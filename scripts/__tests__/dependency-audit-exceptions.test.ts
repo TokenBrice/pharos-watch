@@ -111,41 +111,46 @@ function reviewedBracesReport(): AuditReport {
   };
 }
 
+const bracesFixtureException = {
+  advisoryId: "GHSA-vfj7-8cjw-p6xm",
+  source: 1240992,
+  dependency: "braces",
+  severity: "high",
+  range: "<=3.0.3",
+  expiresOn: "2026-11-15",
+  nodes: ["node_modules/braces"],
+  affectedPackages: ["@next/eslint-plugin-next", "braces", "eslint-config-next", "fast-glob", "micromatch"],
+} as const;
+
 describe("dependency-audit exceptions", () => {
-  it("accepts the user-reviewed braces lint-tooling graph until its expiry", () => {
-    expect(DEPENDENCY_AUDIT_EXCEPTION_REGISTRY).toMatchObject({
-      version: 1,
-      exceptions: [{
-        advisoryId: "GHSA-vfj7-8cjw-p6xm",
-        reviewedAt: "2026-10-16",
-        expiresOn: "2026-11-15",
-        dependencyPath: [
-          "eslint-config-next@16.3.8 (dev)",
-          "@next/eslint-plugin-next@16.3.8",
-          "fast-glob@3.3.1",
-          "micromatch@4.0.8",
-          "braces@3.0.3",
-        ],
-      }],
-    });
-    expect(verifyDependencyAuditReport(reviewedBracesReport(), {
-      now: new Date("2026-10-16T12:00:00.000Z"),
-    })).toEqual({ acceptedExceptionIds: ["GHSA-vfj7-8cjw-p6xm"] });
+  it("keeps the active registry empty after the braces advisory withdrawal, so a clean report passes past the old expiry", () => {
+    expect(DEPENDENCY_AUDIT_EXCEPTION_REGISTRY).toEqual({ version: 1, exceptions: [] });
+    const clean = { auditReportVersion: 2, vulnerabilities: {} };
+    for (const now of ["2026-11-16T00:00:00.000Z", "2026-12-01T00:00:00.000Z"]) {
+      expect(verifyDependencyAuditReport(clean, { now: new Date(now) })).toEqual({ acceptedExceptionIds: [] });
+      expect(verifyDependencyAuditDelta(clean, clean)).toEqual({ preExisting: [] });
+    }
   });
 
-  it("rejects another advisory or a production dependency path under the live braces exception", () => {
+  it("rejects the braces advisory under the active empty registry", () => {
+    expect(() => verifyDependencyAuditReport(reviewedBracesReport(), { now: new Date("2026-11-16T00:00:00.000Z") }))
+      .toThrow("Unreviewed high/critical advisory affects braces.");
+  });
+
+  it("rejects another advisory or a production dependency path under a fixture braces exception", () => {
     const now = new Date("2026-10-16T12:00:00.000Z");
+    const registry = { version: 1, exceptions: [bracesFixtureException] };
     const otherAdvisory = reviewedBracesReport();
     Object.assign(otherAdvisory.vulnerabilities.braces.via[0] as object, {
       source: 9999999,
       url: "https://github.com/advisories/GHSA-unreviewed",
     });
-    expect(() => verifyDependencyAuditReport(otherAdvisory, { now }))
+    expect(() => verifyDependencyAuditReport(otherAdvisory, { registry, now }))
       .toThrow("Unreviewed high/critical advisory affects braces.");
 
     const productionPath = reviewedBracesReport();
     productionPath.vulnerabilities.braces.nodes = ["node_modules/production-consumer/node_modules/braces"];
-    expect(() => verifyDependencyAuditReport(productionPath, { now }))
+    expect(() => verifyDependencyAuditReport(productionPath, { registry, now }))
       .toThrow("Unreviewed high/critical advisory affects braces.");
 
     const productionConsumer = reviewedBracesReport();
@@ -154,7 +159,7 @@ describe("dependency-audit exceptions", () => {
       name: "production-consumer", severity: "high", nodes: ["node_modules/production-consumer"],
       via: ["braces"], effects: [],
     };
-    expect(() => verifyDependencyAuditReport(productionConsumer, { now }))
+    expect(() => verifyDependencyAuditReport(productionConsumer, { registry, now }))
       .toThrow("reached unreviewed package production-consumer");
   });
 
@@ -381,5 +386,51 @@ describe("dependency-audit exceptions", () => {
       expect(buildPrStaticCheckPlan(["worker/package.json"], { group }).commands.map((command) => command.name))
         .not.toContain("audit:deps");
     }
+  });
+
+  describe("Miniflare nested Undici security floor", () => {
+    const advisory = "GHSA-xjj6-f33q-929c";
+    const undiciReport = (): AuditReport => ({
+      auditReportVersion: 2,
+      vulnerabilities: {
+        undici: {
+          name: "undici",
+          severity: "high",
+          nodes: ["node_modules/miniflare/node_modules/undici"],
+          effects: ["miniflare"],
+          via: [{
+            source: 1112345, name: "undici", dependency: "undici", severity: "high",
+            range: ">=7.18.0 <7.30.1", url: `https://github.com/advisories/${advisory}`,
+          }],
+        },
+        miniflare: {
+          name: "miniflare", severity: "high", nodes: ["node_modules/miniflare"], effects: [], via: ["undici"],
+        },
+      },
+    });
+
+    it("locks the nested Miniflare Undici at or above the patched 7.30.1", () => {
+      const lock = JSON.parse(readFileSync(join(process.cwd(), "package-lock.json"), "utf8")) as {
+        packages: Record<string, { version?: string }>;
+      };
+      const [major, minor, patch] = (lock.packages["node_modules/miniflare/node_modules/undici"]?.version ?? "0.0.0")
+        .split(".").map(Number);
+      expect(major).toBe(7);
+      expect(minor > 30 || (minor === 30 && patch >= 1)).toBe(true);
+      const manifest = JSON.parse(readFileSync(join(process.cwd(), "package.json"), "utf8")) as {
+        overrides: Record<string, unknown>;
+      };
+      expect(manifest.overrides["miniflare@5.20261012.1-beta"]).toEqual({ undici: "7.30.1" });
+    });
+
+    it("fails full verification for an affected nested Undici", () => {
+      expect(() => verifyDependencyAuditReport(undiciReport(), { now: reviewedNow }))
+        .toThrow("Unreviewed high/critical advisory affects undici.");
+    });
+
+    it("fails the PR delta when a clean base is reverted to the affected nested Undici", () => {
+      const clean = { auditReportVersion: 2, vulnerabilities: {} };
+      expect(() => verifyDependencyAuditDelta(undiciReport(), clean)).toThrow(`${advisory} affects undici`);
+    });
   });
 });

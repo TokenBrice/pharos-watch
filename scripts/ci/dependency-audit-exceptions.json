@@ -1,32 +1,4 @@
 {
   "version": 1,
-  "exceptions": [
-    {
-      "advisoryId": "GHSA-vfj7-8cjw-p6xm",
-      "source": 1240992,
-      "dependency": "braces",
-      "severity": "high",
-      "range": "<=3.0.3",
-      "reviewedAt": "2026-10-16",
-      "expiresOn": "2026-11-15",
-      "reason": "no patched upstream version; dev-only lint tooling; user-approved risk acceptance 2026-10-16",
-      "dependencyPath": [
-        "eslint-config-next@16.3.8 (dev)",
-        "@next/eslint-plugin-next@16.3.8",
-        "fast-glob@3.3.1",
-        "micromatch@4.0.8",
-        "braces@3.0.3"
-      ],
-      "nodes": [
-        "node_modules/braces"
-      ],
-      "affectedPackages": [
-        "@next/eslint-plugin-next",
-        "braces",
-        "eslint-config-next",
-        "fast-glob",
-        "micromatch"
-      ]
-    }
-  ]
+  "exceptions": []
 }

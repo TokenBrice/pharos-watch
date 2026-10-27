@@ -128,7 +128,7 @@ describe("production deployment baseline gate", () => {
   it("preflights the shared D1 once immediately before applying migrations, using production credentials", () => {
     const workflow = parseYaml(readFileSync(new URL("../../.github/workflows/deploy-cloudflare.yml", import.meta.url), "utf8"));
     const job = workflow.jobs["deploy-worker"];
-    const steps = job.steps as Array<{ name?: string; run?: string; if?: string; "continue-on-error"?: boolean }>;
+    const steps = job.steps as Array<{ name?: string; run?: string; if?: string; env?: Record<string, string>; "continue-on-error"?: boolean }>;
     const preflight = steps.findIndex((step) => step.run === "npm run check:remote-d1-baseline-ledger");
     const apply = steps.findIndex((step) => step.run?.includes("d1 migrations apply"));
     expect(preflight).toBeGreaterThan(steps.findIndex((step) => step.run === "npm run check:worker-package"));
@@ -136,10 +136,14 @@ describe("production deployment baseline gate", () => {
     expect(steps.filter((step) => step.run?.includes("d1 migrations apply"))).toHaveLength(1);
     expect(steps[preflight].if).toBeUndefined();
     expect(steps[preflight]["continue-on-error"]).not.toBe(true);
-    expect(job.env).toMatchObject({
-      CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
-      CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
-    });
+    expect(job.env?.CLOUDFLARE_API_TOKEN).toBeUndefined();
+    expect(job.env?.CLOUDFLARE_ACCOUNT_ID).toBeUndefined();
+    for (const index of [preflight, apply]) {
+      expect(steps[index].env).toMatchObject({
+        CLOUDFLARE_API_TOKEN: "${{ secrets.CLOUDFLARE_API_TOKEN }}",
+        CLOUDFLARE_ACCOUNT_ID: "${{ secrets.CLOUDFLARE_ACCOUNT_ID }}",
+      });
+    }
     const packageJson = JSON.parse(readFileSync(new URL("../../package.json", import.meta.url), "utf8"));
     expect(packageJson.scripts["check:remote-d1-baseline-ledger"])
       .toBe("node --import tsx scripts/ci/check-remote-d1-baseline-ledger.ts");
