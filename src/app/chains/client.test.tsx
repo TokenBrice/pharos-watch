@@ -110,8 +110,24 @@ describe("ChainsLeaderboardClient", () => {
     // the hook exposes freshness as `meta`; the fetch layer strips `_meta` from the body
     mockChains({ chains: [makeChain()], globalTotalUsd: 456_000_000 }, { meta: { status: "stale", updatedAt: 1_760_000_000, ageSeconds: 9_000 } });
     render(<ChainsLeaderboardClient />);
-    expect(screen.getByText(/^Retained · as of \w+ \d+, \d{4} at \d{2}:\d{2}/)).toBeTruthy();
+    expect(screen.getByText(/^as of \w+ \d+, \d{4} at \d{2}:\d{2}/)).toBeTruthy();
+    expect(screen.queryByText(/Retained/)).toBeNull();
     expect(screen.getByRole("button", { name: /Stale data/ }).getAttribute("data-reason-codes")).toBe("api-stale health-stale");
+  });
+
+  it("keeps a failed refresh or fresh-budget-only delay on the original stamp and values, without retained health text", () => {
+    for (const extra of [
+      { isError: true, error: new Error("refresh failed"), meta: { status: "fresh", updatedAt: 1_760_000_000, ageSeconds: 60 } },
+      { meta: { status: "degraded", updatedAt: 1_760_000_000, ageSeconds: 1_801, freshBudgetSec: 1_800, degradedBudgetSec: 3_600 } },
+    ]) {
+      mockChains({ chains: [makeChain()], globalTotalUsd: 456_000_000, supplyCoverage: coverage(1, 0) }, extra);
+      render(<ChainsLeaderboardClient />);
+      expect(screen.getByText(/^as of \w+ \d+, \d{4} at \d{2}:\d{2}/)).toBeTruthy();
+      expect(document.body.textContent).not.toMatch(/retained/i);
+      expect(screen.getByText("Known supply subtotal")).toBeTruthy();
+      expect(screen.getByText(formatCompactUsd(456_000_000))).toBeTruthy();
+      cleanup();
+    }
   });
 
   it("ages the served supply generation into the hero chip without a refetch, never naming held Chain Health inputs", async () => {

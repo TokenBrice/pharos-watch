@@ -108,7 +108,7 @@ export function ChainsLeaderboardClient() {
     );
   }
   if (!data || !harborInput) return null;
-  // the stamp dates the supply generation: it reads retained on the same rule as Harbor's scene, not on Chain Health lag
+  // the stamp dates the supply generation: it takes the full source date on the same rule as Harbor's retained scene, not on Chain Health lag
   const retained = isError || isSupplyRetained(harborInput._meta);
 
   return (
@@ -165,7 +165,7 @@ function ChainsHero({ data, meta, dataUpdatedAt, retained }: { data: ChainsRespo
   const excludedObservations = coverage?.chainUnavailableObservationCount ?? 0;
   const partial = excludedAssets > 0 || excludedObservations > 0;
   const change7dPct = data.globalChange7dPct;
-  const stamp = retained ? `Retained · as of ${formatEventTimestamp(data.updatedAt, true)}` : `as of ${utcStamp(data.updatedAt)}`;
+  const stamp = `as of ${retained ? formatEventTimestamp(data.updatedAt, true) : utcStamp(data.updatedAt)}`;
 
   const partialChainNames = (coverage?.chainIdsWithUnavailableObservations ?? []).map(
     (id) => data.chains.find((chain) => chain.id === id)?.name ?? CHAIN_META[id]?.name ?? id,
