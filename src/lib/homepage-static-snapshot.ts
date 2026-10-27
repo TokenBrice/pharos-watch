@@ -44,7 +44,7 @@ export async function getHomepageHeroSnapshot(): Promise<HomepageHeroSnapshot> {
         id: row.id,
         pegType: row.pegType,
         circulatingUsd: numberValue(row.circulatingUsd),
-        // Rows exported before provenance existed (or with malformed metadata) stay unknown, never complete.
+        // Rows exported before provenance existed (or with malformed metadata) stay unknown: legacy, never partial.
         supplyCoverage: classifySupplyCoverage(parseSupplyObservationProvenance(row.supplyProvenance).provenance),
       }];
     }),

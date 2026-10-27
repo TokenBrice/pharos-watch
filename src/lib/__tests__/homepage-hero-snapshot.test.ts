@@ -254,15 +254,24 @@ describe("homepage hero chain coverage (K-031)", () => {
     expect(partial.cohort.usdc).toBe(100);
   });
 
-  it("treats static dataset rows without recorded provenance as unknown, never complete", () => {
+  it("treats static dataset rows without recorded provenance as legacy, never partial", () => {
     const rows = [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) => ({
       id, pegType: "peggedUSD", circulatingUsd: 100,
       supplyCoverage: id === "usdc-circle" ? "unknown" as const : "complete" as const,
     }));
     const snapshot = buildHomepageHeroSnapshot(rows, "2026-10-27T00:00:00.000Z");
     expect(snapshot).toMatchObject({ supplyCoverageUnknownCount: 1, supplyPartialCount: 0 });
-    expect(snapshot.cohort.usdc).toBeNull();
+    expect(snapshot.cohort.usdc).toBe(100);
     expect(snapshot.cohort.usdt).toBe(100);
-    expect(isHomepageSupplyComplete(snapshot)).toBe(false);
+    expect(isHomepageSupplyComplete(snapshot)).toBe(true);
+    expect(describeHomepageSupplyCoverage(snapshot)).toBeNull();
+  });
+
+  it("keeps the observed-count verdict for a payload without coverage counts", () => {
+    const legacy = snapshot("2026-10-27T00:00:00.000Z", 100);
+    delete legacy.supplyPartialCount;
+    delete legacy.supplyCoverageUnknownCount;
+    expect(isHomepageSupplyComplete(legacy)).toBe(true);
+    expect(describeHomepageSupplyCoverage(legacy)).toBeNull();
   });
 });

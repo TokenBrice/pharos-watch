@@ -55,7 +55,8 @@ export const HomepageHeroSnapshotSchema = z.object({
   supplyMissingCount: z.number().int().nonnegative(),
   /**
    * Observed members whose amount excludes unavailable chains / whose chain coverage was not recorded. Both
-   * are counted within `supplyObservedCount`. Optional for old payloads: absent never means zero.
+   * are counted within `supplyObservedCount`. Only the partial count qualifies completeness; unrecorded
+   * coverage (legacy rows, or an absent count in old payloads) keeps the observed-count verdict.
    */
   supplyPartialCount: z.number().int().nonnegative().optional(),
   supplyCoverageUnknownCount: z.number().int().nonnegative().optional(),

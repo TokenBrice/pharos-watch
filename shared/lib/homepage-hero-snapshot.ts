@@ -53,10 +53,12 @@ export function buildHomepageHeroSnapshot(
     }
     observedIds.add(row.id);
     totalUsd += circulatingUsd;
-    // Partial and unrecorded amounts stay in the observed subtotal but can never certify completeness.
-    if (row.supplyCoverage === "partial") supplyPartialCount += 1;
-    else if (row.supplyCoverage === "unknown") supplyCoverageUnknownCount += 1;
-    if (row.supplyCoverage !== "complete") incompleteIds.add(row.id);
+    // A recorded partial-chain remainder stays in the observed subtotal but never certifies completeness.
+    // Unrecorded coverage (legacy pre-provenance rows) is counted for diagnostics only and is never partial.
+    if (row.supplyCoverage === "partial") {
+      supplyPartialCount += 1;
+      incompleteIds.add(row.id);
+    } else if (row.supplyCoverage === "unknown") supplyCoverageUnknownCount += 1;
 
     if (row.pegType !== "peggedUSD") {
       nonUsdObservedCount += 1;
@@ -71,8 +73,8 @@ export function buildHomepageHeroSnapshot(
     }
   }
 
-  // A cohort is known only when every core-aggregate member reported an observed supply with recorded full
-  // chain coverage; an absent, unavailable, partial or unrecorded member leaves the cohort unavailable.
+  // A cohort is known only when every core-aggregate member reported an observed supply that is not a
+  // recorded partial-chain remainder; an absent, unavailable or partial member leaves the cohort unavailable.
   const cohortValue = (bucket: HomepageCohortBucketKey): number | null =>
     HOMEPAGE_COHORT_BUCKET_IDS[bucket].every((id) =>
       !CLIENT_CORE_AGGREGATE_ACTIVE_IDS.has(id) || (observedIds.has(id) && !incompleteIds.has(id)))
@@ -131,18 +133,20 @@ export function buildLiveHomepageHeroSnapshot(
 
 type SupplyCoverageCounts = Pick<
   HomepageHeroSnapshot,
-  "supplyObservedCount" | "supplyExpectedCount" | "supplyPartialCount" | "supplyCoverageUnknownCount"
+  "supplyObservedCount" | "supplyExpectedCount" | "supplyPartialCount"
 >;
 
-/** Members observed with recorded full chain coverage; absent counts (old payloads) are never assumed zero. */
-function fullyObservedCount(snapshot: SupplyCoverageCounts): number | null {
-  if (snapshot.supplyPartialCount == null || snapshot.supplyCoverageUnknownCount == null) return null;
-  return Math.max(0, snapshot.supplyObservedCount - snapshot.supplyPartialCount - snapshot.supplyCoverageUnknownCount);
+/**
+ * Observed members that are not a recorded partial-chain remainder. Unrecorded coverage (legacy rows, or a
+ * payload without the count) is legacy, never partial: it keeps the pre-provenance observed-count verdict.
+ */
+function fullyObservedCount(snapshot: SupplyCoverageCounts): number {
+  return Math.max(0, snapshot.supplyObservedCount - (snapshot.supplyPartialCount ?? 0));
 }
 
 /**
- * Every core-aggregate member observed with recorded full chain coverage; the one completeness verdict for
- * the homepage hero and route share cards. A partial-chain remainder or unrecorded coverage is a subtotal.
+ * Every core-aggregate member observed and none a recorded partial-chain remainder; the one completeness
+ * verdict for the homepage hero and route share cards.
  */
 export function isHomepageSupplyComplete(snapshot: SupplyCoverageCounts): boolean {
   return fullyObservedCount(snapshot) === snapshot.supplyExpectedCount;
@@ -152,5 +156,5 @@ export function isHomepageSupplyComplete(snapshot: SupplyCoverageCounts): boolea
 export function describeHomepageSupplyCoverage(snapshot: SupplyCoverageCounts): string | null {
   return isHomepageSupplyComplete(snapshot)
     ? null
-    : `Partial · ${fullyObservedCount(snapshot) ?? snapshot.supplyObservedCount}/${snapshot.supplyExpectedCount} assets observed`;
+    : `Partial · ${fullyObservedCount(snapshot)}/${snapshot.supplyExpectedCount} assets observed`;
 }

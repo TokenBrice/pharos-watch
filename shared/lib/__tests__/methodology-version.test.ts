@@ -275,6 +275,16 @@ describe("methodology registry", () => {
     expect(methodology.entries.slice(0, 8).map((candidate) => candidate.version)).toEqual(["6.59", "6.58", "6.57", "6.56", "6.55", "6.54", "6.53", "6.52"]);
   });
 
+  it("activates Pricing 6.58 and 6.59 at one cut, with 6.59 resolving from it", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    for (const version of ["6.58", "6.59"]) {
+      expect(methodology.entries.find((candidate) => candidate.version === version))
+        .toMatchObject({ date: "2026-10-28", effectiveAt: 1_793_145_600, reconstructed: false });
+    }
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_145_600 - 1)).toBe("6.57");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_145_600)).toBe("6.59");
+  });
+
   it.each([
     ["safety-score", "10.17", "10.18"],
     ["redemption-backstop", "4.49", "4.5"],
