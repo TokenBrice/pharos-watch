@@ -105,7 +105,7 @@ const PREVIEW_REDEEM_VAULTS_BY_ID = new Map<string, Erc4626NavVaultConfig>([
 function createVaultNavProvider(input: {
   vaultsById: ReadonlyMap<string, Erc4626NavVaultConfig>;
   selector: string;
-  methodLabel: string;
+  methodLabel: "convertToAssets" | "previewRedeem";
   logLabel: string;
   livePriority?: number;
 }): PriceSourceProvider {
@@ -147,9 +147,10 @@ function createVaultNavProvider(input: {
         ),
       );
       if (!resolved) return null;
-      return resolved.cachedObservedAt == null
-        ? buildParentDerivedLiveOverride(parent, resolved.rate)
-        : buildCachedRateLiveOverride(parent, resolved.rate, resolved.cachedObservedAt);
+      if (resolved.cachedObservedAt != null) return buildCachedRateLiveOverride(parent, resolved.rate, resolved.cachedObservedAt);
+      const override = buildParentDerivedLiveOverride(parent, resolved.rate);
+      // Name the vault method only for this successful live read; cached rates keep their own clock.
+      return override && { ...override, metadata: { ...override.metadata, navMethod: input.methodLabel } };
     },
   };
 }

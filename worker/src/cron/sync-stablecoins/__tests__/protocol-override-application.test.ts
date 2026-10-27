@@ -7,6 +7,7 @@ import {
 import { validatePrimaryPriceCandidate } from "../../../lib/price-publish-policy";
 import type { PeggedAsset } from "../enrich-prices";
 import { makePeggedAsset } from "./_fixtures";
+import { clearPriceMetadata, normalizeStablecoinsPayload, stampPriceMetadata } from "../shared";
 
 vi.mock("../../../lib/price-publish-policy", () => ({
   validatePrimaryPriceCandidate: vi.fn(),
@@ -67,6 +68,73 @@ describe("applyProtocolPriceOverrides", () => {
     expect(assets[0].priceSelectedSource).toBe("protocol-redeem");
     expect(assets[0].priceObservedAtMode).toBe("local_fetch");
     expect(warnSpy).not.toHaveBeenCalled();
+  });
+
+  describe("parent derivation provenance (K-207)", () => {
+    const parentMetadata = {
+      inheritedFrom: "pathusd-bridge", parentSource: "coingecko", parentConfidence: "single-source" as const,
+      parentObservedAt: 1_799_999_900, parentObservedAtMode: "upstream" as const, parentReplaySafe: true,
+      navMethod: "convertToAssets" as const,
+    };
+    const derived = () => makeOverride({
+      price: 2.01, source: "coingecko", confidence: "single-source", observedAt: 1_799_999_900,
+      observedAtMode: "upstream",
+      metadata: { ...parentMetadata, kavaPricefeed: { marketId: "x", blockHeight: 1, activeOracleCount: 1, newestExpiry: 1, dispersionBps: 0 } },
+    });
+    const apply = (assets: PeggedAsset[], override: ProtocolPriceOverride) => applyProtocolPriceOverrides({
+      assets, overrides: new Map([["senpathusd-sentora", override]]),
+      validationContexts: createValidationContextResolver(), syncStartSec: 1_800_000_000,
+    });
+
+    it("publishes the parent derivation with the winning quote without changing trust or clocks", () => {
+      const assets = [makeAsset({ id: "senpathusd-sentora", price: null })];
+      expect(apply(assets, derived())).toBe(1);
+      expect(assets[0]).toMatchObject({ price: 2.01, priceSource: "coingecko", priceConfidence: "single-source",
+        priceObservedAt: 1_799_999_900, priceDerivation: parentMetadata });
+      expect(assets[0].priceDerivation).not.toHaveProperty("kavaPricefeed");
+      const [published] = normalizeStablecoinsPayload({ peggedAssets: assets }).peggedAssets;
+      expect(published.priceDerivation).toEqual(parentMetadata);
+    });
+
+    it("keeps the incumbent's direct provenance when the derived override is rejected", () => {
+      validatePrimaryPriceCandidateMock.mockReturnValue({ accepted: false, reason: "bounds_exceeded" });
+      const assets = [makeAsset({ id: "senpathusd-sentora" })];
+      apply(assets, derived());
+      expect(assets[0].priceSource).toBe("coingecko");
+      expect(assets[0]).not.toHaveProperty("priceDerivation");
+    });
+
+    it("clears derivation on direct replacement, nominal publication, clearing and unusable publication", () => {
+      const assets = [makeAsset({ id: "senpathusd-sentora", price: null })];
+      apply(assets, derived());
+      apply(assets, makeOverride({ price: 2.02, source: "protocol-redeem" }));
+      expect(assets[0]).not.toHaveProperty("priceDerivation");
+
+      apply(assets, derived());
+      stampPriceMetadata(assets[0], "coingecko", "single-source", 1_799_999_990, "upstream");
+      expect(assets[0]).not.toHaveProperty("priceDerivation");
+
+      apply(assets, derived());
+      assets[0].priceSource = "missing";
+      apply(assets, makeOverride({ price: 1, source: "protocol-par", confidence: null, observedAtMode: "nominal_reference" }));
+      expect(assets[0].priceObservedAtMode).toBe("nominal_reference");
+      expect(assets[0]).not.toHaveProperty("priceDerivation");
+
+      apply(assets, derived());
+      clearPriceMetadata(assets[0]);
+      expect(assets[0]).not.toHaveProperty("priceDerivation");
+
+      const stale = { ...makeAsset({ id: "senpathusd-sentora", price: null }), priceDerivation: parentMetadata };
+      expect(normalizeStablecoinsPayload({ peggedAssets: [stale] }).peggedAssets[0]).not.toHaveProperty("priceDerivation");
+      const invalid = { ...makeAsset({ id: "senpathusd-sentora" }), priceDerivation: { ...parentMetadata, inheritedFrom: "" } };
+      expect(normalizeStablecoinsPayload({ peggedAssets: [invalid] }).peggedAssets[0]).not.toHaveProperty("priceDerivation");
+    });
+
+    it("omits derivation for overrides without parent evidence", () => {
+      const assets = [makeAsset({ id: "senpathusd-sentora" })];
+      apply(assets, makeOverride({ metadata: { kavaPricefeed: { marketId: "x", blockHeight: 1, activeOracleCount: 1, newestExpiry: 1, dispersionBps: 0 } } }));
+      expect(assets[0]).not.toHaveProperty("priceDerivation");
+    });
   });
 
   it("leaves the asset untouched when the candidate validation rejects the override", () => {

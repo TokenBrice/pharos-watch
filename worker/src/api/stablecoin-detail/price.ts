@@ -20,7 +20,9 @@ export async function enrichMissingDetailPrice(
     const detail = await response.clone().json() as Record<string, unknown> | null;
     if (!detail || typeof detail !== "object" || Array.isArray(detail)) return response;
     // Only the admitted canonical publication can set restoration or unavailability provenance.
-    if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail) {
+    if ("currentSupplyRestored" in detail || "currentSupplyUnavailableReason" in detail || "currentSupplyExcludedChains" in detail
+      || "priceDerivation" in detail) {
+      delete detail.priceDerivation;
       delete detail.currentSupplyRestored;
       delete detail.currentSupplyUnavailableReason;
       delete detail.currentSupplyExcludedChains;
@@ -133,6 +135,7 @@ export async function enrichMissingDetailPrice(
         consensusSources: coin.consensusSources,
         agreeSources: coin.agreeSources,
         priceSourceConfidenceProfile: coin.priceSourceConfidenceProfile,
+        ...(coin.priceDerivation ? { priceDerivation: coin.priceDerivation } : {}),
       } : {}),
     }), { status: response.status, statusText: response.statusText, headers });
   } catch (error) {

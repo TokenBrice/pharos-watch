@@ -38,6 +38,31 @@ describe("chain partition provenance contract", () => {
   });
 });
 
+describe("price derivation provenance contract (K-207)", () => {
+  const priceDerivation = {
+    inheritedFrom: "pathusd-bridge", parentSource: "coingecko", parentConfidence: "single-source",
+    parentObservedAt: 1_700_000_000, parentObservedAtMode: "upstream", parentReplaySafe: true, navMethod: "convertToAssets",
+  };
+
+  it("round-trips derivation and keeps legacy rows without it", () => {
+    const payload = StablecoinListResponseSchema.parse({
+      peggedAssets: [{ ...makeStablecoin(), priceDerivation }, makeStablecoin()],
+    });
+    expect(payload.peggedAssets[0]!.priceDerivation).toEqual(priceDerivation);
+    expect(payload.peggedAssets[1]).not.toHaveProperty("priceDerivation");
+    expect(StablecoinListResponseSchema.parse(JSON.parse(JSON.stringify(payload)))).toEqual(payload);
+  });
+
+  it.each([
+    { inheritedFrom: "" }, { parentReplaySafe: "yes" }, { navMethod: "totalAssets" },
+    { parentConfidence: "certain" }, { cachedVaultRate: { rate: 0, rateObservedAt: 1 } },
+  ])("rejects invalid derivation evidence %j", (invalid) => {
+    expect(StablecoinDataSchema.safeParse({
+      ...makeStablecoin(), priceDerivation: { ...priceDerivation, ...invalid },
+    }).success).toBe(false);
+  });
+});
+
 const baseEvent = {
   id: 1,
   stablecoinId: "usdt-tether",

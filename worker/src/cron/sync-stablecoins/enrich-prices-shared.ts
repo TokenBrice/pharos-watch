@@ -1,5 +1,5 @@
 import type { ContractDeployment, NominalPriceReference, PriceConfidence, PriceObservedAtMode, PriceSourceConfidenceProfile } from "@shared/types/core";
-import type { ChainPartitionProvenance, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyUnavailableReason } from "@shared/types/market";
+import type { ChainPartitionProvenance, PriceDerivation, SupplyChainGuardProvenance, SupplyGapFillProvenance, SupplyUnavailableReason } from "@shared/types/market";
 import type { SfraxStockPerimeterObservation } from "@shared/types/sfrax-supply";
 import { stampPriceMetadata } from "./shared";
 
@@ -49,6 +49,8 @@ export interface PeggedAsset {
   priceObservedAtMode?: PriceObservedAtMode | null;
   /** This run's nominal par reference (CR-43); separate from the observed price. */
   nominalPriceReference?: NominalPriceReference;
+  /** Parent derivation of the current quote; stamped and cleared with that quote only. */
+  priceDerivation?: PriceDerivation;
   priceSyncedAt?: number | null;
   priceSelectedSource?: string | null;
   supplySource?: string;

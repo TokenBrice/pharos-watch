@@ -1,5 +1,5 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../lib/structured-log";
-import { ChainPartitionProvenanceSchema, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/market";
+import { ChainPartitionProvenanceSchema, PriceDerivationSchema, StablecoinListResponseSchema, SupplyChainGuardProvenanceSchema } from "@shared/types/market";
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
@@ -158,6 +158,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         supplyUnavailableReason: _ignoredSupplyUnavailableReason,
         supplyPerimeter: _ignoredSupplyPerimeter,
         supplyChainGuard: _ignoredSupplyChainGuard,
+        priceDerivation: _ignoredPriceDerivation,
         ...rest
       } = asset as PeggedAsset & { gecko_id?: unknown };
       const hasUsablePrice = typeof asset.price === "number" && Number.isFinite(asset.price) && asset.price > 0;
@@ -188,6 +189,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
           : null;
       const supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
       const supplyChainGuard = SupplyChainGuardProvenanceSchema.safeParse(asset.supplyChainGuard);
+      const priceDerivation = PriceDerivationSchema.safeParse(asset.priceDerivation);
       const hold = reviewedOnchainSupplyHoldFields(asset, runStartedAt);
 
       return {
@@ -204,6 +206,7 @@ export function normalizeStablecoinsPayload(payload: StablecoinsPayload, runStar
         consensusSources: hasUsablePrice ? (asset.consensusSources ?? []) : [],
         agreeSources: hasUsablePrice ? (asset.agreeSources ?? []) : [],
         priceSourceConfidenceProfile: hasUsablePrice ? (asset.priceSourceConfidenceProfile ?? null) : null,
+        ...(hasUsablePrice && priceDerivation.success ? { priceDerivation: priceDerivation.data } : {}),
         ...(supplyObservedAt != null ? { supplyObservedAt } : {}),
         ...(asset.supplyRestored === true ? { supplyRestored: true } : {}),
         ...(asset.id === SFRAX_STOCK_PERIMETER.assetId && !hold && asset.supplyPerimeter ? { supplyPerimeter: asset.supplyPerimeter } : {}),
@@ -293,6 +296,7 @@ export function stampPriceMetadata(
   sourceConfidenceProfile?: PeggedAsset["priceSourceConfidenceProfile"],
 ): void {
   asset.priceSource = source;
+  delete asset.priceDerivation;
   asset.priceSelectedSource = selectedSource ?? source;
   asset.priceConfidence = confidence ?? null;
   asset.priceObservedAt = observedAt;
@@ -312,6 +316,7 @@ export function stampPriceMetadata(
 
 export function clearPriceMetadata(asset: PeggedAsset): void {
   asset.price = null;
+  delete asset.priceDerivation;
   asset.priceSource = undefined;
   asset.priceSelectedSource = null;
   asset.priceConfidence = null;
