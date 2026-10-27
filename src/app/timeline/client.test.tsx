@@ -131,10 +131,15 @@ function mockActiveEvents(events: DepegEvent[], overrides: Partial<ActiveEventsR
 }
 
 describe("TimelineClient", () => {
-  it("does not read the browser clock or query during server rendering", () => {
+  it("server-renders the reserved loading shell without reading the clock or querying", () => {
     const clock = vi.spyOn(Date, "now");
     try {
-      expect(renderToString(<TimelineClient />)).toBe("");
+      const html = renderToString(<TimelineClient />);
+      for (const slot of ["summary", "last-event", "feed"]) expect(html).toContain(`data-timeline-slot="${slot}"`);
+      expect(html).toContain('id="data"');
+      expect(html).toContain("min-h-[100svh]");
+      expect(html).toContain("Filter by event type");
+      expect(html).not.toMatch(/\d+ events?|Updated|Last event/);
       expect(clock).not.toHaveBeenCalled();
       expect(useEventsMock).not.toHaveBeenCalled();
     } finally {
@@ -168,6 +173,53 @@ describe("TimelineClient", () => {
     expect(screen.getByRole("region", { name: /Currently open/ }).textContent).toContain("OPEN 2m ago");
     expect(feedRow.querySelector("time")?.dateTime).toBe("2026-10-20T11:59:00.000Z");
     for (const [params] of useEventsMock.mock.calls) expect(params?.since).toBe(querySince);
+  });
+
+  function slotClasses() {
+    return ["summary", "last-event", "feed"].map((slot) => {
+      const node = document.querySelector(`[data-timeline-slot="${slot}"]`);
+      expect(node, slot).not.toBeNull();
+      return `${slot}:${node!.className}`;
+    });
+  }
+
+  it("keeps the same reserved slots across pending, empty, partial, success and error states", () => {
+    const html = renderToString(<TimelineClient />);
+    const states: Array<[string, () => void]> = [
+      ["pending", () => mockEvents([], { isLoading: true, pages: undefined, dataUpdatedAt: 0 })],
+      ["empty", () => mockEvents([])],
+      ["partial", () => mockEvents([makeTapeEvent()], { total: 12_345, hasNextPage: true })],
+      ["success", () => mockEvents([makeTapeEvent()])],
+      ["error", () => mockEvents([], { error: new Error("fetch failed"), pages: undefined, dataUpdatedAt: 0 })],
+    ];
+    const shell = document.createElement("div");
+    shell.innerHTML = html;
+    const shellFilters = shell.querySelector('[aria-label="Filter by event type"]')!.outerHTML;
+    let reference: string[] | null = null;
+    for (const [label, arrange] of states) {
+      arrange();
+      render(<TimelineClient />);
+      const classes = slotClasses();
+      if (reference) expect(classes, label).toEqual(reference);
+      reference = classes;
+      expect(document.querySelector('[aria-label="Filter by event type"]')!.outerHTML, label).toBe(shellFilters);
+      if (label === "partial") expect(screen.getByText("Showing 1 of 12,345 events")).toBeTruthy();
+      if (label === "success") expect(screen.getByText("1 event")).toBeTruthy();
+      if (label === "empty") expect(screen.getByText("0 events")).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it("appends arriving open incidents after the stable summary slots", () => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([], { isLoading: true, data: undefined, isFullyLoaded: false });
+    const { rerender } = render(<TimelineClient />);
+    const row = () => screen.getByText("1 event").closest("p")!;
+    const before = row().textContent!;
+    mockActiveEvents([activeEvent()]);
+    rerender(<TimelineClient />);
+    expect(row().textContent!.startsWith(before)).toBe(true);
+    expect(row().textContent).toContain("1 open incident");
   });
 
   it("keeps timeline pagination manual on initial page load", () => {

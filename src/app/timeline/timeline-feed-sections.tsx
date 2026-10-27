@@ -117,13 +117,6 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
     </span>
   );
   const parts: ReactNode[] = [];
-  if (openCount != null && openCount > 0) {
-    parts.push(
-      <span key="open" className="font-semibold text-amber-700 dark:text-amber-400">
-        {openCount} open {openCount === 1 ? "incident" : "incidents"}
-      </span>,
-    );
-  }
   parts.push(countNode);
   parts.push(<span key="window">{windowLabel}</span>);
   parts.push(<span key="severity">{severityLabel}</span>);
@@ -143,16 +136,17 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
       </span>,
     );
   }
-  const lastEventNode =
-    lastEventTs != null ? (
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Last event: {formatRelativeTimeMs(lastEventTs, { now: nowMs })}{" "}
-        <span className="text-muted-foreground/70">· {new Date(lastEventTs).toISOString().replace("T", " ").slice(0, 16)} UTC</span>
-      </p>
-    ) : null;
+  // Late-arriving incidents trail the stable slots so they never push neighbors.
+  if (openCount != null && openCount > 0) {
+    parts.push(
+      <span key="open" className="font-semibold text-amber-700 dark:text-amber-400">
+        {openCount} open {openCount === 1 ? "incident" : "incidents"}
+      </span>,
+    );
+  }
   return (
-    <div className="space-y-1">
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+    <div className="space-y-1" data-timeline-slot="summary">
+      <p className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tabular-nums tracking-wider text-muted-foreground">
         {parts.map((part, i) => (
           <span key={i} className="contents">
             {i > 0 ? <span aria-hidden="true">·</span> : null}
@@ -174,7 +168,26 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
           </>
         ) : null}
       </p>
-      {lastEventNode}
+      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground" data-timeline-slot="last-event">
+        {lastEventTs != null ? (
+          <>
+            Last event: {formatRelativeTimeMs(lastEventTs, { now: nowMs })}{" "}
+            <span className="text-muted-foreground/70">· {new Date(lastEventTs).toISOString().replace("T", " ").slice(0, 16)} UTC</span>
+          </>
+        ) : "\u00a0"}
+      </p>
+    </div>
+  );
+}
+
+/** Pre-clock stand-in sharing SummaryBand's reserved rows; no clock or count is fabricated. */
+export function SummaryBandSkeleton() {
+  return (
+    <div className="space-y-1" data-timeline-slot="summary" aria-hidden="true">
+      <p className="flex min-h-11 items-center font-mono text-[11px]">
+        <Skeleton className="h-3 w-64 max-w-full" />
+      </p>
+      <p className="font-mono text-[11px]" data-timeline-slot="last-event">{"\u00a0"}</p>
     </div>
   );
 }

@@ -128,7 +128,8 @@ export function TimelineFeed({
         {loadAnnouncement}
       </div>
 
-      <section id="data" aria-label="Event tape" tabIndex={-1}>
+      {/* The viewport floor keeps the footer from being exposed then displaced as rows arrive. */}
+      <section id="data" aria-label="Event tape" tabIndex={-1} className="min-h-[100svh]" data-timeline-slot="feed">
         <div id="tape-feed" className="space-y-4">
           {bufferEvent ? (
             <div className="border-y border-border/60 bg-amber-500/5">
