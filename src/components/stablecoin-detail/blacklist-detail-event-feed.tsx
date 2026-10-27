@@ -7,6 +7,7 @@ import { DataTableShell, type DataTableColumn } from "@/components/data-table-sh
 import { useBlacklistEventsPage } from "@/hooks/use-blacklist-events";
 import { EventFeedEmpty, EventFeedSkeleton, EventTransactionCell } from "@/components/event-feed-state";
 import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { EVENT_BADGE_STYLES, EVENT_LABELS } from "@shared/lib/classification";
 import { formatAddress, timeAgo, formatEventDate } from "@shared/lib/format";
 import type { BlacklistEvent, BlacklistStablecoin } from "@shared/types";
@@ -37,21 +38,26 @@ function eventBadge(eventType: BlacklistEvent["eventType"]) {
 }
 
 export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
-  const { data, isLoading, isError } = useBlacklistEventsPage({
+  const { data, isLoading, error, meta, dataUpdatedAt } = useBlacklistEventsPage({
     stablecoin: symbol,
     limit,
     offset: 0,
   });
 
-  if (isLoading) return <EventFeedSkeleton variant="blacklist" />;
-  if (isError) {
+  // Rows are replaced only when this exact page was never read; a failed refetch keeps them
+  // (and a retained `events: []` stays known-empty). Only material age reaches readers.
+  if (!data && isLoading) return <EventFeedSkeleton variant="blacklist" />;
+  if (!data && error) {
     return (
       <div className="rounded-md border border-destructive/50 bg-destructive/10 p-4 text-sm text-destructive">
         Unable to load blacklist events. Please try again in a few moments.
       </div>
     );
   }
-  if (!data || data.events.length === 0) return <EventFeedEmpty variant="blacklist" />;
+  const health = (
+    <StaleDataBanner queries={[{ preset: "blacklist", dataUpdatedAt, error, hasData: true, meta, isLoading: false }]} />
+  );
+  if (!data || data.events.length === 0) return <>{health}<EventFeedEmpty variant="blacklist" /></>;
 
   // One amount-source tag for the whole feed when every row shares it
   // (usually "historical" ×10); per-row tags only when sources are mixed.
@@ -61,6 +67,7 @@ export function BlacklistDetailEventFeed({ symbol, limit = 10 }: Props) {
   // The log folds by default; its summary keeps the event count visible.
   return (
     <>
+      {health}
       <ModuleDisclosure label="Latest events" count={data.events.length}>
       {sharedSourceLabel ? (
         <p className="pharos-label mt-2">Amount source: {sharedSourceLabel}</p>

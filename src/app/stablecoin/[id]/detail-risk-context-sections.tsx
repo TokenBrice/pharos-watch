@@ -298,6 +298,7 @@ function ExitBoard({
           reportCard={viewModel.reportCard}
           coinId={viewModel.coin.id}
           variant="module"
+          freshness={viewModel.staleQueries.find((query) => query.preset === "redemptionBackstops")}
         />
       ) : shared.redemptionEvidence.kind === "placeholder" ? (
         shared.redemptionEvidence.status === "empty" ? (
@@ -612,10 +613,14 @@ export function DetailRiskContextSections({
         {contextHasContent ? (
           <SectionBanner id="context" label="Dependencies" icon={ChartPie} active={activeBannerId === "context"} />
         ) : null}
-        <ContagionSnapshot
-          stablecoinId={viewModel.id}
-          variantRelationshipCard={variantRelationshipCard}
-        />
+        {/* A frozen archive keeps only its static relationship; the dependency
+            context reads current report cards and supply. */}
+        {viewModel.coin.status === "frozen" ? variantRelationshipCard : (
+          <ContagionSnapshot
+            stablecoinId={viewModel.id}
+            variantRelationshipCard={variantRelationshipCard}
+          />
+        )}
         {/* The xl rail owns Key Links and Contracts; below xl these in-flow
             copies keep the outbound links, the reserve attestation link and the
             deployment list reachable — after the score and its evidence, never

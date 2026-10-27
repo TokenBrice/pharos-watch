@@ -2,7 +2,7 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
-import { render, within } from "@testing-library/react";
+import { act, render, within } from "@testing-library/react";
 import { RedemptionRouteSection } from "../redemption-backstop-card";
 import { buildRedemptionBackstopCardViewModel } from "../redemption-backstop-card-view-model";
 import { formatRedemptionDocsProvenance, formatRedemptionRouteStatus, resolveScoreTier5, SCORE_TIER_5_CLASSES } from "@shared/lib/classification";
@@ -508,6 +508,59 @@ describe("RedemptionBackstopCard", () => {
   });
 });
 
+describe("RedemptionBackstopCard footer freshness", () => {
+  const HOUR = 3_600_000;
+  const generationMs = BASE_ENTRY.updatedAt * 1000;
+  async function footerTime(freshness: Parameters<typeof RedemptionRouteSection>[0]["freshness"], ageMs: number) {
+    vi.setSystemTime(new Date(generationMs + ageMs));
+    const view = render(<RedemptionRouteSection entry={BASE_ENTRY} reportCard={null} coinId={BASE_ENTRY.stablecoinId} freshness={freshness} />);
+    // Hydration (two frames) then the boundary hook re-anchors to the browser clock.
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
+    const time = view.container.querySelector("time[data-state]")!;
+    return { time, state: time.getAttribute("data-state"), label: time.querySelector(".sr-only")?.textContent ?? "", unmount: view.unmount };
+  }
+  const lane = (meta?: Record<string, unknown> | null, error: unknown = null) => ({
+    dataUpdatedAt: generationMs,
+    error,
+    hasData: true,
+    meta: meta as never,
+  });
+
+  it("stays neutral through 4d and warns only past the shared public band", async () => {
+    const at16h = await footerTime(lane(), 16 * HOUR);
+    expect(at16h.state).toBe("current");
+    expect(at16h.label).toMatch(/Stale when more than 4d old$/);
+    at16h.unmount();
+    const at96h = await footerTime(lane(), 96 * HOUR);
+    expect(at96h.state).toBe("retained");
+    at96h.unmount();
+    expect((await footerTime(lane(), 96 * HOUR + 1)).state).toBe("stale");
+  });
+
+  it("honors a producer budget, a server stale floor, retained refresh failure and null authority", async () => {
+    const meta = { updatedAt: BASE_ENTRY.updatedAt, ageSeconds: 0, status: "fresh", freshBudgetSec: 86_400, degradedBudgetSec: 2 * 86_400 };
+    const budgeted = await footerTime(lane(meta), 3 * 86_400_000);
+    expect(budgeted.state).toBe("stale");
+    expect(budgeted.label).toMatch(/Stale when more than 2d old$/);
+    budgeted.unmount();
+    const floor = await footerTime(lane({ ...meta, status: "stale" }), HOUR);
+    expect(floor.state).toBe("stale");
+    floor.unmount();
+    const failed = await footerTime(lane(null, new Error("refetch failed")), HOUR);
+    expect(failed.state).toBe("retained");
+    failed.unmount();
+    const unknown = await footerTime(lane({ updatedAt: null, ageSeconds: null, status: "unknown" }), HOUR);
+    expect(unknown.state).toBe("unavailable");
+    expect(unknown.time.getAttribute("datetime")).toBeNull();
+  });
+
+  it("shows the served generation rather than the per-coin row clock", async () => {
+    const generation = BASE_ENTRY.updatedAt + 600;
+    const { time } = await footerTime(lane({ updatedAt: generation, ageSeconds: 0, status: "fresh" }), 1_200_000);
+    expect(time.getAttribute("datetime")).toBe(new Date(generation * 1000).toISOString());
+  });
+});
+
 describe("RedemptionRouteSection without a scored route", () => {
   const disposition = REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.find(
     (row) => NO_HOLDER_REASON_CODES.includes(row.reasonCode) && row.evidenceUrls.length > 0,
@@ -536,6 +589,8 @@ describe("RedemptionRouteSection without a scored route", () => {
     const stamps = within(root).getAllByText((content) => content.includes(disposition.reviewedDate));
     expect(stamps.some((stamp) => stamp.closest("details") === null)).toBe(true);
     expect(root.querySelectorAll("summary")).toHaveLength(1);
+    // No served route means no live-data footer to age.
+    expect(root.querySelector("time[data-state]")).toBeNull();
   });
 
 });

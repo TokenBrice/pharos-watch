@@ -498,7 +498,7 @@ describe("useStablecoinDetailViewModel", () => {
       });
     });
 
-    it("prefers the live detail row over the archive when it exists", () => {
+    it("selects the archive directly even when a cached live detail row exists", () => {
       mockLiveSummary({
         data: { ...archived, price: 0.42 }, dataUpdatedAt: 100,
         meta: { updatedAt: 0.005, ageSeconds: 0, status: "fresh" },
@@ -506,8 +506,58 @@ describe("useStablecoinDetailViewModel", () => {
 
       const summary = renderedSummary();
 
-      expect(summary).toMatchObject({ enabled: true, dataUpdatedAt: 100, meta: { updatedAt: 0.005 } });
-      expect(summary.data.price).toBe(0.42);
+      expect(summary).toMatchObject({ enabled: false, dataUpdatedAt: 0, meta: null, error: null, isLoading: false });
+      expect(summary.data.price).toBe(archived.price);
+      expect(summary.data.supplyObservedAt).toBe(archived.supplyObservedAt);
+      const liveCall = mocks.useRegisteredApiQuery.mock.calls.find(([descriptor]) => descriptor.queryKey[0] === "stablecoin-live-summary");
+      expect(liveCall?.[1]).toMatchObject({ enabled: false });
+    });
+
+    it("disables every current-only lane, health entry and retry despite open viewport controls", async () => {
+      const failing = { error: new Error("would retry"), isError: true };
+      mocks.useDexLiquidity.mockReturnValue(queryResult({ ...failing, refetch: mocks.refetchLiquidity }));
+      mocks.useReportCardsV9.mockReturnValue(queryResult({ ...failing, refetch: mocks.refetchReportCards }));
+      mocks.useYieldRankings.mockReturnValue(queryResult({ ...failing, refetch: mocks.refetchYieldRankings }));
+      mocks.useStressSignals.mockReturnValue(queryResult({ ...failing, refetch: mocks.refetchStressSignals }));
+      mocks.useMintBurnFlows.mockReturnValue(queryResult({
+        data: { coins: [{ stablecoinId: coin.id }] }, refetch: mocks.refetchFlows,
+      } as Parameters<typeof queryResult>[0]));
+      renderHook(() => useStablecoinDetailViewModel({
+        id: coin.id, coin, summary: null, archivedLiveSummary: archived,
+        supplementalQueryControls: {
+          liquidity: true, reportCards: true, redemption: true, yield: true,
+          stress: true, flows: true, blacklist: true, reserves: true,
+        },
+      }));
+      const params = mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0];
+      for (const mock of [mocks.useDexLiquidity, mocks.useReportCardsV9, mocks.useYieldRankings]) {
+        expect(mock.mock.calls.at(-1)?.[1]).toMatchObject({ enabled: false });
+      }
+      expect(mocks.useStressSignals.mock.calls.at(-1)?.[0]).toMatchObject({ enabled: false });
+      expect(mocks.useMintBurnFlows.mock.calls.at(-1)?.[1]).toMatchObject({ enabled: false });
+      expect(params.queries.dexLiquidity.enabled).toBe(false);
+      expect(params.queries.reportCards.enabled).toBe(false);
+      expect(params.queries.redemptionBackstops.enabled).toBe(false);
+      expect(params.supplemental.yieldRankings.enabled).toBe(false);
+      expect(params.supplemental.stressSignals.enabled).toBe(false);
+      expect(params.supplemental.flows).toMatchObject({ enabled: false, data: undefined, historyEligible: true });
+      expect(params.supplemental.reserves.enabled).toBe(false);
+      const health = buildDetailStaleQueries(params.queries, params.supplemental, coin.id);
+      expect(health.map((entry) => entry.preset ?? entry.label)).not.toEqual(expect.arrayContaining([
+        "stablecoins", "dexLiquidity", "reportCards", "redemptionBackstops", "yieldRankings", "stressSignals",
+        "mintBurnFlows", "Live Reserves", "Detail snapshot",
+      ]));
+      await params.core.handleRetryAll();
+      for (const refetch of [mocks.refetchLiquidity, mocks.refetchReportCards, mocks.refetchYieldRankings,
+        mocks.refetchStressSignals, mocks.refetchFlows, mocks.refetchList, mocks.refetchReserves]) {
+        expect(refetch).not.toHaveBeenCalled();
+      }
+    });
+
+    it("claims no flow history without retained membership and fetches none to recover it", () => {
+      mocks.useMintBurnFlows.mockReturnValue(queryResult({ refetch: mocks.refetchFlows }));
+      renderedSummary();
+      expect(mocks.buildStablecoinDetailViewModel.mock.calls.at(-1)![0].supplemental.flows.historyEligible).toBe(false);
     });
   });
 });

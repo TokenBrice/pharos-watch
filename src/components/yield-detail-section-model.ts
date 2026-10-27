@@ -179,15 +179,18 @@ export type YieldDetailSectionModel =
   | YieldDetailSectionReadyModel
   | YieldDetailSectionLoadingModel
   | YieldDetailSectionErrorModel
-  | Extract<YieldDetailModel, { status: "unavailable" | "hidden" }>;
+  | Extract<YieldDetailModel, { status: "unavailable" | "hidden" }>
+  | { status: "frozen"; frozenAt: string | null };
 
 export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSectionModel {
   const { getParam, replaceParams } = useUrlFilters();
-  const { data, meta: apiMeta, error, isLoading } = useYieldRankingsCoin(stablecoinId);
+  // Lifecycle first: a frozen archive never requests current rankings, though a retained one renders.
+  const meta = TRACKED_META_BY_ID.get(stablecoinId);
+  const frozen = meta?.status === "frozen";
+  const { data, meta: apiMeta, error, isLoading } = useYieldRankingsCoin(stablecoinId, { enabled: !frozen });
   const sourcesParam = getParam("sources");
   const requestedSourceKeys = useMemo(() => sourcesParam.split(",").filter(Boolean), [sourcesParam]);
   const [showAllSources, setShowAllSources] = useState(false);
-  const meta = TRACKED_META_BY_ID.get(stablecoinId);
   const shouldHaveYieldData = meta?.flags.yieldBearing ?? false;
   const model = useMemo(
     () =>
@@ -209,6 +212,8 @@ export function useYieldDetailSectionModel(stablecoinId: string): YieldDetailSec
   }
 
   if (model.status !== "ready") {
+    // Absent rankings settle as the archive, never "waiting for latest" or a retry.
+    if (frozen) return { status: "frozen", frozenAt: meta?.frozenAt ?? null };
     if (isLoading && shouldHaveYieldData) {
       return { status: "loading", shouldHaveYieldData };
     }

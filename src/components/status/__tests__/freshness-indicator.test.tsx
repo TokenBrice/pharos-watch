@@ -2,7 +2,8 @@
 
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, act } from "@testing-library/react";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
 import { FreshnessIndicator } from "../freshness-indicator";
 
 beforeEach(() => {
@@ -113,17 +114,70 @@ describe("FreshnessIndicator", () => {
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("true");
   });
 
-  it("discloses the already doubled redemption budget without multiplying it again", () => {
-    vi.setSystemTime(new Date(1_700_000_000_000));
-    const updatedAtMs = 1_700_000_000_000 - 57_600_000;
-    const staleAfterMs = API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops * 2000;
-    const { rerender } = render(<FreshnessIndicator updatedAtMs={updatedAtMs} staleAfterMs={staleAfterMs} />);
-    expect(screen.getByRole("time").getAttribute("datetime")).toBe("2023-11-14T06:13:20.000Z");
-    expect(screen.getByRole("time").getAttribute("data-stale-after-ms")).toBe("57600000");
-    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toContain("more than 16h old");
+  it("gives a supplied public verdict the redemption 4d band instead of a local 16h threshold", () => {
+    const nowMs = 1_700_000_000_000;
+    vi.setSystemTime(new Date(nowMs));
+    const updatedAtMs = nowMs - 96 * 3_600_000;
+    const health = (atMs: number) => deriveDataHealth({ ...DATA_HEALTH_PRESETS.redemptionBackstops, dataUpdatedAt: updatedAtMs, hasData: true }, atMs);
+    const sixteenHours = deriveDataHealth({ ...DATA_HEALTH_PRESETS.redemptionBackstops, dataUpdatedAt: nowMs - 16 * 3_600_000, hasData: true }, nowMs);
+    const { rerender } = render(<FreshnessIndicator updatedAtMs={0} staleAfterMs={1} health={sixteenHours} labelPrefix="Updated" />);
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
     expect(screen.getByRole("time").getAttribute("data-state")).toBe("current");
-    rerender(<FreshnessIndicator updatedAtMs={updatedAtMs - 1} staleAfterMs={staleAfterMs} />);
+
+    rerender(<FreshnessIndicator updatedAtMs={0} staleAfterMs={1} health={health(nowMs)} labelPrefix="Updated" />);
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("retained");
+    expect(screen.getByRole("time").getAttribute("datetime")).toBe(new Date(updatedAtMs).toISOString());
+    expect(screen.getByRole("time").getAttribute("data-stale-after-ms")).toBe("345600000");
+    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toMatch(/^Updated at .+\. Stale when more than 4d old$/);
+    expect(screen.getByRole("status").textContent).toBe("");
+
+    rerender(<FreshnessIndicator updatedAtMs={0} staleAfterMs={1} health={health(nowMs + 1)} labelPrefix="Updated" />);
     expect(screen.getByRole("time").getAttribute("data-state")).toBe("stale");
+    expect(screen.getByRole("status").textContent).toBe("Updated is stale.");
+
+    const recovered = deriveDataHealth({ ...DATA_HEALTH_PRESETS.redemptionBackstops, dataUpdatedAt: nowMs, hasData: true }, nowMs);
+    rerender(<FreshnessIndicator updatedAtMs={0} staleAfterMs={1} health={recovered} labelPrefix="Updated" />);
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("current");
+    expect(screen.getByRole("status").textContent).toBe("Updated is current again.");
+  });
+
+  it("never lets the internal age timer override a supplied verdict", () => {
+    const nowMs = 1_700_000_000_000;
+    vi.setSystemTime(new Date(nowMs));
+    const health = deriveDataHealth({ ...DATA_HEALTH_PRESETS.redemptionBackstops, dataUpdatedAt: nowMs - 3_600_000, hasData: true }, nowMs);
+    render(<FreshnessIndicator updatedAtMs={nowMs - 3_600_000} staleAfterMs={1_000} health={health} />);
+    act(() => {
+      vi.advanceTimersByTime(2 * 3_600_000);
+    });
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
+    expect(screen.getByRole("status").textContent).toBe("");
+  });
+
+  it("uses the producer budget, keeps retained failures neutral and explicit null authority unknown", () => {
+    const nowMs = 1_700_000_000_000;
+    vi.setSystemTime(new Date(nowMs));
+    const base = { ...DATA_HEALTH_PRESETS.redemptionBackstops, dataUpdatedAt: nowMs, hasData: true };
+    const budgeted = deriveDataHealth({
+      ...base,
+      meta: { updatedAt: (nowMs - 5 * 86_400_000) / 1000, ageSeconds: 432_000, status: "degraded", freshBudgetSec: 86_400, degradedBudgetSec: 6 * 86_400 },
+    }, nowMs);
+    const { rerender } = render(<FreshnessIndicator updatedAtMs={nowMs} staleAfterMs={1} health={budgeted} labelPrefix="Updated" />);
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("retained");
+    expect(screen.getByRole("time").querySelector(".sr-only")?.textContent).toContain("more than 6d old");
+
+    const floor = deriveDataHealth({ ...base, meta: { updatedAt: nowMs / 1000, ageSeconds: 0, status: "stale" } }, nowMs);
+    rerender(<FreshnessIndicator updatedAtMs={nowMs} staleAfterMs={1} health={floor} labelPrefix="Updated" />);
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("stale");
+
+    const retainedFailure = deriveDataHealth({ ...base, error: new Error("refetch failed") }, nowMs);
+    rerender(<FreshnessIndicator updatedAtMs={nowMs} staleAfterMs={1} health={retainedFailure} labelPrefix="Updated" />);
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("retained");
+    expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
+
+    const unknown = deriveDataHealth({ ...base, meta: { updatedAt: null, ageSeconds: null, status: "unknown" } }, nowMs);
+    rerender(<FreshnessIndicator updatedAtMs={nowMs} staleAfterMs={1} health={unknown} labelPrefix="Updated" />);
+    expect(screen.getByRole("time").getAttribute("data-state")).toBe("unavailable");
+    expect(screen.getByRole("time").getAttribute("datetime")).toBeNull();
   });
 
   it("announces recovery when stale data is replaced by a fresh timestamp", () => {

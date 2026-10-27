@@ -180,6 +180,7 @@ export function buildStablecoinDetailViewModel({
     stressSignal: featureAvailability.stressSignal,
     redemptionBackstop,
     hasFlows: featureAvailability.hasFlows,
+    hasFlowHistory: featureAvailability.hasFlowHistory,
     hasBlacklist: featureAvailability.hasBlacklist,
     blacklistSymbol: featureAvailability.blacklistSymbol,
     supplyHistory: resolvedSupplyHistory,
