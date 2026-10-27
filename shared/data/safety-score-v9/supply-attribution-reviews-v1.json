@@ -4,9 +4,9 @@
   "reviews": [
     {
       "assetId": "syrupusdt-maple",
-      "reviewer": "P2CcipPlans",
-      "reviewedAtSec": 1791202842,
-      "expiresAtSec": 1793794842,
+      "reviewer": "Claude (D02 evidence lane; original review P2CcipPlans)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT",
         "https://github.com/smartcontractkit/chainlink-ccip/blob/d0e9ff9e116e3fb60b61d00d41aae7e98886ffe6/chains/evm/contracts/Router.sol",
@@ -727,9 +727,9 @@
     },
     {
       "assetId": "susdat-saturn",
-      "reviewer": "P2CcipPlans",
-      "reviewedAtSec": 1791202865,
-      "expiresAtSec": 1793794865,
+      "reviewer": "Claude (D02 evidence lane; original review P2CcipPlans)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat",
         "https://github.com/smartcontractkit/chainlink-ccip/blob/d0e9ff9e116e3fb60b61d00d41aae7e98886ffe6/chains/evm/contracts/Router.sol",
@@ -1230,9 +1230,9 @@
     },
     {
       "assetId": "sdola-inverse-finance",
-      "reviewer": "P2CcipPlans",
-      "reviewedAtSec": 1791203027,
-      "expiresAtSec": 1793795027,
+      "reviewer": "Claude (D02 evidence lane; original review P2CcipPlans)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://etherscan.io/address/0x05eee76f456c51be0459ec1c0a78bf177b2c877c",
         "https://github.com/smartcontractkit/chainlink-ccip/blob/d0e9ff9e116e3fb60b61d00d41aae7e98886ffe6/chains/evm/contracts/Router.sol",
@@ -2739,9 +2739,9 @@
     },
     {
       "assetId": "xgld-unitas",
-      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
-      "reviewedAtSec": 1791196392,
-      "expiresAtSec": 1793788392,
+      "reviewer": "Claude (D02 evidence lane; original review P4OftCohortPlans reviewed runtime and complete peer census)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://docs.unitas.so/overview/xgld.md",
         "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all",
@@ -2939,9 +2939,9 @@
     },
     {
       "assetId": "srusd-reservoir",
-      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
-      "reviewedAtSec": 1791196392,
-      "expiresAtSec": 1793788392,
+      "reviewer": "Claude (D02 evidence lane; original review P4OftCohortPlans reviewed runtime and complete peer census)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=srUSD",
         "https://docs.reservoir.xyz",
@@ -3055,9 +3055,9 @@
     },
     {
       "assetId": "witry-brix",
-      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
-      "reviewedAtSec": 1791197520,
-      "expiresAtSec": 1793789520,
+      "reviewer": "Claude (D02 evidence lane; original review P4OftCohortPlans reviewed runtime and complete peer census)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://docs.brix.money/resources/contracts",
         "https://eth.blockscout.com/api/v2/smart-contracts/0x698b7518711bde4832fdc19f5262df705c713006",
