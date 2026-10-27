@@ -24,7 +24,7 @@ describe("DepegOutlookHero source availability", () => {
     expect(markup).toContain("peg summary unavailable");
     expect(markup).not.toContain("0 / 0");
     expect(markup).not.toContain("0 bps");
-    expect(markup).not.toContain("all pegs holding");
+    expect(markup).not.toContain("coins with open confirmed incidents");
   });
 
   it("renders an unavailable median independently of observed cohort and historical counts", () => {
@@ -47,10 +47,25 @@ describe("DepegOutlookHero source availability", () => {
 
   it("preserves successful zero counts rather than treating zero as unavailable", () => {
     const markup = renderHero(observedZero, 0, 0);
-    expect(markup).toContain("all pegs holding");
+    // Zero open incidents is not a claim that every peg holds.
+    expect(markup).toContain("coins with open confirmed incidents");
+    expect(markup).not.toContain("all pegs holding");
     expect(markup).toContain("crossings");
     expect(markup).toContain("of the peg catalog");
     expect(markup).not.toContain("unavailable");
+  });
+});
+
+describe("DepegOutlookHero open-incident wording", () => {
+  it("counts coins with open confirmed incidents, independent of current recovery evidence", () => {
+    const one = renderToStaticMarkup(
+      <DepegOutlookHero stats={{ ...observedZero, activeDepegCount: 1 }} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set(["a"])} />,
+    );
+    expect(one).toContain("coin with an open confirmed incident");
+    expect(one).toContain("halo marks an elevated coin with an open confirmed incident");
+    expect(one).not.toContain("right now");
+    const many = renderHero({ ...observedZero, activeDepegCount: 3 }, 0, 0);
+    expect(many).toContain("coins with open confirmed incidents");
   });
 });
 

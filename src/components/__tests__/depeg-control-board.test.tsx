@@ -106,11 +106,11 @@ describe("DepegControlBoard", () => {
     expect(within(row).queryByText("unknown")).toBeNull();
   });
 
-  it.each(["live", "pending", "floor", "warning", "danger"] as const)(
+  it.each(["open", "pending", "floor", "warning", "danger"] as const)(
     "preserves the known %s status ahead of unknown observations",
     (status) => {
       const row = makeRow({
-        activeDepeg: status === "live",
+        activeDepeg: status === "open",
         depegEventCoverageLimited: status === "floor",
         currentDeviationBps: null,
         pegScore: null,
@@ -126,6 +126,29 @@ describe("DepegControlBoard", () => {
       expect(within(renderedRow).queryByText("unknown")).toBeNull();
     },
   );
+
+  it.each([
+    ["outside", "Observed outside recovery band"],
+    ["inside", "Inside recovery band, awaiting confirmation"],
+    ["unconfirmed", "Recovery unconfirmed"],
+    [null, "Recovery unconfirmed"],
+  ] as const)("labels an open incident's %s evidence beside its lifecycle pill", (evidence, label) => {
+    const row = makeRow({ activeDepeg: true, currentDeviationBps: 0 });
+    row.openIncidentEvidence = evidence;
+    renderBoard([row]);
+    const renderedRow = screen.getByRole("button", { name: /open susd depeg detail/i });
+    expect(within(renderedRow).getByText("open")).toBeTruthy();
+    expect(within(renderedRow).getByText(label)).toBeTruthy();
+    expect(within(renderedRow).queryByText("live")).toBeNull();
+  });
+
+  it("adds no incident evidence to rows without an open incident", () => {
+    const row = makeRow({ activeDepeg: false });
+    row.openIncidentEvidence = "outside";
+    renderBoard([row]);
+    const renderedRow = screen.getByRole("button", { name: /open susd depeg detail/i });
+    expect(within(renderedRow).queryByText("Observed outside recovery band")).toBeNull();
+  });
 
   it.each([1, 2])("labels %s DEX check observations as price sources", (sourcePools) => {
     renderBoard([makeRow({

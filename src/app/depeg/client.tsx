@@ -4,7 +4,7 @@ import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePegSummary, useStressSignals } from "@/hooks/api-hooks";
-import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
+import { useActiveDepegEvents, useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { useQuerySlice } from "@/hooks/use-query-slice";
 import { logosById } from "@/lib/logos";
@@ -22,6 +22,7 @@ import { isResolverBookAvailable, summarizeResolverBook } from "@/components/dep
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
+import { classifyOpenIncidentEvidence } from "@shared/lib/active-depegs";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import type { PegCurrency, GovernanceType } from "@shared/types";
@@ -102,6 +103,8 @@ export function DepegClient() {
     meta: eventsMeta,
     refetch: refetchEvents,
   } = useInfiniteDepegEvents({ includePending: true });
+  // Detail for open incidents only: the board's evidence labels, never the census.
+  const { data: activeEventsData } = useActiveDepegEvents();
   const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
   const resolverSlice = useQuerySlice(resolver);
   const resolverReviewSlice = useQuerySlice(resolverReview);
@@ -158,13 +161,16 @@ export function DepegClient() {
       coin,
       dews: dewsData?.signals?.[coin.id] ?? null,
       pendingIncident: pendingByCoin.get(coin.id) ?? null,
+      openIncidentEvidence: coin.activeDepeg
+        ? classifyOpenIncidentEvidence(activeEventsData?.events, coin.id, nowSeconds)
+        : null,
     }));
-  }, [filteredPegCoins, dewsData, pendingByCoin]);
+  }, [filteredPegCoins, dewsData, pendingByCoin, activeEventsData, nowSeconds]);
   const trackedIds = useMemo(
     () => (pegData?.coins ? new Set(pegData.coins.map((coin) => coin.id)) : undefined),
     [pegData],
   );
-  // Coins in a confirmed live depeg. Same response as the hero's headline count,
+  // Coins with an open confirmed incident. Same response as the hero's headline count,
   // though the headline excludes NAV tokens while this set does not — see the
   // eligibility note in docs/depeg-page.md.
   const activeDepegIds = useMemo(

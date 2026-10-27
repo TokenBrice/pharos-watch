@@ -20,7 +20,7 @@ import {
 } from "@/components/depeg-board-model";
 import { DeviationBar, LinearGauge, EventLoadMeter } from "@/components/depeg-board-primitives";
 import type { PegCurrency, GovernanceType } from "@shared/types";
-import { GOVERNANCE_FILTER_OPTIONS, PEG_FILTER_OPTIONS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
+import { GOVERNANCE_FILTER_OPTIONS, OPEN_INCIDENT_EVIDENCE_LABELS, PEG_FILTER_OPTIONS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import { formatCurrency, formatElapsedSeconds, formatPegOccupancy, formatTrackingSpanDays } from "@shared/lib/format";
 import type { ThreatBand } from "@shared/lib/classification";
 
@@ -166,6 +166,9 @@ function InstrumentRow({
           <span className={cn("inline-flex items-center rounded-sm border px-1.5 py-0.5 text-xs font-semibold uppercase leading-none", statusClassName(row))}>
             {statusLabel(row)}
           </span>
+          {coin.activeDepeg ? (
+            <span className="pharos-meta">{OPEN_INCIDENT_EVIDENCE_LABELS[row.openIncidentEvidence ?? "unconfirmed"]}</span>
+          ) : null}
           <span className="pharos-meta pharos-numeric">{eventAge}</span>
           <span className="pharos-meta pharos-numeric">{coin.pegCurrency}</span>
         </div>

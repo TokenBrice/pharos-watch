@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   useStressSignals: vi.fn(),
   useDepegResolverSurfaces: vi.fn(),
   useInfiniteDepegEvents: vi.fn(),
+  useActiveDepegEvents: vi.fn(),
   useUrlFilters: vi.fn(),
   QueryFreshnessNotices: vi.fn(),
 }));
@@ -40,6 +41,7 @@ vi.mock("@/hooks/api-hooks", () => ({
 
 vi.mock("@/hooks/use-depeg-events", () => ({
   useInfiniteDepegEvents: mocks.useInfiniteDepegEvents,
+  useActiveDepegEvents: (...args: unknown[]) => mocks.useActiveDepegEvents(...args) ?? { data: undefined },
 }));
 
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({
@@ -98,10 +100,11 @@ vi.mock("@/components/dews-alert-feed", () => ({
 }));
 
 vi.mock("@/components/depeg-control-board", () => ({
-  DepegControlBoard: ({ rows }: { rows: Array<{ coin: { id: string }; pendingIncident?: unknown }> }) => (
+  DepegControlBoard: ({ rows }: { rows: Array<{ coin: { id: string }; pendingIncident?: unknown; openIncidentEvidence?: string | null }> }) => (
     <div
       data-testid="depeg-control-board"
       data-row-ids={rows.map((row) => row.coin.id).join(",")}
+      data-evidence={rows.map((row) => `${row.coin.id}:${row.openIncidentEvidence ?? "none"}`).join(",")}
       data-pending-rows={String(rows.filter((row) => row.pendingIncident).length)}
     >
       <span>Leaderboard controls</span>
@@ -188,6 +191,41 @@ describe("DepegClient", () => {
     const hero = screen.getByTestId("depeg-hero");
     expect(hero.dataset.pending).toBe(missing === "events" ? "null" : "0");
     expect(hero.dataset.alerts).toBe(missing === "dews" || missing === "peg" ? "null" : "1");
+  });
+
+  it("labels open incidents from their unique event's latest trusted observation, without touching the census", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const coverage = (kind: "trusted-off-peg" | "trusted-at-par", at: number) => ({
+      intervals: kind === "trusted-off-peg" ? [[at - 600, at]] : [],
+      atParIntervals: kind === "trusted-at-par" ? [[at - 600, at]] : [],
+      lastObservationKind: kind,
+      lastTrustedObservationAt: at,
+      gapStartedAt: kind === "trusted-at-par" ? at - 600 : null,
+    });
+    mocks.useActiveDepegEvents.mockReturnValue({ data: { events: [
+      { id: 1, stablecoinId: "off", endedAt: null, priceCoverage: coverage("trusted-off-peg", NOW_SEC - 60) },
+      { id: 2, stablecoinId: "par", endedAt: null, priceCoverage: coverage("trusted-at-par", NOW_SEC - 1_200) },
+      { id: 3, stablecoinId: "dup", endedAt: null, priceCoverage: coverage("trusted-off-peg", NOW_SEC - 60) },
+      { id: 4, stablecoinId: "dup", endedAt: null, priceCoverage: coverage("trusted-off-peg", NOW_SEC - 60) },
+    ] } });
+    mountDepegRoute({ coins: [
+      makeCoin("off", "OFF", { activeDepeg: true, currentDeviationBps: 0 }),
+      makeCoin("par", "PAR", { activeDepeg: true }),
+      makeCoin("dup", "DUP", { activeDepeg: true }),
+      makeCoin("blind", "BLIND", { activeDepeg: true }),
+      makeCoin("calm", "CALM"),
+    ] });
+    // Spot zero does not override a current off-peg observation; missing or
+    // ambiguous detail stays unconfirmed; non-incident rows carry no label.
+    expect(screen.getByTestId("depeg-control-board").dataset.evidence)
+      .toBe("off:outside,par:inside,dup:unconfirmed,blind:unconfirmed,calm:none");
+    expect(screen.getByTestId("depeg-hero").dataset.activeIds).toBe("off,par,dup,blind");
+
+    // The page minute clock expires the at-par reading past the 1,200-second limit.
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(screen.getByTestId("depeg-control-board").dataset.evidence)
+      .toBe("off:outside,par:unconfirmed,dup:unconfirmed,blind:unconfirmed,calm:none");
   });
 
   it("preserves observed zero pending and DEWS counts from successful empty sources", () => {

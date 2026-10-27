@@ -57,7 +57,7 @@ export function HomeMarketStateLine({ nowMs }: { nowMs?: number }): React.JSX.El
         {activeDepegCount !== null ? (
           <>
             <span className="pharos-numeric font-medium text-foreground">{activeDepegCount}</span>
-            <span>active {activeDepegCount === 1 ? "depeg" : "depegs"}</span>
+            <span>{activeDepegCount === 1 ? "coin with an open confirmed incident" : "coins with open confirmed incidents"}</span>
           </>
         ) : (
           <>

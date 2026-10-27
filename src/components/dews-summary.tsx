@@ -417,7 +417,7 @@ function DEWSRadar({
       const idx = rovingOrder.findIndex((c) => c.id === coin.id);
       const position = idx >= 0 ? `${idx + 1} of ${rovingOrder.length}` : `${rovingOrder.length}`;
       const mcap = coin.mcap != null ? `, ${formatCompactUsd(coin.mcap)} market cap` : ", supply unavailable";
-      const depeg = activeDepegIds?.has(coin.id) ? ", in confirmed depeg" : "";
+      const depeg = activeDepegIds?.has(coin.id) ? ", with an open confirmed incident" : "";
       return `${position}: ${coin.symbol}, ${THREAT_BAND_LABELS[coin.band]} band${depeg}${mcap}`;
     },
     [rovingOrder, activeDepegIds],
@@ -606,7 +606,7 @@ function DEWSLegend({
             <circle cx={10} cy={6} r={3} fill="var(--color-muted-foreground)" />
             <circle cx={10} cy={6} r={5.5} fill="none" stroke="var(--color-muted-foreground)" strokeWidth={1.25} />
           </svg>
-          <span className="text-xs text-muted-foreground">Elevated, in depeg ({activeDepegCount})</span>
+          <span className="text-xs text-muted-foreground">Elevated, open confirmed incident ({activeDepegCount})</span>
         </div>
       ) : null}
       <span className="pharos-meta ml-auto">Updated {updatedAtLabel}</span>

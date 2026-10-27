@@ -80,16 +80,18 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
   layer. Supporting figures stay neutral.
 - **Right field:** `DEWSRadarPanel` (`src/components/dews-summary.tsx`) fills the full column height
   beside the rail. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
-  band, and a **double-ring halo marks an elevated coin that is also in a confirmed live depeg**
+  band, and a **double-ring halo marks an elevated coin that also has an open confirmed incident**
   (`PegSummaryCoin.activeDepeg` intersected with the radar's elevated set — see
   [Universe scope](#universe-scope)). Every shape carries a field.
   Unavailable supply retains a neutral, band-based size rather than the measured-small tier.
   Tooltip and keyboard announcements name missing supply; an explicit observed zero remains a
   measured-zero cap, and unavailable caps sort after observations within each severity band.
 - **Footer band:** conditional reliability caveats only, and nothing when the data is healthy.
-- **Calm state:** at zero active depegs the headline reads `0 — all pegs holding` and no halos are
+- **Open-incident wording:** the headline counts coins with open confirmed incidents
+  (`endedAt=null`), not coins observed off peg now; recovery may be observed but not yet
+  confirmed. At zero it reads `0 coins with open confirmed incidents` and no halos are
   drawn, but the radar still plots precursor WATCH/ALERT coins. Zero confirmed incidents is not the
-  same claim as zero stress.
+  same claim as zero stress, nor that every peg holds.
 - **Independent availability:** missing peg summary, DEWS snapshot/catalog or first event page yields `—` and a source-specific reason for its headline figures. Successful empty responses retain observed zeroes; a query error never manufactures an empty observation.
 
 ### Metric ownership
@@ -168,6 +170,16 @@ behind an explicit toggle that mounts them only when opened.
 
 `DepegControlBoard` is the exact-value workbench: URL-backed filters, sort modes, ranked rows,
 pagination. It owns per-coin values only; page-level aggregates belong to the hero.
+
+An open confirmed incident's lifecycle pill reads `open`. Beside it,
+`classifyOpenIncidentEvidence()` (`shared/lib/active-depegs.ts`, labels in
+`shared/lib/classification/depeg.ts`) names the latest trusted observation of the coin's
+unique open event from the active-events detail read: a gap-free off-peg observation within
+`DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC` reads "Observed outside recovery band"; a trusted
+at-par observation within that limit reads "Inside recovery band, awaiting confirmation";
+missing, ambiguous, blind, expired or future evidence reads "Recovery unconfirmed". Spot
+bps never classify the band, the page minute clock expires the readings, and the census
+stays `summary.activeDepegCount`, never the capped event detail.
 
 An absent live deviation or DEWS reading yields a neutral `unknown` status, never green `clear`;
 known live, pending, floor, warning and danger states retain precedence. Nullable peg-health,

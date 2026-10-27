@@ -53,3 +53,12 @@ describe("DEWSRadarPanel radar logos", () => {
     expect(getByText("Supply unavailable")).toBeTruthy();
   });
 });
+
+describe("DEWSRadarPanel open-incident halos", () => {
+  it("describes a haloed coin as having an open confirmed incident, not a live depeg", () => {
+    const { getByRole, getByText } = render(<DEWSRadarPanel activeDepegIds={new Set(["usdc-circle"])} />);
+    expect(getByRole("button", { name: /USDC.*with an open confirmed incident/ })).toBeTruthy();
+    expect(getByText("Elevated, open confirmed incident (1)")).toBeTruthy();
+    expect(getByRole("button", { name: /FRAX/ }).getAttribute("aria-label")).not.toContain("incident");
+  });
+});

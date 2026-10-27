@@ -16,7 +16,7 @@ import type { PegSummaryStats } from "@shared/types";
 
 interface DepegOutlookHeroProps {
   stats: PegSummaryStats | null | undefined;
-  /** Coins in a confirmed live depeg. Drives the radar halos. */
+  /** Coins with an open confirmed incident. Drives the radar halos. */
   activeDepegIds: ReadonlySet<string>;
   /** Coins in the live peg summary (the peg catalog); null while it is unread. */
   catalogCount?: number | null;
@@ -107,13 +107,14 @@ export function DepegOutlookHero({
                 </span>
               </RailHeroFigureTransition>
               <span className="text-sm text-muted-foreground">
-                {/* "All pegs holding" is a claim about data we have. Without a peg
-                    summary the honest reading is that we cannot say. */}
+                {/* An open lifecycle record, not a claim that the coin is off peg
+                    now: recovery may be observed but not yet confirmed. Without a
+                    peg summary the honest reading is that we cannot say. */}
                 {!stats
                   ? "peg summary unavailable"
-                  : activeCount === 0
-                    ? "all pegs holding"
-                    : `confirmed ${activeCount === 1 ? "depeg" : "depegs"} right now`}
+                  : activeCount === 1
+                    ? "coin with an open confirmed incident"
+                    : "coins with open confirmed incidents"}
               </span>
               {worst ? (
                 <span
@@ -209,7 +210,7 @@ export function DepegOutlookHero({
             <h2 className="pharos-section-title">
               <MethodologyLabel topic="dews">DEWS early warning</MethodologyLabel>
             </h2>
-            <p className="pharos-meta">every DEWS-covered asset · halo marks an elevated coin in confirmed depeg</p>
+            <p className="pharos-meta">every DEWS-covered asset · halo marks an elevated coin with an open confirmed incident</p>
           </div>
           <DEWSRadarPanel
             logos={logos}
