@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "GhoDirectFacilitator GSMs Mainnet",
-      "pct": 41.630945892818,
+      "pct": 35.588856171305,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave DAO mainnet GHO stability modules",
@@ -47,7 +47,7 @@
     },
     {
       "name": "stataUSDT GSM",
-      "pct": 2.718124202359,
+      "pct": 8.760213923857,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -118,7 +118,7 @@
     {
       "sourceKey": "gho:0x3a3868898305f04bec7fea77becff04c13444112",
       "name": "stataUSDC GSM",
-      "pct": 0.000000004966,
+      "pct": 0.000000004981,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -129,8 +129,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map WS1.D reserve research",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l1)",
     "confidence": "verified",
     "sources": [
       {
@@ -158,21 +158,25 @@
         "url": "https://ethereum-rpc.publicnode.com"
       },
       {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26285175 (2026-10-27T16:14:35Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
         "label": "Verified Gsm4626 implementation ABI for UNDERLYING_ASSET (accessed 2026-09-30)",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x320Be97B4d10b6d20a05cAE53a479Fa2A0187e8e"
       }
     ],
-    "rationale": "Pinned Ethereum block 26088256, timestamp 1790746727 (2026-09-30), reconciles eight registered facilitator bucket levels to 699,000,000 GHO supply. The reviewed address-book GSMs report positive getUsed plus getCurrentBacking excess: stataUSDT $18,999,688.174487 and stataUSDC $0.034709. Both are unfrozen and unseized. Same-block UNDERLYING_ASSET reads resolve the USDC module to receipt 0xd4fa2d31b7968e448877f69a96de69f5de8cd23e and the USDT module to receipt 0x7bc3485026ac48b6cf9baf0a377477fff5703af8; their asset() getters return canonical Ethereum USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and USDT 0xdac17f958d2ee523a2206206994597c13d831ec7. These are Aave receipt claims, not idle issuer-token custody. The adapter attributes measured claims only to their mainnet parent and retains the uncovered balance as unknown. Increased precision preserves positive USDC dust. The $291,000,311.790804 uncovered mainnet allocation cannot be resolved to further issuers from these reads.",
-    "compositionBasis": "Same-block Ethereum facilitator bucket levels, totalSupply and tracked GSM getUsed/getCurrentBacking at block 26088256; adapter-derived parent-local issuance attribution",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "Pinned Ethereum block 26285175 (hash 0xa86483d8286713b73125b62e640f380b17af4c93a34cfd452f6bed94f27e9e4d, timestamp 2026-10-27T16:14:35Z) reconciles eight registered facilitator bucket levels (Core 135,000,000; Plasma 50,000,000; mainnet GSMs 310,000,000; Lido 45,000,000; Horizon 59,000,000; Arbitrum 50,000,000; Monad 50,000,000; FlashMinter 0) to the 699,000,000 GHO totalSupply. The facilitator registry still lists the same eight addresses. The reviewed address-book GSMs report positive getUsed plus getCurrentBacking excess: stataUSDT $61,233,895.327762 (used 61,230,772.260462 plus excess 3,123.0673) and stataUSDC $0.034817. Both are unfrozen and unseized. Module identities (Aave receipt claims on USDC and USDT, not idle issuer-token custody) are those verified at block 26088256 and were not re-resolved at this block. The adapter attributes measured claims only to their mainnet parent and retains the uncovered balance as unknown; the $248,766,104.637421 uncovered mainnet allocation cannot be resolved to further issuers from these reads. Weights are recomputed from this block; the stataUSDT claim rose from $18,999,688.174487 at block 26088256.",
+    "compositionBasis": "Same-block Ethereum facilitator bucket levels, totalSupply and tracked GSM getUsed/getCurrentBacking at block 26285175; adapter-derived parent-local issuance attribution",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "Mainnet residual and remote Arbitrum/Monad issuance together remain 55.93709753802633% unresolved at the constituent level. These are research surfaces, not proven issuer-specific holdings. Measured GSM holdings are linked; unmeasured submodule allocations are withheld. Issuer questionnaire pending.",
-    "knownUnknownExposurePct": 55.93709753802633,
+    "knownUnknownExposure": "Mainnet residual and remote Arbitrum/Monad issuance together remain 49.895007816512% unresolved at the constituent level. These are research surfaces, not proven issuer-specific holdings. Measured GSM holdings are linked; unmeasured submodule allocations are withheld. Issuer questionnaire pending.",
+    "knownUnknownExposurePct": 49.895007816512,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "GhoDirectFacilitator GSMs Mainnet",
-        "pct": 41.630945892818,
+        "pct": 35.588856171305,
         "disposition": "basket-needs-split",
         "rationale": "Blocked on a reconciled inventory of the mainnet facilitator's reserve and downstream modules. The measured USDC and USDT GSM backing has already been deducted locally; the remaining issuance does not establish any additional issuer allocation."
       },
