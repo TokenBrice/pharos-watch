@@ -25,8 +25,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (FixInv5)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
     "confidence": "verified",
     "sources": [
       {
@@ -42,33 +42,33 @@
         "url": "https://developers.skyeco.com/protocol/tokens/susds/"
       },
       {
-        "label": "Ethereum xDAI Foreign Bridge collateral-token reads at block 26095806",
+        "label": "Ethereum xDAI Foreign Bridge collateral-token reads at block 26285088",
         "url": "https://etherscan.io/address/0x4aa42145Aa6Ebf72e164C9bBC74fbD3788045016#readProxyContract"
       },
       {
-        "label": "Ethereum sUSDS balance and max-withdraw reads at block 26095806",
+        "label": "Ethereum sUSDS balance and max-withdraw reads at block 26285088",
         "url": "https://etherscan.io/address/0xa3931d71877C0E7a3148CB7Eb4463524FEc27fbD#readProxyContract"
       },
       {
-        "label": "Gnosis xDAI Home Bridge burnt-coin read at block 48529298",
+        "label": "Gnosis xDAI Home Bridge burnt-coin read at block 48971844",
         "url": "https://gnosis.blockscout.com/address/0x7301CFA0e1756B71869E93d4e4Dca5c7d0eb0AA6?tab=read_proxy"
       },
       {
-        "label": "Gnosis BlockReward bridge-mint read at block 48529298",
+        "label": "Gnosis BlockReward bridge-mint read at block 48971844",
         "url": "https://gnosis.blockscout.com/address/0x481c034c6d9441db23Ea48De68BCAe812C5d39bA?tab=read_contract"
       },
       {
-        "label": "Ethereum block 26095806 (2026-10-01T06:54:35Z)",
-        "url": "https://etherscan.io/block/26095806"
+        "label": "Ethereum block 26285088 (2026-10-27T15:57:11Z)",
+        "url": "https://etherscan.io/block/26285088"
       },
       {
-        "label": "Gnosis block 48529298 (2026-10-01T06:54:40Z)",
-        "url": "https://gnosis.blockscout.com/block/48529298"
+        "label": "Gnosis block 48971844 (2026-10-27T15:57:10Z)",
+        "url": "https://gnosis.blockscout.com/block/48971844"
       }
     ],
-    "rationale": "Re-fetched fixed-block reads at Ethereum block 26095806 (2026-10-01T06:54:35Z) identify USDS and sUSDS as the Foreign Bridge's collateral tokens. The bridge holds 823,108.741077534044999388 liquid USDS and 48,331,262.650941988724367273 sUSDS shares, with maxWithdraw returning 53,711,261.055768077689618397 USDS. Normalizing liquid USDS and max-withdrawable sUSDS value gives 1.51% USDS and 98.49% sUSDS, rounded to two decimals; 0.052688189469517749 legacy DAI and zero sDAI remain immaterial dust. Gnosis block 48529298 (2026-10-01T06:54:40Z) records 1,337,958,897.531459019251049888 bridge-minted xDAI and 1,283,840,434.163870179025493045 burned, leaving 54,118,463.367588840225556843 outstanding. These on-chain observations do not constitute an independent attestation. Keep both escrow collateral rows visible; underlying USDS/sUSDS mint risk belongs to those assets rather than xDAI native mint authority.",
+    "rationale": "Re-fetched fixed-block reads at Ethereum block 26285088 (2026-10-27T15:57:11Z) identify USDS and sUSDS as the Foreign Bridge's collateral tokens. The bridge holds 773,682.602436520116242809 liquid USDS and 45,272,577.047624842050223491 sUSDS shares, with maxWithdraw and convertToAssets both returning 50,446,169.883333154916306758 USDS. Normalizing liquid USDS and max-withdrawable sUSDS value gives 1.51% USDS and 98.49% sUSDS, rounded to two decimals; 0.052688189469517749 legacy DAI and zero sDAI remain immaterial dust. Gnosis block 48971844 (2026-10-27T15:57:10Z) records 1,338,911,982.332838275772464532 bridge-minted xDAI and 1,288,118,284.024356137905416228 burned, leaving 50,793,698.308482137867048304 outstanding. These on-chain observations do not constitute an independent attestation. Keep both escrow collateral rows visible; underlying USDS/sUSDS mint risk belongs to those assets rather than xDAI native mint authority.",
     "compositionBasis": "Timestamp-aligned fixed-block Ethereum Foreign Bridge USDS balance and sUSDS maxWithdraw fair value; Gnosis bridge mint-minus-burn accounting separately observed.",
-    "compositionAsOf": "2026-10-01",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No material reserve constituent remains unidentified; 0.052688189469517749 legacy DAI remains as quantified dust after the completed migration.",
     "knownUnknownExposurePct": 0,
