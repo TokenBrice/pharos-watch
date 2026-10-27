@@ -4,6 +4,7 @@ import {
   SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
 } from "../safety-score-v9/consumer-freshness";
 import { SAFETY_SCORE_V9_PUBLICATION_REFRESH_INTERVAL_SEC } from "@shared/lib/cron-jobs";
+import { getPublicSafetyScoreStatus } from "@shared/lib/public-health";
 
 describe("Safety Score V9 consumer freshness", () => {
   const currentHealth = {
@@ -92,5 +93,15 @@ describe("Safety Score V9 consumer freshness", () => {
         nowSec,
       ),
     ).toBe(false);
+  });
+
+  it("keeps the intentional held divergence: current-only rejects, public health tolerates", () => {
+    const nowSec = 1_800_000_000;
+    const held = {
+      ...currentHealth, status: "held" as const, acceptedAtSec: nowSec - 60,
+      attemptedAtSec: nowSec, heldSinceSec: nowSec - 30, reasons: [{ code: "dex-stale" as const }],
+    };
+    expect(isSafetyScoreV9SnapshotFresh({ updatedAt: nowSec - 60, publicationHealth: held }, nowSec)).toBe(false);
+    expect(getPublicSafetyScoreStatus(held, nowSec)).toBe("healthy");
   });
 });

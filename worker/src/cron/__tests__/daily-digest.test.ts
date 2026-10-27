@@ -351,6 +351,20 @@ describe("intelligence, prompt, and regime contracts", () => {
 });
 
 describe("market and risk collectors", () => {
+  it("suppresses Safety copy when the accepted publication is past the consumer budget", async () => {
+    const ctx = ctxFor([]);
+    const cards = [{ id: "usdt-tether", overallGrade: "A", overallScore: 88 }];
+    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValueOnce(canonicalSafetySource(cards, ctx.nowSec - 7_200));
+    expect((await collectSafetyScores(ctx, new Set(["USDT"]))).value.safetyContext).toMatchObject({ status: "available" });
+    vi.mocked(loadActiveSafetyScoreCohort).mockResolvedValueOnce(canonicalSafetySource(cards, ctx.nowSec - 7_201));
+    const stale = await collectSafetyScores(ctx, new Set(["USDT"]));
+    expect(stale.degradedReasons).toEqual(["safety-canonical-snapshot"]);
+    expect(stale.value).toMatchObject({
+      safetyScores: undefined, safetyGrades: undefined, safetyIdentity: undefined,
+      safetyContext: { status: "unavailable", identity: null, reason: "v9-snapshot-stale" },
+    });
+  });
+
   it.each(["complete", "page-failure", "count-mismatch"] as const)(
     "drains indexed 500-row organic identity pages before stamping %s accounting",
     async (mode) => {

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { ActiveSafetyScoreIndex } from "../safety-score-index";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
+import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../safety-score-v9/consumer-freshness";
 
 const mockLoadActiveSafetyScoreIndex = vi.fn();
 
@@ -11,6 +12,7 @@ vi.mock("../safety-score-index", () => ({
 const {
   checkDigestSafetyContextForDelivery,
   digestSafetyContextFromPersistedInput,
+  digestSafetyContextFromSource,
   findUnboundDigestSafetyClaimMarkers,
 } = await import("../digest-safety-context");
 
@@ -52,7 +54,7 @@ describe("digest Safety Score delivery context", () => {
 
   it("allows only the exact authored publication generation", async () => {
     await expect(
-      checkDigestSafetyContextForDelivery({} as D1Database, authored),
+      checkDigestSafetyContextForDelivery({} as D1Database, authored, undefined, 200),
     ).resolves.toEqual({ kind: "ok" });
 
     mockLoadActiveSafetyScoreIndex.mockResolvedValueOnce(
@@ -61,6 +63,35 @@ describe("digest Safety Score delivery context", () => {
     await expect(
       checkDigestSafetyContextForDelivery({} as D1Database, authored),
     ).resolves.toEqual({ kind: "stale", reason: "identity-mismatch" });
+  });
+
+  it("expires an exact-identity delivery once the accepted publication leaves the consumer budget", async () => {
+    const boundary = 110 + SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC;
+    await expect(
+      checkDigestSafetyContextForDelivery({} as D1Database, authored, undefined, boundary),
+    ).resolves.toEqual({ kind: "ok" });
+    await expect(
+      checkDigestSafetyContextForDelivery({} as D1Database, authored, undefined, boundary + 1),
+    ).resolves.toEqual({ kind: "unavailable", reason: "v9-snapshot-stale" });
+    await expect(
+      checkDigestSafetyContextForDelivery({} as D1Database, authored, undefined, 109),
+    ).resolves.toEqual({ kind: "unavailable", reason: "v9-snapshot-stale" });
+  });
+
+  it("binds authored context only to an accepted publication inside the consumer budget", () => {
+    const boundary = 110 + SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC;
+    expect(digestSafetyContextFromSource(activeV9(), boundary)).toMatchObject({
+      status: "available", identity, publishedAt: 110, reason: null,
+    });
+    for (const nowSec of [boundary + 1, 109, Number.NaN]) {
+      expect(digestSafetyContextFromSource(activeV9(), nowSec)).toEqual({
+        status: "unavailable", expectedModel: "v9", identity: null, publishedAt: null, reason: "v9-snapshot-stale",
+      });
+    }
+    const held = activeV9();
+    expect(digestSafetyContextFromSource({
+      kind: "held", reason: "v9-publication-held", detail: "held", snapshot: held.snapshot,
+    }, 110)).toMatchObject({ status: "unavailable", reason: "v9-publication-held" });
   });
 
   it("defers delivery while the activated V9 identity is unavailable", async () => {

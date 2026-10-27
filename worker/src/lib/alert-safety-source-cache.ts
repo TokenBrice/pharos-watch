@@ -1,4 +1,7 @@
-import { safetyScorePublicationIdentitiesAreComparable } from "@shared/lib/safety-score-publication";
+import {
+  assessSafetyScoreAcceptedEvidence,
+  safetyScorePublicationIdentitiesAreComparable,
+} from "@shared/lib/safety-score-publication";
 import { isRecord } from "@shared/lib/type-guards";
 import { resolveV9PublicWitnessText } from "@shared/types/safety-score-v9-public-witness-texts";
 import type { SafetyAlertSourceState } from "@shared/types";
@@ -61,13 +64,25 @@ function sourceDiagnostics(
   "acceptedPublicationGenerationId" | "freshnessMaxAgeSec" | "assessedAtSec"
 > {
   return {
-    ageSeconds: envelope == null ? null : Math.max(0, nowSec - envelope.publishedAt),
+    ageSeconds: envelope == null ? null : assessAlertEnvelopeClock(envelope, nowSec).ageSec,
     generation: envelope?.generation ?? null,
     sourcePublicationGenerationId: envelope?.publicationGenerationId ?? null,
     acceptedPublicationGenerationId,
     freshnessMaxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
     assessedAtSec: nowSec,
   };
+}
+
+function assessAlertEnvelopeClock(
+  envelope: Pick<AlertSafetySourceEnvelope, "publishedAt" | "publicationGenerationId">,
+  nowSec: number,
+) {
+  return assessSafetyScoreAcceptedEvidence({
+    acceptedGenerationId: envelope.publicationGenerationId,
+    acceptedAtSec: envelope.publishedAt,
+    nowSec,
+    maxAgeSec: SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC,
+  });
 }
 
 function heldPublicationDiagnostics(
@@ -147,12 +162,22 @@ export function assessAlertSafetyEnvelope(
   nowSec: number,
 ): AlertSafetySourceAssessment {
   const diagnostics = sourceDiagnostics(nowSec, envelope, envelope.publicationGenerationId);
-  if (diagnostics.ageSeconds != null && diagnostics.ageSeconds > SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC) {
+  const { reason } = assessAlertEnvelopeClock(envelope, nowSec);
+  if (reason === "accepted-evidence-stale") {
     return {
       state: "stale",
       ...diagnostics,
       envelope,
       failureReason: "v9-snapshot-stale",
+    };
+  }
+  // A future or unusable accepted clock is not evidence of a fresh source.
+  if (reason !== null) {
+    return {
+      state: "corrupt",
+      ...diagnostics,
+      envelope: null,
+      failureReason: reason === "accepted-evidence-future" ? "v9-snapshot-future" : "v9-snapshot-invalid",
     };
   }
   return {

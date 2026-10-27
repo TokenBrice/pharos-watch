@@ -27,7 +27,7 @@ import type {
   StablecoinPublicationHealth,
 } from "@shared/types/status";
 import { buildCacheStatuses, type CacheFreshnessDiagnostic, type CacheStatusFailure } from "./api-freshness";
-import { assessFreshnessTimestamp } from "./api-freshness-age";
+import { API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC, assessFreshnessTimestamp } from "./api-freshness-age";
 import {
   BLACKLIST_GAP_METRICS_DIAGNOSTIC_CACHE_TTL_SEC,
   BLACKLIST_GAP_METRICS_PRODUCER_SNAPSHOT_TTL_SEC,
@@ -729,7 +729,7 @@ export async function assessPublicHealth(
         ? `safety-score-publication:${acceptedTimestamp.reason}`
         : null;
   const safetyScorePublication = safetyScorePublicationUnavailableReason ? null : safetyScoreResult.value;
-  const safetyScoreImpactStatus = getPublicSafetyScoreStatus(safetyScorePublication, now);
+  const safetyScoreImpactStatus = getPublicSafetyScoreStatus(safetyScorePublication, now, API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC);
   if (safetyScorePublicationUnavailableReason) warnings.push(safetyScorePublicationUnavailableReason);
   else if (safetyScorePublication?.status === "held") warnings.push("safety-score-publication-held");
   else if (safetyScoreImpactStatus !== "healthy") warnings.push("safety-score-publication-stale");

@@ -292,6 +292,14 @@ describe("assessPublicHealth Safety Score publication", () => {
     expect(result.safetyScoreImpactStatus).toBe("degraded");
   });
 
+  it("keeps the API future-skew allowance at its boundary for the accepted clock", async () => {
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
+      safetyScorePublication: { ...current, acceptedAtSec: now + 60, attemptedAtSec: now + 60 },
+    }), now);
+    expect(result.safetyScorePublication).not.toBeNull();
+    expect(result.safetyScoreImpactStatus).toBe("healthy");
+  });
+
   it("does not admit missing publication or a future accepted clock", async () => {
     for (const publication of [null, { ...current, acceptedAtSec: now + 3600, attemptedAtSec: now + 3600 }]) {
       const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, { safetyScorePublication: publication }), now);
