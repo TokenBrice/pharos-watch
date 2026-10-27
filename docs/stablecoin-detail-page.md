@@ -201,7 +201,7 @@ The same first-read rule covers the hero DEWS, Peg Score, Liquidity and 30d Exce
 
 Liquidity styling requires a non-null score, regardless of measured pool count. Null is a neutral unavailable mark; numeric zero is measured zero. While the Pharos Bluechip roster is suspended, the external grade/report link grants no Pharos designation and its report date grants no tenure.
 
-NAV presentation does not consume the asset's peg-score, active-depeg, deviation or event fields as a fixed-peg verdict. Distressed requires measured active depeg or DEWS WARNING/DANGER, not merely a weak Safety Score. Weak published grades resolve to Low Safety Score/watch (`RISKY_GRADES` is D/F, not nonexistent D±), ahead of archetype labels except the NAV/yield hybrid. Pure NAV rows omit the Record fact and DepegHistory.
+NAV presentation does not consume the asset's peg-score, active-depeg, deviation or event fields as a fixed-peg verdict. Distressed requires measured active depeg or DEWS WARNING/DANGER, not merely a weak Safety Score. Weak published grades resolve to Low Safety Score/watch (`RISKY_GRADES` is D/F, not nonexistent D±), ahead of archetype labels except the NAV/yield hybrid. Uncategorized and the internal institutional-default archetype render no verdict chip (`isHeroVerdictShown`); the lane keeps its reserved height. Pure NAV rows omit the Record fact and DepegHistory.
 
 ### View transitions
 
