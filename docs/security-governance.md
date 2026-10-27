@@ -76,6 +76,8 @@ Keep [public RSC/static exclusions](./architecture.md#frontend-runtime-and-seo-s
 
 `shared/lib/site-csp.ts` owns both the nonce-aware runtime CSP and the static fallback policy used by Pages middleware, the ops-host asset gates, `public/_headers`, and the local static-export smoke server. `npm run check:site-csp-sync` fails when the managed `public/_headers` CSP lines drift; use `npx --no-install tsx scripts/ci/check-site-csp-sync.ts --write` only when intentionally regenerating those managed lines from the shared builder.
 
+Cloudflare Email Obfuscation is off for `pharos.watch` paths `/cemetery` and `/cemetery/` only, through one owner-applied Configuration Rule (2026-10-27): its injected `email-decode.min.js` throws on Cemetery's SVG grave anchors, and the page's issuer contact is already public. Other routes keep the zone default; do not widen the rule or rewrite the SVG anchors. Mobile smoke fails on that decoder signature.
+
 Keep `style-src 'unsafe-inline'` unless the Tailwind/Next style emission path is separately nonce- or hash-authorized. Do not add script `unsafe-inline` back for local convenience; fix the nonce transform or route-specific script instead.
 
 Route-specific exception: `/pharoswatchbot/app/` is the Telegram Mini App surface. `shared/lib/site-csp.ts` permits `'self' https://telegram.org` plus the per-request nonce in runtime HTML, drops Google Analytics script/image/connect origins, and sets `frame-ancestors https://telegram.org https://*.telegram.org`. Its static fallback has no nonce. Do not broaden that exception to other pages.

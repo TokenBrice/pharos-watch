@@ -245,6 +245,8 @@ Manual production capture: `node scripts/maintenance/probe-page-performance.mjs 
 
 Use the `test:smoke-*`, `validate:*-smoke`, `serve:static-export`, and `ops:*` commands in `package.json`. Choose the incident-specific procedure through the [documentation index](./README.md) before taking remedial action. Local smoke harnesses and operator watches are evidence tools; production deployment acceptance is owned by the release workflows and [Deployment Process](./deployment-process.md#operational-acceptance). `night-watch-worker --dry-run` prints its preview to stdout (`--json` selects JSON), preserves report, evidence, and checkpoint files, and performs no remote collection, including with `--fixture`. Ordinary fixture rendering remains a file-writing mode.
 
+Mobile UI smoke (`test:smoke-ui:mobile`) captures console errors/warnings and page errors per route with one listener pair detached after each check. It classifies complete, untruncated text: the generic fatal runtime matcher and the Cemetery email-decoder signature fail the route at any console level; other console output stays advisory and is truncated only for display.
+
 Pages smoke preserves unrelated `STATIC_EXPORT_*` overrides, but its selected host/port and nonblank API-key/site-secret fallbacks win over blank environment values.
 
 API smoke validates the complete redemption response with `RedemptionBackstopsResponseSchema`, including score/resolution coherence. A small wire adapter retains map-key identity, explicit status/eligibility fields and nonempty provider, methodology and source labels; it does not mirror the schema vocabulary.

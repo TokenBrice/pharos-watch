@@ -92,6 +92,8 @@ Cause, date and recorded peak determine the drawing. Peak is size at the top, ne
 
 Both layouts provide one roving tab stop, full accessible grave names, button/pressed semantics and described keyboard rules; decorative geometry is hidden from assistive technology. Desktop ←/→ moves within a cause, ↑/↓ across causes at nearest date, Home/End to ends; portrait swaps axes. Skip the cemetery map reaches the equivalent register. Hover/focus previews; click/Enter/Space pins and announces once politely; Escape/background closes (the next Escape exits zoom). Keyboard access reaches graves outside a partial zoom window, whose label discloses years and `n of total`. Session flowers are not dataset statistics.
 
+Grave targets are real SVG anchors; Cloudflare Email Obfuscation is disabled for this route because its decoder breaks on them ([CSP posture](./security-governance.md#csp-posture)).
+
 Exactly one responsive layer owns pin/key/tap events. Phone sheets keep record links and content clear of sticky/bottom navigation; layout handoff never reopens dismissed pins or replays scroll/focus. Hash-source portrait pins restore the tab stop, not a sheet covering the register. Reduced motion cuts beam, zoom and highlight transitions; no ambient motion is required.
 
 The server renders context, legend, count and desktop rest pose. Clients receive slim register rows/atlas, not the full dataset/model. Portrait mounting reserves its measured aspect against layout shift. No-JS CSS falls back to the desktop plan and register targets, subject to the page-shell visibility limitation below. Capacity failure requires design review, never lowering minimum face sizes.
