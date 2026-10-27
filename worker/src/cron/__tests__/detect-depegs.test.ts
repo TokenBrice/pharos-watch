@@ -21,6 +21,7 @@ vi.mock("@shared/lib/psi-eligible", () => ({
     { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", geckoId: "brz", flags: { navToken: false, pegCurrency: "BRL" }, commodityOunces: undefined },
     { id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", geckoId: "a7a5", flags: { navToken: false, pegCurrency: "RUB" }, commodityOunces: undefined },
     { id: "nav-token-test", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true }, commodityOunces: undefined },
+    { id: "iron-historical", symbol: "IRON", pegType: "peggedUSD", geckoId: "iron-stablecoin", flags: { navToken: false }, commodityOunces: undefined },
   ],
   PSI_ELIGIBLE_META_BY_ID: new Map([
     ["usdt-tether", { id: "usdt-tether", symbol: "USDT", pegType: "peggedUSD", geckoId: "tether", flags: { navToken: false, pegCurrency: "USD" }, commodityOunces: undefined }],
@@ -29,7 +30,9 @@ vi.mock("@shared/lib/psi-eligible", () => ({
     ["brz-transfero", { id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", geckoId: "brz", flags: { navToken: false, pegCurrency: "BRL" }, commodityOunces: undefined }],
     ["a7a5-old-vector", { id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", geckoId: "a7a5", flags: { navToken: false, pegCurrency: "RUB" }, commodityOunces: undefined }],
     ["nav-token-test", { id: "nav-token-test", symbol: "NAVT", pegType: "peggedUSD", geckoId: "nav-token", flags: { navToken: true, pegCurrency: "USD" }, commodityOunces: undefined }],
+    ["iron-historical", { id: "iron-historical", symbol: "IRON", pegType: "peggedUSD", geckoId: "iron-stablecoin", flags: { navToken: false, pegCurrency: "USD" }, commodityOunces: undefined }],
   ]),
+  PSI_HISTORICAL_IDS: new Set(["iron-historical"]),
 }));
 
 // Stub peg-rates
@@ -338,6 +341,34 @@ describe("detectDepegEvents", () => {
       status: "completed",
       census: { eligibleCount: 5, observedCount: 0, belowFloorCount: 0, unavailableCount: 5, reasonCounts: { "asset-absent": 5 } },
     });
+  });
+
+  it("excludes an absent historical member from the census but still flags a missing active member", async () => {
+    const active = () => [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1 }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", price: 1 }),
+      makeAsset({ id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", price: 1.08 }),
+      makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.18765951 }),
+      makeAsset({ id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", price: 0.02 }),
+    ];
+    const censusOf = async (assets: ReturnType<typeof makeAsset>[]) => {
+      const result = await detectDepegEvents(sqliteFixtures.open().db, assets);
+      if (result.status !== "completed") throw new Error("Expected a completed census");
+      return result.census;
+    };
+    // Historical IRON has no row: it is outside the denominator and never asset-absent.
+    const complete = await censusOf(active());
+    expect(complete.eligibleCount).toBe(5);
+    expect(complete.reasonCounts["asset-absent"]).toBeUndefined();
+    // A supplied historical row is still counted, and observed.
+    const withHistorical = await censusOf([...active(), makeAsset({ id: "iron-historical", symbol: "IRON", price: 1 })]);
+    expect(withHistorical.eligibleCount).toBe(6);
+    expect(withHistorical.observedCount).toBe(complete.observedCount + 1);
+    // A missing active member still flags as asset-absent.
+    const missingActive = await censusOf(active().slice(1));
+    expect(missingActive.eligibleCount).toBe(5);
+    expect(missingActive.reasonCounts["asset-absent"]).toBe(1);
+    expect(missingActive.unavailableCount).toBe(complete.unavailableCount + 1);
   });
 
   it.each([

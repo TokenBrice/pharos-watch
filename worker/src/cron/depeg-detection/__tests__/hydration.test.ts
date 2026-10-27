@@ -6,7 +6,7 @@ import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
 import { deriveDepegSignal } from "@shared/lib/depeg-signals";
 import { makeAsset } from "../../../test-helpers/__shared/fixtures";
 import { MAX_OPEN_DEPEG_EVENTS } from "../../../lib/constants";
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import { seedDexEvidence, seedOpenEvent } from "../../__tests__/detect-depegs.test-support";
 import { hydrateDepegDetection } from "../hydration";
 import { detectDepegEvents } from "../../detect-depegs";
@@ -130,7 +130,9 @@ describe("hydrateDepegDetection", () => {
         seededChanges = sqlite.prepare("SELECT total_changes() AS count").get();
       }
     } });
-    const eligibleCount = [...PSI_ELIGIBLE_META_BY_ID.values()].filter((meta) => !meta.flags.navToken).length;
+    // Absent off-catalog historical members are not expected, so they stay outside the census.
+    const eligibleCount = [...PSI_ELIGIBLE_META_BY_ID.values()]
+      .filter((meta) => !meta.flags.navToken && !PSI_HISTORICAL_IDS.has(meta.id)).length;
     await expect(detectDepegEvents(db, [])).resolves.toEqual({
       status: "held",
       reason: "depeg-open-event-limit-reached",

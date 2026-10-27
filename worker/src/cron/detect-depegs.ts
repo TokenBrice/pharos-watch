@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { rowPriceCoverage } from "../lib/depeg-helpers";
@@ -26,7 +26,12 @@ const CENSUS_ELIGIBLE_IDS: readonly string[] = [...PSI_ELIGIBLE_META_BY_ID]
   .filter(([, meta]) => !meta.flags.navToken)
   .map(([id]) => id);
 
-/** Counts each eligible ID once (first row wins); IDs with no row are `asset-absent`. */
+/**
+ * Counts each eligible ID once (first row wins); IDs with no row are
+ * `asset-absent`. Off-catalog historical members have no live price path, so
+ * they are counted only when a row is supplied: their absence is expected and
+ * must not leave every run incomplete. A missing active member still counts.
+ */
 function buildObservationCensus(
   outcomes: ReadonlyMap<string, DepegObservationOutcome>,
   evaluatedAt: number,
@@ -34,14 +39,17 @@ function buildObservationCensus(
   const census: DepegObservationCensus = {
     scope: "psi-non-nav-before-supply-floor",
     evaluatedAt,
-    eligibleCount: CENSUS_ELIGIBLE_IDS.length,
+    eligibleCount: 0,
     observedCount: 0,
     unavailableCount: 0,
     belowFloorCount: 0,
     reasonCounts: {},
   };
   for (const id of CENSUS_ELIGIBLE_IDS) {
-    const outcome = outcomes.get(id) ?? { kind: "unavailable", reason: "asset-absent" };
+    const supplied = outcomes.get(id);
+    if (!supplied && PSI_HISTORICAL_IDS.has(id)) continue;
+    census.eligibleCount++;
+    const outcome = supplied ?? { kind: "unavailable", reason: "asset-absent" };
     if (outcome.kind === "observed") {
       census.observedCount++;
     } else if (outcome.kind === "below-floor") {

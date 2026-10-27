@@ -33,7 +33,8 @@ export type DepegObservationOutcome =
 
 /**
  * Coverage receipt over the non-NAV PSI-eligible universe (historical members
- * included), counted before the live-event supply floor. Diagnostic only.
+ * only when they supply a row), counted before the live-event supply floor.
+ * Diagnostic only.
  */
 export interface DepegObservationCensus {
   scope: "psi-non-nav-before-supply-floor";
