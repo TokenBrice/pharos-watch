@@ -69,11 +69,10 @@ export function DependencyContextDetails({ card, context, marketCapAsOf }: {
   context: DetailDependencyContext;
   marketCapAsOf: number | null;
 }) {
-  const { exposure, upstreams } = context;
+  const { exposure, directKnown, upstreams } = context;
   const direct = exposure?.direct;
   const dependentCount = exposure?.dependentCount ?? 0;
   const excludedCount = direct?.excludedSupplyUnknownIds.length ?? 0;
-  const allSupplyUnknown = dependentCount > 0 && excludedCount === dependentCount;
   const roles = card.dependencies.roles;
   const coverage = card.dependencyCoverage;
   const hasDependents = dependentCount > 0;
@@ -94,7 +93,7 @@ export function DependencyContextDetails({ card, context, marketCapAsOf }: {
         <h3 className={DETAIL_MODULE_TITLE_CLASS}>What depends on me</h3>
         <p className="text-sm">
           <span className="font-mono tabular-nums">{dependentCount}</span> direct {dependentCount === 1 ? "dependent" : "dependents"}.
-          {" "}{allSupplyUnknown ? "Direct USD exposure unavailable." : <><span className="font-mono tabular-nums">{formatCurrency(direct?.knownUsd ?? 0)}</span> known direct exposure.</>}
+          {" "}{direct && directKnown ? <><span className="font-mono tabular-nums">{formatCurrency(direct.knownUsd)}</span> known direct exposure.</> : "Direct USD exposure unavailable."}
         </p>
         <p className="text-xs text-muted-foreground">
           Published links weighted by dependent market cap{marketCapAsOf === null ? "; market-cap date unavailable" : ` as of ${new Date(marketCapAsOf * 1000).toISOString().slice(0, 10)}`}.
