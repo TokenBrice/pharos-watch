@@ -246,7 +246,8 @@ async function main(): Promise<void> {
   const source = values.publication ? ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(resolve(values.publication as string), "utf8"))) : null;
   const admission = "sourceAdmissionBaseline" in capture ? parseSafetyScoreV9SourceAdmissionBaseline(capture.sourceAdmissionBaseline, fixedInput.clockSec) : undefined;
   const transferMaterialityGeneration = capture.transferMaterialityGeneration == null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration);
-  let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
+  // v3 accepted captures forward their prior accepted baseline so measured-route quarantine reproduces.
+  let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), ...(admission === undefined ? {} : { sourceAdmissionBaseline: admission?.baseline ?? null }), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
   const candidate = replay.pipeline.candidate;
   let publishedById: Map<string, ReplayCard> | null = null;
   if (source) {

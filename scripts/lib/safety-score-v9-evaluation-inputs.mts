@@ -129,6 +129,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/facts.ts",
   "shared/lib/safety-score-v9/formula.ts",
   "shared/lib/safety-score-v9/gap-index.ts",
+  "shared/lib/safety-score-v9/grade-hysteresis.ts",
   "shared/lib/safety-score-v9/lender-book-registry.ts",
   "shared/lib/safety-score-v9/lender-book.ts",
   "shared/lib/safety-score-v9/lender-collateral-classes.ts",

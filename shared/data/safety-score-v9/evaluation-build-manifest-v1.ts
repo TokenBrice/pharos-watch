@@ -42,7 +42,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "d733f3f28d881800d4787d0658d5deda79e82c5c3348afaa40cd99c1929f002a"
+      "sha256": "adf31a0094a68ddb3091ce4acc4c7f9f4da04430397bfc44dda926ee5e14422e"
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
@@ -563,6 +563,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     {
       "path": "shared/lib/safety-score-v9/gap-index.ts",
       "sha256": "9f7cc8381f7e34db20fd6605b3e1d4f3bb67d95809fb1eb1e1793e29ff827fb0"
+    },
+    {
+      "path": "shared/lib/safety-score-v9/grade-hysteresis.ts",
+      "sha256": "751ffb38538d6c063001e04308e24a35a1c50baf769ed0c5cb24225c3250535e"
     },
     {
       "path": "shared/lib/safety-score-v9/lender-book-registry.ts",
@@ -1154,7 +1158,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
-      "sha256": "6019d34b93b0bba306c18439023047ac06d52e956fc9fbe782d4f9edd17ecb15"
+      "sha256": "1fa2b49dbffaf97e178ce99bdaa38354e7193ed159d1c141967fe68df10bae92"
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
@@ -1270,7 +1274,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/publication-assessment.ts",
-      "sha256": "12b682d1a6eda801ce6741aade528bcd7c85427f2d22c475a17982878e452e0f"
+      "sha256": "862cc1b598e87a59df6952aa35d8665db49c4454a3696a0c210fb3d6217b253b"
     },
     {
       "path": "worker/src/lib/safety-score-v9/redemption-reserve-quarantine.ts",
@@ -1331,7 +1335,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-27-block-26283011-shock-coverage.json.gz"
     }
   ],
-  "digest": "7146357b3bee926f0155764dbc3626c5eb60225435ecd4ee668c902614f16e6b"
+  "digest": "934a284271b17d2d4567a6f27fc7a2fb1b4036f8dd4d2b53a3846d07b8648105"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

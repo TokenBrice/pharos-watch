@@ -301,7 +301,7 @@ Asset-local extension or fact failures do not abort a replay: the asset is quara
 Prepare-time `report-cards:capture-fixed-input --exact-cache-export` exports wrap the normalized input as
 `{kind:"safety-score-v9-registry-capture", fixedInput, registrySnapshot}`.
 Accepted exports use `{kind:"safety-score-v9-accepted-publication-capture", publicationGenerationId, fixedInput, transferMaterialityGeneration, registrySnapshot}`.
-A v3 delta also carries the required-nullable checksummed `sourceAdmissionBaseline` (the prior accepted baseline grade hysteresis consumed; unique sorted IDs, clock no later than the capture); readers accept v1–v3 but writers still emit v2, so current exports omit it.
+A v3 delta also carries the required-nullable checksummed `sourceAdmissionBaseline` (the prior accepted baseline grade hysteresis consumed; unique sorted IDs, clock no later than the capture); readers accept v1–v3 and writers emit v3 (Safety 10.35).
 The snapshot contains the full active/frozen/dead registry identity projection,
 its recomputed fingerprint, and separately digest-bound transfer reviews.
 Keeping full registry rows rather than a flag-only projection lets replay

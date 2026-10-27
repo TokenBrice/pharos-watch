@@ -7,6 +7,8 @@ import {
   expiredMeasuredExitAssetIds,
   expiredMeasuredExitAssetIdsFromRoutes,
   projectExpiredMeasuredExitRoutes,
+  resolveMeasuredExitExpiry,
+  AcceptedPublicationBaselineSchema,
   V9PublicationInputHealthSchema,
   type V9PublicationInputHealth,
 } from "../safety-score-v9/publication-assessment";
@@ -111,30 +113,95 @@ describe("Safety Score V9 publication assessment", () => {
     return { fixedInput, observation, card, publication, clockSec };
   }
 
-  it("holds an expired mature quote window until refreshed evidence enters the exact input", () => {
+  it("detects an expired mature quote window until refreshed evidence enters the exact input", () => {
     const { fixedInput, observation, publication, clockSec } = measuredHistoryFixture();
-    const assess = () => assessV9Publication({
-      inputHealth: currentInputHealth(),
-      candidate: publication,
-      // Stale-input admission must not depend on a prior score or build identity.
-      acceptedPublication: null,
-      coverageFloors: [],
-      expiredMeasuredExitAssetIds: expiredMeasuredExitAssetIds(fixedInput, publication),
-    });
+    // Stale-input detection must not depend on a prior score or build identity.
+    const detect = () => expiredMeasuredExitAssetIds(fixedInput, publication);
     fixedInput.clockSec = clockSec + 10_800;
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!.modelConfidence).toBe("high");
-    expect(assess().decision).toBe("publish");
+    expect(detect()).toEqual([]);
     fixedInput.clockSec++;
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!.modelConfidence).toBe("medium");
-    expect(assess()).toMatchObject({ decision: "hold", reasons: [{ code: "dex-stale" }], affectedAssetIds: ["alpha"] });
+    expect(detect()).toEqual(["alpha"]);
 
     // Recovery in the quote table cannot refresh a still-reused liquidity snapshot.
     const recoveredQuote = structuredClone(observation);
     recoveredQuote.observationHistory!.observationWindowEndedAt = fixedInput.clockSec;
-    expect(assess().decision).toBe("hold");
+    expect(detect()).toEqual(["alpha"]);
     fixedInput.dexLiqMap.alpha!.exitRouteObservations = [recoveredQuote];
     expect(buildSafetyScoreV9RouteReviews(fixedInput, "alpha")[0]!.modelConfidence).toBe("high");
-    expect(assess().decision).toBe("publish");
+    expect(detect()).toEqual([]);
+  });
+
+  it("publishes an expired asset as a quarantined stub instead of holding unrelated ratings (10.35)", () => {
+    const { fixedInput, publication } = measuredHistoryFixture();
+    fixedInput.clockSec += 10_801;
+    const expired = expiredMeasuredExitAssetIds(fixedInput, publication);
+    expect(expired).toEqual(["alpha"]);
+    const input = { inputHealth: currentInputHealth(), acceptedPublication: null, coverageFloors: [], expiredMeasuredExitAssetIds: expired };
+    // Detection without quarantine fails closed rather than publishing the stale rating.
+    expect(() => assessV9Publication({ ...input, candidate: publication })).toThrow("alpha is not quarantined");
+    const quarantined = candidate([producerFailedCard({ id: "alpha", score: null, grade: null }), ...publication.cards.slice(1)]);
+    expect(assessV9Publication({
+      ...input, candidate: quarantined, quarantinedAssetIds: ["alpha"], quarantineAffectedAssetIds: ["alpha"],
+    })).toEqual({ decision: "publish", reasons: [], affectedAssetIds: ["alpha"] });
+    // Dependents join the census: more than 10% affected still holds the cohort.
+    expect(assessV9Publication({
+      ...input, candidate: quarantined, quarantinedAssetIds: ["alpha"],
+      quarantineAffectedAssetIds: ["alpha", "other-0", "other-1"],
+    })).toMatchObject({ decision: "hold", reasons: [{ code: "producer-failed-pipeline-gap" }, {}, {}] });
+  });
+
+  it("retains witnesses on stubs until fresh same-route evidence, and never on absent rows (10.35)", () => {
+    const { fixedInput, observation, card, publication, clockSec } = measuredHistoryFixture();
+    publication.sourceGenerations.dex = fixedInput.dexGenerationId;
+    fixedInput.clockSec = clockSec + 10_801;
+    const first = resolveMeasuredExitExpiry(projectExpiredMeasuredExitRoutes(fixedInput), publication, null);
+    const witness = {
+      routeId: observation.routeId, dexGenerationId: fixedInput.dexGenerationId,
+      observationWindowEndedAt: clockSec, freshnessMaxSec: 10_800,
+    };
+    expect(first).toEqual({ assetIds: ["alpha"], witnessesByAssetId: { alpha: [witness] } });
+    const stubbed = candidate([producerFailedCard({ id: "alpha", score: null, grade: null }), ...publication.cards.slice(1)]);
+    const baseline = buildSafetyScoreV9AcceptedPublicationBaseline(stubbed, first.witnessesByAssetId);
+
+    // Next cycle: an alternate route is selected and the stale former route is
+    // no longer in the card. The stub carries no route identity; the witness does.
+    fixedInput.clockSec += 3_600;
+    fixedInput.dexGenerationId = "dex-liquidity-next";
+    card.breakdowns!.exit.primaryRoute!.key = "redemption:next:issuer";
+    const next = candidate([card, ...publication.cards.slice(1)]);
+    const routes = () => projectExpiredMeasuredExitRoutes(fixedInput);
+    expect(resolveMeasuredExitExpiry(routes(), next, baseline).witnessesByAssetId).toEqual({ alpha: [witness] });
+    // The rollback detector reads the same witnesses, so a restored global hold still holds.
+    expect(expiredMeasuredExitAssetIdsFromRoutes(routes(), next, baseline)).toEqual(["alpha"]);
+    // An absent row, or a same-route window that is newer but still expired, does not clear it.
+    const rows = fixedInput.dexLiqMap;
+    fixedInput.dexLiqMap = {};
+    expect(resolveMeasuredExitExpiry(routes(), next, baseline).assetIds).toEqual(["alpha"]);
+    fixedInput.dexLiqMap = rows;
+    observation.observationHistory!.observationWindowEndedAt = fixedInput.clockSec - 10_801;
+    expect(resolveMeasuredExitExpiry(routes(), next, baseline).assetIds).toEqual(["alpha"]);
+    // Fresh same-route evidence (success or adverse) resolves the witness.
+    observation.observationHistory!.observationWindowEndedAt = fixedInput.clockSec - 10_800;
+    expect(resolveMeasuredExitExpiry(routes(), next, baseline)).toEqual({ assetIds: [], witnessesByAssetId: {} });
+  });
+
+  it("validates retained witnesses against the baseline cohort and chronology", () => {
+    const { card, clockSec } = measuredHistoryFixture();
+    const publication = candidate([card, makeWorkerV9Card({ id: "beta" })]);
+    const stubbed = candidate([producerFailedCard({ id: "alpha", score: null, grade: null }), makeWorkerV9Card({ id: "beta" })]);
+    const witness = { routeId: "route", dexGenerationId: "dex-liquidity-1", observationWindowEndedAt: clockSec, freshnessMaxSec: 10_800 };
+    const parse = (value: unknown) => AcceptedPublicationBaselineSchema.safeParse(value).success;
+    expect(parse(buildSafetyScoreV9AcceptedPublicationBaseline(stubbed, { alpha: [witness] }))).toBe(true);
+    // Absent witnesses keep the pre-10.35 baseline bytes.
+    expect(buildSafetyScoreV9AcceptedPublicationBaseline(stubbed)).not.toHaveProperty("dexExpiryByAssetId");
+    expect(parse(buildSafetyScoreV9AcceptedPublicationBaseline(publication, { alpha: [witness] }))).toBe(false);
+    expect(parse(buildSafetyScoreV9AcceptedPublicationBaseline(stubbed, { missing: [witness] }))).toBe(false);
+    expect(parse(buildSafetyScoreV9AcceptedPublicationBaseline(stubbed, {
+      alpha: [{ ...witness, observationWindowEndedAt: stubbed.publishedAtSec + 1 }],
+    }))).toBe(false);
+    expect(parse(buildSafetyScoreV9AcceptedPublicationBaseline(stubbed, { alpha: [witness, witness] }))).toBe(false);
   });
 
   it("protects contributing backup routes, but ignores unused and zero-credit alternatives", () => {
@@ -180,7 +247,7 @@ describe("Safety Score V9 publication assessment", () => {
     expect(expiredMeasuredExitAssetIds(fixedInput, publication, baseline)).toEqual(["alpha"]);
   });
 
-  it("holds a rated-to-pipeline-gap transition when its former measured route expires", () => {
+  it("detects a rated-to-pipeline-gap transition when its former measured route expires", () => {
     const { fixedInput, publication, clockSec } = measuredHistoryFixture();
     publication.sourceGenerations.dex = fixedInput.dexGenerationId;
     const baseline = buildSafetyScoreV9AcceptedPublicationBaseline(publication);
@@ -192,7 +259,8 @@ describe("Safety Score V9 publication assessment", () => {
     expect(assessV9Publication({
       inputHealth: currentInputHealth(), candidate: publication,
       acceptedPublication: baseline, coverageFloors: [], expiredMeasuredExitAssetIds: expired,
-    })).toEqual({ decision: "hold", reasons: [{ code: "dex-stale" }], affectedAssetIds: ["alpha"] });
+      quarantinedAssetIds: ["alpha"],
+    })).toEqual({ decision: "publish", reasons: [], affectedAssetIds: ["alpha"] });
   });
 
   it("rejects expired measured-route witnesses outside the candidate census", () => {
@@ -211,9 +279,11 @@ describe("Safety Score V9 publication assessment", () => {
     fixedInput.clockSec += 10_801;
     const health = currentInputHealth();
     health.dex.state = "stale";
+    publication.cards[0] = producerFailedCard({ id: "alpha", score: null, grade: null });
+    // Whole-source staleness remains a global hold beside the asset-local quarantine.
     expect(assessV9Publication({
       inputHealth: health, candidate: publication, acceptedPublication: null, coverageFloors: [],
-      expiredMeasuredExitAssetIds: expiredMeasuredExitAssetIds(fixedInput, publication),
+      expiredMeasuredExitAssetIds: ["alpha"], quarantinedAssetIds: ["alpha"],
     })).toEqual({ decision: "hold", reasons: [{ code: "dex-stale" }], affectedAssetIds: ["alpha"] });
   });
 

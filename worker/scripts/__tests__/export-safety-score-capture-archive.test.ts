@@ -48,7 +48,7 @@ async function archiveFixture(encoding?: "legacy" | "dictionary") {
     publicationGenerationId: "report-cards:v9:fixture-accepted",
   });
   const baseEntry = await buildReportCardsFixedInputCacheEntry(base);
-  const delta = await buildSafetyScoreV9PublicationReplayCapture(publication, base, null);
+  const delta = await buildSafetyScoreV9PublicationReplayCapture(publication, base, null, null);
   const object: SafetyScoreCaptureArchiveObject = {
     schemaVersion: 1, generationId: publication.publicationGenerationId, publishedAt: CLOCK,
     methodologyVersion: publication.policyVersion, policyDigest: publication.policy.semanticDigest,

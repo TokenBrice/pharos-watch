@@ -11,6 +11,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { deriveNativeV9BaseInputGenerationId, NativeSafetyScoreV9InputSchema } from "../../src/lib/safety-score-v9/native-input";
 import { ReportCardsFixedInputSchema } from "../../src/lib/report-cards-fixed-input";
 import { buildSafetyScoreV9ReplayArtifact, type SafetyScoreV9ReplayArtifact } from "../replay-safety-score-v9";
+import { AcceptedPublicationBaselineSchema } from "../../src/lib/safety-score-v9/publication-assessment";
 import { verifyRegistrySnapshot, type SafetyScoreV9RegistrySnapshot } from "./safety-score-v9-registry";
 import type { V9ProductionScoreTrace } from "@shared/lib/safety-score-v9/score";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -198,6 +199,7 @@ export function reproduceSafetyScoreV9Replay(value: unknown, context: ReplayRepr
   same(execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(), context.sourceRevision, "source revision");
   same([value.pipeline.candidateIdentity.policyId, value.pipeline.candidateIdentity.policyDigest, value.pipeline.candidateIdentity.evaluationBuildDigest, value.pipeline.candidate.publishedAtSec], [context.policyId, context.policyDigest, context.evaluationBuildDigest, context.publishedAtSec], "intended policy/build/clock");
   same(value.pipeline.fixedInput.registryFingerprint, verifyRegistrySnapshot(context.registrySnapshot).fingerprint, "intended registry");
-  const rebuilt = buildSafetyScoreV9ReplayArtifact({ fixedInput: value.pipeline.fixedInput, extension: value.pipeline.extension, publishedAtSec: context.publishedAtSec, registrySnapshot: context.registrySnapshot, transferMaterialityGeneration: context.transferMaterialityGeneration, ...(/^v9-rc-[1-9][0-9]*$/.test(value.pipeline.candidate.candidateId) ? { releaseCandidateId: value.pipeline.candidate.candidateId } : {}) });
+  const rebuilt = buildSafetyScoreV9ReplayArtifact({ fixedInput: value.pipeline.fixedInput, extension: value.pipeline.extension, publishedAtSec: context.publishedAtSec, registrySnapshot: context.registrySnapshot, transferMaterialityGeneration: context.transferMaterialityGeneration, ...(/^v9-rc-[1-9][0-9]*$/.test(value.pipeline.candidate.candidateId) ? { releaseCandidateId: value.pipeline.candidate.candidateId } : {}),
+    ...(value.sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline: AcceptedPublicationBaselineSchema.nullable().parse(value.sourceAdmissionBaseline) }) });
   same(rebuilt.pipeline, value.pipeline, "intended-revision reproduction");
 }

@@ -344,7 +344,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.34");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.35");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -510,13 +510,25 @@ describe("methodology registry", () => {
   });
 
   it("discloses the v10.34 reserve evidence admission calibration", () => {
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.34")!;
     expect(release).toMatchObject({
       version: "10.34", date: "2026-10-24", effectiveAt: 1_792_886_400, reconstructed: false, commits: [],
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.33");
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.34");
     expect(release.impact.join(" ")).toContain("newer-unreviewed-report");
+    expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
+  });
+
+  it("discloses the v10.35 asset-local measured-route expiry and bounded DEX capture admission", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    expect(release).toMatchObject({
+      version: "10.35", date: "2026-10-28", effectiveAt: 1_793_145_600, reconstructed: false, commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.34");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.35");
+    expect(release.impact.join(" ")).toContain("Expiry witnesses");
+    expect(release.impact.join(" ")).toContain("4,500 seconds");
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
 
