@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-27",
-    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
+    "reviewedAt": "2026-10-01",
+    "reviewer": "Sol curation pass 2026-10-01 (FixInv1)",
     "confidence": "verified",
     "sources": [
       {
@@ -33,13 +33,13 @@
         "url": "https://docs.brix.money/itry/proof-of-reserves"
       },
       {
-        "label": "Brix Accountable dashboard API (2026-10-27 snapshot)",
+        "label": "Brix Accountable dashboard API (2026-10-01 snapshot)",
         "url": "https://accountable.brix.money:8443/dashboard"
       }
     ],
-    "rationale": "Re-opened 2026-10-27: issuer backing documentation (docs.brix.money/itry/backing) re-fetched and still states that iTRY is fully backed by the Digital Liquidity Fund's DLF token, representing shares of a regulated basket of Turkish money-market funds. The Accountable API (nav_time 2026-10-27T07:30:00Z, live interval) reports verifiability 100, collateralization 1.0, total reserves of TRY 328,892,949.71 and total supply of TRY 328,892,827.75; tokens_split identifies iTRY and wiTRY. Its reserves_split exposes only an Ethereum venue, not underlying DLF holdings. The API's dlf_nav_check also reports a 643 bps gap between gross and administrator price per share (1.3788512 vs 1.2934409), which this composition does not interpret. The ERC-4626 single-asset adapter remains the owner of the wrapper's live composition. The reviewed aggregate fund-share row remains 100% high-risk with 100% unknown look-through exposure; no constituent weights, maturity bounds, or liquidity allocation are inferred from aggregate solvency.",
-    "compositionBasis": "Brix fully DLF-backed iTRY disclosure re-fetched 2026-10-27, corroborated by the Accountable 2026-10-27 assets-and-liabilities snapshot; DLF constituent allocation undisclosed",
-    "compositionAsOf": "2026-10-27",
+    "rationale": "Re-opened 2026-10-01: issuer backing documentation directly states that iTRY is fully backed by the Digital Liquidity Fund's DLF token, representing shares of a regulated basket of Turkish money-market funds. The Accountable API's October 1 snapshot reports verifiability 100, total reserves of TRY 342,198,959.88 and total supply of TRY 342,198,863.93; tokens_split identifies iTRY and wiTRY. Its reserves_split exposes only an Ethereum venue, not underlying DLF holdings. The ERC-4626 single-asset adapter remains the owner of the wrapper's live composition. The reviewed aggregate fund-share row remains 100% high-risk with 100% unknown look-through exposure; no constituent weights, maturity bounds, or liquidity allocation are inferred from aggregate solvency.",
+    "compositionBasis": "Brix fully DLF-backed iTRY disclosure re-fetched 2026-10-01, corroborated by the Accountable 2026-10-01 assets-and-liabilities snapshot; DLF constituent allocation undisclosed",
+    "compositionAsOf": "2026-10-01",
     "scope": "full-composition",
     "knownUnknownExposure": "The Digital Liquidity Fund identity and aggregate NAV/supply are verified, but its current underlying Turkish money-market funds, constituent weights, issuers, maturities, and liquidity allocations are not published.",
     "knownUnknownExposurePct": 100,
