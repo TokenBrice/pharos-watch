@@ -126,6 +126,22 @@ describe("HomeAltDdrOverview", () => {
     expect(screen.queryByText("-300 bps")).toBeNull();
   });
 
+  it("orders rows missing a current deviation by their live event peak, not the frozen lock peak", () => {
+    const row = (id: string, frozenPeak: number, livePeak: number | null) => ({
+      ...forecast, stablecoinId: id, symbol: id.toUpperCase(),
+      frozen: { ...forecast.frozen, sourceRow: { currentDeviationBps: frozenPeak, peakDeviationBps: frozenPeak } },
+      live: { ...forecast.live, currentDeviationBps: null, peakDeviationBps: livePeak },
+    });
+    setSources({ rows: [
+      row("lockdeep", -1_000, -100),
+      row("unknown", -2_000, null),
+      row("livedeep", -100, -500),
+    ] as unknown as typeof forecast[] });
+    render(<HomeAltDdrOverview />);
+    const symbols = screen.getAllByText(/^(LOCKDEEP|UNKNOWN|LIVEDEEP)$/).map((node) => node.textContent);
+    expect(symbols).toEqual(["LIVEDEEP", "LOCKDEEP", "UNKNOWN"]);
+  });
+
   // Homepage rule (docs/homepage.md): source health never renders as a warning.
   it("renders stale-cache generations with a neutral as-of stamp and no warning", () => {
     setSources({ stale: true });

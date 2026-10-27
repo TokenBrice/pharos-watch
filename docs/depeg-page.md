@@ -99,7 +99,7 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
 The hero owns route-level headline figures: active depegs, worst live move, at-peg
 split, catalog DEWS alerts, DDR verdict split, and DDRR accuracy. Lower modules
 must not repeat verdict or accuracy headlines. The resolver header does repeat
-book size, past-peak count, and calibration lineage; the embedded alert queue
+book size, new-worst count, and calibration lineage; the embedded alert queue
 suppresses its own count.
 
 The control board's attention count is scoped to its filtered rows: confirmed active
@@ -138,16 +138,18 @@ Two eligibility caveats:
 `DepegResolverModule` renders the `DEFAULT_VISIBLE_ROWS` most urgent forecasts and keeps the rest
 behind an explicit toggle that mounts them only when opened.
 
-- **Urgency order:** incidents whose **live** deviation is past their event peak first, then the widest
-  live deviation, then `stablecoinId`/`eventId` so equally urgent rows cannot reshuffle between
-  refreshes. Both comparisons use `getLiveCurrentDeviationBps()`, never `getCurrentDeviationBps()` —
-  the latter returns the lock-time value for frozen predictions and would rank incidents by where
-  they were when their forecast sealed. The past-peak test carries an absolute noise floor so a 2%
-  margin cannot be satisfied by a couple of basis points of jitter. DDR rows are not control-board
+- **Urgency order:** incidents at a new worst — **live** deviation beyond the **live** event peak
+  (`row.live.peakDeviationBps`) — first, then the widest live deviation, then
+  `stablecoinId`/`eventId` so equally urgent rows cannot reshuffle between refreshes. Both
+  comparisons use live fields, never `getCurrentDeviationBps()`/`getPeakDeviationBps()` — those
+  return lock-time evidence for frozen predictions, and a frozen lock peak can be far shallower
+  than the live event. A null or zero live peak cannot establish a new worst. The test carries an
+  absolute noise floor (`max(25 bps, 2%)`) so jitter cannot satisfy it. Hero and header caption it
+  `{N} at a new worst`. DDR rows are not control-board
   rows, so the board's `__attention` comparator does not apply; this is the route's own policy.
 - **Shared derivation:** `summarizeResolverBook()` in
   `src/components/depeg-resolver-book-summary.ts` owns the valid frozen prediction tier split,
-  past-peak count and forecast total; `rowCount` separately counts incident browsing rows.
+  new-worst count and forecast total; `rowCount` separately counts incident browsing rows.
   The hero's recovery posture excludes pending, no-call and invalidated outcomes.
 - **Tier vocabulary:** rows predicted under DDR 5.0+ read as evidence classes (No break
   signals / Stress signals / Terminal evidence); earlier locks keep Recovery likely / At risk /
@@ -158,7 +160,7 @@ behind an explicit toggle that mounts them only when opened.
   withhold all three even if retained rows exist. Explicit `stale-cache` responses with rows
   retain frozen forecasts and the existing stale-overlay warning; this does not refresh any clock.
 - **Header scope:** the verdict split belongs to the hero. This header shows
-  forecast and incident-row counts, the visible slice, past-peak count, and
+  forecast and incident-row counts, the visible slice, new-worst count, and
   calibration lineage/coin count. A four-card slice is not the whole book.
   The retired standalone "Outlook Posture" surface must not return.
 - **Review totals:** forecast grading uses the published reviewer summary, not a

@@ -21,7 +21,6 @@ import {
   formatDurationSec,
   formatUtcTimestamp,
   getLiveCurrentDeviationBps,
-  getPeakDeviationBps,
   getResolution,
   getTierMeta,
   getTierVocabulary,
@@ -61,11 +60,14 @@ interface ForecastItem {
   severity: number;
 }
 
-/** Worst gap first: live deviation if present, else this event's peak. */
+/**
+ * Worst gap first: live deviation if present, else this event's live peak —
+ * never the frozen lock peak, which can be far shallower than the live event.
+ */
 function rowSeverity(row: DdrV2ResponseRow): number {
   const now = getLiveCurrentDeviationBps(row);
   if (now != null) return Math.abs(now);
-  const peak = getPeakDeviationBps(row);
+  const peak = row.live.peakDeviationBps;
   return peak == null ? -1 : Math.abs(peak);
 }
 

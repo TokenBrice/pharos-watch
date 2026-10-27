@@ -107,7 +107,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
         {book.pastPeakCount > 0 ? (
           <span className="text-state-warn">
             {" "}
-            · {book.pastPeakCount === 1 ? "1 is" : `${book.pastPeakCount} are`} past their worst
+            · {book.pastPeakCount} at a new worst
           </span>
         ) : null}
       </p>

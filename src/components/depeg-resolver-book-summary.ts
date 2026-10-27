@@ -1,6 +1,5 @@
 import {
   getLiveCurrentDeviationBps,
-  getPeakDeviationBps,
   getResolution,
   getTierVocabulary,
   isCurrentForecast,
@@ -26,18 +25,17 @@ export function isResolverBookAvailable(data: DdrResponse | undefined): data is 
 }
 
 /**
- * Has the live gap to peg opened up beyond this event's benchmark peak?
+ * Is the live gap to peg wider than this event's live recorded peak — a new worst?
  *
- * The current side must be live: `getCurrentDeviationBps()` deliberately returns
- * the lock-time value for frozen predictions, which would rank incidents by
- * where they were when their forecast sealed rather than where they are now.
- * The baseline is the event's peak deviation, so this says "past its worst" —
- * not "worse than at lock", which this data cannot support.
+ * Both sides must be live. `getCurrentDeviationBps()` and `getPeakDeviationBps()`
+ * deliberately return lock-time evidence for frozen predictions; comparing live
+ * deviation with the frozen lock peak flags incidents that already went deeper
+ * after lock (and misses ones whose live peak is shallower than at lock).
  */
 function isPastEventPeak(row: DdrV2ResponseRow): boolean {
   const live = getLiveCurrentDeviationBps(row);
   if (live == null) return false;
-  const peakDeviationBps = getPeakDeviationBps(row);
+  const peakDeviationBps = row.live.peakDeviationBps;
   if (peakDeviationBps == null) return false;
   const peak = Math.abs(peakDeviationBps);
   if (peak <= 0) return false;
@@ -45,7 +43,7 @@ function isPastEventPeak(row: DdrV2ResponseRow): boolean {
 }
 
 /**
- * Worklist order: incidents now past their own worst first, then the widest live
+ * Worklist order: incidents now at a new worst first, then the widest live
  * gap to peg, then a stable identity so equally urgent rows cannot reshuffle
  * between refreshes on API row order. DDR rows are not control-board rows, so
  * the board's attention comparator does not apply.

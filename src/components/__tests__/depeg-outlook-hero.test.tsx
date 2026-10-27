@@ -110,3 +110,25 @@ describe("DepegOutlookHero current forecast posture", () => {
     expect(auditOnly).not.toContain("recovery likely");
   });
 });
+
+describe("DepegOutlookHero recovery outlook caption", () => {
+  const book = (pastPeakCount: number) => ({
+    total: 3, rowCount: 3, tierGroups: [], pastPeakCount,
+    tierCounts: { recovery_likely: 0, at_risk: 3, recovery_unlikely: 0, insufficient_signal: 0 },
+  });
+
+  it.each([[1, "1 at a new worst"], [3, "3 at a new worst"]] as const)("states %s live new-worst incidents", (count, caption) => {
+    const markup = renderToStaticMarkup(
+      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(count)} />,
+    );
+    expect(markup).toContain(caption);
+    expect(markup).not.toContain("past their worst");
+  });
+
+  it("omits the new-worst clause at zero", () => {
+    const markup = renderToStaticMarkup(
+      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()} book={book(0)} />,
+    );
+    expect(markup).not.toContain("new worst");
+  });
+});
