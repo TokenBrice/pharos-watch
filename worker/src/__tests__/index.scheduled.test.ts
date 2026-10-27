@@ -170,7 +170,7 @@ const cronMocks = vi.hoisted(() => ({
   }),
   getCache: vi.fn(async () => null),
   setCache: vi.fn(async () => undefined),
-  recordScheduledWorkerVersionFirstSeen: vi.fn(async () => undefined),
+  setCacheIfAbsent: vi.fn(async () => true),
   shouldAttemptFetch: vi.fn(async () => true),
   recordOutcome: vi.fn(async () => undefined),
   reconcileTelegramCommandRegistration: vi.fn(async () => ({ attempted: false })),
@@ -323,14 +323,11 @@ vi.mock("../lib/db-cache", () => ({
   getCaches: vi.fn(async () => new Map()),
   getCache: cronMocks.getCache,
   setCache: cronMocks.setCache,
+  setCacheIfAbsent: cronMocks.setCacheIfAbsent,
   setCacheIfNewer: vi.fn(async () => ({ written: true, skippedBecauseNewer: false })),
   shouldSkipFreshCache: vi.fn(async () => false),
   getPriceCache: vi.fn(async () => new Map()),
   savePriceCache: vi.fn(async () => undefined),
-}));
-
-vi.mock("../lib/worker-version-first-seen", () => ({
-  recordScheduledWorkerVersionFirstSeen: cronMocks.recordScheduledWorkerVersionFirstSeen,
 }));
 
 vi.mock("../lib/cron-logger", async (importOriginal) => {
@@ -411,7 +408,6 @@ describe("worker.scheduled", () => {
   afterEach(() => vi.restoreAllMocks());
   beforeEach(() => {
     vi.clearAllMocks();
-    cronMocks.recordScheduledWorkerVersionFirstSeen.mockImplementation(async () => undefined);
   });
 
   it("rejects a terminal fence error even when no child throws", async () => {
@@ -435,47 +431,22 @@ describe("worker.scheduled", () => {
     expect(indexImportCronCalls).toEqual([]);
   });
 
-  it("records the worker-version first-seen marker without blocking scheduled execution", async () => {
-    const env = makeScheduledEnv();
+  it.each([
+    ["public", "9 * * * *", worker],
+    ["heavy", "16 * * * *", heavyWorker],
+  ] as const)("runs fenced %s delivery without retired first-seen telemetry writes", async (_role, cron, entry) => {
+    const env = { ...makeScheduledEnv(), SAFETY_CAPTURE_ARCHIVE: makeCaptureArchiveBucket() };
     const { ctx, waits } = makeExecutionContext();
 
-    await worker.scheduled(
-      {
-        cron: "9 * * * *",
-        scheduledTime: Date.parse("2026-08-30T12:09:00Z"),
-      } as ScheduledEvent,
+    await entry.scheduled(
+      { cron, scheduledTime: Date.parse("2026-08-30T12:09:00Z") } as ScheduledEvent,
       env,
       ctx,
     );
     await Promise.all(waits);
 
-    expect(cronMocks.recordScheduledWorkerVersionFirstSeen).toHaveBeenCalledWith(
-      env.DB,
-      "test-worker-version",
-      expect.any(Number),
-    );
     expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(1);
-  }, 15_000);
-
-  it("continues the scheduled lane when the worker-version marker write fails", async () => {
-    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
-    cronMocks.recordScheduledWorkerVersionFirstSeen.mockRejectedValueOnce(new Error("D1 marker unavailable"));
-    const env = makeScheduledEnv();
-    const { ctx, waits } = makeExecutionContext();
-
-    await expect(worker.scheduled(
-      {
-        cron: "9 * * * *",
-        scheduledTime: Date.parse("2026-08-30T12:09:00Z"),
-      } as ScheduledEvent,
-      env,
-      ctx,
-    )).resolves.toBeUndefined();
-    await Promise.all(waits);
-
-    expect(cronMocks.runScheduledSlotWithFence).toHaveBeenCalledTimes(1);
-    expect(warn).toHaveBeenCalled();
-    warn.mockRestore();
+    expect(cronMocks.setCacheIfAbsent).not.toHaveBeenCalled();
   }, 15_000);
 
   it("smokes every configured scheduled trigger without live provider fetches", async () => {
@@ -568,7 +539,7 @@ describe("worker.scheduled", () => {
     await entry.scheduled({ cron } as ScheduledEvent, env, makeExecutionContext().ctx);
     expect(loader).not.toHaveBeenCalled();
     expect(prepare).not.toHaveBeenCalled();
-    expect(cronMocks.recordScheduledWorkerVersionFirstSeen).not.toHaveBeenCalled();
+    expect(cronMocks.setCacheIfAbsent).not.toHaveBeenCalled();
     expect(cronMocks.runScheduledSlotWithFence).not.toHaveBeenCalled();
     expect(cronMocks.logCronRun).not.toHaveBeenCalled();
     expect(log.mock.calls.flat().join(" ")).toContain("scheduled-worker-not-owner");
