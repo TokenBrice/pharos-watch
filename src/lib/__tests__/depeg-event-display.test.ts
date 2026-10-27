@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
 
@@ -156,5 +158,20 @@ describe("depeg event editorial rendering", () => {
   ] as const)("renders a briefing only for authored event %s", async (slug, authored) => {
     const html = renderToStaticMarkup(await DepegEventPage({ params: Promise.resolve({ event: slug }) }));
     expect(/<article aria-label="[^"]+ depeg briefing"/.test(html)).toBe(authored);
+  });
+
+  it("reconciles the USDC briefing, annotation and source with the recorded observation", async () => {
+    const html = renderToStaticMarkup(await DepegEventPage({ params: Promise.resolve({ event: "usdc-2023-03-11" }) }));
+    const text = html.replace(/<[^>]+>/g, " ").replace(/&#x27;|&#39;/g, "\u2019").replace(/\s+/g, " ");
+    expect(text).toContain("USDC fell 12.1% below peg in Pharos\u2019s record.");
+    for (const figure of ["$0.9841", "$0.8789", "$0.9937", "March 12", "March 13"]) expect(text).toContain(figure);
+    for (const retired of ["13-cent", "13.0%", "Sunday low", "largest ever", "cash backing", "parity again"]) {
+      expect(text).not.toContain(retired);
+    }
+    const annotations = JSON.parse(readFileSync(resolve(process.cwd(), "shared/data/annotations/coins/usdc-circle.json"), "utf8")) as
+      Array<{ date: string; label: string; href?: string }>;
+    const pin = annotations.find((entry) => entry.date === "2023-03-11")!;
+    expect(pin.label).toBe("SVB reserve exposure and USDC depeg");
+    expect(pin.href).toBe("https://www.circle.com/pressroom/3-3-billion-of-usdc-reserve-risk-removed-dollar-de-peg-closes");
   });
 });
