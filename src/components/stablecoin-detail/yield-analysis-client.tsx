@@ -9,12 +9,14 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { LazySection } from "@/components/lazy-section";
 import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { DataHealthBanner } from "@/components/data-health-banner";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { DetailSectionTitle } from "@/components/stablecoin-detail/section-title";
 import { PysBreakdown } from "@/components/pys-breakdown";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { useYieldHistory, useYieldRankings } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import {
   formatYieldWarningSignal,
   formatYieldWarningSignalDescription,
@@ -26,7 +28,8 @@ import {
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
 import { toTimestampMs } from "@/lib/time";
-import { formatDataHealthWarning } from "@/lib/data-health";
+import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
+import { DATA_SURFACE_DESCRIPTORS } from "@shared/lib/data-surface-descriptors";
 import { classifyApyChange } from "@/lib/yield-change-attribution";
 import {
   buildYieldPeerRailModel,
@@ -449,7 +452,20 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
     () => deriveSourceSwitchEvents(historyQuery.data?.history ?? []),
     [historyQuery.data],
   );
-  const historyWarning = historyQuery.meta?.warning ? formatDataHealthWarning(historyQuery.meta.warning) : null;
+  // Transport advisories and degraded clocks over retained history are operator signal (ADR-42).
+  const historyHealthInput = {
+    label: "Yield history",
+    dataUpdatedAt: historyQuery.dataUpdatedAt,
+    staleTime: DATA_SURFACE_DESCRIPTORS.yieldHistory.producerIntervalSec * 1000,
+    hasData: historyQuery.data !== undefined,
+    error: historyQuery.error,
+    meta: historyQuery.meta,
+  };
+  const historyNowMs = useFreshnessBoundary([historyHealthInput]);
+  const historyHealth = deriveDataHealth(historyHealthInput, historyNowMs ?? historyQuery.dataUpdatedAt);
+  const historyBanner = historyQuery.data !== undefined && isPublicWarning(historyHealth)
+    ? <DataHealthBanner entries={[historyHealth]} onRetry={() => { void historyQuery.refetch(); }} />
+    : null;
 
   const apyChangeAttribution = useMemo(
     () =>
@@ -588,11 +604,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           <DetailSectionTitle>Warning signals timeline</DetailSectionTitle>
         </CardHeader>
         <CardContent>
-          {historyWarning ? (
-            <div className="mb-3 rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
-              {historyWarning}
-            </div>
-          ) : null}
+          {historyBanner ? <div className="mb-3">{historyBanner}</div> : null}
           {historyQuery.isLoading ? (
             <Skeleton className="h-[160px] w-full rounded-xl" />
           ) : historyQuery.error ? (
@@ -667,11 +679,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           <DetailSectionTitle>Source-switch history</DetailSectionTitle>
         </CardHeader>
         <CardContent className="space-y-3">
-          {historyWarning ? (
-            <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
-              {historyWarning}
-            </div>
-          ) : null}
+          {historyBanner}
           {historyQuery.isLoading ? (
             <Skeleton className="h-[120px] w-full rounded-xl" />
           ) : historyQuery.error ? (

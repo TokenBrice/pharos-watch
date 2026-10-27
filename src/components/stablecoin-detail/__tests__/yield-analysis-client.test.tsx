@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { render, screen, waitFor } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import YieldAnalysisClient from "@/components/stablecoin-detail/yield-analysis-client";
 import { makeYieldDetailRanking, makeYieldDetailResponse } from "@/components/__tests__/yield-detail.test-support";
 import type { StablecoinStaticMeta } from "@/lib/stablecoin-static-meta";
@@ -132,10 +132,21 @@ function makeHistoryPoint(
 function setHistoryQuery(history: YieldHistoryPoint[] = [], overrides: Record<string, unknown> = {}) {
   useYieldHistoryMock.mockReturnValue({
     data: { current: null, history, methodology: { version: "v8.14" } },
+    dataUpdatedAt: Date.now(),
+    meta: null,
     error: null,
     isLoading: false,
+    refetch: vi.fn(),
     ...overrides,
   });
+}
+
+function renderWorkbench() {
+  return render(<YieldAnalysisClient id="usdn-smardex" staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)} />);
+}
+
+function timelineCards() {
+  return [document.getElementById("warning-signals")!, document.getElementById("source-switches")!];
 }
 
 describe("YieldAnalysisClient", () => {
@@ -155,11 +166,11 @@ describe("YieldAnalysisClient", () => {
           }
         : null,
     );
-    useYieldHistoryMock.mockReturnValue({
-      data: { current: null, history: [], methodology: { version: "v8.14" } },
-      error: null,
-      isLoading: false,
-    });
+    setHistoryQuery();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
   });
 
   it("renders the ready workbench from the shared model and filters URL sources", () => {
@@ -373,25 +384,58 @@ describe("YieldAnalysisClient", () => {
     expect(screen.queryByText(/No source switches recorded/)).toBeNull();
   });
 
-  it("forwards a meta warning into both timeline cards while keeping the success empty copy", () => {
+  it.each([
+    ["body", { data: { current: null, history: [], warning: "Source history incomplete" } }],
+    ["header", { meta: { status: "degraded", warning: '110 - "Yield history freshness lookup failed; falling back to cache metadata."' } }],
+    ["degraded clock", { meta: { updatedAt: Date.now() / 1000, status: "degraded", reason: "yield-publication-age" } }],
+  ] as const)("keeps %s history advisories operator-only with the success empty copy (ADR-42)", (_case, overrides) => {
     setRankingsQuery({ data: makeResponse([makeRanking()]) });
-    setHistoryQuery([], {
-      meta: { status: "degraded", warning: "Yield history freshness lookup failed; falling back to cache metadata." },
-    });
+    setHistoryQuery([], overrides);
+    renderWorkbench();
 
-    render(
-      <YieldAnalysisClient
-        id="usdn-smardex"
-        staticCoin={staticCoin("usdn-smardex", "SMARDEX USDN", "USDN", true)}
-      />,
-    );
-
-    expect(
-      screen.getAllByText("Yield history freshness lookup failed; falling back to cache metadata."),
-    ).toHaveLength(2);
+    expect(screen.queryByText(/Source history incomplete|freshness lookup failed/)).toBeNull();
     expect(screen.getByText(/No warning signals recorded/)).toBeTruthy();
     expect(screen.getByText(/No source switches recorded/)).toBeTruthy();
     expect(screen.queryByRole("status")).toBeNull();
+  });
+
+  it.each([
+    ["explicit stale", { updatedAt: Date.now() / 1000 - 100_000, status: "stale", reason: "yield-publication-age" }],
+    ["cutoff unavailable", { updatedAt: null, status: "stale", reason: "publication-cutoff-unavailable" }],
+  ] as const)("shows the shared notice with retry in both timeline cards for %s history", (_case, meta) => {
+    const refetch = vi.fn();
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([
+      makeHistoryPoint({ date: "2026-08-01T10:00:00Z", apy: 0, yieldSource: "Primary Source", warningSignals: ["yield-spike"] }),
+    ], { meta, refetch });
+    renderWorkbench();
+
+    for (const card of timelineCards()) {
+      expect(within(card).getByRole("status").getAttribute("data-health-state")).toBe("stale");
+      fireEvent.click(within(card).getByRole("button", { name: "Retry" }));
+    }
+    expect(refetch).toHaveBeenCalledTimes(2);
+    // Retained observations stay visible beside the notice, including observed-zero APY.
+    expect(document.getElementById("warning-signals")!.querySelector("li")!.textContent).toContain("Primary Source at 0.00%");
+  });
+
+  it("shows the notice at the first millisecond beyond the producer's degraded budget without a refetch", async () => {
+    const updatedAtSec = Date.parse("2026-08-01T00:00:00Z") / 1000;
+    const degradedBudgetSec = 7_200;
+    vi.useFakeTimers({ now: updatedAtSec * 1000 + degradedBudgetSec * 1000 - 1_000 });
+    setRankingsQuery({ data: makeResponse([makeRanking()]) });
+    setHistoryQuery([], {
+      dataUpdatedAt: updatedAtSec * 1000,
+      meta: { updatedAt: updatedAtSec, status: "degraded", freshBudgetSec: 1_800, degradedBudgetSec },
+    });
+    renderWorkbench();
+    // Through hydration and up to the inclusive budget the clock is only degraded.
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(screen.queryByRole("status")).toBeNull();
+
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(screen.getAllByRole("status")).toHaveLength(2);
+    expect(useYieldHistoryMock.mock.results.every((result) => result.value.refetch.mock.calls.length === 0)).toBe(true);
   });
 
   it("keeps the ready workbench mounted when a refetch errors over cached rankings", () => {

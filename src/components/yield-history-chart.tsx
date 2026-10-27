@@ -19,7 +19,7 @@ import { CHART_AMBER, CHART_BLUE, CHART_PALETTE, CHART_SLATE } from "@/lib/chart
 import { CHART_GRID_DASH, CHART_GRID_STROKE } from "@/lib/chart-theme";
 import { toTimestampMs } from "@/lib/time";
 import { cn } from "@/lib/utils";
-import { formatDataHealthWarning, isPublicWarning } from "@/lib/data-health";
+import { isPublicWarning } from "@/lib/data-health";
 import {
   BRAND_ACCENT,
   DEFAULT_DAYS,
@@ -72,21 +72,15 @@ export function YieldHistoryChart({
   });
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const sourceNotices = model.sourceQueries.map((source) => {
-    // Retained data with a failed refresh or a degraded clock is operator signal (ADR-42).
+    // Retained data with a failed refresh, an advisory or a degraded clock is operator signal (ADR-42).
     const showsHealth = source.hasData && isPublicWarning(source.health);
     return (
       <div key={source.sourceKey} className="space-y-2" aria-label={`${source.label} history status`}>
-        {source.isLoading || (source.error && !source.hasData) || source.warning || showsHealth ? (
+        {source.isLoading || (source.error && !source.hasData) || showsHealth ? (
           <p className="text-xs font-medium text-muted-foreground">{source.label}</p>
         ) : null}
         {source.isLoading ? <p className="text-xs text-muted-foreground">Loading history</p> : null}
         <QueryErrorNotice error={source.error} hasData={source.hasData} onRetry={source.onRetry} />
-        {source.warning ? (
-          <div className="rounded-lg border border-state-warn-solid/25 bg-state-warn-solid/5 px-3 py-2 text-xs text-state-warn-bright">
-            {formatDataHealthWarning(source.warning)}
-            {!source.error ? <button type="button" onClick={source.onRetry} className="pharos-focus-ring ml-2 underline">Retry</button> : null}
-          </div>
-        ) : null}
         {showsHealth ? <DataHealthBanner entries={[source.health]} /> : null}
       </div>
     );

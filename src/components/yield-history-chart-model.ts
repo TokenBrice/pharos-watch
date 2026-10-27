@@ -491,7 +491,6 @@ export function useYieldHistoryChartModel({
       hasData: query.data !== undefined,
       isLoading: query.isLoading,
       error: query.error,
-      warning: query.data?.warning ?? query.meta?.warning ?? null,
       health: deriveDataHealth({
         label: identity.label,
         dataUpdatedAt: query.dataUpdatedAt,
@@ -587,7 +586,6 @@ export function useYieldHistoryChartModel({
     selectedSourceKey: effectiveSelectedSourceKey,
     primarySourceKey,
     primarySourceLabel,
-    bodyWarning: historyQuery.data?.warning ?? null,
     historyQuery,
     sourceQueries,
     chartData,
