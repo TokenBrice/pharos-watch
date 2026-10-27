@@ -66,6 +66,8 @@ The shared result is `{ eligible, reasons: LiveReserveAdmissionRejectionCode[], 
 
 `shared/lib/live-reserve-freshness.ts` owns `resolveLiveReserveSourceAgeBudget` and the 600-second `MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC`: scoring wins equal caps and the caller supplies the fallback. Producer validation, serving and nested redemption admission share this authority; `validate.ts` does not export a compatibility skew constant. Source skew and Worker fetch-clock integrity are independent.
 
+JupUSD attributes route status to the protocol API only when its configured oracle read validates against the schema (`ripcord` boolean). A failed, malformed or absent oracle read publishes `unknown` with `static-config` attribution and the `jupusd-oracle-unavailable` warning, never a protocol-API observation; the failed-read reason is preserved.
+
 A later node-disagreement or other attempt error does not revoke a clean retained snapshot. Redemption capacity consumes the same structural, configuration-identity and freshness rejections, but retains its separate evidence-class and degraded-telemetry policy; independent reserve composition is not a prerequisite for valid same-run redemption telemetry.
 
 `ReserveSyncStatusSchema` and its derived `ReserveSyncStatus` in `shared/types/live-reserves.ts` own reserve-attempt status admission for detail wire views, accepted generations, Worker records/history and the Node coverage audit. Accepted-generation absence remains nullable, and unknown audit statuses remain unavailable. Scheduler execution/disposition vocabularies are independent even where literals coincide.
