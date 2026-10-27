@@ -8,6 +8,7 @@ import { cleanupFrontendTest } from "@/test-utils/frontend";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import type { PegSummaryCoin, StressSignalEntry } from "@shared/types";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
+import { QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
 import { makeDews, makePendingIncident } from "./depeg.test-support";
 
 vi.mock("@/hooks/use-prefetch-stablecoin", () => ({
@@ -71,6 +72,23 @@ function renderBoard(
 }
 
 describe("DepegControlBoard", () => {
+  it.each([
+    { pegScore: 60, tier: "bad" },
+    { pegScore: 85, tier: "watch" },
+    { pegScore: 0, tier: "bad" },
+  ] as const)("colors peg score $pegScore text and gauge with the same $tier tier", ({ pegScore, tier }) => {
+    renderBoard([makeRow({ pegScore })]);
+    const gauge = screen.getByLabelText("Peg score for SUSD");
+    expect(gauge.firstElementChild?.className).toContain(QUALITY_TIER_3_CLASSES[tier].bar);
+    const text = screen.getAllByText(String(pegScore)).find((el) => el.className.includes(QUALITY_TIER_3_CLASSES[tier].text));
+    expect(text).toBeDefined();
+  });
+
+  it("renders an unavailable peg score as NR with a neutral gauge", () => {
+    renderBoard([makeRow({ pegScore: null })]);
+    expect(screen.getByLabelText("Peg score for SUSD").firstElementChild?.className).toContain("bg-muted-foreground");
+  });
+
   it.each(["CALM", "WATCH", "ALERT", "WARNING", "DANGER", null] as const)(
     "counts attention from the canonical %s band, retaining active and pending incidents",
     (band) => {

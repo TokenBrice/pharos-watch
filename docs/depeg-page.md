@@ -193,6 +193,8 @@ DEWS and deviation metrics sort last in both directions, separately from observe
 
 The multi-column grid starts at `lg`; below it, stacked cards preserve every field.
 
+Peg Health text and gauge share one tier from `getPegScoreTier` (90/70).
+
 Peg occupancy beside Peg Health is a **recorded-window peg occupancy estimate**.
 Its visible caption and row accessible description disclose that terminal tracking
 closure can leave unobserved time: the percentage proves neither recovery nor

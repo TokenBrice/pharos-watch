@@ -76,6 +76,14 @@ export const QUALITY_TIER_3_CLASSES = {
   borderL: string;
 }>;
 
+/** Peg score (0-100) tier shared by score text and gauge fills; null when unavailable. */
+export function getPegScoreTier(score: number | null | undefined): QualityTier3 | null {
+  if (score == null || !Number.isFinite(score)) return null;
+  if (score >= 90) return "good";
+  if (score >= 70) return "watch";
+  return "bad";
+}
+
 export type DirectionTone = "up" | "down";
 
 /** Signed deltas; zero counts as up. */

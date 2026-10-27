@@ -1,6 +1,7 @@
 import {
   DEPEG_ROW_STATUS_CLASSES,
   DEPEG_TRACKER_UNKNOWN_STATUS,
+  getPegScoreTier,
   QUALITY_TIER_3_CLASSES,
   THREAT_BAND_ACCENT_CLASSES,
 } from "@shared/lib/classification";
@@ -52,8 +53,6 @@ export function getDeviationBarWidthPercent(abs: number): number {
 }
 
 export function metricTone(value: number | null | undefined): string {
-  if (value == null) return "bg-muted-foreground";
-  if (value >= 80) return QUALITY_TIER_3_CLASSES.good.bar;
-  if (value >= 55) return QUALITY_TIER_3_CLASSES.watch.bar;
-  return QUALITY_TIER_3_CLASSES.bad.bar;
+  const tier = getPegScoreTier(value);
+  return tier ? QUALITY_TIER_3_CLASSES[tier].bar : "bg-muted-foreground";
 }

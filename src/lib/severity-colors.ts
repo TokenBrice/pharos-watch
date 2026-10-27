@@ -11,6 +11,7 @@ import { isQuietDeviationsEnabled } from "@/lib/feature-flags";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import {
   getPegDeviationLevel,
+  getPegScoreTier,
   PEG_DEVIATION_TONE_CLASSES,
   QUALITY_TIER_3_CLASSES,
 } from "@shared/lib/classification";
@@ -97,12 +98,6 @@ const SCORE_TEXT_THRESHOLDS = [
   { min: Number.NEGATIVE_INFINITY, className: TIER_TEXT.red },
 ] as const;
 
-const PEG_SCORE_THRESHOLDS = [
-  { min: 90, className: QUALITY_TIER_3_CLASSES.good.text },
-  { min: 70, className: QUALITY_TIER_3_CLASSES.watch.text },
-  { min: Number.NEGATIVE_INFINITY, className: QUALITY_TIER_3_CLASSES.bad.text },
-] as const;
-
 const DURABILITY_TEXT_THRESHOLDS = [
   { min: 70, className: QUALITY_TIER_3_CLASSES.good.text },
   { min: 40, className: QUALITY_TIER_3_CLASSES.watch.text },
@@ -124,7 +119,8 @@ export function getScoreColor(score: number): string {
 
 /** Map a peg score (0-100, null) to a Tailwind text color class */
 export function pegScoreColor(score: number | null): string {
-  return scoreToColorClass(score, PEG_SCORE_THRESHOLDS);
+  const tier = getPegScoreTier(score);
+  return tier ? QUALITY_TIER_3_CLASSES[tier].text : "text-muted-foreground";
 }
 
 // ---------------------------------------------------------------------------
