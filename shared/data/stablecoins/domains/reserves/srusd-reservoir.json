@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv09)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
     "confidence": "verified",
     "sources": [
       {
@@ -41,9 +41,9 @@
         "url": "https://raw.githubusercontent.com/reservoir-protocol/reservoir/master/src/Savingcoin.sol"
       }
     ],
-    "rationale": "Reservoir's live balance-sheet endpoint listed srUSD as a current protocol liability when reviewed on 2026-09-21. The verified SavingModule fixes the direct relationship: minting srUSD burns rUSD, redemption burns srUSD and mints rUSD, and rusdTotalLiability() includes srUSD supply valued at the module price. The full direct reserve composition is therefore one 100% wrapper claim on the tracked parent rusd-reservoir. The parent's underlying reserve composition and custody risks remain upstream facts.",
-    "compositionBasis": "Reservoir live balance sheet observed 2026-09-21 and verified SavingModule burn-mint relationship",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Reservoir's live balance-sheet endpoint listed srUSD as a current protocol liability when re-read on 2026-10-27 (srUSD liability 623,114.41 alongside wsrUSD and rUSD), and the Blockscout-verified SavingModule source was re-read the same day with the burn-mint path unchanged. The verified SavingModule fixes the direct relationship: minting srUSD burns rUSD, redemption burns srUSD and mints rUSD, and rusdTotalLiability() includes srUSD supply valued at the module price. The full direct reserve composition is therefore one 100% wrapper claim on the tracked parent rusd-reservoir. The parent's underlying reserve composition and custody risks remain upstream facts.",
+    "compositionBasis": "Reservoir live balance sheet observed 2026-10-27 and verified SavingModule burn-mint relationship",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct dependency is fully identified as rUSD. The underlying rUSD reserve composition, strategy allocation, and legal custody terms remain upstream facts tracked on the rusd-reservoir record.",
     "knownUnknownExposurePct": 0

@@ -4,7 +4,7 @@
     {
       "sourceKey": "infinifi:fasanara-gdaf",
       "name": "Fasanara mGLOBAL (GDADF)",
-      "pct": 43.4,
+      "pct": 19.9,
       "risk": "high",
       "blacklistable": true,
       "coinId": "mglobal-midas-fasanara",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "infinifi:cowswap-fxsave",
       "name": "f(x) fxSAVE",
-      "pct": 16.4,
+      "pct": 11.7,
       "risk": "medium",
       "coinId": "fxsave-f-x-protocol",
       "depType": "collateral",
@@ -38,7 +38,7 @@
     {
       "sourceKey": "infinifi:new-silver-junior",
       "name": "New Silver",
-      "pct": 10.5,
+      "pct": 7.6,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "private-credit",
@@ -53,7 +53,7 @@
     {
       "sourceKey": "infinifi:spark-susdc-refcode",
       "name": "Spark sUSDC",
-      "pct": 7.5,
+      "pct": 4.9,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -69,7 +69,7 @@
     {
       "sourceKey": "infinifi:new-silver-senior",
       "name": "New Silver 2 Senior",
-      "pct": 4.1,
+      "pct": 14.7,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "New Silver",
@@ -83,7 +83,7 @@
     {
       "sourceKey": "infinifi:fasanara-rwa-farm",
       "name": "Fasanara Genesis Fund",
-      "pct": 5.3,
+      "pct": 3.8,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "fund-share",
@@ -98,7 +98,7 @@
     {
       "sourceKey": "infinifi:falconx-farm",
       "name": "FalconX Institutional",
-      "pct": 4.1,
+      "pct": 2.9,
       "risk": "high",
       "blacklistable": true,
       "assetClass": "private-credit",
@@ -115,7 +115,7 @@
     {
       "sourceKey": "infinifi:morpho-steakusdcinfinifi",
       "name": "Morpho infiniFi Ecosystem Vault",
-      "pct": 1.3,
+      "pct": 0,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -132,7 +132,7 @@
     {
       "sourceKey": "infinifi:aavev3",
       "name": "Aave USDC",
-      "pct": 7.3,
+      "pct": 3.6,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -149,7 +149,7 @@
     {
       "sourceKey": "infinifi:base-morpho-steakhouse-prime",
       "name": "Steakhouse Prime USDC",
-      "pct": 0.1,
+      "pct": 0.5,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -166,7 +166,7 @@
     {
       "sourceKey": "infinifi:monad-aavev3",
       "name": "Aave USDC",
-      "pct": 0,
+      "pct": 2.5,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -216,7 +216,7 @@
     {
       "sourceKey": "infinifi:morpho-v2-august-usdc",
       "name": "August USDC",
-      "pct": 0,
+      "pct": 4.4,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -232,7 +232,7 @@
     {
       "sourceKey": "infinifi:liquid-cap",
       "name": "Liquid Cap stcUSD",
-      "pct": 0,
+      "pct": 10.5,
       "risk": "medium",
       "coinId": "stcusd-cap",
       "depType": "collateral",
@@ -249,7 +249,7 @@
     {
       "sourceKey": "infinifi:pendle-v3-pt-reusd-10dec2026",
       "name": "Pendle PT reUSD 10DEC2026",
-      "pct": 0,
+      "pct": 13.0,
       "risk": "high",
       "coinId": "reusd-re-protocol",
       "depType": "collateral",
@@ -274,12 +274,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W4T05Infinifi)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "infiniFi real-time protocol data (2026-09-21)",
+        "label": "infiniFi real-time protocol data (2026-10-27)",
         "url": "https://eth-api.infinifi.xyz/api/protocol/data"
       },
       {
@@ -335,38 +335,38 @@
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
       }
     ],
-    "rationale": "The infiniFi live protocol capture on 2026-09-21 reports ten nonzero farm slices totaling 100.0% after adapter rounding. Morpho's vault page identifies the previously unmapped 0.1% Steakhouse Prime USDC position as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. Metadata reviewed 2026-10-04: zero-percent keyed rows are classification-only join metadata, not new measured holdings or a refreshed composition. Exact Monad AaveV3Farm and Ethereum AaveV4Farm verified sources establish protocol-position classes and protocol counterparties for the separately keyed live rows. The issuer API identifies both exact Sentora farms and states redemptions are available within one week. Aave utilization, USDG keeper withdrawal/swap, and cross-chain final settlement remain unbounded; no immediate liquidity or zero maturity is inferred. Classification metadata reviewed on 2026-10-07 does not change the 2026-09-21 composition or its percentages. The issuer API binds MAINNET aave-v4-usdg farm 0x2CdF51ca20C2DD56480c35adEA667A6653Fb7657 to USDG 0xe343167631d89B6Ffc58B88d6b7fB0228795491D and describes Aave V3/V4 lending. It binds MONAD morpho-v2-august-usdc farm 0x1330902050dB4edAc0D9D8ca33FdAb5DbE986c9c to AugustUSDCv2 share 0x80017bF0f793EBbE9679Cd61ff0e395B62CAbB59; Morpho identifies that exact vault as USDC with August Digital as curator, and Circle identifies native Monad USDC 0x754704Bc059F8C67012fEd69BC8A327a5aafb603. The new zero-percent keyed row is classification-only metadata, not measured holdings. No farm bucket or conditional pool-utilization statement is converted into a liquidity guarantee.",
-    "compositionBasis": "infiniFi protocol farm balances captured on 2026-09-21, with the Base Steakhouse Prime vault identity verified against Morpho. October 9 adds only zero-weight keyed classification metadata for Liquid Cap and PT-reUSD, plus ordinary liquidity terms on existing zero-weight Aave/August rows; none changes historical weights or compositionAsOf. PT expiry() is 2026-12-10T00:00:00Z, giving a conservative 62-day maximum remaining instrument tenor at the October 9 pin, not a USDC settlement guarantee. PT SY getTokensIn() names exact registered reUSD; SY assetInfo() names USDC as accounting asset, not collateral. Resilience issuer attribution does not give PT holders registered-noteholder rights. PT liquidity remains unknown. Aave immediate horizons are utilization-conditional ordinary withdrawal terms; August seven-days is the issuer's approximate normal horizon, not a binding maximum. No hard liquidity bound, current available fraction, stress exit capacity or financial assurance is inferred.",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "The infiniFi live protocol capture on 2026-10-27 reports thirteen nonzero farm slices (farm balances sum to $69,343,008.49 against reported protocol TVL of $69,342,920.04) totaling 100.0% after rounding to one decimal. Rows that carried zero weight on 2026-09-21 (Liquid Cap stcUSD, Pendle PT reUSD 10DEC2026, Aave USDC on Monad, August USDC) now carry measured weights, and the Morpho infiniFi Ecosystem Vault farm is empty. Morpho's vault page identifies the previously unmapped Steakhouse Prime USDC position (0.5% on 2026-10-27) as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. Metadata reviewed 2026-10-04 on the keyed rows is retained. Exact Monad AaveV3Farm and Ethereum AaveV4Farm verified sources establish protocol-position classes and protocol counterparties for the separately keyed live rows. The issuer API identifies both exact Sentora farms and states redemptions are available within one week. Aave utilization, USDG keeper withdrawal/swap, and cross-chain final settlement remain unbounded; no immediate liquidity or zero maturity is inferred. Classification metadata reviewed on 2026-10-07 and 2026-10-09 is retained; the weights are the 2026-10-27 measurements. The issuer API binds MAINNET aave-v4-usdg farm 0x2CdF51ca20C2DD56480c35adEA667A6653Fb7657 to USDG 0xe343167631d89B6Ffc58B88d6b7fB0228795491D and describes Aave V3/V4 lending. It binds MONAD morpho-v2-august-usdc farm 0x1330902050dB4edAc0D9D8ca33FdAb5DbE986c9c to AugustUSDCv2 share 0x80017bF0f793EBbE9679Cd61ff0e395B62CAbB59; Morpho identifies that exact vault as USDC with August Digital as curator, and Circle identifies native Monad USDC 0x754704Bc059F8C67012fEd69BC8A327a5aafb603. No farm bucket or conditional pool-utilization statement is converted into a liquidity guarantee.",
+    "compositionBasis": "infiniFi protocol farm balances captured on 2026-10-27, with the Base Steakhouse Prime vault identity verified against Morpho. The October 9 keyed classification metadata for Liquid Cap and PT-reUSD, and the ordinary liquidity terms on the Aave and August rows, apply to rows that now carry measured weights. PT expiry() is 2026-12-10T00:00:00Z, giving a conservative 62-day maximum remaining instrument tenor at the October 9 pin, not a USDC settlement guarantee. PT SY getTokensIn() names exact registered reUSD; SY assetInfo() names USDC as accounting asset, not collateral. Resilience issuer attribution does not give PT holders registered-noteholder rights. PT liquidity remains unknown. Aave immediate horizons are utilization-conditional ordinary withdrawal terms; August seven-days is the issuer's approximate normal horizon, not a binding maximum. No hard liquidity bound, current available fraction, stress exit capacity or financial assurance is inferred.",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "All ten nonzero adapter farm slices are identified. Private-credit and fund positions remain explicit non-links; the Aave, Spark, and Morpho positions are linked to their tracked USDC underlying.",
+    "knownUnknownExposure": "All thirteen nonzero adapter farm slices are identified. Private-credit and fund positions remain explicit non-links; the Aave, Spark, and Morpho positions are linked to their tracked USDC underlying.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 2,
         "reserveName": "New Silver",
-        "pct": 10.5,
+        "pct": 7.6,
         "disposition": "untracked-exogenous-asset",
         "rationale": "New Silver is a named private-credit position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 4,
         "reserveName": "New Silver 2 Senior",
-        "pct": 4.1,
+        "pct": 14.7,
         "disposition": "untracked-exogenous-asset",
         "rationale": "New Silver 2 Senior is a named private-credit position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "Fasanara Genesis Fund",
-        "pct": 5.3,
+        "pct": 3.8,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Fasanara Genesis is a named fund position, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "FalconX Institutional",
-        "pct": 4.1,
+        "pct": 2.9,
         "disposition": "untracked-exogenous-asset",
         "rationale": "FalconX Institutional is a named lending position, not a tracked stablecoin dependency."
       }
