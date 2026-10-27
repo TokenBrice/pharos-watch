@@ -130,10 +130,11 @@ counted in `supplyUnavailableCount` and excluded from every total rather than ad
 stats band and the FreezeWatch share card) classifies coverage as
 `complete`, `partial` or `unavailable`. `unavailable` (no reviewed coin reported supply, including a
 schema-valid empty list) publishes no supply total or share (`—`) while registry counts stay visible.
-`partial` replaces the freezable and unfreezable headline shares with `Partial`; the observed-only share,
-observed totals and the "Observed supply only · N assets without supply data excluded" label appear in
-secondary text, so a partial list can never read as a full-market 0% or 100%. Headline shares are
-published only for `complete` coverage. A bucket whose every member lacks supply shows `—` for its value
+`partial` keeps the freezable and unfreezable headline shares but qualifies them as observed-only: the
+hero reads "of observed" market cap, the unfreezable card adds a small `partial` marker beside its figure,
+and the "Observed supply only · N assets without supply data excluded" label and observed totals appear in
+secondary text, so a partial list can never read as a full-market share. The marker never replaces the
+figure; the FreezeWatch share card is still withheld for `partial` coverage. A bucket whose every member lacks supply shows `—` for its value
 and share; the combined freeze-exposed value and share are likewise `—` when a nonempty exposed population has no observed supply, even if non-freezable assets are observed; an explicit observed zero remains a real `$0`. The FreezeWatch data-quality notice also lists
 `dataQuality.ambiguousOrderCount` events (with the plain-language `ambiguousOrderReason`, currently Tron
 transfers in separate transactions whose order cannot be confirmed) when the count is positive.

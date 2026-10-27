@@ -199,9 +199,6 @@ export default function FreezeWatchClient() {
                 </p>
               </RailHeroFigureTransition>
             )}
-            <p className="max-w-md text-sm leading-relaxed text-muted-foreground">
-              of {freezableSummary.coverage === "partial" ? "observed" : "tracked"} stablecoin market cap is exposed to freezing: the issuer can freeze holders (Yes), holds admin controls that could restrict them (Possible), or depends on freezable assets (Upstream).
-            </p>
             {heroUnavailable || heroLoading ? null : (
               <UniverseChip universe="active" value={`${classifiedCount} coins classified`} />
             )}

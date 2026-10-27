@@ -6,7 +6,7 @@ import { InteractiveMetricStatCard, MetricStatCard } from "@/components/metric-s
 import { QueryStateNotice } from "@/components/query-state-notice";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { BlacklistStatusBucket } from "@shared/lib/blacklist-status-buckets";
-import { computeFreezableSummary } from "@shared/lib/freezewatch/freezable-summary";
+import { computeFreezableSummary, describeFreezableSupplyCoverage } from "@shared/lib/freezewatch/freezable-summary";
 import { formatCurrency, formatPercent } from "@shared/lib/format";
 import type { BlacklistSummaryResponse } from "@shared/types";
 import { formatBlacklistValuation } from "@/lib/blacklist-valuation";
@@ -61,20 +61,29 @@ export function BlacklistStats({
       : null;
   const isUnfreezableShareLoading = supportDataLoading;
   const unfreezableSharePartial = freezableSummary.coverage === "partial";
-  // The headline share is published only over complete supply coverage; a partial
-  // denominator moves the observed-only share into the labelled subtext.
+  // A partial observed-supply denominator qualifies the share with a small marker; it never replaces it.
   const unfreezableMarketShareValue =
-    isUnfreezableShareLoading || supportUnavailable || unfreezableMarketSharePct === null
-      ? "—"
-      : unfreezableSharePartial
-        ? "Partial"
-        : formatMarketSharePercentage(unfreezableMarketSharePct);
+    isUnfreezableShareLoading || supportUnavailable || unfreezableMarketSharePct === null ? (
+      "—"
+    ) : unfreezableSharePartial ? (
+      <>
+        {formatMarketSharePercentage(unfreezableMarketSharePct)}
+        <span
+          className="ml-2 text-sm font-normal text-muted-foreground"
+          title={describeFreezableSupplyCoverage(freezableSummary) ?? undefined}
+        >
+          partial
+        </span>
+      </>
+    ) : (
+      formatMarketSharePercentage(unfreezableMarketSharePct)
+    );
   const unfreezableCount = isUnfreezableShareLoading ? "syncing" : `${unfreezableBucket?.count ?? 0} stablecoins`;
   const baseUnfreezableSubtext = supportUnavailable
     ? "Freeze status data unavailable"
     : unfreezableBucket && unfreezableMarketSharePct !== null
       ? unfreezableSharePartial
-        ? `${unfreezableCount} · ${formatMarketSharePercentage(unfreezableMarketSharePct)} of observed supply (${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)}) · ${freezableSummary.supplyUnavailableCount} without supply data excluded`
+        ? `${unfreezableCount} · ${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} observed · ${freezableSummary.supplyUnavailableCount} without supply data excluded`
         : `${unfreezableCount} · ${formatCurrency(unfreezableBucket.marketCap)} of ${formatCurrency(totalTrackedMarketCap)} total`
       : freezableSummary.coverage === "unavailable" && blacklistStatusBuckets !== null
         ? `${unfreezableCount} · supply data unavailable`
