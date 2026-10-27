@@ -168,14 +168,11 @@ describe("CI workflow scope", () => {
       step.run === "npm test -- --shard=${{ matrix.shard }}/2")).toBe(true);
   });
 
-  it("runs CodeQL daily with the existing Monday authority and manual dispatch, not pushes", () => {
+  it("runs CodeQL weekly on Monday and manual dispatch, not pushes", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/codeql.yml"));
     expect(workflow.on.push).toBeUndefined();
     expect(workflow.on).toHaveProperty("workflow_dispatch");
-    expect(workflow.on.schedule).toEqual([
-      { cron: "0 6 * * 1" },
-      { cron: "17 6 * * *" },
-    ]);
+    expect(workflow.on.schedule).toEqual([{ cron: "0 6 * * 1" }]);
   });
 
   it("restricts auxiliary production publishers to main for manual and scheduled runs", () => {
