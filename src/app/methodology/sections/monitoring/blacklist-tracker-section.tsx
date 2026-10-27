@@ -62,15 +62,12 @@ export function BlacklistTrackerMethodologySection() {
                 Bounded cursor progress is not caught-up chain coverage: an incomplete scan cannot renew success
                 clocks or publish a fresh summary. Budget-skipped and order-withheld snapshots are retried from
                 durable maintenance debt. Lifecycle and amount ordering require numeric local positions and proven
-                cross-transaction order; RPC event timestamps require matching block hashes.
+                cross-transaction order; RPC event timestamps require matching block hashes. A wholly unobserved freeze-exposed population is unavailable, never $0.
               </p>
               <p>
                 Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No. The sourced
                 `blacklistabilityReview.reviewedStatus` is the sole status authority; the generated client status is a
                 direct projection, while Safety Score V10 consumes the review as evidence rather than a fallback verdict.
-              </p>
-              <p>
-                A freeze-exposed subtotal is published only when at least one exposed asset reports supply; with none observed it is unavailable, never $0, while an explicit observed zero and partly observed subsets keep their qualified totals.
               </p>
               <p>
                 Reviews measure each deployment against the Safety Score material-supply threshold (currently 10%),

@@ -456,9 +456,7 @@ Upstream requires no direct Yes/Possible plus a holder claim on an exposed decla
 
 Reviews cite deployments, supply shares, current authorities and reachable holder-targeting paths, pinned decisive reads, and any parent or measured reserve basis with denominator. Possible and Upstream describe exposure, not an asserted active blacklist on the token. The full decision procedure is at https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md#freezewatch-decision-procedure.
 
-A freeze-exposed subtotal is published only when at least one exposed asset reports supply; with none observed it is unavailable, never $0, while an explicit observed zero and partly observed subsets keep their qualified totals.
-
-Blacklist Tracker v4.3 counts canonical EVM logs and Tron byte identities once. Bounded progress is not caught-up coverage and cannot renew success/publication clocks; durable maintenance debt retries skipped or ambiguous snapshots. Unknown USD remains unavailable and mixed totals disclose partial valuation coverage, including all canonical tracked gold cohorts. Historical repair requires event-time quotes, ordering requires execution evidence, and RPC timestamps require matching block hashes. Failed observations and explicit gold zero substitutions retain distinct provenance.
+Blacklist Tracker v4.3 counts canonical EVM logs and Tron byte identities once. Bounded progress is not caught-up coverage and cannot renew success/publication clocks; durable maintenance debt retries skipped or ambiguous snapshots. Unknown USD remains unavailable and mixed totals disclose partial valuation coverage, including all canonical tracked gold cohorts. Historical repair requires event-time quotes, ordering requires execution evidence, and RPC timestamps require matching block hashes. Failed observations and explicit gold zero substitutions retain distinct provenance. A wholly unobserved freeze-exposed population is unavailable, never $0.
 
 
 ## Chain Health Score
