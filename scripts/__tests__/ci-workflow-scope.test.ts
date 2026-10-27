@@ -560,3 +560,60 @@ describe("external scheduler delivery monitor", () => {
     } }).status).toBe(1);
   });
 });
+
+describe("Cloudflare deployment credential scope", () => {
+  type Step = { name?: string; id?: string; run?: string; uses?: string; env?: Record<string, string> };
+  const credentialKeys = ["CLOUDFLARE_API_TOKEN", "CLOUDFLARE_ACCOUNT_ID"] as const;
+  const consumerSteps = (workflowPath: string, jobName: string) => {
+    const workflow = parseYaml(readRepoFile(workflowPath));
+    const job = workflow.jobs[jobName] as { env?: Record<string, string>; steps: Step[] };
+    // Effective step environment = workflow env + job env + step env.
+    const effective = job.steps.map((step) => ({
+      step,
+      env: { ...(workflow.env ?? {}), ...(job.env ?? {}), ...(step.env ?? {}) } as Record<string, string>,
+    }));
+    return {
+      job,
+      holders: effective
+        .filter(({ env }) => credentialKeys.some((key) => env[key] !== undefined))
+        .map(({ step }) => step.name),
+      effective,
+    };
+  };
+
+  it.each([
+    ["deploy-worker", ".github/workflows/deploy-cloudflare.yml", [
+      "Verify pre-provisioned reserve Queue and dead-letter Queue",
+      "Preflight remote D1 baseline adoption",
+      "Apply production D1 migrations",
+      "Deploy heavy Worker",
+      "Verify active heavy Worker deployment",
+      "Deploy public Worker",
+      "Verify active public Worker deployment",
+      "Record verified Worker activation markers",
+    ]],
+    ["pages-release", ".github/workflows/pages-release.yml", [
+      "Deploy Pages",
+      "Resolve active Pages deployment",
+    ]],
+  ])("%s exposes credentials only to named consumer steps", (jobName, path, consumers) => {
+    const { job, holders, effective } = consumerSteps(path, jobName);
+    for (const key of credentialKeys) expect(job.env?.[key]).toBeUndefined();
+    expect(holders).toEqual(consumers);
+    for (const { env, step } of effective) {
+      if (!consumers.includes(step.name ?? "")) continue;
+      expect(env.CLOUDFLARE_API_TOKEN).toBe("${{ secrets.CLOUDFLARE_API_TOKEN }}");
+      expect(env.CLOUDFLARE_ACCOUNT_ID).toBe("${{ secrets.CLOUDFLARE_ACCOUNT_ID }}");
+    }
+  });
+
+  it("keeps Pages build-only secret and public flags out of the deploy credential scope", () => {
+    const { job, effective } = consumerSteps(".github/workflows/pages-release.yml", "pages-release");
+    expect(job.env?.NEXT_PUBLIC_FORCE_SITE_DATA_PROXY).toBe("true");
+    const build = effective.find(({ step }) => step.name === "Build clean production export");
+    expect(build?.env.SITE_API_SHARED_SECRET).toBe("${{ secrets.SITE_API_SHARED_SECRET }}");
+    expect(build?.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
+    const marker = effective.find(({ step }) => step.name === "Verify deployment release marker");
+    expect(marker?.env.CLOUDFLARE_API_TOKEN).toBeUndefined();
+  });
+});
