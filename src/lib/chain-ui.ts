@@ -1,5 +1,6 @@
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 import { WAKE_HUE_PCT } from "@shared/lib/harbor-scene";
+import { roundForDisplay } from "@shared/lib/format";
 
 export { formatChainShare } from "@shared/lib/chain-share-format";
 
@@ -22,9 +23,10 @@ export function trendColor(value: number | null): string {
   return pct > 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down;
 }
 
-/** Tint for any other change ratio (24h/30d, per-coin rows): direction only, with a measured zero in neutral ink. */
+/** Tint for any other change ratio (24h/30d, per-coin rows): direction only, with a measured or rounded zero in neutral ink. */
 export function deltaColor(value: number | null): string {
   if (value == null) return "text-muted-foreground";
-  if (value === 0) return "text-foreground";
+  // Callers print percentage points at two decimals; a rounded zero is neutral ink.
+  if (roundForDisplay(value * 100, 2) === 0) return "text-foreground";
   return value > 0 ? DIRECTION_TONE_CLASSES.up : DIRECTION_TONE_CLASSES.down;
 }

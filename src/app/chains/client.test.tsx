@@ -113,4 +113,20 @@ describe("ChainsLeaderboardClient", () => {
     expect(screen.getByText(/^Retained · as of \w+ \d+, \d{4} at \d{2}:\d{2}/)).toBeTruthy();
     expect(screen.getByRole("button", { name: /Stale data/ }).getAttribute("data-reason-codes")).toBe("api-stale");
   });
+
+  it("prints rounded-zero supply changes unsigned and keeps material declines negative", () => {
+    mockChains({
+      chains: [
+        makeChain({ id: "ethereum", name: "Ethereum", change7dPct: -0.000001 }),
+        makeChain({ id: "tron", name: "Tron", change7dPct: -0.05 }),
+      ],
+      globalTotalUsd: 1_000_000_000,
+      globalChange7dPct: -0.0001,
+    });
+    const { container } = render(<ChainsLeaderboardClient />);
+    expect(container.textContent).not.toMatch(/-0\.0+%|\+0\.0+%/);
+    expect(screen.getByText("0.0%")).toBeTruthy();
+    expect(screen.getByText("0.00%")).toBeTruthy();
+    expect(screen.getByText("-5.00%")).toBeTruthy();
+  });
 });

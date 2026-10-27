@@ -41,6 +41,7 @@ import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import { getVariantDisplay } from "@shared/lib/variant-display";
+import { roundForDisplay } from "@shared/lib/format";
 import type {
   DexLiquidityData,
   Infrastructure,
@@ -181,6 +182,10 @@ function posOrNull(value: number | null): number | null {
 
 function getTrendClass(hasPreviousValue: boolean, currentValue: number, previousValue: number): string {
   if (!hasPreviousValue) return HERO_MUTED_CLASS;
+  // A change that prints as 0.00% is neutral, whatever its unrounded sign.
+  if (previousValue > 0 && roundForDisplay(((currentValue - previousValue) / previousValue) * 100, 2) === 0) {
+    return HERO_MUTED_CLASS;
+  }
   if (isQuietDeviationsEnabled()) {
     if (previousValue <= 0) return HERO_MUTED_CLASS;
     const percentChange = Math.abs((currentValue - previousValue) / previousValue) * 100;
