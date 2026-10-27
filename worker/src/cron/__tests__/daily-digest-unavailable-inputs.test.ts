@@ -333,6 +333,28 @@ describe("digest publishes unavailable inputs as unavailable", () => {
     expect(prompt).toContain("baseline covers 1 of 3 core coins");
   });
 
+  it.each([
+    [null, undefined],
+    [null, { coveredCoins: 0, totalCoins: 3, coveredMcapUsd: 0 }],
+    [0, { coveredCoins: 0, totalCoins: 3, coveredMcapUsd: 0 }],
+  ])("withholds arithmetic when no comparison pair exists (delta %j)", (mcap7dDelta, mcap7dDeltaCoverage) => {
+    const prompt = buildUserPrompt(dayInput({ mcap7dDelta, mcap7dDeltaCoverage }));
+    expect(prompt).toContain("7-day market cap change: unavailable (no-7d-comparison-pairs)");
+    expect(prompt).not.toContain("7-day market cap change: +$0");
+  });
+
+  it("keeps a measured-flat and an observed-zero-baseline change as dollars without a percentage", () => {
+    const flat = buildUserPrompt(dayInput({
+      totalMcapUsd: 1e9, mcap7dDelta: 0, mcap7dDeltaCoverage: { coveredCoins: 3, totalCoins: 3, coveredMcapUsd: 1e9 },
+    }));
+    expect(flat).toContain("7-day market cap change: +$0");
+    expect(flat).toContain("(0.00%)");
+    const zeroBaseline = buildUserPrompt(dayInput({
+      totalMcapUsd: 1e6, mcap7dDelta: 1e6, mcap7dDeltaCoverage: { coveredCoins: 1, totalCoins: 3, coveredMcapUsd: 1e6 },
+    }));
+    expect(zeroBaseline).toContain("7-day market cap change: +$1.00M (n/a (no 7d baseline))");
+  });
+
   it("keeps a non-finite depeg impact from defusing the regime thresholds", () => {
     const regime = classifyRegime(dayInput({
       activeDepegCount: 1,

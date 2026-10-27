@@ -61,10 +61,11 @@ export function buildUserPrompt(
 
   // The 7-day percentage is measured against the coins that actually have a
   // prior-week baseline; without one there is no denominator to divide by.
-  const mcap7dBaseline = (data.mcap7dDeltaCoverage?.coveredMcapUsd ?? data.totalMcapUsd) - data.mcap7dDelta;
+  const mcap7dDelta = data.mcap7dDeltaCoverage?.coveredCoins === 0 ? null : data.mcap7dDelta;
+  const mcap7dBaseline = mcap7dDelta == null ? NaN : (data.mcap7dDeltaCoverage?.coveredMcapUsd ?? data.totalMcapUsd) - mcap7dDelta;
   const mcap7dPct =
-    Number.isFinite(mcap7dBaseline) && mcap7dBaseline > 0
-      ? `${((data.mcap7dDelta / mcap7dBaseline) * 100).toFixed(2)}%`
+    mcap7dDelta != null && Number.isFinite(mcap7dBaseline) && mcap7dBaseline > 0
+      ? `${((mcap7dDelta / mcap7dBaseline) * 100).toFixed(2)}%`
       : "n/a (no 7d baseline)";
   const mcap7dCoverage =
     data.mcap7dDeltaCoverage != null && data.mcap7dDeltaCoverage.coveredCoins < data.mcap7dDeltaCoverage.totalCoins
@@ -76,7 +77,9 @@ export function buildUserPrompt(
     data.supplyCoverage?.complete === true
       ? `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`
       : `Known stablecoin market-cap subtotal: ${formatCurrency(data.totalMcapUsd)}; supply coverage ${data.supplyCoverage ? `${data.supplyCoverage.observedCount} observed, ${data.supplyCoverage.unavailableCount} unavailable` : "unverified"}. Do not describe this as the complete market total.`,
-    `7-day market cap change: ${data.mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(data.mcap7dDelta)} (${mcap7dPct})${mcap7dCoverage}`,
+    mcap7dDelta == null
+      ? "7-day market cap change: unavailable (no-7d-comparison-pairs)"
+      : `7-day market cap change: ${mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(mcap7dDelta)} (${mcap7dPct})${mcap7dCoverage}`,
     `Currently active depegs (ongoing, not yet resolved): ${data.degradedSources?.includes("active-depegs-query") ? "unavailable (active-depegs-query)" : data.activeDepegCount ?? "unavailable (active-depegs-observation-missing)"}`,
     `Depegs resolved in last 24h: ${data.degradedSources?.includes("resolved-depegs-query") ? "unavailable (resolved-depegs-query)" : data.resolvedDepegCount ?? "unavailable (resolved-depegs-observation-missing)"}`,
   );
