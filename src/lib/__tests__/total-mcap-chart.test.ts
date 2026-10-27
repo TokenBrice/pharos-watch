@@ -261,4 +261,36 @@ describe("buildTotalMcapChartRows", () => {
       usdcHistory: [], usdsHistory: [], daiHistory: [],
     })).toEqual([]);
   });
+
+  it("leaves a gap for a selected partial-chain cohort row and its Others residual, keeping the provider total (K-031)", () => {
+    const partial = {
+      supplySource: null,
+      supplyObservedAt: null,
+      supplyChainGuard: {
+        reason: "supply-chain-dropout" as const, status: "chains-unavailable" as const, partialCoverage: true as const,
+        chains: [{
+          chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3, baselineObservedAt: 50,
+          baselineSource: "state" as const, resolution: "unavailable" as const,
+        }],
+      },
+    };
+    const rows = buildTotalMcapChartRows(
+      [
+        { date: 100, totalCirculatingUSD: { peggedUSD: 100 } },
+        { date: 200, totalCirculatingUSD: { peggedUSD: 200 } },
+      ],
+      {
+        usdtHistory: [
+          { date: 100, circulatingUsd: 10, price: 1, supplyProvenance: null },
+          { date: 200, circulatingUsd: 17, price: 1, supplyProvenance: partial },
+        ],
+        usdcHistory: [{ date: 100, circulatingUsd: 5, price: 1 }, { date: 200, circulatingUsd: 0, price: 1 }],
+        usdsHistory: [{ date: 100, circulatingUsd: 2, price: 1 }, { date: 200, circulatingUsd: 4, price: 1 }],
+        daiHistory: [{ date: 100, circulatingUsd: 3, price: 1 }, { date: 200, circulatingUsd: 6, price: 1 }],
+      },
+    );
+    // The legacy (unrecorded) row stays numeric; the partial row does not fall back to the older point.
+    expect(rows[0]).toMatchObject({ usdt: 10, usdc: 5, sky: 5, others: 80, total: 100 });
+    expect(rows[1]).toMatchObject({ usdt: null, usdc: 0, sky: 10, others: null, total: 200 });
+  });
 });

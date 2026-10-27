@@ -7,6 +7,8 @@ import { ACTIVE_IDS, ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "./stablecoins
 import { PSI_HISTORICAL_ASSETS, PSI_HISTORICAL_IDS, PSI_HISTORICAL_META_BY_ID } from "./psi-historical-assets";
 import type { StablecoinMeta } from "../types";
 
+export { PSI_HISTORICAL_IDS };
+
 /** Broad monitoring universe used by depeg, DEWS, and per-asset history lanes. */
 export const PSI_ELIGIBLE_IDS: ReadonlySet<string> = new Set([...ACTIVE_IDS, ...PSI_HISTORICAL_IDS]);
 export const PSI_ELIGIBLE_META_BY_ID: ReadonlyMap<string, StablecoinMeta> = new Map([

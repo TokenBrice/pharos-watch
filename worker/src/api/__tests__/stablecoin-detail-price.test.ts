@@ -153,6 +153,32 @@ describe("missing detail price enrichment", () => {
     });
   });
 
+  it("carries the canonical parent derivation only with the overlaid canonical quote (K-207)", async () => {
+    const priceDerivation = {
+      inheritedFrom: "pathusd-bridge", parentSource: "coingecko", parentConfidence: "single-source",
+      parentObservedAt: NOW - 90, parentObservedAtMode: "upstream", parentReplaySafe: true, navMethod: "convertToAssets",
+    };
+    const overlaid = await enrichMissingDetailPrice(makeDb({ priceSource: "coingecko", priceConfidence: "single-source", priceDerivation }),
+      "usdt-tether", makeResponse());
+    const overlaidBody = StablecoinDetailResponseSchema.parse(await overlaid.json());
+    expect(overlaidBody).toMatchObject({ price: 0.997, priceSource: "coingecko", priceDerivation });
+    expect(projectStablecoinLiveSummary(overlaidBody).priceDerivation).toEqual(priceDerivation);
+
+    // A provider-owned quote wins: neither canonical nor provider-supplied derivation is attached to it.
+    const provider = await enrichMissingDetailPrice(makeDb({ priceDerivation }), "usdt-tether",
+      makeResponse(JSON.stringify({ tokens, price: 0.98, priceDerivation })));
+    expect(await provider.json()).toEqual({ tokens, price: 0.98 });
+  });
+
+  it("drops derivation from a live summary whose price is not an observation", () => {
+    const summary = projectStablecoinLiveSummary({
+      tokens, price: 1, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference",
+      priceDerivation: { inheritedFrom: "x", parentSource: null, parentConfidence: null, parentObservedAt: null,
+        parentObservedAtMode: null, parentReplaySafe: false },
+    });
+    expect(summary).not.toHaveProperty("priceDerivation");
+  });
+
   it("preserves a valid provider discount while forwarding the separate nominal reference", async () => {
     const nominalPriceReference = { price: 1, source: "protocol-par", mode: "nominal_reference" };
     const response = makeResponse(JSON.stringify({ tokens, price: 0.98 }));

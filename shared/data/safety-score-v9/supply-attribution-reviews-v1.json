@@ -4,9 +4,9 @@
   "reviews": [
     {
       "assetId": "syrupusdt-maple",
-      "reviewer": "P2CcipPlans",
-      "reviewedAtSec": 1791202842,
-      "expiresAtSec": 1793794842,
+      "reviewer": "Claude (D02 evidence lane; original review P2CcipPlans)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDT",
         "https://github.com/smartcontractkit/chainlink-ccip/blob/d0e9ff9e116e3fb60b61d00d41aae7e98886ffe6/chains/evm/contracts/Router.sol",
@@ -727,9 +727,9 @@
     },
     {
       "assetId": "susdat-saturn",
-      "reviewer": "P2CcipPlans",
-      "reviewedAtSec": 1791202865,
-      "expiresAtSec": 1793794865,
+      "reviewer": "Claude (D02 evidence lane; original review P2CcipPlans)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat",
         "https://github.com/smartcontractkit/chainlink-ccip/blob/d0e9ff9e116e3fb60b61d00d41aae7e98886ffe6/chains/evm/contracts/Router.sol",
@@ -1230,9 +1230,9 @@
     },
     {
       "assetId": "sdola-inverse-finance",
-      "reviewer": "P2CcipPlans",
-      "reviewedAtSec": 1791203027,
-      "expiresAtSec": 1793795027,
+      "reviewer": "Claude (D02 evidence lane; original review P2CcipPlans)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://etherscan.io/address/0x05eee76f456c51be0459ec1c0a78bf177b2c877c",
         "https://github.com/smartcontractkit/chainlink-ccip/blob/d0e9ff9e116e3fb60b61d00d41aae7e98886ffe6/chains/evm/contracts/Router.sol",
@@ -2739,9 +2739,9 @@
     },
     {
       "assetId": "xgld-unitas",
-      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
-      "reviewedAtSec": 1791196392,
-      "expiresAtSec": 1793788392,
+      "reviewer": "Claude (D02 evidence lane; original review P4OftCohortPlans reviewed runtime and complete peer census)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://docs.unitas.so/overview/xgld.md",
         "https://sourcify.dev/server/v2/contract/56/0xe60106a5cab7e7c64830919d36ab20caaf50ac91?fields=all",
@@ -2939,9 +2939,9 @@
     },
     {
       "assetId": "srusd-reservoir",
-      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
-      "reviewedAtSec": 1791196392,
-      "expiresAtSec": 1793788392,
+      "reviewer": "Claude (D02 evidence lane; original review P4OftCohortPlans reviewed runtime and complete peer census)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://metadata.layerzero-api.com/v1/metadata/experiment/ofts/list?symbols=srUSD",
         "https://docs.reservoir.xyz",
@@ -3055,9 +3055,9 @@
     },
     {
       "assetId": "witry-brix",
-      "reviewer": "P4OftCohortPlans reviewed runtime and complete peer census",
-      "reviewedAtSec": 1791197520,
-      "expiresAtSec": 1793789520,
+      "reviewer": "Claude (D02 evidence lane; original review P4OftCohortPlans reviewed runtime and complete peer census)",
+      "reviewedAtSec": 1793120053,
+      "expiresAtSec": 1795712053,
       "evidenceUrls": [
         "https://docs.brix.money/resources/contracts",
         "https://eth.blockscout.com/api/v2/smart-contracts/0x698b7518711bde4832fdc19f5262df705c713006",
@@ -3251,23 +3251,23 @@
       "belongsToAssetId": "frxusd-frax",
       "chainId": "fraxtal",
       "contractAddress": "0xfc00000000000000000000000000000000000001",
-      "reviewer": "DwFrax",
-      "reviewedAtSec": 1790933944,
-      "expiresAtSec": 1793525944,
+      "reviewer": "Claude (D02 evidence lane; original review DwFrax)",
+      "reviewedAtSec": 1793117800,
+      "expiresAtSec": 1795709800,
       "evidenceUrls": [
         "https://gov.frax.finance/t/fip-419-launch-frax-usd-provide-upgrade-path-to-frax-stablecoin/3543",
         "https://gov.frax.finance/t/fip-430-preparation-for-frxusd-payment-stablecoin-charter-compliance/3698",
         "https://docs.frax.com/frxusd/frxusd-contracts",
         "https://docs.frax.com/fraxtal/addresses/frax-tokens"
       ],
-      "rationale": "FIP419 upgrades the Fraxtal stablecoin predeploy in place to frxUSD; FIP430 separates frxUSD and Legacy FRAX liabilities. At block 42061479 the provider's fc...01 contract reports Frax USD / frxUSD and REMOTE_TOKEN Ethereum frxUSD. Exclude only this mislabelled provider row from unresolved-deployment and unmatched/unreviewed bridge-share numerators, retaining the original aggregate, chain observations and all other materiality facts. Nonzero LFRAX at ff...1fd remains a separate legacy deployment/catalog question and is not excluded.",
+      "rationale": "FIP419 upgrades the Fraxtal stablecoin predeploy in place to frxUSD; FIP430 separates frxUSD and Legacy FRAX liabilities. At block 43153493 (re-read 2026-10-27; originally block 42061479) the provider's fc...01 contract reports Frax USD / frxUSD and REMOTE_TOKEN Ethereum frxUSD. Exclude only this mislabelled provider row from unresolved-deployment and unmatched/unreviewed bridge-share numerators, retaining the original aggregate, chain observations and all other materiality facts. Nonzero LFRAX at ff...1fd remains a separate legacy deployment/catalog question and is not excluded.",
       "provenance": {
         "provider": "defillama",
         "providerAssetId": "6",
-        "adapterSourceUrl": "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/43ea0e28655f7391e57ac687f84377c0bcf8a39a/src/adapters/peggedAssets/frax/index.ts",
-        "blockNumber": 42061479,
-        "blockHash": "0x0dee77bee99aa05b5a7f4af548ce258962d3082ca62cab9e0ad5b2990e2e9496",
-        "observedAtSec": 1790933669,
+        "adapterSourceUrl": "https://raw.githubusercontent.com/DefiLlama/peggedassets-server/f9dcc3cf255e5bcb7a026983c55a47d255b5b2d8/src/adapters/peggedAssets/frax/index.ts",
+        "blockNumber": 43153493,
+        "blockHash": "0x4d361a7041e97d348a7b783ba854a4330b8a293066893c65759c4138a6defb0f",
+        "observedAtSec": 1793117729,
         "rpcUrl": "https://rpc.frax.com",
         "remoteChainId": "ethereum",
         "remoteTokenAddress": "0xcacd6fd266af91b8aed52accc382b4e165586e29"

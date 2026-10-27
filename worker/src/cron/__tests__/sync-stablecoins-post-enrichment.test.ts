@@ -95,17 +95,49 @@ function nativePipelineInput(
   };
 }
 
+const depegCensus = {
+  scope: "psi-non-nav-before-supply-floor" as const,
+  evaluatedAt: 1_700_000_000,
+  eligibleCount: 3,
+  observedCount: 1,
+  unavailableCount: 2,
+  belowFloorCount: 0,
+  reasonCounts: { "asset-absent": 1, "primary-unusable": 1 },
+};
+
 describe("runDepegPipeline capacity holds", () => {
   it.each(["detection", "confirmation"] as const)("propagates %s holds independently of thrown errors", async (stage) => {
-    const detect = vi.spyOn(detection, "detectDepegEvents").mockResolvedValue({ status: "completed" });
+    const detect = vi.spyOn(detection, "detectDepegEvents").mockResolvedValue({ status: "completed", census: depegCensus });
     const confirm = vi.spyOn(confirmation, "confirmPendingDepegs").mockResolvedValue({ status: "completed", providerDiagnostics: [] });
     const held = { status: "held", reason: "depeg-open-event-limit-reached" } as const;
-    if (stage === "detection") detect.mockResolvedValue(held);
+    if (stage === "detection") detect.mockResolvedValue({ ...held, census: null });
     else confirm.mockResolvedValue({ ...held, providerDiagnostics: [] });
     try {
-      await expect(runDepegPipeline(mockD1(), [], undefined, undefined, undefined,
-        "", "")).resolves.toMatchObject({
+      const result = await runDepegPipeline(mockD1(), [], undefined, undefined, undefined, "", "");
+      expect(result).toMatchObject({
         depegHeldReason: "depeg-open-event-limit-reached", depegErrorCount: 0, depegErrors: [],
+      });
+      expect(result).toMatchObject(stage === "detection"
+        ? { depegObservation: null, depegObservationUnavailableReason: "depeg-open-event-limit-reached" }
+        : { depegObservation: depegCensus });
+      if (stage === "confirmation") expect(result).not.toHaveProperty("depegObservationUnavailableReason");
+    } finally {
+      detect.mockRestore();
+      confirm.mockRestore();
+    }
+  });
+
+  it("keeps a late detector hold's completed census and names detector errors", async () => {
+    const detect = vi.spyOn(detection, "detectDepegEvents")
+      .mockResolvedValueOnce({ status: "held", reason: "depeg-open-event-limit-reached", census: depegCensus })
+      .mockRejectedValueOnce(new Error("boom"));
+    const confirm = vi.spyOn(confirmation, "confirmPendingDepegs").mockResolvedValue({ status: "completed", providerDiagnostics: [] });
+    try {
+      const late = await runDepegPipeline(mockD1(), [], undefined, undefined, undefined, "", "");
+      expect(late).toMatchObject({ depegHeldReason: "depeg-open-event-limit-reached", depegObservation: depegCensus });
+      expect(late).not.toHaveProperty("depegObservationUnavailableReason");
+      await expect(runDepegPipeline(mockD1(), [], undefined, undefined, undefined, "", "")).resolves.toMatchObject({
+        depegErrorCount: 1, depegObservation: null, depegObservationUnavailableReason: "depeg-detection-error",
       });
     } finally {
       detect.mockRestore();

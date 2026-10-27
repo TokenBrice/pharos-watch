@@ -20,7 +20,7 @@ import {
   validatePrimaryPriceCandidate,
   validatePublishedAssetPrice,
 } from "../../lib/price-publish-policy";
-import type { AuthoritativeLivePriceOverrideStats } from "../../lib/authoritative-price-sources";
+import { projectPriceDerivation, type AuthoritativeLivePriceOverrideStats, type CurrentPriceOverride } from "../../lib/authoritative-price-sources";
 import {
   getRegistryLivePriceDiagnosticTarget,
   type NominalFxProvenance,
@@ -76,6 +76,7 @@ export interface ProtocolPriceOverride {
   observedAt?: number | null;
   observedAtMode?: PeggedAsset["priceObservedAtMode"];
   nominalFx?: NominalFxProvenance;
+  metadata?: CurrentPriceOverride["metadata"];
 }
 
 export interface AcceptedPriceCandidate {
@@ -90,6 +91,8 @@ export interface AcceptedPriceCandidate {
   syncedAt?: number | null;
   selectedSource?: string | null;
   sourceConfidenceProfile?: PeggedAsset["priceSourceConfidenceProfile"];
+  /** Only a parent-derived winning quote carries this; every other stamp clears it. */
+  priceDerivation?: PeggedAsset["priceDerivation"];
 }
 
 export function applyAcceptedPriceCandidate(input: AcceptedPriceCandidate): void {
@@ -106,6 +109,7 @@ export function applyAcceptedPriceCandidate(input: AcceptedPriceCandidate): void
     input.selectedSource,
     input.sourceConfidenceProfile,
   );
+  if (input.priceDerivation) input.asset.priceDerivation = input.priceDerivation;
 }
 
 export function createValidationContextResolver(): ValidationContextResolver {
@@ -479,6 +483,7 @@ function publishNominalPriceReference(asset: PeggedAsset, reference: NominalPric
   asset.consensusSources = [];
   asset.agreeSources = [];
   asset.priceSourceConfidenceProfile = null;
+  delete asset.priceDerivation;
 }
 
 /**
@@ -577,6 +582,7 @@ export function applyProtocolPriceOverrides(input: {
       syncedAt: syncStartSec,
       selectedSource: override.source,
       sourceConfidenceProfile: null,
+      priceDerivation: projectPriceDerivation(override.metadata),
     });
     appliedCount++;
   }

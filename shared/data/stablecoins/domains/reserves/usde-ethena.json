@@ -4,7 +4,7 @@
     {
       "sourceKey": "ethena:stable",
       "name": "Liquid Cash strategy basket",
-      "pct": 81.3,
+      "pct": 83.4,
       "risk": "medium",
       "assetClass": "other",
       "issuerOrObligor": "Ethena Liquid Cash strategy counterparties: stablecoin issuers, Aave and Morpho markets, tokenized-fund issuers, and institutional borrowers",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "ethena:eth",
       "name": "ETH / liquid staking collateral",
-      "pct": 7.6,
+      "pct": 4.3,
       "risk": "medium",
       "assetClass": "hedged-crypto",
       "issuerOrObligor": "Ethena off-exchange custodians, liquid-staking protocols, and derivatives venues for delta-hedged ETH positions",
@@ -52,7 +52,7 @@
     {
       "sourceKey": "ethena:other",
       "name": "Other collateral",
-      "pct": 1.3,
+      "pct": 1.5,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Ethena counterparties for SOL, XRP, BNB and Gold positions reported in the collateral API; per-position hedge and obligor details are not itemized",
@@ -64,19 +64,35 @@
         "liquidity",
         "concentration"
       ]
+    },
+    {
+      "sourceKey": "ethena:equity",
+      "name": "Equity RWA basis collateral",
+      "pct": 1,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "Ethena counterparties for the Equity RWA basis strategy reported in the collateral API; per-position hedge and obligor details are not itemized",
+      "riskFactors": [
+        "market",
+        "basis",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "concentration"
+      ]
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol owner rulings 2026-10-01 (RuleC01)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Ethena collateral positions API (accessed 2026-10-01)",
+        "label": "Ethena collateral positions API (accessed 2026-10-27)",
         "url": "https://app.ethena.fi/api/positions/current/collateral"
       },
       {
-        "label": "Ethena category breakdown API (accessed 2026-10-01)",
+        "label": "Ethena category breakdown API (accessed 2026-10-27)",
         "url": "https://app.ethena.fi/api/collateral-breakdown"
       },
       {
@@ -88,18 +104,18 @@
         "url": "https://docs.ethena.fi/backing-custody-and-security/overview/off-exchange-settlement-in-detail"
       }
     ],
-    "rationale": "The complete issuer collateral payload at source timestamp 1790830837 (2026-10-01T05:00:37Z) discloses totalBackingAssetsInUsd of $4,946,709,944.87. Independently summed rows reconcile exactly in integer USD cents: Liquid Cash $4,016,882,398.87; ETH and liquid-staking assets $376,033,775; BTC $487,054,055; SOL, XRP, BNB and Gold $66,739,716. Existing adapter buckets round to 81.3/7.6/9.8/1.3%, totaling 100% without an invented balance. This is the issuer's whole backing-assets denominator, not a normalized selected subset, category-denominated lending collateral, or the monthly assurance balance sheet. The category API is separate non-additive context, with a different total and no constituent balances; no category fraction is multiplied into Liquid Cash and no tracked-asset allocation is inferred. Historical 2026-09-29 disclosure was $4,909,493,244.78 with weights 81.1/7.6/9.9/1.4; its review was dated 2026-09-30. No current strategy-wide stressed cash-out bound was established.",
-    "compositionBasis": "Complete issuer collateral positions payload; USD amounts summed against its disclosed totalBackingAssetsInUsd at timestamp 1790830837 (2026-10-01T05:00:37Z). Existing adapter source-key buckets, independent division and one-decimal rounding; category disclosure remains non-additive context.",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "The complete issuer collateral payload at source timestamp 1793105868 (2026-10-27T12:57:48Z) discloses totalBackingAssetsInUsd of $4,568,522,785.86. Independently summed rows reconcile exactly to that total in USD: Liquid Cash $3,811,505,357.86; ETH and liquid-staking assets $194,948,991; BTC $447,200,350; SOL, XRP, BNB and Gold $69,608,802; Equity RWA $45,259,285 (a new payload asset, bucketed separately by the adapter as ethena:equity). Adapter buckets round to 83.4/4.3/9.8/1.5/1.0%, totaling 100% without an invented balance. This is the issuer's whole backing-assets denominator, not a normalized selected subset, category-denominated lending collateral, or the monthly assurance balance sheet. The category API is separate non-additive context, with a different total and no constituent balances; no category fraction is multiplied into Liquid Cash and no tracked-asset allocation is inferred. The prior 2026-10-01 disclosure was $4,946,709,944.87 with weights 81.3/7.6/9.8/1.3% and no Equity RWA row. No current strategy-wide stressed cash-out bound was established.",
+    "compositionBasis": "Complete issuer collateral positions payload; USD amounts summed against its disclosed totalBackingAssetsInUsd at timestamp 1793105868 (2026-10-27T12:57:48Z). Existing adapter source-key buckets, independent division and one-decimal rounding; category disclosure remains non-additive context.",
+    "compositionAsOf": "2026-10-27",
     "compositionSource": "live-adapter",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 81.3% Liquid Cash basket remains allocation-unresolved. Named stablecoins and tokenized funds in the separate category endpoint lack per-asset balances and a reconciled cross-endpoint checkpoint. No favorable constituent classification or dependency allocation follows from the refreshed backing-assets denominator.",
-    "knownUnknownExposurePct": 81.3,
+    "knownUnknownExposure": "The 83.4% Liquid Cash basket remains allocation-unresolved. Named stablecoins and tokenized funds in the separate category endpoint lack per-asset balances and a reconciled cross-endpoint checkpoint. No favorable constituent classification or dependency allocation follows from the refreshed backing-assets denominator.",
+    "knownUnknownExposurePct": 83.4,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Liquid Cash strategy basket",
-        "pct": 81.3,
+        "pct": 83.4,
         "disposition": "basket-needs-split",
         "rationale": "The separate category API names USDT, USDC, USDtb and PYUSD in Liquid Stables, and JAAA/STAC in RWA, without constituent balances. Its denominator differs from the complete collateral endpoint. Retain research candidates without quantifying or multiplying category fractions into the Liquid Cash basket.",
         "candidateCoinIds": [
@@ -114,7 +130,7 @@
       {
         "reserveIndex": 1,
         "reserveName": "ETH / liquid staking collateral",
-        "pct": 7.6,
+        "pct": 4.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Delta-hedged ETH and liquid-staking-token backing is an external crypto, staking, and derivatives exposure, not a tracked stablecoin dependency."
       },
@@ -128,9 +144,16 @@
       {
         "reserveIndex": 3,
         "reserveName": "Other collateral",
-        "pct": 1.3,
+        "pct": 1.5,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The existing adapter's explicitly enumerated other bucket includes SOL, XRP, BNB and Gold at the reviewed snapshot. No Gold token identity or per-position hedge is inferred, and no tracked stablecoin dependency is allocated."
+        "rationale": "The existing adapter's explicitly enumerated other bucket includes SOL, XRP, BNB and Gold at the reviewed snapshot (Equity RWA is a separate slice). No Gold token identity or per-position hedge is inferred, and no tracked stablecoin dependency is allocated."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Equity RWA basis collateral",
+        "pct": 1,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The collateral payload reports Equity RWA basis collateral as a single aggregate row with no per-position hedge, issuer or token identity; it is an external equity and derivatives exposure, not a tracked stablecoin dependency."
       }
     ]
   },

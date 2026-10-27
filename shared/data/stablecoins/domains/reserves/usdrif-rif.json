@@ -4,7 +4,7 @@
     {
       "sourceKey": "moc-v3-buckets:usdrif:rif",
       "name": "RIF collateral in the RIF On Chain V3 RIF bucket",
-      "pct": 99.9235840777,
+      "pct": 99.9254223334,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "RIF token market",
@@ -14,7 +14,7 @@
     {
       "sourceKey": "moc-v3-buckets:usdrif:doc",
       "name": "DOC collateral in the RIF On Chain V3 DOC bucket",
-      "pct": 0.0764159223,
+      "pct": 0.0745776666,
       "risk": "high",
       "coinId": "doc-money-on-chain",
       "depType": "collateral",
@@ -25,8 +25,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC21)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
     "confidence": "verified",
     "sources": [
       {
@@ -34,8 +34,8 @@
         "url": "https://github.com/money-on-chain/stable-protocol-roc-v2/tree/64734b2599fd89658d62c15eda805acec7c9e054"
       },
       {
-        "label": "Rootstock block 9287318 (2026-10-01T11:17:35Z)",
-        "url": "https://rootstock.blockscout.com/block/9287318"
+        "label": "Rootstock block 9361356 (2026-10-27T16:01:24Z)",
+        "url": "https://rootstock.blockscout.com/block/9361356"
       },
       {
         "label": "Rootstock explorer: RIF collateral bucket",
@@ -46,9 +46,9 @@
         "url": "https://rootstock.blockscout.com/address/0x697535055Aa7AfD2C280523C7B062b1F05284661"
       }
     ],
-    "rationale": "At Rootstock block 9287318 (2026-10-01T11:17:35Z), the official multi-collateral guard enumerated exactly two buckets, both identifying USDRIF as tpTokens(0). The RIF bucket reported 304939232.646842187881656419 RIF at 0.082003032332503750 USDRIF per RIF, worth 25005941.754187883009006936669117723529071250 USDRIF. The DOC bucket reported 19123.134145949520237687 DOC at 1 USDRIF per DOC, worth 19123.134145949520237687 USDRIF. The complete denominator is 25025064.888333832529244623669117723529071250 USDRIF. Independent integer-ratio and Decimal calculations, rounded to ten decimal places, give 99.9235840777% RIF and 0.0764159223% DOC. D01 admits this reproduced arithmetic; collateral identities, risk tiers and unknown stressed liquidity remain unchanged.",
-    "compositionBasis": "Official V3 deployment identities, current guard bucket census and pinned nACcb/getPACtps values normalized in USDRIF units at Rootstock block 9287318",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "At Rootstock block 9361356 (hash 0x3cb80b49aea5c0687f8c45f424a0004319f4cf044323171206d43e1dd5424cd3, 2026-10-27T16:01:24Z), the two reviewed RIF On Chain V3 buckets (RIF 0xA27024Ed70035E46dba712609fc2Afa1c97aA36A, DOC 0x697535055Aa7AfD2C280523C7B062b1F05284661) both identified USDRIF as tpTokens(0), and their pegContainer(0) liabilities summed exactly to the canonical USDRIF totalSupply() of 2172636.642542303542023390 USDRIF. The RIF bucket reported 304911241.543592835897430608 RIF at 0.070870006887785 USDRIF per RIF, worth 21609061.78835750011538648839074408032328 USDRIF. The DOC bucket reported 16127.561608655935237687 DOC at 1 USDRIF per DOC, worth 16127.561608655935237687 USDRIF. The complete denominator is 21625189.34996615605062417539074408032328 USDRIF. Decimal calculations, rounded to ten decimal places, give 99.9254223334% RIF and 0.0745776666% DOC. D01 admits this reproduced arithmetic; collateral identities, risk tiers and unknown stressed liquidity remain unchanged.",
+    "compositionBasis": "Official V3 deployment identities, reviewed bucket census and pinned nACcb/getPACtp values normalized in USDRIF units at Rootstock block 9361356",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Both positive V3 collateral buckets and their current on-chain values are identified; no material reserve category remains unclassified.",
     "knownUnknownExposurePct": 0,
@@ -56,7 +56,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "RIF collateral in the RIF On Chain V3 RIF bucket",
-        "pct": 99.9235840777,
+        "pct": 99.9254223334,
         "disposition": "untracked-exogenous-asset",
         "rationale": "RIF is an identified cryptoasset collateral token rather than a tracked stablecoin dependency."
       }

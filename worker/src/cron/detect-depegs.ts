@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
-import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
+import { PSI_ELIGIBLE_META_BY_ID, PSI_HISTORICAL_IDS } from "@shared/lib/psi-eligible";
 import type { PegAssetBase } from "@shared/types/core";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
 import { rowPriceCoverage } from "../lib/depeg-helpers";
@@ -15,7 +15,52 @@ import {
   buildOrphanCloseRepair,
   type OrphanDepegRow,
 } from "./depeg-detection/repair";
-import type { DepegPersistenceCommand, DepegStageResult } from "./depeg-detection/types";
+import type {
+  DepegDetectionResult,
+  DepegObservationCensus,
+  DepegObservationOutcome,
+  DepegPersistenceCommand,
+} from "./depeg-detection/types";
+
+const CENSUS_ELIGIBLE_IDS: readonly string[] = [...PSI_ELIGIBLE_META_BY_ID]
+  .filter(([, meta]) => !meta.flags.navToken)
+  .map(([id]) => id);
+
+/**
+ * Counts each eligible ID once (first row wins); IDs with no row are
+ * `asset-absent`. Off-catalog historical members have no live price path, so
+ * they are counted only when a row is supplied: their absence is expected and
+ * must not leave every run incomplete. A missing active member still counts.
+ */
+function buildObservationCensus(
+  outcomes: ReadonlyMap<string, DepegObservationOutcome>,
+  evaluatedAt: number,
+): DepegObservationCensus {
+  const census: DepegObservationCensus = {
+    scope: "psi-non-nav-before-supply-floor",
+    evaluatedAt,
+    eligibleCount: 0,
+    observedCount: 0,
+    unavailableCount: 0,
+    belowFloorCount: 0,
+    reasonCounts: {},
+  };
+  for (const id of CENSUS_ELIGIBLE_IDS) {
+    const supplied = outcomes.get(id);
+    if (!supplied && PSI_HISTORICAL_IDS.has(id)) continue;
+    census.eligibleCount++;
+    const outcome = supplied ?? { kind: "unavailable", reason: "asset-absent" };
+    if (outcome.kind === "observed") {
+      census.observedCount++;
+    } else if (outcome.kind === "below-floor") {
+      census.belowFloorCount++;
+    } else {
+      census.unavailableCount++;
+      census.reasonCounts[outcome.reason] = (census.reasonCounts[outcome.reason] ?? 0) + 1;
+    }
+  }
+  return census;
+}
 
 // --- Depeg event detection ---
 
@@ -26,7 +71,7 @@ export async function detectDepegEvents(
   signal?: AbortSignal,
   coingeckoApiKey?: string | null,
   nativePegSession?: NativePegQuoteSession,
-): Promise<DepegStageResult> {
+): Promise<DepegDetectionResult> {
   throwIfAborted(signal);
   const hydrated = await hydrateDepegDetection(
     db,
@@ -37,7 +82,7 @@ export async function detectDepegEvents(
     nativePegSession,
   );
   if (hydrated.openRowsLimitReached) {
-    return { status: "held", reason: "depeg-open-event-limit-reached" };
+    return { status: "held", reason: "depeg-open-event-limit-reached", census: null };
   }
 
   const duplicateRepair = buildDuplicateOpenEventRepair(hydrated.openRows);
@@ -53,6 +98,7 @@ export async function detectDepegEvents(
   // partial upstream payload omits them entirely for this run.
   const trackedCoinIds = new Set<string>(PSI_ELIGIBLE_META_BY_ID.keys());
   const commands: DepegPersistenceCommand[] = [];
+  const observations = new Map<string, DepegObservationOutcome>();
 
   for (const asset of assets) {
     throwIfAborted(signal);
@@ -74,6 +120,9 @@ export async function detectDepegEvents(
     if (decision.trackedCoinId) {
       trackedCoinIds.add(decision.trackedCoinId);
     }
+    if (decision.observation && !observations.has(asset.id)) {
+      observations.set(asset.id, decision.observation);
+    }
     for (const eventId of decision.seenEventIds) {
       seen.add(eventId);
     }
@@ -83,6 +132,8 @@ export async function detectDepegEvents(
     }
     commands.push(...decision.commands);
   }
+
+  const census = buildObservationCensus(observations, hydrated.now);
 
   // Entirely omitted assets are coverage gaps too; keeping the lifecycle open
   // must never extend the last trusted off-peg interval.
@@ -117,7 +168,7 @@ export async function detectDepegEvents(
   const orphanRows = orphanResult.results ?? [];
   if (orphanRows.length >= MAX_OPEN_DEPEG_EVENTS) {
     logOpenDepegEventLimitReached("orphan-cleanup");
-    return { status: "held", reason: "depeg-open-event-limit-reached" };
+    return { status: "held", reason: "depeg-open-event-limit-reached", census };
   }
 
   const orphanRepair = buildOrphanCloseRepair({
@@ -133,5 +184,5 @@ export async function detectDepegEvents(
     const operationCount = await persistDepegCommands(db, orphanRepair.commands);
     logWorkerEventArgs("handler", "info", `[depeg] Closed ${operationCount} orphaned depeg events`);
   }
-  return { status: "completed" };
+  return { status: "completed", census };
 }

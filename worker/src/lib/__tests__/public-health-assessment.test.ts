@@ -573,8 +573,9 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.activePriceCoverage.missingActiveAssets[0]).toMatchObject({
       marketCapUsd: null, lastKnownMarketCapUsd: 32_686_926.18,
       lastKnownMarketCapObservedAt: 1_790_553_600, lastKnownMarketCapSource: "supply_history",
-      consecutiveMissingGenerations: 19,
+      consecutiveMissingGenerations: 19, currentPrice: null, acknowledgedGap: null, alertEligible: true,
     });
+    expect(result.activePriceCoverage.acknowledgedGapIds).not.toContain("hbd-hive");
   });
 
   it("fails closed for an unnamed count mismatch even when the producer claims complete", async () => {
@@ -709,7 +710,7 @@ describe("assessPublicHealth upstream provider enrichment", () => {
     expect(result.warnings).toContain(`active-price-coverage-incomplete:${missingId}`);
   });
 
-  it.each(["wusd-worldwide", "pht-pht", "hbd-hive", "usdn-noble", "usdk-kast"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
+  it.each(["wusd-worldwide", "pht-pht", "usdn-noble", "usdk-kast"])("keeps %s's acknowledged critical-duration gap visible without warnings, then re-alerts at expiry", async (id) => {
     const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
     for (const compact of [false, true]) {
       const nowSec = review.expiresAt - 1;

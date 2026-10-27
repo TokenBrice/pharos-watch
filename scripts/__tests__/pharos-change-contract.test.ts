@@ -451,6 +451,21 @@ describe("reading selectors and context modes", () => {
       .toContain("scripts/__tests__/inline-homepage-critical-css.test.ts");
   });
 
+  it("routes the DexScreener parser to DEX discovery docs and its parser/census tests", () => {
+    const file = "worker/src/lib/dexscreener.ts";
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("methodology-scoring");
+    expect(docKeys(contract)).toEqual(expect.arrayContaining([
+      "docs/dex-liquidity.md#discovery-cron",
+      "docs/process/dex-liquidity-appendix.md#methodology-versioning",
+    ]));
+    expect(DECLARED_TEST_OWNERSHIP.find((entry) => entry.sources.includes(file))?.tests).toEqual(expect.arrayContaining([
+      "worker/src/lib/__tests__/dexscreener.test.ts",
+      "worker/src/cron/dex-discovery/__tests__/dexscreener-census.test.ts",
+    ]));
+  });
+
   it.each([
     ["worker/src/lib/safety-score-v9/supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],
     ["worker/src/cron/sync-v9-supply-attribution.ts", "supply-attribution-and-in-flight-accounting"],

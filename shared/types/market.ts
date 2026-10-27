@@ -71,6 +71,26 @@ export type SupplyUnavailableReason = z.infer<typeof SupplyUnavailableReasonSche
 
 export const PegBucketsSchema = z.record(z.string(), z.number());
 
+/**
+ * Attribution for a price derived from a tracked parent quote (e.g. parent price × vault NAV).
+ * Descriptive only: `priceSource`/`priceConfidence` remain the trust authority. `navMethod` names a
+ * successful live vault read; a cached rate instead names its original `rateObservedAt`.
+ */
+export const PriceDerivationSchema = z.object({
+  inheritedFrom: z.string().min(1),
+  parentSource: z.string().nullable(),
+  parentConfidence: PriceConfidenceSchema.nullable(),
+  parentObservedAt: z.number().finite().nullable(),
+  parentObservedAtMode: PriceObservedAtModeSchema.nullable(),
+  parentReplaySafe: z.boolean(),
+  navMethod: z.enum(["convertToAssets", "previewRedeem"]).optional(),
+  cachedVaultRate: z.object({
+    rate: z.number().finite().positive(),
+    rateObservedAt: z.number().finite().positive(),
+  }).optional(),
+});
+export type PriceDerivation = z.infer<typeof PriceDerivationSchema>;
+
 const StablecoinDetailTokenSchema = z.object({
   date: z.number().optional(),
   totalCirculatingUSD: PegBucketsSchema.optional(),
@@ -85,6 +105,8 @@ export const StablecoinDetailResponseSchema = z.object({
   priceConfidence: PriceConfidenceSchema.nullable().optional(),
   priceUpdatedAt: z.number().nullable().optional(),
   priceObservedAt: z.number().nullable().optional(),
+  /** Canonical parent derivation of the overlaid publication quote only. */
+  priceDerivation: PriceDerivationSchema.optional(),
   /** Current admitted list USD buckets; distinct from the provider's dated token history. */
   currentCirculatingUSD: PegBucketsSchema.optional(),
   currentCirculatingPrevDayUSD: PegBucketsSchema.optional(),
@@ -195,6 +217,18 @@ export const SupplyChainGuardProvenanceSchema = z.object({
 });
 export type SupplyChainGuardProvenance = z.infer<typeof SupplyChainGuardProvenanceSchema>;
 
+/**
+ * Recorded provenance of one admitted supply observation (daily history row / dataset row). A present
+ * object attests that the writer inspected the admitted current row; `null`/absent means coverage was not
+ * recorded (unknown, never complete). Source and clock stay null when the observation carried none.
+ */
+export const SupplyObservationProvenanceSchema = z.object({
+  supplySource: z.string().nullable(),
+  supplyObservedAt: z.number().int().nonnegative().nullable(),
+  supplyChainGuard: SupplyChainGuardProvenanceSchema.nullable(),
+});
+export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProvenanceSchema>;
+
 const StablecoinDataRawSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -210,6 +244,7 @@ const StablecoinDataRawSchema = z.object({
   priceObservedAt: z.number().nullable().optional(),
   priceObservedAtMode: PriceObservedAtModeSchema.nullable().optional(),
   nominalPriceReference: NominalPriceReferenceSchema.optional(),
+  priceDerivation: PriceDerivationSchema.optional(),
   priceSyncedAt: z.number().nullable().optional(),
   consensusSources: z.array(z.string()).optional(),
   agreeSources: z.array(z.string()).optional(),
@@ -264,6 +299,7 @@ export const StablecoinDataSchema = StablecoinDataRawSchema.transform((asset) =>
   priceObservedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
   priceObservedAtMode: asset.priceObservedAtMode ?? null,
   ...(asset.nominalPriceReference != null ? { nominalPriceReference: asset.nominalPriceReference } : {}),
+  ...(asset.priceDerivation != null ? { priceDerivation: asset.priceDerivation } : {}),
   priceSyncedAt: asset.priceSyncedAt ?? null,
   consensusSources: asset.consensusSources ?? [],
   agreeSources: asset.agreeSources ?? [],
@@ -857,6 +893,8 @@ const SupplyHistoryPointSchema = z.object({
   date: z.number(),
   circulatingUsd: z.number(),
   price: z.number().nullable(),
+  /** Chain-coverage provenance of this daily observation; null/absent = unrecorded (legacy), never complete. */
+  supplyProvenance: SupplyObservationProvenanceSchema.nullable().optional(),
 });
 export type SupplyHistoryPoint = z.infer<typeof SupplyHistoryPointSchema>;
 export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);

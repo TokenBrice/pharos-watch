@@ -249,7 +249,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "stablecoins",
     summary: "List stablecoins",
-    description: "Current stablecoin list with supply, price, peg, chain distribution, FX context, and freshness headers. `_meta` publishes the generation, assessment time and effective fresh/degraded budgets; cache TTL and SWR are bounded by the remaining fresh runway. Since 2026-09-28, `StablecoinListResponse.peggedAssets[].chainCirculating` preserves unobserved `current`, `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth` values as `null` instead of the legacy projected `0`; omitted historical keys also mean unavailable. Explicit observed zero remains `0`. Consumers must not interpret unavailable chain observations as redemptions, mints, or a complete distribution denominator. Also since 2026-09-28 (pricing v6.38), nominal par routes carry par in `nominalPriceReference` (`{ price, source: \"protocol-par\", mode: \"nominal_reference\" }`) instead of a high-confidence `protocol-redeem` price stamped with the sync clock; non-USD par adds optional `fxReferenceType` (`fresh` or `static`) and `fxObservedAt` (the FX reference's own source time, `null` when unknown). A fresh market quote that depeg detection rates authoritative stays the published `price`; otherwise `price` is par with `priceSource` `protocol-par`, `priceObservedAtMode` `nominal_reference`, and `priceConfidence`, `priceObservedAt` and `priceUpdatedAt` `null`. Such a price is a nominal reference, not an observation.",
+    description: "Current stablecoin list with supply, price, peg, chain distribution, FX context, and freshness headers. `_meta` publishes the generation, assessment time and effective fresh/degraded budgets; cache TTL and SWR are bounded by the remaining fresh runway. Since 2026-09-28, `StablecoinListResponse.peggedAssets[].chainCirculating` preserves unobserved `current`, `circulatingPrevDay`, `circulatingPrevWeek`, and `circulatingPrevMonth` values as `null` instead of the legacy projected `0`; omitted historical keys also mean unavailable. Explicit observed zero remains `0`. Consumers must not interpret unavailable chain observations as redemptions, mints, or a complete distribution denominator. Also since 2026-09-28 (pricing v6.38), nominal par routes carry par in `nominalPriceReference` (`{ price, source: \"protocol-par\", mode: \"nominal_reference\" }`) instead of a high-confidence `protocol-redeem` price stamped with the sync clock; non-USD par adds optional `fxReferenceType` (`fresh` or `static`) and `fxObservedAt` (the FX reference's own source time, `null` when unknown). A fresh market quote that depeg detection rates authoritative stays the published `price`; otherwise `price` is par with `priceSource` `protocol-par`, `priceObservedAtMode` `nominal_reference`, and `priceConfidence`, `priceObservedAt` and `priceUpdatedAt` `null`. Such a price is a nominal reference, not an observation. A price derived from a tracked parent quote may carry optional `priceDerivation` (`inheritedFrom`, the parent's source/confidence/clock and replay safety, `navMethod` for a successful live vault read, or `cachedVaultRate` with its original `rateObservedAt`). It is attribution only: `priceSource` and `priceConfidence` remain the trust fields, and the field is absent for direct quotes.",
     tags: ["Stablecoins"],
     responseSchema: "StablecoinListResponse",
     postman: {
@@ -260,7 +260,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "stablecoin-detail",
     responseSchema: "StablecoinDetailResponse",
     summary: "Stablecoin detail",
-    description: "Full current/historical per-coin analytics dossier for a canonical Pharos stablecoin ID. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/reference/#get-api-stablecoins).",
+    description: "Full current/historical per-coin analytics dossier for a canonical Pharos stablecoin ID. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/reference/#get-api-stablecoins); optional `priceDerivation` accompanies only an overlaid canonical quote.",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
   },
@@ -268,7 +268,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     key: "stablecoin-summary",
     responseSchema: "StablecoinSummaryResponse",
     summary: "Stablecoin summary",
-    description: "Lightweight per-coin price and aggregate supply snapshot. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/reference/#get-api-stablecoins).",
+    description: "Lightweight per-coin price and aggregate supply snapshot. Nominal references follow the [pricing v6.38 contract](https://pharos.watch/api/reference/#get-api-stablecoins); optional `priceDerivation` accompanies only an observed price.",
     tags: ["Stablecoins"],
     parameters: [STABLECOIN_ID_PARAM],
   },
@@ -794,7 +794,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "supply-history",
     summary: "Supply history",
-    description: "Historical supply series for a stablecoin. Bounded days defaults to 365; range=all returns every retained daily observation under the same completed-snapshot fence. Nullable observations and producer freshness metadata are preserved.",
+    description: "Historical supply series for a stablecoin. Bounded days defaults to 365; range=all returns every retained daily observation under the same completed-snapshot fence. Nullable observations and producer freshness metadata are preserved. Each row carries nullable supplyProvenance (v6.59): null means chain coverage was not recorded, never complete.",
     tags: ["History"],
     responseSchema: "SupplyHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SUPPLY_HISTORY_DAYS_PARAM, SUPPLY_HISTORY_RANGE_PARAM],

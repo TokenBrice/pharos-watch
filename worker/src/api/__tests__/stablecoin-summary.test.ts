@@ -51,6 +51,25 @@ describe("handleStablecoinSummary", () => {
     expect(await readJsonResponse(res, 503)).toEqual({ error: "Cached stablecoins data is corrupt" });
   });
 
+  it("projects canonical parent derivation only for an observed price (K-207)", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const priceDerivation = {
+      inheritedFrom: "pathusd-bridge", parentSource: "coingecko", parentConfidence: "single-source",
+      parentObservedAt: now - 90, parentObservedAtMode: "upstream", parentReplaySafe: true,
+      cachedVaultRate: { rate: 1.99, rateObservedAt: now - 3600 },
+    };
+    const summaryFor = async (overrides: Record<string, unknown>) => {
+      const payload = JSON.parse(makeStablecoinsCacheValue()) as { peggedAssets: Record<string, unknown>[] };
+      Object.assign(payload.peggedAssets[0]!, { priceObservedAt: now - 90, priceObservedAtMode: "upstream", ...overrides });
+      const db = mockD1([{ match: "cache", rows: [], first: { value: JSON.stringify(payload), updated_at: now } }]);
+      return await (await handleStablecoinSummary(db, "usdt-tether")).json() as Record<string, unknown>;
+    };
+    expect((await summaryFor({ priceDerivation })).priceDerivation).toEqual(priceDerivation);
+    expect(await summaryFor({})).not.toHaveProperty("priceDerivation");
+    expect(await summaryFor({ priceDerivation, priceSource: "protocol-par", priceObservedAtMode: "nominal_reference" }))
+      .not.toHaveProperty("priceDerivation");
+  });
+
   it("returns 404 when stablecoin id is missing in cache payload", async () => {
     const now = Math.floor(Date.now() / 1000);
     const db = mockD1([

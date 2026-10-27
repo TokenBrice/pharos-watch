@@ -33,6 +33,7 @@ import type {
   DepegAssetDecision,
   DepegAssetDecisionInput,
   DepegDiagnostic,
+  DepegObservationOutcome,
   DepegPersistenceCommand,
   DexPoolChallenger,
   PendingDepegCommandPayload,
@@ -90,9 +91,10 @@ type DecisionContextDerivation =
   | { kind: "skip"; decision: DepegAssetDecision }
   | { kind: "context"; ctx: DecisionContext };
 
-function emptyDecision(trackedCoinId?: string): DepegAssetDecision {
+function emptyDecision(trackedCoinId?: string, observation?: DepegObservationOutcome): DepegAssetDecision {
   return {
     trackedCoinId,
+    ...(observation ? { observation } : {}),
     seenEventIds: [],
     commands: [],
     diagnostics: [],
@@ -310,7 +312,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const price = asset.price;
   const primaryTrust = classifyPrimaryDepegTrust(asset, now);
   if (primaryTrust === "unusable" || price == null || typeof price !== "number" || isNaN(price) || price <= 0) {
-    return { kind: "skip", decision: emptyDecision(trackedCoinId) };
+    return { kind: "skip", decision: emptyDecision(trackedCoinId, { kind: "unavailable", reason: "primary-unusable" }) };
   }
 
   // Unavailable supply (asset buckets absent/empty/invalid) cannot assess the live-event floor: keep an
@@ -318,7 +320,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   // explicit zero) closes with `coverage-lost-supply` (CR-13 / D03-2).
   const supply = getCirculatingRawOrNull(asset);
   if (supply == null) {
-    const decision = emptyDecision(trackedCoinId);
+    const decision = emptyDecision(trackedCoinId, { kind: "unavailable", reason: "supply-unavailable" });
     if (existing) {
       decision.seenEventIds.push(existing.id);
       decision.diagnostics.push(withDiagnostic(
@@ -330,7 +332,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     return { kind: "skip", decision };
   }
   if (supply < DEPEG_EVENT_MIN_SUPPLY_USD) {
-    const decision = emptyDecision(trackedCoinId);
+    const decision = emptyDecision(trackedCoinId, { kind: "below-floor" });
     if (existing) {
       decision.commands.push({
         type: "close-event",
@@ -358,7 +360,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     commodityOunces: meta.commodityOunces,
   });
   if (pegSignal.kind === "rejected" && pegSignal.reason === "non-authoritative-reference") {
-    const decision = emptyDecision(trackedCoinId);
+    const decision = emptyDecision(trackedCoinId, { kind: "unavailable", reason: pegSignal.reason });
     if (existing) {
       decision.seenEventIds.push(existing.id);
     }
@@ -370,7 +372,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     return { kind: "skip", decision };
   }
   if (pegSignal.kind === "rejected") {
-    return { kind: "skip", decision: emptyDecision(trackedCoinId) };
+    return { kind: "skip", decision: emptyDecision(trackedCoinId, { kind: "unavailable", reason: pegSignal.reason }) };
   }
   const pegRef = pegSignal.pegReference;
   const primarySignal = pegSignal.signal;
@@ -773,13 +775,16 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
   if (input.existing && isNativePegEvent(input.existing) && ctx.nativeSignal == null) {
     return withPriceCoverage({
       trackedCoinId: ctx.trackedCoinId,
+      observation: { kind: "unavailable", reason: "native-quote-unavailable" },
       seenEventIds: [input.existing.id],
       commands: [],
       diagnostics: [],
     }, input);
   }
+  // A usable context is an observation, not proof of recovery or of a trusted event.
+  const observed: DepegObservationOutcome = { kind: "observed" };
   const nativeVeto = applyNativeQuoteVeto(ctx, input.existing);
-  if (nativeVeto) return withPriceCoverage(nativeVeto, input, ctx);
+  if (nativeVeto) return withPriceCoverage({ ...nativeVeto, observation: observed }, input, ctx);
 
   const nativeOpening = input.existing ? null : decideNewNativePegDepeg(ctx);
   const existingSignal = input.existing && isNativePegEvent(input.existing)
@@ -803,6 +808,7 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
 
   return withPriceCoverage({
     trackedCoinId: ctx.trackedCoinId,
+    observation: observed,
     seenEventIds: decision.seenEventIds,
     commands: decision.commands,
     diagnostics: decision.diagnostics,

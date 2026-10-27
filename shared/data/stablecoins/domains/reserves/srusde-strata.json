@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (DepDrain)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -36,11 +36,15 @@
       {
         "label": "Strata FAQ redemption terms",
         "url": "https://docs.strata.markets/resources/faqs"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26285088 (2026-10-27T15:57:11Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Strata documents the Ethena USDe market meta-vaults with USDe as the Base Asset and all vault shares denominated in USDe, while the strategy stakes assets into Ethena sUSDe as the yield source. The deployed strategy position is therefore linked to the tracked variant parent USDe with a wrapper dependency so the serial dependency projection attributes exactly; the strategy's sUSDe staking leg remains documented through the issuer-obligor name and the basis, counterparty, market, and cooldown liquidity risk factors. The previous susde-ethena slice link left the tracked exposure unattributed against the usde-ethena serial chain and emitted material-dependency-unavailable. Chained variants are structurally invalid in this registry (sUSDe is itself a variant of USDe), so the parent link is the only exact mapping.",
-    "compositionBasis": "Live ERC-4626 deployed balance re-verified 2026-09-29 by a pinned Ethereum read of the vault at 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 (totalAssets() 18,502,556.63 USDe at block 0x18e01f8; the deployed strategy position remains the vault's entire asset base) and current Strata market documentation",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "Strata documents the Ethena USDe market meta-vaults with USDe as the Base Asset and all vault shares denominated in USDe, while the strategy stakes assets into Ethena sUSDe as the yield source. The deployed strategy position is therefore linked to the tracked variant parent USDe with a wrapper dependency so the serial dependency projection attributes exactly; the strategy's sUSDe staking leg remains documented through the issuer-obligor name and the basis, counterparty, market, and cooldown liquidity risk factors. The previous susde-ethena slice link left the tracked exposure unattributed against the usde-ethena serial chain and emitted material-dependency-unavailable. Chained variants are structurally invalid in this registry (sUSDe is itself a variant of USDe), so the parent link is the only exact mapping. Fresh pinned reads at finalized Ethereum block 26285088 (2026-10-27T15:57:11Z): asset() is USDe, the EIP-1967 implementation slot is 0xe894055ca1c73648927e225f3ca38ed48e30210b, totalAssets() is 4,878,502.338259840406343844 USDe and the vault holds zero idle USDe, so the single deployed slice stays 100%.",
+    "compositionBasis": "Live ERC-4626 deployed balance re-verified by a pinned Ethereum read of the vault at 0x3d7d6fdf07ee548b939a80edbc9b2256d0cdc003 at finalized block 26285088 (totalAssets() 4,878,502.338259840406343844 USDe, idle USDe balance 0; the deployed strategy position remains the vault's entire asset base) and current Strata market documentation",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct deployed position is identified as the Strata senior-tranche strategy over sUSDe; changing internal USDe and sUSDe balances are not separately weighted by the live adapter.",
     "knownUnknownExposurePct": 0

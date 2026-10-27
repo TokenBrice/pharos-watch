@@ -299,6 +299,74 @@ describe("stablecoins pricing metadata", () => {
     expect(metadata.quality).toEqual(quality);
   });
 
+  describe("depeg observation census", () => {
+    const census = {
+      scope: "psi-non-nav-before-supply-floor" as const,
+      evaluatedAt: 1_777_000_000,
+      eligibleCount: 4,
+      observedCount: 2,
+      unavailableCount: 1,
+      belowFloorCount: 1,
+      reasonCounts: { "supply-unavailable": 1 },
+    };
+    const assets = (): PeggedAsset[] => ACTIVE_STABLECOINS.map((asset) => ({
+      id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko",
+      circulating: { peggedUSD: 1 },
+    }));
+    const build = (path: "main" | "fallback", extra: Partial<Parameters<typeof buildStablecoinsSyncResult>[0]>) => {
+      const rows = assets();
+      const input = {
+        ...syncInput(rows), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_100,
+        authoritativeOverrideCount: 0, cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+        activePriceCoverage: evaluateStablecoinActivePriceCoverage(rows),
+        ...extra,
+      };
+      return path === "main" ? buildStablecoinsSyncResult(input) : buildFallbackStablecoinsSyncResult(input);
+    };
+
+    it.each(["main", "fallback"] as const)("adds an incomplete-census quality finding without degrading the %s path", (path) => {
+      const result = build(path, { depegObservation: census });
+      expect(result.status).toBe("ok");
+      const metadata = JSON.parse(result.metadata!);
+      expect(metadata.reason).toBeUndefined();
+      expect(metadata).toMatchObject({ depegPipelineSucceeded: true, capabilities: { depegPipeline: true } });
+      expect(metadata.quality).toEqual({
+        reason: "depeg-observation-incomplete",
+        depegObservation: { ...census, syncStartSec: 1_777_000_100 },
+      });
+    });
+
+    it.each(["main", "fallback"] as const)("merges the census behind the degraded driver on the %s path", (path) => {
+      const complete = { ...census, observedCount: 3, unavailableCount: 0, reasonCounts: {} };
+      const clean = JSON.parse(build(path, { depegObservation: complete }).metadata!);
+      expect(clean.quality).toEqual({ depegObservation: { ...complete, syncStartSec: 1_777_000_100 } });
+      const result = build(path, { depegObservation: census, depegErrorCount: 1 });
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata!).quality).toMatchObject({
+        reason: "depeg-pipeline-errors",
+        reasons: ["depeg-pipeline-errors", "depeg-observation-incomplete"],
+      });
+    });
+
+    it.each(["main", "fallback"] as const)("names why the %s path has no census", (path) => {
+      const metadata = JSON.parse(build(path, {
+        depegObservation: null, depegObservationUnavailableReason: "depeg-detection-error", depegErrorCount: 1,
+      }).metadata!);
+      expect(metadata.quality).toEqual({
+        reason: "depeg-pipeline-errors",
+        depegObservation: null,
+        depegObservationUnavailableReason: "depeg-detection-error",
+      });
+    });
+
+    it.each([Infinity, 100_000, 2_000])("retains the census through metadata compaction (budget=%s)", (budget) => {
+      const { guard } = allMissingSizeGuardFixture();
+      const quality = { reason: "depeg-observation-incomplete", depegObservation: { ...census, syncStartSec: 1 } };
+      guard.metadata.quality = quality;
+      expect(JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget)).quality).toEqual(quality);
+    });
+  });
+
   it.each(["kava-pricefeed"])(
     "retains %s fallback observations in source health",
     (source) => {

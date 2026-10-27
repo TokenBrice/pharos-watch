@@ -101,6 +101,7 @@ vi.mock("../../../reserve-adapters/helpers", () => ({
 }));
 
 vi.mock("../../../../lib/authoritative-price-sources", () => ({
+  getFreshSingleSourceNavParentId: () => null,
   resolveVaultNavSupplyPrice: (...args: unknown[]) => resolveVaultNavSupplyPriceMock(...args),
 }));
 

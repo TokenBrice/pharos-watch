@@ -19,6 +19,7 @@ import { useSupplyHistory } from "@/hooks/use-stablecoins";
 import { useMarketDataChartFrame } from "@/components/chart-primitives/use-market-data-chart-window";
 import { relativeChangeRatio, ratioToPercentage } from "@shared/lib/stats";
 import { DAY_MS } from "@shared/lib/time-constants";
+import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
 
 const MCAP_TABLE_COLUMNS: ChartDataTableColumn<{ ts: number; mcap: number }>[] = [
   { id: "date", label: "Date", format: (row) => formatChartDate(row.ts, "short-year") },
@@ -93,6 +94,8 @@ function McapChartBody({
       .map((d) => ({
         ts: d.date * 1000,
         mcap: d.circulatingUsd,
+        // A recorded partial-chain remainder stays a numeric point but never anchors a 24h change.
+        partial: classifySupplyCoverage(d.supplyProvenance) === "partial",
       }));
   }, [data]);
 
@@ -135,12 +138,12 @@ function McapChartBody({
   const autoAxis = useNiceValueAxis(mcapValues, { kind: "currency" });
   const valueAxis = yDomain[1] === "auto" && autoAxis.domain ? autoAxis : { domain: yDomain };
 
-  // A daily delta needs the preceding UTC-day observation in the selected window.
+  // A daily delta needs the preceding UTC-day observation in the selected window, both with full chain coverage.
   const readout = useMemo(() => {
     if (visibleData.length === 0) return null;
     const last = visibleData[visibleData.length - 1];
     const prev = visibleData.length >= 2 ? visibleData[visibleData.length - 2] : null;
-    const delta = prev && last.ts - prev.ts === DAY_MS
+    const delta = prev && last.ts - prev.ts === DAY_MS && !last.partial && !prev.partial
       ? relativeChangeRatio(last.mcap, prev.mcap)
       : null;
     return {

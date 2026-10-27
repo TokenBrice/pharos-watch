@@ -12,6 +12,7 @@ import { prepareCacheUpsert } from "../lib/db-cache";
 import { PSI_HISTORICAL_IDS } from "@shared/lib/psi-historical-assets";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { buildSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 import { CACHE_FRESHNESS_LANES } from "@shared/lib/api-freshness";
 import { formatIsoDate } from "@shared/lib/format";
 import { recordCronFailure, type CronResult } from "../lib/cron-logger";
@@ -49,8 +50,8 @@ interface SnapshotSupplyOptions {
   snapshotEligibleIds?: readonly string[];
 }
 
-/** `[stablecoinId, snapshotDate, circulatingUsd, price, priceObservedAt]` */
-type SupplySnapshotRow = readonly [string, number, number, number | null, number | null];
+/** `[stablecoinId, snapshotDate, circulatingUsd, price, priceObservedAt, supplyProvenanceJson]` */
+type SupplySnapshotRow = readonly [string, number, number, number | null, number | null, string | null];
 
 async function repairSameDayMissingPrices(
   db: D1Database,
@@ -141,7 +142,12 @@ export async function snapshotSupply(
           && Number.isSafeInteger(observedAt) && observedAt > 0
           ? observedAt
           : null;
-        snapshotRows.push([asset.id, snapshotDate, circulatingUsd, price, priceObservedAt]);
+        // Partial-chain evidence travels with the numeric remainder; invalid metadata stays NULL (unknown).
+        const provenance = buildSupplyObservationProvenance(asset);
+        snapshotRows.push([
+          asset.id, snapshotDate, circulatingUsd, price, priceObservedAt,
+          provenance == null ? null : JSON.stringify(provenance),
+        ]);
       }
 
       return {

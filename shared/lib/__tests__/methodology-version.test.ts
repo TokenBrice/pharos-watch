@@ -256,7 +256,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.57");
+    expect(methodology.currentLabel).toBe("v6.59");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -272,7 +272,17 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 8).map((candidate) => candidate.version)).toEqual(["6.57", "6.56", "6.55", "6.54", "6.53", "6.52", "6.51", "6.50"]);
+    expect(methodology.entries.slice(0, 8).map((candidate) => candidate.version)).toEqual(["6.59", "6.58", "6.57", "6.56", "6.55", "6.54", "6.53", "6.52"]);
+  });
+
+  it("activates Pricing 6.58 and 6.59 at one cut, with 6.59 resolving from it", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    for (const version of ["6.58", "6.59"]) {
+      expect(methodology.entries.find((candidate) => candidate.version === version))
+        .toMatchObject({ date: "2026-10-28", effectiveAt: 1_793_145_600, reconstructed: false });
+    }
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_145_600 - 1)).toBe("6.57");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_145_600)).toBe("6.59");
   });
 
   it.each([

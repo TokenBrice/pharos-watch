@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { CLIENT_CORE_AGGREGATE_ACTIVE_IDS } from "@shared/lib/stablecoins/aggregate-client-registry";
-import { buildLiveHomepageHeroSnapshot, type HomepageHeroSnapshot } from "@shared/lib/homepage-hero-snapshot";
+import {
+  buildHomepageHeroSnapshot,
+  buildLiveHomepageHeroSnapshot,
+  describeHomepageSupplyCoverage,
+  isHomepageSupplyComplete,
+  type HomepageHeroSnapshot,
+} from "@shared/lib/homepage-hero-snapshot";
 import { HOMEPAGE_HERO_MAX_FALLBACK_AGE_MS, selectHomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 
@@ -14,6 +20,8 @@ function snapshot(asOfISO: string, totalUsd: number): HomepageHeroSnapshot {
     supplyObservedCount: CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size,
     supplyExpectedCount: CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size,
     supplyMissingCount: 0,
+    supplyPartialCount: 0,
+    supplyCoverageUnknownCount: 0,
     cohort: {
       ts: Date.parse(asOfISO),
       usdt: totalUsd,
@@ -209,5 +217,61 @@ describe("buildLiveHomepageHeroSnapshot supply availability", () => {
     expect(omitted.nonUsdUsd).toBeNull();
     expect(omitted.nonUsdShare).toBeNull();
     expect(omitted.cohort.nonUsd).toBeNull();
+  });
+});
+
+describe("homepage hero chain coverage (K-031)", () => {
+  const PARTIAL_GUARD = {
+    reason: "supply-chain-dropout" as const,
+    status: "chains-unavailable" as const,
+    partialCoverage: true as const,
+    quarantinedSince: 1_792_800_000,
+    chains: [{
+      chainId: "hyperevm", chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000,
+      baselineObservedAt: 1_792_700_000, baselineSource: "state" as const, resolution: "unavailable" as const,
+    }],
+  };
+  const everyCoreAsset = (overrides: Record<string, Partial<Parameters<typeof makeStablecoin>[0]>> = {}) =>
+    [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) =>
+      makeStablecoin({ id, pegType: "peggedUSD", circulating: { peggedUSD: 100 }, ...overrides[id] }));
+
+  it("keeps a numeric partial-chain remainder in the subtotal but never calls it complete", () => {
+    const complete = buildLiveHomepageHeroSnapshot({ peggedAssets: everyCoreAsset() });
+    expect(complete).toMatchObject({ supplyPartialCount: 0, supplyCoverageUnknownCount: 0 });
+    expect(isHomepageSupplyComplete(complete)).toBe(true);
+
+    const partial = buildLiveHomepageHeroSnapshot({ peggedAssets: everyCoreAsset({
+      "usdt-tether": { circulating: { peggedUSD: 97 }, supplyChainGuard: PARTIAL_GUARD },
+    }) });
+    expect(partial.supplyObservedCount).toBe(CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size);
+    expect(partial.supplyPartialCount).toBe(1);
+    expect(partial.totalUsd).toBe(complete.totalUsd! - 3);
+    expect(isHomepageSupplyComplete(partial)).toBe(false);
+    expect(describeHomepageSupplyCoverage(partial))
+      .toBe(`Partial · ${CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size - 1}/${CLIENT_CORE_AGGREGATE_ACTIVE_IDS.size} assets observed`);
+    // The named cohort with a partial member is unavailable; the provider-independent total stays numeric.
+    expect(partial.cohort.usdt).toBeNull();
+    expect(partial.cohort.usdc).toBe(100);
+  });
+
+  it("treats static dataset rows without recorded provenance as legacy, never partial", () => {
+    const rows = [...CLIENT_CORE_AGGREGATE_ACTIVE_IDS].map((id) => ({
+      id, pegType: "peggedUSD", circulatingUsd: 100,
+      supplyCoverage: id === "usdc-circle" ? "unknown" as const : "complete" as const,
+    }));
+    const snapshot = buildHomepageHeroSnapshot(rows, "2026-10-27T00:00:00.000Z");
+    expect(snapshot).toMatchObject({ supplyCoverageUnknownCount: 1, supplyPartialCount: 0 });
+    expect(snapshot.cohort.usdc).toBe(100);
+    expect(snapshot.cohort.usdt).toBe(100);
+    expect(isHomepageSupplyComplete(snapshot)).toBe(true);
+    expect(describeHomepageSupplyCoverage(snapshot)).toBeNull();
+  });
+
+  it("keeps the observed-count verdict for a payload without coverage counts", () => {
+    const legacy = snapshot("2026-10-27T00:00:00.000Z", 100);
+    delete legacy.supplyPartialCount;
+    delete legacy.supplyCoverageUnknownCount;
+    expect(isHomepageSupplyComplete(legacy)).toBe(true);
+    expect(describeHomepageSupplyCoverage(legacy)).toBeNull();
   });
 });

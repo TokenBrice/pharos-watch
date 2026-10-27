@@ -20,12 +20,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R32 primary-source wrapper liquidity review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l1)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "OpenEden cUSDO token documentation",
+        "label": "OpenEden cUSDO token documentation (re-read 2026-10-27)",
         "url": "https://docs.openeden.com/usdo/cusdo-token"
       },
       {
@@ -33,13 +33,13 @@
         "url": "https://docs.openeden.com/usdo/faqs"
       },
       {
-        "label": "Ethereum cUSDO asset() at block 26095805 on 2026-10-01",
-        "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+        "label": "Ethereum cUSDO asset() at block 26285193 (hash 0x191d8ad001f8436dfc184493db098512f31bb66361bcd54fb14f6f8f9b8ec153, 2026-10-27T16:18:11Z) and block 26095805 on 2026-10-01",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "OpenEden documents cUSDO as the non-rebasing wrapped form of USDO and states that users can convert between the two at any time through the wrapper smart contract. This classification-only review applies immediate liquidity to the direct held USDO wrapper position, not to sale of USDO for dollars or to inherited Treasury portfolio settlement. It does not refresh producer allocation weights or observations.",
+    "rationale": "OpenEden documents cUSDO as the non-rebasing wrapped form of USDO and states that users can convert between the two at any time through the wrapper smart contract. This classification-only review applies immediate liquidity to the direct held USDO wrapper position, not to sale of USDO for dollars or to inherited Treasury portfolio settlement. At Ethereum block 26285193 on 2026-10-27, cUSDO 0xad55aebc9b8c03fc43cd9f62260391c13c23e7c0 asset() returned USDO 0x8238884ec9668ef77b90c6dff4d1a9f4f4823bfe, reconfirming the single-asset wrapper; the docs page still states users can convert between USDO and cUSDO at any time. No new weights are published, so the 100% single-slice basis is unchanged. It does not refresh producer allocation weights or observations.",
     "compositionBasis": "OpenEden documented USDO-to-cUSDO wrapper relationship",
-    "compositionAsOf": "2026-10-01",
+    "compositionAsOf": "2026-10-27",
     "scope": "classification-only",
     "knownUnknownExposure": "Current USDO reserve-asset weights and custodian shares are inherited from USDO and are not required to establish the direct 100% wrapper relationship.",
     "knownUnknownExposurePct": 0

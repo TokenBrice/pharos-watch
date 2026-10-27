@@ -1,0 +1,468 @@
+{
+  "dai-makerdao": {
+    "reserves": [
+      {
+        "sourceKey": "sky-makercore:lite-psm:usdc",
+        "name": "USDC (Sky LitePSM)",
+        "pct": 39.4,
+        "risk": "low",
+        "coinId": "usdc-circle",
+        "depType": "collateral",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Circle",
+        "riskFactors": [
+          "counterparty",
+          "custody",
+          "liquidity",
+          "smart-contract",
+          "concentration"
+        ],
+        "blacklistabilityExposure": "yes",
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "sourceKey": "sky-makercore:module:grove",
+        "name": "Grove (RWA)",
+        "pct": 16.7,
+        "risk": "low",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Grove Agent and underlying institutional-credit counterparties",
+        "riskFactors": [
+          "credit",
+          "counterparty",
+          "liquidity",
+          "custody",
+          "smart-contract",
+          "legal",
+          "concentration"
+        ],
+        "blacklistabilityExposure": "upstream",
+        "liquidityHorizon": "unknown"
+      },
+      {
+        "sourceKey": "sky-makercore:module:spark",
+        "name": "Spark (lending)",
+        "pct": 33.6,
+        "risk": "low",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Spark Agent and its lending, liquidity, CeFi, and RWA counterparties",
+        "riskFactors": [
+          "credit",
+          "counterparty",
+          "liquidity",
+          "custody",
+          "smart-contract",
+          "market",
+          "concentration"
+        ],
+        "liquidityHorizon": "unknown"
+      },
+      {
+        "sourceKey": "sky-makercore:module:obex",
+        "name": "Obex",
+        "pct": 3.8,
+        "risk": "medium",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Obex Agent and supported institutional stablecoin projects",
+        "riskFactors": [
+          "credit",
+          "counterparty",
+          "liquidity",
+          "custody",
+          "smart-contract",
+          "legal",
+          "concentration"
+        ],
+        "liquidityHorizon": "unknown"
+      },
+      {
+        "sourceKey": "sky-makercore:module:core",
+        "name": "Core (crypto vaults)",
+        "pct": 3.7,
+        "risk": "medium",
+        "assetClass": "cryptoasset",
+        "issuerOrObligor": "Sky Core vault collateral pools and underlying crypto protocols",
+        "riskFactors": [
+          "market",
+          "liquidity",
+          "smart-contract",
+          "custody",
+          "counterparty",
+          "concentration"
+        ],
+        "liquidityHorizon": "one-day"
+      },
+      {
+        "sourceKey": "sky-makercore:module:staked",
+        "name": "Staking Engine",
+        "pct": 1.5,
+        "risk": "high",
+        "assetClass": "cryptoasset",
+        "issuerOrObligor": "Sky governance token and LockStake Engine",
+        "riskFactors": [
+          "market",
+          "liquidity",
+          "smart-contract",
+          "concentration"
+        ],
+        "liquidityHorizon": "unknown"
+      },
+      {
+        "sourceKey": "sky-makercore:module:legacy-rwa",
+        "name": "Legacy RWA",
+        "pct": 0.8,
+        "risk": "low",
+        "assetClass": "other",
+        "issuerOrObligor": "Sky legacy RWA legal structures and underlying obligors",
+        "riskFactors": [
+          "credit",
+          "counterparty",
+          "liquidity",
+          "custody",
+          "legal",
+          "concentration"
+        ],
+        "liquidityHorizon": "unknown"
+      },
+      {
+        "sourceKey": "sky-makercore:module:osero",
+        "name": "Osero",
+        "pct": 0.5,
+        "risk": "medium",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Osero allocator vault, ALMProxy, and deployed strategy counterparties",
+        "riskFactors": [
+          "credit",
+          "counterparty",
+          "liquidity",
+          "custody",
+          "smart-contract",
+          "market",
+          "concentration"
+        ],
+        "liquidityHorizon": "unknown"
+      },
+      {
+        "sourceKey": "sky-makercore:module:stablecoins-residual",
+        "name": "Unattributed stablecoins (PSM)",
+        "pct": 0,
+        "risk": "very-low",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Sky PSM contracts and external stablecoin issuers",
+        "riskFactors": [
+          "counterparty",
+          "custody",
+          "liquidity",
+          "smart-contract",
+          "concentration"
+        ],
+        "blacklistabilityExposure": "yes",
+        "liquidityHorizon": "immediate"
+      }
+    ],
+    "reserveReview": {
+      "reviewedAt": "2026-09-30",
+      "reviewer": "Codex Sky LitePSM dependency review",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "LitePSM canonical gem and pocket contract, accessed 2026-09-30",
+          "url": "https://github.com/makerdao/dss-lite-psm"
+        },
+        {
+          "label": "Sky stablecoins dashboard, accessed 2026-09-30",
+          "url": "https://info.skyeco.com/collateral/stablecoins"
+        },
+        {
+          "label": "USDS shared DAI conversion book, accessed 2026-09-30",
+          "url": "https://developers.skyeco.com/protocol/tokens/usds/"
+        },
+        {
+          "label": "Sky MakerCore group debt snapshot",
+          "url": "https://info-sky.blockanalitica.com/groups/?days_ago=1&order=-debt"
+        },
+        {
+          "label": "Sky protocol dashboard",
+          "url": "https://info.sky.money/"
+        },
+        {
+          "label": "Sky Ecosystem agent model",
+          "url": "https://www.skyeco.com/ecosystem"
+        },
+        {
+          "label": "Sky LitePSM documentation",
+          "url": "https://developers.skyeco.com/protocol/liquidity/litepsm/"
+        },
+        {
+          "label": "Spark documentation",
+          "url": "https://docs.spark.fi/"
+        },
+        {
+          "label": "Grove protocol FAQ",
+          "url": "https://docs.grove.finance/faqs"
+        },
+        {
+          "label": "Obex institutional stablecoin mandate",
+          "url": "https://obex.xyz/"
+        },
+        {
+          "label": "Sky collateral liquidation documentation",
+          "url": "https://developers.skyeco.com/protocol/vaults/collateral-liquidation/"
+        },
+        {
+          "label": "Sky governance Osero allocator and ALMProxy configuration",
+          "url": "https://vote.sky.money/executive/template-executive-vote-monthly-settlement-cycle-for-june-2026-lssky-sky-rewards-normalization-complete-rwa001-a-offboarding-add-emergency-spells-to-the-chainlog-whitelist-osero-almproxy-adjust-vault-parameters-update-safe-harbor-agreement-prime-agent-proxy-spells-july-16-2026"
+        },
+        {
+          "label": "Sky Staking Engine documentation",
+          "url": "https://developers.skyeco.com/protocol/rewards/staking-engine/"
+        }
+      ],
+      "rationale": "The September 29 captured Sky book reports canonical Ethereum USDC in the verified LitePSM pocket. Both DAI and USDS share this book. The measured $4,255,200,267.580757 divided by captured total group debt $10,751,404,484 is 39.578087%. The rounded stablecoins group share is 39.4%; its 0.178087 percentage-point excess falls inside the explicitly reviewed 0.25-point cross-endpoint timing/rounding band, so the reviewed USDC share is capped to the group share and the measured stock remains separate metadata. The zero keyed residual is a classification row, not a holding. Positive unexplained remainders and failed reconciliations retain the existing very-low PSM-pool risk, without an inferred constituent identity. Allocators remain classified at their deployed-strategy failure domain.",
+      "compositionBasis": "September 29 captured group-debt shares; canonical gem() and measured LitePSM USDC pocket balance with explicit reconciliation",
+      "compositionAsOf": "2026-09-29",
+      "scope": "full-composition",
+      "knownUnknownExposure": "Unexplained positive PSM remainders stay unlinked; excess above 0.25 percentage points fails the split closed. Allocator groups have no invented tracked-token look-through weights.",
+      "knownUnknownExposurePct": 0,
+      "nonLinkDispositions": [
+        {
+          "reserveIndex": 1,
+          "reserveName": "Grove (RWA)",
+          "pct": 16.7,
+          "disposition": "untracked-exogenous-asset",
+          "rationale": "Grove is a Sky Agent allocation into institutional-credit strategies, not a direct wrapper around one tracked stablecoin."
+        },
+        {
+          "reserveIndex": 2,
+          "reserveName": "Spark (lending)",
+          "pct": 33.6,
+          "disposition": "untracked-exogenous-asset",
+          "rationale": "Spark is an allocator and lending-protocol position with multiple deployment counterparties, not a direct wrapper around one tracked stablecoin."
+        },
+        {
+          "reserveIndex": 3,
+          "reserveName": "Obex",
+          "pct": 3.8,
+          "disposition": "untracked-exogenous-asset",
+          "rationale": "Obex is an Agent allocation across supported institutional stablecoin projects rather than one canonical tracked reserve asset."
+        },
+        {
+          "reserveIndex": 4,
+          "reserveName": "Core (crypto vaults)",
+          "pct": 3.7,
+          "disposition": "untracked-exogenous-asset",
+          "rationale": "The Core bucket is a multi-collateral crypto-vault pool, not one canonical tracked reserve asset."
+        },
+        {
+          "reserveIndex": 5,
+          "reserveName": "Staking Engine",
+          "pct": 1.5,
+          "disposition": "untracked-exogenous-asset",
+          "rationale": "The Staking Engine bucket is collateralized by SKY positions in LockStake Engine vaults, not by another tracked stablecoin."
+        },
+        {
+          "reserveIndex": 6,
+          "reserveName": "Legacy RWA",
+          "pct": 0.8,
+          "disposition": "untracked-exogenous-asset",
+          "rationale": "The legacy RWA bucket represents external legal structures and obligors rather than a direct tracked-stablecoin dependency."
+        },
+        {
+          "reserveIndex": 7,
+          "reserveName": "Osero",
+          "pct": 0.5,
+          "disposition": "untracked-exogenous-asset",
+          "rationale": "Osero is a Sky allocator position with mutable deployed strategies rather than one direct tracked-stablecoin reserve asset."
+        }
+      ]
+    }
+  },
+  "susdt-spark": {
+    "reserves": [
+      {
+        "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
+        "name": "Spark Savings USDT idle underlying",
+        "pct": 19.590965651347,
+        "risk": "low",
+        "coinId": "usdt-tether",
+        "depType": "wrapper",
+        "assetClass": "stablecoin",
+        "issuerOrObligor": "Tether (USDT issuer)",
+        "riskFactors": [
+          "smart-contract",
+          "liquidity",
+          "counterparty",
+          "concentration"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "sourceKey": "erc4626-single-asset:ethereum:0xe2e7a17dff93280dec073c995595155283e3c372:deployed",
+        "name": "Spark Savings USDT deployed strategy positions",
+        "pct": 80.409034348653,
+        "risk": "high",
+        "assetClass": "protocol-position",
+        "issuerOrObligor": "Spark Liquidity Layer / Sky ecosystem",
+        "riskFactors": [
+          "smart-contract",
+          "liquidity",
+          "counterparty",
+          "concentration"
+        ],
+        "liquidityHorizon": "unknown"
+      }
+    ],
+    "reserveReview": {
+      "reviewedAt": "2026-10-03",
+      "reviewer": "W1R14 exact Spark Savings idle liquidity review",
+      "confidence": "probable",
+      "sources": [
+        {
+          "label": "Spark V2 idle underlying availability and exact Ethereum spUSDT identity, reviewed 2026-10-03",
+          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+        },
+        {
+          "label": "Spark Savings V2 backing and risk architecture (accessed 2026-09-30)",
+          "url": "https://docs.spark.finance/products/spark-savings"
+        },
+        {
+          "label": "Spark Savings",
+          "url": "https://sparkprotocol.io/"
+        },
+        {
+          "label": "Spark Vaults V2 source",
+          "url": "https://github.com/sparkdotfi/spark-vaults-v2"
+        },
+        {
+          "label": "Spark Data Hub",
+          "url": "https://data.spark.fi/savings/"
+        },
+        {
+          "label": "Pinned Spark Vaults V2 implementation",
+          "url": "https://github.com/sparkdotfi/spark-vaults-v2/blob/51c6d7a1da85944804ba87234f2eac13dba8330e/src/SparkVault.sol"
+        },
+        {
+          "label": "Pinned Spark Ethereum address registry",
+          "url": "https://github.com/sparkdotfi/spark-address-registry/blob/2ec1f5c9b9d6b2f8b94a4a2f063b83d56175f265/src/Ethereum.sol"
+        },
+        {
+          "label": "Spark USDT strategy and May 5, 2026 deployment snapshot",
+          "url": "https://docs.spark.finance/products/spark-savings/risk-architecture/usdt-strategy"
+        },
+        {
+          "label": "Ethereum observation block 26079396",
+          "url": "https://etherscan.io/block/26079396"
+        }
+      ],
+      "rationale": "Historical composition remains from Ethereum block 26079396 (2026-09-28T23:59:59Z), with no weight or composition-date refresh. October 3 metadata-only review: exact spUSDT implementation documentation identifies native USDT and atomic withdraw/redeem capped at the idle token balance. The entire idle-underlying accounting slice is therefore immediately available in-kind, not a whole-vault USD exit or assurance that taker-deployed claims are immediately liquid. Pinned fresh reads at block 26114898 confirm asset=USDT and assetsOutstanding=totalAssets minus idle balance, without replacing historical percentages. Deployed strategies remain protocol-position claims with unknown constituent asset, venue, custodian weights and realization maximum; no scalar maturity is fabricated for either scoring-inapplicable class.",
+      "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDT balanceOf(spUSDT) at Ethereum block 26079396; category-level classification from the pinned Spark vault implementation and address registry",
+      "compositionAsOf": "2026-09-28",
+      "scope": "full-composition",
+      "knownUnknownExposure": "Spark names SparkLend, Morpho, Maple syrupUSDT, Curve and sUSDS in its strategy framework and publishes a May 5, 2026 deployment snapshot. Those historical aggregate amounts do not reconcile the current spUSDT liabilities. The 80.409034348653% non-idle position therefore retains unknown current constituent weights, downstream custody shares and maturity bounds; category-level classification does not admit the live-withheld fallback.",
+      "knownUnknownExposurePct": 80.409034348653,
+      "nonLinkDispositions": [
+        {
+          "reserveIndex": 1,
+          "reserveName": "Spark Savings USDT deployed strategy positions",
+          "pct": 80.409034348653,
+          "disposition": "basket-needs-split",
+          "rationale": "The disclosed SparkLend, Morpho, Maple, Curve and sUSDS strategy framework lacks a current spUSDT-specific allocation and liability reconciliation. The May 5, 2026 snapshot cannot supply September weights.",
+          "candidateCoinIds": [
+            "usdt-tether",
+            "susds-sky",
+            "syrupusdt-maple"
+          ]
+        }
+      ]
+    }
+  },
+  "usdc-circle": {
+    "reserves": [
+      {
+        "sourceKey": "circle:usdc:treasuries-under-3m",
+        "name": "<3-Month U.S. Treasuries",
+        "pct": 18.0104949,
+        "risk": "very-low",
+        "assetClass": "treasury-bill",
+        "issuerOrObligor": "United States Treasury",
+        "riskFactors": [
+          "duration",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day",
+        "maturityDaysMax": 92
+      },
+      {
+        "sourceKey": "circle:usdc:bank-deposits",
+        "name": "Cash at Regulated Financial Institutions (net settlement adjustments)",
+        "pct": 14.43502106,
+        "risk": "very-low",
+        "assetClass": "bank-deposit",
+        "issuerOrObligor": "Regulated financial institutions (individual counterparties undisclosed)",
+        "riskFactors": [
+          "counterparty",
+          "custody",
+          "concentration"
+        ],
+        "liquidityHorizon": "immediate"
+      },
+      {
+        "sourceKey": "circle:usdc:overnight-reverse-treasury-repo",
+        "name": "Overnight Reverse Treasury Repo",
+        "pct": 67.55448404,
+        "risk": "very-low",
+        "assetClass": "repo",
+        "issuerOrObligor": "Leading global banks",
+        "riskFactors": [
+          "counterparty",
+          "liquidity",
+          "custody"
+        ],
+        "liquidityHorizon": "one-day",
+        "maturityDaysMax": 1
+      }
+    ],
+    "reserveReview": {
+      "reviewedAt": "2026-10-01",
+      "reviewer": "Sol curation pass 2026-10-01 (CircleRecovery), D01 independently reproduced examination arithmetic",
+      "confidence": "verified",
+      "sources": [
+        {
+          "label": "Deloitte USDC examination report - August 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
+        }
+      ],
+      "rationale": "The complete August 31, 2026 examination reports USD 73,398,532,613 of reserve assets. Treasury fair values are USD 11,918,146,195 in the fund plus USD 1,301,292,779 outside it, totaling USD 13,219,438,974. Overnight Treasury repurchase agreements are USD 49,584,000,000. Net cash and settlement balances are USD 1,003,409,582 + USD 9,591,096,978 - USD 188,181,352 + USD 188,768,431 = USD 10,595,093,639. Each percentage is independently calculated as its amount divided by USD 73,398,532,613 times 100, rounded to eight decimal places; the three amounts reconcile exactly. Settlement adjustments are reported cash due to or owed by Circle, not an invented residual. The examination does not disclose a SIFI/non-SIFI split, so aggregate bank cash has one conservative common-mode issuer domain. The live adapter uses the same aggregate bank key and retains its weekly split only as contextual metadata.",
+      "compositionBasis": "Complete August 31, 2026 examined USD fair-value balances; independently reproduced arithmetic under D01",
+      "compositionAsOf": "2026-08-31",
+      "scope": "full-composition",
+      "knownUnknownExposure": "All reported reserve assets are classified as Treasury securities, overnight Treasury repos, or net cash and settlement balances. Individual banks, bank shares, and repo counterparties are not disclosed. Aggregate bank exposure is one concentration domain, with no diversification credit inferred from institution categories.",
+      "knownUnknownExposurePct": 0
+    },
+    "proofOfReserves": {
+      "type": "independent-audit",
+      "url": "https://www.circle.com/transparency",
+      "provider": "Deloitte",
+      "attestorTier": "big4",
+      "cadence": "monthly",
+      "attestorJurisdiction": "United States",
+      "attestorLicense": "PCAOB-registered",
+      "latestReport": {
+        "periodEnd": "2026-08-31",
+        "publishedAt": "2026-09-29",
+        "assuranceMethod": "examination",
+        "scope": "assets-and-liabilities",
+        "liabilityReconciliation": "full",
+        "reviewer": "Sol curation pass 2026-10-01 (CurA02USDC): August examination and management assertion dated September 29, 2026 retrieved",
+        "confidence": "verified",
+        "sources": [
+          {
+            "label": "Deloitte USDC examination report: August 2026",
+            "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
+          }
+        ]
+      }
+    }
+  }
+}

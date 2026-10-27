@@ -422,10 +422,10 @@ describe("real stablecoin catalog composed records", () => {
     // The idle wrapper slice carries the variantOf link; the residual deployed
     // accrual slice stays unlinked by review.
     expect(coin.reserves).toEqual([
-      expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 99.999982504839 }),
+      expect.objectContaining({ coinId: coin.variantOf, depType: "wrapper", pct: 99.99996877826727 }),
       expect.objectContaining({
         name: "Sky Savings USDS deployed strategy positions",
-        pct: 0.00001749516100346682,
+        pct: 3.122173273489469e-05,
         risk: "high",
       }),
     ]);

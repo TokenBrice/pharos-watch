@@ -155,6 +155,7 @@
         "worker/src/lib/price*.ts",
         "worker/src/lib/dex-api-token-pricing.ts",
         "worker/src/lib/hive-market-price.ts",
+        "worker/src/lib/stablecoin-publication-coverage.ts",
         "worker/src/lib/address-price-providers/**",
         "worker/src/lib/authoritative-price-sources/**",
         "shared/lib/pricing-*.ts",
@@ -172,6 +173,12 @@
         { "path": "docs/supply-snapshot.md", "anchor": "supply-pipeline" }
       ],
       "reading": [
+        {
+          "sources": ["worker/src/lib/stablecoin-publication-coverage.ts"],
+          "local": [
+            { "path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health" }
+          ]
+        },
         {
           "sources": ["worker/src/cron/sync-v9-supply-attribution.ts"],
           "local": [
@@ -951,6 +958,7 @@
         "worker/src/cron/dex-liquidity/**",
         "worker/src/cron/measured-execution/**",
         "worker/src/lib/dex-api-token-pricing.ts",
+        "worker/src/lib/dexscreener.ts",
         "worker/src/cron/mint-burn/**",
         "worker/src/cron/sync-mint-burn.ts",
         "worker/src/api/depeg-resolver.ts",
@@ -975,7 +983,7 @@
       "docs": [{ "path": "docs/methodology-page.md", "anchor": "methodology-editing-entry" }, { "path": "docs/report-cards.md", "anchor": "methodology-identity" }],
       "reading": [
         {
-          "sources": ["worker/src/cron/dex-liquidity/**", "worker/src/cron/measured-execution/**", "worker/src/lib/dex-api-token-pricing.ts", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
+          "sources": ["worker/src/cron/dex-liquidity/**", "worker/src/cron/measured-execution/**", "worker/src/lib/dex-api-token-pricing.ts", "worker/src/lib/dexscreener.ts", "docs/dex-liquidity.md", "docs/process/dex-liquidity-appendix.md"],
           "local": [
             { "path": "docs/dex-liquidity.md", "anchor": "discovery-cron" },
             { "path": "docs/process/dex-liquidity-appendix.md", "anchor": "methodology-versioning" }
@@ -1016,6 +1024,12 @@
         { "path": "docs/runbooks/mint-burn-integrity.md", "runbook": { "label": "Mint/burn integrity diagnosis", "kind": "symptom" } }
       ],
       "checks": ["npx vitest run shared/lib worker/src/lib"],
+      "testOwnership": [
+        {
+          "sources": ["worker/src/lib/dexscreener.ts"],
+          "tests": ["worker/src/lib/__tests__/dexscreener.test.ts", "worker/src/cron/dex-discovery/__tests__/dexscreener-census.test.ts"]
+        }
+      ],
       "rules": ["Methodology versions increase numerically: after v5.9 use v5.91 or v6.0, not v5.10."]
     },
     {

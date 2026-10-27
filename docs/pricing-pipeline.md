@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.57`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.59`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -193,7 +193,7 @@ This catches weak-source agreement derived from small pools while larger pools s
 - `priceUpdatedAt`: compatibility alias for the effective observation timestamp, so existing consumers do not read sync-write time as source freshness
 - high-confidence cluster labels can name multiple agreeing sources even when the published price is the cluster median rather than any constituent price
 
-Inherited protocol/NAV prices retain the parent's admitted source observation clock. A recent `priceSyncedAt` never rescues stale composite provenance, including pre-intake supply NAV valuation; without an admissible parent the child remains unavailable. Date-only FX observations must name a real ISO calendar day no later than the run's UTC day. Today's daily payload remains valid before its nominal publication hour; a future day cannot gain freshness by clamping its synthetic timestamp to the run clock.
+Inherited protocol/NAV prices retain the parent's admitted source observation clock. A recent `priceSyncedAt` never rescues stale composite provenance, including pre-intake supply NAV valuation, whose parent may be an admitted same-run direct CoinGecko quote; without an admissible parent the child remains unavailable. A published parent-derived quote carries optional `priceDerivation` (parent ID, source, confidence, clock, replay safety, plus `navMethod` for a successful live vault read or `cachedVaultRate` with its original `rateObservedAt`); it is attribution only, travels with that quote through list, detail, live-summary and integration-summary projections, and is cleared whenever the quote is replaced, nominal or unavailable. The Price Transparency card does not render it. Date-only FX observations must name a real ISO calendar day no later than the run's UTC day. Today's daily payload remains valid before its nominal publication hour; a future day cannot gain freshness by clamping its synthetic timestamp to the run clock.
 
 Zephyr Scanner distinguishes genuinely absent clocks from present-but-invalid, stale or excessively future-skewed clocks. A rejected scanner clock withholds its price rather than converting it into an undated or local-fetch quote; ZYS's dependent NAV supply valuation is also withheld. ZSD retains its separate official-circulation supply policy, and an independently admitted preferred market quote keeps its own observation clock. Genuinely absent scanner clocks retain the existing undated-price behavior; see the [Zephyr supplemental lane](process/pricing-pipeline-appendix.md#zephyr-scanner-supplemental-lane).
 
@@ -227,7 +227,7 @@ Downstream consumers use these tags for display, depeg confirmation, and risk ha
 
 After consensus, `applyListAggregatorDowngrade()` expands composite source labels and downgrades 2-source clusters made entirely of list-style aggregators such as CoinGecko, DefiLlama-list, DefiLlama-contract, and CoinMarketCap from `high` to `single-source`, because those feeds can re-export overlapping upstream list data and are not treated as independent corroboration by themselves.
 
-`sync-stablecoins` metadata records circulating-value confidence weights and valid reviewed missing-price counts for status display. These diagnostics do not alter price selection, publication or confidence assignment.
+`sync-stablecoins` metadata records circulating-value confidence weights and valid reviewed missing-price counts for status display, plus the depeg observation census as `quality.depegObservation`. Unavailable census inputs add the `depeg-observation-incomplete` quality reason without changing execution status. If detection stops before a census exists, the field is null and `quality.depegObservationUnavailableReason` says why. These diagnostics do not alter price selection, publication or confidence assignment.
 
 ---
 

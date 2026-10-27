@@ -87,16 +87,12 @@ describe("HomeAltHeroChart", () => {
     expect(container.querySelector('path[fill="url(#homeAltTotalGrad)"]')!.getAttribute("d")!.split("Z").length - 1).toBe(1);
   });
 
-  it("does not warn about cohort gaps while initial history queries are loading", () => {
-    const { container } = render(<HomeAltHeroChart rows={rows.map((row) => ({ ...row, sky: null }))} isLoadingHistory />);
-    expect(container.textContent).not.toContain("gaps are not zero");
-  });
-
   it("shows unavailable total and non-USD history as gaps rather than zero geometry", () => {
     const { container } = render(<HomeAltHeroChart rows={rows.map((row) => ({
       ...row, total: null, nonUsd: null, others: null,
     }))} />);
-    expect(container.textContent).toContain("gaps are not zero");
+    // Gaps stay visible in the geometry; the homepage carries no data-health caption (ADR-42).
+    expect(container.textContent).not.toContain("gaps are not zero");
     const totalPath = [...container.querySelectorAll("path title")]
       .find((title) => title.textContent === "Total market cap")?.parentElement;
     expect(totalPath?.getAttribute("d")).toBe("");

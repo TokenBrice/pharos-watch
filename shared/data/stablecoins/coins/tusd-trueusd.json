@@ -22,17 +22,17 @@
     "attestorJurisdiction": "Hong Kong",
     "attestorLicense": "HK CPA",
     "latestReport": {
-      "periodEnd": "2026-10-20",
-      "publishedAt": "2026-10-20",
+      "periodEnd": "2026-10-27",
+      "publishedAt": "2026-10-27",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "C11 bottom-up refinement 2026-10-21",
+      "reviewer": "D02 evidence renewal 2026-10-27",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Moore CPA signed ISAE 3000 reasonable-assurance report as of October 20, 2026 at 16:30:30 HKT; retrieved 2026-10-20",
+          "label": "Moore CPA signed ISAE 3000 reasonable-assurance report as of October 27, 2026 at 16:30:30 HKT; retrieved 2026-10-27 (SHA-256 9b3bbfe94d689c40da2e8ad8125ecbdbef85098ca32c77e814ba3e00339bc620)",
           "url": "https://widget.verinumus.io/api/v1/tusd/report"
         }
       ]

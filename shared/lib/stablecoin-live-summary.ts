@@ -7,8 +7,10 @@ const DETAIL_BUCKET_MAX_BACKFILL_SEC = 86_400;
 
 /** Nominal references never become observed display prices, regardless of transport. */
 export function normalizeStablecoinLiveSummary(summary: StablecoinLiveSummary): StablecoinLiveSummary {
-  return isObservedPrice(summary) ? summary : {
-    ...summary,
+  if (isObservedPrice(summary)) return summary;
+  const { priceDerivation: _derivation, ...rest } = summary;
+  return {
+    ...rest,
     price: null,
     priceConfidence: null,
     priceUpdatedAt: null,
@@ -85,6 +87,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     priceObservedAtMode: detail.priceObservedAtMode,
     priceSyncedAt: detail.priceSyncedAt,
     ...(detail.nominalPriceReference ? { nominalPriceReference: detail.nominalPriceReference } : {}),
+    ...(detail.priceDerivation ? { priceDerivation: detail.priceDerivation } : {}),
     consensusSources: detail.consensusSources,
     agreeSources: detail.agreeSources,
     supplyObservedAt,

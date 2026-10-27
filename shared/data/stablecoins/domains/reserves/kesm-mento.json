@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "CELO",
-      "pct": 24.855077359547103,
+      "pct": 8.877217656365637,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Celo network native asset held by Mento Reserve governance",
@@ -17,7 +17,7 @@
     },
     {
       "name": "AUSD (Agora Dollar)",
-      "pct": 24.11620494910088,
+      "pct": 29.59770590871478,
       "risk": "low",
       "coinId": "ausd-agora",
       "depType": "collateral",
@@ -35,7 +35,7 @@
     },
     {
       "name": "sUSDS (Sky savings USDS)",
-      "pct": 22.604477552357462,
+      "pct": 28.07250486066514,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -50,7 +50,7 @@
     },
     {
       "name": "USDT",
-      "pct": 8.622294263502587,
+      "pct": 12.041688784275149,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -74,14 +74,14 @@
       "liquidityHorizon": "immediate",
       "sourceKey": "mento:reserve:europ",
       "name": "EUROP (Schuman euro stablecoin)",
-      "pct": 5.443563870521741,
+      "pct": 6.631313575049107,
       "risk": "low",
       "coinId": "europ-schuman",
       "depType": "collateral"
     },
     {
       "name": "EURC (Circle euro stablecoin)",
-      "pct": 3.721438816786519,
+      "pct": 4.53448535870505,
       "risk": "low",
       "coinId": "eurc-circle",
       "depType": "collateral",
@@ -96,7 +96,7 @@
     },
     {
       "name": "stETH (Lido staked ETH)",
-      "pct": 3.2521692070406694,
+      "pct": 3.4744897238959167,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido (stETH liquid staking issuer)",
@@ -110,7 +110,7 @@
     },
     {
       "name": "USDC",
-      "pct": 2.6923864460608122,
+      "pct": 2.3572132184372596,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -125,7 +125,7 @@
     },
     {
       "name": "axlEUROC (Axelar EURC)",
-      "pct": 1.373366633011464,
+      "pct": 1.2232377006378046,
       "risk": "low",
       "coinId": "eurc-circle",
       "depType": "collateral",
@@ -149,7 +149,7 @@
     },
     {
       "name": "USDT0 (Monad)",
-      "pct": 1.111004752080174,
+      "pct": 1.4579422822016839,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -174,7 +174,7 @@
     },
     {
       "name": "axlUSDC (Axelar USDC)",
-      "pct": 1.1069622264377186,
+      "pct": 0.5362387471942778,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -198,7 +198,7 @@
     },
     {
       "name": "ETH",
-      "pct": 1.1010539235528962,
+      "pct": 1.1959621838581749,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum native ether and residual Celo WETH held by Mento Reserve governance",
@@ -212,8 +212,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review W3",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -221,7 +221,7 @@
         "url": "https://reserve.mento.org/"
       },
       {
-        "label": "Mento reserve analytics API (live read 2026-07-27)",
+        "label": "Mento reserve analytics API (live read 2026-10-27T16:16Z; collateral total_usd $16,804,814.71)",
         "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
       },
       {
@@ -245,9 +245,9 @@
         "url": "https://docs.agora.finance/instant-settlement"
       }
     ],
-    "rationale": "kesm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture. Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins.",
-    "compositionBasis": "Issuer reserve API collateral.assets captured 2026-09-30; measured percentages grouped by native economic parent with axlUSDC, axlEUROC and USDT0 retained separately. Capture date is an observation date; the API supplies no independently verified source update clock.",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "kesm-mento retains the shared Mento Reserve backing model. All positive holdings are refreshed from one issuer API capture on 2026-10-27T16:16Z (collateral total_usd $16,804,814.71, 18 positive asset rows; WETH grouped with ETH, USDC across Ethereum, Celo, Monad and Polygon, USDT across Ethereum and Celo, AUSD across Ethereum and Monad). Bridge-representation checks below date from the 2026-09-30 fixed-block reads and were not repeated; no new asset symbol appeared. Native parents keep their canonical collateral link; Celo axlUSDC and axlEUROC and Monad USDT0 carry explicit bridge annotations with registry contracts and fixed-block symbols confirmed at Celo 78860375 and Monad 109288367. Bridge verification establishes representation identity and documented issuer lineage, not independent escrow solvency. GBPm, JPYm and CHFm remain separate USDm-collateral CDPs; no underlying basket is duplicated on those coins.",
+    "compositionBasis": "Issuer reserve API collateral.assets captured 2026-10-27T16:16Z; measured percentages grouped by native economic parent with axlUSDC, axlEUROC and USDT0 retained separately. Capture date is an observation date; the API supplies no independently verified source update clock.",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "All captured holdings have reviewed identities. Bridge custody and current escrow reconciliation are not independently assured. The live source freshness gate is unchanged.",
     "knownUnknownExposurePct": 0,
@@ -255,21 +255,21 @@
       {
         "reserveIndex": 0,
         "reserveName": "CELO",
-        "pct": 24.855077359547103,
+        "pct": 8.877217656365637,
         "disposition": "untracked-exogenous-asset",
         "rationale": "CELO is identified exogenous cryptoasset collateral, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "stETH (Lido staked ETH)",
-        "pct": 3.2521692070406694,
+        "pct": 3.4744897238959167,
         "disposition": "untracked-exogenous-asset",
         "rationale": "stETH (Lido staked ETH) is identified exogenous cryptoasset collateral, not a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 11,
         "reserveName": "ETH",
-        "pct": 1.1010539235528962,
+        "pct": 1.1959621838581749,
         "disposition": "untracked-exogenous-asset",
         "rationale": "ETH is identified exogenous cryptoasset collateral, not a tracked stablecoin dependency."
       }

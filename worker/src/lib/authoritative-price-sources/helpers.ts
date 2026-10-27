@@ -6,6 +6,7 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import { isFixedDecimalDeployment } from "@shared/lib/deployment-amounts";
 import type { NominalPriceReference, PriceConfidence, PriceObservedAtMode, StablecoinMeta } from "@shared/types/core";
 import type { PeggedAsset } from "../../cron/sync-stablecoins/enrich-prices-shared";
+import { PriceDerivationSchema, type PriceDerivation } from "@shared/types/market";
 import { fetchEvmCallHexAtBlock, resolveClosestBlockAtOrBeforeTimestamp, type EvmBlockSearchCache } from "../evm-rpc";
 import { encodeUint256 } from "../evm-selectors";
 export { encodeAddress, encodeUint256 } from "../evm-selectors";
@@ -172,6 +173,8 @@ export interface CurrentPriceOverride {
     parentObservedAt?: number | null;
     parentObservedAtMode?: PriceObservedAtMode | null;
     parentReplaySafe?: boolean;
+    /** Successful live vault read only; cached-rate results omit it. */
+    navMethod?: "convertToAssets" | "previewRedeem";
     cachedVaultRate?: {
       rate: number;
       rateObservedAt: number;
@@ -184,6 +187,22 @@ export interface CurrentPriceOverride {
       dispersionBps: number;
     };
   };
+}
+
+/** Public parent attribution from override metadata; provider diagnostics are never projected. */
+export function projectPriceDerivation(metadata: CurrentPriceOverride["metadata"]): PriceDerivation | undefined {
+  if (!metadata?.inheritedFrom) return undefined;
+  const parsed = PriceDerivationSchema.safeParse({
+    inheritedFrom: metadata.inheritedFrom,
+    parentSource: metadata.parentSource ?? null,
+    parentConfidence: metadata.parentConfidence ?? null,
+    parentObservedAt: metadata.parentObservedAt ?? null,
+    parentObservedAtMode: metadata.parentObservedAtMode ?? null,
+    parentReplaySafe: metadata.parentReplaySafe === true,
+    ...(metadata.navMethod ? { navMethod: metadata.navMethod } : {}),
+    ...(metadata.cachedVaultRate ? { cachedVaultRate: metadata.cachedVaultRate } : {}),
+  });
+  return parsed.success ? parsed.data : undefined;
 }
 
 export interface HistoricalPricePoint {

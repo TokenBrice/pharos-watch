@@ -2,24 +2,9 @@
   "id": "dusd-dialectic",
   "reserves": [
     {
-      "sourceKey": "makina:protocol:pareto",
-      "name": "Pareto / FalconX credit exposure",
-      "pct": 37.1,
-      "risk": "high",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Pareto / FalconX credit tranche obligors reached through the Dialectic strategy",
-      "riskFactors": [
-        "credit",
-        "counterparty",
-        "liquidity",
-        "smart-contract"
-      ],
-      "liquidityHorizon": "over-seven-days"
-    },
-    {
       "sourceKey": "makina:protocol:morpho",
       "name": "Morpho lending positions",
-      "pct": 31.4,
+      "pct": 61.2,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Morpho vault borrowers and curators reached through Makina Caliber instructions",
@@ -32,24 +17,23 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "sourceKey": "makina:protocol:makina",
-      "name": "Makina Machine exposure",
-      "pct": 15.3,
-      "risk": "high",
+      "sourceKey": "makina:protocol:aave-v4",
+      "name": "Aave V4 positions",
+      "pct": 21.7,
+      "risk": "medium",
       "assetClass": "protocol-position",
-      "issuerOrObligor": "Makina DMW Machine reached through the Dialectic strategy",
+      "issuerOrObligor": "Aave V4 markets (USDG and frxUSD supply) reached through Makina Caliber instructions",
       "riskFactors": [
-        "counterparty",
         "smart-contract",
         "liquidity",
-        "market"
+        "counterparty"
       ],
-      "liquidityHorizon": "over-seven-days"
+      "liquidityHorizon": "seven-days"
     },
     {
       "sourceKey": "makina:protocol:aave-v3",
       "name": "Aave V3 positions",
-      "pct": 12,
+      "pct": 12.9,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Aave V3 Horizon market reached through Makina Caliber instructions",
@@ -78,8 +62,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice9)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l1)",
     "confidence": "verified",
     "sources": [
       {
@@ -125,13 +109,17 @@
       {
         "label": "DUSD hub Caliber contract",
         "url": "https://eth.blockscout.com/address/0xD1A1C248B253f1fc60eACd90777B9A63F8c8c1BC?tab=contract"
+      },
+      {
+        "label": "Ethereum Dwellir RPC: DUSD totalSupply pinned at block 26284037 (2026-10-27T12:26:35Z)",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "Makina indexes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The live allocation output reviewed on 2026-09-21 groups the material net exposure into Pareto/FalconX, Morpho, Makina, Aave V3, and Royco. The Aave V3 group includes a named Horizon market position and therefore carries Aave pool smart-contract, borrower/counterparty, liquidity, and leverage exposure. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible in the allocation feed, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms.",
+    "rationale": "Makina indexes DUSD's total AUM, share price, share supply, and current allocations by protocol, chain, base-token balance, and position. The live allocation output re-read on 2026-10-27 (generated 16:16:17Z; positions updated at Ethereum block 26284037, hash 0x52d15d67a2140c6723d10a105ec5c7cb1940b184d3728f3e72a6ce516873b7d8, 12:26:35Z) reports net accounting-token exposure of $1,844,387.74 (Ethereum $1,844,316.92 and Base $70.82), against 1,800,414.09 DUSD shares outstanding at that block, grouped as Morpho 61.21%, Aave V4 21.73%, Aave V3 12.86%, and Royco 4.19%; unlabelled base-token balances total about $77 (0.004%). The Pareto/FalconX, Makina Machine, and Pendle exposures present on 2026-09-21 no longer appear. The book is levered: gross positive positions are about $4.31 million against $2.46 million of debt ($1.47 million Morpho PYUSD borrowing and $0.996 million Aave V3 Horizon RLUSD borrowing), and the weights are net of that debt. The Aave V3 group is a named Horizon market (JAAA supply against RLUSD borrow) and carries Aave pool smart-contract, borrower/counterparty, liquidity, and leverage exposure; the Aave V4 group is USDG and frxUSD supply. Borrowing is structurally permitted through the Risk-Manager-curated instruction set and current live debt is visible in the allocation feed, but no binding Machine-wide numeric leverage ceiling was published or created by the reviewed legal terms.",
     "compositionBasis": "Publicly verifiable Makina Machine and Caliber accounting, indexed and human-labelled by the Makina strategy and allocation APIs",
-    "compositionAsOf": "2026-09-21",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 2026-09-21 live allocation groups identify every material bucket. Sub-material base-token balances without upstream protocol labels remain outside the material groups and fail closed if they become material.",
+    "knownUnknownExposure": "The 2026-10-27 live allocation groups identify every material bucket. Sub-material base-token balances without upstream protocol labels remain outside the material groups and fail closed if they become material.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

@@ -289,6 +289,21 @@ describe("ComparisonTable", () => {
     expect(html).not.toContain("Supply change ·");
   });
 
+  it("withholds market-cap deltas when current supply is a partial-coverage remainder", () => {
+    const coin = makeCoin("test", "TST");
+    coin.data = { ...coin.data, supplyChainGuard: {
+      reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
+      chains: [{ chainLabel: "HyperEVM", listCurrentUsd: null, baselineUsd: 10, baselineObservedAt: 1, baselineSource: "state", resolution: "unavailable" }],
+    } };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} />);
+    const rows = html.match(/<tr\b[^>]*>[\s\S]*?<\/tr>/g)?.filter((row) => row.includes("Market-cap change ·"));
+    expect(rows).toHaveLength(3);
+    for (const row of rows ?? []) {
+      expect(row).toContain("No comparable data available");
+      expect(row).not.toContain("%");
+    }
+  });
+
   it("withholds market-cap deltas when historical buckets are missing", () => {
     const coin = makeCoin("test", "TST");
     coin.data = { ...coin.data, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {} };

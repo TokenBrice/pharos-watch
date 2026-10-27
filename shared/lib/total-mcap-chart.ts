@@ -2,6 +2,7 @@ import type { StablecoinChartPoint, SupplyHistoryPoint } from "../types";
 import type { HomepageHeroCohort } from "../types/homepage";
 import { findAsOfSnapshot, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC } from "./rate-series";
 import { admitSupplyBuckets } from "./supply";
+import { classifySupplyCoverage } from "./supply-provenance";
 import { CLIENT_TRACKED_META_BY_ID } from "./stablecoins/client-registry";
 
 export type TotalMcapChartRow = HomepageHeroCohort;
@@ -30,7 +31,9 @@ function alignHistoryAtOrBeforeDate(
   return chartPoints.map((point) => {
     const date = Number(point.date);
     const snapshot = findAsOfSnapshot(sortedHistory, date, (snapshot) => snapshot.date, MAX_SUPPLY_SNAPSHOT_DISTANCE_SEC);
-    if (snapshot) return snapshot.circulatingUsd;
+    // A selected row recorded as a partial-chain remainder is not a complete cohort value; it leaves a gap
+    // (and withholds the dependent Others residual) without searching past it. Unrecorded legacy rows stay numeric.
+    if (snapshot) return classifySupplyCoverage(snapshot.supplyProvenance) === "partial" ? null : snapshot.circulatingUsd;
     // Authored launch evidence establishes nonexistence, not an archive's first
     // row. Missing/empty reads and gaps after launch still remain unavailable.
     return sortedHistory.length > 0 && launchSec !== null && date < launchSec && date < sortedHistory[0]!.date

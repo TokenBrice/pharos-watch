@@ -540,6 +540,85 @@ describe("snapshotSupply", () => {
     }
   });
 
+  it("persists validated supply provenance with the numeric partial remainder (K-031)", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const snapshotDate = Date.UTC(2025, 5, 15) / 1000;
+      const partialGuard = {
+        reason: "supply-chain-dropout",
+        status: "chains-unavailable",
+        partialCoverage: true,
+        quarantinedSince: nowSec - 9 * 86_400,
+        chains: [{
+          chainId: "hyperevm", chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000,
+          baselineObservedAt: nowSec - 10 * 86_400, baselineSource: "state", resolution: "unavailable",
+        }],
+      };
+      const payload = { peggedAssets: [
+        makeSnapshotAsset({
+          id: "usdt-tether", circulating: { peggedUSD: 97_000 }, price: 1,
+          supplySource: "defillama", supplyObservedAt: nowSec - 120, supplyChainGuard: partialGuard,
+        }),
+        makeSnapshotAsset({ id: "usdc-circle", circulating: { peggedUSD: 0 }, price: null }),
+      ] };
+      const putCache = sqlite.prepare("INSERT OR REPLACE INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      const options = { nowSec, requiredActiveIds: DEFAULT_REQUIRED_IDS, snapshotEligibleIds: DEFAULT_REQUIRED_IDS };
+      putCache.run("stablecoins", JSON.stringify(payload), nowSec);
+      await snapshotSupply(db, undefined, options);
+
+      const rows = () => sqlite.prepare(
+        "SELECT stablecoin_id, circulating_usd, price, supply_provenance FROM supply_history ORDER BY stablecoin_id",
+      ).all() as Array<{ stablecoin_id: string; circulating_usd: number; price: number | null; supply_provenance: string | null }>;
+      const written = rows();
+      // Observed zero is written; the partial remainder stays numeric and keeps its exact guard and clocks.
+      expect(written.map((row) => [row.stablecoin_id, row.circulating_usd])).toEqual([["usdc-circle", 0], ["usdt-tether", 97_000]]);
+      expect(JSON.parse(written[1]!.supply_provenance!)).toEqual({
+        supplySource: "defillama", supplyObservedAt: nowSec - 120, supplyChainGuard: partialGuard,
+      });
+      expect(JSON.parse(written[0]!.supply_provenance!)).toMatchObject({ supplyChainGuard: null });
+
+      // Same-day price-only repair never replaces supply or provenance, even when today's guard changed.
+      Object.assign(payload.peggedAssets[0]!, { supplyChainGuard: undefined, circulating: { peggedUSD: 100_000 } });
+      Object.assign(payload.peggedAssets[1]!, { price: 1 });
+      putCache.run("stablecoins", JSON.stringify(payload), nowSec + 60);
+      const repaired = await snapshotSupply(db, undefined, { ...options, nowSec: nowSec + 60 });
+      expect(JSON.parse(String(repaired.metadata))).toMatchObject({ reason: "repaired_missing_prices_today" });
+      const afterRepair = rows();
+      expect(afterRepair[0]).toMatchObject({ stablecoin_id: "usdc-circle", price: 1, supply_provenance: written[0]!.supply_provenance });
+      expect(afterRepair[1]).toEqual(written[1]);
+
+      // A prior Worker's named-column insert leaves provenance NULL (unrecorded), never complete.
+      sqlite.prepare(
+        "INSERT OR REPLACE INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at) VALUES (?, ?, ?, ?, ?)",
+      ).run("usdt-tether", snapshotDate - 86_400, 96_000, 1, null);
+      expect(sqlite.prepare(
+        "SELECT supply_provenance FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?",
+      ).get("usdt-tether", snapshotDate - 86_400)).toEqual({ supply_provenance: null });
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("records provenance for every admitted guard-less row through the six-column tuple", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      const nowSec = Math.floor(Date.now() / 1000);
+      const asset = makeSnapshotAsset({ id: "usdt-tether", circulating: { peggedUSD: 100 } });
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("stablecoins", JSON.stringify({
+        peggedAssets: [asset, makeSnapshotAsset({ id: "usdc-circle", circulating: { peggedUSD: 50 } })],
+      }), nowSec);
+      const result = await snapshotSupply(db, undefined, {
+        nowSec, requiredActiveIds: DEFAULT_REQUIRED_IDS, snapshotEligibleIds: DEFAULT_REQUIRED_IDS,
+      });
+      expect(result.itemCount).toBe(2);
+      // Valid rows carry recorded provenance; the six-column tuple batches cleanly.
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM supply_history WHERE supply_provenance IS NOT NULL").get()).toEqual({ n: 2 });
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("invalidates completion when an applied waiver owner or expiry changes", async () => {
     const freshUpdatedAt = Math.floor(Date.now() / 1000) - 60;
     const snapshotDate = Date.UTC(2025, 5, 15) / 1000;

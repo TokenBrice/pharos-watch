@@ -23,7 +23,7 @@ export function HomeAltHeroLiveChart({ history, nowMs }: { history?: HomepageHis
   if (!query.data) return <HomeAltHeroStaticChart history={history} nowMs={nowMs} settled={!query.isLoading} />;
   return (
     <div className="h-full">
-      <HomeAltHeroChart rows={rows} isLoadingHistory={query.isLoading} />
+      <HomeAltHeroChart rows={rows} />
     </div>
   );
 }

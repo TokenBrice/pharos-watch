@@ -27,6 +27,15 @@ import type { CronProgressReporter, CronProgressUpdate } from "../../lib/cron-lo
 import { observeMockD1Cost } from "../../lib/__tests__/d1-cost.test-support";
 
 const fetchWithRetryMock = vi.hoisted(() => vi.fn());
+const depegCensus = vi.hoisted(() => ({
+  scope: "psi-non-nav-before-supply-floor" as const,
+  evaluatedAt: 1_700_000_000,
+  eligibleCount: 4,
+  observedCount: 2,
+  unavailableCount: 1,
+  belowFloorCount: 1,
+  reasonCounts: { "supply-unavailable": 1 },
+}));
 
 function mockFetchWithRetry(routes: Parameters<typeof mockFetch>[0]): ReturnType<typeof mockFetch> {
   const spy = mockFetch(routes, { requireMatch: true, stubGlobal: false });
@@ -66,11 +75,12 @@ vi.mock("../sync-stablecoins/enrich-prices", () => ({
   hasMissingPrice: vi.fn((asset: { price?: number | null }) => asset.price == null || typeof asset.price !== "number" || asset.price === 0),
   fetchPrimaryPrices: vi.fn(async () => ({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 } })),
 }));
-vi.mock("../detect-depegs", () => ({ detectDepegEvents: vi.fn(async () => ({ status: "completed" })) }));
+vi.mock("../detect-depegs", () => ({ detectDepegEvents: vi.fn(async () => ({ status: "completed", census: depegCensus })) }));
 vi.mock("../confirm-pending-depegs", () => ({ confirmPendingDepegs: vi.fn(async () => ({ status: "completed", providerDiagnostics: [] })) }));
 vi.mock("../../lib/authoritative-price-sources", () => ({
   createAuthoritativeLivePriceOverrideStats: vi.fn((budgetMs = 30_000) => ({ budgetMs, candidateCount: 0, attemptedCount: 0, successCount: 0, failedCount: 0, emptyCount: 0, skippedCircuitOpen: 0, skippedBudget: 0, timedOut: false })),
   fetchAuthoritativeLivePriceOverrides: vi.fn(async () => new Map()),
+  getFreshSingleSourceNavParentId: vi.fn(() => null),
 }));
 vi.mock("../../lib/resolve-market-cap", () => ({ resolveMarketCap: vi.fn((...args: unknown[]) => args[0] ?? 0) }));
 vi.mock("../../lib/fetch-retry", async (importOriginal) => ({
@@ -123,7 +133,7 @@ describe("syncStablecoins", () => {
     vi.mocked(enrichMissingPrices).mockReset().mockResolvedValue({ totalMissing: 0, pass1: 0, pass1b: 0, passCmc: 0, passJupiter: 0, passDex: 0, passCgLowVolume: 0, finalMissing: 0, failedPasses: [] });
     vi.mocked(fetchPrimaryPrices).mockReset().mockResolvedValue({ results: new Map(), stats: { attempted: 0, high: 0, singleSource: 0, cgOnly: 0, low: 0 } });
     vi.mocked(fetchAuthoritativeLivePriceOverrides).mockReset().mockResolvedValue(new Map());
-    vi.mocked(detectDepegEvents).mockReset().mockResolvedValue({ status: "completed" });
+    vi.mocked(detectDepegEvents).mockReset().mockResolvedValue({ status: "completed", census: depegCensus });
     vi.mocked(confirmPendingDepegs).mockReset().mockResolvedValue({ status: "completed", providerDiagnostics: [] });
   });
 
@@ -234,21 +244,44 @@ describe("syncStablecoins", () => {
     mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
     const result = await syncStablecoins(makeSyncDb());
     expect(result).toMatchObject({ itemCount: 60, status: "degraded" });
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ depegPipelineSucceeded: false, depegErrorCount: 1 });
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata).toMatchObject({ depegPipelineSucceeded: false, depegErrorCount: 1 });
+    expect(metadata.quality).toMatchObject({
+      depegObservation: null,
+      depegObservationUnavailableReason: "depeg-detection-error",
+    });
+  });
+
+  it("publishes the detection census as a quality finding without changing execution status", async () => {
+    mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
+    const result = await syncStablecoins(makeSyncDb());
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBe("ok");
+    expect(metadata).toMatchObject({ depegPipelineSucceeded: true, capabilities: { depegPipeline: true } });
+    expect(metadata.quality).toMatchObject({
+      reason: "depeg-observation-incomplete",
+      depegObservation: { ...depegCensus, syncStartSec: metadata.syncStartSec },
+    });
+    expect(metadata.quality).not.toHaveProperty("depegObservationUnavailableReason");
   });
 
   it.each(["detection", "confirmation"] as const)("degrades a published sync when %s holds at capacity", async (stage) => {
     const hold = { status: "held", reason: "depeg-open-event-limit-reached" } as const;
-    if (stage === "detection") vi.mocked(detectDepegEvents).mockResolvedValueOnce(hold);
+    if (stage === "detection") vi.mocked(detectDepegEvents).mockResolvedValueOnce({ ...hold, census: null });
     else vi.mocked(confirmPendingDepegs).mockResolvedValueOnce({ ...hold, providerDiagnostics: [] });
     mockFetchWithRetry(defaultSyncRoutes(makeDlResponse(60)));
     const result = await syncStablecoins(makeSyncDb());
     expect(result.status).toBe("degraded");
-    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(metadata).toMatchObject({
       reason: "depeg-open-event-limit-reached",
       depegPipelineSucceeded: false,
       capabilities: { depegPipeline: false },
     });
+    // A confirmation hold cannot overwrite the census detection already completed.
+    expect(metadata.quality).toMatchObject(stage === "detection"
+      ? { depegObservation: null, depegObservationUnavailableReason: "depeg-open-event-limit-reached" }
+      : { depegObservation: { ...depegCensus, syncStartSec: metadata.syncStartSec } });
   });
 
   it("holds the whole list only when post-enrichment quarantine drops the cohort below the floor", async () => {

@@ -1,5 +1,35 @@
 [
   {
+    "version": "6.59",
+    "title": "Partial-chain supply provenance in history",
+    "date": "2026-10-28",
+    "effectiveAt": 1793145600,
+    "summary": "Daily supply history, the top-stablecoins dataset and the homepage completeness verdict keep the partial-chain evidence of each observation, so a numeric remainder that excludes unavailable chains is never presented as a complete total.",
+    "impact": [
+      "The daily snapshot writes each admitted row's validated supplySource, supplyObservedAt and supplyChainGuard into the new nullable supply_history.supply_provenance column (migration 0287), and /api/supply-history publishes it as supplyProvenance. Rows written before this release, by a prior Worker or by admin backfills stay null: coverage unrecorded (legacy), never partial. No historical row is backfilled or rewritten; same-day price repairs never touch it.",
+      "A recorded observation is partial when its guard sets partialCoverage or reports chains-unavailable with an unavailable chain. The homepage counts partial and unrecorded members (supplyPartialCount, supplyCoverageUnknownCount) inside the observed count; it is complete only when every core member is observed and none is partial, otherwise the existing known-subtotal label applies. Unrecorded coverage is legacy and never qualifies a figure as partial. Named USDT/USDC/Sky cohorts with a partial member are unavailable; Others and non-USD stay observed subtotals.",
+      "The top-stablecoins dataset adds supplyProvenance (JSON/NDJSON object, CSV serialized column) read from the immutable snapshot envelope. A guard-less row counts as recorded coverage only when that envelope's string pricingPipeline version is at least 6.55; missing, malformed or older versions stay unknown. Homepage cohort history drops a selected partial row to a gap instead of a complete cohort value, and a coin's 24h market-cap change is withheld when either day is partial.",
+      "Amounts, prices, source clocks, the 5% partial-publication rule and the seven-day carry are unchanged; only completeness verdicts, provenance metadata and partial-derived views change."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "6.58",
+    "title": "Supplemental admission and per-row fallback quarantine",
+    "date": "2026-10-28",
+    "effectiveAt": 1793145600,
+    "summary": "Supplemental supply keeps an admitted current zero, vault NAV supply can use a fresh same-run parent quote, and a malformed fallback quote is quarantined alone instead of discarding its healthy siblings.",
+    "impact": [
+      "Supplemental merging keeps an admitted current zero with its own clock, source and history instead of restoring an older positive amount; only missing or invalid current supply is carried forward under the unchanged restore ceiling. Upstream producers still reject nonpositive caps, so this changes no current admission path.",
+      "Intake NAV for vaults whose reviewed config admits one fresh replay-safe single-source parent can use that parent's direct CoinGecko quote from the same run, requested in the existing batch without a new request or added concurrency. The parent must be a positive reasonable price with a fresh, non-future upstream clock; mirror, low-volume and par values never qualify, and the unchanged trust gate still judges every parent, including previous-generation rows. syzUSD no longer loses supply when its previous yzUSD row expires before intake.",
+      "DefiLlama contract, CoinMarketCap category and targeted, and Jupiter fallback responses validate rows individually. A malformed row is quarantined with a bounded invalid-shape diagnostic; healthy siblings and later DefiLlama batches still resolve, while an invalid envelope or a nonempty all-invalid batch still fails. CMC truncation and symbol uniqueness use the raw received rows, so a malformed same-symbol peer keeps symbol-only identity ambiguous and a row without a usable symbol disables slugless fallback for that response.",
+      "Price, identity, freshness, liquidity and confidence gates are unchanged, as are fetch budgets and retries. Derived quotes now also carry optional priceDerivation attribution in the API; that provenance changes no price or confidence."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.57",
     "title": "On-chain share partitions for CoinGecko supply",
     "date": "2026-10-26",

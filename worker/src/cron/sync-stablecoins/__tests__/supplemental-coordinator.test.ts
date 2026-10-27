@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import type * as FetchRetry from "../../../lib/fetch-retry";
-import { fetchCoinGeckoMarketData, fetchSupplementalTrackedTokens } from "../supplemental-assets";
+import { fetchCoinGeckoMarketData, fetchSupplementalTrackedTokens, NAV_PARENT_ONLY_GECKO_IDS } from "../supplemental-assets";
 import { makePeggedAsset } from "./_fixtures";
 
 const providers = vi.hoisted(() => ({
@@ -11,7 +11,8 @@ const providers = vi.hoisted(() => ({
 vi.mock("../supplemental-assets/gold", () => ({ fetchGoldTokens: providers.gold }));
 vi.mock("../supplemental-assets/silver", () => ({ fetchSilverTokens: providers.silver }));
 vi.mock("../supplemental-assets/fiat-cg", () => ({
-  FIAT_CG_METAS: [{ geckoId: "fixture-fiat" }], fetchFiatCoinGeckoTokens: providers.fiat,
+  FIAT_CG_METAS: [{ geckoId: "fixture-fiat" }], FIAT_CG_NAV_PARENT_METAS: [{ geckoId: "fixture-fiat" }, { geckoId: "fixture-parent" }],
+  fetchFiatCoinGeckoTokens: providers.fiat,
 }));
 vi.mock("../../../lib/circuit-breaker", () => ({
   shouldAttemptFetch: providers.allowed, recordOutcomeSafe: providers.outcome,
@@ -58,6 +59,17 @@ describe("supplemental source coordinator", () => {
     providers.fetch.mockResolvedValue({ response: new Response(JSON.stringify(quote)), body: JSON.stringify(quote) });
     expect(await fetchCoinGeckoMarketData(db)).toEqual(quote);
     expect(providers.outcome).toHaveBeenCalledWith(db, CIRCUIT_SOURCE.CG_MCAP, true);
+  });
+
+  it("adds same-run NAV parent quotes to the one existing batch without duplicate ids", async () => {
+    providers.fetch.mockResolvedValue({ response: new Response("{}"), body: "{}" });
+    expect([...NAV_PARENT_ONLY_GECKO_IDS]).toEqual(["fixture-parent"]);
+    await fetchCoinGeckoMarketData(mockD1([]));
+    expect(providers.fetch).toHaveBeenCalledTimes(1);
+    const url = new URL(String(providers.fetch.mock.calls[0]![0]));
+    const ids = url.searchParams.get("ids")!.split(",");
+    expect(ids.filter((id) => id === "fixture-parent")).toHaveLength(1);
+    expect(ids.filter((id) => id === "fixture-fiat")).toHaveLength(1);
   });
 
   it("keeps an open-circuit read unavailable without recording a fictitious successful fetch", async () => {

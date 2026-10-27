@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "GLM issue-sweep 2026-09-29 (ResvSolsticeTron)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -47,11 +47,15 @@
       {
         "label": "USDD Smart Allocator allocation detail API",
         "url": "https://openapi.usdd.io/api/v1/smart-allocator/detail-overview"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26285088 (2026-10-27T15:57:11Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Source-scoped accounting correction reviewed 2026-10-20; original 2026-09-29 review start and composition pin retained. Historical Ethereum block 26083816 (2026-09-29T14:47:11Z) records asset() as USDD 0x4f8e5de400de08b164e7421b3ee387f461becd1a, totalAssets() of 198738616.64 USDD, 186200657.69 sUSDD shares and zero idle USDD. The exact verified SavingsUsdd code explains the zero balance: _mint transfers USDD, calls UsddJoin.join and Pot.join, then increases share supply; _burn decreases share supply and calls Pot.exit and UsddJoin.exit. totalAssets() is converted share accounting, not a measurement of external strategy assets. The position is therefore the high-risk USDD savings/Pot claim linked to the parent, not independently measured Smart Allocator venue positions. Issuer terms describe anytime USDD withdrawal with no lock-up. Parent reserve, peg and governance risks remain inherited; no current balance, venue allocation, financial assurance or legal safeguard is inferred from this source correction.",
-    "compositionBasis": "Historical Ethereum block 26083816 (2026-09-29T14:47:11Z) savings-claim accounting; exact immutable source correction reviewed 2026-10-20, without a new holdings observation",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "Fresh pinned reads at finalized Ethereum block 26285088 (hash 0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534, timestamp 2026-10-27T15:57:11Z): asset() is USDD 0x4f8e5de400de08b164e7421b3ee387f461becd1a, totalAssets() is 208,243,060.345524678557757452 USDD, sUSDD totalSupply() is 194,518,337.928076471752346061 shares and the vault holds zero idle USDD. The exact verified SavingsUsdd code explains the zero balance: _mint transfers USDD, calls UsddJoin.join and Pot.join, then increases share supply; _burn decreases share supply and calls Pot.exit and UsddJoin.exit. totalAssets() is converted share accounting, not a measurement of external strategy assets. The position is therefore the high-risk USDD savings/Pot claim linked to the parent, not independently measured Smart Allocator venue positions; the single slice stays 100% because idle is observed zero. Issuer terms describe anytime USDD withdrawal with no lock-up. Parent reserve, peg and governance risks remain inherited; no venue allocation, financial assurance or legal safeguard is inferred.",
+    "compositionBasis": "Ethereum block 26285088 (2026-10-27T15:57:11Z) savings-claim accounting: asset(), totalAssets(), totalSupply() and USDD balanceOf(sUSDD)",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The reviewed row identifies a USDD savings/Pot accounting claim. The issuer's Smart Allocator description concerns the wider USDD yield/reserve system and does not attribute external venue positions directly to this vault. Underlying USDD reserve composition and unresolved allocator look-through remain on the required parent asset.",
     "knownUnknownExposurePct": 0

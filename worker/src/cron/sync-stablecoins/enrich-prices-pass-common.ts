@@ -5,9 +5,11 @@ import {
 } from "../../lib/price-validation";
 import type { PriceObservedAtMode } from "@shared/types/core";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
+import { logWorkerEvent } from "../../lib/structured-log";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices-shared";
 
 const FALLBACK_FUTURE_TIMESTAMP_SKEW_SEC = 120;
+const MAX_LOGGED_INVALID_FALLBACK_ROWS = 10;
 
 export interface EnrichPassResult {
   resolved: number;
@@ -47,6 +49,37 @@ export function collectMissingPriceCandidates<T extends object = Record<never, n
     }
   });
   return candidates;
+}
+
+/**
+ * Validate provider rows one at a time so a malformed quote is quarantined by
+ * key/index instead of rejecting its healthy siblings. Logs only bounded keys,
+ * never payloads.
+ */
+export function quarantineInvalidFallbackRows<K extends string | number, T>(
+  provider: string,
+  rows: Iterable<readonly [K, unknown]>,
+  schema: { safeParse(value: unknown): { success: true; data: T } | { success: false } },
+): { valid: Array<[K, T]>; invalidKeys: K[] } {
+  const valid: Array<[K, T]> = [];
+  const invalidKeys: K[] = [];
+  for (const [key, row] of rows) {
+    const parsed = schema.safeParse(row);
+    if (parsed.success) valid.push([key, parsed.data]);
+    else invalidKeys.push(key);
+  }
+  if (invalidKeys.length > 0) {
+    logWorkerEvent({
+      scope: "handler", level: "warn", event: "fallback-quote-invalid-shape", provider,
+      message: `[enrich-prices] Quarantined ${invalidKeys.length} malformed ${provider} quote rows`,
+      metadata: {
+        invalidCount: invalidKeys.length,
+        validCount: valid.length,
+        keys: invalidKeys.slice(0, MAX_LOGGED_INVALID_FALLBACK_ROWS).map((key) => String(key).slice(0, 160)),
+      },
+    });
+  }
+  return { valid, invalidKeys };
 }
 
 export function isFreshFallbackObservedAt(

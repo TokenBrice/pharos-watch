@@ -50,7 +50,10 @@ vi.mock("../sync-stablecoins/enrich-prices", () => ({
 }));
 
 
-vi.mock("../../lib/authoritative-price-sources", () => ({
+vi.mock("../../lib/authoritative-price-sources", async () => ({
+  projectPriceDerivation: (await vi.importActual<typeof import("../../lib/authoritative-price-sources/helpers")>(
+    "../../lib/authoritative-price-sources/helpers",
+  )).projectPriceDerivation,
   createAuthoritativeLivePriceOverrideStats: vi.fn((budgetMs = 10_000) => ({
     budgetMs,
     candidateCount: 0,

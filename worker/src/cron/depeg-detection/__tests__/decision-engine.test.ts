@@ -182,6 +182,82 @@ describe("decideDepegAsset", () => {
     }
   });
 
+  describe("observation outcome", () => {
+    const usdInput = {
+      now: 1_750_000_000,
+      meta: usdMeta,
+      pegRates: { peggedUSD: 1 },
+      pegRateSources: { peggedUSD: "median" as const },
+      pegRateCounts: { peggedUSD: 4 },
+    };
+    const usdEvent = () => makeExistingEvent({
+      stablecoin_id: usdMeta.id, symbol: usdMeta.symbol, peg_type: "peggedUSD", peg_reference: 1, direction: "below",
+    });
+
+    it.each([
+      ["missing price", { price: null }],
+      ["nominal price", { priceSource: "protocol-par", price: 1 }],
+    ] as const)("records %s as primary-unusable", (_label, overrides) => {
+      const decision = decideDepegAsset({ ...usdInput, asset: makeAsset(overrides) });
+      expect(decision.observation).toEqual({ kind: "unavailable", reason: "primary-unusable" });
+    });
+
+    it.each([false, true])("records unavailable supply without inventing zero (open event: %s)", (withEvent) => {
+      const existing = withEvent ? usdEvent() : undefined;
+      const decision = decideDepegAsset({ ...usdInput, existing, asset: makeAsset({ circulating: {} }) });
+      expect(decision.observation).toEqual({ kind: "unavailable", reason: "supply-unavailable" });
+      expect(decision.commands).toEqual([]);
+      expect(decision.seenEventIds).toEqual(withEvent ? [existing!.id] : []);
+    });
+
+    it("separates observed zero supply as below-floor", () => {
+      const decision = decideDepegAsset({ ...usdInput, existing: usdEvent(), asset: makeAsset({ circulating: { ethereum: 0 } }) });
+      expect(decision.observation).toEqual({ kind: "below-floor" });
+      expect(decision.commands).toMatchObject([{ type: "close-event", closeReason: "coverage-lost-supply" }]);
+    });
+
+    it.each([
+      ["non-authoritative-reference", { peggedREAL: "median" as const }, { peggedREAL: 1 }, { peggedREAL: 0.19 }],
+      ["invalid-reference", { peggedREAL: "median" as const }, { peggedREAL: 4 }, { peggedREAL: 0 }],
+    ])("records the %s peg-signal rejection", (reason, pegRateSources, pegRateCounts, pegRates) => {
+      const decision = decideDepegAsset({
+        now: 1_750_000_000,
+        asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.19 }),
+        meta: brlMeta, pegRates, pegRateSources, pegRateCounts,
+      });
+      expect(decision.observation).toEqual({ kind: "unavailable", reason });
+    });
+
+    it("records a native-domain event without a native quote as native-quote-unavailable", () => {
+      const decision = decideDepegAsset({
+        now: 1_750_000_000,
+        asset: makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.1876 }),
+        meta: brlMeta,
+        existing: makeExistingEvent({ peg_reference: 1, source: "live" }),
+        pegRates: { peggedREAL: 0.18765951 },
+        pegRateSources: { peggedREAL: "median" },
+        pegRateCounts: { peggedREAL: 3 },
+      });
+      expect(decision.observation).toEqual({ kind: "unavailable", reason: "native-quote-unavailable" });
+    });
+
+    it.each([
+      ["at par", { price: 1 }],
+      ["confirmation-required depeg", {}],
+      ["stale (confirmation-required) price", { priceUpdatedAt: 1_750_000_000 - 30 * 86400 }],
+    ])("counts a usable %s context as observed", (_label, overrides) => {
+      const decision = decideDepegAsset({ ...usdInput, asset: makeAsset(overrides) });
+      expect(decision.observation).toEqual({ kind: "observed" });
+    });
+
+    it("leaves untracked and NAV rows outside the census", () => {
+      expect(decideDepegAsset({ ...usdInput, meta: undefined, asset: makeAsset() }).observation).toBeUndefined();
+      expect(decideDepegAsset({
+        ...usdInput, meta: { ...usdMeta, flags: { ...usdMeta.flags, navToken: true } }, asset: makeAsset(),
+      }).observation).toBeUndefined();
+    });
+  });
+
   it("routes an authoritative small-cap depeg through pending confirmation", () => {
     const decision = decideDepegAsset({
       now: 1_750_000_000,

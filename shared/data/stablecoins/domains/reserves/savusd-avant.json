@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R35 primary-source unknown-wave review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -44,11 +44,15 @@
       {
         "label": "Avalanche verified StakedAvUSDV2 source",
         "url": "https://api.routescan.io/v2/network/mainnet/evm/43114/etherscan/api?module=contract&action=getsourcecode&address=0x06d47f3fb376649c3a9dafe069b3d6e35572219e"
+      },
+      {
+        "label": "Avalanche PublicNode RPC: pinned reads at block 98704976 (2026-10-27T16:14:55Z)",
+        "url": "https://avalanche-c-chain-rpc.publicnode.com"
       }
     ],
-    "rationale": "savUSD's live ERC-4626 adapter emits one 100% avUSD savings-vault share exposure, and avUSD is the tracked upstream dependency. Avant's current unstaking documentation specifies a 24-hour savUSD-to-avUSD cooldown followed by withdrawal to the wallet. The one-day horizon describes this direct parent-token realization only, not USDC or USD settlement; another unstaking request resets the timer. avUSD's strategy backing and subsequent redemption remain upstream risks and are not duplicated here.",
-    "compositionBasis": "Standing single-asset ERC-4626 structure: verified StakedAvUSDV2 source and asset() pinned at Avalanche block 96511220 (2026-10-01T06:53:44Z); this dates the direct wrapper exposure, not the parent avUSD strategy composition.",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "savUSD's live ERC-4626 adapter emits one 100% avUSD savings-vault share exposure, and avUSD is the tracked upstream dependency. Avant's current unstaking documentation specifies a 24-hour savUSD-to-avUSD cooldown followed by withdrawal to the wallet. The one-day horizon describes this direct parent-token realization only, not USDC or USD settlement; another unstaking request resets the timer. avUSD's strategy backing and subsequent redemption remain upstream risks and are not duplicated here. Fresh pinned reads at Avalanche C-Chain block 98704976 (hash 0x956348ba335c02a8647ad8963e0c86d02a05b6529be48d2aac08a17d997a0205, finalized, 2026-10-27T16:14:55Z): savUSD vault 0x06d47f3fb376649c3a9dafe069b3d6e35572219e returned asset() 0x24de8771bc5ddb3362db529fc3358f2df3a0e346 (avUSD, no ERC-1967 proxy slot set); totalAssets() and the vault's avUSD balance both equal 97,062,928.838820019150920628 avUSD, so the single avUSD slice stays 100%.",
+    "compositionBasis": "Standing single-asset ERC-4626 structure: verified StakedAvUSDV2 source and asset()/totalAssets() pinned at Avalanche block 98704976 (2026-10-27T16:14:55Z); this dates the direct wrapper exposure, not the parent avUSD strategy composition.",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct savUSD reserve slice is identified; the upstream avUSD reserve composition, vault liquidity, and withdrawal conditions remain upstream questions.",
     "knownUnknownExposurePct": 0

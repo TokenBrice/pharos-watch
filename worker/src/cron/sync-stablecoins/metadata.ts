@@ -1,5 +1,9 @@
 import type { PriceObservationEffectiveness } from "./price-corroboration-observations";
-import type { DepegHoldReason } from "../depeg-detection/types";
+import type {
+  DepegHoldReason,
+  DepegObservationCensus,
+  DepegObservationUnavailableReason,
+} from "../depeg-detection/types";
 import { HiveMarketDiagnosticSchema } from "@shared/types/hive-market-price";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -484,6 +488,8 @@ export function buildStablecoinsSyncResult(input: {
   responseReadyCacheError?: string | null;
   depegPipelineSucceeded?: boolean;
   depegHeldReason?: DepegHoldReason;
+  depegObservation?: DepegObservationCensus | null;
+  depegObservationUnavailableReason?: DepegObservationUnavailableReason;
   previousActivePriceCoverage?: PreviousStablecoinActivePriceCoverage | null;
   previousAcceptedAssetsById?: ReadonlyMap<string, StablecoinPriceCoverageAsset>;
   activePriceCoverage?: StablecoinActivePriceCoverage;
@@ -605,18 +611,21 @@ export function buildStablecoinsSyncResult(input: {
   }
   // R4: the status driver leads the findings; quarantine stays an
   // informational finding that never degrades a completed publication (ADR-35).
+  const depegObservation = depegObservationQuality(input);
   const qualityReasons = [
     ...(degradedReason ? [degradedReason] : []),
     ...(supplyQuarantined ? ["supply-chain-dropout-quarantine"] : []),
+    ...depegObservation.reasons,
   ];
-  if (qualityReasons.length > 0) {
+  if (qualityReasons.length > 0 || depegObservation.fields) {
     metadata.quality = {
-      reason: qualityReasons[0],
+      ...(qualityReasons.length > 0 ? { reason: qualityReasons[0] } : {}),
       ...(qualityReasons.length > 1 ? { reasons: qualityReasons } : {}),
       ...(supplyQuarantined ? {
         quarantinedAssetCount: input.supplyChainGuard!.quarantinedAssetIds.length,
         unavailableAssetCount: input.supplyChainGuard!.unavailableAssetIds.length,
       } : {}),
+      ...depegObservation.fields,
     };
   }
   if (input.stalenessWarning) metadata.stalenessWarning = true;
@@ -697,6 +706,8 @@ export function buildFallbackStablecoinsSyncResult(input: {
   stalenessCheckFailureReason?: string;
   depegErrorCount: number;
   depegHeldReason?: DepegHoldReason;
+  depegObservation?: DepegObservationCensus | null;
+  depegObservationUnavailableReason?: DepegObservationUnavailableReason;
   cacheKey: string;
   syncStartSec: number;
   activePriceCoverage: StablecoinActivePriceCoverage;
@@ -716,6 +727,8 @@ export function buildFallbackStablecoinsSyncResult(input: {
   }));
 
   const degradedReason = resolveSyncDegradedReason(input, publicationGap);
+  const depegObservation = depegObservationQuality(input);
+  const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons];
 
   return {
     status: degradedReason ? "degraded" : "ok",
@@ -741,7 +754,14 @@ export function buildFallbackStablecoinsSyncResult(input: {
       priceStaleness: input.stalenessSummary,
       stalenessCheckFailed: input.stalenessCheckFailed,
       stalenessCheckFailureReason: input.stalenessCheckFailureReason,
-      ...(degradedReason ? { reason: degradedReason, quality: { reason: degradedReason } } : {}),
+      ...(degradedReason ? { reason: degradedReason } : {}),
+      ...(qualityReasons.length > 0 || depegObservation.fields ? {
+        quality: {
+          ...(qualityReasons.length > 0 ? { reason: qualityReasons[0] } : {}),
+          ...(qualityReasons.length > 1 ? { reasons: qualityReasons } : {}),
+          ...depegObservation.fields,
+        },
+      } : {}),
       ...(input.depegHeldReason ? { depegHeldReason: input.depegHeldReason } : {}),
       upstreamFetchOk: false,
       payloadAccepted: true,
@@ -759,6 +779,26 @@ export function buildFallbackStablecoinsSyncResult(input: {
         depegPipeline: !input.depegHeldReason && input.depegErrorCount === 0,
       },
     }),
+  };
+}
+
+// The census is a quality finding only: it never changes execution status or
+// capabilities. `undefined` means the depeg pipeline did not run on this path.
+function depegObservationQuality(input: {
+  depegObservation?: DepegObservationCensus | null;
+  depegObservationUnavailableReason?: DepegObservationUnavailableReason;
+  syncStartSec?: number;
+}): { reasons: string[]; fields: Record<string, unknown> | null } {
+  if (input.depegObservation === undefined) return { reasons: [], fields: null };
+  const census = input.depegObservation;
+  return {
+    reasons: census && census.unavailableCount > 0 ? ["depeg-observation-incomplete"] : [],
+    fields: {
+      depegObservation: census ? { ...census, syncStartSec: input.syncStartSec } : null,
+      ...(census == null && input.depegObservationUnavailableReason
+        ? { depegObservationUnavailableReason: input.depegObservationUnavailableReason }
+        : {}),
+    },
   };
 }
 

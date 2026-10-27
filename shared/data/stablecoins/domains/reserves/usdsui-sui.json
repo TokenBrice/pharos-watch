@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Cash",
-      "pct": 10.2927,
+      "pct": 10,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "Bridge-approved bank counterparties",
@@ -18,7 +18,7 @@
     {
       "name": "Treasury",
       "sourceKey": "bridge-transparency:treasury",
-      "pct": 89.7073,
+      "pct": 90,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -33,12 +33,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R55 exact live-key and Treasury liquidity metadata review; composition unchanged",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
     "confidence": "probable",
     "sources": [
       {
-        "label": "Bridge live USDsui transparency response (2026-10-01T11:10:40Z)",
+        "label": "Bridge live USDsui transparency response (2026-10-27T16:10:42Z)",
         "url": "https://transparency.bridge.xyz/v0/stablecoins/usd_sui"
       },
       {
@@ -50,9 +50,9 @@
         "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management"
       }
     ],
-    "rationale": "Bridge's USDsui transparency response at 2026-10-01T11:10:40Z reports total reserves and total on-chain amount of $76,870,543.20, comprising cash $7,912,081.32 and Treasury $68,958,461.88, with collateralization ratio 1.0. The disclosed amounts sum exactly to the denominator. Independent integer-ratio and Decimal division, rounded to four decimal places, reproduce 10.2927% cash and 89.7073% Treasury. D01 admits the percentage/date refresh only: the existing risk tiers and asset classes are not upgraded or newly validated, and aggregate Treasury remains insufficient to settle the separate instrument-classification proposal.",
+    "rationale": "Bridge's USDsui transparency response at 2026-10-27T16:10:42Z reports total reserves and total on-chain amount of $77,230,964.78, comprising cash $7,723,096.48 and Treasury $69,507,868.30, with collateralization ratio 1.0. The disclosed amounts sum exactly to the denominator. Exact decimal division gives 10.0000% cash and 90.0000% Treasury. The prior 2026-10-01 capture was 10.2927% cash and 89.7073% Treasury on $76,870,543.20. Only the percentage and date are refreshed: the existing risk tiers and asset classes are not upgraded or newly validated, and aggregate Treasury remains insufficient to settle the separate instrument-classification proposal.",
     "compositionBasis": "Bridge public USDsui transparency API capture normalized by disclosed reserve category",
-    "compositionAsOf": "2026-10-01",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The public USDsui transparency API discloses the complete USDsui composition as cash and Treasury; provider-level custody and instrument details are not part of this composition capture.",
     "knownUnknownExposurePct": 0,

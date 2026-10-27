@@ -404,6 +404,40 @@ describe("enrichMissingPrices", () => {
     });
   });
 
+  it("quarantines a malformed Jupiter mint while healthy and sparse siblings stay usable", async () => {
+    const currentSlot = 418_913_760;
+    const assets: PeggedAsset[] = [makeMissingUsdg()];
+    mockFetch([
+      { match: "api.mainnet-beta.solana.com", body: solanaSlotResponse(currentSlot) },
+      { match: "api.jup.ag/price/v3", body: {
+        [USDG_SOLANA_MINT]: { usdPrice: 1.0002, decimals: 6, blockId: currentSlot - 10, liquidity: 100_000 },
+        BadMint111111111111111111111111111111111111: { usdPrice: 1, decimals: null, blockId: 1 },
+        SparseMint11111111111111111111111111111111: { decimals: 6 },
+      } },
+    ]);
+
+    const result = await runJupiterPass(assets, undefined, undefined);
+
+    expect(result.resolved).toBe(1);
+    expect(assets[0].price).toBe(1.0002);
+    expect(result.diagnostics?.find((entry) => entry.endpoint.includes("jup.ag"))).toMatchObject({
+      success: true,
+      responseRowCount: 3,
+      rejectionReasonCounts: { "missing-quote": 1, "invalid-shape": 1 },
+    });
+  });
+
+  it.each([
+    ["invalid root", []],
+    ["null root", null],
+  ])("still fails a Jupiter %s", async (_label, body) => {
+    const assets: PeggedAsset[] = [makeMissingUsdg()];
+    mockFetch([{ match: "api.jup.ag/price/v3", body }]);
+    const result = await runJupiterPass(assets, undefined, undefined);
+    expect(result.resolved).toBe(0);
+    expect(result.diagnostics?.[0]).toMatchObject({ success: false, errorClass: "invalid-shape" });
+  });
+
   it("reports Jupiter non-OK responses in pass diagnostics", async () => {
     const assets: PeggedAsset[] = [
       makeMissingUsdg(),

@@ -24,6 +24,7 @@ import {
 import { GENIUS_STATUS_SHORT_LABELS } from "@shared/lib/genius";
 import { MICA_STATUS_BADGE_STYLES } from "@shared/lib/mica";
 import { getPegReference } from "@shared/lib/peg-rates";
+import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import { projectTopDriver } from "@shared/lib/safety-score-v9/public";
 import {
   getCirculatingRawOrNull,
@@ -131,9 +132,11 @@ function formatCurrentSupply(coin: ComparisonCoinEntry): ReactNode {
 }
 
 function formatSupplyChange(coin: ComparisonCoinEntry, previous: number | null): ReactNode {
-  // Both operands must be observed: a missing current supply is not a -100% change.
+  // Both operands must be observed: a missing current supply is not a -100% change,
+  // and a partial-coverage remainder (K-031) is not comparable with a prior total.
   const current = getCirculatingRawOrNull(coin.data);
   if (current == null || previous == null || previous <= 0) return NULL_VALUE;
+  if (classifySupplyCoverage(buildSupplyObservationProvenance(coin.data)) === "partial") return NULL_VALUE;
   return formatSignedPercent(((current - previous) / previous) * 100);
 }
 

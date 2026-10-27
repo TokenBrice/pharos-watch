@@ -38,7 +38,6 @@ const HOME_ALT_NARROW_WIDTH = 640;
 
 interface HomeAltHeroChartProps {
   rows: TotalMcapChartRow[];
-  isLoadingHistory?: boolean;
 }
 
 interface ChartBounds {
@@ -465,7 +464,7 @@ function HomeAltHoverReadout({
   );
 }
 
-export function HomeAltHeroChart({ rows, isLoadingHistory = false }: HomeAltHeroChartProps) {
+export function HomeAltHeroChart({ rows }: HomeAltHeroChartProps) {
   const { chartContainerRef, isChartReady, width, height } = useChartShell<HTMLDivElement>();
 
   const yDomain = useMemo(
@@ -485,11 +484,6 @@ export function HomeAltHeroChart({ rows, isLoadingHistory = false }: HomeAltHero
       role="figure"
       aria-label="Stablecoin market cap history by major cohort"
     >
-      {!isLoadingHistory && rows.some((row) => row.total === null || row.nonUsd === null || row.usdt === null || row.usdc === null || row.sky === null || row.others === null) ? (
-        <p className="absolute left-2 top-0 z-10 text-xs text-muted-foreground">
-          Some cohort history is unavailable; gaps are not zero.
-        </p>
-      ) : null}
       {chartReady ? (
         <HomeAltChartFrame width={width} height={height} rows={rows} yDomain={yDomain} />
       ) : (

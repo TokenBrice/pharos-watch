@@ -4,11 +4,15 @@ import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-prof
 import { getCompletedSupplySnapshot, type CompletedSupplySnapshot } from "../lib/supply-snapshot-completion";
 import { STABLECOIN_HISTORY_QUERY_CONTRACTS } from "@shared/lib/api-query-history";
 import { assessFreshnessTimestamp } from "../lib/api-freshness-age";
+import { logWorkerEventArgs } from "../lib/structured-log";
+import { parseSupplyObservationProvenance } from "@shared/lib/supply-provenance";
 
 interface SupplyHistoryRow {
   snapshot_date: number;
   circulating_usd: number;
   price: number | null;
+  /** Migration 0287; NULL = coverage unrecorded (legacy, prior Worker, backfill). */
+  supply_provenance?: string | null;
 }
 
 function latestServedSupplyTimestamp(rows: SupplyHistoryRow[]): number | null {
@@ -41,7 +45,7 @@ export const handleSupplyHistory = async (
       const lowerBinds = range === "all" ? [] : [cutoff];
       const result = await database
         .prepare(
-          `SELECT snapshot_date, circulating_usd, price
+          `SELECT snapshot_date, circulating_usd, price, supply_provenance
            FROM supply_history
            WHERE stablecoin_id = ?${lowerFilter}${latestSnapshotFilter}
            ORDER BY snapshot_date ASC`
@@ -50,11 +54,20 @@ export const handleSupplyHistory = async (
         .all<SupplyHistoryRow>();
       return result.results ?? [];
     },
-    mapRow: (row) => ({
-      date: row.snapshot_date,
-      circulatingUsd: row.circulating_usd,
-      price: row.price,
-    }),
+    mapRow: (row) => {
+      // Malformed metadata degrades only this row's provenance to unknown; supply and price stay intact.
+      const { provenance, invalid } = parseSupplyObservationProvenance(row.supply_provenance);
+      if (invalid) {
+        logWorkerEventArgs("handler", "warn",
+          `[supply-history] supply-provenance-invalid for snapshot_date=${row.snapshot_date}; publishing unknown coverage`);
+      }
+      return {
+        date: row.snapshot_date,
+        circulatingUsd: row.circulating_usd,
+        price: row.price,
+        supplyProvenance: provenance,
+      };
+    },
     freshness: async ({ rows }) => {
       const completedSnapshot = await loadCompletedSnapshot();
       const updatedAt = completedSnapshot?.updatedAt ?? latestServedSupplyTimestamp(rows);

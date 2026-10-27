@@ -18,18 +18,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA29KAU)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l1)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "SG-FORGE CoinVertible reserves",
+        "label": "SG-FORGE CoinVertible reserves dashboard, Last update 27/10/2026 (EUR CoinVertible 170,545,078.68; Societe Generale 100%)",
         "url": "https://www.sgforge.com/product/coinvertible/"
       }
     ],
-    "rationale": "The issuer's dashboard states Last update 1/10/2026, EUR CoinVertible circulation of 164,388,393.02 and matching euro reserves, with Societe Generale accounting for 100%. The issuer states cash backing and segregation; its September 2026 white paper identifies segregated accounts at Societe Generale and expressly retains bank counterparty and group-concentration risk. This is issuer self-reporting, not an independent attestation.",
-    "compositionBasis": "SG-FORGE daily EUR CoinVertible dashboard snapshot labelled Last update 1/10/2026",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "The issuer's dashboard states Last update 27/10/2026, EUR CoinVertible circulation of 170,545,078.68 and matching euro reserves (previous read 1/10/2026: 164,388,393.02), with Societe Generale accounting for 100%. The issuer states cash backing and segregation; its September 2026 white paper identifies segregated accounts at Societe Generale and expressly retains bank counterparty and group-concentration risk. This is issuer self-reporting, not an independent attestation.",
+    "compositionBasis": "SG-FORGE daily EUR CoinVertible dashboard snapshot labelled Last update 27/10/2026",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No reserve asset class or banking obligor remains unidentified in the current daily disclosure.",
     "knownUnknownExposurePct": 0

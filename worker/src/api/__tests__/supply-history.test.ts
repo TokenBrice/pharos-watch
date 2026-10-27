@@ -102,6 +102,7 @@ describe("handleSupplyHistory", () => {
       date: now + offset * day,
       circulatingUsd: offset === -6000 ? 0 : 100,
       price: offset === -6000 ? null : 1,
+      supplyProvenance: null,
     })));
     expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - 300));
     expect(response.headers.get("X-Data-Age")).toBe("300");
@@ -133,6 +134,7 @@ describe("handleSupplyHistory", () => {
         date: row.snapshot_date,
         circulatingUsd: row.circulating_usd,
         price: row.price,
+        supplyProvenance: null,
       },
     ]);
     db.assertAllMatchesUsed();
@@ -218,9 +220,45 @@ describe("handleSupplyHistory", () => {
     for (const offset of [-10, 1, 0]) insert.run(now + offset, 100 + offset);
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('snapshot-supply:last-write', ?, ?)").run(JSON.stringify({ snapshotDate: now }), now);
     expect(await readJsonResponse(await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether")), 200)).toEqual([
-      { date: now - 10, circulatingUsd: 90, price: 1 },
-      { date: now, circulatingUsd: 100, price: 1 },
+      { date: now - 10, circulatingUsd: 90, price: 1, supplyProvenance: null },
+      { date: now, circulatingUsd: 100, price: 1, supplyProvenance: null },
     ]);
+  });
+
+  it("publishes recorded, partial, legacy and malformed provenance per row without touching supply (K-031)", async () => {
+    const now = 1_800_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const { db, sqlite } = fixtures.open();
+    const partialGuard = {
+      reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true, quarantinedSince: now - 9 * 86_400,
+      chains: [{
+        chainId: "hyperevm", chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000,
+        baselineObservedAt: now - 10 * 86_400, baselineSource: "state", resolution: "unavailable",
+      }],
+    };
+    const complete = { supplySource: "defillama", supplyObservedAt: null, supplyChainGuard: null };
+    const partial = { supplySource: "defillama", supplyObservedAt: now - 3 * 86_400 - 120, supplyChainGuard: partialGuard };
+    const insert = sqlite.prepare(
+      "INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price, supply_provenance) VALUES ('usdt-tether', ?, ?, ?, ?)",
+    );
+    insert.run(now - 4 * 86_400, 100_000, 1, null);
+    insert.run(now - 3 * 86_400, 97_000, 1, JSON.stringify(partial));
+    insert.run(now - 2 * 86_400, 99_000, null, "{broken");
+    insert.run(now - 86_400, 100_000, 1, JSON.stringify(complete));
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('snapshot-supply:last-write', ?, ?)")
+      .run(JSON.stringify({ snapshotDate: now - 86_400 }), now - 3_600);
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const response = await handleSupplyHistory(db, new URL("https://x/api/supply-history?stablecoin=usdt-tether"));
+    expect(await readJsonResponse(response, 200)).toEqual([
+      { date: now - 4 * 86_400, circulatingUsd: 100_000, price: 1, supplyProvenance: null },
+      { date: now - 3 * 86_400, circulatingUsd: 97_000, price: 1, supplyProvenance: partial },
+      { date: now - 2 * 86_400, circulatingUsd: 99_000, price: null, supplyProvenance: null },
+      { date: now - 86_400, circulatingUsd: 100_000, price: 1, supplyProvenance: complete },
+    ]);
+    // The completed-marker clock still owns freshness; provenance never renews it.
+    expect(response.headers.get("X-Data-Age")).toBe("3600");
+    warn.mockRestore();
   });
 
   it("uses the newest markerless row for freshness and leaves empty history unfreshened", async () => {
@@ -238,8 +276,8 @@ describe("handleSupplyHistory", () => {
     const populated = await handleSupplyHistory(db, url);
     expect(populated.headers.get("X-Data-Age")).toBe("30");
     expect(await readJsonResponse(populated, 200)).toEqual([
-      { date: now - 300, circulatingUsd: 20, price: 1 },
-      { date: now - 30, circulatingUsd: 10, price: 1 },
+      { date: now - 300, circulatingUsd: 20, price: 1, supplyProvenance: null },
+      { date: now - 30, circulatingUsd: 10, price: 1, supplyProvenance: null },
     ]);
   });
 });

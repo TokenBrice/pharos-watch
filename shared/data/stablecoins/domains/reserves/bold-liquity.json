@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "wstETH (Lido)",
-      "pct": 56.1,
+      "pct": 56.2,
       "risk": "low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Lido DAO and Ethereum validators",
@@ -18,7 +18,7 @@
     },
     {
       "name": "WETH",
-      "pct": 27.2,
+      "pct": 27.1,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum protocol and WETH9 contract",
@@ -49,8 +49,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol owner-ruling review 2026-10-01 (RuleC05)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l1)",
     "confidence": "verified",
     "sources": [
       {
@@ -74,9 +74,9 @@
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The official Ethereum stats snapshot discloses all three permitted collateral branches and their total USD value. D01 admits independently reproduced division and rounding on this complete, source-dated snapshot; no asset identity, category, source key, custody or liquidity tier is changed.",
-    "compositionBasis": "Official Liquity V2 Ethereum API snapshot: USD branch coll_value wstETH 59476473.401949326251740029, WETH 28845373.153389328152132321, rETH 17766497.094755506507290182; disclosed total_coll_value 106088343.650094160911162532. The three amounts sum exactly to the denominator. Each amount / total * 100 independently recomputed with decimal arithmetic and rounded to one decimal: 56.1%, 27.2%, 16.7%. HTTP Last-Modified 2026-10-01T11:08:39Z; fetched 2026-10-01T11:17:45Z. Source-file time is not an independently pinned on-chain block or an auditor report date; weights are dynamic.",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "The official Ethereum stats snapshot, re-read 2026-10-27, discloses all three permitted collateral branches and their total USD value; the three branch values sum exactly to the disclosed total (92368402.573696777247967981). D01 admits independently reproduced division and rounding on this complete, source-dated snapshot; no asset identity, category, source key, custody or liquidity tier is changed.",
+    "compositionBasis": "Official Liquity V2 Ethereum API snapshot: USD branch coll_value wstETH 51884456.711354898238605777, WETH 25041276.332821385005137546, rETH 15442669.529520494004224658; disclosed total_coll_value 92368402.573696777247967981. The three amounts sum exactly to the denominator. Each amount / total * 100 independently recomputed with decimal arithmetic and rounded to one decimal: 56.2%, 27.1%, 16.7%. HTTP Last-Modified 2026-10-27T16:07:39Z; fetched 2026-10-27T16:15:21Z. Source-file time is not an independently pinned on-chain block or an auditor report date; weights are dynamic.",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No material collateral row is unclassified in this snapshot; branch weights are point-in-time and may change with protocol activity.",
     "knownUnknownExposurePct": 0

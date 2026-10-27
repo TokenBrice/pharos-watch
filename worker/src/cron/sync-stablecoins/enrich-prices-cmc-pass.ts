@@ -17,7 +17,12 @@ import {
 import { getCache, setCache } from "../../lib/db-cache";
 import { parseJson, tryParseJson } from "../../lib/json-parse";
 import { logWorkerEvent } from "../../lib/structured-log";
-import { CmcCategoryResponseSchema, CmcLatestQuotesResponseSchema } from "../../lib/schemas";
+import {
+  CmcCategoryCoinSchema,
+  CmcCategoryResponseSchema,
+  CmcLatestQuoteEntrySchema,
+  CmcLatestQuotesResponseSchema,
+} from "../../lib/schemas";
 import {
   createPricingAssetAttempt,
   endpointLabel,
@@ -34,6 +39,7 @@ import {
   isFreshFallbackObservedAt,
   isUsableFallbackPrice,
   parseUnixOrIsoTimestampSec,
+  quarantineInvalidFallbackRows,
   UNIQUE_ACTIVE_SYMBOLS,
 } from "./enrich-prices-pass-common";
 
@@ -302,6 +308,13 @@ async function persistVerifiedCmcQuotes(
   }
 }
 
+/** Reads an identity string from a raw provider row before its shape is admitted. */
+function readRawCmcString(row: unknown, field: "slug" | "symbol"): string | null {
+  if (row == null || typeof row !== "object" || Array.isArray(row)) return null;
+  const value = (row as Record<string, unknown>)[field];
+  return typeof value === "string" ? value : null;
+}
+
 async function fetchTargetedCmcQuotes(params: {
   assets: PeggedAsset[];
   candidates: CmcTargetedCandidate[];
@@ -435,7 +448,11 @@ async function fetchTargetedCmcQuotes(params: {
   }
   const json = jsonResult.value;
   const parsed = CmcLatestQuotesResponseSchema.safeParse(json);
-  if (!parsed.success) {
+  const rawRows = parsed.success ? parsed.data.data : null;
+  const rows = rawRows
+    ? quarantineInvalidFallbackRows("coinmarketcap", rawRows.entries(), CmcLatestQuoteEntrySchema)
+    : null;
+  if (!rawRows || !rows || (rows.invalidKeys.length > 0 && rows.valid.length === 0)) {
     return {
       resolved: 0,
       acceptedQuotes: [],
@@ -449,7 +466,14 @@ async function fetchTargetedCmcQuotes(params: {
     };
   }
 
-  const quotesBySlug = new Map(parsed.data.data.map((entry) => [entry.slug.toLowerCase(), entry]));
+  const quotesBySlug = new Map(rows.valid.map(([, entry]) => [entry.slug.toLowerCase(), entry]));
+  // A malformed row naming a requested slug leaves that slug unverified, even
+  // beside a well-formed duplicate.
+  const invalidSlugs = new Set<string>();
+  for (const index of rows.invalidKeys) {
+    const slug = readRawCmcString(rawRows[index], "slug");
+    if (slug !== null) invalidSlugs.add(slug.toLowerCase());
+  }
   const rejections: NonNullable<PricingProviderAttemptDiagnostic["rejectionReasonCounts"]> = {};
   const reject = (reason: keyof typeof rejections): void => {
     rejections[reason] = (rejections[reason] ?? 0) + 1;
@@ -464,6 +488,11 @@ async function fetchTargetedCmcQuotes(params: {
     if (expectedSlug === excludedSlug) {
       reject("unsupported-quote");
       updateAttempt(candidate.asset.id, "rejected", "unsupported-quote");
+      continue;
+    }
+    if (invalidSlugs.has(expectedSlug)) {
+      reject("invalid-shape");
+      updateAttempt(candidate.asset.id, "rejected", "invalid-shape");
       continue;
     }
     if (!quote) {
@@ -682,7 +711,10 @@ export async function runCmcPass(
         }
         const cmcJson = cmcJsonResult.value;
         const parsed = CmcCategoryResponseSchema.safeParse(cmcJson);
-        if (!parsed.success) {
+        const categoryRows = parsed.success
+          ? quarantineInvalidFallbackRows("coinmarketcap", parsed.data.data.coins.entries(), CmcCategoryCoinSchema)
+          : null;
+        if (!parsed.success || !categoryRows || (categoryRows.invalidKeys.length > 0 && categoryRows.valid.length === 0)) {
           diagnostics.push({
             ...diagnostic,
             errorClass: "invalid-shape",
@@ -692,20 +724,42 @@ export async function runCmcPass(
           return recordFailureAndReturn();
         }
         const cmcData = parsed.data;
+        // Truncation and identity census use the raw received rows, so a
+        // quarantined malformed row still counts and still contests its symbol.
+        const rawCoins = cmcData.data.coins;
         const categoryTruncated =
           cmcData.data.num_tokens > CMC_CATEGORY_LIMIT ||
-          cmcData.data.coins.length < cmcData.data.num_tokens;
-        diagnostic.responseRowCount = cmcData.data.coins.length;
-        const cmcBySymbol = new Map<string, CmcFallbackQuote | null>();
+          rawCoins.length < cmcData.data.num_tokens;
+        diagnostic.responseRowCount = rawCoins.length;
+        if (categoryRows.invalidKeys.length > 0) {
+          diagnostic.rejectionReasonCounts = { "invalid-shape": categoryRows.invalidKeys.length };
+        }
+        const cmcBySymbol = new Map<string, CmcFallbackQuote>();
         const cmcBySlug = new Map<string, CmcFallbackQuote>();
-        for (const entry of categoryTruncated ? [] : cmcData.data.coins) {
-          const symbol = entry.symbol.toUpperCase();
-          const repeatedSymbol = cmcBySymbol.has(symbol);
-          if (repeatedSymbol) {
+        const rawSymbolCounts = new Map<string, number>();
+        // A row without a usable symbol means provider-wide uniqueness is unproven.
+        let symbolCensusComplete = true;
+        for (const raw of categoryTruncated ? [] : rawCoins) {
+          const rawSymbol = readRawCmcString(raw, "symbol");
+          if (rawSymbol === null) {
+            symbolCensusComplete = false;
+            continue;
+          }
+          const symbol = rawSymbol.toUpperCase();
+          const count = (rawSymbolCounts.get(symbol) ?? 0) + 1;
+          if (count > 1) {
             logWorkerEventArgs("handler", "warn", `[enrich] CMC symbol collision: ${symbol}`);
           }
-          // Even a stale/unpriced sibling makes symbol-only identity ambiguous.
-          cmcBySymbol.set(symbol, null);
+          rawSymbolCounts.set(symbol, count);
+        }
+        // A malformed row naming a slug leaves that slug unverified.
+        const invalidSlugs = new Set<string>();
+        for (const index of categoryRows.invalidKeys) {
+          const slug = readRawCmcString(rawCoins[index], "slug");
+          if (slug !== null) invalidSlugs.add(slug.toLowerCase());
+        }
+        for (const [, entry] of categoryTruncated ? [] : categoryRows.valid) {
+          const symbol = entry.symbol.toUpperCase();
           const price = entry.quote?.USD?.price;
           const observedAt = parseUnixOrIsoTimestampSec(entry.quote?.USD?.last_updated);
           if (
@@ -720,8 +774,9 @@ export async function runCmcPass(
               symbol,
             };
             if (entry.slug) quote.slug = entry.slug;
-            if (!repeatedSymbol) cmcBySymbol.set(symbol, quote);
-            if (entry.slug) {
+            // Even a stale, unpriced or malformed sibling makes symbol-only identity ambiguous.
+            if (rawSymbolCounts.get(symbol) === 1) cmcBySymbol.set(symbol, quote);
+            if (entry.slug && !invalidSlugs.has(entry.slug.toLowerCase())) {
               cmcBySlug.set(entry.slug.toLowerCase(), quote);
             }
           }
@@ -730,7 +785,7 @@ export async function runCmcPass(
         let categoryResolved = 0;
         for (const entry of missingAfterPass1b) {
           const symbolKey = entry.asset.symbol.toUpperCase();
-          const allowSymbolFallback = UNIQUE_ACTIVE_SYMBOLS.has(symbolKey);
+          const allowSymbolFallback = symbolCensusComplete && UNIQUE_ACTIVE_SYMBOLS.has(symbolKey);
           const slug = entry.asset.cmcSlug;
           const cmcQuote = slug
             ? cmcBySlug.get(slug.toLowerCase())

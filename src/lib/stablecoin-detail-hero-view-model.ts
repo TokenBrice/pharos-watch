@@ -382,7 +382,8 @@ export function buildStablecoinDetailHeroViewModel({
     outcomeLabel: CASE_STUDY_OUTCOME_LABELS[subjectCaseStudy.outcome],
     outcomeChipClass: CASE_STUDY_OUTCOME_CHIPS[subjectCaseStudy.outcome],
   } : null;
-  const safePrevDay = posOrNull(prevDay);
+  // A partial-coverage current supply (K-031) is not comparable with the prior day.
+  const safePrevDay = coinData.supplyExcludedChains?.length ? null : posOrNull(prevDay);
 
   return {
     coin,

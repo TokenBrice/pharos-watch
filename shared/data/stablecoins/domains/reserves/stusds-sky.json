@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
       "name": "Staked USDS idle underlying",
-      "pct": 99.99900071050182,
+      "pct": 99.9996520188603,
       "risk": "high",
       "coinId": "usds-sky",
       "depType": "collateral",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9:deployed",
       "name": "Sky staked-vault deployed strategy positions",
-      "pct": 0.00099928949818,
+      "pct": 0.0003479811397,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sky stUSDS module and Sky Protocol Vat/Vow accounting (LSEV2-SKY-A risk-capital branch)",
@@ -36,8 +36,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC17)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -63,11 +63,15 @@
       {
         "label": "Pinned Ethereum accounting at block 26097121",
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26285088 (2026-10-27T15:57:11Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The live ERC-4626 split identifies direct USDS held by the stUSDS vault separately from the tiny totalAssets accounting remainder. The pinned stUSDS implementation shows that the remainder reflects projected rate accrual and Sky Vat/Vow accounting inside the LSEV2-SKY-A risk-capital module, not a separately held tracked stablecoin or external strategy token.",
-    "compositionBasis": "Ethereum block 26097121, 2026-10-01T11:18:47Z: direct USDS 194051931765034414663896490 / totalAssets 194053870924987379512889883, both 18-decimal USDS units; identified protocol-accounting amount 1939159952964848993393. Percentages independently divided and rounded to 14 decimal places. Projected accrual reproduces totalAssets exactly; the accounting amount is accrued value less 5263 raw units already held above stored share accounting. Existing source keys, asset categories and risk factors are unchanged.",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "Fresh pinned reads at finalized Ethereum block 26285088 (2026-10-27T15:57:11Z) show asset() is USDS and the EIP-1967 implementation is unchanged at 0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22. The live ERC-4626 split identifies direct USDS held by the stUSDS vault separately from the tiny totalAssets accounting remainder. The pinned stUSDS implementation shows that the remainder reflects projected rate accrual and Sky Vat/Vow accounting inside the LSEV2-SKY-A risk-capital module, not a separately held tracked stablecoin or external strategy token.",
+    "compositionBasis": "Ethereum block 26285088, 2026-10-27T15:57:11Z: direct USDS 179538072274340196742334560 / totalAssets 179538697035144343454118625, both 18-decimal USDS units; accounting remainder (totalAssets minus direct balance) 624760804146711784065. Percentages independently divided and rounded to 14 decimal places. Existing source keys, asset categories and risk factors are unchanged.",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The two live rows cover direct USDS custody and the identified Sky protocol-accounting remainder; dynamic borrower debt and auction state remain risk factors rather than unclassified reserve slices.",
     "knownUnknownExposurePct": 0,
@@ -75,7 +79,7 @@
       {
         "reserveIndex": 1,
         "reserveName": "Sky staked-vault deployed strategy positions",
-        "pct": 0.00099928949818,
+        "pct": 0.0003479811397,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The ERC-4626 remainder is stUSDS totalAssets accounting above the vault's direct USDS balance. The pinned contract identifies this as projected rate accrual and Sky protocol accounting, not a separately held tracked stablecoin or standalone token reserve."
       }

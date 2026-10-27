@@ -95,6 +95,7 @@ describe("dexscreener", () => {
       status: 200,
       contentType: "text/plain;charset=UTF-8",
       error: "DexScreener payload contained no valid pair rows",
+      rejectedPairCount: 1,
     });
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.dexscreener.com/tokens/v1/base/0xabc",
@@ -115,9 +116,12 @@ describe("dexscreener", () => {
       new Response(JSON.stringify([pair, { pairAddress: "0xbroken" }]), { status: 200 }),
     );
 
-    await expect(fetchDsTokenPairsWithStatus("blast", "0xabc", undefined, 8_000, 0)).resolves.toEqual({
+    await expect(fetchDsTokenPairsWithStatus("blast", "0xabc", undefined, 8_000, 0)).resolves.toMatchObject({
       ok: true,
+      degraded: true,
       pairs: [pair],
+      error: "dexscreener-schema-degraded",
+      rejectedPairCount: 1,
     });
     expect(fetchWithRetry).toHaveBeenCalledWith(
       "https://api.dexscreener.com/token-pairs/v1/blast/0xabc",
@@ -197,7 +201,7 @@ describe("dexscreener", () => {
     expect(cancelCalled).toBe(true);
   });
 
-  it("keeps valid token-pool rows and drops malformed rows from mixed payloads", async () => {
+  it("keeps valid token-pool rows and degrades mixed payloads with malformed rows", async () => {
     const pair = validPair();
     vi.mocked(fetchWithRetry).mockResolvedValueOnce(
       new Response(JSON.stringify([pair, { pairAddress: "0xbroken" }]), { status: 200 }),
@@ -205,7 +209,76 @@ describe("dexscreener", () => {
 
     await expect(fetchDsTokenPoolsWithStatus("base", "0xabc")).resolves.toEqual({
       ok: true,
+      degraded: true,
       pairs: [pair],
+      status: 200,
+      contentType: "text/plain;charset=UTF-8",
+      error: "dexscreener-schema-degraded",
+      rejectedPairCount: 1,
+    });
+  });
+
+  const blankIdentityRows: Array<[string, (pair: ReturnType<typeof validPair>) => unknown]> = [
+    ["empty pairAddress", (pair) => ({ ...pair, pairAddress: "" })],
+    ["whitespace pairAddress", (pair) => ({ ...pair, pairAddress: "   " })],
+    ["empty chainId", (pair) => ({ ...pair, chainId: "" })],
+    ["whitespace dexId", (pair) => ({ ...pair, dexId: " \t" })],
+    ["empty base address", (pair) => ({ ...pair, baseToken: { ...pair.baseToken, address: "" } })],
+    ["whitespace quote address", (pair) => ({ ...pair, quoteToken: { ...pair.quoteToken, address: "  " } })],
+    ["missing base symbol", (pair) => ({ ...pair, baseToken: { address: pair.baseToken.address, name: "x" } })],
+  ];
+
+  describe.each([
+    ["token lookup", fetchDsTokenPoolsWithStatus],
+    ["token-pairs discovery", fetchDsTokenPairsWithStatus],
+  ] as const)("%s identity validation", (_label, fetchPools) => {
+    it.each(blankIdentityRows)("counts a %s row as a schema rejection beside a valid row", async (_name, mutate) => {
+      const pair = validPair();
+      const malformed = mutate({ ...validPair(), liquidity: { usd: 1_000_000, base: 500_000, quote: 500_000 } });
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify([pair, malformed])));
+      await expect(fetchPools("base", "0xabc")).resolves.toMatchObject({
+        ok: true, degraded: true, pairs: [pair], error: "dexscreener-schema-degraded", rejectedPairCount: 1,
+      });
+    });
+
+    it("fails all-invalid payloads and keeps genuine empty and clean payloads successful", async () => {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(
+        new Response(JSON.stringify([{ ...validPair(), pairAddress: "" }, { ...validPair(), dexId: " " }])),
+      );
+      await expect(fetchPools("base", "0xabc")).resolves.toMatchObject({
+        ok: false, pairs: [], error: "DexScreener payload contained no valid pair rows", rejectedPairCount: 2,
+      });
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify({ pairs: [] })));
+      await expect(fetchPools("base", "0xabc")).resolves.toEqual({ ok: true, pairs: [] });
+      const pair = validPair();
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify([pair])));
+      await expect(fetchPools("base", "0xabc")).resolves.toEqual({ ok: true, pairs: [pair] });
+    });
+
+    it("counts rejections before chain filtering in mixed chain/schema payloads", async () => {
+      const pair = validPair();
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify([
+        pair, validPair("ethereum"), { ...validPair(), pairAddress: "" }, { ...validPair("ethereum"), dexId: "" },
+      ])));
+      await expect(fetchPools("base", "0xabc")).resolves.toMatchObject({
+        ok: true, degraded: true, pairs: [pair], error: "dexscreener-schema-degraded", rejectedPairCount: 2,
+      });
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify([
+        validPair("ethereum"), { ...validPair(), pairAddress: "" },
+      ])));
+      await expect(fetchPools("base", "0xabc")).resolves.toMatchObject({
+        ok: false, degraded: true, pairs: [], error: "dexscreener-schema-degraded", rejectedPairCount: 1,
+      });
+    });
+
+    it("accepts case-sensitive native identities without rewriting them", async () => {
+      const pair = {
+        ...validPair("solana", "raydium"), pairAddress: "PairCaseMint",
+        baseToken: { address: "MintCase", name: "Native", symbol: "NATIVE" },
+        quoteToken: { address: "QuoteCase", name: "Quote", symbol: "QUOTE" },
+      };
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response(JSON.stringify([pair])));
+      await expect(fetchPools("solana", "MintCase")).resolves.toEqual({ ok: true, pairs: [pair] });
     });
   });
 
