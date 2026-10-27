@@ -246,8 +246,7 @@ Status reliability, hysteresis, evaluation and probes share schema-derived `Stat
 
 **Terminal status and publication evidence are separate (R4).** `degraded` means required work was incomplete;
 it does not prove either publication or absence of publication. A completed job with only input-quality findings
-returns `ok` with `metadata.quality` (including growth capacity warnings, Bluechip partial-cache merges and
-`sync-stablecoins` `depeg-observation-incomplete` census gaps).
+returns `ok` with `metadata.quality` (including growth capacity warnings and Bluechip partial-cache merges).
 Mixed producers can publish usable output while another required stage fails; their confirmed output clock
 advances independently of their degraded attempt. Held cohorts, failed writes, no-row attempts, retained reserve
 fallbacks and lost CAS writes cannot advance that clock. A deliberately published empty snapshot is real output.
