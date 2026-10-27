@@ -38,6 +38,8 @@ interface ActiveEventsResult {
   error: Error | null;
   isFullyLoaded: boolean;
   isAutoLoadCapped: boolean;
+  hasNextPage?: boolean;
+  isFetchingNextPage?: boolean;
   meta: ApiMeta | null;
   dataUpdatedAt: number;
   refetch: () => Promise<unknown>;
@@ -129,10 +131,15 @@ function mockActiveEvents(events: DepegEvent[], overrides: Partial<ActiveEventsR
 }
 
 describe("TimelineClient", () => {
-  it("does not read the browser clock or query during server rendering", () => {
+  it("server-renders the reserved loading shell without reading the clock or querying", () => {
     const clock = vi.spyOn(Date, "now");
     try {
-      expect(renderToString(<TimelineClient />)).toBe("");
+      const html = renderToString(<TimelineClient />);
+      for (const slot of ["summary", "last-event", "feed"]) expect(html).toContain(`data-timeline-slot="${slot}"`);
+      expect(html).toContain('id="data"');
+      expect(html).toContain("min-h-[100svh]");
+      expect(html).toContain("Filter by event type");
+      expect(html).not.toMatch(/\d+ events?|Updated|Last event/);
       expect(clock).not.toHaveBeenCalled();
       expect(useEventsMock).not.toHaveBeenCalled();
     } finally {
@@ -168,6 +175,53 @@ describe("TimelineClient", () => {
     for (const [params] of useEventsMock.mock.calls) expect(params?.since).toBe(querySince);
   });
 
+  function slotClasses() {
+    return ["summary", "last-event", "feed"].map((slot) => {
+      const node = document.querySelector(`[data-timeline-slot="${slot}"]`);
+      expect(node, slot).not.toBeNull();
+      return `${slot}:${node!.className}`;
+    });
+  }
+
+  it("keeps the same reserved slots across pending, empty, partial, success and error states", () => {
+    const html = renderToString(<TimelineClient />);
+    const states: Array<[string, () => void]> = [
+      ["pending", () => mockEvents([], { isLoading: true, pages: undefined, dataUpdatedAt: 0 })],
+      ["empty", () => mockEvents([])],
+      ["partial", () => mockEvents([makeTapeEvent()], { total: 12_345, hasNextPage: true })],
+      ["success", () => mockEvents([makeTapeEvent()])],
+      ["error", () => mockEvents([], { error: new Error("fetch failed"), pages: undefined, dataUpdatedAt: 0 })],
+    ];
+    const shell = document.createElement("div");
+    shell.innerHTML = html;
+    const shellFilters = shell.querySelector('[aria-label="Filter by event type"]')!.outerHTML;
+    let reference: string[] | null = null;
+    for (const [label, arrange] of states) {
+      arrange();
+      render(<TimelineClient />);
+      const classes = slotClasses();
+      if (reference) expect(classes, label).toEqual(reference);
+      reference = classes;
+      expect(document.querySelector('[aria-label="Filter by event type"]')!.outerHTML, label).toBe(shellFilters);
+      if (label === "partial") expect(screen.getByText("Showing 1 of 12,345 events")).toBeTruthy();
+      if (label === "success") expect(screen.getByText("1 event")).toBeTruthy();
+      if (label === "empty") expect(screen.getByText("0 events")).toBeTruthy();
+      cleanup();
+    }
+  });
+
+  it("appends arriving open incidents after the stable summary slots", () => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([], { isLoading: true, data: undefined, isFullyLoaded: false });
+    const { rerender } = render(<TimelineClient />);
+    const row = () => screen.getByText("1 event").closest("p")!;
+    const before = row().textContent!;
+    mockActiveEvents([activeEvent()]);
+    rerender(<TimelineClient />);
+    expect(row().textContent!.startsWith(before)).toBe(true);
+    expect(row().textContent).toContain("1 open incident");
+  });
+
   it("keeps timeline pagination manual on initial page load", () => {
     mockEvents([]);
 
@@ -181,7 +235,7 @@ describe("TimelineClient", () => {
 
   it("renders an error notice and recovers after retry", async () => {
     const refetch = vi.fn(async () => { mockEvents([]); });
-    mockEvents([], { error: new Error("fetch failed"), refetch });
+    mockEvents([], { error: new Error("fetch failed"), refetch, pages: undefined, dataUpdatedAt: 0 });
     const { rerender } = render(<TimelineClient />);
     const notice = screen.getByText("fetch failed").closest('[role="status"]')!;
     expect(notice).not.toBeNull();
@@ -191,6 +245,46 @@ describe("TimelineClient", () => {
     expect(screen.queryByText("fetch failed")).toBeNull();
     expect(screen.queryByRole("button", { name: "Retry" })).toBeNull();
     expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
+  });
+
+  it("admits a fresh empty page as data without a waiting warning", () => {
+    mockEvents([]);
+    render(<TimelineClient />);
+    expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
+    expect(screen.queryByText("Waiting for initial data")).toBeNull();
+  });
+
+  it("keeps a failed read with no response page unavailable", () => {
+    mockEvents([], { error: new Error("fetch failed"), pages: undefined, dataUpdatedAt: 0 });
+    render(<TimelineClient />);
+    expect(screen.getByText("fetch failed")).toBeTruthy();
+    expect(screen.queryByText("▌")).toBeNull();
+  });
+
+  it("keeps a retained empty page quiet through a failed refetch below the public budget", () => {
+    mockEvents([], { error: new Error("refresh failed") });
+    render(<TimelineClient />);
+    expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
+    expect(screen.queryByText("refresh failed")).toBeNull();
+    expect(screen.queryByText(/Waiting for initial data|Refresh failed|Showing an older snapshot/)).toBeNull();
+  });
+
+  it("warns on a genuinely stale empty generation alongside the empty filter UI", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    mockEvents([], {
+      meta: { updatedAt: 1_700_000_000 - 86_400, ageSeconds: 86_400, status: "stale", freshBudgetSec: 600, degradedBudgetSec: 1200 },
+    });
+    render(<TimelineClient />);
+    expect(screen.getByText("Showing an older snapshot")).toBeTruthy();
+    expect(screen.getByText(/no events match these filters/i)).toBeTruthy();
+  });
+
+  it("does not let an explicit null producer clock make an empty page fresh", () => {
+    mockEvents([], { meta: { updatedAt: null, ageSeconds: null, status: "unknown", reason: "snapshot-producer-timestamp-unavailable" } });
+    render(<TimelineClient />);
+    expect(screen.queryByText("▌")).toBeNull();
+    expect(screen.getByText("Waiting for initial data")).toBeTruthy();
   });
 
   it("renders events with titles and source links", () => {
@@ -361,8 +455,9 @@ describe("TimelineClient", () => {
   });
 
   it.each([
-    { label: "failed refresh", error: new Error("active read failed"), isFullyLoaded: true, isLoading: false, isAutoLoadCapped: false },
-    { label: "incomplete traversal", error: null, isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false },
+    { label: "failed first read", error: new Error("active read failed"), isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false, data: undefined },
+    { label: "failed partial refresh", error: new Error("active read failed"), isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false, hasNextPage: true },
+    { label: "incomplete traversal", error: null, isFullyLoaded: false, isLoading: false, isAutoLoadCapped: false, isFetchingNextPage: true },
     { label: "capped traversal", error: null, isFullyLoaded: false, isLoading: false, isAutoLoadCapped: true },
     { label: "loading", error: null, isFullyLoaded: false, isLoading: true, isAutoLoadCapped: false },
   ])("withholds OPEN claims for $label even with retained source records", ({ label, ...overrides }) => {
@@ -370,6 +465,7 @@ describe("TimelineClient", () => {
     mockActiveEvents([activeEvent()], overrides);
     render(<TimelineClient />);
     expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
+    expect(screen.queryByRole("region", { name: /Open at last observation/ })).toBeNull();
     expect(screen.queryByText(/1 open incident/)).toBeNull();
     // An unfinished census is withheld quietly; only loading and failed reads explain themselves.
     if (label.includes("traversal")) {
@@ -391,7 +487,87 @@ describe("TimelineClient", () => {
     expect(screen.getByRole("region", { name: /Currently open/ })).toBeTruthy();
     act(() => { vi.advanceTimersByTime(60_000); });
     expect(screen.queryByRole("region", { name: /Currently open/ })).toBeNull();
+    expect(screen.getByRole("region", { name: "Open at last observation" })).toBeTruthy();
+  });
+
+  it.each([
+    { label: "degraded", meta: { updatedAt: 0, ageSeconds: 0, status: "degraded" } as ApiMeta, error: null, isFullyLoaded: true },
+    { label: "error", meta: null, error: new Error("active refresh failed"), isFullyLoaded: false },
+    { label: "stale", meta: { updatedAt: 0, ageSeconds: 0, status: "stale" } as ApiMeta, error: null, isFullyLoaded: true },
+  ])("retains a complete $label cohort as a dated observation", ({ label, meta, ...overrides }) => {
+    vi.useFakeTimers();
+    const observedAt = Date.UTC(2026, 9, 26);
+    vi.setSystemTime(observedAt);
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    const startedAt = observedAt / 1000 - 3600;
+    mockActiveEvents([activeEvent({ id: 123, symbol: "USDC", startedAt })], {
+      ...overrides,
+      dataUpdatedAt: observedAt,
+      meta: meta ? { ...meta, updatedAt: observedAt / 1000 } : null,
+    });
+    render(<TimelineClient />);
+    const region = screen.getByRole("region", { name: "Open at last observation" });
+    expect(region.textContent).toContain("All incidents open at last observation · independent of feed filters");
+    expect(region.textContent).toContain("Observed open for 1h as of 2026-10-26 00:00 UTC");
+    expect(region.textContent).not.toMatch(/OPEN|Currently open|active/);
+    expect(within(region).getByRole("link", { name: "USDC depeg incident 123, open at last observation" })).toBeTruthy();
+    expect(region.querySelector("time")?.dateTime).toBe(new Date(startedAt * 1000).toISOString());
+    expect(screen.queryByText(/open incident/)).toBeNull();
+    // Only a material age is a public warning; degraded and failed refreshes stay quiet.
+    expect(screen.queryByText("Showing an older snapshot") != null).toBe(label === "stale");
+  });
+
+  it("freezes a retained duration at the producer observation while source age advances", () => {
+    vi.useFakeTimers();
+    const observedAt = Date.UTC(2026, 9, 26);
+    vi.setSystemTime(observedAt);
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([activeEvent({ startedAt: observedAt / 1000 - 3600 })], {
+      error: new Error("active refresh failed"), isFullyLoaded: false, dataUpdatedAt: observedAt,
+    });
+    render(<TimelineClient />);
+    const region = () => screen.getByRole("region", { name: "Open at last observation" });
+    expect(region().textContent).toContain("Updated just now");
+    act(() => { vi.advanceTimersByTime(86_400_000); });
+    expect(region().textContent).toContain("Observed open for 1h as of 2026-10-26 00:00 UTC");
+    expect(region().textContent).toContain("Updated 1d ago");
+    expect(within(region()).getByText("Showing an older snapshot")).toBeTruthy();
+  });
+
+  it("keeps a retained empty cohort quiet without asserting current zero", () => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([], { error: new Error("active refresh failed"), isFullyLoaded: false });
+    render(<TimelineClient />);
+    expect(screen.queryByRole("region", { name: /Currently open|Open at last observation|Active incident status/ })).toBeNull();
+    expect(screen.queryByText(/open incident/)).toBeNull();
+    expect(screen.queryByText("Showing an older snapshot")).toBeNull();
+  });
+
+  it.each([
+    { label: "missing census", data: undefined, error: new Error("active read failed"), isFullyLoaded: false },
+    { label: "unknown clock", meta: { updatedAt: null, ageSeconds: null, status: "unknown" } as ApiMeta, error: new Error("active refresh failed"), isFullyLoaded: false },
+    { label: "unadmitted receipt", dataUpdatedAt: 0, error: new Error("active refresh failed"), isFullyLoaded: false },
+    {
+      label: "partial census", error: new Error("active refresh failed"), isFullyLoaded: false,
+      data: { events: [activeEvent()], total: 2, totalExact: true, nextCursor: null, pending: [] as [] },
+    },
+  ])("fails closed for a $label instead of retaining it", ({ label: _label, ...overrides }) => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([activeEvent()], overrides);
+    render(<TimelineClient />);
+    expect(screen.queryByRole("region", { name: /Currently open|Open at last observation/ })).toBeNull();
     expect(screen.getByRole("region", { name: "Active incident status" }).textContent).toMatch(/unavailable/);
+  });
+
+  it("recovers a retained cohort to current activity on a fresh complete read", () => {
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })]);
+    mockActiveEvents([activeEvent()], { error: new Error("active refresh failed"), isFullyLoaded: false });
+    const { rerender } = render(<TimelineClient />);
+    expect(screen.getByRole("region", { name: "Open at last observation" })).toBeTruthy();
+    mockActiveEvents([activeEvent()]);
+    rerender(<TimelineClient />);
+    expect(screen.getByRole("region", { name: /Currently open · 1 incident/ }).textContent).toContain("OPEN");
+    expect(screen.getByText("1 open incident")).toBeTruthy();
   });
 
   it("renders the summary band with event count and window", () => {
@@ -509,6 +685,38 @@ describe("TimelineClient", () => {
     mockEvents([makeTapeEvent()], { meta });
     render(<TimelineClient />);
     expect(screen.queryByText("▌")).toBeNull();
+  });
+
+  it.each<[string, Partial<UseEventsResult>]>([
+    ["fresh", {}],
+    ["source-degraded", { meta: { updatedAt: 1_700_000_000, ageSeconds: 0, status: "degraded", warning: "199 - \"source delayed\"" } }],
+    ["retained-error", { error: new Error("refresh failed") }],
+  ])("keeps the %s Updated tooltip to the source timestamp", (label, overrides) => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })], overrides);
+    const { rerender } = render(<TimelineClient />);
+    const updated = () => screen.getByText(/^Updated /).parentElement!;
+    expect(updated().title).toBe("Nov 14, 10:13 PM UTC");
+    if (label === "retained-error") expect(screen.queryByText("▌")).toBeNull();
+    // A newer receipt of the same generation cannot renew the source date.
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })], {
+      ...overrides,
+      dataUpdatedAt: 1_700_000_100_000,
+      meta: { status: "fresh", ...overrides.meta, updatedAt: 1_700_000_000, ageSeconds: 0 },
+    });
+    rerender(<TimelineClient />);
+    expect(updated().title).toBe("Nov 14, 10:13 PM UTC");
+  });
+
+  it("lets a stale Updated tooltip explain the public warning", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(1_700_000_000_000);
+    mockEvents([makeTapeEvent({ type: "depeg.peak_worsened" })], {
+      meta: { updatedAt: 1_700_000_000 - 86_400, ageSeconds: 86_400, status: "stale" },
+    });
+    render(<TimelineClient />);
+    expect(screen.getByText(/^Updated /).parentElement!.title).toBe("Data is stale.");
   });
 
   it("removes the fresh indicator on a failed refresh while retaining events", () => {

@@ -20,7 +20,7 @@ import { logosById } from "@/lib/logos";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { type UrlStateSchema } from "@/lib/url-state";
 import { useUrlState } from "@/hooks/use-url-state";
-import { SummaryBand } from "./timeline-feed-sections";
+import { EventSkeleton, SummaryBand, SummaryBandSkeleton } from "./timeline-feed-sections";
 import { TimelineFeed } from "./timeline-feed";
 import { useTimelineFeedData } from "./use-timeline-feed-data";
 import { useTimelineFeedInteractions } from "./use-timeline-feed-interactions";
@@ -113,8 +113,31 @@ export function TimelineClient() {
   const getSnapshot = useCallback(() => clockRef.current, []);
   const clock = useSyncExternalStore(subscribe, getSnapshot, () => null);
 
-  if (clock == null) return null;
+  if (clock == null) return <TimelineLoadingShell />;
   return <MountedTimelineClient queryAnchorMs={clock.queryAnchorMs} nowMs={clock.nowMs} />;
+}
+
+const DEFAULT_TIMELINE_FILTERS = decodeTimelineFilters({
+  type: "", severity: TAPE_DEFAULT_SEVERITY, coin: "", peg: "all", chain: "all", window: "7d", q: "", event: "",
+});
+
+function ignoreFilterChange() {}
+
+/** Server/first-hydration shell: the mounted summary, filter and feed slots without clock or query. */
+function TimelineLoadingShell() {
+  return (
+    <div className="space-y-6">
+      <SummaryBandSkeleton />
+      <TapeFilters state={DEFAULT_TIMELINE_FILTERS} setParam={ignoreFilterChange} />
+      <section id="data" aria-label="Event tape" aria-busy="true" className="min-h-[100svh]" data-timeline-slot="feed">
+        <div id="tape-feed" className="space-y-4">
+          <div>
+            <EventSkeleton />
+          </div>
+        </div>
+      </section>
+    </div>
+  );
 }
 
 function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number; nowMs: number }) {
@@ -232,7 +255,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
       <SummaryBand
         loadedCount={feed.visibleEvents.length}
         totalCount={feed.visibleTotal}
-        openCount={feed.openIncidents?.length ?? null}
+        openCount={feed.activeStatus === "available" ? feed.openIncidents?.length ?? null : null}
         windowLabel={feedController.windowLabel}
         severityLabel={feedController.severityLabel}
         dataUpdatedAt={dataUpdatedAt}
@@ -258,6 +281,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         logos={logos}
         nowMs={nowMs}
         rawEvents={rawEvents}
+        hasData={feed.events.pages?.[0] != null}
         visibleEvents={feed.visibleEvents}
         openIncidents={feed.openIncidents}
         activeStatus={feed.activeStatus}

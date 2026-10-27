@@ -1,5 +1,6 @@
 import { vi, type Mock } from "vitest";
 import type { DepegPendingIncident } from "@shared/types";
+import type { ApiMeta } from "@/lib/api";
 
 /**
  * Fresh query envelopes and resolver surfaces for the depeg route client.
@@ -13,7 +14,7 @@ export interface QueryEnvelope<T> {
   data: T | undefined;
   error: Error | null;
   dataUpdatedAt: number;
-  meta: null;
+  meta: ApiMeta | null;
   refetch: Mock;
 }
 
@@ -100,18 +101,24 @@ export function makeStressSignalsResult(options: {
   signals?: Record<string, StressSignalFixture>;
   oldestComputedAt?: number;
   malformedRows?: number;
+  /** Body (newest) producer clock; the transport clock lives in `meta`. */
+  updatedAt?: number;
+  meta?: ApiMeta | null;
+  error?: Error | null;
+  /** Receipt time, which must never stand in for a producer clock. */
+  dataUpdatedAt?: number;
 } = {}): QueryEnvelope<Record<string, unknown>> {
   return {
     data: {
       signals: options.signals ?? {},
       oldestComputedAt: options.oldestComputedAt,
       malformedRows: options.malformedRows,
-      updatedAt: 1_700_000_000,
+      updatedAt: options.updatedAt ?? 1_700_000_000,
       methodology: {},
     },
-    error: null,
-    dataUpdatedAt: 0,
-    meta: null,
+    error: options.error ?? null,
+    dataUpdatedAt: options.dataUpdatedAt ?? 0,
+    meta: options.meta ?? null,
     refetch: vi.fn(),
   };
 }

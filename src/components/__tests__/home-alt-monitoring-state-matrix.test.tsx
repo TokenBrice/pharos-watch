@@ -195,7 +195,7 @@ const SURFACES: SurfaceCase[] = [
       });
       usePegSummaryMock.mockReturnValue(queryFor(state, pegReady, pegEmpty));
     },
-    emptyText: "No active incidents",
+    emptyText: "No open confirmed incidents",
     readyText: "USDC",
   },
   {

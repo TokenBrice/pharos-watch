@@ -8,6 +8,7 @@ import type { DepegEvent } from "@shared/types";
 import { AlertTriangle, Radar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DataHealthBanner } from "@/components/data-health-banner";
 import { SEVERITY_GLYPH } from "@/components/tape/event-card";
 import { ClassDigestRow } from "@/components/tape/class-digest-row";
 import { timeAgo } from "@shared/lib/format";
@@ -17,14 +18,21 @@ import type { TapeEventSeverity } from "@shared/types/tape-event";
 import type { ActiveFilterChip } from "./timeline-controller";
 import { getLogoSrc } from "@/lib/logos";
 import type { ApiMeta } from "@/lib/api";
-import { deriveDataHealth, type DataHealthInfo } from "@/lib/data-health";
+import { deriveDataHealth, formatDataHealthTimestamp, isPublicWarning, type DataHealthInfo } from "@/lib/data-health";
 import { CRON_TAPE } from "@/lib/cron-intervals";
 import {
   eventDomId,
   formatDayLabel,
   openIncidentPrefix,
   quietDayEventTokens,
+  retainedIncidentPrefix,
 } from "./timeline-feed-helpers";
+import type { TimelineActiveStatus } from "./use-timeline-feed-data";
+
+/** Below public staleness a timestamp tooltip names only the source date (ADR-42). */
+function healthTooltip(health: DataHealthInfo): string {
+  return isPublicWarning(health) ? health.message : formatDataHealthTimestamp(health.dataUpdatedAt, "en-US", "UTC");
+}
 
 export function EventSkeleton() {
   return (
@@ -109,20 +117,13 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
     </span>
   );
   const parts: ReactNode[] = [];
-  if (openCount != null && openCount > 0) {
-    parts.push(
-      <span key="open" className="font-semibold text-amber-700 dark:text-amber-400">
-        {openCount} open {openCount === 1 ? "incident" : "incidents"}
-      </span>,
-    );
-  }
   parts.push(countNode);
   parts.push(<span key="window">{windowLabel}</span>);
   parts.push(<span key="severity">{severityLabel}</span>);
   const health = deriveDataHealth({ label: "Timeline", staleTime: CRON_TAPE, dataUpdatedAt, meta, error, hasData: dataUpdatedAt > 0 }, nowMs);
   if (health.dataUpdatedAt > 0) {
     parts.push(
-      <span key="updated" title={health.message} className="inline-flex items-center gap-1.5">
+      <span key="updated" title={healthTooltip(health)} className="inline-flex items-center gap-1.5">
         {health.state === "fresh" ? (
           <span
             aria-hidden="true"
@@ -135,16 +136,17 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
       </span>,
     );
   }
-  const lastEventNode =
-    lastEventTs != null ? (
-      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
-        Last event: {formatRelativeTimeMs(lastEventTs, { now: nowMs })}{" "}
-        <span className="text-muted-foreground/70">· {new Date(lastEventTs).toISOString().replace("T", " ").slice(0, 16)} UTC</span>
-      </p>
-    ) : null;
+  // Late-arriving incidents trail the stable slots so they never push neighbors.
+  if (openCount != null && openCount > 0) {
+    parts.push(
+      <span key="open" className="font-semibold text-amber-700 dark:text-amber-400">
+        {openCount} open {openCount === 1 ? "incident" : "incidents"}
+      </span>,
+    );
+  }
   return (
-    <div className="space-y-1">
-      <p className="flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tracking-wider text-muted-foreground">
+    <div className="space-y-1" data-timeline-slot="summary">
+      <p className="flex min-h-11 flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] uppercase tabular-nums tracking-wider text-muted-foreground">
         {parts.map((part, i) => (
           <span key={i} className="contents">
             {i > 0 ? <span aria-hidden="true">·</span> : null}
@@ -166,14 +168,33 @@ export function SummaryBand({ loadedCount, totalCount, openCount, windowLabel, s
           </>
         ) : null}
       </p>
-      {lastEventNode}
+      <p className="font-mono text-[11px] uppercase tracking-wider text-muted-foreground" data-timeline-slot="last-event">
+        {lastEventTs != null ? (
+          <>
+            Last event: {formatRelativeTimeMs(lastEventTs, { now: nowMs })}{" "}
+            <span className="text-muted-foreground/70">· {new Date(lastEventTs).toISOString().replace("T", " ").slice(0, 16)} UTC</span>
+          </>
+        ) : "\u00a0"}
+      </p>
+    </div>
+  );
+}
+
+/** Pre-clock stand-in sharing SummaryBand's reserved rows; no clock or count is fabricated. */
+export function SummaryBandSkeleton() {
+  return (
+    <div className="space-y-1" data-timeline-slot="summary" aria-hidden="true">
+      <p className="flex min-h-11 items-center font-mono text-[11px]">
+        <Skeleton className="h-3 w-64 max-w-full" />
+      </p>
+      <p className="font-mono text-[11px]" data-timeline-slot="last-event">{"\u00a0"}</p>
     </div>
   );
 }
 
 interface OpenIncidentsSectionProps {
   incidents: readonly DepegEvent[] | null;
-  status: "available" | "loading" | "incomplete" | "unavailable";
+  status: TimelineActiveStatus;
   health: DataHealthInfo;
   onRetry: () => void;
   logos: Record<string, string>;
@@ -181,6 +202,9 @@ interface OpenIncidentsSectionProps {
 }
 
 export function OpenIncidentsSection({ incidents, status, health, onRetry, logos, nowMs }: OpenIncidentsSectionProps) {
+  const retained = status === "retained";
+  // A retained empty census never asserts current zero; only a material age warns.
+  if (retained && incidents?.length === 0) return <DataHealthBanner entries={[health]} />;
   if (status === "available" && incidents?.length === 0) return null;
   // An unfinished census is not a reader notice; only a failed read is.
   if (status === "incomplete" && !incidents?.length) return null;
@@ -195,14 +219,16 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
         className="flex min-w-0 flex-wrap items-center gap-1.5 font-mono text-[11px] uppercase tracking-wider text-amber-700 dark:text-amber-400"
       >
         <AlertTriangle className="h-3 w-3" aria-hidden="true" />
-        {incidents ? `Currently open · ${incidents.length} ${incidents.length === 1 ? "incident" : "incidents"}` : "Active incident status"}
+        {retained ? "Open at last observation"
+          : incidents ? `Currently open · ${incidents.length} ${incidents.length === 1 ? "incident" : "incidents"}` : "Active incident status"}
       </h2>
+      {retained ? <DataHealthBanner entries={[health]} /> : null}
       {!incidents ? (
         <div role="status" className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-muted-foreground">
           {status === "loading" ? "Loading current activity…"
             : "Current activity unavailable; active incidents cannot be confirmed."}
           {health.dataUpdatedAt > 0 ? (
-            <span title={health.message}> Last source update {timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}.</span>
+            <span title={healthTooltip(health)}> Last source update {timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}.</span>
           ) : null}
           {status !== "loading" ? (
             <Button variant="ghost" size="sm" onClick={onRetry}>Retry active incidents</Button>
@@ -211,7 +237,7 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
       ) : (
         <div className="border-y border-amber-500/30">
           <p className="px-3 py-1 font-mono text-[11px] text-muted-foreground">
-            All active incidents · independent of feed filters
+            {retained ? "All incidents open at last observation" : "All active incidents"} · independent of feed filters
             {health.dataUpdatedAt > 0 ? ` · Updated ${timeAgo(Math.floor(health.dataUpdatedAt / 1000), nowMs / 1000)}` : ""}
           </p>
           {incidents.map((event) => (
@@ -219,12 +245,16 @@ export function OpenIncidentsSection({ incidents, status, health, onRetry, logos
               key={event.id}
               href={`${buildStablecoinUrl(event.stablecoinId)}#peg-history`}
               data-depeg-event-id={event.id}
-              aria-label={`${event.symbol} active depeg incident ${event.id}`}
+              aria-label={retained
+                ? `${event.symbol} depeg incident ${event.id}, open at last observation`
+                : `${event.symbol} active depeg incident ${event.id}`}
               className="pharos-focus-ring flex flex-wrap items-center gap-2 border-b border-border/60 px-3 py-2 font-mono text-xs hover:bg-muted/30"
             >
               <StablecoinLogo src={getLogoSrc(logos, event.stablecoinId)} name={event.symbol} size={22} />
               <span className="font-semibold">{event.symbol}</span>
-              <span className="text-amber-700 dark:text-amber-400">{openIncidentPrefix(event, nowMs)}</span>
+              <span className="text-amber-700 dark:text-amber-400">
+                {retained ? retainedIncidentPrefix(event, health.dataUpdatedAt) : openIncidentPrefix(event, nowMs)}
+              </span>
               <time dateTime={new Date(event.startedAt * 1000).toISOString()} className="text-muted-foreground">
                 Started {new Date(event.startedAt * 1000).toISOString().replace("T", " ").slice(0, 16)} UTC
               </time>

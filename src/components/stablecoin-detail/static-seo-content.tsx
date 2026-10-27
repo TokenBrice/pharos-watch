@@ -762,10 +762,10 @@ export function StablecoinDetailSeoContent({
                   Telegram alerts
                 </IntentLink>
               ) : null}
-              <Link href="/feed/digest.xml" prefetch={false} className={ACTION_LINK_CLASS}>
+              <a href="/feed/digest.xml" className={ACTION_LINK_CLASS}>
                 <Rss aria-hidden="true" className={ACTION_ICON_CLASS} />
                 Digest RSS
-              </Link>
+              </a>
               <IntentLink href="/api/" className={ACTION_LINK_CLASS}>
                 <Code2 aria-hidden="true" className={ACTION_ICON_CLASS} />
                 API access

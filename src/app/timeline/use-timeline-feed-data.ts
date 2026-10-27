@@ -9,6 +9,8 @@ import { useActiveDepegEvents } from "@/hooks/use-depeg-events";
 import { deriveDataHealth } from "@/lib/data-health";
 import { CRON_15MIN } from "@/lib/cron-intervals";
 
+export type TimelineActiveStatus = "available" | "retained" | "loading" | "incomplete" | "unavailable";
+
 interface UseTimelineFeedDataArgs {
   queryParams: TimelineEventQueryParams;
   permalinkId: string;
@@ -25,12 +27,19 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
     error: activeIncidents.error,
     hasData: activeIncidents.data != null,
   }, nowMs);
-  const activeStatus: "available" | "loading" | "incomplete" | "unavailable" = activeIncidents.error ? "unavailable"
+  // A complete cached census stays a dated observation through failed or aged refreshes; the
+  // shared hook's `isFullyLoaded` also folds in transport errors, so completeness is assessed here.
+  const activeData = activeIncidents.data;
+  const activeCensusComplete = activeData != null && !activeIncidents.isLoading && activeData.nextCursor == null
+    && !activeIncidents.hasNextPage && !activeIncidents.isAutoLoadCapped && !activeIncidents.isFetchingNextPage
+    && (!activeData.totalExact || activeData.total === 0 || activeData.events.length >= activeData.total);
+  const activeStatus: TimelineActiveStatus = activeIncidents.isFullyLoaded && activeHealth.state === "fresh" ? "available"
+    : activeCensusComplete && activeHealth.dataUpdatedAt > 0 ? "retained"
+    : activeIncidents.error ? "unavailable"
     : activeIncidents.isLoading ? "loading"
-    : !activeIncidents.data ? "unavailable"
+    : !activeData ? "unavailable"
     : !activeIncidents.isFullyLoaded ? "incomplete"
-    : activeHealth.state !== "fresh" ? "unavailable"
-    : "available";
+    : "unavailable";
 
   const {
     data: { events: rawEvents },
@@ -43,10 +52,11 @@ export function useTimelineFeedData({ queryParams, permalinkId, nowMs }: UseTime
   // raw events and cursors still drive pagination.
   const visibleEvents = useMemo(() => projectTapeEventsForReader(rawEvents), [rawEvents]);
   const suppressedCount = rawEvents.length - visibleEvents.length;
-  // Only a complete, fresh canonical read can establish current activity.
-  // Tape openings, recoveries and filters never participate in this authority.
+  // Only a complete, fresh canonical read can establish current activity; a retained
+  // complete read is shown as of its producer observation. Tape openings, recoveries
+  // and filters never participate in this authority.
   const openIncidents = useMemo(
-    () => activeStatus === "available"
+    () => activeStatus === "available" || activeStatus === "retained"
       ? [...activeIncidents.data!.events].sort((a, b) => a.startedAt - b.startedAt || a.id - b.id)
       : null,
     [activeStatus, activeIncidents.data],

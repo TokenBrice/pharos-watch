@@ -16,6 +16,7 @@ import type { ActiveFilterChip, TimelineFeedController } from "./timeline-contro
 import { eventDomId } from "./timeline-feed-helpers";
 import { DayDigestSection, EmptyState, EventSkeleton, OpenIncidentsSection } from "./timeline-feed-sections";
 import { getLogoSrc } from "@/lib/logos";
+import type { TimelineActiveStatus } from "./use-timeline-feed-data";
 
 interface TimelineFeedProps {
   filters: TapeFilterState;
@@ -23,9 +24,11 @@ interface TimelineFeedProps {
   logos: Record<string, string>;
   nowMs: number;
   rawEvents: readonly TapeEvent[];
+  /** An admitted response page, even an empty one, is observed data. */
+  hasData: boolean;
   visibleEvents: readonly TapeEvent[];
   openIncidents: readonly DepegEvent[] | null;
-  activeStatus: "available" | "loading" | "incomplete" | "unavailable";
+  activeStatus: TimelineActiveStatus;
   activeHealth: DataHealthInfo;
   refetchActive: () => void;
   digestedDays: readonly DigestedDay[];
@@ -56,6 +59,7 @@ export function TimelineFeed({
   logos,
   nowMs,
   rawEvents,
+  hasData,
   visibleEvents,
   openIncidents,
   activeStatus,
@@ -88,14 +92,14 @@ export function TimelineFeed({
     <>
       <QueryFreshnessNotices
         error={error}
-        hasData={rawEvents.length > 0}
+        hasData={hasData}
         onRetry={() => void refetch()}
         queries={[
           {
             label: "Timeline",
             dataUpdatedAt,
             error,
-            hasData: rawEvents.length > 0,
+            hasData,
             meta,
           },
         ]}
@@ -126,7 +130,8 @@ export function TimelineFeed({
         {loadAnnouncement}
       </div>
 
-      <section id="data" aria-label="Event tape" tabIndex={-1}>
+      {/* The viewport floor keeps the footer from being exposed then displaced as rows arrive. */}
+      <section id="data" aria-label="Event tape" tabIndex={-1} className="min-h-[100svh]" data-timeline-slot="feed">
         <div id="tape-feed" className="space-y-4">
           {bufferEvent ? (
             <div className="border-y border-border/60 bg-amber-500/5">

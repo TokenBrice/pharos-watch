@@ -98,3 +98,69 @@ export function collapseForHomepageStrip(events: ReadonlyArray<TapeEvent>): Coll
   }
   return result;
 }
+
+export type LowBandDirection = "calm-to-watch" | "watch-to-calm";
+
+export interface CoinNewsEntry {
+  key: string;
+  // Original archive event; for a low-band group, its newest member.
+  event: TapeEvent;
+  // Present only when two or more low-band reversals were grouped. Counts are
+  // scoped to `loadedEventCount`, the size of the input the group was drawn
+  // from — never the coin's complete history or its current band.
+  lowBand?: {
+    calmToWatch: number;
+    watchToCalm: number;
+    oldestTs: number;
+    loadedEventCount: number;
+  };
+}
+
+export function lowBandDirection(event: TapeEvent): LowBandDirection | null {
+  if (!event.coinId) return null;
+  const prev = event.payload?.prevBand;
+  const next = event.payload?.newBand;
+  if (event.type === "dews.escalated" && prev === "CALM" && next === "WATCH") return "calm-to-watch";
+  if (event.type === "dews.deescalated" && prev === "WATCH" && next === "CALM") return "watch-to-calm";
+  return null;
+}
+
+// Coin News variant: group only exact same-coin DEWS CALM → WATCH / WATCH →
+// CALM reversals into one entry at the newest member's position (input is
+// newest-first). Serious transitions, malformed payloads and every other event
+// stay individual. Input events are never mutated or synthesized.
+export function collapseForCoinNews(events: ReadonlyArray<TapeEvent>): CoinNewsEntry[] {
+  const result: CoinNewsEntry[] = [];
+  const indexByCoin = new Map<string, number>();
+  for (const event of events) {
+    const direction = lowBandDirection(event);
+    if (direction == null) {
+      result.push({ key: event.id, event });
+      continue;
+    }
+    const existingIdx = indexByCoin.get(event.coinId!);
+    if (existingIdx == null) {
+      indexByCoin.set(event.coinId!, result.length);
+      result.push({
+        key: `dews-low-band:${event.coinId}:${event.id}`,
+        event,
+        lowBand: {
+          calmToWatch: direction === "calm-to-watch" ? 1 : 0,
+          watchToCalm: direction === "watch-to-calm" ? 1 : 0,
+          oldestTs: event.ts,
+          loadedEventCount: events.length,
+        },
+      });
+      continue;
+    }
+    const group = result[existingIdx]!.lowBand!;
+    if (direction === "calm-to-watch") group.calmToWatch += 1;
+    else group.watchToCalm += 1;
+    group.oldestTs = Math.min(group.oldestTs, event.ts);
+  }
+  return result.map((entry) =>
+    entry.lowBand && entry.lowBand.calmToWatch + entry.lowBand.watchToCalm < 2
+      ? { key: entry.event.id, event: entry.event }
+      : entry,
+  );
+}

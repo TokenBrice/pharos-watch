@@ -98,7 +98,7 @@ These same-origin Pages surfaces are **not** Worker API routes. Bindings/admissi
 
 ### Static feed route handlers
 
-The App Router feed handlers under `src/app/feed/**/route.ts` emit static RSS/XML feeds from checked-in or generated build inputs; that tree owns the feed-route inventory. The sitemap and `npm run seo:check` cover indexable HTML routes, not RSS feeds.
+The App Router feed handlers under `src/app/feed/**/route.ts` emit static RSS/XML from checked-in or generated inputs and own the feed inventory; sitemap and `npm run seo:check` cover HTML only. Feed links are native `<a>`, not `Link` (no RSC payload).
 Depeg RSS uses `classifyDepegClosure`: only recovered events (including legacy) say `Resolved`; other terminal classes name tracking closure, not recovery.
 
 ---

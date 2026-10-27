@@ -13,6 +13,7 @@ import {
   formatTapeEventTitle,
 } from "@/lib/tape-derive";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
+import { collapseForCoinNews, lowBandDirection, type CoinNewsEntry } from "@/lib/tape-collapse";
 import { SEVERITY_LABEL, SEVERITY_TEXT_CLASS } from "@shared/lib/classification/tape";
 import type { TapeEvent } from "@shared/types/tape-event";
 import { DETAIL_MODULE_TITLE_CLASS } from "@/components/stablecoin-detail/section-title-class";
@@ -94,17 +95,47 @@ function newsDeltaClass(event: TapeEvent): string {
   return SEVERITY_TONE_CLASS.neutral.text;
 }
 
-function NewsEntry({ event, nowMs }: { event: TapeEvent; nowMs: number }) {
+const NEWS_LOAD_LIMIT = 100;
+const NEWS_ENTRY_LIMIT = 5;
+
+function utcMinute(tsMs: number): string {
+  return new Date(tsMs).toISOString().slice(0, 16).replace("T", " ");
+}
+
+function NewsEntry({ entry, nowMs }: { entry: CoinNewsEntry; nowMs: number }) {
+  const { event, lowBand } = entry;
   const href = event.sourceUrl ?? `/timeline/?event=${encodeURIComponent(event.id)}`;
-  // Coin identity is implicit on the coin's own page; non-coin events (e.g.
-  // methodology) carry their descriptive content in `title`, not `summary`.
-  const summary = formatTapeEventSummary(event);
-  const body = summary ? firstSentence(summary) : !event.coinId ? formatTapeEventTitle(event) : "";
-  const delta = describeEventDelta(event);
+  let title: string;
+  let body: string;
+  let delta: string | null;
+  let deltaClass: string;
+  let range: string | undefined;
+  if (lowBand) {
+    // Counts are scoped to the loaded events; the range rides the time tooltip
+    // to keep a group inside an ordinary entry's footprint.
+    const recent = lowBandDirection(event) === "calm-to-watch" ? "CALM → WATCH" : "WATCH → CALM";
+    title = "DEWS CALM/WATCH changes";
+    body = `In the latest ${lowBand.loadedEventCount} events: CALM → WATCH ${lowBand.calmToWatch} · WATCH → CALM ${lowBand.watchToCalm}`;
+    delta = `Most recent: ${recent} · ${utcMinute(event.ts)} UTC`;
+    deltaClass = SEVERITY_TONE_CLASS.neutral.text;
+    range = `Between ${utcMinute(lowBand.oldestTs)} and ${utcMinute(event.ts)} UTC`;
+  } else {
+    // Coin identity is implicit on the coin's own page; non-coin events (e.g.
+    // methodology) carry their descriptive content in `title`, not `summary`.
+    const summary = formatTapeEventSummary(event);
+    title = newsTitle(event);
+    body = summary ? firstSentence(summary) : !event.coinId ? formatTapeEventTitle(event) : "";
+    delta = describeEventDelta(event);
+    deltaClass = newsDeltaClass(event);
+  }
   return (
     <Link href={href} className="pharos-focus-ring block rounded-sm py-2.5 transition-colors hover:bg-muted/30">
       <div className="flex items-center justify-between gap-2">
-        <time dateTime={new Date(event.ts).toISOString()} className="text-[11px] tabular-nums text-muted-foreground">
+        <time
+          dateTime={new Date(event.ts).toISOString()}
+          title={range}
+          className="text-[11px] tabular-nums text-muted-foreground"
+        >
           {newsDateLabel(event.ts, nowMs)}
         </time>
         <span
@@ -113,16 +144,17 @@ function NewsEntry({ event, nowMs }: { event: TapeEvent; nowMs: number }) {
           {SEVERITY_LABEL[event.severity]}
         </span>
       </div>
-      <p className="mt-1 text-sm font-semibold text-foreground">{newsTitle(event)}</p>
+      <p className="mt-1 text-sm font-semibold text-foreground">{title}</p>
       {body ? <p className="mt-0.5 text-xs text-muted-foreground line-clamp-2">{body}</p> : null}
-      {delta ? <p className={`mt-1 font-mono text-[11px] tabular-nums ${newsDeltaClass(event)}`}>{delta}</p> : null}
+      {delta ? <p className={`mt-1 font-mono text-[11px] tabular-nums ${deltaClass}`}>{delta}</p> : null}
     </Link>
   );
 }
 
 export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
-  const { data, dataUpdatedAt, isLoading } = useLatestEvents({ coin: coinId, limit: 5 });
+  const { data, dataUpdatedAt, isLoading } = useLatestEvents({ coin: coinId, limit: NEWS_LOAD_LIMIT });
   const events = useMemo(() => projectTapeEventsForReader(data?.events ?? []), [data?.events]);
+  const entries = collapseForCoinNews(events).slice(0, NEWS_ENTRY_LIMIT);
   // Lazy initializer keeps the render pure (react-hooks/purity). TanStack Query
   // refreshes dataUpdatedAt after successful polling refetches, so keep labels
   // tied to the latest event payload instead of freezing at mount time.
@@ -149,8 +181,8 @@ export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
         <p className="text-xs text-muted-foreground">Loading recent events…</p>
       ) : (
         <div className="divide-y divide-border/40">
-          {events.map((event) => (
-            <NewsEntry key={event.id} event={event} nowMs={labelNowMs} />
+          {entries.map((entry) => (
+            <NewsEntry key={entry.key} entry={entry} nowMs={labelNowMs} />
           ))}
         </div>
       )}

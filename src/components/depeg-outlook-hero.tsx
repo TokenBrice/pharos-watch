@@ -9,6 +9,7 @@ import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
 import { cn } from "@/lib/utils";
+import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
 import { formatPercent } from "@shared/lib/format";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
@@ -16,7 +17,7 @@ import type { PegSummaryStats } from "@shared/types";
 
 interface DepegOutlookHeroProps {
   stats: PegSummaryStats | null | undefined;
-  /** Coins in a confirmed live depeg. Drives the radar halos. */
+  /** Coins with an open confirmed incident. Drives the radar halos. */
   activeDepegIds: ReadonlySet<string>;
   /** Coins in the live peg summary (the peg catalog); null while it is unread. */
   catalogCount?: number | null;
@@ -88,6 +89,7 @@ export function DepegOutlookHero({
   const tierGroups = book?.tierGroups ?? [];
   const headline = review?.headline;
   const accuracyPct = headline?.recoveryLikelihoodAccuracyPct ?? null;
+  const accuracyLines = review ? formatPromotedAccuracyLines(describePromotedAccuracy(review)) : null;
 
   return (
     <section aria-label="Live depeg outlook" className="pharos-card-shell overflow-hidden">
@@ -107,13 +109,14 @@ export function DepegOutlookHero({
                 </span>
               </RailHeroFigureTransition>
               <span className="text-sm text-muted-foreground">
-                {/* "All pegs holding" is a claim about data we have. Without a peg
-                    summary the honest reading is that we cannot say. */}
+                {/* An open lifecycle record, not a claim that the coin is off peg
+                    now: recovery may be observed but not yet confirmed. Without a
+                    peg summary the honest reading is that we cannot say. */}
                 {!stats
                   ? "peg summary unavailable"
-                  : activeCount === 0
-                    ? "all pegs holding"
-                    : `confirmed ${activeCount === 1 ? "depeg" : "depegs"} right now`}
+                  : activeCount === 1
+                    ? "coin with an open confirmed incident"
+                    : "coins with open confirmed incidents"}
               </span>
               {worst ? (
                 <span
@@ -173,27 +176,28 @@ export function DepegOutlookHero({
               <p className="pharos-meta mt-1">
                 {book.pastPeakCount > 0 ? (
                   <span className="text-state-warn">
-                    {book.pastPeakCount === 1 ? "1 is" : `${book.pastPeakCount} are`} past their worst ·{" "}
+                    {book.pastPeakCount} at a new worst ·{" "}
                   </span>
                 ) : null}
                 {lineage
-                  ? `calibrated on ${lineage.incidentCount.toLocaleString()} recovered incidents`
+                  ? `calibrated on ${lineage.incidentCount.toLocaleString()} historical incidents`
                   : `${book.total} open ${book.total === 1 ? "forecast" : "forecasts"}`}
               </p>
             </RailGroup>
           ) : null}
 
-          {headline && headline.recoveryLikelihoodScoredCount > 0 ? (
+          {headline && accuracyLines && headline.recoveryLikelihoodScoredCount > 0 ? (
             <RailGroup label="Forecast track record · DDRR">
               <p className="flex flex-wrap items-baseline gap-x-2">
                 <span className="pharos-numeric text-lg font-semibold text-foreground">
                   {accuracyPct != null ? formatPercent(accuracyPct * 100, 1) : "—"}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  recovery calls correct ({headline.recoveryLikelihoodCorrectCount}/
-                  {headline.recoveryLikelihoodScoredCount} graded)
-                </span>
+                <span className="text-xs text-muted-foreground">{accuracyLines.calls}</span>
               </p>
+              {/* Frozen historical performance, not current-model validation:
+                  name the stronger same-cohort baseline and the versions graded. */}
+              <p className="text-xs text-muted-foreground">{accuracyLines.baseline}</p>
+              {accuracyLines.scope ? <p className="text-xs text-muted-foreground">{accuracyLines.scope}</p> : null}
               <p className="pharos-meta mt-1">
                 {review?.headlineLabel ?? headline.accuracyDenominatorLabel} ·{" "}
                 <a href="#forecast-grading" className="pharos-prose-link">
@@ -209,7 +213,7 @@ export function DepegOutlookHero({
             <h2 className="pharos-section-title">
               <MethodologyLabel topic="dews">DEWS early warning</MethodologyLabel>
             </h2>
-            <p className="pharos-meta">every DEWS-covered asset · halo marks an elevated coin in confirmed depeg</p>
+            <p className="pharos-meta">every DEWS-covered asset · halo marks an elevated coin with an open confirmed incident</p>
           </div>
           <DEWSRadarPanel
             logos={logos}

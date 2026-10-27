@@ -1,12 +1,14 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
 import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "@/components/depeg-resolver-test-support";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
+import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
+import type { ApiMeta } from "@/lib/api";
 
 import { DepegClient } from "./client";
 import {
@@ -23,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   useStressSignals: vi.fn(),
   useDepegResolverSurfaces: vi.fn(),
   useInfiniteDepegEvents: vi.fn(),
+  useActiveDepegEvents: vi.fn(),
   useUrlFilters: vi.fn(),
   QueryFreshnessNotices: vi.fn(),
 }));
@@ -40,6 +43,7 @@ vi.mock("@/hooks/api-hooks", () => ({
 
 vi.mock("@/hooks/use-depeg-events", () => ({
   useInfiniteDepegEvents: mocks.useInfiniteDepegEvents,
+  useActiveDepegEvents: (...args: unknown[]) => mocks.useActiveDepegEvents(...args) ?? { data: undefined },
 }));
 
 vi.mock("@/hooks/use-depeg-resolver-surfaces", () => ({
@@ -70,7 +74,7 @@ vi.mock("@/components/section-error-boundary", () => ({
 }));
 
 // Heavyweight leaf: the hero's own rendering is covered by its suite. This stand-in
-// exposes the figures the client derives and renders the real caveat footer.
+// exposes the figures the client derives and whether the client passed a footer.
 vi.mock("@/components/depeg-outlook-hero", () => ({
   DepegOutlookHero: (props: {
     activeDepegIds?: ReadonlySet<string>;
@@ -86,9 +90,9 @@ vi.mock("@/components/depeg-outlook-hero", () => ({
       data-pending={String(props.pendingCount)}
       data-alerts={String(props.dewsAlertCount)}
       data-resolver-total={props.book?.total ?? "unavailable"}
+      data-footer={props.footer == null ? "none" : "present"}
     >
       {props.alertQueue}
-      {props.footer}
     </div>
   ),
 }));
@@ -98,10 +102,11 @@ vi.mock("@/components/dews-alert-feed", () => ({
 }));
 
 vi.mock("@/components/depeg-control-board", () => ({
-  DepegControlBoard: ({ rows }: { rows: Array<{ coin: { id: string }; pendingIncident?: unknown }> }) => (
+  DepegControlBoard: ({ rows }: { rows: Array<{ coin: { id: string }; pendingIncident?: unknown; openIncidentEvidence?: string | null }> }) => (
     <div
       data-testid="depeg-control-board"
       data-row-ids={rows.map((row) => row.coin.id).join(",")}
+      data-evidence={rows.map((row) => `${row.coin.id}:${row.openIncidentEvidence ?? "none"}`).join(",")}
       data-pending-rows={String(rows.filter((row) => row.pendingIncident).length)}
     >
       <span>Leaderboard controls</span>
@@ -123,14 +128,30 @@ vi.mock("@/components/depeg-resolver-reviewer-module", () => ({
   DepegResolverReviewerModule: () => <div data-testid="depeg-resolver-reviewer" />,
 }));
 
+// Hydrate synchronously so the real banner ages captured queries against the fake wall clock;
+// fake timers here fake only setTimeout and Date, so they never capture this stub.
+beforeEach(() => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 0; });
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   // Unconditional: a failing assertion mid-case must not leak fake timers.
   vi.useRealTimers();
   vi.clearAllMocks();
 });
 
 const NOW_SEC = 1_700_000_000;
+
+/** Renders the real shared banner over the route's captured freshness queries for the given presets. */
+function renderCapturedNotices(presets: readonly string[]) {
+  const { queries } = mocks.QueryFreshnessNotices.mock.calls.at(-1)![0] as { queries: StaleQuery[] };
+  const { container } = render(
+    <StaleDataBanner queries={queries.filter((query) => query.preset != null && presets.includes(query.preset))} />,
+  );
+  return () => container.querySelector("[data-health-state]");
+}
 
 function mountDepegRoute(options: {
   coins?: Parameters<typeof makePegSummaryResult>[0]["coins"];
@@ -188,6 +209,41 @@ describe("DepegClient", () => {
     const hero = screen.getByTestId("depeg-hero");
     expect(hero.dataset.pending).toBe(missing === "events" ? "null" : "0");
     expect(hero.dataset.alerts).toBe(missing === "dews" || missing === "peg" ? "null" : "1");
+  });
+
+  it("labels open incidents from their unique event's latest trusted observation, without touching the census", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const coverage = (kind: "trusted-off-peg" | "trusted-at-par", at: number) => ({
+      intervals: kind === "trusted-off-peg" ? [[at - 600, at]] : [],
+      atParIntervals: kind === "trusted-at-par" ? [[at - 600, at]] : [],
+      lastObservationKind: kind,
+      lastTrustedObservationAt: at,
+      gapStartedAt: kind === "trusted-at-par" ? at - 600 : null,
+    });
+    mocks.useActiveDepegEvents.mockReturnValue({ data: { events: [
+      { id: 1, stablecoinId: "off", endedAt: null, priceCoverage: coverage("trusted-off-peg", NOW_SEC - 60) },
+      { id: 2, stablecoinId: "par", endedAt: null, priceCoverage: coverage("trusted-at-par", NOW_SEC - 1_200) },
+      { id: 3, stablecoinId: "dup", endedAt: null, priceCoverage: coverage("trusted-off-peg", NOW_SEC - 60) },
+      { id: 4, stablecoinId: "dup", endedAt: null, priceCoverage: coverage("trusted-off-peg", NOW_SEC - 60) },
+    ] } });
+    mountDepegRoute({ coins: [
+      makeCoin("off", "OFF", { activeDepeg: true, currentDeviationBps: 0 }),
+      makeCoin("par", "PAR", { activeDepeg: true }),
+      makeCoin("dup", "DUP", { activeDepeg: true }),
+      makeCoin("blind", "BLIND", { activeDepeg: true }),
+      makeCoin("calm", "CALM"),
+    ] });
+    // Spot zero does not override a current off-peg observation; missing or
+    // ambiguous detail stays unconfirmed; non-incident rows carry no label.
+    expect(screen.getByTestId("depeg-control-board").dataset.evidence)
+      .toBe("off:outside,par:inside,dup:unconfirmed,blind:unconfirmed,calm:none");
+    expect(screen.getByTestId("depeg-hero").dataset.activeIds).toBe("off,par,dup,blind");
+
+    // The page minute clock expires the at-par reading past the 1,200-second limit.
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(screen.getByTestId("depeg-control-board").dataset.evidence)
+      .toBe("off:outside,par:unconfirmed,dup:unconfirmed,blind:unconfirmed,calm:none");
   });
 
   it("preserves observed zero pending and DEWS counts from successful empty sources", () => {
@@ -258,30 +314,106 @@ describe("DepegClient", () => {
     expect(screen.getByTestId("depeg-hero").dataset.alerts).toBe("2");
   });
 
-  it("raises the DEWS staleness caveat only once the signal passes the stale window", () => {
-    vi.useFakeTimers({ now: NOW_SEC * 1000 });
-    mountDepegRoute({
-      // Exactly one hour old: the threshold is exclusive, so no caveat yet.
-      signals: { signals: { "coin-a": { band: "CALM" } }, oldestComputedAt: NOW_SEC - 60 * 60 },
+  describe("DEWS hero and shared notice", () => {
+    const SIX_HOURS_MS = 21_600_000;
+    const transport = (updatedAt: number): ApiMeta => ({ updatedAt, ageSeconds: 0, status: "fresh" });
+    const usable = { "coin-a": { band: "CALM" } };
+
+    it("ages the oldest signal generation against the shared six-hour band, not a private hour", () => {
+      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+      // The newest generation is current; only the oldest retained signal ages.
+      const { dews } = mountDepegRoute({
+        signals: { signals: usable, oldestComputedAt: NOW_SEC - 2 * 3600, updatedAt: NOW_SEC, meta: transport(NOW_SEC) },
+      });
+      const banner = renderCapturedNotices(["stressSignals"]);
+      act(() => vi.advanceTimersByTime(0));
+      expect(banner()).toBeNull();
+      expect(screen.queryByText(/oldest DEWS signal|Coverage caveats/)).toBeNull();
+      act(() => vi.advanceTimersByTime(SIX_HOURS_MS - 2 * 3_600_000));
+      expect(banner()).toBeNull();
+      act(() => vi.advanceTimersByTime(1));
+      expect(banner()?.getAttribute("data-health-state")).toBe("stale");
+      expect(dews.refetch).not.toHaveBeenCalled();
     });
 
-    expect(screen.queryByText(/oldest DEWS signal/)).toBeNull();
-
-    act(() => {
-      vi.advanceTimersByTime(60_000);
+    it("keeps the transported verdict, budgets and age offset while selecting the oldest clock", () => {
+      const meta: ApiMeta = {
+        updatedAt: NOW_SEC, ageSeconds: 60, status: "degraded", warning: "199 - \"partial\"",
+        freshBudgetSec: 1800, degradedBudgetSec: 21_600,
+      };
+      mountDepegRoute({ signals: { signals: usable, oldestComputedAt: NOW_SEC - 600, meta } });
+      const query = (mocks.QueryFreshnessNotices.mock.calls.at(-1)![0] as { queries: StaleQuery[] }).queries
+        .find((entry) => entry.preset === "stressSignals")!;
+      expect(query.meta).toEqual({ ...meta, updatedAt: NOW_SEC - 600, ageSeconds: 660 });
+      expect(query.dataUpdatedAt).toBe((NOW_SEC - 600) * 1000);
     });
 
-    expect(screen.getByText(/oldest DEWS signal/)).toBeTruthy();
-    expect(screen.getByText(/Coverage caveats/)).toBeTruthy();
+    it("retains usable signals through a refresh error and malformed rows without a hero caveat", () => {
+      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+      mountDepegRoute({
+        signals: {
+          signals: usable, oldestComputedAt: NOW_SEC - 3 * 3600, malformedRows: 1,
+          meta: transport(NOW_SEC), error: new Error("HTTP 503"),
+        },
+      });
+      const banner = renderCapturedNotices(["stressSignals"]);
+      act(() => vi.advanceTimersByTime(0));
+      expect(banner()).toBeNull();
+      expect(screen.queryByText(/malformed DEWS|Coverage caveats/)).toBeNull();
+      expect(screen.getByTestId("depeg-hero").dataset.footer).toBe("none");
+      expect(screen.getByTestId("depeg-hero").dataset.alerts).toBe("0");
+    });
+
+    it("keeps an explicit-null transport clock unknown even when the body names an oldest signal", () => {
+      mountDepegRoute({
+        signals: {
+          signals: usable, oldestComputedAt: NOW_SEC,
+          meta: { updatedAt: null, ageSeconds: null, status: "unknown", reason: "DEWS current rows unavailable" },
+          dataUpdatedAt: NOW_SEC * 1000,
+        },
+      });
+      const banner = renderCapturedNotices(["stressSignals"]);
+      expect(banner()?.getAttribute("data-health-state")).toBe("unavailable");
+    });
+
+    it("falls back to the body producer clock for legacy bodies, never receipt time", () => {
+      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+      mountDepegRoute({
+        signals: { signals: usable, updatedAt: NOW_SEC - SIX_HOURS_MS / 1000, dataUpdatedAt: NOW_SEC * 1000 },
+      });
+      const banner = renderCapturedNotices(["stressSignals"]);
+      act(() => vi.advanceTimersByTime(0));
+      expect(banner()).toBeNull();
+      act(() => vi.advanceTimersByTime(1));
+      expect(banner()?.getAttribute("data-health-state")).toBe("stale");
+    });
   });
 
-  it("reports malformed DEWS rows as a caveat with singular and plural wording", () => {
-    mountDepegRoute({ signals: { malformedRows: 1 } });
-    expect(screen.getByText(/1 malformed DEWS row/)).toBeTruthy();
-
-    cleanup();
-    mountDepegRoute({ signals: { malformedRows: 3 } });
-    expect(screen.getByText(/3 malformed DEWS rows/)).toBeTruthy();
+  it("routes retained DDR and DDRR ages through the shared public stale band", () => {
+    vi.useFakeTimers({ now: NOW_SEC * 1000 + 901_000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const surfaces = makeResolverSurfaces();
+    const meta = { updatedAt: NOW_SEC, ageSeconds: 0, status: "fresh" as const };
+    surfaces.resolver.data!._meta = { ...surfaces.resolver.data!._meta, degraded: true, degradedReason: "stale-cache" };
+    mocks.usePegSummary.mockReturnValue(makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] }));
+    mocks.useStressSignals.mockReturnValue(makeStressSignalsResult());
+    mocks.useInfiniteDepegEvents.mockReturnValue(makeEventsResult());
+    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
+    mocks.useDepegResolverSurfaces.mockReturnValue({
+      ...surfaces,
+      resolver: { ...surfaces.resolver, dataUpdatedAt: NOW_SEC * 1000, meta },
+      resolverReview: { ...surfaces.resolverReview, dataUpdatedAt: NOW_SEC * 1000, meta, error: new Error("HTTP 503") },
+    });
+    render(<DepegClient />);
+    const banner = renderCapturedNotices(["depegResolver", "depegResolverReview"]);
+    act(() => vi.advanceTimersByTime(0));
+    expect(banner()).toBeNull();
+    // Exactly 12 x 900 s is still inside the degraded band.
+    act(() => vi.advanceTimersByTime(10_800_000 - 901_000));
+    expect(banner()).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(banner()?.getAttribute("data-health-state")).toBe("stale");
+    expect(surfaces.resolver.refetch).not.toHaveBeenCalled();
+    expect(surfaces.resolverReview.refetch).not.toHaveBeenCalled();
   });
 
   it("excludes disabled DDR surfaces from rendering, freshness, and retry", async () => {

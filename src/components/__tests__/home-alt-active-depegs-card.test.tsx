@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 
-import { render, screen, within } from "@testing-library/react";
+import { act, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ActiveDepegsCard } from "@/components/home-alt-mini-cards/active-depegs-card";
 import type { DepegEvent } from "@shared/types";
@@ -42,6 +42,7 @@ vi.mock("next/image", () => ({
 }));
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.clearAllMocks();
 });
 
@@ -128,7 +129,7 @@ describe("ActiveDepegsCard", () => {
 
     expect(screen.getByText("19")).toBeTruthy();
     expect(screen.queryByText("4")).toBeNull();
-    expect(screen.getByText("confirmed depegs right now")).toBeTruthy();
+    expect(screen.getByText("coins with open confirmed incidents")).toBeTruthy();
     const list = screen.getByRole("list", { name: "Top 3 of 19 active depegs by deviation" });
     expect(within(list).getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByText("C19")).toBeTruthy();
@@ -148,7 +149,8 @@ describe("ActiveDepegsCard", () => {
 
     expect(screen.getByText("1")).toBeTruthy();
     expect(screen.getByText("Observation unavailable")).toBeTruthy();
-    expect(screen.queryByText("No active incidents")).toBeNull();
+    expect(screen.getByText("coin with an open confirmed incident")).toBeTruthy();
+    expect(screen.queryByText("No open confirmed incidents")).toBeNull();
   });
 
   it("counts the complete summary beyond the first 100 event details", () => {
@@ -162,6 +164,40 @@ describe("ActiveDepegsCard", () => {
     expect(within(list).getAllByRole("listitem")).toHaveLength(3);
     expect(screen.getByText("C120")).toBeTruthy();
     expect(within(list).getAllByText("Age unavailable")).toHaveLength(3);
+  });
+
+  it("says no open confirmed incidents at zero, not that every peg holds", () => {
+    useActiveDepegEventsMock.mockReturnValue({ data: { events: [] }, isLoading: false });
+    usePegSummaryMock.mockReturnValue({ data: { coins: [{ id: "usdc-circle", symbol: "USDC", activeDepeg: false, currentDeviationBps: 0 }] }, isLoading: false });
+    render(<ActiveDepegsCard />);
+    expect(screen.getByText("No open confirmed incidents")).toBeTruthy();
+  });
+
+  it("names each row's recovery evidence on the viewer's minute clock, not query receipt time", () => {
+    vi.useFakeTimers();
+    const now = 1_700_003_600;
+    vi.setSystemTime(now * 1000);
+    const atPar = {
+      intervals: [], atParIntervals: [[now - 1_200, now - 1_200]] as Array<[number, number]>,
+      lastObservationKind: "trusted-at-par" as const, lastTrustedObservationAt: now - 1_200, gapStartedAt: now - 1_200,
+    };
+    useActiveDepegEventsMock.mockReturnValue({ data: { events: [{ ...makeEvent(), priceCoverage: atPar }] }, isLoading: false });
+    usePegSummaryMock.mockReturnValue({
+      data: { coins: [{ id: "usdc-circle", symbol: "USDC", activeDepeg: true, currentDeviationBps: -3 }] },
+      dataUpdatedAt: 1,
+      isLoading: false,
+    });
+    render(<ActiveDepegsCard />);
+    // Before the mounted clock ticks nothing is claimed.
+    expect(screen.getByText(", Recovery unconfirmed")).toBeTruthy();
+    expect(screen.getByText("Age unavailable")).toBeTruthy();
+    act(() => { vi.advanceTimersByTime(0); });
+    expect(screen.getByText(", Inside recovery band, awaiting confirmation")).toBeTruthy();
+    expect(screen.getByRole("link", { name: /USDC/ }).getAttribute("title")).toBe("Inside recovery band, awaiting confirmation");
+    expect(screen.getByText("1h")).toBeTruthy();
+    // Past the continuous-observation limit the at-par reading expires.
+    act(() => { vi.advanceTimersByTime(60_000); });
+    expect(screen.getByText(", Recovery unconfirmed")).toBeTruthy();
   });
 
   it("keeps the incident count when event detail retrieval fails", () => {

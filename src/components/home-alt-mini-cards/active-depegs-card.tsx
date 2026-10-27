@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { UniverseChip } from "@/components/universe-chip";
@@ -14,10 +14,10 @@ import { getLogoSrc, logosById } from "@/lib/logos";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { ACTIVE_STABLECOIN_ID_SET } from "@/lib/stablecoin-static-data";
-import { selectActiveDepegCoins } from "@shared/lib/active-depegs";
+import { classifyOpenIncidentEvidence, selectActiveDepegCoins } from "@shared/lib/active-depegs";
 import { resolveQueryViewState } from "@/lib/query-view-state";
 import type { PegSummaryCoin } from "@shared/types";
-import { DEPEG_DIRECTION_CLASSES, DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { DEPEG_DIRECTION_CLASSES, DIRECTION_TONE_CLASSES, OPEN_INCIDENT_EVIDENCE_LABELS, type OpenIncidentEvidence } from "@shared/lib/classification";
 import { cn } from "@/lib/utils";
 
 // Rows under the headline; the headline count is never this cap (R7).
@@ -28,6 +28,25 @@ interface ActiveRow {
   symbol: string;
   bps: number | null;
   ageSec: number | null;
+  evidence: OpenIncidentEvidence;
+}
+
+/**
+ * Hydration-safe minute clock: zero (no evidence, no age) until mounted, then
+ * the viewer's clock — never query receipt time, which freezes between polls.
+ */
+function useMinuteClockSec(): number {
+  const [nowSec, setNowSec] = useState(0);
+  useEffect(() => {
+    const tick = () => setNowSec(Math.floor(Date.now() / 1000));
+    const timer = setTimeout(tick, 0);
+    const interval = setInterval(tick, 60_000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
+  }, []);
+  return nowSec;
 }
 
 
@@ -38,6 +57,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
   const { data: pegSummaryData, isLoading: isPegSummaryLoading } = pegSummaryQuery;
   const logos = logosById;
   const logoMap = logos ?? {};
+  const nowSec = useMinuteClockSec();
 
   const activeCoins = useMemo(
     () => selectActiveDepegCoins(pegSummaryData?.coins ?? [], ACTIVE_STABLECOIN_ID_SET),
@@ -46,7 +66,6 @@ export function ActiveDepegsCard(): React.JSX.Element {
   // The complete summary owns the incident census; the event page supplies detail only.
   const activeRows = useMemo<ActiveRow[]>(() => {
     const eventsById = new Map((data?.events ?? []).map((event) => [event.stablecoinId, event]));
-    const nowSec = Math.floor(pegSummaryQuery.dataUpdatedAt / 1000);
     return activeCoins.map((coin: PegSummaryCoin) => {
       const event = eventsById.get(coin.id);
       return {
@@ -54,10 +73,11 @@ export function ActiveDepegsCard(): React.JSX.Element {
         symbol: coin.symbol ?? event?.symbol ?? coin.id,
         bps: coin.currentDeviationBps,
         ageSec: event && nowSec > 0 ? Math.max(0, nowSec - event.startedAt) : null,
+        evidence: classifyOpenIncidentEvidence(data?.events, coin.id, nowSec),
       };
     }).sort((a, b) =>
       (b.bps == null ? -1 : Math.abs(b.bps)) - (a.bps == null ? -1 : Math.abs(a.bps)));
-  }, [activeCoins, data?.events, pegSummaryQuery.dataUpdatedAt]);
+  }, [activeCoins, data?.events, nowSec]);
 
   // Same figure and denominator as the /depeg/ hero: the peg summary's confirmed
   // (non-NAV) active-depeg count over the peg catalog it was read from.
@@ -87,7 +107,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
       emptyContent={
         <div className="flex flex-1 items-center justify-center">
           <span className={cn("pharos-label text-sm", DIRECTION_TONE_CLASSES.up)}>
-            No active incidents
+            No open confirmed incidents
           </span>
         </div>
       }
@@ -99,7 +119,7 @@ export function ActiveDepegsCard(): React.JSX.Element {
         </RailHeroFigureTransition>
         {activeCount !== null ? (
           <span className="text-xs text-muted-foreground">
-            {`confirmed ${activeCount === 1 ? "depeg" : "depegs"} right now`}
+            {activeCount === 1 ? "coin with an open confirmed incident" : "coins with open confirmed incidents"}
           </span>
         ) : null}
         <UniverseChip
@@ -145,11 +165,13 @@ function DepegRow({
       <Link
         prefetch={false}
         href={buildStablecoinUrl(row.id)}
+        title={OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence]}
         className={`pharos-focus-ring -mx-1 grid grid-cols-[1.25rem_minmax(0,1fr)_auto] items-center gap-x-2 rounded-sm px-1 py-1 pharos-numeric transition-colors hover:bg-muted/50 ${isLead ? "bg-muted/55" : ""}`}
       >
         <CoinCell logoSrc={logoSrc} />
         <span className="flex min-w-0 items-baseline gap-1.5">
           <span className="truncate uppercase tracking-tight text-foreground">{row.symbol}</span>
+          <span className="sr-only">{`, ${OPEN_INCIDENT_EVIDENCE_LABELS[row.evidence]}`}</span>
           <span aria-hidden="true" className="text-muted-foreground/40">
             ·
           </span>

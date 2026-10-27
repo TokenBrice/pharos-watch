@@ -33,6 +33,19 @@ export const DEPEG_DIRECTION_CLASSES = {
   above: { pill: "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400", text: "text-amber-700 dark:text-amber-400" },
 } as const satisfies Record<DepegDirection, { pill: string; text: string }>;
 
+/**
+ * What the latest trusted observation says about an open confirmed incident.
+ * An open lifecycle record is not proof the coin is off peg now, and an at-par
+ * reading is not recovery until detection confirms it.
+ */
+export type OpenIncidentEvidence = "outside" | "inside" | "unconfirmed";
+
+export const OPEN_INCIDENT_EVIDENCE_LABELS = {
+  outside: "Observed outside recovery band",
+  inside: "Inside recovery band, awaiting confirmation",
+  unconfirmed: "Recovery unconfirmed",
+} as const satisfies Record<OpenIncidentEvidence, string>;
+
 /** The pulsing "live" dot behind an active depeg. */
 export const DEPEG_LIVE_PING_CLASS = "bg-red-400";
 

@@ -1,7 +1,7 @@
 import { deriveTicker, utcDayKey } from "@/lib/tape-derive";
 import { eventClassSlug } from "@/lib/tape-collapse";
 import { DAY_MS } from "@/lib/constants";
-import { formatRelativeTimeMs } from "@shared/lib/relative-time";
+import { formatRelativeDurationSeconds, formatRelativeTimeMs } from "@shared/lib/relative-time";
 import type { DigestedDay } from "@/lib/tape-digest";
 import { formatUtcDayLabel } from "@shared/lib/format";
 import type { DepegEvent } from "@shared/types";
@@ -44,4 +44,11 @@ export function openIncidentPrefix(event: DepegEvent, nowMs: number): string {
   const duration = formatRelativeTimeMs(event.startedAt * 1000, { now: nowMs });
   const sign = event.direction === "below" ? "−" : "+";
   return `OPEN ${duration} · peak ${sign}${Math.abs(event.peakDeviationBps)}bps`;
+}
+
+/** Duration is frozen at the producer observation, never extended by browser time. */
+export function retainedIncidentPrefix(event: DepegEvent, observedAtMs: number): string {
+  const duration = formatRelativeDurationSeconds(observedAtMs / 1000 - event.startedAt);
+  const observedAt = new Date(observedAtMs).toISOString().replace("T", " ").slice(0, 16);
+  return `Observed open for ${duration} as of ${observedAt} UTC`;
 }

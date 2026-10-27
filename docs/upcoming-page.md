@@ -30,7 +30,7 @@ Share is timeless by decision ([OG images](./og-images.md)): the header `ShareBu
 
 ## SEO And Crawlability
 
-Keep public indexability, canonical `/upcoming/`, route OG and sitemap membership. The static shell emits CollectionPage/ItemList JSON-LD, and the visible per-currency groups plus the launched section link every pre-launch `/stablecoin/[id]/` profile, even when table rows need hydration. Pre-launch profile `lastmod` is the coin file's commit date (milestones are committed there), so a new milestone moves it; a future-dated milestone never becomes a future `lastmod`. Each row links through `buildStablecoinUrl`, never a separate invented upcoming profile URL.
+Keep public indexability, canonical `/upcoming/`, route OG and sitemap membership. The static shell emits CollectionPage/ItemList JSON-LD, and the visible per-currency groups plus the launched section link every pre-launch `/stablecoin/[id]/` profile, even when table rows need hydration. Pre-launch profile `lastmod` is the coin file's commit date (milestones are committed there), so a new milestone moves it; a future-dated milestone never becomes a future `lastmod`. Each row links through `buildStablecoinUrl`, never a separate invented upcoming profile URL. Individual profile links on this page disable Next route prefetch so unvisited profiles do not download their Tweet media.
 
 ## Update Rules
 
