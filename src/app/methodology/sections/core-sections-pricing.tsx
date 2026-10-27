@@ -195,7 +195,7 @@ export function PricingPipelineMethodologySection({
                 ["RedStone", "1", "Oracle", "Per-venue breakdown; requires at least 2 venues and 60% agreement"],
                 ["Curve on-chain", "3", "On-chain", <>StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</>],
                 ["Curve oracle", "3", "On-chain", <>Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></>],
-                ["DEX pools", "1", "On-chain", "Aggregate DEX voice, withheld only when an overlapping protocol-level DEX bridge lane is admitted; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative"],
+                ["DEX pools", "1", "On-chain", "Aggregate DEX voice, withheld once an overlapping protocol DEX candidate passes registry, freshness, price and TVL checks, even if corroboration later fails; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative"],
                 ["Protocol DEX APIs", "2-3", "On-chain / pool-state API", "Primary-consensus protocol promotion currently supports Fluid, Balancer, Curve, Uniswap V3, Uniswap V4, Raydium, Orca, Meteora, PancakeSwap, Aerodrome Slipstream, Velodrome Slipstream, and Aero when the protocol lane survives registry, TVL, freshness, and corroboration gates."],
                 ["GeckoTerminal", "1", "On-chain", <>Pool-level cross-check for weak CG / DL-list soft-source outcomes (&ge;$10K TVL)</>],
                 ...PRICING_SOURCE_REGISTRY

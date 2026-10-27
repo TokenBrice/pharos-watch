@@ -20,7 +20,7 @@ const REGISTRY_PATH = "shared/data/safety-score-v9/shock-coverage-measurements-v
 const POLICY_PATH = "shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 const TARGETS_PATH = "shared/data/safety-score-v9/shock-coverage-targets.json";
 
-// The refresh runs every 48h. Require the newest measurement to be comfortably
+// The refresh runs daily (24h nominal spacing). Require the newest measurement to be comfortably
 // inside the policy bound so a single failed run still leaves usable slack.
 const MAX_AGE_FRACTION = 0.5;
 

@@ -78,7 +78,7 @@ function snapshotPolicy(chain: string): CachePolicy<SnapshotPayload> {
  * answered. An exact batch that answered a pool as absent or invalid is current
  * evidence and is never overridden by an older listing. Returns the number added.
  */
-export function mergeUniswapV4CandidateSnapshot(
+function mergeUniswapV4CandidateSnapshot(
   into: Map<string, UniswapV4ExecutionCandidate[]>,
   snapshot: readonly UniswapV4ExecutionCandidate[],
   answeredPoolIds: ReadonlySet<string> = new Set(),

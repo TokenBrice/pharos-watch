@@ -29,7 +29,7 @@ const LenderCollateralClassSchema = z.enum([
 ]);
 export type LenderCollateralClass = z.output<typeof LenderCollateralClassSchema>;
 
-export const LenderCollateralClassReviewSchema = z.strictObject({
+const LenderCollateralClassReviewSchema = z.strictObject({
   chain: CanonicalChainIdSchema, address: Address, class: LenderCollateralClassSchema,
   reviewedAt: StrictIsoDateSchema, reviewer: Text,
   sources: z.array(z.strictObject({ label: Text, url: z.string().url() })).min(1),

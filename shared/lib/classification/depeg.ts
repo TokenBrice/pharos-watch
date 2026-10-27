@@ -67,7 +67,7 @@ export const DDR_VERDICT_CLASSES = {
 export type DdrTierVocabulary = "legacy" | "evidence_class";
 
 /** First methodology major whose forecasts read their tier as an evidence class. */
-export const DDR_EVIDENCE_CLASS_MIN_MAJOR = 5;
+const DDR_EVIDENCE_CLASS_MIN_MAJOR = 5;
 
 export function getDdrTierVocabulary(methodologyVersion: string | null | undefined): DdrTierVocabulary {
   const major = Number(/^v?(\d+)/.exec(methodologyVersion ?? "")?.[1]);

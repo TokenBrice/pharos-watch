@@ -22,6 +22,52 @@ describe("CI workflow scope", () => {
     ]));
   });
 
+  it("feeds nightly Lighthouse trusted retained release data with a token confined to acquisition", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
+      jobs: Record<string, {
+        if?: string;
+        permissions?: Record<string, string>;
+        env?: Record<string, string>;
+        steps: Array<{ name?: string; run?: string; env?: Record<string, string> }>;
+      }>;
+    };
+    const job = workflow.jobs.lighthouse;
+    expect(job.if).toContain("refs/heads/main");
+    expect(job.permissions).toEqual({ contents: "read", actions: "read" });
+    expect(job.env?.GH_TOKEN).toBeUndefined();
+    const acquire = job.steps.findIndex((step) => step.run?.includes("preparePagesReleaseData"));
+    const build = job.steps.findIndex((step) => step.run === "npm run check:pages-artifact");
+    expect(acquire).toBeGreaterThan(-1);
+    expect(build).toBeGreaterThan(acquire);
+    expect(job.steps[acquire].env?.GH_TOKEN).toBe("${{ github.token }}");
+    const directory = job.steps[acquire].env?.PAGES_RELEASE_DATA_DIR;
+    expect(directory).toContain("runner.temp");
+    expect(job.steps[build].env?.PAGES_RELEASE_DATA_DIR).toBe(directory);
+    for (const [index, step] of job.steps.entries()) {
+      if (index !== acquire) expect(step.env?.GH_TOKEN).toBeUndefined();
+      expect(step.run ?? "").not.toContain("acquireReleaseData:false");
+    }
+  });
+
+  it("bootstraps full history before the blocking weekly critical coverage", () => {
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as {
+      jobs: Record<string, {
+        env?: Record<string, string>;
+        steps: Array<{ uses?: string; run?: string; with?: Record<string, unknown> }>;
+      }>;
+    };
+    const coverage = Object.values(weekly.jobs).find((job) =>
+      job.steps.some((step) => step.run === "npm run coverage:critical"))!;
+    expect(coverage.env?.CRITICAL_COVERAGE_RATCHET_ALL).toBe("1");
+    const checkout = coverage.steps.find((step) => step.uses?.startsWith("actions/checkout@"));
+    expect(checkout?.with?.["fetch-depth"]).toBe(0);
+    const setup = coverage.steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace");
+    const run = coverage.steps.findIndex((step) => step.run === "npm run coverage:critical");
+    expect(setup).toBeGreaterThan(-1);
+    expect(run).toBeGreaterThan(setup);
+    expect(coverage.steps[setup].with?.["bootstrap-history"]).toBe("true");
+  });
+
   it("installs each nightly Node 24 lane independently", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {

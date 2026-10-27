@@ -181,10 +181,14 @@ describe("authority proof does not acquire a seasoning cliff", () => {
   });
   it.each(["continuous", "none", "unknown", "internal-ledger"] as const)(
     "preserves identical %s authority facts across the former 60-month boundary", (reconciliation) => {
-      const evaluate = (trackRecordMonths: number) => evaluateV9EconomicControl(makeEconomicControlArgs({
-        facts: makeEconomicControlFacts([unbounded]),
-        mint: makeReviewedMintInput(unbounded.controlKey, { reconciliation, supervision: "none" }), trackRecordMonths,
-      }));
+      const evaluate = (trackRecordMonths: number) => evaluateV9EconomicControl({
+        // The former track-record input is no longer part of the contract; it must stay ignored.
+        ...makeEconomicControlArgs({
+          facts: makeEconomicControlFacts([unbounded]),
+          mint: makeReviewedMintInput(unbounded.controlKey, { reconciliation, supervision: "none" }),
+        }),
+        ...{ trackRecordMonths },
+      });
       expect(evaluate(59).score).toBe(evaluate(60).score);
     },
   );

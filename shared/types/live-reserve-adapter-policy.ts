@@ -67,7 +67,7 @@ export const NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC = 70 * DAY_SECONDS;
  *  quarter. 150 days = 146 plus publication grace; monthly publishers on the
  *  same adapter tighten back per coin via `scoring.maxSourceAgeSec`. Decision
  *  2026-10-24. */
-export const LAGGED_QUARTERLY_ATTESTATION_SOURCE_MAX_AGE_SEC = 150 * DAY_SECONDS;
+const LAGGED_QUARTERLY_ATTESTATION_SOURCE_MAX_AGE_SEC = 150 * DAY_SECONDS;
 export const BUSINESS_DAY_NAV_SOURCE_MAX_AGE_SEC = 5 * DAY_SECONDS;
 /** Matrixdock's issuer-transmitted `FallbackReserveFeed` rounds (XAGm silver
  *  and the XAUm sibling feed). `setReserve()` is the only writer, so a round

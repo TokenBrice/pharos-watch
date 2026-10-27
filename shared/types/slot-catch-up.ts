@@ -2,7 +2,7 @@ import { z } from "zod";
 
 export const SLOT_CATCH_UP_MESSAGE_KIND = "slot-catch-up";
 
-export const SlotCatchUpTriggerSchema = z.enum(["never-delivered", "abandoned"]);
+const SlotCatchUpTriggerSchema = z.enum(["never-delivered", "abandoned"]);
 export type SlotCatchUpTrigger = z.output<typeof SlotCatchUpTriggerSchema>;
 
 /** A one-shot wakeup hint; the missed slot's own execution fence stays the authority. */

@@ -170,7 +170,7 @@ export function buildSafetyUpsert(
   });
 }
 
-export function buildDepegUpsert(
+function buildDepegUpsert(
   chatId: string,
   stablecoinId: string,
   enabled: boolean,
@@ -201,7 +201,7 @@ export function buildDepegStepUpsert(
 }
 
 /** Replaces the byte-identical launch/reserve/freeze builders. */
-export function buildPlainAlertUpsert(
+function buildPlainAlertUpsert(
   alertType: PlainAlertType,
   chatId: string,
   stablecoinId: string,
@@ -403,16 +403,6 @@ export async function applySettingToSubscriptions(
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }
 
-export function validateGlobalSetCommand(command: ParsedSetCommand): string | null {
-  if (command.setting === "dews" && command.enabled && command.minBand != null) {
-    return "Global DEWS alerts only support the default ALERT threshold. Use /subscribe dews all or /set all dews off; WARNING/DANGER remain per-coin.";
-  }
-  if (command.setting === "safety" && command.enabled && command.mode != null) {
-    return "Global safety alerts support all/off only. Upgrade-only and downgrade-only remain per-coin settings.";
-  }
-  return null;
-}
-
 export async function setGlobalDepegWorseningStep(
   db: D1Database,
   chatId: string,
@@ -436,34 +426,6 @@ export async function setGlobalDepegWorseningStep(
         WHERE chat_id = ?`,
     )
       .bind(step, now, chatId),
-  ];
-  await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
-}
-
-export async function applyGlobalSetting(
-  db: D1Database,
-  chatId: string,
-  username: string | null,
-  command: ParsedSetCommand,
-  options: TelegramOperationBatchOptions = {},
-): Promise<void> {
-  if (command.setting === "depeg-step") {
-    await setGlobalDepegWorseningStep(db, chatId, username, command.step, options);
-    return;
-  }
-  const override: 0 | 1 = command.enabled ? 1 : 0;
-
-  const nowSec = unixNow();
-  const statements = [
-    ...(command.enabled
-      ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec, feature: "global" })
-      : []),
-    prepareUpsertSubscriberRow(db, {
-      chatId,
-      username,
-      nowSec,
-      globalAlertOverrides: { [command.setting]: override },
-    }),
   ];
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }

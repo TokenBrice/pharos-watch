@@ -1,3 +1,4 @@
+import { readdirSync, readFileSync } from "node:fs";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { resolve } from "node:path";
 import {
@@ -266,6 +267,21 @@ describe("stablecoin catalog source helpers", () => {
     expect(() => syncGeneratedPerCoinAsset({ check: true, rootDir })).not.toThrow();
   });
 
+
+  it("publishes the aggregate atomically with no temporary left and byte-stable check mode", () => {
+    const rootDir = makeTempRoot();
+    writeJson(rootDir, "shared/data/stablecoins/coins/per-coin-usd.json", makeCoin("per-coin-usd"));
+    writeJson(rootDir, "shared/data/stablecoins/coins.generated.json", []);
+
+    syncGeneratedPerCoinAsset({ rootDir });
+    const generated = resolve(rootDir, "shared/data/stablecoins/coins.generated.json");
+    const bytes = readFileSync(generated, "utf8");
+    expect(readdirSync(resolve(rootDir, "shared/data/stablecoins")).filter((name) => name.endsWith(".tmp"))).toEqual([]);
+    expect(syncGeneratedPerCoinAsset({ rootDir }).changed).toBe(false);
+    expect(syncGeneratedPerCoinAsset({ check: true, rootDir }).changed).toBe(false);
+    expect(readFileSync(generated, "utf8")).toBe(bytes);
+    expect(readFileSync(resolve("scripts/lib/stablecoin-catalog-sources.ts"), "utf8")).not.toMatch(/writeFileSync/);
+  });
 
   it("validates the newly generated aggregate before writing it", () => {
     const rootDir = makeTempRoot();

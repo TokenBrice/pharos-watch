@@ -255,7 +255,7 @@ it("ages retained freeze usage without changing its observation generation", () 
   const receipt = Date.now();
   usageResult({
     ...statsFor("USDT", { events: 1, addresses: 1, frozen: 100, destroyed: 0 }), dataUpdatedAt: receipt,
-    meta: { updatedAt: receipt / 1000, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 },
+    meta: { updatedAt: receipt / 1000, ageSeconds: 0, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 },
   });
   const { container } = renderModule();
   expect(container.querySelector("[data-health-state]")).toBeNull();

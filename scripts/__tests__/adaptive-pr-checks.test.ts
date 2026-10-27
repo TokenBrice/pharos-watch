@@ -223,7 +223,7 @@ describe("adaptive PR checks", () => {
     expect(docs.map((command) => createPrStaticLeafCommand(command, []).args)).toEqual([
       ["run", "check:verified-doc-links"],
       ["run", "check:doc-sync"],
-      ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"],
+      ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts", "scripts/__tests__/pharos-change-contract.test.ts"],
     ]);
     expect(guards.filter((command) => command.name === "check:doc-sync")).toHaveLength(1);
     expect(buildPrStaticCheckPlan(files, { group: "compile" }).commands.some((command) => command.manifestCommand)).toBe(false);

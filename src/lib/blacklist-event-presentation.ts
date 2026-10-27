@@ -22,7 +22,7 @@ function getBlacklistNativeFractionDigits(event: BlacklistEvent): 2 | 4 {
   return isGoldBlacklistStablecoin(event.stablecoin) ? 4 : 2;
 }
 
-export function formatBlacklistNativeAmount(event: BlacklistEvent): string {
+function formatBlacklistNativeAmount(event: BlacklistEvent): string {
   const amountNative = event.amountNative;
   if (amountNative == null) return "";
   const fractionDigits = getBlacklistNativeFractionDigits(event);

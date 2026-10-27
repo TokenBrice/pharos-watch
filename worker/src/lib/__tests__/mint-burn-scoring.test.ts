@@ -154,6 +154,20 @@ describe("computeGaugeScore", () => {
   it("returns null for eligible intensities with zero total market cap", () => {
     expect(computeGaugeScore([{ intensity: 40, mcap: 0 }])).toBeNull();
   });
+
+  it("is unavailable for empty or all-null inputs but observes a zero gauge for a positive weight", () => {
+    expect(computeGaugeScore([])).toBeNull();
+    expect(computeGaugeScore([{ intensity: null, mcap: 1e9 }])).toBeNull();
+    expect(computeGaugeScore([{ intensity: 0, mcap: 1e9 }])).toBe(0);
+  });
+
+  it("counts only valid intensities that carry a positive admitted weight", () => {
+    expect(computeGaugeScore([
+      { intensity: 80, mcap: 0 },
+      { intensity: 20, mcap: 1e9 },
+      { intensity: null, mcap: 5e9 },
+    ])).toBe(20);
+  });
 });
 
 describe("isGaugeBandRobustToWithheldWeight", () => {

@@ -73,6 +73,9 @@ export function compareLiveCacheControl(header, profile, browserFloorSeconds) {
   return { source, expected: [...expected].map(([key, value]) => value === true ? key : `${key}=${value}`).join(", "), issues };
 }
 
+/**
+ * @param {{ manifest?: ReturnType<typeof loadCloudflareAccountStateManifest>, fetchImpl?: (url: string, init?: RequestInit) => Promise<Response>, consoleImpl?: { log: (...args: unknown[]) => void } }} [options]
+ */
 export async function runLiveApiCachePolicyCheck({
   manifest = loadCloudflareAccountStateManifest(), fetchImpl = fetch, consoleImpl = console,
 } = {}) {

@@ -451,6 +451,10 @@ describe("Safety Score V9 publication runner", () => {
         throw new evaluateSet.V9AssetEvaluationError("brz-transfero", { issues: [{ path: ["structuralSignals"] }] });
       });
     const input = createSafetyScoreV9FullRegistryInput();
+    // This logic test does not exercise the wall-clock publication window, so
+    // isolate the clock and timeout signal from full-registry recompilation time.
+    const clock = vi.spyOn(Date, "now").mockReturnValue(Date.now());
+    const timeout = vi.spyOn(AbortSignal, "timeout").mockImplementation(() => new AbortController().signal);
     try {
       const result = await runSafetyScoreV9Publication({
         db: {} as D1Database, fixedInput: input, nowSec: input.clockSec,
@@ -462,7 +466,8 @@ describe("Safety Score V9 publication runner", () => {
           },
         }),
       });
-      expect(result.status).toBe("published");
+      // Print the complete result (including abortCause) when the status differs.
+      expect(result, JSON.stringify(result)).toMatchObject({ status: "published" });
       expect(evaluate).toHaveBeenCalledTimes(2);
       const pipeline = mocks.build.mock.results[0]!.value;
       expect(pipeline.quarantines).toEqual(expect.arrayContaining([
@@ -476,6 +481,8 @@ describe("Safety Score V9 publication runner", () => {
       expect(mocks.persist).toHaveBeenCalledTimes(1);
     } finally {
       evaluate.mockRestore();
+      clock.mockRestore();
+      timeout.mockRestore();
     }
   }, 120_000);
 

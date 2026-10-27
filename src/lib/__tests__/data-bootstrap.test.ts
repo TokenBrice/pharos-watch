@@ -417,7 +417,7 @@ describe("document data bootstrap", () => {
     const previous = { data: projectStablecoinLiveSummary(detail), meta };
     const overlays = [
       { ...detail, currentCirculatingUSD: { peggedUSD: 120 }, currentSupplyObservedAt: supplyAt + 100 },
-      { ...detail, currentSupplyUnavailableReason: "canonical-supply-quarantined" },
+      { ...detail, currentSupplyUnavailableReason: "supply-chain-dropout" as const },
       { ...detail, price: 0.97, priceSource: "defillama", priceUpdatedAt: supplyAt + 100 },
     ];
     for (const overlay of overlays) {

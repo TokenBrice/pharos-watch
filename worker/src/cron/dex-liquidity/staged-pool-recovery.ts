@@ -15,7 +15,7 @@ import { buildChainAddressKey } from "./token-resolution";
 const STAGED_POOL_RECOVERY_MAX_POOLS = 12;
 const STAGED_POOL_RECOVERY_MAX_AGE_SEC = 4 * 60 * 60;
 
-export const ERC20_RECOVERY_ABI = parseAbi([
+const ERC20_RECOVERY_ABI = parseAbi([
   "function decimals() view returns (uint8)",
   "function balanceOf(address account) view returns (uint256)",
 ]);
@@ -102,7 +102,7 @@ export function mapStagedMulticallResults(
   return new Map(results.map((result) => [result.label, result]));
 }
 
-export function erc20RecoveryCalls(
+function erc20RecoveryCalls(
   prefix: string,
   poolAddress: string,
   tokens: Iterable<string>,

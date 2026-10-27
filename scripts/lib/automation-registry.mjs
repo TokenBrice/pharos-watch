@@ -160,6 +160,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/types/**",
       "shared/contracts/**",
       "scripts/lib/stablecoin-catalog-sources.ts",
+      "scripts/lib/atomic-artifact-write.mts",
     ],
   }),
   generatedArtifact({
@@ -386,6 +387,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
       "shared/lib/classification/resolve-mechanism-archetype.ts",
       "shared/types/stablecoin-client-meta.ts",
       "scripts/lib/ts-ast.mts",
+      "scripts/lib/atomic-artifact-write.mts",
     ],
   }),
   generatedArtifact({

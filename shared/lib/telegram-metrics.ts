@@ -35,11 +35,3 @@ export const TELEGRAM_METRIC_SEMANTICS = {
       "Every chat with a subscriber row, including paused, muted, or empty chats, until inactivity cleanup removes them.",
   },
 } as const satisfies Record<string, TelegramMetricSemantic>;
-
-/**
- * Singular/plural noun selection for count phrases ("1 preset", "3 presets").
- * Returns the noun only; callers format the number themselves.
- */
-export function pluralizeCount(count: number, singular: string, plural = `${singular}s`): string {
-  return count === 1 ? singular : plural;
-}

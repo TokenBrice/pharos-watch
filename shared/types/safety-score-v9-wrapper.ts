@@ -1,7 +1,6 @@
 import { z } from "zod";
 import {
   canonicalTextArray,
-  V9WrapperRiskAssessmentSchema,
   V9FactStatusV2Schema,
 } from "./safety-score-v9-fact-primitives";
 import { issue } from "./safety-schema-primitives";
@@ -18,12 +17,6 @@ export const V9WrapperFactDispositionSchema = z.enum([
   "method-unsupported",
   "unresearched", "public-data-uncurated",
 ]);
-export type V9WrapperFactDisposition = z.infer<typeof V9WrapperFactDispositionSchema>;
-
-export { V9WrapperRiskAssessmentSchema };
-export type V9WrapperRiskAssessment =
-  z.infer<typeof V9WrapperRiskAssessmentSchema>;
-
 
 
 export const V9_WRAPPER_LOCAL_FACT_KEYS = [
@@ -38,8 +31,6 @@ export const V9_WRAPPER_LOCAL_FACT_KEYS = [
   "lossAbsorptionEmergencyControls",
 ] as const;
 export const V9WrapperLocalFactKeySchema = z.enum(V9_WRAPPER_LOCAL_FACT_KEYS);
-export type V9WrapperLocalFactKey = z.infer<typeof V9WrapperLocalFactKeySchema>;
-
 
 
 const V9NotWrapperLocalFactsSchema = z

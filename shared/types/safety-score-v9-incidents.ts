@@ -90,7 +90,7 @@ const V9IntegrationIncidentScopeSchema = z.object({
   integrationKey: CanonicalKeySchema,
 }).strict();
 
-export const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
+const V9IncidentScopeSchema = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("root-claim") }).strict(),
   z.object({ kind: z.literal("control"), controlKey: CanonicalKeySchema }).strict(),
   z
@@ -289,9 +289,6 @@ export const V9ReviewedIncidentSchema = z
   });
 export type V9ReviewedIncident = z.infer<typeof V9ReviewedIncidentSchema>;
 export type V9ControlIncident = Extract<V9ReviewedIncident, { domain: "control" }>;
-export type V9WrapperLocalIncident = Extract<V9ReviewedIncident, { domain: "wrapper-local" }>;
-export type V9OperationalIncident = Extract<V9ReviewedIncident, { domain: "operational" }>;
-
 // Incident ids are globally unique registry keys, not asset-scoped aliases.
 export const V9ReviewedIncidentRegistrySchema = z
   .object({

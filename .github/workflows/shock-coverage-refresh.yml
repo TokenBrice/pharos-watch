@@ -7,9 +7,11 @@ name: Shock Coverage Refresh
 # fails closed to legacy LCR, dropping LUSD to `unsafe-backing:high` (~77/B+ ->
 # 59/C) and taking BOLD's and BD's ratings down with it.
 #
-# Refresh cadence is every other day at 03:41 UTC. The 48h gap leaves a roughly
-# 24h manual/rerun remediation window after one scheduled failure; the next
-# automatic attempt at 96h would be too late. A separate daily 09:11 UTC job
+# Refresh cadence is daily at 03:41 UTC. The independent freshness check
+# enforces a 36h budget on the measured BLOCK timestamp, so 24h nominal spacing
+# leaves 12h total block-age/scheduling/merge headroom (not a guaranteed
+# successful-run SLA); a missed daily attempt needs prompt manual remediation.
+# A separate daily 09:11 UTC job
 # checks committed freshness without regenerating data. The freshness clock runs
 # on the measured BLOCK timestamp, not on merge time, so the PR this opens must
 # be merged promptly.
@@ -20,7 +22,7 @@ name: Shock Coverage Refresh
 
 on:
   schedule:
-    - cron: "41 3 */2 * *"
+    - cron: "41 3 * * *"
     # Independently detect stale/missing committed measurements without regeneration.
     - cron: "11 9 * * *"
   workflow_dispatch:
@@ -34,7 +36,7 @@ concurrency:
 
 jobs:
   targets:
-    if: github.event_name != 'schedule' || github.event.schedule == '41 3 */2 * *'
+    if: github.event_name != 'schedule' || github.event.schedule == '41 3 * * *'
     runs-on: ubuntu-latest
     outputs:
       matrix: ${{ steps.targets.outputs.matrix }}

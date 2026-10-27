@@ -239,7 +239,7 @@ type HeroCoinOverrides = Omit<Partial<StablecoinMeta>, "flags"> & {
 
 type HeroBuilderOverrides = Partial<Omit<HeroBuilderParams, "coin" | "coinData">> & {
   coin?: HeroCoinOverrides;
-  coinData?: Partial<StablecoinData>;
+  coinData?: Partial<StablecoinData> & Partial<HeroBuilderParams["coinData"]>;
 };
 
 function makeHeroProps(overrides: HeroBuilderOverrides = {}): HeroBuilderParams {

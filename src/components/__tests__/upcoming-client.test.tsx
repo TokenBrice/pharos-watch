@@ -3,6 +3,9 @@
 import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeStablecoinMeta } from "@shared/test-utils/stablecoin";
+import type { StablecoinMeta } from "@shared/types";
+import type { UpcomingLaunchPhase } from "@shared/types/core";
+import type { UpcomingCoin } from "../upcoming-client";
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -14,9 +17,14 @@ vi.mock("next/image", () => ({
 }));
 
 const { UpcomingClient } = await import("../upcoming-client");
+
+// Upcoming rows never carry the `launched` phase; the shared factory accepts any LaunchPhase.
+function makeUpcomingCoin({ launchPhase, ...overrides }: Omit<Partial<StablecoinMeta>, "launchPhase"> & { launchPhase?: UpcomingLaunchPhase }): UpcomingCoin {
+  return { ...makeStablecoinMeta(overrides), launchPhase };
+}
 const PRE_LAUNCH_STABLECOINS = [
-  makeStablecoinMeta({ id: "fixture-announced", name: "Announced Coin", status: "pre-launch", launchPhase: "announced" }),
-  makeStablecoinMeta({ id: "fixture-beta", name: "Beta Coin", status: "pre-launch", launchPhase: "beta" }),
+  makeUpcomingCoin({ id: "fixture-announced", name: "Announced Coin", status: "pre-launch", launchPhase: "announced" }),
+  makeUpcomingCoin({ id: "fixture-beta", name: "Beta Coin", status: "pre-launch", launchPhase: "beta" }),
 ];
 
 function table() {
@@ -52,7 +60,7 @@ describe("UpcomingClient", () => {
         coins={[
           { ...PRE_LAUNCH_STABLECOINS[0], expectedLaunchDate: "2026-Q2" },
           { ...PRE_LAUNCH_STABLECOINS[1], expectedLaunchDate: "2026-Q4", dateHistory: [{ date: "2026-Q3", setOn: "2026-01-01" }] },
-          makeStablecoinMeta({ id: "fixture-unphased", name: "Unphased Coin", status: "pre-launch" }),
+          makeUpcomingCoin({ id: "fixture-unphased", name: "Unphased Coin", status: "pre-launch" }),
         ]}
         logos={{}}
         teasers={{}}
@@ -86,7 +94,7 @@ describe("UpcomingClient", () => {
     window.history.replaceState(null, "", "/upcoming/");
     render(
       <UpcomingClient
-        coins={[...PRE_LAUNCH_STABLECOINS, makeStablecoinMeta({ id: "fixture-unphased", name: "Unphased Coin", status: "pre-launch" })]}
+        coins={[...PRE_LAUNCH_STABLECOINS, makeUpcomingCoin({ id: "fixture-unphased", name: "Unphased Coin", status: "pre-launch" })]}
         logos={{}}
         teasers={{}}
       />,

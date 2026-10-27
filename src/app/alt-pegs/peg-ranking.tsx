@@ -8,7 +8,7 @@ import { formatNonUsdShare } from "@shared/lib/alt-peg-snapshot";
 import { formatCurrency } from "@shared/lib/format";
 
 // The long tail folds below the leaders; it stays in the DOM (native details).
-export const PEG_RANKING_OPEN_ROWS = 8;
+const PEG_RANKING_OPEN_ROWS = 8;
 
 const ROW_GRID =
   "grid grid-cols-[minmax(0,1fr)_auto_1.5rem] items-center gap-x-4 gap-y-1 md:grid-cols-[2rem_minmax(0,1.2fr)_minmax(0,1.4fr)_6rem_4.5rem_minmax(0,1fr)_1.5rem]";

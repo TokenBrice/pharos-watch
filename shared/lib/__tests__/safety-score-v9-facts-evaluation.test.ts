@@ -193,7 +193,7 @@ describe("Safety Score v9 fact evaluation", () => {
       });
       expect(evaluated.trace.includedPillars).not.toContain(pillar);
     }
-    expect(evaluated.trace.includedPillars).toEqual(expect.arrayContaining(included));
+    expect(evaluated.trace.includedPillars).toEqual(expect.arrayContaining([...included]));
     expect(evaluated.trace.includedPillars).toHaveLength(included.length);
     expect(evaluated.trace.ratingStatus).toBe(ratingStatus);
     if (ratingStatus === "rated") {

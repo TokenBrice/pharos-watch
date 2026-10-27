@@ -1,4 +1,4 @@
-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import type { StablecoinMeta } from "@shared/types";
 import { compareCodeUnits } from "@shared/lib/compare";
@@ -15,6 +15,7 @@ import {
   StablecoinMetaSourceAssetSchema,
   type StablecoinSourceDomain,
 } from "@shared/lib/stablecoins/schema";
+import { atomicWriteFileSync } from "./atomic-artifact-write.mts";
 import { formatJson, hasOwnField } from "./catalog-json";
 
 export const STABLECOIN_DATA_DIR = "shared/data/stablecoins";
@@ -456,7 +457,7 @@ export function syncGeneratedPerCoinAsset({
     // Repo-owned catalog helpers only write the checked-in generated aggregate path.
     mkdirSync(dirname(absoluteGeneratedPath), { recursive: true });
     // Repo-owned catalog helpers only write the checked-in generated aggregate path.
-    writeFileSync(absoluteGeneratedPath, expected, "utf8");
+    atomicWriteFileSync(absoluteGeneratedPath, expected);
   }
 
   return {

@@ -250,14 +250,14 @@ export const SafetyScoreV9EvidenceSummarySchema = z
  * and the accepted publication whose grade it retains.
  */
 const V9LetterGradeSchema = V9GradeSchema.exclude(["NR"]);
-export const SafetyScoreV9GradeHoldSchema = z.object({
+const SafetyScoreV9GradeHoldSchema = z.object({
   rawGrade: V9LetterGradeSchema,
   heldFromGenerationId: z.string().min(1),
 }).strict();
 export type SafetyScoreV9GradeHold = z.infer<typeof SafetyScoreV9GradeHoldSchema>;
 
 /** Display-only local authority exposure, not an effective Control pillar. */
-export const V9LocalAuthorityExposureSchema = z.object({
+const V9LocalAuthorityExposureSchema = z.object({
   worstQuality: ScoreSchema,
   coveredShare: z.number().finite().positive().max(1).nullable(),
   slices: z.array(z.object({

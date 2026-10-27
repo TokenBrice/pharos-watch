@@ -1,6 +1,6 @@
 import { createHash } from "node:crypto";
 import { gzipSync } from "node:zlib";
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { resolve } from "node:path";
 import { describe, expect, it, vi } from "vitest";
@@ -24,7 +24,8 @@ import { createR2MeasurementsClient } from "../../../scripts/lib/r2-measurements
 import { v9TestClockSec } from "../../src/test-helpers/v9-fixed-input";
 import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
-import { runReportCardsFixedInputCaptureCli } from "../capture-report-cards-fixed-input";
+import { assertReportCardsCaptureCurrent, runReportCardsFixedInputCaptureCli } from "../capture-report-cards-fixed-input";
+import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../../src/lib/safety-score-v9/supply-attribution-source";
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-codec";
 import { createSafetyScoreV9TransferMaterialityGeneration } from "../../src/lib/safety-score-v9/transfer-materiality";
@@ -151,6 +152,77 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     await expect(runReportCardsFixedInputCaptureCli([
       "--output", "unused", "--accepted-cache-export", "pair", "--normalized-only",
     ])).rejects.toThrow("--normalized-only cannot be combined");
+  });
+
+  describe("capture --require-current", () => {
+    const withCapture = async (nowSec: number, run: (paths: { raw: string; output: string }) => Promise<void>) => {
+      const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-require-current-"));
+      const now = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
+      try {
+        const raw = resolve(dir, "raw.json"), output = resolve(dir, "capture.json");
+        writeFileSync(raw, JSON.stringify(exactFixedInput()));
+        await run({ raw, output });
+      } finally {
+        now.mockRestore();
+        rmSync(dir, { recursive: true, force: true });
+      }
+    };
+
+    it.each([
+      ["current", 0, true], ["exact budget", SOURCE_FIXED_INPUT_MAX_AGE_SEC, true],
+      ["budget + 1", SOURCE_FIXED_INPUT_MAX_AGE_SEC + 1, false], ["future by 1s", -1, false],
+    ])("%s", async (_name, ageSec, accepted) => {
+      await withCapture(CLOCK_SEC + ageSec, async ({ raw, output }) => {
+        const run = () => runReportCardsFixedInputCaptureCli([
+          "--exact-cache-export", raw, "--output", output, "--normalized-only", "--require-current",
+        ]);
+        if (accepted) {
+          await run();
+          expect(JSON.parse(readFileSync(output, "utf8")).clockSec).toBe(CLOCK_SEC);
+        } else {
+          await expect(run()).rejects.toThrow(ageSec < 0 ? "capture-future" : "capture-stale");
+          expect(existsSync(output)).toBe(false);
+        }
+      });
+    });
+
+    it("names the assessment, clock, age, budget and generations in the rejection", () => {
+      const input = exactFixedInput();
+      const age = SOURCE_FIXED_INPUT_MAX_AGE_SEC + 5;
+      expect(() => assertReportCardsCaptureCurrent(input, CLOCK_SEC + age)).toThrow("capture-stale: ");
+      let message = "";
+      try { assertReportCardsCaptureCurrent(input, CLOCK_SEC + age); } catch (error) { message = (error as Error).message; }
+      const fragments = [`"assessedAtSec":${CLOCK_SEC + age}`, `"clockSec":${CLOCK_SEC}`, `"ageSec":${age}`,
+        `"budgetSec":${SOURCE_FIXED_INPUT_MAX_AGE_SEC}`, `"sourceGeneration":"report-cards:fixture:v9-replay"`, `"baseInputGenerationId"`];
+      const positions = fragments.map((fragment) => message.indexOf(fragment));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
+    });
+
+    it("rejects malformed input and incompatible flag combinations without output", async () => {
+      await withCapture(CLOCK_SEC, async ({ raw, output }) => {
+        writeFileSync(raw, JSON.stringify({ clockSec: CLOCK_SEC }));
+        await expect(runReportCardsFixedInputCaptureCli([
+          "--exact-cache-export", raw, "--output", output, "--normalized-only", "--require-current",
+        ])).rejects.toThrow();
+        expect(existsSync(output)).toBe(false);
+        for (const args of [
+          ["--exact-cache-export", raw, "--require-current"],
+          ["--accepted-cache-export", raw, "--normalized-only", "--require-current"],
+          ["--accepted-cache-export", raw, "--require-current"],
+        ]) {
+          await expect(runReportCardsFixedInputCaptureCli(["--output", output, ...args])).rejects.toThrow();
+        }
+        expect(existsSync(output)).toBe(false);
+      });
+    });
+
+    it("keeps default historical capture of an old input unchanged", async () => {
+      await withCapture(CLOCK_SEC + 10 * SOURCE_FIXED_INPUT_MAX_AGE_SEC, async ({ raw, output }) => {
+        await runReportCardsFixedInputCaptureCli(["--exact-cache-export", raw, "--output", output, "--normalized-only"]);
+        expect(JSON.parse(readFileSync(output, "utf8")).clockSec).toBe(CLOCK_SEC);
+      });
+    });
   });
 
   it("parses raw exact JSON and the production cache envelope through equivalent paths", async () => {

@@ -150,7 +150,7 @@ describe("data-health hydration", () => {
     const summary = {
       price: 1, circulating: { peggedUSD: 100 }, circulatingPrevDay: {}, circulatingPrevWeek: {},
       circulatingPrevMonth: {}, nativeSupply: { current: 100, prevWeek: 100, prevMonth: 100 },
-    } as StablecoinLiveSummary;
+    } as unknown as StablecoinLiveSummary;
     const settled = {
       data: summary,
       meta: { updatedAt: savedAt / 1000, ageSeconds: 36000, status: "stale" } as ApiMeta,

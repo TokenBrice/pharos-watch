@@ -140,7 +140,7 @@ const CIRCUIT_PROVIDER_BY_KEY: Readonly<Record<string, string>> = {
   "kinesis-kag-horizon": "kinesis",
 };
 
-export function getCircuitProvider(key: string): string {
+function getCircuitProvider(key: string): string {
   return CIRCUIT_PROVIDER_BY_KEY[key] ?? key;
 }
 

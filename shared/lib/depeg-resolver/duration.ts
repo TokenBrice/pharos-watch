@@ -43,7 +43,7 @@ const THIN_SUPPORT_MIN_WEIGHTED_CLOSURES = 1;
  * against out-of-sample base rates < 0). Methodology-owned; see
  * docs/depeg-resolver.md "Stage 2 — Expected Duration".
  */
-export const DDR_NOT_INFORMATIVE_HORIZONS: ReadonlySet<DdrHorizon> = new Set<DdrHorizon>([]);
+const DDR_NOT_INFORMATIVE_HORIZONS: ReadonlySet<DdrHorizon> = new Set<DdrHorizon>([]);
 
 function wilson(k: number, n: number): { lower: number; upper: number } {
   if (n === 0) return { lower: 0, upper: 1 };

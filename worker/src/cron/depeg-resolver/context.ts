@@ -293,7 +293,7 @@ export async function loadPolicyUniverseEvents(db: D1Database): Promise<DdrEvent
 const DDR_ONSET_TVL_LOOKBACK_SEC = 120 * DAY;
 
 /** History window covering the 7/30-day trend targets and every active onset within the lookback. */
-export function resolveDexHistoryWindowStart(startedAts: readonly number[], nowSec: number): number {
+function resolveDexHistoryWindowStart(startedAts: readonly number[], nowSec: number): number {
   const trendStart = nowSec - 32 * DAY;
   if (startedAts.length === 0) return trendStart;
   const earliestOnset = Math.max(Math.min(...startedAts), nowSec - DDR_ONSET_TVL_LOOKBACK_SEC);

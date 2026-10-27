@@ -265,7 +265,7 @@ it("ages the saved blacklist generation without a query update", () => {
   const receipt = Date.now();
   vi.mocked(useBlacklistSummary).mockReturnValue({
     ...summaryStub(), dataUpdatedAt: receipt, error: null,
-    meta: { updatedAt: receipt / 1000, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 },
+    meta: { updatedAt: receipt / 1000, ageSeconds: 0, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 },
   });
   const { container } = render(<BlacklistSection stablecoinId="usdc-circle" symbol="USDC" />);
   expect(container.querySelector("[data-health-state]")).toBeNull();

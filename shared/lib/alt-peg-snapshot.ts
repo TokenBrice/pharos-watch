@@ -87,7 +87,8 @@ function shareOf(part: number, whole: number): number {
 }
 
 export function buildNonUsdMarketSnapshot(rows: readonly NonUsdMarketRow[] | null | undefined): NonUsdMarketSnapshot {
-  if (!Array.isArray(rows) || rows.length === 0) return EMPTY_SNAPSHOT;
+  // Array.isArray widens a readonly array to any[]; test an unknown view to keep row typing.
+  if (rows == null || !Array.isArray(rows as unknown) || rows.length === 0) return EMPTY_SNAPSHOT;
 
   let totalMarketCap = 0;
   let supplyObservedCount = 0;

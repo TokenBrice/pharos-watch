@@ -4,6 +4,7 @@ import { pathToFileURL } from "node:url";
 import { parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
 import { parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
 import { loadSafetyScoreV9RegistryRef, localRegistrySnapshot, type SafetyScoreV9RegistrySnapshot } from "./lib/safety-score-v9-registry";
+import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../src/lib/safety-score-v9/supply-attribution-source";
 import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture } from "../src/lib/safety-score-v9/publication-replay-capture";
 
 /** The accepted-cache-export admission path shared by the CLI and archive round-trip tests. */
@@ -27,7 +28,24 @@ Options:
                                Output embeds the full fingerprint-bound registry snapshot.
   --normalized-only           Export only normalized input for current-curation workflows.
                                Cannot be combined with --registry-ref.
+  --require-current           Scheduled acquisition only (with --exact-cache-export and
+                               --normalized-only): reject, before writing, an input whose
+                               clock is older than one preparation cycle or in the future.
   -h, --help                   Show this help`;
+
+/** Reject a capture that does not represent the current producer cycle; nothing is written. */
+export function assertReportCardsCaptureCurrent(
+  fixedInput: { clockSec: number; sourceGeneration?: unknown; baseInputGenerationId?: unknown },
+  nowSec = Math.floor(Date.now() / 1_000),
+): void {
+  const ageSec = nowSec - fixedInput.clockSec;
+  const reason = ageSec < 0 ? "capture-future" : ageSec > SOURCE_FIXED_INPUT_MAX_AGE_SEC ? "capture-stale" : undefined;
+  if (reason === undefined) return;
+  throw new Error(`${reason}: ${JSON.stringify({
+    assessedAtSec: nowSec, clockSec: fixedInput.clockSec, ageSec, budgetSec: SOURCE_FIXED_INPUT_MAX_AGE_SEC,
+    sourceGeneration: fixedInput.sourceGeneration ?? null, baseInputGenerationId: fixedInput.baseInputGenerationId ?? null,
+  })}`);
+}
 
 export async function runReportCardsFixedInputCaptureCli(argv: readonly string[]): Promise<void> {
   const { values } = parseStrictCliArgs(argv, {
@@ -37,6 +55,7 @@ export async function runReportCardsFixedInputCaptureCli(argv: readonly string[]
       "accepted-cache-export": { type: "string" },
       "registry-ref": { type: "string" },
       "normalized-only": { type: "boolean" },
+      "require-current": { type: "boolean" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
@@ -50,6 +69,9 @@ export async function runReportCardsFixedInputCaptureCli(argv: readonly string[]
   }
   if (accepted && values["normalized-only"] === true) {
     throw new Error("--normalized-only cannot be combined with --accepted-cache-export");
+  }
+  if (values["require-current"] === true && (accepted || values["normalized-only"] !== true)) {
+    throw new Error("--require-current requires --exact-cache-export with --normalized-only");
   }
   const registrySnapshot = values["normalized-only"] === true ? undefined
     : typeof values["registry-ref"] === "string" ? loadSafetyScoreV9RegistryRef(values["registry-ref"]) : localRegistrySnapshot();
@@ -70,6 +92,7 @@ export async function runReportCardsFixedInputCaptureCli(argv: readonly string[]
   if (typeof raw === "string") raw = JSON.parse(raw);
   if (values["normalized-only"] === true) {
     const fixedInput = await parseSafetyScoreV9ReplayFixedInput(raw);
+    if (values["require-current"] === true) assertReportCardsCaptureCurrent(fixedInput);
     writeFileSync(values.output, `${JSON.stringify(fixedInput)}\n`, "utf8");
     return;
   }

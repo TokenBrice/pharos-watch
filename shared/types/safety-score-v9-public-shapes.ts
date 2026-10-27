@@ -7,5 +7,4 @@ export type SafetyScoreV9CardRefinementInput = Pick<
   "score" | "grade" | "qualityScore" | "pegMultiplier" | "pegAdjustedScore" | "pillars" |
   "weakestPillar" | "caps" | "bindingCap" | "dependencies" | "scoreTrace" | "ratingStatus" | "partialEvidence"
 > & { breakdowns: Pick<NonNullable<SafetyScoreV9ParsedCurrentCard["breakdowns"]>, "backing"> | null };
-export type SafetyScoreV9SerialDependencyInput = SafetyScoreV9CardRefinementInput["dependencies"]["serial"][number];
 export type SafetyScoreV9CardWithDependencies = Pick<SafetyScoreV9CardRefinementInput, "dependencies">;

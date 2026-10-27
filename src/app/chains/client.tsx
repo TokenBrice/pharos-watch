@@ -154,7 +154,7 @@ function utcStamp(seconds: number): string {
  * chain), the snapshot stamp, and the neutral dominance bar as the single visual. Partial inputs are named on the
  * beam label and carried, with both excluded counts, by the status chip.
  */
-export function ChainsHero({ data, meta, retained }: { data: ChainsResponse; meta: ApiMeta | null | undefined; retained: boolean }) {
+function ChainsHero({ data, meta, retained }: { data: ChainsResponse; meta: ApiMeta | null | undefined; retained: boolean }) {
   const byShare = data.chains.every((chain) => chain.dominanceShare != null)
     ? [...data.chains].sort((a, b) => b.dominanceShare! - a.dominanceShare!)
     : [];

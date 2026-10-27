@@ -28,7 +28,6 @@ export {
 export {
   deriveV9ReserveLossSignal,
   scoreV9Input,
-  type V9CapTrace,
   type V9NRReason,
   type V9ScoreTrace,
   type V9ResearchScoreTrace,

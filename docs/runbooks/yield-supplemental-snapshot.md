@@ -18,7 +18,7 @@ Aave refreshes three pinned Aave V3 reserves on every successful run: Ethereum U
 
 Beefy, Royco, and Aave each cap concurrent outbound work at three. The standalone supplemental peak is three; hourly catch-up alongside parity is declared at four. Do not restore nested fan-out that can exceed these limits.
 
-The unsuffixed aggregate `yield:supplemental-sources:v1` and retired vaults family/budget/circuit rows remain pending separate cleanup. Do not delete them during normal deployment. First archive exact payloads/timestamps in durable R2 retained indefinitely, record a D1 Time Travel bookmark, and close the compatible rollback floor after healthy first primary/catch-up runs plus 48 hours. Aggregate deletion is exact-key only with a 0-to-1-row bound; preserve surviving suffixed family rows and `yield:supplemental-source-run:v1`. SQL `length(value)` measures text characters, not physical D1 shrinkage.
+The unsuffixed aggregate `yield:supplemental-sources:v1` and retired vaults family/budget/circuit rows remain pending separate cleanup. A tracker checkbox or healthy rankings never authorize deletion; a missing C18 receipt ([MANIFEST](../../worker/migrations/MANIFEST.md), #1593) means retained and deferred, not zero rows. Do not delete them during normal deployment. First archive exact payloads/timestamps in durable R2 retained indefinitely, record a D1 Time Travel bookmark, and close the compatible rollback floor after healthy first primary/catch-up runs plus 48 hours. Aggregate deletion is exact-key only with a 0-to-1-row bound; preserve surviving suffixed family rows and `yield:supplemental-source-run:v1`. SQL `length(value)` measures text characters, not physical D1 shrinkage.
 
 ## First Checks
 

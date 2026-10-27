@@ -111,20 +111,13 @@ export const FailureScenarioStructuralSchema = z.object({
 
 export type FailureScenario = z.output<typeof FailureScenarioStructuralSchema>;
 export type FailureScenarioStage = FailureScenario["stages"][number];
-export type FailureScenarioStageKind = FailureScenarioStage["kind"];
 export type FailureScenarioEvidence = FailureScenarioStage["evidence"];
-export type FailureScenarioTarget = NonNullable<FailureScenarioStage["targets"]>[number];
-export type FailureScenarioWindow = NonNullable<FailureScenario["window"]>;
 export type FailureScenarioDefender = FailureScenario["defenders"][number];
 export type FailureScenarioDefenderVerdict = FailureScenarioDefender["verdict"];
 export type FailureScenarioFalsifier = FailureScenario["falsifiers"][number];
 export type FailureScenarioFalsifierStatus = FailureScenarioFalsifier["status"];
-export type FailureScenarioExposure = FailureScenario["exposure"][number];
 export type FailureScenarioSource = FailureScenario["sources"][number];
 /** Alternative routes rejoin at the next trunk stage, never run sequentially. */
 export type FailureScenarioBranchPoint = NonNullable<FailureScenario["branchPoint"]>;
 export type FailureScenarioBranch = FailureScenarioBranchPoint["branches"][number];
-export type FailureScenarioKeyFigure = FailureScenario["keyFigures"][number];
-/** Approval binds canonical content excluding this review object. */
-export type FailureScenarioReview = FailureScenario["review"];
 export type FailureScenariosById = Record<string, FailureScenario>;

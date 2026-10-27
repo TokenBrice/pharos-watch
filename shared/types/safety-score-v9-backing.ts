@@ -143,8 +143,6 @@ const V9CommodityClaimMechanismRiskReviewSchema = z
     physicalRedemption: V9MechanismFactV1Schema,
   })
   .strict();
-export type V9CommodityClaimMechanismRiskReview = z.infer<typeof V9CommodityClaimMechanismRiskReviewSchema>;
-
 const V9TbillMechanismRiskReviewSchema = z
   .object({
     archetype: z.literal("tbill"),
@@ -155,8 +153,6 @@ const V9TbillMechanismRiskReviewSchema = z
     lossRecoveryDesign: V9MechanismFactV1Schema,
   })
   .strict();
-export type V9TbillMechanismRiskReview = z.infer<typeof V9TbillMechanismRiskReviewSchema>;
-
 // These families have no launch-time applicability exemptions: unknown
 // conservation, collateral reuse and recovery must retain a priced component.
 const V9RequiredFamilyMechanismFactSchema = V9MechanismFactV1Schema.refine(

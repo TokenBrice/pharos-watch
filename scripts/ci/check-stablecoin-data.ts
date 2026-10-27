@@ -330,17 +330,21 @@ export function getExpiredReserveSupplyAdmissionBootstrapIssue(
     : null;
 }
 
-/** Advisory: a launched pre-launch row past its decision date (promote, quarantine or scope). */
-export function getOverdueLaunchedPhaseReviewIssue(
+/**
+ * Advisory: a quarantined row, or a launched pre-launch row, past its decision
+ * date. Quarantine stays enforced; this only surfaces the manual follow-up.
+ */
+export function getOverdueListingStatusReviewIssue(
   coin: Pick<StablecoinMeta, "status" | "launchPhase" | "listingStatusReview">,
   nowMs = Date.now(),
 ): string | null {
-  if (coin.status !== "pre-launch" || coin.launchPhase !== "launched") return null;
+  const launchedPreLaunch = coin.status === "pre-launch" && coin.launchPhase === "launched";
+  if (coin.status !== "quarantined" && !launchedPreLaunch) return null;
   const reviewBy = coin.listingStatusReview?.reviewBy;
-  return reviewBy != null && isValidIsoDateOnly(reviewBy)
-    && Date.parse(`${reviewBy}T00:00:00Z`) <= nowMs
+  if (reviewBy == null || !isValidIsoDateOnly(reviewBy) || Date.parse(`${reviewBy}T00:00:00Z`) > nowMs) return null;
+  return launchedPreLaunch
     ? `launched pre-launch row passed listingStatusReview.reviewBy ${reviewBy}; promote it, record a listing decision, or renew the dated review`
-    : null;
+    : `quarantined row passed listingStatusReview.reviewBy ${reviewBy}; fresh evidence is required for a manual continued-hold or admission decision (quarantine remains enforced)`;
 }
 
 export function getLiveReserveDependencyTypeLinkIssues(
@@ -821,8 +825,8 @@ function runStablecoinDataCheck(): void {
       const expiredBootstrapIssue = getExpiredReserveSupplyAdmissionBootstrapIssue(entry.coin);
       if (expiredBootstrapIssue) reportError(`${entry.file} (${entry.coin.id}): ${expiredBootstrapIssue}`);
 
-      const overdueLaunchedReviewIssue = getOverdueLaunchedPhaseReviewIssue(entry.coin);
-      if (overdueLaunchedReviewIssue) reportWarning(`${entry.file} (${entry.coin.id}): ${overdueLaunchedReviewIssue}`);
+      const overdueListingReviewIssue = getOverdueListingStatusReviewIssue(entry.coin);
+      if (overdueListingReviewIssue) reportWarning(`${entry.file} (${entry.coin.id}): ${overdueListingReviewIssue}`);
 
       const algorithmicBackingIssue = getTrackedAlgorithmicBackingIssue(entry.coin);
       if (algorithmicBackingIssue) {

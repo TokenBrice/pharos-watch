@@ -37,8 +37,10 @@ softening rules for discovery surfaces do not apply here.
   `classifyDepegClosure` result: only recovered and legacy-recovered records claim
   recovery. Coverage loss, superseded direction, removed tracking and unknown
   closure remain tracking closures; an end timestamp alone is not recovery.
-  Authored editorial entries add the briefing lede, timeline and watchpoints;
-  unauthored pages retain the structural event record. Editorial presence does
+  Authored editorial entries add the briefing lede, timeline and watchpoints and
+  state recorded figures (deviation, low, start, recovery) only from the event
+  record; sourced context such as an announcement date stays separate and never
+  replaces them. Unauthored pages retain the structural event record. Editorial presence does
   not change the 500 bps route-admission threshold.
 
 ---

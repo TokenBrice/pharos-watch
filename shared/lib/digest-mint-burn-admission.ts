@@ -5,7 +5,7 @@ import { DAY_SECONDS, HOUR_SECONDS } from "./time-constants";
 // confirmation; half the net allows daily snapshot timing/chain-coverage skew.
 const LARGE_NET_SUPPLY_RATIO = 0.25;
 const MIN_SUPPLY_CONFIRMATION_RATIO = 0.5;
-export const DIGEST_SUPPLY_WINDOW_TOLERANCE_SEC = 12 * HOUR_SECONDS;
+const DIGEST_SUPPLY_WINDOW_TOLERANCE_SEC = 12 * HOUR_SECONDS;
 export const MATERIAL_DIGEST_GAUGE_SHARE = 0.01;
 
 export interface DigestFlowSupplySnapshot {

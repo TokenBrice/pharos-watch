@@ -1,8 +1,8 @@
 name: Curation Expiry Sweep
 
 # Weekly Safety Score V9 curation sweep: freeze the current production compiler
-# input, replay it at HEAD, and publish the curation worklist, curated reserve
-# expiry queue, and typed missing-data registry. Read-only against production
+# input, replay it at HEAD, and publish the curation worklist, evidence
+# pre-expiry queue, and typed missing-data registry. Read-only against production
 # (one D1 cache-row read); no product data is changed.
 # Runbook: docs/process/safety-score-curation-expiry-sweep.md
 
@@ -42,7 +42,7 @@ jobs:
             > agents/sweep/capture.raw.json
           npm run report-cards:capture-fixed-input -- \
             --exact-cache-export agents/sweep/capture.raw.json \
-            --output agents/sweep/capture.json --normalized-only
+            --output agents/sweep/capture.json --normalized-only --require-current
           echo "clock_sec=$(jq -r .clockSec agents/sweep/capture.json)" >> "$GITHUB_OUTPUT"
       - name: Replay the frozen production input
         id: replay
@@ -141,6 +141,17 @@ jobs:
           path: agents/sweep/missing-data-registry.json
           if-no-files-found: error
           retention-days: 30
+      # Retain the full queue, including an explicitly partial report written
+      # before a nonzero queue status; absent output (fatal error) uploads nothing.
+      - name: Upload the full evidence pre-expiry queue
+        id: queue_artifact
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' && hashFiles('agents/sweep/expiry-queue.md') != '' }}
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: safety-score-v9-expiry-queue-${{ github.run_id }}
+          path: agents/sweep/expiry-queue.md
+          if-no-files-found: error
+          retention-days: 30
       - name: Open or update the sweep issue
         env:
           GH_TOKEN: ${{ github.token }}
@@ -179,7 +190,10 @@ jobs:
             fi
             echo '```'
             echo
-            echo "## Curated reserve expiry queue"
+            echo "## Evidence pre-expiry queue"
+            if [ -f agents/sweep/expiry-queue.md ]; then
+              echo "Bounded excerpt; full queue: workflow artifact \`safety-score-v9-expiry-queue-${GITHUB_RUN_ID}\` (30-day retention) at ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
+            fi
             echo '```text'
             if [ -f agents/sweep/expiry-queue.md ]; then
               awk 'NR <= 160 {print} NR == 161 {print "... output truncated after 160 lines ..."}' agents/sweep/expiry-queue.md

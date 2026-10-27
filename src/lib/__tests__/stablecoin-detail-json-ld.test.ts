@@ -67,7 +67,7 @@ describe("buildPreLaunchStablecoinJsonLd", () => {
         { date: "2026-10-16", type: "announcement", title: "Update" },
       ],
     });
-    expect(buildPreLaunchStablecoinJsonLd(coin)[0].dateModified).toBe("2026-10-16");
+    expect(buildPreLaunchStablecoinJsonLd(coin)[0]).toHaveProperty("dateModified", "2026-10-16");
     expect(buildPreLaunchStablecoinJsonLd(makeStablecoinMeta({ status: "pre-launch" }))[0]).not.toHaveProperty("dateModified");
   });
 

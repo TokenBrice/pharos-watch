@@ -47,7 +47,7 @@ function MixBracket({ label, marketCap, sharePct, partial }: {
  * each in rank order and its peg hue. Shares exist only when every non-USD coin
  * reports supply; otherwise the bar is hatched and says why, never empty.
  */
-export function CohortMixBar({ snapshot }: { snapshot: AltPegSnapshot }) {
+function CohortMixBar({ snapshot }: { snapshot: AltPegSnapshot }) {
   const partial = snapshot.altSupplyUnavailableCount > 0;
   const commodityRows = snapshot.distributionRows.filter((row) => row.group === "Commodity");
   const otherRows = snapshot.distributionRows.filter((row) => row.group !== "Commodity");

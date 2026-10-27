@@ -863,9 +863,9 @@ describe("runSelector — universal properties", () => {
       safetyEvidenceLevel: "limited",
       safetyWeakestPillar: { pillar: "backing", score: 72 },
       safetyBindingCap: {
-        kind: "evidence",
+        kind: "track-record",
         limit: 80,
-        source: "evidence",
+        source: "track-record",
         reason: "Reserve evidence is bounded.",
         binding: true,
       },

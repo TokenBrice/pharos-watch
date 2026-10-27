@@ -8,9 +8,9 @@ The [Shock Coverage Refresh](../../.github/workflows/shock-coverage-refresh.yml)
 
 ## Cadence
 
-`.github/workflows/shock-coverage-refresh.yml` measures at **03:41 UTC every other day** (`41 3 */2 * *`), plus `workflow_dispatch` for a manual refresh. A separate **daily 09:11 UTC** (`11 9 * * *`) job checks committed freshness without regenerating measurements.
+`.github/workflows/shock-coverage-refresh.yml` measures at **03:41 UTC daily** (`41 3 * * *`), plus `workflow_dispatch` for a manual refresh. A separate **daily 09:11 UTC** (`11 9 * * *`) job checks committed freshness without regenerating measurements.
 
-Worst-case gap between scheduled attempts is 48h, leaving a roughly 24h manual/rerun remediation window after one scheduled failure; the next automatic attempt at 96h would be too late. The freshness clock runs on the **pinned block timestamp**, not on merge time, so merge latency spends the same budget as scheduler latency; auto-merge (see [Merge path](#merge-path)) keeps that spend bounded by the required checks.
+Nominal spacing between scheduled attempts is 24h against the 36h budget the freshness check enforces, leaving 12h total block-age, scheduling and merge headroom. This is not a guaranteed successful-run SLA: a missed daily attempt requires prompt manual remediation. The freshness clock runs on the **pinned block timestamp**, not on merge time, so merge latency spends the same budget as scheduler latency; auto-merge (see [Merge path](#merge-path)) keeps that spend bounded by the required checks.
 
 ## What the workflow does
 

@@ -9,7 +9,7 @@ The latest squash (`0000_baseline.sql`, S-03 / P4-01) landed on 2026-07-30 and c
 - about 12 months have passed since the previous baseline; or
 - more than 80 active migrations have accumulated after the baseline.
 
-Run `npm run check:migrations` for the current active/retired inventory. Crossing a threshold starts scheduling and rehearsal; it does not authorize an unsupervised production change.
+Run `npm run check:migrations` for the current active/retired inventory. Crossing a threshold starts scheduling and rehearsal; it does not authorize an unsupervised production change. Retiring a feature's tables or Time Travel expiry does not itself satisfy either condition; the [completed Telegram cleanup inventory](../../worker/migrations/MANIFEST.md) records the operated drop and defers baseline cleanup.
 
 ## Preconditions
 

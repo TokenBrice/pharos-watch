@@ -1,6 +1,6 @@
 import { SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
 import { createHash } from "node:crypto";
-import { Buffer } from "node:buffer";
+import { Buffer as NodeBuffer } from "node:buffer";
 import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-publication";
 import {
@@ -25,6 +25,9 @@ import { loadActiveSafetyScoreIndex } from "./safety-score-index";
 import { throwIfAborted } from "./abort";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 export { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
+
+// Correct the ambient Workers Buffer declaration; nodejs_compat supplies the native constructor.
+const Buffer = NodeBuffer as BufferConstructor;
 
 interface V9PublicMaterializationFragment {
   body: string;

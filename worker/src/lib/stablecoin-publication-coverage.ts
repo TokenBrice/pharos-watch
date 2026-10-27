@@ -695,20 +695,22 @@ export function parsePersistedMissingActivePriceState(
   value: unknown,
   options: { nowSec?: number; reviewsById?: ReadonlyMap<string, StablecoinPriceGapReview> } = {},
 ): MissingActivePriceDetail | null {
-  if (!Array.isArray(value) || value.length < 6 || typeof value[0] !== "string") return null;
+  if (!Array.isArray(value)) return null;
+  const fields: readonly unknown[] = value;
+  if (fields.length < 6 || typeof fields[0] !== "string") return null;
   return parseMissingActivePriceDetail({
-    stablecoinId: value[0],
-    symbol: ACTIVE_STABLECOIN_SYMBOL_BY_ID.get(value[0]) ?? value[0],
-    consecutiveMissingGenerations: value[1],
-    lastAcceptedPrice: value[2],
-    lastAcceptedSource: value[3],
-    lastAcceptedObservedAt: value[4],
-    rejectionReason: value[5],
-    streakUnavailableReason: value[6],
-    lastKnownMarketCapUsd: value[7],
-    lastKnownMarketCapObservedAt: value[8],
-    lastKnownMarketCapSource: value[9],
-    marketCapUsd: value[10],
+    stablecoinId: fields[0],
+    symbol: ACTIVE_STABLECOIN_SYMBOL_BY_ID.get(fields[0]) ?? fields[0],
+    consecutiveMissingGenerations: fields[1],
+    lastAcceptedPrice: fields[2],
+    lastAcceptedSource: fields[3],
+    lastAcceptedObservedAt: fields[4],
+    rejectionReason: fields[5],
+    streakUnavailableReason: fields[6],
+    lastKnownMarketCapUsd: fields[7],
+    lastKnownMarketCapObservedAt: fields[8],
+    lastKnownMarketCapSource: fields[9],
+    marketCapUsd: fields[10],
     currentPrice: null,
   }, options);
 }

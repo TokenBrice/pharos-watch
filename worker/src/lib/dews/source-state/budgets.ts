@@ -13,6 +13,6 @@ export const DEWS_PSI_FRESHNESS_BUDGET_SEC = API_FRESHNESS_MAX_AGE_SEC.stability
  * yield run within it keeps DEWS publishing with the retained generation named
  * in run metadata; beyond it the cohort dependency is unavailable.
  */
-export const DEWS_YIELD_RANKINGS_RETENTION_CADENCES = 3;
+const DEWS_YIELD_RANKINGS_RETENTION_CADENCES = 3;
 export const DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC =
   DEWS_YIELD_RANKINGS_RETENTION_CADENCES * CRON_INTERVALS["sync-yield-data"];

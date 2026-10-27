@@ -14,8 +14,6 @@ export function sizeCapMarketCap(ceil: number): number {
   return ((ceil - SIZE_FLOOR) / SIZE_SCALE) ** 2 * MCAP_DIVISOR;
 }
 
-export const FIAT_MAP_SIZE_CAP_MARKET_CAP = sizeCapMarketCap(FIAT_MAP_SIZE_CEIL);
-
 export function coinEmblemSize(marketCapUsd: number | null, options: { ceil?: number } = {}): number {
   const ceil = options.ceil ?? SIZE_CEIL;
   if (marketCapUsd === null) return Math.min(UNKNOWN_SUPPLY_SIZE, ceil);

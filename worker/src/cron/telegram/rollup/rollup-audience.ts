@@ -7,7 +7,7 @@ import {
 } from "../../../telegram/common/presets";
 
 /** Families the roll-up reports. Presets carry only safety and DEWS. */
-export const ROLLUP_FAMILIES = ["safety", "dews", "freeze", "reserve"] as const;
+const ROLLUP_FAMILIES = ["safety", "dews", "freeze", "reserve"] as const;
 export type RollupFamily = (typeof ROLLUP_FAMILIES)[number];
 const PRESET_FAMILIES = new Set<RollupFamily>(["safety", "dews"]);
 

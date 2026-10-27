@@ -74,7 +74,6 @@ export {
   getGaugeBand,
   getGaugeScoreInterval,
   isGaugeBandRobustToWithheldWeight,
-  type GaugeBand,
 } from "@shared/lib/mint-burn-gauge-bands";
 
 // ---------------------------------------------------------------------------
@@ -89,7 +88,7 @@ export interface GaugeCoinInput {
 /**
  * Compute the market-cap-weighted average Flow Intensity Score across coins.
  * Skips coins with null intensity (insufficient data) and computes from available data.
- * Returns `null` only when no coin has valid intensity data.
+ * Returns `null` when no coin with valid intensity has a positive market-cap weight.
  */
 export function computeGaugeScore(
   coins: GaugeCoinInput[]

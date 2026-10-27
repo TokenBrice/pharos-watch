@@ -1309,11 +1309,11 @@
         { "path": "docs/runbooks/blacklist-sync.md", "runbook": { "label": "Blacklist gap checks", "kind": "symptom" } },
         { "path": "docs/runbooks/review-renewal.md", "runbook": { "label": "Scoped review renewal", "kind": "procedure" } }
       ],
-      "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts scripts/maintenance/__tests__/worker-evidence-report.test.ts scripts/__tests__/night-watch-worker.test.ts scripts/__tests__/watch-worker-cron.test.ts"],
+      "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts scripts/maintenance/__tests__/worker-evidence-report.test.ts scripts/__tests__/night-watch-worker.test.ts scripts/__tests__/watch-worker-cron.test.ts worker/scripts/__tests__/worker-status-profile.test.ts"],
       "testOwnership": [
         {
-          "sources": ["scripts/maintenance/worker-*.mjs", "worker/scripts/worker-status-profile.mjs", "scripts/maintenance/watch-worker-cron.mjs", "scripts/maintenance/night-watch-worker.mjs", "docs/process/lane-freshness-matrix.md"],
-          "tests": ["scripts/maintenance/__tests__/worker-evidence-report.test.ts", "scripts/__tests__/night-watch-worker.test.ts", "scripts/__tests__/watch-worker-cron.test.ts"]
+          "sources": ["scripts/maintenance/worker-*.mjs", "worker/scripts/worker-status-profile.mjs", "worker/scripts/worker-status-profile.d.mts", "scripts/maintenance/watch-worker-cron.mjs", "scripts/maintenance/night-watch-worker.mjs", "docs/process/lane-freshness-matrix.md"],
+          "tests": ["scripts/maintenance/__tests__/worker-evidence-report.test.ts", "worker/scripts/__tests__/worker-status-profile.test.ts", "scripts/__tests__/night-watch-worker.test.ts", "scripts/__tests__/watch-worker-cron.test.ts"]
         },
         {
           "sources": ["scripts/maintenance/monitor-worker-memory.ts", "scripts/maintenance/__tests__/fixtures/worker-memory/**", ".github/workflows/worker-memory-monitor.yml"],
@@ -1490,6 +1490,12 @@
       ],
       "docs": ["docs/process/agent-start-here.md", { "path": "docs/process/agent-artifacts.md", "anchor": "harness-configuration" }, { "path": "docs/process/agent-artifacts.md", "anchor": "agent-skills" }],
       "checks": ["npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts"],
+      "testOwnership": [
+        {
+          "sources": ["docs/**", "AGENTS.md", "**/AGENTS.md", "CLAUDE.md"],
+          "tests": ["scripts/__tests__/pharos-change-contract.test.ts"]
+        }
+      ],
       "rules": [
         "Root AGENTS.md is the single authored instruction file; CLAUDE.md imports it.",
         "Temporary agent output belongs in ignored scratch locations, not committed docs."

@@ -7,8 +7,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-export const DIGEST_SAFETY_MAP_TIERS = ["A", "B", "C", "D", "F"] as const;
-export type DigestSafetyMapTier = typeof DIGEST_SAFETY_MAP_TIERS[number];
+const DIGEST_SAFETY_MAP_TIERS = ["A", "B", "C", "D", "F"] as const;
 export type DigestSafetyMapProfile = "canonical" | "archive-compatible";
 
 export type DigestSafetyMapSummary = z.output<typeof DigestSafetyMapSummarySchema>;
@@ -32,9 +31,9 @@ export function parseDigestSafetyMapUtcDateMs(value: unknown): number | null {
 }
 
 /** Safety Map dates are UTC `YYYY-MM-DD` calendar days; that rule has one definition. */
-export const isDigestSafetyMapUtcDate = isValidIsoDateOnly;
+const isDigestSafetyMapUtcDate = isValidIsoDateOnly;
 
-export function getDigestSafetyMapSummaryIssues(
+function getDigestSafetyMapSummaryIssues(
   summary: Pick<DigestSafetyMapSummary, "gradedCount" | "totalMcapUsd"> & {
     tiers: Array<Pick<DigestSafetyMapTierSummary, "tier" | "count" | "mcapUsd" | "sharePct">>;
   },
@@ -59,7 +58,7 @@ export function getDigestSafetyMapSummaryIssues(
   return issues;
 }
 
-export function getDigestSafetyMapCaptureIssues(capture: DigestSafetyMapCapture): DigestSafetyMapContractIssue[] {
+function getDigestSafetyMapCaptureIssues(capture: DigestSafetyMapCapture): DigestSafetyMapContractIssue[] {
   const issues: DigestSafetyMapContractIssue[] = [];
   if (capture.manifest.mapSummary.date !== capture.manifest.date) {
     issues.push({ path: ["manifest", "mapSummary", "date"], message: "Safety Map capture dates must match" });

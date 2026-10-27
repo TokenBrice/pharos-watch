@@ -103,6 +103,8 @@ Preserve ignored `agents/dex-acceptance/` archives externally as required before
 `npm run report-cards:capture-fixed-input -- --exact-cache-export <path> --output <path>`
 exports a registry-bound wrapper with normalized `fixedInput` and a verified `registrySnapshot`.
 
+`--require-current` (only with `--exact-cache-export --normalized-only`, used by the scheduled curation sweep) rejects an input whose `clockSec` is older than one `prepare-safety-score-v9-input` cycle or in the future with `capture-stale` / `capture-future` before writing; default and historical modes are unchanged.
+
 `npm run safety-score-v9:replay -- --input <path> --output <path> --published-at <seconds> --registry-ref <git-sha>`
 replays against the capture-time registry.
 
@@ -188,7 +190,7 @@ Generated clocks intentionally differ: coin sitemap `lastmod` follows the newest
 
 Automatic selection matches source/output changes and propagates dependencies, then filters `checkable` and `ciDriftCheck`. Explicit `--only` can still check a `ciDriftCheck: false` projection. Registry `requiredBrowsers` owns browser setup.
 
-The compact catalog generator loads shared TypeScript classifiers through `tsx`: write with `node --import tsx scripts/build-data/build-client-registry.mjs` and check with `node --import tsx scripts/build-data/build-client-registry.mjs --check`. Both modes cover every output of the `stablecoin-client-registry` artifact, including per-coin details, not just the browser list; its registered output paths are the authoritative inventory.
+The compact catalog generator loads shared TypeScript classifiers through `tsx`: write with `node --import tsx scripts/build-data/build-client-registry.mjs` and check with `node --import tsx scripts/build-data/build-client-registry.mjs --check`. Both modes cover every output of the `stablecoin-client-registry` artifact, including per-coin details, not just the browser list; its registered output paths are the authoritative inventory. Projection, catalog and freshness-stamp writes go through [`atomic-artifact-write.mts`](../scripts/lib/atomic-artifact-write.mts) (exclusive sibling temporary, then rename), so a reader sees complete old or new files, never a truncated one; this guarantees complete individual files, not a transactional multi-file generation.
 
 The editorial policy generator uses the runtime-neutral facade's readonly `EditorialPolicy` contract; raw JSON still passes its existing validation before hashing/rendering. See [Machine-readable policy](./editorial-style.md#machine-readable-policy).
 
@@ -253,7 +255,7 @@ API smoke validates the complete redemption response with `RedemptionBackstopsRe
 
 `ops:watch-worker-cron` and `ops:night-watch-worker` preserve literal `ok`, `degraded`, `error`, `skipped_neutral` and `skipped_locked` counts; `synthetic` counts only the orthogonal `stale-slot-reconciled` subset. Unknown stored statuses retain their own bucket. Productive and publication counts use explicit columns, with unknown counts separate; terminal success is never substituted for publication. Synthetic children group by invocation and slot as “1 started + N not-started”, with execution-unknown children separate; grouping never changes their stored error status. Generation-ledger states are a separate table/count, not extra publications inferred from a terminal.
 
-`npm run ops:worker-evidence-report -- --fixture agents/worker-cron-snapshot.json` renders the same literal-status/output table from a saved watcher JSON snapshot; add `--json` for the computed summary. All three standalone tools use strict CLI parsing. The profiler lives in `worker/scripts/` because it executes Worker source; generic maintenance reporting does not import `worker/src/`.
+`npm run ops:worker-evidence-report -- --fixture agents/worker-cron-snapshot.json` renders the same literal-status/output table from a saved watcher JSON snapshot; add `--json` for the computed summary. All three standalone tools use strict CLI parsing. The profiler and its test live in `worker/scripts/` because they execute Worker source; generic maintenance reporting and the root test-typing project (`tsconfig.test-typecheck.json`, which excludes `worker/`) never import `worker/src/`. The profiler's typed surface is `worker-status-profile.d.mts`.
 
 Read-only status D1 profiling (run from the root):
 

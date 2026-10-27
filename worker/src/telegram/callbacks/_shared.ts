@@ -80,7 +80,7 @@ export function hasExactParts(parts: readonly string[], expected: number): boole
   return parts.length === expected && parts.every((part) => part.length > 0);
 }
 
-export function callbackActorUserId(cb: TelegramCallbackQuery): string | null {
+function callbackActorUserId(cb: TelegramCallbackQuery): string | null {
   return cb.from?.id != null ? String(cb.from.id) : null;
 }
 

@@ -15,7 +15,7 @@ import { sweepStaleScheduledSlotExecutions } from "./scheduled-slot-fence";
 import { resolveScheduledSlotPolicy } from "./scheduled-slot-policy";
 import { logWorkerEvent } from "./structured-log";
 
-export function getSlotCatchUpCacheKey(scheduleKey: SlotCatchUpScheduleKey): string {
+function getSlotCatchUpCacheKey(scheduleKey: SlotCatchUpScheduleKey): string {
   return `scheduled-catch-up:${scheduleKey}`;
 }
 

@@ -3,6 +3,10 @@ import { parseStrictCliArgs, requireCliString, runDirectCli, writeCliHelpIfReque
 import { CronRunStatusSchema } from "../../shared/types/status/cron.ts";
 
 // Reporting preserves stored terminal status; synthetic is an orthogonal provenance count.
+/**
+ * @param {Array<Record<string, unknown>>} runs
+ * @param {Record<string, Array<{ state?: string }>>} [publicationGenerations]
+ */
 export function summarizeWorkerEvidence(runs, publicationGenerations = {}) {
   const counts = Object.assign(Object.create(null), Object.fromEntries(CronRunStatusSchema.options.map((status) => [status, 0])));
   const groups = new Map();
@@ -36,6 +40,7 @@ export function summarizeWorkerEvidence(runs, publicationGenerations = {}) {
     group.statuses[status] = (group.statuses[status] ?? 0) + 1;
     groups.set(key, group);
   }
+  /** @type {Record<string, Record<string, number>>} */
   const publicationStates = {};
   for (const [surface, rows] of Object.entries(publicationGenerations)) {
     publicationStates[surface] = {};

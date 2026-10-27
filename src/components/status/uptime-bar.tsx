@@ -20,7 +20,7 @@ export function summarizeDayCells(cells: readonly ComponentDayCell[]): string {
 }
 
 /** "2026-10-22: Operational (briefly degraded, under 1 h)": blips below the day threshold stay readable. */
-export function describeDayCell(cell: ComponentDayCell): string {
+function describeDayCell(cell: ComponentDayCell): string {
   const brief = cell.brief ? ` (briefly ${PUBLIC_COMPONENT_STATE_TONE[cell.brief].label.toLowerCase()}, under ${DAY_STATE_MIN_HELD_SEC / 3600} h)` : "";
   return `${cell.date}: ${cellTone(cell.state).label}${brief}`;
 }

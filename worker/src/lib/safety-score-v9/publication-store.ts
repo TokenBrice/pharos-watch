@@ -283,7 +283,7 @@ export async function persistSafetyScoreV9Publication(
       );
     }
     publicationValue = stored;
-    const payloadSha256: string = JSON.parse(stored).payloadSha256;
+    const payloadSha256: string = (JSON.parse(stored) as { payloadSha256: string }).payloadSha256;
     publicationPayloadSha256 = payloadSha256;
     if (!input.buildAcceptedProjections) {
       throw new Error("Accepted Safety Score v9 publication requires projection builders");

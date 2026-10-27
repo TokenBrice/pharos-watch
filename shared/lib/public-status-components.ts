@@ -520,7 +520,7 @@ export function projectPublicStatus(
  * change in the same direction, entering or clearing. An outage (database
  * sentinel failure or age past the outage band) bypasses it on entry.
  */
-export const PUBLIC_STATUS_HYSTERESIS_EVALUATIONS = 2;
+const PUBLIC_STATUS_HYSTERESIS_EVALUATIONS = 2;
 
 /** A raw state change waiting for confirmation: latest raw state, streak length, first-seen time. */
 export interface PublicComponentPending {

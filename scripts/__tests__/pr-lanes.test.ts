@@ -67,6 +67,12 @@ describe("PR lane manifest", () => {
       "verified-doc-links", "doc-sync",
       "doc-ownership-invariants",
     ]);
+    const invariants = PR_DOC_COMMANDS.find((command) => command.id === "doc-ownership-invariants");
+    expect(invariants?.args).toEqual([
+      "exec", "--", "vitest", "run",
+      "scripts/__tests__/doc-ownership-registry.test.ts",
+      "scripts/__tests__/pharos-change-contract.test.ts",
+    ]);
   });
 
   it.each([4, 8])("generates %i planned test shards in the validation matrix", (testShards) => {

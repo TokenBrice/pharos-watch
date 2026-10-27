@@ -8,7 +8,7 @@ import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
 export const COVERAGE_REPAIR_REQUEST_LIMIT = 40;
-export const COVERAGE_REPAIR_MAX_CONFIGS = 4;
+const COVERAGE_REPAIR_MAX_CONFIGS = 4;
 export const COVERAGE_REPAIR_MAX_BLOCKS = 10_000;
 export const COVERAGE_REPAIR_WINDOW_MS = 60_000;
 

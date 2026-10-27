@@ -1,6 +1,5 @@
 export type {
   TelegramAlertType,
-  TelegramCoinSnoozeDurationToken,
   TelegramDepegStepBps,
   TelegramDewsBand,
   TelegramMiniAppOperation,

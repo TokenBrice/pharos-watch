@@ -89,7 +89,7 @@ export function getDriftStatus(
 }
 
 /** Slipped = a current target that has moved at least once or has expired. */
-export function isSlippedDrift(status: DriftDisplayStatus): boolean {
+function isSlippedDrift(status: DriftDisplayStatus): boolean {
   return status === "pushed-once" || status === "pushed-multiple" || status === "overdue";
 }
 

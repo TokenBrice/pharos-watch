@@ -345,7 +345,7 @@ describe("StablecoinDetailSeoContent", () => {
         knownUnknownExposure: "none", knownUnknownExposurePct: 0,
       },
       proofOfReserves: { ...coin.proofOfReserves!, latestReport: { periodEnd: "2026-08-31" } },
-    } as StablecoinMeta;
+    } as unknown as StablecoinMeta;
 
     expect(buildStablecoinFaqItems(backed)[2].answer).toBe(
       "Pharos records TSTD's reserves as of Aug 31, 2026 as 60% Overnight reverse repo, 30% Treasury bills, 7% Bank deposits, and 1 smaller holding. " +

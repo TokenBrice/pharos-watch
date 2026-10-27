@@ -23,8 +23,6 @@ import { normalizeDeploymentId } from "../../types/deployment-id";
 import { V9_EMPTY_ARRAY } from "../../types/safety-score-v9-immutable";
 import { sortV1005ProcessDiagnostics } from "./control-scope";
 
-export type V9MintReconciliation = V9EconomicControlReviewV2["mint"]["reconciliation"];
-export type V9MintSupervision = V9EconomicControlReviewV2["mint"]["supervision"];
 export type V9MintPosture = Exclude<MintAuthorityPosture, "none-resolved-mint">;
 export type V9OracleTier = OracleRiskTier;
 export type V9BridgeTier = BridgeRouteRiskTier;

@@ -38,7 +38,7 @@ import { executeAtomicBatch } from "../../lib/db";
 import { decodeAlertTypes, encodeAlertTypes } from "../callbacks/pick";
 import { isUnexpired } from "../callbacks/confirm";
 
-export const RECOMMENDED_PRESET_ID: TelegramPresetId = "usd-top25";
+const RECOMMENDED_PRESET_ID: TelegramPresetId = "usd-top25";
 const RECOMMENDED_ALERT_TYPES = ["dews", "depeg"] as const;
 const FOLLOW_TOP_LABEL = "Follow the top 25 USD stablecoins";
 const UNDO_TTL_SEC = 24 * 3600;

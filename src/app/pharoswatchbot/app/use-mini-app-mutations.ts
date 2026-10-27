@@ -49,7 +49,7 @@ function countCoins(count: number): string {
 }
 
 /** User-facing confirmation for a saved change; also the stale-auth "Not saved" intent. */
-export function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
+function mutationSuccessAnnouncement(operation: TelegramMiniAppOperation, state: TelegramMiniAppState | null): string {
   switch (operation.kind) {
     case "preview-bulk-watchlist":
     case "confirm-bulk-watchlist": {

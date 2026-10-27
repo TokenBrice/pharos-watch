@@ -9,7 +9,7 @@ import type { WebhookCommandHandler } from "./context";
  * samples that the formatter contract test keeps identical to real output.
  * It never reads live data or changes subscriptions.
  */
-export function buildSampleAlertMessage(): string {
+function buildSampleAlertMessage(): string {
   return `${escapeHtml(TELEGRAM_PUBLIC_ALERT_SAMPLES.depeg.message)}\n\n<i>This was a sample alert.</i>`;
 }
 

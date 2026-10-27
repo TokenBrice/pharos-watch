@@ -2,7 +2,7 @@ import { z } from "zod";
 import { ReportCardsV9DependencyGraphSchema } from "./report-cards-v9";
 import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publication";
 import { SafetyScoreV9CurrentCardSchema, SafetyScoreV9CommonModeGroupsSchema } from "./safety-score-v9-public";
-import { refineV9RatingStatusFields, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
+import { V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
 import { Sha256Schema, UnixSecondsSchema, issue } from "./safety-schema-primitives";
 
 export const SAFETY_SCORE_COHORT_MAX_BYTES = 4 * 1024 * 1024;
@@ -60,11 +60,10 @@ const SafetyScoreCohortCardBaseSchema = z.strictObject({
     }),
   }).nullable(),
 });
-export const SafetyScoreCohortCardSchema = SafetyScoreCohortCardBaseSchema.superRefine(refineV9RatingStatusFields);
-export type SafetyScoreCohortCard = z.infer<typeof SafetyScoreCohortCardSchema>;
+export type SafetyScoreCohortCard = z.infer<typeof SafetyScoreCohortCardBaseSchema>;
 
 // Grade fields come from the bound index; graph edges and binding caps already retain these facts.
-export const SafetyScoreCohortStoredCardSchema = SafetyScoreCohortCardBaseSchema.omit({
+const SafetyScoreCohortStoredCardSchema = SafetyScoreCohortCardBaseSchema.omit({
   score: true, grade: true, ratingStatus: true, partialEvidence: true, bindingCap: true,
 }).extend({
   dependencies: SafetyScoreCohortCardBaseSchema.shape.dependencies.omit({ serial: true }),

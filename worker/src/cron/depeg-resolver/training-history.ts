@@ -92,7 +92,7 @@ export async function readDdrTrainingHistory(
 }
 
 /** Open events are few (one per open source event); bound the read regardless. */
-export const OPEN_TRAINING_ROW_CAP = 500;
+const OPEN_TRAINING_ROW_CAP = 500;
 
 /**
  * DDRv5 censoring: still-open, audit-eligible events enter the duration

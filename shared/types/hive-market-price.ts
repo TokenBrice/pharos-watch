@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const HiveMarketRejectionSchema = z.enum([
+const HiveMarketRejectionSchema = z.enum([
   "rpc_timeout", "rpc_error", "rate_limited", "invalid_response", "head_stale",
   "sample_expired", "book_empty", "book_crossed", "spread_exceeded",
   "insufficient_depth", "depth_unproven", "volume_unproven", "insufficient_volume",
@@ -43,9 +43,8 @@ export const HiveMarketDiagnosticSchema = z.object({
   rejectionReason: HiveMarketRejectionSchema.nullable(),
 });
 export type HiveMarketDiagnostic = z.infer<typeof HiveMarketDiagnosticSchema>;
-export const HiveNativePriceQuoteSchema = z.object({
-  price: finite.positive(),
-  observedAt: finite.positive(),
-  observedAtMode: z.literal("local_fetch"),
-});
-export type HiveNativePriceQuote = z.infer<typeof HiveNativePriceQuoteSchema>;
+export type HiveNativePriceQuote = {
+  price: number;
+  observedAt: number;
+  observedAtMode: "local_fetch";
+};

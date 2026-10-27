@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import mechanismOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
-import operationalResilienceOverlays from "@shared/data/safety-score-v9/operational-resilience-overlays-v1.json";
+import operationalResilienceHistoricalFixture from "./fixtures/operational-resilience-overlay.historical.json";
 import transferOverlays from "@shared/data/safety-score-v9/transfer-review-overlays-v1.json";
 import stablecoinsGenerated from "@shared/data/stablecoins/coins.generated.json";
 import type { StablecoinMeta } from "../core";
@@ -27,7 +27,8 @@ const ASSURANCE_COMPONENT_BY_ARCHETYPE: Readonly<Record<string, string>> = {
 
 const mechanismFixture = { schemaVersion: 1, note: "Fixture", overlays: [mechanismOverlays.overlays[0]] };
 const transferFixture = { schemaVersion: 1, note: "Fixture", reviews: [transferOverlays.reviews[0]] };
-const operationalFixture = { schemaVersion: 1, note: "Fixture", overlays: [operationalResilienceOverlays.overlays[0]] };
+// One-row historical schema fixture (source commit bff6cd54c); the retired live census is gone.
+const operationalFixture = operationalResilienceHistoricalFixture;
 
 describe("shared Safety Score V9 overlay boundaries", () => {
   it("requires conserved source measurements rather than trusting complete compiled process labels", () => {
@@ -83,7 +84,7 @@ describe("shared Safety Score V9 overlay boundaries", () => {
     expect(() => SafetyScoreV9MechanismReviewOverlayFileSchema.parse(mechanismOverlays)).not.toThrow();
     expect(() => SafetyScoreV9ReviewedTransferFileSchema.parse(transferOverlays)).not.toThrow();
     expect(() =>
-      SafetyScoreV9OperationalResilienceOverlayFileSchema.parse(operationalResilienceOverlays),
+      SafetyScoreV9OperationalResilienceOverlayFileSchema.parse(operationalResilienceHistoricalFixture),
     ).not.toThrow();
   });
 

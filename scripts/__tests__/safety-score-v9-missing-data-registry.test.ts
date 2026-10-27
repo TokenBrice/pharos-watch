@@ -17,6 +17,7 @@ import {
 } from "@shared/test-utils/report-cards-v9";
 import { makeCoin } from "./stablecoin-catalog.test-support";
 import { describe, expect, it } from "vitest";
+import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import {
   generateV9MissingDataRegistry,
   classifyV9ScoreProjectionWorkType,
@@ -144,7 +145,7 @@ describe("Safety Score v9 missing-data work routing", () => {
       const descriptor = descriptorForReason(reason, path);
       expect(workTypeForDescriptor(descriptor)).toBe("MECHANISM_REVIEW");
       expect(descriptor.defaultResolutionMode).toBe("issuer-or-onchain-evidence");
-      expect(descriptor.context(minimalAsset("mechanism-fixture"))).toMatchObject({
+      expect(descriptor.context(minimalAsset("mechanism-fixture") as unknown as V9AssetFactsV3)).toMatchObject({
         componentKey: field,
       });
     }

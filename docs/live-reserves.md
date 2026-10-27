@@ -236,11 +236,11 @@ New material-clock consumers must submit every material contributor to the cover
 
 ## Frontend Consumers
 
-Reserve composition and collateralization footers separate the source/report-as-of date from the last checked time, retain a stale label for out-of-window evidence, and never label a refreshed historical attestation as a new live measurement. Attestation-mix snapshots use the proof badge with an `Attestation` label. A source-age-only degradation explains that evidence is out of date; collection failures retain their separate sync-error notice.
+Reserve composition and collateralization footers separate the source/report-as-of date from the last checked time, retain a stale label for out-of-window evidence, and never label a refreshed historical attestation as a new live measurement. Attestation-mix snapshots use the proof badge with an `Attestation` label. A source-age-only degradation explains that evidence is out of date; retained-book sync faults have no separate public notice.
 
 The checked-time formatter preserves present finite `liveAt` values, including epoch zero (`1970-01-01 00:00 UTC`). Only an absent or non-finite checked timestamp uses the previous-successful-run fallback; source/report dates and stale status remain separate.
 
-`buildReserveFeedStatus()` appends reviewed exclusion reason, evidence date/URL, owner, reviewed date and expiry to stale/error/bootstrap/fallback disclosure rows. The status card distinguishes raw evidence coverage from health-cohort exclusions; neither surface claims acknowledgement makes evidence fresh.
+`buildReserveFeedStatus()` appends reviewed exclusion reason, evidence date/URL, owner, reviewed date and expiry to the eligible first-sync bootstrap row only. The status card distinguishes raw evidence coverage from health-cohort exclusions; neither surface claims acknowledgement makes evidence fresh.
 
 - `src/hooks/use-stablecoin-reserves.ts` uses mode-aware polling: clean `live` responses follow the 4-hour reserve producer cadence (`staleTime = 4 hours` / `refetchInterval = 8 hours`); all other modes and `live` responses with non-`ok` sync status or `uncertainWrite` use `1 minute` / `2 minutes`
 - `src/hooks/use-stablecoin-detail-view-model.ts` injects the reserve result into the detail-page view model
