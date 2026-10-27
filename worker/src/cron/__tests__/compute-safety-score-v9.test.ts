@@ -795,6 +795,165 @@ describe("computeSafetyScoreV9", () => {
     }
   });
 
+  describe("bounded captured DEX admission", () => {
+    // Captured DEX evidence `ageBeforeUpdatedSec` older than the stablecoins capture.
+    function withCapturedDex(ageBeforeUpdatedSec: number | null, generationId?: string) {
+      const dexUpdatedAt = ageBeforeUpdatedSec === null ? null : fixedInput.updatedAt - ageBeforeUpdatedSec;
+      const input: NativeSafetyScoreV9Input = {
+        ...fixedInput,
+        dexGenerationId: generationId ?? `dex-liquidity-${dexUpdatedAt}`,
+        inputFreshness: {
+          ...fixedInput.inputFreshness,
+          dexLiquidity: { ...fixedInput.inputFreshness.dexLiquidity, updatedAt: dexUpdatedAt },
+        },
+      };
+      mocks.parseFixedInput.mockResolvedValue({
+        input,
+        safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
+          methodologyVersion: input.methodologyVersion, baseInputGenerationId: input.baseInputGenerationId,
+          publicationGenerationId: input.sourceGeneration,
+        }),
+      });
+      mocks.applySupplyGeneration.mockReturnValue({
+        status: "applied", generationId: `safety-score-v9-supply-attribution:v1:${"a".repeat(64)}`,
+        fixedInput: input, acceptedAssetIds: ["xaut-tether"], rejectedAssetIds: [], invalidAssetIds: [],
+      });
+      return input;
+    }
+    const live = (updatedAt: number) => ({ generationId: `dex-liquidity-${updatedAt}`, updatedAt });
+
+    it.each([
+      ["before compute", 0],
+      ["between compute and enrichment", 1],
+    ])("admits in-budget DEX advancement %s without replacing captured provenance", async (_label, boundary) => {
+      vi.useFakeTimers();
+      vi.setSystemTime((fixedInput.updatedAt + 600) * 1_000);
+      const input = withCapturedDex(100);
+      const newer = live(fixedInput.updatedAt + 300);
+      const captured = { generationId: input.dexGenerationId, updatedAt: input.inputFreshness.dexLiquidity.updatedAt! };
+      mocks.loadDexGeneration.mockReset()
+        .mockResolvedValueOnce(boundary === 0 ? newer : captured)
+        .mockResolvedValueOnce(newer);
+      let prepared: NativeSafetyScoreV9Input | null = null;
+      mocks.runPublication.mockImplementation(async (run: {
+        fixedInputOwner: { value: NativeSafetyScoreV9Input };
+        prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+      }) => {
+        prepared = await run.prepareFixedInput(run.fixedInputOwner.value, new AbortController().signal);
+        return { status: "published", attemptId: "attempt", publicationGenerationId: input.sourceGeneration,
+          candidateId: "candidate", outcome: "full", quarantines: [], affectedAssetIds: [], bridgeJoinDiagnostics: [] };
+      });
+
+      const result = await computeSafetyScoreV9({} as D1Database);
+
+      expect(result.status).toBe("ok");
+      expect(mocks.loadDexGeneration).toHaveBeenCalledTimes(2);
+      // Captured rows, ID and freshness stay the evaluated evidence.
+      expect(prepared!.dexGenerationId).toBe(input.dexGenerationId);
+      expect(prepared!.inputFreshness.dexLiquidity).toEqual(input.inputFreshness.dexLiquidity);
+      expect(prepared!.dexLiqMap).toBe(input.dexLiqMap);
+      expect(JSON.parse(result.metadata!).dexCapture).toEqual({
+        verdict: "lagging-within-budget", admitted: true,
+        capturedDexGenerationId: input.dexGenerationId, liveDexGenerationId: newer.generationId,
+        capturedDexUpdatedAt: fixedInput.updatedAt - 100, liveDexUpdatedAt: newer.updatedAt,
+        stablecoinsCaptureAgeSec: 600, stablecoinsCaptureMaxAgeSec: 4_500,
+        dexCaptureAgeSec: 700, dexCaptureMaxAgeSec: 14_400,
+      });
+    });
+
+    it("keeps equal generations current without consulting either budget", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime((fixedInput.updatedAt + 50_000) * 1_000);
+      mocks.getCacheUpdatedAt.mockResolvedValueOnce(fixedInput.updatedAt);
+      mocks.loadDexGeneration.mockReset().mockResolvedValue({ generationId: fixedInput.dexGenerationId });
+      mockPublishedPreparation();
+
+      const result = await computeSafetyScoreV9({} as D1Database);
+
+      expect(result.status).toBe("ok");
+      expect(JSON.parse(result.metadata!).dexCapture).toMatchObject({ verdict: "current", admitted: true });
+    });
+
+    it.each([
+      ["stablecoins capture at its 4500s budget", 4_500, 100, "lagging-within-budget"],
+      ["stablecoins capture one second past budget", 4_501, 100, "out-of-budget"],
+      ["captured DEX at its 14400s budget", 4_400, 10_000, "lagging-within-budget"],
+      ["captured DEX one second past budget", 4_401, 10_000, "out-of-budget"],
+      ["a stablecoins capture dated in the future", -1, 100, "future-dated"],
+    ] as const)("budgets %s", async (_label, stablecoinsAgeSec, dexAgeBeforeUpdatedSec, verdict) => {
+      vi.useFakeTimers();
+      vi.setSystemTime((fixedInput.updatedAt + stablecoinsAgeSec) * 1_000);
+      const input = withCapturedDex(dexAgeBeforeUpdatedSec);
+      mocks.loadDexGeneration.mockReset().mockResolvedValue(live(fixedInput.updatedAt));
+      mockPublishedPreparation();
+
+      const result = await computeSafetyScoreV9({} as D1Database);
+      const metadata = JSON.parse(result.metadata!);
+
+      expect(metadata.dexCapture).toMatchObject({
+        verdict, admitted: verdict === "lagging-within-budget",
+        stablecoinsCaptureAgeSec: stablecoinsAgeSec, dexCaptureAgeSec: stablecoinsAgeSec + dexAgeBeforeUpdatedSec,
+        capturedDexGenerationId: input.dexGenerationId,
+      });
+      if (verdict === "lagging-within-budget") {
+        expect(result.status).toBe("ok");
+        expect(mocks.runPublication).toHaveBeenCalledOnce();
+      } else {
+        expect(result.status).toBe("degraded");
+        expect(metadata.reason).toBe("dex-generation-advanced");
+        expect(mocks.runPublication).not.toHaveBeenCalled();
+      }
+    });
+
+    it.each([
+      ["a captured generation ahead of live", 100, () => live(fixedInput.updatedAt - 200), "ahead-of-live"],
+      ["a missing captured DEX timestamp", null, () => live(fixedInput.updatedAt), "malformed"],
+      ["a captured ID that does not name its timestamp", 100, () => live(fixedInput.updatedAt), "malformed", "dex-liquidity-other"],
+      ["a live generation without a timestamp", 100, () => ({ generationId: `dex-liquidity-${fixedInput.updatedAt}` }), "malformed"],
+    ] as const)("refuses %s", async (_label, dexAgeBeforeUpdatedSec, liveGeneration, verdict, generationId?: string) => {
+      vi.useFakeTimers();
+      vi.setSystemTime((fixedInput.updatedAt + 60) * 1_000);
+      withCapturedDex(dexAgeBeforeUpdatedSec, generationId);
+      mocks.loadDexGeneration.mockReset().mockResolvedValue(liveGeneration());
+
+      const result = await computeSafetyScoreV9({} as D1Database);
+
+      expect(result.status).toBe("degraded");
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        reason: "dex-generation-advanced", dexCapture: { verdict, admitted: false },
+      });
+      expect(mocks.runPublication).not.toHaveBeenCalled();
+    });
+
+    it("reassesses after enrichment and refuses advancement that leaves the budget", async () => {
+      vi.useFakeTimers();
+      vi.setSystemTime((fixedInput.updatedAt + 60) * 1_000);
+      const input = withCapturedDex(100);
+      mocks.loadDexGeneration.mockReset()
+        .mockResolvedValueOnce({ generationId: input.dexGenerationId, updatedAt: fixedInput.updatedAt - 100 })
+        .mockImplementationOnce(async () => {
+          vi.setSystemTime((fixedInput.updatedAt + 4_501) * 1_000);
+          return live(fixedInput.updatedAt + 4_000);
+        });
+      let preparation: Promise<unknown> | null = null;
+      mocks.runPublication.mockImplementation(async (run: {
+        fixedInputOwner: { value: NativeSafetyScoreV9Input };
+        prepareFixedInput: (input: NativeSafetyScoreV9Input, signal: AbortSignal) => Promise<NativeSafetyScoreV9Input>;
+      }) => {
+        preparation = run.prepareFixedInput(run.fixedInputOwner.value, new AbortController().signal);
+        await expect(preparation).rejects.toThrow(/older than current .*\(out-of-budget\)/);
+        return { status: "failed", stage: "v9-enrichment", code: "Error", message: "refused", attemptId: "attempt",
+          phaseElapsedMs: {}, subphaseElapsedMs: {}, phaseTimingBasis: "workers-io-boundary-attributed", abortCause: null,
+          journal: { status: "skipped", reason: "publication-failed", rows: 0 }, captureArchive: { status: "skipped", reason: "publication-failed" } };
+      });
+
+      const result = await computeSafetyScoreV9({} as D1Database);
+
+      expect(preparation).not.toBeNull();
+      expect(JSON.parse(result.metadata!).dexCapture).toMatchObject({ verdict: "out-of-budget", admitted: false });
+    });
+  });
+
   it.each(["base", "seed"] as const)("rejects mismatched %s identity independently", async (owner) => {
     const identity = buildSafetyScoreV9InputIdentity({
       methodologyVersion: fixedInput.methodologyVersion,
