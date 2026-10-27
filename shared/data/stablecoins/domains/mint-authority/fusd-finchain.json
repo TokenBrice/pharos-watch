@@ -166,18 +166,18 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-01",
-        "observedBlock": 452345452,
+        "observedAt": "2026-10-27",
+        "observedBlock": 462008035,
         "executionScope": {
           "controllerDeployment": "solana:Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc04)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
-              "label": "Independently verified finalized mint and SPL multisig context 452354762",
+              "label": "Independently verified finalized mint and SPL multisig context 462008035",
               "url": "https://api.mainnet-beta.solana.com"
             },
             {
@@ -194,13 +194,13 @@
             }
           ],
           "pin": {
-            "position": "452354762",
+            "position": "462008035",
             "hash": null,
             "runtimeIdentity": "Initialized SPL multisig account owned by TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA; deployed program binary correspondence not reviewed",
             "signerIdentity": "1-of-3: DeSV2k6LkxEWTL4U4FFrd5na8LJWqAMEEy48KMqkkf3j,E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C,GmFB41nws8Egtb9mQAqR1i82XPcEJXAzBPZW2t3hsKVr"
           },
           "observedState": {
-            "position": "452354762",
+            "position": "462008035",
             "hash": null,
             "runtimeIdentity": "Initialized SPL multisig account owned by TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA; deployed program binary correspondence not reviewed",
             "signerIdentity": "1-of-3: DeSV2k6LkxEWTL4U4FFrd5na8LJWqAMEEy48KMqkkf3j,E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C,GmFB41nws8Egtb9mQAqR1i82XPcEJXAzBPZW2t3hsKVr"
@@ -278,7 +278,7 @@
             "url": "https://finchain.gitbook.io/finchain-docs/en/fusd/fusdlp-token"
           }
         ],
-        "evidence": "At one finalized context, slot 452345452 on 2026-10-01, mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q returned 9 decimals, mintAuthority Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm and freezeAuthority E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C under the legacy SPL Token program. The authority parsed as an initialized 1-of-3 multisig with the previously recorded signers. A separate finalized metadata read at slot 452346924 returned PDA G5gRiKMa56BuSNHr7WBgcVxdquMGGWioSrZrrMzTnZ6j with name FinChain Dollar LP, symbol FUSDLP, and an empty URI. Both the issuer's FUSD Token page and FUSDLP Token page list this same mint. The quorum and token-level mint power are verified; attributing this FUSDLP-labelled liability to canonical FUSD remains unresolved. No control is removed on this conflicting evidence."
+        "evidence": "At one finalized context, slot 452345452 on 2026-10-01, mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q returned 9 decimals, mintAuthority Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm and freezeAuthority E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C under the legacy SPL Token program. The authority parsed as an initialized 1-of-3 multisig with the previously recorded signers. A separate finalized metadata read at slot 452346924 returned PDA G5gRiKMa56BuSNHr7WBgcVxdquMGGWioSrZrrMzTnZ6j with name FinChain Dollar LP, symbol FUSDLP, and an empty URI. Both the issuer's FUSD Token page and FUSDLP Token page list this same mint. The quorum and token-level mint power are verified; attributing this FUSDLP-labelled liability to canonical FUSD remains unresolved. No control is removed on this conflicting evidence. Re-read 2026-10-27 at finalized Solana slot 462008035 (api.mainnet-beta.solana.com getMultipleAccounts jsonParsed): mint 51tpgun58apNKgrk96xAVUCN5yC7cDzt3EHov9UjBh3Q still shows mintAuthority Ch1Z9TZK7hiX73HZnhGQygsZ3zr1Rjh8ifspDfAqVRgm and freezeAuthority E1wYYoH89zYz5vfXFoWBfuvPhzmHCMsJ4WceK4A1WP7C; the authority is still an initialized SPL multisig with numRequiredSigners=1 and the same three signers. The FUSDLP attribution question above is not re-adjudicated."
       },
       {
         "chain": "multichain",

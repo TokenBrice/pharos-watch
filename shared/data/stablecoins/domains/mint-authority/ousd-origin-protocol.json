@@ -114,7 +114,7 @@
         "threshold": 2,
         "modulesOrGuardsStatus": "present",
         "canRaiseCap": false,
-        "evidence": "At Ethereum block 26101011 (2026-10-02), Vault strategistAddr() remains this Safe, with eight owners, threshold 2, five enabled modules and zero guard. All five module runtimes exactly match their Blockscout verified deployed bytecode. AutoWithdrawalModule 0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5 has immutable OUSD Vault/USDC/Safe targets and an external EOA operator 0x739212d5bafe6aac8be49a60b7d003bd41dbf38b. The operator can bypass the Safe's two-signature transaction flow for withdrawFromStrategy(address,address[],uint256[]) (0xae69f3cb), moving supported-strategy USDC back into the Vault to fund its withdrawal queue, bounded dynamically by min(queue shortfall, strategy balance). A pinned one-USDC eth_call as the Safe succeeds. This is verified reserve-transfer reach, not noninterference; it does not itself expose OUSD mint or upgrade selectors, arbitrary recipients, or delegatecall. Other modules automate mutable bribe targets, strategy rewards and OETH bridging; their complete transitive OUSD reach is not certified. No module-presence waiver, unbounded-loss claim or backing-horizon change is authored.",
+        "evidence": "At Ethereum block 26101011 (2026-10-02), Vault strategistAddr() remains this Safe, with eight owners, threshold 2, five enabled modules and zero guard. All five module runtimes exactly match their Blockscout verified deployed bytecode. AutoWithdrawalModule 0x90d588fc0ec3db9c4b417db4537fe08e063d2ae5 has immutable OUSD Vault/USDC/Safe targets and an external EOA operator 0x739212d5bafe6aac8be49a60b7d003bd41dbf38b. The operator can bypass the Safe's two-signature transaction flow for withdrawFromStrategy(address,address[],uint256[]) (0xae69f3cb), moving supported-strategy USDC back into the Vault to fund its withdrawal queue, bounded dynamically by min(queue shortfall, strategy balance). A pinned one-USDC eth_call as the Safe succeeds. This is verified reserve-transfer reach, not noninterference; it does not itself expose OUSD mint or upgrade selectors, arbitrary recipients, or delegatecall. Other modules automate mutable bribe targets, strategy rewards and OETH bridging; their complete transitive OUSD reach is not certified. No module-presence waiver, unbounded-loss claim or backing-horizon change is authored. Re-read 2026-10-27 at Ethereum block 26282972 (hash 0xdef03506e753852cf624d4103305513a8f7e0a6f48b38a35113755b329c84625, timestamp 2026-10-27T08:53:23Z, ethereum-rpc.publicnode.com): the Safe (version 1.4.1, singleton 0x41675c099f32341bf84bfc5382af534df5c7461a) still has the same eight owners, threshold 2, the same five enabled modules with empty terminal pagination, zero guard and fallback handler 0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5; Vault 0xE75D77B1865Ae93c7eaa3040B038D7aA7BC02F70 strategistAddr() is still this Safe. The runtime-code text SHA-256 of the Safe proxy, all five modules and the fallback handler is identical to the recorded values. AutoWithdrawalModule safeContract() is this Safe, its OPERATOR_ROLE members are this Safe and EOA 0x739212d5bafe6aac8be49a60b7d003bd41dbf38b, and DEFAULT_ADMIN_ROLE has the single member this Safe. Module source re-verification and the transitive reach of the other modules were not repeated; the partial certificate and its closure flags are unchanged.",
         "safe": {
           "owners": [
             "0x052c01a2a88fa6cba8fc2dbef39a442a140a35e3",
@@ -137,16 +137,16 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
           "version": "1.4.1",
-          "observedBlock": 26101011,
+          "observedBlock": 26282972,
           "source": "onchain",
-          "observedAt": "2026-10-02"
+          "observedAt": "2026-10-27"
         },
         "executionScope": {
           "controllerDeployment": "ethereum:0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971",
-          "reviewedAt": "2026-10-09",
-          "observedAt": "2026-10-02",
-          "expiresAt": "2026-10-31",
-          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
@@ -191,16 +191,16 @@
             }
           ],
           "pin": {
-            "position": "26101011",
-            "hash": "0x1c0b72d2454ec2d73c0893fa1932cae8c9bfa8aa98b07a896b5953c2003452cd",
+            "position": "26282972",
+            "hash": "0xdef03506e753852cf624d4103305513a8f7e0a6f48b38a35113755b329c84625",
             "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
-            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26101011"
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26282972"
           },
           "observedState": {
-            "position": "26101011",
-            "hash": "0x1c0b72d2454ec2d73c0893fa1932cae8c9bfa8aa98b07a896b5953c2003452cd",
+            "position": "26282972",
+            "hash": "0xdef03506e753852cf624d4103305513a8f7e0a6f48b38a35113755b329c84625",
             "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
-            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26101011"
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26282972"
           },
           "inventory": "partial",
           "closure": {
@@ -291,8 +291,8 @@
             "url": "https://eth.blockscout.com/address/0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971"
           }
         ],
-        "observedAt": "2026-10-02",
-        "observedBlock": 26101011
+        "observedAt": "2026-10-27",
+        "observedBlock": 26282972
       }
     ],
     "economicCapSemantics": "unbounded",

@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x98a878b1cd98131b271883b390f68d2c90674665",
       "name": "apxUSD yield vault shares",
-      "pct": 99.984575566495,
+      "pct": 99.99757415980419,
       "risk": "high",
       "coinId": "apxusd-apyx",
       "depType": "wrapper",
@@ -23,7 +23,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x38eeb52f0771140d10c4e9a9a72349a329fe8a6a:deployed",
       "name": "Vested apxUSD yield recognized by apyUSD",
-      "pct": 0.015424433505003776,
+      "pct": 0.0024258401958068463,
       "risk": "high",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Apyx apxUSD held through the vesting contract",
@@ -41,8 +41,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (ValA46apyUSD)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -60,11 +60,15 @@
       {
         "label": "Verified LinearVestV0 asset and beneficiary; Ethereum block 26095984",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Verified deployed ApyUSD totalAssets() includes its direct apxUSD balance and LinearVestV0 vestedAmount(). At Ethereum block 26095984, the vesting contract's asset is the published apxUSD token and its beneficiary is the apyUSD vault; its apxUSD balance covers the recognized vested yield, which exactly equals totalAssets minus the direct vault balance. Both slices therefore represent apxUSD exposure. This review corrects slice identity and dependency only; the September 21 composition percentages and compositionAsOf are retained, not refreshed.",
-    "compositionBasis": "Live ERC-4626 totalAssets and apxUSD balance for the published Ethereum apyUSD deployment",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Fresh pinned reads at Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z): the apyUSD proxy implementation remains 0xfd616567ecc1607f61073951a1e822f7315bb112; asset() is apxUSD; totalAssets() is 153,918,638.226858520177928255 apxUSD and the vault's direct apxUSD balance is 153,914,904.406663574521426910. The LinearVestV0 contract 0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f still names apxUSD as its asset and the apyUSD vault as beneficiary, holds 792,814.488060 apxUSD, and vestedAmount() returns 3,733.820194945656501345, exactly totalAssets() minus the direct balance. The two slices therefore remain apxUSD exposure; weights are recomputed from this block (99.997574% direct, 0.002426% vested yield).",
+    "compositionBasis": "Live ERC-4626 totalAssets and apxUSD balance for the published Ethereum apyUSD deployment, pinned at Ethereum block 26282914",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Vested yield is apxUSD held at LinearVestV0 0x0d62b4cc02b4b51ed19ddf41d7a7979cf394c99f for the apyUSD vault. Neither this custody read nor the dependency link establishes legal segregation, bankruptcy remoteness, or protections in the underlying apxUSD reserve.",
     "knownUnknownExposurePct": 0

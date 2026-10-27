@@ -15,8 +15,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal D01-L3 2026-10-27",
     "confidence": "verified",
     "sources": [
       {
@@ -32,9 +32,9 @@
         "url": "https://docs.mento.org/mento-v3/build/deployments/addresses"
       }
     ],
-    "rationale": "Mento documents GBPm as debt borrowed against USDm collateral in its FX CDP system, matching the current live Mento row. The reserve is one tracked stablecoin exposure with Mento Reserve, custody, liquidity, and smart-contract failure domains retained.",
-    "compositionBasis": "Current live Mento CDP row and Mento CDP documentation",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Mento documents GBPm as debt borrowed against USDm collateral in its FX CDP system, matching the current live Mento row. The Mento Reserve analytics API (/api/v2/reserve, retrieved 2026-10-27 08:46 UTC; the payload carries no source timestamp) lists two active GBPm troves, both with USDm collateral (173,427.01 and 177,483.08 USDm against 82,341.66 and 14,545.11 USD of GBPm debt). The reserve is one tracked stablecoin exposure with Mento Reserve, custody, liquidity, and smart-contract failure domains retained.",
+    "compositionBasis": "Current live Mento CDP row, Mento CDP documentation and Mento Reserve analytics API cdp_troves retrieved 2026-10-27",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct GBPm reserve slice is identified; the upstream Mento Reserve basket is tracked through the linked USDm asset.",
     "knownUnknownExposurePct": 0

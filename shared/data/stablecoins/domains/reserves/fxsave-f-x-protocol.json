@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -33,11 +33,15 @@
       {
         "label": "Pinned SavingFxUSD implementation",
         "url": "https://github.com/AladdinDAO/fx-protocol-contracts/blob/59551dba909da826f54d090c552cc8dceaa29bd9/contracts/core/SavingFxUSD.sol"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "f(x) documents that redeeming fxSAVE first returns fxSP tokens, which can then be redeemed for fxUSD and USDC. The live deployed-strategy row is therefore classified as the aggregate fxSP protocol position rather than as one tracked stablecoin.",
-    "compositionBasis": "Exact live ERC-4626 deployed row and f(x) fxSAVE redemption documentation",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Fresh pinned reads at Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z): the fxSAVE proxy implementation remains 0xe4031e271809d20074e4bef1caeefec5f710e8a6; asset() is the fxSP token 0x65c9a641afceb9c0e6034e558a319488fa0fa3be; totalAssets() is 78,509,079.234344063724164394 fxSP and the vault's own fxSP balance is 0, so 100% of totalAssets() is held through the gauge-staking strategy. f(x) documents that redeeming fxSAVE first returns fxSP tokens, which can then be redeemed for fxUSD and USDC. The live deployed-strategy row is therefore classified as the aggregate fxSP protocol position rather than as one tracked stablecoin.",
+    "compositionBasis": "Exact live ERC-4626 deployed row pinned at Ethereum block 26282914 and f(x) fxSAVE redemption documentation",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct fxSAVE reserve is the fxSP position; its changing fxUSD and USDC mix is internal to that classified protocol position.",
     "knownUnknownExposurePct": 0,

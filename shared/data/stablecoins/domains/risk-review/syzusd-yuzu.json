@@ -608,10 +608,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "executionScope": {
           "controllerDeployment": "plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "Sol curation pass 2026-10-01 (DataYuzu)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
@@ -624,14 +624,14 @@
             }
           ],
           "pin": {
-            "position": "33946301",
-            "hash": "0xade3b086fdb1f54a292e93a8c2e4b356475e4eb5b738ed5f9632b02ee14136b9",
+            "position": "36149633",
+            "hash": "0x0842228da297839819f8a4d5d4b67ba4928867073e6eb761989acaf8bb70bfae",
             "runtimeIdentity": "sha256-rpc-code-text:80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c",
             "signerIdentity": "owner=rateLimitAdmin=plasma:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae;eth_getCode=0x"
           },
           "observedState": {
-            "position": "33946301",
-            "hash": "0xade3b086fdb1f54a292e93a8c2e4b356475e4eb5b738ed5f9632b02ee14136b9",
+            "position": "36149633",
+            "hash": "0x0842228da297839819f8a4d5d4b67ba4928867073e6eb761989acaf8bb70bfae",
             "runtimeIdentity": "sha256-rpc-code-text:80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c",
             "signerIdentity": "owner=rateLimitAdmin=plasma:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae;eth_getCode=0x"
           },
@@ -719,8 +719,8 @@
         },
         "capDescription": "CCIP releases use configured per-route rate limits, but these are not immutable whole-escrow bounds: the owner can change the rate-limit administrator and router, or appoint a rebalancer whose withdrawLiquidity transfers escrowed syzUSD without consuming route limits. The pool does not mint independent native liabilities; exhaustive execution and affected-liability reach remain unresolved.",
         "canRaiseCap": true,
-        "observedAt": "2026-10-11",
-        "observedBlock": 34738553,
+        "observedAt": "2026-10-27",
+        "observedBlock": 36149633,
         "sources": [
           {
             "label": "Plasma syzUSD CCIP pool",
@@ -739,7 +739,7 @@
             "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x31672de4726227feb22f2dfbcfa985c71bea86b2"
           }
         ],
-        "evidence": "Sol curation campaign 2026-10-11 (C34XAUm), observed 2026-10-11T00:53:12.270Z via https://rpc.plasma.to at block 34738553, hash 0x80b115b28a99fb71aebbc3e25e262b15d57d2ee63568fb95a7f2e13624439d2f, timestamp 2026-10-11T00:51:17Z: getToken() = canonical syzUSD, owner() = getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, getRebalancer() = zero, getRouter() = 0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3, and getSupportedChains() returns seven selectors. The pool runtime text SHA-256 is 80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c, identical to retained block 33946301. Verified source LockReleaseTokenPool.sol lines 53-83 permits owner-set rebalancer and rebalancer withdrawal of escrow without route limits; TokenPool.sol lines 180-187 permits owner replacement of the router governing ramp authorization. These are adverse reachable permissions, not proof of a withdrawal incident or complete downstream scope. The October 1 partial execution certificate, all seven false closure flags and October 31 expiry are unchanged. August 17 rate-limit/peer details remain historical observations, not refreshed values."
+        "evidence": "Sol curation campaign 2026-10-11 (C34XAUm), observed 2026-10-11T00:53:12.270Z via https://rpc.plasma.to at block 34738553, hash 0x80b115b28a99fb71aebbc3e25e262b15d57d2ee63568fb95a7f2e13624439d2f, timestamp 2026-10-11T00:51:17Z: getToken() = canonical syzUSD, owner() = getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, getRebalancer() = zero, getRouter() = 0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3, and getSupportedChains() returns seven selectors. The pool runtime text SHA-256 is 80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c, identical to retained block 33946301. Verified source LockReleaseTokenPool.sol lines 53-83 permits owner-set rebalancer and rebalancer withdrawal of escrow without route limits; TokenPool.sol lines 180-187 permits owner replacement of the router governing ramp authorization. These are adverse reachable permissions, not proof of a withdrawal incident or complete downstream scope. The October 1 partial execution certificate, all seven false closure flags and October 31 expiry are unchanged. August 17 rate-limit/peer details remain historical observations, not refreshed values. Re-read 2026-10-27 via https://rpc.plasma.to at block 36149633 (hash 0x0842228da297839819f8a4d5d4b67ba4928867073e6eb761989acaf8bb70bfae, timestamp 2026-10-27T08:50:38Z): getToken() = canonical syzUSD 0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, owner() = getRateLimitAdmin() = 0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae (eth_getCode 0x), getRebalancer() = zero, getRouter() = 0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3, and getSupportedChains() returns eight selectors, the eighth being the Base route already recorded as unresolved on 2026-10-20. The pool runtime text SHA-256 is again 80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c. Remote-pool and rate-limit detail were not re-read; the partial execution certificate and its closure flags are otherwise unchanged."
       },
       {
         "id": "syzusd-ethereum-ccip-burn-mint-pool",

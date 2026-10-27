@@ -287,10 +287,10 @@
         "modulesOrGuardsStatus": "none-detected",
         "executionScope": {
           "controllerDeployment": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-11-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSecuritize)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
@@ -303,14 +303,14 @@
             }
           ],
           "pin": {
-            "position": "452398136",
-            "hash": "HxqdN1bh9HdtjQnSD81udSrH7S1Pnk7KfpvwPsSqBtts",
+            "position": "462008033",
+            "hash": "5w7RzY9XNbD6uHVZZwjZmTPuLG1n98PQCWHepvuGZ7dX",
             "runtimeIdentity": "system-owned:zero-data:non-executable",
             "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
           },
           "observedState": {
-            "position": "452398136",
-            "hash": "HxqdN1bh9HdtjQnSD81udSrH7S1Pnk7KfpvwPsSqBtts",
+            "position": "462008033",
+            "hash": "5w7RzY9XNbD6uHVZZwjZmTPuLG1n98PQCWHepvuGZ7dX",
             "runtimeIdentity": "system-owned:zero-data:non-executable",
             "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
           },
@@ -363,8 +363,8 @@
           "eoa:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6",
           "program:solana:7txjmbkzvy3gmg9kdbebcnxt1yc5pyoxxxvlwdbv9tvp"
         ],
-        "observedAt": "2026-08-16",
-        "observedBlock": 439719037,
+        "observedAt": "2026-10-27",
+        "observedBlock": 462008033,
         "sources": [
           {
             "label": "STAC Solana controller program",
@@ -379,7 +379,7 @@
             "url": "https://solana-rpc.publicnode.com"
           }
         ],
-        "evidence": "At finalized Solana slot 439719037, getAccountInfo(jsonParsed) for controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP returned ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1. ProgramData at slot 439719080 reported upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6; that account is system-owned, non-executable, and zero-data. No on-chain timelock or multisig threshold was resolved, so this authority can replace the controller program immediately and can alter the Solana mint path."
+        "evidence": "At finalized Solana slot 439719037, getAccountInfo(jsonParsed) for controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP returned ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1. ProgramData at slot 439719080 reported upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6; that account is system-owned, non-executable, and zero-data. No on-chain timelock or multisig threshold was resolved, so this authority can replace the controller program immediately and can alter the Solana mint path. Re-read 2026-10-27 at finalized Solana slot 462008033 (blockhash 5w7RzY9XNbD6uHVZZwjZmTPuLG1n98PQCWHepvuGZ7dX, solana-rpc.publicnode.com getMultipleAccounts jsonParsed): program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP still resolves to ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1 (last deployed slot 326714033, unchanged) with upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, still a system-owned, non-executable, zero-data account; no on-chain multisig or timelock. Only these identities were re-read; scope stays partial."
       }
     ],
     "economicCapSemantics": "unbounded",

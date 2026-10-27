@@ -22,8 +22,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice3)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -37,11 +37,15 @@
       {
         "label": "Steakhouse documentation",
         "url": "https://www.steakhouse.financial/docs"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The exact contract is Morpho Vault V2, not MetaMorpho V1. At Ethereum block 26095798, asset() returned USDC and its sole listed adapter and liquidityAdapter() were 0x2b9681015a1fa2225d1fc8ae40538d3d64c58290, whose verified source is MorphoMarketV1AdapterV2. The deployed exposure remains a USDC-denominated protocol position with borrower-collateral, curator, liquidity, and smart-contract risk. This identity correction does not re-date the historical composition snapshot.",
-    "compositionBasis": "Live ERC-4626 deployed balance captured 2026-09-21 and Morpho's current vault identity",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Fresh pinned reads at Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z): the vault is not an EIP-1967 proxy; asset() is USDC; adaptersLength() is 1 and both adapters(0) and liquidityAdapter() remain 0x2b9681015a1fa2225d1fc8ae40538d3d64c58290 (MorphoMarketV1AdapterV2). totalAssets() is 115,377,292.352243 USDC and the vault's own USDC balance is 0, so 100% of totalAssets() is deployed through the adapter. The deployed exposure remains a USDC-denominated protocol position with borrower-collateral, curator, liquidity, and smart-contract risk.",
+    "compositionBasis": "Live ERC-4626 totalAssets and idle USDC balance pinned at Ethereum block 26282914, and Morpho's current vault identity",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The live adapter identifies the deployed vault position but does not split the current balance among individual Morpho markets.",
     "knownUnknownExposurePct": 0

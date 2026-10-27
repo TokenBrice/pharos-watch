@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "IOTA collateral (vault 0xaf306be8419cf059642acdba3b4e79a5ae893101ae62c8331cefede779ef48d5)",
-      "pct": 0.02,
+      "pct": 0.03,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "IOTA network and Virtue CDP vault on IOTA Rebased",
@@ -17,7 +17,7 @@
     },
     {
       "name": "stIOTA collateral (vault 0xc9cb494657425f350af0948b8509efdd621626922e9337fd65eb161ec33de259)",
-      "pct": 99.7,
+      "pct": 99.57,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Swirl stIOTA NativePool 0x02d641d7b021b1cd7a2c361ac35b415ae8263be0641f9475ec32af4b9d8a8056 and Virtue CDP vault on IOTA Rebased",
@@ -32,7 +32,7 @@
     },
     {
       "name": "vIOTA collateral (vault 0x53b6405d2672be1e73f8ddea1766dbda57f1fed677be58fbfedc9fdddaafdd26)",
-      "pct": 0.03,
+      "pct": 0.04,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "TokenLabs vIOTA NativePool 0xb435fa61ee8d5473ab36de02c88756f8c74fcc031b4e3a2fe2a6647bb06b2872 and Virtue CDP vault on IOTA Rebased",
@@ -47,7 +47,7 @@
     },
     {
       "name": "iBTC collateral (vault 0xcc094d9e3b491b0c943bb18daf07a49bd951f34688f9610d90982de06fc0c5c9)",
-      "pct": 0.25,
+      "pct": 0.36,
       "risk": "very-high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "iBTC issuer/wrapper and Virtue CDP vault on IOTA Rebased",
@@ -62,8 +62,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv12)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -85,14 +85,26 @@
       {
         "label": "CoinGecko simple-price API: IOTA/USD and BTC/USD spot values observed 2026-09-21",
         "url": "https://api.coingecko.com/api/v3/simple/price?ids=iota%2Cbitcoin&vs_currencies=usd"
+      },
+      {
+        "label": "IOTA mainnet JSON-RPC: vault-object reads at version 865864435 and checkpoint 209253976 (2026-10-27T08:50:19Z)",
+        "url": "https://api.mainnet.iota.cafe"
+      },
+      {
+        "label": "IOTA mainnet GraphQL: stIOTA and vIOTA NativePool and cert::Metadata reads at checkpoint 209253974 (2026-10-27T08:50:18Z)",
+        "url": "https://graphql.mainnet.iota.cafe/graphql"
+      },
+      {
+        "label": "CoinGecko simple-price API: IOTA/USD and BTC/USD spot values observed 2026-10-27T08:50Z",
+        "url": "https://api.coingecko.com/api/v3/simple/price?ids=iota%2Cbitcoin&vs_currencies=usd"
       }
     ],
-    "rationale": "On-chain capture at IOTA checkpoint 193768193 (2026-09-21T08:40:49.164Z) read all four live shared Virtue vaults. Vault balances were 2,410.072442864 IOTA, 8,950,007.805576865 stIOTA, 3,000.003905922 vIOTA, and 0.0149549784 iBTC. Current NativePool and cert::Metadata objects imply exchange rates of 1.1641401807 IOTA/stIOTA and 1.0659272095 IOTA/vIOTA. CoinGecko spot values observed with the capture were $0.04799262 IOTA/USD and $83,802 BTC/USD. The resulting collateral values were approximately $115.67, $500,038.17, $153.47, and $1,253.26, normalized to 0.02%, 99.70%, 0.03%, and 0.25% (100.00% total). The composition is fully identified at the capture point; no independent reserve attestation or legal custody assurance is published.",
-    "compositionBasis": "Current on-chain branch balances and NativePool exchange rates, valued with contemporaneous IOTA/USD and BTC/USD spot prices and cross-checked against Virtue's CDP collateral documentation",
+    "rationale": "On-chain capture at IOTA checkpoint 209253976 (2026-10-27T08:50:19.027Z) read all four live shared Virtue vaults (each at object version 865864435). Vault balances were 2,410.072442864 IOTA, 6,769,320.654962283 stIOTA, 3,000.02764228 vIOTA, and 0.0149549784 iBTC. NativePool and cert::Metadata objects at checkpoint 209253974 imply exchange rates of 1.1733423906 IOTA/stIOTA and 1.0771251052 IOTA/vIOTA, computed as (total_staked + total_rewards - collected_rewards) / cert total_supply and consistent with the rates realized in the latest on-chain stake and unstake events. CoinGecko spot values observed at 2026-10-27T08:50Z were $0.04190442 IOTA/USD and $79,722 BTC/USD. The resulting collateral values were approximately $100.99, $332,835.53, $135.41, and $1,192.24, normalized to 0.03%, 99.57%, 0.04%, and 0.36% (100.00% total). The stIOTA vault balance fell from 8,950,007.8 stIOTA at the 2026-09-21 capture. The composition is fully identified at the capture point; no independent reserve attestation or legal custody assurance is published.",
+    "compositionBasis": "Current on-chain branch balances and NativePool exchange rates read at IOTA checkpoint 209253976, valued with contemporaneous IOTA/USD and BTC/USD spot prices and cross-checked against Virtue's CDP collateral documentation",
     "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified direct collateral or tracked-stablecoin dependency remains at the 2026-09-21 checkpoint capture; all four slices are external cryptoasset identities rather than Pharos-tracked stablecoins. Independent reserve assurance, legal segregation, and guaranteed liquidation liquidity are not disclosed and are recorded in custodyProfile rather than as an unidentified composition slice.",
+    "knownUnknownExposure": "No unidentified direct collateral or tracked-stablecoin dependency remains at the 2026-10-27 checkpoint capture; all four slices are external cryptoasset identities rather than Pharos-tracked stablecoins. Independent reserve assurance, legal segregation, and guaranteed liquidation liquidity are not disclosed and are recorded in custodyProfile rather than as an unidentified composition slice.",
     "knownUnknownExposurePct": 0,
-    "compositionAsOf": "2026-09-21"
+    "compositionAsOf": "2026-10-27"
   },
   "custodyProfile": {
     "providers": [

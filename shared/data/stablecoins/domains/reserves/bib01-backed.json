@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-15",
-    "reviewer": "Pharos reserve evidence recovery review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Pharos reserve evidence recovery review; period renewed 2026-10-27 (D01 evidence lane)",
     "confidence": "verified",
     "sources": [
       {
@@ -41,9 +41,9 @@
         "url": "https://github.com/backed-fi/DefiLlama-Adapters/blob/f84435184a132be71222dfa3eedba8d3774c727e/projects/backed/index.js"
       }
     ],
-    "rationale": "Backed identifies bIB01 as a tracker certificate whose sole underlying is the iShares IB01 UCITS ETF. On July 21, 2026, Backed's public assetReserves feed reported 2,008 IB01 reserve shares against 1,967.285993046277 bIB01 in circulation, with Chainlink as provider. The reserve is recorded as one fund-share position; the proof does not justify decomposing the ETF's changing security-level holdings. September 15, 2026 review independently reproduced distributed circulation by subtracting the two issuer-documented working-capital and treasury inventories from same-block gross supply. All eight issuer-documented EVM deployments were checked, including zero-supply Fantom. Current raw amounts match the issuer API on every reported chain; omitted BSC and Fantom deployments independently have zero gross and circulating supply. This establishes a current distributed-certificate denominator without treating the undated API or gross premint inventory as current liabilities. The reserve oracle retains its own observation clock; no fund look-through or legal segregation is inferred.",
+    "rationale": "Backed identifies bIB01 as a tracker certificate whose sole underlying is the iShares IB01 UCITS ETF. On July 21, 2026, Backed's public assetReserves feed reported 2,008 IB01 reserve shares against 1,967.285993046277 bIB01 in circulation, with Chainlink as provider. The reserve is recorded as one fund-share position; the proof does not justify decomposing the ETF's changing security-level holdings. September 15, 2026 review independently reproduced distributed circulation by subtracting the two issuer-documented working-capital and treasury inventories from same-block gross supply. All eight issuer-documented EVM deployments were checked, including zero-supply Fantom. Current raw amounts match the issuer API on every reported chain; omitted BSC and Fantom deployments independently have zero gross and circulating supply. This establishes a current distributed-certificate denominator without treating the undated API or gross premint inventory as current liabilities. The reserve oracle retains its own observation clock; no fund look-through or legal segregation is inferred. October 27, 2026 renewal: the Polygon Chainlink feed 0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a (latestRoundData updatedAt 2026-10-26T15:50:35Z, answer 80 IB01.L shares at 8 decimals) still reports the single IB01 fund-share reserve against 78.23 bIB01 summed from Backed's API circulatingSupply across six chains; the composition remains one fund-share position at 100% and the July 21 amounts are superseded by this wind-down read, so compositionAsOf and the report period move to October 26.",
     "compositionBasis": "Backed bIB01 product disclosure and Chainlink/The Network Firm reserve proof",
-    "compositionAsOf": "2026-07-21",
+    "compositionAsOf": "2026-10-26",
     "scope": "full-composition",
     "knownUnknownExposure": "The certificate's underlying fund is fully identified; the ETF's changing security-level portfolio and Backed custodian allocations are outside this single-underlying composition.",
     "knownUnknownExposurePct": 0,
