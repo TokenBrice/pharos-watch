@@ -337,18 +337,18 @@ describe("StablecoinDetailClient", () => {
     useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ reportCard: null, reserves: null, featureStates: pending }));
     const { container, rerender } = renderDetail(coin);
     const collateralization = container.querySelector('[data-rail-slot="collateralization"]')!;
-    const access = container.querySelector('[data-rail-slot="access"]')!;
     expect(collateralization.textContent).toContain("Waiting for reserve evidence.");
     expect(collateralization.className).toBe("min-h-64");
-    expect(access.className).toBe("min-h-48");
+    // No published access posture and no pending grade read: the access card stays hidden.
+    expect(container.querySelector('[data-rail-slot="access"]')).toBeNull();
+    expect(container.textContent).not.toContain("Published access posture is unavailable.");
     useStablecoinDetailViewModelMock.mockReturnValue(
       makeReadyViewModel({ reportCard: makeV9Card({ id: coin.id }), reserves: LIVE_COLLATERALIZED_RESERVES }),
     );
     rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
     expect(container.querySelector('[data-rail-slot="collateralization"]')).toBe(collateralization);
-    expect(container.querySelector('[data-rail-slot="access"]')).toBe(access);
     expect(collateralization.className).toBe("min-h-64");
-    expect(access.className).toBe("min-h-48");
+    expect(container.querySelector('[data-rail-slot="access"]')!.className).toBe("min-h-48");
   });
 
   it.each(["empty", "unavailable"])("hides the collateralization rail card once a %s reserve read settles without a KPI", (status) => {
@@ -358,7 +358,6 @@ describe("StablecoinDetailClient", () => {
     const { container } = renderDetail(coin);
     expect(container.querySelector('[data-rail-slot="collateralization"]')).toBeNull();
     expect(container.textContent).not.toContain("Collateralization evidence is unavailable.");
-    expect(container.querySelector('[data-rail-slot="access"]')).not.toBeNull();
   });
 
   it("mounts the reserves module in the score row when report-card data is unavailable", async () => {

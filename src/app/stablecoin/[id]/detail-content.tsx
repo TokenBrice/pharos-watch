@@ -343,17 +343,17 @@ function DetailSummaryRail({
             )}
           </div>
         ) : null}
-        <div className="min-h-48" data-rail-slot="access">
-          {sharedModules.accessRows.length > 0 ? (
-            <AccessPosturePanel variant="rail" rows={sharedModules.accessRows} review={transferReview} />
-          ) : (
-            <RailCard title="Access posture" ariaLabel="Access posture">
-              <p className="px-4 pb-4 text-xs text-muted-foreground">
-                {resolveGradeRead(viewModel) === "pending" ? "Loading published access posture…" : "Published access posture is unavailable."}
-              </p>
-            </RailCard>
-          )}
-        </div>
+        {sharedModules.accessRows.length > 0 || resolveGradeRead(viewModel) === "pending" ? (
+          <div className="min-h-48" data-rail-slot="access">
+            {sharedModules.accessRows.length > 0 ? (
+              <AccessPosturePanel variant="rail" rows={sharedModules.accessRows} review={transferReview} />
+            ) : (
+              <RailCard title="Access posture" ariaLabel="Access posture">
+                <p className="px-4 pb-4 text-xs text-muted-foreground">Loading published access posture…</p>
+              </RailCard>
+            )}
+          </div>
+        ) : null}
         {sharedModules.regulatoryStanding ? (
           <RegulatoryStandingCard view={sharedModules.regulatoryStanding} anchorTwin />
         ) : sharedModules.regulatoryNotReviewed ? (
