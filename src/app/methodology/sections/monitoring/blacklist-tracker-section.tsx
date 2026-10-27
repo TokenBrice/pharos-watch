@@ -62,7 +62,7 @@ export function BlacklistTrackerMethodologySection() {
                 Bounded cursor progress is not caught-up chain coverage: an incomplete scan cannot renew success
                 clocks or publish a fresh summary. Budget-skipped and order-withheld snapshots are retried from
                 durable maintenance debt. Lifecycle and amount ordering require numeric local positions and proven
-                cross-transaction order; RPC event timestamps require matching block hashes.
+                cross-transaction order; RPC event timestamps require matching block hashes. A wholly unobserved freeze-exposed population is unavailable, never $0.
               </p>
               <p>
                 Blacklistability uses the report-card four-status model: Yes, Upstream, Possible, and No. The sourced

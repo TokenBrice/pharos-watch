@@ -4,6 +4,9 @@ import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
+import type * as AmountRecoveryModule from "../../lib/blacklist/amount-recovery";
+import type * as TronAmountRecoveryModule from "../../lib/blacklist/tron-amount-recovery";
+import type * as TronOrderRecoveryModule from "../../lib/blacklist/tron-order-recovery";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -101,6 +104,20 @@ vi.mock("../../lib/blacklist-contracts", () => ({
       : undefined,
   getBlacklistConfigsForSymbolAndChain: () => [],
 }));
+
+// Real implementations by default; individual tests inject repair-stage throws.
+vi.mock("../../lib/blacklist/amount-recovery", async (importOriginal) => {
+  const actual = await importOriginal<typeof AmountRecoveryModule>();
+  return { ...actual, backfillAmounts: vi.fn(actual.backfillAmounts) };
+});
+vi.mock("../../lib/blacklist/tron-amount-recovery", async (importOriginal) => {
+  const actual = await importOriginal<typeof TronAmountRecoveryModule>();
+  return { ...actual, backfillTronBlacklistAmounts: vi.fn(actual.backfillTronBlacklistAmounts) };
+});
+vi.mock("../../lib/blacklist/tron-order-recovery", async (importOriginal) => {
+  const actual = await importOriginal<typeof TronOrderRecoveryModule>();
+  return { ...actual, resolveTronBlacklistOrder: vi.fn(actual.resolveTronBlacklistOrder) };
+});
 
 vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
   ...(await importOriginal<typeof AlchemyLogsModule>()),
@@ -203,6 +220,9 @@ import { fetchAlchemyLogs, getAlchemyBlockNumber, resolveBlockTimestamps } from 
 import { getChainRpc, type ChainRpcConfig } from "../../lib/chain-registry";
 import { CONTRACT_CONFIGS } from "../../lib/blacklist-contracts";
 import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS } from "../blacklist/config-scan";
+import { backfillAmounts } from "../../lib/blacklist/amount-recovery";
+import { backfillTronBlacklistAmounts } from "../../lib/blacklist/tron-amount-recovery";
+import { resolveTronBlacklistOrder } from "../../lib/blacklist/tron-order-recovery";
 
 const mockD1 = createMockD1Preset([
   { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
@@ -567,7 +587,12 @@ describe("syncBlacklist", () => {
     expect(result.status).toBe("degraded");
     // The scan skips every Tron config and the replay tail skips its own lane.
     expect(meta.tronGridCircuitSkips).toBeGreaterThan(0);
-    expect(meta.tronAmountRepairAttempted).toBe(0);
+    expect(meta.tronAmountRepairOutcome).toBe("skipped");
+    expect(meta.tronAmountRepairReason).toBe("provider-circuit-open");
+    expect(meta.tronOrderOutcome).toBe("skipped");
+    expect(meta.tronAmountRepairAttempted).toBeNull();
+    expect(meta.tronAmountRepairLimit).toBeNull();
+    expect(meta.tronOrderBlocksAttempted).toBeNull();
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-tron-replay-candidates"))).toBe(false);
     expect(fetchMock.mock.calls.some(([url]) => String(url).includes("trongrid.io/v1/contracts"))).toBe(false);
   });
@@ -654,6 +679,7 @@ describe("syncBlacklist", () => {
       throwError: undefined as Error | undefined,
     };
     const db = mockD1([
+      ...emptyBlacklistAggregateTables(),
       diagnosticFixture,
       { match: "blacklist_sync_state", rows: [] },
       { match: "blacklist_events", rows: [] },
@@ -914,7 +940,7 @@ describe("syncBlacklist", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
-  it("records producer snapshot materialization errors without failing an otherwise healthy run", async () => {
+  it("degrades an otherwise healthy run when snapshot publication fails", async () => {
     const db = mockD1([
       ...emptyBlacklistAggregateTables(),
       { match: "blacklist_sync_state", rows: [] },
@@ -931,8 +957,10 @@ describe("syncBlacklist", () => {
 
     const result = await syncBlacklist(buildTestOpts({ db, onProgress }));
 
-    expect(result.status).toBe("ok");
+    expect(result.status).toBe("degraded");
     const meta = JSON.parse(result.metadata);
+    expect(meta.reason).toBe("blacklist-snapshot-publication-failed");
+    expect(meta.reasons).toEqual(["blacklist-snapshot-publication-failed"]);
     expect(meta.producerSnapshotError).toBe("Error");
     expect(meta.producerGapMetricSnapshots).toBe(0);
     expect(meta.producerSummarySnapshot).toBe(false);
@@ -947,6 +975,157 @@ describe("syncBlacklist", () => {
         }),
       }),
     );
+  });
+
+  describe("outcome truth", () => {
+    const emptyOk = () => installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    }));
+
+    it("reports successful empty repair stages as ok with observed zero", async () => {
+      emptyOk();
+      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(result.status).toBe("ok");
+      expect(meta.reasons).toBeUndefined();
+      for (const prefix of ["amountRepair", "tronOrder", "tronAmountRepair"]) {
+        expect(meta[`${prefix}Outcome`]).toBe("ok");
+        expect(meta[`${prefix}Reason`]).toBeNull();
+      }
+      expect(meta.amountRepairAttempted).toBe(0);
+      expect(meta.tronAmountRepairAttempted).toBe(0);
+      expect(meta.tronOrderBlocksAttempted).toBe(0);
+    });
+
+    it("marks a thrown EVM amount repair failed with null counters", async () => {
+      emptyOk();
+      vi.mocked(backfillAmounts).mockRejectedValueOnce(new Error("repair boom"));
+      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(result.status).toBe("degraded");
+      expect(meta.reason).toBe("blacklist-evm-amount-repair-failed");
+      expect(meta.reasons).toEqual(["blacklist-evm-amount-repair-failed"]);
+      expect(meta.amountRepairOutcome).toBe("failed");
+      expect(meta.amountRepairAttempted).toBeNull();
+      expect(meta.amountRepairResolved).toBeNull();
+      expect(meta.tronAmountRepairOutcome).toBe("ok");
+    });
+
+    it("names the order failure when Tron order repair throws and skips replay", async () => {
+      emptyOk();
+      vi.mocked(resolveTronBlacklistOrder).mockRejectedValueOnce(new Error("order boom"));
+      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(result.status).toBe("degraded");
+      expect(meta.reasons).toEqual(["blacklist-tron-order-repair-failed"]);
+      expect(meta.tronOrderOutcome).toBe("failed");
+      expect(meta.tronOrderBlocksAttempted).toBeNull();
+      expect(meta.tronAmountRepairOutcome).toBe("skipped");
+      expect(meta.tronAmountRepairReason).toBe("tron-order-repair-failed");
+      expect(meta.tronAmountRepairAttempted).toBeNull();
+      expect(backfillTronBlacklistAmounts).not.toHaveBeenCalled();
+    });
+
+    it("keeps order counters when Tron amount replay throws", async () => {
+      emptyOk();
+      vi.mocked(backfillTronBlacklistAmounts).mockRejectedValueOnce(new Error("replay boom"));
+      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(result.status).toBe("degraded");
+      expect(meta.reasons).toEqual(["blacklist-tron-amount-repair-failed"]);
+      expect(meta.tronOrderOutcome).toBe("ok");
+      expect(meta.tronOrderBlocksAttempted).toBe(0);
+      expect(meta.tronAmountRepairOutcome).toBe("failed");
+      expect(meta.tronAmountRepairLimit).toBeNull();
+    });
+
+    it("reports a budget-limited replay as partial with observed counters", async () => {
+      emptyOk();
+      vi.mocked(backfillTronBlacklistAmounts).mockResolvedValueOnce({
+        runtimeBudgetReached: true, attempted: 2, resolved: 1, retried: 1, parked: 0, limit: 24,
+      });
+      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(meta.tronAmountRepairOutcome).toBe("partial");
+      expect(meta.tronAmountRepairReason).toBe("blacklist-budget-exhausted");
+      expect(meta.tronAmountRepairAttempted).toBe(2);
+      expect(meta.tronAmountRepairLimit).toBe(24);
+    });
+
+    it("skips EVM repair with provider-circuit-open when the Etherscan circuit is open", async () => {
+      const openedAt = Math.floor(Date.now() / 1000);
+      const db = mockD1([
+        {
+          match: "FROM cache WHERE key = ?",
+          matchBinds: ["circuit:etherscan"],
+          rows: [{
+            key: "circuit:etherscan",
+            updated_at: openedAt,
+            value: JSON.stringify({ state: "open", consecutiveFailures: 3, lastFailureAt: openedAt, lastSuccessAt: null, openedAt }),
+          }],
+        },
+        { match: "blacklist_sync_state", rows: [] },
+        { match: "blacklist_events", rows: [] },
+      ]);
+      emptyOk();
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(meta.amountRepairOutcome).toBe("skipped");
+      expect(meta.amountRepairReason).toBe("provider-circuit-open");
+      expect(meta.amountRepairAttempted).toBeNull();
+      expect(backfillAmounts).not.toHaveBeenCalled();
+    });
+
+    it("preserves scan reason first and lists publication and repair failures together", async () => {
+      const db = mockD1([
+        ...emptyBlacklistAggregateTables(),
+        { match: "blacklist_sync_state", rows: [] },
+        { match: "blacklist_events", rows: [] },
+        { match: "blacklist-summary-snapshot-write", rows: [], throwError: new Error("snapshot write failed") },
+      ]);
+      vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValueOnce(new TypeError("explorer down"));
+      vi.mocked(backfillAmounts).mockRejectedValueOnce(new Error("repair boom"));
+      vi.mocked(backfillTronBlacklistAmounts).mockRejectedValueOnce(new Error("replay boom"));
+      emptyOk();
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(result.status).toBe("degraded");
+      expect(meta.reason).toBe("blacklist-source-coverage-incomplete");
+      expect(meta.reasons).toEqual([
+        "blacklist-source-coverage-incomplete",
+        "blacklist-snapshot-publication-failed",
+        "blacklist-evm-amount-repair-failed",
+        "blacklist-tron-amount-repair-failed",
+      ]);
+    });
+
+    it("never lowers an error status when publication or repair also fails", async () => {
+      const db = mockD1([
+        ...emptyBlacklistAggregateTables(),
+        { match: "blacklist_sync_state", rows: [] },
+        { match: "blacklist_events", rows: [] },
+      ]);
+      vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockRejectedValue(new TypeError("explorer down"));
+      vi.mocked(fetchAlchemyLogs).mockRejectedValue(new TypeError("rpc down"));
+      vi.mocked(backfillAmounts).mockRejectedValueOnce(new Error("repair boom"));
+      installFetch(async () => new Response("down", { status: 500 }));
+      const resultPromise = syncBlacklist(buildTestOpts({ db }));
+      await vi.runAllTimersAsync();
+      const result = await resultPromise;
+      const meta = JSON.parse(result.metadata);
+
+      expect(result.status).toBe("error");
+      expect(meta.reasons).toContain("blacklist-evm-amount-repair-failed");
+      expect(meta.reasons?.[0]).toBe("blacklist-source-coverage-incomplete");
+    });
   });
 
   it("advances sync state for EVM chains toward chain head when no events", async () => {

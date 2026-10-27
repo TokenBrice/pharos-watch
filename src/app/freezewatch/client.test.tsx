@@ -7,6 +7,8 @@ import FreezeWatchClient from "./client";
 import { installMatchMediaMock } from "@/test-utils/frontend";
 import type { ApiMeta } from "@/lib/api";
 import type { BlacklistSummaryResponse } from "@shared/types";
+import { makeStablecoin } from "@shared/test-utils/stablecoin";
+import { CLIENT_ACTIVE_STABLECOINS, CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 
 const mocks = vi.hoisted(() => ({
   useBlacklistSummary: vi.fn(),
@@ -253,6 +255,22 @@ describe("FreezeWatchClient", () => {
     expect(screen.queryByText("0%")).toBeNull();
     expect(screen.queryByText("$0")).toBeNull();
     expect(screen.queryByTestId("stablecoin-table")).toBeNull();
+  });
+
+  it("shows the freeze-exposed value as unavailable, not $0, when no exposed member reports supply", () => {
+    const observedOnly = CLIENT_ACTIVE_STABLECOINS
+      .filter((meta) => CLIENT_TRACKED_META_BY_ID.get(meta.id)?.blacklistStatus === false)
+      .map((meta) => makeStablecoin({ id: meta.id, circulating: { peggedUSD: 1_000_000 } }));
+    mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: makeSummary() }));
+    mocks.useStablecoins.mockReturnValue(stubQuery({ data: { peggedAssets: observedOnly } }));
+
+    render(<FreezeWatchClient />);
+
+    const stat = screen.getByText("Freeze-exposed value").closest("div");
+    expect(stat?.textContent).toContain("—");
+    expect(stat?.textContent).not.toContain("$0");
+    // Registry counts stay visible.
+    expect(screen.getByText(/coins classified/)).toBeTruthy();
   });
 
   it("keeps the support widgets out of the unavailable state when the support query answers", () => {

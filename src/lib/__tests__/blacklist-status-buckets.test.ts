@@ -106,6 +106,47 @@ describe("blacklist status buckets", () => {
     );
   });
 
+  it("keeps the freezable subtotal unavailable when no exposed member reports supply", () => {
+    // An observed non-freezable coin must not turn the missing exposed subset into $0 / 0%.
+    for (const exposed of [[], [{ id: "usdt-tether", circulating: {} }, { id: "usdp-parallel", circulating: { peggedUSD: Number.NaN } }]]) {
+      const buckets = buildBlacklistStatusBuckets([
+        ...exposed.map((coin) => makeStablecoin(coin)),
+        makeStablecoin({ id: "lusd-liquity", circulating: { peggedUSD: 10 } }),
+      ]);
+      expect(computeFreezableSummary(buckets)).toMatchObject({
+        coverage: "partial",
+        freezableCount: 2,
+        freezableMarketCap: null,
+        freezableShare: null,
+        totalMarketCap: 10,
+      });
+    }
+  });
+
+  it("publishes the observed subtotal for a partly observed exposed subset and keeps explicit zero", () => {
+    expect(computeFreezableSummary(buildBlacklistStatusBuckets([
+      makeStablecoin({ id: "usdt-tether", circulating: {} }),
+      makeStablecoin({ id: "usdp-parallel", circulating: { peggedUSD: 40 } }),
+      makeStablecoin({ id: "lusd-liquity", circulating: { peggedUSD: 10 } }),
+    ]))).toMatchObject({ coverage: "partial", freezableMarketCap: 40, freezableShare: 80 });
+    expect(computeFreezableSummary(buildBlacklistStatusBuckets([
+      makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 0 } }),
+      makeStablecoin({ id: "usdp-parallel", circulating: { peggedUSD: 0 } }),
+      makeStablecoin({ id: "lusd-liquity", circulating: { peggedUSD: 10 } }),
+    ]))).toMatchObject({ coverage: "complete", freezableMarketCap: 0, freezableShare: 0 });
+  });
+
+  it("keeps a genuinely empty exposed subset at zero and globally unavailable input null", () => {
+    const bucket = (key: "yes" | "upstream" | "possible" | "no", count: number, marketCap: number, supplyUnavailableCount: number) =>
+      ({ status: key, key, count, marketCap, supplyUnavailableCount });
+    expect(computeFreezableSummary([
+      bucket("yes", 0, 0, 0), bucket("upstream", 0, 0, 0), bucket("possible", 0, 0, 0), bucket("no", 1, 10, 0),
+    ])).toMatchObject({ freezableCount: 0, freezableMarketCap: 0, freezableShare: 0 });
+    expect(computeFreezableSummary(buildBlacklistStatusBuckets([]))).toMatchObject({
+      coverage: "unavailable", freezableMarketCap: null, freezableShare: null,
+    });
+  });
+
   it("keeps an explicit observed zero distinct from missing supply", () => {
     const buckets = buildBlacklistStatusBuckets([
       makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 100 } }),

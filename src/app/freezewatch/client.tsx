@@ -209,7 +209,7 @@ export default function FreezeWatchClient() {
           <dl className="flex flex-wrap items-end gap-x-8 gap-y-3">
             <HeroStat
               label="Freeze-exposed value"
-              value={heroUnavailable || !supplyAvailable ? "—" : formatCurrency(freezableMarketCap, 0)}
+              value={heroUnavailable || !supplyAvailable || freezableMarketCap === null ? "—" : formatCurrency(freezableMarketCap, 0)}
               loading={heroLoading && !heroUnavailable}
             />
             <HeroStat
