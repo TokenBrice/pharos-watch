@@ -311,3 +311,35 @@ describe("DigestSnapshot safety map", () => {
     expect(screen.queryByText(/Mapped supply:/)).toBeNull();
   });
 });
+
+describe("DigestSnapshot retention", () => {
+  const retained = {
+    date: "2026-09-01",
+    inputData: { totalMcapUsd: 0, supplyCoverage: { complete: true, observedCount: 2, unavailableCount: 0 }, activeDepegCount: null },
+    prevInputData: null, depegEvents: [], blacklistEvents: [],
+  };
+
+  it("keeps the retained dated snapshot through a failed refetch and recovery", () => {
+    useDigestSnapshotMock.mockReturnValue({ data: retained, isLoading: false, isError: false });
+    const { rerender } = render(<DigestSnapshot date="2026-09-01" />);
+    const before = screen.getByText("Market Snapshot").closest("h3")!.parentElement!.textContent;
+    expect(before).toContain("$0");
+    expect(before).toContain("2/2 coins observed");
+
+    useDigestSnapshotMock.mockReturnValue({ data: retained, isLoading: false, isError: true });
+    rerender(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.queryByText("Digest context is unavailable for this archive entry.")).toBeNull();
+    expect(screen.getByText("Market Snapshot").closest("h3")!.parentElement!.textContent).toBe(before);
+
+    useDigestSnapshotMock.mockReturnValue({ data: retained, isLoading: false, isError: false });
+    rerender(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.getByText("Market Snapshot").closest("h3")!.parentElement!.textContent).toBe(before);
+  });
+
+  it("stays unavailable when the initial read fails with nothing retained", () => {
+    useDigestSnapshotMock.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    render(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.getByText("Digest context is unavailable for this archive entry.")).toBeTruthy();
+    expect(screen.queryByText("Market Snapshot")).toBeNull();
+  });
+});

@@ -258,11 +258,8 @@ export function DigestSnapshot({ date }: { date: string }) {
 }
 
 function DigestSnapshotContent({ date }: { date: string }) {
-  const { data, isLoading, isError } = useDigestSnapshot(date);
-
-  if (isError) {
-    return <SnapshotUnavailable />;
-  }
+  // A dated snapshot is immutable: a failed refetch never withdraws retained inputData.
+  const { data, isLoading } = useDigestSnapshot(date);
 
   if (isLoading) {
     return (
