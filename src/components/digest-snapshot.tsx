@@ -341,7 +341,7 @@ function DigestSnapshotContent({ date }: { date: string }) {
           <p className="text-sm text-muted-foreground">
             7d matched-cohort change:{" "}
             {mcap7dDelta == null ? (
-              <span>Not captured for this edition</span>
+              <span>—</span>
             ) : (
               <>
                 <span className={`font-medium ${getNetColor(mcap7dDelta)}`}>
