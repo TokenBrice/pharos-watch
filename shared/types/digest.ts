@@ -293,8 +293,7 @@ export interface DigestInputData {
   totalMcapUsd: number;
   /** totalMcapUsd is a known subtotal, not a complete market total unless coverage is complete. */
   supplyCoverage?: z.infer<typeof DigestSupplyCoverageSchema>;
-  /** Null when no core coin carries both current and prior-week supply (no comparison pair). */
-  mcap7dDelta: number | null;
+  mcap7dDelta: number;
   /**
    * Basis of `mcap7dDelta`: core coins carrying a prior-week supply bucket and
    * their current market cap. A coin without a baseline is excluded from both

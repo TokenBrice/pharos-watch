@@ -46,14 +46,6 @@ function isDigestInputDataLike(value: unknown): value is DigestInputData {
     && (value.mcap7dDeltaCoverage === undefined || DigestMcap7dDeltaCoverageSchema.safeParse(value.mcap7dDeltaCoverage).success);
 }
 
-// Older producers stored a zero seven-day change for an empty comparison cohort.
-// An explicit empty coverage proves no pair existed, so project it as unavailable;
-// measured zeros and partial cohorts, and the stored bytes, are left untouched.
-function withEmptyCohortDeltaUnavailable(inputData: DigestInputData | null): DigestInputData | null {
-  if (!inputData || inputData.mcap7dDeltaCoverage?.coveredCoins !== 0 || inputData.mcap7dDelta === null) return inputData;
-  return { ...inputData, mcap7dDelta: null };
-}
-
 export const handleDigestSnapshot = async (
   db: D1Database,
   url: URL,
@@ -123,7 +115,7 @@ export const handleDigestSnapshot = async (
 
   const pickInputData = (entry: unknown): DigestInputData | null => {
     const candidate = isRecord(entry) ? entry.inputData : undefined;
-    return isDigestInputDataLike(candidate) ? withEmptyCohortDeltaUnavailable(candidate) : null;
+    return isDigestInputDataLike(candidate) ? candidate : null;
   };
   const pickDate = (entry: unknown): string | null => {
     const date = isRecord(entry) ? entry.date : null;
@@ -141,7 +133,7 @@ export const handleDigestSnapshot = async (
       fromDate = dailyDigests.length > 1 ? pickDate(dailyDigests[0]) : null;
     }
   } else {
-    inputData = isDigestInputDataLike(rawInputData) ? withEmptyCohortDeltaUnavailable(rawInputData) : null;
+    inputData = isDigestInputDataLike(rawInputData) ? rawInputData : null;
     const rawPrev = prevRow
       ? safeJsonParse<unknown>(
           prevRow.input_data,
@@ -149,7 +141,7 @@ export const handleDigestSnapshot = async (
           `digest-snapshot:${prevRow.generated_at}:prev_input_data`,
         )
       : null;
-    prevInputData = isDigestInputDataLike(rawPrev) ? withEmptyCohortDeltaUnavailable(rawPrev) : null;
+    prevInputData = isDigestInputDataLike(rawPrev) ? rawPrev : null;
     toDate = new Date(targetRow.generated_at * 1000).toISOString().slice(0, 10);
     fromDate = prevRow ? new Date(prevRow.generated_at * 1000).toISOString().slice(0, 10) : null;
   }

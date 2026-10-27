@@ -567,31 +567,6 @@ describe("market and risk collectors", () => {
       expect(prompt).not.toContain("1970-01-01");
     },
   );
-  it.each([
-    ["no prior-week buckets", () => undefined, null, 0],
-    ["every prior-week bucket zero-delta (measured flat)", (c: number) => c, 0, 2],
-    ["partial prior-week coverage", (c: number, i: number) => (i === 0 ? c - 5_000_000 : undefined), 5_000_000, 1],
-  ])("%s: seven-day change is null only when no comparison pair exists", async (_name, prior, expected, coveredCoins) => {
-    const scenario = makeDailyDigestScenario();
-    const source = scenario.sourcePayload as unknown as { payload: { peggedAssets: Array<Record<string, unknown> & { circulating: { peggedUSD: number } }> } };
-    source.payload.peggedAssets = source.payload.peggedAssets.map((asset, index) => {
-      const previous = prior(asset.circulating.peggedUSD, index);
-      const { circulatingPrevWeek: _drop, ...rest } = asset;
-      return previous === undefined ? rest : { ...rest, circulatingPrevWeek: { peggedUSD: previous } };
-    });
-    vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
-    const { inputData } = await buildDailyDigestInput(scenario.db);
-    expect(inputData.mcap7dDelta).toBe(expected);
-    expect(inputData.mcap7dDeltaCoverage?.coveredCoins).toBe(coveredCoins);
-    const line = buildUserPrompt(inputData).split("\n").find((l) => l.startsWith("7-day market cap change:"))!;
-    if (expected === null) expect(line).toBe("7-day market cap change: unavailable (no-7d-comparison-pairs)");
-    else expect(line).toContain(expected === 0 ? "+$0" : "+$5.00M");
-  });
-  it("records the cache-fallback seven-day change as unavailable, never zero", async () => {
-    vi.mocked(loadStablecoinsCache).mockResolvedValue({ kind: "unavailable", reason: "stablecoins-cache-missing" } as never);
-    const { inputData } = await buildDailyDigestInput(makeDailyDigestScenario().db);
-    expect(inputData.mcap7dDelta).toBeNull();
-  });
   it("never restates flow claims that missing valuation could alter", async () => {
     const partialMint = {
       window24h: { completeness: "partial", mintCompleteness: "partial", burnCompleteness: "complete", unpricedMintEventCount: 1, unpricedBurnEventCount: 0 },
