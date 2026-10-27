@@ -21,7 +21,7 @@ The default `--source all` reads both sources; when one is unavailable it names 
 
 Admin `/api/status` raises the ops-only `scheduled_delivery_lag_elevated` warning when at least 10 slots that started in the trailing hour were more than 300 seconds late ([status contract](../status-dashboard.md#cron-health-model)). It never changes public health; treat it as a prompt to collect platform evidence, not as a stall.
 
-For numeric memory and OOM attribution, use [`npm run ops:worker-memory`](./cron-slot-abandonment.md#first-checks) and the hourly Worker Memory Monitor artifacts. Scheduled is delivery evidence, **not a complete memory-outcome authority**: its `internalError`/`clientDisconnected` labels can correspond to Adaptive `exceededMemory`. The independent error-filtered Adaptive inventory and exact-second/CPU correlation preserve that distinction; no Scheduled non-success label alone establishes an OOM.
+For numeric memory and OOM attribution, use [`npm run ops:worker-memory`](./cron-slot-abandonment.md#first-checks) and the daily Worker Memory Monitor artifacts. Scheduled is delivery evidence, **not a complete memory-outcome authority**: its `internalError`/`clientDisconnected` labels can correspond to Adaptive `exceededMemory`. The independent error-filtered Adaptive inventory and exact-second/CPU correlation preserve that distinction; no Scheduled non-success label alone establishes an OOM.
 
 ## Triage and lost slots
 

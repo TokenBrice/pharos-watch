@@ -26,7 +26,7 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 |---|---|---|
 | `check:phishing-signatures` | Pages validate after `npm run build` | inline scripts in built HTML matching `history.replaceState` near credentials, `URLSearchParams(location.hash)`, token-shaped window globals, or the full `try{location.hash…replaceState}` shape |
 | ESLint `no-restricted-syntax` (layout files) | every `npm run lint` | `<Script strategy="beforeInteractive">` and inline `<script>` JSX in any `src/app/**/layout.{ts,tsx}` |
-| `check:safe-browsing` | daily GitHub scheduled workflow + manual dispatch | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
+| `check:safe-browsing` | monthly GitHub scheduled workflow + manual dispatch | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
 
 Safe Browsing response admission is fail-closed: only Google's documented `{}` clean response or a schema-validated `matches` envelope is accepted. Error envelopes and unknown top-level fields are API failures even with HTTP 200, never clean verdicts. Threat matches remain a non-clean result; HTTP and deadline failures remain API failures.
 
@@ -58,7 +58,7 @@ Verified property: `pharos.watch` (Domain property). Owner: `me@tokenbrice.com`.
 
 ### Safe Browsing direct lookup
 
-`npm run check:safe-browsing` queries Google's Safe Browsing v4 API for `pharos.watch` and key URLs. Requires `GOOGLE_SAFE_BROWSING_API_KEY` env var. The `Safe Browsing Monitor` GitHub workflow runs it daily at 07:17 UTC and also supports manual dispatch. A workflow failure is treated as an incident trigger and should be triaged through `docs/incident-response/safe-browsing-flag.md`.
+`npm run check:safe-browsing` queries Google's Safe Browsing v4 API for `pharos.watch` and key URLs. Requires `GOOGLE_SAFE_BROWSING_API_KEY` env var. The `Safe Browsing Monitor` GitHub workflow runs it monthly (the 1st, 07:17 UTC) and also supports manual dispatch. A workflow failure is treated as an incident trigger and should be triaged through `docs/incident-response/safe-browsing-flag.md`.
 
 To get a key: https://console.cloud.google.com/apis/library/safebrowsing.googleapis.com
 

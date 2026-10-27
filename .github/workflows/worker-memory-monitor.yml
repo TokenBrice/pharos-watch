@@ -2,8 +2,7 @@ name: Worker Memory Monitor
 
 on:
   schedule:
-    - cron: "43 * * * *"
-    - cron: "17 1 * * *" # Daily bounded incident evidence, after the UTC day closes.
+    - cron: "17 1 * * *" # Daily memory and bounded incident evidence, after the UTC day closes.
   workflow_dispatch:
     inputs:
       from:

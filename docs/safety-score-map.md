@@ -103,7 +103,7 @@ During its window the surface reports `current`, `dispatched`, `awaiting-render`
 
 The Worker kick reuses the Worker secret `GITHUB_PAT` that the feedback issue bridge already requires. A classic token needs `repo` scope; a fine-grained token needs *Actions: Read and write* on this repository in addition to the feedback bridge's *Issues* access. A token without Actions write access surfaces as `dispatch-failed` with `dispatch-http-403` on the kick surface.
 
-The workflow keeps three daily schedules, 01:20, 03:20, and 05:20 UTC, as a no-cost fallback behind the Worker kick: `schedule` runs plan in `ensure` mode and exit early once today's map is live. It also supports `workflow_dispatch` with a `mode` input (`force` by default for operators, `ensure` for the Worker).
+The workflow keeps one daily schedule, 07:20 UTC (about 45 minutes before the digest), as a no-cost fallback behind the Worker kick: `schedule` runs plan in `ensure` mode and exit early once today's map is live. It also supports `workflow_dispatch` with a `mode` input (`force` by default for operators, `ensure` for the Worker).
 
 ## Serving
 
