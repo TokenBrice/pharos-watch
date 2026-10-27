@@ -484,7 +484,10 @@ uninterrupted at-peg streak. Both board `pegPct` and detail `recent90d.pegPct` a
 visibly and accessibly qualified as record-derived occupancy estimates. The
 recent window's `observedDays` is the calculation basis, not proof of continuous
 observations; tracking closure can leave unobserved post-closure time. Specific
-latest-closure disclosures require complete detail history. These are presentation
+latest-closure disclosures require complete detail history. Compare's **Time at peg ·
+up to 90d** row shows the same estimate with its floored basis (`Based on Nd`, `<1d`
+for a positive sub-day basis), **Partial 90-day coverage** when `coverageLimited`, and
+the caveat as its accessible description. These are presentation
 qualifications only: the shared scorer, recent-stat calculations and numeric
 producer contracts are unchanged.
 

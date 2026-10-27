@@ -6,6 +6,7 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { makeUnreportedBluechipRating } from "@shared/test-utils/bluechip.test-support";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
 import { BLUECHIP_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/bluechip-freshness";
+import { computeRecentPegStats } from "@shared/lib/peg-score";
 import { makeReportCardsV9Card, makeReportCardsV9Pillars } from "@shared/test-utils/report-cards-v9";
 
 afterEach(() => vi.restoreAllMocks());
@@ -55,7 +56,10 @@ function makeCoin(id: string, symbol: string): ComparisonCoinEntry {
       pegScore: 95,
       currentDeviationBps: 2,
       activeDepeg: false,
-      recent90d: { pegPct: 99.8, incidentCount: 1 },
+      recent90d: {
+        windowDays: 90, observedDays: 90, coverageLimited: false, pegPct: 99.8,
+        incidentCount: 1, thresholdCrossingCount: 1, worstDeviationBps: 42,
+      },
       eventCount: 3,
       trackingSpanDays: 900,
       worstDeviationBps: 42,
@@ -179,6 +183,49 @@ describe("ComparisonTable", () => {
     expect(externalRow).toContain(`A · audit not reported · ${text}</td>`);
     expect(externalRow).not.toContain("Not rated");
     expect(externalRow).not.toMatch(/retained|stale|observation unknown/);
+  });
+
+  function occupancyRow(html: string): string | undefined {
+    return html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*Time at peg · up to 90d(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
+  }
+
+  it("qualifies a two-day 100% occupancy with its basis, partial coverage and caveat", () => {
+    const nowSec = 1_800_000_000;
+    const recent = computeRecentPegStats([], nowSec - 2 * 86_400, nowSec)!;
+    expect(recent).toMatchObject({ pegPct: 100, observedDays: 2, coverageLimited: true });
+    const coin = makeCoin("usdt", "USDT");
+    coin.pegDetails = { ...coin.pegDetails!, recent90d: recent };
+    const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
+    const row = occupancyRow(html);
+    expect(row).toContain("100.00%");
+    expect(row).toContain("Based on 2d · Partial 90-day coverage");
+    expect(html).not.toContain("At peg · 90d");
+    const describedBy = row?.match(/aria-describedby="([^"]+)"/)?.[1];
+    expect(describedBy).toBeTruthy();
+    expect(html).toContain(`id="${describedBy}" class="mt-0.5 block text-xs font-normal text-muted-foreground">Time at peg is a record-derived estimate, not proof of recovery or continuous observation. Tracking closure can leave unobserved time.</span>`);
+  });
+
+  it.each([
+    { label: "full window", recent: { observedDays: 90, coverageLimited: false, pegPct: 99.8 }, value: "99.80%", basis: "Based on 90d<" },
+    { label: "fractional positive basis", recent: { observedDays: 0.4, coverageLimited: true, pegPct: 100 }, value: "100.00%", basis: "Based on &lt;1d · Partial 90-day coverage" },
+    { label: "blind window", recent: { observedDays: 0, coverageLimited: true, pegPct: null }, value: "—", basis: "Based on 0d · Partial 90-day coverage" },
+    { label: "measured zero occupancy", recent: { observedDays: 30, coverageLimited: true, pegPct: 0 }, value: "0.00%", basis: "Based on 30d · Partial 90-day coverage" },
+  ])("renders $label occupancy with its calculation basis", ({ recent, value, basis }) => {
+    const coin = makeCoin("usdt", "USDT");
+    coin.pegDetails = { ...coin.pegDetails!, recent90d: { ...coin.pegDetails!.recent90d!, ...recent } };
+    const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />));
+    expect(row).toContain(value);
+    expect(row).toContain(basis);
+    if (recent.pegPct == null) expect(row).not.toMatch(/100\.00%|>0\.00%/);
+    if (!recent.coverageLimited) expect(row).not.toContain("Partial 90-day coverage");
+  });
+
+  it("keeps missing recent stats a dash without a basis", () => {
+    const coin = makeCoin("usdt", "USDT");
+    coin.pegDetails = { ...coin.pegDetails!, recent90d: null };
+    const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />));
+    expect(row).toContain("—");
+    expect(row).not.toContain("Based on");
   });
 
   it.each([
