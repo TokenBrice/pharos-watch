@@ -37,8 +37,7 @@ export function buildV9PublicationSlotGroups(
                     captureArchiveBucket: runtime.env.SAFETY_CAPTURE_ARCHIVE,
                     captureArchiveContext: runtime.ctx,
                     // Phase 2 of the persist split; only literal "on" defers.
-                    deferPublicMaterialization: runtime.env.SAFETY_V9_DEFERRED_MATERIALIZATION === "on",
-                    chunkedPublicationWrites: runtime.env.SAFETY_V9_CHUNKED_PUBLICATION_WRITES === "on" },
+                    deferPublicMaterialization: runtime.env.SAFETY_V9_DEFERRED_MATERIALIZATION === "on" },
                 ),
             ),
         ),

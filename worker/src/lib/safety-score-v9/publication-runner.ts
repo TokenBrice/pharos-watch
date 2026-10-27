@@ -94,8 +94,6 @@ export interface RunSafetyScoreV9PublicationInput {
    * reader tolerates unselected staged rows (SAFETY_V9_DEFERRED_MATERIALIZATION).
    */
   deferPublicMaterialization?: boolean;
-  /** Shard the canonical payload into chunk rows (SAFETY_V9_CHUNKED_PUBLICATION_WRITES). */
-  chunkedPublicationWrites?: boolean;
   publicationDeadlineMs?: number;
   fixedInput: unknown;
   /** The production caller transfers ownership instead of pinning the decoded input across publication. */
@@ -944,7 +942,6 @@ export async function runSafetyScoreV9Publication(
       signal: publicationSignal,
       timing: subphaseElapsedMs,
       deferPublicMaterialization: input.deferPublicMaterialization,
-      chunkedPublicationWrites: input.chunkedPublicationWrites,
     });
     committed = true;
     finishPhase();

@@ -17,12 +17,13 @@ import {
   reassembleSafetyScoreV9CohortStoredValue,
   shardedSafetyScoreV9CohortChunkStatements,
   shardedSafetyScoreV9PublicationChunkStatements,
-  safetyScoreV9PublicationChunkCleanupStatement,
+  SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE,
   SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX,
   SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES,
   reassembleSafetyScoreV9PublicationFromCacheRows,
   reassembleSafetyScoreV9PublicationStoredValue,
   shardSafetyScoreV9PublicationStoredValue,
+  loadSafetyScoreV9PublicationStoredRow,
 } from "../safety-score-v9/publication-chunks";
 import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import { loadSafetyPublicationSize } from "../status/safety-publication-size";
@@ -38,28 +39,46 @@ function database() {
   return { sqlite, db: createSqliteD1(sqlite) };
 }
 
-// Large enough to need several chunks after compression.
+// Admitted, yet its single-row stored value exceeds D1's 2,000,000-byte value limit.
 function largePublication(generation: string, publishedAtSec: number) {
   return makeWorkerSafetyScoreV9Publication({
     publishedAtSec, publicationGenerationId: `report-cards:v9:${generation}`,
-    cards: Array.from({ length: 40 }, (_, index) => {
-      const card: SafetyScoreV9CurrentCard = makeReportCardsV9Card({ id: index === 39 ? "usdc-circle" : `chunk-coin-${String(index).padStart(2, "0")}` });
-      card.witnessTexts = [Array.from({ length: 6_000 }, (_, word) => `${generation}-${index}-${word * 7919 % 104729}`).join(" ")];
+    cards: Array.from({ length: 100 }, (_, index) => {
+      const card: SafetyScoreV9CurrentCard = makeReportCardsV9Card({ id: index === 99 ? "usdc-circle" : `chunk-coin-${String(index).padStart(2, "0")}` });
+      card.witnessTexts = [Array.from({ length: 6_000 }, (_, word) => `floor-${index}-${word * 7919 % 104729}`).join(" ")];
       card.evidence.reasons = [{ code: "unresolved-control-identity", message: "~0", path: "control:incidentState" }];
       return card;
     }),
   });
 }
 
-/** What a sharding writer commits: chunk rows plus the sharded envelope in place of the inline row. */
-function shardInPlace(sqlite: DatabaseSync) {
-  const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!;
-  const sharded = shardSafetyScoreV9PublicationStoredValue(row.value as string);
-  for (const chunk of sharded.chunks) {
-    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(chunk.key, chunk.value, row.updated_at);
+const D1_MAX_VALUE_BYTES = 2_000_000;
+
+/** Reject any cache value over D1's per-value limit, as D1 does. */
+function enforceD1ValueLimit(sqlite: DatabaseSync) {
+  for (const event of ["INSERT", "UPDATE"]) {
+    sqlite.exec(`CREATE TRIGGER d1_value_limit_${event} BEFORE ${event} ON cache
+      WHEN length(CAST(NEW.value AS BLOB)) > ${D1_MAX_VALUE_BYTES} BEGIN SELECT RAISE(ABORT, 'D1 value too large'); END`);
   }
-  sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(sharded.envelope, SAFETY_SCORE_V9_CACHE_KEYS.publication);
-  return { inline: row.value as string, sharded };
+}
+
+function publicationChunkRows(sqlite: DatabaseSync) {
+  return sqlite.prepare("SELECT key, value, updated_at FROM cache WHERE key >= ? AND key < ? ORDER BY key")
+    .all(...SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE) as { key: string; value: string; updated_at: number }[];
+}
+
+/** Replace the writer's sharded row with the historical single-row shape that readers must still accept. */
+function seedHistoricalInlineRow(sqlite: DatabaseSync) {
+  const row = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!;
+  const chunks = publicationChunkRows(sqlite);
+  const inline = reassembleSafetyScoreV9PublicationStoredValue(row.value as string, chunks);
+  sqlite.prepare("DELETE FROM cache WHERE key >= ? AND key < ?").run(...SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE);
+  sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(inline, SAFETY_SCORE_V9_CACHE_KEYS.publication);
+  const restore = () => {
+    for (const chunk of chunks) sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(chunk.key, chunk.value, chunk.updated_at);
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(row.value as string, SAFETY_SCORE_V9_CACHE_KEYS.publication);
+  };
+  return { inline, chunks, restore };
 }
 
 describe("Safety Score V9 publication payload chunks", () => {
@@ -80,22 +99,30 @@ describe("Safety Score V9 publication payload chunks", () => {
     expect(reassembleSafetyScoreV9PublicationFromCacheRows(sharded.envelope, otherRows.reverse())).toBe(stored);
   });
 
-  it("serves every reader from a sharded canonical row exactly as from the inline row", async () => {
+  it("serves every reader identically from the sharded canonical row and a historical inline row", async () => {
     const { sqlite, db } = database();
     const publication = largePublication("current", 120);
     await persistAndMaterialize(db, currentInput(publication));
+    const reassembled = await loadSafetyScoreV9Publication(db);
+    expect(reassembled).toEqual(publication);
     const expectedFull = await (await handleReportCardsV9(db)).text();
     const detailUrl = new URL("https://example.com/api/report-cards/v9-detail?stablecoin=usdc-circle");
     const expectedDetail = await (await handleReportCardsV9Detail(db, detailUrl)).text();
     const expectedIndex = await loadActiveSafetyScoreIndex(db);
-    const { inline, sharded } = shardInPlace(sqlite);
-    const reassembled = await loadSafetyScoreV9Publication(db);
-    expect(reassembled).toEqual(publication);
-    expect((await loadSafetyScoreV9PublicationIdentityEnvelope(db))?.publicationGenerationId).toBe(publication.publicationGenerationId);
-    expect(await loadActiveSafetyScoreIndex(db)).toEqual(expectedIndex);
-    expect(await loadSafetyPublicationSize(db)).toMatchObject({ kind: "observed", storedBytes: new TextEncoder().encode(inline).byteLength });
-    expect(await (await handleReportCardsV9(db)).text()).toBe(expectedFull);
-    expect(await (await handleReportCardsV9Detail(db, detailUrl)).text()).toBe(expectedDetail);
+    const historical = seedHistoricalInlineRow(sqlite);
+    const inline = historical.inline;
+    const storedBytes = new TextEncoder().encode(inline).byteLength;
+    const readers = async () => {
+      expect(await loadSafetyScoreV9Publication(db)).toEqual(publication);
+      expect((await loadSafetyScoreV9PublicationIdentityEnvelope(db))?.publicationGenerationId).toBe(publication.publicationGenerationId);
+      expect(await loadActiveSafetyScoreIndex(db)).toEqual(expectedIndex);
+      expect(await loadSafetyPublicationSize(db)).toMatchObject({ kind: "observed", storedBytes });
+      expect(await (await handleReportCardsV9(db)).text()).toBe(expectedFull);
+      expect(await (await handleReportCardsV9Detail(db, detailUrl)).text()).toBe(expectedDetail);
+    };
+    await readers();
+    historical.restore();
+    await readers();
     // Cold reads wait for heavy materialization; they never decode or write.
     sqlite.exec("DELETE FROM safety_score_site_manifests");
     const detail = await handleReportCardsV9Detail(db, detailUrl);
@@ -109,37 +136,46 @@ describe("Safety Score V9 publication payload chunks", () => {
     expect(restoredDetail.status).toBe(200);
     expect(await restoredDetail.text()).toBe(expectedDetail);
     // A missing chunk fails closed instead of returning a partial payload.
-    sqlite.prepare("DELETE FROM cache WHERE key = ?").run(sharded.chunks[sharded.chunks.length - 1]!.key);
+    sqlite.prepare("DELETE FROM cache WHERE key = ?").run(historical.chunks[historical.chunks.length - 1]!.key);
     await expect(loadSafetyScoreV9Publication(db)).rejects.toThrow(/payload chunks/);
   });
 
-  it("an inline acceptance after a sharded one removes stale chunks atomically", async () => {
+  it("replaces a historical inline row with a sharded acceptance", async () => {
     const { sqlite, db } = database();
     await persistAndMaterialize(db, currentInput(largePublication("first", 120)));
-    shardInPlace(sqlite);
+    seedHistoricalInlineRow(sqlite);
     const next = largePublication("next", 130);
     await persistAndMaterialize(db, currentInput(next));
-    expect(sqlite.prepare("SELECT count(*) AS n FROM cache WHERE key LIKE ?").get(`${SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX}%`)!.n).toBe(0);
+    const envelope = JSON.parse(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string);
+    expect(envelope).not.toHaveProperty("payload");
+    expect(publicationChunkRows(sqlite)).toHaveLength(envelope.payloadChunks.count);
     expect(await loadSafetyScoreV9Publication(db)).toEqual(next);
   });
 });
 
 describe("Safety Score V9 sharded publication writer", () => {
-  it.each([false, true])("commits chunks with the envelope and replaces the previous payload's chunks (deferred=%s)", async (deferred) => {
+  it.each([false, true])("by default commits an over-row-limit admitted payload as bounded chunks with its envelope (deferred=%s)", async (deferred) => {
     const { sqlite, db } = database();
+    enforceD1ValueLimit(sqlite);
     const write = async (publication: ReturnType<typeof largePublication>) => {
-      const input = { ...currentInput(publication), chunkedPublicationWrites: true };
+      const input = currentInput(publication);
       if (deferred) await persistAndMaterialize(db, input);
       else await persistSafetyScoreV9Publication(db, input);
     };
     const first = largePublication("first", 120);
+    const firstStored = await serializeSafetyScoreV9Publication(first);
+    expect(new TextEncoder().encode(firstStored).byteLength).toBeGreaterThan(D1_MAX_VALUE_BYTES);
+    // A single-row write of the same value is rejected, as D1 would reject it.
+    expect(() => sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("inline-witness", firstStored, 1))
+      .toThrow(/D1 value too large/);
     await write(first);
-    const chunkKeys = () => sqlite.prepare("SELECT key FROM cache WHERE key LIKE ? ORDER BY key")
-      .all(`${SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX}%`).map((row) => row.key as string);
+    const chunkKeys = () => publicationChunkRows(sqlite).map((row) => row.key);
     const firstKeys = chunkKeys();
     expect(firstKeys.length).toBeGreaterThan(1);
+    for (const chunk of publicationChunkRows(sqlite)) expect(chunk.value.length).toBeLessThanOrEqual(SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES);
     const envelope = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value as string;
     expect(envelope.length).toBeLessThan(4_096);
+    expect((await loadSafetyScoreV9PublicationStoredRow(db))?.value).toBe(firstStored);
     expect(await loadSafetyScoreV9Publication(db)).toEqual(first);
     expect((await handleReportCardsV9(db)).status).toBe(200);
 
@@ -151,7 +187,7 @@ describe("Safety Score V9 sharded publication writer", () => {
     expect(await loadSafetyScoreV9Publication(db)).toEqual(next);
 
     // A stale writer's batch rolls back its chunk writes with its envelope.
-    await expect(persistSafetyScoreV9Publication(db, { ...currentInput(first), chunkedPublicationWrites: true })).rejects.toThrow();
+    await expect(persistSafetyScoreV9Publication(db, currentInput(first))).rejects.toThrow();
     expect(chunkKeys()).toEqual(nextKeys);
   });
 });
@@ -225,7 +261,7 @@ describe("Safety Score cohort payload chunks", () => {
     sqlite.exec(`CREATE TRIGGER reject_cohort BEFORE UPDATE ON cache WHEN NEW.key = '${SAFETY_SCORE_V9_CACHE_KEYS.cohort}' BEGIN SELECT RAISE(ABORT, 'failed cohort commit'); END`);
     await expect(write(first, 130)).rejects.toThrow(/failed cohort commit/);
     expect(rows()).toEqual(snapshot);
-    await db.batch([safetyScoreV9PublicationChunkCleanupStatement(db)]);
+    await db.batch([db.prepare("DELETE FROM cache WHERE key >= ? AND key < ?").bind(...SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE)]);
     expect(rows().filter(row => String(row.key).startsWith(SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX))).toHaveLength(second.chunks.length);
   });
 });
