@@ -118,15 +118,24 @@ export async function dispatchTelegramAlerts(
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
     } else {
-      const events = await buildTelegramDispatchEvents(db, sourceData, snapshotState, getSymbol, signal);
+      const { events, changeLogStatements } = await buildTelegramDispatchEvents(
+        db, sourceData, snapshotState, getSymbol, signal,
+      );
       const summary = summarizeTelegramDispatchEvents(events);
       eventOverrides = summary.eventsDetected;
+      // The roll-up transitions and the baselines that consume them commit in
+      // one batch (never split): a failure keeps both, so the next run
+      // re-detects every transition. The job, when present, goes first.
+      const baselineStatements = [
+        ...changeLogStatements,
+        ...buildTelegramSnapshotCacheEntries(currentSnapshots)
+          .map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt: nowSec })),
+      ];
       if (summary.total === 0) {
         eventless = true;
-        await writeSnapshots(db, currentSnapshots);
+        await executeAtomicBatch(db, baselineStatements, { signal });
       } else {
-        // The job and the baseline it was diffed against commit together: a
-        // crash re-detects the same events and re-derives the same job id.
+        // A crash re-detects the same events and re-derives the same job id.
         const spec = await buildTelegramAlertJobSpec({
           events,
           baselineDigestInput: JSON.stringify(currentSnapshots),
@@ -134,11 +143,7 @@ export async function dispatchTelegramAlerts(
         });
         alertJobId = spec.jobId;
         alertFamilies = activeTelegramEventFamilies(events);
-        const statements = [
-          ...await buildTelegramJobStatements(db, spec),
-          ...buildTelegramSnapshotCacheEntries(currentSnapshots)
-            .map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt: nowSec })),
-        ];
+        const statements = [...await buildTelegramJobStatements(db, spec), ...baselineStatements];
         const results = await executeAtomicBatch(db, statements, { returnResults: true, signal });
         alertJobCreated = Number(results[0]?.meta?.changes ?? 0) > 0;
       }

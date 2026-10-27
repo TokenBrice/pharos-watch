@@ -21,7 +21,13 @@ vi.mock("../telegram-alert-context", () => ({
 
 vi.mock("../../../../lib/db-cache", () => ({
   getCache: mocks.getCache,
+  prepareCacheUpsert: vi.fn(() => ({ kind: "cache-upsert" })),
 }));
+
+/** Prepares statements but never executes: event construction must not commit. */
+function preparingD1() {
+  return makeNoopD1({ prepare: vi.fn(() => ({ bind: vi.fn(() => ({ kind: "prepared" })) })) });
+}
 
 describe("buildTelegramDispatchEvents", () => {
   beforeEach(() => {
@@ -34,8 +40,8 @@ describe("buildTelegramDispatchEvents", () => {
   });
 
   it("uses Reason lines for safety alerts while keeping Context lines on other alert families", async () => {
-    const events = await buildTelegramDispatchEvents(
-      {} as D1Database,
+    const { events } = await buildTelegramDispatchEvents(
+      preparingD1(),
       eventSources({ dewsRows: [{
         stablecoin_id: "coin-dews",
         score: 42,
@@ -113,7 +119,7 @@ describe("buildTelegramDispatchEvents", () => {
     async (peak) => {
       const { sqlite, db } = createClosedDepegFixture("recovered-primary");
       try {
-        const events = await buildTelegramDispatchEvents(
+        const { events } = await buildTelegramDispatchEvents(
           db,
           eventSources({ activeDepegRows: [activeDepeg(peak)] }),
           eventSnapshots({ safeDepegSnapshot: priorDepeg() }),
@@ -142,7 +148,7 @@ describe("buildTelegramDispatchEvents", () => {
   }) => {
     const { sqlite, db } = createClosedDepegFixture(closeReason, recoveryPrice);
     try {
-      const events = await buildTelegramDispatchEvents(
+      const { events } = await buildTelegramDispatchEvents(
         db,
         eventSources({ activeDepegRows: [activeDepeg(280, direction)] }),
         eventSnapshots({ safeDepegSnapshot: priorDepeg() }),
@@ -162,7 +168,7 @@ describe("buildTelegramDispatchEvents", () => {
     const { sqlite, db, insertClosed } = createClosedDepegFixture("coverage-lost-supply", null);
     try {
       insertClosed.run(3, 1_200, 1_800, 1, "recovered-primary");
-      const events = await buildTelegramDispatchEvents(
+      const { events } = await buildTelegramDispatchEvents(
         db,
         eventSources({ activeDepegRows: [activeDepeg()] }),
         eventSnapshots({ safeDepegSnapshot: priorDepeg() }),
@@ -180,7 +186,7 @@ describe("buildTelegramDispatchEvents", () => {
     const { sqlite, db, insertClosed } = createClosedDepegFixture("recovered-primary");
     try {
       insertClosed.run(3, 1_200, 1_800, null, "coverage-lost-supply");
-      const events = await buildTelegramDispatchEvents(
+      const { events } = await buildTelegramDispatchEvents(
         db,
         eventSources(),
         eventSnapshots({ safeDepegSnapshot: priorDepeg() }),
@@ -195,8 +201,8 @@ describe("buildTelegramDispatchEvents", () => {
   });
 
   it("preserves stablecoin-only diffing for legacy snapshots without event IDs", async () => {
-    const events = await buildTelegramDispatchEvents(
-      {} as D1Database,
+    const { events } = await buildTelegramDispatchEvents(
+      preparingD1(),
       eventSources({ activeDepegRows: [activeDepeg(501)] }),
       eventSnapshots({ safeDepegSnapshot: priorDepeg(null) }),
       () => "DPG",
@@ -212,7 +218,7 @@ describe("buildTelegramDispatchEvents", () => {
     const { sqlite, db, insertClosed } = createClosedDepegFixture("coverage-lost-supply", null);
     try {
       insertClosed.run(3, 1_200, 1_800, 1, "recovered-primary");
-      const events = await buildTelegramDispatchEvents(
+      const { events } = await buildTelegramDispatchEvents(
         db,
         eventSources(),
         eventSnapshots({ safeDepegSnapshot: priorDepeg(null) }),
@@ -227,8 +233,8 @@ describe("buildTelegramDispatchEvents", () => {
   });
 
   it("emits depeg worsening only when a supported subscriber step is crossed", async () => {
-    const events = await buildTelegramDispatchEvents(
-      {} as D1Database,
+    const { events } = await buildTelegramDispatchEvents(
+      preparingD1(),
       eventSources({ dewsRows: [], activeDepegRows: [
         {
           stablecoin_id: "coin-no-step",
@@ -286,8 +292,8 @@ describe("buildTelegramDispatchEvents", () => {
   });
 
   it("uses peak_price for triggered and worsening depeg alert display prices", async () => {
-    const events = await buildTelegramDispatchEvents(
-      {} as D1Database,
+    const { events } = await buildTelegramDispatchEvents(
+      preparingD1(),
       eventSources({ dewsRows: [], activeDepegRows: [
         {
           stablecoin_id: "coin-new",
@@ -357,7 +363,7 @@ describe("buildTelegramDispatchEvents", () => {
       })),
     });
 
-    const events = await buildTelegramDispatchEvents(
+    const { events } = await buildTelegramDispatchEvents(
       db,
       eventSources({ dewsRows: [], activeDepegRows: [] }),
       eventSnapshots({
@@ -398,7 +404,7 @@ describe("buildTelegramDispatchEvents", () => {
       })),
     });
 
-    const events = await buildTelegramDispatchEvents(
+    const { events } = await buildTelegramDispatchEvents(
       db,
       eventSources({ dewsRows: [], activeDepegRows: [] }),
       eventSnapshots({
@@ -418,5 +424,25 @@ describe("buildTelegramDispatchEvents", () => {
 
     expect(events.depegResolved).toHaveLength(1);
     expect(events.depegResolved[0].recoveryPrice).toBeNull();
+  });
+
+  it("returns roll-up change-log statements for the dispatcher to commit, executing none", async () => {
+    const db = preparingD1();
+    const { events, changeLogStatements } = await buildTelegramDispatchEvents(
+      db,
+      eventSources({ dewsRows: [{
+        stablecoin_id: "coin-dews", score: 20, band: "WATCH", signals_json: null, computed_at: 1_799_999_000,
+      }] }),
+      eventSnapshots({
+        safeDewsAlertable: { "coin-dews": "ALERT" },
+        safeDewsSnapshot: { "coin-dews": "ALERT" },
+      }),
+      (id) => id,
+    );
+
+    // An unsent de-escalation is roll-up material only, and nothing was committed.
+    expect(events.dewsChanges).toEqual([]);
+    expect(changeLogStatements.length).toBeGreaterThan(0);
+    expect(db.prepare).toHaveBeenCalledWith(expect.stringContaining("INSERT OR IGNORE INTO telegram_change_log"));
   });
 });

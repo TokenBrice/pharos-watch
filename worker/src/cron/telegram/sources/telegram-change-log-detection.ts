@@ -1,4 +1,3 @@
-import { executeAtomicBatch } from "../../../lib/db";
 import { getCache, prepareCacheUpsert } from "../../../lib/db-cache";
 import { parseJsonObject } from "../../../lib/json-parse";
 import type { DewsChange, ReserveAlert } from "../../../telegram/common/alerts-formatting";
@@ -93,11 +92,12 @@ function buildReserveChangeLogEntries(alerts: readonly ReserveAlert[], nowSec: n
 }
 
 /**
- * Persist this run's roll-up material. The observed safety snapshot advances
- * in the same batch as its entries; DEWS and reserve entries are idempotent
- * on their source keys, so a failed dispatch that re-detects them is harmless.
+ * Prepare, without executing, this run's roll-up material: change-log inserts
+ * plus the observed safety snapshot advance. The dispatcher commits them in
+ * the same atomic batch as the baselines that consume these transitions, so a
+ * failed write leaves both unchanged and the next run re-detects them.
  */
-export async function recordDispatchChangeLog(
+export async function prepareDispatchChangeLogStatements(
   db: D1Database,
   input: {
     currentSafetySnapshot: SafetySnapshot | null;
@@ -107,7 +107,7 @@ export async function recordDispatchChangeLog(
     getSymbol: (stablecoinId: string) => string;
     nowSec: number;
   },
-): Promise<number> {
+): Promise<D1PreparedStatement[]> {
   const entries = [
     ...buildDewsChangeLogEntries(input.dewsChanges, input.dewsRows, input.nowSec),
     ...buildReserveChangeLogEntries(input.reserveAlerts, input.nowSec),
@@ -128,10 +128,8 @@ export async function recordDispatchChangeLog(
       observedWrite = prepareCacheUpsert(db, { key: SAFETY_OBSERVED_CACHE_KEY, value: nextRaw, updatedAt: input.nowSec });
     }
   }
-  const statements = [
+  return [
     ...buildTelegramChangeLogStatements(db, entries),
     ...(observedWrite ? [observedWrite] : []),
   ];
-  if (statements.length > 0) await executeAtomicBatch(db, statements);
-  return entries.length;
 }
