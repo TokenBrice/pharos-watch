@@ -75,9 +75,9 @@ function mergeGradeHistory(
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function StatBox({ label, children }: { label: string; children: React.ReactNode }) {
+function StatBox({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
   return (
-    <div className="pharos-inset px-3 py-1.5">
+    <div className={cn("pharos-inset px-3 py-1.5", className)}>
       <p className="pharos-label">{label}</p>
       <div className="mt-0.5">{children}</div>
     </div>
@@ -306,7 +306,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
               />
             </StatBox>
             {stats.streakDays != null && endpoint != null ? (
-            <StatBox label={`Streak as of ${new Date(endpoint * 1000).toISOString().slice(0, 10)}`}>
+            <StatBox className="col-span-2 sm:col-span-1" label={`Streak as of ${new Date(endpoint * 1000).toISOString().slice(0, 10)}`}>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold tabular-nums">{formatTrackingSpanDays(stats.streakDays)}</span>
                 <span className="text-xs text-muted-foreground">at</span>

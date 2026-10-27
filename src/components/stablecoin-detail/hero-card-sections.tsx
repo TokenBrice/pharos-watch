@@ -64,18 +64,16 @@ export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict:
 
   return (
     <div className="flex flex-col gap-2 border-b border-border/40 px-4 py-2 sm:px-5">
-      {isHeroVerdictEnabled() ? (
+      {showVerdict ? (
         <div className="flex min-h-5 items-center" data-hero-verdict-lane>
-          {showVerdict ? (
-            <span
-              id={`hero-verdict-${coin.id}`}
-              data-archetype={verdict.archetype}
-              className="inline-flex min-h-5 items-center gap-1 rounded-full bg-state-info-solid/15 px-2.5 text-xs font-medium leading-snug text-state-info-bright"
-            >
-              <BadgeCheck aria-hidden="true" className="h-3 w-3 shrink-0" />
-              {verdict.label}
-            </span>
-          ) : null}
+          <span
+            id={`hero-verdict-${coin.id}`}
+            data-archetype={verdict.archetype}
+            className="inline-flex min-h-5 items-center gap-1 rounded-full bg-state-info-solid/15 px-2.5 text-xs font-medium leading-snug text-state-info-bright"
+          >
+            <BadgeCheck aria-hidden="true" className="h-3 w-3 shrink-0" />
+            {verdict.label}
+          </span>
         </div>
       ) : null}
       <div className="flex min-w-0 flex-wrap items-center justify-between gap-x-4 gap-y-2">

@@ -86,6 +86,8 @@ describe("SafetyScoreHistorySection", () => {
     // The oldest required lane (legacy, 2h old) bounds the dated streak.
     expect(html).toContain(`Streak as of ${new Date((NOW_SEC - 7_200) * 1000).toISOString().slice(0, 10)}`);
     expect(html).not.toContain("Current streak");
+    // The dated streak spans both mobile columns so its label fits on one line at 390px.
+    expect(html).toContain('class="pharos-inset px-3 py-1.5 col-span-2 sm:col-span-1"><p class="pharos-label">Streak as of');
 
     // Upgrade indicator (B -> B+ is an upgrade)
     expect(html).toContain("Upgraded from B");

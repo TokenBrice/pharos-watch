@@ -31,7 +31,7 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
   "gho-aave": {
     steps: [
       {},
-      { label: "Aave V3 facilitator + GSM", subtitle: "USDC/USDT GSMs" },
+      { label: "Facilitator + GSM", subtitle: "USDC/USDT GSMs" },
       {},
     ],
   },
@@ -64,7 +64,7 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
   "crvusd-curve": {
     steps: [
       {},
-      { label: "LLAMMA continuous arb", subtitle: "no single-threshold liquidation" },
+      { label: "LLAMMA arb", subtitle: "soft liquidation" },
       {},
     ],
   },
@@ -91,7 +91,7 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
   "usdc-circle": {
     steps: [
       {},
-      { subtitle: "Circle Reserve Fund @ BNY Mellon" },
+      { subtitle: "Circle Reserve Fund" },
       {},
     ],
     stressFootnote: "stress: banking-rail freeze (USDC, Mar 2023)",
