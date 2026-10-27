@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice6)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal D01-L3 2026-10-27",
     "confidence": "verified",
     "sources": [
       {
@@ -33,9 +33,9 @@
         "url": "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
       }
     ],
-    "rationale": "Yearn documents each yBOLD as one BOLD deployed across Liquity V2 Stability Pools and redeemable for BOLD without a waiting period. The live deployed-strategy row therefore retains the tracked BOLD wrapper dependency while carrying the Stability Pool's protocol, market, and counterparty risks.",
-    "compositionBasis": "Exact live ERC-4626 deployed row and current Yearn yBOLD documentation",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Yearn documents each yBOLD as one BOLD deployed across Liquity V2 Stability Pools and redeemable for BOLD without a waiting period. On 2026-10-27 a finalized-block Ethereum read (block 26282851, hash 0x2ce46d7e90bdb5c5e490e60debcad33e3dafdddd38d4a54fabd1ea16dec4eb22, timestamp 2026-10-27T08:29:11Z, matching before/after headers) returned vault asset() equal to BOLD 0x6440f144b7e50d6a8439336510312d2f54beb01d, totalAssets equal to totalSupply at 7,707,687.04 BOLD and an idle BOLD balance of 120 raw wei at the vault, so the book remains deployed. The live deployed-strategy row therefore retains the tracked BOLD wrapper dependency while carrying the Stability Pool's protocol, market, and counterparty risks.",
+    "compositionBasis": "Exact live ERC-4626 deployed row and current Yearn yBOLD documentation, re-read at Ethereum block 26282851 (2026-10-27T08:29:11Z)",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The BOLD backing is identified; allocation among Liquity V2 Stability Pools remains dynamic.",
     "knownUnknownExposurePct": 0

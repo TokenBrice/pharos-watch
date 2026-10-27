@@ -51,20 +51,20 @@
           "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5"
         ],
         "chain": "ethereum",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26098746,
+        "observedAt": "2026-10-27",
+        "observedBlock": 26282940,
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "executionScope": {
           "controllerDeployment": "ethereum:0x4cce605ed955295432958d8951d0b176c10720d5",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc01)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [{"label": "Verified StableCoin implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6114a25f69c8115b1778c1c301efa9bd7154e72"}],
-          "pin": {"position": "26098826", "hash": null, "runtimeIdentity": "ethereum:0xc6114a25f69c8115b1778c1c301efa9bd7154e72", "signerIdentity": "getSignatoryList/getThresholds at ethereum:26098826; native mint 3-of-9"},
-          "observedState": {"position": "26098826", "hash": null, "runtimeIdentity": "ethereum:0xc6114a25f69c8115b1778c1c301efa9bd7154e72", "signerIdentity": "getSignatoryList/getThresholds at ethereum:26098826; native mint 3-of-9"},
+          "pin": {"position": "26282940", "hash": "0xb23503997091288a7391c1db5912d492b9f5139e0e401d2c739f5b0f5a475c76", "runtimeIdentity": "ethereum:0xc6114a25f69c8115b1778c1c301efa9bd7154e72", "signerIdentity": "getSignatoryList/getThresholds at ethereum:26282940; native mint 3-of-9"},
+          "observedState": {"position": "26282940", "hash": "0xb23503997091288a7391c1db5912d492b9f5139e0e401d2c739f5b0f5a475c76", "runtimeIdentity": "ethereum:0xc6114a25f69c8115b1778c1c301efa9bd7154e72", "signerIdentity": "getSignatoryList/getThresholds at ethereum:26282940; native mint 3-of-9"},
           "inventory": "partial",
           "closure": {"entrypoints": false, "mutableTargets": false, "delegateAndFallback": false, "permissions": false, "upgrades": false, "bypasses": false, "liabilityInventory": false},
           "paths": [{
@@ -89,7 +89,7 @@
             "bypassRefs": []
           }]
         },
-        "evidence": "At Ethereum block 26098746, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. Signatory and threshold changes also require three approvals. Verified implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 requires an ACCEPTED request owned by the executor before minting. owner() remains EOA 0x59a50cbd643347296e2cf5573b40eda3099d0c54, but ownership alone does not bypass the three-signatory mint path. The separate governance-token swap() and proxy-upgrade paths are not covered by this quorum. W2 observation 2026-10-09T11:38:58.965Z (Sol curation campaign 2026-10-09 (W2L22Spark)): pinned Ethereum block 26154600, hash 0x6f5eae05fc4404d38791f5998c2ade654f55e27deb163e8eab479a6d2f22b20c, timestamp 2026-10-09T11:37:47.000Z, confirms nine signatories and thresholds [1,3], EIP-1967 implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 and admin 0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b. Keyless provenance: https://api-ethereum-mainnet-erigon.n.dwellir.com. The recovered verified implementation separately exposes swap(address,uint256), selector 0xd004f0f7, which mints after checking msg.sender == _governanceTokenAddress; it does not require the native request quorum. The fresh getter census does not enumerate that actor, proxy-admin reach or historical bypasses, so the retained partial execution certificate and its original evidence dates are unchanged.",
+        "evidence": "At Ethereum block 26098746, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. Signatory and threshold changes also require three approvals. Verified implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 requires an ACCEPTED request owned by the executor before minting. owner() remains EOA 0x59a50cbd643347296e2cf5573b40eda3099d0c54, but ownership alone does not bypass the three-signatory mint path. The separate governance-token swap() and proxy-upgrade paths are not covered by this quorum. W2 observation 2026-10-09T11:38:58.965Z (Sol curation campaign 2026-10-09 (W2L22Spark)): pinned Ethereum block 26154600, hash 0x6f5eae05fc4404d38791f5998c2ade654f55e27deb163e8eab479a6d2f22b20c, timestamp 2026-10-09T11:37:47.000Z, confirms nine signatories and thresholds [1,3], EIP-1967 implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 and admin 0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b. Keyless provenance: https://api-ethereum-mainnet-erigon.n.dwellir.com. The recovered verified implementation separately exposes swap(address,uint256), selector 0xd004f0f7, which mints after checking msg.sender == _governanceTokenAddress; it does not require the native request quorum. The fresh getter census does not enumerate that actor, proxy-admin reach or historical bypasses, so the retained partial execution certificate and its original evidence dates are unchanged. Re-read 2026-10-27 at Ethereum block 26282940 (hash 0xb23503997091288a7391c1db5912d492b9f5139e0e401d2c739f5b0f5a475c76, ethereum-rpc.publicnode.com): getSignatoryList() returned the same nine signatories incl. owner 0x59A50CBD643347296E2CF5573b40EDa3099d0C54, getThresholds(0) returned [1,3], EIP-1967 implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 and admin 0x0ac6d3de693072bc9a3e46ea2ac3bb554619598b unchanged. Only these getter, EIP-1967 slot and runtime reads were repeated; the swap() actor, proxy-admin reach and bypasses are not enumerated, so the scope stays partial.",
         "sources": [
           {
             "label": "Ethereum Blockscout AUDD contract",
@@ -142,20 +142,20 @@
           "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65"
         ],
         "chain": "base",
-        "observedAt": "2026-10-01",
-        "observedBlock": 52041974,
+        "observedAt": "2026-10-27",
+        "observedBlock": 53150766,
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "executionScope": {
           "controllerDeployment": "base:0x449b3317a6d1efb1bc3ba0700c9eaa4ffff4ae65",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc01)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [{"label": "Verified Base StableCoin implementation", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x3c9ead9ac7732b76beac828ea4ab92d8b758383b"}],
-          "pin": {"position": "52042380", "hash": null, "runtimeIdentity": "base:0x3c9ead9ac7732b76beac828ea4ab92d8b758383b", "signerIdentity": "getSignatoryList/getThresholds at base:52042380; native mint 3-of-9"},
-          "observedState": {"position": "52042380", "hash": null, "runtimeIdentity": "base:0x3c9ead9ac7732b76beac828ea4ab92d8b758383b", "signerIdentity": "getSignatoryList/getThresholds at base:52042380; native mint 3-of-9"},
+          "pin": {"position": "53150766", "hash": "0xb999e8d0ab28990e65df96a16914e4f3b68d62a4d2c804e516f631220de575b2", "runtimeIdentity": "base:0x3c9ead9ac7732b76beac828ea4ab92d8b758383b", "signerIdentity": "getSignatoryList/getThresholds at base:53150766; native mint 3-of-9"},
+          "observedState": {"position": "53150766", "hash": "0xb999e8d0ab28990e65df96a16914e4f3b68d62a4d2c804e516f631220de575b2", "runtimeIdentity": "base:0x3c9ead9ac7732b76beac828ea4ab92d8b758383b", "signerIdentity": "getSignatoryList/getThresholds at base:53150766; native mint 3-of-9"},
           "inventory": "partial",
           "closure": {"entrypoints": false, "mutableTargets": false, "delegateAndFallback": false, "permissions": false, "upgrades": false, "bypasses": false, "liabilityInventory": false},
           "paths": [{
@@ -180,7 +180,7 @@
             "bypassRefs": []
           }]
         },
-        "evidence": "At Base block 52041974, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. Verified implementation 0x3c9ead9ac7732b76beac828ea4ab92d8b758383b requires an ACCEPTED request owned by the executor before minting. owner() remains 0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127, but ownership alone does not bypass the three-signatory mint path. The separate governance-token swap() path is outside this quorum; the EOA-controlled Base proxy-upgrade path remains independently adverse. W2 observation 2026-10-09T11:40:09.762Z (Sol curation campaign 2026-10-09 (W2L22Spark)): pinned Base block 52378300, hash 0x1dd7a53476a4e2ed18100fc8c1f7424e535c0df8d078b4d13704bcb5c805d2b3, timestamp 2026-10-09T11:39:07.000Z, confirms nine signatories, thresholds [1,3], EIP-1967 implementation 0x3c9ead9ac7732b76beac828ea4ab92d8b758383b and admin 0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f. Keyless provenance: https://api-base-mainnet-archive.n.dwellir.com. This is a current local getter census only; the swap actor and complete proxy/admin/bypass reach remain outside it. The retained partial execution certificate and original evidence dates are unchanged.",
+        "evidence": "At Base block 52041974, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. Verified implementation 0x3c9ead9ac7732b76beac828ea4ab92d8b758383b requires an ACCEPTED request owned by the executor before minting. owner() remains 0xa375adbc3b5497f1c3eb20cbe986e115bd2b9127, but ownership alone does not bypass the three-signatory mint path. The separate governance-token swap() path is outside this quorum; the EOA-controlled Base proxy-upgrade path remains independently adverse. W2 observation 2026-10-09T11:40:09.762Z (Sol curation campaign 2026-10-09 (W2L22Spark)): pinned Base block 52378300, hash 0x1dd7a53476a4e2ed18100fc8c1f7424e535c0df8d078b4d13704bcb5c805d2b3, timestamp 2026-10-09T11:39:07.000Z, confirms nine signatories, thresholds [1,3], EIP-1967 implementation 0x3c9ead9ac7732b76beac828ea4ab92d8b758383b and admin 0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f. Keyless provenance: https://api-base-mainnet-archive.n.dwellir.com. This is a current local getter census only; the swap actor and complete proxy/admin/bypass reach remain outside it. The retained partial execution certificate and original evidence dates are unchanged. Re-read 2026-10-27 at Base block 53150766 (hash 0xb999e8d0ab28990e65df96a16914e4f3b68d62a4d2c804e516f631220de575b2, base-rpc.publicnode.com): getSignatoryList() returned the same nine signatories incl. owner 0xa375adBC3B5497f1c3Eb20CBe986E115Bd2B9127, getThresholds(0) returned [1,3], EIP-1967 implementation 0x3c9ead9ac7732b76beac828ea4ab92d8b758383b and admin 0x0bc67421c729b8cd22a725e40d1c4f5ca3d32f9f unchanged. Only these getter, EIP-1967 slot and runtime reads were repeated; the swap() actor, proxy-admin reach and bypasses are not enumerated, so the scope stays partial.",
         "sources": [
           {
             "label": "Base Blockscout AUDD contract",
@@ -313,20 +313,20 @@
           "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8"
         ],
         "chain": "xdc",
-        "observedAt": "2026-10-01",
-        "observedBlock": 107888340,
+        "observedAt": "2026-10-27",
+        "observedBlock": 108767825,
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "executionScope": {
           "controllerDeployment": "xdc:0x9fe4e6321eeb7c4bc537570f015e4734b15002b8",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-10-31",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc01)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [{"label": "XDC exact-match implementation", "url": "https://xdcscan.com/address/0xbf6db4baae78071777a208924290b77601895273#code"}, {"label": "Verified identical Ethereum source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc6114a25f69c8115b1778c1c301efa9bd7154e72"}],
-          "pin": {"position": "107888340", "hash": null, "runtimeIdentity": "xdc:0xbf6db4baae78071777a208924290b77601895273; runtime-sha256:e22b4723ad6d3d5cd4df41ed314e3151648760c1303fe24af44bb0d641866b97", "signerIdentity": "getSignatoryList/getThresholds at xdc:107888340; native mint 3-of-9"},
-          "observedState": {"position": "107888340", "hash": null, "runtimeIdentity": "xdc:0xbf6db4baae78071777a208924290b77601895273; runtime-sha256:e22b4723ad6d3d5cd4df41ed314e3151648760c1303fe24af44bb0d641866b97", "signerIdentity": "getSignatoryList/getThresholds at xdc:107888340; native mint 3-of-9"},
+          "pin": {"position": "108767825", "hash": "0x0936bd52f95ba8b2d296cb2bad90889b28dea2c03b10d8ee6f72c65473a88a9e", "runtimeIdentity": "xdc:0xbf6db4baae78071777a208924290b77601895273; runtime-sha256:e22b4723ad6d3d5cd4df41ed314e3151648760c1303fe24af44bb0d641866b97", "signerIdentity": "getSignatoryList/getThresholds at xdc:108767825; native mint 3-of-9"},
+          "observedState": {"position": "108767825", "hash": "0x0936bd52f95ba8b2d296cb2bad90889b28dea2c03b10d8ee6f72c65473a88a9e", "runtimeIdentity": "xdc:0xbf6db4baae78071777a208924290b77601895273; runtime-sha256:e22b4723ad6d3d5cd4df41ed314e3151648760c1303fe24af44bb0d641866b97", "signerIdentity": "getSignatoryList/getThresholds at xdc:108767825; native mint 3-of-9"},
           "inventory": "partial",
           "closure": {"entrypoints": false, "mutableTargets": false, "delegateAndFallback": false, "permissions": false, "upgrades": false, "bypasses": false, "liabilityInventory": false},
           "paths": [{
@@ -351,7 +351,7 @@
             "bypassRefs": []
           }]
         },
-        "evidence": "At XDC block 107888340, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. EIP-1967 implementation 0xbf6db4baae78071777a208924290b77601895273 has byte-for-byte identical runtime to verified Ethereum StableCoin implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 at Ethereum block 26098826. Native request minting requires distinct signatory approvals and an ACCEPTED request owned by the executor; owner() 0x994a586f6df51acefb6a417f13ce659a3150e30d does not bypass this quorum. The separate governance-token swap() and proxy-upgrade paths are outside this quorum and remain unresolved for XDC. W2 observation 2026-10-09T11:40:10.101Z (Sol curation campaign 2026-10-09 (W2L22Spark)): pinned XDC block 108160400, hash 0x7471273d3cb05f134a7e0b7916ed304f7d208912ee526be3ff9768d1cbe5cced, timestamp 2026-10-09T11:38:30.000Z, confirms nine signatories, thresholds [1,3], EIP-1967 implementation 0xbf6db4baae78071777a208924290b77601895273 and admin 0x9b0d522c3ff7a374a284c7918b426545d0b8ffdf. Keyless provenance: https://api-xdc-mainnet.n.dwellir.com. No fresh bytecode-equivalence or complete swap/proxy/admin/bypass closure is asserted from these four reads; the retained partial certificate and original evidence dates are unchanged.",
+        "evidence": "At XDC block 107888340, getSignatoryList() returned nine signatories and getThresholds(TOKEN_SUPPLY_CONTROL) returned [1,3] for burn and mint. EIP-1967 implementation 0xbf6db4baae78071777a208924290b77601895273 has byte-for-byte identical runtime to verified Ethereum StableCoin implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 at Ethereum block 26098826. Native request minting requires distinct signatory approvals and an ACCEPTED request owned by the executor; owner() 0x994a586f6df51acefb6a417f13ce659a3150e30d does not bypass this quorum. The separate governance-token swap() and proxy-upgrade paths are outside this quorum and remain unresolved for XDC. W2 observation 2026-10-09T11:40:10.101Z (Sol curation campaign 2026-10-09 (W2L22Spark)): pinned XDC block 108160400, hash 0x7471273d3cb05f134a7e0b7916ed304f7d208912ee526be3ff9768d1cbe5cced, timestamp 2026-10-09T11:38:30.000Z, confirms nine signatories, thresholds [1,3], EIP-1967 implementation 0xbf6db4baae78071777a208924290b77601895273 and admin 0x9b0d522c3ff7a374a284c7918b426545d0b8ffdf. Keyless provenance: https://api-xdc-mainnet.n.dwellir.com. No fresh bytecode-equivalence or complete swap/proxy/admin/bypass closure is asserted from these four reads; the retained partial certificate and original evidence dates are unchanged. Re-read 2026-10-27 at XDC block 108767825 (hash 0x0936bd52f95ba8b2d296cb2bad90889b28dea2c03b10d8ee6f72c65473a88a9e, erpc.xinfin.network): getSignatoryList() returned nine signatories incl. owner 0x994A586f6df51ACEfb6a417F13cE659a3150E30d, getThresholds(0) returned [1,3], EIP-1967 implementation 0xbf6db4baae78071777a208924290b77601895273 and admin 0x9b0d522c3ff7a374a284c7918b426545d0b8ffdf unchanged; implementation runtime sha256 e22b4723ad6d3d5cd4df41ed314e3151648760c1303fe24af44bb0d641866b97 recomputed and equal to Ethereum implementation 0xc6114a25f69c8115b1778c1c301efa9bd7154e72 runtime at Ethereum block 26282940. Only these getter, EIP-1967 slot and runtime reads were repeated; the swap() actor, proxy-admin reach and bypasses are not enumerated, so the scope stays partial.",
         "sources": [
           {
             "label": "XDC RPC",

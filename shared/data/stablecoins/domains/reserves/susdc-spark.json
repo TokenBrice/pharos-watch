@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
       "name": "Spark Savings USDC idle underlying",
-      "pct": 3.257872841217,
+      "pct": 3.3471599476841427,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d:deployed",
       "name": "Spark Savings deployed strategy positions",
-      "pct": 96.742127158783,
+      "pct": 96.65284005231585,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Spark Liquidity Layer / Sky ecosystem",
@@ -34,8 +34,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R14 exact Spark Savings category review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -61,19 +61,23 @@
       {
         "label": "Spark app Collateral Composition tab: issuer-labeled USDS/USDC accounting split observed 2026-10-01",
         "url": "https://app.spark.finance/"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Classification-only review of exact keyed live accounting rows: Spark V2 documentation identifies Ethereum spUSDC 0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d, the underlying USDC and its currently idle balance as available for atomic withdrawals. assetsOutstanding is the difference between share-implied totalAssets and idle USDC; TAKER_ROLE granted to Spark Liquidity Layer deploys funds externally. The aggregate deployed claim is therefore a protocol-position against Spark Liquidity Layer / Sky ecosystem, not a measured portfolio of constituent USDS or individual strategies. This review does not renew historical weights, supply a deployed realization bound, or infer legal custody safeguards.",
-    "compositionBasis": "Historical Ethereum ERC-4626 idle-USDC and assetsOutstanding claim accounting; selected observations only, not a reconciled whole-token backing denominator",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Classification-only review of exact keyed live accounting rows. Fresh pinned reads at Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z): Spark V2 documentation identifies Ethereum spUSDC 0x28b3a8fb53b741a8fd78c0fb9a6b2393d896a43d (proxy implementation 0x1b992302652a92611dcd5090d1cb388c6377f455) with underlying USDC. totalAssets() is 298,739,690.013720 USDC, the vault's idle USDC balance is 9,999,295.251975 and assetsOutstanding() is 288,740,394.761745, which sum exactly to totalAssets(); the idle share is 3.347160% and the deployed claim 96.652840%. TAKER_ROLE granted to Spark Liquidity Layer deploys funds externally, so the aggregate deployed claim is a protocol-position against Spark Liquidity Layer / Sky ecosystem, not a measured portfolio of constituent USDS or individual strategies. This review does not supply a deployed realization bound or infer legal custody safeguards.",
+    "compositionBasis": "Ethereum ERC-4626 idle-USDC and assetsOutstanding claim accounting pinned at Ethereum block 26282914; selected observations only, not a reconciled whole-token backing denominator",
+    "compositionAsOf": "2026-10-27",
     "scope": "classification-only",
-    "knownUnknownExposure": "The historical 96.742127158783% deployed accounting position has unresolved constituent asset, venue and custodian weights. These rows measure Ethereum vault claim accounting, not a reconciled deployment-wide backing mix. The reviewed full USDS mechanism claim establishes residual loss dependence after backstops, not measured strategy allocations. Ruling D24 does not admit the system-wide Sky/Spark backing denominator as spUSDC-specific backing.",
-    "knownUnknownExposurePct": 96.742127158783,
+    "knownUnknownExposure": "The 96.65284005231585% deployed accounting position (block 26282914) has unresolved constituent asset, venue and custodian weights. These rows measure Ethereum vault claim accounting, not a reconciled deployment-wide backing mix. The reviewed full USDS mechanism claim establishes residual loss dependence after backstops, not measured strategy allocations. Ruling D24 does not admit the system-wide Sky/Spark backing denominator as spUSDC-specific backing.",
+    "knownUnknownExposurePct": 96.65284005231585,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "Spark Savings deployed strategy positions",
-        "pct": 96.742127158783,
+        "pct": 96.65284005231585,
         "disposition": "basket-needs-split",
         "rationale": "Aggregate assets outstanding to Spark Liquidity Layer strategies do not establish current constituent weights or liability reconciliation. The separate USDS mechanism claim does not resolve this basket or prove direct USDS custody."
       }

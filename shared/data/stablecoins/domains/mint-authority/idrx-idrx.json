@@ -518,10 +518,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "executionScope": {
           "controllerDeployment": "bsc:0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-11-01",
-          "reviewer": "DataMisc05 verified R2 counterfactual recipe",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
@@ -534,14 +534,14 @@
             }
           ],
           "pin": {
-            "position": "125139388",
-            "hash": null,
+            "position": "130060505",
+            "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
             "runtimeIdentity": "eth_getCode=0x; nonce=0; fixed SafeProxy singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e",
             "signerIdentity": "fixed initializer: 2-of-3; e51b67864a38f42126231d30ed8f3e72ec7f32f4,b4fca8725a9e65b4cd1ef27d71e7c7537148061b,0f9f4cbbec64524deb0d743f9caf34be81bd1576"
           },
           "observedState": {
-            "position": "125139388",
-            "hash": null,
+            "position": "130060505",
+            "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
             "runtimeIdentity": "eth_getCode=0x; nonce=0; MINTER_ROLE=true; DEFAULT_ADMIN_ROLE=false",
             "signerIdentity": "counterfactual fixed initialized 2-of-3; not a live deployed Safe"
           },
@@ -605,8 +605,8 @@
                 "modules": [],
                 "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
                 "accountStatePin": {
-                  "position": "125139388",
-                  "hash": null,
+                  "position": "130060505",
+                  "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
                   "runtimeIdentity": "eth_getCode=0x; eth_getTransactionCount=0x0",
                   "signerIdentity": "undeployed; fixed initialization owners and threshold, not live signer state"
                 }
@@ -614,7 +614,7 @@
             }
           ]
         },
-        "evidence": "Resolved 2026-07-30 from the complete BSC role history: MINTER_ROLE granted 2023-11-29 and current at block 113086546; independently re-verified at latest block on 2026-07-30 (hasRole = true). R2 re-verified at BSC block 125135204 on 2026-10-01: MINTER_ROLE remains true, DEFAULT_ADMIN_ROLE false, eth_getCode = 0x and transaction nonce = 0. This is an undeployed counterfactual 2-of-3 Safe, not a demonstrated single-key EOA. Replaying the exact createProxyWithNonce calldata from Base creation transaction 0x4eede2f05b5fa1fad852b42cd9ea516d103d74e9883135738055cc984887ffe7 against the BSC Safe factory 0xa6b71e26c5e0845f74c812102ca7114b6a896ab2 at the same pinned block returns this exact address. The initialization fixes threshold 2 and three owners: 0xe51b67864a38f42126231d30ed8f3e72ec7f32f4, 0xb4fca8725a9e65b4cd1ef27d71e7c7537148061b, 0x0f9f4cbbec64524deb0d743f9caf34be81bd1576. The mint role is dormant until deployment; direct-mint exposure is retained as a latent Safe-controlled path, with no claim that a Safe currently exists on BSC. Separate DEFAULT_ADMIN EOA authority remains unchanged. Sol curation campaign 2026-10-09 (W2L11Idrx) independently observed at 2026-10-09T11:50:44Z: BSC block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z; hasRole(MINTER_ROLE)=true, hasRole(DEFAULT_ADMIN_ROLE)=false, hasRole(UPGRADER_ROLE)=false and eth_getCode=0x. The target proxy implementation slot resolves to 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 at the same pin. This partial recheck does not refresh the historical Safe initializer, nonce, factory/runtime correspondence or execution certificate; all seven closure predicates remain unresolved.",
+        "evidence": "Resolved 2026-07-30 from the complete BSC role history: MINTER_ROLE granted 2023-11-29 and current at block 113086546; independently re-verified at latest block on 2026-07-30 (hasRole = true). R2 re-verified at BSC block 125135204 on 2026-10-01: MINTER_ROLE remains true, DEFAULT_ADMIN_ROLE false, eth_getCode = 0x and transaction nonce = 0. This is an undeployed counterfactual 2-of-3 Safe, not a demonstrated single-key EOA. Replaying the exact createProxyWithNonce calldata from Base creation transaction 0x4eede2f05b5fa1fad852b42cd9ea516d103d74e9883135738055cc984887ffe7 against the BSC Safe factory 0xa6b71e26c5e0845f74c812102ca7114b6a896ab2 at the same pinned block returns this exact address. The initialization fixes threshold 2 and three owners: 0xe51b67864a38f42126231d30ed8f3e72ec7f32f4, 0xb4fca8725a9e65b4cd1ef27d71e7c7537148061b, 0x0f9f4cbbec64524deb0d743f9caf34be81bd1576. The mint role is dormant until deployment; direct-mint exposure is retained as a latent Safe-controlled path, with no claim that a Safe currently exists on BSC. Separate DEFAULT_ADMIN EOA authority remains unchanged. Sol curation campaign 2026-10-09 (W2L11Idrx) independently observed at 2026-10-09T11:50:44Z: BSC block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z; hasRole(MINTER_ROLE)=true, hasRole(DEFAULT_ADMIN_ROLE)=false, hasRole(UPGRADER_ROLE)=false and eth_getCode=0x. The target proxy implementation slot resolves to 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 at the same pin. This partial recheck does not refresh the historical Safe initializer, nonce, factory/runtime correspondence or execution certificate; all seven closure predicates remain unresolved. Re-read 2026-10-27 at BSC block 130060505 (hash 0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474, timestamp 2026-10-27T08:51:12Z, bsc-rpc.publicnode.com): on proxy 0x649a2da7b28e0d54c13d5eff95d3a660652742cc hasRole(MINTER_ROLE) for this address is still true while DEFAULT_ADMIN_ROLE, UPGRADER_ROLE, PAUSER_ROLE and BLACKLIST_ROLE are false; eth_getCode is still 0x and nonce 0; the implementation slot is still 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0. The exact createProxyWithNonce calldata fetched from Base transaction 0x4eede2f05b5fa1fad852b42cd9ea516d103d74e9883135738055cc984887ffe7 (singleton 0x3E5c63644E683549055b9Be8653de26E0B4CD36E, setup threshold 2 over the same three owners) replayed by eth_call against BSC Safe factory 0xa6b71e26c5e0845f74c812102ca7114b6a896ab2 returns 0xf80fdf246928b7862b23e094b3a14c4e36ee117e. The replay used the latest state rather than the pinned block because the public endpoint does not serve archive calls; no Safe is deployed. All seven closure predicates remain unresolved.",
         "sources": [
           {
             "label": "Sol curation campaign 2026-10-11 (C06USDTB), observed 2026-10-11T00:49:27Z: historical BSC block 125139388, hash 0xc10af77e5abbaec57fdeae395acc81b6eb6a2d3e071e02ebe522b04d53eaa10d, timestamp 2026-10-01T17:20:09Z; counterfactual address eth_getCode=0x and nonce=0x0; no current role, factory, initializer or execution-closure refresh",
@@ -637,8 +637,8 @@
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "observedAt": "2026-10-09",
-        "observedBlock": 126630688
+        "observedAt": "2026-10-27",
+        "observedBlock": 130060505
       },
       {
         "chain": "bsc",
@@ -653,10 +653,10 @@
         "canRaiseCap": true,
         "executionScope": {
           "controllerDeployment": "bsc:0x5515be1db2a513888f5cf375bf5c7956ee93c779",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-11-01",
-          "reviewer": "DataMisc05 independently verified R2 admin observation",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
@@ -665,14 +665,14 @@
             }
           ],
           "pin": {
-            "position": "125139388",
-            "hash": null,
+            "position": "130060505",
+            "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
             "runtimeIdentity": "eth_getCode=0x; nonce=0x17",
             "signerIdentity": "single-key address; key custody unknown"
           },
           "observedState": {
-            "position": "125139388",
-            "hash": null,
+            "position": "130060505",
+            "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
             "runtimeIdentity": "DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false; grantRole(MINTER_ROLE,dead) eth_call succeeds",
             "signerIdentity": "single-key address; key custody unknown"
           },
@@ -722,7 +722,7 @@
             }
           ]
         },
-        "evidence": "Resolved 2026-07-30 from the complete BSC role history: DEFAULT_ADMIN_ROLE granted 2025-09-26 and the original deployer fully revoked; hasRole(DEFAULT_ADMIN_ROLE) = true at block 113086546; eth_getCode = 0x (EOA). Also holds PAUSER_ROLE and BLACKLIST_ROLE. DEFAULT_ADMIN can grant/revoke MINTER_ROLE and UPGRADER_ROLE without delay. Sol curation campaign 2026-10-09 (W2L11Idrx) independently observed at 2026-10-09T11:50:44Z: BSC block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z; hasRole(DEFAULT_ADMIN_ROLE)=true, hasRole(MINTER_ROLE)=false, hasRole(UPGRADER_ROLE)=false and eth_getCode=0x. The target proxy implementation slot resolves to 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 at the same pin. The July PAUSER/BLACKLIST history and October 1 grantRole simulation are not re-observed by this limited call set. Aggregate review dates, historical role census and both partial execution certificates remain unchanged.",
+        "evidence": "Resolved 2026-07-30 from the complete BSC role history: DEFAULT_ADMIN_ROLE granted 2025-09-26 and the original deployer fully revoked; hasRole(DEFAULT_ADMIN_ROLE) = true at block 113086546; eth_getCode = 0x (EOA). Also holds PAUSER_ROLE and BLACKLIST_ROLE. DEFAULT_ADMIN can grant/revoke MINTER_ROLE and UPGRADER_ROLE without delay. Sol curation campaign 2026-10-09 (W2L11Idrx) independently observed at 2026-10-09T11:50:44Z: BSC block 126630688, hash 0x83844aae0fd3e4a43bd278cc4dd405ec72cc21e824da4c17b6aeb5fd52e0b154, timestamp 2026-10-09T11:49:46Z; hasRole(DEFAULT_ADMIN_ROLE)=true, hasRole(MINTER_ROLE)=false, hasRole(UPGRADER_ROLE)=false and eth_getCode=0x. The target proxy implementation slot resolves to 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0 at the same pin. The July PAUSER/BLACKLIST history and October 1 grantRole simulation are not re-observed by this limited call set. Aggregate review dates, historical role census and both partial execution certificates remain unchanged. Re-read 2026-10-27 at BSC block 130060505 (hash 0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474, timestamp 2026-10-27T08:51:12Z, bsc-rpc.publicnode.com): on proxy 0x649a2da7b28e0d54c13d5eff95d3a660652742cc this EOA still holds DEFAULT_ADMIN_ROLE, PAUSER_ROLE and BLACKLIST_ROLE and does not hold MINTER_ROLE or UPGRADER_ROLE; eth_getCode is still 0x and nonce 23 (0x17); the implementation slot is still 0x20fad183dc35f4ae0d1d125ae2f3c4c43a53bbd0. The grantRole simulation and role-grant history were not re-run, so both partial execution certificates keep their closure flags.",
         "sources": [
           {
             "label": "Sol curation campaign 2026-10-11 (C06USDTB), observed 2026-10-11T00:49:27Z: historical BSC block 125139388, hash 0xc10af77e5abbaec57fdeae395acc81b6eb6a2d3e071e02ebe522b04d53eaa10d, timestamp 2026-10-01T17:20:09Z; admin address eth_getCode=0x and nonce=0x17; no current role, signer-custody or execution-closure refresh",
@@ -741,8 +741,8 @@
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "observedAt": "2026-10-09",
-        "observedBlock": 126630688
+        "observedAt": "2026-10-27",
+        "observedBlock": 130060505
       },
       {
         "chain": "bsc",

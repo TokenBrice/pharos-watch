@@ -2,27 +2,9 @@
   "id": "eearn-ember",
   "reserves": [
     {
-      "sourceKey": "erc4626-single-asset:ethereum:0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
-      "name": "USDC deposited into Ember Earn's Ethereum vault",
-      "pct": 0.018665813382,
-      "risk": "high",
-      "coinId": "usdc-circle",
-      "depType": "wrapper",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Ember Earn vault and Circle USDC",
-      "riskFactors": [
-        "smart-contract",
-        "liquidity",
-        "counterparty",
-        "custody",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown"
-    },
-    {
       "sourceKey": "erc4626-single-asset:ethereum:0x9be9294722f8aad37b11a9792be2c782182cafa2:deployed",
       "name": "Ember Earn deployed strategy positions",
-      "pct": 99.981334186618,
+      "pct": 100,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Ember Earn vault",
@@ -38,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice8)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -69,19 +51,23 @@
       {
         "label": "Ember withdrawal timing FAQ; Sol curation campaign 2026-10-09 (Lane18Ember), accessed 2026-10-09T10:30:53Z",
         "url": "https://learn.ember.so/ember-protocol/faqs"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The 2026-09-21 ERC-4626 observer read separates 0.018665813382% idle USDC from 99.981334186618% deployed Ember Earn strategy positions. Ember's product disclosure identifies eEARN as a USDC-denominated, Ember-managed stablecoin-yield vault using lending, fixed-income, liquidity, and rate-carry strategies. The deployed slice is therefore classified as an Ember protocol position rather than misidentified as direct USDC; its changing constituent positions remain unlinked.",
-    "compositionBasis": "Ember Earn product disclosure, verified vault contract identity, and live ERC-4626 idle-versus-deployed observer reads",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Fresh pinned reads at Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z): the eEARN proxy implementation remains 0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e; asset() is USDC; totalAssets() is 3,731,595.929583 USDC and the vault's own USDC balance is 0, so the idle share is 0% and 100% of totalAssets() is deployed Ember Earn strategy accounting (previously 0.018665813382% idle at the 2026-09-21 read). Ember's product disclosure identifies eEARN as a USDC-denominated, Ember-managed stablecoin-yield vault using lending, fixed-income, liquidity, and rate-carry strategies. The deployed slice is therefore classified as an Ember protocol position rather than misidentified as direct USDC; its changing constituent positions remain unlinked.",
+    "compositionBasis": "Ember Earn product disclosure, verified vault contract identity, and ERC-4626 totalAssets() versus idle USDC balance read pinned at Ethereum block 26282914",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The observer identifies idle USDC separately from the Ember-managed deployed strategy position. Ember discloses the strategy families but not a current constituent-by-constituent allocation, so the deployed slice remains a reviewed non-link rather than a direct USDC dependency. On 2026-10-01, the cited eEARN product URL serves a generic Ember landing page; protocol-wide core concepts describe pooled deposits deployed into DeFi, cross-chain, and CeFi strategies, not current eEARN-specific constituents or venue allocations. Sol curation campaign 2026-10-09 (Lane18Ember), observed 2026-10-09T10:30:53Z: the withdrawal FAQ permits strategy-dependent delays beyond the specified withdrawal period. An idle USDC balance therefore does not establish a holder-accessible liquidation horizon for the vault position; liquidity remains unknown. Historical composition and review dates are unchanged.",
+    "knownUnknownExposure": "The 2026-10-27 pinned read finds no idle USDC in the vault, so the entire totalAssets() balance is the Ember-managed deployed strategy position. Ember discloses the strategy families but not a current constituent-by-constituent allocation, so the deployed slice remains a reviewed non-link rather than a direct USDC dependency. On 2026-10-01, the cited eEARN product URL serves a generic Ember landing page; protocol-wide core concepts describe pooled deposits deployed into DeFi, cross-chain, and CeFi strategies, not current eEARN-specific constituents or venue allocations. Sol curation campaign 2026-10-09 (Lane18Ember), observed 2026-10-09T10:30:53Z: the withdrawal FAQ permits strategy-dependent delays beyond the specified withdrawal period. An idle USDC balance therefore does not establish a holder-accessible liquidation horizon for the vault position; liquidity remains unknown.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
-        "reserveIndex": 1,
+        "reserveIndex": 0,
         "reserveName": "Ember Earn deployed strategy positions",
-        "pct": 99.981334186618,
+        "pct": 100,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The deployed balance is an identified Ember-managed multi-strategy protocol position; the reviewed sources do not support attributing it to one tracked stablecoin."
       }

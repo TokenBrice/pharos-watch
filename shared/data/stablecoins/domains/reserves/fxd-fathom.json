@@ -49,20 +49,20 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Pinned XDC block 107486464, observed 2026-09-21",
-        "url": "https://xdcscan.com/block/107486464"
+        "label": "Pinned XDC block 108767954, observed 2026-10-27T08:52:54Z",
+        "url": "https://xdcscan.com/block/108767954"
       },
       {
         "label": "XDC Network public RPC used for same-block collateral and oracle reads",
         "url": "https://erpc.xinfin.network"
       },
       {
-        "label": "Fathom XDC deployment registry (CGO collateral pool; accessed 2026-09-30)",
+        "label": "Fathom XDC deployment registry (CGO collateral pool; accessed 2026-10-27)",
         "url": "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network"
       },
       {
@@ -70,11 +70,11 @@
         "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/blob/59b41c447903497c0d74985bd18f7ec77e3b5e5e/contracts/main/stablecoin-core/config/CollateralPoolConfig.sol"
       }
     ],
-    "rationale": "Same-block reads at XDC block 107486464 (2026-09-21T08:32:46Z) measured 25,407,276.931021 psXDC, 7,471,325.302965 WXDC, and 0.068541 CGO in the three CollateralTokenAdapters. The protocol's XDC/USD aggregator returned $0.0283429 and its CGO/USD aggregator returned $139.619 at the same block. Applying Fathom's one-for-one psXDC-as-XDC valuation produced collateral values of $720,115.91, $211,759.03, and $9.57, or 77.275%, 22.724%, and 0.001% after rounding. An exhaustive LogInitCollateralPoolId follow-up from block 104920354 through 107486464 returned no new pool, so the three previously enumerated pools remain the full composition.",
-    "compositionBasis": "Same-block on-chain CollateralTokenAdapter balances and protocol oracle prices at XDC block 107486464",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Same-block reads at XDC block 108767954 (2026-10-27T08:52:54Z) measured 25,407,276.931021 psXDC, 7,471,325.302965 WXDC, and 0.068541 CGO in the three CollateralTokenAdapters (pool ids psXDC, XDC, and CGO resolved through CollateralPoolConfig.getAdapter); the balances equal those measured at block 107486464 on 2026-09-21. The protocol's FathomPriceOracle returned $0.0336463 for XDC and $128.38 for CGO at the same block. Applying Fathom's one-for-one psXDC-as-XDC valuation produced collateral values of $854,860.86, $251,382.45, and $8.80, or 77.275%, 22.724%, and 0.001% after rounding. A log scan of CollateralPoolConfig from block 107486465 through 108767954 returned no events, so no pool was initialized after the earlier exhaustive follow-up and the three enumerated pools remain the full composition.",
+    "compositionBasis": "Same-block on-chain CollateralTokenAdapter balances and protocol oracle prices at XDC block 108767954",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "Pool identities, balances, and protocol valuation weights are measured at XDC block 107486464. Weights can change after that block, and psXDC retains Fathom's one-for-one XDC valuation because the protocol has no separate psXDC exchange-rate feed.",
+    "knownUnknownExposure": "Pool identities, balances, and protocol valuation weights are measured at XDC block 108767954. Weights can change after that block, and psXDC retains Fathom's one-for-one XDC valuation because the protocol has no separate psXDC exchange-rate feed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

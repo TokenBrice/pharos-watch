@@ -18,8 +18,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (FixInv9)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
     "confidence": "verified",
     "sources": [
       {
@@ -43,9 +43,9 @@
         "url": "https://solstice.finance/usx"
       }
     ],
-    "rationale": "The 2026-10-01 lockstep review retained the 2026-09-23 composition basis matching the existing proofOfReserves.latestReport: the API still reports reserves $219,157,088.72 and outstanding USX $217,959,749.69 for that date. A newer aggregate timeline point dated 2026-09-30 reports reserves $216,282,891 and outstanding USX $214,763,054.53, but publishes no category or instrument weights and does not identify a report period end or publication date. The live Solstice attestation adapter owns the aggregate reserve row. The newer snapshot is retained as review context only; the unresolved 100% basket and all adverse uncertainty remain unchanged.",
-    "compositionBasis": "Solstice collateral disclosure and retained 2026-09-23 aggregate reserve-versus-supply attestation; newer 2026-09-30 aggregate snapshot noted separately without a composition refresh",
-    "compositionAsOf": "2026-09-23",
+    "rationale": "The 2026-10-27 re-read of the Solstice attestation API reports its latest aggregate timeline point dated 2026-10-21: reserves $205,978,791.53 against outstanding USX $203,405,511.13 (collateralization 1.012651, overcollateralized and delta-neutral flags true, verifiability 100). The API still publishes no category or instrument weights and no separate report period end or publication date, so the timeline date is used for both, as for the prior 2026-09-23 point. The live Solstice attestation adapter owns the aggregate reserve row; the unresolved 100% basket and all adverse uncertainty remain unchanged.",
+    "compositionBasis": "Solstice collateral disclosure and the 2026-10-21 aggregate reserve-versus-supply attestation read from the Solstice attestation API on 2026-10-27; no category weights published",
+    "compositionAsOf": "2026-10-21",
     "scope": "full-composition",
     "knownUnknownExposure": "The current split among audited cash, tokenized Treasuries, and delta-neutral hedged positions is not published; underlying instruments, custodian shares, execution venues, and hedge counterparties are also undisclosed.",
     "knownUnknownExposurePct": 100,
