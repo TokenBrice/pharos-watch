@@ -1,6 +1,7 @@
 import { projectV9CompactPartialEvidence, projectV9EvidencePillars } from "@shared/types/safety-score-v9-causes";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { DigestInputData } from "@shared/types/digest";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { DEWS_SIGNAL_LABELS, type DewsSignalKey } from "@shared/lib/dews-config";
 import { THREAT_BAND_ORDER, isDewsAlertBand, isThreatBand } from "@shared/lib/classification";
@@ -500,7 +501,10 @@ export async function collectYieldAnomalies(
         let warnings: string[] = [];
         try {
           const parsed: unknown = JSON.parse(row.warning_signals ?? "[]");
-          warnings = Array.isArray(parsed) ? parsed.filter((value): value is string => typeof value === "string") : [];
+          // Operational advisories are not investment warnings: drop them before the top-N cut.
+          warnings = Array.isArray(parsed)
+            ? selectInvestmentWarningSignals(parsed.filter((value): value is string => typeof value === "string"))
+            : [];
         } catch (error) {
           degradedReasons.push("yield-warning-signals-json");
           logCollectorParseFailure("yield-anomalies", "warning_signals", error, { stablecoinId: row.stablecoin_id });

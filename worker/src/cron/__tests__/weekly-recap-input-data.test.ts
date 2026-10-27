@@ -145,6 +145,14 @@ describe("weekly recap canonical candidate aggregation", () => {
     expect(buildWeeklyPrompt(weekly)).not.toContain("7-day market cap change: +$0");
   });
 
+  it("filters archived operational yield advisories before the weekly top-N ranking", () => {
+    const anomaly = (symbol: string, warnings: string[], mcapUsd: number) => ({ symbol, currentApy: 5, apy7d: 5, apy30d: 5, warnings, mcapUsd });
+    const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => row(index, {
+      yieldAnomalies: index === 0 ? [anomaly("AGED", ["aging"], 9e12), anomaly("MIXD", ["aging", "reward-heavy"], 1e9)] : [],
+    })))!;
+    expect(weekly.weeklySignals.topYieldAnomalies.map((entry) => [entry.symbol, entry.warnings])).toEqual([["MIXD", ["reward-heavy"]]]);
+  });
+
   it.each(["legacy", "partial"] as const)("withholds the weekly full ALERT+ maximum for %s daily census evidence", (kind) => {
     const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => row(index, {
       dewsStress: {

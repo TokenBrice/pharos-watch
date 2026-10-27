@@ -156,6 +156,20 @@ describe("DigestSnapshot", () => {
     expect(screen.getByText(/USDT:/).textContent).toContain("historical peak; current unavailable");
   });
 
+  it("lists only investment warnings in archived yield anomalies", () => {
+    mockSnapshot({
+      totalMcapUsd: 1e9,
+      yieldAnomalies: [
+        { symbol: "AGED", currentApy: 5, apy7d: 5, apy30d: 5, warnings: ["aging", "data-stale"], mcapUsd: 1 },
+        { symbol: "MIXD", currentApy: 6, apy7d: 5, apy30d: 5, warnings: ["negative-trend", "aging"], mcapUsd: 1 },
+      ],
+    });
+    render(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.queryByText("AGED")).toBeNull();
+    expect(screen.getByText("MIXD")).toBeTruthy();
+    expect(screen.queryByText(/Aging observation|Data stale/)).toBeNull();
+  });
+
   it("marks absent market fields as uncaptured instead of publishing zero readings", () => {
     mockSnapshot({ totalMcapUsd: 250_000_000_000, activeDepegCount: 0, topDepegs: [] });
 

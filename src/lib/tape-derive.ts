@@ -2,6 +2,7 @@ import type { TapeEvent } from "@shared/types/tape-event";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { formatCompactUsd, formatScoreTrimmed, formatUtcDateOnly, getNetPrefix } from "@shared/lib/format";
 import { CHAIN_META } from "@shared/types/chain-identity";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 
 export function utcDayKey(tsMs: number): string {
@@ -142,4 +143,47 @@ export function formatTapeEventSummary(event: TapeEvent): string {
     }
   }
   return summary;
+}
+
+/**
+ * Reader projection for yield warning events (ADR-42). Operational advisories
+ * (aging, staleness, benchmark degradation) are not investment warnings, so an
+ * event whose new signals are all operational is omitted (null) and a mixed one
+ * is rebuilt from its investment signals with identity, cursor and timestamps
+ * preserved. Missing or malformed structured signals get neutral unavailable
+ * detail, never the stored advisory text. Raw events are never mutated.
+ */
+export function projectTapeEventForReader(event: TapeEvent): TapeEvent | null {
+  if (baseEventType(event.type) !== "yield.warning_emitted") return event;
+  const payload = event.payload as Record<string, unknown> | undefined;
+  const newSignals = payload?.newSignals;
+  if (!Array.isArray(newSignals) || newSignals.length === 0 || !newSignals.every((s) => typeof s === "string")) {
+    const ticker = deriveTicker(event);
+    return { ...event, title: `${ticker ?? "Yield"} yield warning`, summary: "Signal details unavailable." };
+  }
+  const kept = selectInvestmentWarningSignals(newSignals as string[]);
+  if (kept.length === newSignals.length) return event;
+  if (kept.length === 0) return null;
+  const rawLabel = (newSignals as string[]).join(", ");
+  const keptLabel = kept.join(", ");
+  const single = kept.length === 1;
+  const keptCurrent = Array.isArray(payload?.signals) ? selectInvestmentWarningSignals(payload.signals as string[]) : payload?.signals;
+  const keptPrevious = Array.isArray(payload?.prevSignals) ? selectInvestmentWarningSignals(payload.prevSignals as string[]) : payload?.prevSignals;
+  return {
+    ...event,
+    title: event.title.replace(rawLabel, keptLabel),
+    summary: event.summary
+      .replace(`(${rawLabel})`, `(${keptLabel})`)
+      .replace(/ signals? \(/, single ? " signal (" : " signals ("),
+    payload: { ...payload, signals: keptCurrent, prevSignals: keptPrevious, newSignals: kept },
+  };
+}
+
+export function projectTapeEventsForReader(events: readonly TapeEvent[]): TapeEvent[] {
+  const out: TapeEvent[] = [];
+  for (const event of events) {
+    const projected = projectTapeEventForReader(event);
+    if (projected) out.push(projected);
+  }
+  return out;
 }

@@ -1,5 +1,6 @@
 import { formatCurrency, formatIsoDate } from "@shared/lib/format";
 import { getDepegEditorialImpactScore, getDepegMarketImpactScore, isCriticalDepegRisk } from "@shared/lib/digest-risk";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 import {
   findDigestSignalQuarantineBySymbol,
   findDigestSignalQuarantines,
@@ -644,13 +645,17 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
   const topYieldAnomalies = topSignals(
     parsed,
     (d) =>
-      (d.inputData.yieldAnomalies ?? []).map((anomaly) => ({
-        symbol: anomaly.symbol,
-        apy: anomaly.currentApy,
-        warnings: anomaly.warnings,
-        mcapUsd: anomaly.mcapUsd,
-        date: d.date,
-      })),
+      (d.inputData.yieldAnomalies ?? []).flatMap((anomaly) => {
+        // Archived rows may still carry operational advisories; filter before ranking.
+        const warnings = selectInvestmentWarningSignals(anomaly.warnings);
+        return warnings.length === 0 ? [] : [{
+          symbol: anomaly.symbol,
+          apy: anomaly.currentApy,
+          warnings,
+          mcapUsd: anomaly.mcapUsd,
+          date: d.date,
+        }];
+      }),
     (row) => row.mcapUsd,
   );
   const topLiquidityShifts = topSignals(
