@@ -34,8 +34,23 @@ describe("live reserves frontend-consumer disclosures", () => {
 
   it("does not promise a separate sync-error notice or review rows over retained books", () => {
     expect(consumers).not.toContain("collection failures retain their separate sync-error notice");
-    expect(consumers).toContain("retained-book sync or refetch faults have no separate public sync notice");
+    expect(consumers).toContain("retained-book sync faults have no separate public notice");
     expect(consumers).not.toContain("to stale/error/bootstrap/fallback disclosure rows");
-    expect(consumers).toContain("only to the eligible first-sync bootstrap status row");
+    expect(consumers).toContain("to the eligible first-sync bootstrap row only");
+  });
+});
+
+describe("ADR-42 reserve alert routing", () => {
+  const adr = read("docs/architecture.md").split("#### ADR-42")[1]!.split(/\n#### /)[0]!;
+
+  it("records the approved reserve no-Telegram exception and drops the impossible alert gate", () => {
+    expect(adr).toContain("Approved exception");
+    expect(adr).toContain("send no Telegram");
+    expect(adr).toContain("/status");
+    expect(adr).toContain("cron-sentinel run metadata");
+    expect(adr).not.toContain("pending first production reserve post-sync operator alert");
+    // The homepage warning prohibition and other watchdog routes remain.
+    expect(adr).toContain("through the sentinel watchdogs");
+    expect(adr).toContain("isPublicWarning");
   });
 });
