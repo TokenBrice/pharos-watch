@@ -39,7 +39,8 @@ afterEach(() => {
 });
 
 describe("HomeAltHero producer freshness", () => {
-  it("shows shares of the known subtotal with incomplete supply coverage", () => {
+  // ADR-42: incomplete supply coverage never renders completeness text on the homepage.
+  it("keeps the plain headline and cohort shares with incomplete supply coverage", () => {
     useStablecoinsMock.mockReturnValue({
       data: { peggedAssets: [
         makeStablecoin({ id: "usdt-tether", circulating: { peggedUSD: 80 } }),
@@ -48,10 +49,9 @@ describe("HomeAltHero producer freshness", () => {
       dataUpdatedAt: NOW, error: null, refetch: vi.fn(),
       meta: { updatedAt: NOW / 1000, ageSeconds: 0, status: "fresh" },
     });
-    render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText("Core market cap, known subtotal")).toBeTruthy();
-    expect(screen.queryByText("Core market cap")).toBeNull();
-    expect(screen.getByText("Shares of known market cap subtotal")).toBeTruthy();
+    const view = render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
+    expect(screen.getByText("Core market cap")).toBeTruthy();
+    expect(view.container.textContent).not.toMatch(/known|subtotal|Partial|assets observed/);
     expect(screen.getByText("80.0%")).toBeTruthy();
     expect(screen.getAllByText("20.0%")).toHaveLength(2);
     expect(screen.queryByText("share unavailable")).toBeNull();

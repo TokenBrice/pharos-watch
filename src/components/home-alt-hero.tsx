@@ -7,10 +7,6 @@ import { CHART_ORANGE, CHART_PALETTE, CHART_SLATE_STRONG, USDT_GREEN, USDC_BLUE 
 import { HomeAltHeroChartGate } from "@/components/home-alt-hero-chart-gate";
 import { CardExpandButton } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { useHomepageSnapshot } from "@/hooks/api-hooks";
-import {
-  describeHomepageSupplyCoverage,
-  isHomepageSupplyComplete,
-} from "@shared/lib/homepage-hero-snapshot";
 import { selectHomepageHeroSnapshot } from "@/lib/homepage-hero-snapshot";
 import { formatCurrency, formatLongDate } from "@shared/lib/format";
 import { deriveDataHealth } from "@/lib/data-health";
@@ -71,7 +67,6 @@ export function HomeAltHero({
 
   const visibleSnapshot = selection.snapshot;
   const latest = visibleSnapshot?.cohort ?? null;
-  const supplyComplete = !!visibleSnapshot && isHomepageSupplyComplete(visibleSnapshot);
   const cohortTotal = latest?.total ?? null;
   const selectedDate = visibleSnapshot?.asOfISO
     ? formatLongDate(new Date(visibleSnapshot.asOfISO), { utc: true })
@@ -107,7 +102,7 @@ export function HomeAltHero({
                 className="text-sm font-medium text-muted-foreground"
                 title="Excludes 2 off-catalog PSI historical assets"
               >
-                {visibleSnapshot && !supplyComplete ? "Core market cap, known subtotal" : "Core market cap"}
+                Core market cap
               </p>
               <CardExpandButton href="/screener/" expandLabel="Open Screener" className="-mr-2" />
             </div>
@@ -117,11 +112,6 @@ export function HomeAltHero({
             <p className="pharos-meta min-h-4">
               {selectedDate ? `As of ${selectedDate}` : visibleSnapshot ? null : "Updating"}
             </p>
-            {visibleSnapshot && !supplyComplete ? (
-              <p className="pharos-meta">
-                {describeHomepageSupplyCoverage(visibleSnapshot)}
-              </p>
-            ) : null}
           </div>
         </div>
 
@@ -135,9 +125,6 @@ export function HomeAltHero({
             reads as one continuous story instead of headline-then-gap-then-list. */}
         <div className="space-y-2 p-5 sm:p-6 lg:col-start-1 lg:border-r lg:border-t lg:border-border/50 lg:p-7">
           <p className="pharos-label">Market cohorts</p>
-          {visibleSnapshot && !supplyComplete ? (
-            <p className="text-xs text-muted-foreground">Shares of known market cap subtotal</p>
-          ) : null}
           <ul className="flex min-h-[6.5rem] flex-col gap-1.5 text-xs">
             {latest ? (
               <>
