@@ -38,6 +38,8 @@ vi.mock("@/hooks/api-hooks", () => ({
     fullHistoryQuery(options);
     return {
       ...stabilityState,
+      // A disabled full-history query never carries the detail query's error.
+      error: options?.enabled === false ? null : stabilityState.error,
       data: options?.enabled === false || !stabilityState.data ? undefined : {
         ...stabilityState.data,
         history: [
@@ -108,11 +110,19 @@ vi.mock("@/components/psi-history-chart", () => ({
 }));
 
 vi.mock("@/components/stale-data-banner", () => ({
-  StaleDataBanner: () => null,
+  StaleDataBanner: ({ queries }: { queries: { hasData?: boolean; error?: unknown; meta?: { updatedAt?: number } }[] }) => (
+    <div
+      data-testid="psi-stale-banner"
+      data-has-data={String(queries[0]?.hasData)}
+      data-error={String(!!queries[0]?.error)}
+      data-updated-at={String(queries[0]?.meta?.updatedAt)}
+    />
+  ),
 }));
 
 vi.mock("@/components/query-error-notice", () => ({
-  QueryErrorNotice: ({ error }: { error?: Error | null }) => error ? <div role="alert">{error.message}</div> : null,
+  QueryErrorNotice: ({ error, hasData }: { error?: Error | null; hasData?: boolean }) =>
+    error && !hasData ? <div role="alert">{error.message}</div> : null,
 }));
 
 vi.mock("@/components/stablecoin-logo", () => ({
@@ -263,6 +273,38 @@ describe("StabilityIndexClient", () => {
     expect(beacon.dataset.state).toBe("retained");
     expect(beacon.dataset.paint).toBe("outline");
     expect(beacon.querySelector("svg[role='img']")?.getAttribute("aria-label")).toMatch(/^Retained observation as of /);
+  });
+
+  it("keeps a retained coherent generation through a failed refetch and recovers", () => {
+    const meta = { updatedAt: 1_710_000_000, ageSeconds: 60, status: "fresh" };
+    stabilityState.meta = meta;
+    const view = render(<StabilityIndexClient />);
+    expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
+
+    stabilityState = { ...stabilityState, isError: true, error: new Error("psi down") };
+    view.rerender(<StabilityIndexClient />);
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
+    expect(screen.getByText("Top contributors")).toBeTruthy();
+    expect(screen.getByText("score-chart-3")).toBeTruthy();
+    const banner = screen.getByTestId("psi-stale-banner");
+    // The shared banner owns material-age warnings; the producer clock is unchanged.
+    expect(banner.dataset.hasData).toBe("true");
+    expect(banner.dataset.error).toBe("true");
+    expect(banner.dataset.updatedAt).toBe("1710000000");
+
+    stabilityState = { ...stabilityState, isError: false, error: null };
+    view.rerender(<StabilityIndexClient />);
+    expect(screen.getByTestId("psi-stale-banner").dataset.error).toBe("false");
+    expect(screen.getAllByText("89.4").length).toBeGreaterThan(0);
+  });
+
+  it("still withholds an incoherent retained generation during a failed refetch", () => {
+    stabilityState.data!.headlineAggregates!.computedAt -= 1;
+    stabilityState = { ...stabilityState, isError: true, error: new Error("psi down") };
+    render(<StabilityIndexClient />);
+    expect(screen.getByRole("alert").textContent).toContain("psi down");
+    expect(screen.queryByTestId("psi-beacon")).toBeNull();
   });
 
   it("shows the query error notice when the PSI detail query fails without data", () => {

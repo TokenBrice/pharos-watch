@@ -60,7 +60,7 @@ function PsiHistoryChart({ initialData }: { initialData: StabilityIndexResponse 
 
 
 export function StabilityIndexClient() {
-  const { data, isLoading, isError, error, dataUpdatedAt, refetch, meta } = useStabilityIndexDetail();
+  const { data, isLoading, error, dataUpdatedAt, refetch, meta } = useStabilityIndexDetail();
   const logos = logosById;
   const history = data?.history;
   const current = data?.current ?? null;
@@ -102,9 +102,8 @@ export function StabilityIndexClient() {
     return <StabilityIndexLoadingState />;
   }
 
-  if (isError || (!isLoading && !current) || (current && (
-    !headlineAggregates || headlineAggregates.computedAt !== current.computedAt
-  ))) {
+  // A failed refetch over a retained coherent generation keeps the page; the banner ages it.
+  if (!current || !headlineAggregates || headlineAggregates.computedAt !== current.computedAt) {
     const uiError = error ?? new Error("Stability Index data is temporarily unavailable.");
     return (
       <QueryErrorNotice
