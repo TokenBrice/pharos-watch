@@ -136,8 +136,13 @@ jobs:
 
   lighthouse:
     name: Static-export Lighthouse baseline
+    # Credentialed acquisition of retained main release data: main only.
+    if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
     timeout-minutes: 25
+    permissions:
+      contents: read
+      actions: read
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -146,9 +151,17 @@ jobs:
       - uses: $/.github/actions/setup-workspace
         with:
           bootstrap-history: "true"
-      - name: Build offline artifact and record both Lighthouse routes
-        run: node --import tsx --input-type=module -e "import { runPagesArtifactLane } from './scripts/ci/run-pages-artifact-lane.ts'; await runPagesArtifactLane({ acquireReleaseData:false });"
+      - name: Acquire trusted retained release data
+        # The token is confined to this acquisition step; the build step below
+        # consumes only the directory and runs without credentials.
         env:
+          GH_TOKEN: ${{ github.token }}
+          PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
+        run: node --experimental-strip-types --input-type=module -e "import { preparePagesReleaseData } from './scripts/lib/pages-release-data.mts'; preparePagesReleaseData(process.env.PAGES_RELEASE_DATA_DIR, process.cwd());"
+      - name: Replay retained release data and record all five Lighthouse routes
+        run: npm run check:pages-artifact
+        env:
+          PAGES_RELEASE_DATA_DIR: ${{ runner.temp }}/pharos-pages-release-data
           # Advisory for two weeks; ratchet from measured p50 before enabling.
           PHAROS_LIGHTHOUSE_THRESHOLD: "70"
           PHAROS_LIGHTHOUSE_ENFORCE: "0"
