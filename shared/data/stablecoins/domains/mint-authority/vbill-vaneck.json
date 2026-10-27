@@ -211,10 +211,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "executionScope": {
           "controllerDeployment": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-11-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSecuritize)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
@@ -227,14 +227,14 @@
             }
           ],
           "pin": {
-            "position": "26099926",
-            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "position": "26282946",
+            "hash": "0xa3b7f0aacd03ae55ce28304089412b9952990e5b819dcf5e3938d6cea0ccdace",
             "runtimeIdentity": "eth_getCode:0x",
             "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
           },
           "observedState": {
-            "position": "26099926",
-            "hash": "0xd2aaee1dfb96a21f51eccf24572f7f12bee0e04cc4ef28d9db3d6b7bc9cb2812",
+            "position": "26282946",
+            "hash": "0xa3b7f0aacd03ae55ce28304089412b9952990e5b819dcf5e3938d6cea0ccdace",
             "runtimeIdentity": "eth_getCode:0x",
             "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
           },
@@ -283,8 +283,8 @@
             }
           ]
         },
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095800,
+        "observedAt": "2026-10-27",
+        "observedBlock": 26282946,
         "sources": [
           {
             "label": "Etherscan VBILL owner address",
@@ -299,7 +299,7 @@
             "url": "https://bsc-dataseed.binance.org"
           }
         ],
-        "evidence": "On 2026-10-01, owner() returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on Ethereum at block 26095800, Avalanche at block 96511203, and BNB Chain at block 125056599. Verified deployment sources gate issuance through trust-service issuer/master roles and UUPS authorization through owner-or-master. getDSService(1) identified each trust service, and getRole(sharedOwner) returned 1 (MASTER) at Ethereum block 26095800, Avalanche block 96511203 and BNB block 125059607, establishing direct native mint authority as well as administrative control. These reads do not enumerate every other authorized role holder. Off-chain MPC/HSM custody is indistinguishable from the EOA read."
+        "evidence": "On 2026-10-01, owner() returned the same code-empty EOA 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee on Ethereum at block 26095800, Avalanche at block 96511203, and BNB Chain at block 125056599. Verified deployment sources gate issuance through trust-service issuer/master roles and UUPS authorization through owner-or-master. getDSService(1) identified each trust service, and getRole(sharedOwner) returned 1 (MASTER) at Ethereum block 26095800, Avalanche block 96511203 and BNB block 125059607, establishing direct native mint authority as well as administrative control. These reads do not enumerate every other authorized role holder. Off-chain MPC/HSM custody is indistinguishable from the EOA read. Re-read 2026-10-27 at Ethereum block 26282946 (hash 0xa3b7f0aacd03ae55ce28304089412b9952990e5b819dcf5e3938d6cea0ccdace, ethereum-rpc.publicnode.com): the proxy 0x2255718832bc9fd3be1caf75084f4803da14ff01 still has EIP-1967 implementation 0xaf88485377cca5e690e7dcb1ba81370f0b575156 and owner() 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, which still has empty eth_getCode; getDSService(1) returned trust service 0x08B9C1F3E2F236890b975dEe37eE3579A0d4516b whose getRole(owner) is still 1 (MASTER). Avalanche and BNB Chain were not re-read in this pass; the other authorized role holders are still not enumerated."
       },
       {
         "chain": "solana",
@@ -312,10 +312,10 @@
         "modulesOrGuardsStatus": "none-detected",
         "executionScope": {
           "controllerDeployment": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-11-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSecuritize)",
+          "reviewedAt": "2026-10-27",
+          "observedAt": "2026-10-27",
+          "expiresAt": "2026-11-26",
+          "reviewer": "D01 evidence renewal 2026-10-27",
           "confidence": "partial",
           "sources": [
             {
@@ -328,14 +328,14 @@
             }
           ],
           "pin": {
-            "position": "452398136",
-            "hash": "HxqdN1bh9HdtjQnSD81udSrH7S1Pnk7KfpvwPsSqBtts",
+            "position": "462008033",
+            "hash": "5w7RzY9XNbD6uHVZZwjZmTPuLG1n98PQCWHepvuGZ7dX",
             "runtimeIdentity": "system-owned:zero-data:non-executable",
             "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
           },
           "observedState": {
-            "position": "452398136",
-            "hash": "HxqdN1bh9HdtjQnSD81udSrH7S1Pnk7KfpvwPsSqBtts",
+            "position": "462008033",
+            "hash": "5w7RzY9XNbD6uHVZZwjZmTPuLG1n98PQCWHepvuGZ7dX",
             "runtimeIdentity": "system-owned:zero-data:non-executable",
             "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
           },
@@ -384,8 +384,8 @@
             }
           ]
         },
-        "observedAt": "2026-10-01",
-        "observedBlock": 452212936,
+        "observedAt": "2026-10-27",
+        "observedBlock": 462008033,
         "sources": [
           {
             "label": "Solana JSON-RPC (publicnode)",
@@ -400,7 +400,7 @@
             "url": "https://solscan.io/account/8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
           }
         ],
-        "evidence": "At Solana slot 440030249 the token controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP resolves to programData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1 whose upgrade authority is 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. That account is system-program owned, non-executable and zero-data, i.e. a plain keypair address rather than a multisig or PDA, with no timelock and no on-chain threshold. A single signature can therefore replace the program that mints VBILL. The same key holds upgrade authority over the DS entrypoint, transfer-hook, registry and compliance programs, and over the controller that mints STAC (stac-securitize), so this is a shared failure domain across Securitize's Solana tokens rather than a VBILL-local control.",
+        "evidence": "At Solana slot 440030249 the token controller program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP resolves to programData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1 whose upgrade authority is 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6. That account is system-program owned, non-executable and zero-data, i.e. a plain keypair address rather than a multisig or PDA, with no timelock and no on-chain threshold. A single signature can therefore replace the program that mints VBILL. The same key holds upgrade authority over the DS entrypoint, transfer-hook, registry and compliance programs, and over the controller that mints STAC (stac-securitize), so this is a shared failure domain across Securitize's Solana tokens rather than a VBILL-local control. Re-read 2026-10-27 at finalized Solana slot 462008033 (blockhash 5w7RzY9XNbD6uHVZZwjZmTPuLG1n98PQCWHepvuGZ7dX, solana-rpc.publicnode.com getMultipleAccounts jsonParsed): program 7tXjmbkZVY3Gmg9kDBebcNXT1yC5pyoxxXVLwdbv9tvP still resolves to ProgramData 7u9rE6ESU4c831q4tGQBDA12zpVjRruEHYjT25mKN7V1 (last deployed slot 326714033, unchanged) with upgrade authority 8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6, still a system-owned, non-executable, zero-data account; no on-chain multisig or timelock. Only these identities were re-read; scope stays partial.",
         "deploymentRefs": [
           "solana:34mJztT9am2jybSukvjNqRjgJBZqHJsHnivArx1P4xy1"
         ],
