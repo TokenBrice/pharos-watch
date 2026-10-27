@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { CEMETERY_ENTRIES as merged, frozenToDeadShape, resolveCemeteryLogoUrl } from "@shared/lib/cemetery-merged";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
-import { FROZEN_STABLECOINS } from "../stablecoins/registry";
+import { FROZEN_STABLECOINS, TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { parseDeadStablecoinAssets, StablecoinMetaAssetSchema } from "../stablecoins/schema";
 import { MECHANISM_ARCHETYPE_VALUES } from "../../types/stablecoin-taxonomy";
 import { isValidIsoDateOnly } from "../../types/date-primitives";
@@ -133,6 +133,23 @@ describe("buildMergedCemetery", () => {
   ])("separates %s cemetery entry date from the preserved freeze date", (id, recordedAt, frozenAt) => {
     expect(merged.find((entry) => entry.id === id)?.recordedAt).toBe(recordedAt);
     expect(FROZEN_STABLECOINS.find((coin) => coin.id === id)?.frozenAt).toBe(frozenAt);
+  });
+
+  it("keeps Hubble USDH's May 2026 record historical while the same coin stays tracked", () => {
+    const entry = merged.find((coin) => coin.id === "usdh-hubble-2026-05")!;
+    expect(entry).toMatchObject({
+      name: "Hubble USDH", symbol: "USDH", llamaId: "65", geckoId: "usdh",
+      causeOfDeath: "abandoned", deathDate: "2026-05", recordedAt: "2026-05-12", peakMcap: 14_000_000,
+      sourceUrl: "https://stablecoins.llama.fi/stablecoin/65",
+    });
+    expect(entry.obituary).toContain("this entry is a historical record, not a current exclusion");
+    expect(entry.obituary).not.toMatch(/should skip|treated as wound down/i);
+    const tracked = TRACKED_META_BY_ID.get("usdh-hubble")!;
+    expect(tracked.status ?? "active").toBe("active");
+    expect(tracked.llamaId).toBe("65");
+    const notices = tracked.notices?.map((notice) => notice.message).join("\n") ?? "";
+    expect(notices).toContain("The May 2026 cemetery entry is a historical assessment, not a current exclusion.");
+    expect(notices).not.toMatch(/borrow app remains operational/);
   });
 
   it("rejects invalid or imprecise obituary entry dates at the registry boundary", () => {

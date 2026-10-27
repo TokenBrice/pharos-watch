@@ -60,7 +60,7 @@ const ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST = new Set([
   // UST-collateral depeg incident as a separate historical row.
   "42::usdx-kava::usdx-kava-usdx-2022-06",
   // Hubble USDH remains readable for active/frozen surfaces while the cemetery
-  // keeps the 2026 wind-down incident distinct from Native Markets/Hermetica USDH.
+  // keeps its historical May 2026 assessment distinct from Native Markets/Hermetica USDH.
   "65::usdh-hubble::usdh-hubble-2026-05",
 ]);
 

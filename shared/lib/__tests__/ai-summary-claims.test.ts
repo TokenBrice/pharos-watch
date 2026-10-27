@@ -163,6 +163,12 @@ describe("AI summary editorial corrections", () => {
     expect(usdf.reviewedBy).toBeUndefined();
   });
 
+  it("does not claim that Hubble's borrow app works", () => {
+    const hubble = summaries["usdh-hubble"].text;
+    expect(hubble).not.toMatch(/borrow app remains (?:live|operational)/);
+    expect(hubble).toContain("Pharos has not verified that borrowing or redemption works");
+  });
+
   it("drops RedCoin's superseded no-disclosure claims", () => {
     const redcoin = summaries["hkd-hsbc"].text;
     expect(redcoin).not.toMatch(/names no blockchain|no reserve report/);
