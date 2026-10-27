@@ -44,6 +44,15 @@ The cache row must be fresh enough to represent the current producer cycle. If t
 is missing or unexpectedly old, stop and resolve the production-input problem instead
 of generating a curation queue from stale evidence.
 
+The scheduled workflow enforces this with `--require-current` (valid only with
+`--exact-cache-export --normalized-only`): after normalization and before any output
+is written, the capture clock must satisfy `0 <= now - clockSec <= SOURCE_FIXED_INPUT_MAX_AGE_SEC`
+(one preparation cycle, currently 3,600 seconds). A rejection exits nonzero with
+`capture-stale` or `capture-future` and the assessment time, original clock, age, budget,
+`sourceGeneration` and `baseInputGenerationId`; no capture or clock output is produced, so
+no new report is published. The flag is omitted for historical and manual captures,
+whose original clock is preserved unchanged.
+
 ## 2. Replay the capture at HEAD
 
 Replace `<stamp>` with the capture filename's UTC stamp. Replay the capture through the

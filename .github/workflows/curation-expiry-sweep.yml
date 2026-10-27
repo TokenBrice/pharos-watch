@@ -42,7 +42,7 @@ jobs:
             > agents/sweep/capture.raw.json
           npm run report-cards:capture-fixed-input -- \
             --exact-cache-export agents/sweep/capture.raw.json \
-            --output agents/sweep/capture.json --normalized-only
+            --output agents/sweep/capture.json --normalized-only --require-current
           echo "clock_sec=$(jq -r .clockSec agents/sweep/capture.json)" >> "$GITHUB_OUTPUT"
       - name: Replay the frozen production input
         id: replay

@@ -46,4 +46,18 @@ describe("curation sweep executable workflow contract", () => {
     expect(issue.run).toContain("Curation sweep incomplete");
     expect(issue.run).toContain("exit 1");
   });
+
+  it("opts the scheduled capture into the current-input guard before emitting the replay clock", () => {
+    const run = stepRun("capture");
+    expect(run).toContain("--exact-cache-export agents/sweep/capture.raw.json");
+    expect(run).toContain("--normalized-only --require-current");
+    expect(run.indexOf("--require-current")).toBeLessThan(run.indexOf("clock_sec="));
+    expect(run).toContain("set -euo pipefail");
+    // Acquisition failure stops the job before any report publication, and the
+    // replay keeps the capture's original clock as the published-at pin.
+    expect(steps.find((step) => step.id === "capture")!["continue-on-error"]).toBeUndefined();
+    expect(steps.find((step) => step.id === "replay")!.env?.CLOCK_SEC).toBe("${{ steps.capture.outputs.clock_sec }}");
+    expect(stepRun("replay")).toContain('--published-at "$CLOCK_SEC"');
+    expect(stepRun("capture")).toContain("SELECT value FROM cache");
+  });
 });
