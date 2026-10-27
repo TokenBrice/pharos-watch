@@ -249,7 +249,7 @@ export function buildWeeklyPrompt(
   lines.push(`  DEWS: max ALERT+ mcap ${maxAlertPlusMcapUsd == null ? "unavailable (full census or supply coverage missing)" : formatCurrency(maxAlertPlusMcapUsd)}; band-change observations ${totalDewsBandChanges == null ? "unavailable (full census missing)" : totalDewsBandChanges}`);
   for (const change of data.weeklySignals.topDewsChanges) {
     lines.push(
-      `    ${change.symbol}: ${change.from} -> ${change.to}, score ${change.score}, ${formatCurrency(change.mcapUsd)} mcap, driver ${change.driver}`,
+      `    ${change.symbol}: ${change.from} -> ${change.to}, score ${change.score}, ${change.mcapUsd == null ? "mcap unavailable (supply-unavailable)" : `${formatCurrency(change.mcapUsd)} mcap`}, driver ${change.driver}`,
     );
   }
   if (data.weeklySignals.topPressureSignals.length > 0) {

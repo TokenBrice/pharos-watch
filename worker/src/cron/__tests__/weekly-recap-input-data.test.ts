@@ -102,6 +102,40 @@ describe("weekly recap canonical candidate aggregation", () => {
     }
   });
 
+  it("keeps unavailable DEWS market caps null, ordered after observed caps, with observed zero preserved", () => {
+    const change = (symbol: string, score: number, mcapUsd?: number) => ({
+      symbol, from: "WATCH", to: "ALERT", score, topDriver: "pool", ...(mcapUsd === undefined ? {} : { mcapUsd }),
+    });
+    const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => row(index, {
+      dewsStress: {
+        bandCounts: { calm: 0, watch: 0, alert: 1, warning: 0, danger: 0 },
+        yesterdayBandCounts: null,
+        elevatedCoins: [],
+        bandChanges: index === 0
+          ? [change("NOCAP_LOW", 50), change("NOCAP_HIGH", 90), change("ZERO", 70, 0), change("BIG", 60, 5e9), change("TIE_A", 80, 1e9), change("TIE_B", 85, 1e9)]
+          : index === 1 ? [change("EXTRA1", 10, 1), change("EXTRA2", 11, 2), change("EXTRA3", 12, 3)] : [],
+      },
+    })))!;
+    const rows = weekly.weeklySignals.topDewsChanges;
+    expect(rows.map((r) => r.symbol)).toEqual(["BIG", "TIE_B", "TIE_A", "EXTRA3", "EXTRA2", "EXTRA1", "ZERO"]);
+    expect(rows.find((r) => r.symbol === "ZERO")?.mcapUsd).toBe(0);
+
+    const capped = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => row(index, {
+      dewsStress: {
+        bandCounts: { calm: 0, watch: 0, alert: 1, warning: 0, danger: 0 },
+        yesterdayBandCounts: null, elevatedCoins: [],
+        bandChanges: index === 0 ? [change("NOCAP_LOW", 50), change("NOCAP_HIGH", 90), change("OBS", 60, 2e6)] : [],
+      },
+    })))!;
+    expect(capped.weeklySignals.topDewsChanges.map((r) => [r.symbol, r.mcapUsd])).toEqual([
+      ["OBS", 2e6], ["NOCAP_HIGH", null], ["NOCAP_LOW", null],
+    ]);
+    const prompt = buildWeeklyPrompt(capped);
+    expect(prompt).toContain("NOCAP_HIGH: WATCH -> ALERT, score 90, mcap unavailable (supply-unavailable), driver pool");
+    expect(prompt).not.toContain("NOCAP_HIGH: WATCH -> ALERT, score 90, $0");
+    expect(prompt).toContain("OBS: WATCH -> ALERT, score 60, $2.00M mcap");
+  });
+
   it.each(["legacy", "partial"] as const)("withholds the weekly full ALERT+ maximum for %s daily census evidence", (kind) => {
     const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => row(index, {
       dewsStress: {

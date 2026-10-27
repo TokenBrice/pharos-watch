@@ -503,23 +503,28 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
     },
     (row) => Math.abs(row.amountUsd),
   );
-  // DEWS uses an mcap-major / score-minor sort. Encode as a single numeric
-  // key (mcap is non-negative USD, score is a bounded small integer) so we
-  // can flow through the generic `sortKey: number` helper while preserving
-  // the original `b.mcapUsd - a.mcapUsd || b.score - a.score` ordering.
-  const topDewsChanges = topSignals(
-    parsed,
-    (d) =>
+  // DEWS orders observed market caps first (descending), then unavailable ones;
+  // score breaks ties. An unavailable cap stays null rather than an invented $0.
+  const topDewsChanges = parsed
+    .flatMap((d) =>
       (d.inputData.dewsStress?.bandChanges ?? []).map((change) => ({
         symbol: change.symbol,
         from: change.from,
         to: change.to,
         score: change.score,
-        mcapUsd: change.mcapUsd ?? 0,
+        mcapUsd: change.mcapUsd ?? null,
         driver: change.topDriver,
       })),
-    (row) => row.mcapUsd * 1000 + row.score,
-  );
+    )
+    .sort((a, b) => {
+      if (a.mcapUsd !== b.mcapUsd) {
+        if (a.mcapUsd === null) return 1;
+        if (b.mcapUsd === null) return -1;
+        return b.mcapUsd - a.mcapUsd;
+      }
+      return b.score - a.score;
+    })
+    .slice(0, 7);
   const fullAlertPlusMcaps = parsed.map(({ inputData }) => {
     const dews = inputData.dewsStress;
     return dews?.alertPlusSupplyCoverage?.complete === true ? dews.alertPlusMcapUsd : null;
