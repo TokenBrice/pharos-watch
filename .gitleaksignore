@@ -377,3 +377,9 @@ abbd074ed1de1ff8c35fccc6fa3effe6b5718e78:src/components/status/__tests__/admin-a
 # GitBook file-download token in a cited source URL and a public Solana token mint.
 016878f69dc37d53a9b9c4063b05e4f8092be34a:shared/data/stablecoins/domains/mint-authority/gldt-gold-dao.json:generic-api-key:118
 c76f039048dc6d2decc65d6ea8e752557fa50493:shared/data/safety-score-v9/transfer-review-overlays-v1.json:generic-api-key:12194
+
+# Reviewed 2026-10-27: non-secret public identifiers in historical commits. The
+# runbook line is a SQL deployment config_key naming the public USDT deployment;
+# the test line is a canonical scheduler literal. Neither is a credential.
+aa117604c0ad6f7f352ac0e65fd6395374ae6a36:docs/runbooks/blacklist-sync.md:generic-api-key:53
+e9ffbf3f450f9f461080c069472f7144b29a843e:worker/src/lib/__tests__/scheduler-liveness.test.ts:generic-api-key:68
