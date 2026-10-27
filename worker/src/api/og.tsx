@@ -50,7 +50,7 @@ import { deriveCurrentPegObservationMap, type CurrentPegObservation } from "../l
 import { getDepegThresholdBps } from "../lib/constants";
 import { deriveDepegSignal, signalCrossesThreshold } from "@shared/lib/depeg-signals";
 import {
-  getNativeEventPriceObservation, isNativePegEvent, PSI_NATIVE_EVIDENCE_MAX_AGE_SEC,
+  getNativeEventPriceObservation, isNativePegEvent,
   type NativeEventPriceEvidence,
 } from "@shared/lib/depeg-quote-domain";
 import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/native-peg-quote-cache";
@@ -104,11 +104,11 @@ async function ensureWasm(): Promise<void> {
 }
 
 
-function ogSourceAsOf(source: string, timestamp: number | null | undefined, budget: number, now: number): string {
+function ogSourceAsOf(source: string, timestamp: number | null | undefined, now: number): string {
   const age = assessFreshnessTimestamp(now, timestamp);
   if (age.reason != null) return `${source} unavailable (${age.reason})`;
   const label = new Date(timestamp! * 1000).toISOString().slice(0, 16).replace("T", " ");
-  return `${source} ${label} UTC${age.ageSeconds > budget ? ` (stale; budget ${budget}s)` : ""}`;
+  return `${source} ${label} UTC`;
 }
 
 // ---------------------------------------------------------------------------
@@ -211,7 +211,7 @@ function safetyScoreOgPresentation(
   };
   if (safetySource.kind === "ok") {
     return {
-      lastUpdated: `${safetySource.model.toUpperCase()} ${safetySource.methodologyVersion} · ${ogSourceAsOf("as of", safetySource.asOfSec, API_FRESHNESS_MAX_AGE_SEC.reportCards, Math.floor(Date.now() / 1000))}`,
+      lastUpdated: `${safetySource.model.toUpperCase()} ${safetySource.methodologyVersion} · ${ogSourceAsOf("as of", safetySource.asOfSec, Math.floor(Date.now() / 1000))}`,
       headers: addFreshnessHeaders({
         ...CACHE_HEADERS,
         ...freshnessHeaders,
@@ -520,10 +520,10 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     }),
     safetyModel: safetySource.kind === "ok" ? safetySource.model : null,
     lastUpdated: [
-      ogSourceAsOf("Market", stablecoinsPayload.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now),
-      ogSourceAsOf("Quote", coin.priceObservedAt ?? coin.priceUpdatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now),
+      ogSourceAsOf("Market", stablecoinsPayload.updatedAt, now),
+      ogSourceAsOf("Quote", coin.priceObservedAt ?? coin.priceUpdatedAt, now),
       price24hRow && change24h != null
-        ? ogSourceAsOf("24h pair", price24hRow.current_date, API_FRESHNESS_MAX_AGE_SEC.supplyHistory, now)
+        ? ogSourceAsOf("24h pair", price24hRow.current_date, now)
         : `24h price pair unavailable (${pricePairUnavailableReason})`,
       `Safety ${safetyPresentation.lastUpdated}${reportCardRow?.partialEvidence && reportCardRow.grade !== null ? " · Partial evidence: pipeline gap" : ""}`,
     ].join(" · "),
@@ -723,10 +723,10 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     recoveredToday,
     newToday: newTodayResult?.count ?? null,
     lastUpdated: [
-      ogSourceAsOf("Live peg", stablecoins.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, now),
-      ...(hasNativeEvent ? [ogSourceAsOf("Native peg", nativeQuoteTimes.length ? Math.min(...nativeQuoteTimes) : null, PSI_NATIVE_EVIDENCE_MAX_AGE_SEC, now)] : []),
-      ogSourceAsOf("PSI", psiRow?.stored_at, API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, now),
-      ogSourceAsOf("DEWS", stressRows.results?.length ? Math.min(...stressRows.results.map((row) => row.computed_at)) : null, API_FRESHNESS_MAX_AGE_SEC.stressSignals, now),
+      ogSourceAsOf("Live peg", stablecoins.updatedAt, now),
+      ...(hasNativeEvent ? [ogSourceAsOf("Native peg", nativeQuoteTimes.length ? Math.min(...nativeQuoteTimes) : null, now)] : []),
+      ogSourceAsOf("PSI", psiRow?.stored_at, now),
+      ogSourceAsOf("DEWS", stressRows.results?.length ? Math.min(...stressRows.results.map((row) => row.computed_at)) : null, now),
     ].join(" · "),
   };
   const png = await renderPng(<DepegCard data={data} />);
@@ -737,32 +737,14 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
 // /api/og/stability-index
 // ---------------------------------------------------------------------------
 
-function StabilityIndexUnavailableCard({ reason = "No PSI sample is available yet.", asOf }: { reason?: string; asOf?: string }) {
+function StabilityIndexNeutralCard() {
   return (
     <CardFrame
       title="Pharos Stability Index"
       subtitle="Market-wide Peg Health"
       borderTopColor="#64748b"
-      lastUpdated={asOf}
     >
-      <div
-        style={{
-          display: "flex",
-          flex: 1,
-          flexDirection: "column",
-          alignItems: "center",
-          justifyContent: "center",
-          gap: 12,
-          textAlign: "center",
-        }}
-      >
-        <span style={{ fontSize: 36, fontWeight: 700 }}>
-          Stability index unavailable
-        </span>
-        <span style={{ fontSize: 20, color: "#5f6570" }}>
-          {reason}
-        </span>
-      </div>
+      <div style={{ display: "flex", flex: 1 }} />
     </CardFrame>
   );
 }
@@ -811,13 +793,13 @@ async function handleStabilityIndexOg(db: D1Database): Promise<Response> {
   };
 
   if (!latestSample) {
-    const png = await renderPng(<StabilityIndexUnavailableCard />);
+    const png = await renderPng(<StabilityIndexNeutralCard />);
     return new Response(png, { headers: freshnessHeaders });
   }
 
-  const sourceAsOf = ogSourceAsOf("PSI", latestSample.stored_at, API_FRESHNESS_MAX_AGE_SEC.stabilityIndex, now);
+  const sourceAsOf = ogSourceAsOf("PSI", latestSample.stored_at, now);
   if (latestAge.reason != null || latestAge.ageSeconds > API_FRESHNESS_MAX_AGE_SEC.stabilityIndex) {
-    const png = await renderPng(<StabilityIndexUnavailableCard reason="PSI source is stale or unavailable." asOf={sourceAsOf} />);
+    const png = await renderPng(<StabilityIndexNeutralCard />);
     return new Response(png, { headers: freshnessHeaders });
   }
   const psiScore = latestSample.score;
@@ -910,7 +892,7 @@ async function handleChainOg(db: D1Database, chainId: string): Promise<Response>
     const png = await renderPng(
       <ChainUnavailableCard
         name={CHAIN_META[chainId].name}
-        lastUpdated={ogSourceAsOf("Market", stablecoinsResult.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, Math.floor(Date.now() / 1000))}
+        lastUpdated={ogSourceAsOf("Market", stablecoinsResult.updatedAt, Math.floor(Date.now() / 1000))}
       />,
     );
     return new Response(png, { headers: { ...safetyPresentation.headers, "X-Og-Status": "degraded", "X-Og-Reason": "chain-not-in-aggregate" } });
