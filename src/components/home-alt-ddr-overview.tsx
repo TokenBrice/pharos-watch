@@ -346,11 +346,7 @@ function TrackRecordZone({
             {accuracyValue}
           </span>
         </div>
-        {/* Frozen historical performance, not current-model validation: the
-            same-cohort always-recover baseline and graded versions stay beside it. */}
         <p className="mt-1.5 text-xs text-muted-foreground">{accuracyLines.calls}</p>
-        <p className="text-xs text-muted-foreground">{accuracyLines.baseline}</p>
-        {accuracyLines.scope ? <p className="text-xs text-muted-foreground">{accuracyLines.scope}</p> : null}
       </div>
 
       {rates.length > 0 ? <HorizonBars rates={rates} /> : null}

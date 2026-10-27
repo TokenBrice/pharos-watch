@@ -167,23 +167,14 @@ describe("DepegOutlookHero forecast track record", () => {
     })),
   }) as unknown as Parameters<typeof DepegOutlookHero>[0]["review"];
 
-  it("shows the captured fraction beside its always-recover baseline and frozen-version cohort", () => {
+  it("shows the captured fraction with no sub-text under the figure", () => {
     const markup = renderToStaticMarkup(
       <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()}
         review={review(70, [["2.0", 6], ["3.04", 49], ["4.6", 19]])} />,
     );
     expect(markup).toContain("Recovery calls correct: 61/74 (82.4%)");
-    expect(markup).toContain("Always-recover baseline: 70/74 (94.6%)");
-    expect(markup).toContain("Graded calls from v2/v3/v4 · 0 from current v5");
+    expect(markup).not.toContain("Always-recover baseline");
+    expect(markup).not.toContain("Graded calls");
     expect(markup).toContain("see the grading");
-  });
-
-  it("keeps an unpublished baseline and unreconciled scope unavailable", () => {
-    const markup = renderToStaticMarkup(
-      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()}
-        review={review(undefined, [["4.6", 10]])} />,
-    );
-    expect(markup).toContain("Always-recover baseline: —");
-    expect(markup).toContain("Graded calls by version: —");
   });
 });

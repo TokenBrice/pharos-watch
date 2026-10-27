@@ -149,13 +149,13 @@ describe("HomeAltDdrOverview", () => {
     expect(symbols).toEqual(["LIVEDEEP", "LOCKDEEP", "UNKNOWN"]);
   });
 
-  it("qualifies the promoted accuracy with its same-cohort baseline and frozen versions", () => {
+  it("shows the promoted accuracy with its call fraction and no sub-text under the figure", () => {
     setSources();
     render(<HomeAltDdrOverview />);
     expect(screen.getByText("80.0%")).toBeTruthy();
     expect(screen.getByText("Recovery calls correct: 8/10 (80.0%)")).toBeTruthy();
-    expect(screen.getByText("Always-recover baseline: 9/10 (90.0%)")).toBeTruthy();
-    expect(screen.getByText("Graded calls from v3/v4 · 0 from current v5")).toBeTruthy();
+    expect(screen.queryByText(/Always-recover baseline/)).toBeNull();
+    expect(screen.queryByText(/Graded calls/)).toBeNull();
     expect(screen.queryByText(/recovery-call accuracy/)).toBeNull();
   });
 

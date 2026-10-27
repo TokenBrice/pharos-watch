@@ -194,10 +194,6 @@ export function DepegOutlookHero({
                 </span>
                 <span className="text-xs text-muted-foreground">{accuracyLines.calls}</span>
               </p>
-              {/* Frozen historical performance, not current-model validation:
-                  name the stronger same-cohort baseline and the versions graded. */}
-              <p className="text-xs text-muted-foreground">{accuracyLines.baseline}</p>
-              {accuracyLines.scope ? <p className="text-xs text-muted-foreground">{accuracyLines.scope}</p> : null}
               <p className="pharos-meta mt-1">
                 {review?.headlineLabel ?? headline.accuracyDenominatorLabel} ·{" "}
                 <a href="#forecast-grading" className="pharos-prose-link">
