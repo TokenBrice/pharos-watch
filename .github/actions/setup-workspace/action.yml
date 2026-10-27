@@ -201,4 +201,11 @@ runs:
 
     - if: ${{ inputs.install-playwright-firefox == 'true' }}
       shell: bash
-      run: npx --no-install playwright install --with-deps firefox
+      # A healthy install takes under a minute; bound each attempt so a stalled
+      # apt mirror retries once instead of consuming the caller's job budget (#1702).
+      run: |
+        for attempt in 1 2; do
+          if timeout 6m npx --no-install playwright install --with-deps firefox; then exit 0; fi
+          echo "::warning::Playwright Firefox install attempt ${attempt} failed or exceeded 6 minutes"
+        done
+        exit 1
