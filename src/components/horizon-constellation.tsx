@@ -245,6 +245,7 @@ export function HorizonConstellation({
                         <Link
                           key={coin.id}
                           href={buildStablecoinUrl(coin.id)}
+                          prefetch={false}
                           title={coin.name}
                           aria-label={dotAriaLabel(coin, cell, drift)}
                           style={{
@@ -333,6 +334,7 @@ export function HorizonConstellation({
                       <Link
                         key={coin.id}
                         href={buildStablecoinUrl(coin.id)}
+                        prefetch={false}
                         title={coin.name}
                         aria-label={dotAriaLabel(coin, cell, drift)}
                         className={cn(DOT_LINK_CLASS, coinIndex >= laneDots ? "hidden sm:block" : undefined)}

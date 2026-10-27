@@ -97,7 +97,7 @@ Theme, query cache, source navigation and global search remain stable providers 
 
 Retained-homepage evidence is route-local: only the homepage mounts its provider under the shared query client. Other routes do not load its persistence module or subscribe to homepage query publications; detail has its own bounded per-coin retained-evidence provider.
 
-Footer research and about/legal links retain their crawlable anchors, order and labels but explicitly disable Next route prefetch. They are discovery links, not an instruction to download every hub as soon as a short route exposes the footer.
+Footer research and about/legal links retain their crawlable anchors, order and labels but explicitly disable Next route prefetch. They are discovery links, not an instruction to download every hub as soon as a short route exposes the footer. The blog banner and homepage teaser profile links disable Next route prefetch, so unvisited destinations do not download their cover or Tweet media.
 
 Desktop top-nav section panels (`src/components/top-nav.tsx`) stay mounted, so every `nav-config.ts` destination is a crawlable anchor in static HTML. A closed panel is `hidden` + `inert` (neither visible nor focusable); open, focus, hover-intent and Escape behavior is state-driven as before, and the Status health read stays gated to the open Resources panel.
 
