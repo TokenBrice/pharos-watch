@@ -916,7 +916,7 @@ Scheduled GraphQL proves delivery, not Adaptive resource attribution: `exceededM
 
 ### GET /api/health
 
-Availability ratios are not immediate stale cutoffs; source-owned overrides and stricter route/other floors apply. The realtime cache profile participates in edge cache, so clients can observe bounded cache lag. A resolved null `SELECT 1` is unavailable, not healthy. Subquery failures downgrade health with sanitized machine-readable warnings while keeping HTTP 200; raw exceptions stay in logs.
+Availability ratios are not immediate stale cutoffs; source-owned overrides and stricter route/other floors apply. The realtime cache profile participates in edge cache, so clients can observe bounded cache lag. A resolved null `SELECT 1` is unavailable, not healthy. The snapshot path re-reads only late sentinel lanes; a late, unavailable, held or warned Safety Score/mint-burn lane instead triggers at most one full assessment per request, adopted only with present, nonregressing accepted/sync clocks, while a failed read keeps the snapshot with `health-recovery-read-failed` ([status dashboard](../status-dashboard.md#scope)). Subquery failures downgrade health with sanitized machine-readable warnings while keeping HTTP 200; raw exceptions stay in logs.
 
 Mint/burn health uses critical-lane successful sync plus latest outcome, not event recency (quiet majors are valid). Shared freshness overrides live in `worker/src/lib/mint-burn-health-config.ts`. Advisory growth totals come from the daily sentinel's bounded evidence, not request-time event scans or `sqlite_sequence`; historical watchdog rows are a read fallback only. [Mint/burn operations](../mint-burn-flows.md) owns pruning/debt and integrity evidence.
 
