@@ -202,6 +202,37 @@ describe("stablecoin detail request budget", () => {
     queryClient.clear();
   });
 
+  it("census: every frozen profile reads no current-only lane with every viewport gate open", async () => {
+    const frozen = [...TRACKED_META_BY_ID.values()].filter((coin) => coin.status === "frozen");
+    expect(frozen.length).toBeGreaterThan(0);
+    const forbidden = /\/api\/(?:stablecoin-live-summary|dex-liquidity|report-cards|redemption-backstop|yield-rankings|stress-signals|mint-burn-flows|stablecoin-reserves)/;
+    for (const coin of frozen) {
+      const requests: string[] = [];
+      vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {
+        requests.push(String(input));
+        return new Promise<Response>(() => {});
+      }));
+      const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={queryClient}>
+          <StablecoinDetailLiveSummaryStart id={coin.id} frozen>{children}</StablecoinDetailLiveSummaryStart>
+        </QueryClientProvider>
+      );
+      renderHook(() => useStablecoinDetailViewModel({
+        id: coin.id, coin, summary: null,
+        supplementalQueryControls: {
+          liquidity: true, reportCards: true, redemption: true, yield: true,
+          stress: true, flows: true, blacklist: true, reserves: true,
+        },
+      }), { wrapper });
+      // History lanes (supply history) still start; current-only lanes never do.
+      await waitFor(() => expect(requests.some((path) => path.includes(`/api/supply-history?stablecoin=${coin.id}&days=90`))).toBe(true));
+      expect(requests.filter((path) => forbidden.test(path))).toEqual([]);
+      queryClient.clear();
+      vi.unstubAllGlobals();
+    }
+  });
+
   it("hydrates fresh eager lanes before observers mount and refetches an expired snapshot", async () => {
     const requests: string[] = [];
     vi.stubGlobal("fetch", vi.fn((input: string | URL | Request) => {

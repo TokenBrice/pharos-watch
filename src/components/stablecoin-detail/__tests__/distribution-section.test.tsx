@@ -42,6 +42,16 @@ it("keeps both distribution modules visible as unavailable when their sources fa
   expect(screen.getByText(/DEX distribution data is temporarily unavailable/)).toBeTruthy();
 });
 
+it("keeps a frozen archive's chain context but never mounts the current DEX child", () => {
+  useStablecoinsMock.mockReturnValue({
+    data: undefined, isLoading: false, error: new Error("list failed"), dataUpdatedAt: 0, refetch: vi.fn(),
+  });
+  render(<DistributionSection stablecoinId="buck-buck-assets" frozen />);
+  expect(useDexLiquidityMock).not.toHaveBeenCalled();
+  expect(screen.getByText(/Chain distribution data is temporarily unavailable/)).toBeTruthy();
+  expect(screen.queryByText(/DEX distribution data/)).toBeNull();
+});
+
 it.each([
   { label: "all missing", chainCirculating: { Ethereum: { current: null }, Base: { current: null } } },
   { label: "registered partial", chainCirculating: { Ethereum: { current: null }, Base: { current: 100 } } },

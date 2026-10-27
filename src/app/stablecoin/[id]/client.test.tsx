@@ -314,6 +314,7 @@ describe("StablecoinDetailClient", () => {
     useStablecoinDetailViewModelMock.mockReturnValue(
       makeReadyViewModel({
         hasFlows: true,
+        hasFlowHistory: true,
         hasBlacklist: true,
         blacklistSymbol: "USDT",
         supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1, supply: 100 }],
@@ -758,9 +759,30 @@ describe("StablecoinDetailClient (frozen)", () => {
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
     renderDetail(coin);
     const notes = screen.getAllByText(/no longer collects new metrics/i);
-    // Market chart, Distribution, Liquidity, History — non-flow / non-blacklist
-    // sections render unconditionally for this fixture.
-    expect(notes.length).toBeGreaterThanOrEqual(4);
+    // Market chart, Distribution, History — current DEX liquidity is omitted for an archive.
+    expect(notes.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("omits current DEX liquidity and dependency context while keeping static relationships and flow history", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue({ ...makeFrozenViewModel(coin), hasFlows: false, hasFlowHistory: true });
+    const { container } = renderDetail(coin);
+    expect(container.querySelector("#dex-liquidity")).toBeNull();
+    expect(container.querySelector("#distribution")).not.toBeNull();
+    expect(screen.queryByTestId("contagion-snapshot-mock")).toBeNull();
+    expect(screen.getByTestId("flow-history-section")).toBeTruthy();
+    expect(screen.queryByTestId("flows-section")).toBeNull();
+  });
+
+  it("starts no current summary read for a frozen archive, unlike an active control", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const frozen = makeFrozenViewModel(coin);
+    useStablecoinDetailViewModelMock.mockReturnValue(frozen);
+    renderDetail(frozen.coin);
+    expect(queryClients.at(-1)!.prefetchQuery).not.toHaveBeenCalled();
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+    renderDetail(coin);
+    expect(queryClients.at(-1)!.prefetchQuery).toHaveBeenCalledTimes(1);
   });
 
 });

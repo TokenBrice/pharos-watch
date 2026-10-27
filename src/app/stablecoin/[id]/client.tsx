@@ -124,9 +124,19 @@ export function StablecoinDetailSnapshotHydrator({
   return children;
 }
 /** Adopt the parser-started read only after the saved dossier has hydrated. */
-export function StablecoinDetailLiveSummaryStart({ id, children }: { id: string; children: ReactNode }) {
+export function StablecoinDetailLiveSummaryStart({
+  id,
+  frozen = false,
+  children,
+}: {
+  id: string;
+  /** A frozen archive never reads the current summary. */
+  frozen?: boolean;
+  children: ReactNode;
+}) {
   const queryClient = useQueryClient();
   useEffect(() => {
+    if (frozen) return;
     // The raw request already starts in the route's parser bootstrap. Publishing
     // its result during render can replace seed provenance before a suspended
     // child hydrates, making its first freshness verdict differ from the server.
@@ -135,7 +145,7 @@ export function StablecoinDetailLiveSummaryStart({ id, children }: { id: string;
     const descriptor = FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id);
     const options = asMetaQueryOptions(createRegisteredApiPollingQueryOptions(descriptor));
     void queryClient.prefetchQuery(hasDataBootstrap(descriptor.queryKey) ? { ...options, staleTime: 0 } : options);
-  }, [id, queryClient]);
+  }, [frozen, id, queryClient]);
   return children;
 }
 
@@ -235,7 +245,7 @@ function StablecoinDetailClientContent({
 export default function StablecoinDetailClient(props: StablecoinDetailClientProps) {
   return (
     <StablecoinDetailSnapshotHydrator snapshot={props.snapshot ?? null}>
-      <StablecoinDetailLiveSummaryStart key={props.id} id={props.id}>
+      <StablecoinDetailLiveSummaryStart key={props.id} id={props.id} frozen={props.coin.status === "frozen"}>
         <DetailEvidenceProvider coinId={props.id}>
           <StablecoinDetailClientContent {...props} />
         </DetailEvidenceProvider>

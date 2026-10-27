@@ -60,6 +60,8 @@ export interface StablecoinDetailViewModelQueryInputs {
 }
 
 export interface DetailFlowsInput {
+  /** Frozen coins: retained cached membership admits historical flows without a current read. */
+  historyEligible?: boolean;
   data?: MintBurnFlowsResponse;
   isLoading: boolean;
   error: unknown | null;
@@ -173,6 +175,8 @@ export interface StablecoinDetailReadyViewModel extends BaseViewModel {
   stressSignal: StressSignalEntry | null;
   redemptionBackstop: RedemptionBackstopEntry | undefined;
   hasFlows: boolean;
+  /** Historical flow section eligibility: current flows, or a frozen coin's retained membership. */
+  hasFlowHistory: boolean;
   hasBlacklist: boolean;
   blacklistSymbol: BlacklistStablecoin | null;
   supplyHistory: SupplyHistoryPoint[];

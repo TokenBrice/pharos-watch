@@ -167,6 +167,30 @@ describe("YieldDetailSection", () => {
     expect(screen.getAllByText(qualificationText).some((node) => !node.closest("details"))).toBe(true);
   });
 
+  it.each(["buck-buck-assets", "msy-main-street"])("settles frozen %s as the archive without a ranking request", (id) => {
+    mockRankingsQuery({ error: new Error("would retry"), isLoading: true });
+    render(<YieldDetailSection stablecoinId={id} />);
+    expect(useYieldRankingsMock.mock.calls.every(([, overrides]) => overrides?.enabled === false)).toBe(true);
+    expect(screen.getByText(/Pharos no longer collects new metrics for this asset/)).toBeTruthy();
+    expect(screen.queryByText(/latest ranking snapshot is not available yet/)).toBeNull();
+    expect(screen.queryByRole("button", { name: /retry/i })).toBeNull();
+    // The independent historical read stays available to the archive.
+    expect(useYieldHistoryMock).toHaveBeenCalledWith(id, { days: 30, mode: "best" });
+  });
+
+  it("keeps a retained ranking visible on a frozen archive", () => {
+    mockRankings([makeRanking({ id: "buck-buck-assets", symbol: "BUCK", name: "BUCK" })]);
+    render(<YieldDetailSection stablecoinId="buck-buck-assets" />);
+    expect(screen.queryByText(/Pharos no longer collects new metrics/)).toBeNull();
+    expect(screen.getByTestId("yield-history-chart")).toBeTruthy();
+  });
+
+  it("keeps active loading and error states for a live coin", () => {
+    mockRankingsQuery({ error: new Error("down") });
+    render(<YieldDetailSection stablecoinId="usdn-smardex" />);
+    expect(useYieldRankingsMock.mock.calls.at(-1)?.[1]).toEqual({ enabled: true });
+  });
+
   it("never calls a ZCHF deposit holder yield and omits the leaderboard fallback link", () => {
     mockRankings([makeRanking({
       id: "zchf-frankencoin", symbol: "ZCHF", sourceRole: "external-opportunity",

@@ -39,6 +39,7 @@ import { formatPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { useYieldDetailSectionModel } from "@/components/yield-detail-section-model";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldDetailSectionAltSources } from "@/components/yield-detail-section-alt-sources";
@@ -116,6 +117,14 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
             </div>
           ))}
         </div>
+      </YieldDetailSectionFrame>
+    );
+  }
+
+  if (view.status === "frozen") {
+    return (
+      <YieldDetailSectionFrame>
+        {view.frozenAt ? <FrozenDataNote frozenAt={view.frozenAt} /> : null}
       </YieldDetailSectionFrame>
     );
   }

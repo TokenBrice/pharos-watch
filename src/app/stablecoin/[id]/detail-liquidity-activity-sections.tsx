@@ -99,18 +99,21 @@ export function DetailLiquidityActivitySections({
           {frozenNote}
           <SectionErrorBoundary name="distribution">
             <LazySection minHeight={320}>
-              <DistributionSection stablecoinId={viewModel.id} />
+              <DistributionSection stablecoinId={viewModel.id} frozen={viewModel.coin.status === "frozen"} />
             </LazySection>
           </SectionErrorBoundary>
         </section>
-        <section id="dex-liquidity">
-          {frozenNote}
-          <SectionErrorBoundary name="liquidity">
-            <LazySection minHeight={480}>
-              <DexLiquidityCard stablecoinId={viewModel.id} />
-            </LazySection>
-          </SectionErrorBoundary>
-        </section>
+        {/* Current DEX liquidity is never read for a frozen archive. */}
+        {viewModel.coin.status !== "frozen" ? (
+          <section id="dex-liquidity">
+            {frozenNote}
+            <SectionErrorBoundary name="liquidity">
+              <LazySection minHeight={480}>
+                <DexLiquidityCard stablecoinId={viewModel.id} />
+              </LazySection>
+            </SectionErrorBoundary>
+          </section>
+        ) : null}
 
         {/* The xl rail owns Price Transparency; this in-flow copy keeps it
             reachable below xl. */}

@@ -53,7 +53,7 @@ export function DetailHistoryExploreSections({
             scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
           />
         </LazySection>
-        {viewModel.hasFlows ? (
+        {viewModel.hasFlowHistory ? (
           <LazySection minHeight={340}>
             <FlowHistorySection stablecoinId={viewModel.id} />
           </LazySection>

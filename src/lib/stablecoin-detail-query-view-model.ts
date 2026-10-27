@@ -60,6 +60,7 @@ export interface DetailFeatureAvailabilitySnapshot {
   hasYieldSection: boolean;
   stressSignal: StressSignalEntry | null;
   hasFlows: boolean;
+  hasFlowHistory: boolean;
   hasBlacklist: boolean;
   blacklistSymbol: BlacklistStablecoin | null;
 }
@@ -409,6 +410,7 @@ export function buildDetailFeatureSnapshot(
       hasYieldSection: (coin.flags.yieldBearing ?? false) || yieldRanking !== null,
       stressSignal,
       hasFlows,
+      hasFlowHistory: hasFlows || flows.historyEligible === true,
       hasBlacklist,
       blacklistSymbol,
     },

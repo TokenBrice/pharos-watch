@@ -428,7 +428,15 @@ function DexDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   );
 }
 
-export function DistributionSection({ stablecoinId }: { stablecoinId: string }) {
+/** A frozen archive keeps its chain context but never reads current DEX liquidity. */
+export function DistributionSection({ stablecoinId, frozen = false }: { stablecoinId: string; frozen?: boolean }) {
+  if (frozen) {
+    return (
+      <div className="grid grid-cols-1 gap-3 md:gap-4">
+        <ChainDistributionCard stablecoinId={stablecoinId} />
+      </div>
+    );
+  }
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-3 md:gap-4">
       <ChainDistributionCard stablecoinId={stablecoinId} />
