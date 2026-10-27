@@ -18,12 +18,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurM10USDM)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "SG-FORGE CoinVertible product and daily reserve disclosure (re-opened 2026-10-01)",
+        "label": "SG-FORGE CoinVertible product and daily reserve disclosure (Last update 27/10/2026)",
         "url": "https://www.sgforge.com/product/coinvertible/"
       },
       {
@@ -31,9 +31,9 @@
         "url": "https://www.sgforge.com/wp-content/uploads/2026/09/USDCV-WP-Ethereum_Solana_Canton_2026-09-30.pdf"
       }
     ],
-    "rationale": "The issuer's USD CoinVertible disclosure states 100% cash backing and Last update 1/10/2026, with BNY 87.67% and Societe Generale 12.33%. Displayed balances are USD 11,000,000.00 and USD 1,546,441.00 against USD 12,546,441.00 in circulation. The combined bank-deposit slice is retained; this is issuer-reported composition, not independent assurance.",
-    "compositionBasis": "SG-FORGE dated daily USD CoinVertible reserve-composition disclosure, 2026-10-01",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "The issuer's USD CoinVertible disclosure states 100% cash backing and Last update 27/10/2026, with BNY 92.23% and Societe Generale 7.77%. Displayed balances are USD 11,000,000.00 and USD 926,226.00 against USD 11,926,226.00 in circulation. The combined bank-deposit slice is retained; this is issuer-reported composition, not independent assurance.",
+    "compositionBasis": "SG-FORGE dated daily USD CoinVertible reserve-composition disclosure, Last update 2026-10-27",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The daily page discloses the current two-bank allocation and 100% cash classification but not account-level legal terms, bank-account balances beyond the displayed amounts, or a hard maturity maximum.",
     "knownUnknownExposurePct": 0,

@@ -30,8 +30,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review W3",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -55,13 +55,13 @@
         "url": "https://www.m0.org/press-releases/moonpay-m0-and-paypal-announce-pyusdx-the-infrastructure-platform-for-pyusd-backed-stablecoins"
       },
       {
-        "label": "Ethereum public RPC: pyusdx(), PYUSDx balance and USDat supply at block 26089449 (2026-09-30)",
+        "label": "Ethereum public RPC: pyusdx(), PYUSDx balance and USDat supply at finalized block 26285088 (2026-10-27T15:57:11Z)",
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Saturn's PYUSDx-backed MultiMint implementation replaced the former M reserve. At Ethereum block 26089449, pyusdx() returned 0xebdb0942ce16386ab90718c7bd10c91cdb66b14d; the proxy held 84,861,787.607560 PYUSDx against exactly 84,861,787.607560 USDat supply. M0 documents PYUSDx as MoonPay's PayPal USD-backed extension. The canonical PYUSD wrapper dependency is retained with the immediate PYUSDx claim annotated; no separate tracked PYUSDx identity or independent reserve-solvency assurance is inferred.",
-    "compositionBasis": "Fixed-block USDat pyusdx(), PYUSDx balance and USDat totalSupply reads, with M0 PYUSDx claim documentation",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "Saturn's PYUSDx-backed MultiMint implementation replaced the former M reserve. At finalized Ethereum block 26285088 (2026-10-27T15:57:11Z), pyusdx() returned 0xebdb0942ce16386ab90718c7bd10c91cdb66b14d; the proxy held 112,631,890.386495 PYUSDx against exactly 112,631,890.386495 USDat Ethereum totalSupply. M0 documents PYUSDx as MoonPay's PayPal USD-backed extension. The canonical PYUSD wrapper dependency is retained with the immediate PYUSDx claim annotated; no separate tracked PYUSDx identity or independent reserve-solvency assurance is inferred.",
+    "compositionBasis": "Fixed-block (Ethereum finalized block 26285088, 2026-10-27) USDat pyusdx(), PYUSDx balance and USDat totalSupply reads, with M0 PYUSDx claim documentation",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "PYUSDx identity and the local USDat reserve reconciliation are verified. PYUSDx issuer custody and backing assurance remain separate from the local wrapper-balance check.",
     "knownUnknownExposurePct": 0

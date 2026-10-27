@@ -19,18 +19,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA47sGHO)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
         "label": "Aave sGHO documentation",
         "url": "https://aave.com/docs/aave-v3/guides/sgho"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26285088 (2026-10-27T15:57:11Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The current sGHO implementation and asset() at Ethereum block 26095797 identify GHO as the sole ERC-4626 accounting asset. Deposited GHO remains in the vault; yield is funded separately by the DAO.",
-    "compositionBasis": "Aave sGHO product documentation and asset() at Ethereum block 26095797 on 2026-10-01",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "Fresh pinned reads at Ethereum block 26285088 (hash 0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534, finalized, 2026-10-27T15:57:11Z): sGHO vault 0xe1753f2e00940cc31213dd92013cf019dfe4ca1d (proxy implementation 0xff229a0bbb614a284de8ae0e41e5974878fd7c04) returns asset() 0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f (GHO) as the sole ERC-4626 accounting asset; totalAssets() is 234,927,251.914488573603345269 GHO and the vault's GHO balance is 234,933,098.072737 GHO. Deposited GHO remains in the vault; yield is funded separately by the DAO. The single GHO slice stays 100%.",
+    "compositionBasis": "Aave sGHO product documentation and asset()/totalAssets() pinned at Ethereum block 26285088 on 2026-10-27",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No material unclassified reserve exposure is present; sGHO inherits GHO protocol and facilitator risk.",
     "knownUnknownExposurePct": 0
