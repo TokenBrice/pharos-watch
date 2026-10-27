@@ -348,12 +348,13 @@ describe("DepegResolverModule", () => {
     expect(screen.queryByText("Resolver data is temporarily unavailable.")).toBeNull();
   });
 
-  it("retains the whole-book summary for an explicitly stale frozen forecast", () => {
+  it("retains the whole-book summary for a stale-cache frozen forecast without a private stale notice", () => {
     render(<DepegResolverModule data={response({
       _meta: { ...meta, degraded: true, degradedReason: "stale-cache" }, rows: [row],
     })} />);
     expect(screen.getByText(/Whole book/).textContent).toContain("1 forecast across 1 incident rows");
-    expect(screen.getByText(/live overlay is stale/)).toBeTruthy();
+    // Age admission belongs to the route's shared freshness notice (ADR-42).
+    expect(screen.queryByText(/live overlay is stale/i)).toBeNull();
     expect(screen.getByText("Stress signals")).toBeTruthy();
   });
 
@@ -632,7 +633,7 @@ describe("StablecoinDepegResolverRows", () => {
   });
 
   it.each(["resolver list", "stablecoin detail"] as const)(
-    "explains stale live facts while retaining the frozen duration on the %s surface",
+    "retains the frozen duration over a stale-cache overlay without a private notice on the %s surface",
     (surface) => {
       const sourceRow = makeSourceRow({
         duration: {
@@ -654,14 +655,39 @@ describe("StablecoinDepegResolverRows", () => {
         ? <DepegResolverModule data={data} />
         : <StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={data} />);
 
-      expect(
-        screen.getByText(/live overlay is stale.*frozen forecasts.*remain unchanged/i),
-      ).toBeTruthy();
+      expect(screen.queryByText(/live overlay is stale/i)).toBeNull();
+      expect(screen.queryByText(/Live overlay:/)).toBeNull();
       expect(screen.getByText("anchored duration")).toBeTruthy();
       expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
       expect(screen.queryByText(/duration estimates are suppressed/i)).toBeNull();
     },
   );
+
+  it.each([
+    "stale-cache",
+    "errata-overlay-read-failed",
+    "lock-deferral-overlay-read-failed",
+    "manifest-fallback:missing-cache",
+  ])("keeps the infrastructure reason %s out of the live-incident caption", (degradedReason) => {
+    render(<StablecoinDepegResolverRows
+      stablecoinId="lusd-liquity"
+      data={response({ rows: [makePredictionRow(makeSourceRow(), { degradedReason })] })}
+    />);
+    expect(screen.getByText("Live incident")).toBeTruthy();
+    expect(screen.queryByText(/Live overlay:/)).toBeNull();
+  });
+
+  it.each([
+    ["duration-exceeded", "Live overlay: past its forecast window."],
+    ["closed-pending-review", "Live overlay: closed, pending review."],
+    ["lock-deferred", "Live overlay: lock deferred."],
+  ])("keeps the incident reason %s in the live-incident caption", (degradedReason, caption) => {
+    render(<StablecoinDepegResolverRows
+      stablecoinId="lusd-liquity"
+      data={response({ rows: [makePredictionRow(makeSourceRow(), { degradedReason })] })}
+    />);
+    expect(screen.getByText(caption)).toBeTruthy();
+  });
 
   it("stays hidden for degraded snapshots whose reason is not stale-cache", () => {
     render(

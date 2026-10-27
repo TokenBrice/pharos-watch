@@ -3,6 +3,7 @@
 import { IntentLink } from "@/components/intent-link";
 import { Badge } from "@/components/ui/badge";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
 import { FactGrid, type FactGridItem } from "@/components/stablecoin-detail/fact-grid";
 import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
@@ -45,7 +46,8 @@ function IncidentRow({ incident }: { incident: DdrTrackRecordIncidentRow }) {
  * Deliberately a ledger, not a forecast timeline — the detail page's DDR card
  * owns the forward-looking language; this module is the track record behind it.
  * Healthy empty feeds, in-flight reads and retained evidence over a failed
- * refresh show no notice; only unavailable evidence is visibly qualified.
+ * refresh show no notice; only unavailable evidence, or retained evidence past
+ * the shared public stale band, is visibly qualified.
  */
 export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }) {
   const enabled = isDepegResolverEnabled() && isDepegResolverReviewerEnabled();
@@ -55,13 +57,15 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
   if (!enabled) return null;
   const degraded = data?._meta?.degraded === true;
   const summaryUnavailable = data != null && data.summary.byStablecoin == null;
-  const unavailable = query.error != null || degraded || summaryUnavailable;
+  // A stale-cache snapshot that still carries rows is retained evidence; this coin's absence is a healthy empty.
+  const rejected = degraded && (data?._meta?.degradedReason !== "stale-cache" || data.rows.length === 0);
+  const unavailable = (query.error != null && data == null) || rejected || summaryUnavailable;
   if (!record) {
     if (!unavailable) return null;
     return (
       <section aria-label="DDR track record" className={SECTION_SCROLL_MT}>
         <QueryStateNotice state="unavailable" label="DDR track record" onRetry={() => void query.refetch()} />
-        {degraded || summaryUnavailable ? (
+        {rejected || summaryUnavailable ? (
           <p className="mt-2 text-xs text-muted-foreground">
             Snapshot reason: {data?._meta?.degradedReason ?? "coin-summary-unavailable"}
           </p>
@@ -109,9 +113,17 @@ export function DdrTrackRecordSection({ stablecoinId }: { stablecoinId: string }
           {limitedPopulation ? "Partial coverage" : record.chipLabel}
         </Badge>}
     >
-        {degraded ? (
-          <p className="text-xs text-muted-foreground">Snapshot reason: {data?._meta?.degradedReason ?? "degraded"}</p>
-        ) : null}
+        <StaleDataBanner
+          queries={[{
+            preset: "depegResolverReview",
+            // The producer clock, never receipt time; header metadata takes precedence when present.
+            dataUpdatedAt: (data?._meta?.computedAt ?? 0) * 1000,
+            hasData: true,
+            error: query.error,
+            meta: query.meta,
+          }]}
+          onRetry={() => void query.refetch()}
+        />
         <p className="text-sm leading-relaxed text-muted-foreground">
           {limitedPopulation ? "The reviewed incident cohort is incomplete; track-record aggregates are withheld." : record.lede}
         </p>

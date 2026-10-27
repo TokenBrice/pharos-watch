@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { DdrTrackRecordSection } from "@/components/stablecoin-detail/ddr-track-record-section";
 import { DDRR_PUBLIC_WARNING, type DdrrResponse, type DdrrRow } from "@shared/types/depeg-resolver-review";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
@@ -18,7 +18,15 @@ vi.mock("@/lib/feature-flags", () => ({
   isDepegResolverReviewerEnabled: reviewerEnabledMock,
 }));
 
+// Hydrate synchronously so the shared banner ages against the fake wall clock; fake timers
+// here fake only setTimeout and Date, so they never capture this stub.
+beforeEach(() => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 0; });
+});
+
 afterEach(() => {
+  vi.useRealTimers();
+  vi.unstubAllGlobals();
   vi.clearAllMocks();
   resolverEnabledMock.mockReturnValue(true);
   reviewerEnabledMock.mockReturnValue(true);
@@ -183,14 +191,54 @@ describe("DdrTrackRecordSection", () => {
     expect(screen.getByText("+1 more reviewed incidents")).toBeTruthy();
   });
 
-  it("retains stale-cache review evidence with its snapshot reason and no retry notice", () => {
+  it("retains stale-cache review evidence without a raw reason or retry notice", () => {
     const query = mockReview([PREDICTION_ROW]);
     query.data!._meta.degraded = true;
     query.data!._meta.degradedReason = "stale-cache";
-    render(<DdrTrackRecordSection stablecoinId={COIN} />);
-    expect(screen.getByText("Snapshot reason: stale-cache")).toBeTruthy();
+    const { container } = render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    expect(screen.queryByText(/Snapshot reason/)).toBeNull();
     expect(screen.getByRole("group", { name: "DDR track record facts" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Retry ddr track record" })).toBeNull();
+    expect(container.querySelector("[data-health-state]")).toBeNull();
+  });
+
+  it("ages retained evidence on the producer clock and admits a public notice only past the stale band", () => {
+    const computedAt = 1_700_100_000;
+    vi.useFakeTimers({ now: computedAt * 1000 + 901_000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const query = mockReview([PREDICTION_ROW]);
+    query.data!._meta.degraded = true;
+    query.data!._meta.degradedReason = "stale-cache";
+    Object.assign(query, { dataUpdatedAt: Date.now(), meta: undefined });
+    const { container } = render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    const banner = () => container.querySelector("[data-health-state]");
+    act(() => vi.advanceTimersByTime(0));
+    expect(banner()).toBeNull();
+    act(() => vi.advanceTimersByTime(10_800_000 - 901_000));
+    expect(banner()).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(banner()?.getAttribute("data-health-state")).toBe("stale");
+    expect(screen.getByRole("group", { name: "DDR track record facts" })).toBeTruthy();
+    expect(query.refetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps retained evidence through a failed refresh with no unavailable notice", () => {
+    vi.useFakeTimers({ now: 1_700_100_000 * 1000 + 901_000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const query = mockReview([PREDICTION_ROW]);
+    Object.assign(query, { error: new Error("HTTP 503") });
+    const { container } = render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    act(() => vi.advanceTimersByTime(0));
+    expect(screen.getByRole("group", { name: "DDR track record facts" })).toBeTruthy();
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(container.querySelector("[data-health-state]")).toBeNull();
+  });
+
+  it("omits a coin absent from retained review evidence, even across a refresh error or stale-cache", () => {
+    const query = mockReview([{ ...PREDICTION_ROW, stablecoinId: "usdt-tether" } as DdrrRow]);
+    query.data!._meta.degraded = true;
+    query.data!._meta.degradedReason = "stale-cache";
+    Object.assign(query, { error: new Error("HTTP 503") });
+    const { container } = render(<DdrTrackRecordSection stablecoinId={COIN} />);
+    expect(container.innerHTML).toBe("");
   });
 
   it("distinguishes request failure without data from a healthy empty review", () => {

@@ -16,6 +16,7 @@ import {
   getDuration,
   getLockMetadata,
   isCumulativeIncidence,
+  isDdrInfrastructureReason,
 } from "@/components/depeg-resolver-row-card-model";
 
 export function StageLabel({ children }: { children: ReactNode }) {
@@ -101,7 +102,7 @@ export function LiveFacts({ row }: { row: DdrV2ResponseRow }) {
         </span>
       ) : null}
       {status ? <span className="text-foreground/70">{DDR_EVENT_STATE_LABELS[status]}</span> : null}
-      {live.degradedReason ? (
+      {live.degradedReason && !isDdrInfrastructureReason(live.degradedReason) ? (
         <span className="w-full text-muted-foreground" title={live.degradedReason}>
           Live overlay: {formatDdrReason(live.degradedReason)}.
         </span>

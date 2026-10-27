@@ -114,6 +114,14 @@ const DDR_REASON_LABELS: Record<string, string> = {
   "stale-cache": "showing the last cached build",
 };
 
+/** Serving-path reasons are operator signal (ADR-42); they never caption a reader's live facts. */
+export function isDdrInfrastructureReason(code: string): boolean {
+  return code === "stale-cache"
+    || code === "errata-overlay-read-failed"
+    || code === "lock-deferral-overlay-read-failed"
+    || code.startsWith("manifest-fallback:");
+}
+
 export function formatDdrReason(code: string): string {
   if (code.startsWith("manifest-fallback:")) return "served from the publication manifest";
   return DDR_REASON_LABELS[code] ?? code.replace(/[-_:]+/g, " ");

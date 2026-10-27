@@ -159,7 +159,8 @@ behind an explicit toggle that mounts them only when opened.
 - **Availability:** the hero's recovery totals and the worklist's whole-book/visible-slice
   claims use the same availability gate as forecast cards. Non-staleness degraded responses
   withhold all three even if retained rows exist. Explicit `stale-cache` responses with rows
-  retain frozen forecasts and the existing stale-overlay warning; this does not refresh any clock.
+  retain frozen forecasts without refreshing any clock; age admission belongs only to the route's
+  shared DDR/DDRR freshness notice (ADR-42), and live-fact captions omit serving-path reasons.
 - **Header scope:** the verdict split belongs to the hero. This header shows
   forecast and incident-row counts, the visible slice, new-worst count, and
   calibration lineage/coin count. A four-card slice is not the whole book.

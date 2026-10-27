@@ -638,12 +638,6 @@ export function DepegResolverReviewerModule({ data, error, logos }: DepegResolve
           <CoverageAccountabilityLedger summary={summary} />
           <ReviewerNote text={data._meta.publicWarning ?? DDRR_PUBLIC_WARNING} />
 
-          {data._meta.degraded ? (
-            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-state-warn-strong">
-              Reviewer snapshot is degraded: {data._meta.degradedReason ?? "unknown"}.
-            </p>
-          ) : null}
-
           {/* Track record — every graded call on one time axis, oldest to now */}
           <div className="space-y-2.5">
             <div className="flex items-center justify-between gap-3">

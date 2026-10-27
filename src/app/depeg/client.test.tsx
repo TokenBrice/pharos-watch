@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
 import { act, cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ReactNode } from "react";
 import { makePendingIncident } from "@/components/__tests__/depeg.test-support";
 import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "@/components/depeg-resolver-test-support";
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
+import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
 
 import { DepegClient } from "./client";
 import {
@@ -126,14 +127,30 @@ vi.mock("@/components/depeg-resolver-reviewer-module", () => ({
   DepegResolverReviewerModule: () => <div data-testid="depeg-resolver-reviewer" />,
 }));
 
+// Hydrate synchronously so the real banner ages captured queries against the fake wall clock;
+// fake timers here fake only setTimeout and Date, so they never capture this stub.
+beforeEach(() => {
+  vi.stubGlobal("requestAnimationFrame", (callback: FrameRequestCallback) => { callback(0); return 0; });
+});
+
 afterEach(() => {
   cleanup();
+  vi.unstubAllGlobals();
   // Unconditional: a failing assertion mid-case must not leak fake timers.
   vi.useRealTimers();
   vi.clearAllMocks();
 });
 
 const NOW_SEC = 1_700_000_000;
+
+/** Renders the real shared banner over the route's captured freshness queries for the given presets. */
+function renderCapturedNotices(presets: readonly string[]) {
+  const { queries } = mocks.QueryFreshnessNotices.mock.calls.at(-1)![0] as { queries: StaleQuery[] };
+  const { container } = render(
+    <StaleDataBanner queries={queries.filter((query) => query.preset != null && presets.includes(query.preset))} />,
+  );
+  return () => container.querySelector("[data-health-state]");
+}
 
 function mountDepegRoute(options: {
   coins?: Parameters<typeof makePegSummaryResult>[0]["coins"];
@@ -320,6 +337,33 @@ describe("DepegClient", () => {
     cleanup();
     mountDepegRoute({ signals: { malformedRows: 3 } });
     expect(screen.getByText(/3 malformed DEWS rows/)).toBeTruthy();
+  });
+
+  it("routes retained DDR and DDRR ages through the shared public stale band", () => {
+    vi.useFakeTimers({ now: NOW_SEC * 1000 + 901_000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+    const surfaces = makeResolverSurfaces();
+    const meta = { updatedAt: NOW_SEC, ageSeconds: 0, status: "fresh" as const };
+    surfaces.resolver.data!._meta = { ...surfaces.resolver.data!._meta, degraded: true, degradedReason: "stale-cache" };
+    mocks.usePegSummary.mockReturnValue(makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] }));
+    mocks.useStressSignals.mockReturnValue(makeStressSignalsResult());
+    mocks.useInfiniteDepegEvents.mockReturnValue(makeEventsResult());
+    mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
+    mocks.useDepegResolverSurfaces.mockReturnValue({
+      ...surfaces,
+      resolver: { ...surfaces.resolver, dataUpdatedAt: NOW_SEC * 1000, meta },
+      resolverReview: { ...surfaces.resolverReview, dataUpdatedAt: NOW_SEC * 1000, meta, error: new Error("HTTP 503") },
+    });
+    render(<DepegClient />);
+    const banner = renderCapturedNotices(["depegResolver", "depegResolverReview"]);
+    act(() => vi.advanceTimersByTime(0));
+    expect(banner()).toBeNull();
+    // Exactly 12 x 900 s is still inside the degraded band.
+    act(() => vi.advanceTimersByTime(10_800_000 - 901_000));
+    expect(banner()).toBeNull();
+    act(() => vi.advanceTimersByTime(1));
+    expect(banner()?.getAttribute("data-health-state")).toBe("stale");
+    expect(surfaces.resolver.refetch).not.toHaveBeenCalled();
+    expect(surfaces.resolverReview.refetch).not.toHaveBeenCalled();
   });
 
   it("excludes disabled DDR surfaces from rendering, freshness, and retry", async () => {
