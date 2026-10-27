@@ -1,3 +1,5 @@
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 import committedRegistry from "../../shared/data/safety-score-v9/shock-coverage-measurements-v1.json";
 import {
@@ -140,5 +142,33 @@ describe("shock coverage registry admission", () => {
 
   it("admits the unchanged inclusive 36h refresh boundary", () => {
     expect(evaluate([measurement("bd-basedollar")], NOW_SEC + 36 * 60 * 60).failures).toEqual([]);
+  });
+});
+
+describe("shock coverage refresh workflow cadence", () => {
+  const workflow = readFileSync(
+    resolve(__dirname, "../../.github/workflows/shock-coverage-refresh.yml"),
+    "utf8",
+  );
+
+  it("acquires daily and gates the targets job on the same schedule", () => {
+    expect(workflow).toContain('- cron: "41 3 * * *"');
+    expect(workflow).toContain("github.event.schedule == '41 3 * * *'");
+    expect(workflow).not.toContain("*/2");
+  });
+
+  it("keeps the independent daily freshness check and manual dispatch", () => {
+    expect(workflow).toContain('- cron: "11 9 * * *"');
+    expect(workflow).toContain("github.event.schedule == '11 9 * * *'");
+    expect(workflow).toContain("workflow_dispatch:");
+  });
+
+  it("rejects a complete attested row that is 48h old", () => {
+    expect(evaluateShockCoverageFreshness({
+      registry: { measurements: [measurement("bd-basedollar")] },
+      maxAgeSec: 72 * 60 * 60,
+      nowSec: NOW_SEC + 48 * 60 * 60,
+      requiredAssetIds: ["bd-basedollar"],
+    }).failures).toEqual([expect.stringContaining("over the 36h refresh budget")]);
   });
 });
