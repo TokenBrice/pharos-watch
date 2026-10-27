@@ -12,6 +12,9 @@ import {
 import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { buildFixedInputCacheEntry } from "../report-cards-fixed-input-cache-codec";
+import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { sha256Hex } from "@shared/lib/sha256";
 
 const base = makeV9FixedInput({ assetId: "wm-m0", clockSec: 1_800_000_000, aggregateCirculating: { peggedUSD: 87_020_618.58982982 } });
 const enriched = withV9WmReviewedDeploymentAttribution(base);
@@ -108,5 +111,46 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
     substituted.pipelineGapByAssetId!["wm-m0"]![0]!.evidence.rejection!.reason = "A different failure.";
     await expect(parseSafetyScoreV9PublicationReplayCapture(entry.value, substituted))
       .rejects.toThrow("accepted-publication-replay-pipeline-gap-identity-mismatch");
+  });
+
+  describe("v3 source-admission baseline reader (writers remain v2)", () => {
+    const prior = buildSafetyScoreV9AcceptedPublicationBaseline(makeWorkerSafetyScoreV9Publication({
+      baseInputGenerationId: enriched.baseInputGenerationId, publishedAtSec: base.clockSec - 1800,
+      publicationGenerationId: "accepted-old",
+    }));
+    const admission = (baseline = prior) => ({ sha256: sha256Hex(stableJsonStringifyV1(baseline)), baseline });
+    const v3Entry = (extra: Record<string, unknown>) => buildFixedInputCacheEntry({
+      schemaVersion: 2, sourceGeneration: publication.publicationGenerationId,
+      payload: { schemaVersion: 3, publicationGenerationId: publication.publicationGenerationId,
+        baseInputGenerationId: base.baseInputGenerationId, pipelineGapDigest: null,
+        enrichment: { safetyScoreV9SupplyAttributionById: base.safetyScoreV9SupplyAttributionById,
+          evidenceJournalById: base.evidenceJournalById, supplyAttributionJournalById: base.supplyAttributionJournalById, pegProvenanceById: base.pegProvenanceById },
+        transferMaterialityGeneration: null, ...extra },
+      label: "v3 delta fixture",
+    });
+
+    it("keeps the writer on v2, whose parsed capture carries no baseline claim", async () => {
+      const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null);
+      expect(JSON.parse(entry.value).schemaVersion).toBe(2);
+      expect("sourceAdmissionBaseline" in await parseSafetyScoreV9PublicationReplayCapture(entry.value, base)).toBe(false);
+    });
+
+    it("restores the exact checksummed prior baseline, and an explicit null bootstrap", async () => {
+      const restored = await parseSafetyScoreV9PublicationReplayCapture((await v3Entry({ sourceAdmissionBaseline: admission() })).value, base);
+      expect(restored.sourceAdmissionBaseline).toEqual(admission());
+      const bootstrap = await parseSafetyScoreV9PublicationReplayCapture((await v3Entry({ sourceAdmissionBaseline: null })).value, base);
+      expect(bootstrap.sourceAdmissionBaseline).toBeNull();
+    });
+
+    it.each([
+      ["a missing required-nullable baseline", () => ({}), "sourceAdmissionBaseline"],
+      ["a tampered baseline", () => ({ sourceAdmissionBaseline: { ...admission(), baseline: { ...prior, publicationGenerationId: "accepted-forged" } } }), "accepted-publication-replay-baseline-checksum-mismatch"],
+      ["a baseline newer than the capture clock", () => admission({ ...prior, publishedAtSec: base.clockSec + 1 }), "accepted-publication-replay-baseline-clock-after-capture"],
+      ["duplicate prior IDs", () => admission({ ...prior, cards: [prior.cards[0]!, prior.cards[0]!] }), "unique and sorted"],
+    ] as const)("rejects %s", async (_label, extra, reason) => {
+      const value = extra();
+      const payload = "sha256" in value ? { sourceAdmissionBaseline: value } : value;
+      await expect(parseSafetyScoreV9PublicationReplayCapture((await v3Entry(payload)).value, base)).rejects.toThrow(reason);
+    });
   });
 });

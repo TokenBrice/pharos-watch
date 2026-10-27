@@ -6,6 +6,7 @@ import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "./publication-codec";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { sha256Hex } from "@shared/lib/sha256";
+import { AcceptedPublicationBaselineSchema, type SafetyScoreV9AcceptedPublicationBaseline } from "./publication-assessment";
 
 const envelopeSchema = z.object({ schemaVersion: z.literal(2), ...FixedInputCacheEnvelopeFields }).strict();
 const payloadFields = {
@@ -20,11 +21,34 @@ const payloadFields = {
   transferMaterialityGeneration: z.unknown(),
 };
 const historicalPayloadSchema = z.object({ schemaVersion: z.literal(1), ...payloadFields }).strict();
-const payloadSchema = z.object({
-  schemaVersion: z.literal(2),
-  ...payloadFields,
-  pipelineGapDigest: z.string().regex(/^[a-f0-9]{64}$/u).nullable(),
+const pipelineGapDigest = z.string().regex(/^[a-f0-9]{64}$/u).nullable();
+const payloadSchema = z.object({ schemaVersion: z.literal(2), ...payloadFields, pipelineGapDigest }).strict();
+const SourceAdmissionBaselineSchema = z.object({
+  sha256: z.string().regex(/^[a-f0-9]{64}$/u),
+  baseline: AcceptedPublicationBaselineSchema,
+}).strict().nullable();
+// Readers precede the K-092 v3 writer; writers still emit v2.
+const baselinePayloadSchema = z.object({
+  schemaVersion: z.literal(3), ...payloadFields, pipelineGapDigest,
+  sourceAdmissionBaseline: SourceAdmissionBaselineSchema,
 }).strict();
+
+export interface SafetyScoreV9SourceAdmissionBaseline {
+  sha256: string;
+  baseline: SafetyScoreV9AcceptedPublicationBaseline;
+}
+
+/**
+ * The prior accepted baseline the publication-time grade hysteresis consumed.
+ * Null is a genuine bootstrap; v1/v2 captures carry no field and stay unknown.
+ */
+export function parseSafetyScoreV9SourceAdmissionBaseline(value: unknown, captureClockSec: number): SafetyScoreV9SourceAdmissionBaseline | null {
+  const parsed = SourceAdmissionBaselineSchema.parse(value);
+  if (parsed === null) return null;
+  if (parsed.sha256 !== sha256Hex(stableJsonStringifyV1(parsed.baseline))) throw new Error("accepted-publication-replay-baseline-checksum-mismatch");
+  if (parsed.baseline.publishedAtSec > captureClockSec) throw new Error("accepted-publication-replay-baseline-clock-after-capture");
+  return parsed;
+}
 
 /** Both retained rows must come from one D1 SELECT, never separate live reads. */
 export function parseSafetyScoreV9PublicationReplayCacheRows(value: unknown) {
@@ -93,18 +117,22 @@ export async function parseSafetyScoreV9PublicationReplayCapture(value: unknown,
     artifactLabel: "Accepted Safety Score V9 replay delta",
   });
   // Historical deltas restore enrichment only; they never infer missing cause proofs.
-  const parsed = payload !== null && typeof payload === "object" && "schemaVersion" in payload && payload.schemaVersion === 1
-    ? historicalPayloadSchema.parse(payload) : payloadSchema.parse(payload);
+  const version = payload !== null && typeof payload === "object" && "schemaVersion" in payload ? payload.schemaVersion : undefined;
+  const parsed = version === 1 ? historicalPayloadSchema.parse(payload)
+    : version === 3 ? baselinePayloadSchema.parse(payload) : payloadSchema.parse(payload);
   if (parsed.publicationGenerationId !== envelope.sourceGeneration) throw new Error("accepted-publication-replay-delta-generation-mismatch");
   if (parsed.baseInputGenerationId !== baseInput.baseInputGenerationId) throw new Error("accepted-publication-replay-base-generation-mismatch");
   if ("pipelineGapDigest" in parsed && parsed.pipelineGapDigest !==
     (baseInput.pipelineGapByAssetId === undefined ? null : sha256Hex(stableJsonStringifyV1(baseInput.pipelineGapByAssetId)))) {
     throw new Error("accepted-publication-replay-pipeline-gap-identity-mismatch");
   }
+  const sourceAdmissionBaseline = "sourceAdmissionBaseline" in parsed
+    ? parseSafetyScoreV9SourceAdmissionBaseline(parsed.sourceAdmissionBaseline, baseInput.clockSec) : undefined;
   return {
     kind: "safety-score-v9-accepted-publication-capture" as const,
     publicationGenerationId: parsed.publicationGenerationId,
     fixedInput: normalizeSafetyScoreV9CompilerInput({ ...baseInput, ...parsed.enrichment }),
     transferMaterialityGeneration: parsed.transferMaterialityGeneration === null ? null : parseSafetyScoreV9TransferMaterialityGeneration(parsed.transferMaterialityGeneration),
+    ...(sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline }),
   };
 }

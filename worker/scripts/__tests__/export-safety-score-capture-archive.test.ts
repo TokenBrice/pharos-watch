@@ -16,6 +16,10 @@ import { buildReportCardsFixedInputCacheEntry } from "../../src/test-helpers/rep
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, serializeSafetyScoreV9Publication, serializeSafetyScoreV9PublicationWithEncoding } from "../../src/lib/safety-score-v9/publication-codec";
 import type { SafetyScoreCaptureArchiveObject } from "@shared/types/safety-score-capture-archive";
+import { buildFixedInputCacheEntry } from "../../src/lib/report-cards-fixed-input-cache-codec";
+import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../../src/lib/safety-score-v9/publication-assessment";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import { sha256Hex } from "@shared/lib/sha256";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -88,6 +92,36 @@ describe("Safety Score capture archive export", () => {
       expect(JSON.parse(readFileSync(cards, "utf8"))).toEqual(fixture.publication);
       expect(getObject).not.toHaveBeenCalled();
       expect(client.queryRaw.mock.calls[0]![0]).toMatch(/^SELECT /u);
+    } finally { rmSync(dir, { recursive: true, force: true }); }
+  });
+
+  it("preserves a v3 source-admission baseline through archive export and the capture CLI", async () => {
+    const fixture = await archiveFixture();
+    const baseline = buildSafetyScoreV9AcceptedPublicationBaseline(makeWorkerSafetyScoreV9Publication({
+      baseInputGenerationId: fixture.base.baseInputGenerationId, publishedAtSec: CLOCK - 1800, publicationGenerationId: "report-cards:v9:fixture-prior",
+    }));
+    const sourceAdmissionBaseline = { sha256: sha256Hex(stableJsonStringifyV1(baseline)), baseline };
+    const b = fixture.base;
+    const delta = await buildFixedInputCacheEntry({
+      schemaVersion: 2, sourceGeneration: fixture.row.generation_id,
+      payload: { schemaVersion: 3, publicationGenerationId: fixture.row.generation_id, baseInputGenerationId: b.baseInputGenerationId, pipelineGapDigest: null,
+        enrichment: { safetyScoreV9SupplyAttributionById: b.safetyScoreV9SupplyAttributionById, evidenceJournalById: b.evidenceJournalById,
+          supplyAttributionJournalById: b.supplyAttributionJournalById, pegProvenanceById: b.pegProvenanceById },
+        transferMaterialityGeneration: null, sourceAdmissionBaseline },
+      label: "v3 archive fixture",
+    });
+    const object = { ...fixture.object, delta: { ...fixture.object.delta, value: delta.value } };
+    const bytes = Buffer.from(JSON.stringify(object));
+    const row = { ...fixture.row, object_sha256: createHash("sha256").update(bytes).digest("hex"), object_bytes: bytes.length };
+    const dir = mkdtempSync(resolve(tmpdir(), "pharos-archive-v3-"));
+    vi.spyOn(process.stdout, "write").mockReturnValue(true);
+    try {
+      const output = resolve(dir, "accepted.raw.json"), cards = resolve(dir, "cards.json"), capture = resolve(dir, "capture.json");
+      await runSafetyScoreCaptureArchiveCli(["export", "--generation", row.generation_id, "--output", output, "--cards-output", cards], {
+        client: { queryRaw: () => JSON.stringify([{ success: true, results: [row] }]) }, getObject: async () => bytes,
+      });
+      await runReportCardsFixedInputCaptureCli(["--accepted-cache-export", output, "--output", capture]);
+      expect(JSON.parse(readFileSync(capture, "utf8")).sourceAdmissionBaseline).toEqual(sourceAdmissionBaseline);
     } finally { rmSync(dir, { recursive: true, force: true }); }
   });
 
