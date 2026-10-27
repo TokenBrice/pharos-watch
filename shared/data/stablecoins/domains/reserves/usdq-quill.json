@@ -62,8 +62,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (RuleC11)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
     "confidence": "verified",
     "sources": [
       {
@@ -79,13 +79,13 @@
         "url": "https://docs.quill.finance/documentation/contract-addresses"
       },
       {
-        "label": "Scroll public RPC",
+        "label": "Scroll public RPC, block 35517218 (2026-10-27T16:15:49Z)",
         "url": "https://rpc.scroll.io"
       }
     ],
-    "rationale": "At Scroll block 35237908 (2026-10-01T11:18:13Z), CollateralRegistry.totalCollaterals() and getToken/getTroveManager enumerate exactly four branches. Their complete getEntireBranchColl balances, including residual SCR collateral after shutdown, valued at the corresponding protocol fetchPrice reference produce 1.53% WETH, 97.26% wstETH, 1.20% weETH and 0.01% SCR. Independently reproduced division is admitted under D01; asset categories, source keys, unknown liquidity and other risk facts are unchanged.",
-    "compositionBasis": "Complete four-branch on-chain census at Scroll block 35237908: 18-decimal token amounts times 18-decimal protocol USD prices, divided by their total USD value 104747.843634775771581997010499671890246859; percentages independently rounded to two decimals. Protocol reference-price composition, not an independent solvency attestation.",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "At Scroll block 35517218 (hash 0xf25418f270b4a0be3b14c5a58db04716bb61ceb32f839144109eb212b5662734, 2026-10-27T16:15:49Z), CollateralRegistry.totalCollaterals() and getToken/getTroveManager enumerate exactly four branches. Their complete getEntireBranchColl balances, including residual SCR collateral after shutdown, valued at the TroveManager getUnbackedPortionPriceAndRedeemability protocol price reference produce 1.53% WETH, 97.26% wstETH, 1.20% weETH and 0.01% SCR. Independently reproduced division is admitted under D01; asset categories, source keys, unknown liquidity and other risk facts are unchanged.",
+    "compositionBasis": "Complete four-branch on-chain census at Scroll block 35517218: 18-decimal token amounts times 18-decimal protocol USD prices, divided by their total USD value 91355.8165506757838518679764014876964417; percentages independently rounded to two decimals. Protocol reference-price composition, not an independent solvency attestation.",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "All configured positive Quill branches are identified; validator, wrapper, and liquidation-liquidity details remain structured risks within the four classified exposures.",
     "knownUnknownExposurePct": 0,

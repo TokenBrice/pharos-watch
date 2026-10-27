@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R81 primary-source and pinned Sonic liquidity review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
     "confidence": "verified",
     "sources": [
       {
@@ -29,11 +29,11 @@
         "url": "https://sonicscan.org/address/0x54e14489646fd9693ea5071cb5dfeb1f5afa8f03#code"
       },
       {
-        "label": "Sonic public RPC",
+        "label": "Sonic public RPC, block 81698953 (2026-10-27T16:15:14Z)",
         "url": "https://rpc.soniclabs.com"
       },
       {
-        "label": "Frax frxUSD balance sheet",
+        "label": "Frax frxUSD balance sheet (as of 2026-10-27T16:03:47Z)",
         "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
       },
       {
@@ -45,9 +45,9 @@
         "url": "https://sonicscan.org/address/0xD2478F5db285e7d4f1a260C9f142168124d02370#code"
       }
     ],
-    "rationale": "The original 2026-10-01 composition is preserved. Liquidity metadata reviewed at Sonic block 80306692 on 2026-10-03: actual frxUSD balanceOf(custodian), totalAssets() and native USSD totalSupply() all equal 970845213627100913413464 base units. The beacon returns implementation 0xd2478f5db285e7d4f1a260c9f142168124d02370. Its verified full source burns caller-owned USSD and transfers idle frxUSD atomically; isolatedBackingEnabled=false, router=0, individualCustodian=0, redeemFee=0. Immediate describes availability of the entire direct frxUSD position under the local withdrawal mechanism, not sale at a guaranteed USD price or final bank settlement. Owner recovery, isolation activation, token freeze and upgrade powers remain separate adverse controls; parent reserves and fiat redemption remain inherited.",
-    "compositionBasis": "Fixed-block Sonic frxUSD balanceOf the USSD BrandedCustodian reconciled to USSD totalSupply",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "Renewed 2026-10-27. At Sonic block 81698953 (hash 0xee13e735d08f9e4cc6169fd75b29bc4670f1aa0b3db6cea063b7cac28a1281b4, 2026-10-27T16:15:14Z), actual frxUSD 0x80Eede496655FB9047dd39d9f418d5483ED600df balanceOf(custodian), totalAssets() and native USSD totalSupply() all equal 922116925044993028303998 base units, so the single direct slice remains 100% frxUSD. The Frax frxUSD balance-sheet API (asOfTimestamp 2026-10-27T16:03:47Z) was re-read for the upstream frxUSD record. The EIP-1967 beacon 0x251d07287c12707418a414b2c95436b4216b7bf4 returns implementation 0xd2478f5db285e7d4f1a260c9f142168124d02370. Its verified full source burns caller-owned USSD and transfers idle frxUSD atomically; isolatedBackingEnabled=false, router=0, redeemFee=0 re-read at the new block. Immediate describes availability of the entire direct frxUSD position under the local withdrawal mechanism, not sale at a guaranteed USD price or final bank settlement. Owner recovery, isolation activation, token freeze and upgrade powers remain separate adverse controls; parent reserves and fiat redemption remain inherited.",
+    "compositionBasis": "Fixed-block Sonic frxUSD balanceOf the USSD BrandedCustodian reconciled to USSD totalSupply at block 81698953",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct reserve asset is fully identified as frxUSD. Asset-level reserve and custody risks beneath frxUSD remain inherited from the linked upstream record rather than repeated here.",
     "knownUnknownExposurePct": 0
