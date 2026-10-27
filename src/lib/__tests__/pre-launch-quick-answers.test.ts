@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildPreLaunchQuickAnswers, firstOneLinerClause } from "@/lib/pre-launch-quick-answers";
 
 const base = {
@@ -39,6 +40,13 @@ describe("buildPreLaunchQuickAnswers", () => {
     expect(
       buildPreLaunchQuickAnswers({ ...base, launchPhase: undefined, announcedDate: undefined })[0].answer,
     ).toMatch(/^Pharos has not recorded a launch phase for QEUR\. The current launch target/);
+  });
+
+  it("states no calendar target for EJPY's fiscal-year plan", () => {
+    const ejpy = TRACKED_META_BY_ID.get("ejpy-jbfd")!;
+    const answer = buildPreLaunchQuickAnswers(ejpy)[0].answer;
+    expect(answer).toContain("No target date is set.");
+    expect(answer).not.toContain("The current launch target is 2026");
   });
 
   it("asks the chain question only when deployments are recorded, and the issuer one only with a oneLiner", () => {

@@ -1,8 +1,8 @@
 // @vitest-environment jsdom
 
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { GeniusComplianceRow } from "@/lib/compliance-model";
+import type { ComplianceRow, GeniusComplianceRow } from "@/lib/compliance-model";
 
 const fixtures = vi.hoisted(() => ({ loadDetail: vi.fn() }));
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({
@@ -13,6 +13,7 @@ vi.mock("@shared/lib/stablecoins/client-detail", () => ({
 }));
 
 import { ComplianceTable } from "./compliance-table";
+import { MicaPathwayCell } from "./mica-compliance-cells";
 
 const reference = { label: "Regulator register", url: "https://example.com/register" };
 const detail = {
@@ -107,5 +108,25 @@ describe("ComplianceTable lazy GENIUS evidence", () => {
     await screen.findByText(detail.genius.notes);
     expect(fixtures.loadDetail).toHaveBeenCalledTimes(2);
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("MicaPathwayCell significance badge", () => {
+  const micaRow = (significant: boolean): Extract<ComplianceRow, { regime: "mica" }> => ({
+    regime: "mica", id: "fixture-emt", name: "Fixture EMT", symbol: "FEMT", peg: "EUR",
+    status: "authorized", tokenType: "EMT", authorizationType: "emi", competentAuthority: "ACPR",
+    significant, references: [],
+  });
+
+  it("describes a significant token as an EBA designation, not active EBA supervision", () => {
+    const { container } = render(<MicaPathwayCell row={micaRow(true)} />);
+    const badge = within(container).getByText("Significant").closest("span");
+    expect(badge?.getAttribute("title")).toBe("Classified by the EBA as a significant EMT or ART");
+    expect(container.querySelector('[title*="supervised"]')).toBeNull();
+  });
+
+  it("omits the badge when the token is not designated", () => {
+    const { container } = render(<MicaPathwayCell row={micaRow(false)} />);
+    expect(within(container).queryByText("Significant")).toBeNull();
   });
 });

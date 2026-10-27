@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DRIFT_STATUS_LABEL } from "@shared/lib/classification/pre-launch";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   DRIFT_STATUS_BADGE,
   dateScore,
@@ -48,6 +49,16 @@ describe("pre-launch drift deadlines", () => {
       }
     },
   );
+});
+
+describe("fiscal-year launch targets", () => {
+  it("keeps EJPY's FY2026 target out of the calendar-year deadline", () => {
+    const ejpy = TRACKED_META_BY_ID.get("ejpy-jbfd")!;
+    expect(ejpy.expectedLaunchDate).toBeUndefined();
+    for (const now of ["2027-01-01T00:00:00Z", "2027-04-01T00:00:00Z"]) {
+      expect(getDriftStatus(ejpy.dateHistory, ejpy.expectedLaunchDate, Date.parse(now))).toBe("on-track");
+    }
+  });
 });
 
 describe("pre-launch clock view", () => {

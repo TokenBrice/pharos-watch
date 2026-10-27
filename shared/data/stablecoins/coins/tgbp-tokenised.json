@@ -116,9 +116,9 @@
     "semantics": "single-asset",
     "breakerScope": "tgbp-tokenised",
     "suspended": {
-      "reason": "api.tgbp.io returns HTTP 403 to Cloudflare Workers egress since 2026-09-10; curated reserve evidence remains authoritative until the issuer allows the feed",
+      "reason": "api.tgbp.io returned HTTP 403 to Cloudflare Workers egress from 2026-09-10 and HTTP 503 at the 2026-10-26 review, when the newest transparency report was still August 31; curated reserve evidence remains authoritative until the issuer allows the feed",
       "since": "2026-09-11",
-      "reviewBy": "2026-10-11"
+      "reviewBy": "2026-11-20"
     },
     "display": {
       "url": "https://www.tokenisedgbp.com/",

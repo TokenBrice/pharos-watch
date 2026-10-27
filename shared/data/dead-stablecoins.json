@@ -1914,9 +1914,9 @@
     "recordedAt": "2026-05-12",
     "peakMcap": 14000000,
     "epitaph": "First Solana CDP, last one standing",
-    "obituary": "Hubble Protocol launched USDH in 2022 as one of the earliest Solana CDP stablecoins, peaking near $14M. By May 2026 CoinGecko reports a $0 market cap, on-DEX volume has collapsed, and the redemption pool no longer offers a credible exit. The asset is treated as wound down; future coverage scans should skip it. Symbol collides with Native Markets USDH (tracked) and Hermetica USDH (tracked).",
-    "sourceUrl": "https://www.coingecko.com/en/coins/usdh",
-    "sourceLabel": "CoinGecko"
+    "obituary": "Hubble Protocol launched USDH in 2022 as one of the earliest Solana CDP stablecoins, peaking near $14M. This May 2026 entry records Pharos's assessment, based on the market data available then, that the coin had been abandoned. An October 26, 2026 review found DefiLlama (ID 65) still reporting USDH supply and Hubble's documentation and app still reachable, though neither shows that borrowing or redemption currently works. Pharos still tracks the same Hubble USDH on Solana; this entry is a historical record, not a current exclusion. Symbol collides with Native Markets USDH (tracked) and Hermetica USDH (tracked).",
+    "sourceUrl": "https://stablecoins.llama.fi/stablecoin/65",
+    "sourceLabel": "DefiLlama: USDH supply (October 26, 2026 review)"
   },
   {
     "id": "xai-silo-finance",

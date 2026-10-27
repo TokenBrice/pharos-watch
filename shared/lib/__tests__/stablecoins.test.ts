@@ -3,7 +3,9 @@ import { DETAIL_PROVIDER_VALUES } from "../../types/core";
 import deadStablecoinAsset from "../../data/dead-stablecoins.json";
 import canonicalOrderAsset from "../../data/stablecoins/canonical-order.json";
 import perCoinGeneratedAsset from "../../data/stablecoins/coins.generated.json";
+import hkdHsbcSource from "../../data/stablecoins/coins/hkd-hsbc.json";
 import usdxlSource from "../../data/stablecoins/coins/usdxl-last.json";
+import hkdHsbcCompliance from "../../data/stablecoins/domains/compliance/hkd-hsbc.json";
 import { DEAD_STABLECOINS } from "../dead-stablecoins";
 import {
   ACTIVE_META_BY_ID,
@@ -1043,7 +1045,7 @@ describe("suspended live reserve feeds", () => {
   it("keeps the partial USDXL pool feed out of score-grade runtime metadata", () => {
     expect(usdxlSource.liveReservesConfig.suspended).toMatchObject({
       since: "2026-08-27",
-      reviewBy: "2026-09-10",
+      reviewBy: "2026-11-20",
     });
 
     const runtime = TRACKED_META_BY_ID.get("usdxl-last");
@@ -1051,5 +1053,69 @@ describe("suspended live reserve feeds", () => {
     expect(runtime?.reserves).toMatchObject([
       { pct: 100, risk: "very-high" },
     ]);
+  });
+});
+
+describe("RedCoin issuer-disclosure reconciliation", () => {
+  const genius = hkdHsbcCompliance.genius;
+
+  it("records the issuer's disclosures without inventing an attestation series", () => {
+    expect(genius).toMatchObject({
+      reserveDisclosurePresent: true,
+      reserveDisclosureUrl: "https://www.hsbc.com.hk/stablecoins/",
+      redemptionPolicyPresent: true,
+      monthlyAttestationPresent: false,
+      reviewer: "Pharos compliance research",
+      reviewedAt: "2026-10-26",
+    });
+    expect(genius.references).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        url: "https://www.about.hsbc.com.hk/news-and-media/hsbc-redcoin-launches-today",
+        sourceKind: "issuer-disclosure",
+        sourceDate: "2026-10-23",
+      }),
+    ]));
+  });
+
+  it("keeps the issuer, U.S. authorization finding and pre-launch lifecycle unchanged", () => {
+    expect(genius).toMatchObject({
+      authorizationStatus: "no-public-authorization-found",
+      issuerPathway: "unknown",
+      issuerEntity: "The Hongkong and Shanghai Banking Corporation Limited",
+      foreignExceptionStatus: "unknown",
+      enforcementStatus: "no-public-action-found",
+      daspOfferSaleStatus: "not-yet-restricted",
+    });
+    expect(genius.negativeEvidenceReview.reviewedAt).toBe("2026-10-07");
+    expect(hkdHsbcSource).toMatchObject({ status: "pre-launch", launchPhase: "launching-soon" });
+    expect(TRACKED_META_BY_ID.get("hkd-hsbc")?.status).toBe("pre-launch");
+  });
+
+  it("drops the superseded forthcoming and no-issuance claims from current-state fields", () => {
+    const current = [
+      hkdHsbcSource.oneLiner,
+      hkdHsbcSource.pegMechanism,
+      hkdHsbcSource.launchPhaseDetail,
+      genius.applicabilityBasis.summary,
+      genius.notes,
+    ].join("\n");
+    expect(current).not.toMatch(/forthcoming|no stablecoins (?:have yet been )?issued|once HSBC launches|no contract or supply data/i);
+    expect(genius.references.map((reference) => reference.label)).not.toContain(
+      "HSBC RedCoin product disclosures: no stablecoins issued yet",
+    );
+  });
+});
+
+describe("launched-awaiting-data review reasons", () => {
+  it.each([
+    ["usdf-flipcash", /DefiLlama returned a quote for the Solana mint without naming its source market.*not enough to admit the quote \(#1663\)/],
+    ["swanusd-swan", /DefiLlama returned a fresh contract quote on October 26, 2026, but its source is unverified and the quote has not been admitted/],
+  ])("keeps %s awaiting data with an explicit admitted-price gap", (id, reason) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    expect(coin).toMatchObject({ status: "pre-launch", launchPhase: "launched" });
+    expect(coin.listingStatusReview).toMatchObject({ changedAt: "2026-10-25", reviewBy: "2026-12-24" });
+    expect(coin.listingStatusReview?.reason).toMatch(/^Missing lane: price\./);
+    expect(coin.listingStatusReview?.reason).toMatch(reason);
+    expect(ACTIVE_META_BY_ID.has(id)).toBe(false);
   });
 });

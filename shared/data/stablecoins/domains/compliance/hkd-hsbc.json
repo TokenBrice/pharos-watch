@@ -3,7 +3,7 @@
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
-      "summary": "RCHKD is the catalog entry for HSBC RedCoin, the forthcoming HKD fiat-referenced payment stablecoin of The Hongkong and Shanghai Banking Corporation Limited, licensed by HKMA and designed for 1:1 HKD redemption. It is separate from HSBC tokenized deposits."
+      "summary": "RCHKD is HSBC RedCoin, the HKD fiat-referenced payment stablecoin issued by The Hongkong and Shanghai Banking Corporation Limited and launched through PayMe on October 23, 2026. Its terms provide redemption at par in HKD. It is separate from HSBC tokenized deposits."
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
@@ -13,10 +13,11 @@
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "reserveDisclosurePresent": false,
-    "redemptionPolicyPresent": false,
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.hsbc.com.hk/stablecoins/",
+    "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "HSBC holds an HKMA stablecoin issuer licence for a planned HKD stablecoin, but no U.S. GENIUS PPSI approval, official application, OCC foreign-issuer registration, or Treasury comparability determination was found. HSBC named the product HSBC RedCoin on September 30, 2026 and its current product page explicitly says no stablecoins have yet been issued in Hong Kong. Public disclosures describe future segregated liquid reserves and intended 1:1 redemption, but no issued-token reserve report, operative redemption policy or monthly report series was found. The existing false disclosure flags are retained on this basis. Bank-group status and HKMA licence FRS02 do not confer a U.S. GENIUS route on the exact Hong Kong issuer. DASP not-yet-restricted reflects GENIUS timing, not a finding of U.S. distribution or permission under other U.S. law.",
+    "notes": "Issuer-disclosure review, 2026-10-26. HSBC launched RedCoin through PayMe on October 23, 2026. The issuer now publishes circulation and reserve disclosures, a whitepaper, a reserve assets policy and operative terms providing HKD redemption at par through permitted channels. The whitepaper describes a private permissioned chain. These are issuer statements, not independent verification of public-chain supply. HSBC's product page says the first independent attestation is expected after Q4 2026, and the whitepaper describes at-least-quarterly reporting; this review found no published monthly attestation series. The U.S. authorization finding comes from the separate October 7, 2026 review, which this check did not renew. Bank-group status and HKMA licence FRS02 do not establish a U.S. GENIUS route for this issuer. The DASP status “Not yet restricted” reflects GENIUS timing, not a finding of U.S. distribution or permission under other U.S. law.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -73,10 +74,43 @@
         "sourceDate": "2026-09-30"
       },
       {
-        "label": "HSBC RedCoin product disclosures: no stablecoins issued yet",
+        "label": "HSBC RedCoin product and reserve disclosures",
         "url": "https://www.hsbc.com.hk/stablecoins/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-26"
+      },
+      {
+        "label": "HSBC RedCoin launch announcement, October 23, 2026",
+        "url": "https://www.about.hsbc.com.hk/news-and-media/hsbc-redcoin-launches-today",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-26",
+        "sourceDate": "2026-10-23"
+      },
+      {
+        "label": "HSBC RedCoin whitepaper, October 23, 2026",
+        "url": "https://www.hsbc.com.hk/content/dam/hsbc/hk/docs/mobile/stablecoin-whitepaper.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-26",
+        "sourceDate": "2026-10-23"
+      },
+      {
+        "label": "HSBC RedCoin reserve assets policy, October 23, 2026",
+        "url": "https://www.hsbc.com.hk/content/dam/hsbc/hk/docs/mobile/stablecoin-reserve-assets-policy.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-26",
+        "sourceDate": "2026-10-23"
+      },
+      {
+        "label": "HSBC RedCoin terms",
+        "url": "https://www.hsbc.com.hk/content/dam/hsbc/hk/docs/mobile/stablecoin-terms.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-26"
+      },
+      {
+        "label": "HKMA register of licensed stablecoin issuers",
+        "url": "https://www.hkma.gov.hk/eng/regulatory-resources/registers/register-of-licensed-stablecoin-issuers/",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-26"
       }
     ],
     "negativeEvidenceReview": {
@@ -131,6 +165,6 @@
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-10-26"
   }
 }

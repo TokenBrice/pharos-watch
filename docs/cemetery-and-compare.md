@@ -35,6 +35,8 @@ The page prints its inclusion and primary-cause rules in the methodology section
 
 Every new curated row sets `recordedAt` to the UTC date it is added to Pharos. `parseDeadStablecoinAssets` rejects a curated row without a valid strict `YYYY-MM-DD` `recordedAt`. Set `mechanismArchetype` as well: the schema accepts its absence, but every curated row is classified today and `shared/lib/__tests__/cemetery-merged.test.ts` fails on an unclassified curated row. Classify how the coin was designed to hold its peg, independently of how it died.
 
+A curated row may share provider identity with a still-tracked coin only through `ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST` in `scripts/ci/check-stablecoin-data.ts` (Kava USDX, Hubble USDH). Such a row is a historical assessment, not a current exclusion: its obituary must not direct coverage to skip the tracked coin or state current-market facts the active profile contradicts.
+
 New ids must not equal a section anchor or start with a reserved element-id prefix (`CEMETERY_SECTION_ANCHORS`, `CEMETERY_RESERVED_ID_PREFIXES`); `findCemeteryIdCollisions` must stay empty for the real set.
 
 Every new death also has to fit the plot map. `src/lib/__tests__/cemetery-plot-map.test.ts` runs `validatePlotMapCapacity` on the real data in both presets, so a record that overfills a year block or shrinks plain stones below `PLOT_LAYOUT.faceFloorPx` fails the suite. Treat that failure as a design review: retune the lane depths in `PLOT_MAP_PRESETS` (or, as the archive approaches a few hundred records, add a deliberate overview and zoom policy), and never lower the face floor to make stones fit.
