@@ -45,7 +45,7 @@ The shared shell emits Breadcrumb JSON-LD. The hub adds DefinedTermSet and distr
 
 ## Sitemap + Inbound Surfaces
 
-`src/app/sitemap.ts` includes both hubs and every registered detail route. `scripts/maintenance/generate-sitemap-dates.ts` derives article modification dates from content, never deploy-time `now`.
+`src/app/sitemap.ts` includes both hubs and every registered detail route. `scripts/maintenance/generate-sitemap-dates.ts` derives article modification dates from the Git commit history of each study's JSON plus its shared renderer and `shared/types/editorial-content.ts` schema, never deploy-time `now` or checkout mtime; a scanned source without history fails generation. Article `dateModified` reads that date (else `datePublished`); no Updated byline is shown.
 
 Shared navigation links directly to Mechanisms and Case Studies. Mechanism pages link to relevant studies; event pages use study reverse lookups. Coin-detail Mechanism cards gate the explainer CTA and help primer on the resolved archetype; their review fold does not duplicate that link. Explore Next instead uses `/screener/?mechanisms=<archetype>&lifecycle=active`. Preserve methodology/About entry links and command-palette archetype discovery without inventing additional route families.
 

@@ -2,8 +2,15 @@ import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 import { CASE_STUDY_LIST, CASE_STUDY_OUTCOME_COUNTS } from "@/lib/case-studies";
 import { CaseStudyBody } from "../case-study-body";
+import { CaseStudyArticleJsonLd } from "../case-study-json-ld";
 import { metadata as hubMetadata } from "../page";
 import { generateMetadata } from "../[slug]/page";
+
+const MOCKED_SVB_MODIFIED = "2026-09-30T12:00:00+00:00";
+
+vi.mock("@/generated/sitemap-dates.json", () => ({
+  default: { "/learn/case-studies/usdc-svb-2023/": "2026-09-30T12:00:00+00:00" },
+}));
 
 vi.mock("../case-study-chart", () => ({
   CaseStudyChart: () => <div data-testid="case-study-chart" />,
@@ -32,5 +39,26 @@ describe("case-study publication metadata", () => {
     const study = CASE_STUDY_LIST.find((entry) => entry.slug === "usde-oracle-2025")!;
     const html = renderToStaticMarkup(<CaseStudyBody study={study} />);
     expect(html).toContain("Scope: Binance order-book print");
+  });
+
+  it("keeps the authored Published byline and takes Article dateModified from the per-study sitemap date", () => {
+    const study = CASE_STUDY_LIST.find((entry) => entry.slug === "usdc-svb-2023")!;
+    const body = renderToStaticMarkup(<CaseStudyBody study={study} />);
+    expect(body).toContain(`Published <time dateTime="${study.datePublished}">`);
+    expect(body).not.toMatch(/Updated/);
+
+    const article = JSON.parse(
+      renderToStaticMarkup(<CaseStudyArticleJsonLd study={study} />).replace(/^<script[^>]*>|<\/script>$/g, ""),
+    ) as { dateModified: string; datePublished: string };
+    expect(article.dateModified).toBe(MOCKED_SVB_MODIFIED);
+    expect(article.datePublished.startsWith(study.datePublished.slice(0, 10))).toBe(true);
+  });
+
+  it("falls back to the publication date when a study has no sitemap date", () => {
+    const study = CASE_STUDY_LIST.find((entry) => entry.slug !== "usdc-svb-2023")!;
+    const article = JSON.parse(
+      renderToStaticMarkup(<CaseStudyArticleJsonLd study={study} />).replace(/^<script[^>]*>|<\/script>$/g, ""),
+    ) as { dateModified: string };
+    expect(article.dateModified).toBe(study.datePublished);
   });
 });

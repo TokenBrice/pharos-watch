@@ -68,6 +68,7 @@ const GIT_DATE_SCAN_PATHS = [
   "src/lib/case-studies",
   "src/data/blog",
   "src/lib/page-metadata.ts",
+  "shared/types/editorial-content.ts",
   "shared/data/stablecoins/coins",
   STABLECOIN_DOMAIN_SOURCE_DIR,
   "shared/data/methodology-changelogs",
@@ -130,15 +131,18 @@ function findDirectoryLastModified(index: GitDateIndex, gitPath: string): string
 function getLastModified(pagePath: string): string {
   const index = getGitDateIndex();
   const gitPath = toGitPath(pagePath);
-  const fileDate = index.fileDates.get(gitPath);
-  if (fileDate) return fileDate;
+  const date = index.fileDates.get(gitPath) ?? findDirectoryLastModified(index, gitPath);
+  if (date) return date;
+  // Never fall back to filesystem mtime: it is checkout time, so a fresh clone
+  // would advance every affected route without an editorial change.
+  throw new Error(
+    `[sitemap-dates] No Git history for ${gitPath}. Commit it, or add its path to ` +
+      "GIT_DATE_SCAN_PATHS and SITEMAP_COMMIT_DERIVED_SOURCE_PATHS.",
+  );
+}
 
-  const pageStat = statSync(pagePath);
-  if (pageStat.isDirectory()) {
-    const directoryDate = findDirectoryLastModified(index, gitPath);
-    if (directoryDate) return directoryDate;
-  }
-  return pageStat.mtime.toISOString();
+function isMissingPathError(error: unknown): boolean {
+  return error instanceof Error && (error as NodeJS.ErrnoException).code === "ENOENT";
 }
 
 function walkPages(dir: string, prefix: string, dates: Record<string, string>): void {
@@ -149,12 +153,14 @@ function walkPages(dir: string, prefix: string, dates: Record<string, string>): 
     const subDir = join(dir, entry.name);
     const routePath = `${prefix}${entry.name}/`;
     const pagePath = join(subDir, "page.tsx");
+    let hasPage = true;
     try {
       statSync(pagePath);
-      dates[routePath] = getLastModified(pagePath);
-    } catch {
-      /* no page.tsx in this directory */
+    } catch (error) {
+      if (!isMissingPathError(error)) throw error;
+      hasPage = false; // no page.tsx in this directory
     }
+    if (hasPage) dates[routePath] = getLastModified(pagePath);
     // Recurse into subdirectories for nested routes
     walkPages(subDir, routePath, dates);
   }
