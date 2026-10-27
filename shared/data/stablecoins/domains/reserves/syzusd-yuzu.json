@@ -21,8 +21,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R60 unknown-resolver exact native wrapper review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -42,13 +42,13 @@
         "url": "https://api.routescan.io/v2/network/mainnet/evm/9745/etherscan/api?module=contract&action=getsourcecode&address=0x4ad9f1db810146b660eb863cc6f56649e0824a6e"
       },
       {
-        "label": "Plasma pinned block 34126349: asset(), redeemDelay() = 0 and redeemFeePpm() = 0",
+        "label": "Plasma finalized block 36176326 (2026-10-27T16:15:31Z): asset(), redeemDelay() = 0, redeemFeePpm() = 0 and paused() = false",
         "url": "https://rpc.plasma.to"
       }
     ],
-    "rationale": "At Plasma block 34126349 (2026-10-03), asset() remains yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, redeemDelay() and redeemFeePpm() are zero, and paused() is false. Current issuer documentation says unstaking back to yzUSD completes almost instantly; one-day liquidity describes ordinary native wrapper-to-parent realization, not upstream USDT redemption, measured capacity or a promise against role-managed pauses and throttles. The exact direct reserve remains one protocol position, not a duplication of yzUSD's portfolio.",
-    "compositionBasis": "Standing ERC-4626 single-asset composition confirmed by asset() at Plasma block 33896602 and current issuer wrapper documentation; not a dated financial attestation",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "At Plasma finalized block 36176326 (2026-10-27T16:15:31Z), asset() remains yzUSD 0x6695c0f8706c5ace3bdf8995073179cca47926dc, redeemDelay() and redeemFeePpm() are zero, and paused() is false. Current issuer documentation says unstaking back to yzUSD completes almost instantly; one-day liquidity describes ordinary native wrapper-to-parent realization, not upstream USDT redemption, measured capacity or a promise against role-managed pauses and throttles. The exact direct reserve remains one protocol position, not a duplication of yzUSD's portfolio.",
+    "compositionBasis": "Standing ERC-4626 single-asset composition confirmed by asset() at Plasma finalized block 36176326 (2026-10-27) and current issuer wrapper documentation; not a dated financial attestation",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct syzUSD reserve slice is identified; upstream yzUSD strategy allocations are tracked on the parent asset.",
     "knownUnknownExposurePct": 0

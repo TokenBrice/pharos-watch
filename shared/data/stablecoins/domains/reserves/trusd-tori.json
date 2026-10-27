@@ -4,7 +4,7 @@
     {
       "sourceKey": "accountable:tori:deployment:money-markets",
       "name": "Hedged money-market positions at undisclosed custodians (asset-manager mandate)",
-      "pct": 67.59590155081696,
+      "pct": 72.96887359370969,
       "risk": "medium",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Undisclosed regulated custodian banks under Tori's mandate (identities withheld; verified by Accountable and HT Digital)",
@@ -19,7 +19,7 @@
     {
       "sourceKey": "accountable:tori:deployment:delta-neutral-equity-arbitrage",
       "name": "Delta-neutral equity arbitrage: long listed-equity book hedged with short single-stock futures",
-      "pct": 8.469182301727797,
+      "pct": 9.264662715649639,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "Undisclosed regulated investment banks and execution venues holding the listed-equity long book and short single-stock futures",
@@ -34,7 +34,7 @@
     {
       "sourceKey": "accountable:tori:deployment:cash-equivalents",
       "name": "Cash and equivalents held as FX collateral at investment banks and exchange venues",
-      "pct": 9.201552166427483,
+      "pct": 10.270619614890451,
       "risk": "medium",
       "assetClass": "cash",
       "issuerOrObligor": "Undisclosed regulated investment banks; Accountable data connectors include a CEX feed for this bucket",
@@ -48,7 +48,7 @@
     {
       "sourceKey": "accountable:tori:ethereum:usdc-morpho",
       "name": "USDC supplied to Morpho on Ethereum",
-      "pct": 14.211353838506993,
+      "pct": 3.0243109733712585,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -60,7 +60,7 @@
     {
       "sourceKey": "accountable:tori:ethereum:usdc",
       "name": "USDC held on Ethereum",
-      "pct": 0.38609116464445764,
+      "pct": 0.9864982452258197,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -72,7 +72,7 @@
     {
       "sourceKey": "accountable:tori:ethereum:usdt",
       "name": "USDT held on Ethereum",
-      "pct": 0.13569110007170007,
+      "pct": 0.28644738504169853,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -84,7 +84,7 @@
     {
       "sourceKey": "accountable:tori:ethereum:eth",
       "name": "ETH held on Ethereum",
-      "pct": 0.00021819653829176623,
+      "pct": 0.0007127991323272615,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Native Ethereum ETH",
@@ -93,8 +93,8 @@
     },
     {
       "sourceKey": "accountable:tori:ethereum:ausd-unverified",
-      "name": "Unverified AUSD dust on Ethereum",
-      "pct": 0.0000012733520034663738,
+      "name": "Unverified AUSD holdings on Ethereum",
+      "pct": 0.016788240920830463,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "AUSD symbol only; issuer and token contract unverified",
@@ -104,7 +104,7 @@
     {
       "sourceKey": "accountable:tori:base:eth",
       "name": "ETH held on Base",
-      "pct": 0.000008407912845157566,
+      "pct": 0.000007963216061114,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "ETH on Base",
@@ -114,25 +114,35 @@
     {
       "sourceKey": "accountable:tori:base:usdc-morpho-unverified",
       "name": "Unverified USDC Morpho dust on Base",
-      "pct": 1.4588497863409599e-12,
+      "pct": 1.3825530376276834e-12,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "USDC - Morpho source label on Base; representation and vault unverified",
       "liquidityHorizon": "unknown",
       "riskFactors": ["credit", "smart-contract"]
+    },
+    {
+      "sourceKey": "accountable:tori:monad:ausd-morpho-unverified",
+      "name": "Unverified AUSD Morpho position on Monad",
+      "pct": 3.181078468840847,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "AUSD - Morpho source label on Monad; AUSD issuer, token contract and Morpho vault unverified",
+      "liquidityHorizon": "unknown",
+      "riskFactors": ["credit", "counterparty", "smart-contract"]
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-04",
-    "reviewer": "W2R33 current Accountable money-market liquidity review; original composition retained",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Accountable Tori dashboard API captured 2026-09-30 (assetBreakdown and reserves.nested_split)",
+        "label": "Accountable Tori dashboard API captured 2026-10-27T14:46Z, dashboard ts 1793112360161 (assetBreakdown and reserves.nested_split)",
         "url": "https://cache.accountable.capital/dashboard/tori"
       },
       {
-        "label": "Tori live proof-of-solvency API captured 2026-09-30 (nested token itemization)",
+        "label": "Tori live proof-of-solvency API captured 2026-10-27 (lastVerifiedAt 1793116861832; nested token itemization)",
         "url": "https://app.tori.finance/api/solvency"
       },
       {
@@ -160,40 +170,47 @@
         "url": "https://eth.blockscout.com/address/0xe16b821b9f6b0a6f06a2c4a61d5d1f71cfa53f1e"
       }
     ],
-    "rationale": "The captured Accountable dashboard reports $78,485,841.65 of reserves. Its nested_split reconciles Ethereum and Base token leaves to each On-chain Liquidity chain total. Ethereum USDC supplied to Morpho is $11,153,900.6693676, idle USDC is $303,026.9000899885, and USDT is $106,498.30192926673. Separate keyed slices preserve the Morpho credit and liquidity layer while identifying its USDC exposure. Native ETH, unverified AUSD, and unverified Base Morpho dust remain in the denominator without tracked stablecoin links. The issuer solvency endpoint corroborates these leaf values; its off-chain category totals differ from the dashboard, so dashboard totals remain the composition authority. Custodian identities and the Ethereum Morpho vault remain undisclosed. On 2026-10-04, Accountable data.liquidity (as_of 2026-10-04, complete true, unmapped_instruments 0) explicitly assigns the money_markets class time_to_cash Same day. The keyed money-market sleeve therefore has a one-day operational liquidity horizon; this does not assert a contractual redemption SLA or alter the original 2026-09-30 composition.",
-    "compositionBasis": "Accountable assetBreakdown category totals and reserves.nested_split leaves captured 2026-09-30; issuer solvency leaf cross-check",
-    "compositionAsOf": "2026-09-30",
+    "rationale": "The Accountable dashboard (ts 2026-10-27T14:46Z) reports $72,431,359.63 of reserves; the leaves below sum to that figure. Money Markets $52,852,347.25, Delta-Neutral Equity Arbitrage $6,710,521.17, Cash & Equivalents $7,439,149.43 (Bank Cash $100,180.99 plus FX Collateral $7,338,968.44, OTC & Exchange Reserve $0). On-chain Liquidity leaves: Ethereum USDC supplied to Morpho $2,190,549.56, idle USDC $714,534.09, USDT $207,477.74, AUSD $12,159.95, ETH $516.29; Monad AUSD - Morpho $2,304,098.39; Base ETH $5.77. AUSD is labeled by symbol only, so both AUSD leaves stay unlinked and unverified rather than assumed to be Agora AUSD. The issuer solvency endpoint corroborates the total (72,431,784.82 at 1793116861832, 15 minutes later). Custodian identities and the Morpho vaults remain undisclosed. Accountable data.liquidity (as_of 2026-10-27, complete true, unmapped_instruments 0) assigns the money_markets class time_to_cash Same day, so the keyed money-market sleeve keeps a one-day operational liquidity horizon; this does not assert a contractual redemption SLA.",
+    "compositionBasis": "Accountable assetBreakdown category totals and reserves.nested_split leaves, dashboard ts 2026-10-27T14:46Z; issuer solvency total cross-check",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "AUSD dust has no verified issuer or token address. The Base USDC - Morpho dust has no verified token representation or vault identity. Off-chain custody and Ethereum Morpho vault identity remain unresolved without obscuring measured USDC and USDT exposure.",
-    "knownUnknownExposurePct": 0.0000012733534623161601,
+    "knownUnknownExposure": "The AUSD holdings on Ethereum and the AUSD - Morpho position on Monad have no verified issuer, token address or vault identity. The Base USDC - Morpho dust has no verified token representation or vault identity. Off-chain custody and Ethereum Morpho vault identity remain unresolved without obscuring measured USDC and USDT exposure.",
+    "knownUnknownExposurePct": 3.1978667097630598,
     "nonLinkDispositions": [
       {
         "reserveIndex": 6,
         "reserveName": "ETH held on Ethereum",
-        "pct": 0.00021819653829176623,
+        "pct": 0.0007127991323272615,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Native ETH is outside the stablecoin registry."
       },
       {
         "reserveIndex": 7,
-        "reserveName": "Unverified AUSD dust on Ethereum",
-        "pct": 0.0000012733520034663738,
+        "reserveName": "Unverified AUSD holdings on Ethereum",
+        "pct": 0.016788240920830463,
         "disposition": "insufficient-evidence",
         "rationale": "A symbol alone cannot establish a tracked issuer identity."
       },
       {
         "reserveIndex": 8,
         "reserveName": "ETH held on Base",
-        "pct": 0.000008407912845157566,
+        "pct": 0.000007963216061114,
         "disposition": "untracked-exogenous-asset",
         "rationale": "ETH is outside the stablecoin registry."
       },
       {
         "reserveIndex": 9,
         "reserveName": "Unverified USDC Morpho dust on Base",
-        "pct": 1.4588497863409599e-12,
+        "pct": 1.3825530376276834e-12,
         "disposition": "insufficient-evidence",
         "rationale": "The source does not bind the Base token representation or Morpho vault to a verified tracked claim."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "Unverified AUSD Morpho position on Monad",
+        "pct": 3.181078468840847,
+        "disposition": "insufficient-evidence",
+        "rationale": "The source labels the position AUSD - Morpho on Monad by symbol only and does not bind the token contract, issuer or Morpho vault to a verified tracked claim."
       }
     ]
   },

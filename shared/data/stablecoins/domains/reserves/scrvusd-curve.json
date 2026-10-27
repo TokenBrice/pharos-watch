@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown wave W1R36 primary-source and pinned liquidity review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -37,6 +37,10 @@
         "url": "https://etherscan.io/block/26114893"
       },
       {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26285088 (2026-10-27T15:57:11Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
         "label": "Curve Savings crvUSD repository",
         "url": "https://github.com/curvefi/scrvusd"
       },
@@ -49,9 +53,9 @@
         "url": "https://docs.curve.finance/developer/crvusd/overview"
       }
     ],
-    "rationale": "The existing 2026-10-01 composition remains unchanged. Liquidity metadata was independently reviewed on 2026-10-03 at Ethereum block 26114893 (0xe34d12ddb9802b856a1e54db7968aa664b572660f10ad43c7878be4d327e746f): asset() is crvUSD, totalDebt()=0, totalIdle()=totalAssets(), and withdraw_limit_module() is the zero address. Exact-match Yearn V3 source returns the full owner's asset entitlement when idle assets suffice and no withdrawal module exists; Curve states deposited funds remain idle and always available for redemption. Immediate means local share-to-crvUSD availability, not guaranteed USD liquidation or parent collateral realization. Parent risks remain inherited; no maturity maximum is asserted.",
-    "compositionBasis": "Canonical Ethereum ERC-4626 vault accounting pinned at block 26095892 and Curve savings-vault documentation; direct single-asset wrapper structure",
-    "compositionAsOf": "2026-10-01",
+    "rationale": "Weights renewed from fresh pinned reads at Ethereum block 26285088 (hash 0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534, finalized, 2026-10-27T15:57:11Z): vault 0x0655977feb2f289a4ab78af67bab0d17aab84367 returned asset() 0xf939e0a03fb07f59a73314e73794be0e57ac1b4e (crvUSD), totalAssets() 15,242,901.546027735619568086 crvUSD and an equal vault crvUSD balance (all idle). Earlier liquidity review: Liquidity metadata was independently reviewed on 2026-10-03 at Ethereum block 26114893 (0xe34d12ddb9802b856a1e54db7968aa664b572660f10ad43c7878be4d327e746f): asset() is crvUSD, totalDebt()=0, totalIdle()=totalAssets(), and withdraw_limit_module() is the zero address. Exact-match Yearn V3 source returns the full owner's asset entitlement when idle assets suffice and no withdrawal module exists; Curve states deposited funds remain idle and always available for redemption. Immediate means local share-to-crvUSD availability, not guaranteed USD liquidation or parent collateral realization. Parent risks remain inherited; no maturity maximum is asserted.",
+    "compositionBasis": "Canonical Ethereum ERC-4626 vault accounting pinned at block 26285088 (2026-10-27T15:57:11Z) and Curve savings-vault documentation; direct single-asset wrapper structure",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct scrvUSD reserve slice is identified; liquidity and upstream crvUSD backing remain structured risks of the classified position.",
     "knownUnknownExposurePct": 0

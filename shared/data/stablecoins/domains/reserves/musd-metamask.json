@@ -15,8 +15,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -25,6 +25,10 @@
       },
       {
         "label": "Ethereum mUSD mToken() at block 26086007 (observed 2026-09-29)",
+        "url": "https://etherscan.io/address/0xaca92e438df0b2401ff60da7e4337b687a2435da#readProxyContract"
+      },
+      {
+        "label": "Ethereum mUSD mToken(), swapFacility(), totalSupply() and M balanceOf(mUSD) at block 26285158 (2026-10-27T16:11:11Z)",
         "url": "https://etherscan.io/address/0xaca92e438df0b2401ff60da7e4337b687a2435da#readProxyContract"
       },
       {
@@ -44,9 +48,9 @@
         "url": "https://protocol-api.m0.org/graphql"
       }
     ],
-    "rationale": "mUSD wraps M through the M0 SwapFacility: equivalent M deposits mint mUSD and mUSD burns return M. The Ethereum deployment's mToken() returned tracked M 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b at block 26086007. The reserve envelope records the immediate M claim rather than duplicating M's Treasury/cash collateral. Fresh 2026-09-30 RPC reads also identify the same M parent and 6-decimal mUSD on Ethereum, Linea and Monad; Ethereum swapFacility() returns 0xb6807116b3b1b321a390594e31ecd6e0076f6278 and canSwapViaPath(0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, mUSD, M) returns true. That existing M0 swapper is a sampled approved redemption cohort, not a claim that every holder can redeem or that it operates MetaMask distribution. The independent producer rechecks all catalog deployments, balances and the sampled route; mUSD-specific upgrade, freeze, forced-transfer and SwapFacility controls remain applicable.",
-    "compositionBasis": "Audited M-extension wrapping lifecycle and mToken() identity at Ethereum block 26086007; live balances owned by the independent m0-wrapper-underlying producer",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "Renewed 2026-10-27 from pinned Ethereum JSON-RPC reads at block 26,285,158 (2026-10-27T16:11:11Z): mToken() returned tracked M 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, swapFacility() returned 0xb6807116b3b1b321a390594e31ecd6e0076f6278, canSwapViaPath(0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, mUSD, M) returned true, and M balanceOf(mUSD) of 11,697,287.468115 covered mUSD totalSupply of 11,697,061.357596 (6 decimals). Linea and Monad deployments were not re-read in this renewal. mUSD wraps M through the M0 SwapFacility: equivalent M deposits mint mUSD and mUSD burns return M. The Ethereum deployment's mToken() returned tracked M 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b at block 26086007. The reserve envelope records the immediate M claim rather than duplicating M's Treasury/cash collateral. Fresh 2026-09-30 RPC reads also identify the same M parent and 6-decimal mUSD on Ethereum, Linea and Monad; Ethereum swapFacility() returns 0xb6807116b3b1b321a390594e31ecd6e0076f6278 and canSwapViaPath(0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd, mUSD, M) returns true. That existing M0 swapper is a sampled approved redemption cohort, not a claim that every holder can redeem or that it operates MetaMask distribution. The independent producer rechecks all catalog deployments, balances and the sampled route; mUSD-specific upgrade, freeze, forced-transfer and SwapFacility controls remain applicable.",
+    "compositionBasis": "Audited M-extension wrapping lifecycle and mToken() identity re-read at Ethereum block 26285158 (2026-10-27T16:11:11Z); live balances owned by the independent m0-wrapper-underlying producer",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The immediate reserve parent is tracked M. M's internal cash/Treasury split and provider allocations remain parent-level uncertainty. Permissioned SwapFacility redemption and mUSD-specific administrative controls remain local risks; no additional USDC edge is inferred from distribution routes.",
     "knownUnknownExposurePct": 0

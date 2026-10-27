@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdac17f958d2ee523a2206206994597c13d831ec7",
       "name": "Spark Savings USDT idle underlying",
-      "pct": 19.590965651347,
+      "pct": 11.644368745485861,
       "risk": "low",
       "coinId": "usdt-tether",
       "depType": "wrapper",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xe2e7a17dff93280dec073c995595155283e3c372:deployed",
       "name": "Spark Savings USDT deployed strategy positions",
-      "pct": 80.409034348653,
+      "pct": 88.35563125451414,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Spark Liquidity Layer / Sky ecosystem",
@@ -35,8 +35,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R14 exact Spark Savings idle liquidity review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "probable",
     "sources": [
       {
@@ -74,19 +74,23 @@
       {
         "label": "Ethereum observation block 26079396",
         "url": "https://etherscan.io/block/26079396"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26285088 (2026-10-27T15:57:11Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Historical composition remains from Ethereum block 26079396 (2026-09-28T23:59:59Z), with no weight or composition-date refresh. October 3 metadata-only review: exact spUSDT implementation documentation identifies native USDT and atomic withdraw/redeem capped at the idle token balance. The entire idle-underlying accounting slice is therefore immediately available in-kind, not a whole-vault USD exit or assurance that taker-deployed claims are immediately liquid. Pinned fresh reads at block 26114898 confirm asset=USDT and assetsOutstanding=totalAssets minus idle balance, without replacing historical percentages. Deployed strategies remain protocol-position claims with unknown constituent asset, venue, custodian weights and realization maximum; no scalar maturity is fabricated for either scoring-inapplicable class.",
-    "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDT balanceOf(spUSDT) at Ethereum block 26079396; category-level classification from the pinned Spark vault implementation and address registry",
-    "compositionAsOf": "2026-09-28",
+    "rationale": "Fresh pinned reads at finalized Ethereum block 26285088 (hash 0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534, timestamp 2026-10-27T15:57:11Z): asset() is native USDT, the EIP-1967 implementation slot identifies 0x1b992302652a92611dcd5090d1cb388c6377f455, totalAssets() is 621,863,416.480183 USDT and USDT balanceOf(spUSDT) is 72,412,069.308229, so assetsOutstanding (totalAssets minus idle) is 549,451,347.171954. Weights are recomputed from these reads (11.644369% idle, 88.355631% outstanding). The October 3 classification is retained: exact spUSDT implementation documentation identifies atomic withdraw/redeem capped at the idle token balance, so the idle-underlying slice is immediately available in-kind, not a whole-vault USD exit or assurance that taker-deployed claims are immediately liquid. Deployed strategies remain protocol-position claims with unknown constituent asset, venue, custodian weights and realization maximum; no scalar maturity is fabricated for either scoring-inapplicable class.",
+    "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDT balanceOf(spUSDT) at finalized Ethereum block 26285088; category-level classification from the pinned Spark vault implementation and address registry",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "Spark names SparkLend, Morpho, Maple syrupUSDT, Curve and sUSDS in its strategy framework and publishes a May 5, 2026 deployment snapshot. Those historical aggregate amounts do not reconcile the current spUSDT liabilities. The 80.409034348653% non-idle position therefore retains unknown current constituent weights, downstream custody shares and maturity bounds; category-level classification does not admit the live-withheld fallback.",
-    "knownUnknownExposurePct": 80.409034348653,
+    "knownUnknownExposure": "Spark names SparkLend, Morpho, Maple syrupUSDT, Curve and sUSDS in its strategy framework and publishes a May 5, 2026 deployment snapshot. Those historical aggregate amounts do not reconcile the current spUSDT liabilities. The 88.35563125451414% non-idle position therefore retains unknown current constituent weights, downstream custody shares and maturity bounds; category-level classification does not admit the live-withheld fallback.",
+    "knownUnknownExposurePct": 88.35563125451414,
     "nonLinkDispositions": [
       {
         "reserveIndex": 1,
         "reserveName": "Spark Savings USDT deployed strategy positions",
-        "pct": 80.409034348653,
+        "pct": 88.35563125451414,
         "disposition": "basket-needs-split",
         "rationale": "The disclosed SparkLend, Morpho, Maple, Curve and sUSDS strategy framework lacks a current spUSDT-specific allocation and liability reconciliation. The May 5, 2026 snapshot cannot supply September weights.",
         "candidateCoinIds": [
@@ -121,6 +125,6 @@
       }
     ],
     "uncertainty": "The pinned contract permits the taker to pull vault liquidity. The observed idle USDT remains in the vault, while non-idle accounting exposure has no reconciled spUSDT-specific downstream custody allocation, segregation, insolvency treatment or successor-custody disclosure. No provider percentage is assigned from the accounting remainder.",
-    "knownUnknownExposurePct": 80.409034348653
+    "knownUnknownExposurePct": 88.35563125451414
   }
 }

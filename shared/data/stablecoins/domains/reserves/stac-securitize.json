@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (FixInv2)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,13 +35,17 @@
       {
         "label": "Chronicle STAC content-addressed Proof of Asset (document and portfolio date 2026-09-29; retrieved 2026-10-01)",
         "url": "https://chroniclelabs.org/api/ipfs/Qmedv33sWmMtXbho9dbZaXuFgsw7nL2c82UU6Rpt2aDY1J"
+      },
+      {
+        "label": "Chronicle STAC content-addressed Proof of Asset (document and portfolio date 2026-10-26; payload timestamp 2026-10-27T14:05:57Z; retrieved 2026-10-27)",
+        "url": "https://chroniclelabs.org/api/ipfs/QmehrWWxwuvK2rV5BxqVH4upbk3ubGb4P7zBKwpDi9dNuh"
       }
     ],
-    "rationale": "The September 29, 2026 Chronicle source payload directly identifies STAC fund NAV of $281,895,415.70 and 49 named CLO positions with aggregate portfolio market value $277,571,572.67, plus cash of $1,297,805.81 and other net assets/liabilities of $3,026,037.24. The static reserve row remains the single 100% fund-NAV identity emitted by the live chronicle-nav adapter; its high-risk public-credit classification describes the identified fund claim, not a claim that every underlying asset is a CLO tranche. No PGIM AAA CLO ETF appears in this dated portfolio. Chronicle technically verifies third-party source data and expressly disclaims underlying-data attestation or audit. The older July position census and its maturity maximum are not carried forward.",
-    "compositionBasis": "Chronicle September 29, 2026 dated fund-NAV proof and position census; single fund-share scoring bucket matching the live chronicle-nav adapter",
-    "compositionAsOf": "2026-09-29",
+    "rationale": "The October 26, 2026 Chronicle source payload (CID QmehrWWxwuvK2rV5BxqVH4upbk3ubGb4P7zBKwpDi9dNuh, followed from the configured Chronicle STAC proof page) directly identifies STAC fund NAV of $283,345,495.60 and 51 named CLO positions with aggregate portfolio market value $281,029,830.41, plus cash of $1,631,463.30 and other net assets/liabilities of $684,201.90. Against the September 29 payload (CID Qmedv33sWmMtXbho9dbZaXuFgsw7nL2c82UU6Rpt2aDY1J, 49 positions, $277,571,572.67, retained as a prior reference) all 49 original ISINs remain with unchanged units and maturity dates; two positions were added (AGL CORE CLO 5.31444% 07/20/2039, US001200AQ71, $2,502,524.50; ARINI US CLO V 5.27249% 04/15/2039, US04040CAA53, $1,000,496.50). The observed maximum position maturity is unchanged at 2041-07-17; it is an observation, not a legal maximum or WAM/WAL claim. The static reserve row remains the single 100% fund-NAV identity emitted by the live chronicle-nav adapter; its high-risk public-credit classification describes the identified fund claim, not a claim that every underlying asset is a CLO tranche. No PGIM AAA CLO ETF appears in this dated portfolio. Chronicle technically verifies third-party source data and expressly disclaims underlying-data attestation or audit. The older July position census and its maturity maximum are not carried forward.",
+    "compositionBasis": "Chronicle October 26, 2026 dated fund-NAV proof and position census; single fund-share scoring bucket matching the live chronicle-nav adapter",
+    "compositionAsOf": "2026-10-26",
     "scope": "full-composition",
-    "knownUnknownExposure": "The full reserve row identifies the STAC fund-NAV claim, so no reserve row is unidentified. Underlying cash counterparties, other net assets/liabilities, and fund legal terms are not disclosed by this proof; no gross unknown-exposure percentage is inferred from net balances. The 49 named CLO positions have individual maturities, but those dates do not establish a contractual maturity maximum for the fund share.",
+    "knownUnknownExposure": "The full reserve row identifies the STAC fund-NAV claim, so no reserve row is unidentified. Underlying cash counterparties, other net assets/liabilities, and fund legal terms are not disclosed by this proof; no gross unknown-exposure percentage is inferred from net balances. The 51 named CLO positions have individual maturities, but those dates do not establish a contractual maturity maximum for the fund share.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": []
   },

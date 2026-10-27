@@ -4,7 +4,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
       "name": "Sky Savings USDS idle underlying",
-      "pct": 99.999982504839,
+      "pct": 99.99996877826727,
       "risk": "low",
       "coinId": "usds-sky",
       "depType": "wrapper",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "erc4626-single-asset:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd:deployed",
       "name": "Sky Savings USDS deployed strategy positions",
-      "pct": 0.00001749516100346682,
+      "pct": 0.00003122173273489469,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sky sUSDS projected SSR accrual funded through Vat, Vow and UsdsJoin",
@@ -33,8 +33,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R02 pinned liquidity classification review; GLM September composition review retained",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D02 d02-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -64,11 +64,15 @@
       {
         "label": "Ethereum liquidity classification observation block 26114891",
         "url": "https://etherscan.io/block/26114891"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at finalized block 26285088 (2026-10-27T15:57:11Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Composition remains the September 28 observation: block 26079396 asset() identifies USDS, totalAssets() is 4411049738164593904315517122 and USDS balanceOf(sUSDS) is 4411048966444342796076869286. Liquidity classification independently reviewed at block 26114891 on October 3: getImplementation() still identifies 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, asset() is USDS, and permissionless drip() eth_call succeeds. The source realizes all projected chi accrual by Vat.suck/UsdsJoin.exit before withdraw/redeem transfers USDS; no queue, maturity, lockup or external strategy exists. Both scoped reserve categories are immediately available in USDS under this mechanism, not a guarantee of final USD settlement, market price, or parent collateral liquidity. No composition weights or dates are refreshed, and structurally inapplicable maturity maxima remain omitted.",
-    "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDS balanceOf(sUSDS), pinned to Ethereum block 26079396, plus the pinned SUsds accrual implementation",
-    "compositionAsOf": "2026-09-28",
+    "rationale": "Fresh pinned reads at finalized Ethereum block 26285088 (hash 0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534, timestamp 2026-10-27T15:57:11Z): the EIP-1967 implementation slot still identifies 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0, asset() is USDS, totalAssets() is 4803873806930936023389895080 and USDS balanceOf(sUSDS) is 4803872307078295101802259852; the remainder is projected SSR accrual not yet realized by drip(). Weights are recomputed from these reads (99.999969% idle USDS, 0.000031% projected accrual). The October 3 liquidity classification is retained: the source realizes all projected chi accrual by Vat.suck/UsdsJoin.exit before withdraw/redeem transfers USDS; no queue, maturity, lockup or external strategy exists. Both scoped reserve categories are immediately available in USDS under this mechanism, not a guarantee of final USD settlement, market price, or parent collateral liquidity. Structurally inapplicable maturity maxima remain omitted.",
+    "compositionBasis": "Archive eth_call of asset(), totalAssets() and USDS balanceOf(sUSDS), pinned to finalized Ethereum block 26285088, plus the pinned SUsds accrual implementation",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Both direct reserve categories are identified. Underlying USDS collateral, including its unresolved PSM composition, remains evaluated on the parent record.",
     "knownUnknownExposurePct": 0,
@@ -76,7 +80,7 @@
       {
         "reserveIndex": 1,
         "reserveName": "Sky Savings USDS deployed strategy positions",
-        "pct": 0.00001749516100346682,
+        "pct": 0.00003122173273489469,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Projected SSR accrual is a Sky protocol accounting claim until drip mints the USDS funding. It is not a separate held stablecoin token and creates no additional tracked collateral link."
       }
