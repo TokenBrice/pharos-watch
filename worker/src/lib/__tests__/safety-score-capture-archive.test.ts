@@ -6,6 +6,7 @@ import { SafetyScoreCaptureArchiveObjectSchema } from "@shared/types/safety-scor
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationStoredRow } from "../safety-score-v9/publication-chunks";
 import { SAFETY_SCORE_V9_PUBLICATION_MAX_READ_STORED_BYTES } from "@shared/lib/safety-score-v9-publication-limits";
 import { archiveSafetyScoreCapture, SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_OBJECT_BYTES, SAFETY_SCORE_CAPTURE_ARCHIVE_MAX_REPLAY_STORED_BYTES } from "../safety-score-v9/capture-archive";
 import { SAFETY_SCORE_CAPTURE_ARCHIVE_WAIT_MS, SAFETY_SCORE_CAPTURE_ARCHIVE_CONTINUATION_MS } from "../safety-score-v9/capture-archive";
@@ -62,11 +63,13 @@ describe("accepted Safety capture archive", () => {
     expect(put).toHaveBeenCalledOnce();
     const [key, value, options] = put.mock.calls[0]!;
     const object = SafetyScoreCaptureArchiveObjectSchema.parse(JSON.parse(value));
-    for (const row of [object.base, object.delta, object.cards]) {
+    for (const row of [object.base, object.delta]) {
       const stored = sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(row.key);
       expect(row.value).toBe(stored?.value);
       expect(row.updatedAt).toBe(stored?.updated_at);
     }
+    // The canonical row is a sharded envelope; the archive keeps the reassembled stored value.
+    expect(await loadSafetyScoreV9PublicationStoredRow(db)).toEqual({ value: object.cards.value, updatedAt: object.cards.updatedAt });
     const digest = createHash("sha256").update(value).digest("hex");
     const bytes = Buffer.byteLength(value, "utf8");
     expect(key).toBe(`captures/safety-score-v9-accepted/${new Date(publication.publishedAtSec * 1_000).toISOString().slice(0, 10)}/${publication.publicationGenerationId}.json`);

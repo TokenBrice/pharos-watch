@@ -65,9 +65,6 @@ crons = [
 # public fragments; flip only after every public reader tolerates unselected
 # staged rows (shipped with the reader in the same release as this flag).
 SAFETY_V9_DEFERRED_MATERIALIZATION = "on"
-# Safety Score V9 canonical payload sharding. `on` writes chunk rows behind a
-# small envelope; flip only after every reader accepts sharded envelopes.
-SAFETY_V9_CHUNKED_PUBLICATION_WRITES = "on"
 
 [[d1_databases]]
 binding = "DB"
