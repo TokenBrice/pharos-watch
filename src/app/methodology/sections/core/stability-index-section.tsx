@@ -232,8 +232,9 @@ export function StabilityIndexMethodologySection() {
               score any depeg overlapping the UTC day, canonicalize legacy depeg IDs into the current PSI universe,
               replay USD-domain deviation from `supply_history.price` when possible, never exceed the event&apos;s
               recorded `peak_deviation_bps`, and keep `peak_deviation_bps` as a start-day floor only when the event
-              remained active through the UTC close and a daily snapshot misses the move. Replay days whose restored
-              daily price is back inside the configured threshold drop out entirely, and restore jobs also repair
+              remained active through the UTC close and a daily snapshot misses the move. Unless that floor applies, a
+              start day whose restored daily price is back inside the configured threshold drops out of the replay.
+              Later days of an active event keep their daily-price deviation. Restore jobs also repair
               replay-critical daily price coverage, including PSI historical assets, before the PSI rebuild is rerun.
             </li>
             <li>

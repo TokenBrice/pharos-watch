@@ -130,6 +130,19 @@ describe("summarizeDexVolumeWindow", () => {
   });
 });
 
+describe("volume activity saturation example", () => {
+  const complete = (volumeUsd: number, tvlUsd: number) => ({
+    ...summarizeDexVolumeWindow([at(1, volumeUsd)], "24h", CLOCK).availability, admittedTvlUsd: tvlUsd,
+  });
+
+  it("saturates at about 43% volume/TVL, not 32%", () => {
+    const at32 = resolveVolumeActivityComponent(complete(320, 1_000));
+    expect(at32.status).toBe("measured");
+    expect(at32.score).toBeCloseTo(95.195699, 5);
+    expect(resolveVolumeActivityComponent(complete(430, 1_000))).toEqual({ status: "measured", score: 100 });
+  });
+});
+
 describe("readStoredDexVolumeWindow", () => {
   const recorded = (pools: DexPoolVolumeObservationInput[]) =>
     parseDexVolumeAvailabilityRecord(JSON.stringify({

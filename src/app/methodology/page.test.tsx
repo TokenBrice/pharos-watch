@@ -1,4 +1,6 @@
 // @vitest-environment jsdom
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
@@ -225,6 +227,34 @@ describe("MethodologyPage", () => {
     for (const rule of ["ONED / PYUSDx", "do not establish direct-wrapper", "1.05", "1.45", "1.02", "1.50"]) {
       expect(section.textContent).toContain(rule);
     }
+  });
+
+  it("describes aggregate DEX suppression at candidate creation, matching the owning table", () => {
+    const text = methodologyDocument().querySelector("#pricing-pipeline-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).toContain("withheld once an overlapping protocol DEX candidate passes registry, freshness, price and TVL checks, even if corroboration later fails");
+    expect(text).not.toContain("withheld only when an overlapping protocol-level DEX bridge lane is admitted");
+    const owner = readFileSync(resolve(process.cwd(), "docs/pricing-pipeline.md"), "utf8");
+    expect(owner).toContain("the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration.");
+  });
+
+  it("explains Bank Run Gauge unavailability by missing or zero weights, not only all-NR", () => {
+    const text = methodologyDocument().querySelector("#mint-burn-flow-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).toContain("The gauge is unavailable when no coin with a pressure-shift value has a positive market-cap weight");
+    expect(text).toContain("their weights are unavailable or zero");
+    expect(text).not.toContain("Returns null only when all tracked coins are NR");
+  });
+
+  it("limits PSI replay threshold dropout to the start day", () => {
+    const text = methodologyDocument().querySelector("#stability-index-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).toContain("a start day whose restored daily price is back inside the configured threshold drops out of the replay");
+    expect(text).toContain("Later days of an active event keep their daily-price deviation");
+    expect(text).not.toContain("Replay days whose restored daily price is back inside the configured threshold drop out entirely");
+  });
+
+  it("shows the corrected Volume Activity saturation example", () => {
+    const text = methodologyDocument().querySelector("#liquidity-methodology")!.textContent!.replace(/\s+/g, " ");
+    expect(text).toContain("~43%+->100");
+    expect(text).not.toContain("~32%+->100");
   });
 
 });

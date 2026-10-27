@@ -300,8 +300,9 @@ export function MintBurnFlowMethodologySection() {
                     rows={BANK_RUN_GAUGE_ROWS}
                   />
                   <p>
-                    Returns null only when all tracked coins are NR (for example, insufficient history or no 24h mint/burn
-                    activity). Coins with null pressure-shift values are skipped from the market-cap-weighted composite.
+                    The gauge is unavailable when no coin with a pressure-shift value has a positive market-cap weight,
+                    for example when all tracked coins are NR or their weights are unavailable or zero. Coins with null
+                    pressure-shift values are skipped from the composite.
                   </p>
                 </div>
 
