@@ -172,7 +172,7 @@ Machine-readable status timeline endpoint for tooling and incident analysis.
 
 `limit` is clamped into `1..200` by the shared query parser.
 
-**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`). The response includes the current `reserveComposition` summary when it can be computed, or `null` if the reserve overview diagnostic query fails. `hasMore` reports whether another matching transition exists beyond the returned page: `true` means the selected window is truncated, `false` proves the returned page covers the matching window, and `null` means the transition query failed and completeness is unknown. Consumers must not infer that no transition occurred from a `true` or `null` result.
+**Response shape:** `StatusHistoryResponse` (defined in `shared/types/index.ts`). The response includes the current `reserveComposition` summary when it can be computed, or `null` plus `sectionErrors.reserveComposition` (`reserve_composition_query_failed`) if the reserve overview diagnostic query fails. `hasMore` reports whether another matching transition exists beyond the returned page: `true` means the selected window is truncated, `false` proves the returned page covers the matching window, and `null` means the transition query failed and completeness is unknown. Consumers must not infer that no transition occurred from a `true` or `null` result.
 
 `discrepancy.consecutiveDivergent` is nullable: a failed required streak read returns `null` and additive `sectionErrors.discrepancy`, never fabricated zero. A successful SELECT with no global row may report the initial zero. The counter remains diagnostic; probe/status comparison does not itself establish an outage or send push notifications.
 
