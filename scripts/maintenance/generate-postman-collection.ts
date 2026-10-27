@@ -146,6 +146,7 @@ function renderCollection() {
       { key: "days", value: "90" },
       { key: "limit", value: "50" },
       { key: "digestDate", value: "2026-03-16" },
+      { key: "snapshotDate", value: "2026-10-25" },
     ],
     item: folders.map((folder) => ({
       name: folder.name,
@@ -170,6 +171,7 @@ function renderEnvironment() {
       { key: "days", value: "90", type: "default", enabled: true },
       { key: "limit", value: "50", type: "default", enabled: true },
       { key: "digestDate", value: "2026-03-16", type: "default", enabled: true },
+      { key: "snapshotDate", value: "2026-10-25", type: "default", enabled: true },
     ],
     _postman_variable_scope: "environment",
     _postman_exported_using: "Pharos generator",

@@ -126,6 +126,79 @@ describe("OpenAPI runtime response contracts", () => {
     expect(publicOperation.responses).not.toHaveProperty("429");
   });
 
+  it("describes JSON error bodies, anonymous throttles and retry headers", () => {
+    const schemas = document.components.schemas as Record<string, unknown>;
+    const throttled = [
+      "/api/safety-grades",
+      "/api/dependency-graph/v1",
+      "/api/dependency-scenarios/v1",
+    ];
+    for (const path of throttled) {
+      const responses = document.paths[path].get.responses;
+      expect(responses, path).toHaveProperty("429");
+      expect(responses, path).not.toHaveProperty("401");
+    }
+    expect(document.paths["/api/health"].get.responses).not.toHaveProperty("429");
+    const protectedResponses = document.paths["/api/stablecoin/{stablecoinId}"].get.responses;
+    expect(protectedResponses).toHaveProperty("401");
+    expect(protectedResponses).toHaveProperty("429");
+
+    const retryAfter = (status: "429" | "503") => (
+      document.paths["/api/stablecoin/{stablecoinId}"].get.responses[status] as {
+        headers: Record<string, { required: boolean; schema: Record<string, unknown> }>;
+      }
+    ).headers["Retry-After"];
+    expect(retryAfter("429")).toMatchObject({ required: true, schema: { type: "integer", minimum: 1 } });
+    expect(retryAfter("503")).toMatchObject({ required: false, schema: { type: "integer", minimum: 1 } });
+
+    const apiError = resolveSchemaRef({ $ref: "#/components/schemas/ApiError" }, schemas) as {
+      required: string[];
+      additionalProperties?: unknown;
+      properties: Record<string, { type: string }>;
+    };
+    expect(apiError.required).toEqual(["error"]);
+    expect(apiError.properties.error.type).toBe("string");
+    expect(apiError.properties.reason.type).toBe("string");
+    expect(apiError.additionalProperties).not.toBe(false);
+    for (const [path, item] of Object.entries(document.paths)) {
+      for (const [status, response] of Object.entries(item.get.responses)) {
+        if (status === "200") continue;
+        expect((response as { content: unknown }).content, `${path} ${status}`).toEqual({
+          "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
+        });
+      }
+    }
+
+    const body = z.fromJSONSchema(apiError as never);
+    expect(body.safeParse({ error: "x" }).success).toBe(true);
+    expect(body.safeParse({ error: "maintenance", message: "m", reason: "r", extra: 1 }).success).toBe(true);
+    expect(body.safeParse({ reason: "r" }).success).toBe(false);
+    expect(body.safeParse({ error: 1 }).success).toBe(false);
+  });
+
+  it("documents blacklist cursor continuation without changing offset or totals", () => {
+    const operation = document.paths["/api/blacklist"].get;
+    const byName = new Map(operation.parameters.map((parameter) => [parameter.name, parameter]));
+    expect(byName.get("cursor")).toMatchObject({ in: "query", required: false, schema: { type: "string" } });
+    expect(byName.has("offset")).toBe(true);
+    expect(byName.has("includeTotal")).toBe(true);
+    expect(operation.description).toContain("pass nextCursor URL-encoded as cursor with the same filters, sortBy, sortDirection and limit, and omit offset");
+    expect(operation.description).toContain("The maximum offset is 25,000, and totalExact: false means total is a lower bound.");
+    const schemas = document.components.schemas as Record<string, unknown>;
+    const response = resolveSchemaTree({ $ref: "#/components/schemas/BlacklistResponse" }, schemas) as {
+      properties: Record<string, unknown>;
+      required?: string[];
+    };
+    expect(response.properties).toHaveProperty("nextCursor");
+  });
+
+  it("states the strict non-USD days bounds and omission default", () => {
+    const days = document.paths["/api/non-usd-share"].get.parameters.find((parameter) => parameter.name === "days");
+    expect(days).toMatchObject({ required: false, schema: { type: "integer", minimum: 30, maximum: 5000 } });
+    expect(days?.description).toBe("Historical lookback window in days. Omit days to use 5000; supplied values must be integers from 30 to 5000.");
+    expect(days?.description).not.toContain("`0`");
+  });
+
   it("resolves every emitted reference, including colliding shared shapes", () => {
     const left = z.object({ value: z.string() });
     const right = z.object({ value: z.number() });

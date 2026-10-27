@@ -50,4 +50,39 @@ describe("public API artifact catalog", () => {
     expect(new Set(postmanMethods)).toEqual(new Set(["GET"]));
   });
 
+  it("resolves every Postman variable from the collection plus environment, including snapshotDate", () => {
+    const read = (file: string) => JSON.parse(
+      readFileSync(join(process.cwd(), "public/postman", file), "utf8"),
+    ) as Record<string, unknown>;
+    const collection = read("pharos-api.postman_collection.json") as {
+      variable: { key: string; value: string }[];
+    };
+    const environment = read("pharos-api.postman_environment.json") as {
+      values: { key: string; value: string; enabled: boolean }[];
+    };
+
+    const fromCollection = collection.variable.find((entry) => entry.key === "snapshotDate");
+    const fromEnvironment = environment.values.find((entry) => entry.key === "snapshotDate");
+    expect(fromCollection?.value).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(fromEnvironment?.value).toBe(fromCollection?.value);
+    expect(environment.values.every((entry) => entry.enabled)).toBe(true);
+
+    const declared = new Set([
+      ...collection.variable.map((entry) => entry.key),
+      ...environment.values.map((entry) => entry.key),
+    ]);
+    expect(declared.has("apiKey")).toBe(true);
+    const referenced = new Set(
+      [...JSON.stringify(collection.variable.length ? { ...collection, variable: undefined } : collection)
+        .matchAll(/\{\{([A-Za-z0-9_]+)\}\}/g)].map((match) => match[1]),
+    );
+    expect(referenced.has("snapshotDate")).toBe(true);
+    for (const name of referenced) expect(declared.has(name), name).toBe(true);
+
+    const text = JSON.stringify(collection);
+    expect(text).toContain("/api/snapshots/{{snapshotDate}}.json");
+    expect(text).toContain("/api/snapshot/{{snapshotDate}}/stablecoin/{{stablecoinId}}");
+    expect(text).toContain("/api/snapshots/index (API key required)");
+  });
+
 });

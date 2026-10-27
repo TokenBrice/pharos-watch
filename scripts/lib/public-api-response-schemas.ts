@@ -181,11 +181,18 @@ export const DailyDigestResponseArtifactSchema = z.object({
   standingConditions: z.array(DigestStandingConditionSchema).nullable(),
 });
 
+/** JSON error body: runtime bodies always carry `error`; `reason`, `message` and diagnostics vary. */
+export const ApiErrorSchema = z.looseObject({
+  error: z.string(),
+  reason: z.string().optional(),
+});
+
 /**
  * Named nested contracts keep the largest response families readable in the
  * generated components section without changing their runtime validators.
  */
 export const PUBLIC_API_RESPONSE_COMPONENT_SCHEMAS = {
+  ApiError: ApiErrorSchema,
   DdrFrozenDuration: DdrFrozenDurationSchema,
   DdrOfficialLockOutcome: DdrOfficialLockOutcomeSchema,
   DdrResolution: DdrResolutionSchema,
