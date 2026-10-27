@@ -6,6 +6,7 @@
     "authorizationType": "emi",
     "competentAuthority": "ACPR",
     "authorizedEntity": "Circle Internet Financial Europe SAS",
+    "significant": true,
     "references": [
       {
         "label": "ESMA Interim MiCA Register: Issuers of EMTs (EMTWP.csv)",
@@ -18,6 +19,10 @@
       {
         "label": "Circle USDC MiCA white paper",
         "url": "https://www.circle.com/fr/legal/mica-usdc-whitepaper"
+      },
+      {
+        "label": "EBA: USDC classified as a significant EMT on October 14, 2026; dual supervision announced to begin November 12, 2026 (official text via search index, accessed October 26, 2026)",
+        "url": "https://www.eba.europa.eu/publications-and-media/press-releases/eba-classifies-usdc-first-significant-e-money-token-european-union"
       }
     ]
   },

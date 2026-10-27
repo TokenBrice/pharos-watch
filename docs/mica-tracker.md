@@ -59,7 +59,7 @@ Leave `mica` **undefined** for coins not yet assessed — the page distinguishes
 - **30 Dec 2024** — Title V (crypto-asset service providers) applies.
 - **1 Jul 2026** — end of the longest national CASP transitional ("grandfathering") windows (Art. 143(3) ceiling; ESMA confirmed expiry on 23 Jun 2026); the "full application" milestone. Note this window covers **service providers/venues**, not issuers — status copy must not imply issuers are grandfathered.
 
-Per-coin `significant` follows EBA designation of significant EMTs/ARTs (threshold-based; EBA-supervised).
+Per-coin `significant` records EBA designation of significant EMTs/ARTs (threshold-based). Designation is not proof that EBA supervision has begun; record a later supervision transfer only from a dated source.
 
 ---
 

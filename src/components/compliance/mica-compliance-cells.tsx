@@ -37,7 +37,7 @@ export function MicaPathwayCell({ row }: { row: Extract<ComplianceRow, { regime:
       ) : null}
       {row.significant ? (
         <span
-          title="EBA-supervised significant EMT/ART"
+          title="Classified by the EBA as a significant EMT or ART"
           className={cn(
             "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold",
             MICA_SIGNIFICANT_BADGE_CLS,
