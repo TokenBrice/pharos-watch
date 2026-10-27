@@ -156,7 +156,6 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     isFetchingNextPage,
     meta,
     dataUpdatedAt,
-    total,
   } = feed.events;
 
   const interactions = useTimelineFeedInteractions({

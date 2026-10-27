@@ -559,7 +559,7 @@ describe("market and risk collectors", () => {
     ["partial prior-week coverage", (c: number, i: number) => (i === 0 ? c - 5_000_000 : undefined), 5_000_000, 1],
   ])("%s: seven-day change is null only when no comparison pair exists", async (_name, prior, expected, coveredCoins) => {
     const scenario = makeDailyDigestScenario();
-    const source = scenario.sourcePayload as { payload: { peggedAssets: Array<Record<string, any>> } };
+    const source = scenario.sourcePayload as unknown as { payload: { peggedAssets: Array<Record<string, unknown> & { circulating: { peggedUSD: number } }> } };
     source.payload.peggedAssets = source.payload.peggedAssets.map((asset, index) => {
       const previous = prior(asset.circulating.peggedUSD, index);
       const { circulatingPrevWeek: _drop, ...rest } = asset;
