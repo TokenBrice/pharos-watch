@@ -25,6 +25,27 @@ describe("DigestSnapshotResponseSchema", () => {
     expect(parsed.inputData?.safetyScores?.mentionedCoins[0]).toEqual({ symbol: "USDX" });
   });
 
+  it.each([
+    ["legacy zero", 0],
+    ["omitted", undefined],
+    ["unavailable", null],
+  ])("accepts %s seven-day change in current and previous daily and weekly inputs", (_name, mcap7dDelta) => {
+    const input = { totalMcapUsd: 10_000_000, ...(mcap7dDelta === undefined ? {} : { mcap7dDelta }) };
+    for (const date of ["2026-10-24", "2026-10-24-weekly"]) {
+      const parsed = DigestSnapshotResponseSchema.parse({
+        date, inputData: input, prevInputData: input, depegEvents: [], blacklistEvents: [],
+      });
+      expect(parsed.inputData?.mcap7dDelta).toBe(mcap7dDelta);
+      expect(parsed.prevInputData?.mcap7dDelta).toBe(mcap7dDelta);
+    }
+  });
+
+  it("still rejects a non-numeric seven-day change", () => {
+    expect(() => DigestSnapshotResponseSchema.parse({
+      date: "2026-10-24", inputData: { totalMcapUsd: 1, mcap7dDelta: "0" }, depegEvents: [], blacklistEvents: [],
+    })).toThrow();
+  });
+
   it("preserves a fully identified V9 safety section without legacy dimensions", () => {
     const identity = {
       model: "v9" as const,
