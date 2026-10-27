@@ -103,7 +103,7 @@ For non-U.S. issuers, `foreignExceptionStatus` tracks the GENIUS foreign-issuer 
 
 ## Reserve & redemption disclosure
 
-`reserveDisclosurePresent` / `reserveDisclosureUrl`, `redemptionPolicyPresent`, and `monthlyAttestationPresent` capture the public disclosure footprint GENIUS will require. Record what is **publicly present today**; presence of `reserveDisclosurePresent: true` requires a URL.
+`reserveDisclosurePresent` / `reserveDisclosureUrl`, `redemptionPolicyPresent`, and `monthlyAttestationPresent` capture the public disclosure footprint GENIUS will require. Record what is **publicly present today**; presence of `reserveDisclosurePresent: true` requires a URL. Each flag is a separate finding: an issuer reserve dashboard supports `reserveDisclosurePresent`, operative redemption terms support `redemptionPolicyPresent`, and only a published attestation series supports `monthlyAttestationPresent`. A planned or promised attestation is not a published one, and issuer disclosures are not independent verification of supply.
 
 Reserve-report dates have one authority: `proofOfReserves.latestReport`. Its independently optional `periodEnd` and `publishedAt` retain their respective semantics in detail-page regulatory standing and the compliance table; `publishedAtBasis: "signed-date-standin"` renders as **signed**, not published. Neither date is inferred from the other or from the compliance review date. A missing report or unknown dates fabricate no latest-report note. The compliance projection carries the canonical report alongside GENIUS; GENIUS has no separately authored latest-report date.
 

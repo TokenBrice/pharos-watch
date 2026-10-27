@@ -147,3 +147,16 @@ describe("AI summary claim tokens", () => {
     }
   });
 });
+
+describe("AI summary editorial corrections", () => {
+  const summaries = JSON.parse(readFileSync(resolve("data/ai-summaries.json"), "utf8")) as Record<
+    string,
+    { text: string; updatedAt: string; authoredBy: string; reviewedBy?: string }
+  >;
+
+  it("drops RedCoin's superseded no-disclosure claims", () => {
+    const redcoin = summaries["hkd-hsbc"].text;
+    expect(redcoin).not.toMatch(/names no blockchain|no reserve report/);
+    expect(redcoin).toContain("not independent verification of public-chain supply");
+  });
+});

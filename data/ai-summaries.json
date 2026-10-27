@@ -4402,11 +4402,11 @@
   },
   "hkd-hsbc": {
     "title": "HSBC's PayMe-Bound HKD Stablecoin",
-    "text": "HSBC RedCoin is live but not yet observable. The Hongkong and Shanghai Banking Corporation received HKMA stablecoin issuer licence FRS02 on April 10 2026, alongside Anchorpoint's FRS01, named the product on September 30 and launched it on October 23 under the ticker RCHKD. Distribution is the distinctive feature. The token is offered through PayMe, which HSBC puts at 3.3 million users, for peer-to-peer and merchant payments, with wallet functionality in the HSBC HK Mobile Banking App and tokenized investment subscriptions planned for later in 2026. It sits inside HSBC's own channels rather than on open markets, and HSBC Digital Assets Custody provides safekeeping. The stated design follows the Stablecoins Ordinance: 1:1 backing in HKD-denominated high-quality liquid assets held in segregated accounts, with {{term:redemption}}redemption{{/term}} through regulated channels. The launch release names no blockchain and publishes no contract, circulation or reserve figures, and Pharos has found no reserve report or {{term:attestation}}attestation{{/term}} series to review. The durable constraint is that a live product still leaves every reserve and supply claim as an issuer statement rather than an on-chain record.",
-    "updatedAt": "2026-10-25",
+    "text": "HSBC RedCoin is an HKD stablecoin available through PayMe on HSBC's private permissioned chain. The Hongkong and Shanghai Banking Corporation Limited launched it on October 23, 2026 under HKMA licence FRS02. Distribution runs through the bank's own channels, and HSBC Digital Assets Custody provides safekeeping. HSBC describes 1:1 backing by segregated HKD-denominated reserves and redemption at par through permitted channels, subject to its terms. The product page now publishes issuer-reported circulation and reserve figures, alongside a whitepaper, a reserve assets policy and redemption terms. These documents are the issuer's account of the backing, not independent verification of public-chain supply. The first independent attestation is expected after Q4 2026; this review found no published monthly series. Pharos keeps RedCoin in pre-launch until public on-chain issuance and a verifiable price and supply path exist.",
+    "updatedAt": "2026-10-27",
     "authoredBy": "ai",
     "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-25"
+    "factsAsOf": "2026-10-26"
   },
   "okrw-hashed": {
     "title": "The Native Won of Hashed's Maroo L1",
