@@ -9,7 +9,7 @@ import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import type { PeggedAsset } from "./enrich-prices";
 import type { OnchainPartitionSummary } from "@shared/types/status/cron";
-import { FIAT_CG_METAS, fetchFiatCoinGeckoTokens } from "./supplemental-assets/fiat-cg";
+import { FIAT_CG_METAS, FIAT_CG_NAV_PARENT_METAS, fetchFiatCoinGeckoTokens } from "./supplemental-assets/fiat-cg";
 import { fetchGoldTokens } from "./supplemental-assets/gold";
 import { fetchSilverTokens } from "./supplemental-assets/silver";
 
@@ -30,13 +30,18 @@ const COMMODITY_TOKENS = ACTIVE_STABLECOINS.filter(
   (stablecoin) => stablecoin.flags.pegCurrency === "GOLD" || stablecoin.flags.pegCurrency === "SILVER",
 );
 
+const SUPPLY_GECKO_IDS = [
+  // Protocol-backed commodity tokens still need CoinGecko spot + mcap fallback
+  // when DefiLlama omits their `coins.llama.fi` price or protocol mcap.
+  ...COMMODITY_TOKENS.map((token) => token.geckoId).filter(Boolean),
+  ...FIAT_CG_METAS.map((token) => token.geckoId).filter(Boolean),
+];
+// Same-run NAV parent quotes for fiat-cg vault supply valuation (K-033).
+export const NAV_PARENT_ONLY_GECKO_IDS: ReadonlySet<string> = new Set(FIAT_CG_NAV_PARENT_METAS
+  .map((parent) => parent.geckoId!).filter((geckoId) => !SUPPLY_GECKO_IDS.includes(geckoId)));
+
 export async function fetchCoinGeckoMarketData(db: D1Database, signal?: AbortSignal, coingeckoApiKey?: string | null): Promise<CoinGeckoMcapData> {
-  const ids = [
-    // Protocol-backed commodity tokens still need CoinGecko spot + mcap fallback
-    // when DefiLlama omits their `coins.llama.fi` price or protocol mcap.
-    ...COMMODITY_TOKENS.map((token) => token.geckoId).filter(Boolean),
-    ...FIAT_CG_METAS.map((token) => token.geckoId).filter(Boolean),
-  ].join(",");
+  const ids = [...SUPPLY_GECKO_IDS, ...NAV_PARENT_ONLY_GECKO_IDS].join(",");
 
   if (!ids) return {};
   throwIfAborted(signal);

@@ -1,5 +1,5 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getOnchainSupplyHoldReason, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
@@ -10,7 +10,9 @@ import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
-import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
+import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
+import { buildPriceReasonablenessOptions, isReasonablePrice } from "../../../lib/price-validation";
+import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
 import { restoreCuratedAggregateChainPartition, reviewedOnchainSupplyHoldFields } from "../shared";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
@@ -31,6 +33,45 @@ const FIAT_CG_TOKEN_CONCURRENCY = 2;
 // Measured full-roster reads need more than 20s; retain rotation under the 30s ceiling.
 export const ONCHAIN_PARTITION_STAGE_BUDGET_MS = 30_000;
 export const ONCHAIN_PARTITION_ROTATION_RUNS = 4;
+// DefiLlama-owned NAV parents absent from this batch; intake values vault supply
+// before this run's parent prices exist, so their direct CG quote rides the batch.
+export const FIAT_CG_NAV_PARENT_METAS = [...new Map(FIAT_CG_METAS.flatMap((meta) => {
+  const parentId = getFreshSingleSourceNavParentId(meta.id);
+  const parent = parentId ? ACTIVE_META_BY_ID.get(parentId) : undefined;
+  return parent?.geckoId ? [[parent.id, parent] as const] : [];
+})).values()];
+
+/**
+ * Run-local NAV parent rows: previous published rows plus independently admitted
+ * direct CoinGecko parent quotes (fresh upstream clock, positive reasonable price).
+ * These supply-only stubs are never published; the trust gate still judges each.
+ */
+function buildNavParentAssetsById(
+  cgData: CoinGeckoMcapData,
+  previousAssetsById: ReadonlyMap<string, PeggedAsset> | undefined,
+  fxFallbackRates: Record<string, number> | undefined,
+  nowSec: number,
+): ReadonlyMap<string, PeggedAsset> {
+  const current = FIAT_CG_NAV_PARENT_METAS.flatMap((parent) => {
+    const entry = cgData[parent.geckoId!];
+    const price = toPositiveFiniteNumber(entry?.usd);
+    const freshness = validatePricingSourceFreshness({
+      source: "coingecko", observedAt: entry?.last_updated_at, observedAtMode: "upstream", nowSec, requireObservedAt: true,
+    });
+    if (price == null || !freshness.accepted || freshness.observedAt == null) return [];
+    if (!isReasonablePrice(price, pegTypeKey(parent), fxFallbackRates, buildPriceReasonablenessOptions({
+      navToken: parent.flags.navToken, commodityOunces: parent.commodityOunces,
+    }))) return [];
+    const asset: PeggedAsset = {
+      id: parent.id, name: parent.name, symbol: parent.symbol, price,
+      priceSource: "coingecko", priceConfidence: "single-source",
+      priceObservedAt: freshness.observedAt, priceObservedAtMode: "upstream", priceSyncedAt: nowSec,
+    };
+    return [[parent.id, asset] as const];
+  });
+  if (current.length === 0) return previousAssetsById ?? new Map();
+  return new Map([...(previousAssetsById ?? []), ...current]);
+}
 
 export async function fetchFiatCoinGeckoTokens(
   cgData: CoinGeckoMcapData,
@@ -52,6 +93,7 @@ export async function fetchFiatCoinGeckoTokens(
     return [];
   }
   const runNowSec = Math.floor(Date.now() / 1000);
+  const navParentAssetsById = buildNavParentAssetsById(cgData, previousAssetsById, fxFallbackRates, runNowSec);
   let partitionStage: { timeout: ReturnType<typeof createTimeoutSignal>; deadlineAtMs: number } | undefined;
   let partitionCandidateCount = 0;
   let partitionStartOffset = 0;
@@ -136,8 +178,8 @@ export async function fetchFiatCoinGeckoTokens(
           const navUsdRate = meta.flags.pegCurrency === "USD" ? 1 : pegReferencePrice;
           if (reserveNav && navUsdRate != null) navSupplyPrice = reserveNav.price * navUsdRate;
         }
-        if (navLikeAsset && !priceResolution && navSupplyPrice == null && previousAssetsById) {
-          const navOverride = await resolveVaultNavSupplyPrice(meta.id, previousAssetsById, db, signal, chainRpcs);
+        if (navLikeAsset && !priceResolution && navSupplyPrice == null) {
+          const navOverride = await resolveVaultNavSupplyPrice(meta.id, navParentAssetsById, db, signal, chainRpcs);
           if (navOverride) {
             navSupplyPrice = navOverride.price;
             logWorkerEventArgs(

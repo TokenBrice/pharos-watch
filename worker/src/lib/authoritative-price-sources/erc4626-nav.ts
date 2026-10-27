@@ -170,19 +170,30 @@ export const previewRedeemProvider = createVaultNavProvider({
 });
 
 /**
+ * Parent of a registered ERC-4626 vault whose existing trust options admit one
+ * fresh replay-safe single-source parent. Intake may request that parent's
+ * CoinGecko quote in its existing batch; the trust gate itself is unchanged.
+ */
+export function getFreshSingleSourceNavParentId(stablecoinId: string): string | null {
+  const config = ERC4626_NAV_VAULTS_BY_ID.get(stablecoinId);
+  return config?.allowFreshReplaySafeSingleSourceParent ? config.parentId : null;
+}
+
+/**
  * Pre-intake supply-valuation NAV price for a tracked supplemental vault token
  * whose market price sources are gone (e.g. a CoinGecko delisting). The fiat-cg
  * supply lane needs an observed price to admit on-chain supply, but intake runs
  * before this run's enrichment prices exist, so the parent row comes from the
+ * caller's run-local map: an admitted same-run parent observation or the
  * previous published payload. This reuses the exact protocol-redeem route —
- * parent-trust gate (incl. its 30-minute synced-at ceiling), live
+ * parent-trust gate (incl. its source freshness budget), live
  * registered ERC-4626 convertToAssets or Idle CDO virtualPrice read, and the bounded cached-rate degradation lane — so no
  * freshness policy is bypassed. The result values supply only; the live
  * override stage re-prices the published row in the same run.
  */
 export async function resolveVaultNavSupplyPrice(
   stablecoinId: string,
-  previousAssetsById: ReadonlyMap<string, PeggedAsset>,
+  parentAssetsById: ReadonlyMap<string, PeggedAsset>,
   db?: D1Database,
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
@@ -192,7 +203,7 @@ export async function resolveVaultNavSupplyPrice(
     : idleCdoTrancheProvider.matches(stablecoinId) ? idleCdoTrancheProvider : null;
   const parentId = config?.parentId ?? provider?.liveParentByAssetId?.[stablecoinId];
   if (!provider || !parentId) return null;
-  const parentAsset = previousAssetsById.get(parentId);
+  const parentAsset = parentAssetsById.get(parentId);
   if (!parentAsset) return null;
   const liveAllowed = !db || await shouldAttemptFetch(db, CIRCUIT_SOURCE.PROTOCOL_REDEEM);
 

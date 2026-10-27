@@ -21,7 +21,9 @@ vi.mock("../../../../lib/fetch-retry", async (importOriginal) => ({
   fetchTextWithRetry: async () => ({ response: new Response('{"coins":{}}'), body: '{"coins":{}}' }),
 }));
 vi.mock("../../../reserve-adapters/helpers", () => ({ probeTrackedTokenSupply: (...args: unknown[]) => supply(...args) }));
-vi.mock("../../../../lib/authoritative-price-sources", () => ({ resolveVaultNavSupplyPrice: vi.fn().mockResolvedValue(null) }));
+vi.mock("../../../../lib/authoritative-price-sources", () => ({
+  getFreshSingleSourceNavParentId: () => null, resolveVaultNavSupplyPrice: vi.fn().mockResolvedValue(null),
+}));
 vi.mock("../onchain-supply", async (importOriginal) => ({
   ...(await importOriginal<typeof OnchainSupply>()),
   fetchPinnedNativeShares: async () => {
