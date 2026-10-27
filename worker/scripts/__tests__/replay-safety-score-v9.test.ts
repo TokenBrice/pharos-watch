@@ -29,7 +29,8 @@ import { SOURCE_FIXED_INPUT_MAX_AGE_SEC } from "../../src/lib/safety-score-v9/su
 import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../../src/lib/safety-score-v9/publication-codec";
 import { createSafetyScoreV9TransferMaterialityGeneration } from "../../src/lib/safety-score-v9/transfer-materiality";
-import { makeWorkerSafetyScoreV9Publication } from "../../src/test-helpers/report-cards-v9";
+import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../src/test-helpers/report-cards-v9";
+import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../../src/lib/safety-score-v9/publication-assessment";
 import { makeV9FixedInput } from "../../src/test-helpers/v9-fixed-input";
 import { makeSupplyFullRedemption } from "../../src/lib/__tests__/redemption-backstops-store.test-support";
 import { deriveSupplyModelExitRouteObservation } from "../../src/lib/redemption-exit-route-observations";
@@ -112,7 +113,13 @@ describe("Safety Score v9 deterministic replay CLI", () => {
         },
       });
       const baseEntry = await buildReportCardsFixedInputCacheEntry(base);
-      const delta = await buildSafetyScoreV9PublicationReplayCapture(publication, base, transfer);
+      // 10.35: the prior accepted baseline retains a measured-route expiry witness on a stub.
+      const prior = buildSafetyScoreV9AcceptedPublicationBaseline(makeWorkerSafetyScoreV9Publication({
+        cards: [makeWorkerV9Card({ id: "wm-m0", score: null, grade: null, ratingStatus: "pipeline-gap" })],
+        publicationGenerationId: "report-cards:v9:fixture-prior", publishedAtSec: base.clockSec - 3_600,
+      }), { "wm-m0": [{ routeId: "dex:retired", dexGenerationId: base.dexGenerationId,
+        observationWindowEndedAt: base.clockSec - 14_400, freshnessMaxSec: 10_800 }] });
+      const delta = await buildSafetyScoreV9PublicationReplayCapture(publication, base, transfer, prior);
       const raw = resolve(dir, "raw.json");
       const capturePath = resolve(dir, "capture.json");
       const replayPath = resolve(dir, "replay.json");
@@ -131,9 +138,13 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       await runSafetyScoreV9ReplayCli(args);
       const expected = buildSafetyScoreV9ReplayArtifact({
         fixedInput: base, registrySnapshot: capture.registrySnapshot, transferMaterialityGeneration: transfer,
-        publishedAtSec: base.clockSec,
+        publishedAtSec: base.clockSec, sourceAdmissionBaseline: prior,
       });
       expect(readFileSync(replayPath, "utf8")).toBe(serializeSafetyScoreV9ReplayArtifact(expected));
+      // The witness reproduces the publication-time quarantine instead of a raw rating.
+      expect(expected.sourceAdmissionBaseline).toEqual(prior);
+      expect(expected.pipeline.quarantines).toEqual([expect.objectContaining({ assetId: "wm-m0", code: "evaluation-failed" })]);
+      expect(expected.pipeline.measuredExitExpiry.assetIds).toEqual(["wm-m0"]);
       await expect(runSafetyScoreV9ReplayCli([...args, "--rederive-current-redemption"])).rejects.toThrow("accepted captures");
       capture.registrySnapshot.fingerprint = "0".repeat(64);
       writeFileSync(capturePath, JSON.stringify(capture));

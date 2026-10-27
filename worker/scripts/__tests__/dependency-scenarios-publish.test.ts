@@ -146,7 +146,7 @@ async function prepareSupplyAttributionReplayFixture() {
   const invoke = () => spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts", "--mode", "compute", "--input", resolve(fixture.directory, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", fixture.directory], { encoding: "utf8", timeout: 30_000 });
   writeFileSync(resolve(fixture.directory, "publication.json"), JSON.stringify(source));
   writeFileSync(resolve(fixture.directory, "capture.json"), JSON.stringify(base));
-  const entry = await buildSafetyScoreV9PublicationReplayCapture(candidate, fixedInput, null);
+  const entry = await buildSafetyScoreV9PublicationReplayCapture(candidate, fixedInput, null, null);
   const baseEntry = await buildReportCardsFixedInputCacheEntry(base);
   const newerEntry = await buildReportCardsFixedInputCacheEntry(createReplayFixedInput(base.clockSec + 1800));
   const db = new DatabaseSync(fixture.databasePath);

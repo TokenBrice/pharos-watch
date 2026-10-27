@@ -49,6 +49,13 @@ import {
   type SafetyScoreV9CompilerInput,
 } from "./native-input";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "./consumer-freshness";
+import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
+import {
+  resolveMeasuredExitExpiry,
+  type SafetyScoreV9AcceptedPublicationBaseline,
+  type SafetyScoreV9DexExpiryWitness,
+  type SafetyScoreV9ExpiredMeasuredExitRoutes,
+} from "./publication-assessment";
 
 const SAFETY_SCORE_V9_COMPILER_FACT_SCHEMA_DIGEST_DOMAIN = "safety-score-v9.compiler-fact-schema.v1";
 const SAFETY_SCORE_V9_PRODUCER_CAPABILITY_DIGEST_DOMAIN = "safety-score-v9.producer-capability-build.v1";
@@ -167,6 +174,15 @@ export interface BuildSafetyScoreV9CandidateInput {
    */
   allowRegistryMismatch?: boolean;
   registry?: Pick<BuildSafetyScoreV9BaselineExtensionOptions, "metaById" | "registryFingerprint" | "reviewedTransferFacts">;
+  /**
+   * 10.35 asset-local measured-route expiry: the prior accepted baseline and the
+   * input's embedded-window projection. Detected assets are quarantined and the
+   * cohort recompiled; omitted only by callers without accepted context.
+   */
+  measuredExitExpiry?: {
+    routes: SafetyScoreV9ExpiredMeasuredExitRoutes;
+    acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null;
+  };
   /** Operator-only reuse context; never supplied by the production publisher. */
   liveWithheldCompilation?: {
     source: SafetyScoreV9LiveWithheldCompilation;
@@ -204,6 +220,7 @@ export interface SafetyScoreV9CandidatePipelineResult {
   quarantines: readonly V9AssetQuarantine[];
   quarantineAffectedAssetIds: readonly string[];
   bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
+  measuredExitExpiry: SafetyScoreV9MeasuredExitExpiryResult;
 }
 
 export interface SafetyScoreV9PublicationResult {
@@ -213,6 +230,19 @@ export interface SafetyScoreV9PublicationResult {
   quarantines: readonly V9AssetQuarantine[];
   quarantineAffectedAssetIds: readonly string[];
   bridgeJoinDiagnostics: readonly SafetyScoreV9BridgeJoinDiagnostic[];
+  measuredExitExpiry: SafetyScoreV9MeasuredExitExpiryResult;
+}
+
+/** Quarantined expired-route assets and the witnesses the next baseline retains. */
+export interface SafetyScoreV9MeasuredExitExpiryResult {
+  assetIds: readonly string[];
+  witnessesByAssetId: Readonly<Record<string, SafetyScoreV9DexExpiryWitness[]>>;
+}
+
+function measuredExitExpiryMessage(witnesses: readonly SafetyScoreV9DexExpiryWitness[], clockSec: number): string {
+  return `dex-stale: exitRouteObservations.observationHistory.observationWindowEndedAt expired; ${witnesses.map((witness) =>
+    `route ${witness.routeId} generation ${witness.dexGenerationId} window ended ${witness.observationWindowEndedAt}, ` +
+      `clock ${clockSec}, budget ${witness.freshnessMaxSec}s`).join("; ")}`;
 }
 
 export type SafetyScoreV9BridgeJoinDiagnostic = V9BridgeJoinDiagnosticsV1 & {
@@ -758,9 +788,30 @@ function buildSafetyScoreV9CandidatePipeline(
     candidate: SafetyScoreV9CurrentResponse;
     candidateIdentity: z.infer<typeof SafetyScoreV9CandidateIdentityV1Schema>;
     retained: { extension: SafetyScoreV9FactSetExtensionV2; compiledFacts: CompiledV9FactSetV3; evaluatedSet: Readonly<V9EvaluatedSet> } | null;
+  } | null = null;
+  const recompile = () => {
+    fixedInput = input.fixedInputOwner.value ?? input.fixedInputOwner.reload();
+    input.fixedInputOwner.value = fixedInput;
+    extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;
+    const retryExtension = extension ?? extensionSource?.extension ?? materializeCandidateExtension({ ...input, fixedInput });
+    compilation =
+      compileFacts(retryExtension, evaluationFailures);
+    compiledFacts = compilation.factSet;
+    quarantines = compilation.quarantines;
+    publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput });
+    compilation = null;
+    if (!retainIntermediates) {
+      extensionSource = null;
+      fixedInput = null;
+      input.fixedInputOwner.value = null;
+    }
   };
+  const expiryWitnesses = new Map<string, SafetyScoreV9DexExpiryWitness[]>();
   // An asset whose evaluation or public card violates its contract is
   // quarantined and the cohort recompiled (R8), never the whole attempt.
+  // 10.35: so is an asset whose post-hysteresis card relies on, or (via a
+  // retained witness) formerly relied on, expired measured DEX history;
+  // quarantine is monotonic until no new asset is detected.
   while (true) {
     try {
       if (retainIntermediates) {
@@ -777,7 +828,22 @@ function buildSafetyScoreV9CandidatePipeline(
         });
         publication = publishEvaluatedCandidate(projected, projector);
       }
-      break;
+      if (input.measuredExitExpiry === undefined) break;
+      const { acceptedPublication, routes } = input.measuredExitExpiry;
+      const expiry = resolveMeasuredExitExpiry(routes,
+        applySafetyScoreV9GradeHysteresis(publication.candidate, acceptedPublication), acceptedPublication);
+      for (const [assetId, witnesses] of Object.entries(expiry.witnessesByAssetId)) {
+        if (!expiryWitnesses.has(assetId)) expiryWitnesses.set(assetId, witnesses);
+      }
+      const pending = expiry.assetIds.filter((assetId) =>
+        !evaluationFailures.has(assetId) && !quarantines.some((quarantine) => quarantine.assetId === assetId));
+      if (pending.length === 0) break;
+      for (const assetId of pending) {
+        evaluationFailures.set(assetId, measuredExitExpiryMessage(expiry.witnessesByAssetId[assetId]!, clockSec).slice(0, 500));
+      }
+      // Release the superseded candidate before the cohort is recompiled.
+      publication = null;
+      recompile();
     } catch (error) {
       const failed = error instanceof V9AssetEvaluationError
         ? [[error.assetId, error.message] as const]
@@ -790,24 +856,14 @@ function buildSafetyScoreV9CandidatePipeline(
         evaluationFailures.has(assetId) || quarantines.some((quarantine) => quarantine.assetId === assetId),
       )) throw error;
       for (const [assetId, message] of failed) evaluationFailures.set(assetId, message);
-      fixedInput = input.fixedInputOwner.value ?? input.fixedInputOwner.reload();
-      input.fixedInputOwner.value = fixedInput;
-      extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;
-      const retryExtension = extension ?? extensionSource?.extension ?? materializeCandidateExtension({ ...input, fixedInput });
-      compilation =
-        compileFacts(retryExtension, evaluationFailures);
-      compiledFacts = compilation.factSet;
-      quarantines = compilation.quarantines;
-      publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput });
-      compilation = null;
-      if (!retainIntermediates) {
-        extensionSource = null;
-        fixedInput = null;
-        input.fixedInputOwner.value = null;
-      }
+      recompile();
     }
   }
-  const { candidate, candidateIdentity, retained } = publication;
+  const measuredExitExpiry: SafetyScoreV9MeasuredExitExpiryResult = {
+    assetIds: [...expiryWitnesses.keys()].sort(compareText),
+    witnessesByAssetId: Object.fromEntries([...expiryWitnesses].sort(([left], [right]) => compareText(left, right))),
+  };
+  const { candidate, candidateIdentity, retained } = publication!;
   const { affectedAssetIds } = publicationFacts;
   extension = null;
   compiledFacts = null;
@@ -895,6 +951,7 @@ function buildSafetyScoreV9CandidatePipeline(
       quarantines,
       quarantineAffectedAssetIds: affectedAssetIds,
       bridgeJoinDiagnostics,
+      measuredExitExpiry,
     };
   }
 
@@ -912,5 +969,6 @@ function buildSafetyScoreV9CandidatePipeline(
     quarantines,
     quarantineAffectedAssetIds: affectedAssetIds,
     bridgeJoinDiagnostics,
+    measuredExitExpiry,
   };
 }

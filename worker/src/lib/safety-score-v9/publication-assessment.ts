@@ -45,8 +45,20 @@ export function expiredMeasuredExitAssetIds(
 
 /** Keep route identities, not captured curves, after compilation releases its input. */
 export function projectExpiredMeasuredExitRoutes(fixedInput: MeasuredExitPublicationInput) {
+  // Every embedded measured window, so a retained expiry witness can see fresh same-route evidence.
+  const windowsByAssetId = new Map(Object.entries(fixedInput.dexLiqMap).map(([assetId, row]) => [assetId,
+    new Map((row.exitRouteObservations ?? []).flatMap((observation) => observation.observationHistory == null ? [] : [[
+      observation.routeId,
+      {
+        observationWindowEndedAt: observation.observationHistory.observationWindowEndedAt,
+        freshnessMaxSec: getDexMeasuredExecutionFreshnessMaxSec(observation.adapterProfileId ?? ""),
+      },
+    ] as const])),
+  ]));
   return {
+    clockSec: fixedInput.clockSec,
     dexGenerationId: fixedInput.dexGenerationId,
+    windowsByAssetId,
     byAssetId: new Map(Object.entries(fixedInput.dexLiqMap).map(([assetId, row]) => [assetId,
       (row.exitRouteObservations ?? []).filter((observation) => {
         const history = observation.observationHistory;
@@ -59,35 +71,70 @@ export function projectExpiredMeasuredExitRoutes(fixedInput: MeasuredExitPublica
     ])),
   };
 }
+export type SafetyScoreV9ExpiredMeasuredExitRoutes = ReturnType<typeof projectExpiredMeasuredExitRoutes>;
+
+/**
+ * Asset-local measured-route expiry (10.35). Each detected asset carries one
+ * witness per expired route with its original window end and budget. Witnesses
+ * survive quarantine stubs, which have no route identity, and clear only when the
+ * same route has a newer embedded window inside its budget; an absent row or a
+ * newer outer snapshot never clears one.
+ */
+export function resolveMeasuredExitExpiry(
+  routes: SafetyScoreV9ExpiredMeasuredExitRoutes,
+  candidate: Pick<SafetyScoreV9CurrentResponse, "cards">,
+  acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
+): { assetIds: string[]; witnessesByAssetId: Record<string, SafetyScoreV9DexExpiryWitness[]> } {
+  const acceptedById = new Map(acceptedPublication?.cards.map((card) => [card.id, card]));
+  const witnessesByAssetId: Record<string, SafetyScoreV9DexExpiryWitness[]> = {};
+  for (const card of [...candidate.cards].sort((left, right) => compareText(left.id, right.id))) {
+    const windows = routes.windowsByAssetId.get(card.id);
+    const retained = (acceptedPublication?.dexExpiryByAssetId?.[card.id] ?? []).filter((witness) => {
+      const latest = windows?.get(witness.routeId);
+      return latest === undefined || latest.observationWindowEndedAt <= witness.observationWindowEndedAt ||
+        routes.clockSec - latest.observationWindowEndedAt > witness.freshnessMaxSec;
+    });
+    const detected = expiredContributingRouteIds(routes, card, acceptedById.get(card.id), acceptedPublication)
+      .filter((routeId) => !retained.some((witness) => witness.routeId === routeId))
+      .map((routeId) => ({ routeId, dexGenerationId: routes.dexGenerationId, ...windows!.get(routeId)! }));
+    const witnesses = [...retained, ...detected].sort((left, right) => compareText(left.routeId, right.routeId));
+    if (witnesses.length > 0) witnessesByAssetId[card.id] = witnesses;
+  }
+  return { assetIds: Object.keys(witnessesByAssetId), witnessesByAssetId };
+}
 
 export function expiredMeasuredExitAssetIdsFromRoutes(
-  routes: ReturnType<typeof projectExpiredMeasuredExitRoutes>,
+  routes: SafetyScoreV9ExpiredMeasuredExitRoutes,
   candidate: SafetyScoreV9CurrentResponse,
   acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null = null,
 ): string[] {
-  const acceptedById = new Map(acceptedPublication?.cards.map((card) => [card.id, card]));
-  return candidate.cards.flatMap((card) => {
-    const exit = card.breakdowns?.exit;
-    const contributingRoutes = new Set([
-      exit?.primaryRoute?.key,
-      ...(exit?.diversification && exit.diversification.bonus > 0
-        ? [exit.diversification.routeKey]
-        : []),
-    ]);
-    const accepted = acceptedById.get(card.id);
-    // Once a stale route leaves selection (or makes the card NR), its former
-    // contribution must not disappear from the freshness gate as well.
-    const previousRoutes = accepted && cardDeteriorated(card, accepted)
-      ? [accepted.primaryRouteKey, accepted.diversificationRouteKey]
-      : [];
-    const expired = routes.byAssetId.get(card.id)?.some((routeId) =>
-        contributingRoutes.has(canonicalV9RouteKey("dex", routes.dexGenerationId, routeId)) ||
-          (acceptedPublication?.dexGenerationId != null && previousRoutes.includes(
-            canonicalV9RouteKey("dex", acceptedPublication.dexGenerationId, routeId),
-          )),
-    );
-    return expired ? [card.id] : [];
-  }).sort(compareText);
+  return resolveMeasuredExitExpiry(routes, candidate, acceptedPublication).assetIds;
+}
+
+function expiredContributingRouteIds(
+  routes: SafetyScoreV9ExpiredMeasuredExitRoutes,
+  card: SafetyScoreV9CurrentResponse["cards"][number],
+  accepted: SafetyScoreV9AcceptedCardBaseline | undefined,
+  acceptedPublication: SafetyScoreV9AcceptedPublicationBaseline | null,
+): string[] {
+  const exit = card.breakdowns?.exit;
+  const contributingRoutes = new Set([
+    exit?.primaryRoute?.key,
+    ...(exit?.diversification && exit.diversification.bonus > 0
+      ? [exit.diversification.routeKey]
+      : []),
+  ]);
+  // Once a stale route leaves selection (or makes the card NR), its former
+  // contribution must not disappear from the freshness gate as well.
+  const previousRoutes = accepted && cardDeteriorated(card, accepted)
+    ? [accepted.primaryRouteKey, accepted.diversificationRouteKey]
+    : [];
+  return (routes.byAssetId.get(card.id) ?? []).filter((routeId) =>
+      contributingRoutes.has(canonicalV9RouteKey("dex", routes.dexGenerationId, routeId)) ||
+        (acceptedPublication?.dexGenerationId != null && previousRoutes.includes(
+          canonicalV9RouteKey("dex", acceptedPublication.dexGenerationId, routeId),
+        )),
+  );
 }
 
 export interface V9PublicationCoverageFloor {
@@ -163,6 +210,12 @@ const AcceptedCardBaselineSchema = z.strictObject({
 });
 export type SafetyScoreV9AcceptedCardBaseline = z.infer<typeof AcceptedCardBaselineSchema>;
 
+const DexExpiryWitnessSchema = z.strictObject({
+  routeId: z.string().min(1), dexGenerationId: z.string().min(1),
+  observationWindowEndedAt: UnixSecondsSchema, freshnessMaxSec: z.number().int().positive(),
+});
+export type SafetyScoreV9DexExpiryWitness = z.infer<typeof DexExpiryWitnessSchema>;
+
 /**
  * The publication gate only needs identity, deterioration, and delta fields
  * from the previously accepted publication. Keeping this compact projection
@@ -174,17 +227,33 @@ export const AcceptedPublicationBaselineSchema = z.strictObject({
   policyVersion: z.string().min(1), policyId: z.string().min(1), policyDigest: Sha256Schema,
   evaluationBuildDigest: Sha256Schema, dexGenerationId: z.string().min(1).nullable(),
   cards: z.array(AcceptedCardBaselineSchema),
+  // 10.35: unresolved measured-route expiry, keyed by the quarantined asset.
+  dexExpiryByAssetId: z.record(z.string().min(1), z.array(DexExpiryWitnessSchema).min(1)).optional(),
 }).superRefine((value, ctx) => {
   if (value.cards.some((card, index) => index > 0 && compareCodeUnits(value.cards[index - 1]!.id, card.id) >= 0)) {
     ctx.addIssue({ code: "custom", path: ["cards"], message: "Baseline card IDs must be unique and sorted" });
+  }
+  const cardsById = new Map(value.cards.map((card) => [card.id, card]));
+  for (const [assetId, witnesses] of Object.entries(value.dexExpiryByAssetId ?? {})) {
+    const card = cardsById.get(assetId);
+    if (card === undefined || card.score !== null || card.grade !== null) {
+      ctx.addIssue({ code: "custom", path: ["dexExpiryByAssetId", assetId], message: "Expiry witnesses must name a published null-score stub" });
+    }
+    if (witnesses.some((witness, index) => witness.observationWindowEndedAt > value.publishedAtSec ||
+      (index > 0 && compareCodeUnits(witnesses[index - 1]!.routeId, witness.routeId) >= 0))) {
+      ctx.addIssue({ code: "custom", path: ["dexExpiryByAssetId", assetId], message: "Expiry witnesses must be route-sorted, unique and not postdate publication" });
+    }
   }
 });
 export type SafetyScoreV9AcceptedPublicationBaseline = z.infer<typeof AcceptedPublicationBaselineSchema>;
 
 export function buildSafetyScoreV9AcceptedPublicationBaseline(
   publication: SafetyScoreV9CurrentResponse,
+  dexExpiryByAssetId: Readonly<Record<string, SafetyScoreV9DexExpiryWitness[]>> = {},
 ): SafetyScoreV9AcceptedPublicationBaseline {
+  const witnessEntries = Object.entries(dexExpiryByAssetId).sort(([left], [right]) => compareCodeUnits(left, right));
   return {
+    ...(witnessEntries.length === 0 ? {} : { dexExpiryByAssetId: Object.fromEntries(witnessEntries) }),
     publicationGenerationId: publication.publicationGenerationId,
     publishedAtSec: publication.publishedAtSec,
     policyVersion: publication.policyVersion,
@@ -275,17 +344,18 @@ export function assessV9Publication(input: {
   const reasons = inputHealthReasons(
     V9PublicationInputHealthSchema.parse(input.inputHealth),
   );
-  // This is a stale score-bearing input, not an issuer change or an asset-local
-  // coverage gap. Hold even below the 10% partial-publication allowance and
-  // across build changes; the global hold also protects dependent wrappers.
+  // 10.35: expired embedded measured history is asset-local. Every detected
+  // asset must already be a quarantined stub; its dependents join the affected
+  // census, so the 90% closure and coverage floors still hold the cohort.
+  // Whole-source DEX failure stays a global hold through input health.
   const expiredMeasuredAssets = new Set(input.expiredMeasuredExitAssetIds ?? []);
   for (const assetId of expiredMeasuredAssets) {
     if (!input.candidate.cards.some((card) => card.id === assetId)) {
       throw new Error(`Expired measured-exit asset ${assetId} is absent from the candidate`);
     }
-  }
-  if (expiredMeasuredAssets.size > 0 && !reasons.some((reason) => reason.code === "dex-stale")) {
-    reasons.push({ code: "dex-stale" });
+    if (!(input.quarantinedAssetIds ?? []).includes(assetId)) {
+      throw new Error(`Expired measured-exit asset ${assetId} is not quarantined`);
+    }
   }
   const failedFloorIds = input.coverageFloors
     .filter((floor) => floor.status === "fail")

@@ -36,6 +36,11 @@ import {
 } from "./lib/safety-score-v9-registry";
 
 import { parseSafetyScoreV9TransferMaterialityGeneration, type SafetyScoreV9TransferMaterialityGeneration } from "../src/lib/safety-score-v9/transfer-materiality";
+import {
+  projectExpiredMeasuredExitRoutes,
+  type SafetyScoreV9AcceptedPublicationBaseline,
+} from "../src/lib/safety-score-v9/publication-assessment";
+import { parseSafetyScoreV9SourceAdmissionBaseline } from "../src/lib/safety-score-v9/publication-replay-capture";
 export interface SafetyScoreV9FutureDatedReview {
   assetId: string;
   field: "reviewedAt" | "compositionAsOf" | "mechanism.reviewedAt" | `mechanism.components.${string}.review.reviewedAt`;
@@ -140,6 +145,8 @@ export interface SafetyScoreV9ReplayArtifact {
     reason: "v9-replay-only";
   };
   pipeline: Readonly<SafetyScoreV9CandidatePipelineResult>;
+  /** v3 accepted captures: the prior accepted baseline the publication was admitted against (null = bootstrap). */
+  sourceAdmissionBaseline?: SafetyScoreV9AcceptedPublicationBaseline | null;
   replayScenario?: {
     kind: "current-redemption-rederivation";
     sourceBaseInputGenerationId: string;
@@ -329,7 +336,9 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
   allowRegistryMismatch?: boolean;
   registrySnapshot?: SafetyScoreV9RegistrySnapshot;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+  sourceAdmissionBaseline?: SafetyScoreV9AcceptedPublicationBaseline | null;
 }): SafetyScoreV9ReplayArtifact {
+  const { sourceAdmissionBaseline, ...candidateInput } = input;
   if (input.registrySnapshot && (!input.fixedInput || typeof input.fixedInput !== "object" ||
     !("registryFingerprint" in input.fixedInput) || input.fixedInput.registryFingerprint !== input.registrySnapshot.fingerprint)) {
     throw new Error("Capture registry fingerprint does not match supplied snapshot");
@@ -342,8 +351,14 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
       authorized: false,
       reason: "v9-replay-only",
     },
+    ...(sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline }),
     pipeline: buildSafetyScoreV9Candidate({
-      ...input,
+      ...candidateInput,
+      // Reproduce 10.35 measured-route quarantine against the same accepted baseline.
+      ...(sourceAdmissionBaseline === undefined ? {} : { measuredExitExpiry: {
+        routes: projectExpiredMeasuredExitRoutes(input.fixedInput as SafetyScoreV9CompilerInput),
+        acceptedPublication: sourceAdmissionBaseline,
+      } }),
       ...(input.registrySnapshot ? {
         registry: {
           metaById: new Map(verifyRegistrySnapshot(input.registrySnapshot).activeStablecoins.map((coin) => [coin.id, coin])),
@@ -385,7 +400,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   );
 
   const raw = await readReplayInput(values.input);
-  const capture = raw as { kind?: string; fixedInput?: unknown; registrySnapshot?: SafetyScoreV9RegistrySnapshot; transferMaterialityGeneration?: unknown };
+  const capture = raw as { kind?: string; fixedInput?: unknown; registrySnapshot?: SafetyScoreV9RegistrySnapshot; transferMaterialityGeneration?: unknown; sourceAdmissionBaseline?: unknown };
   const acceptedCapture = capture.kind === "safety-score-v9-accepted-publication-capture";
   const embedded = capture.kind === "safety-score-v9-registry-capture" || acceptedCapture ? capture.registrySnapshot : undefined;
   assertCliUsage(
@@ -426,6 +441,8 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     fixedInput,
     registrySnapshot,
     ...(acceptedCapture ? { transferMaterialityGeneration: capture.transferMaterialityGeneration === null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration) } : {}),
+    ...(acceptedCapture && capture.sourceAdmissionBaseline !== undefined
+      ? { sourceAdmissionBaseline: parseSafetyScoreV9SourceAdmissionBaseline(capture.sourceAdmissionBaseline, capturedInput.clockSec)?.baseline ?? null } : {}),
     ...(extension === undefined ? {} : { extension }),
     publishedAtSec,
     ...(releaseCandidateId === undefined ? {} : { releaseCandidateId: String(releaseCandidateId) }),

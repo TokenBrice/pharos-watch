@@ -44,6 +44,10 @@ import {
 } from "../../test-helpers/v9-fixed-input";
 import { localControl } from "./safety-score-v9-fact-set.test-support";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import {
+  buildSafetyScoreV9AcceptedPublicationBaseline,
+  projectExpiredMeasuredExitRoutes,
+} from "../safety-score-v9/publication-assessment";
 
 // One day past the newest reviewed registry date the usdc-circle capture below
 // reads, so the extension's "review is later than the scoring clock" guard stays
@@ -700,6 +704,98 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
     }
   });
 
+  describe("asset-local measured-route expiry (10.35)", () => {
+    // Mark exact routes expired without changing the scored observations.
+    function expiredRoutes(input: ReturnType<typeof reserveParentCascadeFixture>, byAssetId: Record<string, string[]>) {
+      const routes = projectExpiredMeasuredExitRoutes(input.fixedInput);
+      for (const [assetId, routeIds] of Object.entries(byAssetId)) {
+        routes.byAssetId.set(assetId, routeIds);
+        routes.windowsByAssetId.set(assetId, new Map(routeIds.map((routeId) => [routeId, {
+          observationWindowEndedAt: input.fixedInput.clockSec - 10_801, freshnessMaxSec: 10_800,
+        }])));
+      }
+      return routes;
+    }
+
+    it("quarantines the expired contributor, recomputes dependents and keeps unaffected ratings", () => {
+      const input = reserveParentCascadeFixture();
+      const clean = buildSafetyScoreV9Candidate(input);
+      const acceptedPublication = buildSafetyScoreV9AcceptedPublicationBaseline(clean.candidate);
+      const result = buildSafetyScoreV9Candidate({
+        ...input, measuredExitExpiry: { routes: expiredRoutes(input, { beta: ["dex:primary"] }), acceptedPublication },
+      });
+      expect(result.quarantines).toEqual([{
+        assetId: "beta", code: "evaluation-failed",
+        message: `dex-stale: exitRouteObservations.observationHistory.observationWindowEndedAt expired; route dex:primary ` +
+          `generation ${input.fixedInput.dexGenerationId} window ended ${input.fixedInput.clockSec - 10_801}, ` +
+          `clock ${input.fixedInput.clockSec}, budget 10800s`,
+      }]);
+      expect(result.measuredExitExpiry).toEqual({
+        assetIds: ["beta"],
+        witnessesByAssetId: { beta: [{
+          routeId: "dex:primary", dexGenerationId: input.fixedInput.dexGenerationId,
+          observationWindowEndedAt: input.fixedInput.clockSec - 10_801, freshnessMaxSec: 10_800,
+        }] },
+      });
+      expect(result.quarantineAffectedAssetIds).toEqual(["alpha", "beta", "gamma"]);
+      expect(result.candidate.cards.find((card) => card.id === "beta"))
+        .toMatchObject({ ratingStatus: "pipeline-gap", score: null, grade: null });
+      expect(SafetyScoreV9ResponseSchema.parse(result.candidate)).toEqual(result.candidate);
+      // The same pipeline without expiry context keeps today's raw candidate.
+      expect(buildSafetyScoreV9Candidate(input).candidate).toEqual(clean.candidate);
+    });
+
+    it("keeps quarantining from a retained witness until the same route refreshes", () => {
+      const input = reserveParentCascadeFixture();
+      const first = buildSafetyScoreV9Candidate({
+        ...input, measuredExitExpiry: {
+          routes: expiredRoutes(input, { beta: ["dex:primary"] }),
+          acceptedPublication: null,
+        },
+      });
+      const acceptedPublication = buildSafetyScoreV9AcceptedPublicationBaseline(
+        first.candidate, first.measuredExitExpiry.witnessesByAssetId,
+      );
+      // No route is expired now, but the stub's former route has no newer window.
+      const retained = buildSafetyScoreV9Candidate({
+        ...input, measuredExitExpiry: { routes: expiredRoutes(input, {}), acceptedPublication },
+      });
+      expect(retained.quarantines.map((quarantine) => quarantine.assetId)).toEqual(["beta"]);
+      expect(retained.measuredExitExpiry.witnessesByAssetId).toEqual(first.measuredExitExpiry.witnessesByAssetId);
+
+      const refreshed = expiredRoutes(input, {});
+      refreshed.windowsByAssetId.set("beta", new Map([["dex:primary", {
+        observationWindowEndedAt: input.fixedInput.clockSec, freshnessMaxSec: 10_800,
+      }]]));
+      const recovered = buildSafetyScoreV9Candidate({ ...input, measuredExitExpiry: { routes: refreshed, acceptedPublication } });
+      expect(recovered.quarantines).toEqual([]);
+      expect(recovered.measuredExitExpiry).toEqual({ assetIds: [], witnessesByAssetId: {} });
+      expect(recovered.candidate.cards.find((card) => card.id === "beta")).toMatchObject({ ratingStatus: "rated" });
+    });
+
+    it("is monotonic: a wrapper that deteriorates after its parent quarantine loses its expired former route too", () => {
+      const input = reserveParentCascadeFixture();
+      const clean = buildSafetyScoreV9Candidate(input);
+      const accepted = buildSafetyScoreV9AcceptedPublicationBaseline(clean.candidate);
+      // Alpha's accepted primary was a now-expired legacy route it no longer selects.
+      const alpha = accepted.cards.find((card) => card.id === "alpha")!;
+      alpha.primaryRouteKey = `dex:${input.fixedInput.dexGenerationId}:dex:legacy`;
+      const result = buildSafetyScoreV9Candidate({
+        ...input, measuredExitExpiry: {
+          routes: expiredRoutes(input, { beta: ["dex:primary"], alpha: ["dex:legacy"] }),
+          acceptedPublication: accepted,
+        },
+      });
+      expect(result.quarantines.map((quarantine) => quarantine.assetId)).toEqual(["alpha", "beta"]);
+      expect(result.measuredExitExpiry.assetIds).toEqual(["alpha", "beta"]);
+      // Without the parent quarantine alpha would not deteriorate, so it stays rated.
+      const alone = buildSafetyScoreV9Candidate({
+        ...input, measuredExitExpiry: { routes: expiredRoutes(input, { alpha: ["dex:legacy"] }), acceptedPublication: accepted },
+      });
+      expect(alone.quarantines).toEqual([]);
+    });
+  });
+
   it("fails immediately when a compilation-quarantined stub violates its public contract", () => {
     const fixedInput = exactFixedInput("alpha");
     const extension = reviewedExtension(fixedInput);
@@ -758,6 +854,7 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       quarantineAffectedAssetIds:
         full.quarantineAffectedAssetIds,
       bridgeJoinDiagnostics: full.bridgeJoinDiagnostics,
+      measuredExitExpiry: full.measuredExitExpiry,
     });
     expect(() =>
       evaluateValidatedV9FactSet(structuredClone(full.compiledFacts), clockBoundPolicy),

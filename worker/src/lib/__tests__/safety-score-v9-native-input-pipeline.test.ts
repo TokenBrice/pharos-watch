@@ -772,7 +772,7 @@ describe("native v4 input through the V9 candidate pipeline", { timeout: V9_EVAL
         ...frozen, safetyScoreV9SupplyAttributionById: {}, evidenceJournalById: {},
         supplyAttributionJournalById: {}, pegProvenanceById: {},
       };
-      const delta = await buildSafetyScoreV9PublicationReplayCapture(admitted.candidate, enriched, null);
+      const delta = await buildSafetyScoreV9PublicationReplayCapture(admitted.candidate, enriched, null, null);
       const restoredBase = (await parseNativeV9InputCacheArtifact(base.value)).input;
       const replay = await parseSafetyScoreV9PublicationReplayCapture(delta.value, restoredBase);
       expect(replay.fixedInput.baseInputGenerationId).toBe(frozen.baseInputGenerationId);

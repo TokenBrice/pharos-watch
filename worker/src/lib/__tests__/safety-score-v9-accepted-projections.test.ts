@@ -28,6 +28,20 @@ describe("Safety Score V9 accepted projection writers", () => {
       expectedCount: publication.cards.length });
   });
 
+  it("carries measured-route expiry witnesses through the baseline projection (10.35)", () => {
+    const publication = makeWorkerSafetyScoreV9Publication({
+      cards: [makeWorkerV9Card({ id: "alpha", score: null, grade: null, ratingStatus: "pipeline-gap" }), makeWorkerV9Card({ id: "beta" })],
+    });
+    const witness = { routeId: "dex:primary", dexGenerationId: "dex-liquidity-1", observationWindowEndedAt: publication.publishedAtSec, freshnessMaxSec: 10_800 };
+    const value = serializeSafetyScoreV9AcceptedBaselineProjection(buildSafetyScoreV9AcceptedBaselineProjection(publication, { alpha: [witness] }));
+    const parsed = parseSafetyScoreV9AcceptedBaselineProjection({ value, updatedAt: publication.publishedAtSec });
+    expect(parsed.baseline.dexExpiryByAssetId).toEqual({ alpha: [witness] });
+    // Without witnesses the projection keeps its pre-10.35 shape.
+    expect(buildSafetyScoreV9AcceptedBaselineProjection(publication).baseline).not.toHaveProperty("dexExpiryByAssetId");
+    // A witness on a rated card cannot be committed.
+    expect(() => buildSafetyScoreV9AcceptedBaselineProjection(publication, { beta: [witness] })).toThrow();
+  });
+
   it("retains every eligible card, canonical card SHA and stable local/foreign gaps with D > C > U precedence", () => {
     const cards = ["adverse", "curated", "unreferenced", "unknown"].map(id => makeWorkerV9Card({ id }));
     cards[0]!.pillars.backing.limitedEvidenceCauses = ["C", "D", "U"];

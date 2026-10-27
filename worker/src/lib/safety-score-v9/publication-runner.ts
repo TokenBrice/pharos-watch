@@ -756,6 +756,7 @@ export async function runSafetyScoreV9Publication(
       fixedInputOwner: preparedInput.owner,
       publishedAtSec: fixedInput.clockSec,
       transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
+      measuredExitExpiry: { routes: preparedInput.expiredRoutes, acceptedPublication },
     });
     preparedInput.owner.reload = releasedPublicationInput;
     // Grade hysteresis (10.26) is applied before assessment and journaling so
@@ -773,7 +774,9 @@ export async function runSafetyScoreV9Publication(
       logPublicationGenerationDeltas(publication, acceptedPublication);
       assessment = assessV9Publication({
         inputHealth: fixedInput.v9PublicationInputHealth,
-        expiredMeasuredExitAssetIds: expiredMeasuredExitAssetIdsFromRoutes(preparedInput.expiredRoutes, publication, acceptedPublication),
+        // The witness-aware re-detection must agree with the compiler's quarantines.
+        expiredMeasuredExitAssetIds: [...new Set([...pipeline.measuredExitExpiry.assetIds,
+          ...expiredMeasuredExitAssetIdsFromRoutes(preparedInput.expiredRoutes, publication, acceptedPublication)])],
         candidate: publication,
         acceptedPublication,
         coverageFloors,
@@ -879,7 +882,7 @@ export async function runSafetyScoreV9Publication(
     if (input.fixedInputCacheValue !== undefined) {
       try {
         replayCaptureValue = (await buildSafetyScoreV9PublicationReplayCapture(
-          publication, preparedInput.replay!(), input.transferMaterialityGeneration ?? null,
+          publication, preparedInput.replay!(), input.transferMaterialityGeneration ?? null, acceptedPublication,
         )).value;
       } catch (error) {
         if (error instanceof SafetyScoreV9ReplayCaptureIdentityError) throw error;
@@ -913,7 +916,8 @@ export async function runSafetyScoreV9Publication(
     };
     const persisted = await persistSafetyScoreV9Publication(input.db, {
       publication,
-      buildAcceptedProjections: buildSafetyScoreV9AcceptedProjections,
+      buildAcceptedProjections: (accepted) =>
+        buildSafetyScoreV9AcceptedProjections(accepted, pipeline.measuredExitExpiry.witnessesByAssetId),
       publicationReplayCaptureValue: replayCaptureValue,
       publicationReplayBaseValue: replayCaptureValue === undefined ? undefined : input.fixedInputCacheValue,
       publicationHealth: {
