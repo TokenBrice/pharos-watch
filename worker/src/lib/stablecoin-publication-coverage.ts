@@ -145,22 +145,6 @@ export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaive
  * (and reported) so their gaps alert again until renewed or resolved. */
 export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [
   {
-    stablecoinId: "hbd-hive",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-21 14:13 UTC: CoinGecko's fresh HBD quote is $1.87 (2026-10-21 14:12:04 UTC), above the unchanged exclusive USD upper bound of $1.19; Upbit Indonesia and Upbit HBD/BTC tickers imply $1.92 and $1.83. DefiLlama repeats the out-of-range venue price ($1.9768). The native Hive HBD/HIVE book with separately observed HIVE/USD instead implies $0.99759-$0.99760, but remains an unadmitted cross-rate: no reviewed runtime HIVE/USD dependency or native order-book depth policy exists. The max-500-level read contains 215,190.014/16,267.135 HBD posted asks/bids, not executable USD depth or pool TVL. This is unresolved venue divergence, not a harmless premium or stale-only feed. Ops must resolve the rejected upstream quote and review an identity-safe source, depth policy and USD dependency by 2026-10-24 14:13 UTC; this short source-review acknowledgement preserves the missing gap, price bounds and conversion-peg exclusion.",
-    sources: [
-      "https://www.coingecko.com/en/coins/hive_dollar",
-      "https://api.coingecko.com/api/v3/coins/hive_dollar/tickers",
-      "https://api.coingecko.com/api/v3/simple/price?ids=hive,hive_dollar&vs_currencies=usd&include_last_updated_at=true",
-      "https://coins.llama.fi/prices/current/coingecko:hive_dollar",
-      "https://api.hive.blog",
-      "https://developers.hive.io/apidefinitions/#condenser_api.get_order_book",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
-    expiresAt: Date.UTC(2026, 9, 24, 14, 13) / 1000,
-  },
-  {
     stablecoinId: "usdn-noble",
     owner: "ops",
     reason:
