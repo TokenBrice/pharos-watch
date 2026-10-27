@@ -4,7 +4,7 @@
     {
       "sourceKey": "circle:usdc:treasuries-under-3m",
       "name": "<3-Month U.S. Treasuries",
-      "pct": 18.0104949,
+      "pct": 36.66910665,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -19,7 +19,7 @@
     {
       "sourceKey": "circle:usdc:bank-deposits",
       "name": "Cash at Regulated Financial Institutions (net settlement adjustments)",
-      "pct": 14.43502106,
+      "pct": 13.76945254,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Regulated financial institutions (individual counterparties undisclosed)",
@@ -33,7 +33,7 @@
     {
       "sourceKey": "circle:usdc:overnight-reverse-treasury-repo",
       "name": "Overnight Reverse Treasury Repo",
-      "pct": 67.55448404,
+      "pct": 49.56144081,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Leading global banks",
@@ -47,18 +47,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CircleRecovery), D01 independently reproduced examination arithmetic",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "D02 evidence renewal 2026-10-27, independently reproduced September examination arithmetic",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte USDC examination report - August 2026",
-        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
+        "label": "Deloitte USDC examination report - September 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20September%2026.pdf"
       }
     ],
-    "rationale": "The complete August 31, 2026 examination reports USD 73,398,532,613 of reserve assets. Treasury fair values are USD 11,918,146,195 in the fund plus USD 1,301,292,779 outside it, totaling USD 13,219,438,974. Overnight Treasury repurchase agreements are USD 49,584,000,000. Net cash and settlement balances are USD 1,003,409,582 + USD 9,591,096,978 - USD 188,181,352 + USD 188,768,431 = USD 10,595,093,639. Each percentage is independently calculated as its amount divided by USD 73,398,532,613 times 100, rounded to eight decimal places; the three amounts reconcile exactly. Settlement adjustments are reported cash due to or owed by Circle, not an invented residual. The examination does not disclose a SIFI/non-SIFI split, so aggregate bank cash has one conservative common-mode issuer domain. The live adapter uses the same aggregate bank key and retains its weekly split only as contextual metadata.",
-    "compositionBasis": "Complete August 31, 2026 examined USD fair-value balances; independently reproduced arithmetic under D01",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "The complete September 30, 2026 examination, signed October 26, 2026, reports USD 73,956,687,701 of reserve assets. Treasury fair values are USD 25,361,578,416 in the fund plus USD 1,757,678,272 outside it, totaling USD 27,119,256,688. Overnight Treasury repurchase agreements are USD 36,654,000,000. Net cash and settlement balances are USD 1,003,847,741 - USD 552,000,382 + USD 9,502,194,346 + USD 229,389,308 = USD 10,183,431,013. Each percentage is independently calculated as its amount divided by USD 73,956,687,701 times 100, rounded to eight decimal places; the three amounts reconcile exactly. The latest listed Treasury maturity is December 31, 2026, 92 days after the report date. Settlement adjustments are reported cash due to or owed by Circle, not an invented residual. The examination does not disclose a SIFI/non-SIFI split, so aggregate bank cash has one conservative common-mode issuer domain. The live adapter uses the same aggregate bank key and retains its weekly split only as contextual metadata.",
+    "compositionBasis": "Complete September 30, 2026 examined USD fair-value balances; independently reproduced arithmetic",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "All reported reserve assets are classified as Treasury securities, overnight Treasury repos, or net cash and settlement balances. Individual banks, bank shares, and repo counterparties are not disclosed. Aggregate bank exposure is one concentration domain, with no diversification credit inferred from institution categories.",
     "knownUnknownExposurePct": 0

@@ -88,24 +88,24 @@
   },
   "proofOfReserves": {
     "type": "attestation",
-    "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf",
+    "url": "https://vnx.io/reports/vnx-attestation-report-2026-09-30.pdf",
     "provider": "Apex Fund Services Ltd. (ISAE 3000 reasonable-assurance examination of VNX Global Ltd.'s currency-matched cash reserves and covered stablecoin liabilities)",
     "attestorTier": "niche",
     "cadence": "monthly",
     "attestorJurisdiction": "Bermuda",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-08",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-07",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Pharos VNX correction review (issue #1462)",
+      "reviewer": "D02 evidence renewal 2026-10-27 (September Apex report read; SHA-256 f4cecb937517065b212902dbef6bcb432eae0a059b4d430d11a18446f5c4c813)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Apex VNX Global reserve attestation as of August 31, 2026 (signed September 8, 2026)",
-          "url": "https://vnx.io/reports/vnx-attestation-report-2026-08-31.pdf"
+          "label": "Apex VNX Global reserve attestation as of September 30, 2026 (signed October 7, 2026)",
+          "url": "https://vnx.io/reports/vnx-attestation-report-2026-09-30.pdf"
         },
         {
           "label": "VNX Global monthly independent attestation reports",
