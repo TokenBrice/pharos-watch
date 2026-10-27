@@ -41,6 +41,44 @@ function createTapeDatabase(): { db: D1Database } {
   return fixtures.open();
 }
 
+describe("Tape large-flow claim guard", () => {
+  const flow = (amountUsd: number): TapeEventInsert => ({
+    ...event("flow-1"), eventId: "flow-event", type: "mint_burn.large_mint", sourceTable: "mint_burn_events",
+    transition: "updated", title: `flow ${amountUsd}`,
+    payload: { direction: "mint", amountUsd, flowType: "standard", burnType: null },
+  });
+  const seedSource = (sqlite: ReturnType<typeof fixtures.open>["sqlite"], amountUsd: number) =>
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp, flow_type,
+       tx_hash, block_number, explorer_tx_url)
+      VALUES ('flow-1', 'usdt-tether', 'USDT', 'ethereum', 'mint', 1, ?, 1000, 'standard', '0x', 1, 'https://example.com')`)
+      .run(amountUsd);
+
+  it("rejects stale or ineligible snapshots, updates only presentation, and never revives a suppressed claim", async () => {
+    const { db, sqlite } = fixtures.open();
+    const count = () => (sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events").get() as { n: number }).n;
+    await insertTapeEvents(db, [flow(20_000_000)]); // source missing
+    expect(count()).toBe(0);
+    seedSource(sqlite, 20_000_000);
+    await insertTapeEvents(db, [flow(30_000_000)]); // stale snapshot
+    expect(count()).toBe(0);
+    await insertTapeEvents(db, [flow(20_000_000)]);
+    const first = sqlite.prepare("SELECT * FROM tape_events").get()!;
+
+    sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 30000000").run();
+    await insertTapeEvents(db, [{ ...flow(30_000_000), eventId: "other", ts: 9_999 }]);
+    expect(sqlite.prepare("SELECT * FROM tape_events").get()).toEqual({
+      ...first, title: "flow 30000000", payload_json: expect.stringContaining("30000000"),
+    });
+
+    sqlite.prepare("UPDATE tape_events SET suppressed_at = 1, suppression_reason = 'flow-claim-retracted'").run();
+    sqlite.prepare("UPDATE mint_burn_events SET amount_usd = 40000000").run();
+    await insertTapeEvents(db, [flow(40_000_000)]);
+    expect(sqlite.prepare("SELECT title, suppressed_at FROM tape_events").get())
+      .toEqual({ title: "flow 30000000", suppressed_at: 1 });
+  });
+});
+
 describe("Tape event source-key conflicts", () => {
   it("keeps an identical peak's original identity and clocks without suppressing other source corrections", async () => {
     const { db, sqlite } = fixtures.open();

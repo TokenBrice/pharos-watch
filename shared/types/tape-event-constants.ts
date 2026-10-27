@@ -4,6 +4,9 @@
 /** A retracted freeze claim has no public event representation. */
 export const FREEZE_CLAIM_RETRACTED_REASON = "freeze-claim-retracted";
 
+/** A flow claim whose source became ineligible has no public event representation. */
+export const FLOW_CLAIM_RETRACTED_REASON = "flow-claim-retracted";
+
 export const TAPE_EVENT_SEVERITY_VALUES = [
   "info",
   "notice",

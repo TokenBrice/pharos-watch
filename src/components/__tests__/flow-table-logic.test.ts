@@ -92,6 +92,15 @@ describe("compareFlowRows — numeric sort keys", () => {
     expect(compareFlowRows(partialNet, smallBurn, sort("net24h", direction))).toBeGreaterThan(0);
   });
 
+  it.each(["asc", "desc"] as const)("sorts an unavailable largest event after an observed zero and a positive amount (%s)", (direction) => {
+    const event = (amountUsd: number) => makeFlow({ largestEvent24h: { amountUsd } as MintBurnCoinFlow["largestEvent24h"] });
+    const rows = [makeFlow({ largestEvent24h: null }), event(100), event(0), makeFlow({ largestEvent24h: null })];
+    const sorted = [...rows].sort((a, b) => compareFlowRows(a, b, sort("largest", direction)));
+    expect(sorted.map((r) => r.largestEvent24h?.amountUsd ?? null)).toEqual(
+      direction === "asc" ? [0, 100, null, null] : [100, 0, null, null],
+    );
+    expect(compareFlowRows(rows[0], rows[3], sort("largest", direction))).toBe(0);
+  });
 });
 
 describe("compareFlowRows — pressure sort key", () => {

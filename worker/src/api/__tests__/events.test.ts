@@ -69,6 +69,12 @@ describe("handleEvents", () => {
         source_table: "blacklist_events", title: "needle retracted", suppressed_at: SEC,
         suppression_reason: "freeze-claim-retracted",
       }),
+      makeRow({
+        id: 3, event_id: "flow-retracted", source_row_id: "flow-retracted", type: "mint_burn.large_burn",
+        source_table: "mint_burn_events", title: "needle flow", suppressed_at: SEC,
+        suppression_reason: "flow-claim-retracted",
+      }),
+      makeRow({ id: 4, event_id: "no-reason", source_row_id: "no-reason", title: "needle none", suppressed_at: SEC }),
     ]);
     for (const suffix of ["?includeTotal=true", "?q=needle&includeTotal=true"]) {
       const body = TapeEventsResponseSchema.parse(await readJsonResponse(
@@ -82,6 +88,10 @@ describe("handleEvents", () => {
     expect(response.status).toBe(404);
     expect(response.headers.get("cache-control")).toBe("no-store");
     expect(await response.json()).toEqual({ error: "Event not found", reason: "freeze-claim-retracted" });
+    expect(await readJsonResponse(await handleEvents(db, new URL("https://x/api/events?event=flow-retracted")), 404))
+      .toEqual({ error: "Event not found", reason: "flow-claim-retracted" });
+    expect(await readJsonResponse(await handleEvents(db, new URL("https://x/api/events?event=no-reason")), 404))
+      .toEqual({ error: "Event not found", reason: "event-not-found" });
     expect(await readJsonResponse(await handleEvents(db, new URL("https://x/api/events?event=absent")), 404))
       .toEqual({ error: "Event not found", reason: "event-not-found" });
     const exact = TapeEventsResponseSchema.parse(await readJsonResponse(

@@ -33,6 +33,17 @@ describe("FlowWeekReceipt", () => {
     expect(screen.getByText(/not market-wide supply creation or redemption/)).toBeTruthy();
   });
 
+  it("prints Unavailable, not None, for absent leaders when no 7d net is displayable", () => {
+    render(<FlowWeekReceipt coins={[makeMintBurnFlowCoin({ netFlow7dUsd: null })]} weeklyHourly={[]} scopeLabel="Configured issuance chains" />);
+    expect(screen.getAllByText("Unavailable").length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText("None")).toBeNull();
+  });
+
+  it("keeps None for an observed absence of leaders", () => {
+    render(<FlowWeekReceipt coins={[makeMintBurnFlowCoin({ netFlow7dUsd: 0 })]} weeklyHourly={[]} scopeLabel="Configured issuance chains" />);
+    expect(screen.getAllByText("None")).toHaveLength(2);
+  });
+
   it("renders weekly volumes as NR without hourly data, never $0", () => {
     render(<FlowWeekReceipt coins={[makeMintBurnFlowCoin()]} weeklyHourly={[]} scopeLabel="Configured issuance chains" />);
 

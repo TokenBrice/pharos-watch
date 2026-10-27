@@ -45,6 +45,8 @@ export interface FlowPressureReceiptModel {
   scopeLabel: string;
   topMint: FlowPressureReceiptLeader | null;
   topBurn: FlowPressureReceiptLeader | null;
+  /** No coin has a displayable 7d net, so an absent leader is unavailable evidence, not an observed absence. */
+  leadersUnavailable: boolean;
   coverageRows: FlowPressureReceiptCoverageRow[];
   coverageSummary: string;
   rows: FlowPressureReceiptRow[];
@@ -127,6 +129,7 @@ export function buildFlowPressureReceiptModel({
     scopeLabel,
     topMint,
     topBurn,
+    leadersUnavailable: rankedNets.length === 0,
     coverageRows,
     coverageSummary: summarizeCoverage(coverageRows, syncWarning),
     rows: [

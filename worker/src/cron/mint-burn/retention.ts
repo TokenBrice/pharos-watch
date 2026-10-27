@@ -6,6 +6,7 @@ import { mintBurnHourlyBucketAggregatesSql } from "../../lib/mint-burn-pipeline/
 import { MINT_BURN_HOURLY_BUCKET_COLUMNS_SQL } from "../../lib/mint-burn-hourly-valuation";
 import { runCappedPruneFamily } from "../shared/capped-delete";
 import { tapeProjectorCursorKey } from "../../lib/tape-event-store";
+import { mintBurnTapeClaimStaleSql } from "../../lib/mint-burn-tape-claim";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
@@ -38,7 +39,8 @@ function mintBurnConfigFrontiersSql(configs: readonly MintBurnContractConfig[]):
  * An event row may only leave `mint_burn_events` once its price is final
  * (`amount_usd` present or repair settled as recovered/irreducible), it is
  * not awaiting aggregation, and the mint-burn tape projector has consumed
- * past it. Bind order at every consumer: cutoff first, then
+ * past it and any unsuppressed Tape claim still matches the source (a corrected
+ * source is kept until the claim is republished or retracted). Bind order at every consumer: cutoff first, then
  * MINT_BURN_TAPE_CURSOR_KEY. A missing cursor cache row fails closed via
  * COALESCE 0 — nothing is eligible for deletion or repair.
  */
@@ -52,7 +54,15 @@ const MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL = `event.timestamp < ?
     SELECT CAST(value AS INTEGER)
       FROM cache
      WHERE key = ?
-  ), 0)`;
+  ), 0)
+  AND NOT EXISTS (
+    SELECT 1 FROM tape_events AS claim INDEXED BY idx_tape_source_key
+     WHERE claim.source_table = 'mint_burn_events'
+       AND claim.source_row_id = event.id
+       AND claim.transition = 'updated'
+       AND claim.suppressed_at IS NULL
+       AND ${mintBurnTapeClaimStaleSql("claim", "event")}
+  )`;
 
 /**
  * Whole-hour finality: neither valuation debt nor an uncommitted scan frontier
