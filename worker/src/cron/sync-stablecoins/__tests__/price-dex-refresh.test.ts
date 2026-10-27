@@ -13,6 +13,7 @@ import { getCache, setCacheIfNewer } from "../../../lib/db-cache";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import * as dexscreener from "../../../lib/dexscreener";
 import { coingeckoResponse } from "../../../lib/__tests__/address-price-providers.test-support";
+import * as coverage from "../../../lib/stablecoin-publication-coverage";
 import { STABLECOIN_PRICE_GAP_REVIEWS } from "../../../lib/stablecoin-publication-coverage";
 import { DEX_REFRESH_CACHE_KEY, PRICE_CORROBORATION_OBSERVATIONS_KEY, loadPriceCorroborationObservations } from "../price-corroboration-observations";
 import type { PeggedAsset } from "../enrich-prices-shared";
@@ -470,8 +471,16 @@ describe("exact-address coverage refresh", () => {
   });
 
   it("refreshes a published address quote despite its gap review while excluding acknowledged missing rows", async () => {
-    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "usda-avalon")!;
-    const slot = review.reviewedAt + 60;
+    // Co-dated synthetic USDA and authored WUSD reviews: the spy returns the
+    // real resolver's result for exactly these fixtures.
+    const wusdReview = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    const usdaReview = { ...wusdReview, stablecoinId: "usda-avalon" };
+    const resolveReviews = coverage.resolveStablecoinPriceGapReviews;
+    vi.spyOn(coverage, "resolveStablecoinPriceGapReviews").mockImplementation((ids, nowSec) =>
+      resolveReviews(ids, nowSec, [usdaReview, wusdReview]));
+    const slot = wusdReview.reviewedAt + 60;
+    expect([...resolveReviews([...ACTIVE_META_BY_ID.keys()], slot, [usdaReview, wusdReview]).activeById.keys()].sort())
+      .toEqual(["usda-avalon", "wusd-worldwide"]);
     prepareAddressRefresh({ ...usda(), priceObservedAt: slot - 600 },
       makePeggedAsset({ id: "wusd-worldwide", symbol: "WUSD", price: null }));
     const cg = mockFetch(onchainRoutes());

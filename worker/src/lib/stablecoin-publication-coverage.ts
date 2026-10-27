@@ -424,8 +424,9 @@ function isHttpsSource(value: unknown): value is string {
   return typeof value === "string" && /^https:\/\/\S+$/.test(value.trim());
 }
 
-/** Reviews fail closed on invalid identity, provenance, or dates. Expiry is
- * evaluated against the current clock, never persisted acknowledgement state. */
+/** Reviews fail closed on invalid identity, provenance, or dates; a review
+ * dated after the evaluation clock is invalid evidence. Expiry is evaluated
+ * against the current clock, never persisted acknowledgement state. */
 function validReviewSeconds(value: number): boolean {
   return Number.isFinite(value)
     && value > 0
@@ -453,6 +454,7 @@ export function resolveStablecoinPriceGapReviews(
       || !validReviewSeconds(review.reviewedAt)
       || !validReviewSeconds(review.expiresAt)
       || review.expiresAt <= review.reviewedAt
+      || review.reviewedAt > nowSec
       || (review.weeklyUtcWindow != null && (!Number.isInteger(review.weeklyUtcWindow.start)
         || !Number.isInteger(review.weeklyUtcWindow.end)
         || review.weeklyUtcWindow.start < 0 || review.weeklyUtcWindow.start >= 7 * 86_400

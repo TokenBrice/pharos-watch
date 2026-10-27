@@ -665,11 +665,59 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       expect(result.activeById.size).toBe(0);
       expect(result.invalidGapReviewIds).toEqual([invalid.stablecoinId]);
     }
+    // Every authored row is valid at the latest review clock; expiry is
+    // exercised separately, so rows may already be expired here.
+    const latestReviewedAt = Math.max(...STABLECOIN_PRICE_GAP_REVIEWS.map((entry) => entry.reviewedAt));
     const registry = resolveStablecoinPriceGapReviews(
-      ACTIVE_STABLECOINS.map((asset) => asset.id), review.reviewedAt,
+      ACTIVE_STABLECOINS.map((asset) => asset.id), latestReviewedAt,
     );
     expect(registry.invalidGapReviewIds).toEqual([]);
-    expect(registry.activeById.size).toBe(STABLECOIN_PRICE_GAP_REVIEWS.filter((entry) => !entry.weeklyUtcWindow).length);
+    expect(registry.activeById.size + registry.expiredGapReviewIds.length)
+      .toBeLessThanOrEqual(STABLECOIN_PRICE_GAP_REVIEWS.length);
+    for (const id of registry.activeById.keys()) expect(registry.expiredGapReviewIds).not.toContain(id);
+  });
+
+  it("rejects a review dated after the evaluation clock as invalid evidence", () => {
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "wusd-worldwide")!;
+    const resolveAt = (nowSec: number, candidate = review) => resolveStablecoinPriceGapReviews([candidate.stablecoinId], nowSec, [candidate]);
+    expect(resolveAt(review.reviewedAt - 1)).toMatchObject({ invalidGapReviewIds: [review.stablecoinId], expiredGapReviewIds: [] });
+    expect(resolveAt(review.reviewedAt - 1).activeById.size).toBe(0);
+    expect([...resolveAt(review.reviewedAt).activeById.keys()]).toEqual([review.stablecoinId]);
+    expect([...resolveAt(review.expiresAt - 1).activeById.keys()]).toEqual([review.stablecoinId]);
+    expect(resolveAt(review.expiresAt)).toMatchObject({ invalidGapReviewIds: [], expiredGapReviewIds: [review.stablecoinId] });
+
+    // A future review inside its weekly window is invalid, not merely out of window.
+    const weekend = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === "chfm-mento")!;
+    const saturday = Date.UTC(2026, 9, 17, 12) / 1000;
+    expect(resolveAt(saturday, { ...weekend, reviewedAt: saturday + 1 })).toMatchObject({ invalidGapReviewIds: [weekend.stablecoinId] });
+    expect([...resolveAt(saturday, { ...weekend, reviewedAt: saturday }).activeById.keys()]).toEqual([weekend.stablecoinId]);
+    const weekday = Date.UTC(2026, 9, 20, 12) / 1000;
+    expect(resolveAt(weekday, { ...weekend, reviewedAt: weekday - 86_400 })).toMatchObject({ invalidGapReviewIds: [], expiredGapReviewIds: [] });
+    expect(resolveAt(weekday, { ...weekend, reviewedAt: weekday - 86_400 }).activeById.size).toBe(0);
+
+    // Coverage keeps the gap missing, unacknowledged and counted; streaks still advance.
+    const ids = [review.stablecoinId];
+    const assets = [{ id: review.stablecoinId, price: null, circulating: { peggedUSD: 100 } }];
+    const first = evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec: review.reviewedAt - 900, priceGapReviews: [review] });
+    const coverage = evaluateStablecoinActivePriceCoverage(assets, ids, {
+      nowSec: review.reviewedAt - 1, priceGapReviews: [review], previousCoverage: first,
+    });
+    expect(coverage).toMatchObject({
+      missingPriceCount: 1, missingActiveIds: ids, acknowledgedGapIds: [], acknowledgedGapCount: 0,
+      alertEligibleIds: ids, invalidGapReviewIds: ids, expiredGapReviewIds: [],
+    });
+    expect(coverage.missingActiveAssets[0]).toMatchObject({ currentPrice: null, consecutiveMissingGenerations: 2, acknowledgedGap: null });
+
+    // Registry readback (compact and verbose) applies the same clock.
+    const compact = compactStablecoinActivePriceCoverage(coverage, 0);
+    expect(parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec: review.reviewedAt - 1 }))
+      .toMatchObject({ acknowledgedGap: null, alertEligible: true });
+    expect(parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec: review.reviewedAt }))
+      .toMatchObject({ acknowledgedGap: { owner: "ops", expiresAt: review.expiresAt }, alertEligible: false });
+    expect(parseMissingActivePriceDetail(coverage.missingActiveAssets[0], { nowSec: review.reviewedAt - 1 }))
+      .toMatchObject({ acknowledgedGap: null });
+    expect(parseMissingActivePriceDetail(coverage.missingActiveAssets[0], { nowSec: review.reviewedAt }))
+      .toMatchObject({ acknowledgedGap: { expiresAt: review.expiresAt } });
   });
 
   it("drops accepted observation timestamps outside the JavaScript Date range", () => {

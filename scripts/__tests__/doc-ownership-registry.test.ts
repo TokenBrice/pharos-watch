@@ -180,6 +180,17 @@ describe("doc-ownership registry integrity", () => {
     }
   });
 
+  it("routes price-gap review coverage to the pricing owner and its active-coverage appendix", () => {
+    const file = "worker/src/lib/stablecoin-publication-coverage.ts";
+    const pricing = mappings.find((mapping) => mapping.id === "pricing-pipeline");
+    expect(pricing && matchesAny(file, pricing.sources)).toBe(true);
+    const selector = pricing!.reading?.find((entry) => matchesAny(file, entry.sources));
+    expect(selector?.local).toContainEqual({
+      path: "docs/process/pricing-pipeline-appendix.md", anchor: "active-price-coverage-health",
+    });
+    expect(pricing!.required).toContainEqual({ path: "docs/architecture.md", anchor: "adr-3" });
+  });
+
   it("keeps Functions in CI check ownership while selecting runtime and applicable proxy contracts", () => {
     const policy = mappings.find((mapping) => mapping.id === "validation-ci-policy");
     expect(policy?.sources).toContain("functions/**");

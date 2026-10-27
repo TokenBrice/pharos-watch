@@ -28,8 +28,8 @@ These notices do not change health status, create a status transition, or enter 
 Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-coverage.ts`:
 
 - Keep the exact active stablecoin identity and a nonblank accountable owner and reason.
-- Record fresh, relevant public evidence using HTTPS sources and a nonfuture `reviewedAt` (Unix seconds).
-- Set `expiresAt > reviewedAt` and keep the acknowledgement within the documented roughly 30-day review policy. The resolver validates date shape and ordering, not that duration cap; enforce the policy during review. Renewal is a new review decision, not automatic date extension.
+- Record fresh, relevant public evidence using HTTPS sources and a nonfuture `reviewedAt` (Unix seconds). The resolver enforces this: a review dated after the evaluation clock is reported in `invalidGapReviewIds` and acknowledges nothing.
+- Set `expiresAt > reviewedAt` and keep the acknowledgement within the documented roughly 30-day review policy. The resolver validates date shape, ordering and the nonfuture review date, not that duration cap; enforce the policy during review. Renewal is a new review decision, not automatic date extension.
 - Preserve any `weeklyUtcWindow` that limits applicability. An out-of-window review acknowledges nothing, even before its expiry.
 - Never substitute an invented quote, lower a price-validation floor, or change source freshness to close the gap. If the source recovers, the normal price pipeline clears the gap without a new acknowledgement.
 - After verifying recovery through an admitted source with its real observation clock, remove an obsolete expired review instead of renewing an acknowledgement the asset no longer needs. Preserve source-specific freshness and admission guards; a merely numeric upstream response is not recovery.

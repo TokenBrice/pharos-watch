@@ -155,6 +155,7 @@
         "worker/src/lib/price*.ts",
         "worker/src/lib/dex-api-token-pricing.ts",
         "worker/src/lib/hive-market-price.ts",
+        "worker/src/lib/stablecoin-publication-coverage.ts",
         "worker/src/lib/address-price-providers/**",
         "worker/src/lib/authoritative-price-sources/**",
         "shared/lib/pricing-*.ts",
@@ -172,6 +173,12 @@
         { "path": "docs/supply-snapshot.md", "anchor": "supply-pipeline" }
       ],
       "reading": [
+        {
+          "sources": ["worker/src/lib/stablecoin-publication-coverage.ts"],
+          "local": [
+            { "path": "docs/process/pricing-pipeline-appendix.md", "anchor": "active-price-coverage-health" }
+          ]
+        },
         {
           "sources": ["worker/src/cron/sync-v9-supply-attribution.ts"],
           "local": [
