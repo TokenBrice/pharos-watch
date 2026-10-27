@@ -433,6 +433,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "b892d6f4ace0b1af623d5b5fc5518493272e57141d404c87a7c786e6264b7923"
     },
     {
+      "path": "shared/lib/safety-score-publication.ts",
+      "sha256": "12ae0de503276aa6d89a74473e94af5899632ce0cf2eb2fe910df7c90936d42a"
+    },
+    {
       "path": "shared/lib/safety-score-v9-supply-attribution-journal.ts",
       "sha256": "c6a5ac576497fe46a8a6b34148f6dd6f70049baaa2c106107f36620af09ea4f9"
     },
@@ -706,7 +710,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/status-thresholds.ts",
-      "sha256": "b55cfa9723336659dd4f533544c8708e61906db87c23d3e7ca87613e24020cba"
+      "sha256": "a647c7ca1bd66d45fe24b619c5468a0aa56cf92765dda90da5d7e4a6cce7d418"
     },
     {
       "path": "shared/lib/strongly-connected-components.ts",
@@ -794,7 +798,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/live-reserves.ts",
-      "sha256": "c149e09e044fa132f137ef8fc5ce2a675aa9c1c14c97c5b55944c71400e426b9"
+      "sha256": "214f576ff4424104119df1617b0be40e7e6d9e7f6f3465bf208d18be61ada50c"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -1078,7 +1082,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/live-reserves/store-overview.ts",
-      "sha256": "1373cbaac1b89f4c2cb9890f873c13310508e721b20354bcaccc811f7552392d"
+      "sha256": "2efb2685c2e9520c8c4a5a154039d9da1d77eb4965c08b1e1bbb676fe3f1297a"
     },
     {
       "path": "worker/src/lib/live-reserves/store-read.ts",
@@ -1138,7 +1142,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
-      "sha256": "80b9ec7582a365a1b22afbe3fd3f2aed172ac91cc4a5b9f080a4446cdc99745c"
+      "sha256": "46920ec247dcea072b4f469370c705e74ddb1ea22709fa891783b1a253852707"
     },
     {
       "path": "worker/src/lib/safety-score-v9/curated-single-route-supply.ts",
@@ -1311,7 +1315,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-27-block-26283011-shock-coverage.json.gz"
     }
   ],
-  "digest": "1fd160fd635e78a40e47a2edfe4f9778b1fa47f60f21bebc163e30b36e146260"
+  "digest": "42c3f2ad1f7b4d39f3f538963b9b8c5b7a1c5a03773867321ab70279b5fb2e1d"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
