@@ -3,8 +3,10 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 export const DEPENDENCY_SCENARIO_EVALUATOR_MANIFEST_PATH = "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
-// Digest rules per admitted manifest domain; an unlisted domain is unknown, never guessed.
-const KNOWN_MANIFEST_DOMAINS = new Set(["safety-score-v9.evaluation-build.v1"]);
+// Admitted manifest domains share one digest rule over the committed payload
+// (v2 changes only how JSON member hashes are computed); an unlisted domain is
+// unknown, never guessed.
+const KNOWN_MANIFEST_DOMAINS = new Set(["safety-score-v9.evaluation-build.v1", "safety-score-v9.evaluation-build.v2"]);
 const MANIFEST_PREFIX = "export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = ";
 const MANIFEST_SUFFIX = " as const;";
 const Sha256 = z.string().regex(/^[a-f0-9]{64}$/u);
