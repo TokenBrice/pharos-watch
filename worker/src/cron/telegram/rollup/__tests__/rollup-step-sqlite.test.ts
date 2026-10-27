@@ -375,6 +375,188 @@ describe("hourly freeze batch", () => {
   });
 });
 
+describe("bounded freeze batch audience", () => {
+  /** Wrap the D1 to observe returned rows per subscription query, and run a hook before the exact-id read. */
+  function observed(db: D1Database, beforeExactRead?: () => void) {
+    const candidateRows: number[] = [];
+    const exactRows: number[] = [];
+    const proxy = new Proxy(db, {
+      get(target, key) {
+        if (key === "prepare") {
+          return (sql: string) => {
+            const statement = target.prepare(sql);
+            if (!sql.includes("FROM telegram_subscriptions")) return statement;
+            const exact = sql.includes("json_each");
+            if (exact) beforeExactRead?.();
+            const wrap = (bound: D1PreparedStatement): D1PreparedStatement => new Proxy(bound, {
+              get(inner, innerKey) {
+                if (innerKey === "bind") return (...args: unknown[]) => wrap(inner.bind(...args));
+                if (innerKey === "all") return async () => {
+                  const result = await inner.all();
+                  (exact ? exactRows : candidateRows).push(result.results?.length ?? 0);
+                  return result;
+                };
+                const value = Reflect.get(inner, innerKey);
+                return typeof value === "function" ? value.bind(inner) : value;
+              },
+            });
+            return wrap(statement);
+          };
+        }
+        const value = Reflect.get(target, key);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    return { db: proxy, candidateRows, exactRows };
+  }
+
+  it("keeps only limit+1 candidates and the selected chats' rows resident, with unchanged paged output", async () => {
+    const { sqlite, db, subscriber, follow } = fixture();
+    try {
+      for (let index = 0; index < 700; index++) {
+        const chatId = String(1_000 + index);
+        subscriber.run(chatId, null, 0, null, null, 0, 0);
+        follow.run(chatId, "usdc", 0, 1);
+      }
+      await recordTelegramChangeLog(db, [freeze("usdc", "t1", 5_000, DAY1_0905Z)]);
+      await runFreezeBatch(db, DAY1_0905Z);
+      const [job] = await freezeBatchJobs(sqlite);
+      const spy = observed(db);
+      const { deliveries: rows, pages } = await fanOutFreezeBatch(spy.db, job!.payload_json, 200);
+      expect(pages).toBe(4);
+      expect(rows.map((row) => row.chatId)).toEqual(Array.from({ length: 700 }, (_, index) => String(1_000 + index)));
+      expect(Math.max(...spy.candidateRows)).toBeLessThanOrEqual(201);
+      expect(Math.max(...spy.exactRows)).toBeLessThanOrEqual(200);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("merges duplicate followers across 90-coin chunks in lexical chat order with an exact lookahead", async () => {
+    const { sqlite, db, follow } = fixture();
+    try {
+      const coins = Array.from({ length: 95 }, (_, index) => `coin-${String(index).padStart(3, "0")}`);
+      await recordTelegramChangeLog(db, coins.map((coin, index) => freeze(coin, `t${index}`, index, DAY1_0905Z)));
+      // "-100" < "10" < "2" < "x" lexically; each follows a coin in both chunks.
+      for (const chatId of ["2", "-100", "10", "x"]) {
+        follow.run(chatId, "coin-000", 0, 1);
+        follow.run(chatId, "coin-094", 0, 1);
+      }
+      const payload = { fromChangeId: 0, toChangeId: 95 };
+      const page = (cursor: string | null, limit: number) =>
+        buildFreezeBatchJobPage({ db, job: {} as TelegramJobRow, payload, cursor, nowSec: 0, limit });
+      const first = await page(null, 3);
+      expect(first.deliveries.map((row) => row.chatId)).toEqual(["-100", "10", "2"]);
+      expect(first.nextCursor).toBe("2");
+      expect(first.deliveries[0]!.coinIds).toEqual(["coin-000", "coin-094"]);
+      expect(await page(null, 4)).toMatchObject({ nextCursor: null });
+      const last = await page("2", 1);
+      expect(last.deliveries.map((row) => row.chatId)).toEqual(["x"]);
+      expect(last.nextCursor).toBeNull();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("advances past a chat removed between reads and never admits chats subscribed between them", async () => {
+    const { sqlite, db, follow } = fixture();
+    try {
+      await recordTelegramChangeLog(db, [freeze("usdc", "t1", 5, DAY1_0905Z)]);
+      for (const chatId of ["1", "2", "3"]) follow.run(chatId, "usdc", 0, 1);
+      const spy = observed(db, () => {
+        sqlite.prepare("DELETE FROM telegram_subscriptions WHERE chat_id IN ('1', '2')").run();
+        sqlite.prepare("INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_freeze) VALUES ('15', 'usdc', 1)").run();
+      });
+      const page = await buildFreezeBatchJobPage({
+        db: spy.db, job: {} as TelegramJobRow, payload: { fromChangeId: 0, toChangeId: 1 }, cursor: null, nowSec: 0, limit: 2,
+      });
+      expect(page.deliveries).toEqual([]);
+      expect(page.nextCursor).toBe("2");
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("never reads changes past the job's upper id, and fails closed on a read failure", async () => {
+    const { sqlite, db, follow } = fixture();
+    try {
+      follow.run("1", "usdc", 0, 1);
+      follow.run("1", "usdt", 0, 1);
+      await recordTelegramChangeLog(db, [freeze("usdc", "in-range", 5, DAY1_0905Z), freeze("usdt", "later", 7, DAY1_0905Z)]);
+      const page = await buildFreezeBatchJobPage({
+        db, job: {} as TelegramJobRow, payload: { fromChangeId: 0, toChangeId: 1 }, cursor: null, nowSec: 0, limit: 10,
+      });
+      expect(page.deliveries.map((row) => row.coinIds)).toEqual([["usdc"]]);
+      expect(page.deliveries[0]!.body).not.toContain("USDT");
+      const failing = new Proxy(db, {
+        get(target, key) {
+          if (key === "prepare") {
+            return (sql: string) => {
+              if (sql.includes("SELECT DISTINCT chat_id")) throw new Error("subscriptions unavailable");
+              return target.prepare(sql);
+            };
+          }
+          const value = Reflect.get(target, key);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+      await expect(buildFreezeBatchJobPage({
+        db: failing, job: {} as TelegramJobRow, payload: { fromChangeId: 0, toChangeId: 1 }, cursor: null, nowSec: 0, limit: 10,
+      })).rejects.toThrow("subscriptions unavailable");
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
+describe("freeze claim manifests", () => {
+  it("records each freeze batch message's exact constituents on every chunk", async () => {
+    const { sqlite, db, follow } = fixture();
+    try {
+      follow.run("1", "usdc", 0, 1);
+      sqlite.prepare(
+        `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at, suppressed_at)
+         VALUES ('gone', 'freeze.blocked', 'warning', 1, 'x', 'x', '{}', 'blacklist_events', 'b-gone', 'opened', 1, 1)`,
+      ).run();
+      await recordTelegramChangeLog(db, [
+        freeze("usdc", "gone", 1, DAY1_0905Z), freeze("usdc", "a", null, DAY1_0905Z), freeze("usdc", "b", 0, DAY1_0905Z),
+      ]);
+      const page = await buildFreezeBatchJobPage({
+        db, job: {} as TelegramJobRow, payload: { fromChangeId: 0, toChangeId: 3 }, cursor: null, nowSec: 0, limit: 10,
+      });
+      // A retraction excluded before planning is not part of the manifest.
+      expect(page.deliveries.map((row) => row.freezeSourceKeys)).toEqual([["freeze:a", "freeze:b"]]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("records the freeze constituents of a roll-up summary, null and zero amounts alike", async () => {
+    const { sqlite, db, subscriber, follow, deliveries } = fixture();
+    try {
+      subscriber.run("2", null, 0, null, null, 1, 1); // global safety and freeze
+      await recordTelegramChangeLog(db, [
+        freeze("usdc", "n", null, DAY1_0905Z - 60),
+        freeze("usdc", "z", 0, DAY1_0905Z - 60),
+        safety("usdx", "A", "D", DAY1_0905Z - 60),
+      ]);
+      follow.run("3", "usdx", 1, 0);
+      subscriber.run("3", null, 0, null, null, 0, 0); // safety only: no freeze manifest
+      await runDailyRollup(db, DAY1_0905Z);
+      const options = sqlite.prepare("SELECT chat_id, families, options_json FROM telegram_deliveries ORDER BY chat_id").all() as Array<{
+        chat_id: string; families: string; options_json: string;
+      }>;
+      expect(options.map((row) => [row.chat_id, row.families, JSON.parse(row.options_json).freezeSourceKeys ?? null])).toEqual([
+        ["2", "freeze,safety", ["freeze:n", "freeze:z"]],
+        ["3", "safety", null],
+      ]);
+      expect(deliveries().find((row) => row.chat_id === "2")?.body).toContain("2 freeze events");
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
 describe("per-chat cap", () => {
   it("admits up to the cap, exempts depeg, and turns the excess into roll-up overflow", async () => {
     const { sqlite, db } = fixture();

@@ -24,6 +24,9 @@ const CAPPED_KINDS: ReadonlySet<string> = new Set(["alert", "freeze"]);
  */
 const MAX_ROWS_PER_BATCH = 420;
 
+const OPEN_PLANNING_JOB_SQL = `SELECT job_id, kind, payload_json, state, cursor, planned_count, created_at, expires_at, completed_at, error
+   FROM telegram_jobs WHERE state IN ('planning', 'ready') AND state = 'planning'`;
+
 /** Jobs closed per sweep. */
 const CLOSE_JOBS_LIMIT = 50;
 
@@ -84,14 +87,23 @@ export async function fanOutPlanningTelegramJobs(
   ).bind(nowSec, nowSec).run();
   result.jobsCancelled = Number(cancelled.meta?.changes ?? 0);
 
-  const jobs = await db.prepare(
-    `SELECT job_id, kind, payload_json, state, cursor, planned_count, created_at, expires_at, completed_at, error
-       FROM telegram_jobs WHERE state = 'planning'
-      ORDER BY created_at ASC, job_id ASC`,
-  ).all<TelegramJobRow>();
   const maxPages = options.maxPages ?? TELEGRAM_FANOUT_MAX_PAGES_PER_RUN;
 
-  for (const job of jobs.results ?? []) {
+  // One resident job at a time, FIFO by (created_at, job_id). The frontier
+  // is invocation-local: a failed or cancelled job is passed this run and
+  // retried by the next one, never re-selected here. The redundant `IN`
+  // matches idx_telegram_jobs_open's partial predicate so SQLite uses it.
+  let frontier: { createdAt: number; jobId: string } | null = null;
+  while (result.pages < maxPages) {
+    if (options.signal?.aborted) return result;
+    if (options.softDeadlineAtMs != null && Date.now() >= options.softDeadlineAtMs) return result;
+    const job: TelegramJobRow | null = await (frontier == null
+      ? db.prepare(`${OPEN_PLANNING_JOB_SQL} ORDER BY created_at ASC, job_id ASC LIMIT 1`)
+      : db.prepare(`${OPEN_PLANNING_JOB_SQL} AND (created_at, job_id) > (?, ?) ORDER BY created_at ASC, job_id ASC LIMIT 1`)
+        .bind(frontier.createdAt, frontier.jobId)
+    ).first<TelegramJobRow>();
+    if (!job) break;
+    frontier = { createdAt: Number(job.created_at), jobId: job.job_id };
     const handler = TELEGRAM_JOB_KIND_HANDLERS[job.kind];
     if (!handler?.buildPage) {
       await db.prepare(

@@ -32,6 +32,7 @@ import {
 } from "../jobs/freeze-job";
 import { fanOutPlanningTelegramJobs, sweepTelegramJobs } from "../jobs/run-jobs";
 import { runTelegramRollupStep, type TelegramRollupStepResult } from "../rollup/rollup-step";
+import { loadRetractedFreezeAlertIds } from "../freeze/telegram-alert-freeze";
 import { classifyTelegramLogError, logTelegramEvent } from "../../../telegram/common/log";
 
 export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
@@ -118,15 +119,24 @@ export async function dispatchTelegramAlerts(
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
     } else {
-      const events = await buildTelegramDispatchEvents(db, sourceData, snapshotState, getSymbol, signal);
+      const { events, changeLogStatements } = await buildTelegramDispatchEvents(
+        db, sourceData, snapshotState, getSymbol, signal,
+      );
       const summary = summarizeTelegramDispatchEvents(events);
       eventOverrides = summary.eventsDetected;
+      // The roll-up transitions and the baselines that consume them commit in
+      // one batch (never split): a failure keeps both, so the next run
+      // re-detects every transition. The job, when present, goes first.
+      const baselineStatements = [
+        ...changeLogStatements,
+        ...buildTelegramSnapshotCacheEntries(currentSnapshots)
+          .map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt: nowSec })),
+      ];
       if (summary.total === 0) {
         eventless = true;
-        await writeSnapshots(db, currentSnapshots);
+        await executeAtomicBatch(db, baselineStatements, { signal });
       } else {
-        // The job and the baseline it was diffed against commit together: a
-        // crash re-detects the same events and re-derives the same job id.
+        // A crash re-detects the same events and re-derives the same job id.
         const spec = await buildTelegramAlertJobSpec({
           events,
           baselineDigestInput: JSON.stringify(currentSnapshots),
@@ -134,11 +144,7 @@ export async function dispatchTelegramAlerts(
         });
         alertJobId = spec.jobId;
         alertFamilies = activeTelegramEventFamilies(events);
-        const statements = [
-          ...await buildTelegramJobStatements(db, spec),
-          ...buildTelegramSnapshotCacheEntries(currentSnapshots)
-            .map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt: nowSec })),
-        ];
+        const statements = [...await buildTelegramJobStatements(db, spec), ...baselineStatements];
         const results = await executeAtomicBatch(db, statements, { returnResults: true, signal });
         alertJobCreated = Number(results[0]?.meta?.changes ?? 0) > 0;
       }
@@ -171,9 +177,11 @@ export async function dispatchTelegramAlerts(
   // Hourly freeze batch and the 09:00-local roll-up enqueue direct-delivery
   // jobs; a failure here must never block live alerts.
   let rollup: TelegramRollupStepResult | null = null;
+  let rollupStepFailed = false;
   try {
     rollup = await runTelegramRollupStep(db, nowSec);
   } catch (error) {
+    rollupStepFailed = true;
     logTelegramEvent({
       level: "warn",
       message: "telegram roll-up step failed",
@@ -184,7 +192,13 @@ export async function dispatchTelegramAlerts(
   }
 
   const drain = transportAllowed
-    ? await drainTelegramDeliveries(db, botToken, { signal, softDeadlineAtMs, holdKinds })
+    ? await drainTelegramDeliveries(db, botToken, {
+      signal,
+      softDeadlineAtMs,
+      holdKinds,
+      // Fresh per send wave; a failed read holds freeze-bearing rows and degrades the run.
+      validateFreezeClaims: (keys) => isolate("freeze-revalidation", null, () => loadRetractedFreezeAlertIds(db, keys)),
+    })
     : null;
   const sweep = await sweepTelegramJobs(db, Math.floor(Date.now() / 1000));
 
@@ -247,8 +261,18 @@ export async function dispatchTelegramAlerts(
     handoffEnqueuedCount: fanout.deliveriesPlanned,
     handoffPageCount: fanout.pages,
   };
+  // R4: every incomplete stage names itself, in stage order. A thrown roll-up
+  // hook names only itself, never fabricated sub-step outcomes.
+  const reasons: string[] = [];
+  if (planningErrors.length > 0) reasons.push("telegram-planning-failed");
+  if (fanout.jobsFailedClosed > 0) reasons.push("fanout-page-failed");
+  if (rollupStepFailed) reasons.push("telegram-rollup-step-failed");
+  if (rollup?.rollup.state === "failed") reasons.push("telegram-rollup-failed");
+  if (rollup?.rollup.state === "preset-resolution-failed") reasons.push("telegram-rollup-preset-resolution-failed");
+  if (rollup?.freezeBatch.state === "failed") reasons.push("telegram-freeze-batch-failed");
   const metadata = {
     ...result,
+    ...(reasons.length > 0 ? { reason: reasons[0], reasons } : {}),
     deliveryV2: {
       alertJobId,
       alertJobCreated,
@@ -280,7 +304,7 @@ export async function dispatchTelegramAlerts(
       jobsDone: sweep.jobsDone,
       planningErrors,
     },
-    noWorkRun: !mustSeedSnapshots && attempted === 0 && fanout.deliveriesPlanned === 0 && sweep.expired === 0
+    noWorkRun: reasons.length === 0 && !mustSeedSnapshots && attempted === 0 && fanout.deliveriesPlanned === 0 && sweep.expired === 0
       && !alertJobCreated && freeze.observed === 0,
   };
   await reportCronProgress(reportProgress, {
@@ -293,8 +317,11 @@ export async function dispatchTelegramAlerts(
   return {
     itemCount: sent,
     metadata: JSON.stringify(metadata),
-    ...(planningErrors.length > 0
-      ? { status: "degraded" as const, error: `Telegram dispatch planning failed: ${planningErrors.join(", ")}` }
+    ...(reasons.length > 0
+      ? {
+        status: "degraded" as const,
+        error: `Telegram dispatch incomplete: ${[...reasons, ...planningErrors].join(", ")}`,
+      }
       : {}),
   };
 }

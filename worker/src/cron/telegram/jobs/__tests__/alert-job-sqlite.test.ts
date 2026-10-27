@@ -104,4 +104,38 @@ describe("alert job fan-out", () => {
     expect(sqlite.prepare("SELECT state FROM telegram_jobs").get()).toEqual({ state: "planning" });
     expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_deliveries").get()).toEqual({ n: 0 });
   });
+
+  it("retains the durable cursor after a failed page and plans each chat once on retry", async () => {
+    const { sqlite, db } = fixture();
+    addDirectFollower(sqlite, "100");
+    addDirectFollower(sqlite, "200");
+    const spec = await buildTelegramAlertJobSpec({ events: depegEvents(250), baselineDigestInput: "b", detectedAt: NOW });
+    await enqueueTelegramJob(db, spec);
+    // The page's atomic row/cursor batch fails once.
+    let failNextBatch = true;
+    const flaky = new Proxy(db, {
+      get(target, property, receiver) {
+        if (property === "batch") {
+          return async (statements: D1PreparedStatement[]) => {
+            if (failNextBatch) {
+              failNextBatch = false;
+              throw new Error("D1 batch unavailable");
+            }
+            return target.batch(statements);
+          };
+        }
+        const value = Reflect.get(target, property, receiver) as unknown;
+        return typeof value === "function" ? (value as (...args: unknown[]) => unknown).bind(target) : value;
+      },
+    });
+    expect(await fanOutPlanningTelegramJobs(flaky, NOW)).toMatchObject({ jobsFailedClosed: 1, deliveriesPlanned: 0 });
+    expect(sqlite.prepare("SELECT state, cursor, planned_count FROM telegram_jobs").get())
+      .toEqual({ state: "planning", cursor: null, planned_count: 0 });
+
+    expect(await fanOutPlanningTelegramJobs(flaky, NOW + 300)).toMatchObject({ jobsFailedClosed: 0, deliveriesPlanned: 2 });
+    expect(await fanOutPlanningTelegramJobs(flaky, NOW + 600)).toMatchObject({ deliveriesPlanned: 0 });
+    expect(sqlite.prepare("SELECT chat_id, COUNT(*) AS n FROM telegram_deliveries GROUP BY chat_id ORDER BY chat_id").all())
+      .toEqual([{ chat_id: "100", n: 1 }, { chat_id: "200", n: 1 }]);
+    expect(sqlite.prepare("SELECT state, error FROM telegram_jobs").get()).toEqual({ state: "ready", error: null });
+  });
 });

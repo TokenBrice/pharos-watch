@@ -50,6 +50,17 @@ function global(chatId: string, alerts: Record<string, boolean>, options: Record
   return { subscribers: [{ chatId, global: alerts, ...options }] };
 }
 
+function queueBroadcastRow(harness: ReturnType<typeof createDispatchHarness>, now: number) {
+  harness.sqlite.prepare(
+    `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+     VALUES ('broadcast:queued', 'broadcast', '{}', 'ready', ?, ?)`,
+  ).run(now, now + 3600);
+  harness.sqlite.prepare(
+    `INSERT INTO telegram_deliveries (job_id, kind, chat_id, audience, body, body_hash, state, next_attempt_at, expires_at, created_at)
+     VALUES ('broadcast:queued', 'broadcast', '12345', 'notice', 'queued notice', 'h', 'pending', ?, ?, ?)`,
+  ).run(now, now + 3600, now);
+}
+
 describe("dispatchTelegramAlerts", () => {
   beforeEach(resetDispatchTelegramAlertsTest);
   afterEach(cleanupDispatchTelegramAlertsTest);
@@ -273,6 +284,165 @@ describe("dispatchTelegramAlerts", () => {
 
     expect(mockRunTelegramRollupStep).toHaveBeenCalledOnce();
     expect(metadata).toMatchObject({ messagesSent: 1, deliveryV2: { rollupState: "failed" } });
+  });
+
+  it("names a thrown roll-up hook as the run's reason without inventing sub-step outcomes", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }] });
+    queueBroadcastRow(harness, now);
+    mockRunTelegramRollupStep.mockRejectedValueOnce(new Error("roll-up down"));
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(metadata).toMatchObject({
+      reason: "telegram-rollup-step-failed",
+      reasons: ["telegram-rollup-step-failed"],
+      noWorkRun: false,
+      messagesSent: 1,
+    });
+    // Unrelated live work and the sweep still run.
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+    expect(harness.sqlite.prepare("SELECT state FROM telegram_jobs WHERE job_id = 'broadcast:queued'").get())
+      .toEqual({ state: "done" });
+  });
+
+  it.each([
+    [{ rollup: "failed" }, ["telegram-rollup-failed"]],
+    [{ rollup: "preset-resolution-failed" }, ["telegram-rollup-preset-resolution-failed"]],
+    [{ freezeBatch: "failed" }, ["telegram-freeze-batch-failed"]],
+    [{ rollup: "failed", freezeBatch: "failed" }, ["telegram-rollup-failed", "telegram-freeze-batch-failed"]],
+  ] as const)("degrades on a returned roll-up step failure %j", async (states, reasons) => {
+    const harness = createDispatchHarness();
+    mockRunTelegramRollupStep.mockResolvedValueOnce({
+      freezeBatch: { state: "freezeBatch" in states ? states.freezeBatch : "not-due", changes: 0 },
+      rollup: { state: "rollup" in states ? states.rollup : "not-due", dueChats: 0, sentChats: 0, emptyChats: 0, deferredChats: 0 },
+    });
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
+
+    expect(result).toMatchObject({ status: "degraded", error: expect.stringContaining(reasons[0]) });
+    expect(metadata).toMatchObject({ reason: reasons[0], reasons, noWorkRun: false });
+  });
+
+  it.each(["not-due", "empty", "queued"] as const)("keeps a successful %s roll-up step ok", async (freezeBatch) => {
+    const harness = createDispatchHarness();
+    mockRunTelegramRollupStep.mockResolvedValueOnce({
+      freezeBatch: { state: freezeBatch, changes: 0 },
+      rollup: { state: freezeBatch === "queued" ? "done" : "not-due", dueChats: 0, sentChats: 0, emptyChats: 0, deferredChats: 0 },
+    });
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
+
+    expect(result.status).toBeUndefined();
+    expect(metadata.reason).toBeUndefined();
+    expect(metadata.reasons).toBeUndefined();
+  });
+
+  it("degrades a caught fan-out page failure that never throws out of fan-out", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }] });
+    queueBroadcastRow(harness, now);
+    // A page builder that throws is failed closed inside fan-out.
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('freeze_batch:bad', 'freeze_batch', 'null', 'planning', ?, ?)`,
+    ).run(now, now + 3600);
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(metadata).toMatchObject({
+      reason: "fanout-page-failed",
+      reasons: ["fanout-page-failed"],
+      deliveryV2: { jobsFailedClosed: 1, planningErrors: [] },
+      messagesSent: 1,
+    });
+    expect(harness.sqlite.prepare("SELECT state, cursor FROM telegram_jobs WHERE job_id = 'freeze_batch:bad'").get())
+      .toEqual({ state: "planning", cursor: null });
+  });
+
+  it("orders simultaneous stage failures deterministically, planning first", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('freeze_batch:bad', 'freeze_batch', 'null', 'planning', ?, ?)`,
+    ).run(now, now + 3600);
+    harness.sqlite.exec("DROP TABLE tape_events");
+    mockRunTelegramRollupStep.mockResolvedValueOnce({
+      freezeBatch: { state: "failed", changes: 0 },
+      rollup: { state: "preset-resolution-failed", dueChats: 1, sentChats: 0, emptyChats: 0, deferredChats: 1 },
+    });
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata.reason).toBe("telegram-planning-failed");
+    expect(metadata.reasons).toEqual([
+      "telegram-planning-failed",
+      "fanout-page-failed",
+      "telegram-rollup-preset-resolution-failed",
+      "telegram-freeze-batch-failed",
+    ]);
+    expect(metadata.deliveryV2.planningErrors).toEqual(expect.arrayContaining([expect.stringMatching(/^freeze-retraction:/)]));
+  });
+
+  it("cancels a queued batch whose freeze claim was retracted at its blacklist source after planning", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }, { chatId: "678", lastActiveAt: now }] });
+    queueBroadcastRow(harness, now);
+    harness.sqlite.prepare(
+      `INSERT INTO blacklist_events
+        (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+         timestamp, amount_usd_at_event, config_key, contract_address, explorer_tx_url, explorer_address_url, suppression_reason)
+        VALUES ('b-gone', 'USDC', 1, 'Ethereum', 'blacklist', '0x1', 'tx', 1, ?, 5000, 'k', '0x2', '', '', 'reorged')`,
+    ).run(now);
+    // The Tape row itself is not suppressed: only its source is.
+    harness.sqlite.prepare(
+      `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
+       VALUES ('gone', 'freeze.blocked', 'warning', 1, 'x', 'x', '{}', 'blacklist_events', 'b-gone', 'opened', 1)`,
+    ).run();
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('freeze_batch:0-1', 'freeze_batch', '{}', 'ready', ?, ?)`,
+    ).run(now, now + 3600);
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_deliveries (job_id, kind, chat_id, audience, body, body_hash, options_json, families, state, next_attempt_at, expires_at, created_at)
+       VALUES ('freeze_batch:0-1', 'freeze_batch', '678', 'alert', 'USDC 1 freeze event, $5,000 known', 'h', ?, 'freeze', 'pending', ?, ?, ?)`,
+    ).run(JSON.stringify({ freezeSourceKeys: ["freeze:gone"] }), now, now + 3600, now);
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+
+    expect(result.status).toBeUndefined();
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+    expect(harness.sqlite.prepare("SELECT state, attempts, reason FROM telegram_deliveries WHERE chat_id = '678'").get())
+      .toEqual({ state: "cancelled", attempts: 0, reason: "freeze-claim-retracted" });
+  });
+
+  it("holds a freeze-bearing roll-up and degrades the run when freeze revalidation cannot read", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }, { chatId: "678", lastActiveAt: now }] });
+    queueBroadcastRow(harness, now);
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('rollup:2026-04-23:678', 'rollup', '{}', 'ready', ?, ?)`,
+    ).run(now, now + 3600);
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_deliveries (job_id, kind, chat_id, audience, body, body_hash, options_json, families, state, next_attempt_at, expires_at, created_at)
+       VALUES ('rollup:2026-04-23:678', 'rollup', '678', 'alert', 'Daily changes', 'h', ?, 'freeze', 'pending', ?, ?, ?)`,
+    ).run(JSON.stringify({ freezeSourceKeys: ["freeze:t1"] }), now, now + 3600, now);
+    harness.sqlite.exec("DROP TABLE tape_events");
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("telegram-planning-failed");
+    expect(metadata.deliveryV2.planningErrors).toEqual(expect.arrayContaining([expect.stringMatching(/^freeze-revalidation:/)]));
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+    expect(harness.sqlite.prepare("SELECT state, attempts, reason FROM telegram_deliveries WHERE chat_id = '678'").get())
+      .toEqual({ state: "retry", attempts: 0, reason: "freeze-retraction-read-failed" });
   });
 
   it("holds a fresh severe safety drop for the dwell, so a one-run flip never alerts", async () => {

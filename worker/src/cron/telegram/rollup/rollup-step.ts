@@ -99,36 +99,59 @@ async function withoutRetractedFreezes(
   return changes.filter((change) => change.kind !== "freeze" || !retracted.has(change.sourceKey));
 }
 
-/** Freeze changes and direct followers for `(fromChangeId, toChangeId]`, one message's alerts per chat. */
+/**
+ * One page of direct freeze followers for `(fromChangeId, toChangeId]`: the
+ * next `limit` chats after `cursor` in chat-id order, with each selected chat's
+ * alerts. Only `limit + 1` candidate ids and the selected chats' subscription
+ * rows are resident, however large the audience. The continuation comes from
+ * the selected ids, so a chat unsubscribed between the two reads still advances.
+ */
 async function loadFreezeBatchAlertsByChat(
   db: D1Database,
-  fromChangeId: number,
-  toChangeId: number,
-): Promise<Map<string, FreezeAlert[]>> {
-  const changes = await withoutRetractedFreezes(
-    db, (await loadFreezeChangesAfter(db, fromChangeId)).filter((change) => change.id <= toChangeId),
+  range: { fromChangeId: number; toChangeId: number },
+  cursor: string | null,
+  limit: number,
+): Promise<{ alertsByChat: Map<string, FreezeAlert[]>; nextCursor: string | null }> {
+  const changes = await withoutRetractedFreezes(db, await loadFreezeChangesAfter(db, range.fromChangeId, range.toChangeId));
+  const coinChunks = chunkArray(
+    [...new Set(changes.map((change) => change.kind === "freeze" ? change.stablecoinId : ""))].filter(Boolean),
+    90,
   );
-  const coinIds = [...new Set(changes.map((change) => change.kind === "freeze" ? change.stablecoinId : ""))].filter(Boolean);
-  const followersByCoin = new Map<string, string[]>();
-  for (const chunk of chunkArray(coinIds, 90)) {
+  const pageSize = Math.max(1, limit);
+  let candidates: string[] = [];
+  for (const chunk of coinChunks) {
     const clause = buildInClause(chunk);
     const rows = await db.prepare(
-      `SELECT chat_id, stablecoin_id FROM telegram_subscriptions
-        WHERE alert_freeze = 1 AND stablecoin_id IN (${clause.sql})`,
-    ).bind(...clause.binds).all<{ chat_id: string; stablecoin_id: string }>();
-    for (const row of rows.results ?? []) {
-      followersByCoin.set(row.stablecoin_id, [...(followersByCoin.get(row.stablecoin_id) ?? []), row.chat_id]);
+      `SELECT DISTINCT chat_id FROM telegram_subscriptions
+        WHERE alert_freeze = 1 AND stablecoin_id IN (${clause.sql}) AND chat_id > ?
+        ORDER BY chat_id ASC LIMIT ?`,
+    ).bind(...clause.binds, cursor ?? "", pageSize + 1).all<{ chat_id: string }>();
+    candidates = [...new Set([...candidates, ...(rows.results ?? []).map((row) => row.chat_id)])].sort().slice(0, pageSize + 1);
+  }
+  const page = candidates.slice(0, pageSize);
+  const followersByCoin = new Map<string, string[]>();
+  if (page.length > 0) {
+    for (const chunk of coinChunks) {
+      const clause = buildInClause(chunk);
+      // Exact selected ids: chats subscribing between the two reads cannot enter this page.
+      const rows = await db.prepare(
+        `SELECT chat_id, stablecoin_id FROM telegram_subscriptions
+          WHERE alert_freeze = 1 AND stablecoin_id IN (${clause.sql})
+            AND chat_id IN (SELECT value FROM json_each(?))`,
+      ).bind(...clause.binds, JSON.stringify(page)).all<{ chat_id: string; stablecoin_id: string }>();
+      for (const row of rows.results ?? []) {
+        followersByCoin.set(row.stablecoin_id, [...(followersByCoin.get(row.stablecoin_id) ?? []), row.chat_id]);
+      }
     }
   }
-  const alertsByChat = new Map<string, FreezeAlert[]>();
+  const byChat = new Map<string, FreezeAlert[]>(page.map((chatId) => [chatId, []]));
   for (const change of changes) {
     const alert = freezeAlertFromChange(change);
     if (!alert) continue;
-    for (const chatId of followersByCoin.get(alert.stablecoinId) ?? []) {
-      alertsByChat.set(chatId, [...(alertsByChat.get(chatId) ?? []), alert]);
-    }
+    for (const chatId of followersByCoin.get(alert.stablecoinId) ?? []) byChat.get(chatId)?.push(alert);
   }
-  return alertsByChat;
+  const alertsByChat = new Map([...byChat].filter(([, alerts]) => alerts.length > 0));
+  return { alertsByChat, nextCursor: candidates.length > page.length ? page[page.length - 1]! : null };
 }
 
 export interface FreezeBatchJobPayload {
@@ -144,12 +167,9 @@ export interface FreezeBatchJobPayload {
 export async function buildFreezeBatchJobPage(
   ctx: TelegramJobPageContext<FreezeBatchJobPayload>,
 ): Promise<TelegramJobPage> {
-  const alertsByChat = await loadFreezeBatchAlertsByChat(ctx.db, ctx.payload.fromChangeId, ctx.payload.toChangeId);
-  const chatIds = [...alertsByChat.keys()].sort().filter((chatId) => ctx.cursor == null || chatId > ctx.cursor);
-  const page = chatIds.slice(0, Math.max(1, ctx.limit));
+  const { alertsByChat, nextCursor } = await loadFreezeBatchAlertsByChat(ctx.db, ctx.payload, ctx.cursor, ctx.limit);
   const deliveries: TelegramDeliveryInput[] = [];
-  for (const chatId of page) {
-    const freeze = alertsByChat.get(chatId)!;
+  for (const [chatId, freeze] of alertsByChat) {
     const alerts = { dews: [], depegTriggered: [], depegResolved: [], depegWorsening: [], safety: [], reserve: [], freeze };
     const chunks = splitMessage(formatConsolidatedMessage(alerts, { via: { presetIds: [], watchlist: true, allStablecoins: false } }));
     chunks.forEach((body, seq) => deliveries.push({
@@ -160,9 +180,10 @@ export async function buildFreezeBatchJobPage(
       disableWebPagePreview: true,
       coinIds: [...new Set(freeze.map((alert) => alert.stablecoinId))],
       families: ["freeze"],
+      freezeSourceKeys: freeze.map((alert) => alert.sourceEventId),
     }));
   }
-  return { deliveries, nextCursor: chatIds.length > page.length ? page[page.length - 1]! : null };
+  return { deliveries, nextCursor };
 }
 
 export const freezeBatchJobHandler: TelegramJobKindHandler<FreezeBatchJobPayload> = {
@@ -382,11 +403,14 @@ export async function runDailyRollup(db: D1Database, nowSec: number): Promise<Te
   for (const { row, localDate, sinceSec } of batch) {
     const chatId = row.chat_id;
     const chatCoverage = coverage.get(chatId);
+    const included = chatCoverage ? chatChanges(changes, chatCoverage, sinceSec, liveAlertedAt.get(chatId)) : [];
     const net = chatCoverage
-      ? computeNetRollupChanges(chatChanges(changes, chatCoverage, sinceSec, liveAlertedAt.get(chatId)))
+      ? computeNetRollupChanges(included)
         .filter((change) => change.kind !== "safety" || chatCoverage.coins.safety.has(change.stablecoinId) ||
           isMaterialGlobalSafetyChange(change))
       : [];
+    // Every freeze counted in this chat's summary, revalidated before each send.
+    const freezeSourceKeys = included.flatMap((change) => change.kind === "freeze" ? [change.sourceKey] : []);
     const message = formatRollupMessage({ changes: net, overflowCount: overflowCounts.get(chatId) ?? 0 });
     const marker = db.prepare(
       `INSERT INTO telegram_rollup_state (chat_id, last_rollup_local_date, last_rollup_at) VALUES (?, ?, ?)
@@ -413,6 +437,7 @@ export async function runDailyRollup(db: D1Database, nowSec: number): Promise<Te
         disableWebPagePreview: true,
         coinIds: [...new Set(net.map((change) => change.stablecoinId))],
         families: [...new Set(net.map((change) => change.kind))],
+        ...(freezeSourceKeys.length > 0 ? { freezeSourceKeys } : {}),
       })),
     });
     result.sentChats++;

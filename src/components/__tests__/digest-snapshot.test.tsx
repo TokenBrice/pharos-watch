@@ -197,6 +197,24 @@ describe("DigestSnapshot", () => {
   });
 
   it.each([
+    ["null with covered cohort", null, { coveredCoins: 2, totalCoins: 2, coveredMcapUsd: 100e9 }],
+    ["null with empty cohort", null, { coveredCoins: 0, totalCoins: 2, coveredMcapUsd: 0 }],
+    ["legacy zero with empty cohort", 0, { coveredCoins: 0, totalCoins: 2, coveredMcapUsd: 0 }],
+  ])("withholds the seven-day change for %s", (_name, mcap7dDelta, mcap7dDeltaCoverage) => {
+    mockSnapshot({ totalMcapUsd: 1e12, mcap7dDelta, mcap7dDeltaCoverage });
+    render(<DigestSnapshot date="2026-09-01" />);
+    const line = screen.getByText(/7d matched-cohort change:/).closest("p")!;
+    expect(line.textContent).toContain("Not captured for this edition");
+    expect(line.textContent).not.toContain("$0");
+  });
+
+  it("keeps a measured-flat seven-day change", () => {
+    mockSnapshot({ totalMcapUsd: 1e12, mcap7dDelta: 0, mcap7dDeltaCoverage: { coveredCoins: 2, totalCoins: 2, coveredMcapUsd: 100e9 } });
+    render(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.getByText(/7d matched-cohort change:/).closest("p")!.textContent).toContain("$0");
+  });
+
+  it.each([
     ["2026-08-29", "2026-09-01", true],
     ["2026-08-24", "2026-08-30", true],
     ["2026-08-29", "2026-09-01", false],

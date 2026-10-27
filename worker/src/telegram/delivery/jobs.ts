@@ -53,6 +53,8 @@ export interface TelegramDeliveryInput {
   notBefore?: number;
   /** Canonical pre-split body; enables 24 h same-chat identical-body suppression. */
   dedupeBody?: string;
+  /** Exact `freeze:<tapeEventId>` claims this message states, revalidated before each send wave. */
+  freezeSourceKeys?: readonly string[];
 }
 
 export interface TelegramJobSpec<P = unknown> {
@@ -84,6 +86,7 @@ export interface TelegramDeliveryOptions {
   linkPreviewOptions?: LinkPreviewOptions;
   disableWebPagePreview?: boolean;
   disableNotification?: boolean;
+  freezeSourceKeys?: string[];
 }
 
 const DEFAULT_PRIORITY_BY_KIND: Record<TelegramJobKind, number> = {
@@ -109,6 +112,9 @@ function serializeOptions(input: TelegramDeliveryInput): string | null {
     ...(input.linkPreviewOptions ? { linkPreviewOptions: input.linkPreviewOptions } : {}),
     ...(input.disableWebPagePreview ? { disableWebPagePreview: true } : {}),
     ...(input.disableNotification ? { disableNotification: true } : {}),
+    ...(input.freezeSourceKeys && input.freezeSourceKeys.length > 0
+      ? { freezeSourceKeys: [...new Set(input.freezeSourceKeys)].sort() }
+      : {}),
   };
   return Object.keys(options).length > 0 ? JSON.stringify(options) : null;
 }
@@ -267,4 +273,22 @@ export function parseTelegramDeliveryOptions(raw: string | null): TelegramDelive
   } catch {
     return {};
   }
+}
+
+/**
+ * Strict freeze manifest admission for the send-time gate: a nonempty list of
+ * nonempty `freeze:<tapeEventId>` keys, deduplicated. Anything else is null
+ * (unverifiable), never an empty list that would pass the check.
+ */
+export function parseTelegramFreezeSourceKeys(raw: string | null): string[] | null {
+  if (!raw) return null;
+  let keys: unknown;
+  try {
+    keys = (JSON.parse(raw) as { freezeSourceKeys?: unknown } | null)?.freezeSourceKeys;
+  } catch {
+    return null;
+  }
+  if (!Array.isArray(keys) || keys.length === 0) return null;
+  if (!keys.every((key) => typeof key === "string" && key.startsWith("freeze:") && key.length > "freeze:".length)) return null;
+  return [...new Set(keys as string[])];
 }

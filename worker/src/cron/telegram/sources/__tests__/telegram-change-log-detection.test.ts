@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { planDewsAlerts } from "../telegram-alert-changes";
-import { diffObservedSafetyGrades, recordDispatchChangeLog } from "../telegram-change-log-detection";
+import { diffObservedSafetyGrades, prepareDispatchChangeLogStatements } from "../telegram-change-log-detection";
 import type { SafetySnapshot } from "../telegram-alert-snapshots";
 
 const rated = (grade: string | null, extra: Partial<SafetySnapshot[string]> = {}) => ({
@@ -45,8 +45,8 @@ describe("planDewsAlerts de-escalations", () => {
   });
 });
 
-describe("recordDispatchChangeLog", () => {
-  it("writes entries idempotently and advances the observed safety snapshot atomically", async () => {
+describe("prepareDispatchChangeLogStatements", () => {
+  it("prepares idempotent entries plus the observed safety advance without committing them", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     try {
       const dewsChange = { stablecoinId: "a", symbol: "A", oldBand: "WARNING", newBand: "ALERT", score: 61, topSignals: [] };
@@ -58,9 +58,13 @@ describe("recordDispatchChangeLog", () => {
         getSymbol: symbol,
         nowSec: 1_000,
       };
-      await recordDispatchChangeLog(db, input);
+      const prepared = await prepareDispatchChangeLogStatements(db, input);
+      // Preparation alone writes nothing.
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM telegram_change_log").get()).toEqual({ n: 0 });
+      expect(sqlite.prepare("SELECT COUNT(*) AS n FROM cache").get()).toEqual({ n: 0 });
+      await db.batch(prepared);
       // A retried dispatch run re-detects the same DEWS and reserve moves.
-      await recordDispatchChangeLog(db, { ...input, nowSec: 1_300, currentSafetySnapshot: { s: rated("C") } });
+      await db.batch(await prepareDispatchChangeLogStatements(db, { ...input, nowSec: 1_300, currentSafetySnapshot: { s: rated("C") } }));
       const rows = sqlite.prepare("SELECT kind, stablecoin_id, observed_at FROM telegram_change_log ORDER BY id").all();
       expect(rows).toEqual([
         { kind: "dews", stablecoin_id: "a", observed_at: 1_000 },

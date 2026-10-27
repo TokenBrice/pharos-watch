@@ -90,6 +90,39 @@ describe("handleDigestSnapshot", () => {
     expect(body.prevInputData?.totalMcapUsd).toBe(90e9);
   });
 
+  it("passes a stored null seven-day change through unchanged for daily and weekly reads", async () => {
+    const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
+    const rows = [
+      { match: "depeg_events", rows: [] },
+      { match: "digest-snapshot:blacklist-summary", rows: [{ total_events: 0, valued_events: 0, known_amount_usd: null }] },
+      { match: "blacklist_events", rows: [] },
+    ];
+    const dailyDb = mockD1([
+      { match: "daily_digest", rows: [{ generated_at: dayStart + 3600, input_data: JSON.stringify({ totalMcapUsd: 100e9, mcap7dDelta: null }) }] },
+      ...rows,
+    ]);
+    const daily = (await readJsonResponse(
+      await handleDigestSnapshot(dailyDb, new URL(`https://x/api/digest-snapshot?date=${todayStr}`)), 200,
+    )) as { inputData: { mcap7dDelta: number | null } };
+    expect(daily.inputData.mcap7dDelta).toBeNull();
+
+    const weeklyInput = {
+      dailyDigests: [
+        { date: "2026-03-10", inputData: { totalMcapUsd: 90e9, mcap7dDelta: null } },
+        { date: "2026-03-16", inputData: { totalMcapUsd: 100e9, mcap7dDelta: null } },
+      ],
+    };
+    const weeklyDb = mockD1([
+      { match: "daily_digest", rows: [{ generated_at: dayStart + 3600, input_data: JSON.stringify(weeklyInput) }] },
+      ...rows,
+    ]);
+    const weekly = (await readJsonResponse(
+      await handleDigestSnapshot(weeklyDb, new URL(`https://x/api/digest-snapshot?date=${todayStr}`)), 200,
+    )) as { inputData: { mcap7dDelta: number | null }; prevInputData: { mcap7dDelta: number | null } };
+    expect(weekly.inputData.mcap7dDelta).toBeNull();
+    expect(weekly.prevInputData.mcap7dDelta).toBeNull();
+  });
+
   it("uses the requested digest type when daily and weekly rows share a date", async () => {
     const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
     const dailyRow = {
