@@ -68,6 +68,7 @@ vi.mock("../safety-score-v9/accepted-projection-readers", async (importOriginal)
 }));
 
 const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
+const noMeasuredExitExpiry = { assetIds: [], witnessesByAssetId: {} };
 
 function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = false) {
   return {
@@ -290,7 +291,7 @@ describe("Safety Score V9 publication runner", () => {
       producerCapabilityDigest: "2".repeat(64),
       quarantines: [],
       quarantineAffectedAssetIds: [],
-      bridgeJoinDiagnostics: [],
+      bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry,
     });
     mocks.loadBaseline.mockReset().mockResolvedValue({ kind: "bootstrap", health: null });
     mocks.loadIdentity.mockClear();
@@ -508,7 +509,7 @@ describe("Safety Score V9 publication runner", () => {
         producerCapabilityDigest: "2".repeat(64),
         quarantines: [],
         quarantineAffectedAssetIds: [],
-        bridgeJoinDiagnostics: [],
+        bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry,
       };
     });
 
@@ -551,7 +552,7 @@ describe("Safety Score V9 publication runner", () => {
       producerCapabilityDigest: "2".repeat(64),
       quarantines: [],
       quarantineAffectedAssetIds: [],
-      bridgeJoinDiagnostics: [],
+      bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry,
     });
 
     await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput });
@@ -599,7 +600,7 @@ describe("Safety Score V9 publication runner", () => {
       producerCapabilityDigest: "2".repeat(64),
       quarantines: [],
       quarantineAffectedAssetIds: [],
-      bridgeJoinDiagnostics: [],
+      bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry,
     });
 
     await expect(
@@ -612,7 +613,7 @@ describe("Safety Score V9 publication runner", () => {
       reasons: [{ code: "live-reserves-coverage-below-floor" }],
     });
   });
-  it("holds expired measured evidence without replacing accepted grades or alerts, then publishes recovered evidence", async () => {
+  it("quarantines expired measured evidence per asset, retains its witness, and fails closed when compilation missed it (10.35)", async () => {
     const { assessV9Publication } = await vi.importActual<
       typeof import("../safety-score-v9/publication-assessment")
     >("../safety-score-v9/publication-assessment");
@@ -648,42 +649,59 @@ describe("Safety Score V9 publication runner", () => {
       publicationGenerationId: "report-cards:v9:accepted",
     });
     mocks.loadBaseline.mockResolvedValue(acceptedBaseline(accepted));
-    const buildCandidate = (input: typeof expiredInput, expired: boolean) => mocks.build.mockReturnValue({
-      candidate: makeWorkerSafetyScoreV9Publication({
-        cards: cards.map((row) => expired && row.id === assetId ? { ...row, grade: "B", score: 72 } : row),
-        completeness: { ...accepted.completeness, ratedCount: cards.length },
-        baseInputGenerationId: input.baseInputGenerationId,
-        publishedAtSec: input.clockSec,
-        sourceGenerations: { dex: input.dexGenerationId },
-      }),
+    const stub = makeWorkerV9Card({ id: assetId, score: null, grade: null, ratingStatus: "pipeline-gap" });
+    const witness = {
+      routeId: observation.routeId, dexGenerationId: expiredInput.dexGenerationId,
+      observationWindowEndedAt: draft.clockSec - 10_801, freshnessMaxSec: 10_800,
+    };
+    const candidateFor = (input: typeof expiredInput, row: typeof card) => makeWorkerSafetyScoreV9Publication({
+      cards: cards.map((other) => other.id === assetId ? row : other),
+      completeness: {
+        ...accepted.completeness,
+        ratedCount: cards.length - (row.ratingStatus === "pipeline-gap" ? 1 : 0),
+        pipelineGapCount: row.ratingStatus === "pipeline-gap" ? 1 : 0,
+        pipelineGapIds: row.ratingStatus === "pipeline-gap" ? [assetId] : [],
+      },
+      baseInputGenerationId: input.baseInputGenerationId,
+      publishedAtSec: input.clockSec,
+      sourceGenerations: { dex: input.dexGenerationId },
+    });
+    mocks.build.mockReturnValue({
+      candidate: candidateFor(expiredInput, stub),
+      compilerFactSchemaDigest: "1".repeat(64),
+      producerCapabilityDigest: "2".repeat(64),
+      quarantines: [{ assetId, code: "evaluation-failed", message: "dex-stale: fixture" }],
+      quarantineAffectedAssetIds: [assetId], bridgeJoinDiagnostics: [],
+      measuredExitExpiry: { assetIds: [assetId], witnessesByAssetId: { [assetId]: [witness] } },
+    });
+
+    // One expired root among the full registry no longer holds unrelated ratings.
+    expect(await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput: expiredInput })).toMatchObject({
+      status: "published", outcome: "partial", affectedAssetIds: [assetId],
+    });
+    expect(mocks.build.mock.calls[0]![0].measuredExitExpiry).toMatchObject({
+      acceptedPublication: { publicationGenerationId: accepted.publicationGenerationId },
+      routes: { dexGenerationId: expiredInput.dexGenerationId, clockSec: expiredInput.clockSec },
+    });
+    const write = mocks.persist.mock.calls[0]![1];
+    const projected = JSON.parse(write.buildAcceptedProjections(write.publication).baseline);
+    expect(projected.baseline.dexExpiryByAssetId).toEqual({ [assetId]: [witness] });
+
+    // A compiler that left the expired contributor rated fails closed.
+    mocks.persist.mockClear();
+    mocks.build.mockReturnValue({
+      candidate: candidateFor(expiredInput, { ...card, grade: "B", score: 72 }),
       compilerFactSchemaDigest: "1".repeat(64),
       producerCapabilityDigest: "2".repeat(64),
       quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [],
+      measuredExitExpiry: noMeasuredExitExpiry,
     });
-    buildCandidate(expiredInput, true);
     expect(await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput: expiredInput })).toMatchObject({
-      status: "held", reasons: [{ code: "dex-stale" }], affectedAssetIds: [assetId],
+      status: "held", reasons: [{ code: "assessment-failed", detail: expect.stringContaining(`${assetId} is not quarantined`) }],
     });
-    expect(mocks.persist).toHaveBeenCalledTimes(1);
-    const heldWrite = mocks.persist.mock.calls[0]![1];
-    expect(heldWrite).not.toHaveProperty("publication");
-    expect(heldWrite.publicationHealth).toMatchObject({
+    expect(mocks.persist.mock.calls[0]![1].publicationHealth).toMatchObject({
       status: "held", acceptedPublicationGenerationId: accepted.publicationGenerationId,
     });
-    expect(mocks.persistAlertEnvelope).not.toHaveBeenCalled();
-
-    observation.observationHistory.observationWindowEndedAt = draft.clockSec;
-    const recoveredInput = createReportCardsFixedInput(draft);
-    buildCandidate(recoveredInput, false);
-    mocks.persist.mockClear();
-    expect(await runSafetyScoreV9Publication({ db: {} as D1Database, fixedInput: recoveredInput })).toMatchObject({
-      status: "published", outcome: "clean",
-    });
-    expect(mocks.persist).toHaveBeenCalledWith(expect.anything(), expect.objectContaining({
-      publication: expect.objectContaining({ baseInputGenerationId: recoveredInput.baseInputGenerationId }),
-      publicationHealth: expect.objectContaining({ status: "current" }),
-    }));
-    expect(mocks.persistAlertEnvelope).toHaveBeenCalledTimes(1);
   });
 
   it("publishes a bounded quarantine as a productive partial attempt", async () => {
@@ -698,7 +716,7 @@ describe("Safety Score V9 publication runner", () => {
         { assetId: "alpha", code: "evaluation-failed", message: "fixture evaluation quarantine" },
       ],
       quarantineAffectedAssetIds: ["alpha"],
-      bridgeJoinDiagnostics: [],
+      bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry,
     });
     mocks.assess.mockReturnValue({
       decision: "publish",
@@ -1045,7 +1063,7 @@ describe("Safety Score V9 publication runner", () => {
       mocks.loadBaseline.mockResolvedValue(acceptedBaseline(prior));
       mocks.build.mockImplementationOnce(() => {
         elapsedMs = 16_000;
-        return { candidate, quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [] };
+        return { candidate, quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry };
       });
       mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
       mocks.persistAttempt.mockImplementation(store.persistSafetyScoreV9PublicationAttempt);
@@ -1160,7 +1178,7 @@ describe("Safety Score V9 publication runner", () => {
       mocks.loadBaseline.mockResolvedValue(acceptedBaseline(prior));
       mocks.build.mockImplementationOnce(() => {
         elapsedMs = 16_000;
-        return { candidate, quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [] };
+        return { candidate, quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry };
       });
       mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
       mocks.persistAttempt.mockImplementation(store.persistSafetyScoreV9PublicationAttempt);
@@ -1231,7 +1249,7 @@ describe("Safety Score V9 publication runner", () => {
         clock.mockReturnValue(start + 125_000);
         return { candidate: makeWorkerSafetyScoreV9Publication({
           baseInputGenerationId: fixedInput.baseInputGenerationId, publishedAtSec: fixedInput.clockSec,
-        }), quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [] };
+        }), quarantines: [], quarantineAffectedAssetIds: [], bridgeJoinDiagnostics: [], measuredExitExpiry: noMeasuredExitExpiry };
       });
       const result = await runSafetyScoreV9Publication({
         db: {} as D1Database, fixedInput, publicationDeadlineMs: start + 240_000,

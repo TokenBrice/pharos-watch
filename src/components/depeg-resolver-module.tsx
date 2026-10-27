@@ -64,7 +64,7 @@ function ResolverHeader({ data, summary }: { data: DdrResponse | undefined; summ
         </div>
         {lineage ? (
           <p className="text-2xs text-muted-foreground">
-            Calibrated on <span className="pharos-numeric">{lineage.incidentCount.toLocaleString()}</span> recovered
+            Calibrated on <span className="pharos-numeric">{lineage.incidentCount.toLocaleString()}</span> historical
             incidents · <span className="pharos-numeric">{lineage.coinCount}</span> coins
           </p>
         ) : null}
@@ -91,7 +91,6 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
   if (!isDepegResolverEnabled()) return null;
 
   const bookAvailable = isResolverBookAvailable(data);
-  const showStaleRows = bookAvailable && data._meta.degraded;
   const visible = showAll ? ordered : ordered.slice(0, DEFAULT_VISIBLE_ROWS);
   const hiddenCount = ordered.length - visible.length;
 
@@ -107,7 +106,7 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
         {book.pastPeakCount > 0 ? (
           <span className="text-state-warn">
             {" "}
-            · {book.pastPeakCount === 1 ? "1 is" : `${book.pastPeakCount} are`} past their worst
+            · {book.pastPeakCount} at a new worst
           </span>
         ) : null}
       </p>
@@ -131,11 +130,6 @@ export function DepegResolverModule({ data, logos }: DepegResolverModuleProps) {
         </div>
       ) : (
         <>
-          {showStaleRows ? (
-            <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-state-warn-strong">
-              Resolver live overlay is stale; frozen forecasts, including anchored duration estimates, remain unchanged.
-            </p>
-          ) : null}
           <div className="pharos-stagger-entrance grid grid-cols-1 items-start gap-4 lg:grid-cols-2">
             {visible.map((row, i) => (
               <div key={`${row.stablecoinId}:${row.eventId}`} style={{ "--stagger-index": i } as CSSProperties}>

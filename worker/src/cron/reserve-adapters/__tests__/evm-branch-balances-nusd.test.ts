@@ -76,7 +76,7 @@ describe("nUSD LP-attributable reserve observation", () => {
       expect(details.branchObservations.map(row => row.balanceRaw)).toEqual(snapshot.lp.map(String));
       expect(result.slices).toHaveLength(3);
       expect(result.slices).toEqual(expect.arrayContaining(TOKENS.map((token, index) => expect.objectContaining({
-        name: token.name, pct: Number((pricedValue(snapshot.lp[index], index) / lpValue * 100).toFixed(1)),
+        name: token.name, pct: expect.closeTo(pricedValue(snapshot.lp[index], index) / lpValue * 100, 8),
       }))));
       expect(result.metadata).toMatchObject({
         observedBlock: { chain: "ethereum", number: snapshot.block, timestamp: snapshot.timestamp },

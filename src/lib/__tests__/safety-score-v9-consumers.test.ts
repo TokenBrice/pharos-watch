@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { internV9PublicWitnessTexts } from "@shared/lib/safety-score-v9/public-witness-texts";
 import { projectV9Table } from "@shared/lib/report-cards-v9-projections";
+import { ReportCardsV9TableResponseSchema } from "@shared/types/report-cards-v9-projections";
 import {
   buildV9PortfolioProjection,
   buildV9SafetyTableMap,
@@ -170,6 +171,35 @@ describe("V9 safety consumer projections", () => {
       materiality: "serial", exposureUsd: 375,
     }]);
   });
+  it("keeps unknown basket shares unavailable, never $0, in the compact table projection", () => {
+    const response = makeReportCardsV9Response({
+      cards: ["held", "unheld", "up-half", "up-null", "up-serial", "up-zero"].map((id) => makeV9Card({ id })),
+    });
+    const table = projectV9Table(response);
+    const edge = (from: string, to: string, kind: "serial" | "basket", weight: number | null) => ({
+      from, to, kind, weight, upstreamScore: 80,
+      materiality: kind === "serial" ? "serial" as const : weight === null ? "basket-bounded-unknown" as const : "basket-weighted" as const,
+    });
+    table.dependencyGraph = { edges: [
+      edge("up-half", "held", "basket", 0.5),
+      edge("up-half", "unheld", "basket", 0.5),
+      edge("up-null", "held", "basket", null),
+      edge("up-serial", "held", "serial", null),
+      edge("up-zero", "held", "basket", 0),
+    ] };
+    expect(ReportCardsV9TableResponseSchema.safeParse(table).success).toBe(true);
+    const result = buildV9PortfolioProjection(table, response.safetyScoreIdentity, [{ coinId: "held", amount: 300 }]);
+    expect(result).toMatchObject({ status: "available" });
+    if (result.status !== "available") throw new Error(result.reason);
+    expect(result.value.dependencyExposure.map((row) => [row.upstreamAssetId, row.exposureUsd])).toEqual([
+      ["up-half", 150], ["up-null", null], ["up-serial", 300], ["up-zero", 0],
+    ]);
+    const baseline = buildV9PortfolioProjection(projectV9Table(response), response.safetyScoreIdentity, [{ coinId: "held", amount: 300 }]);
+    if (baseline.status !== "available") throw new Error(baseline.reason);
+    expect(result.value.score).toBe(baseline.value.score);
+    expect(result.value.pillars).toEqual(baseline.value.pillars);
+  });
+
   it("rejects historical report versions at the live transition boundary", () => {
     const response = makeReportCardsV9Response();
     expect(resolveV9ConsumerResponse(

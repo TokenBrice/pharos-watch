@@ -10,6 +10,7 @@ import { stablecoinLabel } from "@/lib/stablecoin-label";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card, CardContent } from "@/components/ui/card";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { DependencyHero } from "./dependency-hero";
@@ -34,11 +35,13 @@ export function DependencyMapClient() {
     refetch: refetchStablecoins,
   } = stablecoinsQuery;
   const logos = logosById;
+  // A failed refetch keeps the retained supply generation and its own clock; the shared banner ages it.
+  const hasRetainedSupply = !!stablecoinsData?.peggedAssets?.length;
 
   const mcapMap = useMemo(() => {
-    if (!stablecoinsData?.peggedAssets || stablecoinsError) return new Map<string, number | null>();
+    if (!stablecoinsData?.peggedAssets) return new Map<string, number | null>();
     return new Map(stablecoinsData.peggedAssets.map((asset) => [asset.id, getCirculatingRawOrNull(asset)]));
-  }, [stablecoinsData, stablecoinsError]);
+  }, [stablecoinsData]);
 
   const dependencyEdges = useMemo(() => (reportData?.edges ?? []).filter(edge => edge && typeof edge.from === "string" && typeof edge.to === "string"), [reportData]);
 
@@ -62,8 +65,8 @@ export function DependencyMapClient() {
   );
 
   const dependencyHubsModel = useMemo(
-    () => buildDependencyHubsModel({ cards, edges: dependencyEdges, mcapMap, marketCapAsOf: stablecoinsError ? null : stablecoinsQuery.meta?.updatedAt ?? null }),
-    [cards, dependencyEdges, mcapMap, stablecoinsError, stablecoinsQuery.meta?.updatedAt],
+    () => buildDependencyHubsModel({ cards, edges: dependencyEdges, mcapMap, marketCapAsOf: stablecoinsQuery.meta?.updatedAt ?? null }),
+    [cards, dependencyEdges, mcapMap, stablecoinsQuery.meta?.updatedAt],
   );
   const exposureWorkspace = useDependencyExposureWorkspace(reportData);
   const coveragePublished = (reportData?.nodes ?? []).filter(node => node.dependencyCoverageCount !== null);
@@ -112,13 +115,20 @@ export function DependencyMapClient() {
 
   return (
     <div className="space-y-4">
-      {reportCardsError && (
-        <QueryErrorNotice error={reportCardsError} hasData={!!reportData.nodes.length} onRetry={() => { void refetchReportCards(); }} />
-      )}
-      {stablecoinsError && (
+      <StaleDataBanner
+        queries={[
+          // The plain graph read carries its publication clock in the payload, not in response meta.
+          { preset: "reportCards", dataUpdatedAt: reportData.updatedAt * 1000, error: reportCardsError, hasData: true },
+          // Missing supply keeps its own unavailable prose below; only a retained generation is aged here.
+          ...(hasRetainedSupply
+            ? [{ preset: "stablecoins" as const, dataUpdatedAt: stablecoinsQuery.dataUpdatedAt, error: stablecoinsError, hasData: true, meta: stablecoinsQuery.meta }]
+            : []),
+        ]}
+      />
+      {stablecoinsError && !hasRetainedSupply && (
         <div className="space-y-2">
           <p className="text-sm text-muted-foreground">Market-cap data is unavailable. The map remains available with default node sizes and unknown USD exposure.</p>
-          <QueryErrorNotice error={stablecoinsError} hasData={!!stablecoinsData?.peggedAssets?.length} onRetry={() => { void refetchStablecoins(); }} />
+          <QueryErrorNotice error={stablecoinsError} hasData={false} onRetry={() => { void refetchStablecoins(); }} />
         </div>
       )}
       <DependencyHero

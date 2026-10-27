@@ -1,15 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ArrowDown, ArrowUp } from "lucide-react";
+import { ArrowDown, ArrowUp, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
-import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DetailModuleCard } from "@/components/stablecoin-detail/module-title";
-import { FreshnessIndicator } from "@/components/status/freshness-indicator";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { SafetyGradeBadge } from "@/components/safety-grade-badge";
 import { useSafetyScoreHistory, useSafetyScoreHistoryV2 } from "@/hooks/api-hooks";
-import { CRON_24H } from "@/lib/cron-intervals";
+import { CRON_SAFETY_GRADE_HISTORY } from "@/lib/cron-intervals";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { formatChartDate, formatDuration, formatTrackingSpanDays } from "@shared/lib/format";
 import { getReportCardGradeRank } from "@shared/lib/report-card-core";
@@ -76,9 +75,9 @@ function mergeGradeHistory(
 // Sub-components
 // ---------------------------------------------------------------------------
 
-function StatBox({ label, children }: { label: string; children: React.ReactNode }) {
+function StatBox({ label, className, children }: { label: string; className?: string; children: React.ReactNode }) {
   return (
-    <div className="pharos-inset px-3 py-1.5">
+    <div className={cn("pharos-inset px-3 py-1.5", className)}>
       <p className="pharos-label">{label}</p>
       <div className="mt-0.5">{children}</div>
     </div>
@@ -136,6 +135,39 @@ interface SafetyScoreHistorySectionProps {
   stablecoinId: string;
 }
 
+interface HistoryLane {
+  data?: unknown;
+  error?: unknown;
+  isLoading?: boolean;
+  dataUpdatedAt?: number;
+  meta?: { updatedAt?: number | null } | null;
+}
+
+/** A lane's producer generation in seconds; a missing or null clock is unknown, never receipt time. */
+function laneGeneration(lane: HistoryLane): number | null {
+  const updatedAt = lane.meta?.updatedAt;
+  return updatedAt != null && updatedAt > 0 ? updatedAt : null;
+}
+
+function formatUtcMinute(sec: number): string {
+  return `${new Date(sec * 1000).toISOString().slice(0, 16).replace("T", " ")} UTC`;
+}
+
+/**
+ * The latest instant the merged history supports. Grade streaks and the open timeline segment end
+ * here, never at "now": identity-aware coverage must be readable, no lane may still be loading or
+ * missing after a failed read, and every retained lane's generation must be known. The oldest
+ * generation bounds the claim.
+ */
+function resolveClaimEndpoint(legacy: HistoryLane, identityAware: HistoryLane, nowSec: number): number | null {
+  if (identityAware.data === undefined) return null;
+  const lanes = [legacy, identityAware];
+  if (lanes.some((lane) => lane.isLoading || (lane.error != null && lane.data === undefined))) return null;
+  const generations = lanes.filter((lane) => lane.data !== undefined).map(laneGeneration);
+  if (generations.some((generation) => generation === null)) return null;
+  return Math.min(nowSec, ...(generations as number[]));
+}
+
 export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySectionProps) {
   const legacyQuery = useSafetyScoreHistory(stablecoinId, 3650);
   const identityAwareQuery = useSafetyScoreHistoryV2(stablecoinId, 3650);
@@ -150,8 +182,10 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
     () => mergeGradeHistory(legacyQuery.data ?? [], identityAwareQuery.data?.history ?? []),
     [identityAwareQuery.data, legacyQuery.data],
   );
-  const updatedAt = Math.max(legacyQuery.meta?.updatedAt ?? 0, identityAwareQuery.meta?.updatedAt ?? 0);
-  const error = legacyQuery.error ?? identityAwareQuery.error;
+  const lastDate = history.length > 0 ? history[history.length - 1].date : null;
+  const rawEndpoint = resolveClaimEndpoint(legacyQuery, identityAwareQuery, nowSec);
+  // A segment bounded before its own start has no defensible duration.
+  const endpoint = rawEndpoint != null && lastDate != null && rawEndpoint >= lastDate ? rawEndpoint : null;
 
   const stats = useMemo(() => {
     if (history.length === 0) return null;
@@ -167,50 +201,89 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
     }
 
     const lastEntry = history[history.length - 1];
-    const streakDays = Math.max(0, Math.floor((nowSec - lastEntry.date) / 86400));
+    const streakDays = endpoint == null ? null : Math.max(0, Math.floor((endpoint - lastEntry.date) / 86400));
 
     return { best, worst, lastEntry, streakDays };
-  }, [history, nowSec]);
+  }, [endpoint, history]);
 
   const segments = useMemo(() => {
     if (history.length === 0) return [];
-    const totalSpan = nowSec - history[0].date;
+    // Without a supported endpoint the open final segment is omitted, not extended to now.
+    const spanEnd = endpoint ?? history[history.length - 1].date;
+    const totalSpan = spanEnd - history[0].date;
     if (totalSpan <= 0) return [];
 
-    return history.map((entry, i) => {
+    const bounded = endpoint == null ? history.slice(0, -1) : history;
+    return bounded.map((entry, i) => {
       const start = entry.date;
-      const end = i < history.length - 1 ? history[i + 1].date : nowSec;
+      const end = i < history.length - 1 ? history[i + 1].date : spanEnd;
       const duration = end - start;
       const pct = (duration / totalSpan) * 100;
       const color = getSafetyGradeMetadata(entry.grade).radarColor;
-      return { grade: entry.grade, start, end, duration, pct, color, isLast: i === history.length - 1 };
+      return { grade: entry.grade, start, end, duration, pct, color };
     });
-  }, [history, nowSec]);
+  }, [endpoint, history]);
 
   const reversed = useMemo(() => [...history].reverse(), [history]);
   const visibleEntries = expanded ? reversed : reversed.slice(0, VISIBLE_CAP);
   const hiddenCount = reversed.length - VISIBLE_CAP;
 
+  // Each lane keeps its own clock and health; a retained lane's failed refresh stays silent.
+  const laneQueries = [
+    { query: identityAwareQuery, label: "Safety Score history", hasData: identityAwareQuery.data !== undefined },
+    { query: legacyQuery, label: "Legacy history", hasData: legacyQuery.data !== undefined },
+  ].map(({ query, label, hasData }) => ({
+    label,
+    staleTime: CRON_SAFETY_GRADE_HISTORY,
+    dataUpdatedAt: query.dataUpdatedAt ?? 0,
+    error: query.error,
+    hasData,
+    isLoading: query.isLoading,
+    meta: query.meta ?? null,
+  }));
+  const laneStamps = [
+    { label: "Safety Score history", generation: laneGeneration(identityAwareQuery) },
+    { label: "Legacy history", generation: laneGeneration(legacyQuery) },
+  ].filter((lane): lane is { label: string; generation: number } => lane.generation !== null);
+
   // --- early returns -------------------------------------------------------
 
-  if (legacyQuery.isLoading || identityAwareQuery.isLoading) return null;
-  if (error) return <QueryErrorNotice error={error} />;
-  if (history.length === 0) return null;
+  if (history.length === 0) {
+    if (legacyQuery.isLoading || identityAwareQuery.isLoading) return null;
+    // Successful empty lanes omit the module; a failed lane with nothing retained is named.
+    return laneQueries.some((lane) => lane.error && !lane.hasData)
+      ? <StaleDataBanner queries={laneQueries} />
+      : null;
+  }
 
   // --- render --------------------------------------------------------------
 
+  const laneProvenance = laneStamps.map((lane) => `${lane.label} as of ${formatUtcMinute(lane.generation)}`);
   return (
     <DetailModuleCard
       title={<MethodologyLabel topic="safetyScore">Grade History</MethodologyLabel>}
-      headerRight={updatedAt > 0 ? (
-          <FreshnessIndicator
-            compact
-            updatedAtMs={updatedAt * 1000}
-            staleAfterMs={CRON_24H}
-            labelPrefix="Updated"
-          />
-        ) : null}
+      headerRight={laneStamps.length > 0 ? (
+        <TooltipProvider delayDuration={220}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <time
+                tabIndex={0}
+                dateTime={new Date(laneStamps[0].generation * 1000).toISOString()}
+                className="inline-flex min-h-6 cursor-help items-center gap-1.5 rounded-md border border-border/60 bg-background/60 px-2 py-0 text-2xs font-medium leading-none text-muted-foreground"
+              >
+                <RefreshCw className="h-3 w-3" aria-hidden="true" />
+                <span aria-hidden="true">{new Date(laneStamps[0].generation * 1000).toISOString().slice(0, 10)}</span>
+                <span className="sr-only">{laneProvenance.join(". ")}</span>
+              </time>
+            </TooltipTrigger>
+            <TooltipContent className="text-2xs">
+              {laneProvenance.map((line) => <p key={line}>{line}</p>)}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : null}
     >
+        <StaleDataBanner queries={laneQueries} />
         {/* Summary stats strip */}
         {stats && (
           <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -232,7 +305,8 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
                 versionVariant="tooltip-only"
               />
             </StatBox>
-            <StatBox label="Current streak">
+            {stats.streakDays != null && endpoint != null ? (
+            <StatBox className="col-span-2 sm:col-span-1" label={`Streak as of ${new Date(endpoint * 1000).toISOString().slice(0, 10)}`}>
               <div className="flex items-center gap-1.5">
                 <span className="text-xs font-semibold tabular-nums">{formatTrackingSpanDays(stats.streakDays)}</span>
                 <span className="text-xs text-muted-foreground">at</span>
@@ -245,6 +319,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
                 />
               </div>
             </StatBox>
+            ) : null}
           </div>
         )}
 
@@ -267,7 +342,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
                         backgroundColor: seg.color,
                         minWidth: "2px",
                       }}
-                      aria-label={`${seg.grade}, ${formatChartDate(seg.start * 1000, "long")} to ${seg.isLast ? "now" : formatChartDate(seg.end * 1000, "long")}, ${formatDuration(seg.start, seg.end)}`}
+                      aria-label={`${seg.grade}, ${formatChartDate(seg.start * 1000, "long")} to ${formatChartDate(seg.end * 1000, "long")}, ${formatDuration(seg.start, seg.end)}`}
                     />
                   </TooltipTrigger>
                   <TooltipContent className="text-xs">
@@ -275,7 +350,7 @@ export function SafetyScoreHistorySection({ stablecoinId }: SafetyScoreHistorySe
                     <p>
                       {formatChartDate(seg.start * 1000, "long")}
                       {" — "}
-                      {seg.isLast ? "Now" : formatChartDate(seg.end * 1000, "long")}
+                      {formatChartDate(seg.end * 1000, "long")}
                     </p>
                     <p className="text-muted-foreground">{formatDuration(seg.start, seg.end)}</p>
                   </TooltipContent>

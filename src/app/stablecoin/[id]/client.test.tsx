@@ -81,7 +81,7 @@ vi.mock("@/components/stablecoin-detail/redemption-backstop-card", async (import
   return {
     ...original,
     RedemptionRouteSection: (props: Parameters<typeof original.RedemptionRouteSection>[0]) => props.entry
-      ? <section data-testid="redemption-route-section">{props.entry.stablecoinId}</section>
+      ? <section data-testid="redemption-route-section" data-freshness-updated-at={props.freshness?.dataUpdatedAt}>{props.entry.stablecoinId}</section>
       : <original.RedemptionRouteSection {...props} />,
   };
 });
@@ -314,6 +314,7 @@ describe("StablecoinDetailClient", () => {
     useStablecoinDetailViewModelMock.mockReturnValue(
       makeReadyViewModel({
         hasFlows: true,
+        hasFlowHistory: true,
         hasBlacklist: true,
         blacklistSymbol: "USDT",
         supplyHistory: [{ date: "2026-01-01", mcap: 100, price: 1, supply: 100 }],
@@ -331,25 +332,33 @@ describe("StablecoinDetailClient", () => {
 
 
 
-  it("keeps the collateralization and access rail footprints through unavailable and populated evidence", () => {
+  it("keeps the collateralization and access rail footprints through pending and populated evidence", () => {
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
-    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ reportCard: null, reserves: null }));
+    const pending = { redemption: { status: "empty", dataUpdatedAt: 0, error: null }, reserves: { status: "loading", dataUpdatedAt: 0, error: null } };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ reportCard: null, reserves: null, featureStates: pending }));
     const { container, rerender } = renderDetail(coin);
     const collateralization = container.querySelector('[data-rail-slot="collateralization"]')!;
-    const access = container.querySelector('[data-rail-slot="access"]')!;
+    expect(collateralization.textContent).toContain("Waiting for reserve evidence.");
     expect(collateralization.className).toBe("min-h-64");
-    expect(access.className).toBe("min-h-48");
-    for (const overrides of [
-      { reportCard: makeV9Card({ id: coin.id }), reserves: LIVE_COLLATERALIZED_RESERVES },
-      { reportCard: null, reserves: null },
-    ]) {
-      useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel(overrides));
-      rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
-      expect(container.querySelector('[data-rail-slot="collateralization"]')).toBe(collateralization);
-      expect(container.querySelector('[data-rail-slot="access"]')).toBe(access);
-      expect(collateralization.className).toBe("min-h-64");
-      expect(access.className).toBe("min-h-48");
-    }
+    // No published access posture and no pending grade read: the access card stays hidden.
+    expect(container.querySelector('[data-rail-slot="access"]')).toBeNull();
+    expect(container.textContent).not.toContain("Published access posture is unavailable.");
+    useStablecoinDetailViewModelMock.mockReturnValue(
+      makeReadyViewModel({ reportCard: makeV9Card({ id: coin.id }), reserves: LIVE_COLLATERALIZED_RESERVES }),
+    );
+    rerender(<StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)} />);
+    expect(container.querySelector('[data-rail-slot="collateralization"]')).toBe(collateralization);
+    expect(collateralization.className).toBe("min-h-64");
+    expect(container.querySelector('[data-rail-slot="access"]')!.className).toBe("min-h-48");
+  });
+
+  it.each(["empty", "unavailable"])("hides the collateralization rail card once a %s reserve read settles without a KPI", (status) => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const settled = { redemption: { status: "empty", dataUpdatedAt: 0, error: null }, reserves: { status, dataUpdatedAt: 0, error: null } };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({ reportCard: null, reserves: null, featureStates: settled }));
+    const { container } = renderDetail(coin);
+    expect(container.querySelector('[data-rail-slot="collateralization"]')).toBeNull();
+    expect(container.textContent).not.toContain("Collateralization evidence is unavailable.");
   });
 
   it("mounts the reserves module in the score row when report-card data is unavailable", async () => {
@@ -572,6 +581,17 @@ describe("StablecoinDetailClient", () => {
     expect(screen.queryByRole("button", { name: "Retry redemption" })).toBeNull();
   });
 
+  it("hands the redemption footer the page's own redemption health lane", () => {
+    const base = makeReadyViewModel();
+    const lane = { preset: "redemptionBackstops" as const, dataUpdatedAt: 1_700_000_000_000, error: null, hasData: true, meta: null };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      redemptionBackstop: { stablecoinId: base.coin.id, score: 79, routeFamily: "offchain-issuer" },
+      staleQueries: [{ preset: "reportCards", dataUpdatedAt: 1, error: null, hasData: true, meta: null }, lane],
+    }));
+    renderDetail();
+    expect(screen.getByTestId("redemption-route-section").getAttribute("data-freshness-updated-at")).toBe(String(lane.dataUpdatedAt));
+  });
+
   it("keeps reviewed no-holder evidence authoritative before the live read settles", () => {
     const coin = TRACKED_META_BY_ID.get("frax-frax")!;
     const base = makeReadyViewModel();
@@ -747,9 +767,30 @@ describe("StablecoinDetailClient (frozen)", () => {
     useStablecoinDetailViewModelMock.mockReturnValue(makeFrozenViewModel(coin));
     renderDetail(coin);
     const notes = screen.getAllByText(/no longer collects new metrics/i);
-    // Market chart, Distribution, Liquidity, History — non-flow / non-blacklist
-    // sections render unconditionally for this fixture.
-    expect(notes.length).toBeGreaterThanOrEqual(4);
+    // Market chart, Distribution, History — current DEX liquidity is omitted for an archive.
+    expect(notes.length).toBeGreaterThanOrEqual(3);
+  });
+
+  it("omits current DEX liquidity and dependency context while keeping static relationships and flow history", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    useStablecoinDetailViewModelMock.mockReturnValue({ ...makeFrozenViewModel(coin), hasFlows: false, hasFlowHistory: true });
+    const { container } = renderDetail(coin);
+    expect(container.querySelector("#dex-liquidity")).toBeNull();
+    expect(container.querySelector("#distribution")).not.toBeNull();
+    expect(screen.queryByTestId("contagion-snapshot-mock")).toBeNull();
+    expect(screen.getByTestId("flow-history-section")).toBeTruthy();
+    expect(screen.queryByTestId("flows-section")).toBeNull();
+  });
+
+  it("starts no current summary read for a frozen archive, unlike an active control", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const frozen = makeFrozenViewModel(coin);
+    useStablecoinDetailViewModelMock.mockReturnValue(frozen);
+    renderDetail(frozen.coin);
+    expect(queryClients.at(-1)!.prefetchQuery).not.toHaveBeenCalled();
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+    renderDetail(coin);
+    expect(queryClients.at(-1)!.prefetchQuery).toHaveBeenCalledTimes(1);
   });
 
 });

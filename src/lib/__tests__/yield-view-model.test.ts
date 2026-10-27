@@ -39,7 +39,7 @@ const rows = [
     symbol: "EURC",
     name: "EURC",
     yieldType: "lending-vault",
-    warningSignals: ["data-stale"],
+    warningSignals: ["yield-spike"],
     safetyScore: null,
     safetyGrade: null,
     sourceTvlUsd: null,
@@ -488,10 +488,22 @@ describe("buildYieldViewModel", () => {
     expect(model.riskBudget.stops.every((stop) => stop.active === false)).toBe(true);
   });
 
+  it("does not treat operational advisories as warnings for the warnings filter or watchlist attention", () => {
+    const advisoryRows = [
+      makeYieldRanking({ id: "advisory", symbol: "ADV", safetyScore: 90, warningSignals: ["aging", "data-stale", "benchmark-degraded"] }),
+      makeYieldRanking({ id: "real", symbol: "REL", safetyScore: 90, warningSignals: ["aging", "yield-spike"] }),
+    ];
+    const only = buildYieldViewModel(prepareYieldUniverse(advisoryRows, null), { risk: "any", warnings: "only" });
+    expect(only.visibleRows.map((row) => row.id)).toEqual(["real"]);
+    const hidden = buildYieldViewModel(prepareYieldUniverse(advisoryRows, null), { risk: "any", warnings: "hide" });
+    expect(hidden.visibleRows.map((row) => row.id)).toEqual(["advisory"]);
+    expect(hidden.visibleRows[0].warningSignals).toEqual(["aging", "data-stale", "benchmark-degraded"]);
+  });
+
   it("applies the opportunistic landing band only when the URL omits risk", () => {
     const bandRows = [
       makeYieldRanking({ id: "low-safety", symbol: "LOW", safetyScore: 40, warningSignals: [] }),
-      makeYieldRanking({ id: "warned", symbol: "WRN", safetyScore: 90, warningSignals: ["data-stale"] }),
+      makeYieldRanking({ id: "warned", symbol: "WRN", safetyScore: 90, warningSignals: ["yield-spike"] }),
     ];
 
     const landing = buildYieldViewModel(prepareYieldUniverse(bandRows, null), {});

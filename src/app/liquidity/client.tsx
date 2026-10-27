@@ -177,7 +177,7 @@ function PoolQualityFold({ stats }: { stats: LiquidityStatsData }) {
             value={stats.avgBalance == null ? "—" : `${stats.avgBalance}%`}
           />
           <HeroMetricRow
-            label="Organic liquidity, fee-based share of TVL"
+            label="Base-yield share, TVL-weighted"
             value={stats.avgOrganic == null ? "—" : `${stats.avgOrganic}%`}
           />
           <HeroMetricRow
@@ -186,8 +186,8 @@ function PoolQualityFold({ stats }: { stats: LiquidityStatsData }) {
           />
         </div>
         <p className="pharos-meta">
-          On the map, rails turn dashed when pool balance is under 70% and flow lines turn dashed when organic
-          liquidity is under 60%. Durability is scored per coin; see the Durability column in the leaderboard.
+          On the map, rails turn dashed when pool balance is under 70% and flow lines turn dashed when base-yield
+          share is under 60%. Durability is scored per coin; see the Durability column in the leaderboard.
         </p>
       </div>
     </ModuleDisclosure>

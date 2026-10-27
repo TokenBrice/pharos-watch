@@ -60,6 +60,20 @@ describe("adaptJupUsdData", () => {
     });
   });
 
+  it("attributes no live source when the oracle is configured but unread or absent", () => {
+    for (const options of [{ oracleConfigured: true, oracle: null }, {}]) {
+      const result = adaptJupUsdData({
+        totalSupply: "1000000",
+        holdings: [{ name: "USDC", amount: "1000000", decimals: 6 }],
+      }, options);
+      expect(result.metadata?.redemption).toMatchObject({
+        routeStatus: "unknown",
+        routeStatusSource: "static-config",
+      });
+      expect(result.metadata?.redemption).not.toHaveProperty("routeObserved");
+    }
+  });
+
   it("keeps unknown holdings explicit instead of defaulting them to medium risk", () => {
     const result = adaptJupUsdData({
       totalSupply: "100000000",
@@ -320,8 +334,9 @@ describe("fetchJupUsdReserves", () => {
     ]));
     expect(result.metadata?.redemption).toMatchObject({
       routeStatus: "unknown",
-      routeStatusSource: "protocol-api",
+      routeStatusSource: "static-config",
     });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeObserved");
   });
 
   it.each([
@@ -342,8 +357,9 @@ describe("fetchJupUsdReserves", () => {
     ]));
     expect(result.metadata?.redemption).toMatchObject({
       routeStatus: "unknown",
-      routeStatusSource: "protocol-api",
+      routeStatusSource: "static-config",
     });
+    expect(result.metadata?.redemption).not.toHaveProperty("routeObserved");
   });
 
   it.each([

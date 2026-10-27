@@ -45,7 +45,7 @@ export async function handleStablecoinLiveSummary(
     meta = { updatedAt: null, ageSeconds: null, status: "unknown", reason: "producer-timestamp-unavailable" };
   } else {
     meta = buildFreshnessMeta(updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail");
-    // A settled failed-refresh verdict must survive projection even inside the age budget.
+    // A server-stale floor (genuinely stale enriched inputs) or degraded verdict must survive projection even inside the age budget.
     const inheritedStatus = headers.get("X-Data-Freshness");
     if (inheritedStatus === "stale" || (inheritedStatus === "degraded" && meta.status === "fresh")) {
       meta.status = inheritedStatus;

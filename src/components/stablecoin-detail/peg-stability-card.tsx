@@ -194,7 +194,7 @@ export function PegStabilityCard({
     ? resolveMechanismFlowTemplate(parentArchetype, wrapper.parentSymbol, {
         navToken: parentNavToken ?? null,
         liquidationEngine: parentLiquidationEngine ?? null,
-      })
+      }, meta.variantOf ? getCoinOverride(meta.variantOf) : undefined)
     : effectiveArchetype
       ? resolveMechanismFlowTemplate(
           effectiveArchetype,

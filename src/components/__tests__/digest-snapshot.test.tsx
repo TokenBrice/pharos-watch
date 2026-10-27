@@ -156,6 +156,20 @@ describe("DigestSnapshot", () => {
     expect(screen.getByText(/USDT:/).textContent).toContain("historical peak; current unavailable");
   });
 
+  it("lists only investment warnings in archived yield anomalies", () => {
+    mockSnapshot({
+      totalMcapUsd: 1e9,
+      yieldAnomalies: [
+        { symbol: "AGED", currentApy: 5, apy7d: 5, apy30d: 5, warnings: ["aging", "data-stale"], mcapUsd: 1 },
+        { symbol: "MIXD", currentApy: 6, apy7d: 5, apy30d: 5, warnings: ["negative-trend", "aging"], mcapUsd: 1 },
+      ],
+    });
+    render(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.queryByText("AGED")).toBeNull();
+    expect(screen.getByText("MIXD")).toBeTruthy();
+    expect(screen.queryByText(/Aging observation|Data stale/)).toBeNull();
+  });
+
   it("marks absent market fields as uncaptured instead of publishing zero readings", () => {
     mockSnapshot({ totalMcapUsd: 250_000_000_000, activeDepegCount: 0, topDepegs: [] });
 
@@ -327,5 +341,37 @@ describe("DigestSnapshot safety map", () => {
 
     expect(screen.getByText("The map is not available right now")).toBeTruthy();
     expect(screen.queryByText(/Mapped supply:/)).toBeNull();
+  });
+});
+
+describe("DigestSnapshot retention", () => {
+  const retained = {
+    date: "2026-09-01",
+    inputData: { totalMcapUsd: 0, supplyCoverage: { complete: true, observedCount: 2, unavailableCount: 0 }, activeDepegCount: null },
+    prevInputData: null, depegEvents: [], blacklistEvents: [],
+  };
+
+  it("keeps the retained dated snapshot through a failed refetch and recovery", () => {
+    useDigestSnapshotMock.mockReturnValue({ data: retained, isLoading: false, isError: false });
+    const { rerender } = render(<DigestSnapshot date="2026-09-01" />);
+    const before = screen.getByText("Market Snapshot").closest("h3")!.parentElement!.textContent;
+    expect(before).toContain("$0");
+    expect(before).toContain("2/2 coins observed");
+
+    useDigestSnapshotMock.mockReturnValue({ data: retained, isLoading: false, isError: true });
+    rerender(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.queryByText("Digest context is unavailable for this archive entry.")).toBeNull();
+    expect(screen.getByText("Market Snapshot").closest("h3")!.parentElement!.textContent).toBe(before);
+
+    useDigestSnapshotMock.mockReturnValue({ data: retained, isLoading: false, isError: false });
+    rerender(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.getByText("Market Snapshot").closest("h3")!.parentElement!.textContent).toBe(before);
+  });
+
+  it("stays unavailable when the initial read fails with nothing retained", () => {
+    useDigestSnapshotMock.mockReturnValue({ data: undefined, isLoading: false, isError: true });
+    render(<DigestSnapshot date="2026-09-01" />);
+    expect(screen.getByText("Digest context is unavailable for this archive entry.")).toBeTruthy();
+    expect(screen.queryByText("Market Snapshot")).toBeNull();
   });
 });

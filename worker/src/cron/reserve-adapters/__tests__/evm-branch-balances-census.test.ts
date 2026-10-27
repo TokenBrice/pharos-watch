@@ -116,8 +116,8 @@ describe("branch reserve census and unavailable residual", () => {
     expect(result.metadata).toMatchObject({ censusComplete: true, valuationComplete: true, unknownExposurePct: 0 });
     // Circular claims are measured very-high-risk slices, not an unknown residual.
     expect(result.slices).toEqual(expect.arrayContaining([
-      expect.objectContaining({ name: "Self-referential claim (U0R)", pct: 81.64, risk: "very-high" }),
-      expect.objectContaining({ name: "Self-referential claim (EVK Vault eUSD0-4)", pct: 2.851, risk: "very-high" }),
+      expect.objectContaining({ name: "Self-referential claim (U0R)", pct: expect.closeTo(81.64068855601755, 8), risk: "very-high" }),
+      expect.objectContaining({ name: "Self-referential claim (EVK Vault eUSD0-4)", pct: expect.closeTo(2.8507035858793603, 8), risk: "very-high" }),
     ]));
     expect(result.slices.filter((slice) => slice.name.startsWith("Self-referential")).every((slice) =>
       slice.coinId == null && slice.depType == null)).toBe(true);
@@ -173,9 +173,8 @@ describe("branch reserve census and unavailable residual", () => {
         },
       },
     });
-    // Nine $1 constituents round to 0.9% each; the largest $99 slice
-    // absorbs the one-decimal rounding remainder: 100 - 9 * 0.9 = 91.9%.
-    expect(result.slices.find((slice) => slice.sourceKey?.endsWith(fundedBAsset))?.pct).toBe(91.9);
+    // Nine $1 constituents each keep their exact share of the $108 book; the $99 slice is 99 / 108.
+    expect(result.slices.find((slice) => slice.sourceKey?.endsWith(fundedBAsset))?.pct).toBeCloseTo((99 / 108) * 100, 10);
     expect(result.metadata?.unknownExposurePct).toBe(0);
     expect(result.metadata?.collateralizationRatio).toBe(1);
   });

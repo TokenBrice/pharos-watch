@@ -55,7 +55,8 @@
         "scopeId": "lvusd:designated-usdc-vault:monad:109737920",
         "liabilityBookKey": "lvusd:monad-native-token-supply",
         "deploymentRefs": [
-          "monad:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1"
+          "monad:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+          "monad:0x754704bc059f8c67012fed69bc8a327a5aafb603"
         ],
         "reviewer": "DataBBMisc04",
         "confidence": "verified",
@@ -103,7 +104,7 @@
           },
           {
             "key": "usdc:0x754704bc059f8c67012fed69bc8a327a5aafb603:balanceOf:0xc69d584b3118e94b3443cc6c67076281242fa704",
-            "deploymentRef": "monad:0xfd44b35139ae53fff7d8f2a9869c503d987f00d1",
+            "deploymentRef": "monad:0x754704bc059f8c67012fed69bc8a327a5aafb603",
             "selector": "0x70a08231000000000000000000000000c69d584b3118e94b3443cc6c67076281242fa704",
             "rawAmount": "906831469062",
             "decimals": 6

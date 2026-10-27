@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
 
 import { cleanup, render, screen } from "@testing-library/react";
-import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { InstrumentPanel } from "./instrument-panel";
 import { useTelegramPulse } from "@/hooks/api-hooks";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
+import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
 import type { TelegramPulse } from "@shared/types/status";
 import { TelegramPulseSchema } from "@shared/types/status/telegram";
@@ -21,11 +23,9 @@ vi.mock("@/hooks/use-chart-container-ready", () => ({
   }),
 }));
 
-vi.mock("@/hooks/use-count-up", () => ({
-  useCountUp: vi.fn((target: number | null | undefined) => ({
-    value: target ?? null,
-    display: target == null ? null : target.toLocaleString("en-US"),
-  })),
+// Real useCountUp, settled instantly: it keeps its preceding display when the target becomes null.
+vi.mock("@/hooks/use-prefers-reduced-motion", () => ({
+  usePrefersReducedMotion: () => true,
 }));
 
 const mockUseTelegramPulse = vi.mocked(useTelegramPulse);
@@ -76,13 +76,28 @@ function mockPulse(data: TelegramPulse | undefined, overrides: { isLoading?: boo
     data,
     isLoading: overrides.isLoading ?? false,
     isError: overrides.isError ?? false,
+    error: overrides.isError ? new Error("Offline") : null,
+    dataUpdatedAt: data ? Date.now() : 0,
   } as ReturnType<typeof useTelegramPulse>);
 }
+
+const PULSE_INTERVAL_MS = FRONTEND_API_QUERY_DESCRIPTORS.telegramPulse.producerIntervalMs;
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(pulse.currentSnapshotAt * 1000 + 60_000);
+});
 
 afterEach(() => {
   cleanup();
   vi.clearAllMocks();
+  vi.useRealTimers();
 });
+
+function beam(): string | null {
+  return screen.getByText(TELEGRAM_METRIC_SEMANTICS.activeWatchers.label).closest("[aria-label='Live Telegram adoption metrics']")
+    ?.querySelector("span[aria-hidden='true']")?.textContent ?? null;
+}
 
 describe("InstrumentPanel", () => {
   it("shows the live adoption board in full — nothing folded away", () => {
@@ -184,26 +199,70 @@ describe("InstrumentPanel", () => {
     expect(screen.queryByText(/D1 unavailable/i)).toBeNull();
   });
 
-  it("withdraws every live placement on retained-data refresh failure and recovers", () => {
+  it("retains a complete snapshot through a failed refetch and recovers", () => {
     mockPulse(pulse);
     const { rerender } = render(<InstrumentPanel />);
-    expect(screen.getAllByText("1,842").length).toBeGreaterThan(0);
+    expect(screen.getByText("1,842 active watchers")).toBeTruthy();
 
     mockPulse(pulse, { isError: true });
     rerender(<InstrumentPanel />);
-    expect(screen.getByRole("status", { name: "Telegram adoption metrics unavailable" })).toBeTruthy();
-    expect(screen.queryByText("Complete telemetry")).toBeNull();
-    expect(screen.queryByText("Partial telemetry")).toBeNull();
-    expect(screen.queryAllByText("1,842")).toHaveLength(0);
-    expect(screen.queryByText("5,621")).toBeNull();
-    expect(screen.queryByText("active watchers")).toBeNull();
-    expect(screen.queryByRole("figure", { name: /lifecycle chart/i })).toBeNull();
+    expect(screen.queryByRole("status", { name: "Telegram adoption metrics unavailable" })).toBeNull();
+    expect(screen.getByText("1,842 active watchers")).toBeTruthy();
+    expect(screen.getByText("5,621")).toBeTruthy();
+    expect(screen.getByText("Complete telemetry")).toBeTruthy();
+    expect(screen.getByRole("figure", { name: /lifecycle chart with 2 daily points/i })).toBeTruthy();
+    // The original snapshot date stays; a mild failed refresh is operator signal (ADR-42).
+    const snapshotLabel = new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+      .format(new Date(pulse.currentSnapshotAt * 1000));
+    expect(screen.getByText(snapshotLabel)).toBeTruthy();
+    expect(screen.queryByText("Showing an older snapshot")).toBeNull();
 
     mockPulse({ ...pulse, activeWatchers: 2_000, watcherHistory: [] });
     rerender(<InstrumentPanel />);
-    expect(screen.queryByRole("status", { name: "Telegram adoption metrics unavailable" })).toBeNull();
-    expect(screen.getByText("Complete telemetry")).toBeTruthy();
-    expect(screen.getAllByText("2,000")).toHaveLength(1);
+    expect(screen.getByText("2,000 active watchers")).toBeTruthy();
+  });
+
+  it("never resurrects prior scalars after a partial snapshot, through failed refetch and recovery", () => {
+    const base = { ...pulse, watcherHistory: [] };
+    mockPulse(base);
+    const { rerender } = render(<InstrumentPanel />);
+    expect(beam()).toBe("1,842");
+    expect(screen.getByText("5,621")).toBeTruthy();
+
+    const partial = {
+      ...base,
+      coinSubscriptions: null,
+      quality: { status: "partial" as const, unavailableFields: ["activeWatchers", "coinSubscriptions"] },
+    };
+    mockPulse(partial);
+    rerender(<InstrumentPanel />);
+    expect(beam()).toBe("—");
+    expect(screen.queryByText(/active watchers$/)).toBeNull();
+    expect(screen.queryByText("5,621")).toBeNull();
+    expect(screen.queryByText("1,842")).toBeNull();
+
+    mockPulse(partial, { isError: true });
+    rerender(<InstrumentPanel />);
+    expect(beam()).toBe("—");
+    expect(screen.queryByText(/active watchers$/)).toBeNull();
+    expect(screen.queryByText("5,621")).toBeNull();
+    expect(screen.getByText("Partial telemetry")).toBeTruthy();
+
+    mockPulse({ ...base, activeWatchers: 0, coinSubscriptions: 0 });
+    rerender(<InstrumentPanel />);
+    expect(beam()).toBe("0");
+    expect(screen.getByText("0 active watchers")).toBeTruthy();
+  });
+
+  it.each([
+    { budgets: 2, notice: false },
+    { budgets: FRESHNESS_RATIOS.DEGRADED + 1, notice: true },
+  ])("warns on a retained snapshot only past its stale band ($budgets intervals)", ({ budgets, notice }) => {
+    vi.setSystemTime(pulse.currentSnapshotAt * 1000 + budgets * PULSE_INTERVAL_MS);
+    mockPulse(pulse, { isError: true });
+    render(<InstrumentPanel />);
+    expect(screen.getByText("1,842 active watchers")).toBeTruthy();
+    expect(screen.queryByText("Showing an older snapshot") !== null).toBe(notice);
   });
 
   it("renders a loading state and an honest unavailable state", () => {

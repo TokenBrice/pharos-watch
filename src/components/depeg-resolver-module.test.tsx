@@ -4,7 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { DepegResolverModule } from "@/components/depeg-resolver-module";
 import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
-import { summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
+import { compareResolverUrgency, summarizeResolverBook } from "@/components/depeg-resolver-book-summary";
 import { DDR_METHODOLOGY_VERSION, DDR_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/depeg-resolver";
 import {
   DdrV2ResponseRowSchema,
@@ -249,6 +249,77 @@ describe("DepegResolverModule", () => {
     expect(screen.getByText("Prediction invalidated by erratum")).toBeTruthy();
   });
 
+  describe("new-worst flag compares live deviation with the live event peak", () => {
+    function peakRow(
+      id: string,
+      frozenPeak: number | null,
+      live: { peak: number | null; current: number | null },
+    ): DdrV2ResponseRow {
+      const frozen = makeFrozenDdrV2Row(makeSourceRow({ stablecoinId: id, symbol: id.toUpperCase(), peakDeviationBps: frozenPeak ?? -1, currentDeviationBps: frozenPeak }));
+      if (frozenPeak == null) frozen.frozen.sourceRow.peakDeviationBps = null as unknown as number;
+      return { ...frozen, live: { ...frozen.live, peakDeviationBps: live.peak, currentDeviationBps: live.current } } as DdrV2ResponseRow;
+    }
+
+    it.each([
+      ["ALUSD-like: lock -380, live peak -825, now -425", -380, -825, -425, false],
+      ["genuine exceedance of the live peak", -380, -400, -600, true],
+      ["live peak shallower than the frozen lock peak, then crossed", -800, -300, -500, true],
+      ["equality at the noise margin is not exceedance", -300, -1_000, -1_025, false],
+      ["just past the noise margin", -300, -1_000, -1_026, true],
+      ["above-peg direction uses magnitudes", 200, 300, 400, true],
+      ["null current", -300, -300, null, false],
+      ["null live peak", -300, null, -900, false],
+      ["zero live peak", -300, 0, -900, false],
+    ] as const)("%s", (_label, frozenPeak, livePeak, current, expected) => {
+      const book = summarizeResolverBook([peakRow("a", frozenPeak, { peak: livePeak, current })]);
+      expect(book.pastPeakCount).toBe(expected ? 1 : 0);
+    });
+
+    it("ranks by the corrected flag, then live deviation, then identity", () => {
+      const falseFlag = peakRow("alusd", -380, { peak: -825, current: -425 });
+      const realFlag = peakRow("usda", -800, { peak: -300, current: -350 });
+      const wider = peakRow("wide", -100, { peak: -2_000, current: -1_500 });
+      const tieA = peakRow("tie-a", -100, { peak: -2_000, current: -500 });
+      const tieB = peakRow("tie-b", -100, { peak: -2_000, current: -500 });
+      const order = [tieB, falseFlag, wider, tieA, realFlag].sort(compareResolverUrgency).map((r) => r.stablecoinId);
+      expect(order).toEqual(["usda", "wide", "tie-a", "tie-b", "alusd"]);
+    });
+
+    it("captions the count as a new worst, never as past their worst", () => {
+      render(<DepegResolverModule data={response({ rows: [
+        peakRow("a", -300, { peak: -400, current: -900 }),
+        peakRow("b", -300, { peak: -400, current: -900 }),
+      ] })} />);
+      expect(screen.getByText(/2 at a new worst/)).toBeTruthy();
+      expect(screen.queryByText(/past their worst/)).toBeNull();
+    });
+
+    it("leaves the locked frozen peak in the payload untouched", () => {
+      const r = peakRow("a", -380, { peak: -825, current: -425 });
+      summarizeResolverBook([r]);
+      expect(r.kind === "prediction" ? r.frozen.sourceRow.peakDeviationBps : null).toBe(-380);
+    });
+  });
+
+  describe("calibration lineage caption", () => {
+    const lineage = (incidentCount: number, coinCount: number) => ({
+      trainingWindow: { start: 1, end: 2 }, eventCount: 99_999, incidentCount, coinCount, quarantinedCoins: 0,
+    });
+
+    it.each([[8_466, 41, "8,466"], [0, 0, "0"]] as const)("states %s producer historical incidents", (incidents, coins, shown) => {
+      // One visible row: the count comes from lineage, never from visible forecasts.
+      render(<DepegResolverModule data={response({ _meta: { ...meta, lineage: lineage(incidents, coins) }, rows: [row] })} />);
+      const caption = screen.getByText(/^Calibrated on/);
+      expect(caption.textContent).toBe(`Calibrated on ${shown} historical incidents · ${coins} coins`);
+      expect(screen.queryByText(/recovered\s+incidents/)).toBeNull();
+    });
+
+    it("omits the caption without lineage", () => {
+      render(<DepegResolverModule data={response({ rows: [row] })} />);
+      expect(screen.queryByText(/^Calibrated on/)).toBeNull();
+    });
+  });
+
   it("does not claim there are no active depegs before data loads", () => {
     render(<DepegResolverModule data={undefined} />);
 
@@ -277,12 +348,13 @@ describe("DepegResolverModule", () => {
     expect(screen.queryByText("Resolver data is temporarily unavailable.")).toBeNull();
   });
 
-  it("retains the whole-book summary for an explicitly stale frozen forecast", () => {
+  it("retains the whole-book summary for a stale-cache frozen forecast without a private stale notice", () => {
     render(<DepegResolverModule data={response({
       _meta: { ...meta, degraded: true, degradedReason: "stale-cache" }, rows: [row],
     })} />);
     expect(screen.getByText(/Whole book/).textContent).toContain("1 forecast across 1 incident rows");
-    expect(screen.getByText(/live overlay is stale/)).toBeTruthy();
+    // Age admission belongs to the route's shared freshness notice (ADR-42).
+    expect(screen.queryByText(/live overlay is stale/i)).toBeNull();
     expect(screen.getByText("Stress signals")).toBeTruthy();
   });
 
@@ -561,7 +633,7 @@ describe("StablecoinDepegResolverRows", () => {
   });
 
   it.each(["resolver list", "stablecoin detail"] as const)(
-    "explains stale live facts while retaining the frozen duration on the %s surface",
+    "retains the frozen duration over a stale-cache overlay without a private notice on the %s surface",
     (surface) => {
       const sourceRow = makeSourceRow({
         duration: {
@@ -583,14 +655,39 @@ describe("StablecoinDepegResolverRows", () => {
         ? <DepegResolverModule data={data} />
         : <StablecoinDepegResolverRows stablecoinId="lusd-liquity" data={data} />);
 
-      expect(
-        screen.getByText(/live overlay is stale.*frozen forecasts.*remain unchanged/i),
-      ).toBeTruthy();
+      expect(screen.queryByText(/live overlay is stale/i)).toBeNull();
+      expect(screen.queryByText(/Live overlay:/)).toBeNull();
       expect(screen.getByText("anchored duration")).toBeTruthy();
       expect(screen.getByText("~2h (1h-3h)")).toBeTruthy();
       expect(screen.queryByText(/duration estimates are suppressed/i)).toBeNull();
     },
   );
+
+  it.each([
+    "stale-cache",
+    "errata-overlay-read-failed",
+    "lock-deferral-overlay-read-failed",
+    "manifest-fallback:missing-cache",
+  ])("keeps the infrastructure reason %s out of the live-incident caption", (degradedReason) => {
+    render(<StablecoinDepegResolverRows
+      stablecoinId="lusd-liquity"
+      data={response({ rows: [makePredictionRow(makeSourceRow(), { degradedReason })] })}
+    />);
+    expect(screen.getByText("Live incident")).toBeTruthy();
+    expect(screen.queryByText(/Live overlay:/)).toBeNull();
+  });
+
+  it.each([
+    ["duration-exceeded", "Live overlay: past its forecast window."],
+    ["closed-pending-review", "Live overlay: closed, pending review."],
+    ["lock-deferred", "Live overlay: lock deferred."],
+  ])("keeps the incident reason %s in the live-incident caption", (degradedReason, caption) => {
+    render(<StablecoinDepegResolverRows
+      stablecoinId="lusd-liquity"
+      data={response({ rows: [makePredictionRow(makeSourceRow(), { degradedReason })] })}
+    />);
+    expect(screen.getByText(caption)).toBeTruthy();
+  });
 
   it("stays hidden for degraded snapshots whose reason is not stale-cache", () => {
     render(

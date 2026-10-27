@@ -56,7 +56,7 @@ import type { SafetyScoreV9CaptureControl } from "@shared/types/safety-score-v9-
 import type { V9ExecutionWindow } from "../lib/v9-slot-window";
 import { TRACKED_SOURCE_COINS } from "@shared/lib/stablecoins/registry";
 import { assessSafetyScoreV9ResourceBudget } from "../lib/safety-score-v9/resource-budget";
-import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
+import { CRON_SCHEDULE_CADENCES, DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/cron-cadences";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 /**
@@ -72,6 +72,43 @@ import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 export const SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC =
   CRON_INTERVALS["prepare-safety-score-v9-input"] +
   CRON_SCHEDULE_CADENCES.quarterHourly.intervalSec;
+
+/**
+ * The DEX producer can advance between prepare and compute, or during
+ * enrichment. A captured generation older than live is still admitted when the
+ * capture is inside its stablecoins budget and its own DEX evidence is inside
+ * the four-hour DEX evidence budget; captured rows are never replaced or
+ * relabelled latest. Missing, malformed, ahead or future-dated inputs refuse.
+ */
+function assessCapturedDexGeneration(
+  fixedInput: Pick<SafetyScoreV9CompilerInput, "dexGenerationId" | "updatedAt" | "inputFreshness">,
+  live: { generationId: string; updatedAt?: number | null },
+  nowSec: number,
+) {
+  const capturedDexUpdatedAt = fixedInput.inputFreshness.dexLiquidity.updatedAt;
+  const liveDexUpdatedAt = live.updatedAt ?? null;
+  const evidence = {
+    capturedDexGenerationId: fixedInput.dexGenerationId,
+    liveDexGenerationId: live.generationId,
+    capturedDexUpdatedAt,
+    liveDexUpdatedAt,
+    stablecoinsCaptureAgeSec: nowSec - fixedInput.updatedAt,
+    stablecoinsCaptureMaxAgeSec: SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC,
+    dexCaptureAgeSec: capturedDexUpdatedAt === null ? null : nowSec - capturedDexUpdatedAt,
+    dexCaptureMaxAgeSec: DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC,
+  };
+  if (fixedInput.dexGenerationId === live.generationId) return { ...evidence, verdict: "current" as const, admitted: true };
+  const wellFormed = (generationId: string, updatedAt: number | null): updatedAt is number =>
+    updatedAt !== null && Number.isSafeInteger(updatedAt) && generationId === `dex-liquidity-${updatedAt}`;
+  const verdict = !wellFormed(fixedInput.dexGenerationId, capturedDexUpdatedAt) ||
+      !wellFormed(live.generationId, liveDexUpdatedAt) ? "malformed"
+    : capturedDexUpdatedAt! >= liveDexUpdatedAt! ? "ahead-of-live"
+    : evidence.stablecoinsCaptureAgeSec < 0 || evidence.dexCaptureAgeSec! < 0 ? "future-dated"
+    : evidence.stablecoinsCaptureAgeSec > SAFETY_SCORE_V9_STABLECOINS_CAPTURE_MAX_AGE_SEC ||
+      evidence.dexCaptureAgeSec! > DEX_LIQUIDITY_EVIDENCE_MAX_AGE_SEC ? "out-of-budget"
+    : "lagging-within-budget";
+  return { ...evidence, verdict, admitted: verdict === "lagging-within-budget" };
+}
 
 /**
  * A held attempt is only attributable if the numbers it was decided on reach
@@ -296,20 +333,20 @@ export async function computeSafetyScoreV9(
       stablecoinsCapture: { ...stablecoinsCapture, verdict: "out-of-budget" },
     });
   }
-  let latestDexGenerationId: string;
+  let latestDexGeneration: Awaited<ReturnType<typeof loadExactDexPublicationGeneration>>;
   try {
-    latestDexGenerationId = (
-      await loadExactDexPublicationGeneration(db)
-    ).generationId;
+    latestDexGeneration = await loadExactDexPublicationGeneration(db);
   } catch (error) {
     return unavailable("latest-dex-generation-unavailable", {
       code: error instanceof Error ? error.name : "Error",
     });
   }
-  if (fixedInput.dexGenerationId !== latestDexGenerationId) {
+  let dexCapture = assessCapturedDexGeneration(fixedInput, latestDexGeneration, Math.floor(Date.now() / 1_000));
+  if (!dexCapture.admitted) {
     return unavailable("dex-generation-advanced", {
       fixedInputDexGenerationId: fixedInput.dexGenerationId,
-      latestDexGenerationId,
+      latestDexGenerationId: latestDexGeneration.generationId,
+      dexCapture,
     });
   }
   let v9SeedInput: Readonly<SafetyScoreV9CompilerInput> | null = {
@@ -564,9 +601,10 @@ export async function computeSafetyScoreV9(
         supplyAttributionJournalById,
       };
       const currentDexGeneration = await loadExactDexPublicationGeneration(db);
-      if (currentDexGeneration.generationId !== v9FixedInput.dexGenerationId) {
+      dexCapture = assessCapturedDexGeneration(v9FixedInput, currentDexGeneration, Math.floor(Date.now() / 1_000));
+      if (!dexCapture.admitted) {
         throw new Error(
-          `V9 candidate DEX dependency ${v9FixedInput.dexGenerationId} is older than current ${currentDexGeneration.generationId}`,
+          `V9 candidate DEX dependency ${v9FixedInput.dexGenerationId} is older than current ${currentDexGeneration.generationId} (${dexCapture.verdict})`,
         );
       }
       await reportProgress?.({
@@ -635,6 +673,7 @@ export async function computeSafetyScoreV9(
       sourceGenerationId: inputSummary.sourceGeneration,
       baseInputGenerationId: inputSummary.baseInputGenerationId,
       stablecoinsCapture,
+      dexCapture,
       pegProvenance: {
         status: "applied",
         assetCount: inputSummary.pegProvenanceAssets,

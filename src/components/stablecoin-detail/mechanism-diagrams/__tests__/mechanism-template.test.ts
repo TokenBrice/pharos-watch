@@ -142,3 +142,20 @@ describe("shipped coins (dossier audit 2026-10-06, defect 6)", () => {
     expect(shippedTemplate("dai-makerdao").stressFootnote).toMatch(/\bDAI\b/);
   });
 });
+
+describe("wrapper-inherited overrides (visual review 2026-10-27)", () => {
+  // Measured at 1440px, a 4-column wrapper step has ~138px for copy: 18 label or 24 subtitle characters fit one line.
+  const LABEL_MAX = 18;
+  const SUBTITLE_MAX = 24;
+  const parents = new Set([...TRACKED_META_BY_ID.values()].map((meta) => meta.variantOf).filter(Boolean));
+
+  it.each([...parents].filter((id) => getCoinOverride(id!)).map((id) => [id!]))(
+    "keeps %s overrides inside one line of the narrow wrapper step",
+    (parentId) => {
+      for (const step of getCoinOverride(parentId)!.steps ?? []) {
+        if (step.label) expect(step.label.length, step.label).toBeLessThanOrEqual(LABEL_MAX);
+        if (step.subtitle) expect(step.subtitle.length, step.subtitle).toBeLessThanOrEqual(SUBTITLE_MAX);
+      }
+    },
+  );
+});

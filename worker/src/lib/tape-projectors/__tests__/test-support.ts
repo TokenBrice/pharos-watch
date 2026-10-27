@@ -8,6 +8,7 @@ import { mockD1, type MockD1Database, type MockTableConfig } from "@shared/test-
  */
 const TAPE_WRITE_TABLES: MockTableConfig[] = [
   { match: "INSERT OR REPLACE INTO tape_events", rows: [] },
+  { match: "INSERT INTO tape_events", rows: [] },
   { match: "INSERT INTO cache", rows: [] },
 ];
 
@@ -18,7 +19,7 @@ export function mockTapeD1(tables: MockTableConfig[] = []): MockD1Database {
 export function tapeInsertBinds(db: MockD1Database): unknown[][] {
   return db
     .getHistory()
-    .filter((entry) => entry.sql.includes("INSERT OR REPLACE INTO tape_events"))
+    .filter((entry) => /INSERT (OR REPLACE )?INTO tape_events/.test(entry.sql))
     .map((entry) => entry.binds);
 }
 

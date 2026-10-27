@@ -284,6 +284,28 @@ describe("mint/burn retention", () => {
     expect(result.eventRows.oldestEligibleAt).toBeNull();
   });
 
+  it("keeps a corrected source until its unsuppressed Tape claim is republished or retracted", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const cutoff = NOW_SEC - MINT_BURN_EVENT_RETENTION_SEC;
+    insertEvent(sqlite, { id: "corrected", timestamp: cutoff - HOUR_SEC - 1, amountUsd: 30_000_000 });
+    insertEvent(sqlite, { id: "reconciled", timestamp: cutoff - HOUR_SEC - 2, amountUsd: 30_000_000 });
+    const claim = (id: string, amountUsd: number) => sqlite.prepare(
+      `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table,
+         source_row_id, transition, created_at)
+       VALUES (?, 'mint_burn.large_mint', 'warning', 1, 't', 's', ?, 'mint_burn_events', ?, 'updated', 1)`,
+    ).run(`e-${id}`, JSON.stringify({ amountUsd, flowType: "standard", burnType: null }), id);
+    claim("corrected", 20_000_000);
+    claim("reconciled", 30_000_000);
+
+    await pruneMintBurnRetention(db, NOW_SEC);
+    expect(eventIds(sqlite)).toEqual(["corrected"]);
+
+    sqlite.prepare("UPDATE tape_events SET suppressed_at = 1 WHERE source_row_id = 'corrected'").run();
+    await pruneMintBurnRetention(db, NOW_SEC);
+    expect(eventIds(sqlite)).toEqual([]);
+  });
+
   it("protects all event rows when the tape watermark is absent", async () => {
     const { sqlite, db } = setupDb();
     openDb = sqlite;

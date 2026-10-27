@@ -736,6 +736,15 @@ describe("market and risk collectors", () => {
     const many = Array.from({ length: 8 }, (_, i) => ({ stablecoin_id: `coin-${i}`, symbol: `C${i}`, current_apy: 10, apy_7d: 5, apy_30d: 4, warning_signals: '["spike"]' })); const ctx = ctxFor([{ match: "FROM yield_data", rows: many }]); for (let i = 0; i < 8; i++) ctx.mcapById.set(`coin-${i}`, 20e9);
     expect((await collectYieldAnomalies(ctx)).value).toHaveLength(5); expect((await collectYieldAnomalies(ctxFor([{ match: "FROM yield_data", rows: [{ ...rows[0], warning_signals: "[]" }] }]))).value).toBeUndefined();
   });
+  it("drops operational advisories before the yield anomaly top-N cut", async () => {
+    const aged = Array.from({ length: 6 }, (_, i) => ({ stablecoin_id: `aged-${i}`, symbol: `A${i}`, current_apy: 10, apy_7d: 5, apy_30d: 4, warning_signals: '["aging","data-stale"]' }));
+    const real = { stablecoin_id: "real-0", symbol: "REAL", current_apy: 10, apy_7d: 5, apy_30d: 4, warning_signals: '["aging","yield-spike"]' };
+    const ctx = ctxFor([{ match: "FROM yield_data", rows: [...aged, real] }]);
+    for (const row of [...aged, real]) ctx.mcapById.set(row.stablecoin_id, row === real ? 1e9 : 90e9);
+    const result = (await collectYieldAnomalies(ctx)).value;
+    expect(result?.map(({ symbol }) => symbol)).toEqual(["REAL"]);
+    expect(result?.[0].warnings).toEqual(["yield-spike"]);
+  });
   const coverage = { coverage_class: "primary", coverage_confidence: 0.9, methodology_version: "6.1" };
   const liquidityPair = (current: number, previous: number, currentTvl = 500e6, previousTvl = 480e6, extra = {}) => [{ stablecoin_id: "usdt-tether", liquidity_score: current, total_tvl_usd: currentTvl, snapshot_date: 1_772_755_200, ...coverage, ...extra }, { stablecoin_id: "usdt-tether", liquidity_score: previous, total_tvl_usd: previousTvl, snapshot_date: 1_772_668_800, ...coverage }];
   it("skips malformed newest coverage before choosing the digest pair", async () => {

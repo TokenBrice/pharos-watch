@@ -117,8 +117,6 @@ export interface BackingMetricsView {
   freshness: {
     /** Live stamp when a live figure is shown, e.g. "Live · checked 2h ago". */
     live: string | null;
-    /** The live feed is past its freshness budget: an amber chip, never a re-tinted bar. */
-    stale: boolean;
     /** Review date of the reviewed figures shown. */
     reviewedAt: string | null;
   };
@@ -148,8 +146,6 @@ export interface BackingMetricsInput {
   /** Denominator of the live ratio (`resolveLiveRatioBasis`). */
   liveRatioBasis?: string | null;
   liveMetadata?: LiveReserveSnapshotMetadata;
-  /** Live snapshot is stale; derived from the freshness label when omitted. */
-  liveStale?: boolean;
   oracle?: BackingMetricsOracleInput | null;
   /**
    * Parent of a savings pass-through wrapper (sUSDe → USDe). The wrapper runs
@@ -642,14 +638,13 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
 
   const liveShown = live != null || liveBackstop != null || metadata != null;
   const labelParts = input.liveFreshnessLabel?.split(" · ") ?? null;
-  const stale = liveShown && (input.liveStale ?? labelParts?.includes("Stale") ?? false);
   // "Source date unavailable · Checked …": the check time already dates the
   // reading, so the missing source date would only push the stamp to two lines.
   const checked = labelParts?.some((part) => part.startsWith("Checked ")) ?? false;
   const liveStamp = !liveShown
     ? null
     : labelParts != null
-      ? labelParts.filter((part) => part !== "Stale" && !(checked && part === "Source date unavailable")).join(" · ")
+      ? labelParts.filter((part) => !(checked && part === "Source date unavailable")).join(" · ")
       : input.liveAtSec != null
         ? `Live · checked ${timeAgo(input.liveAtSec, input.nowSec)}`
         : "Live";
@@ -687,7 +682,7 @@ export function buildBackingMetricsView(input: BackingMetricsInput): BackingMetr
       parentShown && parentBacking ? { label: parentBacking.sourceLabel, url: parentBacking.sourceUrl } : null,
       native ? { label: `${native.reserveUnit.unit} quantity basis`, url: native.evidenceRef } : null,
     ]),
-    freshness: { live: liveStamp, stale, reviewedAt },
+    freshness: { live: liveStamp, reviewedAt },
   };
 }
 
@@ -885,16 +880,11 @@ function BackingDetails({ view, withSources }: { view: BackingMetricsView; withS
   );
 }
 
-/** The live stamp, with an amber chip when the feed is past its budget. */
+/** The neutral live stamp; the shared page health banner owns material reserve staleness. */
 function LiveStamp({ freshness }: { freshness: BackingMetricsView["freshness"] }) {
   if (!freshness.live) return null;
   return (
     <span className="inline-flex min-w-0 flex-wrap items-center gap-1.5">
-      {freshness.stale ? (
-        <Badge variant="outline" className={cn("h-5 rounded-full px-2 text-2xs font-medium", SEVERITY_TONE_CLASS.watch.pill)}>
-          Stale feed
-        </Badge>
-      ) : null}
       <span>{freshness.live}</span>
     </span>
   );

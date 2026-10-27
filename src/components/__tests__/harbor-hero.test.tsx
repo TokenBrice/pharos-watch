@@ -109,8 +109,23 @@ describe("HarborHero keyboard and pin contract", () => {
     renderHero({ ...LIVE, _meta: { status: "stale" } });
     const hero = document.querySelector("[data-retained]") as HTMLElement;
     expect(hero.dataset.retained).toBe("true");
-    expect(hero.textContent).toContain("Harbor · chains by observed stablecoin supply · retained");
+    expect(screen.getByRole("heading", { name: "Harbor · chains by observed stablecoin supply" })).toBeTruthy();
+    expect(hero.textContent).not.toMatch(/retained/i);
     expect(hero.textContent).not.toContain("as of");
+  });
+
+  it("keeps a fresh-budget-only delay or failed refresh neutral while still drawing the retained state", () => {
+    renderHero({ ...LIVE, _meta: { status: "degraded", ageSeconds: 1_801, freshBudgetSec: 1_800 } });
+    expect((document.querySelector("[data-retained]") as HTMLElement).dataset.retained).toBe("true");
+    expect(screen.getByRole("heading", { name: "Harbor · chains by observed stablecoin supply" })).toBeTruthy();
+    cleanup();
+    render(
+      <HarborSelectionProvider chainIds={LIVE.chains.map((c) => c.id)}>
+        <HarborHero data={LIVE} retainedAfterError />
+      </HarborSelectionProvider>,
+    );
+    expect((document.querySelector("[data-retained]") as HTMLElement).dataset.retained).toBe("true");
+    expect(screen.getByRole("heading", { name: "Harbor · chains by observed stablecoin supply" })).toBeTruthy();
   });
 
   it("folds the legend behind a native disclosure that keeps it in the DOM", () => {

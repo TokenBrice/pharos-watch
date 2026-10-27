@@ -128,7 +128,7 @@ function makeViewModelBase(coin: StablecoinMeta) {
     performanceVsUsd1y: null, pegRef: 1, deviationBps: 0,
     isNavToken: false, pegScoreResult: null, consensusSources: [], agreeSources: [],
     dexPriceCheck: null, liquidityData: undefined, yieldRanking: null, hasYieldSection: false,
-    stressSignal: null, redemptionBackstop: undefined, hasFlows: false, hasBlacklist: false,
+    stressSignal: null, redemptionBackstop: undefined, hasFlows: false, hasFlowHistory: false, hasBlacklist: false,
     supplyHistory: [], reserves: null, reserveFetchError: null,
     refetchReserves: null, isFetchingReserves: false, supplyError: null, staleQueries: [],
     featureStates: makeFeatureStates(),

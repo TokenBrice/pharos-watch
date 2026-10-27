@@ -204,9 +204,7 @@ export function formatBps(bps: number): string {
 export function formatPercentChange(current: number, previous: number): string {
   const changeRatio = relativeChangeRatio(current, previous);
   if (changeRatio == null) return "N/A";
-  const change = ratioToPercentage(changeRatio);
-  const sign = change >= 0 ? "+" : "";
-  return `${sign}${change.toFixed(2)}%`;
+  return formatSignedPercent(ratioToPercentage(changeRatio), 2);
 }
 
 export function formatSupply(value: number): string {
@@ -458,8 +456,18 @@ export function formatPegOccupancy(value: number | null | undefined, decimals = 
 /** Format a signed percentage-point value (0-100 scale) with +/- prefix and % suffix. Returns `nullFallback` (default "-") for nullish. */
 export function formatSignedPercent(value: number | null | undefined, decimals = 2, nullFallback = "-"): string {
   if (!isFiniteNumber(value)) return nullFallback;
-  const sign = value > 0 ? "+" : "";
-  return `${sign}${value.toFixed(decimals)}%`;
+  const rounded = roundForDisplay(value, decimals);
+  const sign = rounded > 0 ? "+" : "";
+  return `${sign}${rounded.toFixed(decimals)}%`;
+}
+
+/**
+ * Display-only rounding: the value a reader sees at `decimals`, with signed zero normalized to 0, so
+ * sign, arrow and color follow the printed digits. Never use it for statistics, sorting or exports.
+ */
+export function roundForDisplay(value: number, decimals: number): number {
+  const rounded = Number(value.toFixed(decimals));
+  return rounded === 0 ? 0 : rounded;
 }
 
 /**

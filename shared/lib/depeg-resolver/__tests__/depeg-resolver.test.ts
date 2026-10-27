@@ -474,6 +474,31 @@ describe("resolveOutlook — acceptance cases", () => {
   });
 });
 
+describe("resolveOutlook — directional verdict summary", () => {
+  it("reads a severe non-wind-down kill above peg as No break signals", () => {
+    const r = resolveOutlook(
+      event({ direction: "above", peakDeviationBps: 300 }),
+      coin({ mechanismArchetype: "fiat-cash", authorityPosture: "concentrated-admin", canBeBlacklisted: "inherited" }),
+      baseSupply(),
+      baseLive({ blacklistSurge: true, liquidityScore: 70 }),
+    );
+    expect(r.factors.some((f) => f.code === "K3_freeze_seizure" && f.severity === "severe")).toBe(true);
+    expect(r.tier).toBe("recovery_likely");
+  });
+
+  it("reads a severe issuer wind-down above peg as Terminal evidence", () => {
+    const r = resolveOutlook(
+      event({ stablecoinId: "usdr-stablr", direction: "above", peakDeviationBps: 300 }),
+      coin({ authorityPosture: "none-resolved", mechanismArchetype: "fiat-cash", windDownAnnouncedAt: "2026-05-24" }),
+      baseSupply(),
+      baseLive({ liquidityScore: 70 }),
+      Date.UTC(2026, 5, 22) / 1000,
+    );
+    expect(r.factors.some((f) => f.code === "K6_wind_down" && f.severity === "severe")).toBe(true);
+    expect(r.tier).toBe("recovery_unlikely");
+  });
+});
+
 describe("resolveOutlook — factor-code emission (guards against silent code renames)", () => {
   it("emits K6 severe after an issuer-announced token wind-down", () => {
     const announcementDate = "2026-05-24";

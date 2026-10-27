@@ -382,4 +382,24 @@ describe("DepegResolverReviewerModule", () => {
     expect(screen.queryByText("N/A")).toBeNull();
   });
 
+  it("retains a stale-cache review behind the route's shared notice, not a private one", () => {
+    const data = response();
+    data._meta.degraded = true;
+    data._meta.degradedReason = "stale-cache";
+    render(<DepegResolverReviewerModule data={data} error={new Error("HTTP 503")} />);
+    expect(screen.getByText("Track record")).toBeTruthy();
+    expect(screen.queryByText(/Reviewer snapshot is degraded/)).toBeNull();
+    expect(screen.queryByText(/stale-cache/)).toBeNull();
+    expect(screen.queryByText("Reviewer data is temporarily unavailable.")).toBeNull();
+  });
+
+  it("keeps a degraded review with no rows unavailable rather than empty", () => {
+    const data = response({ rows: [] });
+    data._meta.degraded = true;
+    data._meta.degradedReason = "missing-cache";
+    render(<DepegResolverReviewerModule data={data} />);
+    expect(screen.getByText("Reviewer data is temporarily unavailable.")).toBeTruthy();
+    expect(screen.queryByText("No readouts have matured yet.")).toBeNull();
+  });
+
 });

@@ -21,6 +21,8 @@ import { cn } from "@/lib/utils";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
 import { Button } from "@/components/ui/button";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { deriveDataHealth, isPublicWarning, type DataHealthInfo } from "@/lib/data-health";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 
 const TIME_RANGE_OPTIONS: TimeRangeOption[] = ["7d", "30d", "90d", "1y", "all"];
 
@@ -57,25 +59,37 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
   });
   const hasExpandedHistory = needsExpandedHistory && expandedHistoryQuery.data.length > 0;
   const activeHistory = hasExpandedHistory ? expandedHistoryQuery.data : supplyHistory;
-  const activeUpdatedAtMs = hasExpandedHistory
-    ? (expandedHistoryQuery.meta?.updatedAt ?? 0) * 1000
-    : updatedAtMs;
   const requestedRange = range === "all" ? "All" : "1Y";
-  const historyStatus = !needsExpandedHistory ? null
-    : expandedHistoryQuery.error ? `${requestedRange} history ${hasExpandedHistory ? "refresh failed" : "could not be loaded"}. Requested coverage is not confirmed.`
-    : expandedHistoryQuery.isLoading || expandedHistoryQuery.isFetching ? `Loading ${requestedRange} history. Requested coverage is not yet confirmed.`
-    : !hasExpandedHistory ? `No observations returned for ${requestedRange} history. Requested coverage is unavailable.`
-    : expandedHistoryQuery.meta.status !== "fresh" ? `${requestedRange} history is ${expandedHistoryQuery.meta.status === "unknown" ? "of unknown freshness" : expandedHistoryQuery.meta.status}.`
+  // One verdict for the retained expansion's chip and notice (ADR-42): its own producer
+  // generation, budgets and server floor; null authority never renews from receipt.
+  const expandedHealthInput = {
+    label: `${requestedRange} history`,
+    staleTime: API_FRESHNESS_MAX_AGE_SEC.supplyHistory * 1000,
+    dataUpdatedAt: expandedHistoryQuery.dataUpdatedAt,
+    error: expandedHistoryQuery.error,
+    hasData: hasExpandedHistory,
+    meta: expandedHistoryQuery.meta,
+  };
+  const nowMs = useFreshnessBoundary([expandedHealthInput], hasExpandedHistory);
+  const expandedHealth = hasExpandedHistory
+    ? deriveDataHealth(expandedHealthInput, nowMs ?? expandedHistoryQuery.dataUpdatedAt)
     : null;
+  const expandedWarning = expandedHealth != null && isPublicWarning(expandedHealth);
+  const historyStatus = !needsExpandedHistory ? null
+    : hasExpandedHistory
+      ? expandedWarning ? `${requestedRange} history is ${expandedHealth?.state === "stale" ? "stale" : "of unknown freshness"}.` : null
+    : expandedHistoryQuery.error ? `${requestedRange} history could not be loaded. Requested coverage is not confirmed.`
+    : expandedHistoryQuery.isLoading || expandedHistoryQuery.isFetching ? `Loading ${requestedRange} history. Requested coverage is not yet confirmed.`
+    : `No observations returned for ${requestedRange} history. Requested coverage is unavailable.`;
   const historyNotice = historyStatus ? (
     <div role="status" aria-label="Market history coverage" aria-live="polite" className="flex flex-wrap items-center justify-between gap-2 text-sm text-muted-foreground">
       <p>
         {historyStatus}{" "}
         {hasExpandedHistory
-          ? `Showing retained observations from ${new Date(activeHistory[0].date * 1000).toISOString().slice(0, 10)} to ${new Date(activeHistory[activeHistory.length - 1].date * 1000).toISOString().slice(0, 10)}.`
+          ? `Observations from ${new Date(activeHistory[0].date * 1000).toISOString().slice(0, 10)} to ${new Date(activeHistory[activeHistory.length - 1].date * 1000).toISOString().slice(0, 10)}.`
           : activeHistory.length > 0 ? "Only the available 90-day window is shown." : "No observations are available to show."}
       </p>
-      {expandedHistoryQuery.error ? (
+      {(!hasExpandedHistory && expandedHistoryQuery.error) || expandedHealth?.state === "stale" ? (
         <Button variant="outline" size="sm" disabled={expandedHistoryQuery.isFetching} onClick={() => void expandedHistoryQuery.refetch()}>
           Retry {requestedRange} history
         </Button>
@@ -89,7 +103,8 @@ export function MarketDataSection({ stablecoinId, supplyHistory, pegCurrency, up
         stablecoinId={stablecoinId}
         supplyHistory={activeHistory}
         pegCurrency={pegCurrency}
-        updatedAtMs={activeUpdatedAtMs}
+        updatedAtMs={expandedHealth ? expandedHealth.dataUpdatedAt : updatedAtMs}
+        health={expandedHealth}
         frozenNote={frozenNote}
         historyNotice={historyNotice}
         range={range}
@@ -102,6 +117,8 @@ interface MarketDataSectionBodyProps extends MarketDataSectionProps {
   range: TimeRangeOption;
   setRange: (next: TimeRangeOption) => void;
   historyNotice: ReactNode;
+  /** The selected retained expansion's public verdict; null keeps the seed chip's own band. */
+  health: DataHealthInfo | null;
 }
 
 /**
@@ -115,6 +132,7 @@ function MarketDataSectionBody({
   updatedAtMs,
   frozenNote,
   historyNotice,
+  health,
   range,
   setRange,
 }: MarketDataSectionBodyProps) {
@@ -152,6 +170,7 @@ function MarketDataSectionBody({
               compact
               updatedAtMs={updatedAtMs}
               staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.supplyHistory * 1000}
+              health={health ?? undefined}
               labelPrefix="Updated"
             />
           ) : null}

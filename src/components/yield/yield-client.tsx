@@ -17,6 +17,9 @@ import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { UniverseChip } from "@/components/universe-chip";
 import { YieldSourceBoard } from "@/components/yield/yield-source-board";
 import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
+import { resolveYieldSourceAssessedAt } from "@/lib/yield-source-presentation";
+import { getYieldRowSourceClockInput } from "@/lib/yield-workbench-row";
+import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
 import { ReferenceRatesStrip } from "@/components/yield/reference-rates-strip";
 import { YieldCoinIndex } from "@/components/yield/coin-index";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -55,6 +58,7 @@ import {
 } from "@shared/lib/yield-workbench-fallback";
 import type { YieldBenchmarkRegistry } from "@shared/types";
 import { isOpportunityDerivedSafety, YIELD_OPPORTUNITY_SAFETY_DESCRIPTION } from "@shared/lib/yield-opportunity-provenance";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 interface HeroHighlightRowProps {
   label: string;
@@ -171,7 +175,7 @@ function formatHeroRiskContext(
   const safety = row.safetyGrade && row.safetyGrade !== "NR" ? `${row.safetyGrade} ${safetyLabel}` : opportunitySafety ? "Opportunity safety NR" : "Safety NR";
   const pys = row.pharosYieldScore !== null ? `PYS ${row.pharosYieldScore.toFixed(1)}` : "PYS NR";
   const posture = row.sourcePosture ? row.sourcePosture.replaceAll("-", " ") : "posture unknown";
-  const warningCount = row.warningSignals.length;
+  const warningCount = selectInvestmentWarningSignals(row.warningSignals).length;
   const parts = [safety, pys, posture, `${warningCount} warning${warningCount === 1 ? "" : "s"}`];
   if (zone !== null) parts.unshift(YIELD_ZONE_LABELS[zone]);
   return (
@@ -323,9 +327,13 @@ export function YieldClient() {
     [urlParams, yieldUniverse],
   );
 
+  // One parent clock covers the board and the visible rows: each selected
+  // source crosses the public source-age gate at its own instant.
+  const sourceClockInputs = useMemo(() => rankings.map(getYieldRowSourceClockInput), [rankings]);
+  const sourceClock = useYieldSourceClock(sourceClockInputs, resolveYieldSourceAssessedAt(meta, dataUpdatedAt));
   const sourceBoardModel = useMemo(
-    () => buildYieldSourceBoardModel(sourceBoardRows),
-    [sourceBoardRows],
+    () => buildYieldSourceBoardModel(sourceBoardRows, sourceClock),
+    [sourceBoardRows, sourceClock],
   );
 
   // Counts the full /yield ranking universe per peg currency (not filter-
@@ -660,6 +668,7 @@ export function YieldClient() {
               methodologyVersion={data.methodology?.version}
               emptyMessage={viewModel.emptyState.description}
               comparisonRows={comparisonRows}
+              sourceClock={sourceClock}
               updatedAt={data.updatedAt}
               methodologyLabel={data.methodology?.versionLabel ?? "Pharos Yield Score current"}
               filterSummary={{

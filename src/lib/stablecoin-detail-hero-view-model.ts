@@ -41,6 +41,7 @@ import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
 import type { StablecoinVerdict } from "@shared/lib/stablecoin-verdict";
 import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import { getVariantDisplay } from "@shared/lib/variant-display";
+import { roundForDisplay } from "@shared/lib/format";
 import type {
   DexLiquidityData,
   Infrastructure,
@@ -58,7 +59,7 @@ export interface HeroTertiaryMetricViewModel {
   key: "dews" | "peg-score" | "liquidity" | "excess-yield" | "performance-vs-usd";
   label: "DEWS" | "Peg Score" | "Liquidity" | "30d Excess" | "1Y vs USD";
   mobileLabel?: "Peg" | "Liq";
-  methodologyTopic?: "dewsBand" | "pegScore" | "liquidityScore" | "pys";
+  methodologyTopic?: "dewsBand" | "pegScore" | "liquidityScore" | "excessYield";
   display: HeroDisplayValue | HeroDewsDisplay;
   accentClass?: string;
 }
@@ -181,6 +182,10 @@ function posOrNull(value: number | null): number | null {
 
 function getTrendClass(hasPreviousValue: boolean, currentValue: number, previousValue: number): string {
   if (!hasPreviousValue) return HERO_MUTED_CLASS;
+  // A change that prints as 0.00% is neutral, whatever its unrounded sign.
+  if (previousValue > 0 && roundForDisplay(((currentValue - previousValue) / previousValue) * 100, 2) === 0) {
+    return HERO_MUTED_CLASS;
+  }
   if (isQuietDeviationsEnabled()) {
     if (previousValue <= 0) return HERO_MUTED_CLASS;
     const percentChange = Math.abs((currentValue - previousValue) / previousValue) * 100;
@@ -223,7 +228,7 @@ function buildTertiaryMetrics(
     { key: "dews", label: "DEWS", methodologyTopic: "dewsBand", display: dewsDisplay, accentClass: dewsAccent },
     { key: "peg-score", label: "Peg Score", mobileLabel: "Peg", methodologyTopic: "pegScore", display: pegScoreDisplay, accentClass: pegScoreAccent },
     { key: "liquidity", label: "Liquidity", mobileLabel: "Liq", methodologyTopic: "liquidityScore", display: liquidityDisplay, accentClass: liquidityAccent },
-    { key: "excess-yield", label: "30d Excess", methodologyTopic: "pys", display: excessYieldDisplay },
+    { key: "excess-yield", label: "30d Excess", methodologyTopic: "excessYield", display: excessYieldDisplay },
     ...(performanceVsUsdDisplay
       ? [{ key: "performance-vs-usd" as const, label: "1Y vs USD" as const, display: performanceVsUsdDisplay }]
       : []),

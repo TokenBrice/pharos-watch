@@ -155,6 +155,18 @@ describe("site-only stablecoin live summary", () => {
       warning: '110 - "Detail refresh failed"' } });
   });
 
+  it("keeps a failed 90-minute detail refresh inside the degraded band", async () => {
+    const warning = '110 - "Stablecoin detail cache is stale; refresh failed"';
+    vi.mocked(handleStablecoinDetail).mockResolvedValue(detailResponse({}, {
+      "Cache-Control": "no-store", "X-Data-Updated-At": String(NOW - 5_400), "X-Data-Age": "5400",
+      "X-Data-Freshness": "degraded", Warning: warning,
+    }));
+    const response = await handleStablecoinLiveSummary(db, "usdt-tether", ctx);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(await response.json()).toMatchObject({ _meta: { updatedAt: NOW - 5_400, status: "degraded",
+      freshBudgetSec: 4_800, degradedBudgetSec: 7_200, warning } });
+  });
+
   it.each([null, "bad-clock", "0"])("does not manufacture a producer timestamp from %s", async (clock) => {
     const full = detailResponse({});
     if (clock === null) full.headers.delete("X-Data-Updated-At");

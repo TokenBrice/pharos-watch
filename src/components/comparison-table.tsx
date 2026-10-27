@@ -2,8 +2,7 @@
 
 import Link from "next/link";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { bluechipObservationLabel } from "@shared/lib/bluechip-freshness";
-import { memo, useMemo, type ReactNode } from "react";
+import { memo, useId, useMemo, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
   COLLATERAL_QUALITY_LABELS,
@@ -48,6 +47,7 @@ import { resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
+import { bluechipObservationText } from "@/lib/bluechip";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 import {
   resolveCoinNetFlow,
@@ -91,6 +91,8 @@ interface ComparisonMetric {
   label: ReactNode;
   render: (coin: ComparisonCoinEntry) => ReactNode;
   numeric?: boolean;
+  /** Associate each cell with the section's visible description (the caveat it needs). */
+  describedBySection?: boolean;
 }
 
 interface ComparisonSection {
@@ -226,10 +228,10 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
     {
       key: "peg",
       title: "Peg track record",
-      description: "Current stress plus the reviewed observation window behind Peg Score.",
+      description: "Time at peg is a record-derived estimate, not proof of recovery or continuous observation. Tracking closure can leave unobserved time.",
       metrics: [
         { key: "active-depeg", label: "Open recorded incident", render: (coin) => coin.pegDetails ? (coin.pegDetails.activeDepeg ? "Yes" : "No") : NULL_VALUE },
-        { key: "peg-90d", label: "At peg · 90d", numeric: true, render: (coin) => coin.pegDetails?.recent90d ? formatPegOccupancy(coin.pegDetails.recent90d.pegPct) : NULL_VALUE },
+        { key: "peg-90d", label: "Time at peg · up to 90d", numeric: true, describedBySection: true, render: (coin) => renderRecentPegOccupancy(coin.pegDetails?.recent90d) },
         { key: "incidents-90d", label: "Incidents · 90d", numeric: true, render: (coin) => coin.pegDetails?.recent90d ? formatCount(coin.pegDetails.recent90d.incidentCount, "incident") : NULL_VALUE },
         { key: "worst-deviation", label: "Worst deviation", numeric: true, render: (coin) => formatComparisonBps(coin.pegDetails?.worstDeviationBps) },
         { key: "event-count", label: "Recorded incidents", numeric: true, render: (coin) => coin.pegDetails ? formatCount(coin.pegDetails.eventCount, "incident") : NULL_VALUE },
@@ -273,8 +275,8 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
               : coin.bluechipRating.smartContractAudit
                 ? "audit recorded"
                 : "no audit flag";
-            const observationLabel = bluechipObservationLabel(coin.bluechipRating, Math.floor(Date.now() / 1000));
-            return `${coin.bluechipRating.grade} · ${audit}${observationLabel ? ` · ${observationLabel}` : ""}`;
+            const observationText = bluechipObservationText(coin.bluechipRating.lastObservedAt, Math.floor(Date.now() / 1000));
+            return <span title={observationText}>{`${coin.bluechipRating.grade} · ${audit}`}<span className="sr-only">{` · ${observationText}`}</span></span>;
           },
         },
       ],
@@ -409,13 +411,37 @@ export const ComparisonTable = memo(function ComparisonTable({ coins, pegRates, 
   );
 });
 
+// Whole-day flooring matches the detail page's recent-window basis; a positive sub-day basis is <1d.
+function formatOccupancyBasisDays(observedDays: number): string {
+  const days = Math.floor(observedDays);
+  return days === 0 && observedDays > 0 ? "<1d" : `${days}d`;
+}
+
+function renderRecentPegOccupancy(recent: NonNullable<ComparisonCoinEntry["pegDetails"]>["recent90d"] | undefined): ReactNode {
+  if (!recent) return NULL_VALUE;
+  const value = recent.pegPct == null ? NULL_VALUE : formatPegOccupancy(recent.pegPct);
+  if (!recent.coverageLimited) return value;
+  // Only a limited window carries an inline basis marker; a full window adds nothing under the value.
+  const days = formatOccupancyBasisDays(recent.observedDays);
+  const basis = `Based on ${days}`;
+  return (
+    <>
+      {value}
+      <span className="text-muted-foreground" title={`${basis} · Partial 90-day coverage`}>
+        {` · ${days}`}<span className="sr-only"> of partial 90-day coverage</span>
+      </span>
+    </>
+  );
+}
+
 function SectionRows({ section, coins }: { section: ComparisonSection; coins: ComparisonCoinEntry[] }) {
+  const descriptionId = `${useId()}-description`;
   return (
     <>
       <TableRow className="hover:bg-muted/30">
         <TableHead colSpan={coins.length + 1} className="bg-muted/35 px-3 py-3 text-left">
           <span className="block text-sm font-semibold text-foreground">{section.title}</span>
-          <span className="mt-0.5 block text-xs font-normal text-muted-foreground">{section.description}</span>
+          <span id={descriptionId} className="mt-0.5 block text-xs font-normal text-muted-foreground">{section.description}</span>
         </TableHead>
       </TableRow>
       {section.metrics.map((metric) => (
@@ -427,6 +453,7 @@ function SectionRows({ section, coins }: { section: ComparisonSection; coins: Co
             <TableCell
               key={coin.id}
               className={`max-w-[14rem] whitespace-normal text-center text-xs ${metric.numeric ? "pharos-numeric" : ""}`}
+              aria-describedby={metric.describedBySection ? descriptionId : undefined}
             >
               {metric.render(coin)}
             </TableCell>

@@ -1,3 +1,4 @@
+import { expect } from "vitest";
 import captures from "./fixtures/accountable-captures.json";
 
 export function makeTimestampedYuzuPayload(reserves: Record<string, unknown> = {}) {
@@ -26,13 +27,13 @@ export const ACCOUNTABLE_MAPPING_CASES = [
     name: "type breakdown", collateralization: 1.0595, ts: "1773304804848", bucket: "type",
     buckets: { "Liquid Bonds": 8_971_650.68, "Short Term Cash": 4_398_374.55 },
     params: { bucket: "type", riskMap: { "Liquid Bonds": "high", "Short Term Cash": "very-low" } },
-    expected: [{ name: "Liquid Bonds", pct: 67.1, risk: "high" }, { name: "Short Term Cash", pct: 32.9, risk: "very-low" }],
+    expected: [{ name: "Liquid Bonds", pct: expect.closeTo(67.10272064310831, 8), risk: "high" }, { name: "Short Term Cash", pct: expect.closeTo(32.89727935689169, 8), risk: "very-low" }],
   },
   {
     name: "reserves_split breakdown", collateralization: 1.00007, ts: "1773337492853", bucket: "reserves_split",
     buckets: [{ name: "Copper", value: 28_058_537.09 }, { name: "Fireblocks", value: 9_964_626 }, { name: "Insurance Fund", value: 656_796.7 }, { name: "Insurance Fund Usage", value: 20_000 }, { name: "Binance", value: 1_181.38 }, { name: "Ethereum Chain", value: 7.96 }],
     params: { bucket: "reserves_split", riskMap: { Copper: "medium", Fireblocks: "medium", "Insurance Fund": "low", "Insurance Fund Usage": "very-high", Binance: "high" } },
-    expected: [{ name: "Copper", pct: 72.5, risk: "medium" }, { name: "Fireblocks", pct: 25.7, risk: "medium" }, { name: "Insurance Fund", pct: 1.7, risk: "low" }, { name: "Insurance Fund Usage", pct: 0.1, risk: "very-high" }],
+    expected: [{ name: "Copper", pct: expect.closeTo(72.50052704055196, 8), risk: "medium" }, { name: "Fireblocks", pct: expect.closeTo(25.747623065475622, 8), risk: "medium" }, { name: "Insurance Fund", pct: expect.closeTo(1.697098703177447, 8), risk: "low" }, { name: "Insurance Fund Usage", pct: expect.closeTo(0.051678052072351974, 8), risk: "very-high" }, { name: "Binance", pct: expect.closeTo(0.003052570857861759, 8), risk: "high" }, { name: "Unknown / unmapped Accountable buckets", pct: expect.closeTo(0.000020567864724796086, 8), risk: "high" }],
   },
   {
     name: "deployment object buckets", collateralization: 1.013, ts: "1773337732067", bucket: "deployment",
@@ -62,7 +63,7 @@ export const ACCOUNTABLE_MAPPING_CASES = [
     name: "product-scoped protocol_split values", collateralization: 1.002, ts: "1778509189684", bucket: "protocol_split",
     buckets: { hoUSDT: { hoUSDT: 3_676_711.58 }, USDT0: { USDT0: 25_184.45 }, USDC: { Morpho: 586_637.21 }, masterUSD: { masterUSD: 2_001_257.2 } },
     params: { bucket: "protocol_split", riskMap: { hoUSDT: "high", USDT0: "low", USDC: "medium", masterUSD: "high" }, coinIdMap: { hoUSDT: "usdt-tether", USDT0: "usdt-tether", USDC: "usdc-circle" }, depTypeMap: { hoUSDT: "wrapper", USDT0: "wrapper", USDC: "collateral" }, renameMap: { hoUSDT: "hoUSDT strategy exposure", USDT0: "USDT0 reserves", USDC: "Morpho USDC lending exposure", masterUSD: "masterUSD strategy exposure" } },
-    expected: [{ name: "hoUSDT strategy exposure", pct: 58.5, risk: "high", coinId: "usdt-tether", depType: "wrapper" }, { name: "masterUSD strategy exposure", pct: 31.8, risk: "high" }, { name: "Morpho USDC lending exposure", pct: 9.3, risk: "medium", coinId: "usdc-circle", depType: "collateral" }, { name: "USDT0 reserves", pct: 0.4, risk: "low", coinId: "usdt-tether", depType: "wrapper" }],
+    expected: [{ name: "hoUSDT strategy exposure", pct: expect.closeTo(58.45523177716553, 8), risk: "high", coinId: "usdt-tether", depType: "wrapper" }, { name: "masterUSD strategy exposure", pct: expect.closeTo(31.817549711560815, 8), risk: "high" }, { name: "Morpho USDC lending exposure", pct: expect.closeTo(9.326816459086988, 8), risk: "medium", coinId: "usdc-circle", depType: "collateral" }, { name: "USDT0 reserves", pct: expect.closeTo(0.40040205218665437, 8), risk: "low", coinId: "usdt-tether", depType: "wrapper" }],
   },
 ] as const;
 export const APYX_RESERVE_PARAMS = {

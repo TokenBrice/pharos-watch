@@ -6,7 +6,6 @@ import { createContext, useContext, type ReactNode } from "react";
 import { TopNav } from "@/components/top-nav";
 import { NAV_GROUPS } from "@/lib/nav-config";
 import { cleanupFrontendTest, installMatchMediaMock } from "@/test-utils/frontend";
-import { makeHealthyHealthResponse } from "@/test-utils/status-fixtures";
 
 const { useHealthMock, pathnameMock } = vi.hoisted(() => ({
   useHealthMock: vi.fn(),
@@ -60,10 +59,6 @@ describe("TopNav", () => {
   beforeEach(() => {
     pathnameMock.current = "/";
     useHealthMock.mockReset();
-    useHealthMock.mockReturnValue({
-      data: makeHealthyHealthResponse(),
-      isError: false,
-    });
   });
 
 
@@ -88,7 +83,7 @@ describe("TopNav", () => {
     const firstItem = NAV_GROUPS[0].items[0];
     expect(screen.queryByRole("link", { name: firstItem.label })).toBeNull();
     expect(screen.queryByText("Operational", { selector: "span" })).toBeNull();
-    expect(useHealthMock).toHaveBeenLastCalledWith({ enabled: false });
+    expect(useHealthMock).not.toHaveBeenCalled();
 
     const trigger = screen.getByRole("button", { name: NAV_GROUPS[0].label });
     fireEvent.click(trigger);
@@ -124,7 +119,7 @@ describe("TopNav", () => {
     const resources = NAV_GROUPS.find((menu) => menu.key === "more");
     const columnHeadings = [...document.querySelectorAll("p.pharos-label")].map((node) => node.textContent);
     expect(columnHeadings).toEqual(resources?.columns?.map((column) => column.label));
-    expect(useHealthMock).toHaveBeenLastCalledWith({ enabled: true });
+    expect(useHealthMock).not.toHaveBeenCalled();
 
     const hoverBridge = document.querySelector('[data-section-menu="more"] > div.absolute');
     expect(hoverBridge?.className).toContain("pt-2");
@@ -227,67 +222,16 @@ describe("TopNav", () => {
   });
 
 
-  it("keeps the Status destination label and shows health as separate metadata", () => {
+  it("keeps the Status link a neutral destination with no health metadata", () => {
     installMatchMediaMock(true);
 
     render(<TopNav />);
     fireEvent.click(screen.getByRole("button", { name: "Resources" }));
 
-    const statusLabel = screen.getByText("Status", { selector: "span" });
-    const state = screen.getByText("Operational", { selector: "span" });
-    const statusLink = statusLabel.closest("a");
-    expect(state.closest("a")).toBe(statusLink);
-    expect(statusLink?.querySelector("span.rounded-full")?.classList.contains("bg-state-positive-solid")).toBe(true);
-    expect(useHealthMock).toHaveBeenLastCalledWith({ enabled: true });
-  });
-
-  it("reports a degraded headline with text and the warning dot", () => {
-    installMatchMediaMock(true);
-    useHealthMock.mockReturnValue({
-      data: { ...makeHealthyHealthResponse(), status: "degraded" },
-      isError: false,
-    });
-
-    render(<TopNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
-
-    const state = screen.getByText("Degraded", { selector: "span" });
-    const dot = state.closest("a")?.querySelector("span.rounded-full");
-    expect(dot?.classList.contains("bg-state-warn-solid")).toBe(true);
-  });
-
-  it("does not publish retained healthy data after a failed health refetch", () => {
-    installMatchMediaMock(true);
-    useHealthMock.mockReturnValue({ data: makeHealthyHealthResponse(), isError: true });
-    render(<TopNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
-    expect(screen.getByText("Unavailable", { selector: "span" })).not.toBeNull();
-    expect(screen.queryByText("Operational", { selector: "span" })).toBeNull();
-  });
-
-  it("keeps the initial health read neutral while checking", () => {
-    installMatchMediaMock(true);
-    useHealthMock.mockReturnValue({ data: undefined, isError: false });
-    render(<TopNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
-    expect(screen.getByText("Checking", { selector: "span" })).not.toBeNull();
-    expect(screen.queryByText("Operational", { selector: "span" })).toBeNull();
-  });
-
-  it("shows the worker headline label when the payload carries one", () => {
-    installMatchMediaMock(true);
-    useHealthMock.mockReturnValue({
-      data: {
-        ...makeHealthyHealthResponse(),
-        status: "stale",
-        headline: { state: "partial-outage", title: "Partial outage: Yield", affected: ["yield"] },
-        components: [],
-      },
-      isError: false,
-    });
-    render(<TopNav />);
-    fireEvent.click(screen.getByRole("button", { name: "Resources" }));
-    expect(screen.getByText("Partial outage", { selector: "span" })).not.toBeNull();
+    const statusLink = screen.getByText("Status", { selector: "span" }).closest("a");
+    expect(statusLink?.textContent).toBe("Status");
+    expect(statusLink?.querySelector("span.rounded-full")).toBeNull();
+    expect(useHealthMock).not.toHaveBeenCalled();
   });
 
 });

@@ -1,7 +1,9 @@
 "use client";
 
+import { isResolverBookAvailable } from "@/components/depeg-resolver-book-summary";
 import { StablecoinDepegResolverRows } from "@/components/depeg-resolver-row-card-parts";
 import { QueryStateNotice } from "@/components/query-state-notice";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { useDepegResolver } from "@/hooks/api-hooks";
 import { isDepegResolverEnabled } from "@/lib/feature-flags";
 
@@ -17,8 +19,10 @@ export function StablecoinDepegResolverCard({ stablecoinId, logoSrc }: Stablecoi
   if (!enabled) return null;
   const rows = resolver.data?.rows.filter((row) => row.stablecoinId === stablecoinId) ?? [];
   const degraded = resolver.data?._meta?.degraded === true;
-  const usableRows = rows.length > 0 && (!degraded || resolver.data?._meta?.degradedReason === "stale-cache");
-  const unavailable = !usableRows && (resolver.error != null || degraded);
+  const bookAvailable = isResolverBookAvailable(resolver.data);
+  const usableRows = bookAvailable && rows.length > 0;
+  // A failed refresh over a retained book is aged by the shared banner, not reported as missing.
+  const unavailable = !usableRows && (resolver.data == null ? resolver.error != null : !bookAvailable);
 
   if (!unavailable && !usableRows) return null;
   return (
@@ -36,7 +40,19 @@ export function StablecoinDepegResolverCard({ stablecoinId, logoSrc }: Stablecoi
             </p>
           ) : null}
         </section>
-      ) : null}
+      ) : (
+        <StaleDataBanner
+          queries={[{
+            preset: "depegResolver",
+            // The producer clock, never receipt time; header metadata takes precedence when present.
+            dataUpdatedAt: (resolver.data?._meta.computedAt ?? 0) * 1000,
+            hasData: true,
+            error: resolver.error,
+            meta: resolver.meta,
+          }]}
+          onRetry={() => void resolver.refetch()}
+        />
+      )}
       <StablecoinDepegResolverRows stablecoinId={stablecoinId} data={resolver.data} logoSrc={logoSrc} />
     </div>
   );

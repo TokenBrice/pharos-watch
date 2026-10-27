@@ -85,6 +85,22 @@ describe("validateAdapterOutput redemption telemetry", () => {
     }));
   });
 
+  it("keeps a disclosed whole-number total inside its rounding envelope ok, never past the error band", () => {
+    const rounded = [{ name: "Cash", pct: 33, risk: "low" as const }, { name: "Bonds", pct: 66, risk: "low" as const }];
+    const validateEnvelope = (pcts: typeof rounded, roundingEnvelopePct?: number) =>
+      validateAdapterOutput({ slices: pcts, metadata: { diag: { publishedAllocationSumPct: 99, roundingEnvelopePct } } });
+    expect(validateEnvelope(rounded, 1)).toEqual({ valid: true, warnings: [] });
+    expect(validateEnvelope(rounded).warnings).toContainEqual(expect.objectContaining({
+      code: "pct-sum-deviation", effect: "degraded",
+    }));
+    const pastEnvelope = [{ ...rounded[0]!, pct: 32.5 }, rounded[1]!];
+    expect(validateEnvelope(pastEnvelope, 1).warnings).toContainEqual(expect.objectContaining({
+      code: "pct-sum-deviation", effect: "degraded",
+    }));
+    const pastError = [{ ...rounded[0]!, pct: 30 }, rounded[1]!];
+    expect(validateEnvelope(pastError, 10).valid).toBe(false);
+  });
+
   it.each([null, "0", -0.1, Number.NaN, Infinity, undefined])("rejects present malformed raw deviation %s", (rawSumDeviation) => {
     const result = validateAdapterOutput({ slices, metadata: { diag: { rawSumDeviation } } });
     expect(result.valid).toBe(false);

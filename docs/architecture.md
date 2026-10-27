@@ -98,7 +98,7 @@ These same-origin Pages surfaces are **not** Worker API routes. Bindings/admissi
 
 ### Static feed route handlers
 
-The App Router feed handlers under `src/app/feed/**/route.ts` emit static RSS/XML feeds from checked-in or generated build inputs; that tree owns the feed-route inventory. The sitemap and `npm run seo:check` cover indexable HTML routes, not RSS feeds.
+The App Router feed handlers under `src/app/feed/**/route.ts` emit static RSS/XML from checked-in or generated inputs and own the feed inventory; sitemap and `npm run seo:check` cover HTML only. Feed links are native `<a>`, not `Link` (no RSC payload).
 Depeg RSS uses `classifyDepegClosure`: only recovered events (including legacy) say `Resolved`; other terminal classes name tracking closure, not recovery.
 
 ---
@@ -296,7 +296,7 @@ Domain applications: [R6 source identity and review clocks](process/architecture
 - **ADR-34 — R7: never publish display-capped or clamped values as statistics.** Headlines use authoritative aggregates, not pages or slices; disclose shown/total bounds (home depegs “Top 3 of N by deviation”; status counts full populations while listing 25 details). Without reproducible denominators use `reportedCollateralizationRatio`, not bounded `collateralizationRatio`. V9 structural shares normalize only floating tails within 0.0001 percentage point, with a clamp marker; other out-of-range values pass unclamped to asset-quarantine validation. Details: [reserves](./live-reserves.md), [report cards](./report-cards.md), [frontend rules](../src/AGENTS.md).
 #### ADR-35
 
-- **ADR-35 — R8: per-asset isolation inside an admitted publication.** Quarantine bad assets with named reasons; publish unaffected members only after global admission. Safety holds below ≥90% unaffected closure, on stale DEX or failed source/coverage floors, retaining the accepted generation. Admitted technical quarantines are `pipeline-gap` with null score/grade, not NR; dependents receive unavailable upstream results. Details: [report cards](./report-cards.md), [evaluation appendix](process/report-cards-appendix.md).
+- **ADR-35 — R8: per-asset isolation inside an admitted publication.** Quarantine bad assets with named reasons; publish unaffected members only after global admission. Safety holds below ≥90% unaffected closure, on stale DEX sources or failed floors, retaining the accepted generation. Admitted technical quarantines are `pipeline-gap` with null score/grade, not NR; dependents receive unavailable upstream results. Details: [report cards](./report-cards.md), [evaluation appendix](process/report-cards-appendix.md).
 Domain applications: [R8 redemption admission](process/architecture-appendix.md#adr-35-applications).
 
 #### ADR-36

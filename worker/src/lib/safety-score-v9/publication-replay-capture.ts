@@ -27,7 +27,7 @@ const SourceAdmissionBaselineSchema = z.object({
   sha256: z.string().regex(/^[a-f0-9]{64}$/u),
   baseline: AcceptedPublicationBaselineSchema,
 }).strict().nullable();
-// Readers precede the K-092 v3 writer; writers still emit v2.
+// v3 (10.35) writer: hysteresis and measured-route quarantine replay need the baseline.
 const baselinePayloadSchema = z.object({
   schemaVersion: z.literal(3), ...payloadFields, pipelineGapDigest,
   sourceAdmissionBaseline: SourceAdmissionBaselineSchema,
@@ -89,8 +89,13 @@ export async function buildSafetyScoreV9PublicationReplayCapture(
   publication: Readonly<SafetyScoreV9CurrentResponse>,
   fixedInput: Readonly<SafetyScoreV9ReplayCaptureInput>,
   transferMaterialityGeneration: SafetyScoreV9TransferMaterialityGeneration | null,
+  sourceAdmissionBaseline: SafetyScoreV9AcceptedPublicationBaseline | null,
 ) {
-  if (publication.baseInputGenerationId !== fixedInput.baseInputGenerationId || publication.publishedAtSec !== fixedInput.clockSec) {
+  if (publication.baseInputGenerationId !== fixedInput.baseInputGenerationId || publication.publishedAtSec !== fixedInput.clockSec ||
+    publication.cards.some((card) => card.gradeHold !== undefined &&
+      card.gradeHold.heldFromGenerationId !== sourceAdmissionBaseline?.publicationGenerationId) ||
+    (sourceAdmissionBaseline !== null && (sourceAdmissionBaseline.publicationGenerationId === publication.publicationGenerationId ||
+      sourceAdmissionBaseline.publishedAtSec > fixedInput.clockSec))) {
     throw new SafetyScoreV9ReplayCaptureIdentityError();
   }
   const { safetyScoreV9SupplyAttributionById, evidenceJournalById, supplyAttributionJournalById, pegProvenanceById } = fixedInput;
@@ -98,7 +103,9 @@ export async function buildSafetyScoreV9PublicationReplayCapture(
     schemaVersion: 2,
     sourceGeneration: publication.publicationGenerationId,
     payload: {
-      schemaVersion: 2, publicationGenerationId: publication.publicationGenerationId,
+      schemaVersion: 3, publicationGenerationId: publication.publicationGenerationId,
+      sourceAdmissionBaseline: sourceAdmissionBaseline === null ? null
+        : { sha256: sha256Hex(stableJsonStringifyV1(sourceAdmissionBaseline)), baseline: sourceAdmissionBaseline },
       pipelineGapDigest: fixedInput.pipelineGapByAssetId === undefined ? null : sha256Hex(stableJsonStringifyV1(fixedInput.pipelineGapByAssetId)),
       baseInputGenerationId: fixedInput.baseInputGenerationId,
       enrichment: { safetyScoreV9SupplyAttributionById, evidenceJournalById, supplyAttributionJournalById, pegProvenanceById },
@@ -128,6 +135,9 @@ export async function parseSafetyScoreV9PublicationReplayCapture(value: unknown,
   }
   const sourceAdmissionBaseline = "sourceAdmissionBaseline" in parsed
     ? parseSafetyScoreV9SourceAdmissionBaseline(parsed.sourceAdmissionBaseline, baseInput.clockSec) : undefined;
+  if (sourceAdmissionBaseline?.baseline.publicationGenerationId === parsed.publicationGenerationId) {
+    throw new Error("accepted-publication-replay-source-baseline-identity-mismatch");
+  }
   return {
     kind: "safety-score-v9-accepted-publication-capture" as const,
     publicationGenerationId: parsed.publicationGenerationId,

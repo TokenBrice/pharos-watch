@@ -25,7 +25,7 @@ import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { resolveYieldScoreQualification } from "@/lib/yield-constants";
-import { YIELD_SOURCE_CONFIDENCE_STYLES, getYieldSourceFreshnessDisplay } from "@/lib/yield-source-risk";
+import { YIELD_SOURCE_CONFIDENCE_STYLES } from "@/lib/yield-source-risk";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
@@ -39,6 +39,7 @@ import { formatPercent } from "@shared/lib/format";
 import type { YieldRankChangeAttribution } from "@shared/types";
 import { MethodologyLabel } from "@/components/methodology-hint";
 import { EvidenceFooter } from "@/components/stablecoin-detail/evidence-footer";
+import { FrozenDataNote } from "@/components/stablecoin-detail/frozen-data-note";
 import { useYieldDetailSectionModel } from "@/components/yield-detail-section-model";
 import { YieldHistoryChart } from "@/components/yield-history-chart";
 import { YieldDetailSectionAltSources } from "@/components/yield-detail-section-alt-sources";
@@ -120,6 +121,14 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
     );
   }
 
+  if (view.status === "frozen") {
+    return (
+      <YieldDetailSectionFrame>
+        {view.frozenAt ? <FrozenDataNote frozenAt={view.frozenAt} /> : null}
+      </YieldDetailSectionFrame>
+    );
+  }
+
   if (view.status === "unavailable") {
     return (
       <YieldDetailSectionFrame>
@@ -158,11 +167,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       : ranking.sourceRole === "fallback-proxy" && qualification === "estimated"
         ? YIELD_SOURCE_FACT_LABELS.estimated : null;
   const confidence = ranking.provenance?.confidenceTier;
-  const freshness = getYieldSourceFreshnessDisplay({
-    sourceAgeSeconds: ranking.provenance?.sourceAgeSeconds,
-    sourceFreshness: ranking.provenance?.sourceFreshness,
-    warningSignals: ranking.warningSignals,
-  });
+  const freshness = view.sourceExplorer.selectedSource.freshness;
   const venue = ranking.sourceRisk?.venueProtocol;
   const chain = ranking.sourceRisk?.venueChain;
   const deployment = ranking.sourceRisk?.deploymentPlace;
@@ -347,6 +352,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         sourceRiskDrivers={view.sourceExplorer.selectedSource.sourceRiskDrivers}
         sourceChanged={view.sourceExplorer.sourceSwitch.changed}
         confidenceTier={view.sourceExplorer.selectedSource.confidenceTier}
+        freshness={view.sourceExplorer.selectedSource.freshness}
         sourceFreshness={ranking.provenance?.sourceFreshness}
         warningSignals={ranking.warningSignals}
         compact

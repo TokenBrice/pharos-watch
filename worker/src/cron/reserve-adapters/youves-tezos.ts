@@ -168,7 +168,6 @@ export function adaptYouvesTezosState(state: YouvesTezosState): AdapterResult {
       value: values[assetKey],
       risk: SLICE_META[assetKey].risk,
     })),
-    4,
   );
 
   const details = {

@@ -545,6 +545,27 @@ describe("handleStablecoinDetail", () => {
     expect(await response.json()).toMatchObject(JSON.parse(cachedValue));
   });
 
+  it.each([
+    [5_400, "degraded"],
+    [7_200, "degraded"],
+    [7_201, "stale"],
+  ])("classifies a %ss detail retained after refresh failure as %s by the served generation's budget", async (age, status) => {
+    const now = Math.floor(Date.now() / 1000);
+    const cachedValue = makeDLDetailBody();
+    const db = mockD1([
+      { match: "cache", rows: [], first: { value: cachedValue, updated_at: now - age } },
+      { match: "supply_history", rows: [] },
+    ]);
+    queueFetch(new Response("Server Error", { status: 500 }));
+    const response = await handleStablecoinDetail(db, "usdt-tether", makeCtx());
+    expect(response.status).toBe(200);
+    expect(response.headers.get("X-Data-Updated-At")).toBe(String(now - age));
+    expect(response.headers.get("X-Data-Freshness")).toBe(status);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Warning")).toContain("refresh failed");
+    expect(await response.json()).toMatchObject(JSON.parse(cachedValue));
+  });
+
   it("returns stale cache when upstream fails but cache exists", async () => {
     const cachedValue = makeDLDetailBody();
     const now = Math.floor(Date.now() / 1000);

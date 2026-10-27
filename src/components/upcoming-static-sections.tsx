@@ -25,7 +25,7 @@ export function UpcomingLaunchedSection({ rows }: { rows: readonly LaunchedUntra
         {rows.map((row) => (
           <li key={row.id} className="space-y-1 px-4 py-3 text-sm sm:px-5">
             <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <Link href={row.href} className={LINK_CLASS}>
+              <Link href={row.href} prefetch={false} className={LINK_CLASS}>
                 {row.name} ({row.symbol})
               </Link>
               <LaunchPhaseBadge phase="launched" />
@@ -76,7 +76,7 @@ export function UpcomingStaticSections({
                   {item.dateLabel}
                 </time>
                 <span aria-hidden="true" className="text-muted-foreground"> · </span>
-                <Link href={item.href} className={LINK_CLASS}>
+                <Link href={item.href} prefetch={false} className={LINK_CLASS}>
                   {`${item.symbol}: ${item.title}`}
                 </Link>
               </li>
@@ -94,6 +94,7 @@ export function UpcomingStaticSections({
                 <li key={coin.id}>
                   <Link
                     href={coin.href}
+                    prefetch={false}
                     className="pharos-focus-ring inline-flex items-center rounded-full border border-border/60 bg-background px-2.5 py-1 text-xs font-medium transition-colors hover:bg-accent"
                   >
                     {coin.name} ({coin.symbol})

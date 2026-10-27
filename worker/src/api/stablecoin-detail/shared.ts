@@ -112,6 +112,8 @@ function createFreshUpstreamResponse(body: string): Response {
 function createStaleCacheResponse(cached: DetailCacheEntry): Response | null {
   if (!cached) return null;
   const ageSeconds = Math.max(0, Math.floor(Date.now() / 1000) - cached.updatedAt);
+  // The served generation keeps its own age budget; a failed refresh is a warning, not an automatic stale verdict.
+  const freshness = buildFreshnessMeta(cached.updatedAt, API_FRESHNESS_MAX_AGE_SEC.stablecoins, "stablecoin-detail");
   return new Response(cached.value, {
     headers: {
       "Content-Type": "application/json",
@@ -119,7 +121,7 @@ function createStaleCacheResponse(cached: DetailCacheEntry): Response | null {
       "X-Data-Age": String(ageSeconds),
       "X-Data-Updated-At": String(cached.updatedAt),
       "Warning": "110 - \"Stablecoin detail cache is stale; refresh failed\"",
-      "X-Data-Freshness": "stale",
+      "X-Data-Freshness": freshness.status,
     },
   });
 }

@@ -497,6 +497,7 @@ export function UpcomingClient({
                 ) : soonest?.expectedLaunchDate ? (
                   <Link
                     href={buildStablecoinUrl(soonest.id)}
+                    prefetch={false}
                     className="pharos-focus-ring rounded-sm font-sans hover:underline hover:underline-offset-4"
                   >
                     {soonest.name}
@@ -625,6 +626,7 @@ function UpcomingRow({
             <div className="min-w-0">
               <Link
                 href={href}
+                prefetch={false}
                 className="pharos-focus-ring block truncate rounded-sm text-sm font-medium text-foreground hover:underline hover:underline-offset-4"
               >
                 {coin.name}
@@ -714,6 +716,7 @@ function UpcomingRow({
             </p>
             <Link
               href={href}
+              prefetch={false}
               className="pharos-focus-ring inline-flex rounded-sm text-xs font-medium text-foreground underline-offset-4 hover:underline"
             >
               Open the pre-launch dossier &rarr;

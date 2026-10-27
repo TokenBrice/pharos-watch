@@ -16,6 +16,7 @@ import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { cn } from "@/lib/utils";
 
 /** Label class shared by every hero metric cell — one casing across breakpoints. */
 const HERO_METRIC_LABEL_CLASS = "text-sm font-medium text-muted-foreground";
@@ -82,8 +83,9 @@ function SupplyRestoredNotice({ coinData, className }: { coinData?: Pick<DetailQ
     const excluded = coinData?.supplyExcludedChains;
     return excluded?.length ? <p className={className}>Partial supply · excludes {excluded.join(", ")}</p> : null;
   }
+  // Neutral provenance: the page health banner owns material supply staleness (ADR-42).
   const supplyRestoredAsOf = formatSupplyRestoredAsOf(coinData);
-  return <p className={className}>Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}</p>;
+  return <p className={cn(className, "text-muted-foreground")}>{supplyRestoredAsOf ? `Supply as of ${supplyRestoredAsOf}` : "Supply date unavailable"}</p>;
 }
 
 function CompactMetricCell({
@@ -163,14 +165,14 @@ export function HeroPriceMetric({
   }
 
   return (
-    <div className="min-h-36 min-w-0 pharos-inset px-3 py-2.5">
+    <div className="min-w-0 pharos-inset px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>
         Price{coin.flags.pegCurrency !== "USD" ? ` (${coin.flags.pegCurrency})` : ""}
       </p>
       <p className={`break-words font-extrabold pharos-numeric tracking-tight ${confidenceClass(observed ? coinData.priceConfidence : null)} text-xl`}>
         {price}
       </p>
-      <p className={`mt-1 min-h-12 text-xs ${referenceClass}`}>{referenceLine}</p>
+      <p className={`mt-1 text-xs ${referenceClass}`}>{referenceLine}</p>
       {limitedDepegCoverageNote ? (
         <p className="mt-1 text-2xs text-state-warn">{limitedDepegCoverageNote}</p>
       ) : null}
@@ -215,7 +217,7 @@ function HeroMarketCapMetric({
   }
 
   return (
-    <div className="min-h-36 min-w-0 pharos-inset px-3 py-2.5">
+    <div className="min-w-0 pharos-inset px-3 py-2.5">
       <p className={HERO_METRIC_LABEL_CLASS}>Market cap</p>
       <p className="font-bold pharos-numeric tracking-tight text-lg">{mcap != null ? formatCurrency(mcap) : "—"}</p>
       {coin.flags.pegCurrency !== "USD" && <p className="mt-0.5 text-2xs text-muted-foreground">USD-normalized</p>}

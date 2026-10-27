@@ -326,7 +326,7 @@ The daily Pages refresh schedule is source-owned by [`rebuild-pages.yml`](../.gi
 - Worker rollback is an operator decision using Cloudflare deployment history or `wrangler rollback [VERSION-ID] --yes`. It does not reverse D1 migrations, KV/R2/D1 data, secrets, bindings, or other resources.
 - ADR-38 topology rollback restores moved registry plans to public **first**, re-adds public trigger expressions, then deploys heavy with explicit `[triggers] crons = []`. It does not recreate the retired Workflow. During the retained-resource drain stage, preserve the referenced heavy class until export/deletion; after deletion UUID rollback cannot recover instances/history/cache bytes. A new experiment needs separate approval and resource deployment. Cloudflare cron changes may overlap for up to 15 minutes; shared D1 fences remain the protection. Never reset leases/checkpoints or discard canonical publication data.
 - Pages rollback is an operator decision in Cloudflare Pages deployment history. Use the failed run's commit, deployment URL, marker response, and Wrangler output to identify the target.
-- Persistent stale custom-domain HTML can use the guarded `purge-pages-zone-cache.yml` recovery workflow after the correct Pages deployment is confirmed.
+- Persistent stale custom-domain HTML can be cleared with a Cloudflare dashboard zone purge (Caching → Purge Everything for `pharos.watch`) after the correct Pages deployment is confirmed.
 
 ## Runtime Measurement Notes
 

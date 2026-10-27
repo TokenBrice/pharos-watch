@@ -10,6 +10,7 @@ import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld"
 import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
+import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import {
   DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH,
   DEPEG_DEWS_METHODOLOGY_VERSION_LABEL,
@@ -33,7 +34,7 @@ const FAQ_ITEMS = [
   {
     question: "What counts as a depeg event on Pharos?",
     answer:
-      "A depeg event is triggered when a stablecoin's price deviates from its peg by more than 1% (100 bps) for USD-pegged coins, or 1.5% (150 bps) for non-USD pegs. Pharos opens events immediately only when the primary price input is trusted. Large-cap coins, low-confidence price inputs, and extreme moves go through a two-stage confirmation process: the deviation must persist for at least 15 minutes and then receive same-direction corroboration from CoinGecko or DefiLlama, Binance, supported native-peg quotes, or trusted DEX and challenger-pool data. Opposite-direction evidence rejects the pending incident instead of confirming it.",
+      `A depeg event is triggered when a stablecoin's price deviates from its peg by more than ${DEPEG_THRESHOLD_BPS / 100}% (${DEPEG_THRESHOLD_BPS} bps) for USD-pegged coins, or ${DEPEG_THRESHOLD_BPS_NON_USD / 100}% (${DEPEG_THRESHOLD_BPS_NON_USD} bps) for non-USD pegs. Every new event is pending at first: the deviation must hold for at least ${DEPEG_PENDING_MIN_AGE_SEC / 60} minutes and be backed by a trusted or multi-source primary price, or by same-direction secondary evidence, before it is confirmed. Opposite-direction evidence never counts as confirmation and can reject a pending event.`,
   },
 ] as const satisfies readonly FaqItem[];
 

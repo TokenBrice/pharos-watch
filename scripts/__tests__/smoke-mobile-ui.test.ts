@@ -5,6 +5,7 @@ import {
   assertRouteSummary,
   attachRuntimeMessageListeners,
   captureRoute,
+  classifyRuntimeMessage,
   exerciseProfileFeedbackDialog,
   getConsoleScanOutcome,
   isProfileFeedbackInteractionRoute,
@@ -197,5 +198,66 @@ describe("representative profile interaction", () => {
     order.length = 0;
     await captureRoute(wrapped, { ...base, route: "/depeg/" });
     expect(order).toEqual(["evaluate"]);
+  });
+});
+
+describe("Cemetery email-decoder incompatibility", () => {
+  const cemetery = {
+    routeUrl: "https://pharos.watch/cemetery/",
+    finalUrl: "https://pharos.watch/cemetery/",
+    status: 200,
+    textLength: 100,
+    hasFrameworkOverlay: false,
+    overflowDelta: 0,
+    tableScan: { checked: 0, issues: [] },
+    touchScan: { violations: [] },
+  };
+  // The page error Cloudflare's injected decoder throws on SVG grave anchors,
+  // with a long stack so the signature sits beyond any display truncation.
+  const decoderError = classifyRuntimeMessage(
+    "pageerror",
+    `TypeError: o.href.indexOf is not a function\n${"    at frame (https://pharos.watch/_next/x.js:1:1)\n".repeat(8)}` +
+      "    at https://pharos.watch/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js:1:120",
+  );
+
+  it("passes a healthy Cemetery capture with ordinary advisory console noise", () => {
+    const consoleMessages = [
+      classifyRuntimeMessage("warning", "Image with src /chains/foo.png has either width or height modified"),
+      classifyRuntimeMessage("error", "Failed to load resource: the server responded with a status of 503 ()"),
+    ];
+    expect(assertRouteSummary(cemetery, { consoleMessages, strictTouchTargets: true })).toEqual([]);
+  });
+
+  it("fails an injected decoder error, including when it surfaces only as a console warning", () => {
+    expect(assertRouteSummary(cemetery, { consoleMessages: [decoderError], strictTouchTargets: true }))
+      .toEqual([expect.stringContaining("fatal runtime errors=1")]);
+    const warningOnly = classifyRuntimeMessage("warning", "Uncaught TypeError: e.href.indexOf is not a function");
+    expect(assertRouteSummary(cemetery, { consoleMessages: [warningOnly], strictTouchTargets: true }))
+      .toEqual([expect.stringContaining("href.indexOf is not a function")]);
+  });
+
+  it("classifies the complete stack, not the 240-character display preview", () => {
+    const fullText = `TypeError: x is undefined\n${"    at f (a.js:1:1)\n".repeat(12)}    at email-decode.min.js:1:1`;
+    expect(fullText.length).toBeGreaterThan(240);
+    const entry = classifyRuntimeMessage("pageerror", fullText);
+    expect(entry.text).not.toContain("email-decode");
+    expect(entry.fatal).toBe(true);
+  });
+
+  it("collapses duplicate decoder errors into one fatal entry", () => {
+    expect(assertRouteSummary(cemetery, { consoleMessages: [decoderError, decoderError], strictTouchTargets: true }))
+      .toEqual([expect.stringContaining("fatal runtime errors=1")]);
+  });
+
+  it("keeps the generic fatal matcher and leaves non-Cemetery nonfatal errors advisory", () => {
+    const flows = { ...cemetery, routeUrl: "https://pharos.watch/flows/", finalUrl: "https://pharos.watch/flows/" };
+    expect(assertRouteSummary(flows, {
+      consoleMessages: [classifyRuntimeMessage("error", "TypeError: Cannot read properties of undefined (reading 'map')")],
+      strictTouchTargets: true,
+    })).toEqual([]);
+    expect(assertRouteSummary(flows, {
+      consoleMessages: [classifyRuntimeMessage("error", "Uncaught Error: Minified React error #418; visit https://react.dev")],
+      strictTouchTargets: true,
+    })).toEqual([expect.stringContaining("fatal runtime errors=1")]);
   });
 });

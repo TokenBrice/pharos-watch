@@ -4,11 +4,15 @@ import {
   classifyYieldSourceDepth,
   formatYieldSourceRiskSummary,
   formatYieldSourceRiskCompact,
+  formatYieldSourcePosture,
+  formatYieldSourcePostureCountSummary,
   formatYieldSourceRiskDriverSummary,
   getYieldSourceDepthDisplay,
   getYieldSourceRiskDrivers,
   isNativeYieldSource,
+  isYieldSourcePostureScoringWindowOnly,
   isYieldSourceRiskMaterial,
+  projectYieldSourceDisplayDrivers,
 } from "@/lib/yield-source-risk";
 import {
   classifyYieldSourceAgeContext,
@@ -112,7 +116,7 @@ describe("yield source risk UI helpers", () => {
   it("keeps missing source-risk evidence neutral", () => {
     expect(getYieldSourceRiskDrivers({ sourceRisk: null })).toEqual([]);
     expect(getYieldSourceRiskDrivers({ sourceRisk: buildSourceRiskGoldenFixture("missing-safety") })).toEqual([]);
-    expect(formatYieldSourceRiskDriverSummary([])).toContain("No populated source-risk driver");
+    expect(formatYieldSourceRiskDriverSummary([])).toBe("No source-risk drivers shown.");
   });
 
   it("classifies source depth only when TVL and supply-relative depth are present", () => {
@@ -238,55 +242,79 @@ describe("classifyYieldSourceAgeContext", () => {
 });
 
 describe("getYieldSourceFreshnessDisplay", () => {
-  it("keeps a 4h observation stale when the published status is stale", () => {
-    const result = getYieldSourceFreshnessDisplay({
-      sourceAgeSeconds: 4 * 60 * 60,
-      sourceFreshness: "stale",
-    });
+  const assessedAt = 1_800_000_000;
+  const HOUR = 60 * 60;
+  // Core `sync-yield-data` sources publish every 2h; the public gate is 12x.
+  const core = { dataSource: "defillama", sourceKey: "defillama:pool" };
+  const publicBoundarySec = 12 * 2 * HOUR;
 
-    expect(result).toMatchObject({
-      status: "stale",
-      displayText: "Stale · 4h ago",
-      ageContext: { band: "within-6h" },
-    });
-    expect(result?.textClassName).toContain("state-warn");
-    expect(result?.tooltipText).toContain("Published source freshness: Stale");
+  it("labels a scoring-stale 2h observation neutrally below the public gate", () => {
+    const result = getYieldSourceFreshnessDisplay({ ...core, sourceAgeSeconds: 2 * HOUR, clock: { assessedAt } });
+
+    expect(result).toMatchObject({ status: "fresh", displayText: "Observed 2h ago", ageContext: { band: "within-6h" } });
+    expect(result?.textClassName).not.toContain("state-warn");
+    expect(result?.tooltipText).toBe("Source observed 2h ago; age context: observed within 6 hours.");
   });
 
-  it("keeps a 30h observation fresh when the published status is fresh", () => {
-    const result = getYieldSourceFreshnessDisplay({
-      sourceAgeSeconds: 30 * 60 * 60,
-      sourceFreshness: "fresh",
+  it("warns only past 12x the producer cadence (exact boundary inclusive, +1ms stale)", () => {
+    const observed = { ...core, sourceAgeSeconds: 0 };
+    const at = (offsetMs: number) => getYieldSourceFreshnessDisplay({
+      ...observed,
+      clock: { assessedAt, nowMs: (assessedAt + publicBoundarySec) * 1000 + offsetMs },
     });
-
-    expect(result).toMatchObject({
-      status: "fresh",
-      displayText: "Fresh · 1d ago",
-      ageContext: { band: "over-24h" },
-    });
-    expect(result?.textClassName).toContain("state-positive");
-    expect(result?.tooltipText).toContain("age context: observed more than 24 hours ago");
+    expect(at(0)?.status).toBe("fresh");
+    expect(at(1)).toMatchObject({ status: "stale", displayText: "Stale · 1d ago" });
+    expect(at(1)?.textClassName).toContain("state-warn");
   });
 
-  it("uses data-stale only when published freshness is absent", () => {
+  it("prefers the original observation clock and uses each source's own cadence", () => {
+    // A daily price-derived source is still neutral at 5 days.
     expect(getYieldSourceFreshnessDisplay({
-      sourceAgeSeconds: 60,
-      warningSignals: ["data-stale"],
-    })?.status).toBe("stale");
-    expect(getYieldSourceFreshnessDisplay({
-      sourceAgeSeconds: 60,
-      sourceFreshness: "fresh",
-      warningSignals: ["data-stale"],
-    })?.status).toBe("fresh");
+      dataSource: "price-derived",
+      sourceKey: "price-derived:x",
+      sourceObservedAt: assessedAt - 5 * 24 * HOUR,
+      sourceAgeSeconds: 0,
+      clock: { assessedAt },
+    })?.displayText).toBe("Observed 5d ago");
   });
 
-  it("keeps freshness unknown when only data-freshness-unknown is published", () => {
-    const result = getYieldSourceFreshnessDisplay({
-      warningSignals: ["data-freshness-unknown"],
-    });
-
+  it.each([
+    ["missing", { sourceAgeSeconds: null }],
+    ["invalid", { sourceAgeSeconds: Number.NaN }],
+    ["negative", { sourceAgeSeconds: -5 }],
+    ["future", { sourceObservedAt: assessedAt + 60 }],
+    ["zero observation clock", { sourceObservedAt: 0 }],
+    ["missing identity", { dataSource: null, sourceAgeSeconds: 60 }],
+  ])("keeps a %s clock neutral unavailable", (_label, input) => {
+    const result = getYieldSourceFreshnessDisplay({ ...core, ...input, clock: { assessedAt } });
     expect(result).toMatchObject({ status: "unknown", displayText: "Unknown", ageContext: null });
-    expect(result?.tooltipText).toContain("Source observation age is unavailable");
+    expect(result?.tooltipText).toBe("Source observation age is unavailable.");
+  });
+
+  it("treats a zero age as a valid observation", () => {
+    expect(getYieldSourceFreshnessDisplay({ ...core, sourceAgeSeconds: 0, clock: { assessedAt } })?.status).toBe("fresh");
+  });
+
+  it("ignores published scoring status and data-stale warnings", () => {
+    expect(getYieldSourceFreshnessDisplay({ ...core, sourceAgeSeconds: 60, clock: { assessedAt } })?.status).toBe("fresh");
+    expect(getYieldSourceFreshnessDisplay({ ...core, clock: { assessedAt } })?.status).toBe("unknown");
+  });
+
+  it("projects stale-source drivers and qualifies scoring-only speculative posture", () => {
+    const params = { sourceRisk: { sourceDepthRatio: 0.02, venueRiskTier: "low" as const }, sourceTvlUsd: 10_000_000, sourceFreshness: "stale" as const };
+    const drivers = getYieldSourceRiskDrivers(params);
+    expect(drivers.map((driver) => driver.key)).toEqual(["stale-source"]);
+    expect(projectYieldSourceDisplayDrivers(drivers, false)).toEqual([]);
+    expect(projectYieldSourceDisplayDrivers([], true).map((driver) => driver.key)).toEqual(["stale-source"]);
+    const posture = classifyYieldSourcePosture(params);
+    expect(posture).toBe("speculative");
+    expect(isYieldSourcePostureScoringWindowOnly(params, posture, false)).toBe(true);
+    expect(isYieldSourcePostureScoringWindowOnly(params, posture, true)).toBe(false);
+    expect(formatYieldSourcePosture(posture, true)).toBe("Speculative (scoring window)");
+    // An independently justified speculative posture keeps its plain label.
+    const thin = { ...params, sourceRisk: { sourceDepthRatio: 0.0001, venueRiskTier: "low" as const } };
+    expect(isYieldSourcePostureScoringWindowOnly(thin, classifyYieldSourcePosture(thin), false)).toBe(false);
+    expect(formatYieldSourcePostureCountSummary(3, 2)).toBe("Speculative: 3 sources, 2 due only to the scoring window.");
   });
 
   it("uses the authoritative status for stale-source risk drivers", () => {

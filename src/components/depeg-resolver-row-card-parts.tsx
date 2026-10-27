@@ -456,11 +456,6 @@ export function StablecoinDepegResolverRows({ stablecoinId, data, logoSrc }: Sta
 
   return (
     <section aria-label={`Depeg Duration Resolver for ${rows[0]?.symbol ?? stablecoinId}`} className="space-y-4">
-      {showStaleRows ? (
-        <p className="rounded-lg border border-state-warn bg-state-warn-subtle px-3 py-2 text-xs text-state-warn-strong">
-          Resolver live overlay is stale; frozen forecasts, including anchored duration estimates, remain unchanged.
-        </p>
-      ) : null}
       <div className="space-y-4">
         {rows.map((row) => (
           <DepegResolverRowCard key={`${row.stablecoinId}:${row.eventId}`} row={row} logos={logos} />

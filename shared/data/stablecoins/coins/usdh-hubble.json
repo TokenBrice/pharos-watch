@@ -63,7 +63,7 @@
     {
       "type": "info",
       "title": "Small float, dormant trading",
-      "message": "Hubble's USDH circulating supply has contracted to roughly $1.2 to 1.5M with very low secondary-market volume. The Hubble team's focus has shifted to sister protocol Kamino, though no formal USDH wind-down has been announced and the borrow app remains operational."
+      "message": "Reviewed 2026-10-26: Pharos still tracks USDH, with supply reported by DefiLlama. Hubble's documentation and app were reachable, but Pharos has not verified that borrowing or redemption works. The May 2026 cemetery entry is a historical assessment, not a current exclusion."
     }
   ]
 }

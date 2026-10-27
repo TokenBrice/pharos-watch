@@ -12,6 +12,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
 import { formatPercentFromRatio } from "@shared/lib/format";
+import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
 import {
   type DdrResolutionTier,
   type DdrPublicPredictionState,
@@ -21,7 +22,6 @@ import {
   formatDurationSec,
   formatUtcTimestamp,
   getLiveCurrentDeviationBps,
-  getPeakDeviationBps,
   getResolution,
   getTierMeta,
   getTierVocabulary,
@@ -61,11 +61,14 @@ interface ForecastItem {
   severity: number;
 }
 
-/** Worst gap first: live deviation if present, else this event's peak. */
+/**
+ * Worst gap first: live deviation if present, else this event's live peak —
+ * never the frozen lock peak, which can be far shallower than the live event.
+ */
 function rowSeverity(row: DdrV2ResponseRow): number {
   const now = getLiveCurrentDeviationBps(row);
   if (now != null) return Math.abs(now);
-  const peak = getPeakDeviationBps(row);
+  const peak = row.live.peakDeviationBps;
   return peak == null ? -1 : Math.abs(peak);
 }
 
@@ -320,13 +323,13 @@ function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] 
 
 function TrackRecordZone({
   accuracyValue,
-  scored,
+  accuracyLines,
   lockedCount,
   durationScored,
   rates,
 }: {
   accuracyValue: string;
-  scored: number;
+  accuracyLines: ReturnType<typeof formatPromotedAccuracyLines>;
   lockedCount: number;
   durationScored: number;
   rates: { horizon: string; hitRate: number }[];
@@ -343,15 +346,7 @@ function TrackRecordZone({
             {accuracyValue}
           </span>
         </div>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          recovery-call accuracy
-          {scored > 0 ? (
-            <>
-              {" · "}
-              <span className="font-mono tabular-nums text-foreground">{scored}</span> scored
-            </>
-          ) : null}
-        </p>
+        <p className="mt-1.5 text-xs text-muted-foreground">{accuracyLines.calls}</p>
       </div>
 
       {rates.length > 0 ? <HorizonBars rates={rates} /> : null}
@@ -450,9 +445,9 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
             <div className={cn("flex flex-col bg-muted/20 p-4 sm:p-5", trackSpan)}>
               <SourceStatus label="Reviewer" computedAt={resolverReviewData?._meta.computedAt}
                 usable={ddrrUsable} loading={!resolverReviewData && !resolverReviewError} />
-              {ddrrUsable && headline ? <TrackRecordZone
+              {ddrrUsable && headline && resolverReviewData ? <TrackRecordZone
                 accuracyValue={accuracyValue}
-                scored={scored}
+                accuracyLines={formatPromotedAccuracyLines(describePromotedAccuracy(resolverReviewData.summary))}
                 lockedCount={headline.lockedPredictionCount}
                 durationScored={headline.durationScoredCount}
                 rates={rates}

@@ -18,6 +18,7 @@ export function HomeBlogBanner() {
     <aside aria-label="Latest blog post">
       <Link
         href={`/blog/${post.slug}/`}
+        prefetch={false}
         className="pharos-focus-ring group flex items-center gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-2.5 text-sm transition-colors hover:border-border hover:bg-muted/35"
       >
         <span className="pharos-label hidden shrink-0 sm:inline">

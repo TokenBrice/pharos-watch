@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { getPublicStaleBudgetMs, isPublicWarning, type DataHealthInfo } from "@/lib/data-health";
 
 interface FreshnessIndicatorProps {
   updatedAtMs: number;
@@ -14,7 +15,14 @@ interface FreshnessIndicatorProps {
   labelPrefix?: string;
   className?: string;
   compact?: boolean;
+  /**
+   * Public health verdict (ADR-42) for a content consumer. When supplied it owns the
+   * displayed generation, warning state and tooltip budget; the age timer only ticks the label.
+   */
+  health?: DataHealthInfo;
 }
+
+type FreshnessState = "current" | "retained" | "stale" | "unavailable";
 
 /**
  * Content-surface headroom on the staleness threshold.
@@ -47,18 +55,26 @@ function nextFreshnessUpdateDelay(ageMs: number, staleAfterMs: number): number {
 }
 
 export function FreshnessIndicator({
-  updatedAtMs,
+  updatedAtMs: updatedAtMsProp,
   staleAfterMs: staleAfterMsProp,
   labelPrefix,
   className,
   compact = false,
+  health,
 }: FreshnessIndicatorProps) {
-  const staleAfterMs = compact ? staleAfterMsProp * CONTENT_STALE_GRACE_FACTOR : staleAfterMsProp;
-  const isUnavailable = updatedAtMs <= 0;
+  const updatedAtMs = health ? health.dataUpdatedAt : updatedAtMsProp;
+  const staleAfterMs = health
+    ? getPublicStaleBudgetMs(health)
+    : compact ? staleAfterMsProp * CONTENT_STALE_GRACE_FACTOR : staleAfterMsProp;
+  const isUnavailable = updatedAtMs <= 0 || health?.state === "unavailable";
   const [label, setLabel] = useState(() =>
-    isUnavailable ? "not loaded" : formatAge(Math.max(0, Date.now() - updatedAtMs)),
+    updatedAtMs <= 0 ? "not loaded" : formatAge(Math.max(0, Date.now() - updatedAtMs)),
   );
-  const [isStale, setIsStale] = useState(() => !isUnavailable && Math.max(0, Date.now() - updatedAtMs) > staleAfterMs);
+  const [timerStale, setIsStale] = useState(() => updatedAtMs > 0 && Math.max(0, Date.now() - updatedAtMs) > staleAfterMs);
+  const isStale = health ? !isUnavailable && isPublicWarning(health) : timerStale;
+  // Retained degradation below the public band is a neutral timestamp, never a fresh claim.
+  const isRetained = health != null && !isUnavailable && !isStale && health.state !== "fresh";
+  const state: FreshnessState = isUnavailable ? "unavailable" : isStale ? "stale" : isRetained ? "retained" : "current";
 
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null;
@@ -110,7 +126,7 @@ export function FreshnessIndicator({
           <time
             tabIndex={0}
             dateTime={absolute ? new Date(updatedAtMs).toISOString() : undefined}
-            data-state={isUnavailable ? "unavailable" : isStale ? "stale" : "current"}
+            data-state={state}
             data-stale={isStale ? "true" : "false"}
             data-stale-after-ms={staleAfterMs}
             className={cn(
@@ -126,7 +142,10 @@ export function FreshnessIndicator({
               <RefreshCw className="h-3 w-3" aria-hidden="true" />
             ) : (
               <span
-                className={cn("h-1.5 w-1.5 rounded-full", isStale || isUnavailable ? "bg-state-warn-solid" : "bg-state-positive-solid")}
+                className={cn(
+                  "h-1.5 w-1.5 rounded-full",
+                  isStale || isUnavailable ? "bg-state-warn-solid" : isRetained ? "bg-muted-foreground/60" : "bg-state-positive-solid",
+                )}
                 aria-hidden="true"
               />
             )}
@@ -139,24 +158,22 @@ export function FreshnessIndicator({
         </TooltipTrigger>
         <TooltipContent className="text-2xs">{fullLabel}</TooltipContent>
       </Tooltip>
-      <FreshnessTransitionAnnouncer
-        labelPrefix={labelPrefix}
-        state={isUnavailable ? "unavailable" : isStale ? "stale" : "current"}
-      />
+      <FreshnessTransitionAnnouncer labelPrefix={labelPrefix} state={state} />
     </TooltipProvider>
   );
 }
 
 /**
  * Announces freshness-state transitions only (current <-> stale), never the
- * ticking relative age. The initial state is not announced.
+ * ticking relative age. The initial state is not announced; a neutral retained
+ * state announces nothing, so leaving stale for it never claims currency.
  */
 function FreshnessTransitionAnnouncer({
   labelPrefix,
   state,
 }: {
   labelPrefix?: string;
-  state: "current" | "stale" | "unavailable";
+  state: FreshnessState;
 }) {
   const regionRef = useRef<HTMLSpanElement>(null);
   const previousStateRef = useRef(state);
@@ -167,7 +184,8 @@ function FreshnessTransitionAnnouncer({
     const previous = previousStateRef.current;
     previousStateRef.current = state;
     // Leaving "unavailable" is a first load, not a recovery worth announcing.
-    if (previous === state || state === "unavailable" || previous === "unavailable") return;
+    if (previous === state || state === "unavailable" || previous === "unavailable" || state === "retained") return;
+    if (previous === "retained" && state === "current") return;
     if (regionRef.current) {
       regionRef.current.textContent = `${labelPrefix ?? "Data"} is ${state === "stale" ? "stale" : "current again"}.`;
     }

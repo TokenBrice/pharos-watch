@@ -7,12 +7,16 @@ import type {
   StablecoinListResponse,
   StressSignalsAllResponse,
 } from "@shared/types/market";
+import { readFileSync } from "node:fs";
+import { resolve } from "node:path";
 import {
   buildCurrentMap,
   extractFindings,
+  extractSummaryFindings,
   fetchJson,
   type Current,
 } from "../build-ai-summary-staleness-candidates";
+import contradictionFixture from "./fixtures/ai-summary-contradictions.json";
 import { buildMaintenanceApiRequest } from "../../lib/maintenance-api";
 
 function makeCurrent(overrides: Partial<Current> = {}): Current {
@@ -177,5 +181,64 @@ describe("AI candidate body deadlines", () => {
     await vi.advanceTimersByTimeAsync(30_001);
     expect(signals.map((signal) => signal.aborted)).toEqual([false, false, false]);
     expect(vi.getTimerCount()).toBe(0);
+  });
+});
+
+describe("AI summary weakest-pillar contradiction dispositions", () => {
+  type Pillar = "backing" | "exit" | "control";
+  const rows = contradictionFixture.rows as Array<{
+    id: string; kind: string; originalSentence: string; claimed: string;
+    weakestPillar: Pillar | null; pillars: Record<Pillar, number | null>; disposition: string;
+  }>;
+  const summaries = JSON.parse(readFileSync(resolve("data/ai-summaries.json"), "utf8")) as Record<
+    string, Parameters<typeof extractSummaryFindings>[0]
+  >;
+  const byDisposition = (disposition: string) => rows.filter((row) => row.disposition === disposition);
+  const minimum = (row: (typeof rows)[number]) =>
+    Math.min(...Object.values(row.pillars).filter((score): score is number => typeof score === "number"));
+  const weakestFindings = (row: (typeof rows)[number], text: string) =>
+    extractFindings(text, makeCurrent({ weakestPillar: row.weakestPillar })).filter((f) => f.kind === "weakest-pillar");
+
+  it("retains every captured candidate with one semantic disposition", () => {
+    expect(rows).toHaveLength(84);
+    expect(new Set(rows.map((row) => row.id)).size).toBe(84);
+    expect(byDisposition("strict-corrected")).toHaveLength(80);
+    expect(byDisposition("tie-retained").map((row) => row.id).sort()).toEqual(["dusd-standx", "usdm-mega", "vgbp-vnx"]);
+    expect(byDisposition("false-positive-retained").map((row) => row.id)).toEqual(["mglobal-midas-fasanara"]);
+  });
+
+  it("clears each strict contradiction from the edited summary", () => {
+    for (const row of byDisposition("strict-corrected")) {
+      const claimedScore = row.pillars[row.claimed as Pillar];
+      expect(claimedScore, row.id).not.toBeNull();
+      expect(claimedScore!, row.id).toBeGreaterThan(minimum(row));
+      expect(weakestFindings(row, row.originalSentence), row.id).toEqual([
+        expect.objectContaining({ claimed: row.claimed, current: row.weakestPillar, severity: "medium" }),
+      ]);
+      const entry = summaries[row.id];
+      expect(entry.text, row.id).not.toContain(row.originalSentence);
+      const findings = extractSummaryFindings(entry, makeCurrent({ weakestPillar: row.weakestPillar }));
+      expect(findings.filter((f) => f.kind === "weakest-pillar" || f.kind === "claim-token-evidence"), row.id).toEqual([]);
+    }
+  });
+
+  it("keeps tied minima as heuristic hits without treating them as errors", () => {
+    for (const row of byDisposition("tie-retained")) {
+      expect(row.pillars.control, row.id).toBe(50);
+      expect(row.pillars.exit, row.id).toBe(50);
+      expect(minimum(row), row.id).toBe(50);
+      expect(summaries[row.id].text, row.id).toContain(row.originalSentence);
+      expect(weakestFindings(row, row.originalSentence), row.id).toHaveLength(1);
+    }
+  });
+
+  it("leaves the date/comma holder false positive unchanged", () => {
+    const [row] = byDisposition("false-positive-retained");
+    expect(summaries[row.id].text).toContain(row.originalSentence);
+  });
+
+  it("never compares a claim against an absent weakest pillar", () => {
+    const [row] = byDisposition("strict-corrected");
+    expect(extractFindings(row.originalSentence, makeCurrent()).filter((f) => f.kind === "weakest-pillar")).toEqual([]);
   });
 });

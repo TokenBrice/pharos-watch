@@ -16,6 +16,7 @@ import type { ActiveFilterChip, TimelineFeedController } from "./timeline-contro
 import { eventDomId } from "./timeline-feed-helpers";
 import { DayDigestSection, EmptyState, EventSkeleton, OpenIncidentsSection } from "./timeline-feed-sections";
 import { getLogoSrc } from "@/lib/logos";
+import type { TimelineActiveStatus } from "./use-timeline-feed-data";
 
 interface TimelineFeedProps {
   filters: TapeFilterState;
@@ -23,9 +24,11 @@ interface TimelineFeedProps {
   logos: Record<string, string>;
   nowMs: number;
   rawEvents: readonly TapeEvent[];
+  /** An admitted response page, even an empty one, is observed data. */
+  hasData: boolean;
   visibleEvents: readonly TapeEvent[];
   openIncidents: readonly DepegEvent[] | null;
-  activeStatus: "available" | "loading" | "incomplete" | "unavailable";
+  activeStatus: TimelineActiveStatus;
   activeHealth: DataHealthInfo;
   refetchActive: () => void;
   digestedDays: readonly DigestedDay[];
@@ -36,6 +39,7 @@ interface TimelineFeedProps {
   isFetchingNextPage: boolean;
   nextCursor: string | null;
   total: number | null;
+  permalinkSuppressed?: boolean;
   meta: ApiMeta | null;
   dataUpdatedAt: number;
   permalinkId: string;
@@ -55,6 +59,7 @@ export function TimelineFeed({
   logos,
   nowMs,
   rawEvents,
+  hasData,
   visibleEvents,
   openIncidents,
   activeStatus,
@@ -68,6 +73,7 @@ export function TimelineFeed({
   isFetchingNextPage,
   nextCursor,
   total,
+  permalinkSuppressed = false,
   meta,
   dataUpdatedAt,
   permalinkId,
@@ -86,20 +92,20 @@ export function TimelineFeed({
     <>
       <QueryFreshnessNotices
         error={error}
-        hasData={rawEvents.length > 0}
+        hasData={hasData}
         onRetry={() => void refetch()}
         queries={[
           {
             label: "Timeline",
             dataUpdatedAt,
             error,
-            hasData: rawEvents.length > 0,
+            hasData,
             meta,
           },
         ]}
       />
 
-      {permalinkId && !permalinkBufferIsLoading && !bufferEvent && !rawEvents.some((e) => e.id === permalinkId) ? (
+      {permalinkId && !permalinkBufferIsLoading && !bufferEvent && !permalinkSuppressed && !rawEvents.some((e) => e.id === permalinkId) ? (
         <div
           title={permalinkId}
           className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-amber-700 dark:text-amber-400"
@@ -124,7 +130,8 @@ export function TimelineFeed({
         {loadAnnouncement}
       </div>
 
-      <section id="data" aria-label="Event tape" tabIndex={-1}>
+      {/* The viewport floor keeps the footer from being exposed then displaced as rows arrive. */}
+      <section id="data" aria-label="Event tape" tabIndex={-1} className="min-h-[100svh]" data-timeline-slot="feed">
         <div id="tape-feed" className="space-y-4">
           {bufferEvent ? (
             <div className="border-y border-border/60 bg-amber-500/5">
@@ -147,7 +154,7 @@ export function TimelineFeed({
           <div>
             <EventSkeleton />
           </div>
-        ) : visibleEvents.length === 0 ? (
+        ) : visibleEvents.length === 0 && !(hasNextPage && rawEvents.length > 0) ? (
           <div>
             <EmptyState
               onClearAll={emptyStateFallback.apply}
@@ -178,19 +185,19 @@ export function TimelineFeed({
                         <Loader2 className="mr-1.5 h-3 w-3 animate-spin" aria-hidden="true" />
                         Loading…
                       </>
-                    ) : total != null && total > rawEvents.length ? (
-                      `Load more (${(total - rawEvents.length).toLocaleString()} remaining)`
+                    ) : total != null && total > visibleEvents.length ? (
+                      `Load more (${(total - visibleEvents.length).toLocaleString()} remaining)`
                     ) : (
                       "Load more"
                     )}
                   </Button>
                   <div ref={sentinelRef} aria-hidden="true" />
                 </div>
-              ) : nextCursor == null && rawEvents.length > 0 ? (
+              ) : nextCursor == null && visibleEvents.length > 0 ? (
                 <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider tabular-nums text-muted-foreground">
                   ───── END OF TAPE
                   {" · "}
-                  {(total ?? rawEvents.length).toLocaleString()} EVT
+                  {(total ?? visibleEvents.length).toLocaleString()} EVT
                   {" · WINDOW "}
                   {controller.windowShort}
                   {" · "}

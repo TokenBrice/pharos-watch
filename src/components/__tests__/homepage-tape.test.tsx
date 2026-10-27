@@ -49,6 +49,18 @@ function mockEvents(events: TapeEvent[]) {
 }
 
 describe("HomepageTape", () => {
+  it("omits operational-only yield warnings and strips advisories from mixed ones", () => {
+    const warning = (id: string, newSignals: string[]) => makeTapeEvent({
+      id, type: "yield.warning_emitted", coinId: "usde-ethena", severity: "warning",
+      title: `USDe yield warning: ${newSignals.join(", ")}`, summary: "x",
+      payload: { newSignals },
+    });
+    mockEvents([warning("only-aging", ["aging"]), warning("mixed", ["yield-spike", "data-stale"])]);
+    render(<HomepageTape />);
+    expect(screen.queryByText(/Aging observation|Data stale/)).toBeNull();
+    expect(screen.getAllByText(/USDe yield warning: Yield spike/).length).toBeGreaterThan(0);
+  });
+
 
   it("renders nothing when there are no events", () => {
     const { container } = render(<HomepageTape />);

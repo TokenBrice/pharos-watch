@@ -35,6 +35,8 @@ The page prints its inclusion and primary-cause rules in the methodology section
 
 Every new curated row sets `recordedAt` to the UTC date it is added to Pharos. `parseDeadStablecoinAssets` rejects a curated row without a valid strict `YYYY-MM-DD` `recordedAt`. Set `mechanismArchetype` as well: the schema accepts its absence, but every curated row is classified today and `shared/lib/__tests__/cemetery-merged.test.ts` fails on an unclassified curated row. Classify how the coin was designed to hold its peg, independently of how it died.
 
+A curated row may share provider identity with a still-tracked coin only through `ACTIVE_DEAD_LLAMA_ID_OVERLAP_ALLOWLIST` in `scripts/ci/check-stablecoin-data.ts` (Kava USDX, Hubble USDH). Such a row is a historical assessment, not a current exclusion: its obituary must not direct coverage to skip the tracked coin or state current-market facts the active profile contradicts.
+
 New ids must not equal a section anchor or start with a reserved element-id prefix (`CEMETERY_SECTION_ANCHORS`, `CEMETERY_RESERVED_ID_PREFIXES`); `findCemeteryIdCollisions` must stay empty for the real set.
 
 Every new death also has to fit the plot map. `src/lib/__tests__/cemetery-plot-map.test.ts` runs `validatePlotMapCapacity` on the real data in both presets, so a record that overfills a year block or shrinks plain stones below `PLOT_LAYOUT.faceFloorPx` fails the suite. Treat that failure as a design review: retune the lane depths in `PLOT_MAP_PRESETS` (or, as the archive approaches a few hundred records, add a deliberate overview and zoom policy), and never lower the face floor to make stones fit.
@@ -91,6 +93,8 @@ Scene, flower and legend seeds use the frozen UTF-16 `fnv1a32` authority in `sha
 Cause, date and recorded peak determine the drawing. Peak is size at the top, never holder losses; orderly regulatory/abandoned exits must not look like destruction. Unknown peaks have a distinct neutral/hatched encoding, not zero/floor. Age uses latest recorded death (`asOf`), not wall time. Legend examples use the same geometry and distinguish archive availability, peg and unknown data. The sole frost figure counts all records, not visible stones.
 
 Both layouts provide one roving tab stop, full accessible grave names, button/pressed semantics and described keyboard rules; decorative geometry is hidden from assistive technology. Desktop ←/→ moves within a cause, ↑/↓ across causes at nearest date, Home/End to ends; portrait swaps axes. Skip the cemetery map reaches the equivalent register. Hover/focus previews; click/Enter/Space pins and announces once politely; Escape/background closes (the next Escape exits zoom). Keyboard access reaches graves outside a partial zoom window, whose label discloses years and `n of total`. Session flowers are not dataset statistics.
+
+Grave targets are real SVG anchors; Cloudflare Email Obfuscation is disabled for this route because its decoder breaks on them ([CSP posture](./security-governance.md#csp-posture)).
 
 Exactly one responsive layer owns pin/key/tap events. Phone sheets keep record links and content clear of sticky/bottom navigation; layout handoff never reopens dismissed pins or replays scroll/focus. Hash-source portrait pins restore the tab stop, not a sheet covering the register. Reduced motion cuts beam, zoom and highlight transitions; no ambient motion is required.
 
@@ -164,6 +168,7 @@ Each pair page ends with a "Related comparisons" section: "More {A} comparisons"
 ### Selection and URL contract
 
 - Maximum selection: `MAX_COMPARE_COINS = 5`.
+- Selectable coins are active plus frozen archive profiles (`src/lib/compare-config.ts`); the scope hero labels that count **Active + frozen**, never the active-only count.
 - URL is the source of truth for selection state.
 - Query param `coins` accepts canonical ticker-issuer IDs only (for example `usdt-tether`). Unknown IDs, legacy DefiLlama/historical IDs, and raw ticker symbols are dropped rather than guessed.
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
@@ -180,7 +185,7 @@ Compare composes stablecoins, peg summary, Bluechip, DEX, report cards, redempti
 
 An empty comparison admits only the stablecoin list used by its selector. Metric feeds enable as soon as at least one accepted comparison ID exists, including URL-initialized selections. Empty-state retries do not bypass those gates; pending evidence remains unavailable, not an empty or safe verdict.
 
-Bluechip publication availability is separate from per-coin membership. A pending or failed whole-feed read without retained data leaves only Bluechip unavailable; a successful empty map is a usable publication. Refresh failures keep retained ratings and their existing dated observation qualifiers, with source error/freshness notices intact.
+Bluechip publication availability is separate from per-coin membership. A pending or failed whole-feed read without retained data leaves only Bluechip unavailable; a successful empty map is a usable publication. Refresh failures keep retained ratings and their original observation dates, with source error/freshness notices intact.
 
 It also derives live peg references with `derivePegRates(...)` for commodity/non-USD normalization in displayed prices.
 
@@ -201,7 +206,7 @@ Compare includes client-side share/export rendering:
 
 The horizontally scrollable matrix is the comparable-field surface at every width; preserve accessible/narrow-screen access. Directional market-cap/issuance/yield fields are not universal winners.
 
-The matrix uses the shared contextual methodology labels for Peg Score, Liquidity Score, and Safety. Missing source coverage renders as a dash rather than zero. External Bluechip says "Not rated" only when a usable publication omits that coin, including a successfully loaded empty map; no whole-feed publication means a dash, not an unrated verdict. A rated coin whose audit flag the source omits reads "audit not reported" beside its grade, and a source that positively reports no audit reads "no audit flag". Retained ratings keep their observation labels. Directional fields such as issuance flow, market-cap change, and yield are not styled as universal winners because their desirability depends on the comparison task.
+The matrix uses the shared contextual methodology labels for Peg Score, Liquidity Score, and Safety. Missing source coverage renders as a dash rather than zero. External Bluechip says "Not rated" only when a usable publication omits that coin, including a successfully loaded empty map; no whole-feed publication means a dash, not an unrated verdict. A rated coin whose audit flag the source omits reads "audit not reported" beside its grade, and a source that positively reports no audit reads "no audit flag". Every rated cell carries the grade's neutral original observation date in its tooltip and accessible text; operator retained/stale labels are not shown. Time at peg · up to 90d renders `recent90d` occupancy; only a partial-coverage window adds an inline whole-day basis marker (`· 2d`, full basis in its tooltip), described by the section's record-derived caveat; missing stats stay a dash and a null occupancy never reads as 100% or 0%. Directional fields such as issuance flow, market-cap change, and yield are not styled as universal winners because their desirability depends on the comparison task.
 
 Market cap and the `Market-cap change · 24h/7d/30d` rows use the already-USD current and historical circulation buckets through the nullable supply helpers. These are USD market-cap movements, not token-supply changes or price returns: unchanged EUR/gold token balances can move solely with USD valuation. No current-price conversion is applied to historical buckets; native detail supply trends instead use paired native token-count checkpoints. A coin whose current peg buckets are absent, empty or wholly invalid shows a dash for market cap and every market-cap change: a change is published only when both the current and the previous value are observed (and the previous value is positive), so missing current supply never becomes a `-100%` change. An explicitly observed zero still renders `$0.00` and its real change. Shared stablecoin-table delta context and the 7-day sparkline likewise name USD market cap.
 

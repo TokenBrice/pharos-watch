@@ -129,7 +129,7 @@ describe("fetchParallelizerBalancesReserves", () => {
       {
         sourceKey: "parallelizer-balances:0x6000000000000000000000000000000000000006",
         name: "sUSDe (Ethereum + HyperEVM branches)",
-        pct: 66.666667,
+        pct: expect.closeTo(200 / 3, 8),
         risk: "medium",
         coinId: "susde-ethena",
         depType: "collateral",
@@ -137,7 +137,7 @@ describe("fetchParallelizerBalancesReserves", () => {
       {
         sourceKey: "parallelizer-balances:0x5000000000000000000000000000000000000005",
         name: "frxUSD (Ethereum branch)",
-        pct: 22.222222,
+        pct: expect.closeTo(200 / 9, 8),
         risk: "low",
         coinId: "frxusd-frax",
         depType: "collateral",
@@ -145,7 +145,7 @@ describe("fetchParallelizerBalancesReserves", () => {
       {
         sourceKey: "parallelizer-balances:0x7000000000000000000000000000000000000007",
         name: `Untracked Parallelizer collateral ${UNKNOWN.toLowerCase()}`,
-        pct: 11.111111,
+        pct: expect.closeTo(100 / 9, 8),
         risk: "high",
       },
     ]);
@@ -153,8 +153,8 @@ describe("fetchParallelizerBalancesReserves", () => {
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
       totalReserveUsd: 450,
-      unlinkedCollateralPct: 11.111111,
-      unknownExposurePct: 11.111111,
+      unlinkedCollateralPct: expect.closeTo(100 / 9, 8),
+      unknownExposurePct: expect.closeTo(100 / 9, 8),
       redemption: {
         capacityUsd: 450,
         routeStatus: "open",

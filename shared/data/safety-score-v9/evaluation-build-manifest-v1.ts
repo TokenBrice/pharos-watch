@@ -42,7 +42,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "d733f3f28d881800d4787d0658d5deda79e82c5c3348afaa40cd99c1929f002a"
+      "sha256": "1da2c90b5e2af51672e7678075a1d8fb5adaa3ee93c74929202bff1bd7146f5e"
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
@@ -70,15 +70,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "b45fbf5ce5f6bd1dd71961dea84f3d2771ba19f5a2eda97d59b0a04509a082dc"
+      "sha256": "5b966c86b682f6a9410cb6dcd77744914146354c92919a84260dc56dc7fc5db8"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "1b17880430046832508493e26ed0cffc37fbe9368300fd8326a7e505e8d8fd21"
+      "sha256": "b2b94c0610fe39834e92a1b83658e36598a3940ecbafaec1feeb441dd0708b4b"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "a0763203d22a69b026a181192a52fb7b7b69dd97fd655b6b84cbdbcb37a7724d"
+      "sha256": "76a12190526bcaa1108b1d2f4641ecd66bf650c8d7b79cb8aa528b919c2bc396"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -565,6 +565,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "9f7cc8381f7e34db20fd6605b3e1d4f3bb67d95809fb1eb1e1793e29ff827fb0"
     },
     {
+      "path": "shared/lib/safety-score-v9/grade-hysteresis.ts",
+      "sha256": "751ffb38538d6c063001e04308e24a35a1c50baf769ed0c5cb24225c3250535e"
+    },
+    {
       "path": "shared/lib/safety-score-v9/lender-book-registry.ts",
       "sha256": "c1bc8a98d1a0656f2e157621d76f42f4c52a72f28db9a2ea288cc486d0a506a2"
     },
@@ -634,7 +638,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/reserve-scope.ts",
-      "sha256": "be384a78595e549e8fe4819e5e25babe80a1f7ba2f460063f0a3d32e8874388a"
+      "sha256": "c241def1b883aabb3fcfef8fefa8001fd826f751da1a516ac32abb09c83ae137"
     },
     {
       "path": "shared/lib/safety-score-v9/review-evidence.ts",
@@ -806,7 +810,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/live-reserves.ts",
-      "sha256": "214f576ff4424104119df1617b0be40e7e6d9e7f6f3465bf208d18be61ada50c"
+      "sha256": "050b1c4ba372e814d743e8b7487aeefd920712db44f081b8efe143c0592be602"
     },
     {
       "path": "shared/types/measured-execution.ts",
@@ -1154,7 +1158,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
-      "sha256": "6019d34b93b0bba306c18439023047ac06d52e956fc9fbe782d4f9edd17ecb15"
+      "sha256": "1fa2b49dbffaf97e178ce99bdaa38354e7193ed159d1c141967fe68df10bae92"
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
@@ -1270,7 +1274,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/publication-assessment.ts",
-      "sha256": "12b682d1a6eda801ce6741aade528bcd7c85427f2d22c475a17982878e452e0f"
+      "sha256": "862cc1b598e87a59df6952aa35d8665db49c4454a3696a0c210fb3d6217b253b"
     },
     {
       "path": "worker/src/lib/safety-score-v9/redemption-reserve-quarantine.ts",
@@ -1331,7 +1335,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-27-block-26283011-shock-coverage.json.gz"
     }
   ],
-  "digest": "7146357b3bee926f0155764dbc3626c5eb60225435ecd4ee668c902614f16e6b"
+  "digest": "1532f839d0a2205404bea3d0e3e0fb5b5b9ac6c35b848143e3d08721bc1b6043"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

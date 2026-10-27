@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { collapseByCoinClass } from "@/lib/tape-collapse";
+import { collapseByCoinClass, collapseForCoinNews } from "@/lib/tape-collapse";
 import type { TapeEvent, TapeEventSeverity } from "@shared/types/tape-event";
 
 let idSeq = 0;
@@ -112,5 +112,97 @@ describe("collapseByCoinClass", () => {
     );
     expect(collapsed[0]!.count).toBe(2);
     expect(collapsed[0]!.event).toBe(first);
+  });
+});
+
+function lowBand(direction: "up" | "down", overrides: Partial<TapeEvent> = {}): TapeEvent {
+  return makeEvent({
+    type: direction === "up" ? "dews.escalated" : "dews.deescalated",
+    severity: direction === "up" ? "warning" : "info",
+    coinId: "usde-ethena",
+    transition: null,
+    payload: direction === "up" ? { prevBand: "CALM", newBand: "WATCH" } : { prevBand: "WATCH", newBand: "CALM" },
+    ...overrides,
+  });
+}
+
+describe("collapseForCoinNews", () => {
+  it("groups five same-coin reversals into one entry with directional counts and range", () => {
+    const events = [
+      lowBand("up", { id: "r5", ts: 5_000 }),
+      lowBand("down", { id: "r4", ts: 4_000 }),
+      lowBand("up", { id: "r3", ts: 3_000 }),
+      lowBand("down", { id: "r2", ts: 2_000 }),
+      lowBand("up", { id: "r1", ts: 1_000 }),
+      makeEvent({ id: "other", ts: 500 }),
+    ];
+    const entries = collapseForCoinNews(events);
+
+    expect(entries.map((entry) => entry.event.id)).toEqual(["r5", "other"]);
+    expect(entries[0]!.event).toBe(events[0]);
+    expect(entries[0]!.lowBand).toEqual({ calmToWatch: 3, watchToCalm: 2, oldestTs: 1_000, loadedEventCount: 6 });
+    expect(entries[1]!.lowBand).toBeUndefined();
+  });
+
+  it("keeps separate coins in separate groups", () => {
+    const entries = collapseForCoinNews([
+      lowBand("up", { id: "a2" }),
+      lowBand("up", { id: "b2", coinId: "usdc-circle" }),
+      lowBand("down", { id: "a1" }),
+      lowBand("down", { id: "b1", coinId: "usdc-circle" }),
+    ]);
+
+    expect(entries.map((entry) => [entry.event.id, entry.lowBand?.calmToWatch, entry.lowBand?.watchToCalm])).toEqual([
+      ["a2", 1, 1],
+      ["b2", 1, 1],
+    ]);
+  });
+
+  it("renders a singleton as an ordinary entry and accepts empty input", () => {
+    expect(collapseForCoinNews([])).toEqual([]);
+    const entries = collapseForCoinNews([lowBand("up", { id: "only" }), makeEvent({ id: "other" })]);
+    expect(entries.map((entry) => entry.event.id)).toEqual(["only", "other"]);
+    expect(entries.every((entry) => entry.lowBand === undefined)).toBe(true);
+  });
+
+  it("keeps malformed, mismatched and serious transitions individual and in order", () => {
+    const events = [
+      lowBand("up", { id: "low-3" }),
+      makeEvent({ id: "serious", type: "dews.escalated", payload: { prevBand: "WATCH", newBand: "ALERT" } }),
+      lowBand("up", { id: "missing-payload", payload: {} }),
+      lowBand("up", { id: "wrong-type", type: "dews.deescalated" }),
+      lowBand("down", { id: "no-coin", coinId: null }),
+      lowBand("down", { id: "low-2" }),
+      makeEvent({ id: "serious-down", type: "dews.deescalated", payload: { prevBand: "ALERT", newBand: "WATCH" } }),
+      lowBand("up", { id: "low-1" }),
+    ];
+    const entries = collapseForCoinNews(events);
+
+    expect(entries.map((entry) => entry.event.id)).toEqual([
+      "low-3",
+      "serious",
+      "missing-payload",
+      "wrong-type",
+      "no-coin",
+      "serious-down",
+    ]);
+    expect(entries[0]!.lowBand).toMatchObject({ calmToWatch: 2, watchToCalm: 1 });
+    expect(entries.slice(1).every((entry) => entry.lowBand === undefined)).toBe(true);
+  });
+
+  it("does not mutate input events", () => {
+    const events = [lowBand("up"), lowBand("down")];
+    const snapshot = structuredClone(events);
+    collapseForCoinNews(events);
+    expect(events).toEqual(snapshot);
+  });
+
+  it("collapses before the caller caps entries so older stories surface", () => {
+    const reversals = Array.from({ length: 52 }, (_, i) => lowBand(i % 2 === 0 ? "up" : "down", { id: `r${i}` }));
+    const others = Array.from({ length: 4 }, (_, i) => makeEvent({ id: `o${i}`, type: `score.upgraded`, transition: null }));
+    const visible = collapseForCoinNews([...reversals, ...others]).slice(0, 5);
+
+    expect(visible.map((entry) => entry.event.id)).toEqual(["r0", "o0", "o1", "o2", "o3"]);
+    expect(visible[0]!.lowBand).toMatchObject({ calmToWatch: 26, watchToCalm: 26, loadedEventCount: 56 });
   });
 });

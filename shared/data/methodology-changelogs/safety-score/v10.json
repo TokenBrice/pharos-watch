@@ -1,5 +1,36 @@
 [
   {
+    "version": "10.36",
+    "title": "Unrounded reserve composition shares",
+    "date": "2026-10-28",
+    "effectiveAt": 1793145600,
+    "summary": "Live reserve composition now publishes measured shares without one-decimal rounding or remainder repair, so a positive holding below the former display precision stays a finite positive share that Backing and dependency inputs can see.",
+    "impact": [
+      "Reserve adapters: the shared slice helpers default to unrounded precision and sixteen adapters that rounded to 1-12 decimals now publish source-derived shares. Positive holdings that rounded to zero (for example a 0.04% credit slice beside a 99.96% parent) are retained, as are sub-display branches that were previously dropped. Identity grouping, zero filtering, source-total validation and capacity arithmetic are unchanged, and a source total off 100% is retained as a source fact instead of being repaired to 100.",
+      "Composition-only raw shares: USD.AI, xDAI and ERC4626 vault composition no longer prequantize raw-amount shares, so a positive balance cannot round to zero; an unrepresentable positive share rejects, and an observed zero stays zero.",
+      "Movers: reserve-backed Backing and dependency inputs can change slightly where sub-display positive holdings now appear; pillar weights, materiality and admission rules are unchanged. Mover attribution and the first accepted publication are separate obligations.",
+      "No fixed-clock replay is claimed. Activation: 2026-10-28 00:00 UTC (release cut; 1793145600), stacked on 10.35; no deployment or production acceptance is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
+    "version": "10.35",
+    "title": "Asset-local measured-route expiry and bounded DEX capture admission",
+    "date": "2026-10-28",
+    "effectiveAt": 1793145600,
+    "summary": "Expired measured DEX history on a contributing route now quarantines only that asset as a pipeline gap instead of holding every rating, and a valid prepared capture is no longer refused because the live DEX generation advanced inside its evidence budgets.",
+    "impact": [
+      "Measured-route expiry: an asset whose post-hysteresis card relies on, or formerly relied on, expired previously mature high-confidence measured DEX history is quarantined as evaluation-failed (dex-stale: route, generation, original window end, clock, budget) and the cohort recompiled until no new asset is detected. Dependents join the affected census, so the 90% unaffected closure, the 271 rateable floor and the coverage floors still hold the cohort; whole-source DEX staleness or unavailability remains a global hold. Assessment fails closed if a detected asset was not quarantined.",
+      "Expiry witnesses: the accepted baseline retains each quarantined asset's expired routes with their original window end and budget, because the null-score stub keeps no route identity. A witness clears only when the same route carries a newer embedded window inside its budget; absent rows and new outer snapshots never clear it. Rollback restores the global hold while keeping the witness-aware detector, so unresolved witnesses still hold.",
+      "Bounded DEX capture admission: compute admits a captured DEX generation older than live, before compute and again after enrichment, only while the stablecoins capture is at most 4,500 seconds old and its own DEX evidence at most 14,400 seconds old. Captured rows, generation and freshness remain the evaluated evidence; missing, malformed, ahead or future inputs are refused, and cron metadata records both identities, ages, budgets and the verdict.",
+      "Accepted replay captures move to schema v3, retaining the prior accepted baseline the publication was admitted against (null only for a genuine bootstrap) so replay reproduces quarantine; v1/v2 captures stay readable without inferred context. Score arithmetic, grade thresholds, weights and evidence-age limits are unchanged.",
+      "No fixed-clock replay is claimed. Activation: 2026-10-28 00:00 UTC (release cut; 1793145600). Equivalence on accepted captures and the first accepted publication remain separate obligations; no deployment or production acceptance is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.34",
     "title": "Reserve evidence admission calibration",
     "date": "2026-10-24",

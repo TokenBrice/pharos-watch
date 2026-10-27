@@ -294,6 +294,66 @@ describe("stablecoin detail view-model builder", () => {
     }
   });
 
+  it("selects the first public (12x) reserve expiry, not the first 1x budget, and warns on it", () => {
+    const now = 1_790_000_000_000;
+    const nowSec = now / 1000;
+    const fetchedAt = nowSec - 25 * 86400;
+    const sourceAt = nowSec - 59 * 86400;
+    const live = {
+      mode: "live-stale" as const, reserves: [], estimated: false, liveAt: fetchedAt,
+      sync: {
+        enabled: true, status: "degraded" as const, stale: true, bootstrap: false,
+        freshness: {
+          stale: true, staleReasons: ["fetch-age"], assessedAt: nowSec, fetchedAt, attemptId: "reserve-attempt",
+          fetchAgeSec: 25 * 86400, fetchBudgetSec: 2 * 86400, freshnessMode: "verified" as const,
+          sourceFreshnessInvalid: false, sourceTimestamp: sourceAt, sourceAgeSec: 59 * 86400,
+          sourceAgeBudgetSec: 30 * 86400, sourceAgeBudgetCap: "scoring" as const,
+        },
+      },
+    };
+    const params = makeBuildStablecoinDetailViewModelParams({ supplemental: {
+      reserves: { live, enabled: true, dataUpdatedAt: now },
+    } });
+    const query = buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+      .find((entry) => entry.label === "Live Reserves")!;
+    // Source 1x expired first (N-29d) but its 12x band runs to N+301d; fetch's ends at N-1d.
+    expect(query.dataUpdatedAt).toBe(fetchedAt * 1000);
+    expect(query.meta).toMatchObject({ updatedAt: fetchedAt, freshBudgetSec: 2 * 86400, degradedBudgetSec: 24 * 86400, status: "stale" });
+    const reason = query.meta?.dependencies?.reserveEvidence.reason ?? "";
+    expect(reason).toContain(`fetch budget ${2 * 86400} seconds`);
+    expect(reason).toContain(`source budget ${30 * 86400} seconds`);
+    const health = deriveDataHealth({ ...query, label: "Live Reserves", staleTime: query.staleTime! }, now);
+    expect(health.state).toBe("stale");
+    expect(isPublicWarning(health)).toBe(true);
+  });
+
+  it("ages a restored supply on its original observation clock, never receipt time", () => {
+    const now = 1_790_000_000_000;
+    const nowSec = now / 1000;
+    const params = makeReadyDetailParams({ id: "usdt-tether", coin: TRACKED_META_BY_ID.get("usdt-tether")! });
+    const supplyLane = () => buildDetailStaleQueries(params.queries, params.supplemental, "usdt-tether")
+      .find((entry) => entry.label === "Supply");
+    expect(supplyLane()).toBeUndefined();
+    const summary = params.queries.liveSummary.data!;
+    params.queries.liveSummary = {
+      ...params.queries.liveSummary,
+      dataUpdatedAt: now,
+      meta: { updatedAt: nowSec, ageSeconds: 0, status: "fresh" },
+      data: { ...summary, supplyRestored: true, supplyObservedAt: nowSec - 3600 },
+    };
+    const recent = supplyLane()!;
+    expect(recent).toMatchObject({ dataUpdatedAt: (nowSec - 3600) * 1000, hasData: true, staleTime: 600_000 });
+    expect(isPublicWarning(deriveDataHealth({ ...recent, label: "Supply", staleTime: recent.staleTime! }, now))).toBe(false);
+    // Old supply despite a fresh summary: past the 12x (7,200s) band.
+    params.queries.liveSummary.data = { ...summary, supplyRestored: true, supplyObservedAt: nowSec - 7201 };
+    const old = supplyLane()!;
+    expect(deriveDataHealth({ ...old, label: "Supply", staleTime: old.staleTime! }, now).state).toBe("stale");
+    params.queries.liveSummary.data = { ...summary, supplyRestored: true, supplyObservedAt: null };
+    expect(supplyLane()).toMatchObject({ dataUpdatedAt: 0, meta: { updatedAt: null, status: "stale" } });
+    params.queries.liveSummary.data = { ...summary, supplyRestored: true, supplyObservedAt: nowSec - 60, circulating: { peggedUSD: 0 } };
+    expect(supplyLane()).toMatchObject({ hasData: true });
+  });
+
   it("preserves reserve sync errors and uncertain writes without re-dating retained evidence", () => {
     const now = 1_790_000_000_000;
     const fetchedAt = now / 1000 - 60;

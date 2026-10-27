@@ -292,11 +292,15 @@ export function validateAdapterOutput(input: ValidationInput, options?: Validati
       ],
     };
   }
-  if (deviation > PCT_SUM_WARNING_TOLERANCE) {
+  // A source publishing whole-number shares can sum to 100 ± its disclosed rounding envelope;
+  // that total is published unrepaired and stays ok, never widening past the error tolerance.
+  const roundingEnvelopePct = diagnosticsParsed.success ? diagnosticsParsed.data.roundingEnvelopePct : undefined;
+  const warningTolerance = Math.max(PCT_SUM_WARNING_TOLERANCE, Math.min(roundingEnvelopePct ?? 0, PCT_SUM_ERROR_TOLERANCE));
+  if (deviation > warningTolerance) {
     warnings.push(
       reserveDegradedWarning(
         "pct-sum-deviation",
-        `${sumDescription}${adapterLabel} (expected 100% ± ${PCT_SUM_WARNING_TOLERANCE}%)`,
+        `${sumDescription}${adapterLabel} (expected 100% ± ${warningTolerance}%)`,
       ),
     );
   }

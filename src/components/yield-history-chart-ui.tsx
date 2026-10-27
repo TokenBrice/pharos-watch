@@ -31,6 +31,7 @@ import {
   type YieldSourceSegment,
   type YieldHistorySourceDisplay,
 } from "./yield-history-chart-model";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 interface AxisTickProps {
   x?: number | string;
@@ -90,7 +91,7 @@ export function YAxisTick({
 }
 
 export function WarningDot({ cx, cy, payload, active = false }: WarningDotProps) {
-  if (typeof cx !== "number" || typeof cy !== "number" || !payload || payload.apy == null || (payload.warningSignals.length === 0 && payload.warningSignalsStatus !== "unreadable")) {
+  if (typeof cx !== "number" || typeof cy !== "number" || !payload || payload.apy == null || (selectInvestmentWarningSignals(payload.warningSignals).length === 0 && payload.warningSignalsStatus !== "unreadable")) {
     return null;
   }
 
@@ -221,13 +222,13 @@ export function YieldHistoryTooltip({
       {point.warningSignalsStatus === "unreadable" ? (
         <p className="mt-2 border-t border-border/60 pt-2 text-muted-foreground">Warnings unreadable</p>
       ) : null}
-      {point.warningSignals.length > 0 ? (
+      {selectInvestmentWarningSignals(point.warningSignals).length > 0 ? (
         <div className="mt-2 border-t border-border/60 pt-2">
           <p className="text-3xs font-medium text-state-warn">
             Warning signals
           </p>
           <div className="mt-1 space-y-1">
-            {point.warningSignals.map((signal) => (
+            {selectInvestmentWarningSignals(point.warningSignals).map((signal) => (
               <div key={signal} className="text-muted-foreground">
                 <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
                 <span className="block">{formatYieldWarningSignalDescription(signal)}</span>

@@ -315,11 +315,14 @@ describe("HeroCard", () => {
     expect(unavailable).not.toContain("+100.00%");
     expect(unavailable).not.toContain('> 30D</span>');
   });
-  it("labels restored market cap with its original supply observation date", () => {
+  it("labels restored market cap neutrally with its original supply observation date", () => {
     const html = renderHero({ coinData: { supplyRestored: true, supplyObservedAt: 1_700_000_000 } });
-    expect(html).toContain("Stale supply · as of Nov 14");
+    expect(html).toContain("Supply as of Nov 14");
+    expect(html).not.toContain("Stale supply");
+    expect(html).not.toMatch(/text-state-warn[^>]*>Supply as of/);
+    expect(renderHero({ coinData: { supplyRestored: true, supplyObservedAt: null } })).toContain("Supply date unavailable");
     expect(renderHero({ coinData: { supplyRestored: false, supplyObservedAt: 1_700_000_000 } }))
-      .not.toContain("Stale supply");
+      .not.toContain("Supply as of");
   });
 
   it("labels partial-coverage market cap with the excluded chains", () => {

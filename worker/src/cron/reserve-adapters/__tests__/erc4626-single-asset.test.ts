@@ -987,6 +987,17 @@ describe("fetchErc4626SingleAssetReserves", () => {
 });
 
 describe("Morpho V2 operational conditions and composition admission", () => {
+  it("keeps a raw 1 / 10^18 idle balance as a positive share and never quantizes it to zero", async () => {
+    const id = "ethenausdc-steakhouse";
+    const total = 10n ** 18n;
+    installTrackedMorphoV2(id, null, { idleBalance: 1n, totalAssets: total, totalSupply: total, convertedAssets: total });
+    const result = await runTrackedVault(id);
+    const idle = result.slices.find((slice) => slice.sourceKey === "erc4626-single-asset:base:0x833589fcd6edb6e08f4c7c32d4f71b54bda02913");
+    expect(idle?.pct).toBeGreaterThan(0);
+    expect(idle?.pct).toBeCloseTo(1e-16, 20);
+    expect(result.slices.find((slice) => slice.sourceKey?.endsWith(":deployed"))?.pct).toBeCloseTo(100, 10);
+  });
+
   it.each([0n, 25_000_000n, 99_990_000n, 99_999_999n, 100_000_000n])(
     "keeps reviewed Ethena USDC idle and deployed composition distinct at idle %s",
     async (idleBalance) => {
@@ -1000,13 +1011,13 @@ describe("Morpho V2 operational conditions and composition admission", () => {
       const deployed = result.slices.find((slice) => slice.sourceKey === deployedKey);
       expect(result.slices).toHaveLength(idleBalance === 0n || idleBalance === 100_000_000n ? 1 : 2);
       if (idleBalance > 0n) {
-        expect(idle).toMatchObject({ pct: Number(idleBalance) / 1_000_000, coinId: "usdc-circle" });
+        expect(idle).toMatchObject({ pct: expect.closeTo(Number(idleBalance) / 1_000_000, 10), coinId: "usdc-circle" });
       } else {
         expect(idle).toBeUndefined();
       }
       if (idleBalance < 100_000_000n) {
         expect(deployed).toMatchObject({
-          pct: Number(100_000_000n - idleBalance) / 1_000_000,
+          pct: expect.closeTo(Number(100_000_000n - idleBalance) / 1_000_000, 10),
           coinId: "usdc-circle", depType: "wrapper",
         });
       } else {

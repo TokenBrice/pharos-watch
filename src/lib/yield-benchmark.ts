@@ -12,6 +12,8 @@ import {
   YIELD_BENCHMARK_RECORD_MAX_AGE_SEC,
 } from "@shared/lib/yield-benchmark-freshness";
 import { YIELD_BENCHMARK_SCORE_TTL_SEC } from "@shared/lib/status-thresholds";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
 
 type YieldWorkbenchRanking = YieldRanking | YieldRankingSummary;
 
@@ -21,6 +23,7 @@ type YieldBenchmarkLike = {
   benchmarkSelectionMode?: YieldBenchmarkSelectionMode;
   benchmarkIsFallback?: boolean;
   ageSeconds?: number | null;
+  fetchedAt?: number | null;
   recordDate?: string | null;
   recordAgeSec?: number | null;
   maxRecordAgeSec?: number | null;
@@ -41,12 +44,12 @@ function getYieldBenchmarkStatusSuffix(value: YieldBenchmarkLike | null | undefi
   if (value.benchmarkSelectionMode === "fallback-usd" || value.benchmarkIsFallback) {
     parts.push("fallback");
   }
-  // Registry entries carry age evidence, so a stale entry labels itself
-  // wherever the shared suffix renders (reference-rates strip, source board,
-  // scatter benchmark frame) instead of reading identically to a fresh one.
+  // Registry entries carry age evidence, so a publicly stale fetch generation
+  // labels itself wherever the shared suffix renders (reference-rates strip,
+  // scatter benchmark frame); score qualification alone never does (ADR-42).
   if ("ageSeconds" in value || "recordDate" in value) {
-    const age = resolveYieldBenchmarkAge(value);
-    if (age.stale && age.marker !== "fallback") parts.push(age.marker);
+    const display = resolveYieldBenchmarkDisplayHealth(value);
+    if (display.warning) parts.push(display.marker);
   }
   if (parts.length === 0) return "";
   return ` (${parts.join(" · ")})`;
@@ -189,6 +192,41 @@ export function resolveYieldBenchmarkAge(
     reason: freshness === "degraded"
       ? "Benchmark evidence is a fallback, not a healthy reference."
       : `Benchmark evidence is unavailable or exceeds its ${formatBenchmarkAge(effectiveBound)} ${fetchExpired ? "fetch" : "observation"} freshness bound.`,
+  };
+}
+
+/** Public display gate input: the benchmark's own fetch clock against its daily producer cadence. */
+export function getYieldBenchmarkDisplayHealthInput(value: YieldBenchmarkAgeEvidence | null | undefined) {
+  const fetchedAt = value?.fetchedAt;
+  return {
+    label: "Benchmark",
+    // A missing or invalid clock stays unavailable, never zero-age evidence.
+    dataUpdatedAt: fetchedAt != null && Number.isFinite(fetchedAt) && fetchedAt > 0 ? fetchedAt * 1000 : 0,
+    staleTime: CRON_INTERVALS["fetch-tbill-rate"] * 1000,
+    hasData: true,
+  };
+}
+
+export interface YieldBenchmarkDisplayHealth {
+  /** True only when the shared public gate warns on the fetch generation. */
+  warning: boolean;
+  /** Compact label marker, e.g. "13d old"; empty below public eligibility. */
+  marker: string;
+}
+
+/**
+ * Reader-facing benchmark health, separate from `resolveYieldBenchmarkAge`'s
+ * score qualification: record dates and fallback identity stay neutral facts.
+ */
+export function resolveYieldBenchmarkDisplayHealth(
+  value: YieldBenchmarkAgeEvidence | null | undefined,
+  nowMs: number = Date.now(),
+): YieldBenchmarkDisplayHealth {
+  const health = deriveDataHealth(getYieldBenchmarkDisplayHealthInput(value), nowMs);
+  if (!isPublicWarning(health)) return { warning: false, marker: "" };
+  return {
+    warning: true,
+    marker: health.ageMs != null ? `${formatBenchmarkAge(health.ageMs / 1000)} old` : "unavailable",
   };
 }
 

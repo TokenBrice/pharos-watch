@@ -450,6 +450,8 @@ Search-title trimming is word-boundary/70-character bounded including date and s
 
 `src/app/digest/page.tsx` and `src/components/digest-archive-client.tsx` separate the checked-in crawlable index from interactive API views. `view`, `month` and `q` filters are URL-addressable but never remove server-rendered links or change sitemap membership. Every checked-in edition is reachable without JavaScript/API through the monthly native-disclosure index (no link prefetch), with matching CollectionPage/ItemList JSON-LD. Dated detail pages remain canonical Articles.
 
+A failed refetch keeps the admitted archive envelope (rows and links); the error notice appears only when nothing was retained. The shared health banner sits above both the empty and nonempty branches and uses envelope availability, not row count, so an empty generation ages against its own producer clock and warns only past its public stale band (ADR-42); receipt time never renews it.
+
 Trigger history keeps hit, missed, expired, pending and unavailable separate. Displayed hit share is `hit / (hit + missed + expired)`; pending/unavailable are excluded. Group by archived metric or an explicit unclassified bucket. A single-edition result is not site-wide accuracy evidence.
 
 ### Detail pages
@@ -457,6 +459,8 @@ Trigger history keeps hit, missed, expired, pending and unavailable separate. Di
 `src/app/digest/[date]/page.tsx` statically generates `data/digests.json` entries; `src/components/digest-snapshot.tsx` reads the matching snapshot. Daily and `YYYY-MM-DD-weekly` slugs select independent row types, so same-day editions cannot shadow one another.
 
 Render every published editorial paragraph and only captured, admitted intelligence/context. The stored map uses immutable `imageUrl`/`manifest.date`, never latest, with a validated deterministic tally; missing/failed posters or unusable snapshot context show unavailable states, not invented figures or silent disappearance.
+
+The dated snapshot is immutable archived evidence: a failed refetch never withdraws retained `inputData`, only a settled read with no `inputData` is unavailable, and the capture is never aged as current data.
 
 Active depeg counts/top rows are edition evidence; day-overlap API rows remain separately labelled historical context and cannot replace publication counts. Captured `currentBps` requires stored `severityBasis: "current"`; fallback/legacy captures label historical peak/current unavailable. Blacklist counts/valuation cover the unsuppressed full day independently of the latest 50 displayed events, with latest-N-of-M and known-subtotal qualifiers; legacy missing summaries remain unknown.
 

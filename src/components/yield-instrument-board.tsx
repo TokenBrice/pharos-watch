@@ -23,6 +23,7 @@ import {
   YieldSourceDetails,
   deriveYieldRowDisplay,
 } from "@/components/yield-leaderboard-row-parts";
+import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import { cn } from "@/lib/utils";
 import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import type { YieldBenchmarkRegistry } from "@shared/types";
@@ -196,6 +197,8 @@ interface YieldInstrumentRowProps {
   benchmarks?: YieldBenchmarkRegistry | null;
   /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
   methodologyVersion?: string | null;
+  /** Parent-sampled source clock; rows re-derive source-age display at its crossings. */
+  sourceClock?: YieldSourceDisplayClock | null;
   expanded: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
@@ -214,6 +217,7 @@ function YieldInstrumentRowBase({
   scalingFactor,
   benchmarks = null,
   methodologyVersion = null,
+  sourceClock = null,
   expanded,
   isCompared,
   compareDisabled,
@@ -248,8 +252,9 @@ function YieldInstrumentRowBase({
         scalingFactor,
         // Version-gated: pre-8.43 payloads were scored without the re-base.
         resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate, benchmarks?.USD),
+        sourceClock,
       ),
-    [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks],
+    [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks, sourceClock],
   );
   const totalSourceCount = 1 + altSourceCount;
   const workbenchLink = getYieldWorkbenchLink(row.id);
@@ -527,6 +532,8 @@ interface YieldInstrumentBoardProps {
   benchmarks?: YieldBenchmarkRegistry | null;
   /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
   methodologyVersion?: string | null;
+  /** Parent-sampled source clock; rows re-derive source-age display at its crossings. */
+  sourceClock?: YieldSourceDisplayClock | null;
   pageStartIndex: number;
   sortKey: YieldTableSortKey;
   sortDirection: "asc" | "desc";
@@ -553,6 +560,7 @@ export function YieldInstrumentBoard({
   scalingFactor,
   benchmarks = null,
   methodologyVersion = null,
+  sourceClock = null,
   pageStartIndex,
   sortKey,
   sortDirection,
@@ -649,6 +657,7 @@ export function YieldInstrumentBoard({
               scalingFactor={scalingFactor}
               benchmarks={benchmarks}
               methodologyVersion={methodologyVersion}
+              sourceClock={sourceClock}
               expanded={expandedId === row.id}
               isCompared={compareHas(row.id)}
               compareDisabled={!compareHas(row.id) && !compareCanAdd}

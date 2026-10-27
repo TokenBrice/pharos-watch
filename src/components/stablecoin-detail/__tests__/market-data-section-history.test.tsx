@@ -174,22 +174,94 @@ describe("MarketDataSection history expansion", () => {
     expect(screen.queryByRole("button", { name: `Retry ${range} history` })).toBeNull();
   });
 
-  it("retains expanded observations and their clock when the expanded refresh fails", async () => {
+  function seedExpanded(meta: Record<string, unknown>) {
     const client = makeSeededQueryClient();
     const key = FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory("usdt-tether", "all").queryKey;
+    client.setQueryData(key, { data: FULL_HISTORY, meta }, { updatedAt: Date.now() });
+    return { client, key };
+  }
+  const coverageNotice = () => screen.queryByRole("status", { name: "Market history coverage" });
+  const chip = (container: HTMLElement) => container.querySelector("time[data-state]");
+
+  it("keeps a stale server floor's warning, span and clock through a failed expanded refresh", async () => {
     const updatedAt = Math.floor(Date.now() / 1000) - 3 * DAY;
-    client.setQueryData(key, { data: FULL_HISTORY, meta: { updatedAt, ageSeconds: 3 * DAY, status: "stale" } });
+    const { client, key } = seedExpanded({ updatedAt, ageSeconds: 3 * DAY, status: "stale" });
     vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("refresh failed"); }));
     const { container } = renderSeededSection(client);
     fireEvent.click(screen.getByRole("button", { name: "All" }));
-    expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain("All history is stale");
+    await waitFor(() => expect(chip(container)?.getAttribute("data-state")).toBe("stale"));
+    expect(coverageNotice()?.textContent).toContain("All history is stale");
     act(() => { void client.refetchQueries({ queryKey: key, exact: true }); });
-    await waitFor(() => expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain("All history refresh failed"), { timeout: 4500 });
-    expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).toContain("Showing retained observations from");
-    expect(screen.getByRole("status", { name: "Market history coverage" }).textContent).not.toContain("90-day");
+    await waitFor(() => expect(client.getQueryState(key)?.status).toBe("error"), { timeout: 4500 });
+    expect(coverageNotice()?.textContent).toContain("All history is stale");
+    expect(coverageNotice()?.textContent).toContain("Observations from 2017-07-14 to ");
+    expect(coverageNotice()?.textContent).not.toContain("refresh failed");
+    expect(coverageNotice()?.textContent).not.toContain("90-day");
     expect(marketCapDomain()).toBe(FULL_DOMAIN);
-    expect(container.querySelector("time")?.getAttribute("datetime")).toBe(new Date(updatedAt * 1000).toISOString());
+    expect(chip(container)?.getAttribute("data-state")).toBe("stale");
+    expect(chip(container)?.getAttribute("datetime")).toBe(new Date(updatedAt * 1000).toISOString());
     expect(screen.getByRole("button", { name: "Retry All history" })).toBeTruthy();
+  });
+
+  it("keeps a 13-day generation quiet in chip and notice under a 20-day producer budget", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 13 * DAY;
+    const { client } = seedExpanded({ updatedAt, ageSeconds: 13 * DAY, status: "degraded", freshBudgetSec: 10 * DAY, degradedBudgetSec: 20 * DAY });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+    const { container } = renderSeededSection(client);
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(chip(container)?.getAttribute("datetime")).toBe(new Date(updatedAt * 1000).toISOString()));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
+    expect(chip(container)?.getAttribute("data-state")).toBe("retained");
+    expect(chip(container)?.querySelector(".sr-only")?.textContent).toContain("more than 20d old");
+    expect(coverageNotice()).toBeNull();
+    expect(screen.queryByRole("button", { name: "Retry All history" })).toBeNull();
+    expect(marketCapDomain()).toBe(FULL_DOMAIN);
+  });
+
+  it("keeps a fresh retained expansion quiet through a failed refresh", async () => {
+    const updatedAt = Math.floor(Date.now() / 1000) - 3600;
+    const { client, key } = seedExpanded({ updatedAt, ageSeconds: 3600, status: "fresh" });
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("refresh failed"); }));
+    const { container } = renderSeededSection(client);
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    act(() => { void client.refetchQueries({ queryKey: key, exact: true }); });
+    await waitFor(() => expect(client.getQueryState(key)?.status).toBe("error"), { timeout: 4500 });
+    expect(coverageNotice()).toBeNull();
+    expect(chip(container)?.getAttribute("data-state")).toBe("retained");
+    expect(marketCapDomain()).toBe(FULL_DOMAIN);
+  });
+
+  it("warns once a mounted retained expansion crosses the 12-day public band", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const nowMs = Date.now();
+      const updatedAt = Math.floor(nowMs / 1000) - 12 * DAY;
+      vi.setSystemTime(new Date(updatedAt * 1000 + 12 * DAY * 1000));
+      const { client } = seedExpanded({ updatedAt, ageSeconds: 12 * DAY, status: "fresh" });
+      vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+      const { container } = renderSeededSection(client);
+      fireEvent.click(screen.getByRole("button", { name: "All" }));
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
+      expect(chip(container)?.getAttribute("data-state")).toBe("retained");
+      expect(coverageNotice()).toBeNull();
+      vi.setSystemTime(new Date(updatedAt * 1000 + 12 * DAY * 1000 + 1));
+      // The boundary hook's own timer fires at the crossing; no refetch is involved.
+      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 60)); });
+      await waitFor(() => expect(chip(container)?.getAttribute("data-state")).toBe("stale"));
+      expect(coverageNotice()?.textContent).toContain("All history is stale");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps explicit null authority unknown instead of renewing it from receipt", async () => {
+    const { client } = seedExpanded({ updatedAt: null, ageSeconds: null, status: "unknown", reason: "producer-timestamp-unavailable" });
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => {})));
+    const { container } = renderSeededSection(client);
+    fireEvent.click(screen.getByRole("button", { name: "All" }));
+    await waitFor(() => expect(coverageNotice()?.textContent).toContain("All history is of unknown freshness"));
+    expect(chip(container)).toBeNull();
+    expect(marketCapDomain()).toBe(FULL_DOMAIN);
   });
 
   it("bounds 1Y independently from All and restores the 90-day seed on return", async () => {

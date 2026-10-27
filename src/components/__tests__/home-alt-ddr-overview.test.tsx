@@ -51,8 +51,15 @@ function setSources({ rows = [forecast], stale = false, resolverError = null, re
     resolverReview: {
       data: unavailable ? undefined : {
         _meta: { ...meta, computedAt: COMPUTED_AT - 60 },
-        summary: { headline: { recoveryLikelihoodScoredCount: 10, recoveryLikelihoodAccuracyPct: 0.8,
-          lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] } },
+        summary: { headlineScope: "current_policy", headline: { recoveryLikelihoodScoredCount: 10,
+          recoveryLikelihoodCorrectCount: 8, recoveryLikelihoodAccuracyPct: 0.8, baselineRecoverableCorrectCount: 9,
+          lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] },
+        byPredictionPolicy: [
+          { segmentKind: "prediction_policy", predictionMethodologyVersion: "3.04", predictionPolicyVersion: "sticky-24h-v1",
+            metrics: { recoveryLikelihoodScoredCount: 4 } },
+          { segmentKind: "prediction_policy", predictionMethodologyVersion: "4.6", predictionPolicyVersion: "sticky-24h-v1",
+            metrics: { recoveryLikelihoodScoredCount: 6 } },
+        ] },
       },
       error: reviewerError, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchReviewer,
     },
@@ -124,6 +131,32 @@ describe("HomeAltDdrOverview", () => {
 
     expect(screen.getByText("-45 bps")).toBeTruthy();
     expect(screen.queryByText("-300 bps")).toBeNull();
+  });
+
+  it("orders rows missing a current deviation by their live event peak, not the frozen lock peak", () => {
+    const row = (id: string, frozenPeak: number, livePeak: number | null) => ({
+      ...forecast, stablecoinId: id, symbol: id.toUpperCase(),
+      frozen: { ...forecast.frozen, sourceRow: { currentDeviationBps: frozenPeak, peakDeviationBps: frozenPeak } },
+      live: { ...forecast.live, currentDeviationBps: null, peakDeviationBps: livePeak },
+    });
+    setSources({ rows: [
+      row("lockdeep", -1_000, -100),
+      row("unknown", -2_000, null),
+      row("livedeep", -100, -500),
+    ] as unknown as typeof forecast[] });
+    render(<HomeAltDdrOverview />);
+    const symbols = screen.getAllByText(/^(LOCKDEEP|UNKNOWN|LIVEDEEP)$/).map((node) => node.textContent);
+    expect(symbols).toEqual(["LIVEDEEP", "LOCKDEEP", "UNKNOWN"]);
+  });
+
+  it("shows the promoted accuracy with its call fraction and no sub-text under the figure", () => {
+    setSources();
+    render(<HomeAltDdrOverview />);
+    expect(screen.getByText("80.0%")).toBeTruthy();
+    expect(screen.getByText("Recovery calls correct: 8/10")).toBeTruthy();
+    expect(screen.queryByText(/Always-recover baseline/)).toBeNull();
+    expect(screen.queryByText(/Graded calls/)).toBeNull();
+    expect(screen.queryByText(/recovery-call accuracy/)).toBeNull();
   });
 
   // Homepage rule (docs/homepage.md): source health never renders as a warning.

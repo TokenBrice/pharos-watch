@@ -4,7 +4,7 @@ import { useMemo, useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { usePegSummary, useStressSignals } from "@/hooks/api-hooks";
-import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
+import { useActiveDepegEvents, useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useDepegResolverSurfaces } from "@/hooks/use-depeg-resolver-surfaces";
 import { useQuerySlice } from "@/hooks/use-query-slice";
 import { logosById } from "@/lib/logos";
@@ -22,57 +22,44 @@ import { isResolverBookAvailable, summarizeResolverBook } from "@/components/dep
 import { trackEvent, trackSearch } from "@/lib/analytics";
 import { extractPendingDepegIncidents, mapPendingIncidentsByCoin } from "@/lib/depeg-incident-utils";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
+import type { ApiMeta } from "@/lib/api";
+import { classifyOpenIncidentEvidence } from "@shared/lib/active-depegs";
 import { buildStablecoinUrl } from "@shared/lib/urls";
-import { formatElapsedSeconds } from "@shared/lib/format";
-import type { PegCurrency, GovernanceType } from "@shared/types";
+import type { PegCurrency, GovernanceType, StressSignalsAllResponse } from "@shared/types";
 import { PEG_LABELS_SHORT, GOVERNANCE_LABELS, THREAT_BAND_ORDER, isThreatBand } from "@shared/lib/classification";
 import type { DepegTrackerRow } from "@/lib/depeg-sort";
 import { DepegContentLoadingState } from "./loading-state";
 import { useStablecoins } from "@/hooks/use-stablecoins";
 
-/** DEWS publishes every 30 minutes, so anything past two cycles is worth saying out loud. */
-const STALE_DEWS_AGE_SEC = 60 * 60;
-
-interface DepegCoverageMetrics {
-  oldestAgeSec: number | null;
-  malformedRows: number;
-}
-
-/** Caveat text for each degraded-reliability condition, in reading order. */
-function reliabilityNotes(reliability: DepegCoverageMetrics): string[] {
-  const notes: string[] = [];
-  if (reliability.oldestAgeSec != null && reliability.oldestAgeSec > STALE_DEWS_AGE_SEC) {
-    notes.push(`oldest DEWS signal ${formatElapsedSeconds(reliability.oldestAgeSec)} old`);
-  }
-  if (reliability.malformedRows > 0) {
-    notes.push(`${reliability.malformedRows} malformed DEWS ${reliability.malformedRows === 1 ? "row" : "rows"}`);
-  }
-  return notes;
+function isProducerClock(value: number | undefined): value is number {
+  return typeof value === "number" && Number.isFinite(value) && value > 0;
 }
 
 /**
- * Degraded-reliability caveats only, announced when they appear.
- *
- * The caller decides whether to mount it: a component that returns `null` is
- * still a truthy element, which would leave an empty bordered strip under the
- * hero in the healthy state.
- *
- * The healthy-state counts this band used to carry (live confirmed, pending,
- * DEWS population) are owned by the hero and the radar. The event-history floor
- * count also left: it is stable methodology eligibility, not a data fault, so it
- * belongs to the board that lists those assets.
+ * DEWS health ages by the oldest retained signal generation, not the newest one the transport
+ * stamps, keeping its verdict, warning, budgets and dependencies. An explicit-null transport clock
+ * stays unknown; without a body clock the transported or body producer clock stands, never receipt.
  */
-function DepegReliabilityNote({ notes }: { notes: string[] }) {
-  return (
-    <p className="pharos-subtle-band pharos-meta" role="status">
-      <span className="font-semibold">Coverage caveats</span> · {notes.join(" · ")}
-    </p>
-  );
+function selectDewsHealthClock(
+  data: StressSignalsAllResponse | undefined,
+  meta: ApiMeta | null,
+): Pick<StaleQuery, "dataUpdatedAt" | "meta"> {
+  if (meta?.updatedAt === null) return { dataUpdatedAt: 0, meta };
+  const oldest = data?.oldestComputedAt;
+  if (isProducerClock(oldest) && typeof meta?.updatedAt === "number") {
+    const ageSeconds = typeof meta.ageSeconds === "number" ? meta.ageSeconds : 0;
+    return {
+      dataUpdatedAt: oldest * 1000,
+      meta: { ...meta, updatedAt: oldest, ageSeconds: Math.max(0, ageSeconds + meta.updatedAt - oldest) } as ApiMeta,
+    };
+  }
+  const bodyClock = isProducerClock(oldest) ? oldest : isProducerClock(data?.updatedAt) ? data.updatedAt : null;
+  return { dataUpdatedAt: bodyClock == null ? 0 : bodyClock * 1000, meta };
 }
 
 export function DepegClient() {
-  // Ticks so an open session can actually cross the staleness threshold; a
-  // mount-time timestamp would freeze the caveat in whatever state it loaded in.
+  // Ticks so an open session's board keeps its relative event ages current; a
+  // mount-time timestamp would freeze them in whatever state they loaded in.
   const [nowSeconds, setNowSeconds] = useState(() => Math.floor(Date.now() / 1000));
   useEffect(() => {
     const timer = setInterval(() => setNowSeconds(Math.floor(Date.now() / 1000)), 60_000);
@@ -91,7 +78,6 @@ export function DepegClient() {
   const {
     data: dewsData,
     error: dewsError,
-    dataUpdatedAt: dewsUpdatedAt,
     meta: dewsMeta,
     refetch: refetchDews,
   } = useStressSignals();
@@ -102,6 +88,8 @@ export function DepegClient() {
     meta: eventsMeta,
     refetch: refetchEvents,
   } = useInfiniteDepegEvents({ includePending: true });
+  // Detail for open incidents only: the board's evidence labels, never the census.
+  const { data: activeEventsData } = useActiveDepegEvents();
   const { resolverEnabled, resolverReviewerEnabled, resolver, resolverReview } = useDepegResolverSurfaces();
   const resolverSlice = useQuerySlice(resolver);
   const resolverReviewSlice = useQuerySlice(resolverReview);
@@ -158,13 +146,16 @@ export function DepegClient() {
       coin,
       dews: dewsData?.signals?.[coin.id] ?? null,
       pendingIncident: pendingByCoin.get(coin.id) ?? null,
+      openIncidentEvidence: coin.activeDepeg
+        ? classifyOpenIncidentEvidence(activeEventsData?.events, coin.id, nowSeconds)
+        : null,
     }));
-  }, [filteredPegCoins, dewsData, pendingByCoin]);
+  }, [filteredPegCoins, dewsData, pendingByCoin, activeEventsData, nowSeconds]);
   const trackedIds = useMemo(
     () => (pegData?.coins ? new Set(pegData.coins.map((coin) => coin.id)) : undefined),
     [pegData],
   );
-  // Coins in a confirmed live depeg. Same response as the hero's headline count,
+  // Coins with an open confirmed incident. Same response as the hero's headline count,
   // though the headline excludes NAV tokens while this set does not — see the
   // eligibility note in docs/depeg-page.md.
   const activeDepegIds = useMemo(
@@ -172,7 +163,7 @@ export function DepegClient() {
     [pegData],
   );
   // Methodology eligibility, not a data fault: it belongs beside the board that
-  // lists these assets, not in the hero's degraded-reliability caveats.
+  // lists these assets, not in the hero.
   const eventFloorCount = useMemo(
     () => pegData?.coins?.filter((coin) => coin.depegEventCoverageLimited).length ?? 0,
     [pegData],
@@ -181,16 +172,6 @@ export function DepegClient() {
     () => (eventsData?.events ?? []).filter((event) => event.endedAt !== null),
     [eventsData],
   );
-  const reliability = useMemo(() => {
-    const oldestAgeSec = dewsData?.oldestComputedAt
-      ? Math.max(0, nowSeconds - dewsData.oldestComputedAt)
-      : null;
-    return {
-      oldestAgeSec,
-      malformedRows: dewsData?.malformedRows ?? 0,
-    };
-  }, [dewsData, nowSeconds]);
-  const caveats = useMemo(() => reliabilityNotes(reliability), [reliability]);
   // One derivation of the resolver book, shared with the module's own header so
   // the hero's posture and that header can never disagree.
   const resolverBook = useMemo(
@@ -239,7 +220,7 @@ export function DepegClient() {
   ]);
   const freshnessQueries: StaleQuery[] = [
     { preset: "pegSummary", dataUpdatedAt: pegUpdatedAt, error: pegError, hasData: !!pegData?.coins?.length, meta: pegMeta },
-    { preset: "stressSignals", dataUpdatedAt: dewsUpdatedAt, error: dewsError, hasData: !!dewsData?.signals, meta: dewsMeta },
+    { preset: "stressSignals", ...selectDewsHealthClock(dewsData, dewsMeta), error: dewsError, hasData: !!dewsData?.signals },
     { preset: "depegEvents", dataUpdatedAt: eventsUpdatedAt, error: eventsError, hasData: eventsData != null, meta: eventsMeta },
   ];
   if (resolverEnabled) {
@@ -305,7 +286,6 @@ export function DepegClient() {
             <DEWSAlertFeed signals={dewsData?.signals} logos={logos} allowedIds={trackedIds} embedded />
           </SectionErrorBoundary>
         }
-        footer={caveats.length > 0 ? <DepegReliabilityNote notes={caveats} /> : null}
       />
 
       {/* Recovery forecasts: the most urgent incidents, full book on demand. */}

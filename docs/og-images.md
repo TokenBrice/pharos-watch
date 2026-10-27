@@ -28,7 +28,7 @@ The live routes' metadata selects `buildLiveRouteOgImageUrl(slug)` (`src/lib/pag
 
 The timeline card counts the full open set the homepage reads, not the feed's windowed event page, so an incident opened before the feed window still counts (ADR-34). The `/api/og/depeg` summary card counts open `depeg_events` rows instead and labels that figure **OPEN DEPEG EVENTS**.
 
-The Budget column names the source; its admission budget is `OG_SOURCE_BUDGET_SEC` (`worker/src/api/og-page/types.ts`): the same fresh ceiling the owner endpoint publishes as `_meta.status: "fresh"` (`API_FRESHNESS_MAX_AGE_SEC` × the cache's fresh ratio from `getCacheRatioThresholds`), never less than two producer intervals. A card therefore shows its figure exactly while its page reads fresh and goes timeless once the page itself would warn.
+The Budget column names the source; its admission budget is `OG_SOURCE_BUDGET_SEC` (`worker/src/api/og-page/types.ts`): the same fresh ceiling the owner endpoint publishes as `_meta.status: "fresh"` (`API_FRESHNESS_MAX_AGE_SEC` × the cache's fresh ratio from `getCacheRatioThresholds`), never less than two producer intervals. A card therefore shows its figure exactly while its source is inside that admission budget and goes timeless after it. Admission expiry is not the onset of a page warning: readers see warnings only on the page's own public bands.
 
 Fail-closed contract:
 
@@ -162,7 +162,7 @@ Stablecoin cards preserve unavailable price, DEWS, liquidity, market cap, metada
 
 A chain absent from the current aggregate renders a figure-free "No current supply observation" card with `X-Og-Status: degraded` and `X-Og-Reason: chain-not-in-aggregate`, never `$0`: absence from the aggregate is not an observed zero (ADR-28).
 
-Summary cards keep missing DEWS counts, safety coverage and window averages unavailable. Fewer than two PSI history observations yield no sparkline, and PSI 24h change uses a sample within one hour before source-minus-24h, else it is unavailable. PSI and safety freshness headers name the assessment clock, budget and generation where available.
+Summary cards keep missing DEWS counts, safety coverage and window averages unavailable. Fewer than two PSI history observations yield no sparkline, and PSI 24h change uses a sample within one hour before source-minus-24h, else it is unavailable. PSI and safety freshness headers name the assessment clock, budget and generation where available. Dynamic cards stamp each source with its generation time only (`{source} YYYY-MM-DD HH:MM UTC`) and never print a stale label or budget. `/api/og/stability-index` shows its figures while the newest sample is inside the PSI admission window (`API_FRESHNESS_MAX_AGE_SEC.stabilityIndex`, two producer intervals, not 12×); a missing or expired sample serves a figure-free neutral card (frame, title and subtitle only), with the stale or unknown verdict, reason and budget carried only in the `X-Data-*` headers.
 
 OG cards display only metrics supplied by their constructors: the stablecoin card has no redemption cell, and summary cards have no safety trend or PSI flight-to-quality widget. The safety summary retains its average score explicitly without an aggregate grade; real flow flight-to-quality and redemption products are unchanged.
 

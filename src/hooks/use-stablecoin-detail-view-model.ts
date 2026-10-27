@@ -100,26 +100,31 @@ export function useStablecoinDetailViewModel({
   supplementalQueryControls,
 }: UseStablecoinDetailViewModelParams): StablecoinDetailViewModel {
   const queryClient = useQueryClient();
-  const liquidityEnabled = supplementalQueryControls?.liquidity ?? true;
-  const reportCardsEnabled = supplementalQueryControls?.reportCards ?? true;
-  const redemptionEnabled = supplementalQueryControls?.redemption ?? true;
-  const yieldEnabled = supplementalQueryControls?.yield ?? true;
-  const stressEnabled = supplementalQueryControls?.stress ?? true;
-  const flowsEnabled = supplementalQueryControls?.flows ?? true;
+  // A frozen archive has no current evidence to read: current-only lanes stay disabled
+  // (no requests, health entries or retries) whatever the viewport controls say.
+  const current = coin.status !== "frozen";
+  const liquidityEnabled = current && (supplementalQueryControls?.liquidity ?? true);
+  const reportCardsEnabled = current && (supplementalQueryControls?.reportCards ?? true);
+  const redemptionEnabled = current && (supplementalQueryControls?.redemption ?? true);
+  const yieldEnabled = current && (supplementalQueryControls?.yield ?? true);
+  const stressEnabled = current && (supplementalQueryControls?.stress ?? true);
+  const flowsEnabled = current && (supplementalQueryControls?.flows ?? true);
   const supplyQuery = useSupplyHistory(id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS);
   const annualPriceEnabled = isAnnualUsdPerformanceEligible(coin);
   // Include the 14-day anchor tolerance without fetching the full five-year chart.
   const annualPriceQuery = useSupplyHistory(id, 380, { enabled: annualPriceEnabled });
   const liveSummaryQuery = useRegisteredApiQuery<StablecoinLiveSummary>(
     FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id),
+    { enabled: current },
   );
   const summaryIsSnapshot = isDetailSnapshotQuery(queryClient, FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(id).queryKey);
   const displayedSummary = useDetailEvidence(id, liveSummaryQuery, summaryIsSnapshot || liveSummaryQuery.isError);
   const liveSummary = useMemo(() => {
     // Live detail wins when present (as in sync-stablecoins intake). A frozen coin's detail row
     // is never refreshed, so once that row is gone the archived row backs the page; it has no freshness clock.
-    const summaryData = displayedSummary.data ?? archivedLiveSummary;
-    const usingArchive = displayedSummary.data == null && archivedLiveSummary != null;
+    // A frozen coin selects its archive directly, with its original dates and no live metadata.
+    const summaryData = current ? displayedSummary.data ?? archivedLiveSummary : archivedLiveSummary;
+    const usingArchive = !current || (displayedSummary.data == null && archivedLiveSummary != null);
     return {
       data: summaryData ?? undefined,
       isLoading: !usingArchive && !displayedSummary.data && liveSummaryQuery.isLoading,
@@ -137,7 +142,7 @@ export function useStablecoinDetailViewModel({
     };
   }, [archivedLiveSummary, displayedSummary.data, displayedSummary.meta, displayedSummary.isRetained,
     liveSummaryQuery.dataUpdatedAt, liveSummaryQuery.error, liveSummaryQuery.isLoading,
-    summaryIsSnapshot, liveSummaryQuery.fetchStatus]);
+    summaryIsSnapshot, liveSummaryQuery.fetchStatus, current]);
   useEffect(() => {
     // Early prefetch may finish before this observer mounts; explicit admitted
     // live provenance, not isFetchedAfterMount, distinguishes it from a seed.
@@ -161,7 +166,7 @@ export function useStablecoinDetailViewModel({
   const stressSignalsQuery = useStressSignals({ enabled: stressEnabled });
   const blacklistSupported = (BLACKLIST_STABLECOINS as readonly string[]).includes(coin.symbol);
   const blacklistEnabled = blacklistSupported && (supplementalQueryControls?.blacklist ?? true);
-  const reservesEnabled = !!coin?.liveReservesConfig && (supplementalQueryControls?.reserves ?? true);
+  const reservesEnabled = current && !!coin?.liveReservesConfig && (supplementalQueryControls?.reserves ?? true);
   const flowsQuery = useMintBurnFlows(24, { enabled: flowsEnabled });
   const blacklistQuery = useBlacklistSummary({ enabled: blacklistEnabled });
   const liveReserves = useStablecoinReserves(id, reservesEnabled);
@@ -199,8 +204,13 @@ export function useStablecoinDetailViewModel({
 
   // The three supplemental lanes are query-gated: when disabled they must present as an
   // inert resource rather than as a stale one, which is the `enabled` fan-out below.
+  // Retained flow membership (cache only, never a recovery fetch) keeps a frozen coin's
+  // historical flow section; absent membership stays unknown rather than "no history".
+  const flowHistoryEligible = !current
+    && flowsSlice.data?.coins.some((entry) => entry.stablecoinId === id) === true;
   const flows = useMemo(
     () => ({
+      historyEligible: flowHistoryEligible,
       data: flowsEnabled ? flowsSlice.data : undefined,
       isLoading: flowsEnabled && flowsSlice.isLoading,
       error: flowsEnabled ? flowsSlice.error : null,
@@ -208,7 +218,7 @@ export function useStablecoinDetailViewModel({
       meta: flowsEnabled ? flowsSlice.meta : null,
       enabled: flowsEnabled,
     }),
-    [flowsEnabled, flowsSlice],
+    [flowHistoryEligible, flowsEnabled, flowsSlice],
   );
   const blacklist = useMemo(
     () => ({

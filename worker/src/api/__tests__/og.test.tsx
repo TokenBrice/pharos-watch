@@ -19,6 +19,7 @@ import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
 import { SAFETY_SCORE_V9_CONSUMER_MAX_AGE_SEC } from "../../lib/safety-score-v9/consumer-freshness";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { buildDewsStablecoinIdsDigest } from "../../lib/dews-publication-pointer";
 import { loadStressSignalCurrentRowForCoin, loadStressSignalCurrentRows } from "../../lib/stress-signals-current-rows";
 import {
@@ -535,7 +536,7 @@ describe("stablecoin OG card data", () => {
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
       expect(data.change24h).toBeNull();
       expect(data.lastUpdated).toContain("24h price pair unavailable");
-      expect(data.lastUpdated).toContain("(stale; budget");
+      expect(data.lastUpdated).not.toContain("(stale; budget");
       expect(data.lastUpdated).toContain(new Date(marketAt * 1000).toISOString().slice(0, 16).replace("T", " "));
       expect(data.grade).toBe("A+");
     });
@@ -778,10 +779,28 @@ describe("depeg OG handler aggregation", () => {
     expect(data.activeDepegs[2]).toMatchObject({ deviationBps: null, peakBps: -9000 });
     expect(data.psiScore).toBeNull();
     expect(data.psiBand).toBeNull();
-    expect(data.lastUpdated).toContain("(stale; budget");
+    expect(data.lastUpdated).not.toContain("stale");
     expect(renderToStaticMarkup(<DepegCard data={data} />)).toContain("Current unavailable; peak -9000 bps");
   });
+
+  it("formats market source stamps neutrally beyond their 600s admission budget", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const data = await captureDepegData(mockD1([
+      { match: "FROM cache WHERE key = ?", rows: [{ key: "stablecoins", value: JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", price: 0.98, priceObservedAt: now - 601 })] }), updated_at: now - 601 }] },
+      { match: "peak_deviation_bps", rows: [] },
+      { match: "stability_index_samples", first: null, rows: [] },
+      { match: "stress_signals", rows: [] },
+      { match: "ended_at IS NOT NULL", rows: [] },
+      { match: "started_at >", rows: [], first: { count: 0 } },
+    ]));
+    expect(data.lastUpdated).toContain("Live peg");
+    expect(data.lastUpdated).not.toContain("stale");
+    expect(data.lastUpdated).not.toContain("budget");
+  });
 });
+
+const PSI_BUDGET = API_FRESHNESS_MAX_AGE_SEC.stabilityIndex;
+const PSI_PRODUCER_INTERVAL_SEC = CRON_INTERVALS["stability-index"];
 
 describe("stability-index OG handler aggregation", () => {
   function captureStabilityData(db: D1Database) {
@@ -905,10 +924,39 @@ describe("stability-index OG handler aggregation", () => {
     expect(response?.headers.get("X-Data-Freshness-Budget")).toBe(String(API_FRESHNESS_MAX_AGE_SEC.stabilityIndex));
     const calls = vi.mocked(satoriStandalone).mock.calls;
     const markup = renderToStaticMarkup(calls[calls.length - 1][0]);
-    expect(markup).toContain("Stability index unavailable");
-    expect(markup).toContain("(stale; budget");
-    expect(markup).toContain(new Date(sourceAt * 1000).toISOString().slice(0, 16).replace("T", " "));
+    expect(markup).toContain("Pharos Stability Index");
+    expect(markup).toContain("Market-wide Peg Health");
+    expect(markup).not.toContain("unavailable");
+    expect(markup).not.toContain("stale");
+    expect(markup).not.toContain(" UTC");
     expect(markup).not.toContain(">73.5<");
+  });
+
+  it.each([
+    PSI_BUDGET - 1, PSI_BUDGET, PSI_BUDGET + 1,
+    12 * PSI_PRODUCER_INTERVAL_SEC - 1, 12 * PSI_PRODUCER_INTERVAL_SEC, 12 * PSI_PRODUCER_INTERVAL_SEC + 1,
+  ])("keeps PSI admission at its own budget and never prints a stale label at %ss", async (age) => {
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const sourceAt = nowSec - age;
+    const admitted = age <= PSI_BUDGET;
+    const db = mockD1([
+      { match: "stored_at DESC LIMIT 1", rows: [], first: { score: 73.5, band: "STEADY", stored_at: sourceAt } },
+      { match: "AVG(score)", rows: [], first: { avg: 70 } },
+      { match: "FROM stability_index ORDER BY computed_at", rows: [] },
+      { match: "MAX(score)", rows: [], first: { max: 90 } },
+      { match: "MIN(score)", rows: [], first: { min: 50 } },
+      { match: "stored_at <=", rows: [], first: null },
+    ]);
+    const response = await handleOg(db, "/api/og/stability-index");
+    expect(response?.headers.get("X-Data-Updated-At")).toBe(String(sourceAt));
+    expect(response?.headers.get("X-Data-Freshness-Budget")).toBe(String(PSI_BUDGET));
+    expect(response?.headers.get("X-Data-Freshness")).toBe(admitted ? null : "stale");
+    expect(response?.headers.get("X-Data-Freshness-Reason")).toBe(admitted ? null : "psi-source-stale");
+    const calls = vi.mocked(satoriStandalone).mock.calls;
+    const markup = renderToStaticMarkup(calls[calls.length - 1][0]);
+    expect(markup).not.toContain("stale");
+    expect(markup.includes(">73.5<")).toBe(admitted);
+    if (admitted) expect(markup).toContain(new Date(sourceAt * 1000).toISOString().slice(0, 16).replace("T", " "));
   });
 
   it("renders unavailable without inventing a zero score or MELTDOWN band when no sample exists", async () => {
@@ -926,7 +974,8 @@ describe("stability-index OG handler aggregation", () => {
     const element = calls[calls.length - 1]?.[0] as React.ReactElement;
     const markup = renderToStaticMarkup(element);
 
-    expect(markup).toContain("Stability index unavailable");
+    expect(markup).toContain("Pharos Stability Index");
+    expect(markup).not.toContain("unavailable");
     expect(markup).not.toContain("MELTDOWN");
     expect(markup).not.toContain(">0.0<");
   });

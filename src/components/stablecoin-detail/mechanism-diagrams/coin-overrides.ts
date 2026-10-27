@@ -31,18 +31,22 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
   "gho-aave": {
     steps: [
       {},
-      { label: "Aave V3 facilitator + GSM", subtitle: "USDC/USDT GSMs" },
+      { label: "Facilitator + GSM", subtitle: "USDC/USDT GSMs" },
       {},
     ],
   },
 
-  // USDe (Ethena): delta-neutral with named perp venues
+  // USDe (Ethena): mostly Liquid Cash since the Apr 2026 reserve overhaul; a perp-hedged crypto minority
   "usde-ethena": {
     steps: [
-      {},
-      { subtitle: "perp short on Binance/Bybit/OKX" },
-      {},
+      { label: "Collateral deposit", subtitle: "mostly stables + loans" },
+      { label: "Mostly Liquid Cash", subtitle: "minority perp-hedged" },
+      { label: "USDe minted", subtitle: "lending + funding yield" },
     ],
+    ariaLabel:
+      "Collateral is held mostly as Liquid Cash, with the crypto remainder hedged by equal short perp positions; lending income and the funding rate paid by perp longs become the yield on USDe.",
+    description:
+      "Users deposit collateral; the protocol holds most of it as Liquid Cash (stablecoins, DeFi and institutional lending, tokenized funds) and hedges the remaining crypto with equal-size short perpetual futures positions; lending income and funding flow to sUSDe stakers as yield.",
   },
 
   // ftUSD: stablecoin lending with native-asset borrow/stake carry on both chains
@@ -60,7 +64,7 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
   "crvusd-curve": {
     steps: [
       {},
-      { label: "LLAMMA continuous arb", subtitle: "no single-threshold liquidation" },
+      { label: "LLAMMA arb", subtitle: "soft liquidation" },
       {},
     ],
   },
@@ -87,7 +91,7 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
   "usdc-circle": {
     steps: [
       {},
-      { subtitle: "Circle Reserve Fund @ BNY Mellon" },
+      { subtitle: "Circle Reserve Fund" },
       {},
     ],
     stressFootnote: "stress: banking-rail freeze (USDC, Mar 2023)",

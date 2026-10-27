@@ -105,6 +105,23 @@ export function collateralizationRatioFromTokenAmounts(
   return numerator / denominator;
 }
 
+/**
+ * Composition share (percent) of two raw amounts of the same unit, computed from
+ * a high-precision bigint quotient so a positive numerator never quantizes to
+ * zero. A positive numerator whose share is not finite and strictly positive
+ * rejects; an observed zero numerator is a valid 0.
+ */
+export function compositionPctFromRaw(numerator: bigint, denominator: bigint, context: string): number {
+  if (denominator <= 0n) throw new Error(`${context} denominator must be positive`);
+  if (numerator < 0n) throw new Error(`${context} numerator must not be negative`);
+  if (numerator === 0n) return 0;
+  // Parse the decimal expansion rather than dividing floats, so exact shares (94.4) stay exact.
+  const scaled = numerator * 10n ** 38n / denominator;
+  const pct = Number(`${scaled / 10n ** 36n}.${(scaled % 10n ** 36n).toString().padStart(36, "0")}`);
+  if (!Number.isFinite(pct) || pct <= 0) throw new Error(`${context} share is not representable`);
+  return pct;
+}
+
 export interface TokenCapacityRatios {
   capacityUsd: number;
   capacityRatioOfSupply: number | undefined;
@@ -146,11 +163,12 @@ export function assertFiniteNonNegativeReserveRows<Value>(
 
 /**
  * Deduplicate reserve slices, merging every identity and risk field by pct.
- * Rounded mode repairs the remainder to 100%; null preserves source percentages
- * without quantization or remainder correction. Both modes validate source totals
+ * The default (null) preserves source percentages without quantization or
+ * remainder correction, so positive dust survives; an explicit numeric precision
+ * opts into rounded mode, which repairs the remainder to 100%. Both modes validate source totals
  * and return slices sorted by pct descending.
  */
-export function normalizeSlices(slices: ReserveSlice[], decimals: number | null = 1): ReserveSlice[] {
+export function normalizeSlices(slices: ReserveSlice[], decimals: number | null = null): ReserveSlice[] {
   assertFiniteNonNegativeReserveRows(slices, (slice) => slice.pct, "reserve percentages");
   const rawTotal = slices.reduce((sum, slice) => sum + slice.pct, 0);
   if (rawTotal > 0 && Math.abs(rawTotal - 100) > PCT_SUM_ERROR_TOLERANCE) {
@@ -217,7 +235,7 @@ export function calculateRawPercentageSumDeviation(percentages: readonly number[
   return Math.abs(percentages.reduce((sum, pct) => sum + pct, 0) - 100);
 }
 
-export function normalizeSlicesWithDiagnostics(slices: ReserveSlice[], decimals = 1): {
+export function normalizeSlicesWithDiagnostics(slices: ReserveSlice[], decimals: number | null = null): {
   slices: ReserveSlice[];
   rawSumDeviation: number;
 } {
@@ -273,7 +291,7 @@ export function slicesFromPercentages(
     blacklistable?: boolean;
   }>,
   options?: {
-    decimals?: number;
+    decimals?: number | null;
     tolerancePct?: number;
     context?: string;
   },
@@ -301,7 +319,7 @@ export function slicesFromPercentages(
       ...(value.depType ? { depType: value.depType } : {}),
       ...(value.blacklistable != null ? { blacklistable: value.blacklistable } : {}),
     })),
-    options?.decimals ?? 1,
+    options?.decimals ?? null,
   );
 }
 
@@ -322,7 +340,7 @@ export function slicesFromValues(
     issuerOrObligor?: string;
     blacklistable?: boolean;
   }>,
-  decimals: number | null = 1,
+  decimals: number | null = null,
 ): ReserveSlice[] {
   assertFiniteNonNegativeReserveRows(values, (value) => value.value, "reserve values");
   const filtered = values.filter((value) => value.value > 0);
@@ -358,7 +376,7 @@ export function buildBucketSlices<Bucket extends string>(
     blacklistable?: boolean;
   }>,
   immediateRedeemableBucket: Bucket,
-  decimals = 1,
+  decimals: number | null = null,
 ): { slices: ReserveSlice[]; immediateRedeemableUsd: number } {
   const immediateRedeemableUsd = bucketTotals.get(immediateRedeemableBucket) ?? 0;
 

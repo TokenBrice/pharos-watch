@@ -2,7 +2,7 @@ name: Safe Browsing Monitor
 
 on:
   schedule:
-    - cron: "17 7 * * *"
+    - cron: "17 7 1 * *" # Monthly; Search Console security alerts are the faster flag signal.
   workflow_dispatch:
 
 permissions:

@@ -53,7 +53,7 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
 
   it("restores the compute-time enrichment the stripped base cache lacks", async () => {
     expect(base.safetyScoreV9SupplyAttributionById["wm-m0"]).toBeUndefined();
-    const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null);
+    const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null, null);
     expect(entry.key).toBe(SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY);
 
     const capture = await parseSafetyScoreV9PublicationReplayCapture(entry.value, base);
@@ -67,12 +67,12 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
     ["base input generation", { baseInputGenerationId: `report-cards-input:v1:${"e".repeat(64)}` }],
     ["publication clock", { publishedAtSec: enriched.clockSec + 1 }],
   ] as const)("refuses to bind a delta whose %s differs from the compiled input", async (_label, override) => {
-    await expect(buildSafetyScoreV9PublicationReplayCapture({ ...publication, ...override }, enriched, null))
+    await expect(buildSafetyScoreV9PublicationReplayCapture({ ...publication, ...override }, enriched, null, null))
       .rejects.toBeInstanceOf(SafetyScoreV9ReplayCaptureIdentityError);
   });
 
   it("rejects pairing the delta with a different retained base generation", async () => {
-    const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null);
+    const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null, null);
     const otherBase = makeV9FixedInput({ assetId: "wm-m0", clockSec: base.clockSec + 1800 });
     await expect(parseSafetyScoreV9PublicationReplayCapture(entry.value, otherBase))
       .rejects.toThrow("accepted-publication-replay-base-generation-mismatch");
@@ -104,7 +104,7 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
       ...base, baseInputGenerationId: undefined, pipelineGapByAssetId: { "wm-m0": [failure] },
     });
     const accepted = { ...publication, baseInputGenerationId: captured.baseInputGenerationId };
-    const entry = await buildSafetyScoreV9PublicationReplayCapture(accepted, captured, null);
+    const entry = await buildSafetyScoreV9PublicationReplayCapture(accepted, captured, null, null);
     const restored = await parseSafetyScoreV9PublicationReplayCapture(entry.value, captured);
     expect(restored.fixedInput.pipelineGapByAssetId).toEqual(captured.pipelineGapByAssetId);
     const substituted = structuredClone(captured);
@@ -113,10 +113,10 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
       .rejects.toThrow("accepted-publication-replay-pipeline-gap-identity-mismatch");
   });
 
-  describe("v3 source-admission baseline reader (writers remain v2)", () => {
+  describe("v3 source admission baseline (10.35)", () => {
     const prior = buildSafetyScoreV9AcceptedPublicationBaseline(makeWorkerSafetyScoreV9Publication({
       baseInputGenerationId: enriched.baseInputGenerationId, publishedAtSec: base.clockSec - 1800,
-      publicationGenerationId: "accepted-old",
+      publicationGenerationId: "report-cards:v9:prior",
     }));
     const admission = (baseline = prior) => ({ sha256: sha256Hex(stableJsonStringifyV1(baseline)), baseline });
     const v3Entry = (extra: Record<string, unknown>) => buildFixedInputCacheEntry({
@@ -129,23 +129,52 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
       label: "v3 delta fixture",
     });
 
-    it("keeps the writer on v2, whose parsed capture carries no baseline claim", async () => {
-      const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null);
-      expect(JSON.parse(entry.value).schemaVersion).toBe(2);
-      expect("sourceAdmissionBaseline" in await parseSafetyScoreV9PublicationReplayCapture(entry.value, base)).toBe(false);
+    it("writes v3 and round-trips the checksummed prior baseline, and null only as an explicit bootstrap", async () => {
+      for (const [baseline, expected] of [[prior, admission()], [null, null]] as const) {
+        const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null, baseline);
+        const capture = await parseSafetyScoreV9PublicationReplayCapture(entry.value, base);
+        expect(capture).toHaveProperty("sourceAdmissionBaseline", expected);
+      }
     });
 
-    it("restores the exact checksummed prior baseline, and an explicit null bootstrap", async () => {
-      const restored = await parseSafetyScoreV9PublicationReplayCapture((await v3Entry({ sourceAdmissionBaseline: admission() })).value, base);
-      expect(restored.sourceAdmissionBaseline).toEqual(admission());
-      const bootstrap = await parseSafetyScoreV9PublicationReplayCapture((await v3Entry({ sourceAdmissionBaseline: null })).value, base);
-      expect(bootstrap.sourceAdmissionBaseline).toBeNull();
+    it("keeps legacy v2 deltas readable without inferring a bootstrap", async () => {
+      const entry = await buildFixedInputCacheEntry({
+        schemaVersion: 2, sourceGeneration: publication.publicationGenerationId,
+        payload: { schemaVersion: 2, publicationGenerationId: publication.publicationGenerationId,
+          baseInputGenerationId: base.baseInputGenerationId, pipelineGapDigest: null,
+          enrichment: { safetyScoreV9SupplyAttributionById: base.safetyScoreV9SupplyAttributionById,
+            evidenceJournalById: base.evidenceJournalById, supplyAttributionJournalById: base.supplyAttributionJournalById, pegProvenanceById: base.pegProvenanceById },
+          transferMaterialityGeneration: null },
+        label: "Legacy v2 delta",
+      });
+      const capture = await parseSafetyScoreV9PublicationReplayCapture(entry.value, base);
+      expect(capture).not.toHaveProperty("sourceAdmissionBaseline");
+    });
+
+    it.each([
+      ["the publication itself", { ...prior, publicationGenerationId: publication.publicationGenerationId }],
+      ["a baseline published after the capture", { ...prior, publishedAtSec: enriched.clockSec + 1 }],
+    ])("refuses to write %s as the admission baseline", async (_label, baseline) => {
+      await expect(buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null, baseline))
+        .rejects.toBeInstanceOf(SafetyScoreV9ReplayCaptureIdentityError);
+    });
+
+    it("binds every retained grade hold to the named baseline", async () => {
+      const held = structuredClone(publication);
+      held.cards[0] = { ...held.cards[0]!, gradeHold: { rawGrade: "B", heldFromGenerationId: prior.publicationGenerationId } };
+      await expect(buildSafetyScoreV9PublicationReplayCapture(held, enriched, null, prior)).resolves.toBeDefined();
+      await expect(buildSafetyScoreV9PublicationReplayCapture(held, enriched, null, null))
+        .rejects.toBeInstanceOf(SafetyScoreV9ReplayCaptureIdentityError);
+      held.cards[0]!.gradeHold!.heldFromGenerationId = "report-cards:v9:substituted";
+      await expect(buildSafetyScoreV9PublicationReplayCapture(held, enriched, null, prior))
+        .rejects.toBeInstanceOf(SafetyScoreV9ReplayCaptureIdentityError);
     });
 
     it.each([
       ["a missing required-nullable baseline", () => ({}), "sourceAdmissionBaseline"],
       ["a tampered baseline", () => ({ sourceAdmissionBaseline: { ...admission(), baseline: { ...prior, publicationGenerationId: "accepted-forged" } } }), "accepted-publication-replay-baseline-checksum-mismatch"],
       ["a baseline newer than the capture clock", () => admission({ ...prior, publishedAtSec: base.clockSec + 1 }), "accepted-publication-replay-baseline-clock-after-capture"],
+      ["a self-referencing baseline", () => admission({ ...prior, publicationGenerationId: publication.publicationGenerationId }), "accepted-publication-replay-source-baseline-identity-mismatch"],
       ["duplicate prior IDs", () => admission({ ...prior, cards: [prior.cards[0]!, prior.cards[0]!] }), "unique and sorted"],
     ] as const)("rejects %s", async (_label, extra, reason) => {
       const value = extra();

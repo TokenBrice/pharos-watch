@@ -120,6 +120,33 @@ describe("adaptThreeJaneUsd3Snapshot", () => {
     });
     expectValidAdapterOutput("3jane-usd3", result);
   });
+  it("preserves a 0.04% credit receivable instead of rounding it into the liquid buffer", () => {
+    const result = adaptThreeJaneUsd3Snapshot({
+      contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",
+      navRaw: 100_000n * ONE,
+      totalAssetsRaw: 100_000n * ONE,
+      totalSupplyRaw: 80_000n * ONE,
+      idleUsdcRaw: 99_940n * ONE,
+      localWaUsdcRaw: 5n * ONE,
+      suppliedWaUsdcRaw: 60n * ONE,
+      marketTotalSupplyAssetsRaw: 100_000n * ONE,
+      marketTotalSharesRaw: 100_000n * ONE,
+      marketTotalBorrowAssetsRaw: 75_000n * ONE,
+      marketLiquidityRaw: 25_000n * ONE,
+      marketLiquidPositionRaw: 20n * ONE,
+      creditPositionRaw: 40n * ONE,
+      liquidPositionAssetsRaw: 20n * ONE,
+      creditPositionAssetsRaw: 40n * ONE,
+      availableWithdrawRaw: 40_000n * ONE,
+      isShutdown: false,
+    });
+
+    expect(result.slices).toEqual([
+      expect.objectContaining({ sourceKey: "3jane-usd3:usdc", risk: "medium", pct: expect.closeTo(99.96, 10) }),
+      expect.objectContaining({ sourceKey: "3jane-usd3:credit-receivables", risk: "high", pct: expect.closeTo(0.04, 10) }),
+    ]);
+  });
+
   it("fails closed when reserve accounting diverges materially from nav()", () => {
     expect(() => adaptThreeJaneUsd3Snapshot({
       contractAddress: "0x056b269eb1f75477a8666ae8c7fe01b64dd55ecc",

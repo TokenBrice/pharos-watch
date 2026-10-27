@@ -46,7 +46,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
   }, [routeModel, backingFilter]);
 
   const hero = meta ? (
-    <ChainHero meta={meta} chain={chain} apiMeta={chainsQuery.meta} supplyCoverage={supplyCoverage} supplyUnavailable={supplyUnavailable} />
+    <ChainHero meta={meta} chain={chain} apiMeta={chainsQuery.meta} dataUpdatedAt={chainsQuery.dataUpdatedAt} supplyCoverage={supplyCoverage} supplyUnavailable={supplyUnavailable} />
   ) : null;
 
   if (routeError && !hasAnyData) {
@@ -99,7 +99,7 @@ export function ChainProfileClient({ chainId }: { chainId: string }) {
       <div className="space-y-6">
         {/* Retained data for this chain silences a failed refresh (ADR-42); a missing chain read does not. */}
         <QueryErrorNotice error={routeError} hasData={hasAnyData && chain != null} onRetry={() => { void refetchAll(); }} />
-        {/* degraded or stale data is the hero's status chip; the body only reports a hard error */}
+        {/* materially stale data is the hero's status chip; the body only reports a hard error */}
         {hero}
         {chain && (
           <ShowYourWorkPanel

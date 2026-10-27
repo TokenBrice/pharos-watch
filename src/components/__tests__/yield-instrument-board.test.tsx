@@ -209,7 +209,7 @@ describe("YieldInstrumentBoard", () => {
     expect(screen.queryByText("Native · depth n/a")).toBeNull();
   });
 
-  it("renders published stale status for a 4h-old default source", () => {
+  it("labels a scoring-stale 4h-old default source neutrally below the public gate", () => {
     const row = {
       ...baseRow,
       provenance: { ...baseRow.provenance, sourceFreshness: "stale" },
@@ -218,12 +218,13 @@ describe("YieldInstrumentBoard", () => {
 
     renderBoard(row);
 
-    const freshness = screen.getByText("Stale · 4h ago");
-    expect(freshness.className).toContain("text-state-warn");
-    expect(screen.queryByText("Fresh · 4h ago")).toBeNull();
+    const freshness = screen.getByText("Observed 4h ago");
+    expect(freshness.className).not.toContain("text-state-warn");
+    expect(screen.queryByText("Stale · 4h ago")).toBeNull();
+    expect(screen.queryByText("stale source")).toBeNull();
   });
 
-  it("renders published fresh status for a 30h-old price-derived source", () => {
+  it("labels a 30h-old price-derived source by its observation age", () => {
     const row = {
       ...baseRow,
       dataSource: "price-derived",
@@ -233,8 +234,8 @@ describe("YieldInstrumentBoard", () => {
 
     renderMobileCard(row);
 
-    const freshness = screen.getByText("Fresh · 1d ago");
-    expect(freshness.className).toContain("text-state-positive");
+    const freshness = screen.getByText("Observed 1d ago");
+    expect(freshness.className).toContain("text-foreground");
     expect(screen.queryByText("Stale · 1d ago")).toBeNull();
   });
 

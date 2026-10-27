@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   abbreviateNumberParts,
   formatScore,
+  roundForDisplay,
   formatChartDate,
   formatChartPercent,
   formatPercent,
@@ -122,9 +123,21 @@ describe("formatSignedPercent", () => {
     [5.5, "+5.50%"],
     [-3.2, "-3.20%"],
     [0, "0.00%"],
+    [-0, "0.00%"],
+    [0.001, "0.00%"],
+    [-0.001, "0.00%"],
+    [-0.0049, "0.00%"],
+    [0.0049, "0.00%"],
+    [-0.0051, "-0.01%"],
+    [0.0051, "+0.01%"],
     [null, "-"],
   ])("formats %s as %s", (value, expected) => {
     expect(formatSignedPercent(value)).toBe(expected);
+  });
+  it("rounds before choosing the sign at one decimal", () => {
+    expect(formatSignedPercent(-0.04, 1)).toBe("0.0%");
+    expect(formatSignedPercent(-0.06, 1)).toBe("-0.1%");
+    expect(formatSignedPercent(0.06, 1)).toBe("+0.1%");
   });
   it("returns fallback for non-finite values", () => {
     expect(formatSignedPercent(Infinity)).toBe("-");
@@ -329,11 +342,23 @@ describe("formatBps", () => {
 });
 
 
+describe("roundForDisplay", () => {
+  it("normalizes signed zero and keeps ordinary values", () => {
+    expect(Object.is(roundForDisplay(-0.001, 2), 0)).toBe(true);
+    expect(Object.is(roundForDisplay(-0, 2), 0)).toBe(true);
+    expect(roundForDisplay(-1.234, 2)).toBe(-1.23);
+    expect(roundForDisplay(1.236, 2)).toBe(1.24);
+  });
+});
+
 describe("formatPercentChange", () => {
   it.each([
     [110, 100, "+10.00%"],
     [90, 100, "-10.00%"],
-    [100, 100, "+0.00%"],
+    [100, 100, "0.00%"],
+    [99.999, 100, "0.00%"],
+    [100.001, 100, "0.00%"],
+    [0, 100, "-100.00%"],
     [100, 0, "N/A"],
     [NaN, 100, "N/A"],
     [100, Infinity, "N/A"],

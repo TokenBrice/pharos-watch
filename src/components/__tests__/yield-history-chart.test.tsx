@@ -28,7 +28,7 @@ afterEach(() => {
 });
 
 describe("YieldHistoryChart", () => {
-  it.each(["error", "retained-error", "warning", "loading", "stale", "primary-error"] as const)(
+  it.each(["error", "retained-error", "warning", "header-warning", "degraded", "loading", "stale", "primary-error"] as const)(
     "qualifies requested source %s without hiding successful observations",
     (state) => {
       const retry = vi.fn();
@@ -41,7 +41,11 @@ describe("YieldHistoryChart", () => {
           data: affected && ["error", "loading", "primary-error"].includes(state)
             ? undefined
             : { history: [point], ...(affected && state === "warning" ? { warning: "Source history incomplete" } : {}) },
-          meta: affected && state === "stale" ? { updatedAt: date / 1000 - 100000, status: "stale" } : null,
+          meta: !affected ? null
+            : state === "stale" ? { updatedAt: date / 1000 - 100000, status: "stale" }
+            : state === "header-warning" ? { status: "degraded", warning: '110 - "Response is stale"' }
+            : state === "degraded" ? { updatedAt: date / 1000, status: "degraded", reason: "yield-publication-age" }
+            : null,
           dataUpdatedAt: date, isLoading: affected && state === "loading", error, refetch: retry,
         };
       });
@@ -52,11 +56,14 @@ describe("YieldHistoryChart", () => {
       const status = screen.getByLabelText(`${state === "primary-error" ? "Primary" : "Alternate"} history status`);
       if (state === "loading") expect(within(status).getByText("Loading history")).toBeTruthy();
       else if (state === "stale") expect(within(status).getByText("Showing an older snapshot")).toBeTruthy();
-      // A failed refresh over retained observations is operator signal (ADR-42).
-      else if (state === "retained-error") expect(status.textContent).toBe("");
-      else {
-        if (state === "warning") expect(within(status).getByText("Source history incomplete")).toBeTruthy();
-        else expect(within(status).getByRole("status")).toBeTruthy();
+      // Failed refreshes, body/header advisories and degraded clocks over retained
+      // observations are operator signal (ADR-42).
+      else if (["retained-error", "warning", "header-warning", "degraded"].includes(state)) {
+        expect(status.textContent).toBe("");
+        expect(screen.queryByText("Source history incomplete")).toBeNull();
+        expect(screen.queryByText("Response is stale")).toBeNull();
+      } else {
+        expect(within(status).getByRole("status")).toBeTruthy();
         fireEvent.click(within(status).getByRole("button", { name: "Retry" }));
         expect(retry).toHaveBeenCalledOnce();
       }
@@ -276,6 +283,17 @@ describe("YieldHistoryChart", () => {
     render(<YieldHistoryTooltip active label={point.date} payload={[{ dataKey: "apy", payload: point }]} showBreakdown={false} compact={false} />);
     expect(screen.getByText("Warnings unreadable")).toBeTruthy();
     expect(screen.queryByText("Warning signals")).toBeNull();
+  });
+  it("draws no warning marker or tooltip section for operational advisories only", () => {
+    const point = { date: Date.UTC(2026, 8, 1), apy: 3, apyBase: null, apyReward: null,
+      sourceTvlUsd: null, warningSignals: ["aging", "data-stale"], sourceKey: null, yieldSource: null,
+      dataSource: null, isBest: true, sourceSwitch: false };
+    const { container } = render(<svg><WarningDot cx={10} cy={20} payload={point} /></svg>);
+    expect(container.querySelector("circle")).toBeNull();
+    const mixed = { ...point, warningSignals: ["aging", "yield-spike"] };
+    render(<YieldHistoryTooltip active label={mixed.date} payload={[{ dataKey: "apy", payload: mixed }]} showBreakdown={false} compact={false} />);
+    expect(screen.getByText("Yield spike")).toBeTruthy();
+    expect(screen.queryByText("Aging observation")).toBeNull();
   });
 });
 

@@ -190,6 +190,15 @@ async function fetchFixture(
 }
 
 describe("xdai-bridge adapter", () => {
+  it("keeps a raw 1-wei liquid USDS balance as a positive share and omits an observed zero", async () => {
+    const dust = await fetchFixture(installXdaiNetwork({ ethereum: { "usds-balance": word(1n) } }));
+    const liquid = dust.slices.find((slice) => slice.coinId === "usds-sky");
+    expect(liquid?.pct).toBeGreaterThan(0);
+    expect(liquid?.pct).toBeLessThan(1e-18);
+    const zero = await fetchFixture(installXdaiNetwork({ ethereum: { "usds-balance": word(0n) } }));
+    expect(zero.slices.some((slice) => slice.coinId === "usds-sky")).toBe(false);
+  });
+
   it("publishes the two reviewed collateral slices and bridge coverage", async () => {
     const output = await fetchFixture();
 
@@ -197,7 +206,7 @@ describe("xdai-bridge adapter", () => {
       expect.objectContaining({ name: "sUSDS held by the Ethereum xDAI Foreign Bridge", coinId: "susds-sky", depType: "collateral" }),
       expect.objectContaining({ name: "Liquid USDS held by the Ethereum xDAI Foreign Bridge", coinId: "usds-sky", depType: "collateral" }),
     ]);
-    expect(output.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBe(100);
+    expect(output.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 10);
     expect(output.metadata).toMatchObject({ freshnessMode: "not-applicable", supplyUsd: 64_623_307, totalReserveUsd: 65_036_450 });
     expect(output.metadata?.collateralizationRatio).toBeCloseTo(65_036_450 / 64_623_307, 9);
     expect(output.metadata?.redemption).toBeUndefined();

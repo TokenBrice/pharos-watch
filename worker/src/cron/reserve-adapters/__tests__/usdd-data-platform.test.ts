@@ -105,11 +105,11 @@ describe("adaptUsddLatestCollateral", () => {
     );
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdd-data-platform:smart-allocator", name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: 50.4, risk: "medium" },
-      { sourceKey: "usdd-data-platform:trx", name: "TRX", pct: 39.7, risk: "high" },
-      { sourceKey: "usdd-data-platform:psm-usdt", name: "USDT (PSM vaults)", pct: 8, risk: "low", coinId: "usdt-tether", depType: "collateral" },
-      { sourceKey: "usdd-data-platform:staked-trx", name: "sTRX (direct vaults)", pct: 1.8, risk: "high" },
-      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: 0.1, risk: "high", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "usdd-data-platform:smart-allocator", name: "Smart Allocator (stablecoin DeFi via Aave/JustLend)", pct: expect.closeTo(50.39238677823006, 8), risk: "medium" },
+      { sourceKey: "usdd-data-platform:trx", name: "TRX", pct: expect.closeTo(39.72894667636699, 8), risk: "high" },
+      { sourceKey: "usdd-data-platform:psm-usdt", name: "USDT (PSM vaults)", pct: expect.closeTo(7.981139958245113, 8), risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: "usdd-data-platform:staked-trx", name: "sTRX (direct vaults)", pct: expect.closeTo(1.8322726748872153, 8), risk: "high" },
+      { sourceKey: "usdd-data-platform:direct-usdt", name: "USDT (direct vaults)", pct: expect.closeTo(0.06525391227060706, 8), risk: "high", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       vaultCount: 7,

@@ -13,19 +13,24 @@ vi.mock("next/link", async () => {
 });
 
 describe("detail verdict lane", () => {
-  it("keeps the taxonomy in its own row when the late V9 verdict arrives", () => {
+  it("renders the verdict lane only when a verdict is shown, leaving the taxonomy unchanged", () => {
     const coin = TRACKED_META_BY_ID.get("usdt-tether")!;
     const { container, rerender } = render(<HeroChipRail coin={coin} verdict={{ archetype: "uncategorized", label: "Uncategorized" }} />);
+    expect(container.querySelector("[data-hero-verdict-lane]")).toBeNull();
+    const initialTaxonomy = container.firstElementChild!.firstElementChild!.innerHTML;
+    rerender(<HeroChipRail coin={coin} verdict={{ archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" }} />);
     const lane = container.querySelector("[data-hero-verdict-lane]")!;
-    expect(lane.className).toContain("min-h-5");
-    expect(lane.textContent).toBe("");
+    expect(lane.textContent).toContain("Yield-Bearing Hybrid");
     const taxonomy = lane.nextElementSibling!;
-    const initialTaxonomy = taxonomy.innerHTML;
-    rerender(<HeroChipRail coin={coin} verdict={{ archetype: "institutional-default", label: "Institutional Default" }} />);
-    expect(container.querySelector("[data-hero-verdict-lane]")).toBe(lane);
-    expect(lane.textContent).toContain("Institutional Default");
-    expect(lane.nextElementSibling).toBe(taxonomy);
     expect(taxonomy.innerHTML).toBe(initialTaxonomy);
-    expect(taxonomy.textContent).not.toContain("Institutional Default");
+    expect(taxonomy.textContent).not.toContain("Yield-Bearing Hybrid");
+  });
+
+  it("renders no lane and no chip for the internal institutional-default archetype", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const { container } = render(<HeroChipRail coin={coin} verdict={{ archetype: "institutional-default", label: "Institutional Default" }} />);
+    expect(container.querySelector("[data-hero-verdict-lane]")).toBeNull();
+    expect(container.querySelector(`#hero-verdict-${coin.id}`)).toBeNull();
+    expect(container.textContent).not.toContain("Institutional");
   });
 });

@@ -11,6 +11,8 @@ export const SITEMAP_COMMIT_DERIVED_SOURCE_PATHS: string[] = [
   "src/lib/case-studies/**",
   "src/data/blog/**",
   "src/lib/page-metadata.ts",
+  // Case-study schema: a shared Article dependency of every case-study page.
+  "shared/types/editorial-content.ts",
   // Profile-wide content changes move every profile through the explicit
   // STABLECOIN_DETAIL_CONTENT_REVISED_AT constant, not commit dates.
   "scripts/lib/sitemap-detail-dates.ts",

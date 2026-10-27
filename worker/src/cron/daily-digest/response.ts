@@ -398,12 +398,14 @@ export function validateDigestModelOutput(
   if (profile.kind === "weekly") {
     const copy = `${parsed.digestTitle}\n${parsed.digestText}\n${parsed.digestExtended}`;
     const weeklyPeriod = weeklyPeriodFromMeta(parsedMeta);
-    for (const quarantine of weeklyPeriod ? findQuarantinedDigestSignalClaims(copy, "liquidity", weeklyPeriod) : []) {
-      issues.push({
-        code: "quarantined-signal-claim",
-        severity: "hard",
-        message: `Copy repeats a retracted ${quarantine.family} claim for ${quarantine.stablecoinId} (${quarantine.incidentReference}).`,
-      });
+    for (const family of ["liquidity", "flow"] as const) {
+      for (const quarantine of weeklyPeriod ? findQuarantinedDigestSignalClaims(copy, family, weeklyPeriod) : []) {
+        issues.push({
+          code: "quarantined-signal-claim",
+          severity: "hard",
+          message: `Copy repeats a retracted ${quarantine.family} claim for ${quarantine.stablecoinId} (${quarantine.incidentReference}).`,
+        });
+      }
     }
   }
   if (combinedLength > 270) {

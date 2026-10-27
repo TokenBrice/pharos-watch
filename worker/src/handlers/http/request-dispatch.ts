@@ -1,3 +1,4 @@
+import { API_PATHS } from "@shared/lib/api-endpoints";
 import { API_HOSTNAME, SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { resolveRoute, route } from "../../router";
 import type { Env } from "../../lib/env";
@@ -9,7 +10,7 @@ import {
 import { addCorsHeaders, handleCorsPreflight, resolveCorsOrigin } from "./cors";
 import { buildRouteContext } from "./context";
 import { createEdgeCacheContext, readEdgeCache, writeEdgeCache } from "./edge-cache";
-import { conditionalGetResponse, scopeResponseEtag } from "../../lib/api-response";
+import { conditionalGetResponse, jsonResponse, scopeResponseEtag } from "../../lib/api-response";
 import {
   evaluateTelegramIngressAbuseGate,
   recordTelegramIngressHandlerResponse,
@@ -28,6 +29,21 @@ function apiHostRootRedirect(request: Request, url: URL): Response | null {
   if (url.hostname !== API_HOSTNAME || url.pathname !== "/") return null;
   if (request.method !== "GET" && request.method !== "HEAD") return null;
   return Response.redirect(`${SITE_ORIGIN}/api/`, 301);
+}
+
+const RETIRED_REPORT_CARDS_PATH = "/api/report-cards";
+
+/** Authenticated clients of the retired pre-v9 report-cards path get a migration disposition, not a generic 404. */
+function retiredReportCardsResponse(request: Request, url: URL): Response | null {
+  if (url.hostname !== API_HOSTNAME || request.method !== "GET" || url.pathname !== RETIRED_REPORT_CARDS_PATH) {
+    return null;
+  }
+  return jsonResponse({
+    error: "Endpoint retired",
+    reason: "endpoint_retired",
+    replacement: API_PATHS.reportCardsV9(),
+    documentation: `${SITE_ORIGIN}/api/reference/#safety-score-availability`,
+  }, { status: 410, noStore: true });
 }
 
 export async function handleHttpRequestImpl(
@@ -118,7 +134,10 @@ export async function handleHttpRequestImpl(
   const resolvedRoute = resolveRoute(url, routedRequest.method);
   if (resolvedRoute == null) {
     recordRequestSource();
-    return addCorsHeaders(apiHostRootRedirect(routedRequest, url) ?? notFoundResponse(), origin);
+    return addCorsHeaders(
+      apiHostRootRedirect(routedRequest, url) ?? retiredReportCardsResponse(routedRequest, url) ?? notFoundResponse(),
+      origin,
+    );
   }
 
   const response = await route(

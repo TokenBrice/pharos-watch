@@ -214,7 +214,7 @@ export function HarborHero({ data, retainedAfterError = false }: HarborHeroProps
       {/* the snapshot stamp lives in the page hero above; retained data still desaturates the scene here */}
       <div className={styles.head}>
         <h2 id="harbor-title" className="pharos-label">
-          Harbor · chains by observed stablecoin supply{retained ? " · retained" : ""}
+          Harbor · chains by observed stablecoin supply
         </h2>
       </div>
       <p id={HARBOR_KEYS_ID} className="sr-only">

@@ -180,6 +180,33 @@ export function getTouchScanOutcome(scan, { strictTouchTargets = false } = {}) {
   };
 }
 
+/**
+ * Cloudflare Email Obfuscation's injected decoder calls `href.indexOf` on every
+ * anchor, which throws on Cemetery's SVG grave anchors (SVGAnimatedString).
+ * The edge rule disables it for /cemetery/; this signature proves it stays off.
+ */
+export function isEmailDecoderIncompatibility(message) {
+  return /email-decode(?:\.min)?\.js|\bhref\.indexOf is not a function/i.test(message ?? "");
+}
+
+/**
+ * Classifies one captured runtime message from its complete text: the generic
+ * fatal matcher or the Cemetery decoder signature, at any console level. Only
+ * the stored display copy is truncated.
+ */
+/**
+ * @param {string} type
+ * @param {unknown} text
+ */
+export function classifyRuntimeMessage(type, text) {
+  const fullText = String(text ?? "");
+  return {
+    type,
+    text: fullText.slice(0, 240),
+    fatal: isFatalRuntimeMessage(fullText) || isEmailDecoderIncompatibility(fullText),
+  };
+}
+
 export function getConsoleScanOutcome(messages = []) {
   return {
     errors: messages.filter((entry) => entry.type === "error" || entry.type === "pageerror"),
@@ -574,13 +601,11 @@ export async function exerciseProfileFeedbackDialog(page, timeoutMs = 5000) {
 export function attachRuntimeMessageListeners(page, sink) {
   const onConsole = (message) => {
     if (message.type() === "error" || message.type() === "warning") {
-      const text = message.text();
-      sink.push({ type: message.type(), text: text.slice(0, 240), fatal: isFatalRuntimeMessage(text) });
+      sink.push(classifyRuntimeMessage(message.type(), message.text()));
     }
   };
   const onPageError = (error) => {
-    const text = String(error?.stack ?? error?.message ?? error);
-    sink.push({ type: "pageerror", text: text.slice(0, 240), fatal: isFatalRuntimeMessage(text) });
+    sink.push(classifyRuntimeMessage("pageerror", String(error?.stack ?? error?.message ?? error)));
   };
   page.on("console", onConsole);
   page.on("pageerror", onPageError);
@@ -603,6 +628,10 @@ function formatConsoleMessage(entry) {
   return `${entry.type}: ${entry.text}`;
 }
 
+/**
+ * @param {any} summary
+ * @param {{ consoleMessages?: Array<{ type: string, text: string, fatal?: boolean }>, strictTouchTargets?: boolean }} options
+ */
 export function assertRouteSummary(summary, { consoleMessages = [], strictTouchTargets }) {
   const failures = [];
   const deepYieldId = /^\/stablecoin\/([^/]+)\/yield\/?$/.exec(new URL(summary.routeUrl).pathname)?.[1];
@@ -624,7 +653,12 @@ export function assertRouteSummary(summary, { consoleMessages = [], strictTouchT
   if (summary.overflowDelta > 1) {
     failures.push(`horizontal overflow ${summary.scrollWidth}px > ${summary.innerWidth}px`);
   }
-  const fatalMessages = consoleMessages.filter((entry) => entry.fatal === true);
+  // Repeated identical errors (e.g. the decoder throwing once per anchor) count once.
+  const fatalMessages = [
+    ...new Map(
+      consoleMessages.filter((entry) => entry.fatal === true).map((entry) => [`${entry.type}:${entry.text}`, entry]),
+    ).values(),
+  ];
   if (fatalMessages.length > 0) {
     failures.push(
       `fatal runtime errors=${fatalMessages.length} (${fatalMessages.slice(0, 3).map(formatConsoleMessage).join("; ")})`,

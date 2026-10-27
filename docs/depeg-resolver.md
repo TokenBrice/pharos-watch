@@ -174,7 +174,7 @@ Each anchor is rated `weak` or `strong`. Since v5, anchors are published context
 
 ### Verdict mapping
 
-The ordinal tiers are `recovery_likely` (No break signals) › `at_risk` (Stress signals) › `recovery_unlikely` (Terminal evidence), plus the `insufficient_signal` escape hatch. They are evidence classes, not recovery probabilities: No break signals means no kill signal fired and the break is not severe, not that recovery is assured.
+The ordinal tiers are `recovery_likely` (No break signals) › `at_risk` (Stress signals) › `recovery_unlikely` (Terminal evidence), plus the `insufficient_signal` escape hatch. They are evidence classes, not recovery probabilities. In either direction, a terminal status or a severe issuer wind-down signal is Terminal evidence. Otherwise, above peg, an exit-collapse signal reads as Stress signals and everything else as No break signals, even a severe kill signal. Below peg, any severe kill signal, or two or more kill signals without a strong non-inflatable-supply or hard-collateral/redemption anchor on a break deeper than 1,000 bps (the worse of the stored peak and live deviation), is Terminal evidence. Any other below-peg kill signal, or a deep break with none, reads as Stress signals. No break signals never means recovery is assured.
 
 Live DDR deviation uses `deriveCurrentPegObservationMap`, the same observed-price and authoritative-reference admission as peg analytics and peg-summary. Nominal references, `protocol-par`, and any composite containing a nominal component yield null deviation rather than observed zero. DDR additionally requires explicitly available positive current supply; missing or zero supply cannot satisfy its live-input gate.
 

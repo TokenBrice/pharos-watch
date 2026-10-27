@@ -21,9 +21,10 @@ export interface GeniusRegimeState {
 
 export const GENIUS_REGIME_STATE = {
   publicLawDate: "2025-07-18",
+  finalRulesIssuedAt: "2026-10-23",
   statutoryFallbackEffectiveDate: "2027-01-18",
   effectiveDate: "2027-01-18",
-  rulemakingPhase: "proposed-rules",
+  rulemakingPhase: "final-rules-issued",
   sourceLabel: "GENIUS Act Public Law 119-27, section 20",
   sourceUrl: "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
   sourceReferences: [
@@ -88,19 +89,27 @@ export const GENIUS_REGIME_STATE = {
       url: "https://www.govinfo.gov/content/pkg/FR-2026-08-18/html/2026-16796.htm",
     },
     {
-      label: "Federal Reserve proposed GENIUS responsibilities rule (91 FR 61580)",
+      label: "Federal Reserve proposed GENIUS responsibilities rule (91 FR 61580), comments due November 30, 2026",
       url: "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19860.htm",
     },
     {
-      label: "Federal Reserve proposed IDI subsidiary application procedures (91 FR 61346)",
+      label: "Federal Reserve proposed IDI subsidiary application procedures (91 FR 61346), comments due November 30, 2026",
       url: "https://www.govinfo.gov/content/pkg/FR-2026-09-29/html/2026-19899.htm",
     },
     {
-      label: "SCRC interim final procedural rule for state certifications (91 FR 61688)",
+      label: "SCRC interim final procedural rule for state certifications (91 FR 61688), comments due November 30, 2026",
       url: "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
     },
+    {
+      label: "OCC final GENIUS implementing rule (91 FR 67000), published October 23, 2026",
+      url: "https://www.govinfo.gov/content/pkg/FR-2026-10-23/html/2026-21706.htm",
+    },
+    {
+      label: "OCC GENIUS licensing and registration forms submitted for OMB review (91 FR 66939), comments due November 23, 2026",
+      url: "https://www.govinfo.gov/content/pkg/FR-2026-10-23/html/2026-21704.htm",
+    },
   ],
-  reviewedAt: "2026-10-07",
+  reviewedAt: "2026-10-26",
 } as const satisfies GeniusRegimeState;
 
 export function isGeniusRegimeEffective(state: GeniusRegimeState = GENIUS_REGIME_STATE): boolean {

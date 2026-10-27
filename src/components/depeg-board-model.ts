@@ -1,6 +1,7 @@
 import {
   DEPEG_ROW_STATUS_CLASSES,
   DEPEG_TRACKER_UNKNOWN_STATUS,
+  getPegScoreTier,
   QUALITY_TIER_3_CLASSES,
   THREAT_BAND_ACCENT_CLASSES,
 } from "@shared/lib/classification";
@@ -11,7 +12,7 @@ import type { DepegTrackerRow } from "@/lib/depeg-sort";
 // ---------------------------------------------------------------------------
 
 export function statusLabel(row: DepegTrackerRow): string {
-  if (row.coin.activeDepeg) return "live";
+  if (row.coin.activeDepeg) return "open";
   if (row.pendingIncident) return "pending";
   if (row.coin.depegEventCoverageLimited) return "floor";
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return row.dews.band.toLowerCase();
@@ -36,7 +37,7 @@ export function statusClassName(row: DepegTrackerRow): string {
 
 export function rowToneClassName(row: DepegTrackerRow): string {
   // Active depegs fill the top of the Attention sort, so a tint there marks every row;
-  // the LIVE status chip and deviation bar already carry that signal.
+  // the OPEN status chip and deviation bar already carry that signal.
   if (row.coin.activeDepeg) return "";
   if (row.pendingIncident) return DEPEG_ROW_STATUS_CLASSES.pending.rowTint;
   if (row.dews?.band === "DANGER" || row.dews?.band === "WARNING") return THREAT_BAND_ACCENT_CLASSES[row.dews.band].rowTint;
@@ -52,8 +53,6 @@ export function getDeviationBarWidthPercent(abs: number): number {
 }
 
 export function metricTone(value: number | null | undefined): string {
-  if (value == null) return "bg-muted-foreground";
-  if (value >= 80) return QUALITY_TIER_3_CLASSES.good.bar;
-  if (value >= 55) return QUALITY_TIER_3_CLASSES.watch.bar;
-  return QUALITY_TIER_3_CLASSES.bad.bar;
+  const tier = getPegScoreTier(value);
+  return tier ? QUALITY_TIER_3_CLASSES[tier].bar : "bg-muted-foreground";
 }

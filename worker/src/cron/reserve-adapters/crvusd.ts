@@ -252,7 +252,6 @@ function summarizeCrvUsdCollateralBuckets(
       pct: (bucket.usd / totalWithUnknown) * 100,
       risk: bucket.risk,
     })),
-    1,
   );
 
   return {

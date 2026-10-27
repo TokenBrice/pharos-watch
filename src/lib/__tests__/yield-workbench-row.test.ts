@@ -30,7 +30,7 @@ describe("deriveYieldRowPresentation", () => {
     // The observation was 900 seconds old at publication; serving it 14,401
     // seconds later advances its age to 15,301 seconds in either payload.
     const full = makeYieldRanking({
-      provenance: makeYieldProvenance({ sourceAgeSeconds: 15301, sourceFreshness: "stale" }),
+      provenance: makeYieldProvenance({ sourceObservedAt: null, sourceAgeSeconds: 15301, sourceFreshness: "stale" }),
       sourceRisk: {
         sourceRiskScore: 22, sourceRiskPenalty: 1.11, sourceDepthRatio: 0.008,
         rewardShare: 0.2, sourceAgeSeconds: 15301,

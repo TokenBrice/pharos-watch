@@ -1,10 +1,18 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { buildCoinTrackerLink } from "@/lib/coin-tracker-links";
 import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
+
+const quietDeviations = vi.hoisted(() => ({ value: null as boolean | null }));
+vi.mock("@/lib/feature-flags", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/feature-flags")>();
+  return { ...actual, isQuietDeviationsEnabled: () => quietDeviations.value ?? actual.isQuietDeviationsEnabled() };
+});
 
 describe("stablecoin detail hero view-model builder", () => {
   const SAVED = {
@@ -514,3 +522,36 @@ describe("stablecoin detail hero view-model builder", () => {
 
 });
 
+describe("hero trend direction follows the printed percentage", () => {
+  afterEach(() => { quietDeviations.value = null; });
+  const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+
+  it.each([false, true])("keeps rounded zero neutral and real moves directional (quiet=%s)", (quiet) => {
+    quietDeviations.value = quiet;
+    const trend = (mcap: number, prevDay: number) => buildDetailHero({ coin, mcap, prevDay }).market.prevDayTrendClass;
+    expect(trend(100, 100)).toBe("text-muted-foreground");
+    expect(trend(99.999, 100)).toBe("text-muted-foreground");
+    expect(trend(100.001, 100)).toBe("text-muted-foreground");
+    expect(trend(99, 100)).toBe(DIRECTION_TONE_CLASSES.down);
+    expect(trend(101, 100)).toBe(DIRECTION_TONE_CLASSES.up);
+    expect(trend(0, 100)).toBe(DIRECTION_TONE_CLASSES.down);
+    // Within the quiet threshold only the flag decides; outside it the sign does.
+    expect(trend(100.2, 100)).toBe(quiet ? "text-muted-foreground" : DIRECTION_TONE_CLASSES.up);
+  });
+
+  it("stays muted without a previous value", () => {
+    expect(buildDetailHero({ coin, mcap: 100, prevDay: null }).market.prevDayTrendClass).toBe("text-muted-foreground");
+  });
+});
+
+describe("excess-yield tile help", () => {
+  it("binds the 30d Excess tile to the excess-yield definition, not PYS, keeping its label", () => {
+    const hero = buildDetailHero({ coin: TRACKED_META_BY_ID.get("usdt-tether")! });
+    const metric = hero.tertiaryMetrics.find((entry) => entry.key === "excess-yield")!;
+    expect(metric).toMatchObject({ label: "30d Excess", methodologyTopic: "excessYield" });
+    expect(METHODOLOGY_CONTEXT.excessYield).toMatchObject({
+      title: "Excess yield",
+      summary: "30-day average APY minus its benchmark rate.",
+    });
+  });
+});

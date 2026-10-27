@@ -107,7 +107,7 @@ export function HomeAltHero({
                 className="text-sm font-medium text-muted-foreground"
                 title="Excludes 2 off-catalog PSI historical assets"
               >
-                {visibleSnapshot && !supplyComplete ? "Known market cap subtotal" : "Total market cap"}
+                {visibleSnapshot && !supplyComplete ? "Core market cap, known subtotal" : "Core market cap"}
               </p>
               <CardExpandButton href="/screener/" expandLabel="Open Screener" className="-mr-2" />
             </div>

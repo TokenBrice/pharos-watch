@@ -611,7 +611,6 @@ export function adaptAccountableDashboard(
             }]
           : []),
     ],
-    nestedHoldings ? null : 1,
   );
 
   const sourceTimestamp = exposureSplitSourceTimestamp ?? parseTimestampLikeToUnixSeconds(payload.data.ts);

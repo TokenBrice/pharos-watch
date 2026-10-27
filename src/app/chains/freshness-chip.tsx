@@ -2,47 +2,40 @@
 
 import { OpsStatusChip } from "@/components/ops-status-chip";
 import type { ApiMeta } from "@/lib/api";
-import { formatDataHealthWarning } from "@/lib/data-health";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { formatElapsedSeconds } from "@shared/lib/format";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
 
 /**
- * A stale `/api/chains` read shows as a hero chip (on `/chains/` and chain profiles), never a body callout. A non-fresh report-card dependency names itself,
- * because it alone is why every chain's Chain Health is NR while supply and shares still publish. Degraded reads are operator signal only.
+ * A materially stale `/api/chains` supply generation shows as a hero chip (on `/chains/` and chain profiles), never a
+ * body callout, and ages at its producer budgets without another fetch. Degraded reads and non-fresh report-card
+ * dependencies are operator signal only (ADR-42); held Chain Health explains itself as NR beside the values.
  */
-export function ChainsFreshnessChip({ meta }: { meta: ApiMeta | null | undefined }) {
-  const reportCards = meta?.dependencies?.reportCards;
-  const healthHeld = reportCards != null && reportCards.status !== "fresh";
-  if (!meta || (meta.status !== "stale" && !healthHeld)) return null;
+export function ChainsFreshnessChip({ meta, dataUpdatedAt = 0 }: { meta: ApiMeta | null | undefined; dataUpdatedAt?: number }) {
+  const input = { ...DATA_HEALTH_PRESETS.chains, meta, dataUpdatedAt, hasData: meta != null };
+  const nowMs = useFreshnessBoundary([input], meta != null);
+  // Absent metadata is the route's loading or no-data state, which owns unavailability.
+  if (!meta) return null;
+  const health = deriveDataHealth(input, nowMs ?? dataUpdatedAt);
+  if (!isPublicWarning(health) || health.state !== "stale") return null;
   // Header-derived meta carries no budget; the endpoint's own authority does (R3/R5).
-  const freshBudgetSec = "freshBudgetSec" in meta && meta.freshBudgetSec != null
-    ? meta.freshBudgetSec
-    : API_FRESHNESS_MAX_AGE_SEC.chains * FRESHNESS_RATIOS.FRESH;
+  const staleAfterSec = "degradedBudgetSec" in meta && meta.degradedBudgetSec != null
+    ? meta.degradedBudgetSec
+    : (input.staleTime / 1000) * FRESHNESS_RATIOS.DEGRADED;
   return (
-    <OpsStatusChip
-      label={
-        healthHeld
-          ? `Chain Health inputs ${reportCards.status === "stale" || reportCards.status === "unavailable" ? reportCards.status : "delayed"}`
-          : "Stale data"
-      }
-      reasonCodes={[
-        `api-${meta.status}`,
-        ...(healthHeld ? [`report-cards-${reportCards.status}`, ...(reportCards.reason ? [reportCards.reason] : [])] : []),
-      ]}
-    >
-      {healthHeld ? (
-        <p>
-          Safety Score inputs are {reportCards.status}
-          {reportCards.ageSeconds != null ? ` (${formatElapsedSeconds(reportCards.ageSeconds)} old)` : ""}, so Chain Health is
-          not rated (NR) until a fresh publication lands.
+    <OpsStatusChip label="Stale data" reasonCodes={[`api-${meta.status}`, `health-${health.state}`]}>
+      <p>{health.message}</p>
+      {health.dataUpdatedAt > 0 && health.ageMs != null ? (
+        <p className="text-muted-foreground">
+          Supply snapshot as of{" "}
+          <time dateTime={new Date(health.dataUpdatedAt).toISOString()}>
+            {new Date(health.dataUpdatedAt).toISOString().slice(0, 16).replace("T", " ")} UTC
+          </time>
+          , {formatElapsedSeconds(health.ageMs / 1000)} old; stale after {formatElapsedSeconds(staleAfterSec)}.
         </p>
       ) : null}
-      {meta.warning ? <p>{formatDataHealthWarning(meta.warning)}</p> : null}
-      <p className="text-muted-foreground">
-        {meta.updatedAt != null ? `Supply snapshot ${formatElapsedSeconds(meta.ageSeconds ?? 0)} old` : "Snapshot time unknown"}; fresh
-        budget {Math.round(freshBudgetSec / 60)} min.
-      </p>
     </OpsStatusChip>
   );
 }

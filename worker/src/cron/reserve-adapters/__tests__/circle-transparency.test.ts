@@ -130,9 +130,9 @@ describe("adaptCircleTransparency", () => {
     });
     expect(result.metadata?.diag).not.toHaveProperty("rawSumDeviation");
     expect(result.slices).toEqual([
-      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: 71.9, risk: "very-low" },
-      { sourceKey: "circle:usdc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: 15.6, risk: "very-low" },
-      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: 12.5, risk: "very-low" },
+      { sourceKey: "circle:usdc:overnight-reverse-treasury-repo", name: "Overnight Reverse Treasury Repo", pct: expect.closeTo(71.93274975684314, 8), risk: "very-low" },
+      { sourceKey: "circle:usdc:bank-deposits", name: "Cash at Regulated Financial Institutions", pct: expect.closeTo(15.575934417118246, 8), risk: "very-low" },
+      { sourceKey: "circle:usdc:treasuries-under-3m", name: "<3-Month U.S. Treasuries", pct: expect.closeTo(12.491315826038628, 8), risk: "very-low" },
     ]);
   });
 
@@ -144,10 +144,10 @@ describe("adaptCircleTransparency", () => {
     ]);
   });
 
-  it("reports upstream percentage drift separately from rounding repair", () => {
+  it("reports upstream percentage drift without repairing it", () => {
     const result = adaptCircleTransparency(AMBIGUOUS_NEAR_PERCENT_HTML.replace('data-usdc-cash="11.35"', 'data-usdc-cash="10.55"'), "usdc");
     expect(result.metadata?.diag).toMatchObject({ rawSumDeviation: expect.closeTo(0.8, 6) });
-    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100);
+    expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(99.2, 6);
   });
 
   it("uses a unique global reserve disclosure date when the coin tab has no local date", () => {

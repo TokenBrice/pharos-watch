@@ -10,6 +10,8 @@ import {
   getScoreTier,
   pegScoreColor,
 } from "../severity-colors";
+import { getPegScoreTier, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
+import { metricTone } from "@/components/depeg-board-model";
 import * as featureFlags from "@/lib/feature-flags";
 
 describe("severity-colors", () => {
@@ -45,6 +47,17 @@ describe("severity-colors", () => {
     expect(getScoreColor(65)).toBe(TIER_TEXT.blue);
     expect(getScoreColor(45)).toBe(TIER_TEXT.amber);
     expect(getScoreColor(5)).toBe(TIER_TEXT.red);
+  });
+
+  it.each([
+    [60, "bad"], [69, "bad"], [70, "watch"], [85, "watch"], [89, "watch"], [90, "good"], [0, "bad"],
+    [null, null], [undefined, null], [Number.NaN, null],
+  ] as const)("uses one peg-score tier for text and gauge at %s", (score, tier) => {
+    expect(getPegScoreTier(score)).toBe(tier);
+    expect(metricTone(score)).toBe(tier ? QUALITY_TIER_3_CLASSES[tier].bar : "bg-muted-foreground");
+    if (score !== undefined) {
+      expect(pegScoreColor(score)).toBe(tier ? QUALITY_TIER_3_CLASSES[tier].text : "text-muted-foreground");
+    }
   });
 
   it("maps peg and durability score thresholds", () => {

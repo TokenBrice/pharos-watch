@@ -2,14 +2,14 @@
   "id": "hkd-hsbc",
   "name": "HSBC RedCoin",
   "symbol": "RCHKD",
-  "oneLiner": "HSBC RedCoin (RCHKD) is HSBC's HKMA-licensed HKD stablecoin, launched on PayMe in October 2026 with no public contract or supply data yet.",
+  "oneLiner": "HSBC RedCoin (RCHKD) is an HKD stablecoin issued by HSBC under an HKMA licence, available through PayMe since October 2026 on HSBC's private permissioned chain.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "HKD",
     "governance": "centralized"
   },
   "collateral": "1:1 HKD-denominated high-quality liquid assets held in segregated accounts under HKMA Stablecoins Ordinance requirements",
-  "pegMechanism": "Pre-launch HKD fiat-referenced stablecoin licensed by the HKMA; expected to maintain 1:1 HKD backing with segregated high-quality liquid reserve assets and regulated mint/redemption channels once HSBC launches the business",
+  "pegMechanism": "HKD fiat-referenced stablecoin issued by The Hongkong and Shanghai Banking Corporation Limited on HSBC's private permissioned chain. HSBC describes 1:1 backing by segregated HKD-denominated reserve assets and redemption at par through permitted channels, subject to its terms.",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
@@ -32,7 +32,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026. HSBC named the token HSBC RedCoin on September 30 2026 and launched it on October 23 2026 under the ticker RCHKD, available on PayMe by HSBC (3.3M users) for peer-to-peer and merchant payments, with HSBC Digital Assets Custody providing safekeeping. HSBC plans to add wallet functionality to the HSBC HK Mobile Banking App and tokenized investment subscriptions later in 2026. 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts. The launch release names no blockchain and publishes no contract, circulation or reserve figures, so Pharos tracks RCHKD pre-launch until a verifiable supply and price path exists.",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026. HSBC named the token HSBC RedCoin on September 30 2026 and launched it on October 23 2026 under the ticker RCHKD, available on PayMe by HSBC (3.3M users) for peer-to-peer and merchant payments, with HSBC Digital Assets Custody providing safekeeping. HSBC plans to add wallet functionality to the HSBC HK Mobile Banking App and tokenized investment subscriptions later in 2026. 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts. HSBC now publishes issuer-reported circulation and reserve figures. Pharos keeps RCHKD in pre-launch until public on-chain issuance and a verifiable price and supply path exist.",
   "featuredContent": [
     {
       "type": "blog",

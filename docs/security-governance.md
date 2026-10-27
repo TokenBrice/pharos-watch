@@ -26,7 +26,7 @@ Durable rules and roadmap for keeping pharos.watch trusted by browsers and free 
 |---|---|---|
 | `check:phishing-signatures` | Pages validate after `npm run build` | inline scripts in built HTML matching `history.replaceState` near credentials, `URLSearchParams(location.hash)`, token-shaped window globals, or the full `try{location.hash…replaceState}` shape |
 | ESLint `no-restricted-syntax` (layout files) | every `npm run lint` | `<Script strategy="beforeInteractive">` and inline `<script>` JSX in any `src/app/**/layout.{ts,tsx}` |
-| `check:safe-browsing` | daily GitHub scheduled workflow + manual dispatch | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
+| `check:safe-browsing` | monthly GitHub scheduled workflow + manual dispatch | live Google Safe Browsing verdict for `pharos.watch` and high-traffic URLs |
 
 Safe Browsing response admission is fail-closed: only Google's documented `{}` clean response or a schema-validated `matches` envelope is accepted. Error envelopes and unknown top-level fields are API failures even with HTTP 200, never clean verdicts. Threat matches remain a non-clean result; HTTP and deadline failures remain API failures.
 
@@ -58,7 +58,7 @@ Verified property: `pharos.watch` (Domain property). Owner: `me@tokenbrice.com`.
 
 ### Safe Browsing direct lookup
 
-`npm run check:safe-browsing` queries Google's Safe Browsing v4 API for `pharos.watch` and key URLs. Requires `GOOGLE_SAFE_BROWSING_API_KEY` env var. The `Safe Browsing Monitor` GitHub workflow runs it daily at 07:17 UTC and also supports manual dispatch. A workflow failure is treated as an incident trigger and should be triaged through `docs/incident-response/safe-browsing-flag.md`.
+`npm run check:safe-browsing` queries Google's Safe Browsing v4 API for `pharos.watch` and key URLs. Requires `GOOGLE_SAFE_BROWSING_API_KEY` env var. The `Safe Browsing Monitor` GitHub workflow runs it monthly (the 1st, 07:17 UTC) and also supports manual dispatch. A workflow failure is treated as an incident trigger and should be triaged through `docs/incident-response/safe-browsing-flag.md`.
 
 To get a key: https://console.cloud.google.com/apis/library/safebrowsing.googleapis.com
 
@@ -75,6 +75,8 @@ The Pages middleware generates a random nonce per HTML request, rewrites inline 
 Keep [public RSC/static exclusions](./architecture.md#frontend-runtime-and-seo-surface) narrow: blanket text/PNG/JSON rules bypass operator gates or artifact handlers.
 
 `shared/lib/site-csp.ts` owns both the nonce-aware runtime CSP and the static fallback policy used by Pages middleware, the ops-host asset gates, `public/_headers`, and the local static-export smoke server. `npm run check:site-csp-sync` fails when the managed `public/_headers` CSP lines drift; use `npx --no-install tsx scripts/ci/check-site-csp-sync.ts --write` only when intentionally regenerating those managed lines from the shared builder.
+
+Cloudflare Email Obfuscation is off for `pharos.watch` paths `/cemetery` and `/cemetery/` only, through one owner-applied Configuration Rule (2026-10-27): its injected `email-decode.min.js` throws on Cemetery's SVG grave anchors, and the page's issuer contact is already public. Other routes keep the zone default; do not widen the rule or rewrite the SVG anchors. Mobile smoke fails on that decoder signature.
 
 Keep `style-src 'unsafe-inline'` unless the Tailwind/Next style emission path is separately nonce- or hash-authorized. Do not add script `unsafe-inline` back for local convenience; fix the nonce transform or route-specific script instead.
 

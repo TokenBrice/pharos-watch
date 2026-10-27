@@ -1,7 +1,51 @@
 import { join, resolve } from "node:path";
-import { describe, expect, it } from "vitest";
+import { afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources";
 import { collectStablecoinDetailDates, STABLECOIN_DETAIL_CONTENT_REVISED_AT } from "../lib/sitemap-detail-dates";
+import { SITEMAP_COMMIT_DERIVED_SOURCE_PATHS } from "../lib/sitemap-source-paths.mts";
+
+const generator = vi.hoisted(() => ({
+  gitLog: "",
+  gitLogArgs: [] as string[],
+  mtime: new Date("2026-01-01T00:00:00.000Z"),
+  written: null as Record<string, string> | null,
+}));
+
+vi.mock("node:child_process", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:child_process")>();
+  return {
+    ...actual,
+    execFileSync: vi.fn((file: string, args: readonly string[], options?: object) => {
+      if (file === "git" && args[0] === "log") {
+        generator.gitLogArgs = [...args];
+        return generator.gitLog;
+      }
+      return actual.execFileSync(file, args, options as never);
+    }),
+  };
+});
+
+vi.mock("node:fs", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("node:fs")>();
+  return {
+    ...actual,
+    // Every stat reports the scenario's checkout time; real type bits remain.
+    statSync: vi.fn((path: string, options?: object) => {
+      const stats = actual.statSync(path, options as never);
+      if (stats) Object.assign(stats, { mtime: generator.mtime, mtimeMs: generator.mtime.getTime() });
+      return stats;
+    }),
+  };
+});
+
+vi.mock("../lib/git-history.mts", () => ({ assertFullGitHistory: () => {} }));
+
+vi.mock("../lib/generated-artifacts", () => ({
+  syncGeneratedArtifacts: ({ artifacts }: { artifacts: { path: string; contents: string }[] }) => {
+    const json = artifacts.find((artifact) => artifact.path.endsWith("sitemap-dates.json"));
+    generator.written = json ? (JSON.parse(json.contents) as Record<string, string>) : null;
+  },
+}));
 
 const REPO_ROOT = resolve(import.meta.dirname, "../..");
 const FLOOR_DATE = "2026-01-01T00:00:00.000Z";
@@ -60,5 +104,102 @@ describe("stablecoin detail sitemap dates", () => {
   it("pins the shared-content revision to a valid, explicit UTC date", () => {
     expect(STABLECOIN_DETAIL_CONTENT_REVISED_AT).toMatch(/^\d{4}-\d{2}-\d{2}T00:00:00\.000Z$/);
     expect(Number.isFinite(Date.parse(STABLECOIN_DETAIL_CONTENT_REVISED_AT))).toBe(true);
+  });
+});
+
+const GIT_MARKER = "--PHAROS-SITEMAP-COMMIT--";
+const BASE_COMMIT = "2026-02-01T00:00:00+00:00";
+const LATER_COMMIT = "2026-09-30T12:00:00+00:00";
+const SCHEMA_PATH = "shared/types/editorial-content.ts";
+const STUDY_PATH = "src/lib/case-studies/usdc-svb-2023.json";
+
+async function scannedHistoryFiles(): Promise<string[]> {
+  const { execFileSync } = await vi.importActual<typeof import("node:child_process")>("node:child_process");
+  const scanPaths = [
+    "src/app",
+    "src/lib/case-studies",
+    "src/data/blog",
+    "src/lib/page-metadata.ts",
+    SCHEMA_PATH,
+    "shared/data/stablecoins/coins",
+    "shared/data/stablecoins/domains",
+    "shared/data/methodology-changelogs",
+  ];
+  // Every path with history, including deleted shared renderers the generator still dates.
+  const history = String(execFileSync("git", ["log", "--format=", "--name-only", "--", ...scanPaths], {
+    cwd: REPO_ROOT,
+    encoding: "utf-8",
+    maxBuffer: 64 * 1024 * 1024,
+  }));
+  return [...new Set(history.split("\n").filter(Boolean))];
+}
+
+/** Newest-first `git log --name-only` output: `edited` files at LATER, the rest at BASE. */
+function gitLogFor(files: readonly string[], edited: readonly string[] = []): string {
+  const rest = files.filter((file) => !edited.includes(file));
+  const commits = edited.length > 0 ? [[LATER_COMMIT, edited] as const, [BASE_COMMIT, rest] as const] : [[BASE_COMMIT, rest] as const];
+  return commits.map(([date, paths]) => `${GIT_MARKER}${date}\n\n${paths.join("\n")}\n`).join("\n");
+}
+
+async function runGenerator({ gitLog, mtime }: { gitLog: string; mtime: string }): Promise<Record<string, string>> {
+  generator.gitLog = gitLog;
+  generator.mtime = new Date(mtime);
+  generator.written = null;
+  vi.resetModules();
+  await import("../maintenance/generate-sitemap-dates.ts");
+  expect(generator.written).not.toBeNull();
+  return generator.written!;
+}
+
+function changedRoutes(before: Record<string, string>, after: Record<string, string>): string[] {
+  return Object.keys(after).filter((route) => after[route] !== before[route]).sort();
+}
+
+describe("generated sitemap dates are independent of checkout time", () => {
+  let files: string[] = [];
+
+  beforeAll(async () => {
+    files = await scannedHistoryFiles();
+  });
+
+  afterEach(() => {
+    vi.resetModules();
+  });
+
+  it("declares and scans the shared case-study schema", async () => {
+    expect(SITEMAP_COMMIT_DERIVED_SOURCE_PATHS).toContain(SCHEMA_PATH);
+    expect(files).toContain(SCHEMA_PATH);
+    await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-26T19:23:19.000Z" });
+    expect(generator.gitLogArgs).toContain(SCHEMA_PATH);
+  });
+
+  it("produces identical output for two different checkout times", async () => {
+    const first = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-03-01T00:00:00.000Z" });
+    const second = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    expect(second).toEqual(first);
+    expect(first["/learn/case-studies/usdc-svb-2023/"]).toBe(BASE_COMMIT);
+  });
+
+  it("fails closed when a tracked route source has no Git history", async () => {
+    const withoutHub = files.filter((file) => file !== "src/app/learn/case-studies/page.tsx");
+    await expect(runGenerator({ gitLog: gitLogFor(withoutHub), mtime: "2026-10-27T09:00:00.000Z" })).rejects.toThrow(
+      /No Git history for src\/app\/learn\/case-studies\/page\.tsx/,
+    );
+  });
+
+  it("advances only the edited study and the hub for a single case-study edit", async () => {
+    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    const edited = await runGenerator({ gitLog: gitLogFor(files, [STUDY_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
+    expect(changedRoutes(baseline, edited)).toEqual(["/learn/case-studies/", "/learn/case-studies/usdc-svb-2023/"]);
+    expect(edited["/learn/case-studies/usdc-svb-2023/"]).toBe(LATER_COMMIT);
+  });
+
+  it("advances every case-study detail page for a shared schema edit", async () => {
+    const baseline = await runGenerator({ gitLog: gitLogFor(files), mtime: "2026-10-27T09:00:00.000Z" });
+    const edited = await runGenerator({ gitLog: gitLogFor(files, [SCHEMA_PATH]), mtime: "2026-10-27T09:00:00.000Z" });
+    const changed = changedRoutes(baseline, edited);
+    expect(changed.length).toBeGreaterThan(1);
+    expect(changed.every((route) => /^\/learn\/case-studies\/[^/]+\/$/.test(route))).toBe(true);
+    expect(changed).not.toContain("/learn/case-studies/");
   });
 });

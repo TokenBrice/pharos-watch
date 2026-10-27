@@ -23,6 +23,8 @@ export interface PublicApiArtifactEndpoint {
   description: string;
   tags: readonly string[];
   security?: "apiKey" | "none";
+  /** Keyless route that the Worker throttles per client; documents its 429 response. */
+  anonymousThrottle?: true;
   responseSchema?: PublicApiResponseSchemaName;
   /**
    * Extra 200-response contracts for endpoints whose query parameters select a
@@ -173,7 +175,7 @@ export const NON_USD_SHARE_DAYS_PARAM = {
   name: "days",
   in: "query",
   schema: { type: "integer", minimum: 30, maximum: 5000 },
-  description: "Historical lookback window in days. Defaults to 5000; `0` maps to the default.",
+  description: "Historical lookback window in days. Omit days to use 5000; supplied values must be integers from 30 to 5000.",
 } as const satisfies PublicApiArtifactParameter;
 
 export const SAFETY_SCORE_HISTORY_DAYS_PARAM = {
@@ -340,7 +342,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         name: "event",
         in: "query",
         schema: { type: "string", minLength: 1, maxLength: 200 },
-        description: "Exact permalink event ID, independent of list filters. Returns one event with the normal response schema, or 404 with no event body. Retracted freeze claims return reason freeze-claim-retracted.",
+        description: "Exact permalink event ID, independent of list filters. Returns one event with the normal response schema, or 404 with no event body. Retracted freeze claims return reason freeze-claim-retracted; retracted large mint/burn claims return flow-claim-retracted.",
       },
       {
         name: "type",
@@ -461,6 +463,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "safety-grades",
+    anonymousThrottle: true,
     summary: "Safety Score grades (no key)",
     description:
       "Free schema-1, no-key projection of the accepted V9 publication: nullable score/grade, ratingStatus and compact partialEvidence per tracked stablecoin, plus methodology version and publication status. Pipeline-gap never means NR. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
@@ -472,6 +475,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "dependency-graph-v1",
+    anonymousThrottle: true,
     summary: "Dependency graph (no key)",
     description:
       "Free schema-2 projection of the accepted V9 publication: publication-bound node supply, nullable grades, ratingStatus, compact partialEvidence, role summaries and coverage counts, with the published dependency edges unchanged. Held snapshots return no-store and X-Safety-Score-Status: held. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
@@ -481,6 +485,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   },
   {
     key: "dependency-scenarios",
+    anonymousThrottle: true,
     summary: "Modeled dependency scenarios (no key)",
     description:
       "Offline schema-2 production-evaluator scenarios from a V9 publication, refreshed daily. Published and modeled rows preserve ratingStatus, compact partialEvidence, nullable grades and null deltas for unavailable scores. Returns a nullable artifact and generation-bound freshness: current, earlier-generation within two days, stale beyond budget, or unavailable. Hypothetical results never alter canonical scores. See [Safety Score availability](https://pharos.watch/api/reference/#safety-score-availability).",
@@ -550,7 +555,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "blacklist",
     summary: "Blacklist events",
-    description: "Normalized issuer freeze, unfreeze, blacklist, and destruction events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based.",
+    description: "Normalized issuer freeze, unfreeze, blacklist, and destruction events with optional uppercase symbol, chain display-name or chain ID, event type, search, sort, exact-count, and pagination filters. Responses include `chainId` join keys; the `chain` query filter is display-name based. To continue, pass nextCursor URL-encoded as cursor with the same filters, sortBy, sortDirection and limit, and omit offset. Stop when nextCursor is null. The maximum offset is 25,000, and totalExact: false means total is a lower bound.",
     tags: ["Blacklist"],
     responseSchema: "BlacklistResponse",
     parameters: [
@@ -598,6 +603,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         description: "Maximum number of events to return. Defaults to 1000; `0` maps to the default.",
       },
       OFFSET_QUERY_PARAM,
+      CURSOR_QUERY_PARAM,
       INCLUDE_TOTAL_QUERY_PARAM,
     ],
     postman: {
@@ -912,6 +918,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     postman: {
       order: 9,
       path: "/api/snapshots/{{snapshotDate}}.json",
+      description: "2026-10-25 is only an example. Use a snapshots[].snapshotDate returned by /api/snapshots/index (API key required).",
     },
   },
   {
@@ -934,6 +941,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
     postman: {
       order: 10,
       path: "/api/snapshot/{{snapshotDate}}/stablecoin/{{stablecoinId}}",
+      description: "2026-10-25 is only an example. Use a snapshots[].snapshotDate returned by /api/snapshots/index (API key required).",
     },
   },
   {

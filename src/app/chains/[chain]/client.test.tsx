@@ -135,7 +135,7 @@ describe("ChainProfileClient", () => {
     expect(screen.queryByText("Pharos doesn't have a chain read for this one yet.")).toBeNull();
   });
 
-  it("carries degraded freshness as a hero chip naming the held report-card input, not a body banner", () => {
+  it("keeps a held report-card input over fresh supply off the hero and out of the body (ADR-42)", () => {
     useChainProfileDataMock.mockReturnValue(makeHookState({
       chainsQuery: {
         data: { chains: [makeChain()] },
@@ -148,8 +148,7 @@ describe("ChainProfileClient", () => {
       },
     }));
     render(<ChainProfileClient chainId="ethereum" />);
-    const chip = screen.getByRole("button", { name: /Chain Health inputs stale/ });
-    expect(chip.getAttribute("data-reason-codes")).toBe("api-degraded report-cards-stale stale-cache");
+    expect(screen.queryByRole("button", { name: /Chain Health inputs/ })).toBeNull();
     expect(screen.queryByText(/Data quality warning/)).toBeNull();
   });
 

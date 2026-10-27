@@ -3,14 +3,19 @@ import {
   classifyYieldSourceDepth,
   classifyYieldSourcePosture,
   getYieldSourceRiskDrivers,
+  isYieldSourceDisplayStale,
+  isYieldSourcePostureScoringWindowOnly,
+  projectYieldSourceDisplayDrivers,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
   type YieldSourcePosture,
   type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
 import { YIELD_TYPE_LABELS } from "@shared/lib/classification";
+import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import {
   getYieldAlternateSourceCount,
+  getYieldRowSourceClockInput,
   getYieldWorkbenchDataSource,
   isYieldRankingSummary,
   type YieldWorkbenchRanking,
@@ -88,6 +93,8 @@ export interface YieldSourceBoardModel {
   selectedConfidenceUnknownCount: number;
   depthCounts: YieldSourceDepthCounts;
   postureCounts: YieldSourcePostureCounts;
+  /** Speculative rows whose posture rests only on the scoring window (subset, not a bucket). */
+  speculativeScoringWindowCount: number;
   topSourceRiskDrivers: YieldSourceBoardRiskDriverCount[];
   sourceSwitchCount: number;
   anomalyCount: number;
@@ -183,6 +190,7 @@ function getSourceRows(ranking: YieldWorkbenchRanking): SourceRow[] {
 
 export function buildYieldSourceBoardModel(
   rankings: readonly YieldWorkbenchRanking[],
+  clock?: YieldSourceDisplayClock | null,
 ): YieldSourceBoardModel {
   const selectedConfidenceCounts = emptyConfidenceCounts();
   const depthCounts = emptyDepthCounts();
@@ -205,6 +213,7 @@ export function buildYieldSourceBoardModel(
   let anomalyCount = 0;
   let compositionMissingSourceCount = 0;
   let anomalyUnavailableCount = 0;
+  let speculativeScoringWindowCount = 0;
 
   for (const ranking of rankings) {
     alternateCount += getYieldAlternateSourceCount(ranking);
@@ -220,23 +229,22 @@ export function buildYieldSourceBoardModel(
       sourceTvlUsd: ranking.sourceTvlUsd,
     });
     depthCounts[sourceDepthLens] += 1;
-    postureCounts[
-      classifyYieldSourcePosture({
-        sourceRisk: ranking.sourceRisk,
-        sourceTvlUsd: ranking.sourceTvlUsd,
-        sourceDepthLens,
-        sourceChanged: ranking.provenance?.sourceSwitch ?? false,
-        sourceFreshness: ranking.provenance?.sourceFreshness,
-        warningSignals: ranking.warningSignals,
-      })
-    ] += 1;
-
-    for (const driver of getYieldSourceRiskDrivers({
+    const postureInput = {
       sourceRisk: ranking.sourceRisk,
+      sourceTvlUsd: ranking.sourceTvlUsd,
+      sourceDepthLens,
       sourceChanged: ranking.provenance?.sourceSwitch ?? false,
       sourceFreshness: ranking.provenance?.sourceFreshness,
       warningSignals: ranking.warningSignals,
-    })) {
+    };
+    const posture = classifyYieldSourcePosture(postureInput);
+    postureCounts[posture] += 1;
+    const displayStale = isYieldSourceDisplayStale(getYieldRowSourceClockInput(ranking), clock);
+    if (isYieldSourcePostureScoringWindowOnly(postureInput, posture, displayStale)) speculativeScoringWindowCount += 1;
+
+    // Display drivers are projected before the top-N cut, so a suppressed
+    // scoring-only stale driver never occupies a visible slot.
+    for (const driver of projectYieldSourceDisplayDrivers(getYieldSourceRiskDrivers(postureInput), displayStale)) {
       const existing = sourceRiskDriverCounts.get(driver.key);
       if (existing) existing.count += 1;
       else
@@ -331,6 +339,7 @@ export function buildYieldSourceBoardModel(
     selectedConfidenceUnknownCount,
     depthCounts,
     postureCounts,
+    speculativeScoringWindowCount,
     topSourceRiskDrivers: sortedRiskDriverCounts(sourceRiskDriverCounts).slice(0, 4),
     sourceSwitchCount,
     anomalyCount,

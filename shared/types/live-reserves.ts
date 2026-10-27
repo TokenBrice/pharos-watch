@@ -330,6 +330,8 @@ export function decodeLiveReserveRedemptionTelemetry(
 
 export const LiveReserveDiagnosticsSchema = /* @__PURE__ */ (() => z.object({
   rawSumDeviation: z.number().finite().nonnegative().optional(),
+  /** Disclosed rounding envelope of a whole-number-percentage source (categories × 0.5 points). */
+  roundingEnvelopePct: z.number().finite().nonnegative().optional(),
 }).passthrough())();
 export type LiveReserveDiagnostics = z.output<typeof LiveReserveDiagnosticsSchema>;
 

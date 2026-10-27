@@ -1,10 +1,33 @@
+import { statSync } from "node:fs";
+import { resolve, sep } from "node:path";
 import { describe, expect, it } from "vitest";
 
 import { CG_CHAIN_MAP, GT_CHAIN_MAP, getActiveChainIds, getChainResilienceTier } from "@shared/lib/chains";
 import { CHAIN_META, normalizeChainId, resolveChainId } from "../../types/chain-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
+const PUBLIC_DIR = resolve(import.meta.dirname, "../../../public");
+
 describe("CHAIN_META", () => {
+  it("declares only local /chains/ logos that exist as files under public/", () => {
+    const problems: string[] = [];
+    for (const [id, meta] of Object.entries(CHAIN_META)) {
+      if (!meta.logoPath) continue; // an intentionally empty logo falls back to the name badge
+      const file = resolve(PUBLIC_DIR, `.${meta.logoPath}`);
+      const isFile = (() => {
+        try {
+          return statSync(file).isFile();
+        } catch {
+          return false;
+        }
+      })();
+      if (!meta.logoPath.startsWith("/chains/") || !file.startsWith(`${PUBLIC_DIR}${sep}chains${sep}`) || !isFile) {
+        problems.push(`${id}: ${meta.logoPath}`);
+      }
+    }
+    expect(problems).toEqual([]);
+  });
+
   it("exposes only lowercase chain keys", () => {
     const keys = Object.keys(CHAIN_META);
 

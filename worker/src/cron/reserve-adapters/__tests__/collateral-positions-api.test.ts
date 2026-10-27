@@ -50,8 +50,10 @@ describe("adaptCollateralPositions", () => {
     );
 
     expect(result.slices).toEqual([
-      { sourceKey: "collateral-positions-api:wbtc", name: "WBTC (Wrapped BTC)", pct: 55.6, risk: "medium" },
-      { sourceKey: "collateral-positions-api:weth", name: "WETH (Wrapped Ether)", pct: 44.4, risk: "very-low" },
+      { sourceKey: "collateral-positions-api:wbtc", name: "WBTC (Wrapped BTC)", pct: expect.closeTo(55.5432126194179, 8), risk: "medium" },
+      { sourceKey: "collateral-positions-api:weth", name: "WETH (Wrapped Ether)", pct: expect.closeTo(44.434570095534326, 8), risk: "very-low" },
+      // The folded sub-threshold tail keeps its true positive share instead of rounding away.
+      expect.objectContaining({ name: "Other collateral", pct: expect.closeTo(0.02221728504776716, 8) }),
     ]);
     expect(result.metadata).toMatchObject({
       assetCount: 3,
@@ -121,7 +123,9 @@ describe("adaptCollateralPositions", () => {
     expect(unknownSlice).toBeDefined();
     expect(unknownSlice!.risk).toBe("high");
     expect(unknownSlice!.pct).toBeGreaterThan(0);
-    expect(otherSlice).toBeUndefined();
+    // Only the sub-threshold known asset folds into Other; its share is 20 / 90,520 USD.
+    expect(otherSlice?.pct).toBeCloseTo((20 / 90_520) * 100, 8);
+    expect(otherSlice?.name).not.toBe("Unknown assets");
     expect(result.metadata?.unknownExposurePct).toBeGreaterThan(0);
   });
 
@@ -162,7 +166,7 @@ describe("adaptCollateralPositions", () => {
     expect(result.slices).toContainEqual({
       sourceKey: "collateral-positions-api:ysybold",
       name: "ysyBOLD (Staked yBOLD)",
-      pct: 0.1,
+      pct: expect.closeTo(0.14977533699450823, 8),
       risk: "medium",
       coinId: "ybold-yearn",
       depType: "collateral",
