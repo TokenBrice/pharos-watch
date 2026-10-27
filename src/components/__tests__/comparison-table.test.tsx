@@ -156,13 +156,13 @@ describe("ComparisonTable", () => {
   });
 
   it.each([
-    { state: "current", age: 0, label: null },
-    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC, label: "retained" },
-    { state: "current", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC + 1, label: "stale retained" },
-    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC + 1, label: "stale retained" },
-    { state: "unknown", age: null, label: "observation unknown" },
-    { state: "current", age: -1, label: "observation unknown" },
-  ] as const)("keeps $state age=$age provenance with the external grade", ({ state, age, label }) => {
+    { state: "current", age: 0, text: "Observed 2026-09-21" },
+    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC, text: "Observed 2026-09-19" },
+    { state: "stale", age: 3 * 86_400, text: "Observed 2026-09-18" },
+    { state: "retained", age: 12 * 86_400 + 1, text: "Observed 2026-09-09" },
+    { state: "unknown", age: null, text: "Observation date unavailable" },
+    { state: "current", age: -1, text: "Observation date unavailable" },
+  ] as const)("keeps $state age=$age neutral provenance with the external grade", ({ state, age, text }) => {
     const now = 1_790_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const coin = makeCoin("usdt", "USDT");
@@ -176,12 +176,10 @@ describe("ComparisonTable", () => {
     const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
     const externalRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*External Bluechip(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
     expect(externalRow).toBeDefined();
-    expect(externalRow).toContain(`A · audit not reported${label ? ` · ${label}` : ""}</td>`);
+    expect(externalRow).toContain(`A · audit not reported · ${text}</td>`);
     expect(externalRow).not.toContain("Not rated");
-    if (!label) expect(externalRow).not.toMatch(/retained|observation unknown/);
+    expect(externalRow).not.toMatch(/retained|stale|observation unknown/);
   });
-
-
 
   it.each([
     { label: "unusable price", deviation: null, nav: false, limited: false },

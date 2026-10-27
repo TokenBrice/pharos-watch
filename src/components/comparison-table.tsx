@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
-import { bluechipObservationLabel } from "@shared/lib/bluechip-freshness";
 import { memo, useMemo, type ReactNode } from "react";
 import {
   BACKING_LABELS_SHORT,
@@ -48,6 +47,7 @@ import { resolveMintAuthorityStatus } from "@/lib/mint-authority-display";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import type { ComparisonCoinEntry } from "@/lib/compare-derive";
+import { bluechipObservationText } from "@/lib/bluechip";
 import { FlowSignedNetValue } from "@/components/flow-valuation-value";
 import {
   resolveCoinNetFlow,
@@ -273,8 +273,8 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
               : coin.bluechipRating.smartContractAudit
                 ? "audit recorded"
                 : "no audit flag";
-            const observationLabel = bluechipObservationLabel(coin.bluechipRating, Math.floor(Date.now() / 1000));
-            return `${coin.bluechipRating.grade} · ${audit}${observationLabel ? ` · ${observationLabel}` : ""}`;
+            const observationText = bluechipObservationText(coin.bluechipRating.lastObservedAt, Math.floor(Date.now() / 1000));
+            return `${coin.bluechipRating.grade} · ${audit} · ${observationText}`;
           },
         },
       ],
