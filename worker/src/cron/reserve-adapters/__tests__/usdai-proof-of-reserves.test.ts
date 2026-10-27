@@ -207,7 +207,7 @@ describe("usdai-proof-of-reserves adapter", () => {
       );
       await vi.advanceTimersByTimeAsync(15_000);
       const result = await pending;
-      expect(result.slices.map(({ pct }) => pct)).toEqual([94.4, 5.6]);
+      expect(result.slices.map(({ pct }) => pct)).toEqual([expect.closeTo(94.4, 10), expect.closeTo(5.6, 10)]);
       expect(network.fetchSpy).toHaveBeenCalledTimes(1);
     } finally {
       vi.useRealTimers();
@@ -226,7 +226,7 @@ describe("usdai-proof-of-reserves adapter", () => {
 
   it("retains amount observations without certifying composition shares", async () => {
     const result = await fetchAnchored();
-    expect(result.slices.map(({ pct }) => pct)).toEqual([94.4, 5.6]);
+    expect(result.slices.map(({ pct }) => pct)).toEqual([expect.closeTo(94.4, 10), expect.closeTo(5.6, 10)]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "unverified",
       observedBlock: { number: 500_000_000, timestamp: 1_788_975_000 },
@@ -264,7 +264,7 @@ describe("usdai-proof-of-reserves adapter", () => {
         { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, share: "460000000000000000", amount: "56000000000000000000000" },
       ],
     );
-    expect(result.slices.map(({ pct }) => pct)).toEqual([54, 46]);
+    expect(result.slices.map(({ pct }) => pct)).toEqual([expect.closeTo(54, 10), expect.closeTo(46, 10)]);
     expect(result.metadata?.freshnessMode).toBe("unverified");
     expectWarningEffect(result, "usdai-composition-unverified", "degraded");
   });
@@ -287,7 +287,7 @@ describe("usdai-proof-of-reserves adapter", () => {
 
   it("degrades a balance mismatch without discarding the observed composition", async () => {
     const result = await fetchAnchored({ "balance-0": 900_000n * 10n ** 6n });
-    expect(result.slices.map(({ pct }) => pct)).toEqual([94.4, 5.6]);
+    expect(result.slices.map(({ pct }) => pct)).toEqual([expect.closeTo(94.4, 10), expect.closeTo(5.6, 10)]);
     expect(result.metadata?.freshnessMode).toBe("unverified");
     expect(result.warnings).toContainEqual(expect.objectContaining({ code: "usdai-anchor-mismatch", effect: "degraded" }));
   });
@@ -338,12 +338,12 @@ describe("usdai-proof-of-reserves adapter", () => {
 
     const result = adaptUsdAiProofOfReserves(parsed);
     expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: 80.6, risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 19.4, risk: "high" },
+      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(80.64893497018299, 8), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(19.351065029816983, 8), risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({
       weightingBasis: "share",
-      declaredSharePct: 100,
+      declaredSharePct: expect.closeTo(100, 10),
     });
   });
 
@@ -383,7 +383,7 @@ describe("usdai-proof-of-reserves adapter", () => {
 
     expect(result.slices).toEqual(expect.arrayContaining([
       expect.objectContaining({ name: "PYUSD (PayPal USD)", pct: 1.3, risk: "low", coinId: "pyusd-paypal", depType: "collateral" }),
-      expect.objectContaining({ name: "Undisclosed USD.AI reserve buckets", pct: 98.7, risk: "high" }),
+      expect.objectContaining({ name: "Undisclosed USD.AI reserve buckets", pct: expect.closeTo(98.7, 10), risk: "high" }),
     ]));
     expect(result.warnings).toContainEqual(expect.objectContaining({
       code: "usdai-share-coverage-gap",
@@ -391,7 +391,7 @@ describe("usdai-proof-of-reserves adapter", () => {
     }));
     expect(result.metadata).toMatchObject({
       weightingBasis: "share",
-      unknownExposurePct: 98.7,
+      unknownExposurePct: expect.closeTo(98.7, 10),
       apiEntryCount: 1,
       liquidBucketCount: 1,
       dealCount: 0,
@@ -402,8 +402,8 @@ describe("usdai-proof-of-reserves adapter", () => {
     const result = adaptUsdAiProofOfReserves(parseUsdAiProofOfReserves(SAMPLE_RAW_PAYLOAD));
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: 94.4, risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 5.6, risk: "high" },
+      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({
       apiEntryCount: 3,
@@ -424,8 +424,8 @@ describe("usdai-proof-of-reserves adapter", () => {
     const result = adaptUsdAiProofOfReserves(MIXED_WEIGHT_PAYLOAD);
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: 94.4, risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 5.6, risk: "high" },
+      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
     ]);
     expect(result.warnings).toContainEqual({
       code: "missing-share-rows-ignored",
@@ -449,8 +449,8 @@ describe("usdai-proof-of-reserves adapter", () => {
     ]);
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: 94.4, risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 5.6, risk: "high" },
+      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({
       apiEntryCount: 2,
@@ -471,8 +471,8 @@ describe("usdai-proof-of-reserves adapter", () => {
     ]);
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: 94.4, risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 5.6, risk: "high" },
+      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(94.4, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(5.6, 10), risk: "high" },
     ]);
     expect(result.warnings).toContainEqual(
       expect.objectContaining({
@@ -494,7 +494,7 @@ describe("usdai-proof-of-reserves adapter", () => {
     ]);
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: 91, risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(91, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
       { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 5, risk: "high" },
       { sourceKey: "usdai-proof-of-reserves:unknown", name: "Unmapped USD.AI reserve buckets", pct: 4, risk: "high" },
     ]);
@@ -523,7 +523,7 @@ describe("usdai-proof-of-reserves adapter", () => {
     expect(result.slices[0]).toEqual({
       sourceKey: "usdai-proof-of-reserves:pyusd",
       name: "PYUSD (PayPal USD)",
-      pct: 94.4,
+      pct: expect.closeTo(94.4, 10),
       risk: "low",
       coinId: "pyusd-paypal", depType: "collateral",
     });
@@ -582,9 +582,9 @@ describe("USD.AI on-chain composition corroboration", () => {
     // 0x1e710cc0…6438 totalDeposits, whose USDai sits with the escrow admin.
     const run = await runCorroboration();
     expect(run.result.slices).toEqual([
-      { sourceKey: "usdai-proof-of-reserves:vault-usdai", name: "USDai (idle in sUSDai vault)", pct: 43.8, risk: "low", coinId: "usdai-usd-ai", depType: "collateral" },
-      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: 32.9, risk: "high" },
-      { sourceKey: "usdai-proof-of-reserves:escrow-receivable", name: "Escrowed USDai receivable (pending deals)", pct: 23.3, risk: "high" },
+      { sourceKey: "usdai-proof-of-reserves:vault-usdai", name: "USDai (idle in sUSDai vault)", pct: expect.closeTo(43.81320759582653, 8), risk: "low", coinId: "usdai-usd-ai", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(32.88027127762343, 8), risk: "high" },
+      { sourceKey: "usdai-proof-of-reserves:escrow-receivable", name: "Escrowed USDai receivable (pending deals)", pct: expect.closeTo(23.306521126550034, 8), risk: "high" },
     ]);
     expect(run.result.warnings?.map(({ code }) => code)).toEqual(["missing-share-rows-ignored", "usdai-composition-unverified"]);
     expectWarningEffect(run.result, "usdai-composition-unverified", "degraded");

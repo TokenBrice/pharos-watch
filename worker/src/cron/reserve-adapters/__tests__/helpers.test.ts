@@ -134,13 +134,32 @@ describe("buildRedemptionSnapshotMetadata", () => {
 });
 
 describe("normalizeSlices", () => {
-  it("rounds to one decimal by default and adjusts the largest slice to sum to 100", () => {
+  it("preserves source percentages by default, without rounding or remainder repair", () => {
     const slices: ReserveSlice[] = [
       { name: "A", pct: 33.3, risk: "low" },
       { name: "B", pct: 33.3, risk: "medium" },
       { name: "C", pct: 33.3, risk: "high" },
     ];
     const result = normalizeSlices(slices);
+    expect(result.map((slice) => slice.pct)).toEqual([33.3, 33.3, 33.3]);
+  });
+
+  it("keeps positive dust by default and drops it only under explicit rounding", () => {
+    const slices: ReserveSlice[] = [
+      { name: "Parent", pct: 99.96, risk: "low" },
+      { name: "Dust", pct: 0.04, risk: "high" },
+    ];
+    expect(normalizeSlices(slices).map((slice) => slice.pct)).toEqual([99.96, 0.04]);
+    expect(normalizeSlices(slices, 1).map((slice) => slice.pct)).toEqual([100]);
+  });
+
+  it("rounds explicitly and adjusts the largest slice to sum to 100", () => {
+    const slices: ReserveSlice[] = [
+      { name: "A", pct: 33.3, risk: "low" },
+      { name: "B", pct: 33.3, risk: "medium" },
+      { name: "C", pct: 33.3, risk: "high" },
+    ];
+    const result = normalizeSlices(slices, 1);
     const sum = result.reduce((acc, s) => acc + s.pct, 0);
     expect(sum).toBeCloseTo(100, 10);
     expect(result[0].pct).toBe(33.4);
@@ -193,15 +212,15 @@ describe("normalizeSlices", () => {
     );
   });
 
-  it("corrects normal downward rounding drift (e.g. 100.1% -> 100%)", () => {
-    // Ensure the defense-in-depth clamp doesn't break normal small-over-sum
-    // normalization: the largest slice absorbs the small negative remainder.
+  it("retains small over-sum source drift by default and corrects it only under explicit rounding", () => {
+    // Explicit rounding keeps the defense-in-depth clamp for small over-sums:
+    // the largest slice absorbs the small negative remainder.
     const slices: ReserveSlice[] = [
       { name: "Big", pct: 60.1, risk: "low" },
       { name: "Small", pct: 40, risk: "medium" },
     ];
-    const result = normalizeSlices(slices);
-    expect(result.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 5);
+    expect(normalizeSlices(slices).reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100.1, 10);
+    expect(normalizeSlices(slices, 1).reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 5);
   });
 });
 

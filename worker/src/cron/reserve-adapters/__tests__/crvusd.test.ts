@@ -103,9 +103,9 @@ describe("adaptCrvUsd", () => {
 
     expect(result.slices).toEqual([
       { sourceKey: "crvusd:btc",
-      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: expect.closeTo(200 / 3, 8), risk: "medium" },
       { sourceKey: "crvusd:eth",
-      name: "ETH", pct: 33.3, risk: "very-low" },
+      name: "ETH", pct: expect.closeTo(100 / 3, 8), risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       marketCount: 4,
@@ -213,9 +213,9 @@ describe("adaptCrvUsd", () => {
 
     expect(result.slices).toEqual([
       { sourceKey: "crvusd:btc",
-      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: expect.closeTo(200 / 3, 8), risk: "medium" },
       { sourceKey: "crvusd:eth",
-      name: "ETH", pct: 33.3, risk: "very-low" },
+      name: "ETH", pct: expect.closeTo(100 / 3, 8), risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       freshnessMode: "not-applicable",
@@ -546,9 +546,9 @@ describe("fetchCrvUsdReserves", () => {
 
     expect(result.slices).toEqual([
       { sourceKey: "crvusd:btc",
-      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: 66.7, risk: "medium" },
+      name: "Custodied BTC (ex: wBTC/cbBTC)", pct: expect.closeTo(200 / 3, 8), risk: "medium" },
       { sourceKey: "crvusd:eth",
-      name: "ETH", pct: 33.3, risk: "very-low" },
+      name: "ETH", pct: expect.closeTo(100 / 3, 8), risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
       yieldBasisMarketCount: 2,

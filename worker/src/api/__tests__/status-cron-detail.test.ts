@@ -3,7 +3,7 @@ import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlit
 import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 import { StatusCronDetailResponseSchema } from "@shared/types/status";
 import { handleStatusCronDetailRoute } from "../status-cron-detail";
-import { summarizeCronStatus, CRON_STATUS_LATEST_FACT_KEYS } from "../../lib/status/cron-status-summary";
+import { summarizeCronStatus, projectCronRunOutcome, CRON_STATUS_LATEST_FACT_KEYS } from "../../lib/status/cron-status-summary";
 import { STATUS_RAW_SNAPSHOT_CACHE_KEY } from "../../lib/status/raw-snapshot";
 import {
   loadStatusPublicHealthSnapshot,
@@ -115,6 +115,16 @@ describe("summarizeCronStatus", () => {
     expect(summary).not.toHaveProperty("lastRun");
     expect(summary).not.toHaveProperty("recentRuns");
     expect(summary.confirmedOutputAt).toBe(NOW - 60);
+  });
+
+  it("projects a degraded reserve-sync reason into summary runs without full metadata", () => {
+    const metadata = { reason: "reserve-adapter-or-persistence-failed", reasons: ["reserve-adapter-or-persistence-failed"], failed: 1, synced: 99, bulky: "x".repeat(4_000) };
+    const summary = summarizeCronStatus("sync-live-reserves", {
+      ...detail,
+      runs: [{ startedAt: NOW - 60, durationMs: 10, status: "degraded" as const, ...projectCronRunOutcome(metadata), metadata }],
+    });
+    expect(summary.runs[0]).toMatchObject({ status: "degraded", reason: "reserve-adapter-or-persistence-failed" });
+    expect(summary.runs[0]).not.toHaveProperty("metadata");
   });
 
   it("serves no facts for jobs outside the registry", () => {

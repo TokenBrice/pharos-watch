@@ -66,10 +66,9 @@ describe("adaptKavaCdpState", () => {
     expect(byName.get("BNB")!.risk).toBe("high");
     expect(byName.get("BUSD")!.risk).toBe("low");
     expect(byName.get("USDT")!.risk).toBe("low");
-    const round1 = (value: number) => Math.round(value * 10) / 10;
-    expect(byName.get("BUSD")!.pct).toBeCloseTo(round1((expectedDenomValueUsd("busd") / expectedTotalCollateralUsd) * 100), 9);
-    expect(byName.get("HBTC")!.pct).toBeCloseTo(round1((expectedDenomValueUsd("hbtc") / expectedTotalCollateralUsd) * 100), 9);
-    expect(byName.get("USDT")!.pct).toBeCloseTo(round1((expectedDenomValueUsd("erc20/tether/usdt") / expectedTotalCollateralUsd) * 100), 9);
+    expect(byName.get("BUSD")!.pct).toBeCloseTo(((expectedDenomValueUsd("busd") / expectedTotalCollateralUsd) * 100), 9);
+    expect(byName.get("HBTC")!.pct).toBeCloseTo(((expectedDenomValueUsd("hbtc") / expectedTotalCollateralUsd) * 100), 9);
+    expect(byName.get("USDT")!.pct).toBeCloseTo(((expectedDenomValueUsd("erc20/tether/usdt") / expectedTotalCollateralUsd) * 100), 9);
     expect(result.slices.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 9);
     expect(byName.get("HBTC")!.sourceKey).toBe("kava-cdp:hbtc");
 

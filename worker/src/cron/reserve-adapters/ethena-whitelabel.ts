@@ -203,7 +203,7 @@ export function adaptEthenaWhitelabel(
   const unknownExposurePct = totalReserveUsd > 0 ? (unmappedUsd / totalReserveUsd) * 100 : 0;
 
   return {
-    slices: slicesFromValues(sliceInputs, 3),
+    slices: slicesFromValues(sliceInputs),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...verifiedFreshnessMetadata(sourceTimestamp),

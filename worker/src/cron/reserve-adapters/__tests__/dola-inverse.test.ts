@@ -185,18 +185,22 @@ describe("adaptFirmMarkets", () => {
     expect(btcSlice?.pct).toBe(20);
   });
 
-  it("keeps issuer-captured LP debt unlinked and links only direct sUSDe debt", () => {
+  it("keeps issuer-captured LP debt unlinked and links only direct sUSDe and DAI debt", () => {
     const result = adaptFirmMarkets(firmMarketsCapture, 108_602_244.0893683);
     expect(result.slices.filter((slice) => slice.coinId)).toEqual([
-      expect.objectContaining({ sourceKey: "dola-inverse:susde", pct: 0.4, coinId: "susde-ethena", depType: "collateral" }),
+      expect.objectContaining({ sourceKey: "dola-inverse:susde", pct: expect.closeTo(0.3892390098568767, 8), coinId: "susde-ethena", depType: "collateral" }),
+      // Direct DAI debt is real but sub-display-precision; positive dust is no longer rounded away.
+      expect.objectContaining({ sourceKey: "dola-inverse:dai", pct: expect.closeTo(0.000024153914629103883, 10), coinId: "dai-makerdao", depType: "collateral" }),
     ]);
     const lpSlices = result.slices.filter((slice) => slice.sourceKey?.startsWith("dola-inverse:lp:"));
     expect(lpSlices).toEqual(expect.arrayContaining([
-      expect.objectContaining({ sourceKey: "dola-inverse:lp:dola-susde", pct: 51.7 }),
-      expect.objectContaining({ sourceKey: "dola-inverse:lp:dola-susds", pct: 5.7 }),
-      expect.objectContaining({ sourceKey: "dola-inverse:lp:sdola-scrvusd", pct: 4.2 }),
-      expect.objectContaining({ sourceKey: "dola-inverse:lp:reusd-sdola", pct: 2.7 }),
+      expect.objectContaining({ sourceKey: "dola-inverse:lp:dola-susde", pct: expect.closeTo(51.5672367659998, 8) }),
+      expect.objectContaining({ sourceKey: "dola-inverse:lp:dola-susds", pct: expect.closeTo(5.71517112483883, 8) }),
+      expect.objectContaining({ sourceKey: "dola-inverse:lp:sdola-scrvusd", pct: expect.closeTo(4.207119603925258, 8) }),
+      expect.objectContaining({ sourceKey: "dola-inverse:lp:reusd-sdola", pct: expect.closeTo(2.7439580080233763, 8) }),
     ]));
+    // Positive sub-display-precision LP debt stays visible instead of rounding to zero.
+    expect(lpSlices.filter((slice) => slice.pct < 1e-6)).toHaveLength(2);
     for (const slice of lpSlices) {
       expect(slice.coinId).toBeUndefined();
       expect(slice.depType).toBeUndefined();
@@ -222,11 +226,10 @@ describe("adaptFirmMarkets", () => {
     expect(debt + frontier + residual + idle).toBeCloseTo(gross, 6);
     expect(residual).toBeCloseTo(537_392.03701814, 6);
     expect(result.slices.find(row => row.sourceKey === "dola-inverse:unattributed")).toMatchObject({
-      name: "Unresolved issuance and backing reconciliation residual", pct: 0.7,
+      name: "Unresolved issuance and backing reconciliation residual", pct: expect.closeTo(0.720406785876396, 8),
       unclassifiedResidual: true, residualReason: "insufficient-evidence",
     });
-    // One-decimal normalization assigns the ordinary rounding remainder to the largest slice.
-    expect(result.slices.find(row => row.sourceKey === "dola-inverse:lp:dola-susde")?.pct).toBe(71.5);
+    expect(result.slices.find(row => row.sourceKey === "dola-inverse:lp:dola-susde")?.pct).toBeCloseTo(71.39872033224877, 8);
     expect(result.slices.some(row => /idle|non-FiRM/i.test(row.name))).toBe(false);
     expect(result.slices.reduce((sum, row) => sum + row.pct, 0)).toBeCloseTo(100, 1);
     expect(result.metadata).not.toHaveProperty("totalReserveUsd");
@@ -265,7 +268,7 @@ describe("adaptFirmMarkets", () => {
       timestamp: 1000,
     }, 600);
     expect(result.slices.filter((slice) => slice.coinId)).toEqual([
-      expect.objectContaining({ coinId: "reusd-resupply", pct: 16.7 }),
+      expect.objectContaining({ coinId: "reusd-resupply", pct: expect.closeTo(100 / 6, 8) }),
     ]);
     expect(result.metadata?.unknownExposurePct).toBeCloseTo(500 / 600 * 100);
   });
@@ -281,7 +284,7 @@ describe("adaptFirmMarkets", () => {
   it("splits only measured Frontier bad debt against the same supply denominator", () => {
     const result = adaptFirmMarkets({ markets: [makeMarket("wstETH", 60)], timestamp: 1000 }, 100, 7);
     expect(result.slices.find(row => row.sourceKey === "dola-inverse:frontier-bad-debt")).toMatchObject({
-      pct: 7, risk: "very-high", assetClass: "private-credit",
+      pct: expect.closeTo(7, 8), risk: "very-high", assetClass: "private-credit",
     });
     expect(result.slices.find(row => row.sourceKey === "dola-inverse:unattributed")).toMatchObject({
       unclassifiedResidual: true, residualReason: "insufficient-evidence",

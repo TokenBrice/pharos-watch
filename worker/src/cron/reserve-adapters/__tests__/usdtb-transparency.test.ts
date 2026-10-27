@@ -52,8 +52,10 @@ describe("custody inventory USDtb profile", () => {
     const result = adaptCustodyInventory("usdtb-transparency", USDTB_BACKING);
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdtb-transparency:buidl", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock", depType: "collateral" },
-      { sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
+      { sourceKey: "usdtb-transparency:buidl", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: expect.closeTo(98.82641571461582, 8), risk: "low", coinId: "buidl-blackrock", depType: "collateral" },
+      { sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", pct: expect.closeTo(1.1735842853252136, 8), risk: "low" },
+      // The positive 0.000458 USDC balance survives as its exact (sub-display) share.
+      { sourceKey: "usdtb-transparency:usdc", name: "USDC cash-equivalent reserves", pct: expect.closeTo(5.896598671662838e-11, 15), risk: "low", coinId: "usdc-circle", depType: "collateral" },
     ]);
     expect(result.warnings).toBeUndefined();
 
@@ -184,8 +186,8 @@ describe("custody inventory USDtb profile", () => {
     const result = adaptCustodyInventory("usdtb-transparency", withStringAmounts);
 
     expect(result.slices).toEqual([
-      { sourceKey: "usdtb-transparency:buidl", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: 98.8, risk: "low", coinId: "buidl-blackrock", depType: "collateral" },
-      { sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", pct: 1.2, risk: "low" },
+      { sourceKey: "usdtb-transparency:buidl", name: "BlackRock BUIDL (U.S. T-Bills, cash, repos)", pct: expect.closeTo(98.8264157146741, 8), risk: "low", coinId: "buidl-blackrock", depType: "collateral" },
+      { sourceKey: "usdtb-transparency:assets-in-motion", name: "Assets in motion (settlement float)", pct: expect.closeTo(1.1735842853259055, 8), risk: "low" },
     ]);
     const totalReserveUsd = 767603510.39 + 9115451.68;
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(totalReserveUsd, 3);

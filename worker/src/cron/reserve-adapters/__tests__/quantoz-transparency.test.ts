@@ -103,7 +103,7 @@ describe("adaptQuantozTransparency", () => {
     const result = adaptQuantozTransparency(LIVE_QUANTOZ_HTML, "EURQ");
 
     expect(result.slices).toEqual([
-      { sourceKey: "quantoz-transparency:government-bonds", name: "Government bonds (Netherlands, Germany, and US)", pct: 67, risk: "very-low" },
+      { sourceKey: "quantoz-transparency:government-bonds", name: "Government bonds (Netherlands, Germany, and US)", pct: 66, risk: "very-low" },
       { sourceKey: "quantoz-transparency:cash", name: "Cash deposits at Tier 1 European banks", pct: 33, risk: "very-low" },
     ]);
     expect(result.metadata).toMatchObject({
@@ -114,8 +114,9 @@ describe("adaptQuantozTransparency", () => {
       governmentBondPct: 66,
       sourceTimestamp: Date.UTC(2026, 7, 30) / 1000,
     });
-    // The 99% published sum stays out of the shared percentage-sum gate's raw input,
-    // because the source's own rounding envelope explains it.
+    // The disclosed whole-number percentages are published as read (no 99 -> 100 remainder
+    // repair), and the 99% sum stays out of the raw-deviation input because the source's own
+    // rounding envelope explains it.
     expect(result.metadata?.diag).toEqual({ roundingEnvelopePct: 1, publishedAllocationSumPct: 99 });
     expectWarningEffect(result, "published-percentages-rounded", "info");
   });
@@ -162,6 +163,7 @@ describe("fetchQuantozTransparencyReserves", () => {
     expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-08-30T00:00:00Z") / 1000);
     expectWarningEffect(result, "published-percentages-rounded", "info");
     expectWarningEffect(report, "stale-source-data", "degraded");
+    // The unrepaired 99% disclosed sum sits inside the declared rounding envelope, so the shared gate stays quiet.
     expect(report.warnings.some((warning) => warning.code === "pct-sum-deviation")).toBe(false);
   });
 
@@ -183,7 +185,7 @@ describe("fetchQuantozTransparencyReserves", () => {
   });
 
   it.each(["eurq-quantoz", "usdq-quantoz"])(
-    "keeps the live rounded allocation of %s at ok status",
+    "publishes the live rounded allocation of %s unrepaired at ok status",
     async (coinId) => {
       const { result, report } = await runAdapter("quantoz-transparency", coinId, {
         network: installAdapterNetwork({ html: { [url]: LIVE_QUANTOZ_HTML } }),
@@ -195,9 +197,9 @@ describe("fetchQuantozTransparencyReserves", () => {
         cashPct: 33,
         governmentBondPct: 66,
       });
-      const effects = [...(result.warnings ?? []), ...report.warnings].map((warning) => warning.effect);
-      expect(effects).toContain("info");
-      expect(effects.filter((effect) => effect !== "info")).toEqual([]);
+      expectWarningEffect(result, "published-percentages-rounded", "info");
+      // Disclosed percentages are not repaired to 100; the one-point sum is within the disclosed rounding envelope.
+      expect(report.warnings.filter((warning) => warning.effect !== "info")).toEqual([]);
     },
   );
 

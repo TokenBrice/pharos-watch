@@ -84,7 +84,7 @@ export function classifyBucketedValues<Item, Bucket extends string>({
   getValue,
   getUnknownLabel,
   totalValue,
-  decimals = 1,
+  decimals = null,
   unknownSliceName = "Unmapped reserve positions",
   unknownSourceKey,
   unknownRisk = "high",

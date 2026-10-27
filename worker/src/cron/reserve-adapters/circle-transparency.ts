@@ -181,7 +181,6 @@ export function adaptCircleTransparency(html: string, coinType: string): Adapter
         value: entry.value,
         risk: entry.risk,
       })),
-      1,
     )
     : slicesFromPercentages(
       entries.map((entry) => ({

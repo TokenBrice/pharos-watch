@@ -229,8 +229,8 @@ const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
     network: { json: { [MEGAUSD_URL]: MEGAUSD_BACKING } },
     expected: {
       slices: [
-        { sourceKey: "megausd-custody:usdc", name: "USDC cash-equivalent reserves", pct: 99.9, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-        { sourceKey: "megausd-custody:usdtb", name: "USDtb cash-equivalent reserves", pct: 0.1, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
+        { sourceKey: "megausd-custody:usdc", name: "USDC cash-equivalent reserves", pct: expect.closeTo(99.87667757992814, 8), risk: "low", coinId: "usdc-circle", depType: "collateral" },
+        { sourceKey: "megausd-custody:usdtb", name: "USDtb cash-equivalent reserves", pct: expect.closeTo(0.12332242007185923, 8), risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
       ],
       metadata: {
         sourceTimestamp: Math.floor(Date.parse("2026-09-09T15:55:59.000Z") / 1000),
@@ -308,13 +308,13 @@ const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
     expected: {
       // Detailed unit/pricing oracles also remain in the pure Kava suite.
       slices: expect.arrayContaining([
-        expect.objectContaining({ name: "HBTC", risk: "medium", pct: expect.closeTo(80.2, 9), sourceKey: "kava-cdp:hbtc" }),
-        expect.objectContaining({ name: "BTCB", risk: "medium" }),
-        expect.objectContaining({ name: "XRPB", risk: "medium" }),
-        expect.objectContaining({ name: "KAVA", risk: "high" }),
-        expect.objectContaining({ name: "BNB", risk: "high" }),
-        expect.objectContaining({ name: "BUSD", risk: "low", pct: expect.closeTo(1.4, 9) }),
-        expect.objectContaining({ name: "USDT", risk: "low", pct: expect.closeTo(0.2, 9) }),
+        expect.objectContaining({ name: "HBTC", risk: "medium", pct: expect.closeTo(80.21670453644832, 8), sourceKey: "kava-cdp:hbtc" }),
+        expect.objectContaining({ name: "BTCB", risk: "medium", pct: expect.closeTo(7.721250969745951, 8) }),
+        expect.objectContaining({ name: "XRPB", risk: "medium", pct: expect.closeTo(3.8375869436432217, 8) }),
+        expect.objectContaining({ name: "KAVA", risk: "high", pct: expect.closeTo(3.807252905946823, 8) }),
+        expect.objectContaining({ name: "BNB", risk: "high", pct: expect.closeTo(2.9032914244728696, 8) }),
+        expect.objectContaining({ name: "BUSD", risk: "low", pct: expect.closeTo(1.3526381503986986, 8) }),
+        expect.objectContaining({ name: "USDT", risk: "low", pct: expect.closeTo(0.161275069344107, 8) }),
       ]),
       metadata: { freshnessMode: "not-applicable", totalReserveUsd: expect.closeTo(63_740_454.117967, 6) },
       warnings: [],

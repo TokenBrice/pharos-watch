@@ -294,8 +294,10 @@ describe("adaptAccountableDashboard", () => {
       name: "US Treasury Bills",
       sourceKey: "accountable:noon:deployment:us-treasury-bills",
     }));
-    expect(result.slices).not.toContainEqual(expect.objectContaining({
+    // A positive sub-display-precision bucket survives as its true share.
+    expect(result.slices).toContainEqual(expect.objectContaining({
       name: "Funding Rate (BTC)",
+      pct: expect.closeTo(0.0000027942145582178365, 12),
     }));
   });
 
@@ -312,7 +314,7 @@ describe("adaptAccountableDashboard", () => {
     expect(result.slices).toContainEqual({
       name: "Funding Rate Arb (Hyperliquid)",
       sourceKey: "accountable:noon:deployment:funding-rate-arb-hyperliquid",
-      pct: 16.6,
+      pct: expect.closeTo(16.58, 8),
       risk: "high",
     });
     expect(result.slices.some((slice) => slice.sourceKey === "accountable:noon:deployment:funding-rate-arb-hype")).toBe(false);
@@ -401,20 +403,26 @@ describe("adaptAccountableDashboard", () => {
     });
     expect(result.warnings ?? []).toEqual([]);
     // This September payload is independent of the refreshed catalog composition.
-    // The adapter publishes one-decimal slices; its sub-rounding Other balance
-    // does not change the external-reserves or redeemable-claims denominators.
+    // The adapter publishes unrounded slices; its sub-rounding Other balance
+    // survives as a positive slice and does not change the external-reserves or redeemable-claims denominators.
     expect(result.slices).toEqual([
       {
         sourceKey: "accountable:apyx:deployment:strc",
         name: "STRC / STRCx (Strategy preferred-equity exposure)",
-        pct: 86.7,
+        pct: expect.closeTo(86.74094097006268, 8),
         risk: "high",
       },
       {
         sourceKey: "accountable:apyx:deployment:cash-equivalents",
         name: "Cash & Equivalents (cash, stablecoins, bills and DeFi positions)",
-        pct: 13.3,
+        pct: expect.closeTo(13.255356384693812, 8),
         risk: "medium",
+      },
+      {
+        sourceKey: expect.any(String),
+        name: "Other",
+        pct: expect.closeTo(0.0037026452435144092, 8),
+        risk: expect.any(String),
       },
     ]);
     expect(result.metadata?.collateralizationBasis).toBe("net-of-protocol-owned");
@@ -509,8 +517,8 @@ describe("adaptAccountableDashboard", () => {
     });
 
     expect(result.slices).toEqual([
-      { sourceKey: "accountable:unitas:xgld:binance", name: "Binance", pct: 98.1, risk: "high" },
-      { sourceKey: "accountable:unitas:xgld:bnb-smartchain", name: "BNB Smart Chain", pct: 1.9, risk: "high" },
+      { sourceKey: "accountable:unitas:xgld:binance", name: "Binance", pct: expect.closeTo(98.08, 8), risk: "high" },
+      { sourceKey: "accountable:unitas:xgld:bnb-smartchain", name: "BNB Smart Chain", pct: expect.closeTo(1.92, 8), risk: "high" },
     ]);
     expect(result.metadata).toMatchObject({ breakdownCount: 2, mappedBucketCount: 2 });
     expect(result.metadata).not.toHaveProperty("unknownExposurePct");
@@ -653,13 +661,13 @@ describe("adaptAccountableDashboard", () => {
     });
     expect(result.metadata?.unknownBucketCount).toBeUndefined();
     expect(result.metadata?.unknownExposurePct).toBeUndefined();
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Ethena USDe loop", pct: 5.9, risk: "high", coinId: "usde-ethena", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Ethena USDe", pct: 5.9, risk: "high", coinId: "usde-ethena", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Aave GHO", pct: 5.9, risk: "medium", coinId: "gho-aave", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "MegaETH USDm", pct: 5.9, risk: "low", coinId: "usdm-mega", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Maple syrupUSDT", pct: 5.9, risk: "medium", coinId: "syrupusdt-maple", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Sky PT sUSDS loop", pct: 5.9, risk: "high", coinId: "susds-sky", depType: "collateral" }));
-    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Paxos USDG", pct: 5.9, risk: "low", coinId: "usdg-paxos", depType: "collateral" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Ethena USDe loop", pct: expect.closeTo(100 / 17, 8), risk: "high", coinId: "usde-ethena", depType: "collateral" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Ethena USDe", pct: expect.closeTo(100 / 17, 8), risk: "high", coinId: "usde-ethena", depType: "collateral" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Aave GHO", pct: expect.closeTo(100 / 17, 8), risk: "medium", coinId: "gho-aave", depType: "collateral" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "MegaETH USDm", pct: expect.closeTo(100 / 17, 8), risk: "low", coinId: "usdm-mega", depType: "collateral" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Maple syrupUSDT", pct: expect.closeTo(100 / 17, 8), risk: "medium", coinId: "syrupusdt-maple", depType: "collateral" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Sky PT sUSDS loop", pct: expect.closeTo(100 / 17, 8), risk: "high", coinId: "susds-sky", depType: "collateral" }));
+    expect(result.slices).toContainEqual(expect.objectContaining({ name: "Paxos USDG", pct: expect.closeTo(100 / 17, 8), risk: "low", coinId: "usdg-paxos", depType: "collateral" }));
     expect(validateAdapterOutput(result, {
       adapter: getReserveAdapter("accountable") ?? undefined,
       now: Date.UTC(2026, 4, 12) / 1000,
@@ -1157,10 +1165,10 @@ describe("adaptAccountableDashboard", () => {
     );
 
     expect(result.slices).toEqual([
-      { name: "Hedged money-market positions at undisclosed custodians (asset-manager mandate)", pct: 61.7, risk: "medium" },
-      { name: "Delta-neutral futures arbitrage and calendar-spread positions", pct: 26.7, risk: "high" },
-      { name: "Cash and equivalents held as FX collateral at investment banks and exchange venues", pct: 10.1, risk: "medium" },
-      { name: "On-chain stablecoin buffer in the minting custodian wallet", pct: 1.5, risk: "low" },
+      { name: "Hedged money-market positions at undisclosed custodians (asset-manager mandate)", pct: expect.closeTo(61.64721789524519, 8), risk: "medium" },
+      { name: "Delta-neutral futures arbitrage and calendar-spread positions", pct: expect.closeTo(26.74949300171463, 8), risk: "high" },
+      { name: "Cash and equivalents held as FX collateral at investment banks and exchange venues", pct: expect.closeTo(10.085823858305902, 8), risk: "medium" },
+      { name: "On-chain stablecoin buffer in the minting custodian wallet", pct: expect.closeTo(1.5174652447342842, 8), risk: "low" },
     ]);
     expect(result.metadata).toMatchObject({
       bucket: "asset-breakdown",

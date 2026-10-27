@@ -27,7 +27,7 @@ import {
   uint256Observation,
   type EvmObservationTransportCall,
 } from "./evm-observation-plan";
-import { normalizeSlices, decimalNumberFromBigInt } from "./slice-math";
+import { compositionPctFromRaw, normalizeSlices, decimalNumberFromBigInt } from "./slice-math";
 import { reserveDegradedWarning, reserveInfoWarning } from "./warnings";
 import type { AdapterContext, AdapterResult } from "./types";
 
@@ -437,14 +437,14 @@ function adaptXdaiBridgeResponse(
   const slices: ReserveSlice[] = normalizeSlices([
     {
       name: "sUSDS held by the Ethereum xDAI Foreign Bridge",
-      pct: percentageFromBigInts(observation.susdsAssets, collateral, "sUSDS collateral share"),
+      pct: compositionPctFromRaw(observation.susdsAssets, collateral, `${ADAPTER_KEY}: sUSDS collateral share`),
       risk: "low",
       coinId: "susds-sky",
       depType: "collateral",
     },
     {
       name: "Liquid USDS held by the Ethereum xDAI Foreign Bridge",
-      pct: percentageFromBigInts(observation.liquidUsds, collateral, "liquid USDS collateral share"),
+      pct: compositionPctFromRaw(observation.liquidUsds, collateral, `${ADAPTER_KEY}: liquid USDS collateral share`),
       risk: "low",
       coinId: "usds-sky",
       depType: "collateral",

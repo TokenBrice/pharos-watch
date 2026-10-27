@@ -336,7 +336,6 @@ export function buildBrlaReserveSlices(manifest: IndependentAssuranceManifest): 
     .reduce((sum, asset) => sum + asset.amount, 0);
   const slices = normalizeSlices(
     classifiedAssets.map(({ amount, unclassified: _unclassified, ...asset }) => ({ ...asset, pct: (amount / totalClassifiedAmount) * 100 })),
-    6,
   );
   return {
     slices,

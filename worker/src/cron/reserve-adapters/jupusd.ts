@@ -233,7 +233,7 @@ export function adaptJupUsdData(
         capacityKind: "live-direct-bounded",
         freshnessKind: sourceTimestamp != null ? "verified-source-timestamp" : "same-run-api",
         ...(sourceTimestamp != null ? { sourceTimestamp } : {}),
-        ...(routeStatus
+        ...(options.oracle != null && routeStatus
           ? {
               routeStatus,
               routeStatusSource: "protocol-api" as const,

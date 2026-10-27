@@ -1,5 +1,20 @@
 [
   {
+    "version": "10.36",
+    "title": "Unrounded reserve composition shares",
+    "date": "2026-10-28",
+    "effectiveAt": 1793145600,
+    "summary": "Live reserve composition now publishes measured shares without one-decimal rounding or remainder repair, so a positive holding below the former display precision stays a finite positive share that Backing and dependency inputs can see.",
+    "impact": [
+      "Reserve adapters: the shared slice helpers default to unrounded precision and sixteen adapters that rounded to 1-12 decimals now publish source-derived shares. Positive holdings that rounded to zero (for example a 0.04% credit slice beside a 99.96% parent) are retained, as are sub-display branches that were previously dropped. Identity grouping, zero filtering, source-total validation and capacity arithmetic are unchanged, and a source total off 100% is retained as a source fact instead of being repaired to 100.",
+      "Composition-only raw shares: USD.AI, xDAI and ERC4626 vault composition no longer prequantize raw-amount shares, so a positive balance cannot round to zero; an unrepresentable positive share rejects, and an observed zero stays zero.",
+      "Movers: reserve-backed Backing and dependency inputs can change slightly where sub-display positive holdings now appear; pillar weights, materiality and admission rules are unchanged. Mover attribution and the first accepted publication are separate obligations.",
+      "No fixed-clock replay is claimed. Activation: 2026-10-28 00:00 UTC (release cut; 1793145600), stacked on 10.35; no deployment or production acceptance is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "10.35",
     "title": "Asset-local measured-route expiry and bounded DEX capture admission",
     "date": "2026-10-28",

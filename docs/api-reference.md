@@ -1010,7 +1010,7 @@ Yield-bearing stablecoin rankings with safety, benchmark-aware context, and opti
 ```json
 {
   "currentVersion": "8.52",
-  "methodologyVersion": "10.35"
+  "methodologyVersion": "10.36"
 }
 ```
 

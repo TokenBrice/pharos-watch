@@ -522,9 +522,9 @@ describe("reserve-protocol-dtf adapter", () => {
     const result = await fetchReserveProtocolDtfReserves(eusdCoin as never, config, signal, { nowSec: observedAt });
 
     expect(result.slices).toEqual([
-      { sourceKey: `reserve-protocol-dtf:${STATIC_AAVE_USDC.toLowerCase()}`, name: "Static Aave Ethereum USDC", pct: 34, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { sourceKey: `reserve-protocol-dtf:${WCUSDCV3.toLowerCase()}`, name: "Wrapped Compound USDCv3", pct: 33, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { sourceKey: `reserve-protocol-dtf:${WCUSDT_V3.toLowerCase()}`, name: "Wrapped Compound USDTv3", pct: 33, risk: "low", coinId: "usdt-tether", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${STATIC_AAVE_USDC.toLowerCase()}`, name: "Static Aave Ethereum USDC", pct: expect.closeTo(34, 8), risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${WCUSDCV3.toLowerCase()}`, name: "Wrapped Compound USDCv3", pct: expect.closeTo(33, 8), risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: `reserve-protocol-dtf:${WCUSDT_V3.toLowerCase()}`, name: "Wrapped Compound USDTv3", pct: expect.closeTo(33, 8), risk: "low", coinId: "usdt-tether", depType: "collateral" },
     ]);
     expect(result.metadata).toMatchObject({
       componentCount: 3,

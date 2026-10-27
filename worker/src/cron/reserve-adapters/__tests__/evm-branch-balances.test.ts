@@ -810,16 +810,16 @@ describe("fetchEvmBranchBalancesReserves", () => {
       name: "retains a measured sub-tenth-percent tracked branch",
       secondBalance: 428n,
       expected: [
-        { sourceKey: "evm-branch-balances:rootstock:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "Sovryn Zero ZUSD", pct: 99.957, risk: "medium" },
-        { sourceKey: "evm-branch-balances:rootstock:0xcccccccccccccccccccccccccccccccccccccccc", name: "Dollar on Chain DOC", pct: 0.043, risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
+        { sourceKey: "evm-branch-balances:rootstock:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "Sovryn Zero ZUSD", pct: expect.closeTo((1_000_000 / 1_000_428) * 100, 10), risk: "medium" },
+        { sourceKey: "evm-branch-balances:rootstock:0xcccccccccccccccccccccccccccccccccccccccc", name: "Dollar on Chain DOC", pct: expect.closeTo((428 / 1_000_428) * 100, 10), risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
       ],
     },
     {
-      name: "retains a measured branch below the three-decimal rounding threshold",
+      name: "retains a measured branch far below any display precision",
       secondBalance: 4n,
       expected: [
-        { sourceKey: "evm-branch-balances:rootstock:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "Sovryn Zero ZUSD", pct: 99.9996, risk: "medium" },
-        { sourceKey: "evm-branch-balances:rootstock:0xcccccccccccccccccccccccccccccccccccccccc", name: "Dollar on Chain DOC", pct: 0.0004, risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
+        { sourceKey: "evm-branch-balances:rootstock:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "Sovryn Zero ZUSD", pct: expect.closeTo((1_000_000 / 1_000_004) * 100, 10), risk: "medium" },
+        { sourceKey: "evm-branch-balances:rootstock:0xcccccccccccccccccccccccccccccccccccccccc", name: "Dollar on Chain DOC", pct: expect.closeTo((4 / 1_000_004) * 100, 10), risk: "medium", coinId: "doc-money-on-chain", depType: "collateral" },
       ],
     },
   ])("$name", async ({ secondBalance, expected }) => {
@@ -1032,8 +1032,8 @@ describe("fetchEvmBranchBalancesReserves", () => {
     );
 
     expect(result.slices).toEqual([
-      { sourceKey: "evm-branch-balances:ethereum:0xdddddddddddddddddddddddddddddddddddddddd", name: "Wrapped stable", pct: 64.1, risk: "low" },
-      { sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "USYC", pct: 35.9, risk: "low" },
+      { sourceKey: "evm-branch-balances:ethereum:0xdddddddddddddddddddddddddddddddddddddddd", name: "Wrapped stable", pct: expect.closeTo((2 / 3.12) * 100, 8), risk: "low" },
+      { sourceKey: "evm-branch-balances:ethereum:0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", name: "USYC", pct: expect.closeTo((1.12 / 3.12) * 100, 8), risk: "low" },
     ]);
   });
 

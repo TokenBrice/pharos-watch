@@ -116,7 +116,7 @@ export async function fetchHyloSolanaReserves(_coin: ReserveAdapterCoin, config:
     if (total < supply) warnings.push(reserveDegradedWarning("reserve-undercollateralized", "Hylo collateral value is below hyUSD supply"));
     if (Math.abs(liabilities - supply) > Math.max(1, supply * 0.000001)) throw new Error("Hylo pool liabilities do not reconcile to hyUSD mint supply");
   }
-  const slices = slicesFromValues(values, 4).filter((slice) => slice.pct > 0);
+  const slices = slicesFromValues(values).filter((slice) => slice.pct > 0);
   return { slices, warnings, metadata: {
     ...notApplicableFreshnessMetadata({ proofKind: "hylo-solana-atomic-account-census", lstBreakdown, poolLiabilities: liabilities, hyusdSupply: supply, liabilityReconciliationDelta: liabilities - supply, usdcDustExcludedUsd: slices.some((slice) => slice.sourceKey === "hylo-solana:usdc-pool") ? 0 : usdcValue, exoInventoryScope: "SDK reviewed cbBTC/HYPE plus four inactive candidates; unknown activation fails closed" }),
     observedBlock: census.observedBlock, totalCollateralUsd: total, ...(supply > 0 ? { collateralizationRatio: total / supply } : {}),

@@ -292,7 +292,7 @@ export async function fetchSodaxSonicReserves(
   warnings.push(reserveInfoWarning("supply-inventory-unverified", "The coin's Balanced v1 transition notice identifies a historical v1 contract inventory; Sonic v2 liabilities remain unverified"));
   const observedSupply = supplyReads.reduce((sum, s) => sum + (s.raw == null ? 0 : decimalNumberFromBigInt(s.raw, s.contract.decimals!)), 0);
   return {
-    slices: slicesFromValues(values, 6), warnings,
+    slices: slicesFromValues(values), warnings,
     metadata: {
       ...notApplicableFreshnessMetadata({ proofKind: "sodax-scaled-debt-reconciled-collateral" }),
       observedBlock: plan.observedBlock, totalReserveUsd, unknownExposurePct,

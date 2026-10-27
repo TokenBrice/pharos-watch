@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { calculateRawPercentageSumDeviation, normalizeSlicesWithDiagnostics, normalizeSlices, parsePositiveNumericLike, slicesFromValues, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
+import { buildBucketSlices, compositionPctFromRaw, calculateRawPercentageSumDeviation, slicesFromPercentages, normalizeSlicesWithDiagnostics, normalizeSlices, parsePositiveNumericLike, slicesFromValues, sourceKeySlug, valueUsdFromBigIntPrice, worseRisk } from "../slice-math";
 import { accumulateBucketedExposure, classifyBucketedValues } from "../classification";
 import type { ReserveSlice } from "@shared/types/core";
 
@@ -134,10 +134,30 @@ describe("reserve identity and input integrity", () => {
     }
   });
 
-  it("retains source drift independently of repaired rounding", () => {
+  it("retains source drift without repairing it by default", () => {
     const result = normalizeSlicesWithDiagnostics([{ name: "Cash", risk: "low", pct: 99 }]);
     expect(result.rawSumDeviation).toBe(1);
-    expect(result.slices[0].pct).toBe(100);
+    expect(result.slices[0].pct).toBe(99);
+    expect(normalizeSlicesWithDiagnostics([{ name: "Cash", risk: "low", pct: 99 }], 1).slices[0].pct).toBe(100);
+  });
+
+  it("preserves 99.96 / 0.04 distinct-risk shares through every default entrypoint", () => {
+    const rows = [
+      { name: "parent", risk: "low" as const, coinId: "usdc-circle", value: 99_960 },
+      { name: "other", risk: "high" as const, value: 40 },
+    ];
+    const expected = [
+      expect.objectContaining({ name: "parent", pct: expect.closeTo(99.96, 10) }),
+      expect.objectContaining({ name: "other", risk: "high", pct: expect.closeTo(0.04, 10) }),
+    ];
+    expect(slicesFromValues(rows)).toEqual(expected);
+    expect(slicesFromPercentages(rows.map(({ value, ...row }) => ({ ...row, pct: value / 1_000 })))).toEqual(expected);
+    expect(buildBucketSlices(new Map(), rows, "cash" as never).slices).toEqual(expected);
+    expect(classifyBucketedValues({
+      items: rows, getValue: (row) => row.value, getUnknownLabel: (row) => row.name,
+      rules: [{ key: "parent", name: "parent", risk: "low", match: (row) => row.name === "parent" },
+        { key: "other", name: "other", risk: "high", match: (row) => row.name === "other" }],
+    }).slices).toEqual(expected);
   });
 
   it("rejects malformed exposure before either classifier can hide it", () => {
@@ -151,6 +171,22 @@ describe("reserve identity and input integrity", () => {
         rules: [{ key: "cash", name: "Cash", risk: "low", match: () => true }],
       })).toThrow(/invalid value/);
     }
+  });
+});
+
+describe("compositionPctFromRaw", () => {
+  it("keeps a raw 1 / 10^18 numerator as a positive share and parses exact shares exactly", () => {
+    expect(compositionPctFromRaw(1n, 10n ** 18n, "test")).toBeCloseTo(1e-16, 28);
+    expect(compositionPctFromRaw(1n, 10n ** 18n, "test")).toBeGreaterThan(0);
+    expect(compositionPctFromRaw(944n, 1_000n, "test")).toBe(94.4);
+    expect(compositionPctFromRaw(5n, 5n, "test")).toBe(100);
+  });
+
+  it("returns an observed zero as 0 and rejects invalid or unrepresentable inputs", () => {
+    expect(compositionPctFromRaw(0n, 10n ** 18n, "test")).toBe(0);
+    expect(() => compositionPctFromRaw(1n, 0n, "test")).toThrow(/denominator must be positive/);
+    expect(() => compositionPctFromRaw(-1n, 10n, "test")).toThrow(/must not be negative/);
+    expect(() => compositionPctFromRaw(1n, 10n ** 400n, "test")).toThrow(/not representable/);
   });
 });
 

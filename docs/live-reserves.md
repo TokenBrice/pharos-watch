@@ -66,6 +66,8 @@ The shared result is `{ eligible, reasons: LiveReserveAdmissionRejectionCode[], 
 
 `shared/lib/live-reserve-freshness.ts` owns `resolveLiveReserveSourceAgeBudget` and the 600-second `MAX_FUTURE_SOURCE_TIMESTAMP_SKEW_SEC`: scoring wins equal caps and the caller supplies the fallback. Producer validation, serving and nested redemption admission share this authority; `validate.ts` does not export a compatibility skew constant. Source skew and Worker fetch-clock integrity are independent.
 
+JupUSD claims `protocol-api` route status only from a schema-valid oracle read; failure publishes `unknown`/`static-config`.
+
 A later node-disagreement or other attempt error does not revoke a clean retained snapshot. Redemption capacity consumes the same structural, configuration-identity and freshness rejections, but retains its separate evidence-class and degraded-telemetry policy; independent reserve composition is not a prerequisite for valid same-run redemption telemetry.
 
 `ReserveSyncStatusSchema` and its derived `ReserveSyncStatus` in `shared/types/live-reserves.ts` own reserve-attempt status admission for detail wire views, accepted generations, Worker records/history and the Node coverage audit. Accepted-generation absence remains nullable, and unknown audit statuses remain unavailable. Scheduler execution/disposition vocabularies are independent even where literals coincide.
@@ -82,7 +84,7 @@ Producer writes use attempt/deadline/ownership fences and atomically commit comp
 
 Feed acknowledgement changes health cohorts, never raw counts, freshness, admission, scoring or listing status. `worker/src/lib/reserve-feed-reviews.ts` owns exact cause matching, dated evidence, owner and expiry. [Review renewal](runbooks/review-renewal.md#reserve-feed-reviews) owns review constraints; [source boundaries](process/live-reserves-appendix.md#issuer-balance-sheets-and-reviewed-reports) details mTBILL's v2 integrity review. [Status health](./status-dashboard.md#live-reserve-sync-health) owns cohorts and expiry reminders.
 
-Retired bindings return 404 while the coin, curated research and retained evidence remain; STBT's complete retirement receipt is in `shared/data/coverage-dispositions/retired-reserve-adapters/matrixdock-stbt/`.
+Retired bindings return 404 while the coin, curated research and retained evidence remain.
 
 `computeReserveCompositionOverview()` and the [status reserve-health contract](./status-dashboard.md#live-reserve-sync-health) own the overview fields, strict-corruption fail-closed count, attempt-over-stale priority, acknowledgement cohorts and recovery-cursor presentation.
 

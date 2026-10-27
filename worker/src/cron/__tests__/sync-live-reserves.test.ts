@@ -729,7 +729,7 @@ describe("syncLiveReserves", () => {
     const result = await syncLiveReserves(db, new AbortController().signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as { warningCount?: number };
 
-    // Warnings no longer affect status (only failed+skipped > 10% of total triggers degraded)
+    // Warnings no longer affect status (any failed or circuit-held member triggers degraded)
     expect(result?.status).toBe("ok");
     expect(metadata.warningCount).toBeGreaterThanOrEqual(configuredCoinCount);
   });
@@ -1590,9 +1590,24 @@ describe("syncLiveReserves", () => {
       status: "ok", reason: undefined, reasons: [],
     },
     {
-      name: "partial failure below the existing threshold",
+      name: "one failed member of a hundred",
       counts: { synced: 99, failed: 1, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
-      status: "ok", reason: undefined, reasons: ["reserve-adapter-or-persistence-failed"],
+      status: "degraded", reason: "reserve-adapter-or-persistence-failed", reasons: ["reserve-adapter-or-persistence-failed"],
+    },
+    {
+      name: "one failed member of two",
+      counts: { synced: 1, failed: 1, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
+      status: "degraded", reason: "reserve-adapter-or-persistence-failed", reasons: ["reserve-adapter-or-persistence-failed"],
+    },
+    {
+      name: "two failed members of twenty",
+      counts: { synced: 18, failed: 2, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
+      status: "degraded", reason: "reserve-adapter-or-persistence-failed", reasons: ["reserve-adapter-or-persistence-failed"],
+    },
+    {
+      name: "one circuit-held member of a hundred",
+      counts: { synced: 99, failed: 0, skipped: 1, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 1 },
+      status: "degraded", reason: "reserve-circuit-open", reasons: ["reserve-circuit-open"],
     },
     {
       name: "deferred skip without a recorded deferred-coin count",

@@ -234,8 +234,7 @@ export function resolveReserveSyncRunStatus(
     return "error";
   }
   if (!args.checkpointOwned && args.counts.deferredCoins > 0) return "degraded";
-  const attempted = args.counts.attemptedCoins;
-  return (args.counts.failed + args.counts.circuitSkipped) > Math.ceil(attempted * 0.1) ? "degraded" : "ok";
+  return args.counts.failed > 0 || args.counts.circuitSkipped > 0 ? "degraded" : "ok";
 }
 
 export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): Promise<CronResult> {

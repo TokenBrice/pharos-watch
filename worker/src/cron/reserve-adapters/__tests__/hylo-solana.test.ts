@@ -137,8 +137,9 @@ describe("hylo-solana", () => {
     expect(result.metadata?.observedBlock).toEqual({ chain: "solana", number: 445689101, timestamp: NOW_SEC });
     expect(result.metadata?.freshnessMode).toBe("not-applicable");
     expect(result.slices.map((slice) => slice.sourceKey)).toEqual(expect.arrayContaining(["hylo-solana:lst-pool", "hylo-solana:cbbtc-pool", "hylo-solana:hype-pool"]));
-    expect(result.slices.some((slice) => slice.sourceKey === "hylo-solana:usdc-pool")).toBe(false);
-    expect(result.metadata?.details?.usdcDustExcludedUsd).toBe(0.199025);
+    // The $0.199025 USDC balance is positive and now survives as its exact share instead of rounding away.
+    expect(result.slices.find((slice) => slice.sourceKey === "hylo-solana:usdc-pool")?.pct).toBeCloseTo((0.199025 / total) * 100, 10);
+    expect(result.metadata?.details?.usdcDustExcludedUsd).toBe(0);
     expect(result.warnings).toEqual([]);
   });
 
