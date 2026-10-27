@@ -15,6 +15,7 @@ import { CHART_PALETTE, THREAT_BAND_HEX, SIGNAL_CHART_COLORS } from "@/lib/chart
 const DEWS_CHART_HEX = CHART_PALETTE[0];
 import type { ThreatBand } from "@shared/lib/classification";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { StablecoinModuleTitle } from "@/components/stablecoin-detail/module-title";
 import {
   ChartAreaGradient,
@@ -95,7 +96,7 @@ interface DEWSDetailProps {
 
 export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
   const dewsGradientId = useSvgId("dews");
-  const { data, isLoading, error, refetch } = useStressSignalDetail(stablecoinId);
+  const { data, isLoading, error, meta, refetch } = useStressSignalDetail(stablecoinId);
   const history = data?.history;
   const { ref: chartContainerRef, ready: isChartReady, width, height } = useChartContainerReady<HTMLDivElement>();
   const [showBreakdown, setShowBreakdown] = useState(false);
@@ -152,8 +153,9 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
     );
   }
 
-  if (error) {
-    return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
+  // A failed refresh keeps the retained detail; the in-card banner below owns its age.
+  if (error && data == null) {
+    return <QueryErrorNotice error={error} hasData={false} onRetry={() => void refetch()} />;
   }
 
   if (!data?.current) {
@@ -258,6 +260,17 @@ export function DEWSDetail({ stablecoinId }: DEWSDetailProps) {
         </div>
       </CardHeader>
       <CardContent className="space-y-5 px-4 py-5 sm:px-5">
+        <StaleDataBanner
+          queries={[{
+            preset: "stressSignals",
+            // This detail's own generation: never the aggregate feed's clock, never receipt time.
+            dataUpdatedAt: data.current.computedAt * 1000,
+            hasData: true,
+            error,
+            meta,
+          }]}
+          onRetry={() => void refetch()}
+        />
         {availableCount < 4 && (
           <p className="text-xs text-muted-foreground">
             Limited data: only {availableCount} of 8 signals available. Score may be less reliable.

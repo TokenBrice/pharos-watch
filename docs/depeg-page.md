@@ -320,7 +320,8 @@ history anchor; the API, tracker, detail history and feeds retain the full event
 | `useDepegResolverReview()` | `/api/depeg-resolver-review` | hero forecast track record; full ledger behind the grading disclosure |
 
 `DEWSRadarPanel` additionally reads `useStablecoins()` for market-cap mark sizing through the shared
-query cache.
+query cache. A refresh error keeps a retained radar; its load-error notice appears only with no data,
+and the route's shared DEWS notice owns retained age.
 The route starts that stablecoin read independently before the peg-summary loading
 return, avoiding a peg-summary → radar-sizing request waterfall.
 

@@ -659,8 +659,9 @@ export function DEWSRadarPanel({ logos, className, activeDepegIds, maxHeight = 4
     );
   }
 
-  if (error) {
-    return <QueryErrorNotice error={error} />;
+  // A failed refresh keeps the retained radar; the route's shared DEWS notice owns its age.
+  if (error && data == null) {
+    return <QueryErrorNotice error={error} hasData={false} />;
   }
 
   if (!viewModel) return null;
