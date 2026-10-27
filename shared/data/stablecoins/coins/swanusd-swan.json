@@ -56,7 +56,7 @@
   "launchDate": "2026-10-22",
   "listingStatusReview": {
     "changedAt": "2026-10-25",
-    "reason": "Missing lane: price. No CoinGecko or DefiLlama stablecoin listing exists, and DefiLlama's contract quote was about two hours old on October 25 2026, outside the 15-minute freshness budget. Supply is readable on-chain.",
+    "reason": "Missing lane: price. DefiLlama returned a fresh contract quote on October 26, 2026, but its source is unverified and the quote has not been admitted. Supply is readable on-chain.",
     "reviewBy": "2026-12-24"
   }
 }

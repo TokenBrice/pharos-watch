@@ -1105,3 +1105,17 @@ describe("RedCoin issuer-disclosure reconciliation", () => {
     );
   });
 });
+
+describe("launched-awaiting-data review reasons", () => {
+  it.each([
+    ["usdf-flipcash", /DefiLlama returned a quote for the Solana mint without naming its source market.*not enough to admit the quote \(#1663\)/],
+    ["swanusd-swan", /DefiLlama returned a fresh contract quote on October 26, 2026, but its source is unverified and the quote has not been admitted/],
+  ])("keeps %s awaiting data with an explicit admitted-price gap", (id, reason) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    expect(coin).toMatchObject({ status: "pre-launch", launchPhase: "launched" });
+    expect(coin.listingStatusReview).toMatchObject({ changedAt: "2026-10-25", reviewBy: "2026-12-24" });
+    expect(coin.listingStatusReview?.reason).toMatch(/^Missing lane: price\./);
+    expect(coin.listingStatusReview?.reason).toMatch(reason);
+    expect(ACTIVE_META_BY_ID.has(id)).toBe(false);
+  });
+});

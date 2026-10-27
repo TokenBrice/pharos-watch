@@ -154,6 +154,15 @@ describe("AI summary editorial corrections", () => {
     { text: string; updatedAt: string; authoredBy: string; reviewedBy?: string }
   >;
 
+  it("qualifies USDF's unadmitted quote instead of asserting that no market exists", () => {
+    const usdf = summaries["usdf-flipcash"];
+    expect(usdf.text).not.toMatch(/no DEX pair|no Jupiter market|platform demonstration/);
+    expect(usdf.text).toContain("neither is an admitted price source");
+    expect(usdf.text).toContain("launched but awaiting data while the quote's source is unresolved");
+    expect(usdf).toMatchObject({ authoredBy: "ai", updatedAt: "2026-10-27" });
+    expect(usdf.reviewedBy).toBeUndefined();
+  });
+
   it("drops RedCoin's superseded no-disclosure claims", () => {
     const redcoin = summaries["hkd-hsbc"].text;
     expect(redcoin).not.toMatch(/names no blockchain|no reserve report/);

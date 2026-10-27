@@ -124,7 +124,7 @@
   "launchDate": "2026-05-20",
   "listingStatusReview": {
     "changedAt": "2026-10-25",
-    "reason": "Missing lane: price. A DefiLlama contract price for the Solana mint exists, but its source pool is under review (see #1663) before admission; supply is readable from the mint.",
+    "reason": "Missing lane: price. On October 26, 2026, DefiLlama returned a quote for the Solana mint without naming its source market, and Jupiter and Dexscreener queries did not identify one. That evidence is not enough to admit the quote (#1663).",
     "reviewBy": "2026-12-24"
   }
 }
