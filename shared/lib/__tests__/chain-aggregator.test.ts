@@ -437,6 +437,85 @@ describe("aggregateChains", () => {
     expect(result.chains.find((chain) => chain.id === "bsc")?.unavailableSupplyObservationCount).toBe(0);
   });
 
+  it("publishes unavailable totals and accounting as null, never a fabricated zero (K-029)", () => {
+    const allNull = {
+      globalTotalUsd: null,
+      chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null,
+      attributionDiscrepancyUsd: null,
+      dominanceGeometryTotalUsd: null,
+    };
+    // Empty universe, an asset with no observations at all, and invalid inputs: nothing was observed.
+    expect(aggregateChains(makeInput({ peggedAssets: [] }))).toMatchObject({ ...allNull, chains: [] });
+    expect(aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: {}, chainCirculating: {} },
+    ] }))).toMatchObject(allNull);
+    expect(aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: -5 },
+        chainCirculating: { ethereum: { current: Number.NaN } } },
+    ] }))).toMatchObject(allNull);
+
+    // Observed zeros on both families stay zero.
+    expect(aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 0 },
+        chainCirculating: { ethereum: { current: 0 } } },
+    ] }))).toMatchObject({
+      globalTotalUsd: 0,
+      chainAttributedTotalUsd: 0,
+      unattributedTotalUsd: 0,
+      attributionDiscrepancyUsd: 0,
+      dominanceGeometryTotalUsd: 0,
+    });
+
+    // Aggregate-only: the global total is observed, attribution and dependent accounting are unavailable.
+    expect(aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100 }, chainCirculating: {} },
+    ] }))).toMatchObject({ ...allNull, globalTotalUsd: 100 });
+
+    // Chain-only fallback is preserved.
+    expect(aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: {}, chainCirculating: { ethereum: { current: 100 } } },
+    ] }))).toMatchObject({
+      globalTotalUsd: 100,
+      chainAttributedTotalUsd: 100,
+      unattributedTotalUsd: 0,
+      attributionDiscrepancyUsd: 0,
+      dominanceGeometryTotalUsd: 100,
+    });
+  });
+
+  it("withholds shares over a zero global denominator while keeping raw over-attribution", () => {
+    const result = aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 0 },
+        chainCirculating: { ethereum: { current: 100, circulatingPrevDay: 100 } } },
+    ] }));
+    expect(result).toMatchObject({
+      globalTotalUsd: 0,
+      chainAttributedTotalUsd: 100,
+      attributionDiscrepancyUsd: 100,
+      unattributedTotalUsd: 0,
+      dominanceGeometryTotalUsd: 100,
+      updatedAt: 1_752_560_000,
+    });
+    expect(result.chains.find((chain) => chain.id === "ethereum")?.dominanceShare).toBeNull();
+  });
+
+  it("keeps a full redemption numeric when a mixed cohort has unobserved members", () => {
+    const result = aggregateChains(makeInput({ peggedAssets: [
+      { id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 0 }, circulatingPrevDay: { peggedUSD: 50 },
+        chainCirculating: { ethereum: { current: 0, circulatingPrevDay: 50 } } },
+      { id: "usdc-circle", symbol: "USDC", price: 1, circulating: {}, chainCirculating: { ethereum: { current: null } } },
+    ] }));
+    expect(result).toMatchObject({
+      chains: [],
+      globalTotalUsd: 0,
+      chainAttributedTotalUsd: 0,
+      attributionDiscrepancyUsd: 0,
+      globalChange24hPct: -1,
+      supplyCoverage: { aggregateUnavailableAssetCount: 1, chainUnavailableObservationCount: 1 },
+    });
+  });
+
   it("includes the top stablecoins per chain by local supply", () => {
     const result = aggregateChains(makeInput());
     const eth = result.chains.find((c) => c.id === "ethereum")!;

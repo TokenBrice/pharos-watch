@@ -45,6 +45,8 @@ describe("compact homepage evidence admission", () => {
     "{", "null", JSON.stringify({ version: 0 }),
     encode().replace(HOMEPAGE_EVIDENCE_METHODOLOGY, "old-methodology"),
     encode().replace(`"version":${HOMEPAGE_EVIDENCE_VERSION}`, `"version":${HOMEPAGE_EVIDENCE_VERSION + 1}`),
+    // v1 envelopes predate chain-coverage counts (K-031) and must not revive a complete verdict.
+    encode().replace(`"version":${HOMEPAGE_EVIDENCE_VERSION}`, `"version":1`),
     encode().replace('"totalUsd":100', '"totalUsd":"broken"'),
     "x".repeat(HOMEPAGE_EVIDENCE_MAX_CHARS + 1),
   ])("tolerates corruption, schema/format and methodology changes", (raw) => {

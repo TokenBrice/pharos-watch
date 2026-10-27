@@ -6,7 +6,8 @@ import { isRetainableHomepageLane } from "@/lib/homepage-evidence";
 import { openPublicEvidenceDatabase, PUBLIC_EVIDENCE_STORE as STORE } from "@/lib/public-evidence-database";
 
 export const HOMEPAGE_EVIDENCE_QUERY_KEY = FRONTEND_API_QUERY_DESCRIPTORS.homepageSnapshot.queryKey;
-export const HOMEPAGE_EVIDENCE_VERSION = 1;
+// v2 (K-031): retained v1 envelopes predate chain-coverage counts and could revive a false complete verdict.
+export const HOMEPAGE_EVIDENCE_VERSION = 2;
 export const HOMEPAGE_EVIDENCE_METHODOLOGY = `psi:${PSI_METHODOLOGY_VERSION};peg:${DEPEG_DEWS_METHODOLOGY_VERSION}`;
 export const HOMEPAGE_EVIDENCE_MAX_CHARS = 32_768;
 const KEY = "homepage";

@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.59",
+    "title": "Partial-chain supply provenance in history",
+    "date": "2026-10-28",
+    "effectiveAt": 1793145600,
+    "summary": "Daily supply history, the top-stablecoins dataset and the homepage completeness verdict keep the partial-chain evidence of each observation, so a numeric remainder that excludes unavailable chains is never presented as a complete total.",
+    "impact": [
+      "The daily snapshot writes each admitted row's validated supplySource, supplyObservedAt and supplyChainGuard into the new nullable supply_history.supply_provenance column (migration 0287), and /api/supply-history publishes it as supplyProvenance. Rows written before this release, by a prior Worker or by admin backfills stay null: coverage unrecorded, never complete. No historical row is backfilled or rewritten; same-day price repairs never touch it.",
+      "A recorded observation is partial when its guard sets partialCoverage or reports chains-unavailable with an unavailable chain. The homepage counts partial and unrecorded members (supplyPartialCount, supplyCoverageUnknownCount) inside the observed count; it is complete only when every core member is observed with both counts explicitly zero, otherwise the existing known-subtotal label applies. Named USDT/USDC/Sky cohorts with a partial or unrecorded member are unavailable; Others and non-USD stay observed subtotals.",
+      "The top-stablecoins dataset adds supplyProvenance (JSON/NDJSON object, CSV serialized column) read from the immutable snapshot envelope. A guard-less row counts as recorded coverage only when that envelope's string pricingPipeline version is at least 6.55; missing, malformed or older versions stay unknown. Homepage cohort history drops a selected partial row to a gap instead of a complete cohort value, and a coin's 24h market-cap change is withheld when either day is partial.",
+      "Amounts, prices, source clocks, the 5% partial-publication rule and the seven-day carry are unchanged; only completeness verdicts, provenance metadata and partial-derived views change."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.58",
     "title": "Supplemental admission and per-row fallback quarantine",
     "date": "2026-10-28",

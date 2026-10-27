@@ -74,6 +74,7 @@
 | 0284     | `0284_telegram_orphan_coin_subscriptions.sql`             | Delete Telegram follow rows for the four coins removed from the registry on 2026-07-19 and bump their chats' preference generation. |
 | 0285     | `0285_telegram_jobs_deliveries.sql`                        | Add the Telegram delivery v2 `telegram_jobs` and `telegram_deliveries` tables and their indexes; legacy delivery tables keep their rows and old-Worker readers/writers unchanged. |
 | 0286     | `0286_telegram_change_log.sql`                            | Add the Telegram roll-up `telegram_change_log` (changes not sent live plus per-chat cap overflow, bounded retention) and `telegram_rollup_state` (last roll-up per chat); no existing row changes. |
+| 0287     | `0287_supply_history_provenance.sql`                      | Add the nullable daily-snapshot supply provenance (source, observation clock, chain-dropout guard) of `supply_history` (NULL = unrecorded: legacy, prior-Worker and admin-backfill rows); no backfill or row rewrite. |
 
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
@@ -386,6 +387,8 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - The deploy workflow reruns `npm run check:migrations`, applies remote D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged deployment owns 100% of production traffic.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Worker rollback is an explicit operator action. It restores Worker code traffic but does not undo D1 schema or data changes.
+
+Migration `0287` adds the nullable `supply_history.supply_provenance` column and mutates no existing row. Apply before the Worker: the new daily snapshot writes it and `/api/supply-history` selects it. Capture the pre-deploy Time Travel bookmark. Worker rollback ignores the column; a prior Worker's full-date replacement and admin backfills write NULL, so those rows read back as unrecorded coverage, never complete. Same-day price-only repairs never touch it. No backfill; retain the column on rollback.
 
 Migration `0286` creates `telegram_change_log` and `telegram_rollup_state` (plus two indexes) and mutates no existing row. Apply before the Worker. The old Worker never touches them, so a Worker rollback only stops new roll-ups, hourly freeze batches and cap overflow entries; retained rows stay for audit and expire by the change-log retention once the new Worker returns.
 

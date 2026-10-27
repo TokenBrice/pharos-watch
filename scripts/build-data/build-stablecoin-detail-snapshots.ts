@@ -13,6 +13,7 @@ import {
 } from "@shared/lib/detail-snapshot-inputs";
 import { DETAIL_SNAPSHOT_INPUT_BATCH_SIZE, DetailSnapshotInputsResponseSchema, type DetailSnapshotInputEntry } from "@shared/types/detail-snapshot-inputs";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import {
   StablecoinDetailResponseSchema,
   SupplyHistoryResponseSchema,
@@ -53,12 +54,17 @@ function roundSignificant(value: number): number {
   return Number(value.toPrecision(DETAIL_SNAPSHOT_HISTORY_SIGNIFICANT_DIGITS));
 }
 
-/** Same points and dates; an unavailable price stays null. */
+/**
+ * Same points and dates; an unavailable price stays null. Only partial-chain provenance (the one state the
+ * detail chart acts on) is kept verbatim; other provenance is dropped to fit the byte budget and reads as
+ * unrecorded there, never as complete.
+ */
 function compactSupplyHistory(points: readonly SupplyHistoryPoint[]): SupplyHistoryPoint[] {
-  return points.map((point) => ({
+  return points.map(({ supplyProvenance, ...point }) => ({
     ...point,
     circulatingUsd: roundSignificant(point.circulatingUsd),
     price: point.price === null ? null : roundSignificant(point.price),
+    ...(classifySupplyCoverage(supplyProvenance) === "partial" ? { supplyProvenance } : {}),
   }));
 }
 

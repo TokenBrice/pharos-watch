@@ -37,7 +37,7 @@ import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
-import type { DepegEvent } from "@shared/types/market";
+import type { DepegEvent, SupplyObservationProvenance } from "@shared/types/market";
 import { getMechanismArchetypeLabel } from "@shared/lib/classification";
 import { formatUtcDateOnly } from "@shared/lib/format";
 import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
@@ -46,6 +46,7 @@ import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
+import { projectEnvelopeSupplyProvenance } from "@shared/lib/supply-provenance";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
 import {
   PublicSnapshotEnvelopeSchema,
@@ -190,6 +191,8 @@ interface TopStablecoinRow {
   price: number | null;
   circulatingUsd: number | null;
   supplyUnavailableReason: string | null;
+  /** Recorded chain-coverage provenance from the immutable envelope; null = unrecorded (unknown). */
+  supplyProvenance: SupplyObservationProvenance | null;
   chainCount: number;
   chains: string;
 }
@@ -205,10 +208,12 @@ const TOP_STABLECOINS_COLUMNS: DatasetColumn<TopStablecoinRow>[] = [
   { header: "chainCount", accessor: (r) => r.chainCount },
   { header: "chains", accessor: (r) => r.chains },
   { header: "supplyUnavailableReason", accessor: (r) => r.supplyUnavailableReason },
+  { header: "supplyProvenance", accessor: (r) => r.supplyProvenance },
 ];
 
 function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoinRow[] {
   if (!envelope) return [];
+  const pricingPipelineVersion = envelope.methodologyVersions?.pricingPipeline;
   return envelope.stablecoins
     .map((coin) => {
       const admission = admitSupplyBuckets(coin.circulating);
@@ -222,6 +227,13 @@ function projectTopStablecoins(envelope: SnapshotEnvelope | null): TopStablecoin
       circulatingUsd: getCirculatingRawOrNull(coin),
       supplyUnavailableReason: admission.status === "observed" ? null
         : admission.status === "invalid" ? admission.reason : "absent",
+      supplyProvenance: admission.status === "observed"
+        ? projectEnvelopeSupplyProvenance({
+          supplySource: coin.supplySource,
+          supplyObservedAt: coin.supplyObservedAt,
+          supplyChainGuard: coin.supplyChainGuard,
+        }, pricingPipelineVersion)
+        : null,
       chainCount: coin.chains.length,
       chains: coin.chains.join(";"),
       };

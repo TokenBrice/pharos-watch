@@ -343,6 +343,41 @@ describe("handleChains", () => {
     }
   });
 
+  it("publishes null totals for an admitted payload with no observed supply, never $0 (K-029)", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+    const cache = stablecoinsCache([asset("usdc-circle", {}, { circulating: {} })]);
+    const response = await handleChains(mockD1([cache]));
+    const body = await response.json() as Record<string, unknown>;
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      chains: [],
+      globalTotalUsd: null,
+      chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null,
+      attributionDiscrepancyUsd: null,
+      dominanceGeometryTotalUsd: null,
+      supplyCoverage: { aggregateUnavailableAssetCount: 1 },
+    });
+    // The source generation clock is forwarded unchanged.
+    expect(body.updatedAt).toBe(cache.first.updated_at);
+  });
+
+  it("keeps aggregate-only supply numeric while chain accounting stays unavailable", async () => {
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
+    const response = await handleChains(mockD1([
+      stablecoinsCache([asset("usdc-circle", {}, { circulating: { peggedUSD: 100 } })]),
+    ]));
+    const body = await response.json() as Record<string, unknown>;
+    expect(response.status).toBe(200);
+    expect(body).toMatchObject({
+      globalTotalUsd: 100,
+      chainAttributedTotalUsd: null,
+      unattributedTotalUsd: null,
+      attributionDiscrepancyUsd: null,
+      dominanceGeometryTotalUsd: null,
+    });
+  });
+
   it("excludes frozen and non-active assets from live aggregation", async () => {
     vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue(activeV9());
     const db = mockD1([

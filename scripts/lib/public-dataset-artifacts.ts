@@ -2,9 +2,12 @@ import { escapeCsvField } from "@shared/lib/csv";
 
 export type DatasetVariant = "csv" | "json" | "ndjson";
 
+/** Object values stay structured in JSON/NDJSON and are serialized as one JSON field in CSV. */
+type DatasetValue = string | number | null | Readonly<Record<string, unknown>>;
+
 export interface DatasetColumn<T> {
   header: string;
-  accessor: (row: T, index: number) => string | number | null;
+  accessor: (row: T, index: number) => DatasetValue;
 }
 
 export interface PublicDatasetMetadata {
@@ -53,10 +56,13 @@ export function buildPublicDatasetArtifacts<T>({
   columns: DatasetColumn<T>[];
   metadata: PublicDatasetMetadata;
 }): { csv: string; json: string; ndjson: string } {
-  const projectedRows: Array<Record<string, string | number | null>> = rows.map((row, rowIndex) =>
+  const projectedRows: Array<Record<string, DatasetValue>> = rows.map((row, rowIndex) =>
     Object.fromEntries(columns.map((column) => [column.header, column.accessor(row, rowIndex)])),
   );
-  const csvRows = projectedRows.map((row) => columns.map((column) => escapeCsvField(row[column.header])).join(","));
+  const csvRows = projectedRows.map((row) => columns.map((column) => {
+    const value = row[column.header];
+    return escapeCsvField(value !== null && typeof value === "object" ? JSON.stringify(value) : value);
+  }).join(","));
 
   return {
     csv: [
