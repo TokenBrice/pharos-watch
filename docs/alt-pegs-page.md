@@ -30,7 +30,7 @@ Cohort omitted/null/malformed buckets stay chart gaps and Unavailable cells; exp
 
 Share/history hooks independently retain producer metadata and age budgets. Share health reaches the page banner; cohort history owns its notice. HTTP receipt never renews producer generation. Share headline/accessible name uses latest included sample date, separately from coverage start/receipt, and retained history never says Current share.
 
-Initial stablecoin failure without usable snapshot replaces the page. Failed refresh retains atlas/table/history with saved-data notices and retry. Published peg-summary deviation owns text/severity; raw price refresh does not create a second deviation measurement.
+Initial stablecoin failure without usable snapshot replaces the page. Failed refresh retains atlas/table/history with saved-data notices and retry. The atlas coin layer keeps retained positions (including partial, unavailable-supply and observed-zero marks) through a failed refresh: its loading overlay is reserved for the first read without assets and its unavailable overlay for settled absence. The fullscreen dialog renders the shared stablecoins `StaleDataBanner` so material staleness is visible there; the default view relies on the page banner. Published peg-summary deviation owns text/severity; raw price refresh does not create a second deviation measurement.
 
 ## Atlas And Drill-down
 

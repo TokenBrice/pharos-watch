@@ -356,27 +356,38 @@ export function DigestArchiveClient() {
     );
   }
 
-  if (error) {
-    return (
-      <QueryErrorNotice
-        error={error}
-        hasData={!!data?.digests?.length}
-        onRetry={() => {
-          void refetch();
-        }}
-      />
-    );
+  // A failed refetch keeps the admitted archive envelope; only a read with nothing retained is an error.
+  if (!data) {
+    if (error) {
+      return (
+        <QueryErrorNotice
+          error={error}
+          onRetry={() => {
+            void refetch();
+          }}
+        />
+      );
+    }
+    return <p className="text-sm text-muted-foreground py-8">No digests yet. Check back tomorrow.</p>;
   }
 
-  if (!data || data.digests.length === 0) {
-    return <p className="text-sm text-muted-foreground py-8">No digests yet. Check back tomorrow.</p>;
+  // Envelope availability, not row count: an aged empty generation still crosses its own budget.
+  const healthBanner = (
+    <StaleDataBanner queries={[{ preset: "digestArchive", dataUpdatedAt, error, hasData: true, meta }]} />
+  );
+
+  if (data.digests.length === 0) {
+    return (
+      <div className="space-y-8">
+        {healthBanner}
+        <p className="text-sm text-muted-foreground py-8">No digests yet. Check back tomorrow.</p>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-8">
-      <StaleDataBanner
-        queries={[{ preset: "digestArchive", dataUpdatedAt, error, hasData: !!data?.digests?.length, meta }]}
-      />
+      {healthBanner}
 
       {/* Lead story: today's digest (nameplate above carries the edition + date) */}
       <section aria-label="Today's lead digest" className="min-h-[58rem] space-y-4 sm:min-h-[34rem]">

@@ -2,7 +2,13 @@
 
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { TableBody, TableCell, TableFrame, TableHead, TableHeader, TableRow } from "@/components/table";
-import { getYieldBenchmarkDisplayLabel, resolveYieldBenchmarkAge, type YieldBenchmarkAgeAssessment } from "@/lib/yield-benchmark";
+import {
+  getYieldBenchmarkDisplayHealthInput,
+  getYieldBenchmarkDisplayLabel,
+  resolveYieldBenchmarkDisplayHealth,
+} from "@/lib/yield-benchmark";
+import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
 import { cn } from "@/lib/utils";
 import { formatPercent } from "@shared/lib/format";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
@@ -31,11 +37,8 @@ interface BenchmarkRow {
   benchmarkLabel: string;
   rate: number;
   recordDate: string | null;
-  age: YieldBenchmarkAgeAssessment;
+  meta: YieldBenchmarkMeta;
 }
-
-// Pool input is considered stale once it exceeds 2x the hourly source producer interval.
-const POOL_STALE_THRESHOLD_SECONDS = 2 * CRON_SCHEDULE_CADENCES.halfHourlyOffset.intervalSec;
 
 // Preserve strip-specific forms while sharing the canonical currency glyphs.
 const CURRENCY_SYMBOL_OVERRIDES: Record<string, string> = {
@@ -43,13 +46,16 @@ const CURRENCY_SYMBOL_OVERRIDES: Record<string, string> = {
   MXN: "Mex$",
 };
 
-function getBenchmarkRows(
+function getBenchmarkEntries(
   benchmarks: YieldBenchmarkRegistry | null | undefined,
   fallbackBenchmark: YieldBenchmarkMeta | null | undefined,
-): BenchmarkRow[] {
+): YieldBenchmarkMeta[] {
   const entries = benchmarks ? Object.values(benchmarks) : fallbackBenchmark ? [fallbackBenchmark] : [];
+  return entries.filter((b): b is YieldBenchmarkMeta => b != null);
+}
+
+function getBenchmarkRows(entries: YieldBenchmarkMeta[]): BenchmarkRow[] {
   return entries
-    .filter((b): b is YieldBenchmarkMeta => b != null)
     .map((b) => {
       const fullLabel = getYieldBenchmarkDisplayLabel(b);
       const currency = b.currency ?? b.key ?? "USD";
@@ -64,7 +70,7 @@ function getBenchmarkRows(
         benchmarkLabel,
         rate: b.rate,
         recordDate: b.recordDate,
-        age: resolveYieldBenchmarkAge(b),
+        meta: b,
       };
     });
 }
@@ -96,11 +102,23 @@ export function ReferenceRatesStrip({
   safetySnapshot,
   currencyCounts,
 }: ReferenceRatesStripProps) {
-  const rows = getBenchmarkRows(benchmarks, fallbackBenchmark);
+  const entries = getBenchmarkEntries(benchmarks, fallbackBenchmark);
+  // Pool input ages from its original clock against the producer cadence; a null clock stays unavailable (ADR-42).
+  const poolHealthInput = poolInputMeta?.updatedAt != null && poolInputMeta.updatedAt > 0 ? {
+    label: "Pool input",
+    dataUpdatedAt: poolInputMeta.updatedAt * 1000,
+    staleTime: CRON_SCHEDULE_CADENCES.halfHourlyOffset.intervalSec * 1000,
+    hasData: true,
+  } : null;
+  const nowMs = useFreshnessBoundary([
+    ...(poolHealthInput ? [poolHealthInput] : []),
+    ...entries.map(getYieldBenchmarkDisplayHealthInput),
+  ]);
+  const rows = getBenchmarkRows(entries);
   if (rows.length === 0 && !poolInputMeta && !safetySnapshot) return null;
 
   const safetyPct = safetySnapshot?.coverageRatio != null ? Math.round(safetySnapshot.coverageRatio * 100) : null;
-  const poolIsStale = poolInputMeta?.ageSeconds != null && poolInputMeta.ageSeconds > POOL_STALE_THRESHOLD_SECONDS;
+  const poolIsStale = poolHealthInput != null && isPublicWarning(deriveDataHealth(poolHealthInput, nowMs));
   const hasFreshnessRow = !!poolInputMeta || !!safetySnapshot;
   // USD is the implicit baseline: every other currency's risk-free rate is
   // compared against it. If USD isn't in the registry, the spread column
@@ -163,6 +181,7 @@ export function ReferenceRatesStrip({
                 {rows.map((row) => {
                   const isUsd = row.currency === "USD";
                   const spreadBps = usdRow ? (row.rate - usdRow.rate) * 100 : null;
+                  const dateIsStale = resolveYieldBenchmarkDisplayHealth(row.meta, nowMs).warning;
                   return (
                     <TableRow key={row.key} className="transition-colors hover:bg-muted/20">
                       <TableCell className="py-2 pr-2">
@@ -195,23 +214,13 @@ export function ReferenceRatesStrip({
                         {isUsd || spreadBps === null ? "—" : formatSpread(spreadBps)}
                       </TableCell>
                       <TableCell className="px-3 py-2 text-xs text-muted-foreground">{row.benchmarkLabel}</TableCell>
-                      <TableCell className="py-2 pl-3 text-right pharos-numeric text-xs text-muted-foreground/80">
-                        {row.age.stale ? (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <span
-                                tabIndex={0}
-                                aria-label={row.age.reason ?? undefined}
-                                className="pharos-focus-ring inline-flex min-h-6 cursor-help items-center justify-end rounded-sm text-state-warn-bright"
-                              >
-                                {row.recordDate ?? "—"}
-                              </span>
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-[260px] text-xs">{row.age.reason}</TooltipContent>
-                          </Tooltip>
-                        ) : (
-                          row.recordDate ?? "—"
+                      <TableCell
+                        className={cn(
+                          "py-2 pl-3 text-right pharos-numeric text-xs",
+                          dateIsStale ? "text-state-warn-bright" : "text-muted-foreground/80",
                         )}
+                      >
+                        {row.recordDate ?? "—"}
                       </TableCell>
                     </TableRow>
                   );
@@ -243,8 +252,6 @@ export function ReferenceRatesStrip({
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[260px] text-xs">
                     {formatPoolInputMode(poolInputMeta)}
-                    {` Warning budget: ${POOL_STALE_THRESHOLD_SECONDS} seconds (2× the pool-input producer interval).`}
-                    {poolIsStale ? " Pool input is stale — treat numbers as lagging." : ""}
                   </TooltipContent>
                 </Tooltip>
               </>
@@ -270,11 +277,10 @@ export function ReferenceRatesStrip({
                     </span>
                   </TooltipTrigger>
                   <TooltipContent className="max-w-[260px] text-xs">
+                    {/* Retained measured coverage reads as neutral provenance; held/degraded reasons stay in the API and /status. */}
                     {safetyPct === null
                       ? (safetySnapshot.reason ?? "Safety coverage unavailable.")
-                      : safetySnapshot.kind === "ok"
-                        ? "Confidence-weighted source arbitration coverage across tracked rows."
-                        : (safetySnapshot.reason ?? "Safety snapshot degraded.")}
+                      : "Confidence-weighted source arbitration coverage across tracked rows."}
                   </TooltipContent>
                 </Tooltip>
               </>

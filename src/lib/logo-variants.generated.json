@@ -35,6 +35,14 @@
     "56": "/chains/compact/arc.webp",
     "100": "/chains/compact/arc-100.webp"
   },
+  "/chains/archway.png": {
+    "56": "/chains/compact/archway.webp",
+    "100": "/chains/compact/archway-100.webp"
+  },
+  "/chains/assetchain.png": {
+    "56": "/chains/compact/assetchain.webp",
+    "100": "/chains/compact/assetchain-100.webp"
+  },
   "/chains/astar.png": {
     "56": "/chains/compact/astar.webp",
     "100": "/chains/compact/astar-100.webp"
@@ -54,6 +62,10 @@
   "/chains/berachain.png": {
     "56": "/chains/compact/berachain.webp",
     "100": "/chains/compact/berachain-100.webp"
+  },
+  "/chains/bevm.png": {
+    "56": "/chains/compact/bevm.webp",
+    "100": "/chains/compact/bevm-100.webp"
   },
   "/chains/bifrost.png": {
     "56": "/chains/compact/bifrost.webp",
@@ -95,6 +107,10 @@
     "56": "/chains/compact/celo.webp",
     "100": "/chains/compact/celo-100.webp"
   },
+  "/chains/chiliz.png": {
+    "56": "/chains/compact/chiliz.webp",
+    "100": "/chains/compact/chiliz-100.webp"
+  },
   "/chains/codex.png": {
     "56": "/chains/compact/codex.webp",
     "100": "/chains/compact/codex-100.webp"
@@ -110,6 +126,10 @@
   "/chains/edgechain.png": {
     "56": "/chains/compact/edgechain.webp",
     "100": "/chains/compact/edgechain-100.webp"
+  },
+  "/chains/ethereum-classic.png": {
+    "56": "/chains/compact/ethereum-classic.webp",
+    "100": "/chains/compact/ethereum-classic-100.webp"
   },
   "/chains/ethereum.png": {
     "56": "/chains/compact/ethereum.webp",
@@ -131,6 +151,10 @@
     "56": "/chains/compact/flow.webp",
     "100": "/chains/compact/flow-100.webp"
   },
+  "/chains/fluent.png": {
+    "56": "/chains/compact/fluent.webp",
+    "100": "/chains/compact/fluent-100.webp"
+  },
   "/chains/fraxtal.png": {
     "56": "/chains/compact/fraxtal.webp",
     "100": "/chains/compact/fraxtal-100.webp"
@@ -142,6 +166,10 @@
   "/chains/gnosis.png": {
     "56": "/chains/compact/gnosis.webp",
     "100": "/chains/compact/gnosis-100.webp"
+  },
+  "/chains/havah.png": {
+    "56": "/chains/compact/havah.webp",
+    "100": "/chains/compact/havah-100.webp"
   },
   "/chains/hedera.png": {
     "56": "/chains/compact/hedera.webp",
@@ -163,6 +191,10 @@
     "56": "/chains/compact/hyperliquid-l1.webp",
     "100": "/chains/compact/hyperliquid-l1-100.webp"
   },
+  "/chains/icon.png": {
+    "56": "/chains/compact/icon.webp",
+    "100": "/chains/compact/icon-100.webp"
+  },
   "/chains/icp.png": {
     "56": "/chains/compact/icp.webp",
     "100": "/chains/compact/icp-100.webp"
@@ -170,6 +202,10 @@
   "/chains/immutable-zkevm.png": {
     "56": "/chains/compact/immutable-zkevm.webp",
     "100": "/chains/compact/immutable-zkevm-100.webp"
+  },
+  "/chains/initia.png": {
+    "56": "/chains/compact/initia.webp",
+    "100": "/chains/compact/initia-100.webp"
   },
   "/chains/injective.png": {
     "56": "/chains/compact/injective.webp",
@@ -194,6 +230,10 @@
   "/chains/linea.png": {
     "56": "/chains/compact/linea.webp",
     "100": "/chains/compact/linea-100.webp"
+  },
+  "/chains/lisk.png": {
+    "56": "/chains/compact/lisk.webp",
+    "100": "/chains/compact/lisk-100.webp"
   },
   "/chains/manta.png": {
     "56": "/chains/compact/manta.webp",
@@ -299,6 +339,10 @@
     "56": "/chains/compact/rise.webp",
     "100": "/chains/compact/rise-100.webp"
   },
+  "/chains/rootstock.png": {
+    "56": "/chains/compact/rootstock.webp",
+    "100": "/chains/compact/rootstock-100.webp"
+  },
   "/chains/scroll.png": {
     "56": "/chains/compact/scroll.webp",
     "100": "/chains/compact/scroll-100.webp"
@@ -379,6 +423,10 @@
     "56": "/chains/compact/unichain.webp",
     "100": "/chains/compact/unichain-100.webp"
   },
+  "/chains/vechain.png": {
+    "56": "/chains/compact/vechain.webp",
+    "100": "/chains/compact/vechain-100.webp"
+  },
   "/chains/viction.png": {
     "56": "/chains/compact/viction.webp",
     "100": "/chains/compact/viction-100.webp"
@@ -394,6 +442,10 @@
   "/chains/xlayer.png": {
     "56": "/chains/compact/xlayer.webp",
     "100": "/chains/compact/xlayer-100.webp"
+  },
+  "/chains/xpr.png": {
+    "56": "/chains/compact/xpr.webp",
+    "100": "/chains/compact/xpr-100.webp"
   },
   "/chains/xrpl.png": {
     "56": "/chains/compact/xrpl.webp",

@@ -34,6 +34,16 @@ export const YIELD_SOURCE_CONFIDENCE_CLASSES = {
   },
 } as const satisfies Record<YieldSourceConfidenceTier, { pill: string; dot: string; text: string }>;
 
+/**
+ * Reader-facing yield source-age display (ADR-42): a neutral observation age,
+ * warning tone only past the shared public gate, muted when unavailable.
+ */
+export const YIELD_SOURCE_AGE_DISPLAY = {
+  fresh: { label: "Observed", text: "text-foreground" },
+  stale: { label: "Stale", text: "text-state-warn" },
+  unknown: { label: "Unknown", text: "text-muted-foreground" },
+} as const satisfies Record<"fresh" | "stale" | "unknown", { label: string; text: string }>;
+
 /** Faded `/40` fills for the yield source board quality strips. */
 export const YIELD_SOURCE_QUALITY_FILL_CLASSES = {
   deterministic: "bg-emerald-500/40",

@@ -7,9 +7,13 @@ import { DateTooltip, MonoYAxis, TimeGrid, TimeXAxis, useNiceValueAxis } from "@
 import { useTelegramPulse } from "@/hooks/api-hooks";
 import { useChartContainerReady } from "@/hooks/use-chart-container-ready";
 import { useCountUp } from "@/hooks/use-count-up";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
+import { DataHealthBanner } from "@/components/data-health-banner";
 import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { Skeleton } from "@/components/ui/skeleton";
+import { FRONTEND_API_QUERY_DESCRIPTORS } from "@/lib/api-query-descriptors";
 import { DAY_MS } from "@/lib/constants";
+import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
 import { cn } from "@/lib/utils";
 import { formatChartDate, formatDecimal } from "@shared/lib/format";
 import { TELEGRAM_METRIC_SEMANTICS } from "@shared/lib/telegram-metrics";
@@ -33,8 +37,14 @@ const PULSE_UPDATED_FORMATTER = new Intl.DateTimeFormat("en-US", {
   minute: "2-digit",
 });
 
-function isTelegramPulseAvailable(query: { data?: unknown; isLoading: boolean; isError: boolean }): boolean {
-  return !query.isLoading && !query.isError && query.data != null;
+// A failed refetch keeps the retained snapshot; the shared health banner ages it (ADR-42).
+function isTelegramPulseAvailable(query: { data?: unknown; isLoading: boolean }): boolean {
+  return !query.isLoading && query.data != null;
+}
+
+/** A scalar is shown only while the current snapshot carries it as a finite, admitted value (R1). */
+function admittedCount(value: number | null | undefined, field: string, unavailableFields: readonly string[]): number | null {
+  return typeof value === "number" && Number.isFinite(value) && !unavailableFields.includes(field) ? value : null;
 }
 
 function formatCount(value: number): string {
@@ -171,8 +181,26 @@ export function InstrumentPanel() {
   const query = useTelegramPulse();
   const { data, isLoading } = query;
   const available = isTelegramPulseAvailable(query);
-  const watchers = useCountUp(available ? data?.activeWatchers ?? null : null);
-  const follows = useCountUp(available ? data?.coinSubscriptions ?? null : null);
+  const unavailableFields = data?.quality?.unavailableFields ?? [];
+  const watcherCount = available ? admittedCount(data?.activeWatchers, "activeWatchers", unavailableFields) : null;
+  const followCount = available ? admittedCount(data?.coinSubscriptions, "coinSubscriptions", unavailableFields) : null;
+  // useCountUp keeps its last display on null, so rendered output is gated on the current target too.
+  const watchers = useCountUp(watcherCount);
+  const follows = useCountUp(followCount);
+  const sourceAtSec = data?.currentSnapshotAt ?? data?.updatedAt;
+  const healthInput = data && typeof sourceAtSec === "number" && Number.isFinite(sourceAtSec) && sourceAtSec > 0
+    ? {
+        label: "Data",
+        dataUpdatedAt: sourceAtSec * 1000,
+        staleTime: FRONTEND_API_QUERY_DESCRIPTORS.telegramPulse.producerIntervalMs,
+        hasData: true,
+        error: query.error,
+        meta: null,
+      }
+    : null;
+  const healthNowMs = useFreshnessBoundary(healthInput ? [healthInput] : []);
+  // Receipt time seeds only the first assessment; the snapshot's own clock is the age.
+  const health = healthInput ? deriveDataHealth(healthInput, healthNowMs ?? query.dataUpdatedAt) : null;
   const rankingUnavailable = data?.quality?.unavailableFields.includes("topCoins") ?? false;
   const historyUnavailable = data?.quality?.unavailableFields.includes("watcherHistory") ?? false;
   const live = available && data ? data : null;
@@ -198,10 +226,9 @@ export function InstrumentPanel() {
         }
         beamValue={
           <>
-            {/* useCountUp keeps its last display on null; availability gates the beam too (R1). */}
-            <span aria-hidden="true">{live ? watchers.display ?? "—" : "—"}</span>
-            {live && watchers.value != null ? (
-              <span className="sr-only">{formatCount(watchers.value)} active watchers</span>
+            <span aria-hidden="true">{live && watcherCount != null ? watchers.display ?? "—" : "—"}</span>
+            {live && watcherCount != null ? (
+              <span className="sr-only">{formatCount(watcherCount)} active watchers</span>
             ) : null}
           </>
         }
@@ -213,7 +240,7 @@ export function InstrumentPanel() {
                   {TELEGRAM_METRIC_SEMANTICS.coinFollows.label}
                 </dt>
                 <dd className="mt-2 pharos-numeric text-2xl font-semibold leading-none text-foreground">
-                  {follows.display ?? "—"}
+                  {followCount != null ? follows.display ?? "—" : "—"}
                 </dd>
                 {typeof live.explicitCoinSubscriptions === "number" &&
                 typeof live.presetImpliedCoinSubscriptions === "number" ? (
@@ -318,6 +345,11 @@ export function InstrumentPanel() {
         ) : null}
         {live ? (
           <div className="p-5 sm:p-6 lg:p-7">
+            {health && isPublicWarning(health) ? (
+              <div className="mb-4">
+                <DataHealthBanner entries={[health]} />
+              </div>
+            ) : null}
             {live.quality?.status === "partial" ? (
               <p className="mb-4 rounded-lg border border-amber-500/25 bg-amber-500/10 px-3 py-2 text-xs leading-relaxed text-amber-800 dark:text-amber-200">
                 Some public Telegram telemetry is temporarily unavailable. Counts shown here keep working where source

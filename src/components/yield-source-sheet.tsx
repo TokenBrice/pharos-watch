@@ -18,9 +18,9 @@ import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   YIELD_SOURCE_CONFIDENCE_STYLES,
   YIELD_SOURCE_DEPTH_DEFINITIONS,
-  getYieldSourceFreshnessDisplay,
   formatYieldSourceRiskCompact,
 } from "@/lib/yield-source-risk";
+import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import { YieldSourceRiskBar } from "@/components/yield-source-risk-bar";
 import { YieldSourceRiskCard } from "@/components/yield-source-risk-card";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
@@ -47,6 +47,7 @@ interface YieldSourceSheetProps {
   riskFreeRate: number;
   medianApy: number | null;
   benchmarks?: YieldBenchmarkRegistry | null;
+  sourceClock?: YieldSourceDisplayClock | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
   loading?: boolean;
@@ -60,12 +61,14 @@ interface YieldSourceSheetBodyProps {
   riskFreeRate: number;
   medianApy: number | null;
   benchmarks?: YieldBenchmarkRegistry | null;
+  /** Parent-owned source clock: the leaderboard schedules this ranking's source crossings. */
+  sourceClock?: YieldSourceDisplayClock | null;
   onOpenChange: (open: boolean) => void;
   error?: unknown;
   onRetry?: () => void;
 }
 
-function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmarks, onOpenChange, error, onRetry }: YieldSourceSheetBodyProps) {
+function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmarks, sourceClock, onOpenChange, error, onRetry }: YieldSourceSheetBodyProps) {
   const [selectedSourceKey, setSelectedSourceKey] = useState<string | null>(null);
   const [showAllSheetSources, setShowAllSheetSources] = useState(false);
   const chartRef = useRef<HTMLDivElement>(null);
@@ -73,7 +76,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   const alreadyInCompare = compare.has(ranking.id);
   const canAddToCompare = compare.canAdd;
 
-  const sourceExplorer = buildYieldSourceExplorerModel(ranking);
+  const sourceExplorer = buildYieldSourceExplorerModel(ranking, sourceClock);
   const effectiveSourceKey = selectedSourceKey ?? sourceExplorer.selectedSource.sourceKey;
   const totalSources = sourceExplorer.allSources.length;
   const { selectedSource } = sourceExplorer;
@@ -88,11 +91,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
   const evidenceCompleteness = ranking.provenance?.evidenceCompleteness ?? null;
   const scoreQualification = ranking.provenance?.scoreQualification ?? null;
   const opportunityRisk = ranking.sourceRisk?.opportunityRisk ?? null;
-  const freshness = getYieldSourceFreshnessDisplay({
-    sourceAgeSeconds: ranking.sourceRisk?.sourceAgeSeconds,
-    sourceFreshness: ranking.provenance?.sourceFreshness,
-    warningSignals: ranking.warningSignals,
-  });
+  const freshness = selectedSource.freshness;
   const hasAlternateSelected =
     selectedSourceKey !== null && selectedSourceKey !== sourceExplorer.selectedSource.sourceKey;
   const deepDive = getYieldWorkbenchLink(ranking.id, hasAlternateSelected ? selectedSourceKey : null);
@@ -236,6 +235,7 @@ function YieldSourceSheetBody({ ranking, logo, riskFreeRate, medianApy, benchmar
             sourceRiskDrivers={activeSource.sourceRiskDrivers}
             sourceChanged={activeSource.isChosen ? sourceExplorer.sourceSwitch.changed : false}
             confidenceTier={activeSource.confidenceTier}
+            freshness={activeSource.freshness}
             sourceFreshness={activeSource.isChosen ? ranking.provenance?.sourceFreshness : undefined}
             warningSignals={activeSource.isChosen ? ranking.warningSignals : undefined}
           />
@@ -399,6 +399,7 @@ export function YieldSourceSheet({
   riskFreeRate,
   medianApy,
   benchmarks = null,
+  sourceClock = null,
   open,
   onOpenChange,
   loading = false,
@@ -415,6 +416,7 @@ export function YieldSourceSheet({
         riskFreeRate={riskFreeRate}
         medianApy={medianApy}
         benchmarks={benchmarks}
+        sourceClock={sourceClock}
         onOpenChange={onOpenChange}
         error={error}
         onRetry={onRetry}

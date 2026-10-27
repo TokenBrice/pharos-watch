@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { ReferenceRatesStrip } from "@/components/yield/reference-rates-strip";
 import type {
   YieldBenchmarkMeta,
@@ -9,6 +9,9 @@ import type {
   YieldSafetySnapshotMeta,
   YieldSourceInputMeta,
 } from "@shared/types";
+
+// Every test pins fake timers, so hydration's animation frames would never settle.
+vi.mock("@/hooks/use-hydrated", () => ({ useHydrated: () => true }));
 
 function makeBenchmark(
   currency: string,
@@ -76,17 +79,26 @@ describe("ReferenceRatesStrip", () => {
   });
 
   it.each([
-    [7199, false],
-    [7200, false],
-    [7201, true],
+    [7_201, false],
+    [43_200, false],
+    [43_201, true],
     [null, false],
-  ] as const)("warns only beyond the pool-input budget (age=%s)", (ageSeconds, stale) => {
+  ] as const)("tints pool input only beyond the public stale band (age=%s)", (ageSeconds, stale) => {
     render(<ReferenceRatesStrip poolInputMeta={{ ...poolInputMeta, ageSeconds, updatedAt: ageSeconds === null ? null : FAKE_NOW / 1000 - ageSeconds }} />);
     const age = screen.getByText(ageSeconds === null ? "Pool input age unavailable" : /Pool input age \d+m/);
+    if (ageSeconds === 7_201) expect(age.textContent).toBe("Pool input age 120m");
+    expect(age.className.includes("state-warn")).toBe(stale);
     fireEvent.focus(age);
-    const tooltip = screen.getByRole("tooltip");
-    expect(tooltip.textContent).toMatch(/7200 seconds/);
-    expect(/stale/i.test(tooltip.textContent ?? "")).toBe(stale);
+    expect(screen.getByRole("tooltip").textContent).toBe("DEX-sync cached DeFiLlama pools.");
+  });
+
+  it("tints pool input at its public crossing without a new payload", async () => {
+    render(<ReferenceRatesStrip poolInputMeta={{ ...poolInputMeta, ageSeconds: 240, updatedAt: FAKE_NOW / 1000 - 43_199 }} />);
+    const age = screen.getByText("Pool input age 4m");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1_000); });
+    expect(age.className).not.toContain("state-warn");
+    await act(async () => { await vi.advanceTimersByTimeAsync(1); });
+    expect(age.className).toContain("state-warn");
   });
 
   it("renders unavailable Safety coverage without inventing a percentage", () => {
@@ -119,7 +131,7 @@ describe("ReferenceRatesStrip", () => {
     expect(screen.queryByText("Safety coverage unavailable")).toBeNull();
   });
 
-  it("retains measured coverage and the reason for a held accepted Safety snapshot", () => {
+  it("retains measured coverage with neutral provenance for a held accepted Safety snapshot", () => {
     render(<ReferenceRatesStrip safetySnapshot={{
       ...safetySnapshot,
       kind: "degraded",
@@ -129,7 +141,8 @@ describe("ReferenceRatesStrip", () => {
     const coverage = screen.getByText("91%");
     expect(screen.queryByText("Safety coverage unavailable")).toBeNull();
     fireEvent.focus(coverage.parentElement!);
-    expect(screen.getByRole("tooltip").textContent).toBe("safety-snapshot-held");
+    expect(screen.getByRole("tooltip").textContent).toBe("Confidence-weighted source arbitration coverage across tracked rows.");
+    expect(screen.queryByText(/safety-snapshot-held|degraded/i)).toBeNull();
   });
 
   it("renders one row per benchmark with the currency code, symbol, rate, and stripped benchmark label", () => {
@@ -208,35 +221,30 @@ describe("ReferenceRatesStrip", () => {
     expect(container.textContent).toBe("");
   });
 
-  it("tints a benchmark row amber with a reason and an age marker when its record is stale", () => {
-    const staleRegistry: YieldBenchmarkRegistry = {
+  it("keeps record dates and fallback identity neutral and tints only an aged fetch generation", () => {
+    const registry = {
       USD: makeBenchmark("USD", "USD", "USD 3M T-Bill", 3.68, "2026-05-19"),
-      // Exactly 42 days before the pinned clock.
+      // 42 days old against the default daily bound: scoring-stale, not a reader warning.
       CAD: makeBenchmark("CAD", "CAD", "CAD Bank of Canada Bank Rate", 2.75, "2026-04-08"),
-    };
+      EUR: { ...makeBenchmark("EUR", "EUR", "EUR 3M compounded €STR", 1.94, "2026-05-19"), isFallback: true, fallbackMode: "eur-retained" },
+      // Fetched 13 days ago: past the daily producer's 12x public band.
+      GBP: { ...makeBenchmark("GBP", "GBP", "GBP SONIA", 4.2, "2026-05-06"), fetchedAt: FAKE_NOW / 1000 - 13 * 86_400 },
+      JPY: { ...makeBenchmark("JPY", "JPY", "JPY TONA", 0.5, "2026-05-19"), fetchedAt: null },
+    } as YieldBenchmarkRegistry;
 
-    render(<ReferenceRatesStrip benchmarks={staleRegistry} />);
+    render(<ReferenceRatesStrip benchmarks={registry} />);
+    const rowFor = (currency: string) => screen.getByText(currency).closest("tr")!;
 
-    const table = screen.getByRole("table");
-    const cadRow = within(table)
-      .getAllByRole("row")
-      .find((r) => within(r).queryByText("CAD"));
-    expect(cadRow).toBeDefined();
-
-    // The stale observation is visibly marked while a freshly fetched record is not.
-    const dateChip = within(cadRow!).getByText("2026-04-08");
-    expect(dateChip.className).toContain("state-warn");
-    expect(within(cadRow!).getByLabelText(/observation.*freshness/i)).toBe(dateChip);
-
-    // Age marker appended through the shared benchmark suffix.
-    expect(within(cadRow!).getByText(/42d old/)).toBeTruthy();
-
-    // A fresh row stays untinted and unmarked.
-    const usdRow = within(table)
-      .getAllByRole("row")
-      .find((r) => within(r).queryByText("USD"));
-    expect(within(usdRow!).getByText("2026-05-19").className).not.toContain("state-warn");
-    expect(within(usdRow!).queryByText(/old/)).toBeNull();
+    for (const currency of ["USD", "CAD", "EUR"]) {
+      const row = rowFor(currency);
+      expect(row.innerHTML).not.toContain("state-warn");
+      expect(row.textContent).not.toMatch(/old|unavailable|fallback/);
+    }
+    expect(within(rowFor("GBP")).getByText("2026-05-06").className).toContain("state-warn");
+    expect(within(rowFor("GBP")).getByText(/13d old/)).toBeTruthy();
+    expect(within(rowFor("JPY")).getByText("2026-05-19").className).toContain("state-warn");
+    expect(within(rowFor("JPY")).getByText(/unavailable/)).toBeTruthy();
+    expect(screen.queryByText(/not a healthy reference|freshness bound/)).toBeNull();
   });
 
   it("uses the payload's per-key record bound instead of the default when present", () => {

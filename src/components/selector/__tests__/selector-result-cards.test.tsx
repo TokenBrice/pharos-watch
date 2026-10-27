@@ -178,4 +178,39 @@ describe("SelectorShortlistCard", () => {
       "/stablecoin/usdc-usd-coin/yield/",
     );
   });
+
+  it.each([false, true])("shows Trading input ages as neutral provenance (mobile=%s)", (isMobile) => {
+    const trading = { ...baseRecommendation, profile: "trading" as const };
+    const { container, rerender } = render(
+      <SelectorShortlistCard rank={1} recommendation={{ ...trading, perInputStaleness: { pegSummary: 361, dexTvl: 90 } }}
+        profile="trading" isMobile={isMobile} />,
+    );
+    expect(screen.getByText("Oldest input")).toBeTruthy();
+    expect(screen.getByText("6m")).toBeTruthy();
+    expect(screen.getByText("Oldest input 6 minutes old when results were computed")).toBeTruthy();
+    expect(container.textContent).not.toMatch(/Stale|Freshness|freshness watch/);
+    expect(screen.getByLabelText("Profile-conditioned evidence").innerHTML).not.toContain("state-warn");
+
+    for (const [age, text] of [[0, "0s"], [60, "1m"], [120, "2m"], [360, "6m"]] as const) {
+      rerender(
+        <SelectorShortlistCard rank={1} recommendation={{ ...trading, perInputStaleness: { pegSummary: age } }}
+          profile="trading" isMobile={isMobile} />,
+      );
+      expect(screen.getByText(text)).toBeTruthy();
+    }
+  });
+
+  it("falls back to the DEWS chip when no Trading input ages are carried", () => {
+    render(
+      <SelectorShortlistCard rank={1}
+        recommendation={{
+          ...baseRecommendation, profile: "trading", perInputStaleness: {},
+          components: [...baseRecommendation.components,
+            { key: "dewsInverted", weight: 10, rawValue: 12, normalizedValue: 88, contribution: 8.8, redistributed: false }],
+        }}
+        profile="trading" isMobile={false} />,
+    );
+    expect(screen.queryByText("Oldest input")).toBeNull();
+    expect(screen.getByText("DEWS stress score 12 of 100. Lower is better.")).toBeTruthy();
+  });
 });

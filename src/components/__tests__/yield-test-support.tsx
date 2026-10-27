@@ -18,7 +18,7 @@ afterEach(() => vi.unstubAllGlobals());
 /** Complete provenance record: spreading the factory's own (nullable) field widens the type. */
 export const YIELD_TEST_PROVENANCE: YieldRankingProvenance = {
   sourceKey: "aave",
-  sourceObservedAt: 0,
+  sourceObservedAt: null,
   sourceAgeSeconds: 60,
   confidenceTier: "curated",
   selectionMethod: "confidence-weighted",

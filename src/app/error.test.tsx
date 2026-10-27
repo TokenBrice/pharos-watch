@@ -1,8 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
-import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 
 vi.mock("next/font/local", () => ({
   default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
@@ -10,14 +9,11 @@ vi.mock("next/font/local", () => ({
 
 import ErrorPage from "./error";
 
+const fetchSpy = vi.fn();
+
 beforeEach(() => {
-  // The root error boundary probes /api/health on mount. Stub fetch so the
-  // tests don't surface a degraded callout (or an unhandled rejection from a
-  // missing global fetch).
-  mockFetch([{
-    match: "/api/health",
-    respond: () => new Error("offline"),
-  }], { requireMatch: true });
+  fetchSpy.mockReset();
+  vi.stubGlobal("fetch", fetchSpy);
 });
 
 afterEach(() => {
@@ -38,4 +34,26 @@ describe("root app error boundary", () => {
     expect(screen.queryByText("select * from secrets where leaked = 1")).toBeNull();
   });
 
+  it("makes no requests and calls reset on retry", () => {
+    const reset = vi.fn();
+
+    render(<ErrorPage error={new Error("boom")} reset={reset} />);
+
+    expect(screen.getByText("The beam paused. The data is being re-aligned.")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(reset).toHaveBeenCalledTimes(1);
+    expect(screen.queryByText(/currently degraded/i)).toBeNull();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
+  it("labels chunk-load failures as a reload", () => {
+    const chunkError = new Error("Loading chunk 42 failed");
+    chunkError.name = "ChunkLoadError";
+
+    render(<ErrorPage error={chunkError} reset={() => {}} />);
+
+    expect(screen.getByText("A newer version of the site is up.")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Reload page" })).toBeTruthy();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
 });

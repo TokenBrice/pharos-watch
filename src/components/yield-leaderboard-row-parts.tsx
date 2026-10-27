@@ -38,6 +38,7 @@ import type {
   YieldSourceFreshnessDisplay,
   YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
+import type { YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import { YIELD_SOURCE_FACT_LABELS, type YieldRankChangeChipDisplay } from "@/lib/yield-presentation";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { trackEvent } from "@/lib/analytics";
@@ -633,9 +634,10 @@ export function deriveYieldRowDisplay(
    * unhealthy USD evidence disables the re-base, matching the published score.
    */
   usdBenchmarkRate?: number | null,
+  sourceClock?: YieldSourceDisplayClock | null,
 ) {
   const labels = formatYieldRowLabels(row);
-  const presentation = deriveYieldRowPresentation(row);
+  const presentation = deriveYieldRowPresentation(row, sourceClock);
   const sourceRole = getYieldWorkbenchSourceRole(row);
   // Same resolution the scoring/read paths use: the row's carried currency
   // wins; the benchmark-key table fills the summary projection in (USD_EFFR

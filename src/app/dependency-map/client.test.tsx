@@ -37,6 +37,7 @@ function makeQueryResult(data: unknown) {
     data,
     isLoading: false,
     error: null,
+    dataUpdatedAt: data ? Date.now() : 0,
     refetch: vi.fn(),
   };
 }
@@ -86,6 +87,38 @@ describe("DependencyMapClient", () => {
     expect(screen.getByText(/Market-cap data is unavailable/)).toBeTruthy();
     expect(screen.getByText("Supply data unavailable")).toBeTruthy();
     expect(screen.getByText(/Excludes 1 coins without supply data/)).toBeTruthy();
+  });
+
+  it("retains supply sizes and its as-of clock through a failed stablecoins refetch", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const graph = mockUseDependencyGraph()!.data as { updatedAt: number };
+    graph.updatedAt = nowSec - 60;
+    const supply = mockUseStablecoins()!.data;
+    const meta = { updatedAt: nowSec - 120, ageSeconds: 120, status: "fresh" as const };
+    mockUseStablecoins.mockReturnValue({ ...makeQueryResult(supply), meta, dataUpdatedAt: Date.now() } as unknown as ReturnType<typeof useStablecoins>);
+    const view = render(<DependencyMapClient />);
+    await screen.findByRole("figure", { name: /Dependency graph showing/ });
+    const asOf = screen.getByText(/^market cap as of /).textContent;
+    expect(asOf).not.toContain("unknown");
+
+    mockUseStablecoins.mockReturnValue({
+      ...makeQueryResult(supply), meta, dataUpdatedAt: Date.now(), error: new Error("Stablecoins unavailable"),
+    } as unknown as ReturnType<typeof useStablecoins>);
+    view.rerender(<DependencyMapClient />);
+    expect(screen.getByText(/^market cap as of /).textContent).toBe(asOf);
+    expect(screen.queryByText(/Market-cap data is unavailable/)).toBeNull();
+    expect(screen.queryByText("Supply data unavailable")).toBeNull();
+    // A mild failed refresh over retained data is operator signal (ADR-42).
+    expect(screen.queryByText("Showing an older snapshot")).toBeNull();
+    expect(screen.queryByText("Refresh failed")).toBeNull();
+  });
+
+  it("warns through the shared banner once the retained graph passes its stale band", async () => {
+    const graph = mockUseDependencyGraph()!.data as { updatedAt: number };
+    graph.updatedAt = Math.floor(Date.now() / 1000) - 400 * 86_400;
+    render(<DependencyMapClient />);
+    await screen.findByRole("figure", { name: /Dependency graph showing/ });
+    expect(await screen.findByText("Showing an older snapshot")).toBeTruthy();
   });
 
   it("keeps held publication off the page and retains unpublished v5 coverage and supply facts", async () => {

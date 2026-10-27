@@ -1,5 +1,7 @@
-import { YIELD_SOURCE_CONFIDENCE_CLASSES } from "@shared/lib/classification";
+import { YIELD_SOURCE_AGE_DISPLAY, YIELD_SOURCE_CONFIDENCE_CLASSES } from "@shared/lib/classification";
+import { getYieldSourceProducerCadenceMs } from "@shared/lib/yield-source-cadence";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
+import { deriveDataHealth, isPublicWarning } from "@/lib/data-health";
 import type { YieldRankChangeAttribution, YieldRanking } from "@shared/types";
 
 export type YieldSourceConfidenceTier = NonNullable<YieldRanking["provenance"]>["confidenceTier"];
@@ -54,18 +56,6 @@ export interface YieldSourceFreshnessDisplay {
   tooltipText: string;
 }
 
-const YIELD_SOURCE_FRESHNESS_STYLES: Record<YieldSourcePublishedFreshness, string> = {
-  fresh: "text-state-positive",
-  stale: "text-state-warn",
-  unknown: "text-muted-foreground",
-};
-
-const YIELD_SOURCE_FRESHNESS_LABELS: Record<YieldSourcePublishedFreshness, string> = {
-  fresh: "Fresh",
-  stale: "Stale",
-  unknown: "Unknown",
-};
-
 export function classifyYieldSourceAgeContext(
   sourceAgeSeconds: number | null | undefined,
 ): YieldSourceAgeContext | null {
@@ -95,44 +85,119 @@ export function classifyYieldSourceAgeContext(
   };
 }
 
-function resolveYieldSourceFreshnessStatus(
-  sourceFreshness: YieldSourcePublishedFreshness | null | undefined,
-  warningSignals: readonly string[] | null | undefined,
-): YieldSourcePublishedFreshness {
-  if (sourceFreshness) return sourceFreshness;
-  return warningSignals?.includes("data-stale") ? "stale" : "unknown";
+/**
+ * Response clock the source ages were assessed against, plus the sampled
+ * boundary time. `assessedAt` is the response `_meta.assessedAt` (or receipt)
+ * in seconds; `nowMs` is undefined during SSR/first hydration, when the
+ * assessment clock itself is the comparison instant.
+ */
+export interface YieldSourceDisplayClock {
+  assessedAt: number | null;
+  nowMs?: number;
 }
 
-export function getYieldSourceFreshnessDisplay(params: {
+/** One source's own identity and observation clock. */
+export interface YieldSourceClockInput {
+  dataSource?: string | null;
+  sourceKey?: string | null;
+  /** Original observation time (seconds), when the payload carries it. */
+  sourceObservedAt?: number | null;
+  /** API-aged source age (seconds) at `clock.assessedAt`. */
   sourceAgeSeconds?: number | null;
-  sourceFreshness?: YieldSourcePublishedFreshness | null;
-  warningSignals?: readonly string[] | null;
-}): YieldSourceFreshnessDisplay | null {
-  const ageContext = classifyYieldSourceAgeContext(params.sourceAgeSeconds);
-  const hasPublishedStatus = params.sourceFreshness != null;
-  const hasStaleWarning = params.warningSignals?.includes("data-stale") ?? false;
-  const hasUnknownWarning = params.warningSignals?.includes("data-freshness-unknown") ?? false;
-  if (!ageContext && !hasPublishedStatus && !hasStaleWarning && !hasUnknownWarning) return null;
+}
 
-  const status = resolveYieldSourceFreshnessStatus(params.sourceFreshness, params.warningSignals);
-  const statusLabel = YIELD_SOURCE_FRESHNESS_LABELS[status];
-  const displayText = ageContext ? `${statusLabel} · ${ageContext.relativeText}` : statusLabel;
-  const statusContext = hasPublishedStatus
-    ? `Published source freshness: ${statusLabel}.`
-    : hasStaleWarning
-      ? "Source freshness: Stale (data-stale warning)."
-      : "Source freshness: Unknown.";
-  const ageText = ageContext
-    ? ` Source observed ${ageContext.relativeText}; age context: ${ageContext.description}.`
-    : " Source observation age is unavailable.";
+function validSeconds(value: number | null | undefined): number | null {
+  return typeof value === "number" && Number.isFinite(value) && value > 0 ? value : null;
+}
+
+/** Response assessment clock (seconds): `_meta.assessedAt`, else the query receipt. */
+export function resolveYieldSourceAssessedAt(meta: object | null | undefined, dataUpdatedAt: number): number | null {
+  const assessedAt = meta != null && "assessedAt" in meta && typeof meta.assessedAt === "number" ? meta.assessedAt : null;
+  return validSeconds(assessedAt) ?? (dataUpdatedAt > 0 ? dataUpdatedAt / 1000 : null);
+}
+
+/** Assessment instant (seconds); without a response clock the ages stand as of now. */
+function resolveAssessmentSec(clock: YieldSourceDisplayClock | null | undefined): number {
+  return validSeconds(clock?.assessedAt) ?? (clock?.nowMs ?? Date.now()) / 1000;
+}
+
+/** Observation anchor (seconds); null when the clock is missing, invalid, or in the future. */
+function getYieldSourceObservedAt(
+  input: YieldSourceClockInput,
+  clock: YieldSourceDisplayClock | null | undefined,
+  assessedAt: number = resolveAssessmentSec(clock),
+): number | null {
+  let observedAt: number | null;
+  if (input.sourceObservedAt != null) {
+    observedAt = validSeconds(input.sourceObservedAt);
+  } else {
+    const age = input.sourceAgeSeconds;
+    observedAt = typeof age === "number" && Number.isFinite(age) && age >= 0 ? validSeconds(assessedAt - age) : null;
+  }
+  return observedAt != null && observedAt <= assessedAt ? observedAt : null;
+}
+
+/**
+ * Shared public-gate input for one source: its own observation anchor against
+ * its producer cadence. Scoring bounds and status floors play no part.
+ */
+export function getYieldSourceDisplayHealthInput(
+  input: YieldSourceClockInput,
+  clock: YieldSourceDisplayClock | null | undefined,
+  assessedAt: number = resolveAssessmentSec(clock),
+) {
+  const observedAt = input.dataSource ? getYieldSourceObservedAt(input, clock, assessedAt) : null;
+  return {
+    label: "Source",
+    // A missing identity or clock stays unavailable, never zero-age evidence.
+    dataUpdatedAt: observedAt != null ? observedAt * 1000 : 0,
+    staleTime: getYieldSourceProducerCadenceMs(input.dataSource ?? "", input.sourceKey),
+    hasData: true,
+  };
+}
+
+export interface YieldSourceDisplayAge {
+  status: YieldSourcePublishedFreshness;
+  ageSeconds: number | null;
+}
+
+/** Reader-facing source age: `stale` only past the shared public gate (ADR-42). */
+export function assessYieldSourceDisplayAge(
+  input: YieldSourceClockInput,
+  clock: YieldSourceDisplayClock | null | undefined,
+): YieldSourceDisplayAge {
+  const assessedAt = resolveAssessmentSec(clock);
+  const healthInput = getYieldSourceDisplayHealthInput(input, clock, assessedAt);
+  if (healthInput.dataUpdatedAt <= 0) return { status: "unknown", ageSeconds: null };
+  const health = deriveDataHealth(healthInput, clock?.nowMs ?? assessedAt * 1000);
+  return {
+    status: isPublicWarning(health) ? "stale" : "fresh",
+    ageSeconds: health.ageMs != null ? health.ageMs / 1000 : null,
+  };
+}
+
+export function getYieldSourceFreshnessDisplay(
+  input: YieldSourceClockInput & { clock?: YieldSourceDisplayClock | null },
+): YieldSourceFreshnessDisplay | null {
+  if (input.sourceKey == null && input.sourceObservedAt == null && input.sourceAgeSeconds == null) return null;
+  const { status, ageSeconds } = assessYieldSourceDisplayAge(input, input.clock);
+  const ageContext = status === "unknown" ? null : classifyYieldSourceAgeContext(ageSeconds);
+  const display = YIELD_SOURCE_AGE_DISPLAY[ageContext ? status : "unknown"];
+  const displayText = !ageContext
+    ? display.label
+    : status === "stale"
+      ? `${display.label} · ${ageContext.relativeText}`
+      : `${display.label} ${ageContext.relativeText}`;
 
   return {
-    status,
-    statusLabel,
+    status: ageContext ? status : "unknown",
+    statusLabel: display.label,
     displayText,
     ageContext,
-    textClassName: YIELD_SOURCE_FRESHNESS_STYLES[status],
-    tooltipText: `${statusContext}${ageText}`,
+    textClassName: display.text,
+    tooltipText: ageContext
+      ? `Source observed ${ageContext.relativeText}; age context: ${ageContext.description}.`
+      : "Source observation age is unavailable.",
   };
 }
 

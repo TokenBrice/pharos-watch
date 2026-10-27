@@ -22,24 +22,10 @@ import {
   type NavGroup,
   type NavItem,
 } from "@/lib/nav-config";
-import { useHealth } from "@/hooks/api-hooks";
-import { PUBLIC_HEADLINE_TONE } from "@shared/lib/classification/operational-status";
 import { cn } from "@/lib/utils";
 
 const TOP_MENUS: readonly NavGroup[] = NAV_GROUPS;
-const MORE_MENU_KEY = "more";
 const APPEARANCE_MENU_KEY = "appearance";
-const STATUS_HREF = "/status/";
-
-const CHECKING_STATUS_MENU = {
-  state: "Checking",
-  dotClassName: "bg-muted-foreground/50",
-} as const;
-
-const UNAVAILABLE_STATUS_MENU = {
-  state: "Unavailable",
-  dotClassName: "bg-muted-foreground/50",
-} as const;
 
 /**
  * Single menu row. Section menus render the authored `description` on a second
@@ -54,14 +40,12 @@ function NavMenuItem({
   group,
   isActive,
   withDescription,
-  trailing,
   onNavigate,
 }: {
   item: NavItem;
   group: string;
   isActive: boolean;
   withDescription?: boolean;
-  trailing?: React.ReactNode;
   onNavigate: () => void;
 }) {
   const Icon = item.icon;
@@ -101,7 +85,6 @@ function NavMenuItem({
             </span>
           ) : null}
         </span>
-        {trailing}
       </Link>
     </li>
   );
@@ -131,21 +114,6 @@ export function TopNav() {
   // Set when ArrowDown opens a closed trigger: the panel's rows are inert
   // until the open state commits, so the first-row focus lands in an effect.
   const pendingKeyboardOpen = useRef<string | null>(null);
-  // Health stays gated to the open panel: a persistent masthead dot would add
-  // /api/health polling to every desktop page view.
-  const moreMenuOpen = openMenu === MORE_MENU_KEY;
-  const { data: healthData, isError: healthError } = useHealth({ enabled: moreMenuOpen });
-  // The global nav reads the server headline only; it must not pull the
-  // projection into every page's shared client chunk. A pre-projection
-  // payload (Worker rollback) maps its worst raw level conservatively.
-  const healthTone = healthData && !healthError
-    ? PUBLIC_HEADLINE_TONE[healthData.headline?.state ?? (healthData.status === "healthy" ? "operational" : "degraded")]
-    : null;
-  const healthMenu = healthError
-    ? UNAVAILABLE_STATUS_MENU
-    : healthTone
-      ? { state: healthTone.label, dotClassName: healthTone.dot }
-      : CHECKING_STATUS_MENU;
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -430,17 +398,6 @@ export function TopNav() {
                                     group={menu.key}
                                     isActive={isNavItemActive(pathname, item)}
                                     onNavigate={closeMenu}
-                                    trailing={
-                                      item.href === STATUS_HREF && isOpen ? (
-                                        <span className="ml-auto flex shrink-0 items-center gap-2 text-xs text-muted-foreground">
-                                          <span>{healthMenu.state}</span>
-                                          <span
-                                            className={cn("size-2 shrink-0 rounded-full", healthMenu.dotClassName)}
-                                            aria-hidden
-                                          />
-                                        </span>
-                                      ) : undefined
-                                    }
                                   />
                                 ))}
                               </ul>

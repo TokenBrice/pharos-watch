@@ -25,7 +25,7 @@ import { getYieldWorkbenchLink } from "@/lib/yield-workbench-link";
 import { YieldSourceIdentity } from "@/components/yield-leaderboard-row-parts";
 import { YieldFreshnessLabel } from "@/components/yield-freshness-label";
 import { resolveYieldScoreQualification } from "@/lib/yield-constants";
-import { YIELD_SOURCE_CONFIDENCE_STYLES, getYieldSourceFreshnessDisplay } from "@/lib/yield-source-risk";
+import { YIELD_SOURCE_CONFIDENCE_STYLES } from "@/lib/yield-source-risk";
 import { formatYieldWarningSignal, formatYieldWarningSignalDescription } from "@/lib/yield-constants";
 import {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
@@ -167,11 +167,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
       : ranking.sourceRole === "fallback-proxy" && qualification === "estimated"
         ? YIELD_SOURCE_FACT_LABELS.estimated : null;
   const confidence = ranking.provenance?.confidenceTier;
-  const freshness = getYieldSourceFreshnessDisplay({
-    sourceAgeSeconds: ranking.provenance?.sourceAgeSeconds,
-    sourceFreshness: ranking.provenance?.sourceFreshness,
-    warningSignals: ranking.warningSignals,
-  });
+  const freshness = view.sourceExplorer.selectedSource.freshness;
   const venue = ranking.sourceRisk?.venueProtocol;
   const chain = ranking.sourceRisk?.venueChain;
   const deployment = ranking.sourceRisk?.deploymentPlace;
@@ -356,6 +352,7 @@ export default function YieldDetailSection({ stablecoinId }: YieldDetailSectionP
         sourceRiskDrivers={view.sourceExplorer.selectedSource.sourceRiskDrivers}
         sourceChanged={view.sourceExplorer.sourceSwitch.changed}
         confidenceTier={view.sourceExplorer.selectedSource.confidenceTier}
+        freshness={view.sourceExplorer.selectedSource.freshness}
         sourceFreshness={ranking.provenance?.sourceFreshness}
         warningSignals={ranking.warningSignals}
         compact

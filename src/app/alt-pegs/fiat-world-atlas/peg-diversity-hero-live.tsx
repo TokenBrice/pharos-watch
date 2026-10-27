@@ -10,6 +10,7 @@ import {
 } from "@/lib/alt-peg-sizing";
 import { buildPegDiversityHero } from "@/lib/alt-peg-hero";
 import { useStablecoins } from "@/hooks/use-stablecoins";
+import { StaleDataBanner } from "@/components/stale-data-banner";
 import { HoverProvider } from "@/app/alt-pegs/fiat-world-atlas/hover-context";
 import { OffMapShelf } from "@/app/alt-pegs/fiat-world-atlas/off-map-shelf";
 import { FiatEmblems } from "@/app/alt-pegs/fiat-world-atlas/fiat-emblems";
@@ -64,11 +65,12 @@ export function PegDiversityHeroLive({
   const { data } = stablecoinsQuery;
   const peggedAssets = data?.peggedAssets;
   const hero = useMemo(() => buildPegDiversityHero(peggedAssets), [peggedAssets]);
-  const showStatusOverlay = !data?.peggedAssets?.length || stablecoinsQuery.isError;
-  const statusCopy =
-    stablecoinsQuery.isError || (!stablecoinsQuery.isLoading && !data?.peggedAssets?.length)
-      ? "Live coin layer unavailable; the ranking and table below still list every peg."
-      : "Loading live coin positions.";
+  // Retained positions stay drawn through a failed refresh; only settled absence is unavailable.
+  const renderable = !!peggedAssets?.length;
+  const showStatusOverlay = !renderable;
+  const statusCopy = stablecoinsQuery.isLoading
+    ? "Loading live coin positions."
+    : "Live coin layer unavailable; the ranking and table below still list every peg.";
 
   return (
     <HoverProvider>
@@ -79,6 +81,21 @@ export function PegDiversityHeroLive({
             : "peg-hero__live-shell"
         }
       >
+        {/* The default view sits under the page's stablecoins banner; the dialog needs its own. */}
+        {variant === "fullscreen" && renderable ? (
+          <div className="mb-3 empty:hidden">
+            <StaleDataBanner
+              queries={[{
+                preset: "stablecoins",
+                dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
+                isLoading: stablecoinsQuery.isLoading,
+                error: stablecoinsQuery.error,
+                hasData: true,
+                meta: stablecoinsQuery.meta,
+              }]}
+            />
+          </div>
+        ) : null}
         <div className={variant === "fullscreen" ? "peg-hero peg-hero--fullscreen" : "peg-hero"}>
           {showStatusOverlay ? (
             <div className="peg-hero__status-overlay" role="status" aria-live="polite">

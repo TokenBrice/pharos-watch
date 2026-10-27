@@ -10,10 +10,14 @@ import type {
   YieldSourceConfidenceTier,
   YieldSourcePublishedFreshness,
 } from "@/lib/yield-source-presentation";
+import {
+  assessYieldSourceDisplayAge,
+  type YieldSourceClockInput,
+  type YieldSourceDisplayClock,
+} from "@/lib/yield-source-presentation";
 export {
   YIELD_RANK_CHANGE_DRIVER_LABELS,
   YIELD_SOURCE_CONFIDENCE_STYLES,
-  getYieldSourceFreshnessDisplay,
   type YieldSourceConfidenceStyle,
   type YieldSourceConfidenceTier,
   type YieldSourceFreshnessDisplay,
@@ -381,7 +385,61 @@ export function classifyYieldSourcePosture(params: {
   return "clean";
 }
 
-export function formatYieldSourcePosture(posture: YieldSourcePosture): string {
+const STALE_SOURCE_DRIVER: YieldSourceRiskDriver = {
+  key: "stale-source",
+  label: "stale source",
+  description: "Latest source observation is older than expected for its family.",
+};
+
+/**
+ * Reader-facing driver list: the scoring `stale-source` driver shows only once
+ * the source's own observation age crosses the shared public gate, and is
+ * emitted at that crossing even when the cached scoring verdict was fresh.
+ */
+export function projectYieldSourceDisplayDrivers(
+  drivers: readonly YieldSourceRiskDriver[],
+  displayStale: boolean,
+): YieldSourceRiskDriver[] {
+  const rest = drivers.filter((driver) => driver.key !== "stale-source");
+  if (!displayStale) return rest;
+  const index = rest.findIndex((driver) => driver.key === "limited-history" || driver.key === "source-changed");
+  return index === -1 ? [...rest, STALE_SOURCE_DRIVER] : [...rest.slice(0, index), STALE_SOURCE_DRIVER, ...rest.slice(index)];
+}
+
+/** Whether the source's own observation age is publicly stale. */
+export function isYieldSourceDisplayStale(
+  input: YieldSourceClockInput,
+  clock: YieldSourceDisplayClock | null | undefined,
+): boolean {
+  return assessYieldSourceDisplayAge(input, clock).status === "stale";
+}
+
+/**
+ * True when a speculative posture rests only on the scoring window's stale
+ * verdict while the source is below public eligibility. Membership, counts and
+ * filters keep the scoring posture; only its label is qualified.
+ */
+export function isYieldSourcePostureScoringWindowOnly(
+  params: Parameters<typeof classifyYieldSourcePosture>[0],
+  posture: YieldSourcePosture,
+  displayStale: boolean,
+): boolean {
+  if (posture !== "speculative" || displayStale) return false;
+  return classifyYieldSourcePosture({
+    ...params,
+    sourceFreshness: params.sourceFreshness === "stale" ? "fresh" : params.sourceFreshness,
+    warningSignals: params.warningSignals?.filter((signal) => signal !== "data-stale"),
+  }) !== "speculative";
+}
+
+const YIELD_SOURCE_SCORING_WINDOW_POSTURE_LABEL = "Speculative (scoring window)";
+
+export function formatYieldSourcePostureCountSummary(count: number, scoringWindowOnlyCount: number): string {
+  return `Speculative: ${count} source${count === 1 ? "" : "s"}, ${scoringWindowOnlyCount} due only to the scoring window.`;
+}
+
+export function formatYieldSourcePosture(posture: YieldSourcePosture, scoringWindowOnly = false): string {
+  if (scoringWindowOnly && posture === "speculative") return YIELD_SOURCE_SCORING_WINDOW_POSTURE_LABEL;
   return YIELD_SOURCE_POSTURE_DEFINITIONS[posture].label;
 }
 
@@ -408,7 +466,7 @@ export function formatYieldSourceRiskCompact(sourceRisk: YieldSourceRisk | null 
 
 export function formatYieldSourceRiskDriverSummary(drivers: readonly YieldSourceRiskDriver[]): string {
   if (drivers.length === 0) {
-    return "No populated source-risk driver is currently reducing this row beyond the neutral source penalty.";
+    return "No source-risk drivers shown.";
   }
   return drivers.map((driver) => `${driver.label}: ${driver.description}`).join(" ");
 }
