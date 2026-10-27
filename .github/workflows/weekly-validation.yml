@@ -80,6 +80,8 @@ jobs:
           fetch-depth: 0
           persist-credentials: false
       - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-history: "true"
       - run: npm run coverage:critical
 
   node26-proof:

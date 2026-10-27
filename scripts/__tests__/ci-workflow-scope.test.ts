@@ -49,6 +49,25 @@ describe("CI workflow scope", () => {
     }
   });
 
+  it("bootstraps full history before the blocking weekly critical coverage", () => {
+    const weekly = parseYaml(readRepoFile(".github/workflows/weekly-validation.yml")) as {
+      jobs: Record<string, {
+        env?: Record<string, string>;
+        steps: Array<{ uses?: string; run?: string; with?: Record<string, unknown> }>;
+      }>;
+    };
+    const coverage = Object.values(weekly.jobs).find((job) =>
+      job.steps.some((step) => step.run === "npm run coverage:critical"))!;
+    expect(coverage.env?.CRITICAL_COVERAGE_RATCHET_ALL).toBe("1");
+    const checkout = coverage.steps.find((step) => step.uses?.startsWith("actions/checkout@"));
+    expect(checkout?.with?.["fetch-depth"]).toBe(0);
+    const setup = coverage.steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace");
+    const run = coverage.steps.findIndex((step) => step.run === "npm run coverage:critical");
+    expect(setup).toBeGreaterThan(-1);
+    expect(run).toBeGreaterThan(setup);
+    expect(coverage.steps[setup].with?.["bootstrap-history"]).toBe("true");
+  });
+
   it("installs each nightly Node 24 lane independently", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {
