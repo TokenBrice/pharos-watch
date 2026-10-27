@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W1R58 unknown-wave primary-source classification review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -35,11 +35,15 @@
       {
         "label": "Inverse transparency disclosure",
         "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The captured deployed-position source key identifies the canonical sDOLA vault, not the underlying DOLA token. The exact pinned sDola.sol implementation stakes deposits into DolaSavings and totalAssets() measures its DOLA balance less undistributed weekly revenue; beforeWithdraw() unstakes DOLA atomically while retaining MIN_BALANCE and MIN_SHARES. The issuer describes instant permissionless DOLA unwrapping with no lock-up. This metadata review corrects the live-row join and identifies the parent DOLA stablecoin claim; it does not refresh September 21 weights or establish same-notional USD liquidation.",
-    "compositionBasis": "Live ERC-4626 deployed-position observation on 2026-09-21 plus Inverse sDOLA product disclosure",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Fresh pinned reads at Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z): sDOLA is not an EIP-1967 proxy; savings() is the DOLA Savings Account 0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4 and asset() is DOLA 0x865377367054516e17014ccded1e7d814edc9ce4. totalAssets() is 19,268,010.853080396978504445 DOLA and the vault's own DOLA balance is 0, so 100% of totalAssets() is staked in DolaSavings. The exact pinned sDola.sol implementation stakes deposits into DolaSavings and totalAssets() measures its DOLA balance less undistributed weekly revenue; beforeWithdraw() unstakes DOLA atomically while retaining MIN_BALANCE and MIN_SHARES. The issuer describes instant permissionless DOLA unwrapping with no lock-up. This review identifies the parent DOLA stablecoin claim; it does not establish same-notional USD liquidation.",
+    "compositionBasis": "Live ERC-4626 deployed-position observation pinned at Ethereum block 26282914 plus Inverse sDOLA product disclosure",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "No unclassified wrapper-reserve exposure is present: the full wrapper reserve is the identified parent DOLA claim, whose own backing is evaluated on the DOLA record.",
     "knownUnknownExposurePct": 0

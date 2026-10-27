@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Morpho USDU Core vault shares",
-      "pct": 60.634,
+      "pct": 60.6311,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "USDU Finance Morpho USDU Core vault and underlying borrowers",
@@ -17,7 +17,7 @@
     },
     {
       "name": "USDU constituent of Curve USDU/USDC LP backing",
-      "pct": 15.1126,
+      "pct": 31.5674,
       "risk": "medium",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Curve USDU/USDC pool",
@@ -31,7 +31,7 @@
     },
     {
       "name": "USDC constituent of Curve USDU/USDC LP backing",
-      "pct": 24.2534,
+      "pct": 7.8015,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -47,8 +47,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv04Finish)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -66,26 +66,30 @@
       {
         "label": "Ethereum mainnet RPC: Curve coins and balances at block 26024768",
         "url": "https://ethereum-rpc.publicnode.com"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The issuer live backing API read on 2026-09-21 reports 34,939.61267289634 USDU-equivalent in Morpho and 22,684.148785465073 in Curve, with 5.1206765e-10 in TermMax, totaling 57,623.76145836193. Ethereum block 26024768 (0x18d1b40, hash 0x3ecb59e5896b8506b3a32d29e5cbaaf201a45aa4ec315628ca02d283b9980766, timestamp 2026-09-21T08:42:35Z) identifies Curve coins(0) as USDC and coins(1) as USDU; balances(0) and balances(1) return 30,864.253806 USDC and 19,232.031274025132 USDU. Splitting the API-valued Curve position by those constituent balances and normalizing total backing yields 60.6340% Morpho self-exposure, 15.1126% Curve USDU self-exposure, and 24.2534% external USDC collateral after rounding the residual. The issuer API does not expose its own block number; these are same-day observations rather than a claimed atomic reconciliation. No circulating-supply value is overridden.",
-    "compositionBasis": "Issuer live backing API observed 2026-09-21, with Curve LP constituents read on Ethereum at block 26024768",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "The issuer live backing API read on 2026-10-27 (HTTP Date 08:46:51 GMT) reports 34,939.62211545444 USDU-equivalent in Morpho and 22,686.925540211709 in Curve, with 5.1206765e-10 in TermMax, totaling 57,626.54765566666. Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z) identifies Curve coins(0) as USDC and coins(1) as USDU; balances(0) and balances(1) return 9,929.076831 USDC and 40,176.239362205237 USDU. Splitting the API-valued Curve position by those constituent balances and normalizing total backing yields 60.6311% Morpho self-exposure, 31.5674% Curve USDU self-exposure, and 7.8015% external USDC collateral after rounding the residual. The Curve pool is now USDU-heavy relative to 2026-09-21, which shifts the self-exposure share. The issuer API does not expose its own block number and was read about five minutes after the pinned block; these are same-day observations rather than a claimed atomic reconciliation. No circulating-supply value is overridden.",
+    "compositionBasis": "Issuer live backing API observed 2026-10-27T08:46:51Z, with Curve LP constituents read on Ethereum at block 26282914",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
-    "knownUnknownExposure": "The dated 2026-09-21 composition covers the disclosed Morpho USDU, Curve LP and TermMax positions. At Ethereum block 26098837 on 2026-10-01, two additional valid SwapBridgeMorphoV1 modules reported 2.470331 USDU-equivalent in a USDC vault and 1.003272 in a USDT vault. The re-fetched issuer backing API exposes total, morpho, curve and termmax aggregates without a module roster or accounting timestamp, so it does not directly establish whether these modules are included. A complete current denominator requires all active-module positions and historical-module residuals with consistently valued LP and vault exposures; this observation does not refresh the dated percentages.",
+    "knownUnknownExposure": "The dated 2026-10-27 composition covers the disclosed Morpho USDU, Curve LP and TermMax positions. At Ethereum block 26098837 on 2026-10-01, two additional valid SwapBridgeMorphoV1 modules reported 2.470331 USDU-equivalent in a USDC vault and 1.003272 in a USDT vault. The re-fetched issuer backing API exposes total, morpho, curve and termmax aggregates without a module roster or accounting timestamp, so it does not directly establish whether these modules are included. A complete current denominator requires all active-module positions and historical-module residuals with consistently valued LP and vault exposures; the 2026-10-27 re-fetch of the issuer API still exposes only total, morpho, curve and termmax aggregates, so inclusion of those modules in the API total remains unestablished.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Morpho USDU Core vault shares",
-        "pct": 60.634,
+        "pct": 60.6311,
         "disposition": "self-reserve",
         "rationale": "The Morpho vault represents lending positions denominated in the subject USDU asset and cannot create a dependency edge to itself."
       },
       {
         "reserveIndex": 1,
         "reserveName": "USDU constituent of Curve USDU/USDC LP backing",
-        "pct": 15.1126,
+        "pct": 31.5674,
         "disposition": "self-reserve",
         "rationale": "The subject-token leg of the Curve LP is self exposure rather than an upstream stablecoin dependency."
       }

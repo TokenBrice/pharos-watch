@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "WETH",
-      "pct": 34.5,
+      "pct": 32.7,
       "risk": "very-low",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Ethereum WETH contract and the Beraborrow collateral branch",
@@ -18,7 +18,7 @@
     },
     {
       "name": "WETH-WBTC Kodiak Island",
-      "pct": 32.5,
+      "pct": 33.4,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Kodiak WETH-WBTC Island and the WETH and WBTC issuers",
@@ -36,7 +36,7 @@
     },
     {
       "name": "WETH-HONEY Kodiak Island",
-      "pct": 6.4,
+      "pct": 7.0,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Kodiak WETH-HONEY Island and the WETH and HONEY protocols",
@@ -53,7 +53,7 @@
     },
     {
       "name": "beraETH",
-      "pct": 5.8,
+      "pct": 5.2,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Dinero / Redacted pxETH, underlying Ethereum staking and its bridged Berachain representation",
@@ -68,7 +68,7 @@
     },
     {
       "name": "solvBTC",
-      "pct": 5.6,
+      "pct": 5.9,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Solv Protocol and its Bitcoin custody network",
@@ -84,7 +84,7 @@
     },
     {
       "name": "solvBTC.bbn",
-      "pct": 4.2,
+      "pct": 4.4,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Solv Protocol, Babylon, and their Bitcoin custody network",
@@ -100,7 +100,7 @@
     },
     {
       "name": "pumpBTC",
-      "pct": 3.5,
+      "pct": 3.7,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "pumpBTC protocol and its Bitcoin custody network",
@@ -116,7 +116,7 @@
     },
     {
       "name": "WBTC-HONEY Kodiak Island",
-      "pct": 2.9,
+      "pct": 3.2,
       "risk": "high",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Kodiak WBTC-HONEY Island and the WBTC and HONEY issuers",
@@ -134,7 +134,7 @@
     },
     {
       "name": "uniBTC",
-      "pct": 1.4,
+      "pct": 1.5,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Bedrock uniBTC protocol and its Bitcoin custody network",
@@ -165,7 +165,7 @@
     },
     {
       "name": "rsETH",
-      "pct": 1.1,
+      "pct": 1.0,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Kelp DAO rsETH protocol and Ethereum validators",
@@ -195,7 +195,7 @@
     },
     {
       "name": "WBERA",
-      "pct": 0.4,
+      "pct": 0.3,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Berachain WBERA contract and market liquidity",
@@ -209,8 +209,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W2R05 classification identity review; composition retained from Resv16",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "verified",
     "sources": [
       {
@@ -240,11 +240,19 @@
       {
         "label": "Pinned exact Beraborrow collateral identity at block 27028385",
         "url": "https://berascan.com/address/0x45b3b6b28c77dd23a91acc3bd41da436fa6a61ae"
+      },
+      {
+        "label": "Berachain public RPC: holder balances, ERC-4626 conversions and branch fetchPrice() at block 28038152 (2026-10-27T08:50:20Z)",
+        "url": "https://rpc.berachain.com"
+      },
+      {
+        "label": "DefiLlama current prices for Berachain collateral assets, observed 2026-10-27T08:50Z",
+        "url": "https://coins.llama.fi/prices/current"
       }
     ],
-    "rationale": "The historical composition remains the September 21 block 26483059 inventory: all thirteen configured positive collateral-vault balances were valued against their exact token/DenManager identities and live liquity-v2-branches source keys. Shutdown/sunset branches retain their positive balances; the pumpBTC quote used its same-block branch oracle when DefiLlama was unavailable. This October 3 review changes classification provenance only, not weights or compositionAsOf. At Berachain block 27028385 (hash 0xc1e8698e0dd085d316fdd73b6ee1b7e8af57f9dea43fd30ef6b990e623d3c738), the exact ylstETH collateral vault asset() is 0xa958090601e21a82e9873042652e35891d945a8c; its name() is CIAN yield layer stETH and symbol() is ylstETH. CIAN's primary documentation identifies ylstETH as its stETH Yield Layer receipt, correcting the former YieldNest obligor attribution. The documented roughly five-day estimate is not a complete Berachain whole-position realization bound, so liquidity remains unknown.",
-    "compositionBasis": "All configured positive Beraborrow collateral-vault balances observed on Berachain block 26483059 on 2026-09-21",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Fresh pinned reads at Berachain block 28038152 (hash 0x68659a2c65b5affec7c9e4ae08cb378adbb852c82cfc3587050d41283f729300, timestamp 2026-10-27T08:50:20Z): for each of the thirteen configured collateral vaults the holder's share balance was read, converted to underlying assets through totalAssets() and totalSupply(), and valued at the DefiLlama berachain quote of the vault's asset() observed at the same time. DefiLlama had no quote for the pumpBTC and beraETH underlying assets, so those two used the same-block branch fetchPrice() oracle. All thirteen balances are positive. Resulting values were approximately $6,935.90 WETH, $7,088.97 WETH-WBTC Kodiak Island, $1,477.03 WETH-HONEY Kodiak Island, $1,109.68 beraETH, $1,242.06 solvBTC, $938.08 solvBTC.bbn, $781.79 pumpBTC, $684.55 WBTC-HONEY Kodiak Island, $321.18 uniBTC, $249.81 ylstETH, $217.06 rsETH, $97.97 Stakestone ETH, and $60.35 WBERA, totaling about $21,204 and normalized to the stated weights at one decimal. The Kodiak Island branch oracle prices exceed the DefiLlama quotes by roughly 13% to 32%, so island weights are quote-dependent. At Berachain block 27028385 (hash 0xc1e8698e0dd085d316fdd73b6ee1b7e8af57f9dea43fd30ef6b990e623d3c738), the exact ylstETH collateral vault asset() is 0xa958090601e21a82e9873042652e35891d945a8c; its name() is CIAN yield layer stETH and symbol() is ylstETH. CIAN's primary documentation identifies ylstETH as its stETH Yield Layer receipt, correcting the former YieldNest obligor attribution. The documented roughly five-day estimate is not a complete Berachain whole-position realization bound, so liquidity remains unknown.",
+    "compositionBasis": "All thirteen configured Beraborrow collateral-vault balances read on Berachain block 28038152 on 2026-10-27, converted through each ERC-4626 vault's totalAssets and totalSupply and valued at contemporaneous DefiLlama quotes of the underlying assets",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "All configured positive branches are identified and weighted. Wrapper custody, validator, LP unwind, oracle, and liquidation-liquidity risks remain explicit structured risk factors rather than unclassified exposure.",
     "knownUnknownExposurePct": 0,
@@ -252,63 +260,63 @@
       {
         "reserveIndex": 0,
         "reserveName": "WETH",
-        "pct": 34.5,
+        "pct": 32.7,
         "disposition": "untracked-exogenous-asset",
         "rationale": "WETH is crypto collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "WETH-WBTC Kodiak Island",
-        "pct": 32.5,
+        "pct": 33.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This Kodiak Island is an identified LP position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 2,
         "reserveName": "WETH-HONEY Kodiak Island",
-        "pct": 6.4,
+        "pct": 7.0,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This Kodiak Island is an identified LP position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "beraETH",
-        "pct": 5.8,
+        "pct": 5.2,
         "disposition": "untracked-exogenous-asset",
         "rationale": "beraETH is liquid-staking or liquid-restaking collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 4,
         "reserveName": "solvBTC",
-        "pct": 5.6,
+        "pct": 5.9,
         "disposition": "untracked-exogenous-asset",
         "rationale": "solvBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "solvBTC.bbn",
-        "pct": 4.2,
+        "pct": 4.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "solvBTC.bbn is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 6,
         "reserveName": "pumpBTC",
-        "pct": 3.5,
+        "pct": 3.7,
         "disposition": "untracked-exogenous-asset",
         "rationale": "pumpBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 7,
         "reserveName": "WBTC-HONEY Kodiak Island",
-        "pct": 2.9,
+        "pct": 3.2,
         "disposition": "untracked-exogenous-asset",
         "rationale": "This Kodiak Island is an identified LP position rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 8,
         "reserveName": "uniBTC",
-        "pct": 1.4,
+        "pct": 1.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "uniBTC is wrapped Bitcoin collateral rather than a tracked stablecoin dependency."
       },
@@ -322,7 +330,7 @@
       {
         "reserveIndex": 10,
         "reserveName": "rsETH",
-        "pct": 1.1,
+        "pct": 1.0,
         "disposition": "untracked-exogenous-asset",
         "rationale": "rsETH is liquid-staking or liquid-restaking collateral rather than a tracked stablecoin dependency."
       },
@@ -336,7 +344,7 @@
       {
         "reserveIndex": 12,
         "reserveName": "WBERA",
-        "pct": 0.4,
+        "pct": 0.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "WBERA is crypto collateral rather than a tracked stablecoin dependency."
       }

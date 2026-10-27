@@ -24,8 +24,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Slice1Finish)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01 d01-l2)",
     "confidence": "probable",
     "sources": [
       {
@@ -39,11 +39,15 @@
       {
         "label": "YieldFi yUSD contract",
         "url": "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb#code"
+      },
+      {
+        "label": "Ethereum PublicNode RPC: pinned reads at block 26282914 (2026-10-27T08:41:47Z)",
+        "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "The exact live ERC-4626 row measures 100% deployed strategy accounting with zero idle USDC. YieldFi's yUSD terms identify the Series as market-neutral and delta-neutral positions across whitelisted DeFi protocols and hedged venues and permit leverage, while official transparency materials provide no current itemized exposure. The aggregate is classified as a high-risk protocol position without inventing look-through allocation or tracked-coin links.",
-    "compositionBasis": "Exact live ERC-4626 deployed-strategy row and YieldFi yUSD token terms",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Fresh pinned reads at Ethereum block 26282914 (hash 0x748ac3086a5b99e61d6a72dffd1d57911554c9f144826ad8fc08c72a774cafe0, timestamp 2026-10-27T08:41:47Z): the yUSD proxy implementation is 0x5bf44d32260aee6b807c490e92ef0481d15ab493; asset() is USDC; totalAssets() is 10,696,286.730934 USDC and the vault's own USDC balance is 0, so the exact live ERC-4626 row measures 100% deployed strategy accounting with zero idle USDC. YieldFi's yUSD terms identify the Series as market-neutral and delta-neutral positions across whitelisted DeFi protocols and hedged venues and permit leverage, while the official transparency page (re-read 2026-10-27) describes the Prime analytics layer without publishing a current itemized yUSD exposure. The aggregate is classified as a high-risk protocol position without inventing look-through allocation or tracked-coin links.",
+    "compositionBasis": "Exact live ERC-4626 deployed-strategy row pinned at Ethereum block 26282914 and YieldFi yUSD token terms",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The live adapter identifies the full 100% as deployed yUSD strategy accounting. The yUSD terms name ForDeFi as an MPC/custody service provider, but do not disclose current venue, protocol, counterparty, custody allocation, or constituent weights.",
     "knownUnknownExposurePct": 100,
