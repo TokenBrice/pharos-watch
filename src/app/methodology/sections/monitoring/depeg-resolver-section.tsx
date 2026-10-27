@@ -27,9 +27,11 @@ export function DepegResolverMethodologySection() {
         Unlikely labels.
       </p>
       <p>
-        Terminal evidence means a terminal status, an announced issuer wind-down, any severe kill signal, or two or more
-        kill signals without a strong structural anchor on a below-peg break deeper than 1,000 bps, measured as the worse
-        of the stored peak and live deviation. Any other kill signal, or a deep below-peg break with none, reads as Stress
+        In either direction, a terminal status or a severe issuer wind-down signal is Terminal evidence. Otherwise, above
+        peg, an exit-collapse signal reads as Stress signals and everything else as No break signals, even a severe kill
+        signal. Below peg, any severe kill signal, or two or more kill signals without a strong non-inflatable-supply or
+        hard-collateral/redemption anchor on a break deeper than 1,000 bps (the worse of the stored peak and live
+        deviation), is Terminal evidence. Any other below-peg kill signal, or a deep break with none, reads as Stress
         signals. Static exit thinness &mdash; a thin route, no viable route, thin liquidity, or thin redemption capacity
         &mdash; caps at elevated: V9 exit capacity is measured against the dislocation&rsquo;s value gap (supply times
         break depth) instead of the Safety Score stress request and its $1M floor, which made small-float coins look

@@ -22,7 +22,7 @@ import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { QUALITY_WEIGHT, CHAIN_ENVIRONMENT_WEIGHT, CONCENTRATION_WEIGHT, PEG_STABILITY_WEIGHT, BACKING_DIVERSITY_WEIGHT } from "@shared/lib/chains/health";
 import { PYS_BENCHMARK_SPREAD_WEIGHT, PYS_RISK_PENALTY_EXPONENT, PYS_RISK_PENALTY_FLOOR, PYS_SUSTAINABILITY_FLOOR, PYS_MAX_SOURCE_RISK_PENALTY, PYS_APY_SANITY_MAX } from "@shared/lib/yield-scoring";
 import { DEFINITIONS } from "@/lib/definitions";
-import { PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
+import { DEPEG_RESOLVER_SECTION_CONTENT, PRICING_PIPELINE_SECTION_CONTENT, SAFETY_SCORES_SECTION_CONTENT } from "@/lib/methodology-content";
 import { METHODOLOGY_HISTORY_ARCHIVES, methodologyHistoryAnchor } from "@shared/lib/methodology-versions/archives";
 
 function methodologyDocument() {
@@ -38,6 +38,16 @@ function tableCells(root: HTMLElement, testId: string) {
 }
 
 describe("MethodologyPage", () => {
+  it("qualifies DDR verdict summaries by depeg direction in the page and Markdown export", () => {
+    const summary = "In either direction, a terminal status or a severe issuer wind-down signal is Terminal evidence. Otherwise, above peg, an exit-collapse signal reads as Stress signals and everything else as No break signals, even a severe kill signal. Below peg, any severe kill signal, or two or more kill signals without a strong non-inflatable-supply or hard-collateral/redemption anchor on a break deeper than 1,000 bps (the worse of the stored peak and live deviation), is Terminal evidence. Any other below-peg kill signal, or a deep break with none, reads as Stress signals.";
+    const section = methodologyDocument().querySelector("#depeg-resolver-methodology");
+    expect(section?.textContent?.replace(/\s+/g, " ")).toContain(summary);
+    expect(DEPEG_RESOLVER_SECTION_CONTENT.markdown).toContain(summary);
+    for (const text of [section?.textContent ?? "", DEPEG_RESOLVER_SECTION_CONTENT.markdown]) {
+      expect(text).not.toMatch(/Terminal evidence means a terminal status|No break signals means no kill signal/);
+    }
+  });
+
   it("names the Safety Score version, weights and changelog dates in metadata and the header", () => {
     const latest = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0];
     expect(metadata.title).toBe(`Stablecoin Safety Score Methodology (${SAFETY_SCORE_METHODOLOGY_VERSION_LABEL})`);
