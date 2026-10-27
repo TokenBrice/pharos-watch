@@ -35,7 +35,10 @@ import { RedemptionRouteRail } from "@/components/stablecoin-detail/redemption-r
 import { ScoreBandSpectrum, type SpectrumBand } from "@/components/stablecoin-detail/score-band-spectrum";
 import { ScorePill } from "@/components/stablecoin-detail/score-pill";
 import { FreshnessIndicator } from "@/components/status/freshness-indicator";
-import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { deriveDataHealth } from "@/lib/data-health";
+import { DATA_HEALTH_PRESETS } from "@/lib/data-health-config";
+import { useFreshnessBoundary } from "@/hooks/use-freshness-boundary";
+import type { StablecoinDetailStaleQuery } from "@/lib/stablecoin-detail-view-model-types";
 import { buildRedemptionBackstopCardViewModel } from "./redemption-backstop-card-view-model";
 
 type ExitBreakdown = NonNullable<SafetyScoreV9CurrentCard["breakdowns"]>["exit"];
@@ -393,6 +396,9 @@ function noHolderRouteReason(coinId: string) {
   return disposition && reason !== undefined ? { disposition, reason } : null;
 }
 
+/** The page's redemption health lane: endpoint generation, budgets, error and retention. */
+type RedemptionFreshnessLane = Pick<StablecoinDetailStaleQuery, "dataUpdatedAt" | "error" | "hasData" | "meta">;
+
 /** Whether `RedemptionRouteSection` renders anything for this coin. */
 export function hasRedemptionRouteModule(entry: RedemptionBackstopEntry | null | undefined, coinId: string): boolean {
   return entry != null || noHolderRouteReason(coinId) !== null;
@@ -412,17 +418,20 @@ export function RedemptionRouteSection({
   coinId,
   variant = "module",
   stripForm = false,
+  freshness,
 }: {
   entry: RedemptionBackstopEntry | null | undefined;
   reportCard: SafetyScoreV9CurrentCard | null | undefined;
   coinId: string;
   variant?: EvidenceModuleVariant;
   stripForm?: boolean;
+  freshness?: RedemptionFreshnessLane;
 }) {
   if (entry) {
     return (
       <RedemptionBackstopCard
         entry={entry}
+        freshness={freshness}
         reconciliation={describeExitReconciliation(reportCard, entry)}
         variant={variant}
         stripForm={stripForm}
@@ -610,13 +619,25 @@ function RedemptionBackstopCard({
   reconciliation,
   variant,
   stripForm,
+  freshness,
 }: {
   entry: RedemptionBackstopEntry;
   reconciliation: string | null;
   variant: EvidenceModuleVariant;
   stripForm: boolean;
+  freshness?: RedemptionFreshnessLane;
 }) {
   const viewModel = buildRedemptionBackstopCardViewModel(entry);
+  // The shared public verdict (ADR-42) ages the served generation without a refetch.
+  const healthInput = {
+    ...DATA_HEALTH_PRESETS.redemptionBackstops,
+    dataUpdatedAt: freshness?.dataUpdatedAt ?? entry.updatedAt * 1000,
+    error: freshness?.error ?? null,
+    hasData: freshness?.hasData ?? true,
+    meta: freshness?.meta ?? null,
+  };
+  const nowMs = useFreshnessBoundary([healthInput]);
+  const health = deriveDataHealth(healthInput, nowMs ?? healthInput.dataUpdatedAt);
   const verdict = viewModel.score == null
     ? notRatedReason(entry)
     : `${viewModel.accessLabel} access; ${viewModel.settlementLabel.toLowerCase()} settlement into ${viewModel.outputAssetLabel.toLowerCase()}.`;
@@ -761,11 +782,11 @@ function RedemptionBackstopCard({
           reviewed={viewModel.docsReviewedAt ?? undefined}
         >
           {/* Live-data freshness as plain footer text on the left; the docs
-              review date sits right. The 2× producer headroom matches the
-              compact chip's, so amber means a producer run was missed. */}
+              review date sits right. Amber follows the shared public verdict. */}
           <FreshnessIndicator
-            updatedAtMs={entry.updatedAt * 1000}
-            staleAfterMs={API_FRESHNESS_MAX_AGE_SEC.redemptionBackstops * 2000}
+            updatedAtMs={health.dataUpdatedAt}
+            staleAfterMs={healthInput.staleTime}
+            health={health}
             labelPrefix="Updated"
             className="border-transparent bg-transparent px-0 py-0 text-xs font-normal"
           />

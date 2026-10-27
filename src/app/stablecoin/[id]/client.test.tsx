@@ -81,7 +81,7 @@ vi.mock("@/components/stablecoin-detail/redemption-backstop-card", async (import
   return {
     ...original,
     RedemptionRouteSection: (props: Parameters<typeof original.RedemptionRouteSection>[0]) => props.entry
-      ? <section data-testid="redemption-route-section">{props.entry.stablecoinId}</section>
+      ? <section data-testid="redemption-route-section" data-freshness-updated-at={props.freshness?.dataUpdatedAt}>{props.entry.stablecoinId}</section>
       : <original.RedemptionRouteSection {...props} />,
   };
 });
@@ -570,6 +570,17 @@ describe("StablecoinDetailClient", () => {
     expect(screen.getByTestId("redemption-route-section").textContent).toBe(base.coin.id);
     expect(container.querySelector('[aria-label="Evidence index"] a[href="#redemption"]')?.textContent).toContain("79");
     expect(screen.queryByRole("button", { name: "Retry redemption" })).toBeNull();
+  });
+
+  it("hands the redemption footer the page's own redemption health lane", () => {
+    const base = makeReadyViewModel();
+    const lane = { preset: "redemptionBackstops" as const, dataUpdatedAt: 1_700_000_000_000, error: null, hasData: true, meta: null };
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel({
+      redemptionBackstop: { stablecoinId: base.coin.id, score: 79, routeFamily: "offchain-issuer" },
+      staleQueries: [{ preset: "reportCards", dataUpdatedAt: 1, error: null, hasData: true, meta: null }, lane],
+    }));
+    renderDetail();
+    expect(screen.getByTestId("redemption-route-section").getAttribute("data-freshness-updated-at")).toBe(String(lane.dataUpdatedAt));
   });
 
   it("keeps reviewed no-holder evidence authoritative before the live read settles", () => {

@@ -131,6 +131,11 @@ function getDegradedBudgetMs(staleTime: number, meta: ApiMeta | null | undefined
     : FRESHNESS_RATIOS.DEGRADED * staleTime;
 }
 
+/** The public stale boundary a verdict was judged against: producer `degradedBudgetSec`, else 12x base. */
+export function getPublicStaleBudgetMs(entry: Pick<DataHealthInfo, "staleTime" | "meta">): number {
+  return getDegradedBudgetMs(entry.staleTime, entry.meta);
+}
+
 function getUpdatedAtMs(input: QueryHealthInput): number {
   return input.meta?.updatedAt === null
     ? 0

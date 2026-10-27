@@ -298,6 +298,7 @@ function ExitBoard({
           reportCard={viewModel.reportCard}
           coinId={viewModel.coin.id}
           variant="module"
+          freshness={viewModel.staleQueries.find((query) => query.preset === "redemptionBackstops")}
         />
       ) : shared.redemptionEvidence.kind === "placeholder" ? (
         shared.redemptionEvidence.status === "empty" ? (
