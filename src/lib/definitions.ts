@@ -15,7 +15,7 @@
  * runtime constant exists, so a methodology change cannot leave this copy stale.
  */
 import { DEWS_SIGNAL_LABELS, DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
-import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
@@ -248,7 +248,7 @@ export const DEFINITIONS = {
     label: "Active Depegs",
     short: "Open depeg events that have crossed Pharos thresholds and passed the live confirmation rules.",
     detail:
-      "Large-cap, low-confidence, and extreme moves can require secondary confirmation before they count as live events.",
+      `Every new depeg must hold for at least ${DEPEG_PENDING_MIN_AGE_SEC / 60} minutes and pass source-trust checks before it counts as live.`,
     ...PEG,
   },
   coinsAtPeg: {
