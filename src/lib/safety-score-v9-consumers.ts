@@ -1,6 +1,6 @@
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
-import { ReportCardsV9TableResponseSchema, type ReportCardsV9TableResponse, type ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
+import { ReportCardsV9TableReaderResponseSchema, type ReportCardsV9TableResponse, type ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
 import type {
   SafetyScorePublicationIdentity,
@@ -113,7 +113,7 @@ function resolveV9TableConsumerResponse(
   expectedIdentity: V9ConsumerIdentity,
 ): V9ConsumerResult<ReportCardsV9TableResponse | V9ConsumerResponse> {
   if (input !== null && typeof input === "object" && "projection" in input && input.projection === "table") {
-    const parsed = ReportCardsV9TableResponseSchema.safeParse(input);
+    const parsed = ReportCardsV9TableReaderResponseSchema.safeParse(input);
     if (!parsed.success) return { status: "unavailable", reason: "invalid-v9-response" };
     if (!safetyScoreV9IdentitiesMatch(parsed.data.safetyScoreIdentity, expectedIdentity)) {
       return { status: "unavailable", reason: "identity-mismatch" };
