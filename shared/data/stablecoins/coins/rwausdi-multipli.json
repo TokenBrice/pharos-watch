@@ -37,8 +37,8 @@
     "attestorTier": "self",
     "cadence": "weekly",
     "latestReport": {
-      "periodEnd": "2026-10-10",
-      "publishedAt": "2026-10-10",
+      "periodEnd": "2026-10-27",
+      "publishedAt": "2026-10-27",
       "assuranceMethod": "self-verification",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "partial",
@@ -46,7 +46,7 @@
       "confidence": "probable",
       "sources": [
         {
-          "label": "AFI rwaUSDi proof-of-reserves snapshot (data timestamp 2026-10-10T18:30:00Z, TEE attestation 2026-10-10T18:30:57.740Z, proof 6def82e5cb21c621), observed 2026-10-10T23:30:33Z",
+          "label": "AFI rwaUSDi proof-of-reserves snapshot (data timestamp 2026-10-27T06:32:05.804Z, TEE attestation 2026-10-27T06:32:30.601Z, proof a661f485eed6fb68, reserves $1,500,000,000, liabilities $479,782,100 matching issuance-parameters total_circulation 479782100), observed 2026-10-27T08:48Z; supersedes proof 6def82e5cb21c621 of 2026-10-10",
           "url": "https://api.afiprotocol.xyz/por/multipli/rwaUSDi/proofs"
         },
         {

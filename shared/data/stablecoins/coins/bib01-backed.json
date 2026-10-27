@@ -44,17 +44,21 @@
     "cadence": "daily",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-07-21",
-      "publishedAt": "2026-07-21",
+      "periodEnd": "2026-10-26",
+      "publishedAt": "2026-10-26",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "OpenAI Codex V9 NR-recovery review",
+      "reviewer": "OpenAI Codex V9 NR-recovery review; period renewed 2026-10-27 from a fresh Chainlink feed round (D01 evidence lane)",
       "confidence": "verified",
       "sources": [
         {
           "label": "Backed public assetReserves GraphQL feed - IB01.L",
           "url": "https://api.backed.fi/graphql"
+        },
+        {
+          "label": "Polygon Chainlink LedgerLens bIB01 PoR feed 0xad4395fc414fc1575a7a38c20b0bfdbdb09ee41a, latestRoundData round 0x2000000000000035b answer 80 IB01.L shares (8 decimals), updatedAt 2026-10-26T15:50:35Z, read 2026-10-27T08:46Z via eth_call at Polygon block 96256945; Backed API summed circulatingSupply across six chains 78.23 bIB01",
+          "url": "https://data.chain.link/feeds/polygon/mainnet/bib01-por"
         },
         {
           "label": "Backed proof-of-reserves methodology",
