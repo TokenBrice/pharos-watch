@@ -162,16 +162,16 @@ function assuranceCandidate(
   return `<a href="${url}">${label}</a>`;
 }
 
-const FIDD_VIEWER_URL = "https://fwc.widen.net/s/jgdsvvsknq/fidelity-digital-assets---fidd-reserve-attestation-report---august-2026";
-const FIDD_SEPTEMBER_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---september-2026";
-const FIDD_VIEWER_HTML = '<html><head><title>Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf</title></head><body><a id="download" href="/content/z6rtnzs3v9/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---August-2026.pdf?u=5lvvtn&amp;download=true">Download</a></body></html>';
-const FIDD_SEPTEMBER_VIEWER_HTML = FIDD_VIEWER_HTML.replaceAll("August-2026", "September-2026");
+const FIDD_VIEWER_URL = "https://fwc.widen.net/s/bbtmltgbgf/fidelity-digital-assets---fidd-reserve-attestation-report---september-2026";
+const FIDD_OCTOBER_VIEWER_URL = "https://fwc.widen.net/s/nextreport/fidelity-digital-assets---fidd-reserve-attestation-report---october-2026";
+const FIDD_VIEWER_HTML = '<html><head><title>Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf</title></head><body><a id="download" href="/content/azzc1igqzr/original/Fidelity-Digital-Assets---FIDD-Reserve-Attestation-Report---September-2026.pdf?u=5lvvtn&amp;download=true">Download</a></body></html>';
+const FIDD_OCTOBER_VIEWER_HTML = FIDD_VIEWER_HTML.replaceAll("September-2026", "October-2026");
 
 function assuranceFenceCases() {
   const ausd = getIndependentAssuranceManifest("AUSD");
   const agoraReviewed =
     `https://fdr-prod-docs-files-public.s3.us-east-1.amazonaws.com${new URL(ausd.reportUrl).pathname}?X-Amz-Signature=fixture`;
-  const fiddIndex = `<a href="${FIDD_VIEWER_URL}">August</a>`;
+  const fiddIndex = `<a href="${FIDD_VIEWER_URL}">September</a>`;
   return [
     {
       adapter: "agora-independent-assurance",
@@ -210,7 +210,7 @@ function assuranceFenceCases() {
       product: "CADD",
       html: indexFixture("cadd-independent-assurance.html"),
       newerHtml: indexFixture("cadd-independent-assurance.html") +
-        '<a href="https://drive.google.com/file/d/1SepFailsClosedPlaceholderID/view?usp=sharing">September 2026 attestation</a>',
+        '<a href="https://drive.google.com/file/d/1OctFailsClosedPlaceholderID/view?usp=sharing">October 2026 attestation</a>',
     },
     {
       adapter: "fdusd-independent-assurance",
@@ -241,11 +241,11 @@ function assuranceFenceCases() {
       coinId: "fidd-fidelity",
       product: "FIDD",
       html: fiddIndex,
-      newerHtml: `${fiddIndex}<a href="${FIDD_SEPTEMBER_VIEWER_URL}">September</a>`,
+      newerHtml: `${fiddIndex}<a href="${FIDD_OCTOBER_VIEWER_URL}">October</a>`,
       options: {
         extraHtml: {
           [FIDD_VIEWER_URL]: FIDD_VIEWER_HTML,
-          [FIDD_SEPTEMBER_VIEWER_URL]: FIDD_SEPTEMBER_VIEWER_HTML,
+          [FIDD_OCTOBER_VIEWER_URL]: FIDD_OCTOBER_VIEWER_HTML,
         },
       },
     },

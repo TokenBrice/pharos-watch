@@ -66,8 +66,8 @@ const PAXOS_FRAMER_SITE_ORIGIN = "https://framerusercontent.com/sites/3XxgTiMfDK
 // Only reviewed products are registered; absent products fail closed.
 const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { binding: PaxosProductBinding; profile: IndependentAssuranceProfile }>> = {
   PAXG: {
-    // Reviewed 2026-09-25: official route and August 31 KPMG report selection
-    // (Exhibit A adds a 5-token Robinhood column beside Ethereum and Solana).
+    // Reviewed 2026-10-27: official route and September 30 KPMG report selection
+    // (Exhibit A adds a 235-token Base column beside Ethereum, Solana and Robinhood).
     binding: {
       siteOrigin: PAXOS_FRAMER_SITE_ORIGIN,
       routePath: "/paxg-transparency",
@@ -94,7 +94,8 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { binding: PaxosProductBindin
     },
   },
   PYUSD: {
-    // Reviewed August 2026 year-specific open variants on 2026-09-25.
+    // Reviewed September 2026 year-specific open variants on 2026-10-27
+    // (Exhibit A adds a Stable chain column).
     binding: {
       siteOrigin: PAXOS_FRAMER_SITE_ORIGIN,
       routePath: "/pyusd-transparency",
@@ -135,7 +136,7 @@ const PAXOS_PRODUCTS: Partial<Record<PaxosProduct, { binding: PaxosProductBindin
     },
   },
   USDP: {
-    // Reviewed August 2026 year-specific open variants on 2026-09-25.
+    // Reviewed September 2026 year-specific open variants on 2026-10-27.
     binding: {
       siteOrigin: PAXOS_FRAMER_SITE_ORIGIN,
       routePath: "/usdp-transparency",

@@ -3,13 +3,13 @@
   "product": "PAXG",
   "profile": "paxg-v1",
   "officialIndexUrl": "https://www.paxos.com/paxg-transparency",
-  "reportUrl": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf",
-  "reportSha256": "65fa4148facf8d6256a5bff8db39c969cae329fdf5afc39ce89baddf44ac1b3c",
-  "reportByteLength": 495271,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T17:00:00-04:00",
+  "reportUrl": "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf",
+  "reportSha256": "2611a159b29fc28dd4f438528c5aa38330002e4848e20cbdd8b02ec2864f87a1",
+  "reportByteLength": 490005,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T17:00:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-09-24T23:59:00-04:00",
+  "reportIssuedAt": "2026-10-23T23:59:00-04:00",
   "attestor": "KPMG LLP",
   "engagement": "Independent accountants' examination under AICPA attestation standards",
   "conclusion": "unmodified",
@@ -18,33 +18,38 @@
     {
       "code": "allocated-gold",
       "label": "London Good Delivery gold in fine troy ounces",
-      "amount": "431313"
+      "amount": "435306"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "PAXG redeemable Ethereum tokens",
-      "amount": "428830"
+      "amount": "432506"
     },
     {
       "code": "solana",
       "label": "PAXG redeemable Solana tokens",
-      "amount": "2478"
+      "amount": "2560"
     },
     {
       "code": "robinhood",
       "label": "PAXG redeemable Robinhood tokens",
       "amount": "5"
+    },
+    {
+      "code": "base",
+      "label": "PAXG redeemable Base tokens",
+      "amount": "235"
     }
   ],
-  "reportedAssetTotal": "431313",
-  "computedAssetTotal": "431313",
-  "reportedLiabilityTotal": "431313",
+  "reportedAssetTotal": "435306",
+  "computedAssetTotal": "435306",
+  "reportedLiabilityTotal": "435306",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "815b6d76dd382e861b687135c9e556489875b82b1ea450835ed5893c460cc2b6",
+    "normalizedTextSha256": "36192848d31bbe8a4dee58e5eed2efadca188ff42ee380407b2b470592343bee",
     "pageCount": 8
   },
   "assuranceTier": "independent-assurance"

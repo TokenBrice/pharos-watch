@@ -3,7 +3,8 @@ import type { LiveReserveAdapterParamsByKey } from "@shared/lib/live-reserve-ada
 /**
  * Framer asset IDs (`https://framerusercontent.com/assets/<id>.pdf`) of every
  * report the product page offered when its reviewed manifest was admitted,
- * captured 2026-10-24. A page entry outside this set is a newer unreviewed
+ * captured 2026-10-24 (PAXG/PYUSD/USDP September 30 reports added
+ * 2026-10-27). A page entry outside this set is a newer unreviewed
  * report. When a manifest advances, add the newly reviewed asset IDs here.
  */
 export const PAXOS_REVIEWED_REPORT_ARCHIVE = {
@@ -34,9 +35,10 @@ export const PAXOS_REVIEWED_REPORT_ARCHIVE = {
     "pVHONH9EYEktv79A0yVmbJXkC7k", "pbwuhx3j30LBiuGddlsi76ImkNA", "qDFmwpEJj8XuE1fvCpye648UdUM",
     "qbgvnUtJKEbbOP7byVvbuVd6ls", "rQa67VlOqP02FPsKHjj7aj5SfZo", "t3Bv8lTRcw5OEVP9VFqpbEbM8p0",
     "tUv28uBR33TVNCanRdjNA3Y8Q", "tdF6LZNfMegrjo5RezClFUVIyM", "ttw1Q4Hw9v454YvlP5CxnEJRQag",
-    "uQbWch5RlNrDMUtPfroY8NwmAW0", "uxbTQC7Gbd1yR3FlQr1R706vHs", "v89DQuKBjVYCcpnGdJIdbXTwn8",
-    "vnQ0QmO2ILE5nPz2NF26l1ZqBFc", "wHnVKTK5Sx6zwNrAxcjSa38Vg", "wKyhIekITaWTPgB3TSIALf6A714",
-    "xKyRhNFOQQORmyrA8g2YgbulkCI", "yraiYkBhYASuy65vU9FJPs29sso", "zlpPQZUPjyoSP7K4u6P48CRKfVg"
+    "uQbWch5RlNrDMUtPfroY8NwmAW0", "uwWybrLRlgkC4vexP3yLyrQVeV0", "uxbTQC7Gbd1yR3FlQr1R706vHs",
+    "v89DQuKBjVYCcpnGdJIdbXTwn8", "vnQ0QmO2ILE5nPz2NF26l1ZqBFc", "wHnVKTK5Sx6zwNrAxcjSa38Vg",
+    "wKyhIekITaWTPgB3TSIALf6A714", "xKyRhNFOQQORmyrA8g2YgbulkCI", "yraiYkBhYASuy65vU9FJPs29sso",
+    "zlpPQZUPjyoSP7K4u6P48CRKfVg"
   ],
   PYUSD: [
     "04vEMuzf1FVRAFj1sa3WLpjNNnA", "2PrBOCByAyi3CDvHQscajHtuEk", "4U3PyuLH8ioC5p7SFCRiO0",
@@ -49,16 +51,17 @@ export const PAXOS_REVIEWED_REPORT_ARCHIVE = {
     "FGkcW4N0EP3iImzQXCSWLHO8C98", "FIRoNy0wNu5FRSkscDtTTQtYFlo", "FSYKESkinxKwfF0LEBa5KlnfEo",
     "FrPgT16j1PGP3NwGnE4dPqrk5Q", "GGXn4WO6fHGZibsKFreUDzGIjds", "IOFwXc56lG46UxRmSl0DJ39RJ3k",
     "Jw4hb36TWXwsGEeifh2tcKi0CA", "MhNVZ7lFOeATRJs2axm75hgBeA", "SLja3tIQ4DeIVBDK8nySu8Za6ik",
-    "TgiDUvuvxZx3vFaELgdclgTb4", "VNH7NQnSIKNeeATbKJREg43ls", "VdMoM8qevL5j7tgTTmLhkemRdY",
-    "YplnsKT0e4aweQqoFIcFdOryNkI", "Yxiwo6GGblJcbBoKpbmvMN59sIM", "ZQrEgJboR534wj60NdIVkcpbC9g",
-    "aASxgF63HLZomzBVRSjMIf967t8", "aGz5Rm6q7lLMp4npnB2X3oaVEgg", "bXg8txy2JhkmAnK77PqWdZlKs40",
-    "bzkGKBoxmnPMhLWGm0u8kb2bc", "ciwlZ3iRDYZQbA9cjaPJlbZDw4U", "ckmdoP53rVMH50Ktrp4jPQevzzc",
-    "guW7SlDqxieakD9UTN9a6jneyw", "hRnBz9WtHaqXedZLntIFO1LPsrQ", "heudMy6mI9GdxPzbecIjRRWGbyM",
-    "i7LoJaS7RfoTSJQzaUvSNOGKLrM", "isI1bZQNcE4KhhFzxqYQHJs5MY", "ivK93ZVp14MVk0YstLFAtk8xQY",
-    "mGqLYWOSpmEpmZgjdwWhgNK8", "n9KKDg0lzwI1PqcWbgqJ7Sw5IU", "nnDmTwtYmO3HUZnwxNhQAyeFfjs",
-    "oXkOs7s6NtMOSAq2vF1sdK8mZPE", "obziSaVRQrfDPkkafqcHoKSV1sQ", "paohDdtxlutsObY9rt2EQM4QHA",
-    "rkQVbKZCYkDi85u4VypqQ7PVS2g", "sQ7KkuRzcfPa3MEi5MX3zXCV5Xw", "simtQzalIFKI30BUVPfCTJ7bM",
-    "xDG2MVw3Ikz1dGt3pmJlv6FvTg", "y45297lPRnrTMfRFsYahpsi1a8", "zmxIfht91egtV9NCqRt0RLBbx8"
+    "TgiDUvuvxZx3vFaELgdclgTb4", "UZ8Eke3FvB5npXyceLEmiLRV6k", "VNH7NQnSIKNeeATbKJREg43ls",
+    "VdMoM8qevL5j7tgTTmLhkemRdY", "YplnsKT0e4aweQqoFIcFdOryNkI", "Yxiwo6GGblJcbBoKpbmvMN59sIM",
+    "ZQrEgJboR534wj60NdIVkcpbC9g", "aASxgF63HLZomzBVRSjMIf967t8", "aGz5Rm6q7lLMp4npnB2X3oaVEgg",
+    "bXg8txy2JhkmAnK77PqWdZlKs40", "bzkGKBoxmnPMhLWGm0u8kb2bc", "ciwlZ3iRDYZQbA9cjaPJlbZDw4U",
+    "ckmdoP53rVMH50Ktrp4jPQevzzc", "guW7SlDqxieakD9UTN9a6jneyw", "hRnBz9WtHaqXedZLntIFO1LPsrQ",
+    "heudMy6mI9GdxPzbecIjRRWGbyM", "i7LoJaS7RfoTSJQzaUvSNOGKLrM", "isI1bZQNcE4KhhFzxqYQHJs5MY",
+    "ivK93ZVp14MVk0YstLFAtk8xQY", "mGqLYWOSpmEpmZgjdwWhgNK8", "n9KKDg0lzwI1PqcWbgqJ7Sw5IU",
+    "nnDmTwtYmO3HUZnwxNhQAyeFfjs", "oXkOs7s6NtMOSAq2vF1sdK8mZPE", "obziSaVRQrfDPkkafqcHoKSV1sQ",
+    "paohDdtxlutsObY9rt2EQM4QHA", "rkQVbKZCYkDi85u4VypqQ7PVS2g", "sQ7KkuRzcfPa3MEi5MX3zXCV5Xw",
+    "simtQzalIFKI30BUVPfCTJ7bM", "xDG2MVw3Ikz1dGt3pmJlv6FvTg", "y45297lPRnrTMfRFsYahpsi1a8",
+    "zmxIfht91egtV9NCqRt0RLBbx8"
   ],
   USDG: [
     "09o6oGvVPtVJce6B8CYd9GfwdIQ", "19usPDzwrjsVoGHCCIEqP2pWC60", "1a5XGyUwTIlbKBRTgM5wPvwIo8",
@@ -105,12 +108,13 @@ export const PAXOS_REVIEWED_REPORT_ARCHIVE = {
     "ilcioyBdVZFChUISEppbDFOlQ4", "jDwtPQCQyMvcFW2IzsL19MbZMdI", "joSgCxbkoX2wEGgA0eajkiBr1Y",
     "js8zctlqgJUyjbKzSi6qv4cXoXA", "k1j7KYkT4ZOvSuDYKVRvfG4qM8", "kyihGiKbjnMx9LDCxtsJGmSCN4U",
     "lIYhRgSJtjvGcStFAokgj3hM1FI", "mFll6S89Yz8Y3ykrJtnGXuf3P7M", "n3MYsGCdGPl3U3sdkgkG5o8Ztgo",
-    "nf1aOziNNoA4f6tJXeFFBfNYoKE", "p42sCEg6LsEXLKSf9B7LsUik4ac", "pkjnQ4DUM0niVUkunYi2Tlt7HqY",
-    "pnG2jmP9FMawaeT0E6eTIPvajs", "qHrZlZdem3nAMSBmvxmzTygapzA", "qbrPeNNIMESOL8O2WqNyXVdo0c",
-    "rjV0MMQh9C8SnswKeodmmmW8oJA", "sHNCXaiP1UyPe14rNaqVRajex6I", "sr2aSg01dYOnD2MPY3zDrrjqwro",
-    "sxygTZkL8ymnDsPHZOzsFIdyGY", "syteJfTeakaYMJDb0nhqvL13Ts0", "tRANi5h5mAmui6qumsGnFMTnvUs",
-    "tdF6LZNfMegrjo5RezClFUVIyM", "uKntk2ik1YPJhCgOw0uvd6BXoUQ", "v78IpblwBhoTSQvkZSPt3oE1afE",
-    "vi4KznPF8SbdYqZG5rv1TzvFk", "wStRfOn5l7ks6EEIghaxDGmtog", "wogojcR1nZxkEbrH3gXzGmbqDw",
-    "wzGLjcW5vqJgX4d8BMbfS6dukAM", "x8201I8sQkJbkUHA1o7OUENEaIk", "xD0VLapKHdne0v2Luim0x8qOw"
+    "nf1aOziNNoA4f6tJXeFFBfNYoKE", "oeOuRskMln0RvSNGMfgLTDIjQys", "p42sCEg6LsEXLKSf9B7LsUik4ac",
+    "pkjnQ4DUM0niVUkunYi2Tlt7HqY", "pnG2jmP9FMawaeT0E6eTIPvajs", "qHrZlZdem3nAMSBmvxmzTygapzA",
+    "qbrPeNNIMESOL8O2WqNyXVdo0c", "rjV0MMQh9C8SnswKeodmmmW8oJA", "sHNCXaiP1UyPe14rNaqVRajex6I",
+    "sr2aSg01dYOnD2MPY3zDrrjqwro", "sxygTZkL8ymnDsPHZOzsFIdyGY", "syteJfTeakaYMJDb0nhqvL13Ts0",
+    "tRANi5h5mAmui6qumsGnFMTnvUs", "tdF6LZNfMegrjo5RezClFUVIyM", "uKntk2ik1YPJhCgOw0uvd6BXoUQ",
+    "v78IpblwBhoTSQvkZSPt3oE1afE", "vi4KznPF8SbdYqZG5rv1TzvFk", "wStRfOn5l7ks6EEIghaxDGmtog",
+    "wogojcR1nZxkEbrH3gXzGmbqDw", "wzGLjcW5vqJgX4d8BMbfS6dukAM", "x8201I8sQkJbkUHA1o7OUENEaIk",
+    "xD0VLapKHdne0v2Luim0x8qOw"
   ],
 } satisfies Partial<Record<LiveReserveAdapterParamsByKey["paxos-independent-assurance"]["product"], readonly string[]>>;

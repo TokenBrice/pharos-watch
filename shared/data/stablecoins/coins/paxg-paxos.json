@@ -25,17 +25,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-24",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-23",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA15PAXG)",
+      "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7); September 30 report PDF read; report and composition refreshed together",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG PAXG Redemption Assets Report - August 31, 2026",
-          "url": "https://framerusercontent.com/assets/9bk8TbTXouqOrpoxLSn5XIf7Ufo.pdf"
+          "label": "KPMG PAXG Redemption Assets Report - September 30, 2026",
+          "url": "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf"
         },
         {
           "label": "Paxos PAXG transparency reports",

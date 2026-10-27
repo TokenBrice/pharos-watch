@@ -27,17 +27,17 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Canada",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-15",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-13",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "PoR verification sweep 2026-09 (August report PDF read; composition review advanced in lockstep)",
+      "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7; September report PDF read; composition review advanced in lockstep)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Baker Tilly WM CADD CSAE 3000 reasonable-assurance report - August 2026",
-          "url": "https://drive.google.com/file/d/1TGC4WdV7shMJPTwAYErRNrCns7LsH6TX/view"
+          "label": "Baker Tilly WM CADD CSAE 3000 reasonable-assurance report - September 2026",
+          "url": "https://drive.google.com/file/d/1tMHO2EgZ6lRllAgp2h4BBanDTmGM1FBI/view"
         },
         {
           "label": "CADD reserve attestations",

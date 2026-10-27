@@ -13,27 +13,27 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
     vi.restoreAllMocks();
   });
 
-  it("reviews the August 31 2026 reasonable assurance report and reconciles CAD circulation across Base, Tempo and Ethereum", () => {
+  it("reviews the September 30 2026 reasonable assurance report and reconciles CAD circulation across Base, Tempo and Ethereum", () => {
     const manifest = getIndependentAssuranceManifest("CADD");
     expect(manifest.assuranceTier).toBe("independent-assurance");
     expect(manifest.conclusion).toBe("unmodified");
     expect(manifest.attestor).toBe("Baker Tilly WM LLP");
-    expect(manifest.reportAsOf).toBe("2026-08-31T23:59:00Z");
+    expect(manifest.reportAsOf).toBe("2026-09-30T23:59:00Z");
     expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({
-      computedAssetTotal: "1207253.18",
-      liabilityTotal: "1207019.18",
+      computedAssetTotal: "1320001.34",
+      liabilityTotal: "1319658.34",
       reportedAssetDifference: "0",
       reportedLiabilityDifference: "0",
     });
     expect(manifest.assets).toEqual([
-      { code: "cad-cash", label: "Canadian Dollar Cash", amount: "1207253.18" },
+      { code: "cad-cash", label: "Canadian Dollar Cash", amount: "1320001.34" },
     ]);
     expect(manifest.liabilities).toHaveLength(1);
     const liability = manifest.liabilities[0];
     for (const chain of ["Base", "Tempo", "Ethereum"]) {
       expect(liability.label).toContain(chain);
     }
-    expect(liability.amount).toBe("1207019.18");
+    expect(liability.amount).toBe("1319658.34");
   });
 
   it("declares the independent / independent-assurance descriptor", () => {
@@ -58,6 +58,7 @@ describe("cadd-independent-assurance (Baker Tilly CSAE 3000)", () => {
     expect(date("", "June 2026 attestation")).toBe("2026-06-30");
     expect(date("", "July 2026 attestation")).toBe("2026-07-31");
     expect(date("", "August 2026 attestation")).toBe("2026-08-31");
+    expect(date("", "September 2026 attestation")).toBe("2026-09-30");
     expect(date("", "Daily Reserve Ratio Reports")).toBeNull();
     expect(
       CADD_INDEPENDENT_ASSURANCE_PROFILE.isReportCandidate(

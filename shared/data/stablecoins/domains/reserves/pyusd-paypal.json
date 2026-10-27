@@ -4,7 +4,7 @@
     {
       "sourceKey": "paxos-independent-assurance:pyusd:cash",
       "name": "Cash held for authorized token holders",
-      "pct": 3.84,
+      "pct": 3.65,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Commercial banks; individual institutions not disclosed",
@@ -14,7 +14,7 @@
     {
       "sourceKey": "paxos-independent-assurance:pyusd:reverse-repo",
       "name": "Overnight reverse repurchase agreements collateralized by U.S. Treasury obligations",
-      "pct": 83.23,
+      "pct": 78.24,
       "risk": "very-low",
       "assetClass": "repo",
       "issuerOrObligor": "Selected commercial banks and broker-dealers; Treasury obligations as collateral",
@@ -25,7 +25,7 @@
     {
       "sourceKey": "paxos-independent-assurance:pyusd:treasury-bills",
       "name": "U.S. Treasury bills",
-      "pct": 12.92,
+      "pct": 18.11,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -35,22 +35,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "Unknown-resolver PilotFiat primary-source review",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7); September 30 report PDF read; report and composition refreshed together",
     "confidence": "verified",
     "sources": [
       {
-        "label": "KPMG August 2026 PYUSD examination dated September 24, 2026",
-        "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf"
+        "label": "KPMG September 2026 PYUSD examination dated October 23, 2026",
+        "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
       },
       {
         "label": "PayPal Cryptocurrency Terms - PYUSD reserves",
         "url": "https://www.paypal.com/us/legalhub/paypal/cryptocurrencies-tnc?locale.x=en_US%5C"
       }
     ],
-    "rationale": "Exhibit B records $111,173,415 cash, $2,408,763,000 Treasury-collateralized reverse repos and $373,999,462 Treasury bills, totaling $2,893,935,877 at August 31, 2026, 5:00 PM Eastern Time. Independently reproduced amount / total * 100 yields 3.841599113635%, 83.234843561808% and 12.923557324556%; ordinary two-decimal rounding gives 3.84%, 83.23% and 12.92% (99.99%, with no residual assigned). D01 admits this complete dated report arithmetic at high confidence. No government money-market funds were held. All repos mature September 1, one day after the observation; the latest Treasury bill maturity is October 1, 31 days after period end. The October 3 metadata review admits maximum maturity of one day for the explicitly overnight repo category, and a conservative 93-day ceiling for the report's statement that Paxos only holds Treasury bills three months or less from maturity; the latter is a category restriction, not the observed portfolio maximum or WAM. Composition weights and as-of date are unchanged. Individual counterparties remain anonymized; existing risk categories and liquidity horizons are unchanged.",
-    "compositionBasis": "KPMG examination of PYUSD Redemption Assets Report, Exhibit B as of August 31, 2026 at 5:00 PM Eastern Time; disclosed USD amounts independently divided by disclosed total redemption assets",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "Exhibit B records $100,413,388 cash, $2,155,290,000 Treasury-collateralized reverse repos and $499,005,972 Treasury bills, totaling $2,754,709,360 at September 30, 2026, 5:00 PM Eastern Time. Independently reproduced amount / total * 100 yields 3.645153621578%, 78.240195909452% and 18.114650468970%; ordinary two-decimal rounding gives 3.65%, 78.24% and 18.11% (100.00%). No government money-market funds were held. All repos mature October 1, one day after the observation; the latest Treasury bill maturity is November 5, 36 days after period end. The repo category keeps a one-day maximum maturity, and Treasury bills keep the conservative 93-day ceiling from the report's statement that Paxos only holds Treasury bills three months or less from maturity; that is a category restriction, not the observed portfolio maximum or WAM. Exhibit A adds a Stable chain column (249,982 tokens). Individual counterparties remain anonymized; existing risk categories and liquidity horizons are unchanged.",
+    "compositionBasis": "KPMG examination of PYUSD Redemption Assets Report, Exhibit B as of September 30, 2026 at 5:00 PM Eastern Time; disclosed USD amounts independently divided by disclosed total redemption assets",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The report identifies the complete asset-type composition. Individual commercial-bank and broker-dealer counterparties are anonymized, but no reserve asset class is unclassified.",
     "knownUnknownExposurePct": 0

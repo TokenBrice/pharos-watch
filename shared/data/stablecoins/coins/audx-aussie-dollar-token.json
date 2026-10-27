@@ -81,18 +81,18 @@
     "cadence": "monthly",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-22",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-22",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "review",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (CurM15PHT)",
+      "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Aura Partners AUDX Independent Limited Assurance Report - August 2026 (dated September 22)",
-          "url": "https://www.audxtoken.com/_files/ugd/539754_e06dd9a1842d4b4a97777c64ed096bbe.pdf"
+          "label": "Aura Partners AUDX Independent Limited Assurance Report - September 2026 (dated October 22)",
+          "url": "https://www.audxtoken.com/_files/ugd/539754_db5ac3cd8ef94f5f923513d5708af3b3.pdf"
         }
       ]
     }
