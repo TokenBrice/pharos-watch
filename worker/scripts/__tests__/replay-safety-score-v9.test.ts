@@ -188,10 +188,15 @@ describe("Safety Score v9 deterministic replay CLI", () => {
 
     it("names the assessment, clock, age, budget and generations in the rejection", () => {
       const input = exactFixedInput();
-      expect(() => assertReportCardsCaptureCurrent(input, CLOCK_SEC + SOURCE_FIXED_INPUT_MAX_AGE_SEC + 5)).toThrow(
-        expect.objectContaining({ message: expect.stringMatching(new RegExp(
-          `capture-stale: .*"assessedAtSec":${CLOCK_SEC + SOURCE_FIXED_INPUT_MAX_AGE_SEC + 5}.*"clockSec":${CLOCK_SEC}.*"ageSec":${SOURCE_FIXED_INPUT_MAX_AGE_SEC + 5}.*"budgetSec":${SOURCE_FIXED_INPUT_MAX_AGE_SEC}.*"sourceGeneration":"report-cards:fixture:v9-replay".*"baseInputGenerationId"`)) }),
-      );
+      const age = SOURCE_FIXED_INPUT_MAX_AGE_SEC + 5;
+      expect(() => assertReportCardsCaptureCurrent(input, CLOCK_SEC + age)).toThrow("capture-stale: ");
+      let message = "";
+      try { assertReportCardsCaptureCurrent(input, CLOCK_SEC + age); } catch (error) { message = (error as Error).message; }
+      const fragments = [`"assessedAtSec":${CLOCK_SEC + age}`, `"clockSec":${CLOCK_SEC}`, `"ageSec":${age}`,
+        `"budgetSec":${SOURCE_FIXED_INPUT_MAX_AGE_SEC}`, `"sourceGeneration":"report-cards:fixture:v9-replay"`, `"baseInputGenerationId"`];
+      const positions = fragments.map((fragment) => message.indexOf(fragment));
+      expect(positions.every((position) => position >= 0)).toBe(true);
+      expect(positions).toEqual([...positions].sort((a, b) => a - b));
     });
 
     it("rejects malformed input and incompatible flag combinations without output", async () => {
