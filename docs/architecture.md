@@ -47,7 +47,7 @@ Domain schema splits, catalog merging, numeric/display admission, reserve/depend
 
 `route-chrome.tsx` owns chrome/workspace boundaries; `src/lib/nav-config.ts` owns navigation.
 
-Stable providers outlive navigation; optional chrome never gates content. [Shell loading](./homepage.md#shared-shell-loading) owns lazy islands, PSI and footer; `page-loading-skeleton.tsx` retains only route-consumed loading helpers.
+Stable providers outlive navigation; optional chrome never gates content. [Shell loading](./homepage.md#shared-shell-loading) owns lazy islands, PSI and footer; `page-loading-skeleton.tsx` retains only route-consumed loading helpers. The root error boundary (`src/app/error.tsx`) renders its editorial fallback without fetching or backend-health callouts.
 
 - `src/lib/public-route-inventory.ts` and `src/app/sitemap.ts` share indexable paths, including registry-derived families. `npm run seo:check` checks coverage, orphans and depth.
 - History and API documents retain citations/fragments through [methodology archives](./methodology-page.md), [changelog archives](./process/blog-publishing.md#changelog) and [separate API documents](./api-page.md).
