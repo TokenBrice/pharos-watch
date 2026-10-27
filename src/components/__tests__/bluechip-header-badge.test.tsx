@@ -64,7 +64,8 @@ describe("BluechipHeaderBadge", () => {
     const html = renderToStaticMarkup(<BluechipHeaderBadge stablecoinId="usdc" />);
     expect(html).toContain('href="https://bluechip.org/en/coins/usdc"');
     expect(html).toContain(">A</span>");
-    expect(html).toContain(`>Observed ${date}</span>`);
+    expect(html).toContain(`title="Observed ${date} · View the external Bluechip methodology"`);
+    expect(html).not.toContain(`>Observed ${date}</span>`);
     expect(html).toContain(`aria-label="Bluechip rating: A · Observed ${date} (via bluechip.org)"`);
     expect(html).not.toMatch(/retained|stale|observation unknown|2024-08/);
   });
@@ -77,7 +78,7 @@ describe("BluechipHeaderBadge", () => {
     vi.spyOn(Date, "now").mockReturnValue(1_790_000_000 * 1000);
     ratings.usdc = { ...makeUnreportedBluechipRating(), lastObservedAt, observationState: "unknown", observationReason: null };
     const html = renderToStaticMarkup(<BluechipHeaderBadge stablecoinId="usdc" />);
-    expect(html).toContain(">Observation date unavailable</span>");
+    expect(html).toContain('title="Observation date unavailable · View the external Bluechip methodology"');
     expect(html).toContain('aria-label="Bluechip rating: A · Observation date unavailable (via bluechip.org)"');
     expect(html).not.toMatch(/Observed \d|observation unknown/);
   });

@@ -180,7 +180,7 @@ describe("ComparisonTable", () => {
     const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
     const externalRow = html.match(/<tr\b[^>]*>(?:(?!<\/tr>)[\s\S])*External Bluechip(?:(?!<\/tr>)[\s\S])*<\/tr>/)?.[0];
     expect(externalRow).toBeDefined();
-    expect(externalRow).toContain(`A · audit not reported · ${text}</td>`);
+    expect(externalRow).toContain(`<span title="${text}">A · audit not reported<span class="sr-only"> · ${text}</span></span></td>`);
     expect(externalRow).not.toContain("Not rated");
     expect(externalRow).not.toMatch(/retained|stale|observation unknown/);
   });
@@ -198,7 +198,8 @@ describe("ComparisonTable", () => {
     const html = renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />);
     const row = occupancyRow(html);
     expect(row).toContain("100.00%");
-    expect(row).toContain("Based on 2d · Partial 90-day coverage");
+    expect(row).toContain('100.00%<span class="text-muted-foreground" title="Based on 2d · Partial 90-day coverage"> · 2d<span class="sr-only"> of partial 90-day coverage</span></span>');
+    expect(row).not.toContain("block text-muted-foreground");
     expect(html).not.toContain("At peg · 90d");
     const describedBy = row?.match(/aria-describedby="([^"]+)"/)?.[1];
     expect(describedBy).toBeTruthy();
@@ -206,16 +207,17 @@ describe("ComparisonTable", () => {
   });
 
   it.each([
-    { label: "full window", recent: { observedDays: 90, coverageLimited: false, pegPct: 99.8 }, value: "99.80%", basis: "Based on 90d<" },
-    { label: "fractional positive basis", recent: { observedDays: 0.4, coverageLimited: true, pegPct: 100 }, value: "100.00%", basis: "Based on &lt;1d · Partial 90-day coverage" },
-    { label: "blind window", recent: { observedDays: 0, coverageLimited: true, pegPct: null }, value: "—", basis: "Based on 0d · Partial 90-day coverage" },
-    { label: "measured zero occupancy", recent: { observedDays: 30, coverageLimited: true, pegPct: 0 }, value: "0.00%", basis: "Based on 30d · Partial 90-day coverage" },
-  ])("renders $label occupancy with its calculation basis", ({ recent, value, basis }) => {
+    { label: "full window", recent: { observedDays: 90, coverageLimited: false, pegPct: 99.8 }, value: "99.80%", basis: null },
+    { label: "fractional positive basis", recent: { observedDays: 0.4, coverageLimited: true, pegPct: 100 }, value: "100.00%", basis: 'title="Based on &lt;1d · Partial 90-day coverage"> · &lt;1d' },
+    { label: "blind window", recent: { observedDays: 0, coverageLimited: true, pegPct: null }, value: "—", basis: 'title="Based on 0d · Partial 90-day coverage"> · 0d' },
+    { label: "measured zero occupancy", recent: { observedDays: 30, coverageLimited: true, pegPct: 0 }, value: "0.00%", basis: 'title="Based on 30d · Partial 90-day coverage"> · 30d' },
+  ])("renders $label occupancy with a basis marker only for limited coverage", ({ recent, value, basis }) => {
     const coin = makeCoin("usdt", "USDT");
     coin.pegDetails = { ...coin.pegDetails!, recent90d: { ...coin.pegDetails!.recent90d!, ...recent } };
     const row = occupancyRow(renderToStaticMarkup(<ComparisonTable coins={[coin]} pegRates={PEG_RATES} logos={{}} />));
     expect(row).toContain(value);
-    expect(row).toContain(basis);
+    if (basis) expect(row).toContain(basis);
+    else expect(row).not.toMatch(/Based on|Partial 90-day coverage/);
     if (recent.pegPct == null) expect(row).not.toMatch(/100\.00%|>0\.00%/);
     if (!recent.coverageLimited) expect(row).not.toContain("Partial 90-day coverage");
   });

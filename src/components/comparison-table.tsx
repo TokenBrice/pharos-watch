@@ -276,7 +276,7 @@ function buildSections(pegRates: Record<string, number>): ComparisonSection[] {
                 ? "audit recorded"
                 : "no audit flag";
             const observationText = bluechipObservationText(coin.bluechipRating.lastObservedAt, Math.floor(Date.now() / 1000));
-            return `${coin.bluechipRating.grade} · ${audit} · ${observationText}`;
+            return <span title={observationText}>{`${coin.bluechipRating.grade} · ${audit}`}<span className="sr-only">{` · ${observationText}`}</span></span>;
           },
         },
       ],
@@ -419,12 +419,16 @@ function formatOccupancyBasisDays(observedDays: number): string {
 
 function renderRecentPegOccupancy(recent: NonNullable<ComparisonCoinEntry["pegDetails"]>["recent90d"] | undefined): ReactNode {
   if (!recent) return NULL_VALUE;
-  const basis = `Based on ${formatOccupancyBasisDays(recent.observedDays)}`;
+  const value = recent.pegPct == null ? NULL_VALUE : formatPegOccupancy(recent.pegPct);
+  if (!recent.coverageLimited) return value;
+  // Only a limited window carries an inline basis marker; a full window adds nothing under the value.
+  const days = formatOccupancyBasisDays(recent.observedDays);
+  const basis = `Based on ${days}`;
   return (
     <>
-      {recent.pegPct == null ? NULL_VALUE : formatPegOccupancy(recent.pegPct)}
-      <span className="block text-muted-foreground">
-        {recent.coverageLimited ? `${basis} · Partial 90-day coverage` : basis}
+      {value}
+      <span className="text-muted-foreground" title={`${basis} · Partial 90-day coverage`}>
+        {` · ${days}`}<span className="sr-only"> of partial 90-day coverage</span>
       </span>
     </>
   );

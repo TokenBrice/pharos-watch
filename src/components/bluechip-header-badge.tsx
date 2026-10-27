@@ -40,12 +40,11 @@ export function BluechipHeaderBadge({ stablecoinId, versionTopic, versionVariant
       target="_blank"
       rel="noopener noreferrer"
       aria-label={`Bluechip rating: ${rating.grade} · ${observationText} (via bluechip.org)`}
-      title="View the external Bluechip methodology"
+      title={`${observationText} · View the external Bluechip methodology`}
       className="pharos-focus-ring inline-flex min-h-11 max-w-full flex-wrap items-center gap-x-1.5 rounded-md px-1 py-1 text-sm transition-colors hover:text-foreground lg:min-h-0"
     >
       <span className="text-muted-foreground font-medium">Bluechip:</span>
       <span className={`font-mono font-semibold ${gradeColor}`}>{rating.grade}</span>
-      <span className="text-muted-foreground text-xs">{observationText}</span>
       <ExternalLink className="h-3 w-3 text-muted-foreground" aria-hidden="true" />
     </a>
   );

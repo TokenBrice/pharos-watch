@@ -70,6 +70,6 @@ See [API Reference](./api-reference.md) for the exact response shape.
 
 ## Frontend Usage
 
-The registered `bluechipRatings` query (`src/hooks/api-hooks.ts`) uses the producer interval; Selector admits only eligible constituents under `isBluechipRatingCurrent`, while detail/compare display each external grade with its neutral original observation date (`Observed YYYY-MM-DD`, or `Observation date unavailable` for a missing, invalid or future clock) via `bluechipObservationText` in `src/lib/bluechip.ts`. The 48h observation states are scoring admission, not reader warnings, so retained/stale/unknown labels are not shown.
+The registered `bluechipRatings` query (`src/hooks/api-hooks.ts`) uses the producer interval; Selector admits only eligible constituents under `isBluechipRatingCurrent`, while detail/compare carry each external grade's neutral original observation date in the badge/cell tooltip and accessible text (`Observed YYYY-MM-DD`, or `Observation date unavailable` for a missing, invalid or future clock) via `bluechipObservationText` in `src/lib/bluechip.ts`. The 48h observation states are scoring admission, not reader warnings, so retained/stale/unknown labels are not shown.
 
 The detail badge links only to the external Bluechip report. Pharos qualification/tenure is suspended pending the V10 grade-floor review; `/about/#bluechip` states that rule without fetching a roster. Neither visible copy nor accessible labels infer Pharos tenure from Bluechip's external rating date. `src/lib/bluechip.ts` owns the external report base and grade ordering.
