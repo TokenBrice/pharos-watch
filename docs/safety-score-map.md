@@ -143,12 +143,12 @@ If any condition fails, the digest still generates and delivers without the map 
 Three levers, in increasing order of what has already escaped:
 
 1. **Stop generating.** `gh workflow disable safety-map-refresh.yml`. Previously published keys stay live and served. A disabled workflow also refuses the Worker's pre-digest dispatches; the kick surface then reports `dispatch-failed` until its daily attempt budget is spent.
-2. **Stop serving the image.** Delete `safety-map:latest.png`, `safety-map:latest.webp`, and today's dated key plus any dated keys still eligible for the two-day carry-forward window, then run `.github/workflows/purge-pages-zone-cache.yml`. The Functions then return 404 with `no-store` and the pages render their unavailable panels. No Pages release is required.
+2. **Stop serving the image.** Delete `safety-map:latest.png`, `safety-map:latest.webp`, and today's dated key plus any dated keys still eligible for the two-day carry-forward window, then purge the `pharos.watch` zone cache in the Cloudflare dashboard (Caching → Purge Everything). The Functions then return 404 with `no-store` and the pages render their unavailable panels. No Pages release is required.
 
    The purge is not optional. Both latest image formats are served with `s-maxage=300, stale-while-revalidate=86400`, so a deleted key can keep being served from the edge for up to a day. Dated keys are `immutable` and will not re-validate at all until purged.
 
    Deleting `safety-map:latest.json` is a **different** lever with a different scope: the image Functions never read the manifest, so the images keep serving. What the manifest controls is whether the digest carries a map (see above); deleting it removes the map attachment but does **not** hold the digest. Delete the manifest to pull the map from social channels; delete the PNG and WebP keys to stop it appearing on the site. To stop both, delete the manifest and all applicable image keys.
-3. **A bad image is already live and scraped.** Re-render, overwrite the keys, and run `.github/workflows/purge-pages-zone-cache.yml`. This purges Pages, not social CDNs. A same-day `force` keeps the dated URL and may remain stale there; only a new date gives the next post a new URL.
+3. **A bad image is already live and scraped.** Re-render, overwrite the keys, and purge the `pharos.watch` zone cache in the Cloudflare dashboard. This purges Pages, not social CDNs. A same-day `force` keeps the dated URL and may remain stale there; only a new date gives the next post a new URL.
 
 ## Related
 
