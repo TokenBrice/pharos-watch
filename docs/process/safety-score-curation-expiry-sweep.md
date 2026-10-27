@@ -13,8 +13,8 @@ The sweep is also automated: `.github/workflows/curation-expiry-sweep.yml` runs 
 procedure every Tuesday at 05:45 UTC (and on manual dispatch) with the deploy
 pipeline's Cloudflare credentials. It updates or creates the "Safety Score curation
 expiry sweep" issue with bounded live-withheld/expiry/Dependencies/Backing excerpts
-and registry counts. Only the full missing-data registry is retained as a 30-day
-artifact; full queue/report files are not uploaded. Replay and each of the four
+and registry counts. The full missing-data registry and expiry queue (even when
+partial) are retained as 30-day artifacts; other reports are not uploaded. Replay and each of the four
 reports have separate timed workflow steps and status outputs. The live-withheld
 step has a 15-minute ceiling inside the unchanged 25-minute job budget, leaving
 time for issue/artifact publication when that report times out. Missing status
@@ -40,18 +40,9 @@ mkdir -p agents/v9-captures
 # Export and normalize capture-<stamp>.json using harness section (a).
 ```
 
-The cache row must be fresh enough to represent the current producer cycle. If the row
-is missing or unexpectedly old, stop and resolve the production-input problem instead
-of generating a curation queue from stale evidence.
-
-The scheduled workflow enforces this with `--require-current` (valid only with
-`--exact-cache-export --normalized-only`): after normalization and before any output
-is written, the capture clock must satisfy `0 <= now - clockSec <= SOURCE_FIXED_INPUT_MAX_AGE_SEC`
-(one preparation cycle, currently 3,600 seconds). A rejection exits nonzero with
-`capture-stale` or `capture-future` and the assessment time, original clock, age, budget,
-`sourceGeneration` and `baseInputGenerationId`; no capture or clock output is produced, so
-no new report is published. The flag is omitted for historical and manual captures,
-whose original clock is preserved unchanged.
+The scheduled workflow adds `--require-current`: unless `0 <= now - clockSec <=
+SOURCE_FIXED_INPUT_MAX_AGE_SEC` it exits nonzero (`capture-stale`/`capture-future`) with no
+output. Never generate a queue from a missing or old row; historical captures omit the flag.
 
 ## 2. Replay the capture at HEAD
 
@@ -130,6 +121,15 @@ only known supply and is not a complete supply denominator:
 npm run safety-score-v9:expiry-queue -- --replay "${replay}"
 ```
 
+The same report enrolls execution reviews, supply plans/partitions/row exclusions,
+native single-route supply, mint/bridge scoped controls and questions, transfer
+scopes, scoped reserve observations and bounded reserve facts. Their boundaries come
+from original authored clocks plus canonical policy budgets (never a +N-day replay),
+with inclusive/exclusive semantics; admission joins exported resolvers or the replay,
+and a missing join is `unknown`. Wrapper-allocation and operational-resilience dates
+are an inactive/history census, never renewals. A census error writes a **partial**
+report, then exits nonzero.
+
 The queue consumes the `projected` rows from production's `resolveReviewedReserveAdmission()`
 in `extension-reserves.ts`: supervised named-report admission precedes the audited/curated
 fallback lanes for configured producers, or standalone admission without a live producer.
@@ -146,12 +146,10 @@ Named independent reports use the policy's report-period bound, not a one-year a
 escape path; expired named reports cannot fall through to the generic curated lane.
 Use the live-withheld report below to inspect the resulting fallback score and ceiling.
 
-The columns are asset ID, evaluated-set circulating USD (drain priority, largest
-first), curated `compositionAsOf`, age in days, whether the composition carries
-dependency-creating collateral links, and the adapter state (`none` or
-`silent-this-cycle`). Add these assets to the week's reserve-research queue even when
-they have no current `RESV` or `DEP` row. A fresh live snapshot in a later cycle
-removes the asset from this preventive queue; it does not retroactively make this
+Reserve columns: asset ID, evaluated-set circulating USD (largest first), curated
+`compositionAsOf`, age in days, collateral links, and adapter state (`none` or
+`silent-this-cycle`). Queue these assets for reserve research even without a current
+`RESV`/`DEP` row. A later live snapshot removes the asset; it does not make this
 cycle's missing snapshot live.
 
 ## 4a. Generate and drain the typed missing-data registry
