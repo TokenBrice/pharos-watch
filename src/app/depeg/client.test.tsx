@@ -8,6 +8,7 @@ import { DDR_TEST_META, makeDdrSourceRow, makeFrozenDdrV2Row } from "@/component
 import type { DdrResponse } from "@shared/types/depeg-resolver";
 import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
 import { StaleDataBanner, type StaleQuery } from "@/components/stale-data-banner";
+import type { ApiMeta } from "@/lib/api";
 
 import { DepegClient } from "./client";
 import {
@@ -73,7 +74,7 @@ vi.mock("@/components/section-error-boundary", () => ({
 }));
 
 // Heavyweight leaf: the hero's own rendering is covered by its suite. This stand-in
-// exposes the figures the client derives and renders the real caveat footer.
+// exposes the figures the client derives and whether the client passed a footer.
 vi.mock("@/components/depeg-outlook-hero", () => ({
   DepegOutlookHero: (props: {
     activeDepegIds?: ReadonlySet<string>;
@@ -89,9 +90,9 @@ vi.mock("@/components/depeg-outlook-hero", () => ({
       data-pending={String(props.pendingCount)}
       data-alerts={String(props.dewsAlertCount)}
       data-resolver-total={props.book?.total ?? "unavailable"}
+      data-footer={props.footer == null ? "none" : "present"}
     >
       {props.alertQueue}
-      {props.footer}
     </div>
   ),
 }));
@@ -313,30 +314,79 @@ describe("DepegClient", () => {
     expect(screen.getByTestId("depeg-hero").dataset.alerts).toBe("2");
   });
 
-  it("raises the DEWS staleness caveat only once the signal passes the stale window", () => {
-    vi.useFakeTimers({ now: NOW_SEC * 1000 });
-    mountDepegRoute({
-      // Exactly one hour old: the threshold is exclusive, so no caveat yet.
-      signals: { signals: { "coin-a": { band: "CALM" } }, oldestComputedAt: NOW_SEC - 60 * 60 },
+  describe("DEWS hero and shared notice", () => {
+    const SIX_HOURS_MS = 21_600_000;
+    const transport = (updatedAt: number): ApiMeta => ({ updatedAt, ageSeconds: 0, status: "fresh" });
+    const usable = { "coin-a": { band: "CALM" } };
+
+    it("ages the oldest signal generation against the shared six-hour band, not a private hour", () => {
+      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+      // The newest generation is current; only the oldest retained signal ages.
+      const { dews } = mountDepegRoute({
+        signals: { signals: usable, oldestComputedAt: NOW_SEC - 2 * 3600, updatedAt: NOW_SEC, meta: transport(NOW_SEC) },
+      });
+      const banner = renderCapturedNotices(["stressSignals"]);
+      act(() => vi.advanceTimersByTime(0));
+      expect(banner()).toBeNull();
+      expect(screen.queryByText(/oldest DEWS signal|Coverage caveats/)).toBeNull();
+      act(() => vi.advanceTimersByTime(SIX_HOURS_MS - 2 * 3_600_000));
+      expect(banner()).toBeNull();
+      act(() => vi.advanceTimersByTime(1));
+      expect(banner()?.getAttribute("data-health-state")).toBe("stale");
+      expect(dews.refetch).not.toHaveBeenCalled();
     });
 
-    expect(screen.queryByText(/oldest DEWS signal/)).toBeNull();
-
-    act(() => {
-      vi.advanceTimersByTime(60_000);
+    it("keeps the transported verdict, budgets and age offset while selecting the oldest clock", () => {
+      const meta: ApiMeta = {
+        updatedAt: NOW_SEC, ageSeconds: 60, status: "degraded", warning: "199 - \"partial\"",
+        freshBudgetSec: 1800, degradedBudgetSec: 21_600,
+      };
+      mountDepegRoute({ signals: { signals: usable, oldestComputedAt: NOW_SEC - 600, meta } });
+      const query = (mocks.QueryFreshnessNotices.mock.calls.at(-1)![0] as { queries: StaleQuery[] }).queries
+        .find((entry) => entry.preset === "stressSignals")!;
+      expect(query.meta).toEqual({ ...meta, updatedAt: NOW_SEC - 600, ageSeconds: 660 });
+      expect(query.dataUpdatedAt).toBe((NOW_SEC - 600) * 1000);
     });
 
-    expect(screen.getByText(/oldest DEWS signal/)).toBeTruthy();
-    expect(screen.getByText(/Coverage caveats/)).toBeTruthy();
-  });
+    it("retains usable signals through a refresh error and malformed rows without a hero caveat", () => {
+      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+      mountDepegRoute({
+        signals: {
+          signals: usable, oldestComputedAt: NOW_SEC - 3 * 3600, malformedRows: 1,
+          meta: transport(NOW_SEC), error: new Error("HTTP 503"),
+        },
+      });
+      const banner = renderCapturedNotices(["stressSignals"]);
+      act(() => vi.advanceTimersByTime(0));
+      expect(banner()).toBeNull();
+      expect(screen.queryByText(/malformed DEWS|Coverage caveats/)).toBeNull();
+      expect(screen.getByTestId("depeg-hero").dataset.footer).toBe("none");
+      expect(screen.getByTestId("depeg-hero").dataset.alerts).toBe("0");
+    });
 
-  it("reports malformed DEWS rows as a caveat with singular and plural wording", () => {
-    mountDepegRoute({ signals: { malformedRows: 1 } });
-    expect(screen.getByText(/1 malformed DEWS row/)).toBeTruthy();
+    it("keeps an explicit-null transport clock unknown even when the body names an oldest signal", () => {
+      mountDepegRoute({
+        signals: {
+          signals: usable, oldestComputedAt: NOW_SEC,
+          meta: { updatedAt: null, ageSeconds: null, status: "unknown", reason: "DEWS current rows unavailable" },
+          dataUpdatedAt: NOW_SEC * 1000,
+        },
+      });
+      const banner = renderCapturedNotices(["stressSignals"]);
+      expect(banner()?.getAttribute("data-health-state")).toBe("unavailable");
+    });
 
-    cleanup();
-    mountDepegRoute({ signals: { malformedRows: 3 } });
-    expect(screen.getByText(/3 malformed DEWS rows/)).toBeTruthy();
+    it("falls back to the body producer clock for legacy bodies, never receipt time", () => {
+      vi.useFakeTimers({ now: NOW_SEC * 1000, toFake: ["setTimeout", "clearTimeout", "Date"] });
+      mountDepegRoute({
+        signals: { signals: usable, updatedAt: NOW_SEC - SIX_HOURS_MS / 1000, dataUpdatedAt: NOW_SEC * 1000 },
+      });
+      const banner = renderCapturedNotices(["stressSignals"]);
+      act(() => vi.advanceTimersByTime(0));
+      expect(banner()).toBeNull();
+      act(() => vi.advanceTimersByTime(1));
+      expect(banner()?.getAttribute("data-health-state")).toBe("stale");
+    });
   });
 
   it("routes retained DDR and DDRR ages through the shared public stale band", () => {

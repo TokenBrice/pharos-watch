@@ -87,7 +87,9 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
   Unavailable supply retains a neutral, band-based size rather than the measured-small tier.
   Tooltip and keyboard announcements name missing supply; an explicit observed zero remains a
   measured-zero cap, and unavailable caps sort after observations within each severity band.
-- **Footer band:** conditional reliability caveats only, and nothing when the data is healthy.
+- **Footer band:** unused on this route. DEWS age reaches readers only through the route's shared
+  `stressSignals` notice, aged by the oldest retained generation (`oldestComputedAt`) (ADR-42);
+  malformed-row and coverage counts stay in the API and operator diagnostics.
 - **Open-incident wording:** the headline counts coins with open confirmed incidents
   (`endedAt=null`), not coins observed off peg now; recovery may be observed but not yet
   confirmed. At zero it reads `0 coins with open confirmed incidents` and no halos are
