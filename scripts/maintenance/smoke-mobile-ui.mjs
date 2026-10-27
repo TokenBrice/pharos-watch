@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 import { mkdir } from "node:fs/promises";
-import { isExpectedYieldDeepRouteUrl } from "../lib/pages-asset-smoke.mjs";
+import { isExpectedYieldDeepRouteUrl, isFatalRuntimeMessage } from "../lib/pages-asset-smoke.mjs";
 import { join } from "node:path";
 import {
   captureFailureScreenshot,
@@ -182,7 +182,7 @@ export function getTouchScanOutcome(scan, { strictTouchTargets = false } = {}) {
 
 export function getConsoleScanOutcome(messages = []) {
   return {
-    errors: messages.filter((entry) => entry.type === "error"),
+    errors: messages.filter((entry) => entry.type === "error" || entry.type === "pageerror"),
     warnings: messages.filter((entry) => entry.type === "warning"),
   };
 }
@@ -524,6 +524,7 @@ export async function captureRoute(page, { route, scanTableGeometry, scanTouchTa
   const routeUrl = joinUrl(url, route);
   const response = await page.goto(routeUrl, { timeout: timeoutMs, waitUntil: "domcontentloaded" });
   await waitForSettledPage(page, waitMs);
+  if (isProfileFeedbackInteractionRoute(route)) await exerciseProfileFeedbackDialog(page, timeoutMs);
   const summary = await page.evaluate(ROUTE_CAPTURE_FN, {
     scanTableGeometry,
     scanTouchTargets,
@@ -540,6 +541,55 @@ export async function captureRoute(page, { route, scanTableGeometry, scanTouchTa
   };
 }
 
+const PROFILE_FEEDBACK_INTERACTION_PATH = "/stablecoin/usdt-tether/";
+
+export function isProfileFeedbackInteractionRoute(route) {
+  try {
+    const pathname = new URL(route, "https://pharos.invalid").pathname;
+    return (pathname.endsWith("/") ? pathname : `${pathname}/`) === PROFILE_FEEDBACK_INTERACTION_PATH;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Proves the representative profile hydrated: the existing exact-role "Report
+ * issue" button opens the "Send Feedback" dialog and Escape closes it. Nothing
+ * is submitted. A missing or nonresponsive control throws.
+ */
+export async function exerciseProfileFeedbackDialog(page, timeoutMs = 5000) {
+  const timeout = Math.min(Math.max(timeoutMs, 1000), 10000);
+  await page.getByRole("button", { name: "Report issue", exact: true }).click({ timeout });
+  const dialog = page.getByRole("dialog", { name: "Send Feedback" });
+  await dialog.waitFor({ state: "visible", timeout });
+  await page.keyboard.press("Escape");
+  await dialog.waitFor({ state: "hidden", timeout });
+}
+
+/**
+ * Records console errors/warnings and uncaught page errors. Fatal-ness is
+ * classified from the complete text before the display copy is truncated.
+ * Returns the detach function for the single listener lifecycle.
+ */
+export function attachRuntimeMessageListeners(page, sink) {
+  const onConsole = (message) => {
+    if (message.type() === "error" || message.type() === "warning") {
+      const text = message.text();
+      sink.push({ type: message.type(), text: text.slice(0, 240), fatal: isFatalRuntimeMessage(text) });
+    }
+  };
+  const onPageError = (error) => {
+    const text = String(error?.stack ?? error?.message ?? error);
+    sink.push({ type: "pageerror", text: text.slice(0, 240), fatal: isFatalRuntimeMessage(text) });
+  };
+  page.on("console", onConsole);
+  page.on("pageerror", onPageError);
+  return () => {
+    page.off("console", onConsole);
+    page.off("pageerror", onPageError);
+  };
+}
+
 function formatViewport(viewport) {
   return `${viewport.width}x${viewport.height}`;
 }
@@ -553,7 +603,7 @@ function formatConsoleMessage(entry) {
   return `${entry.type}: ${entry.text}`;
 }
 
-export function assertRouteSummary(summary, { strictTouchTargets }) {
+export function assertRouteSummary(summary, { consoleMessages = [], strictTouchTargets }) {
   const failures = [];
   const deepYieldId = /^\/stablecoin\/([^/]+)\/yield\/?$/.exec(new URL(summary.routeUrl).pathname)?.[1];
   const hasExpectedDestination = deepYieldId
@@ -573,6 +623,12 @@ export function assertRouteSummary(summary, { strictTouchTargets }) {
   }
   if (summary.overflowDelta > 1) {
     failures.push(`horizontal overflow ${summary.scrollWidth}px > ${summary.innerWidth}px`);
+  }
+  const fatalMessages = consoleMessages.filter((entry) => entry.fatal === true);
+  if (fatalMessages.length > 0) {
+    failures.push(
+      `fatal runtime errors=${fatalMessages.length} (${fatalMessages.slice(0, 3).map(formatConsoleMessage).join("; ")})`,
+    );
   }
   const tableOutcome = getTableScanOutcome(summary.tableScan);
   if (tableOutcome.failCount > 0) {
@@ -613,12 +669,7 @@ async function runRouteCheck(page, options) {
   const { failureScreenshotDir, strictTouchTargets, viewport } = options;
   await page.setViewportSize({ height: viewport.height, width: viewport.width });
   const consoleMessages = [];
-  const onConsole = (message) => {
-    if (message.type() === "error" || message.type() === "warning") {
-      consoleMessages.push({ type: message.type(), text: message.text().slice(0, 240) });
-    }
-  };
-  page.on("console", onConsole);
+  const detachRuntimeListeners = attachRuntimeMessageListeners(page, consoleMessages);
   try {
     const summary = await retrySmokeOperation(() => captureRoute(page, options), {
       retries: 1,
@@ -641,7 +692,7 @@ async function runRouteCheck(page, options) {
     }
     return { consoleMessages, failures, screenshotPath: null, summary };
   } finally {
-    page.off("console", onConsole);
+    detachRuntimeListeners();
   }
 }
 
