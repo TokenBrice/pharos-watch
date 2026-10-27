@@ -7,6 +7,7 @@ import {
 import { getD1CapacityImpactStatus } from "@shared/lib/d1-capacity";
 import {
   countPublicImpactOpenCircuits,
+  getCacheQualityImpact,
   getCircuitImpactStatus,
   getOverallCacheImpactStatus,
   getPublicMintBurnStatus,
@@ -101,6 +102,11 @@ export interface PublicHealthAssessment {
    * re-grade cache freshness at read time without losing the other floors.
    */
   statusExcludingCacheFreshness: HealthResponse["status"];
+  /**
+   * `overallStatus` without any cache-owned verdict (age or input quality), so
+   * read-time advancement can adopt a newer generation's own quality.
+   */
+  statusExcludingCacheEvidence: HealthResponse["status"];
   warnings: string[];
   caches: HealthResponse["caches"];
   cacheImpactStatus: HealthResponse["status"];
@@ -592,6 +598,7 @@ export async function assessPublicHealth(
       dbHealthy: false,
       overallStatus: "stale",
       statusExcludingCacheFreshness: "stale",
+      statusExcludingCacheEvidence: "stale",
       warnings,
       caches: {},
       cacheImpactStatus: "stale",
@@ -749,23 +756,13 @@ export async function assessPublicHealth(
   // keeps answering "is the served generation inside its budget", while the
   // quality verdict answers "were that generation's inputs clean".
   const cacheImpactStatus = getOverallCacheImpactStatus(cachesWithProvider);
-  const degradedQualityCaches = Object.entries(cachesWithProvider)
-    .filter(([, cache]) => cache.degraded === true)
-    .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
   // Rule R2: unreadable quality evidence is unknown, never clean: the cache's
-  // `healthy` flag stays false and the warning below names it (R4). It is an
+  // `healthy` flag stays false and the warning names it (R4). It is an
   // evidence-plane fault, not a service impact (2026-10-23): the age bands
   // still grade the served generation, so it does not floor public status.
-  const unknownQualityCaches = Object.entries(cachesWithProvider)
-    .filter(([, cache]) => cache.degraded === null)
-    .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
-  const cacheQualityImpactStatus: HealthResponse["status"] = degradedQualityCaches.length > 0 ? "degraded" : "healthy";
-  if (degradedQualityCaches.length > 0) {
-    warnings.push(`cache-quality-degraded: ${degradedQualityCaches.join(", ")}`);
-  }
-  if (unknownQualityCaches.length > 0) {
-    warnings.push(`cache-quality-unknown: ${unknownQualityCaches.join(", ")}`);
-  }
+  const cacheQuality = getCacheQualityImpact(cachesWithProvider);
+  const cacheQualityImpactStatus: HealthResponse["status"] = cacheQuality.status;
+  warnings.push(...cacheQuality.warnings);
   if (cacheAssessment.failures.length > 0) {
     warnings.push(
       `cache-freshness-query-failed: ${cacheAssessment.failures.map((failure) => failure.key).join(", ")}`,
@@ -870,8 +867,7 @@ export async function assessPublicHealth(
     if (error) warnings.push(error);
   }
 
-  const statusExcludingCacheFreshness = maxPublicStatus(
-    cacheQualityImpactStatus,
+  const statusExcludingCacheEvidence = maxPublicStatus(
     mintBurnResult.mintBurnImpactStatus,
     circuitImpactStatus,
     blacklistImpactStatus,
@@ -882,12 +878,14 @@ export async function assessPublicHealth(
     safetyScoreImpactStatus,
     schedulerLivenessImpactStatus,
   );
+  const statusExcludingCacheFreshness = maxPublicStatus(cacheQualityImpactStatus, statusExcludingCacheEvidence);
   const overallStatus = maxPublicStatus(cacheImpactStatus, statusExcludingCacheFreshness);
 
   return {
     dbHealthy: true,
     overallStatus,
     statusExcludingCacheFreshness,
+    statusExcludingCacheEvidence,
     warnings,
     caches: cachesWithProvider,
     cacheImpactStatus,

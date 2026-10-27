@@ -50,18 +50,21 @@ export const handleHealth = async (db: D1Database): Promise<Response> => {
         || warning === "heavy_scheduled_delivery_stalled" || warning === "heavy_scheduler_liveness_unavailable"));
   if (cachedHealth != null && !cachedSchedulerUnhealthy) {
     const statusExcludingCacheFreshness = snapshot.kind === "fresh" ? snapshot.payload.statusExcludingCacheFreshness : undefined;
+    const statusExcludingCacheEvidence = snapshot.kind === "fresh" ? snapshot.payload.statusExcludingCacheEvidence : undefined;
     const advanced = advancePublicHealthSnapshot(cachedHealth, now);
     const currentCaches = statusExcludingCacheFreshness != null
       ? await readRecoveredSentinelCaches(db, now, advanced)
       : null;
     const agedHealth = currentCaches
-      ? advancePublicHealthSnapshot(cachedHealth, now, { statusExcludingCacheFreshness, currentCaches })
+      ? advancePublicHealthSnapshot(cachedHealth, now, {
+        statusExcludingCacheFreshness, statusExcludingCacheEvidence, currentCaches,
+      })
       : advanced;
     const status = maxPublicStatus(agedHealth.status,
       schedulerLivenessImpactStatus(schedulerLiveness));
     const body: HealthResponse = {
       ...agedHealth, status, schedulerLiveness,
-      warnings: [...cachedHealth.warnings.filter((warning) =>
+      warnings: [...agedHealth.warnings.filter((warning) =>
         warning !== "scheduled_delivery_stalled" && warning !== "scheduler_liveness_unavailable"
         && warning !== "heavy_scheduled_delivery_stalled" && warning !== "heavy_scheduler_liveness_unavailable"),
       ...schedulerLivenessWarnings(schedulerLiveness)],

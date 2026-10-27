@@ -383,7 +383,11 @@ describe("handleHealth", () => {
   });
   describe("read-time freshness sentinel re-read", () => {
     const yieldInterval = 7_200;
-    async function delayedYieldSnapshot(now: number, statusExcludingCacheFreshness?: HealthResponse["status"]) {
+    async function delayedYieldSnapshot(
+      now: number,
+      statusExcludingCacheFreshness?: HealthResponse["status"],
+      options: { statusExcludingCacheEvidence?: HealthResponse["status"]; degradedReason?: string } = {},
+    ) {
       const publicHealth = await (await handleHealth(makeHealthyHealthDb(now))).json() as HealthResponse;
       publicHealth.timestamp = now - 60;
       publicHealth.assessedAt = now - 60;
@@ -392,21 +396,29 @@ describe("handleHealth", () => {
       publicHealth.caches["yield-data"] = {
         ...publicHealth.caches["yield-data"], ageSeconds: 3 * yieldInterval + 600,
         publishedAt: now - 60 - 3 * yieldInterval - 600, healthy: false,
+        ...(options.degradedReason ? { degraded: true, degradedReason: options.degradedReason, streakDegradedRuns: 2 } : {}),
       };
+      if (options.degradedReason) {
+        publicHealth.warnings = [...publicHealth.warnings, `cache-quality-degraded: yield-data:${options.degradedReason}`];
+      }
       return {
         key: STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY,
         updated_at: now - 60,
         value: JSON.stringify({
           version: 1, producedAt: now - 60, publicHealth: { ...publicHealth, ...projectPublicStatus(publicHealth) },
           ...(statusExcludingCacheFreshness ? { statusExcludingCacheFreshness } : {}),
+          ...(options.statusExcludingCacheEvidence ? { statusExcludingCacheEvidence: options.statusExcludingCacheEvidence } : {}),
         }),
       };
     }
-    function sentinelDb(now: number, row: Record<string, unknown>, sentinel: MockTableConfig) {
+    function sentinelDb(now: number, row: Record<string, unknown>, sentinel: MockTableConfig, degradedRuns = 0) {
       return buildStatusD1Scenario({ sections: [], overrides: [
         { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: [STATUS_PUBLIC_HEALTH_SNAPSHOT_CACHE_KEY], rows: [], first: row },
         sentinel,
-        { match: "GROUP BY job", rows: [{ job: "sync-yield-data", started_at: now - 30, generation_id: "recovered-generation", degraded_runs_since_ok: 0 }], allowUnused: true },
+        { match: "GROUP BY job", rows: [{
+          job: "sync-yield-data", started_at: now - 30, generation_id: "recovered-generation",
+          degraded_runs_since_ok: degradedRuns, latest_reason: degradedRuns > 0 ? "new-quality" : null,
+        }], allowUnused: true },
       ] });
     }
     const recoveredSentinel = (now: number): MockTableConfig => ({
@@ -427,6 +439,40 @@ describe("handleHealth", () => {
       expect(body.status).toBe("healthy");
       expect(body.components!.find((item) => item.id === "yield")).toMatchObject({ state: "operational", reasons: [] });
       expect(body.components!.find((item) => item.id === "website-api")!.state).toBe("operational");
+    });
+
+    it("adopts a recovered clean generation's quality, clearing the obsolete degradation and warning", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const row = await delayedYieldSnapshot(now, "degraded", { statusExcludingCacheEvidence: "healthy", degradedReason: "old-quality" });
+      const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now)))).json() as HealthResponse;
+      expect(body.caches["yield-data"]).toMatchObject({
+        generationId: "recovered-generation", healthy: true, degraded: false, degradedReason: null, streakDegradedRuns: 0,
+      });
+      expect(body.status).toBe("healthy");
+      expect(body.warnings.filter((warning) => warning.startsWith("cache-quality-"))).toEqual([]);
+      expect(body.assessedAt).toBe(now - 60);
+    });
+
+    it("adopts a recovered degraded generation's quality instead of the stored clean verdict", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const row = await delayedYieldSnapshot(now, "healthy", { statusExcludingCacheEvidence: "healthy" });
+      const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now), 2))).json() as HealthResponse;
+      expect(body.caches["yield-data"]).toMatchObject({
+        generationId: "recovered-generation", healthy: false, degraded: true, degradedReason: "new-quality", streakDegradedRuns: 2,
+      });
+      expect(body.status).toBe("degraded");
+      expect(body.warnings).toContain("cache-quality-degraded: yield-data:new-quality");
+    });
+
+    it("keeps the legacy floor's stored degradation when the snapshot lacks the cache-evidence floor", async () => {
+      vi.spyOn(Date, "now").mockReturnValue(Date.now());
+      const now = Math.floor(Date.now() / 1000);
+      const row = await delayedYieldSnapshot(now, "degraded", { degradedReason: "old-quality" });
+      const body = await (await handleHealth(sentinelDb(now, row, recoveredSentinel(now)))).json() as HealthResponse;
+      expect(body.caches["yield-data"]).toMatchObject({ generationId: "recovered-generation", degraded: false });
+      expect(body.status).toBe("degraded");
     });
 
     it("keeps a genuinely late producer Delayed and never re-reads healthy lanes", async () => {

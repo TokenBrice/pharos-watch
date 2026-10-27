@@ -24,7 +24,7 @@ The operator dashboard combines ten signals:
 The repo now ships two related surfaces:
 
 - `/status/`: public, read-only health board backed by `/api/health` plus public browser probes
-- The public health payload is the status self-check's 15-minute projection in the dedicated `status:public-health-snapshot:v1` cache key (`{version: 1, producedAt, publicHealth, statusExcludingCacheFreshness?}`); `/api/health` reads only that key plus its live scheduler overlay, and performs a live assessment only when the snapshot is missing, stale or unreadable, or its cached scheduler state is unhealthy. If the snapshot grades a sentinel lane (`yield-data`, `dews`, `dex-liquidity`) late, `/api/health` re-reads only those sentinels; a newer publication replaces that lane's age and the cache-age floor is re-graded over `statusExcludingCacheFreshness`, so a recovered producer clears at once. A failed read or legacy payload keeps the stored ages. Operator-only Telegram lifecycle diagnostics live on `/api/status`.
+- The public health payload is the status self-check's 15-minute projection in the dedicated `status:public-health-snapshot:v1` cache key (`{version: 1, producedAt, publicHealth, statusExcludingCacheFreshness?, statusExcludingCacheEvidence?}`); `/api/health` reads only that key plus its live scheduler overlay, and performs a live assessment only when the snapshot is missing, stale or unreadable, or its cached scheduler state is unhealthy. If the snapshot grades a sentinel lane (`yield-data`, `dews`, `dex-liquidity`) late, `/api/health` re-reads only those sentinels; a valid sentinel with a new generation ID published later replaces that lane's complete generation-bound status (age, quality, health, budgets, provenance and diagnostics; only `upstreamProvider` is kept), then cache age and quality, and their `cache-quality-*` / lane warnings, are re-graded over `statusExcludingCacheEvidence` (the floor without any cache-owned verdict), so a recovered producer clears at once and a degraded new generation degrades at once. A payload with only `statusExcludingCacheFreshness` keeps its stored quality as a floor. A failed read, legacy payload, or invalid, fallback, unchanged, older or future evidence keeps the stored lane aging. Operator-only Telegram lifecycle diagnostics live on `/api/status`.
 - `/admin/`: Triage workspace
 - `/admin/pipeline/`: data-quality, market, reserve, yield, storage, and integrity workbench
 - `/admin/reliability/`: endpoint, dependency, demand, and cache reliability workbench
@@ -807,7 +807,7 @@ confirmed publication has degraded input quality, and a good sentinel whose qual
 not be read all publish an unhealthy lane. `/api/health` folds degraded quality
 into its own `status` (unknown quality is an evidence-plane notice) and names it in `warnings` as
 `cache-quality-degraded: <key>:<reason>` for degraded evidence or
-`cache-quality-unknown: <key>:<reason>` for unreadable evidence;
+`cache-quality-unknown: <key>:<reason>` for unreadable evidence (one derivation, `getCacheQualityImpact()`, serves the self-check and the read-time snapshot advancement);
 `/api/status` availability keeps measuring freshness alone.
 
 Cron sentinel sources are a distinct control-plane aggregate. Every source stays visible in `sourceStatuses`

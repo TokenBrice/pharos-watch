@@ -437,10 +437,22 @@ describe("runStatusSelfCheck", () => {
     expect(computeRawStatusMock).toHaveBeenCalledWith(expect.anything(), expect.any(Number));
     expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
       expect.anything(), expect.any(Number), expect.objectContaining({ status: expect.any(String) }), expect.any(String),
+      expect.any(String),
     );
     expect(firstSnapshotWrite[3]).not.toHaveProperty("publicHealth");
     expect(firstSnapshotWrite[3]?.supplements).toBeDefined();
     expect(metadata.rawSnapshotPersistenceSucceeded).toBe(true);
+  });
+
+  it("publishes both private floors so read-time advancement can adopt cache quality", async () => {
+    assessPublicHealthMock.mockResolvedValueOnce(makePublicHealth("degraded", {
+      statusExcludingCacheFreshness: "degraded", statusExcludingCacheEvidence: "healthy",
+      cacheQualityImpactStatus: "degraded",
+    }));
+    await runStatusSelfCheck({} as D1Database, { selfUrl: "secret" });
+    expect(writeStatusPublicHealthSnapshotMock).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), expect.any(Number), expect.objectContaining({ status: "degraded" }), "degraded", "healthy",
+    );
   });
 
   it("keeps health every run and rotates deeper probe buckets", () => {

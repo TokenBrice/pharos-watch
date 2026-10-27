@@ -14,6 +14,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { getCacheQualityImpact, maxPublicStatus } from "@shared/lib/public-health";
 import type { PublicHealthAssessment } from "../public-health-assessment";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -643,6 +644,29 @@ describe("assessPublicHealth upstream provider enrichment", () => {
         warning.startsWith("cache-quality-unknown:")
         && warning.includes("yield-data:producer-history-unreadable"))).toBe(true);
       expect(result.warnings.some((warning) => warning.startsWith("cache-quality-degraded:"))).toBe(false);
+    } finally {
+      warnSpy.mockRestore();
+    }
+  });
+
+  it("derives a cache-evidence floor that excludes only cache-owned age and quality verdicts", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    try {
+      // Unreadable sentinels fall back, so every sentinel-backed lane is quality-degraded.
+      const result = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec, {
+        cacheError: new Error("cache unavailable"),
+      }), nowSec, { logPrefix: "test" });
+      const quality = getCacheQualityImpact(result.caches);
+      expect(result.cacheQualityImpactStatus).toBe("degraded");
+      expect(quality.status).toBe(result.cacheQualityImpactStatus);
+      expect(result.warnings).toEqual(expect.arrayContaining(quality.warnings));
+      expect(result.statusExcludingCacheFreshness)
+        .toBe(maxPublicStatus(result.cacheQualityImpactStatus, result.statusExcludingCacheEvidence));
+      expect(result.overallStatus).toBe(maxPublicStatus(result.cacheImpactStatus, result.statusExcludingCacheFreshness));
+      // The same reads with clean sentinels leave the cache-evidence floor unchanged.
+      const clean = await assessPublicHealth(makeMintBurnAssessmentDb(nowSec), nowSec, { logPrefix: "test" });
+      expect(result.statusExcludingCacheEvidence).toBe(clean.statusExcludingCacheEvidence);
     } finally {
       warnSpy.mockRestore();
     }

@@ -119,6 +119,34 @@ export function getOverallCacheImpactStatus(caches: Record<string, CacheStatus>)
   return worstStatus;
 }
 
+/** Prefixes of the cache-quality warnings `getCacheQualityImpact` owns. */
+export const CACHE_QUALITY_WARNING_PREFIXES = ["cache-quality-degraded: ", "cache-quality-unknown: "] as const;
+
+/**
+ * Input-quality verdict over the caches, independent of age (rule R3). Only
+ * explicitly degraded inputs floor status; unreadable quality (`degraded:
+ * null`) is named as unknown, never clean (R2), but is an evidence-plane
+ * fault rather than a service impact. One authority for the assessment and
+ * read-time snapshot advancement (R5).
+ */
+export function getCacheQualityImpact(caches: Record<string, CacheStatus>): {
+  status: PublicStatusTone;
+  warnings: string[];
+} {
+  const named = (value: boolean | null) => Object.entries(caches)
+    .filter(([, cache]) => cache.degraded === value)
+    .map(([key, cache]) => `${key}:${cache.degradedReason ?? "unknown"}`);
+  const degraded = named(true);
+  const unknown = named(null);
+  return {
+    status: degraded.length > 0 ? "degraded" : "healthy",
+    warnings: [
+      ...(degraded.length > 0 ? [`${CACHE_QUALITY_WARNING_PREFIXES[0]}${degraded.join(", ")}`] : []),
+      ...(unknown.length > 0 ? [`${CACHE_QUALITY_WARNING_PREFIXES[1]}${unknown.join(", ")}`] : []),
+    ],
+  };
+}
+
 export function getCircuitImpactStatus(openCircuitCount: number | null): PublicStatusTone {
   return openCircuitCount == null || openCircuitCount >= PUBLIC_CIRCUIT_IMPACT_QUORUM ? "degraded" : "healthy";
 }

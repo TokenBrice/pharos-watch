@@ -47,6 +47,7 @@ export function makePublicHealth(
     dbHealthy: true,
     overallStatus,
     statusExcludingCacheFreshness: "healthy",
+    statusExcludingCacheEvidence: "healthy",
     warnings: [],
     caches: {},
     cacheImpactStatus: overallStatus,
