@@ -12,9 +12,10 @@ import {
   YIELD_SOURCE_POSTURE_DEFINITIONS,
   classifyYieldSourcePosture,
   formatYieldSourcePosture,
-  getYieldSourceFreshnessDisplay,
+  isYieldSourcePostureScoringWindowOnly,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
+  type YieldSourceFreshnessDisplay,
   type YieldSourcePublishedFreshness,
   type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
@@ -32,6 +33,9 @@ export interface YieldSourceRiskCardProps {
   sourceDepthLens: YieldSourceDepthLens;
   sourceRiskDrivers: readonly YieldSourceRiskDriver[];
   sourceChanged?: boolean;
+  /** Reader-facing source age from the source's own clock (public gate). */
+  freshness: YieldSourceFreshnessDisplay | null;
+  /** Scoring inputs: drive posture membership only, never the age display. */
   sourceFreshness?: YieldSourcePublishedFreshness | null;
   warningSignals?: readonly string[] | null;
   confidenceTier?: YieldSourceConfidenceTier | null;
@@ -82,6 +86,7 @@ export function YieldSourceRiskCard({
   sourceDepthLens,
   sourceRiskDrivers,
   sourceChanged = false,
+  freshness,
   sourceFreshness,
   warningSignals,
   confidenceTier = null,
@@ -89,22 +94,14 @@ export function YieldSourceRiskCard({
   showVenueBreakdown = true,
   className,
 }: YieldSourceRiskCardProps) {
-  const posture = classifyYieldSourcePosture({
-    sourceRisk,
-    sourceTvlUsd,
-    sourceDepthLens,
-    sourceChanged,
-    sourceFreshness,
-    warningSignals,
-  });
+  const postureInput = { sourceRisk, sourceTvlUsd, sourceDepthLens, sourceChanged, sourceFreshness, warningSignals };
+  const posture = classifyYieldSourcePosture(postureInput);
   const postureMeta = YIELD_SOURCE_POSTURE_DEFINITIONS[posture];
-  const postureLabel = formatYieldSourcePosture(posture);
+  const postureLabel = formatYieldSourcePosture(
+    posture,
+    isYieldSourcePostureScoringWindowOnly(postureInput, posture, freshness?.status === "stale"),
+  );
   const depthMeta = YIELD_SOURCE_DEPTH_DEFINITIONS[sourceDepthLens];
-  const freshness = getYieldSourceFreshnessDisplay({
-    sourceAgeSeconds: sourceRisk?.sourceAgeSeconds,
-    sourceFreshness,
-    warningSignals,
-  });
   const venueTier = sourceRisk?.venueRiskTier ?? null;
   const venueConfidence = sourceRisk?.venueRiskConfidence ?? null;
   const dependency = sourceRisk?.dependencyConcentration ?? null;
@@ -188,9 +185,7 @@ export function YieldSourceRiskCard({
             ))}
           </div>
         ) : (
-          <p className="text-xs text-muted-foreground">
-            No populated source-risk driver is currently reducing this row beyond the neutral source penalty.
-          </p>
+          <p className="text-xs text-muted-foreground">No source-risk drivers shown.</p>
         )}
       </div>
 

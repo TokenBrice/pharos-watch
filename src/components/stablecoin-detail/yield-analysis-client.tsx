@@ -23,6 +23,7 @@ import {
 } from "@/lib/yield-constants";
 import {
   buildYieldDetailModel,
+  useYieldCoinSourceClock,
   type YieldDetailReadyModel,
 } from "@/components/yield-detail-section-model";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -416,6 +417,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         .filter(Boolean),
     [sourcesParam],
   );
+  const sourceClock = useYieldCoinSourceClock(rankingsQuery.data, id, rankingsQuery.meta, rankingsQuery.dataUpdatedAt);
   const detailModel = useMemo(
     () =>
       buildYieldDetailModel(
@@ -428,8 +430,9 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
           inactiveReason: coinDetail?.listingStatusReview?.reason,
         },
         requestedSourceKeys,
+        sourceClock,
       ),
-    [coin?.status, coinDetail?.listingStatusReview?.reason, id, rankingsQuery.data, requestedSourceKeys, shouldHaveYieldData],
+    [coin?.status, coinDetail?.listingStatusReview?.reason, id, rankingsQuery.data, requestedSourceKeys, shouldHaveYieldData, sourceClock],
   );
   const readyModel = detailModel.status === "ready" ? detailModel : null;
   const ranking = readyModel?.ranking ?? null;
@@ -561,6 +564,7 @@ export default function YieldAnalysisClient({ id, staticCoin, logoSrc }: YieldAn
         sourceRiskDrivers={readyModel.sourceExplorer.selectedSource.sourceRiskDrivers}
         sourceChanged={readyModel.sourceExplorer.sourceSwitch.changed}
         confidenceTier={readyModel.sourceExplorer.selectedSource.confidenceTier}
+        freshness={readyModel.sourceExplorer.selectedSource.freshness}
         sourceFreshness={ranking.provenance?.sourceFreshness}
         warningSignals={ranking.warningSignals}
       />

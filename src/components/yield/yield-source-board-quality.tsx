@@ -9,6 +9,7 @@ import {
   YIELD_SOURCE_POSTURE_DEFINITIONS,
   YIELD_SOURCE_POSTURE_ORDER,
   formatYieldSourcePosture,
+  formatYieldSourcePostureCountSummary,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
   type YieldSourcePosture,
@@ -150,7 +151,11 @@ export function SourceQualityBars({ model, activeFilters, onFilterChange }: {
   }));
   const posture = YIELD_SOURCE_POSTURE_ORDER.map((value) => ({
     key: value, bg: POSTURE_BG[value], count: model.postureCounts[value],
-    description: YIELD_SOURCE_POSTURE_DEFINITIONS[value].description, label: formatYieldSourcePosture(value),
+    // The scoring-window subset qualifies the speculative bucket without splitting its filter target.
+    description: value === "speculative" && model.speculativeScoringWindowCount > 0
+      ? formatYieldSourcePostureCountSummary(model.postureCounts.speculative, model.speculativeScoringWindowCount)
+      : YIELD_SOURCE_POSTURE_DEFINITIONS[value].description,
+    label: formatYieldSourcePosture(value),
     target: { key: "sourcePosture" as const, value: value === "watch" ? "watch-only" : value },
     active: activeFilters?.sourcePosture === (value === "watch" ? "watch-only" : value),
   }));

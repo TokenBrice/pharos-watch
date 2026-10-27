@@ -25,7 +25,7 @@ function pluralize(count: number, singular: string, plural = `${singular}s`): st
 
 function SourceRiskDriverChips({ drivers }: { drivers: readonly YieldSourceBoardRiskDriverCount[] }) {
   if (drivers.length === 0) {
-    return <p className="text-xs text-muted-foreground">No populated source-risk drivers in the visible rows.</p>;
+    return <p className="text-xs text-muted-foreground">No source-risk drivers shown.</p>;
   }
   return (
     <div className="flex flex-wrap gap-2" aria-label="Top source-risk drivers">

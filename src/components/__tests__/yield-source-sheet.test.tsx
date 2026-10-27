@@ -92,7 +92,7 @@ describe("YieldSourceSheet", () => {
       sourceRiskScore: null, sourceRiskPenalty: null, sourceDepthRatio: null, rewardShare: null,
       sourceAgeSeconds: 14401, observationCount30d: null, sourceSwitchCount30d: null,
     };
-    ranking.provenance = makeYieldProvenance({ sourceFreshness: "stale", sourceAgeSeconds: 14401 });
+    ranking.provenance = makeYieldProvenance({ sourceFreshness: "stale", sourceObservedAt: null, sourceAgeSeconds: 14401 });
     renderYieldSourceSheet(ranking);
     expect(screen.getAllByText(/4h ago/).length).toBeGreaterThan(0);
     expect(screen.queryByText(/0s ago/)).toBeNull();
@@ -250,18 +250,24 @@ describe("YieldSourceSheet", () => {
     const base = makeRanking("usdc", "best-usdc", "alt-usdc");
     renderYieldSourceSheet({
       ...base,
-      provenance: { ...base.provenance!, sourceFreshness: "fresh" },
+      provenance: { ...base.provenance!, sourceFreshness: "fresh", sourceObservedAt: null },
       sourceRisk: { sourceRiskScore: null, sourceAgeSeconds: 90 * 60 },
     });
 
     const stamp = screen
-      .getAllByText("Fresh · 1h ago")
-      .find((node) => node.getAttribute("title")?.startsWith("Published source freshness: Fresh."));
+      .getAllByText("Observed 1h ago")
+      .find((node) => node.getAttribute("title")?.startsWith("Source observed 1h ago"));
     expect(stamp).toBeTruthy();
   });
 
   it("does not render a freshness stamp when sourceAgeSeconds is missing", () => {
-    renderYieldSourceSheet(makeRanking("usdc", "best-usdc", "alt-usdc"));
+    const base = makeRanking("usdc", "best-usdc", "alt-usdc");
+    renderYieldSourceSheet({
+      ...base,
+      provenance: { ...base.provenance!, sourceObservedAt: null, sourceAgeSeconds: null },
+      sourceRisk: null,
+      altSources: base.altSources.map((source) => ({ ...source, sourceRisk: null })),
+    });
 
     expect(screen.queryByText(/ago$/)).toBeNull();
   });

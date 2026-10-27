@@ -17,6 +17,9 @@ import { FeatureHeroSplit } from "@/components/feature-hero-split";
 import { UniverseChip } from "@/components/universe-chip";
 import { YieldSourceBoard } from "@/components/yield/yield-source-board";
 import { buildYieldSourceBoardModel } from "@/lib/yield-source-board-model";
+import { resolveYieldSourceAssessedAt } from "@/lib/yield-source-presentation";
+import { getYieldRowSourceClockInput } from "@/lib/yield-workbench-row";
+import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
 import { ReferenceRatesStrip } from "@/components/yield/reference-rates-strip";
 import { YieldCoinIndex } from "@/components/yield/coin-index";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -323,9 +326,13 @@ export function YieldClient() {
     [urlParams, yieldUniverse],
   );
 
+  // One parent clock covers the board and the visible rows: each selected
+  // source crosses the public source-age gate at its own instant.
+  const sourceClockInputs = useMemo(() => rankings.map(getYieldRowSourceClockInput), [rankings]);
+  const sourceClock = useYieldSourceClock(sourceClockInputs, resolveYieldSourceAssessedAt(meta, dataUpdatedAt));
   const sourceBoardModel = useMemo(
-    () => buildYieldSourceBoardModel(sourceBoardRows),
-    [sourceBoardRows],
+    () => buildYieldSourceBoardModel(sourceBoardRows, sourceClock),
+    [sourceBoardRows, sourceClock],
   );
 
   // Counts the full /yield ranking universe per peg currency (not filter-
@@ -660,6 +667,7 @@ export function YieldClient() {
               methodologyVersion={data.methodology?.version}
               emptyMessage={viewModel.emptyState.description}
               comparisonRows={comparisonRows}
+              sourceClock={sourceClock}
               updatedAt={data.updatedAt}
               methodologyLabel={data.methodology?.versionLabel ?? "Pharos Yield Score current"}
               filterSummary={{

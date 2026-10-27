@@ -3,10 +3,18 @@ import { YIELD_DECISION_REJECTION_REASON_LABELS } from "@/lib/yield-presentation
 import {
   classifyYieldSourceDepth,
   getYieldSourceRiskDrivers,
+  projectYieldSourceDisplayDrivers,
   type YieldSourceConfidenceTier,
   type YieldSourceDepthLens,
   type YieldSourceRiskDriver,
 } from "@/lib/yield-source-risk";
+import {
+  getYieldSourceFreshnessDisplay,
+  type YieldSourceClockInput,
+  type YieldSourceDisplayClock,
+  type YieldSourceFreshnessDisplay,
+} from "@/lib/yield-source-presentation";
+import { getYieldRowSourceClockInput } from "@/lib/yield-workbench-row";
 import type { AltYieldSource, YieldDecisionRejectionReasonCode, YieldRanking, YieldType } from "@shared/types";
 
 export interface YieldRejectionHint {
@@ -27,7 +35,11 @@ export interface YieldSourceExplorerSource {
   confidenceTier: YieldSourceConfidenceTier | null;
   sourceRisk: YieldRanking["sourceRisk"];
   depthLens: YieldSourceDepthLens;
+  /** Display-projected: scoring-only stale drivers stay hidden below the public gate. */
   sourceRiskDrivers: YieldSourceRiskDriver[];
+  /** This source's own observation clock, for parent boundary scheduling. */
+  clockInput: YieldSourceClockInput;
+  freshness: YieldSourceFreshnessDisplay | null;
   isChosen: boolean;
 }
 
@@ -81,8 +93,24 @@ function buildDisplayLabels(sources: Array<{ sourceKey: string; label: string }>
   );
 }
 
-export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourceExplorerModel {
+/** Selected then alternate source clocks, each with its own identity and observation age. */
+export function getYieldRankingSourceClockInputs(ranking: YieldRanking): YieldSourceClockInput[] {
+  return [
+    { ...getYieldRowSourceClockInput(ranking), sourceKey: selectedSourceKey(ranking) },
+    ...ranking.altSources.map((source) => ({
+      dataSource: source.dataSource,
+      sourceKey: source.sourceKey,
+      sourceAgeSeconds: source.sourceRisk?.sourceAgeSeconds ?? null,
+    })),
+  ];
+}
+
+export function buildYieldSourceExplorerModel(
+  ranking: YieldRanking,
+  clock?: YieldSourceDisplayClock | null,
+): YieldSourceExplorerModel {
   const selectedKey = selectedSourceKey(ranking);
+  const clockInputs = getYieldRankingSourceClockInputs(ranking);
   const sourceRows = [
     {
       sourceKey: selectedKey,
@@ -94,10 +122,11 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       dataSource: ranking.dataSource,
       confidenceTier: ranking.provenance?.confidenceTier ?? inferLaneConfidenceTier(ranking.dataSource),
       sourceRisk: ranking.sourceRisk ?? null,
+      clockInput: clockInputs[0]!,
       isChosen: true,
       rejectionReasonCode: undefined,
     },
-    ...ranking.altSources.map((source) => ({
+    ...ranking.altSources.map((source, index) => ({
       sourceKey: source.sourceKey,
       label: source.yieldSource,
       url: sourceUrl(source),
@@ -107,6 +136,7 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
       dataSource: source.dataSource,
       confidenceTier: source.confidenceTier ?? inferLaneConfidenceTier(source.dataSource),
       sourceRisk: source.sourceRisk ?? null,
+      clockInput: clockInputs[index + 1]!,
       isChosen: false,
       rejectionReasonCode: source.rejectionReasonCode,
     })),
@@ -114,19 +144,21 @@ export function buildYieldSourceExplorerModel(ranking: YieldRanking): YieldSourc
   const displayLabels = buildDisplayLabels(sourceRows);
   const allSources = sourceRows.map((source) => {
     const sourceChanged = source.isChosen ? ranking.provenance?.sourceSwitch ?? false : false;
+    const freshness = getYieldSourceFreshnessDisplay({ ...source.clockInput, clock });
     return {
       ...source,
+      freshness,
       displayLabel: displayLabels.get(source.sourceKey) ?? source.label,
       depthLens: classifyYieldSourceDepth({
         sourceRisk: source.sourceRisk,
         sourceTvlUsd: source.sourceTvlUsd,
       }),
-      sourceRiskDrivers: getYieldSourceRiskDrivers({
+      sourceRiskDrivers: projectYieldSourceDisplayDrivers(getYieldSourceRiskDrivers({
         sourceRisk: source.sourceRisk,
         sourceChanged,
         sourceFreshness: source.isChosen ? ranking.provenance?.sourceFreshness : undefined,
         warningSignals: source.isChosen ? ranking.warningSignals : undefined,
-      }),
+      }), freshness?.status === "stale"),
     };
   });
   const selectedSource = allSources[0]!;

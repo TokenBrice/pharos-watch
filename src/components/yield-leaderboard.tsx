@@ -22,6 +22,9 @@ import { YieldWatchlistStar } from "@/components/yield-watchlist-star";
 import { usePrefetchStablecoin } from "@/hooks/use-prefetch-stablecoin";
 import { getLogoSrc } from "@/lib/logos";
 import { useYieldRankings } from "@/hooks/api-hooks";
+import { useYieldSourceClock } from "@/hooks/use-yield-source-clock";
+import { getYieldRankingSourceClockInputs } from "@/lib/yield-source-explorer-model";
+import { resolveYieldSourceAssessedAt, type YieldSourceDisplayClock } from "@/lib/yield-source-presentation";
 import { useSortedPaginatedTable } from "@/hooks/use-sorted-paginated-table";
 import { TABLE_PAGE_SIZE } from "@/lib/constants";
 import { compareYieldRows, type YieldTableSortKey } from "@/components/yield-table-logic";
@@ -196,6 +199,8 @@ interface YieldLeaderboardProps {
   benchmarks?: YieldBenchmarkRegistry | null;
   /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
   methodologyVersion?: string | null;
+  /** Parent-sampled source clock; rows re-derive source-age display at its crossings. */
+  sourceClock?: YieldSourceDisplayClock | null;
   emptyMessage?: string;
   filterSummary?: YieldLeaderboardFilterSummary;
   comparisonRows?: readonly YieldViewModelRow[];
@@ -211,6 +216,7 @@ export function YieldLeaderboard({
   scalingFactor,
   benchmarks = null,
   methodologyVersion = null,
+  sourceClock = null,
   emptyMessage,
   filterSummary,
   comparisonRows = rows,
@@ -229,6 +235,16 @@ export function YieldLeaderboard({
   const sheetRanking = useMemo(
     () => (sheetRankingId ? (detailedRankings.data?.rankings.find((row) => row.id === sheetRankingId) ?? null) : null),
     [detailedRankings.data?.rankings, sheetRankingId],
+  );
+  // The sheet's sources come from a separate detailed fetch, so they get their
+  // own clock: that response's assessment, never the summary publication.
+  const sheetSourceClockInputs = useMemo(
+    () => (sheetRanking ? getYieldRankingSourceClockInputs(sheetRanking) : []),
+    [sheetRanking],
+  );
+  const sheetSourceClock = useYieldSourceClock(
+    sheetSourceClockInputs,
+    resolveYieldSourceAssessedAt(detailedRankings.meta, detailedRankings.dataUpdatedAt),
   );
 
   const {
@@ -347,6 +363,7 @@ export function YieldLeaderboard({
                     scalingFactor={scalingFactor}
                     benchmarks={benchmarks}
                     methodologyVersion={methodologyVersion}
+                    sourceClock={sourceClock}
                     expanded={visibleExpandedId === row.id}
                     isCompared={isCompared}
                     compareDisabled={compareDisabled}
@@ -382,6 +399,7 @@ export function YieldLeaderboard({
           scalingFactor={scalingFactor}
           benchmarks={benchmarks}
           methodologyVersion={methodologyVersion}
+          sourceClock={sourceClock}
           pageStartIndex={pageStartIndex}
           sortKey={sortKey}
           sortDirection={sortDirection}
@@ -422,6 +440,7 @@ export function YieldLeaderboard({
         riskFreeRate={riskFreeRate}
         medianApy={medianApy}
         benchmarks={benchmarks}
+        sourceClock={sheetSourceClock}
         open={sheetRankingId !== null}
         onOpenChange={(open) => {
           if (!open) setSheetRankingId(null);
@@ -449,6 +468,7 @@ export function YieldMobileCard({
   scalingFactor,
   benchmarks = null,
   methodologyVersion = null,
+  sourceClock = null,
   expanded,
   isCompared,
   compareDisabled,
@@ -470,6 +490,8 @@ export function YieldMobileCard({
   benchmarks?: YieldBenchmarkRegistry | null;
   /** Payload methodology version; gates the v8.43 re-base reference during a deploy window. */
   methodologyVersion?: string | null;
+  /** Parent-sampled source clock; rows re-derive source-age display at its crossings. */
+  sourceClock?: YieldSourceDisplayClock | null;
   expanded: boolean;
   isCompared: boolean;
   compareDisabled: boolean;
@@ -506,8 +528,9 @@ export function YieldMobileCard({
         scalingFactor,
         // Version-gated: pre-8.43 payloads were scored without the re-base.
         resolveYieldDisplayRebaseReferenceRate(methodologyVersion, riskFreeRate, benchmarks?.USD),
+        sourceClock,
       ),
-    [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks],
+    [row, scalingFactor, methodologyVersion, riskFreeRate, benchmarks, sourceClock],
   );
   const resolvedBenchmark = resolveYieldRowBenchmark(row, benchmarks, riskFreeRate);
   const workbenchLink = getYieldWorkbenchLink(row.id);

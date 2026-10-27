@@ -3,6 +3,12 @@ import { computePYSFromComponents, computePysComponents, PYS_APY_SANITY_MAX, typ
 import type { YieldEvidenceClass, YieldPysNullReason } from "@shared/types/yield";
 import type { YieldBenchmarkFreshness } from "@shared/lib/yield-benchmark-freshness";
 import { assessYieldEvidence } from "@shared/lib/yield-evidence";
+import {
+  PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS,
+  SLOW_NAV_SOURCE_KEYS,
+  getYieldSourceProducerCadenceMs,
+  isSupplementalOnchainSource,
+} from "@shared/lib/yield-source-cadence";
 import type { YieldRowSafetyResolution } from "@shared/lib/yield-opportunity-risk";
 
 const HOUR_MS = 60 * 60 * 1000;
@@ -13,21 +19,9 @@ export const STALE_THRESHOLD_MS = CRON_INTERVALS["sync-yield-data"] * YIELD_STAL
 const SUPPLEMENTAL_STALE_THRESHOLD_CYCLES = 1.5;
 export const SUPPLEMENTAL_SOURCE_STALE_THRESHOLD_MS =
   CRON_INTERVALS["sync-yield-supplemental"] * SUPPLEMENTAL_STALE_THRESHOLD_CYCLES * 1000;
-/**
- * Daily Pendle term-yield observations trade intraday precision for a smaller
- * anonymous-IP quota footprint. Two cycles (48h) allow one missed daily
- * refresh; observation timestamps remain unchanged during retained reuse.
- * Scheduling, ranking freshness, and family health share this authority.
- */
-const PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS = DAY_MS;
 export const PENDLE_SUPPLEMENTAL_FETCH_CADENCE_SEC = PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS / 1000;
 export const PENDLE_SUPPLEMENTAL_STALE_THRESHOLD_MS = PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS * 2;
 export const SLOW_NAV_SOURCE_STALE_THRESHOLD_MS = 3 * DAY_MS;
-const SLOW_NAV_SOURCE_KEYS = new Set([
-  "protocol-api:hashnote-usyc",
-  "protocol-api:midas-mmev-nav-oracle",
-  "protocol-api:re-protocol-reusd",
-]);
 /**
  * Freshness tiers are anchored on the cadence at which each source class
  * actually receives a new observation (B21; measured on the live payload
@@ -153,10 +147,6 @@ export function scoreYieldPys(input: PysNullReasonInput & { nullReason: YieldPys
   };
 }
 
-function isSupplementalOnchainSource(sourceKey: string | null | undefined): boolean {
-  return sourceKey?.startsWith("aave-v3-onchain:") === true || sourceKey?.startsWith("compound-v3:") === true;
-}
-
 export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: string | null): number {
   if (dataSource === "price-derived") return PRICE_DERIVED_STALE_THRESHOLD_MS;
   if (dataSource === "rate-derived") return RATE_DERIVED_STALE_THRESHOLD_MS;
@@ -174,27 +164,9 @@ export function getRankingStaleThresholdMs(dataSource: string, sourceKey?: strin
 
 export type YieldSourceFreshness = "fresh" | "stale" | "unknown";
 
-/** Observation cadence for a ranking source class (see the tier table above). */
-function getRankingProducerCadenceMs(dataSource: string, sourceKey?: string | null): number {
-  if (
-    dataSource === "price-derived" ||
-    dataSource === "rate-derived" ||
-    (dataSource === "protocol-api" && sourceKey != null && SLOW_NAV_SOURCE_KEYS.has(sourceKey))
-  ) {
-    return DAY_MS;
-  }
-  if (dataSource === "protocol-api" && sourceKey?.startsWith("protocol-api:pendle:") === true) {
-    return PENDLE_SUPPLEMENTAL_FETCH_CADENCE_MS;
-  }
-  if (dataSource === "protocol-api" || (dataSource === "onchain" && isSupplementalOnchainSource(sourceKey))) {
-    return CRON_INTERVALS["sync-yield-supplemental"] * 1000;
-  }
-  return CRON_INTERVALS["sync-yield-data"] * 1000;
-}
-
 /** `aging` boundary: the midpoint between a class cadence and its stale bound. */
 export function getRankingAgingThresholdMs(dataSource: string, sourceKey?: string | null): number {
-  const cadenceMs = getRankingProducerCadenceMs(dataSource, sourceKey);
+  const cadenceMs = getYieldSourceProducerCadenceMs(dataSource, sourceKey);
   return cadenceMs + (getRankingStaleThresholdMs(dataSource, sourceKey) - cadenceMs) / 2;
 }
 

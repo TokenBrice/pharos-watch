@@ -9,10 +9,13 @@ import {
   YIELD_SOURCE_CONFIDENCE_DEFINITIONS,
   getYieldSourceRiskDrivers,
   isYieldSourceRiskMaterial,
+  projectYieldSourceDisplayDrivers,
 } from "@/lib/yield-source-risk";
 import {
   YIELD_SOURCE_CONFIDENCE_STYLES,
   getYieldSourceFreshnessDisplay,
+  type YieldSourceClockInput,
+  type YieldSourceDisplayClock,
 } from "@/lib/yield-source-presentation";
 import type {
   YieldBenchmarkSelectionMode,
@@ -71,30 +74,38 @@ export function getYieldBenchmarkSelectionMode(row: YieldWorkbenchRanking): Yiel
   return row.benchmarkSelectionMode;
 }
 
+/** The selected source's own identity and observation clock. */
+export function getYieldRowSourceClockInput(row: YieldWorkbenchRanking): YieldSourceClockInput {
+  return {
+    dataSource: row.dataSource ?? null,
+    sourceKey: row.provenance?.sourceKey ?? null,
+    sourceObservedAt: isYieldRankingSummary(row) ? null : (row.provenance?.sourceObservedAt ?? null),
+    sourceAgeSeconds: row.sourceRisk?.sourceAgeSeconds
+      ?? (isYieldRankingSummary(row) ? null : (row.provenance?.sourceAgeSeconds ?? null)),
+  };
+}
+
 /**
  * Row-level presentation values shared by the desktop instrument row and the
  * mobile card. Both surfaces derived these identically; the PYS breakdown stays
  * per-surface because their handling of it deliberately differs.
  */
-export function deriveYieldRowPresentation(row: YieldWorkbenchRanking) {
+export function deriveYieldRowPresentation(row: YieldWorkbenchRanking, clock?: YieldSourceDisplayClock | null) {
   const confidenceTier = row.provenance?.confidenceTier ?? null;
+  const freshness = getYieldSourceFreshnessDisplay({ ...getYieldRowSourceClockInput(row), clock });
 
   return {
     confidenceStyle: confidenceTier ? YIELD_SOURCE_CONFIDENCE_STYLES[confidenceTier] : null,
     confidenceLabel: confidenceTier ? YIELD_SOURCE_CONFIDENCE_DEFINITIONS[confidenceTier].label : null,
-    freshness: getYieldSourceFreshnessDisplay({
-      sourceAgeSeconds: row.sourceRisk?.sourceAgeSeconds,
-      sourceFreshness: row.provenance?.sourceFreshness,
-      warningSignals: row.warningSignals,
-    }),
+    freshness,
     sourceRiskScore: row.sourceRisk?.sourceRiskScore ?? null,
     sourceRiskMaterial: isYieldSourceRiskMaterial(row.sourceRisk),
-    sourceRiskDrivers: getYieldSourceRiskDrivers({
+    sourceRiskDrivers: projectYieldSourceDisplayDrivers(getYieldSourceRiskDrivers({
       sourceRisk: row.sourceRisk,
       sourceChanged: row.provenance?.sourceSwitch ?? false,
       sourceFreshness: row.provenance?.sourceFreshness,
       warningSignals: row.warningSignals,
-    }),
+    }), freshness?.status === "stale"),
     rankChip: buildRankChangeChipDisplay(getYieldRankChangeAttribution(row)),
     pysNullReasonText:
       row.pharosYieldScore === null && row.pysNullReason ? PYS_NULL_REASON_TEXT[row.pysNullReason] : null,
