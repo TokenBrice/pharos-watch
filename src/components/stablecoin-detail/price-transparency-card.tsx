@@ -487,7 +487,7 @@ export function PriceTransparencyCard({
   return (
     <DetailModuleCard
       id="price-transparency"
-      title={<MethodologyLabel topic="pegScore">Price Transparency</MethodologyLabel>}
+      title={<MethodologyLabel topic="priceTransparency">Price Transparency</MethodologyLabel>}
       bodyClassName="space-y-4"
     >
         {/* Summary Bar */}

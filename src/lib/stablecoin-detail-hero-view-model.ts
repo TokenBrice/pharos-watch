@@ -59,7 +59,7 @@ export interface HeroTertiaryMetricViewModel {
   key: "dews" | "peg-score" | "liquidity" | "excess-yield" | "performance-vs-usd";
   label: "DEWS" | "Peg Score" | "Liquidity" | "30d Excess" | "1Y vs USD";
   mobileLabel?: "Peg" | "Liq";
-  methodologyTopic?: "dewsBand" | "pegScore" | "liquidityScore" | "pys";
+  methodologyTopic?: "dewsBand" | "pegScore" | "liquidityScore" | "excessYield";
   display: HeroDisplayValue | HeroDewsDisplay;
   accentClass?: string;
 }
@@ -228,7 +228,7 @@ function buildTertiaryMetrics(
     { key: "dews", label: "DEWS", methodologyTopic: "dewsBand", display: dewsDisplay, accentClass: dewsAccent },
     { key: "peg-score", label: "Peg Score", mobileLabel: "Peg", methodologyTopic: "pegScore", display: pegScoreDisplay, accentClass: pegScoreAccent },
     { key: "liquidity", label: "Liquidity", mobileLabel: "Liq", methodologyTopic: "liquidityScore", display: liquidityDisplay, accentClass: liquidityAccent },
-    { key: "excess-yield", label: "30d Excess", methodologyTopic: "pys", display: excessYieldDisplay },
+    { key: "excess-yield", label: "30d Excess", methodologyTopic: "excessYield", display: excessYieldDisplay },
     ...(performanceVsUsdDisplay
       ? [{ key: "performance-vs-usd" as const, label: "1Y vs USD" as const, display: performanceVsUsdDisplay }]
       : []),

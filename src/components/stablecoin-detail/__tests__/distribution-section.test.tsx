@@ -344,3 +344,20 @@ it("ages both distribution notices in place under their served budgets", () => {
     expect(chip.getAttribute("datetime")).toBe(new Date(receipt).toISOString());
   }
 });
+
+it("binds Supply by Chain to the one-coin distribution definition, not chain HHI", () => {
+  useStablecoinsMock.mockReturnValue({
+    data: undefined, isLoading: false, error: new Error("list failed"), dataUpdatedAt: 0, refetch: vi.fn(),
+  });
+  useDexLiquidityMock.mockReturnValue({
+    data: undefined, isLoading: false, error: new Error("liquidity failed"), dataUpdatedAt: 0, refetch: vi.fn(),
+  });
+  render(<DistributionSection stablecoinId="usdc-circle" />);
+  const triggers = screen.getAllByRole("button", { name: "Explain Supply by Chain" });
+  expect(triggers.length).toBeGreaterThan(0);
+  expect(screen.queryByRole("button", { name: "Explain Concentration" })).toBeNull();
+  fireEvent.click(triggers[triggers.length - 1]);
+  expect(screen.getByText("Current circulating supply of this stablecoin on each chain, in USD.")).toBeTruthy();
+  expect(screen.queryByText(/HHI/)).toBeNull();
+  expect(screen.getByRole("link", { name: "View methodology" }).getAttribute("href")).toMatch(/^\/methodology\/?#pricing-pipeline-methodology$/);
+});

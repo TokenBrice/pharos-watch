@@ -6,6 +6,7 @@ import { makePegSummaryCoin } from "@/test-utils/peg-summary-fixtures";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { buildDetailHero } from "./stablecoin-detail-view-model.test-support";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { METHODOLOGY_CONTEXT } from "@/lib/methodology-context";
 
 const quietDeviations = vi.hoisted(() => ({ value: null as boolean | null }));
 vi.mock("@/lib/feature-flags", async (importOriginal) => {
@@ -540,5 +541,17 @@ describe("hero trend direction follows the printed percentage", () => {
 
   it("stays muted without a previous value", () => {
     expect(buildDetailHero({ coin, mcap: 100, prevDay: null }).market.prevDayTrendClass).toBe("text-muted-foreground");
+  });
+});
+
+describe("excess-yield tile help", () => {
+  it("binds the 30d Excess tile to the excess-yield definition, not PYS, keeping its label", () => {
+    const hero = buildDetailHero({ coin: TRACKED_META_BY_ID.get("usdt-tether")! });
+    const metric = hero.tertiaryMetrics.find((entry) => entry.key === "excess-yield")!;
+    expect(metric).toMatchObject({ label: "30d Excess", methodologyTopic: "excessYield" });
+    expect(METHODOLOGY_CONTEXT.excessYield).toMatchObject({
+      title: "Excess yield",
+      summary: "30-day average APY minus its benchmark rate.",
+    });
   });
 });

@@ -318,7 +318,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   if (isLoading && !listData) {
     return (
       <DonutCardSkeleton
-        title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
+        title={<MethodologyLabel topic="supplyByChain">Supply by Chain</MethodologyLabel>}
       />
     );
   }
@@ -326,7 +326,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
   if ((query.error && !listData) || unavailable) {
     return (
       <DistributionUnavailableCard
-        title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
+        title={<MethodologyLabel topic="supplyByChain">Supply by Chain</MethodologyLabel>}
         label="Chain distribution data"
         onRetry={() => void query.refetch()}
       />
@@ -337,7 +337,7 @@ function ChainDistributionCard({ stablecoinId }: { stablecoinId: string }) {
 
   return (
     <DonutCard
-      title={<MethodologyLabel topic="chainHealthConcentration">Supply by Chain</MethodologyLabel>}
+      title={<MethodologyLabel topic="supplyByChain">Supply by Chain</MethodologyLabel>}
       headerEnd={
         <FreshnessIndicator
           compact

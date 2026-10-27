@@ -82,6 +82,36 @@ describe("PriceTransparencyCard", () => {
     }
   });
 
+  it("binds the in-flow title to current-price help, not the historical Peg Score", () => {
+    render(
+      <PriceTransparencyCard
+        coinData={makeCoinData("coingecko")}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+      />,
+    );
+    const triggers = screen.getAllByRole("button", { name: "Explain Price Transparency" });
+    expect(triggers.length).toBeGreaterThan(0);
+    expect(screen.queryByRole("button", { name: "Explain Peg Score" })).toBeNull();
+    act(() => { triggers[triggers.length - 1].click(); });
+    expect(screen.getByText("The current USD price with its confidence, candidate source depth and, where available, a DEX check.")).toBeTruthy();
+    expect(screen.queryByText(/time-at-peg/)).toBeNull();
+  });
+
+  it("keeps the compact title plain", () => {
+    render(
+      <PriceTransparencyCard
+        coinData={makeCoinData("coingecko")}
+        consensusSources={["coingecko"]}
+        agreeSources={["coingecko"]}
+        dexPriceCheck={null}
+        compact
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Explain Price Transparency" })).toBeNull();
+  });
+
   it.each([false, true])("names the USD basis for a non-USD peg in compact=%s", (compact) => {
     render(
       <PriceTransparencyCard
