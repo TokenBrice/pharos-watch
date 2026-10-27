@@ -8951,15 +8951,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2026-11-02",
-        "reviewer": "Sol refinement 2026-10-03 (Refine13)",
+        "reviewedAt": "2026-10-27",
+        "expiresAt": "2026-11-26",
+        "reviewer": "D02 evidence renewal 2026-10-27 (d02-l7)",
         "deploymentKey": "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Reviewed sole exact liability deployment, positive totalSupply and holder-transfer code at Ethereum block 26110183",
-            "url": "https://etherscan.io/block/26110183"
+            "label": "Reviewed sole exact liability deployment at finalized Ethereum block 26285088 (2026-10-27T15:57:11Z; hash 0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534): non-proxy VaultV2, runtime code keccak 0x0b10d3ab9979405d0970771ee305d10e8c62ea4afd94a6176a7db3ecd97dfd9a, totalSupply raw 481331044511367847283923881 at 18 decimals, share and asset gates zero with both share-gate setters abdicated",
+            "url": "https://etherscan.io/block/26285088"
+          },
+          {
+            "label": "Morpho Vault V2 census 2026-10-27: no other-chain deployment of this share; two same-name Ethereum sibling vaults are separate liabilities created 2026-08-31",
+            "url": "https://api.morpho.org/graphql"
           },
           {
             "label": "Exact liability contract and verified source",
