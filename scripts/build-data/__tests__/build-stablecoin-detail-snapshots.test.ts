@@ -171,6 +171,34 @@ describe("stablecoin detail snapshot generator", () => {
     expect(snapshot.lanes.supplyHistory).toHaveLength(1);
   });
 
+  it("keeps partial-chain provenance with its original clocks and drops other provenance to fit the budget (K-031)", () => {
+    const guard = {
+      reason: "supply-chain-dropout" as const, status: "chains-unavailable" as const, partialCoverage: true as const,
+      quarantinedSince: 1_699_000_000,
+      chains: [{
+        chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3, baselineObservedAt: 1_698_900_000,
+        baselineSource: "state" as const, resolution: "unavailable" as const,
+      }],
+    };
+    const partial = { supplySource: "defillama", supplyObservedAt: 1_699_999_000, supplyChainGuard: guard };
+    const snapshots = buildStablecoinDetailSnapshots({
+      generatedAt: 1_700_000_000_000,
+      updatedAtById: new Map(),
+      liveSummariesById: new Map([["usdt-tether", liveSummary()]]),
+      supplyHistoryById: new Map([[
+        "usdt-tether",
+        [
+          { date: 1_699_913_600, circulatingUsd: 100, price: 1, supplyProvenance: { supplySource: "defillama", supplyObservedAt: null, supplyChainGuard: null } },
+          { date: 1_700_000_000, circulatingUsd: 97, price: 1, supplyProvenance: partial },
+        ],
+      ]]),
+    });
+    const snapshot = snapshots.find((candidate) => candidate.stablecoinId === "usdt-tether")!;
+    expect(validateStablecoinDetailSnapshot(snapshot)).toEqual(snapshot);
+    expect(snapshot.lanes.supplyHistory![0]).not.toHaveProperty("supplyProvenance");
+    expect(snapshot.lanes.supplyHistory![1]!.supplyProvenance).toEqual(partial);
+  });
+
   it("rejects a generated compact lane that no longer matches its runtime schema", () => {
     expect(() => validateStablecoinDetailSnapshot({
       version: 1,

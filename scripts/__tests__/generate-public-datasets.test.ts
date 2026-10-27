@@ -152,14 +152,55 @@ describe("generate-public-datasets", () => {
     const csvLines = artifacts.csv.trimEnd().split("\n").filter((line) => !line.startsWith("#"));
     expect(csvLines[0].split(",")).toEqual([
       "id", "symbol", "name", "pegType", "pegMechanism", "price", "circulatingUsd",
-      "chainCount", "chains", "supplyUnavailableReason",
+      "chainCount", "chains", "supplyUnavailableReason", "supplyProvenance",
     ]);
     expect(csvLines.find((line) => line.startsWith("unknown,"))?.split(",")).toEqual([
-      "unknown", "USDC", "USD Coin", "peggedUSD", "fiat-backed", "1", "", "1", "ethereum", "absent",
+      "unknown", "USDC", "USD Coin", "peggedUSD", "fiat-backed", "1", "", "1", "ethereum", "absent", "",
     ]);
     expect(csvLines.find((line) => line.startsWith("zero,"))?.split(",")).toEqual([
-      "zero", "USDC", "USD Coin", "peggedUSD", "fiat-backed", "1", "0", "1", "ethereum", "",
+      "zero", "USDC", "USD Coin", "peggedUSD", "fiat-backed", "1", "0", "1", "ethereum", "", "",
     ]);
+  });
+
+  it.each([
+    { label: "string 6.57", versions: { pricingPipeline: "6.57" }, recorded: true },
+    { label: "string 6.55", versions: { pricingPipeline: "6.55" }, recorded: true },
+    { label: "pre-guard 6.54", versions: { pricingPipeline: "6.54" }, recorded: false },
+    { label: "missing Pricing key", versions: { safetyScore: "10.34" }, recorded: false },
+    { label: "malformed version", versions: { pricingPipeline: "six" }, recorded: false },
+  ])("records guard-less dataset provenance only for a guard-capable envelope ($label) (K-031)", ({ versions, recorded }) => {
+    const envelope = makeEnvelope("2026-05-16");
+    envelope.methodologyVersions = versions;
+    const base = envelope.stablecoins[0];
+    envelope.stablecoins = [{ ...base, circulating: { peggedUSD: 100 }, supplySource: "defillama" } as typeof base];
+    const spec = testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((item) => item.topic === "top-stablecoins")!;
+    expect(spec.rows[0]).toMatchObject({
+      supplyProvenance: recorded ? { supplySource: "defillama", supplyObservedAt: null, supplyChainGuard: null } : null,
+    });
+  });
+
+  it("keeps an explicit partial guard and its original clocks in JSON, NDJSON and CSV, even on a legacy envelope", () => {
+    const envelope = makeEnvelope("2026-05-16");
+    const guard = {
+      reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true, quarantinedSince: 1_778_000_000,
+      chains: [{
+        chainId: "hyperevm", chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000,
+        baselineObservedAt: 1_777_900_000, baselineSource: "state", resolution: "unavailable",
+      }],
+    };
+    const base = envelope.stablecoins[0];
+    envelope.stablecoins = [
+      { ...base, circulating: { peggedUSD: 97_000 }, supplyObservedAt: 1_778_990_000, supplyChainGuard: guard } as typeof base,
+    ];
+    const spec = testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((item) => item.topic === "top-stablecoins")!;
+    const expected = { supplySource: null, supplyObservedAt: 1_778_990_000, supplyChainGuard: guard };
+    expect(spec.rows[0]).toMatchObject({ circulatingUsd: 97_000, supplyProvenance: expected });
+    const artifacts = testExports.buildTopicArtifacts(spec, "2026-05-16T10:00:00.000Z");
+    const json = JSON.parse(artifacts.json);
+    expect((json.data ?? json.rows)[0].supplyProvenance).toEqual(expected);
+    const ndjsonRow = artifacts.ndjson.trim().split("\n").map((line) => JSON.parse(line)).find((line) => line.id === "usdc-circle");
+    expect(ndjsonRow.supplyProvenance).toEqual(expected);
+    expect(artifacts.csv).toContain(`"${JSON.stringify(spec.rows[0]!.supplyProvenance).replace(/"/g, '""')}"`);
   });
 
   it.each([

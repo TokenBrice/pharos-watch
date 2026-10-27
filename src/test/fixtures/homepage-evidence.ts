@@ -16,6 +16,7 @@ export function makeHomepageEvidence(updatedAt = HOMEPAGE_EVIDENCE_TEST_NOW / 10
       data: {
         asOfISO: new Date(updatedAt * 1000).toISOString(), totalUsd: 100, nonUsdUsd: 0, nonUsdShare: 0,
         supplyObservedCount: 1, supplyExpectedCount: 1, supplyMissingCount: 0, supplyUnavailableCount: 0,
+        supplyPartialCount: 0, supplyCoverageUnknownCount: 0,
         cohort: { ts: updatedAt * 1000, usdt: 100, usdc: 0, sky: 0, others: 0, nonUsd: 0, total: 100 },
       },
       meta: meta("stablecoins", API_FRESHNESS_MAX_AGE_SEC.stablecoins),

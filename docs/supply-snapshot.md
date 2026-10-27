@@ -49,6 +49,7 @@ When DefiLlama publishes a tracked zero-supply row for an asset that also has po
    - Read admitted circulating supply via `getCirculatingRawOrNull(asset)` --- already in USD
    - Skip unavailable supply; retain explicit observed zero
    - Extract price (must be a number > 0 and an actual observation per `isObservedPrice`, so a nominal par reference is `null`) with its observation clock `priceObservedAt` (`null` when absent or invalid)
+   - Serialize the row's validated supply provenance (`supplySource`, `supplyObservedAt`, `supplyChainGuard`) via `buildSupplyObservationProvenance()`; an invalid guard stores `NULL` (unknown), and a `partialCoverage` remainder keeps its numeric amount plus guard
    - Build `INSERT OR REPLACE` statement
 8. Banded data-quality check: classify unwaived `missingActiveIds` as a share of `expectedActiveCount` using `classifyStablecoinPublicationGap()`: no gap preserves normal behavior; below 1% is routine (`ok`, no gap warning); 1–10% is elevated (write rows and marker; report `ok` with the `quality` finding `upstream_publication_gap_elevated`, because sync-stablecoins already degrades for the same gap and owns that verdict); above 10% is systemic (retain `partial_snapshot_blocked`, no write). Missing cache IDs and invalid non-restored supply get no daily row, never zero or carried-forward supply. Routine/elevated metadata exposes `publicationGap.band`, `missingActiveCount`, and the first 20 missing IDs; the marker retains all missing IDs. Restored-only active IDs count as accounted exclusions, not gaps: write fresh rows and retain `quality: { reason: "snapshot_written_restored_skipped", restoredOnlyIds }`, combined with gap metadata when applicable (both findings then appear in `quality.reasons`, the gap first). Non-restored PSI historical assets are written when present but do not block active-universe completion. Same-day recovery of a missing or restored required ID triggers atomic date replacement.
 9. Atomically replace the cron-owned rows for the UTC date and write the completion marker in one bounded D1 batch. Multi-row inserts stay below the 100-bind limit. Supply-row deletion is restricted to the union of current PSI-eligible IDs and the prior structurally valid version 2 marker's sorted `ownedRowIds` (including partial markers), so same-day admin-backfill rows outside snapshot ownership are preserved. The marker certifies a committed observation set, not observation of every active coin.
@@ -75,6 +76,7 @@ CREATE TABLE IF NOT EXISTS supply_history (
   circulating_usd REAL NOT NULL,
   price REAL,
   price_observed_at INTEGER,       -- 0253: actual observation clock of price (NULL = unknown)
+  supply_provenance TEXT,          -- 0287: JSON supply provenance (NULL = coverage unrecorded)
   PRIMARY KEY (stablecoin_id, snapshot_date)
 );
 
@@ -88,8 +90,9 @@ CREATE INDEX idx_supply_hist_date ON supply_history(snapshot_date DESC);
 | `circulating_usd` | REAL | Total market cap in USD |
 | `price` | REAL | USD price at snapshot time (may be `null`). Since mint-burn-flow v6.23 the cron writes it only when the published price is an actual observation (`isObservedPrice`); a nominal par reference is stored as `null`. Rows written earlier can hold nominal par |
 | `price_observed_at` | INTEGER | Actual observation time of `price` (the asset's `priceObservedAt`), migration `0253`. `null` when unknown: rows written before `0253` or by a prior Worker, admin backfill rows, and prices without an observation clock. Mint/burn event-time valuation admits a snapshot price only through this clock (±24h of the event), never through `snapshot_date` |
+| `supply_provenance` | TEXT | JSON `{ supplySource, supplyObservedAt, supplyChainGuard }` of the admitted current row the daily snapshot wrote (Pricing v6.59, migration `0287`), validated through `shared/lib/supply-provenance.ts`; a numeric remainder publishing `partialCoverage` keeps its guard here. `null` when unrecorded: rows written before `0287` or by a prior Worker, admin backfill rows, and rows whose guard failed validation. Unrecorded is unknown coverage, never complete. Same-day price repair never touches it; a full-date replacement rewrites supply and provenance together |
 
-The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. [Algorithm](#algorithm) owns first-write, null-price repair, recovered-required-ID replacement and atomic marker semantics. The table lives in `worker/migrations/0000_baseline.sql`, with `price_observed_at` added by `0253_supply_history_price_observed_at.sql`.
+The primary key `(stablecoin_id, snapshot_date)` enforces one row per coin per UTC day. [Algorithm](#algorithm) owns first-write, null-price repair, recovered-required-ID replacement and atomic marker semantics. The table lives in `worker/migrations/0000_baseline.sql`, with `price_observed_at` added by `0253_supply_history_price_observed_at.sql` and `supply_provenance` by `0287_supply_history_provenance.sql` (no backfill).
 
 ### onchain_supply
 
@@ -277,14 +280,14 @@ Economic plans and provider-row exclusion evidence/key collisions admit per asse
 | `days` | No | 365 | Min 1, max 5000. Older dates depend on how much archival history has been ingested into `supply_history` through the cron plus admin backfills. |
 
 ```sql
-SELECT snapshot_date, circulating_usd, price
+SELECT snapshot_date, circulating_usd, price, supply_provenance
 FROM supply_history
 WHERE stablecoin_id = ? AND snapshot_date >= ?
   AND snapshot_date <= ? -- when snapshot-supply:last-write exists
 ORDER BY snapshot_date ASC
 ```
 
-**Response:** array of `{ date, circulatingUsd, price }`
+**Response:** array of `{ date, circulatingUsd, price, supplyProvenance }`. `supplyProvenance` is the parsed `supply_provenance` object or `null` for unrecorded/malformed metadata (malformed rows log `supply-provenance-invalid` and keep their supply and price). A row is partial when its guard sets `partialCoverage` or reports `chains-unavailable` with an `unavailable` chain; homepage cohort history treats a selected partial row as a gap and detail market-cap charts withhold a 24h change across it. Build-time detail snapshots keep only partial provenance (other rows drop it to stay inside the 8 KB snapshot budget and read as unrecorded there).
 
 **Cache profile:** slow (`s-maxage=3600`, `max-age=300`). Responses include `X-Data-Age` from the `snapshot-supply:last-write` marker's `updated_at` when available, falling back to the latest served snapshot row only when the marker is absent. Rows newer than the completed daily snapshot marker are hidden so a failed chunked write cannot expose a partial latest day.
 

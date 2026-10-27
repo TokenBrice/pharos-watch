@@ -62,6 +62,35 @@ it("keeps observed zero supply but withholds a percentage with a zero baseline",
   expect(screen.queryByText(/% 24h/)).toBeNull();
 });
 
+it("withholds the 24h change when either day is a recorded partial-chain remainder (K-031)", () => {
+  const partialProvenance = {
+    supplySource: "defillama",
+    supplyObservedAt: null,
+    supplyChainGuard: {
+      reason: "supply-chain-dropout" as const, status: "chains-unavailable" as const, partialCoverage: true as const,
+      chains: [{
+        chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3_000, baselineObservedAt: START - 86_400,
+        baselineSource: "state" as const, resolution: "unavailable" as const,
+      }],
+    },
+  };
+  const { rerender } = render(<McapChart data={[
+    data[0], { ...data[1], supplyProvenance: partialProvenance },
+  ]} stablecoinId="test" controlledRange="all" />);
+  // The partial point stays numeric; only the change is withheld.
+  expect(screen.getAllByText("$1.10M").length).toBeGreaterThan(0);
+  expect(screen.queryByText(/% 24h/)).toBeNull();
+  rerender(<McapChart data={[
+    { ...data[0], supplyProvenance: partialProvenance }, data[1],
+  ]} stablecoinId="test" controlledRange="all" />);
+  expect(screen.queryByText(/% 24h/)).toBeNull();
+  // Unrecorded legacy provenance keeps the ordinary change.
+  rerender(<McapChart data={[
+    { ...data[0], supplyProvenance: null }, data[1],
+  ]} stablecoinId="test" controlledRange="all" />);
+  expect(screen.getByText("+10.00% 24h")).toBeTruthy();
+});
+
 it("expands standalone charts with a bounded annual key and an uncapped retained-all key", async () => {
   const annual = [{ date: START - 200 * 86_400, circulatingUsd: 500_000, price: 1 }, ...data];
   const all = [{ date: Date.UTC(2017, 0, 1) / 1000, circulatingUsd: 10_000, price: null }, ...annual];
