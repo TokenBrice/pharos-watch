@@ -11,7 +11,8 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { buildSafetyScoreV9ReplayArtifact } from "../replay-safety-score-v9";
 import { createReplayFixedInput } from "./safety-score-v9-replay.test-support";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../../src/lib/report-cards-v9-cache";
-import { buildSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
+import { buildSafetyScoreV9PublicationReplayCapture, parseSafetyScoreV9PublicationReplayCapture } from "../../src/lib/safety-score-v9/publication-replay-capture";
+import { buildFixedInputCacheEntry } from "../../src/lib/report-cards-fixed-input-cache-codec";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, serializeSafetyScoreV9Publication } from "../../src/lib/safety-score-v9/publication-codec";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../../src/lib/safety-score-v9/publication-health";
 import { makeV9FixedInput, makeXautObservation } from "../../src/test-helpers/v9-fixed-input";
@@ -186,6 +187,43 @@ describe("dependency scenario accepted-publication verification stamp", () => {
     const replay = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/replay-safety-score-v9.ts", "--input", resolve(fixture.directory, "capture.json"), "--output", replayPath, "--published-at", String(fixture.base.clockSec)], { encoding: "utf8", timeout: 30_000 });
     expect(replay.status, replay.stderr).toBe(0);
     expect(JSON.parse(readFileSync(replayPath, "utf8")).pipeline.candidate.publicationGenerationId).toBe(fixture.candidate.publicationGenerationId);
+  }, 30_000);
+  it("exports the exact retained rows that the historical evaluator's own capture reader verifies and publishes", async () => {
+    const fixture = await prepareSupplyAttributionReplayFixture();
+    const planned = fixture.plan();
+    expect(planned.status, planned.stderr).toBe(0);
+    const raw = JSON.parse(readFileSync(resolve(fixture.directory, "accepted.raw.json"), "utf8"));
+    expect(raw[0].results.map((row: { key: string }) => row.key).sort()).toEqual([SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, fixture.entry.key].sort());
+    // Mirrors the workflow's credential-free historical stage, with absolute paths and a separate directory.
+    const historical = resolve(fixture.directory, "historical");
+    mkdirSync(historical);
+    const capture = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/capture-report-cards-fixed-input.ts", "--accepted-cache-export", resolve(fixture.directory, "accepted.raw.json"), "--output", resolve(historical, "capture.json")], { encoding: "utf8", timeout: 30_000 });
+    expect(capture.status, capture.stderr).toBe(0);
+    const compute = spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts", "--mode", "compute", "--input", resolve(historical, "capture.json"), "--publication", resolve(fixture.directory, "publication.json"), "--out-dir", historical], { encoding: "utf8", timeout: 30_000 });
+    expect(compute.status, compute.stderr).toBe(0);
+    expect(JSON.parse(compute.stdout).acceptedPublicationVerified).toBe(true);
+    expect(existsSync(resolve(fixture.directory, "artifact.verified.sha256"))).toBe(false);
+    for (const name of ["artifact.json", "artifact.verified.sha256"]) writeFileSync(resolve(fixture.directory, name), readFileSync(resolve(historical, name)));
+    const publish = fixture.invoke();
+    expect(publish.status, publish.stderr).toBe(0);
+  }, 60_000);
+  it("fails plan explicitly on a legacy capture without a retained admission baseline", async () => {
+    const fixture = await prepareSupplyAttributionReplayFixture();
+    const { safetyScoreV9SupplyAttributionById, evidenceJournalById, supplyAttributionJournalById, pegProvenanceById } =
+      (await parseSafetyScoreV9PublicationReplayCapture(fixture.entry.value, fixture.base)).fixedInput;
+    const legacy = await buildFixedInputCacheEntry({
+      schemaVersion: 2, sourceGeneration: fixture.candidate.publicationGenerationId,
+      payload: { schemaVersion: 2, publicationGenerationId: fixture.candidate.publicationGenerationId,
+        baseInputGenerationId: fixture.base.baseInputGenerationId, pipelineGapDigest: null,
+        enrichment: { safetyScoreV9SupplyAttributionById, evidenceJournalById, supplyAttributionJournalById, pegProvenanceById }, transferMaterialityGeneration: null },
+      label: "Legacy v2 delta",
+    });
+    const db = new DatabaseSync(fixture.databasePath);
+    try { db.prepare("UPDATE cache SET value = ? WHERE key = ?").run(legacy.value, fixture.entry.key); } finally { db.close(); }
+    const rejected = fixture.plan();
+    expect(rejected.status).not.toBe(0);
+    expect(rejected.stderr).toContain("accepted-publication-replay-baseline-unavailable");
+    expect(existsSync(resolve(fixture.directory, "accepted.raw.json"))).toBe(false);
   }, 30_000);
   it.each([
     ["retention clock", "accepted-publication-replay-retention-clock-mismatch"],

@@ -230,6 +230,50 @@ describe("CI workflow scope", () => {
       .toContain("${{ env.MAP_OUT_DIR }}/latest.webp");
   });
 
+  it("replays scenarios under the resolved compatible evaluator checkout without credentials", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/dependency-scenarios-refresh.yml"));
+    const steps = workflow.jobs.scenarios.steps as Array<{
+      name?: string; id?: string; uses?: string; run?: string; "working-directory"?: string;
+      with?: Record<string, string>; env?: Record<string, string>;
+    }>;
+    const index = (predicate: (step: (typeof steps)[number]) => boolean) => {
+      const found = steps.findIndex(predicate);
+      expect(found).toBeGreaterThan(-1);
+      return found;
+    };
+    // Full first-parent ancestry; the resolver refuses a shallow history.
+    expect(steps[0].with).toMatchObject({ "persist-credentials": false, "fetch-depth": 0 });
+    const plan = index((step) => step.run?.includes("--mode plan") === true);
+    const resolveSource = index((step) => step.id === "source");
+    expect(steps[resolveSource].run).toContain("--mode resolve-source");
+    expect(steps[resolveSource].env).toEqual({ TRUSTED_REF: "${{ github.sha }}" });
+    const checkout = index((step) => step.run?.includes("git worktree add --detach") === true);
+    expect(steps[checkout].env).toEqual({ COMMIT_SHA: "${{ steps.source.outputs.commit_sha }}" });
+    const setups = steps.filter((step) => step.uses?.startsWith("actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1"));
+    expect(setups.map((step) => step.with?.["node-version-file"])).toEqual(["${{ env.EVALUATOR_DIR }}/.nvmrc", ".nvmrc"]);
+    const historicalNode = steps.indexOf(setups[0]!), currentNode = steps.indexOf(setups[1]!);
+    const install = index((step) => step.run?.includes("npm ci") === true && step["working-directory"] === "${{ env.EVALUATOR_DIR }}");
+    expect(steps[install].run).toContain("npm run generate:safety-score-v9-evaluation-build -- --check");
+    expect(steps[install].run).toContain("git diff --exit-code");
+    const historical = index((step) => step.run?.includes("--accepted-cache-export") === true);
+    expect(steps[historical]["working-directory"]).toBe("${{ env.EVALUATOR_DIR }}");
+    expect(steps[historical].run).toContain("--mode compute");
+    const publish = index((step) => step.run?.includes("--mode publish") === true);
+    expect([plan, resolveSource, checkout, historicalNode, install, historical, currentNode, publish])
+      .toEqual([...[plan, resolveSource, checkout, historicalNode, install, historical, currentNode, publish]].sort((a, b) => a - b));
+    // Secrets reach only the current-code plan and publish steps.
+    for (const [position, step] of steps.entries()) {
+      const secretBearing = JSON.stringify(step).includes("secrets.");
+      expect(secretBearing, step.name ?? step.uses).toBe(position === plan || position === publish);
+    }
+    const upload = steps.find((step) => step.uses?.startsWith("actions/upload-artifact@"));
+    expect(upload?.with?.path.trim().split("\n")).toEqual([
+      "${{ env.SCENARIO_OUT_DIR }}/artifact.json",
+      "${{ env.SCENARIO_OUT_DIR }}/artifact.verified.sha256",
+      "${{ env.SCENARIO_OUT_DIR }}/source.json",
+    ]);
+  });
+
   it("checks public live cache policy independently of secret-bearing account evidence", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/production-canaries.yml"));
     const step = workflow.jobs.transport.steps.find((entry: { run?: string }) =>

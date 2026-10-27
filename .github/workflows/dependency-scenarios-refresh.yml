@@ -18,15 +18,16 @@ jobs:
   scenarios:
     if: ${{ github.ref == 'refs/heads/main' }}
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     env:
       SCENARIO_OUT_DIR: agents/dependency-scenarios/ci
+      EVALUATOR_DIR: agents/dependency-scenarios/evaluator
       WRANGLER_SEND_METRICS: "false"
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 1
+          fetch-depth: 0
       - uses: $/.github/actions/setup-workspace
         with:
           browser-cache: "false"
@@ -39,12 +40,51 @@ jobs:
         run: >-
           node --import tsx worker/scripts/compute-dependency-scenarios.ts
           --mode plan --out-dir "${SCENARIO_OUT_DIR}"
-      - name: Recompile, verify accepted-generation equivalence and compute the matrix
-        run: >-
-          node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts
-          --mode compute --out-dir "${SCENARIO_OUT_DIR}"
-          --input "${SCENARIO_OUT_DIR}/capture.json"
-          --publication "${SCENARIO_OUT_DIR}/publication.json"
+      - name: Resolve the committed evaluator that produced the accepted build
+        id: source
+        env:
+          TRUSTED_REF: ${{ github.sha }}
+        run: |
+          node --import tsx worker/scripts/compute-dependency-scenarios.ts \
+            --mode resolve-source --out-dir "${SCENARIO_OUT_DIR}" --trusted-ref "${TRUSTED_REF}"
+          commit_sha="$(jq -r .commitSha "${SCENARIO_OUT_DIR}/source.json")"
+          [[ "${commit_sha}" =~ ^[0-9a-f]{40}$ ]] || { echo "dependency-scenario-source-commit-invalid" >&2; exit 1; }
+          {
+            echo "commit_sha=${commit_sha}"
+            echo "evaluation_build_digest=$(jq -r .evaluationBuildDigest "${SCENARIO_OUT_DIR}/source.json")"
+            echo "registry_ref=$(jq -r .registry.ref "${SCENARIO_OUT_DIR}/source.json")"
+          } >> "${GITHUB_OUTPUT}"
+      - name: Check out the compatible evaluator as an immutable detached tree
+        env:
+          COMMIT_SHA: ${{ steps.source.outputs.commit_sha }}
+        run: |
+          git worktree add --detach "${EVALUATOR_DIR}" "${COMMIT_SHA}"
+          test "$(git -C "${EVALUATOR_DIR}" rev-parse HEAD)" = "${COMMIT_SHA}"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: ${{ env.EVALUATOR_DIR }}/.nvmrc
+      - name: Install the evaluator and require its rebuilt manifest unchanged
+        working-directory: ${{ env.EVALUATOR_DIR }}
+        run: |
+          npm ci
+          npm run bootstrap:generated
+          npm run generate:safety-score-v9-evaluation-build -- --check
+          git diff --exit-code
+      - name: Recompile under the compatible evaluator and verify accepted-generation equivalence
+        # Credential-free: no secrets reach the historical checkout.
+        working-directory: ${{ env.EVALUATOR_DIR }}
+        run: |
+          out="${GITHUB_WORKSPACE}/${SCENARIO_OUT_DIR}"
+          mkdir -p "${out}/historical"
+          node --import tsx worker/scripts/capture-report-cards-fixed-input.ts \
+            --accepted-cache-export "${out}/accepted.raw.json" --output "${out}/historical/capture.json"
+          node --expose-gc --import tsx worker/scripts/compute-dependency-scenarios.ts \
+            --mode compute --out-dir "${out}/historical" \
+            --input "${out}/historical/capture.json" --publication "${out}/publication.json"
+          cp "${out}/historical/artifact.json" "${out}/historical/artifact.verified.sha256" "${out}/"
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version-file: .nvmrc
       - name: Preserve validated modeled artifact
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
@@ -52,6 +92,7 @@ jobs:
           path: |
             ${{ env.SCENARIO_OUT_DIR }}/artifact.json
             ${{ env.SCENARIO_OUT_DIR }}/artifact.verified.sha256
+            ${{ env.SCENARIO_OUT_DIR }}/source.json
           if-no-files-found: error
           retention-days: 14
       - name: Publish immutable payload then commit marker with readback verification
