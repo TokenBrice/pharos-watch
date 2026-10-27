@@ -324,6 +324,9 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
  * Transfer/shock registries imported during fact compilation are pinned too;
  * latest mechanism capture hash/R2 refs retain their separate manifest binding.
  * Catalog generator correctness is guarded by decoded-versus-source equality.
+ * `.json` members hash their stable parsed value (formatting-neutral, every
+ * value kept); `.ts` members, including the data-directory modules carrying
+ * logic, stay byte-hashed. Capture refs and packed catalog values are unchanged.
  */
 export const V9_SCORE_INPUT_DATA_PATHS = [
   "shared/data/business-calendars/reviewed.ts",

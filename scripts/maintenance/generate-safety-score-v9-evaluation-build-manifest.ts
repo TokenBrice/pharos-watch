@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, readFileSync, readdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import {
   CAPTURE_SUMMARY_SUFFIX,
@@ -9,7 +10,7 @@ import {
   parseMechanismCaptureSummary,
 } from "../lib/mechanism-measurement/capture-summary";
 
-export const V9_EVALUATION_BUILD_DIGEST_DOMAIN = "safety-score-v9.evaluation-build.v1";
+export const V9_EVALUATION_BUILD_DIGEST_DOMAIN = "safety-score-v9.evaluation-build.v2";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const OUTPUT_PATH = "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
@@ -20,7 +21,9 @@ export {
   V9_SCORE_INPUT_DATA_PATHS,
   V9_EVALUATION_BUILD_SOURCE_PATHS,
 } from "../lib/safety-score-v9-evaluation-inputs.mts";
-import { V9_EVALUATION_BUILD_SOURCE_PATHS } from "../lib/safety-score-v9-evaluation-inputs.mts";
+import { V9_EVALUATION_BUILD_SOURCE_PATHS, V9_SCORE_INPUT_DATA_PATHS } from "../lib/safety-score-v9-evaluation-inputs.mts";
+
+const CANONICAL_JSON_PATHS: ReadonlySet<string> = new Set(V9_SCORE_INPUT_DATA_PATHS.filter((path) => path.endsWith(".json")));
 
 export interface V9EvaluationBuildManifestFile {
   path: string;
@@ -42,6 +45,20 @@ export interface V9EvaluationBuildManifest {
 
 function sha256(value: string | Buffer): string {
   return createHash("sha256").update(value).digest("hex");
+}
+
+/**
+ * Formatting-neutral identity for reviewed JSON data: hash the parsed value's
+ * stable serialization, so whitespace and key order do not rotate the build
+ * while every value, array order and null/absent/zero distinction does.
+ * Malformed or unsafe JSON fails; executable sources keep byte hashing.
+ */
+function canonicalJsonBytes(path: string, text: string): string {
+  try {
+    return stableJsonStringifyV1(JSON.parse(text));
+  } catch (error) {
+    throw new Error(`Safety Score v9 evaluation-build JSON input is malformed or unsafe: ${path}`, { cause: error });
+  }
 }
 
 export function collectV9EvaluationBuildSourcePaths(root = REPO_ROOT): string[] {
@@ -88,7 +105,7 @@ export function collectV9EvaluationBuildCaptureRefs(root = REPO_ROOT): V9Evaluat
 export function buildV9EvaluationBuildManifest(root = REPO_ROOT): V9EvaluationBuildManifest {
   const files = collectV9EvaluationBuildSourcePaths(root).map((path) => ({
     path,
-    sha256: sha256(readFileSync(resolve(root, path))),
+    sha256: sha256(CANONICAL_JSON_PATHS.has(path) ? canonicalJsonBytes(path, readFileSync(resolve(root, path), "utf8")) : readFileSync(resolve(root, path))),
   }));
   const captures = collectV9EvaluationBuildCaptureRefs(root);
   const payload: Omit<V9EvaluationBuildManifest, "digest"> = {

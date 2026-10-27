@@ -2,7 +2,7 @@
 // Do not edit manually.
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
   "schemaVersion": 1,
-  "domain": "safety-score-v9.evaluation-build.v1",
+  "domain": "safety-score-v9.evaluation-build.v2",
   "files": [
     {
       "path": "shared/data/business-calendars/reviewed.ts",
@@ -10,7 +10,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/access-lookthrough-reviews-v1.json",
-      "sha256": "12f783df7cb66136a231f88342b75982b8b9fe04070793d27cb0cb6227a0e6df"
+      "sha256": "38bda23acedc72d38320bbebb3c67f36fd3068db206755b3c1ff37d47d7054ca"
     },
     {
       "path": "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
@@ -18,67 +18,67 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/evidence-gap-classifications-v1.json",
-      "sha256": "4efe4252f63c315ccc698af63647fb693a0dd9957b070e4e0cb4e8bad52ae155"
+      "sha256": "bdbbcc0d967349478f03dd1ce404abc94008715e64687c867efe43fe77a2c659"
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
-      "sha256": "430982057d7d8e8597ca86aa2d603183fbdada165e8c8b5994ee0967317cfd9d"
+      "sha256": "021a3b11ed7dabeb9e38c540140234abdee0815481936e9b2d8706132bc5b053"
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
-      "sha256": "290f1c581bc99141410a87c6881a06b89f3bc7d8bd2438af6263885335afd25b"
+      "sha256": "0e8665fde6e4e9b3d6b93284aaa944150ddeceb4db3d13749dd75de328615a44"
     },
     {
       "path": "shared/data/safety-score-v9/incident-runtime-v1.generated.json",
-      "sha256": "57d56d02b3c15f7e30fcde2f1309ff45ff86fc0068c35d0d0ee6de74775c11f1"
+      "sha256": "57835e7c6a60530dc8f9f68d235dd595d22f391a49a1a9f18023da919d8483a0"
     },
     {
       "path": "shared/data/safety-score-v9/lender-collateral-classes-v1.json",
-      "sha256": "cb84abcbdf8adf23c51d040c66a84485a2fef00127559a876fe1baf5690edd64"
+      "sha256": "4f5a1ac3b9302fa96ae040aec0f48daf769b4ba96689e686d99722b01eccc0f8"
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "f2ffb1ca2fc1d48541286dbd166e94d5a4fc02831c3fc6d5ad4148d0432c7ae0"
+      "sha256": "5a8cd3a918d9c7bdb132bb751e80a46da1968a4fd3e1e3a15bbe7dcdb4cf2eaf"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "1da2c90b5e2af51672e7678075a1d8fb5adaa3ee93c74929202bff1bd7146f5e"
+      "sha256": "b43a4487f44e53db0cba67dd59b6c3be19d2af948125771b52e84cd28000f434"
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
-      "sha256": "59bfa9f11a5c0767c0246590f49ded4b22d94fd69622191f28ce3c6ddd9ba1c8"
+      "sha256": "c7cf0f18b677497ca4a89d42d5b50289832c872290721aa2c2d50617d5709848"
     },
     {
       "path": "shared/data/safety-score-v9/shock-coverage-measurements-v1.json",
-      "sha256": "c221e3fb0028d58cba0df901e88d41de0350e392936857863b24d673979797cd"
+      "sha256": "a450da0191cdb9fb0fdc729d86715e5d01d6f499b07387ee3d092323f1e06216"
     },
     {
       "path": "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
-      "sha256": "46e123e8fc8e2dc86ac3158c6cfd94913bf6d1dd33d977d6efc173304a671e18"
+      "sha256": "a0d3b48ec74babb48cc506c1f36877c3d12abcb5a5e5302188f88576bb1f8004"
     },
     {
       "path": "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
-      "sha256": "48453bcf925de1633000116fca0c0891bba6a405fcc1596446cc6f00b48beeff"
+      "sha256": "eec4039f7467ffd5bc393b3a3bc51be136197e5001332f19eacde8dc3344e738"
     },
     {
       "path": "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
-      "sha256": "d127c8b9cf3766bceb0cf0212188300b6b4ccaf0df8299a002c8fbd367e413f8"
+      "sha256": "057fd8d2c08aecd95979bf387cd25a5b8489849d7609d865557ec99f4684661d"
     },
     {
       "path": "shared/data/stablecoins/canonical-order.json",
-      "sha256": "d4d93e963a7dcd868a410c2f729e69382fd2e8becf67eb4bb851a8e260d2a5a0"
+      "sha256": "db22007f90919b713ca31a38aee93beb9c7bad6fa5ba68f98c09a714d36a6c04"
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "07ce7da0e07868595028cf1cc688b21e33f53d1e3dedfcf430a69c795477557a"
+      "sha256": "fcd450a5d2da3d579a27585b3e5ad24b11847ca20c304069cb8f784602dcd147"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "83700a4d6706b7b6418aba67db6e0242d5c90eac2152d8777f3dd226e351464a"
+      "sha256": "1841a8ed671ca7c081d970afba1a1e0c9f0944fafd38b4faebf5aed69d40e42d"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "e2621690fe78c7db22ef7ec97f66c5ea76780c04b625eec6ecf3467239c11cbd"
+      "sha256": "28ffb3efddc1433c2f8c89a044c8b6ae858555e7aa6711c05fe7fbb8b2604854"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -1335,7 +1335,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-27-block-26283011-shock-coverage.json.gz"
     }
   ],
-  "digest": "6c51e11e0e134922a218027b99ef001f25599d21e868369af1485612ee8ca5a3"
+  "digest": "60a44191ad639bae0f5b8fe27bed6c85085c712fd571a0163e489123a8dec95f"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

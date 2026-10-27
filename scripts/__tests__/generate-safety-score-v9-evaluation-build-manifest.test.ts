@@ -103,11 +103,15 @@ function collectRuntimeImportClosure(): Set<string> {
 const roots = createTempRepoTracker("pharos-v9-build-manifest");
 afterEach(() => roots.cleanup());
 
+// JSON data members hash their canonical parse, so fixtures must be valid JSON.
+const fixtureBytes = (path: string, label: string) =>
+  path.endsWith(".json") ? `${JSON.stringify({ path, label })}\n` : `${label} ${path}\n`;
+
 function fixtureRoot(): string {
   const root = roots.makeRoot();
   for (const path of V9_EVALUATION_BUILD_SOURCE_PATHS) {
     mkdirSync(dirname(resolve(root, path)), { recursive: true });
-    writeFileSync(resolve(root, path), `${path}\n`);
+    writeFileSync(resolve(root, path), fixtureBytes(path, "fixture"));
   }
   return root;
 }
@@ -206,7 +210,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     const root = fixtureRoot();
     const before = buildV9EvaluationBuildManifest(root);
     expect(before.files).toContainEqual(expect.objectContaining({ path }));
-    writeFileSync(resolve(root, path), `changed score-bearing contract ${path}\n`);
+    writeFileSync(resolve(root, path), fixtureBytes(path, "changed score-bearing contract"));
     const after = buildV9EvaluationBuildManifest(root);
     expect(after.domain).toBe(V9_EVALUATION_BUILD_DIGEST_DOMAIN);
     expect(after.digest).not.toBe(before.digest);
@@ -232,7 +236,7 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     writeFileSync(resolve(root, decoder), "changed decoder\n");
     const changedDecoder = buildV9EvaluationBuildManifest(root);
     expect(changedDecoder.digest).not.toBe(before.digest);
-    writeFileSync(resolve(root, packed!), "changed full metadata\n");
+    writeFileSync(resolve(root, packed!), fixtureBytes(packed!, "changed full metadata"));
     expect(buildV9EvaluationBuildManifest(root).digest).not.toBe(changedDecoder.digest);
   });
 
@@ -260,6 +264,56 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     const after = buildV9EvaluationBuildManifest(root);
     expect(after.captures).toEqual([changed, other]);
     expect(after.digest).not.toBe(before.digest);
+  });
+
+  describe("canonical JSON data identity", () => {
+    const JSON_PATH = "shared/data/safety-score-v9/access-lookthrough-reviews-v1.json";
+    const TS_DATA_PATH = "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts";
+    const value = { reviews: [{ id: "a", reviewedAt: "2026-10-01", weight: 0, note: null }, { id: "b", reviewedAt: "2026-10-02", weight: 1 }] };
+    const digestWith = (root: string, path: string, text: string) => {
+      writeFileSync(resolve(root, path), text);
+      return buildV9EvaluationBuildManifest(root).digest;
+    };
+
+    it("keeps identity across formatting and key-order-only edits", () => {
+      const root = fixtureRoot();
+      const compact = digestWith(root, JSON_PATH, JSON.stringify(value));
+      expect(digestWith(root, JSON_PATH, `${JSON.stringify(value, null, 2)}\n`)).toBe(compact);
+      const reordered = { reviews: value.reviews.map((review) => Object.fromEntries(Object.entries(review).reverse())) };
+      expect(digestWith(root, JSON_PATH, JSON.stringify(reordered, null, 4))).toBe(compact);
+      expect(buildV9EvaluationBuildManifest(root).domain).toBe("safety-score-v9.evaluation-build.v2");
+    });
+
+    it.each([
+      ["a value", { reviews: [{ ...value.reviews[0], weight: 2 }, value.reviews[1]] }],
+      ["an evidence date", { reviews: [{ ...value.reviews[0], reviewedAt: "2026-10-03" }, value.reviews[1]] }],
+      ["array order", { reviews: [value.reviews[1], value.reviews[0]] }],
+      ["zero to null", { reviews: [{ ...value.reviews[0], weight: null }, value.reviews[1]] }],
+      ["null to absent", { reviews: [{ id: "a", reviewedAt: "2026-10-01", weight: 0 }, value.reviews[1]] }],
+      ["zero to absent", { reviews: [{ id: "a", reviewedAt: "2026-10-01", note: null }, value.reviews[1]] }],
+    ])("rotates identity when %s changes", (_label, changed) => {
+      const root = fixtureRoot();
+      const before = digestWith(root, JSON_PATH, JSON.stringify(value));
+      expect(digestWith(root, JSON_PATH, JSON.stringify(changed))).not.toBe(before);
+    });
+
+    it.each([
+      ["malformed", '{"reviews": [}'],
+      ["unsafe-number", '{"weight": 9007199254740993}'],
+    ])("fails on %s JSON instead of hashing its bytes", (_label, text) => {
+      const root = fixtureRoot();
+      writeFileSync(resolve(root, JSON_PATH), text);
+      expect(() => buildV9EvaluationBuildManifest(root)).toThrow(`malformed or unsafe: ${JSON_PATH}`);
+    });
+
+    it("keeps byte hashing for executable sources, including data-directory modules", () => {
+      const root = fixtureRoot();
+      for (const path of [TS_DATA_PATH, EVALUATOR_ENTRY]) {
+        const before = buildV9EvaluationBuildManifest(root).digest;
+        writeFileSync(resolve(root, path), `${readFileSync(resolve(root, path), "utf8")}\n`);
+        expect(buildV9EvaluationBuildManifest(root).digest, path).not.toBe(before);
+      }
+    });
   });
 
   it("fails when an enumerated contract disappears", () => {
