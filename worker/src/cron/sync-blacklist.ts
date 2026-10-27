@@ -46,6 +46,22 @@ type SyncBlacklistResult = {
   status: "ok" | "degraded" | "error";
 };
 
+type RepairStageOutcome = {
+  outcome: "ok" | "partial" | "failed" | "skipped";
+  reason: string | null;
+};
+
+const REPAIR_OK: RepairStageOutcome = { outcome: "ok", reason: null };
+const REPAIR_EXCEPTION_REASON = "repair-threw";
+
+function skippedRepair(reason: string): RepairStageOutcome {
+  return { outcome: "skipped", reason };
+}
+
+function measuredRepair(budgetReached: boolean): RepairStageOutcome {
+  return budgetReached ? { outcome: "partial", reason: "blacklist-budget-exhausted" } : REPAIR_OK;
+}
+
 export interface SyncBlacklistOptions {
   db: D1Database;
   etherscanApiKey: string | null;
@@ -110,26 +126,13 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let producerSummarySnapshot = false;
   let producerSnapshotSkipped = false;
   let producerSnapshotError: string | null = null;
-  let amountBackfill: BlacklistAmountBackfillResult = {
-    runtimeBudgetReached: false,
-    attempted: 0,
-    resolved: 0,
-    retried: 0,
-    unrecoverable: 0,
-  };
-  let tronAmountBackfill: TronAmountBackfillResult = {
-    runtimeBudgetReached: false,
-    attempted: 0,
-    resolved: 0,
-    retried: 0,
-    parked: 0,
-    limit: 0,
-  };
-  let tronOrderBackfill: TronOrderBackfillResult = {
-    blocksAttempted: 0,
-    positionsResolved: 0,
-    blocksDeferred: 0,
-  };
+  // Null until a stage returns: a throw or an admission skip is not observed zero work.
+  let amountBackfill: BlacklistAmountBackfillResult | null = null;
+  let tronAmountBackfill: TronAmountBackfillResult | null = null;
+  let tronOrderBackfill: TronOrderBackfillResult | null = null;
+  let amountRepair: RepairStageOutcome = REPAIR_OK;
+  let tronOrderRepair: RepairStageOutcome = REPAIR_OK;
+  let tronAmountRepair: RepairStageOutcome = REPAIR_OK;
 
   // Historical amount repair and Tron freeze-amount replay are maintenance work.
   // They run only after every admissible event source has had its turn. A short,
@@ -147,12 +150,17 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         scanBudgetExhausted ? { maxRows: BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT } : undefined,
       );
       runtimeBudgetHit ||= amountBackfill.runtimeBudgetReached;
+      amountRepair = measuredRepair(amountBackfill.runtimeBudgetReached);
     } catch (err) {
+      amountRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
       logWorkerEventArgs("handler", "warn", "[sync-blacklist] Backfill failed:", err);
     }
   } else if (!etherscanCircuitAllowed) {
+    amountRepair = skippedRepair("provider-circuit-open");
     etherscanCircuitSkips++;
     logWorkerEventArgs("handler", "warn", "[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
+  } else {
+    amountRepair = skippedRepair("maintenance-budget-exhausted");
   }
 
   // Tron freeze amounts need TronGrid only, so the replay tail runs even when the
@@ -161,6 +169,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   // subrequest budget as every other tail lane.
   const tronGridCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID);
   if (tronGridCircuitAllowed && !blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
+    let tronOrderResolved = false;
     try {
       tronOrderBackfill = await resolveTronBlacklistOrder(db, {
         apiKey: trongridApiKey,
@@ -169,19 +178,37 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         signal,
         pagesFetched: { count: 0 },
       }, maintenanceRunBudget);
-      tronAmountBackfill = await backfillTronBlacklistAmounts(db, {
-        trongridApiKey,
-        limiter: tronLimiter,
-        runBudget: maintenanceRunBudget,
-        signal,
-      });
-      runtimeBudgetHit ||= tronAmountBackfill.runtimeBudgetReached;
+      tronOrderResolved = true;
     } catch (err) {
-      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Tron amount replay failed:", err);
+      tronOrderRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
+      tronAmountRepair = skippedRepair("tron-order-repair-failed");
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Tron order repair failed:", err);
     }
-  } else if (!tronGridCircuitAllowed) {
-    tronGridCircuitSkips++;
-    logWorkerEventArgs("handler", "warn", "[sync-blacklist] TronGrid circuit open, skipping Tron amount replay");
+    if (tronOrderResolved) {
+      try {
+        tronAmountBackfill = await backfillTronBlacklistAmounts(db, {
+          trongridApiKey,
+          limiter: tronLimiter,
+          runBudget: maintenanceRunBudget,
+          signal,
+        });
+        runtimeBudgetHit ||= tronAmountBackfill.runtimeBudgetReached;
+        tronAmountRepair = measuredRepair(tronAmountBackfill.runtimeBudgetReached);
+      } catch (err) {
+        tronAmountRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
+        logWorkerEventArgs("handler", "warn", "[sync-blacklist] Tron amount replay failed:", err);
+      }
+    }
+  } else {
+    const skipReason = !tronGridCircuitAllowed ? "provider-circuit-open"
+      : blacklistRuntimeBudgetReached(maintenanceRunBudget) ? "maintenance-budget-exhausted"
+      : "subrequest-budget-exhausted";
+    tronOrderRepair = skippedRepair(skipReason);
+    tronAmountRepair = skippedRepair(skipReason);
+    if (!tronGridCircuitAllowed) {
+      tronGridCircuitSkips++;
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] TronGrid circuit open, skipping Tron amount replay");
+    }
   }
   if (!blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
     await reconcileCurrentBalanceDebt(db, {
@@ -201,7 +228,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   const coverageFailures = Object.values(scan.coverageVerdicts).filter((verdict) => verdict === "failed").length;
   const coverageLaggingWithinTolerance = Object.values(scan.coverageVerdicts)
     .filter((verdict) => verdict === "lagging-within-tolerance").length;
-  const status: SyncBlacklistResult["status"] =
+  const scanStatus: SyncBlacklistResult["status"] =
     derivedStatus === "ok" &&
     (providerCircuitSkips > 0 || coverageFailures > 0 || stateConflicts > 0 || neverSucceeded > 0)
       ? "degraded"
@@ -254,6 +281,22 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
   }
 
+  // Final status: publication and repair throws raise ok to degraded, never lower error.
+  const failureReasons = [
+    ...(producerSnapshotError != null ? ["blacklist-snapshot-publication-failed"] : []),
+    ...(amountRepair.outcome === "failed" ? ["blacklist-evm-amount-repair-failed"] : []),
+    ...(tronOrderRepair.outcome === "failed" ? ["blacklist-tron-order-repair-failed"] : []),
+    ...(tronAmountRepair.outcome === "failed" ? ["blacklist-tron-amount-repair-failed"] : []),
+  ];
+  const status: SyncBlacklistResult["status"] =
+    scanStatus === "ok" && failureReasons.length > 0 ? "degraded" : scanStatus;
+  const scanReason = scanStatus === "ok" ? null
+    : stateConflicts > 0 ? "blacklist-state-conflict"
+    : runtimeBudgetHit || subrequestBudgetReached ? "blacklist-budget-exhausted"
+    : providerCircuitSkips > 0 ? "blacklist-provider-circuit-open"
+    : "blacklist-source-coverage-incomplete";
+  const reasons = [...new Set([...(scanReason ? [scanReason] : []), ...failureReasons])];
+
   const decodeRetryRows = await runWithOverloadRetry(
     () => db.prepare(`
       SELECT substr(remainder, 1, instr(remainder, ':') - 1) AS configKey, COUNT(*) AS count
@@ -297,10 +340,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         outputPublishedAt: status !== "error" && (counters.totalInsertedRows > 0 || configsSucceeded > 0)
           ? Math.floor(Date.now() / 1000) : null,
         ...(status !== "ok" ? {
-          reason: stateConflicts > 0 ? "blacklist-state-conflict"
-            : runtimeBudgetHit || subrequestBudgetReached ? "blacklist-budget-exhausted"
-            : providerCircuitSkips > 0 ? "blacklist-provider-circuit-open"
-            : "blacklist-source-coverage-incomplete",
+          reason: reasons[0] ?? "blacklist-source-coverage-incomplete",
+          ...(failureReasons.length > 0 ? { reasons } : {}),
         } : {}),
         rowsWritten: counters.totalInsertedRows,
         eventsFetched: totalFetchedEvents,
@@ -330,20 +371,26 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         providerLimiterLiveConcurrency: BLACKLIST_PROVIDER_LIVE_CONCURRENCY,
         etherscanLimiterRequestsPerSecond: etherscanLimiter.requestsPerSecond ?? null,
         tronLimiterRequestsPerSecond: tronLimiter.requestsPerSecond ?? null,
-        amountRepairAttempted: amountBackfill.attempted,
-        amountRepairResolved: amountBackfill.resolved,
-        amountRepairRetried: amountBackfill.retried,
-        amountRepairUnrecoverable: amountBackfill.unrecoverable,
+        amountRepairOutcome: amountRepair.outcome,
+        amountRepairReason: amountRepair.reason,
+        amountRepairAttempted: amountBackfill?.attempted ?? null,
+        amountRepairResolved: amountBackfill?.resolved ?? null,
+        amountRepairRetried: amountBackfill?.retried ?? null,
+        amountRepairUnrecoverable: amountBackfill?.unrecoverable ?? null,
         amountRepairTailWindowUsed: scanBudgetExhausted,
         amountRepairTailLimit: scanBudgetExhausted ? BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT : 100,
-        tronAmountRepairAttempted: tronAmountBackfill.attempted,
-        tronAmountRepairResolved: tronAmountBackfill.resolved,
-        tronAmountRepairRetried: tronAmountBackfill.retried,
-        tronAmountRepairParked: tronAmountBackfill.parked,
-        tronAmountRepairLimit: tronAmountBackfill.limit,
-        tronOrderBlocksAttempted: tronOrderBackfill.blocksAttempted,
-        tronOrderPositionsResolved: tronOrderBackfill.positionsResolved,
-        tronOrderBlocksDeferred: tronOrderBackfill.blocksDeferred,
+        tronAmountRepairOutcome: tronAmountRepair.outcome,
+        tronAmountRepairReason: tronAmountRepair.reason,
+        tronAmountRepairAttempted: tronAmountBackfill?.attempted ?? null,
+        tronAmountRepairResolved: tronAmountBackfill?.resolved ?? null,
+        tronAmountRepairRetried: tronAmountBackfill?.retried ?? null,
+        tronAmountRepairParked: tronAmountBackfill?.parked ?? null,
+        tronAmountRepairLimit: tronAmountBackfill?.limit ?? null,
+        tronOrderOutcome: tronOrderRepair.outcome,
+        tronOrderReason: tronOrderRepair.reason,
+        tronOrderBlocksAttempted: tronOrderBackfill?.blocksAttempted ?? null,
+        tronOrderPositionsResolved: tronOrderBackfill?.positionsResolved ?? null,
+        tronOrderBlocksDeferred: tronOrderBackfill?.blocksDeferred ?? null,
         maintenanceRuntimeBudgetMs: SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS,
         runtimeBudgetReached: runtimeBudgetHit,
         subrequestBudgetReached,
