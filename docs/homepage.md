@@ -99,7 +99,7 @@ Retained-homepage evidence is route-local: only the homepage mounts its provider
 
 Footer research and about/legal links retain their crawlable anchors, order and labels but explicitly disable Next route prefetch. They are discovery links, not an instruction to download every hub as soon as a short route exposes the footer.
 
-Desktop top-nav section panels (`src/components/top-nav.tsx`) stay mounted, so every `nav-config.ts` destination is a crawlable anchor in static HTML. A closed panel is `hidden` + `inert` (neither visible nor focusable); open, focus, hover-intent and Escape behavior is state-driven as before, and the Status health read stays gated to the open Resources panel.
+Desktop top-nav section panels (`src/components/top-nav.tsx`) stay mounted, so every `nav-config.ts` destination is a crawlable anchor in static HTML. A closed panel is `hidden` + `inert` (neither visible nor focusable); open, focus, hover-intent and Escape behavior is state-driven as before, and the Status link is a plain destination with no health read, dot or state word.
 
 ## Update Rules
 
