@@ -123,6 +123,29 @@ describe("handleDigestSnapshot", () => {
     expect(weekly.prevInputData.mcap7dDelta).toBeNull();
   });
 
+  it("normalizes a legacy zero over an explicitly empty cohort to unavailable without touching measured zeros", async () => {
+    const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
+    const empty = { coveredCoins: 0, totalCoins: 3, coveredMcapUsd: 0 };
+    const measured = { coveredCoins: 2, totalCoins: 3, coveredMcapUsd: 5e9 };
+    const weeklyInput = {
+      dailyDigests: [
+        { date: "2026-03-10", inputData: { totalMcapUsd: 90e9, mcap7dDelta: 0, mcap7dDeltaCoverage: empty } },
+        { date: "2026-03-16", inputData: { totalMcapUsd: 100e9, mcap7dDelta: 0, mcap7dDeltaCoverage: measured } },
+      ],
+    };
+    const db = mockD1([
+      { match: "daily_digest", rows: [{ generated_at: dayStart + 3600, input_data: JSON.stringify(weeklyInput) }] },
+      { match: "depeg_events", rows: [] },
+      { match: "digest-snapshot:blacklist-summary", rows: [{ total_events: 0, valued_events: 0, known_amount_usd: null }] },
+      { match: "blacklist_events", rows: [] },
+    ]);
+    const body = (await readJsonResponse(
+      await handleDigestSnapshot(db, new URL(`https://x/api/digest-snapshot?date=${todayStr}`)), 200,
+    )) as { inputData: { mcap7dDelta: number | null }; prevInputData: { mcap7dDelta: number | null } };
+    expect(body.prevInputData.mcap7dDelta).toBeNull();
+    expect(body.inputData.mcap7dDelta).toBe(0);
+  });
+
   it("uses the requested digest type when daily and weekly rows share a date", async () => {
     const dayStart = Math.floor(new Date(`${todayStr}T00:00:00Z`).getTime() / 1000);
     const dailyRow = {

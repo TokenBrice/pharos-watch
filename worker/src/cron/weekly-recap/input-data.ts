@@ -87,7 +87,7 @@ function canonicalDailyCandidates(parsed: WeeklyParsedRow[], index: number): Dig
   if (!row) return [];
   const inputData: DigestInputData = {
     ...row.inputData,
-    mcap7dDelta: row.inputData.mcap7dDelta ?? 0,
+    mcap7dDelta: row.inputData.mcap7dDeltaCoverage?.coveredCoins === 0 ? null : row.inputData.mcap7dDelta ?? null,
     activeDepegCount: row.inputData.activeDepegCount ?? null,
     topDepegs: row.inputData.topDepegs ?? [],
     biggestSupplyChange: row.inputData.biggestSupplyChange ?? null,

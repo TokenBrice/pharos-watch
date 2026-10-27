@@ -169,7 +169,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
         aggregateUniverse: CORE_STABLECOIN_AGGREGATE_UNIVERSE,
         totalMcapUsd: 0,
         supplyCoverage: { complete: false, observedCount: 0, unavailableCount: CORE_AGGREGATE_ACTIVE_IDS.size },
-        mcap7dDelta: 0,
+        mcap7dDelta: null,
         degradedSources: [stablecoinsCacheResult.reason],
         activeDepegCount: null,
         resolvedDepegCount: null,
@@ -430,7 +430,7 @@ export async function buildDailyDigestInput(db: D1Database): Promise<DailyDigest
       memberFingerprint: await sha256Hex(JSON.stringify([
         CORE_STABLECOIN_AGGREGATE_UNIVERSE, [...CORE_AGGREGATE_ACTIVE_IDS].sort(),
       ])) },
-    mcap7dDelta: baselineMcapUsd - totalPrevWeek,
+    mcap7dDelta: baselineCoinCount === 0 ? null : baselineMcapUsd - totalPrevWeek,
     mcap7dDeltaCoverage: {
       coveredCoins: baselineCoinCount,
       totalCoins: CORE_AGGREGATE_ACTIVE_IDS.size,
