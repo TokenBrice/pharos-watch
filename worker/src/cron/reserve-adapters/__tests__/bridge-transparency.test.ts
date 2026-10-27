@@ -77,8 +77,8 @@ describe("adaptBridgeTransparency", () => {
     const result = adaptBridgeTransparency(USDSUI_PAYLOAD, "usd_sui");
 
     expect(result.slices).toEqual([
-      { sourceKey: "bridge-transparency:treasury", name: "Treasury", pct: 89.8, risk: "very-low", assetClass: "treasury-bill", issuerOrObligor: "United States Treasury" },
-      { sourceKey: "bridge-transparency:cash", name: "Cash", pct: 10.2, risk: "very-low", assetClass: "cash", issuerOrObligor: "Bridge-approved bank counterparties" },
+      { sourceKey: "bridge-transparency:treasury", name: "Treasury", pct: expect.closeTo(89.77121726416358, 8), risk: "very-low", assetClass: "treasury-bill", issuerOrObligor: "United States Treasury" },
+      { sourceKey: "bridge-transparency:cash", name: "Cash", pct: expect.closeTo(10.228782735836427, 8), risk: "very-low", assetClass: "cash", issuerOrObligor: "Bridge-approved bank counterparties" },
     ]);
     expect(result.warnings).toBeUndefined();
     expect(result.metadata).toMatchObject({
@@ -351,14 +351,14 @@ describe("fetchBridgeTransparencyReserves", () => {
       expect.objectContaining({
         sourceKey: "bridge-transparency:cash",
         name: "Cash",
-        pct: 12.1,
+        pct: expect.closeTo(12.072651089840452, 8),
         risk: "very-low",
         assetClass: "cash",
       }),
       expect.objectContaining({
         sourceKey: "bridge-transparency:treasury",
         name: "Treasury",
-        pct: 87.9,
+        pct: expect.closeTo(87.92734891015954, 8),
         risk: "very-low",
         assetClass: "treasury-bill",
       }),
@@ -392,11 +392,11 @@ describe("fetchBridgeTransparencyReserves", () => {
     for (const slice of result.slices) expect(ReserveSliceSchema.safeParse(slice).success).toBe(true);
     expect(result.slices).toHaveLength(2);
     expect(result.slices.find((slice) => slice.sourceKey === "bridge-transparency:treasury")).toMatchObject({
-      pct: 93,
+      pct: expect.closeTo(92.98518587713123, 8),
       assetClass: "other",
     });
     expect(result.slices.find((slice) => slice.sourceKey === "bridge-transparency:cash")).toMatchObject({
-      pct: 7,
+      pct: expect.closeTo(7.01481412286877, 8),
       assetClass: "bank-deposit",
     });
     expect(result.metadata).toMatchObject({

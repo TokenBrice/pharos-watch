@@ -20,9 +20,9 @@ import {
   reserveDegradedWarning,
   slicesFromPercentages,
 } from "./helpers";
+import { compositionPctFromRaw } from "./slice-math";
 
 const SHARE_SCALE = 10n ** 18n;
-const PCT_MICRO_SCALE = 100_000_000n;
 const PERCENTAGE_TOLERANCE_PCT = 1.5;
 // sUSDai LoanRouterPositionManager.loanRouterBalances() -> (pending principal, accrued interest).
 const LOAN_ROUTER_BALANCES_SELECTOR = "0x66518b81";
@@ -73,7 +73,7 @@ function ratioToPct(value: bigint, total: bigint): number {
   if (value <= 0n || total <= 0n) {
     return 0;
   }
-  return Number((value * PCT_MICRO_SCALE + total / 2n) / total) / 1_000_000;
+  return compositionPctFromRaw(value, total, "usdai-proof-of-reserves share");
 }
 
 function shareToPct(share: bigint): number {
@@ -302,7 +302,6 @@ export function adaptUsdAiProofOfReserves(
   }
 
   const slices = slicesFromPercentages(sliceInputs, {
-    decimals: 1,
     context: "USD.AI proof-of-reserves",
   });
 
@@ -532,7 +531,7 @@ async function anchorUsdAiComposition(
         sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)",
         pct: ratioToPct(pendingLoanPrincipal!, vaultBasis), risk: "high",
       },
-    ], { decimals: 1, context: "USD.AI sUSDai vault basis" });
+    ], { context: "USD.AI sUSDai vault basis" });
     return {
       slices,
       ...(escrowMaterial ? {

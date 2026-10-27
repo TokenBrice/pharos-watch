@@ -506,7 +506,7 @@ export async function fetchUsdrifRifReserves(
         coinId: "doc-money-on-chain",
         depType: "collateral",
       },
-    ], 10),
+    ]),
     ...(warnings.length > 0 ? { warnings } : {}),
     metadata: {
       ...notApplicableFreshnessMetadata(),

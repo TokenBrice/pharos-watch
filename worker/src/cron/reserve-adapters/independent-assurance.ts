@@ -609,7 +609,6 @@ export async function fetchIndependentAssuranceReserves(
   const totalClassifiedAmount = classifiedAssets.reduce((sum, asset) => sum + asset.amount, 0);
   const slices = normalizeSlices(
     classifiedAssets.map(({ amount, ...asset }) => ({ ...asset, pct: (amount / totalClassifiedAmount) * 100 })),
-    6,
   );
   if (slices.length === 0) throw new Error("independent-assurance: no positive reserve asset rows");
 

@@ -13,8 +13,8 @@ describe("custody inventory MegaUSD profile", () => {
     const result = adaptCustodyInventory("megausd-custody", MEGAUSD_BACKING);
 
     expect(result.slices).toEqual([
-      { sourceKey: "megausd-custody:usdc", name: "USDC cash-equivalent reserves", pct: 99.9, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { sourceKey: "megausd-custody:usdtb", name: "USDtb cash-equivalent reserves", pct: 0.1, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
+      { sourceKey: "megausd-custody:usdc", name: "USDC cash-equivalent reserves", pct: expect.closeTo(99.87667757992814, 8), risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "megausd-custody:usdtb", name: "USDtb cash-equivalent reserves", pct: expect.closeTo(0.12332242007185923, 8), risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
     ]);
     expect(result.warnings).toBeUndefined();
 
@@ -101,8 +101,8 @@ describe("custody inventory MegaUSD profile", () => {
     const result = adaptCustodyInventory("megausd-custody", withStringAmounts);
 
     expect(result.slices).toEqual([
-      { sourceKey: "megausd-custody:usdc", name: "USDC cash-equivalent reserves", pct: 99.9, risk: "low", coinId: "usdc-circle", depType: "collateral" },
-      { sourceKey: "megausd-custody:usdtb", name: "USDtb cash-equivalent reserves", pct: 0.1, risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
+      { sourceKey: "megausd-custody:usdc", name: "USDC cash-equivalent reserves", pct: expect.closeTo(99.87667757992814, 8), risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "megausd-custody:usdtb", name: "USDtb cash-equivalent reserves", pct: expect.closeTo(0.12332242007185923, 8), risk: "low", coinId: "usdtb-ethena", depType: "collateral" },
     ]);
     expect(result.metadata?.totalReserveUsd).toBeCloseTo(TOTAL_RESERVE_USD, 3);
   });

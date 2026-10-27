@@ -141,10 +141,10 @@ describe("adaptIdleCdoEpochVariantSnapshot", () => {
     const result = adapt({ unlentRaw: 16_851_433_569_387n });
 
     expect(result.slices).toEqual([
-      expect.objectContaining({ name: "FalconX single-obligor credit facility", pct: 90 }),
+      expect.objectContaining({ name: "FalconX single-obligor credit facility", pct: expect.closeTo(90, 10) }),
       expect.objectContaining({
         name: "Unlent USDC held by the credit vault",
-        pct: 10,
+        pct: expect.closeTo(10, 10),
         coinId: "usdc-circle",
         depType: "collateral",
         liquidityHorizon: "immediate",

@@ -412,6 +412,22 @@ describe("handleStablecoinReserves", () => {
     expect(body.sync?.bootstrap).toBe(true);
   });
 
+  it("serves stored positive fractional shares exactly with distinct identity and estimated:false", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const slices = [
+      { sourceKey: "src:parent", name: "Parent", pct: 99.96, risk: "low" as const, coinId: "usdc-circle", depType: "collateral" as const },
+      { sourceKey: "src:credit", name: "Credit", pct: 0.04, risk: "high" as const },
+    ];
+    const db = mockD1([
+      { match: "reserve_composition", rows: [], first: reserveCompositionRow(now, { slices: JSON.stringify(slices) }) },
+      { match: "reserve_sync_state", rows: [], first: reserveSyncRow(now) },
+    ]);
+    const body = StablecoinReservesResponseSchema.parse(await readJsonResponse(await handleStablecoinReserves(db, "iusd-infinifi"), 200));
+    expect(body.reserves).toEqual(slices);
+    expect(body.estimated).toBe(false);
+    expect(body.liveAt).toBe(now);
+  });
+
   it("returns live slices and preserves stored metadata while deduplicating display evidence URLs", async () => {
     const now = Math.floor(Date.now() / 1000);
     const slices = [{ name: "Test Farm", pct: 100, risk: "low" as const }];

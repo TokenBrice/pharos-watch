@@ -87,8 +87,8 @@ describe("fx", () => {
 
     expect(network.requests.map((request) => request.url)).toContain(ONCHAIN_PRICE_ENDPOINT);
     expect(result.slices).toEqual([
-      { sourceKey: "fx:wbtc", name: "WBTC", pct: 86.0, risk: "medium" },
-      { sourceKey: "fx:wsteth", name: "wstETH (Lido)", pct: 14.0, risk: "low" },
+      { sourceKey: "fx:wbtc", name: "WBTC", pct: expect.closeTo(85.9999881601067, 8), risk: "medium" },
+      { sourceKey: "fx:wsteth", name: "wstETH (Lido)", pct: expect.closeTo(14.000011839893311, 8), risk: "low" },
     ]);
 
     const totalDebtUsd = (Number(wstEthPoolDebt) + Number(wbtcPoolDebt)) / 1e18;

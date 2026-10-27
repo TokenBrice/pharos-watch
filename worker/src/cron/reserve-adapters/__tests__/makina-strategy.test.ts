@@ -78,19 +78,19 @@ describe("makina-strategy adapter", () => {
     const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, ALLOCATIONS_FIXTURE, PARAMS);
 
     expect(result.slices).toEqual([
-      { sourceKey: "makina:protocol:morpho", name: "Morpho lending positions", pct: 59.6, risk: "medium" },
-      { sourceKey: "makina:protocol:aave-v4", name: "Aave V4 positions", pct: 22.6, risk: "medium" },
-      { sourceKey: "makina:protocol:re", name: "Re Protocol exposure", pct: 8.7, risk: "high" },
+      { sourceKey: "makina:protocol:morpho", name: "Morpho lending positions", pct: expect.closeTo((6850 / 11500) * 100, 8), risk: "medium" },
+      { sourceKey: "makina:protocol:aave-v4", name: "Aave V4 positions", pct: expect.closeTo((2600 / 11500) * 100, 8), risk: "medium" },
+      { sourceKey: "makina:protocol:re", name: "Re Protocol exposure", pct: expect.closeTo((1000 / 11500) * 100, 8), risk: "high" },
       {
         sourceKey: "makina:base-token:usdc",
         name: "Unallocated USDC balances",
-        pct: 6.1,
+        pct: expect.closeTo((700 / 11500) * 100, 8),
         risk: "low",
         coinId: "usdc-circle",
         depType: "collateral",
       },
-      { sourceKey: "makina:unknown:unlabelled", name: "Unknown Makina exposure", pct: 2.6, risk: "high" },
-      { name: "Other identified Makina positions", pct: 0.4, risk: "high" },
+      { sourceKey: "makina:unknown:unlabelled", name: "Unknown Makina exposure", pct: expect.closeTo((300 / 11500) * 100, 8), risk: "high" },
+      { name: "Other identified Makina positions", pct: expect.closeTo((50 / 11500) * 100, 8), risk: "high" },
     ]);
     expect(result.metadata?.totalReserveUsd).toBe(11000);
     expect(result.metadata?.totalDebtUsd).toBe(500);
@@ -244,7 +244,7 @@ describe("makina-strategy adapter", () => {
     };
     const result = adaptMakinaStrategyReserves(STRATEGY_FIXTURE, allocations, PARAMS);
     expect(result.slices).toContainEqual(expect.objectContaining({
-      sourceKey: "makina:base-token:usdc", coinId: "usdc-circle", risk: "low", pct: 6.1,
+      sourceKey: "makina:base-token:usdc", coinId: "usdc-circle", risk: "low", pct: expect.closeTo((700 / 11500) * 100, 8),
     }));
     expect(result.metadata?.sourceTimestamp).toBe(1785265103);
   });
@@ -269,7 +269,7 @@ describe("makina-strategy adapter", () => {
     expect(result.slices).toContainEqual({
       sourceKey: "makina:protocol:pendle",
       name: "Pendle positions",
-      pct: 3,
+      pct: expect.closeTo((350 / 11500) * 100, 8),
       risk: "high",
     });
     expect(result.slices.some((slice) => slice.name === "Unknown Makina exposure")).toBe(false);

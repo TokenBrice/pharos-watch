@@ -203,7 +203,6 @@ function adaptBatch(batch: XprReadBatch, params: XprAccountBalancesParams): Adap
           }]
         : []),
     ],
-    2,
   );
 
   return {

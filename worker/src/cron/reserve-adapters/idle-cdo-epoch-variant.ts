@@ -232,7 +232,7 @@ export function adaptIdleCdoEpochVariantSnapshot(
         : {}),
       liquidityHorizon: "immediate" as const,
     },
-  ], 6);
+  ]);
 
   return {
     slices,

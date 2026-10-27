@@ -22,6 +22,7 @@ import {
   requireOnchainInput,
   reserveDegradedWarning,
 } from "./helpers";
+import { compositionPctFromRaw } from "./slice-math";
 import { hasDegradingWarnings } from "./validate";
 import { reserveInfoWarning } from "./warnings";
 import {
@@ -396,13 +397,13 @@ export async function fetchErc4626SingleAssetReserves(
   const heldRaw = idleUnderlyingBalanceRaw == null || excludesWalletCash
     ? 0n
     : idleUnderlyingBalanceRaw < totalAssetsRaw ? idleUnderlyingBalanceRaw : totalAssetsRaw;
-  const idlePct = Number(heldRaw * 100_000_000_000_000n / totalAssetsRaw) / 1_000_000_000_000;
+  const idlePct = compositionPctFromRaw(heldRaw, totalAssetsRaw, "erc4626-single-asset idle share");
   // A reviewed `deployedExposure` covers the non-idle positions, not idle
   // holdings. Publish measured shares under distinct keys; classification
   // enrichment remains subject to the consumer's unique-match and age gates.
   // An unreadable holding stays unattributed.
   const reviewedDeployedExposure = idleUnderlyingBalanceRaw == null ? null : sliceConfig.deployedExposure ?? null;
-  const deployedPct = Number((totalAssetsRaw - heldRaw) * 100_000_000_000_000n / totalAssetsRaw) / 1_000_000_000_000;
+  const deployedPct = compositionPctFromRaw(totalAssetsRaw - heldRaw, totalAssetsRaw, "erc4626-single-asset deployed share");
   const unknownExposurePct = sliceConfig.pooledClaim ? 100 : reviewedDeployedExposure ? 0 : 100 - idlePct;
   const slices: ReserveSlice[] = [];
   if (sliceConfig.pooledClaim) {

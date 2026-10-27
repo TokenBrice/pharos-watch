@@ -251,6 +251,19 @@ describe("live-reserves-store", () => {
     expect(detail?.metadata).toEqual(version === 2 ? metadata : undefined);
   });
 
+  it("serves stored positive fractional shares with distinct identity and no quantization", async () => {
+    const slices = [
+      { sourceKey: "src:parent", name: "Parent", pct: 99.96, risk: "low", coinId: "usdc-circle", depType: "collateral" },
+      { sourceKey: "src:credit", name: "Credit", pct: 0.04, risk: "high" },
+    ];
+    const db = makeReservesDb({ composition: { slices: JSON.stringify(slices) } });
+
+    const result = await resolveReserveResult(db, "iusd-infinifi", 1_200);
+
+    expect(result).toMatchObject({ mode: "live", liveAt: 1_000 });
+    expect(result?.reserves).toEqual(slices);
+  });
+
   it("returns live data only when composition and sync state agree on the last successful snapshot", async () => {
     const db = makeReservesDb();
 

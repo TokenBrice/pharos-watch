@@ -285,7 +285,7 @@ export async function fetchParallelizerBalancesReserves(
     });
   }
 
-  const slices = slicesFromValues([...grouped.values()], 6);
+  const slices = slicesFromValues([...grouped.values()]);
   if (slices.length === 0) {
     throw new Error(`${ADAPTER_KEY}: no positive reserve slices were produced`);
   }
