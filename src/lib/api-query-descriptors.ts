@@ -413,7 +413,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<ReportCardsV9TableResponse>(
-      async () => (await import("@shared/types/report-cards-v9-projections")).ReportCardsV9TableReaderResponseSchema,
+      async () => (await import("@shared/types/report-cards-v9-projections")).ReportCardsV9TableResponseSchema,
     ),
   ),
   reportCardsV9Detail: defineParameterizedApiQuery(

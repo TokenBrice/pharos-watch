@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { projectV9Table, projectV9TableCard, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
-import { ReportCardsV9DetailResponseSchema, ReportCardsV9TableReaderResponseSchema, ReportCardsV9TableResponseSchema } from "@shared/types/report-cards-v9-projections";
+import { ReportCardsV9DetailResponseSchema, ReportCardsV9TableResponseSchema } from "@shared/types/report-cards-v9-projections";
 import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
-import { makeReportCardsV9PartialCard, makeReportCardsV9Pillars, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard, makeReportCardsV9PricedExcludedCard } from "@shared/test-utils/report-cards-v9";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";
 import { buildV9SafetyTableRows, buildV9PortfolioProjection } from "../safety-score-v9-consumers";
@@ -81,30 +81,20 @@ describe("compact score consumer equivalence", () => {
     expect(ReportCardsV9DetailResponseSchema.parse(detail).neighborhood[0]!.pillars![key]).toEqual(expected);
     expect(projectDependencyGraph(full).nodes[0]!.pillars![key]).toEqual(expected);
   });
-  // #1674 release A: browsers admit the scorer's priced unknown on an A/B-excluded
-  // pillar before release B lets the producer emit it.
-  function pricedExcludedCard(cause: "A" | "B") {
-    const pillars = makeReportCardsV9Pillars({ backing: 50, exit: null, control: 50 });
-    Object.assign(pillars.exit, { aggregationDisposition: "excluded-a-b", supportedComponentKeys: [], causeGapRefs: [0], limitedEvidenceCauses: [] });
-    const card = makeReportCardsV9PartialCard("exit", cause, { id: "c-partial", pillars, score: 50, qualityScore: 50, pegAdjustedScore: 50 });
-    card.scoreTrace.aggregation!.effectiveScoringWeights = { backing: 0.4, exit: 0.35, control: 0.25 };
-    card.scoreTrace.aggregation!.pricedUnknownPillars = [{ pillar: "exit", cause: "U", score: 50, causeGapRefs: [] }];
-    card.breakdowns!.backing.aggregationWeight = 0.4;
-    card.breakdowns!.control.aggregationWeight = 0.25;
-    return card;
-  }
+  // #1674: the scorer prices an A/B-excluded null pillar of a rated card; the
+  // producer and both browser readers admit it on the canonical table schema.
   function tablesFor(cause: "A" | "B") {
     const old = projectV9Table(cohort());
     const full = cohort();
-    full.cards[2] = pricedExcludedCard(cause);
+    full.cards[2] = makeReportCardsV9PricedExcludedCard(cause, { id: "c-partial" });
     expect(ReportCardsV9CurrentResponseSchema.safeParse(full).success).toBe(true);
     return { old, full, next: { ...old, cards: full.cards.map(projectV9TableCard) } };
   }
-  it.each(["A", "B"] as const)("browser readers admit old and cause-%s priced excluded tables while the producer still rejects them", async (cause) => {
+  it.each(["A", "B"] as const)("producer and browser readers admit old and cause-%s priced excluded tables", async (cause) => {
     const { old, full, next } = tablesFor(cause);
     expect(next.cards[2]!.pillars.exit).toEqual({ score: null, aggregationDisposition: "excluded-a-b", pricedUnknown: { cause: "U", score: 50 } });
-    expect(() => projectV9Table(full)).toThrow();
-    expect(ReportCardsV9TableResponseSchema.safeParse(next).success).toBe(false);
+    expect(projectV9Table(full)).toEqual(next);
+    expect(ReportCardsV9TableResponseSchema.parse(next)).toEqual(next);
     const descriptorSchema = await resolveSchemaLike(FRONTEND_API_QUERY_DESCRIPTORS.reportCardsV9Table.schema);
     const identity = full.safetyScoreIdentity;
     for (const table of [old, next]) {
@@ -129,7 +119,7 @@ describe("compact score consumer equivalence", () => {
     ];
     for (const { index, pillar } of variants) {
       const table = { ...next, cards: next.cards.map((card, i) => i === index ? { ...card, pillars: { ...card.pillars, exit: pillar } } : card) };
-      expect(ReportCardsV9TableReaderResponseSchema.safeParse(table).error?.issues.map(issue => issue.path))
+      expect(ReportCardsV9TableResponseSchema.safeParse(table).error?.issues.map(issue => issue.path))
         .toContainEqual(["cards", index, "pillars", "exit", "pricedUnknown"]);
       expect(descriptorSchema!.safeParse(table).success).toBe(false);
       expect(buildV9SafetyTableRows(table, next.safetyScoreIdentity)).toEqual({ status: "unavailable", reason: "invalid-v9-response" });

@@ -21,7 +21,8 @@ const common = {
   completeness: envelope.completeness, publicationHealth: envelope.publicationHealth,
 };
 
-const TableCardObjectSchema = z.object({
+/** Only fields consumed by cross-asset tables, filters, exports and mini radars. */
+export const ReportCardsV9TableCardSchema = z.object({
   id: card.id, score: card.score, grade: card.grade, ratingStatus: card.ratingStatus,
   partialEvidence: V9CompactPartialEvidenceSchema.nullable(),
   pillars: V9EvidencePillarsSchema,
@@ -31,32 +32,20 @@ const TableCardObjectSchema = z.object({
   accessPosture: z.object({ freezeExposure: card.accessPosture.shape.freezeExposure }).strict(),
   nrReasons: card.nrReasons, reasonCodes: card.reasonCodes,
   mint: z.object({ score: z.number().finite().min(0).max(100), posture: z.string().nullable() }).strict().nullable(),
-}).strict();
-type PricedUnknownDisposition = "unavailable" | "excluded-a-b";
-function refineTableCard(pricedDispositions: readonly PricedUnknownDisposition[], message: string) {
-  return (value: z.infer<typeof TableCardObjectSchema>, ctx: z.RefinementCtx) => {
-    refineV9RatingStatusFields(value, ctx);
-    if (value.localAuthorityExposure !== undefined && value.ratingStatus !== "rated") {
-      ctx.addIssue({ code: "custom", path: ["localAuthorityExposure"], message: "Local authority exposure is only shown on rated cards" });
+}).strict().superRefine((value, ctx) => {
+  refineV9RatingStatusFields(value, ctx);
+  if (value.localAuthorityExposure !== undefined && value.ratingStatus !== "rated") {
+    ctx.addIssue({ code: "custom", path: ["localAuthorityExposure"], message: "Local authority exposure is only shown on rated cards" });
+  }
+  for (const key of ["backing", "exit", "control"] as const) {
+    const pillar = value.pillars[key];
+    if (pillar.pricedUnknown !== undefined && (value.ratingStatus !== "rated" || pillar.score !== null ||
+        (pillar.aggregationDisposition !== "unavailable" && pillar.aggregationDisposition !== "excluded-a-b"))) {
+      ctx.addIssue({ code: "custom", path: ["pillars", key, "pricedUnknown"], message: "Only an unavailable or A/B-excluded null pillar of a rated card carries a priced unknown" });
     }
-    for (const key of ["backing", "exit", "control"] as const) {
-      const pillar = value.pillars[key];
-      if (pillar.pricedUnknown !== undefined && (value.ratingStatus !== "rated" || pillar.score !== null ||
-          !pricedDispositions.some(disposition => disposition === pillar.aggregationDisposition))) {
-        ctx.addIssue({ code: "custom", path: ["pillars", key, "pricedUnknown"], message });
-      }
-    }
-  };
-}
-/** Only fields consumed by cross-asset tables, filters, exports and mini radars. */
-export const ReportCardsV9TableCardSchema = TableCardObjectSchema.superRefine(
-  refineTableCard(["unavailable"], "Only an unavailable pillar of a rated card carries a priced unknown"));
+  }
+});
 export type ReportCardsV9TableCard = z.infer<typeof ReportCardsV9TableCardSchema>;
-/** Temporary #1674 release-A browser reader: also admits a priced unknown on an
- * A/B-excluded null pillar of a rated card, which the scorer already prices.
- * Producer admission stays on the canonical schema until release B widens it. */
-const ReportCardsV9TableReaderCardSchema = TableCardObjectSchema.superRefine(
-  refineTableCard(["unavailable", "excluded-a-b"], "Only an unavailable or A/B-excluded null pillar of a rated card carries a priced unknown"));
 
 function refineEnvelope(value: z.infer<z.ZodObject<typeof common>>, ctx: z.RefinementCtx) {
   const identity = value.safetyScoreIdentity;
@@ -65,13 +54,10 @@ function refineEnvelope(value: z.infer<z.ZodObject<typeof common>>, ctx: z.Refin
     ctx.addIssue({ code: "custom", message: "Projection identity, methodology or clocks disagree" });
   }
 }
-function tableResponseObjectSchema(cardSchema: typeof ReportCardsV9TableCardSchema) {
-  return z.object({
-    ...common, projection: z.literal("table"), cards: z.array(cardSchema),
-    dependencyGraph: ReportCardsV9DependencyGraphSchema,
-  }).strict();
-}
-function refineTableResponse(value: z.infer<ReturnType<typeof tableResponseObjectSchema>>, ctx: z.RefinementCtx) {
+export const ReportCardsV9TableResponseSchema = z.object({
+  ...common, projection: z.literal("table"), cards: z.array(ReportCardsV9TableCardSchema),
+  dependencyGraph: ReportCardsV9DependencyGraphSchema,
+}).strict().superRefine((value, ctx) => {
   refineEnvelope(value, ctx);
   const ids = value.cards.map(row => row.id);
   if (ids.length !== value.completeness.expectedCount || !ids.every((id, i) => i === 0 || ids[i - 1]! < id) ||
@@ -84,11 +70,8 @@ function refineTableResponse(value: z.infer<ReturnType<typeof tableResponseObjec
   if (value.dependencyGraph.edges.some(edge => !members.has(edge.from) || !members.has(edge.to))) {
     ctx.addIssue({ code: "custom", message: "Table graph references an absent asset" });
   }
-}
-export const ReportCardsV9TableResponseSchema = tableResponseObjectSchema(ReportCardsV9TableCardSchema).superRefine(refineTableResponse);
+});
 export type ReportCardsV9TableResponse = z.infer<typeof ReportCardsV9TableResponseSchema>;
-/** Temporary #1674 release-A browser reader; never a producer admission authority. */
-export const ReportCardsV9TableReaderResponseSchema = tableResponseObjectSchema(ReportCardsV9TableReaderCardSchema).superRefine(refineTableResponse);
 
 export const ReportCardsV9NeighborhoodCardSchema = z.object({
   id: card.id, grade: card.grade, partialEvidence: V9CompactPartialEvidenceSchema.nullable(), sharedBookId: card.sharedBookId,

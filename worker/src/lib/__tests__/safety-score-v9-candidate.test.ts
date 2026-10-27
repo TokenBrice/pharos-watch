@@ -11,6 +11,7 @@ import {
 } from "@shared/lib/safety-score-v9/evaluate-set";
 import * as evaluateSetModule from "@shared/lib/safety-score-v9/evaluate-set";
 import * as publicModule from "@shared/lib/safety-score-v9/public";
+import * as causesModule from "@shared/types/safety-score-v9-causes";
 import {
   loadV9CandidateMethodologyPolicy,
   loadV9MethodologyPolicy,
@@ -662,6 +663,40 @@ describe("Safety Score v9 publication pipeline", { timeout: V9_EVALUATION_TEST_T
       }
     } finally {
       build.mockRestore();
+    }
+  });
+
+  it("quarantines only a parent whose table projection alone fails, preserving its dependents' census", () => {
+    const input = reserveParentCascadeFixture();
+    const baseline = buildSafetyScoreV9Candidate(input);
+    expect(baseline.quarantines).toEqual([]);
+    // Sorted projection admits alpha's table and neighborhood rows, then beta's
+    // table row: give only that row a priced unknown on a scored pillar.
+    const original = causesModule.projectV9EvidencePillars;
+    let calls = 0;
+    let armed = true;
+    const pillars = vi.spyOn(causesModule, "projectV9EvidencePillars").mockImplementation((...args) => {
+      const projected = original(...args);
+      if (!armed || calls++ !== 2) return projected;
+      armed = false;
+      return { ...projected, backing: { ...projected.backing, pricedUnknown: { cause: "U", score: 50 } } };
+    });
+    try {
+      const result = buildSafetyScoreV9Candidate(input);
+      expect(result.quarantines).toEqual([expect.objectContaining({
+        assetId: "beta", code: "evaluation-failed",
+        message: expect.stringContaining("table.pillars.backing.pricedUnknown"),
+      })]);
+      expect(result.candidate.cards.find((row) => row.id === "beta"))
+        .toMatchObject({ ratingStatus: "pipeline-gap", grade: null, score: null });
+      expect(result.candidate.completeness.pipelineGapIds).toContain("beta");
+      expect(result.candidate.completeness.expectedCount).toBe(baseline.candidate.completeness.expectedCount);
+      expect(result.quarantineAffectedAssetIds).toEqual(expect.arrayContaining(["alpha", "beta", "gamma"]));
+      const gamma = resolveV9PublicWitnessTexts(result.candidate.cards.find((row) => row.id === "gamma")!);
+      expect(gamma.partialEvidence?.causes).toEqual(["A"]);
+      expect(SafetyScoreV9ResponseSchema.parse(result.candidate)).toEqual(result.candidate);
+    } finally {
+      pillars.mockRestore();
     }
   });
 

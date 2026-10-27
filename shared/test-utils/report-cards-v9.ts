@@ -340,6 +340,21 @@ export function makeReportCardsV9PartialCard(
   });
 }
 
+/** A rated card whose A/B-excluded null Exit the scorer prices as a U50 unknown (#1674). */
+export function makeReportCardsV9PricedExcludedCard(
+  cause: "A" | "B" = "A",
+  overrides: Partial<SafetyScoreV9CurrentCard> = {},
+): SafetyScoreV9ResolvedCurrentCard {
+  const pillars = makeReportCardsV9Pillars({ backing: 50, exit: null, control: 50 });
+  Object.assign(pillars.exit, { aggregationDisposition: "excluded-a-b", supportedComponentKeys: [], causeGapRefs: [0], limitedEvidenceCauses: [] });
+  const card = makeReportCardsV9PartialCard("exit", cause, { pillars, score: 50, qualityScore: 50, pegAdjustedScore: 50, ...overrides });
+  card.scoreTrace.aggregation!.effectiveScoringWeights = { backing: 0.4, exit: 0.35, control: 0.25 };
+  card.scoreTrace.aggregation!.pricedUnknownPillars = [{ pillar: "exit", cause: "U", score: 50, causeGapRefs: [] }];
+  card.breakdowns!.backing.aggregationWeight = 0.4;
+  card.breakdowns!.control.aggregationWeight = 0.25;
+  return card;
+}
+
 /** One or zero included pillars is technical unavailability, not NR. */
 export function makeReportCardsV9PipelineGapCard(
   survivingPillar: V9PillarKey | null = "control",
