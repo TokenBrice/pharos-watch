@@ -797,7 +797,7 @@ const DigestSnapshotInputDataSchema = z
     aggregateUniverse: z.literal("core-stablecoins-v1").optional(),
     totalMcapUsd: z.number().optional(),
     supplyCoverage: DigestSupplyCoverageSchema.optional(),
-    mcap7dDelta: z.number().optional(),
+    mcap7dDelta: z.number().nullable().optional(),
     mcap7dDeltaCoverage: DigestMcap7dDeltaCoverageSchema.optional(),
     activeDepegCount: z.number().nullable().optional(),
     resolvedDepegCount: z.number().nullable().optional(),
