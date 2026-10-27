@@ -349,4 +349,25 @@ describe("generate-reserve-coverage-audit", () => {
     },
   );
 
+  it("keeps the tGBP, USDXL and USDN suspensions non-executable and due from the November 20 UTC boundary", () => {
+    const ids = ["tgbp-tokenised", "usdxl-last", "usdn-noble"];
+    const dormantAt = (generatedAt: string) => new Map(
+      buildReserveCoverageAudit({ generatedAt }).configCensus.dormantConfigs
+        .filter((row) => ids.includes(row.coinId))
+        .map((row) => [row.coinId, row]),
+    );
+    for (const [generatedAt, due] of [
+      ["2026-11-19T23:59:59.999Z", false],
+      ["2026-11-20T00:00:00.000Z", true],
+      ["2026-11-21T00:00:00.000Z", true],
+    ] as const) {
+      const rows = dormantAt(generatedAt);
+      expect([...rows.keys()].sort()).toEqual([...ids].sort());
+      for (const id of ids) {
+        expect(rows.get(id), `${id} at ${generatedAt}`).toMatchObject({ status: "active", reviewBy: "2026-11-20", reviewDue: due });
+        expect(rows.get(id)?.suspensionReason).toBeTruthy();
+        expect(ACTIVE_META_BY_ID.get(id)?.liveReservesConfig).toBeUndefined();
+      }
+    }
+  });
 });

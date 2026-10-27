@@ -1043,7 +1043,7 @@ describe("suspended live reserve feeds", () => {
   it("keeps the partial USDXL pool feed out of score-grade runtime metadata", () => {
     expect(usdxlSource.liveReservesConfig.suspended).toMatchObject({
       since: "2026-08-27",
-      reviewBy: "2026-09-10",
+      reviewBy: "2026-11-20",
     });
 
     const runtime = TRACKED_META_BY_ID.get("usdxl-last");
