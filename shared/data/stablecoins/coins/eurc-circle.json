@@ -25,18 +25,18 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-29",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-26",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA34EURC), August examination and management assertion dated September 29, 2026",
+      "reviewer": "D02 evidence renewal 2026-10-27, September examination and management assertion dated October 26, 2026 (SHA-256 5a3d56891a7a6f7ada40e1d1766cb599441628c1f8b91674e8b69d3b928bdfba)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte EURC examination report - August 2026",
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
+          "label": "Deloitte EURC examination report - September 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20September%2026.pdf"
         }
       ]
     }

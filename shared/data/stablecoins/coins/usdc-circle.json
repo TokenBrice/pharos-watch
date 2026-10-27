@@ -23,17 +23,18 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-29",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-26",
+      "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (CurA02USDC): August examination and management assertion dated September 29, 2026 retrieved",
+      "reviewer": "D02 evidence renewal 2026-10-27: September examination and management assertion dated October 26, 2026 retrieved (SHA-256 3c7d773aedb18078d92d8f9be3e6d26fb1e219446ee17624e0f6a376e9399e6a); upload date not separately stated",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Deloitte USDC examination report: August 2026",
-          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20August%2026.pdf"
+          "label": "Deloitte USDC examination report: September 2026",
+          "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/USDCAttestationReports/2026/2026%20USDC_Examination%20Report%20September%2026.pdf"
         }
       ]
     }

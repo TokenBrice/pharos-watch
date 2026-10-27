@@ -17,18 +17,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CircleRecovery), D01 independently reproduced examination arithmetic",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "D02 evidence renewal 2026-10-27, independently reproduced September examination arithmetic",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Deloitte EURC examination report - August 2026",
-        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20August%2026.pdf"
+        "label": "Deloitte EURC examination report - September 2026",
+        "url": "https://6778953.fs1.hubspotusercontent-na1.net/hubfs/6778953/EURC%20Attestations/2026%20EURC_Examination%20Report%20September%2026.pdf"
       }
     ],
-    "rationale": "The complete August 31, 2026 examination reports EUR 395,424,211 of cash at regulated financial institutions less EUR 2,139,303 of net timing and settlement adjustments, totaling EUR 393,284,908 of reserve assets. Net cash divided by the examined denominator, EUR 393,284,908, times 100 is exactly 100%. This uses only examined EUR amounts, with no weekly SIFI/non-SIFI split or invented residual. The aggregate bank row carries one conservative common-mode issuer domain; the live adapter uses the same bank-deposits key and retains its weekly bank-category amounts only in contextual metadata.",
-    "compositionBasis": "Complete August 31, 2026 examined EUR bank-cash balances net of settlement adjustments; independently reproduced arithmetic under D01",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "The complete September 30, 2026 examination, signed October 26, 2026, reports EUR 415,354,210 of cash at regulated financial institutions less EUR 54,475 of net timing and settlement adjustments, totaling EUR 415,299,735 of reserve assets. Net cash divided by the examined denominator, EUR 415,299,735, times 100 is exactly 100%. This uses only examined EUR amounts, with no weekly SIFI/non-SIFI split or invented residual. The aggregate bank row carries one conservative common-mode issuer domain; the live adapter uses the same bank-deposits key and retains its weekly bank-category amounts only in contextual metadata.",
+    "compositionBasis": "Complete September 30, 2026 examined EUR bank-cash balances net of settlement adjustments; independently reproduced arithmetic",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "All examined reserve assets are euro bank cash net of timing and settlement adjustments. Individual banks and their shares are not disclosed. The aggregate bank category receives no inferred diversification credit; the weekly SIFI/non-SIFI split does not describe this report period.",
     "knownUnknownExposurePct": 0
