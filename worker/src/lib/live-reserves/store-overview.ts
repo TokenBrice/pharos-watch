@@ -295,7 +295,7 @@ export async function computeReserveCompositionOverview(
 ): Promise<ReserveCompositionOverview> {
   const configuredCoins = getConfiguredLiveReserveCoins();
   if (configuredCoins.length === 0) {
-    return emptyReserveCompositionOverview();
+    return { ...emptyReserveCompositionOverview(), adapterReliabilityAvailability: { status: "available" } };
   }
 
   const [syncById, compositionById, checkpoint, cohortCompletions, adapterReliability] = await Promise.all([
@@ -303,7 +303,10 @@ export async function computeReserveCompositionOverview(
     loadReserveCompositionRowMap(db),
     loadLatestLiveReserveResumePointer(db),
     loadReserveCohortCompletions(db, now),
-    loadReserveSyncReliabilityRollup(db, now).catch((error) => {
+    loadReserveSyncReliabilityRollup(db, now).then((rows) => ({
+      rows,
+      availability: { status: "available" as const },
+    })).catch((error) => {
       logWorkerEvent({
         scope: "status",
         level: "warn",
@@ -313,7 +316,10 @@ export async function computeReserveCompositionOverview(
         message: "Reserve adapter reliability rollup unavailable",
         error,
       });
-      return [];
+      return {
+        rows: [],
+        availability: { status: "unavailable" as const, reason: "reserve_adapter_reliability_query_failed" as const },
+      };
     }),
   ]);
 
@@ -396,7 +402,8 @@ export async function computeReserveCompositionOverview(
     ),
     lastSuccessAt: counts.lastSuccessAt,
     oldestFreshAgeSec: counts.oldestFreshAgeSec,
-    adapterReliability,
+    adapterReliability: adapterReliability.rows,
+    adapterReliabilityAvailability: adapterReliability.availability,
     healthConfiguredCoins: configuredCoins.length - acknowledgedFeedIds.length,
     healthFreshCoins: healthCounts.freshCoins,
     healthAuthoritativeFreshCoins: healthCounts.independentFreshEligible

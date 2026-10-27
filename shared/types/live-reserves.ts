@@ -195,6 +195,14 @@ export const ReserveCompositionOverviewSchema = /* @__PURE__ */ (() => z.object(
   lastSuccessAt: z.number().nullable(),
   oldestFreshAgeSec: z.number().nullable(),
   adapterReliability: z.array(ReserveSyncAdapterReliabilitySchema),
+  /**
+   * Whether `adapterReliability` was actually read. Absent on legacy payloads
+   * (unknown); unavailable rows are not observations of zero attempts.
+   */
+  adapterReliabilityAvailability: z.discriminatedUnion("status", [
+    z.object({ status: z.literal("available") }),
+    z.object({ status: z.literal("unavailable"), reason: z.literal("reserve_adapter_reliability_query_failed") }),
+  ]).optional(),
   healthConfiguredCoins: z.number().optional(),
   healthFreshCoins: z.number().optional(),
   healthAuthoritativeFreshCoins: z.number().optional(),

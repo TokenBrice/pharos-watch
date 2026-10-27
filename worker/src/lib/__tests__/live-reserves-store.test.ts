@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { computeLiveReserveConfigFingerprint, getLiveReserveAdapterDefinition, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
 import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { STATUS_RESERVE_COHORT_SLO } from "@shared/lib/status-thresholds";
@@ -19,6 +19,11 @@ import { getMaxSyncAge } from "../live-reserves/store-read";
 import { resolveReserveResult } from "../live-reserves/store-views";
 import { evaluateLiveReserveAdmission } from "../live-reserves/store-snapshot-state";
 import { getConfiguredLiveReserveCoins } from "../live-reserves/store-shared";
+
+vi.mock("../live-reserves/store-shared", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../live-reserves/store-shared")>();
+  return { ...actual, getConfiguredLiveReserveCoins: vi.fn(actual.getConfiguredLiveReserveCoins) };
+});
 import { parseSnapshotMetadata } from "../live-reserves/store-row-decoding";
 import { decodeLiveReserveRedemptionTelemetry } from "@shared/types/live-reserves";
 
@@ -449,6 +454,51 @@ describe("live-reserves-store", () => {
         sourceModel: testCase.sourceModel,
         freshnessMode: testCase.freshnessMode,
       },
+    });
+  });
+
+  describe("adapter reliability availability", () => {
+    const policy = () => resolveScheduledSlotPolicy("fourHourlyReserveSync");
+    const reliabilityRow = {
+      adapter_key: "infinifi", attempts: 4, ok_count: 3, degraded_count: 1,
+      degraded_by_design_count: 0, error_count: 0, skipped_count: 0,
+    };
+
+    it("marks a failed rollup unavailable without disturbing readable coverage counts", async () => {
+      const readable = await computeReserveCompositionOverview(mockD1([
+        { match: "reserve_sync_attempt_history", rows: [] },
+      ]), 2_000, policy());
+      const failed = await computeReserveCompositionOverview(mockD1([
+        { match: "reserve_sync_attempt_history", rows: [], throwError: new Error("rollup unavailable") },
+      ]), 2_000, policy());
+      expect(failed.adapterReliability).toEqual([]);
+      expect(failed.adapterReliabilityAvailability).toEqual({
+        status: "unavailable", reason: "reserve_adapter_reliability_query_failed",
+      });
+      expect({ ...failed, adapterReliabilityAvailability: undefined })
+        .toEqual({ ...readable, adapterReliabilityAvailability: undefined });
+    });
+
+    it("distinguishes a successful empty read from populated rows", async () => {
+      const empty = await computeReserveCompositionOverview(mockD1([
+        { match: "reserve_sync_attempt_history", rows: [] },
+      ]), 2_000, policy());
+      expect(empty).toMatchObject({ adapterReliability: [], adapterReliabilityAvailability: { status: "available" } });
+      const populated = await computeReserveCompositionOverview(mockD1([
+        { match: "reserve_sync_attempt_history", rows: [reliabilityRow] },
+      ]), 2_000, policy());
+      expect(populated.adapterReliabilityAvailability).toEqual({ status: "available" });
+      expect(populated.adapterReliability).toEqual([expect.objectContaining({ adapterKey: "infinifi", attempts: 4, ok: 3 })]);
+    });
+
+    it("emits available empty evidence for a zero configured cohort", async () => {
+      vi.mocked(getConfiguredLiveReserveCoins).mockReturnValueOnce([]);
+      const overview = await computeReserveCompositionOverview(mockD1([
+        { match: "reserve_sync_attempt_history", rows: [], throwError: new Error("must not be read") },
+      ]), 2_000, policy());
+      expect(overview).toMatchObject({
+        configuredCoins: 0, adapterReliability: [], adapterReliabilityAvailability: { status: "available" },
+      });
     });
   });
 

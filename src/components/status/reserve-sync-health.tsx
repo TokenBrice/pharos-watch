@@ -180,9 +180,23 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
           ) : null}
         </div>
 
-        {health.adapterReliability.length > 0 ? (
-          <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
-            <div className="text-xs font-medium text-foreground">30-day Adapter Reliability</div>
+        <div className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+          <div className="text-xs font-medium text-foreground">30-day Adapter Reliability</div>
+          {health.adapterReliabilityAvailability?.status === "unavailable" ? (
+            <div className="space-y-1 text-xs">
+              <div className="font-medium text-muted-foreground">Unavailable</div>
+              <p>Adapter reliability history could not be read; attempt counts are unknown.</p>
+              <div className="font-mono text-muted-foreground">{health.adapterReliabilityAvailability.reason}</div>
+            </div>
+          ) : health.adapterReliability.length === 0 ? (
+            <div className="text-xs text-muted-foreground">
+              {health.adapterReliabilityAvailability == null
+                ? "Unknown: this payload does not report whether reliability history was read."
+                : health.configuredCoins === 0
+                  ? "No live reserve adapters are configured."
+                  : "No adapter attempts recorded in the last 30 days."}
+            </div>
+          ) : (
             <TableFrame
               tableId="reserve-adapter-reliability"
               chrome="content"
@@ -220,8 +234,8 @@ export function ReserveSyncHealthCard({ health, nowSeconds }: ReserveSyncHealthC
                 ))}
               </TableBody>
             </TableFrame>
-          </div>
-        ) : null}
+          )}
+        </div>
       </CardContent>
     </Card>
   );

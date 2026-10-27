@@ -181,6 +181,20 @@ describe("writeStatusRawSnapshot", () => {
     await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({ kind: "fresh", raw: { budgetOnlySurfaces: [] } });
   });
 
+  it.each([
+    { status: "available" },
+    { status: "unavailable", reason: "reserve_adapter_reliability_query_failed" },
+  ] as const)("round-trips reserve adapter reliability availability %o", async (availability) => {
+    const { db } = fixtures.open();
+    const raw = minimalRawStatus();
+    Object.assign(raw.reserveComposition, { adapterReliabilityAvailability: availability });
+    await expect(writeStatusRawSnapshot(db, NOW, raw as unknown as Parameters<typeof writeStatusRawSnapshot>[2]))
+      .resolves.toBe(true);
+    await expect(loadStatusRawSnapshot(db, NOW)).resolves.toMatchObject({
+      kind: "fresh", raw: { reserveComposition: { adapterReliability: [], adapterReliabilityAvailability: availability } },
+    });
+  });
+
   it("rejects cached reserve composition without the health cohort needed for current gates", async () => {
     const db = mockD1([{
       match: "SELECT value, updated_at FROM cache",
