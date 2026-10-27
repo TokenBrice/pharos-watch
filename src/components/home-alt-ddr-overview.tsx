@@ -12,6 +12,7 @@ import { buildStablecoinUrl } from "@shared/lib/urls";
 import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { cn } from "@/lib/utils";
 import { formatPercentFromRatio } from "@shared/lib/format";
+import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
 import {
   type DdrResolutionTier,
   type DdrPublicPredictionState,
@@ -322,13 +323,13 @@ function HorizonBars({ rates }: { rates: { horizon: string; hitRate: number }[] 
 
 function TrackRecordZone({
   accuracyValue,
-  scored,
+  accuracyLines,
   lockedCount,
   durationScored,
   rates,
 }: {
   accuracyValue: string;
-  scored: number;
+  accuracyLines: ReturnType<typeof formatPromotedAccuracyLines>;
   lockedCount: number;
   durationScored: number;
   rates: { horizon: string; hitRate: number }[];
@@ -345,15 +346,11 @@ function TrackRecordZone({
             {accuracyValue}
           </span>
         </div>
-        <p className="mt-1.5 text-xs text-muted-foreground">
-          recovery-call accuracy
-          {scored > 0 ? (
-            <>
-              {" · "}
-              <span className="font-mono tabular-nums text-foreground">{scored}</span> scored
-            </>
-          ) : null}
-        </p>
+        {/* Frozen historical performance, not current-model validation: the
+            same-cohort always-recover baseline and graded versions stay beside it. */}
+        <p className="mt-1.5 text-xs text-muted-foreground">{accuracyLines.calls}</p>
+        <p className="text-xs text-muted-foreground">{accuracyLines.baseline}</p>
+        {accuracyLines.scope ? <p className="text-xs text-muted-foreground">{accuracyLines.scope}</p> : null}
       </div>
 
       {rates.length > 0 ? <HorizonBars rates={rates} /> : null}
@@ -452,9 +449,9 @@ export function HomeAltDdrOverview(): React.JSX.Element | null {
             <div className={cn("flex flex-col bg-muted/20 p-4 sm:p-5", trackSpan)}>
               <SourceStatus label="Reviewer" computedAt={resolverReviewData?._meta.computedAt}
                 usable={ddrrUsable} loading={!resolverReviewData && !resolverReviewError} />
-              {ddrrUsable && headline ? <TrackRecordZone
+              {ddrrUsable && headline && resolverReviewData ? <TrackRecordZone
                 accuracyValue={accuracyValue}
-                scored={scored}
+                accuracyLines={formatPromotedAccuracyLines(describePromotedAccuracy(resolverReviewData.summary))}
                 lockedCount={headline.lockedPredictionCount}
                 durationScored={headline.durationScoredCount}
                 rates={rates}

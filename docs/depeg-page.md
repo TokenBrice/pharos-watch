@@ -76,7 +76,8 @@ KPI" shape required by `design-language.md#feature-page-heroes`.
   move beside it as the one semantic-coloured element and a `Peg catalog` `UniverseChip` under it (catalog size = rows in the live peg summary, omitted while unread); a four-cell figure grid (pending
   confirmations, DEWS ALERT-or-worse, holding peg, median deviation); **Recovery outlook · DDR** — the
   whole-book verdict split and calibration lineage; **Forecast track record · DDRR** — headline
-  recovery-call accuracy; then the DEWS alert queue (`DEWSAlertFeed embedded`) as the rail's detail
+  recovery-call accuracy with its same-denominator always-recover baseline and the frozen
+  forecast majors the graded cohort came from (see [Forecast Grading](#forecast-grading)); then the DEWS alert queue (`DEWSAlertFeed embedded`) as the rail's detail
   layer. Supporting figures stay neutral.
 - **Right field:** `DEWSRadarPanel` (`src/components/dews-summary.tsx`) fills the full column height
   beside the rail. Radial ring encodes DEWS band, mark size encodes market cap, mark colour encodes
@@ -227,6 +228,15 @@ log-ratio multiplier with the within-2× share, open-past-band count, horizon Br
 per-major Wilson intervals) render only when the snapshot carries them; older snapshots show
 them unavailable, never zero. `terminal_at_lock` rows are labelled "Terminal at lock" and are
 curation debt, not scored calls.
+
+The hero and homepage DDR card promote that headline through `describePromotedAccuracy()`
+(`src/lib/ddr-promoted-accuracy.ts`): `Recovery calls correct: c/s (p%)`, the always-recover
+baseline `headline.baselineRecoverableCorrectCount` over the same `s` (missing reads `—`,
+observed zero stays zero, a zero denominator has no percentage), and `Graded calls from
+v2/v3/v4 · N from current v5`, folded from `byPredictionPolicy` segments. If the versioned
+segments do not sum to the headline's scored count (another policy, unversioned rows) the
+scope reads `Graded calls by version: —`; when every graded call is current-major the
+qualifier is omitted. This is frozen historical performance, not current-model validation.
 
 Once at least five recovery calls are scored, the ledger leads with the aggregate accuracy percentage (the homepage DDR card's track-record figure) over the `correct / scored` fraction; a thinner sample shows only the fraction.
 

@@ -152,3 +152,38 @@ describe("DepegOutlookHero recovery outlook caption", () => {
     expect(markup).not.toContain("new worst");
   });
 });
+
+describe("DepegOutlookHero forecast track record", () => {
+  const review = (baseline: number | undefined, segments: Array<[string, number]>) => ({
+    headlineScope: "current_policy",
+    headlineLabel: "Current DDRv2 public prediction policy",
+    headline: {
+      recoveryLikelihoodCorrectCount: 61, recoveryLikelihoodScoredCount: 74, recoveryLikelihoodAccuracyPct: 61 / 74,
+      baselineRecoverableCorrectCount: baseline, accuracyDenominatorLabel: "scored",
+    },
+    byPredictionPolicy: segments.map(([version, scored]) => ({
+      segmentKind: "prediction_policy", predictionMethodologyVersion: version, predictionPolicyVersion: "sticky-24h-v1",
+      metrics: { recoveryLikelihoodScoredCount: scored },
+    })),
+  }) as unknown as Parameters<typeof DepegOutlookHero>[0]["review"];
+
+  it("shows the captured fraction beside its always-recover baseline and frozen-version cohort", () => {
+    const markup = renderToStaticMarkup(
+      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()}
+        review={review(70, [["2.0", 6], ["3.04", 49], ["4.6", 19]])} />,
+    );
+    expect(markup).toContain("Recovery calls correct: 61/74 (82.4%)");
+    expect(markup).toContain("Always-recover baseline: 70/74 (94.6%)");
+    expect(markup).toContain("Graded calls from v2/v3/v4 · 0 from current v5");
+    expect(markup).toContain("see the grading");
+  });
+
+  it("keeps an unpublished baseline and unreconciled scope unavailable", () => {
+    const markup = renderToStaticMarkup(
+      <DepegOutlookHero stats={observedZero} pendingCount={0} dewsAlertCount={0} activeDepegIds={new Set()}
+        review={review(undefined, [["4.6", 10]])} />,
+    );
+    expect(markup).toContain("Always-recover baseline: —");
+    expect(markup).toContain("Graded calls by version: —");
+  });
+});

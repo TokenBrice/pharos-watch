@@ -51,8 +51,15 @@ function setSources({ rows = [forecast], stale = false, resolverError = null, re
     resolverReview: {
       data: unavailable ? undefined : {
         _meta: { ...meta, computedAt: COMPUTED_AT - 60 },
-        summary: { headline: { recoveryLikelihoodScoredCount: 10, recoveryLikelihoodAccuracyPct: 0.8,
-          lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] } },
+        summary: { headlineScope: "current_policy", headline: { recoveryLikelihoodScoredCount: 10,
+          recoveryLikelihoodCorrectCount: 8, recoveryLikelihoodAccuracyPct: 0.8, baselineRecoverableCorrectCount: 9,
+          lockedPredictionCount: 12, durationScoredCount: 5, horizonHitRates: [] },
+        byPredictionPolicy: [
+          { segmentKind: "prediction_policy", predictionMethodologyVersion: "3.04", predictionPolicyVersion: "sticky-24h-v1",
+            metrics: { recoveryLikelihoodScoredCount: 4 } },
+          { segmentKind: "prediction_policy", predictionMethodologyVersion: "4.6", predictionPolicyVersion: "sticky-24h-v1",
+            metrics: { recoveryLikelihoodScoredCount: 6 } },
+        ] },
       },
       error: reviewerError, dataUpdatedAt: COMPUTED_AT * 1000, refetch: refetchReviewer,
     },
@@ -140,6 +147,16 @@ describe("HomeAltDdrOverview", () => {
     render(<HomeAltDdrOverview />);
     const symbols = screen.getAllByText(/^(LOCKDEEP|UNKNOWN|LIVEDEEP)$/).map((node) => node.textContent);
     expect(symbols).toEqual(["LIVEDEEP", "LOCKDEEP", "UNKNOWN"]);
+  });
+
+  it("qualifies the promoted accuracy with its same-cohort baseline and frozen versions", () => {
+    setSources();
+    render(<HomeAltDdrOverview />);
+    expect(screen.getByText("80.0%")).toBeTruthy();
+    expect(screen.getByText("Recovery calls correct: 8/10 (80.0%)")).toBeTruthy();
+    expect(screen.getByText("Always-recover baseline: 9/10 (90.0%)")).toBeTruthy();
+    expect(screen.getByText("Graded calls from v3/v4 · 0 from current v5")).toBeTruthy();
+    expect(screen.queryByText(/recovery-call accuracy/)).toBeNull();
   });
 
   // Homepage rule (docs/homepage.md): source health never renders as a warning.

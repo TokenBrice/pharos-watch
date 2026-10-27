@@ -9,6 +9,7 @@ import { UniverseChip } from "@/components/universe-chip";
 import { RailHeroFigureTransition } from "@/components/view-transitions";
 import type { ResolverBookSummary } from "@/components/depeg-resolver-book-summary";
 import { cn } from "@/lib/utils";
+import { describePromotedAccuracy, formatPromotedAccuracyLines } from "@/lib/ddr-promoted-accuracy";
 import { deviationBorderClass, deviationColorClass } from "@/lib/severity-colors";
 import { formatPercent } from "@shared/lib/format";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
@@ -88,6 +89,7 @@ export function DepegOutlookHero({
   const tierGroups = book?.tierGroups ?? [];
   const headline = review?.headline;
   const accuracyPct = headline?.recoveryLikelihoodAccuracyPct ?? null;
+  const accuracyLines = review ? formatPromotedAccuracyLines(describePromotedAccuracy(review)) : null;
 
   return (
     <section aria-label="Live depeg outlook" className="pharos-card-shell overflow-hidden">
@@ -184,17 +186,18 @@ export function DepegOutlookHero({
             </RailGroup>
           ) : null}
 
-          {headline && headline.recoveryLikelihoodScoredCount > 0 ? (
+          {headline && accuracyLines && headline.recoveryLikelihoodScoredCount > 0 ? (
             <RailGroup label="Forecast track record · DDRR">
               <p className="flex flex-wrap items-baseline gap-x-2">
                 <span className="pharos-numeric text-lg font-semibold text-foreground">
                   {accuracyPct != null ? formatPercent(accuracyPct * 100, 1) : "—"}
                 </span>
-                <span className="text-xs text-muted-foreground">
-                  recovery calls correct ({headline.recoveryLikelihoodCorrectCount}/
-                  {headline.recoveryLikelihoodScoredCount} graded)
-                </span>
+                <span className="text-xs text-muted-foreground">{accuracyLines.calls}</span>
               </p>
+              {/* Frozen historical performance, not current-model validation:
+                  name the stronger same-cohort baseline and the versions graded. */}
+              <p className="text-xs text-muted-foreground">{accuracyLines.baseline}</p>
+              {accuracyLines.scope ? <p className="text-xs text-muted-foreground">{accuracyLines.scope}</p> : null}
               <p className="pharos-meta mt-1">
                 {review?.headlineLabel ?? headline.accuracyDenominatorLabel} ·{" "}
                 <a href="#forecast-grading" className="pharos-prose-link">
