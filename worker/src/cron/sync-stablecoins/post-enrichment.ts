@@ -25,7 +25,11 @@ import {
 import type { PriceCacheEntry, PriceCacheWriteEntry } from "../../lib/db-cache";
 import { detectDepegEvents } from "../detect-depegs";
 import { confirmPendingDepegs } from "../confirm-pending-depegs";
-import type { DepegHoldReason } from "../depeg-detection/types";
+import type {
+  DepegHoldReason,
+  DepegObservationCensus,
+  DepegObservationUnavailableReason,
+} from "../depeg-detection/types";
 import {
   hasMissingPrice,
   type PrimaryPriceResult,
@@ -112,8 +116,12 @@ export interface DepegPipelineResult {
   depegErrorCount: number;
   depegErrors: string[];
   depegHeldReason?: DepegHoldReason;
+  /** Null when detection stopped before a census existed; the reason names why. */
+  depegObservation: DepegObservationCensus | null;
+  depegObservationUnavailableReason?: DepegObservationUnavailableReason;
   providerDiagnostics: PricingProviderAttemptDiagnostic[];
 }
+
 
 // ---------------------------------------------------------------------------
 // Stage 1: Post-enrichment price validation + price cache
@@ -501,18 +509,25 @@ export async function runDepegPipeline(
   let depegErrorCount = 0;
   const depegErrors: string[] = [];
   let depegHeldReason: DepegHoldReason | undefined;
+  let depegObservation: DepegObservationCensus | null = null;
+  let depegObservationUnavailableReason: DepegObservationUnavailableReason | undefined;
   const providerDiagnostics: PricingProviderAttemptDiagnostic[] = [];
 
   try {
     const depegAbort = returnIfAborted(signal, `${abortStagePrefix}depeg-detection`);
     if (depegAbort) return depegAbort;
     const detection = await detectDepegEvents(db, assets, fxFallbackRates, signal, coingeckoApiKey, nativePegSession);
-    if (detection.status === "held") depegHeldReason = detection.reason;
+    if (detection.status === "held") {
+      depegHeldReason = detection.reason;
+      if (detection.census == null) depegObservationUnavailableReason = detection.reason;
+    }
+    depegObservation = detection.census;
   } catch (err) {
     if (signal?.aborted) return abortResult(signal, `${abortStagePrefix}depeg-detection`);
     logWorkerEventArgs("handler", "error", `[sync-stablecoins] Depeg detection failed${logContext}:`, err);
     depegErrorCount++;
     depegErrors.push(`detection: ${String(err).slice(0, 200)}`);
+    depegObservationUnavailableReason = "depeg-detection-error";
   }
 
   try {
@@ -538,7 +553,14 @@ export async function runDepegPipeline(
     depegErrors.push(`confirmation: ${String(err).slice(0, 200)}`);
   }
 
-  return { depegErrorCount, depegErrors, providerDiagnostics, ...(depegHeldReason ? { depegHeldReason } : {}) };
+  return {
+    depegErrorCount,
+    depegErrors,
+    providerDiagnostics,
+    ...(depegHeldReason ? { depegHeldReason } : {}),
+    depegObservation,
+    ...(depegObservationUnavailableReason ? { depegObservationUnavailableReason } : {}),
+  };
 }
 
 /** Type guard: true when the pipeline returned the abort sentinel CronResult. */

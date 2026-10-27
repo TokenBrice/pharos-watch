@@ -52,8 +52,12 @@ describe("publication path authority", () => {
     }))];
     vi.spyOn(phase, "fillMissingSupplyHistory").mockResolvedValue(0);
     vi.spyOn(notices, "queueTrackedAdditionsNotice").mockResolvedValue(undefined);
+    const census = {
+      scope: "psi-non-nav-before-supply-floor" as const, evaluatedAt: 1_800_000_000, eligibleCount: 2,
+      observedCount: 1, unavailableCount: 1, belowFloorCount: 0, reasonCounts: { "asset-absent": 1 },
+    };
     const depeg = vi.spyOn(post, "runDepegPipeline").mockResolvedValue({
-      depegErrorCount: 0, depegErrors: [], providerDiagnostics: [],
+      depegErrorCount: 0, depegErrors: [], providerDiagnostics: [], depegObservation: census,
     });
     const record = vi.spyOn(circuit, "recordOutcome");
     const stages: string[] = [];
@@ -72,6 +76,7 @@ describe("publication path authority", () => {
     expect(JSON.parse(result.metadata!)).toMatchObject({
       rowsRead: assets.length, rowsWritten: assets.length, rowsDropped: 0, cacheWriteSucceeded: true, depegPipelineSucceeded: true,
       upstreamFetchOk: path === "main", fallbackMode: path === "main" ? null : "coingecko-supply-fallback",
+      quality: { depegObservation: { ...census, syncStartSec: 1_800_000_000 } },
     });
     expect(JSON.parse((await getCache(db, "stablecoins"))!.value).peggedAssets[0]).toMatchObject({
       id: "fixture-usd", circulating: assets[0].circulating,
@@ -122,7 +127,7 @@ async function publishSupplyPacket(asset: PeggedAsset, path: "main" | "fallback"
   vi.spyOn(runtime, "checkStablecoinsPriceStaleness").mockResolvedValue({
     state: "ok", stalenessWarning: false, stalenessSummary: { compared: 1, identical: 0, identicalRatio: 0 }, stalenessCheckFailed: false,
   });
-  vi.spyOn(post, "runDepegPipeline").mockResolvedValue({ depegErrorCount: 0, depegErrors: [], providerDiagnostics: [] });
+  vi.spyOn(post, "runDepegPipeline").mockResolvedValue({ depegErrorCount: 0, depegErrors: [], providerDiagnostics: [], depegObservation: null });
   vi.spyOn(notices, "queueTrackedAdditionsNotice").mockResolvedValue(undefined);
   const circuitRecord = {
     state: "closed", consecutiveFailures: 0, lastFailureAt: null, lastSuccessAt: now, openedAt: null,
@@ -252,7 +257,7 @@ describe("stablecoins publication cohort", () => {
     vi.spyOn(runtime, "checkStablecoinsPriceStaleness").mockResolvedValue({
       state: "ok", stalenessWarning: false, stalenessSummary: { compared: 1, identical: 0, identicalRatio: 0 }, stalenessCheckFailed: false,
     });
-    vi.spyOn(post, "runDepegPipeline").mockResolvedValue({ depegErrorCount: 0, depegErrors: [], providerDiagnostics: [] });
+    vi.spyOn(post, "runDepegPipeline").mockResolvedValue({ depegErrorCount: 0, depegErrors: [], providerDiagnostics: [], depegObservation: null });
     vi.spyOn(notices, "queueTrackedAdditionsNotice").mockResolvedValue(undefined);
     const circuitRecord = {
       state: "closed", consecutiveFailures: 0, lastFailureAt: null, lastSuccessAt: now, openedAt: null,

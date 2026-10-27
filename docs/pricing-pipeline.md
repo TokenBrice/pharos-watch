@@ -227,7 +227,7 @@ Downstream consumers use these tags for display, depeg confirmation, and risk ha
 
 After consensus, `applyListAggregatorDowngrade()` expands composite source labels and downgrades 2-source clusters made entirely of list-style aggregators such as CoinGecko, DefiLlama-list, DefiLlama-contract, and CoinMarketCap from `high` to `single-source`, because those feeds can re-export overlapping upstream list data and are not treated as independent corroboration by themselves.
 
-`sync-stablecoins` metadata records circulating-value confidence weights and valid reviewed missing-price counts for status display. These diagnostics do not alter price selection, publication or confidence assignment.
+`sync-stablecoins` metadata records circulating-value confidence weights and valid reviewed missing-price counts for status display, plus the depeg observation census as `quality.depegObservation`. Unavailable census inputs add the `depeg-observation-incomplete` quality reason without changing execution status. If detection stops before a census exists, the field is null and `quality.depegObservationUnavailableReason` says why. These diagnostics do not alter price selection, publication or confidence assignment.
 
 ---
 

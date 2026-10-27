@@ -291,6 +291,55 @@ describe("detectDepegEvents", () => {
     expect(sqlite.prepare("SELECT * FROM depeg_events").all()).toEqual([]);
   });
 
+  it("censuses every non-NAV eligible asset with the first failing gate and leaves event writes unchanged", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const now = Math.floor(Date.now() / 1000);
+    seedOpenEvent(sqlite, { id: 7, stablecoin_id: "eurc-circle", symbol: "EUROC", peg_type: "peggedEUR", peg_reference: 1.08, source: "backfill" });
+    const lifecycle = "SELECT id, ended_at, peak_deviation_bps, peak_price, recovery_price, close_reason FROM depeg_events ORDER BY id";
+    const before = sqlite.prepare(lifecycle).all();
+    const result = await detectDepegEvents(db, [
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: 1.001 }),
+      makeAsset({ id: "usdt-tether", symbol: "USDT", price: null }),
+      makeAsset({ id: "usdc-circle", symbol: "USDC", price: null }),
+      makeAsset({ id: "eurc-circle", symbol: "EUROC", pegType: "peggedEUR", price: 1.08, circulating: {} }),
+      makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.1876, circulating: { ethereum: 0 } }),
+      makeAsset({ id: "nav-token-test", symbol: "NAVT", price: 0.5 }),
+      makeAsset({ id: "untracked-coin", symbol: "UNT", price: 0.5 }),
+    ]);
+    expect(result).toEqual({
+      status: "completed",
+      census: {
+        scope: "psi-non-nav-before-supply-floor",
+        evaluatedAt: now,
+        eligibleCount: 5,
+        observedCount: 1,
+        unavailableCount: 3,
+        belowFloorCount: 1,
+        reasonCounts: { "primary-unusable": 1, "supply-unavailable": 1, "asset-absent": 1 },
+      },
+    });
+    // Unavailable supply keeps the open event's lifecycle untouched; nothing new opens.
+    expect(sqlite.prepare(lifecycle).all()).toEqual(before);
+    expect(sqlite.prepare("SELECT * FROM depeg_pending").all()).toEqual([]);
+  });
+
+  it("names reference and native-quote gaps and returns an all-absent census for empty input", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    seedOpenEvent(sqlite, { id: 8, stablecoin_id: "brz-transfero", symbol: "BRZ", peg_type: "peggedREAL", peg_reference: 1, start_price: 0.97, peak_price: 0.97, peak_deviation_bps: -300 });
+    const gaps = await detectDepegEvents(db, [
+      makeAsset({ id: "brz-transfero", symbol: "BRZ", pegType: "peggedREAL", price: 0.1876 }),
+      makeAsset({ id: "a7a5-old-vector", symbol: "A7A5", pegType: "peggedRUB", price: 0.02 }),
+    ], { peggedREAL: 0.18765951 });
+    expect(gaps.status === "completed" ? gaps.census.reasonCounts : null).toEqual({
+      "native-quote-unavailable": 1, "non-authoritative-reference": 1, "asset-absent": 3,
+    });
+    const empty = await detectDepegEvents(sqliteFixtures.open().db, []);
+    expect(empty).toMatchObject({
+      status: "completed",
+      census: { eligibleCount: 5, observedCount: 0, belowFloorCount: 0, unavailableCount: 5, reasonCounts: { "asset-absent": 5 } },
+    });
+  });
+
   it.each([
     ["usdt-tether", "USDT", "peggedUSD", 1, 99, false],
     ["usdt-tether", "USDT", "peggedUSD", 1, 100, true],

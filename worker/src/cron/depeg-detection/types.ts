@@ -10,12 +10,48 @@ import type {
 } from "../../lib/depeg-helpers";
 import type { NativePegQuote } from "../../lib/native-peg-quotes";
 import type { PendingDepegUpsertParams } from "../../lib/depeg-pending";
+import type { AuthoritativePegSignalRejectionReason } from "../authoritative-peg-signal";
 
 export type DepegStageResult =
   | { status: "completed" }
   | { status: "held"; reason: "depeg-open-event-limit-reached" };
 
 export type DepegHoldReason = Extract<DepegStageResult, { status: "held" }>["reason"];
+
+/** First failing gate that kept an eligible asset from being observed this run. */
+export type DepegObservationGapReason =
+  | "asset-absent"
+  | "primary-unusable"
+  | "supply-unavailable"
+  | AuthoritativePegSignalRejectionReason
+  | "native-quote-unavailable";
+
+export type DepegObservationOutcome =
+  | { kind: "observed" }
+  | { kind: "below-floor" }
+  | { kind: "unavailable"; reason: DepegObservationGapReason };
+
+/**
+ * Coverage receipt over the non-NAV PSI-eligible universe (historical members
+ * included), counted before the live-event supply floor. Diagnostic only.
+ */
+export interface DepegObservationCensus {
+  scope: "psi-non-nav-before-supply-floor";
+  evaluatedAt: number;
+  eligibleCount: number;
+  observedCount: number;
+  unavailableCount: number;
+  belowFloorCount: number;
+  reasonCounts: Partial<Record<DepegObservationGapReason, number>>;
+}
+
+/** Why a sync run has no census: detection held or failed before building one. */
+export type DepegObservationUnavailableReason = DepegHoldReason | "depeg-detection-error";
+
+/** Detection-only result: a completed run always carries its census. */
+export type DepegDetectionResult =
+  | { status: "completed"; census: DepegObservationCensus }
+  | { status: "held"; reason: DepegHoldReason; census: DepegObservationCensus | null };
 
 export interface DexPoolChallenger {
   price: number;
@@ -85,6 +121,8 @@ export interface DepegAssetDecision {
   trackedCoinId?: string;
   seenEventIds: number[];
   priceCoverage?: DepegPriceCoverage;
+  /** Absent for untracked and NAV rows, which are outside the census. */
+  observation?: DepegObservationOutcome;
   commands: DepegPersistenceCommand[];
   diagnostics: DepegDiagnostic[];
 }
