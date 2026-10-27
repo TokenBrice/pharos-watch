@@ -39,6 +39,7 @@ import { gradeRange } from "@shared/lib/report-card-core";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { PegCurrency, YieldBenchmarkKey, YieldType } from "@shared/types";
 import type { YieldWorkbenchRanking } from "@/lib/yield-workbench-row";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 function getYieldRankingPeg(rankingId: string): PegCurrency | null {
   return TRACKED_META_BY_ID.get(rankingId)?.flags.pegCurrency ?? null;
@@ -67,7 +68,7 @@ function buildYieldRowFacet(row: YieldWorkbenchRanking, watchlistIds: ReadonlySe
   const sourceDepthLens = getSourceDepthLens(row);
   const inWatchlist = watchlistIds?.has(row.id) ?? false;
   const sourceChanged = row.provenance?.sourceSwitch === true;
-  const hasWarning = row.warningSignals.length > 0;
+  const hasWarning = selectInvestmentWarningSignals(row.warningSignals).length > 0;
   const observations = row.sourceRisk?.observationCount30d;
   return {
     row,

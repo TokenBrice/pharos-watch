@@ -36,6 +36,7 @@ interface TimelineFeedProps {
   isFetchingNextPage: boolean;
   nextCursor: string | null;
   total: number | null;
+  permalinkSuppressed?: boolean;
   meta: ApiMeta | null;
   dataUpdatedAt: number;
   permalinkId: string;
@@ -68,6 +69,7 @@ export function TimelineFeed({
   isFetchingNextPage,
   nextCursor,
   total,
+  permalinkSuppressed = false,
   meta,
   dataUpdatedAt,
   permalinkId,
@@ -99,7 +101,7 @@ export function TimelineFeed({
         ]}
       />
 
-      {permalinkId && !permalinkBufferIsLoading && !bufferEvent && !rawEvents.some((e) => e.id === permalinkId) ? (
+      {permalinkId && !permalinkBufferIsLoading && !bufferEvent && !permalinkSuppressed && !rawEvents.some((e) => e.id === permalinkId) ? (
         <div
           title={permalinkId}
           className="border-y border-amber-500/30 px-3 py-2 font-mono text-xs text-amber-700 dark:text-amber-400"
@@ -147,7 +149,7 @@ export function TimelineFeed({
           <div>
             <EventSkeleton />
           </div>
-        ) : visibleEvents.length === 0 ? (
+        ) : visibleEvents.length === 0 && !(hasNextPage && rawEvents.length > 0) ? (
           <div>
             <EmptyState
               onClearAll={emptyStateFallback.apply}
@@ -178,19 +180,19 @@ export function TimelineFeed({
                         <Loader2 className="mr-1.5 h-3 w-3 animate-spin" aria-hidden="true" />
                         Loading…
                       </>
-                    ) : total != null && total > rawEvents.length ? (
-                      `Load more (${(total - rawEvents.length).toLocaleString()} remaining)`
+                    ) : total != null && total > visibleEvents.length ? (
+                      `Load more (${(total - visibleEvents.length).toLocaleString()} remaining)`
                     ) : (
                       "Load more"
                     )}
                   </Button>
                   <div ref={sentinelRef} aria-hidden="true" />
                 </div>
-              ) : nextCursor == null && rawEvents.length > 0 ? (
+              ) : nextCursor == null && visibleEvents.length > 0 ? (
                 <p className="pt-2 text-center font-mono text-[11px] uppercase tracking-wider tabular-nums text-muted-foreground">
                   ───── END OF TAPE
                   {" · "}
-                  {(total ?? rawEvents.length).toLocaleString()} EVT
+                  {(total ?? visibleEvents.length).toLocaleString()} EVT
                   {" · WINDOW "}
                   {controller.windowShort}
                   {" · "}

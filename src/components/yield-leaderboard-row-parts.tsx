@@ -42,6 +42,7 @@ import { YIELD_SOURCE_FACT_LABELS, type YieldRankChangeChipDisplay } from "@/lib
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { trackEvent } from "@/lib/analytics";
 import type { YieldResolvedRowBenchmark } from "@/lib/yield-benchmark";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 // These presentational parts are chassis-agnostic: each returns inline content
 // (no `<TableCell>`/`<TableRow>` wrapper) so the yield instrument board can place
@@ -367,7 +368,7 @@ export function YieldSignalsIndicator({
   sourceRiskSummary: string | null;
   variant?: "board" | "mobile";
 }) {
-  const warningSignalCount = row.warningSignals.length;
+  const warningSignalCount = selectInvestmentWarningSignals(row.warningSignals).length;
 
   if (warningSignalCount === 0 && !sourceRiskSummary) {
     return variant === "mobile" ? <span>No warnings</span> : null;
@@ -447,8 +448,8 @@ export function YieldSignalsIndicator({
       </TooltipTrigger>
       <TooltipContent className="max-w-[300px]">
         <ul className="space-y-2 text-xs">
-          {row.warningSignals.map((signal, index) => {
-            const isLast = index === row.warningSignals.length - 1;
+          {selectInvestmentWarningSignals(row.warningSignals).map((signal, index) => {
+            const isLast = index === selectInvestmentWarningSignals(row.warningSignals).length - 1;
             return (
               <li key={signal}>
                 <span className="font-medium text-foreground">{formatYieldWarningSignal(signal)}</span>
@@ -546,7 +547,7 @@ export function YieldExpandedDetails({
                     trackEvent("yield_row_action", {
                       action: "provider_opened",
                       coin_id: row.id,
-                      warning_count: row.warningSignals.length,
+                      warning_count: selectInvestmentWarningSignals(row.warningSignals).length,
                     });
                   }}
                 >
@@ -570,10 +571,10 @@ export function YieldExpandedDetails({
             {!isYieldRankingSummary(row) ? (
               <YieldAccessStructure sourceRisk={row.sourceRisk} compact />
             ) : null}
-            {row.warningSignals.length > 0 ? (
+            {selectInvestmentWarningSignals(row.warningSignals).length > 0 ? (
               <ExpandedMetricSection title="Signals">
                 <ul className="mt-0.5 space-y-0.5 text-xs text-state-warn-solid">
-                  {row.warningSignals.map((signal) => (
+                  {selectInvestmentWarningSignals(row.warningSignals).map((signal) => (
                     <li key={signal}>
                       <span>{formatYieldWarningSignal(signal)}</span>
                       <span className="block text-muted-foreground">{formatYieldWarningSignalDescription(signal)}</span>
@@ -663,7 +664,7 @@ export function deriveYieldRowDisplay(
     grade: row.safetyGrade,
     safetyScore: row.safetyScore,
     pysColor: getPysColor(row.pharosYieldScore),
-    warningCount: row.warningSignals.length,
+    warningCount: selectInvestmentWarningSignals(row.warningSignals).length,
     sourceRiskSummary: formatYieldSourceRiskSummary(row.sourceRisk),
     depthDisplay: getYieldSourceDepthDisplay({
       depthLens: row.sourceDepthLens,

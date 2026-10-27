@@ -14,6 +14,7 @@ import { formatDigestDateLabel } from "@/lib/digest";
 import { formatV9ReasonCodeLabel } from "@/lib/safety-score-data-coverage";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
 /** Stored pillar scores are unrounded floats (53.239999999999995); readers get one decimal at most. */
@@ -283,6 +284,11 @@ function DigestSnapshotContent({ date }: { date: string }) {
   const prev = prevInputData ?? undefined;
   const coverage = inputData.supplyCoverage;
   const totalMcapUsd = coverage?.observedCount === 0 ? null : inputData.totalMcapUsd ?? null;
+  // Archived snapshots may still list operational advisories; keep investment warnings only.
+  const investmentYieldAnomalies = (inputData.yieldAnomalies ?? []).flatMap((anomaly) => {
+    const warnings = selectInvestmentWarningSignals(anomaly.warnings);
+    return warnings.length === 0 ? [] : [{ ...anomaly, warnings }];
+  });
   const mcap7dCoverage = inputData.mcap7dDeltaCoverage;
   const mcap7dDelta = mcap7dCoverage && mcap7dCoverage.coveredCoins > 0 ? inputData.mcap7dDelta ?? null : null;
   const prevTotalMcapUsd = prev?.totalMcapUsd ?? null;
@@ -548,9 +554,9 @@ function DigestSnapshotContent({ date }: { date: string }) {
         )}
 
         {/* 7. Yield Anomalies */}
-        {inputData.yieldAnomalies && inputData.yieldAnomalies.length > 0 && (
+        {investmentYieldAnomalies.length > 0 && (
           <SnapshotCard title="Yield Anomalies" icon={<TrendingUp className="h-4 w-4" aria-hidden="true" />}>
-            {inputData.yieldAnomalies.map((y, index) => (
+            {investmentYieldAnomalies.map((y, index) => (
               <div key={`${y.symbol}-${index}`} className="flex items-baseline justify-between gap-2 text-sm">
                 <span className="font-mono font-medium">{y.symbol}</span>
                 <span className="text-muted-foreground">

@@ -422,6 +422,32 @@ describe("TimelineClient", () => {
     expect(screen.getByText(/Load more \(1,245 remaining\)/)).toBeTruthy();
   });
 
+  describe("operational yield advisories", () => {
+    const warning = (id: string, newSignals: string[]) => makeTapeEvent({
+      id, type: "yield.warning_emitted", coinId: "usde-ethena", severity: "warning",
+      title: `USDe yield warning: ${newSignals.join(", ")}`,
+      summary: `New yield warning signal (${newSignals.join(", ")}) detected on selected source.`,
+      payload: { newSignals },
+    });
+
+    it("hides them, excludes them from visible counts and keeps Load More on a filtered-empty page", () => {
+      const events = [warning("w1", ["aging"]), warning("w2", ["data-stale"])];
+      mockEvents(events, { total: 40, hasNextPage: true, data: { events, nextCursor: "cursor-2" } });
+      render(<TimelineClient />);
+      expect(screen.queryByText(/Aging observation|Data stale/)).toBeNull();
+      expect(screen.getByRole("button", { name: /Load more/ })).toBeTruthy();
+      // Raw total counts suppressed rows, so no visible total is claimed mid-traversal.
+      expect(screen.queryByText(/of 40 events/)).toBeNull();
+      expect(screen.queryByText(/remaining/)).toBeNull();
+    });
+
+    it("shows the visible total once raw traversal is complete", () => {
+      mockEvents([warning("w1", ["aging"]), makeTapeEvent({ id: "d1", title: "Depeg one" })], { total: 2 });
+      render(<TimelineClient />);
+      expect(screen.getByText(/^1 events?$/)).toBeTruthy();
+    });
+  });
+
   it("keeps rejected malformed rows out of the reader-facing total", () => {
     mockEvents(
       [

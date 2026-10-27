@@ -7,7 +7,7 @@ import { useLatestEvents } from "@/hooks/use-events";
 import { getLogoSrc, logosById } from "@/lib/logos";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { collapseForHomepageStrip, eventClassSlug, type CollapsedTapeEntry } from "@/lib/tape-collapse";
-import { formatTapeEventTitle } from "@/lib/tape-derive";
+import { formatTapeEventTitle, projectTapeEventsForReader } from "@/lib/tape-derive";
 import { formatRelativeTimeMs } from "@shared/lib/relative-time";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import {
@@ -186,7 +186,7 @@ export function HomepageTape({ placement = "inline" }: { placement?: HomepageTap
   const logos = logosById;
   const events = data?.events ?? EMPTY_EVENTS;
   const collapsed = useMemo(
-    () => collapseForHomepageStrip(events.filter((event) => eventClassSlug(event.type) !== "score")),
+    () => collapseForHomepageStrip(projectTapeEventsForReader(events).filter((event) => eventClassSlug(event.type) !== "score")),
     [events],
   );
   const duplicated = useMemo(() => collapsed.concat(collapsed), [collapsed]);

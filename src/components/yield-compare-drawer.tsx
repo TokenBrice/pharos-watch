@@ -26,6 +26,7 @@ import { downloadCsvWithPreamble } from "@/lib/exports/csv";
 import { getLogoSrc, type LogoMap } from "@/lib/logos";
 import type { YieldViewModelRow } from "@/lib/yield-view-model";
 import { YIELD_COMPARE_CSV_COLUMNS } from "@/lib/yield-presentation";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 interface YieldCompareDrawerProps {
   open: boolean;
@@ -164,9 +165,9 @@ const COMPARE_ROW_DESCRIPTORS: readonly CompareRowDescriptor[] = [
     label: "Warnings",
     align: "left",
     render: (row) =>
-      row.warningSignals.length === 0
+      selectInvestmentWarningSignals(row.warningSignals).length === 0
         ? "None"
-        : row.warningSignals.map((signal) => formatYieldWarningSignal(signal)).join(", "),
+        : selectInvestmentWarningSignals(row.warningSignals).map((signal) => formatYieldWarningSignal(signal)).join(", "),
   },
   {
     key: "benchmark",

@@ -73,7 +73,7 @@ export interface WeeklyInputData {
     riskLeaderboard: WeeklyRiskLeaderboardSignal[];
     topDepegSignals: WeeklyDepegSignal[];
     topSupplySignals: { symbol: string; label: string; amountUsd: number }[];
-    topDewsChanges: { symbol: string; from: string; to: string; score: number; mcapUsd: number; driver: string }[];
+    topDewsChanges: { symbol: string; from: string; to: string; score: number; mcapUsd: number | null; driver: string }[];
     /** Null unless every daily edition proves a complete full ALERT+ supply census. */
     maxAlertPlusMcapUsd: number | null;
     /** Sum of daily full band-change counts, not unique assets or displayed changes. */

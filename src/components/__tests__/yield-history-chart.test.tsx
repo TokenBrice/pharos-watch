@@ -277,6 +277,17 @@ describe("YieldHistoryChart", () => {
     expect(screen.getByText("Warnings unreadable")).toBeTruthy();
     expect(screen.queryByText("Warning signals")).toBeNull();
   });
+  it("draws no warning marker or tooltip section for operational advisories only", () => {
+    const point = { date: Date.UTC(2026, 8, 1), apy: 3, apyBase: null, apyReward: null,
+      sourceTvlUsd: null, warningSignals: ["aging", "data-stale"], sourceKey: null, yieldSource: null,
+      dataSource: null, isBest: true, sourceSwitch: false };
+    const { container } = render(<svg><WarningDot cx={10} cy={20} payload={point} /></svg>);
+    expect(container.querySelector("circle")).toBeNull();
+    const mixed = { ...point, warningSignals: ["aging", "yield-spike"] };
+    render(<YieldHistoryTooltip active label={mixed.date} payload={[{ dataKey: "apy", payload: mixed }]} showBreakdown={false} compact={false} />);
+    expect(screen.getByText("Yield spike")).toBeTruthy();
+    expect(screen.queryByText("Aging observation")).toBeNull();
+  });
 });
 
 

@@ -42,6 +42,7 @@ import type { StablecoinClientDetailMeta } from "@shared/types/stablecoin-client
 import { formatChartDate, formatPercent, formatScore } from "@shared/lib/format";
 import { BACKING_LABELS, GOVERNANCE_LABELS, PEG_LABELS_SHORT, YIELD_TYPE_LABELS } from "@shared/lib/classification";
 import type { YieldHistoryPoint } from "@shared/types";
+import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";
 
 // Keep each chart-bearing piece behind its own client import boundary. The
 // shared Webpack recharts-vendor group deduplicates charts across these loaders.
@@ -328,10 +329,11 @@ function EmptyStateCard({ title, message }: { title: string; message: string }) 
 function deriveWarningEvents(history: YieldHistoryPoint[]): WarningSignalGroup[] {
   const events: WarningSignalEvent[] = [];
   for (const point of history) {
-    if (!point.warningSignals || point.warningSignals.length === 0) continue;
+    const pointWarnings = selectInvestmentWarningSignals(point.warningSignals);
+    if (pointWarnings.length === 0) continue;
     const timestamp = toTimestampMs(point.date);
     if (!Number.isFinite(timestamp)) continue;
-    for (const signal of point.warningSignals) {
+    for (const signal of pointWarnings) {
       events.push({
         timestamp,
         signal,

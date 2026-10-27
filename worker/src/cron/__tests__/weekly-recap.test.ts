@@ -476,6 +476,31 @@ describe("generateWeeklyRecap", () => {
     }));
   });
 
+  const validateWeekly = (digestText: string, digestExtended = "") => validateDigestModelOutput({
+    digestTitle: "Weekly Flow Recap",
+    digestText,
+    digestExtended,
+    digestMeta: JSON.stringify({ weekStart: "2026-10-19", weekEnd: "2026-10-25" }),
+    strippedDashCount: 0,
+    usedRawTextFallback: false,
+  }, { kind: "weekly" });
+
+  it.each([
+    "USG saw $36.85M of net burns.",
+    "USG pressure reached -$36.8M.",
+    "Net burns of $36.9M in USG led the week.",
+  ])("raises a hard issue when weekly copy repeats the retracted USG burn: %s", (copy) => {
+    expect(validateWeekly(copy)).toContainEqual(expect.objectContaining({ code: "quarantined-signal-claim", severity: "hard" }));
+  });
+
+  it.each([
+    "USG held steady. USDT recorded $36.85M in net mints.",
+    "USG minted $36.85M of new supply.",
+    "The USG inventory burn of $36.85M was a correction, not pressure.",
+  ])("allows unrelated, independently valid and corrective USG prose: %s", (copy) => {
+    expect(validateWeekly(copy).filter((issue) => issue.code === "quarantined-signal-claim")).toEqual([]);
+  });
+
   it("returns a neutral skipped result outside Monday UTC", async () => {
     vi.setSystemTime(new Date("2026-03-31T12:00:00.000Z"));
     const db = mockD1([]);

@@ -53,7 +53,7 @@ The compact homepage snapshot is retained in a versioned, schema-validated Index
 
 ### HomepageTape
 
-`src/components/homepage-tape.tsx` reads the canonical latest-events query through same-origin site data, excludes score events and applies `collapseForHomepageStrip`. Query errors/valid empty collapsed data render no ticker; smoke checks the underlying endpoint, not visible copy. `formatTapeEventTitle()` maps stored warning keys/chain IDs to shared public labels. Hover/focus pauses motion; reduced motion provides horizontal scrolling. One nonduplicated View all events link opens `/timeline/`; [Timeline](./tape-page.md) owns archival/publication semantics.
+`src/components/homepage-tape.tsx` reads the canonical latest-events query through same-origin site data, excludes score events, drops operational-only yield warnings via `projectTapeEventsForReader()` (ADR-42), and applies `collapseForHomepageStrip`. Query errors/valid empty collapsed data render no ticker; smoke checks the underlying endpoint, not visible copy. `formatTapeEventTitle()` maps stored warning keys/chain IDs to shared public labels. Hover/focus pauses motion; reduced motion provides horizontal scrolling. One nonduplicated View all events link opens `/timeline/`; [Timeline](./tape-page.md) owns archival/publication semantics.
 
 `CoreTopRail` dynamically loads the tape. Text-first routes share `isEditorialPath()` in `src/lib/editorial-routes.ts`: their desktop tape mounts only after document load and an idle opportunity, with a persistent 40 px rail reserve. Interior mobile routes do not mount it. Deferral creates no empty/healthy event claim and does not change polling or producer freshness.
 

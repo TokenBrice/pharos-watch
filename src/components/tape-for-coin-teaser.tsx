@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
 import { useLatestEvents } from "@/hooks/use-events";
@@ -9,6 +9,7 @@ import {
   describeEventDelta,
   firstSentence,
   formatTapeEventSummary,
+  projectTapeEventsForReader,
   formatTapeEventTitle,
 } from "@/lib/tape-derive";
 import { SEVERITY_TONE_CLASS } from "@/lib/severity-tone";
@@ -121,7 +122,7 @@ function NewsEntry({ event, nowMs }: { event: TapeEvent; nowMs: number }) {
 
 export function TapeForCoinTeaser({ coinId }: TapeForCoinTeaserProps) {
   const { data, dataUpdatedAt, isLoading } = useLatestEvents({ coin: coinId, limit: 5 });
-  const events = data?.events ?? [];
+  const events = useMemo(() => projectTapeEventsForReader(data?.events ?? []), [data?.events]);
   // Lazy initializer keeps the render pure (react-hooks/purity). TanStack Query
   // refreshes dataUpdatedAt after successful polling refetches, so keep labels
   // tied to the latest event payload instead of freezing at mount time.

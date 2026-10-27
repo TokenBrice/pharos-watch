@@ -567,6 +567,31 @@ describe("market and risk collectors", () => {
       expect(prompt).not.toContain("1970-01-01");
     },
   );
+  it.each([
+    ["no prior-week buckets", () => undefined, null, 0],
+    ["every prior-week bucket zero-delta (measured flat)", (c: number) => c, 0, 2],
+    ["partial prior-week coverage", (c: number, i: number) => (i === 0 ? c - 5_000_000 : undefined), 5_000_000, 1],
+  ])("%s: seven-day change is null only when no comparison pair exists", async (_name, prior, expected, coveredCoins) => {
+    const scenario = makeDailyDigestScenario();
+    const source = scenario.sourcePayload as unknown as { payload: { peggedAssets: Array<Record<string, unknown> & { circulating: { peggedUSD: number } }> } };
+    source.payload.peggedAssets = source.payload.peggedAssets.map((asset, index) => {
+      const previous = prior(asset.circulating.peggedUSD, index);
+      const { circulatingPrevWeek: _drop, ...rest } = asset;
+      return previous === undefined ? rest : { ...rest, circulatingPrevWeek: { peggedUSD: previous } };
+    });
+    vi.mocked(loadStablecoinsCache).mockResolvedValue(scenario.sourcePayload);
+    const { inputData } = await buildDailyDigestInput(scenario.db);
+    expect(inputData.mcap7dDelta).toBe(expected);
+    expect(inputData.mcap7dDeltaCoverage?.coveredCoins).toBe(coveredCoins);
+    const line = buildUserPrompt(inputData).split("\n").find((l) => l.startsWith("7-day market cap change:"))!;
+    if (expected === null) expect(line).toBe("7-day market cap change: unavailable (no-7d-comparison-pairs)");
+    else expect(line).toContain(expected === 0 ? "+$0" : "+$5.00M");
+  });
+  it("records the cache-fallback seven-day change as unavailable, never zero", async () => {
+    vi.mocked(loadStablecoinsCache).mockResolvedValue({ kind: "unavailable", reason: "stablecoins-cache-missing" } as never);
+    const { inputData } = await buildDailyDigestInput(makeDailyDigestScenario().db);
+    expect(inputData.mcap7dDelta).toBeNull();
+  });
   it("never restates flow claims that missing valuation could alter", async () => {
     const partialMint = {
       window24h: { completeness: "partial", mintCompleteness: "partial", burnCompleteness: "complete", unpricedMintEventCount: 1, unpricedBurnEventCount: 0 },
@@ -735,6 +760,15 @@ describe("market and risk collectors", () => {
     expect((await collectYieldAnomalies(ctxFor([{ match: "FROM yield_data", rows }]))).value?.map(({ symbol }) => symbol)).toEqual(["USDT", "USDC"]);
     const many = Array.from({ length: 8 }, (_, i) => ({ stablecoin_id: `coin-${i}`, symbol: `C${i}`, current_apy: 10, apy_7d: 5, apy_30d: 4, warning_signals: '["spike"]' })); const ctx = ctxFor([{ match: "FROM yield_data", rows: many }]); for (let i = 0; i < 8; i++) ctx.mcapById.set(`coin-${i}`, 20e9);
     expect((await collectYieldAnomalies(ctx)).value).toHaveLength(5); expect((await collectYieldAnomalies(ctxFor([{ match: "FROM yield_data", rows: [{ ...rows[0], warning_signals: "[]" }] }]))).value).toBeUndefined();
+  });
+  it("drops operational advisories before the yield anomaly top-N cut", async () => {
+    const aged = Array.from({ length: 6 }, (_, i) => ({ stablecoin_id: `aged-${i}`, symbol: `A${i}`, current_apy: 10, apy_7d: 5, apy_30d: 4, warning_signals: '["aging","data-stale"]' }));
+    const real = { stablecoin_id: "real-0", symbol: "REAL", current_apy: 10, apy_7d: 5, apy_30d: 4, warning_signals: '["aging","yield-spike"]' };
+    const ctx = ctxFor([{ match: "FROM yield_data", rows: [...aged, real] }]);
+    for (const row of [...aged, real]) ctx.mcapById.set(row.stablecoin_id, row === real ? 1e9 : 90e9);
+    const result = (await collectYieldAnomalies(ctx)).value;
+    expect(result?.map(({ symbol }) => symbol)).toEqual(["REAL"]);
+    expect(result?.[0].warnings).toEqual(["yield-spike"]);
   });
   const coverage = { coverage_class: "primary", coverage_confidence: 0.9, methodology_version: "6.1" };
   const liquidityPair = (current: number, previous: number, currentTvl = 500e6, previousTvl = 480e6, extra = {}) => [{ stablecoin_id: "usdt-tether", liquidity_score: current, total_tvl_usd: currentTvl, snapshot_date: 1_772_755_200, ...coverage, ...extra }, { stablecoin_id: "usdt-tether", liquidity_score: previous, total_tvl_usd: previousTvl, snapshot_date: 1_772_668_800, ...coverage }];

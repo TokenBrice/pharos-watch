@@ -156,7 +156,6 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     isFetchingNextPage,
     meta,
     dataUpdatedAt,
-    total,
   } = feed.events;
 
   const interactions = useTimelineFeedInteractions({
@@ -164,7 +163,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
     permalinkId,
     permalinkResolved: feed.permalinkResolved,
     loadedCount: feed.visibleEvents.length,
-    total,
+    total: feed.visibleTotal,
     fetchNextPage,
     hasNextPage,
     isFetchingNextPage,
@@ -232,7 +231,7 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
 
       <SummaryBand
         loadedCount={feed.visibleEvents.length}
-        totalCount={total}
+        totalCount={feed.visibleTotal}
         openCount={feed.openIncidents?.length ?? null}
         windowLabel={feedController.windowLabel}
         severityLabel={feedController.severityLabel}
@@ -271,7 +270,8 @@ function MountedTimelineClient({ queryAnchorMs, nowMs }: { queryAnchorMs: number
         hasNextPage={hasNextPage}
         isFetchingNextPage={isFetchingNextPage}
         nextCursor={nextCursor}
-        total={total}
+        total={feed.visibleTotal}
+        permalinkSuppressed={feed.permalinkSuppressed}
         meta={meta}
         dataUpdatedAt={dataUpdatedAt}
         permalinkId={permalinkId}
