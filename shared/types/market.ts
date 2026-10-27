@@ -195,6 +195,18 @@ export const SupplyChainGuardProvenanceSchema = z.object({
 });
 export type SupplyChainGuardProvenance = z.infer<typeof SupplyChainGuardProvenanceSchema>;
 
+/**
+ * Recorded provenance of one admitted supply observation (daily history row / dataset row). A present
+ * object attests that the writer inspected the admitted current row; `null`/absent means coverage was not
+ * recorded (unknown, never complete). Source and clock stay null when the observation carried none.
+ */
+export const SupplyObservationProvenanceSchema = z.object({
+  supplySource: z.string().nullable(),
+  supplyObservedAt: z.number().int().nonnegative().nullable(),
+  supplyChainGuard: SupplyChainGuardProvenanceSchema.nullable(),
+});
+export type SupplyObservationProvenance = z.infer<typeof SupplyObservationProvenanceSchema>;
+
 const StablecoinDataRawSchema = z.object({
   id: z.string(),
   name: z.string(),
@@ -857,6 +869,8 @@ const SupplyHistoryPointSchema = z.object({
   date: z.number(),
   circulatingUsd: z.number(),
   price: z.number().nullable(),
+  /** Chain-coverage provenance of this daily observation; null/absent = unrecorded (legacy), never complete. */
+  supplyProvenance: SupplyObservationProvenanceSchema.nullable().optional(),
 });
 export type SupplyHistoryPoint = z.infer<typeof SupplyHistoryPointSchema>;
 export const SupplyHistoryResponseSchema = z.array(SupplyHistoryPointSchema);

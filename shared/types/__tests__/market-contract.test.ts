@@ -11,6 +11,7 @@ import {
   PegSummaryStatsSchema,
   StablecoinDataSchema,
   StablecoinListResponseSchema,
+  SupplyHistoryResponseSchema,
 } from "../market";
 
 import { makeStablecoin } from "../../test-utils/stablecoin";
@@ -233,5 +234,26 @@ describe("DEX volume availability wire contract", () => {
     } });
     expect(result.success).toBe(accepted);
     if (result.success) expect(result.data.volume24hAvailability).not.toHaveProperty("admittedTvlUsd");
+  });
+});
+
+describe("supply history provenance contract (K-031)", () => {
+  it("admits old points and nullable provenance additively, rejecting malformed metadata", () => {
+    const guard = {
+      reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
+      chains: [{ chainLabel: "HyperEVM", listCurrentUsd: 0, baselineUsd: 3, baselineObservedAt: 1, baselineSource: "state", resolution: "unavailable" }],
+    };
+    const parsed = SupplyHistoryResponseSchema.parse([
+      { date: 1, circulatingUsd: 100, price: 1 },
+      { date: 2, circulatingUsd: 97, price: 1, supplyProvenance: { supplySource: "defillama", supplyObservedAt: 2, supplyChainGuard: guard } },
+      { date: 3, circulatingUsd: 0, price: null, supplyProvenance: null },
+    ]);
+    // Absent stays absent (unknown); nothing defaults to a complete record.
+    expect(parsed[0]).not.toHaveProperty("supplyProvenance");
+    expect(parsed[1]!.supplyProvenance?.supplyChainGuard?.partialCoverage).toBe(true);
+    expect(parsed[2]!.supplyProvenance).toBeNull();
+    expect(SupplyHistoryResponseSchema.safeParse([
+      { date: 1, circulatingUsd: 1, price: 1, supplyProvenance: { supplySource: 7, supplyObservedAt: null, supplyChainGuard: null } },
+    ]).success).toBe(false);
   });
 });

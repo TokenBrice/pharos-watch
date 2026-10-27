@@ -788,7 +788,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "supply-history",
     summary: "Supply history",
-    description: "Historical supply series for a stablecoin. Bounded days defaults to 365; range=all returns every retained daily observation under the same completed-snapshot fence. Nullable observations and producer freshness metadata are preserved.",
+    description: "Historical supply series for a stablecoin. Bounded days defaults to 365; range=all returns every retained daily observation under the same completed-snapshot fence. Nullable observations and producer freshness metadata are preserved. Each row carries nullable supplyProvenance (v6.59): null means chain coverage was not recorded, never complete.",
     tags: ["History"],
     responseSchema: "SupplyHistoryResponse",
     parameters: [REQUIRED_STABLECOIN_QUERY_PARAM, SUPPLY_HISTORY_DAYS_PARAM, SUPPLY_HISTORY_RANGE_PARAM],
