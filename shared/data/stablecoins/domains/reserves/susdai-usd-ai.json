@@ -4,7 +4,7 @@
     {
       "sourceKey": "usdai-proof-of-reserves:pyusd",
       "name": "PYUSD (PayPal USD)",
-      "pct": 63.01098086,
+      "pct": 59.41916613,
       "risk": "low",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Paxos (PYUSD issuer) held in USD.AI reserve contracts",
@@ -18,7 +18,7 @@
     {
       "sourceKey": "usdai-proof-of-reserves:deal",
       "name": "GPU-backed infrastructure loans (NVIDIA hardware)",
-      "pct": 36.98901914,
+      "pct": 40.58083387,
       "risk": "high",
       "assetClass": "private-credit",
       "issuerOrObligor": "USD.AI borrower SPVs financing NVIDIA GPU compute (20 active share-bearing loan positions in the reviewed reserve index)",
@@ -33,8 +33,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-21",
-    "reviewer": "Claude curation campaign 2026-09-21 (Resv03)",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
     "confidence": "verified",
     "sources": [
       {
@@ -54,13 +54,13 @@
         "url": "https://arbitrum.blockscout.com/address/0x1C2ED170de32846316784c4fd58A5e3C7563E12f"
       },
       {
-        "label": "Arbitrum PublicNode PYUSD balanceOf(USDai), block 507385839, 2026-09-21",
+        "label": "Arbitrum PublicNode PYUSD balanceOf(USDai), block 518692331, 2026-10-27",
         "url": "https://arbitrum-one-rpc.publicnode.com"
       }
     ],
-    "rationale": "The live USD.AI reserve index observed on 2026-09-21 identifies 63.01098086% PYUSD and 36.98901914% across 20 share-bearing GPU loans. Published shares total 100%; seven entries without share weights are not assigned additional exposure. At Arbitrum block 507385839 (2026-09-21T08:35:24Z), PYUSD balanceOf(USDai) returned 307910381063423 base units, exactly matching the API amount normalized from 18 decimals to 307,910,381.063423 PYUSD. This review verifies the current issuer-disclosed composition and liquid balance, not the off-chain GPU identity, appraisal, insurance, SPV structure, or loan enforceability. Loan values remain issuer-disclosed. Existing source keys and the serial-wrapper dependency treatment are retained.",
-    "compositionBasis": "Current USD.AI protocol reserve-index shares observed 2026-09-21; PYUSD amount reconciled to Arbitrum block 507385839",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "The live USD.AI reserve index observed on 2026-10-27 identifies 59.41916613% PYUSD and 40.58083387% across 21 share-bearing GPU loans. Published shares total 100%; five entries without share weights are not assigned additional exposure. At Arbitrum block 518692331 (2026-10-27T08:50:15Z), PYUSD balanceOf(USDai) returned 266256622297251 base units, exactly matching the API amount normalized from 18 decimals to 266,256,622.297251 PYUSD. This review verifies the current issuer-disclosed composition and liquid balance, not the off-chain GPU identity, appraisal, insurance, SPV structure, or loan enforceability. Loan values remain issuer-disclosed. Existing source keys and the serial-wrapper dependency treatment are retained.",
+    "compositionBasis": "Current USD.AI protocol reserve-index shares observed 2026-10-27; PYUSD amount reconciled to Arbitrum block 518692331",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete disclosed composition identifies PYUSD and GPU-loan principal. Physical GPU mapping, valuation, insurance, SPV structure, enforceability, and loan valuation remain issuer-described; this review does not independently attest those private-credit claims.",
     "knownUnknownExposurePct": 0,
@@ -68,16 +68,16 @@
       {
         "reserveIndex": 0,
         "reserveName": "PYUSD (PayPal USD)",
-        "pct": 63.01098086,
+        "pct": 59.41916613,
         "disposition": "not-applicable",
         "rationale": "sUSDai is a serial wrapper of USDai; this PYUSD slice is the look-through of the parent's backing. The PYUSD exposure is inherited through the reviewed serial wrapper edge to usdai-usd-ai (whose verified reserve envelope is 100% PYUSD) and is tracked on the parent asset, so the slice is not a separate parallel dependency link."
       },
       {
         "reserveIndex": 1,
         "reserveName": "GPU-backed infrastructure loans (NVIDIA hardware)",
-        "pct": 36.98901914,
+        "pct": 40.58083387,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "GPU infrastructure loans are private-credit positions, not tracked stablecoin dependencies. Sol curation campaign 2026-10-09 (Lane42Inverse), observed 2026-10-09T10:35:59Z: the current issuer reserve API publishes documentId, borrower, term in seconds, remaining amounts and share per loan. Borrower FAQ describes approximately 36-month amortization, while the overview describes 3-year principal amortization. Those descriptions do not establish a contractual maximum for every position in this September 21 reserve envelope. No maturityDaysMax, new weights or refreshed composition clock is inferred; current loan-term data requires a complete identity and gross-exposure reconciliation before a whole-slice observed-tenor bound can be admitted."
+        "rationale": "GPU infrastructure loans are private-credit positions, not tracked stablecoin dependencies. Sol curation campaign 2026-10-09 (Lane42Inverse), observed 2026-10-09T10:35:59Z: the current issuer reserve API publishes documentId, borrower, term in seconds, remaining amounts and share per loan. Borrower FAQ describes approximately 36-month amortization, while the overview describes 3-year principal amortization. Those descriptions do not establish a contractual maximum for every position in the current reserve envelope. No maturityDaysMax is inferred; current loan-term data requires a complete identity and gross-exposure reconciliation before a whole-slice observed-tenor bound can be admitted."
       }
     ]
   },

@@ -4,7 +4,7 @@
     {
       "sourceKey": "liquity-v2-branches:ethereum:0x23346b04a7f55b8760e5860aa5a77383d63491cd",
       "name": "ysyBOLD",
-      "pct": 57.2,
+      "pct": 56.12,
       "risk": "medium",
       "coinId": "bold-liquity",
       "depType": "collateral",
@@ -21,7 +21,7 @@
     {
       "sourceKey": "liquity-v2-branches:ethereum:0x0655977feb2f289a4ab78af67bab0d17aab84367",
       "name": "scrvUSD",
-      "pct": 11.5,
+      "pct": 12.8,
       "risk": "medium",
       "coinId": "scrvusd-curve",
       "depType": "collateral",
@@ -38,7 +38,7 @@
     {
       "sourceKey": "liquity-v2-branches:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
       "name": "sUSDS",
-      "pct": 7.7,
+      "pct": 7.49,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -55,7 +55,7 @@
     {
       "sourceKey": "liquity-v2-branches:ethereum:0x18084fba666a33d37592fa2633fd49a74dd93a88",
       "name": "tBTC",
-      "pct": 11.7,
+      "pct": 11.78,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Threshold Network and tBTC custodians",
@@ -70,7 +70,7 @@
     {
       "sourceKey": "liquity-v2-branches:ethereum:0xcf62f905562626cfcdd2261162a51fd02fc9c5b6",
       "name": "sfrxUSD",
-      "pct": 8.6,
+      "pct": 8.42,
       "risk": "medium",
       "coinId": "sfrxusd-frax",
       "depType": "collateral",
@@ -87,7 +87,7 @@
     {
       "sourceKey": "liquity-v2-branches:ethereum:0xe065bc161b90c9c4bba2de7f1e194b70a3267c47",
       "name": "wBTC",
-      "pct": 3.3,
+      "pct": 3.39,
       "risk": "medium",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "WBTC custodians and merchant network",
@@ -101,8 +101,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Pharos dependency-map review 2026-09-30",
+    "reviewedAt": "2026-10-27",
+    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
     "confidence": "probable",
     "sources": [
       {
@@ -116,11 +116,15 @@
       {
         "label": "USDaf V2 contracts",
         "url": "https://github.com/asymmetryfinance/USDaf-v2/tree/c51caef00ccd2d42ec7ed569009e53e7537d1546/contracts"
+      },
+      {
+        "label": "Chainlink BTC/USD aggregator proxy (read at Ethereum block 26282951)",
+        "url": "https://eth.blockscout.com/address/0xF4030086522a5bEEa4988F8cA5B36dbC97BeE88c"
       }
     ],
-    "rationale": "The four corrected source keys for ysyBOLD, scrvUSD, sUSDS, and sfrxUSD match the collToken addresses in the pinned USDaf V2 deployment registry and the captured 2026-09-29 V2 live adapter rows. The existing 2026-09-21 authored percentages are retained as historical classification-row context; admitted fixed-block V2 adapter observations own current weights. The general /api/stats endpoint is not independent validation of the V2 composition because its outstanding supply differs materially from the captured V2 deployment. This identity correction does not reweight the slices or establish custody, segregation, or assurance.",
-    "compositionBasis": "Retained 2026-09-21 authored composition; four V2 collateral source keys reconciled against the pinned deployment registry and fixed-block live adapter capture reviewed 2026-09-29",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "Slice weights were recomputed on 2026-10-27 from same-block Ethereum reads at block 26282951 (2026-10-27T08:49:11Z): getCollBalance on each of the six USDaf V2 branch holders configured for the live adapter (ysyBOLD 189,488.5558, scrvUSD 42,843.5695, sUSDS 24,982.8034, sfrxUSD 25,698.3089, tBTC 0.5481, wBTC 0.1578). The four ERC-4626 collateral tokens are valued at their on-chain convertToAssets share price with the underlying BOLD, crvUSD, USDS, and frxUSD taken at one dollar, and the two BTC tokens at the Chainlink BTC/USD feed (79,861.76), giving a collateral value near $371,638. The four corrected source keys still match the collToken addresses in the pinned USDaf V2 deployment registry. The general /api/stats endpoint is not independent validation of the V2 composition because its branch balances differ materially from the V2 holders. This reweighting does not establish custody, segregation, or assurance.",
+    "compositionBasis": "Same-block Ethereum branch-holder collateral balances at block 26282951 (2026-10-27T08:49:11Z), valued at ERC-4626 share prices with stable underlyings at one dollar and Chainlink BTC/USD; collateral identities reconciled against the pinned deployment registry",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "Underlying protocol-position custody, wrapper counterparty exposure, and independent reserve assurance are not established by the public stats endpoint.",
     "knownUnknownExposurePct": 0
