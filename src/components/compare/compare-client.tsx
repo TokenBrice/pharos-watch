@@ -209,7 +209,7 @@ function CompareScopeHero({
   return (
     <FeatureHeroSplit
       ariaLabel="Comparison scope overview"
-      beamLabel="Stablecoins ready to compare"
+      beamLabel="Active + frozen"
       beamValue={coinOptions.length}
       subKicker="Set Scope"
       sub={

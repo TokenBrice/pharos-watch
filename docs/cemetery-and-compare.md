@@ -164,6 +164,7 @@ Each pair page ends with a "Related comparisons" section: "More {A} comparisons"
 ### Selection and URL contract
 
 - Maximum selection: `MAX_COMPARE_COINS = 5`.
+- Selectable coins are active plus frozen archive profiles (`src/lib/compare-config.ts`); the scope hero labels that count **Active + frozen**, never the active-only count.
 - URL is the source of truth for selection state.
 - Query param `coins` accepts canonical ticker-issuer IDs only (for example `usdt-tether`). Unknown IDs, legacy DefiLlama/historical IDs, and raw ticker symbols are dropped rather than guessed.
 - Query param `range` stores the market-cap chart window. Accepted values are `7d`, `30d`, `90d`, `1y`, and `all`; `all` is the default and is cleared from the URL instead of persisted.
