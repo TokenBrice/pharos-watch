@@ -155,8 +155,8 @@ export function formatReserveSnapshotLabel(reserves: ReserveResult): string {
   const reportDate = assurance && typeof assurance === "object" && "reportDate" in assurance
     && typeof assurance.reportDate === "string" ? assurance.reportDate : null;
   const asOf = reportDate ? `Report as of ${reportDate}` : sourceDate ? `Source as of ${sourceDate}` : "Source date unavailable";
-  const stale = reserves.mode === "live-stale" ? " · Stale" : "";
-  return `${asOf}${stale} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
+  // Neutral dates: the shared page health banner owns material staleness (ADR-42).
+  return `${asOf} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
 }
 
 function formatReserveCompositionLabel(reserves: ReserveResult): string {
@@ -172,8 +172,7 @@ function formatReserveCompositionLabel(reserves: ReserveResult): string {
 
   // A totals observation cannot date a separately reviewed reserve mix.
   const asOf = hasCompositionDate ? `Composition as of ${compositionAsOf}` : "Composition date unavailable";
-  const stale = reserves.mode === "live-stale" ? " · Stale" : "";
-  return `${asOf}${stale} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
+  return `${asOf} · Checked ${formatReserveUpdatedAt(reserves.liveAt)}`;
 }
 
 function reserveReferenceLinks(reserves: ReserveResult): ReserveReferenceLink[] {

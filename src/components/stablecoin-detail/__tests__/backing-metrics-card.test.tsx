@@ -270,16 +270,16 @@ describe("buildBackingMetricsView", () => {
     expect(view?.freshness.reviewedAt).toBe(reviewed.reviewedAt);
   });
 
-  it("stamps live age from epoch seconds and flags a stale feed without dropping the report date", () => {
+  it("stamps live age from epoch seconds and keeps report dates neutral with no stale chip", () => {
     vi.useFakeTimers();
     vi.setSystemTime(new Date("2026-07-28T12:00:00Z"));
     const aged = build({ liveRatio: 5.17, liveAtSec: Date.parse("2026-07-28T10:00:00Z") / 1000 });
     expect(aged?.freshness.live).toContain("2h ago");
-    expect(aged?.freshness.stale).toBe(false);
+    expect(aged?.freshness).not.toHaveProperty("stale");
 
-    const report = build({ liveRatio: 1.00057, liveFreshnessLabel: "Report as of 2026-06-30 · Stale · Checked Sep 5" });
-    expect(report?.freshness.stale).toBe(true);
-    expect(report?.freshness.live).toContain("2026-06-30");
+    const report = build({ liveRatio: 1.00057, liveFreshnessLabel: "Report as of 2026-10-25 · Checked 2026-10-26 00:00 UTC" });
+    expect(report?.freshness.live).toBe("Report as of 2026-10-25 · Checked 2026-10-26 00:00 UTC");
+    expect(report?.freshness).not.toHaveProperty("stale");
   });
 
   it("keeps at most two sub-metrics and loses no reviewed metric for every archetype", () => {

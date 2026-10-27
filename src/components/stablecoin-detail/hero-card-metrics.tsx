@@ -16,6 +16,7 @@ import type { HeroCardViewModel } from "@/lib/stablecoin-detail-view-model";
 import { confidenceClass } from "@/lib/confidence";
 import { deviationColorClass } from "@/lib/severity-colors";
 import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
+import { cn } from "@/lib/utils";
 
 /** Label class shared by every hero metric cell — one casing across breakpoints. */
 const HERO_METRIC_LABEL_CLASS = "text-sm font-medium text-muted-foreground";
@@ -82,8 +83,9 @@ function SupplyRestoredNotice({ coinData, className }: { coinData?: Pick<DetailQ
     const excluded = coinData?.supplyExcludedChains;
     return excluded?.length ? <p className={className}>Partial supply · excludes {excluded.join(", ")}</p> : null;
   }
+  // Neutral provenance: the page health banner owns material supply staleness (ADR-42).
   const supplyRestoredAsOf = formatSupplyRestoredAsOf(coinData);
-  return <p className={className}>Stale supply{supplyRestoredAsOf ? ` · as of ${supplyRestoredAsOf}` : ""}</p>;
+  return <p className={cn(className, "text-muted-foreground")}>{supplyRestoredAsOf ? `Supply as of ${supplyRestoredAsOf}` : "Supply date unavailable"}</p>;
 }
 
 function CompactMetricCell({

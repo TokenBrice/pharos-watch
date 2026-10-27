@@ -31,6 +31,7 @@ import type { ReportCardsV9DetailResponse } from "@shared/types/report-cards-v9-
 import { MINT_BURN_FTQ_DEPENDENCY_KEY } from "@shared/types/mint-burn";
 import { parseDataHealthWarnings } from "@/lib/data-health";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 
 const YEAR_SECONDS = 365 * DAY_SECONDS;
 const YEARLY_PERFORMANCE_ANCHOR_TOLERANCE_SECONDS = 14 * DAY_SECONDS;
@@ -161,7 +162,7 @@ function staleQueryFrom<T>(
   };
 }
 
-/** Reserve fetch/source clocks have independent budgets; the first expiry owns aging. */
+/** Reserve fetch/source clocks have independent budgets; the first public (12x) expiry owns aging. */
 function reserveStaleQuery(
   reserves: StablecoinDetailViewModelSupplementalInputs["reserves"],
 ): StablecoinDetailStaleQuery {
@@ -182,7 +183,8 @@ function reserveStaleQuery(
     }
   }
   const authority = clocks.reduce<{ at: number; budget: number } | null>((first, clock) =>
-    !first || clock.at + clock.budget < first.at + first.budget ? clock : first, null);
+    !first || clock.at + FRESHNESS_RATIOS.DEGRADED * clock.budget < first.at + FRESHNESS_RATIOS.DEGRADED * first.budget
+      ? clock : first, null);
   const stale = live?.mode === "live-stale" || sync?.stale || freshness?.stale || freshness?.sourceFreshnessInvalid;
   const issues = [
     live?.mode,
@@ -226,6 +228,34 @@ function reserveStaleQuery(
       reason: `${live?.mode ?? "unavailable"}: reserve-generation-or-budget-unavailable`,
       dependencies: { reserveEvidence: { status: "unavailable", reason: details } },
     },
+  };
+}
+
+/**
+ * A restored supply value ages on its own original observation clock against the shared
+ * stablecoins base, so an old retained figure surfaces past the public band even beside a
+ * fresh summary. A missing clock never inherits receipt time.
+ */
+function restoredSupplyStaleQuery(
+  liveSummary: StablecoinDetailViewModelQueryInputs["liveSummary"],
+): StablecoinDetailStaleQuery | null {
+  const data = liveSummary.data;
+  if (data?.supplyRestored !== true) return null;
+  const observedAt = data.supplyObservedAt != null && data.supplyObservedAt > 0 ? data.supplyObservedAt : null;
+  const summaryAt = liveSummary.meta?.updatedAt;
+  return {
+    label: "Supply",
+    staleTime: API_FRESHNESS_MAX_AGE_SEC.stablecoins * 1000,
+    dataUpdatedAt: observedAt != null ? observedAt * 1000 : 0,
+    error: null,
+    hasData: getCirculatingRawOrNull(data) !== null,
+    meta: observedAt != null
+      ? {
+        updatedAt: observedAt,
+        ageSeconds: Math.max(0, (summaryAt != null && summaryAt > 0 ? summaryAt : observedAt) - observedAt),
+        status: "fresh",
+      }
+      : { updatedAt: null, ageSeconds: null, status: "stale", reason: "restored-supply-observation-unavailable" },
   };
 }
 
@@ -329,6 +359,8 @@ export function buildDetailStaleQueries(
   if (supplemental.reserves.enabled) {
     result.push(reserveStaleQuery(supplemental.reserves));
   }
+  const restoredSupply = restoredSupplyStaleQuery(queries.liveSummary);
+  if (restoredSupply) result.push(restoredSupply);
   return result.filter((query) => query.enabled !== false);
 }
 

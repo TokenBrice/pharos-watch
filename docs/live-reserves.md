@@ -236,7 +236,7 @@ New material-clock consumers must submit every material contributor to the cover
 
 ## Frontend Consumers
 
-Reserve composition and collateralization footers separate the source/report-as-of date from the last checked time, retain a stale label for out-of-window evidence, and never label a refreshed historical attestation as a new live measurement. Attestation-mix snapshots use the proof badge with an `Attestation` label. A source-age-only degradation explains that evidence is out of date; collection failures retain their separate sync-error notice.
+Reserve composition and collateralization footers separate neutral source/report-as-of and checked dates and never label a refreshed historical attestation as a new live measurement; the detail health lane owns staleness. Attestation-mix snapshots use the proof badge with an `Attestation` label. A source-age-only degradation explains that evidence is out of date; collection failures retain their separate sync-error notice.
 
 The checked-time formatter preserves present finite `liveAt` values, including epoch zero (`1970-01-01 00:00 UTC`). Only an absent or non-finite checked timestamp uses the previous-successful-run fallback; source/report dates and stale status remain separate.
 

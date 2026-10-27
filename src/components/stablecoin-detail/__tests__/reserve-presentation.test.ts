@@ -125,13 +125,14 @@ describe("buildReserveFootnoteModel", () => {
     ]);
   });
 
-  it("live-stale → stale label", () => {
+  it("live-stale keeps a neutral dated label; the page banner owns staleness", () => {
     const result = buildReserveFootnoteModel(
       makeReserves({ mode: "live-stale", liveAt: 1_700_000_000 }),
       true,
       "rwa backed",
     );
-    expect(result?.text).toContain("Stale · Checked");
+    expect(result?.text).toContain(" · Checked");
+    expect(result?.text).not.toContain("Stale");
   });
 
   it("curated-fallback with live enabled → live-sync-unavailable text, no references", () => {
@@ -439,7 +440,7 @@ describe("dated reserve disclosures", () => {
         warnings: ["Upstream reserve source timestamp is 700000s old for static-validated (max 604800s)"],
       },
     });
-    const stale = mode === "live-stale" ? " · Stale" : "";
+    const stale = "";
     const composition = buildReserveFootnoteModel(reserves, true, "rwa backed")?.text;
     expect(composition).toContain(`Composition as of 2026-06-30${stale} · Checked 2026-09-27 12:14 UTC`);
     expect(composition).not.toContain("2026-09-26");
@@ -458,7 +459,7 @@ describe("dated reserve disclosures", () => {
         details: { compositionSource: "reviewed-config" },
       },
     });
-    const stale = mode === "live-stale" ? " · Stale" : "";
+    const stale = "";
     expect(buildReserveFootnoteModel(reserves, true, "commodity backed")?.text)
       .toContain(`Composition date unavailable${stale} · Checked 2026-09-27 12:14 UTC`);
     expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of 2026-09-26");
@@ -471,7 +472,7 @@ describe("dated reserve disclosures", () => {
       liveAt: Date.parse("2026-09-27T12:14:32Z") / 1000,
       metadata: { sourceTimestamp: Date.parse("2026-09-26T00:00:00Z") / 1000 },
     });
-    const stale = mode === "live-stale" ? " · Stale" : "";
+    const stale = "";
     expect(buildReserveFootnoteModel(reserves, true, "rwa backed")?.text)
       .toContain(`Composition date unavailable${stale} · Checked 2026-09-27 12:14 UTC`);
     expect(formatReserveSnapshotLabel(reserves)).toContain("Source as of 2026-09-26");
@@ -501,7 +502,8 @@ describe("dated reserve disclosures", () => {
         warnings: ["Upstream reserve source timestamp is 5775332s old for dynamic-mix/independent (max 4000000s)"] },
     });
     const footnote = buildReserveFootnoteModel(reserves, true, "rwa backed");
-    expect(footnote?.text).toContain("Report as of 2026-06-30 · Stale · Checked");
+    expect(footnote?.text).toContain("Report as of 2026-06-30 · Checked 2026-09-05 12:14 UTC");
+    expect(footnote?.text).not.toContain("Stale");
     expect(buildReserveFeedStatus(reserves, null)).toBeNull();
     expect(buildReserveFeedStatus({ ...reserves, sync: { ...reserves.sync!, status: "error", lastError: "HTTP 503" } }, null))
       .toBeNull();
@@ -543,7 +545,7 @@ describe("dated reserve disclosures", () => {
   it.each([
     ["an uncertain write", { uncertainWrite: true } as const],
     ["a recorded last error", { lastError: "HTTP 503" } as const],
-  ])("leaves a stale-age warning mixed with %s to the footnote's Stale marker", (_label, extra) => {
+  ])("leaves a stale-age warning mixed with %s to the shared page health banner", (_label, extra) => {
     const status = buildReserveFeedStatus(
       makeReserves({
         mode: "live-stale",
