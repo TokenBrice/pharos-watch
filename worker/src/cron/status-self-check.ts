@@ -318,10 +318,10 @@ export function selectStatusProbePathsForRun(
 
 export function classifyProbeStatus(sampleCount: number, failCount: number, latencyMs: number): StatusHealthValue {
   if (sampleCount === 0) return "stale";
-  const { healthyMaxFailCount, healthyP95MaxMs, degradedMaxFailRatio, degradedP95MaxMs } = STATUS_PROBE_THRESHOLDS;
-  if (failCount <= healthyMaxFailCount && latencyMs <= healthyP95MaxMs) return "healthy";
+  const { healthyMaxFailCount, healthyLatencyMaxMs, degradedMaxFailRatio, degradedLatencyMaxMs } = STATUS_PROBE_THRESHOLDS;
+  if (failCount <= healthyMaxFailCount && latencyMs <= healthyLatencyMaxMs) return "healthy";
   const degradedFailCap = Math.max(healthyMaxFailCount, Math.floor(sampleCount * degradedMaxFailRatio));
-  if (failCount <= degradedFailCap && latencyMs <= degradedP95MaxMs) return "degraded";
+  if (failCount <= degradedFailCap && latencyMs <= degradedLatencyMaxMs) return "degraded";
   return "stale";
 }
 

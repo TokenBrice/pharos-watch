@@ -303,13 +303,13 @@ export const STATUS_CACHE_RATIO_THRESHOLDS = {
  * Tightens the default 8×/12× tolerance for caches whose slow stale window would
  * otherwise under-report real user impact on the public status surface.
  *
- * `yield-data`: hourly producer (`sync-yield-data`, 3600s availability budget,
- * equal to the producer interval). Under the global bands a lane can serve
- * ~8h-stale rankings while public health still reads "healthy", even though the
+ * `yield-data`: two-hourly producer (`sync-yield-data`, 7200s availability
+ * budget, equal to the producer interval). Under the global bands a lane can serve
+ * ~16h-stale rankings while public health still reads "healthy", even though the
  * admin endpoint-budget lane already flags it at 1×. Since 2026-10-23 it follows
  * the one public producer grace rule (`STATUS_PUBLIC_PRODUCER_GRACE_RATIOS`):
  * public-unhealthy (Delayed) past 3× and stale (Degraded) past 6×, so a single
- * missed or abandoned hourly run stays healthy. The 2026-07-19 2×/4× bands let
+ * missed or abandoned two-hourly run stays healthy. The 2026-07-19 2×/4× bands let
  * one abandoned run read Delayed. See docs/architecture.md ADR-9 and
  * docs/status-dashboard.md.
  */
@@ -338,12 +338,15 @@ export function getCacheHealthyMaxRatio(cacheKey?: string): number {
   return override ? override.degraded : FRESHNESS_RATIOS.DEGRADED;
 }
 
-// --- Probe classification thresholds (browser & self-check probe runs) ---
+// --- Probe classification thresholds (self-check probe runs) ---
+// Self-check judges the second-slowest connectivity sample (the only sample when
+// just one ran), so one cold probe cannot breach a band. The reported p95 is a
+// separate diagnostic and is not what these bands classify.
 export const STATUS_PROBE_THRESHOLDS = {
-  /** p95 latency (ms) at or below which probes are classified healthy (given fail cap). */
-  healthyP95MaxMs: 5000,
-  /** p95 latency (ms) at or below which probes are classified degraded (given fail ratio cap). */
-  degradedP95MaxMs: 8000,
+  /** Judged latency (ms) at or below which probes are classified healthy (given fail cap). */
+  healthyLatencyMaxMs: 5000,
+  /** Judged latency (ms) at or below which probes are classified degraded (given fail ratio cap). */
+  degradedLatencyMaxMs: 8000,
   /** Max failures tolerated for "healthy" classification (absolute). */
   healthyMaxFailCount: 1,
   /** Max fail ratio tolerated for "degraded" classification (fraction of sample). */

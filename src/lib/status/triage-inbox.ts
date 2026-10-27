@@ -248,7 +248,7 @@ export function describeSelfCheck(probe: StatusResponse["probe"], slowestPath: s
     ? `All ${probe.sampleCount} probes pass`
     : `${probe.passCount} transport passes; no transport failures (${probe.sampleCount} total samples)`;
   if (probe.status === "healthy") return base;
-  const budget = STATUS_PROBE_THRESHOLDS.healthyP95MaxMs;
+  const budget = STATUS_PROBE_THRESHOLDS.healthyLatencyMaxMs;
   if (probe.p95LatencyMs != null && probe.p95LatencyMs > budget) {
     const where = slowestPath ? ` on ${slowestPath}` : "";
     return `${base}; slow: p95 ${formatSeconds(probe.p95LatencyMs)} (budget ${formatSeconds(budget)})${where}`;
