@@ -65,6 +65,10 @@ function getMappingMatcher(sources: readonly string[]): (file: string) => boolea
   return (file: string) => matchers.some((matcher) => matcher(file));
 }
 
+function collectFailure(failures: string[], label: string, assertion: () => void): void {
+  try { assertion(); } catch (error) { failures.push(`${label}: ${error instanceof Error ? error.message : String(error)}`); }
+}
+
 describe("Markdown section ranges", () => {
   it("uses renderer slugs, UTF-8 source, nested sections, and global duplicate headings", () => {
     const content = "# Guide\n\n## Café\né😀\n### Child\nnested\n## Café\nsecond\n# End\n";
@@ -233,30 +237,54 @@ describe("doc-ownership registry integrity", () => {
       "coverage-page", "start-page", "feedback-pipeline", "compliance", "worker-admin-api",
     ];
     const documentCache = new Map<string, MarkdownSections>();
+    const failures: string[] = [];
+    // Every section is visited before asserting; an unreadable document or
+    // anchor is reported with its path and never counted as an in-budget section.
+    const check = (label: string, assertion: () => void) => collectFailure(failures, label, assertion);
     for (const mapping of mappings) {
       const newDomain = domainIds.includes(mapping.id);
-      if (newDomain) expect(mapping.checks ?? [], mapping.id).toEqual([]);
+      if (newDomain) check(mapping.id, () => expect(mapping.checks ?? [], mapping.id).toEqual([]));
       for (const reference of enumerateDocReferences(mapping, { includeBackground: false })) {
         if (!reference.path.endsWith(".md")) continue;
-        if (newDomain) expect(reference.anchor, mapping.id).toBeTruthy();
+        if (newDomain) check(mapping.id, () => expect(reference.anchor, mapping.id).toBeTruthy());
         const key = reference.path + (reference.anchor ? `#${reference.anchor}` : "");
-        let document = documentCache.get(reference.path);
-        if (!document) {
-          document = parseMarkdownSections(readFileSync(resolve(REPO_ROOT, reference.path), "utf8"));
-          documentCache.set(reference.path, document);
+        let bytes: number | undefined;
+        check(key, () => {
+          let document = documentCache.get(reference.path);
+          if (!document) {
+            document = parseMarkdownSections(readFileSync(resolve(REPO_ROOT, reference.path), "utf8"));
+            documentCache.set(reference.path, document);
+          }
+          const range = resolveMarkdownSectionRange(document, reference.anchor);
+          // Keep the historic byte ratchet: joining selected split lines omits
+          // the separator before the next heading, unlike route payload bytes.
+          bytes = Buffer.byteLength(document.lines.slice(range.startLine, range.endLine).join("\n"));
+        });
+        if (bytes === undefined) {
+          // Track the exception independently of a successful read.
+          remainingExceptions.delete(key);
+          continue;
         }
-        const range = resolveMarkdownSectionRange(document, reference.anchor);
-        // Keep the historic byte ratchet: joining selected split lines omits
-        // the separator before the next heading, unlike route payload bytes.
-        const bytes = Buffer.byteLength(document.lines.slice(range.startLine, range.endLine).join("\n"));
-        expect(bytes, key).toBeLessThanOrEqual(newDomain ? 25_000 : legacySectionCeilings[key] ?? 25_000);
+        const measured = bytes;
+        check(key, () => expect(measured, key).toBeLessThanOrEqual(newDomain ? 25_000 : legacySectionCeilings[key] ?? 25_000));
         if (Object.hasOwn(legacySectionCeilings, key)) {
-          expect(bytes, `Remove resolved section exception: ${key}`).toBeGreaterThan(25_000);
+          check(key, () => expect(measured, `Remove resolved section exception: ${key}`).toBeGreaterThan(25_000));
           remainingExceptions.delete(key);
         }
       }
     }
+    expect(failures, failures.join("\n")).toEqual([]);
     expect([...remainingExceptions], "Remove exceptions no longer routed as primary sections").toEqual([]);
+  });
+  it("collects every failing assertion instead of stopping at the first", () => {
+    const failures: string[] = [];
+    collectFailure(failures, "oversized-a", () => expect(30_000, "a").toBeLessThanOrEqual(25_000));
+    collectFailure(failures, "missing-b", () => { throw new Error("ENOENT: docs/missing.md"); });
+    collectFailure(failures, "oversized-c", () => expect(26_000, "c").toBeLessThanOrEqual(25_000));
+    collectFailure(failures, "fits-d", () => expect(1_000, "d").toBeLessThanOrEqual(25_000));
+    expect(failures).toHaveLength(3);
+    expect(failures.map((failure) => failure.split(":")[0])).toEqual(["oversized-a", "missing-b", "oversized-c"]);
+    expect(failures[1]).toContain("docs/missing.md");
   });
   it("keeps declared invariant inputs live and their tests executable", () => {
     for (const mapping of mappings) {

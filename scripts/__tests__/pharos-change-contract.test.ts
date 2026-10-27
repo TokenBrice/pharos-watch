@@ -577,38 +577,65 @@ describe("reading selectors and context modes", () => {
   });
 });
 
+/** Labelled byte-budget failures (measured, ceiling, excess) for one route. */
+function routeBudgetFailures(label: string, bytes: number, ceiling: number): string[] {
+  return bytes > ceiling ? [`${label}: ${bytes} bytes > ${ceiling} (excess ${bytes - ceiling})`] : [];
+}
+
 describe("route context enforcement and fixture ratchets", () => {
   it.each(ROUTE_FIXTURES)("keeps %s within its exact auto/contract fixture ceilings", (file, autoCeiling, contractCeiling) => {
+    // Visit both modes before asserting so one breach cannot hide the other.
+    const failures: string[] = [];
     for (const [mode, ceiling] of [["auto", autoCeiling], ["contract", contractCeiling]] as const) {
-      const context = buildRouteContext(classifyChangedFiles([file], mode));
-      expect(context.total.bytes, `${file} (${mode})`).toBeLessThanOrEqual(ceiling);
-      expect(ceiling).toBeLessThanOrEqual(context.ceiling);
-      expect(context.status).toBe("within-budget");
-      expect(context.ceiling).toBe(ROUTE_CONTEXT_CEILINGS[context.class]);
+      try {
+        const context = buildRouteContext(classifyChangedFiles([file], mode));
+        failures.push(...routeBudgetFailures(`${file} (${mode})`, context.total.bytes, ceiling));
+        if (ceiling > context.ceiling) failures.push(`${file} (${mode}): fixture ${ceiling} exceeds class ceiling ${context.ceiling}`);
+        if (context.status !== "within-budget") failures.push(`${file} (${mode}): status ${context.status}`);
+        if (context.ceiling !== ROUTE_CONTEXT_CEILINGS[context.class]) failures.push(`${file} (${mode}): ceiling ${context.ceiling} is not the ${context.class} class ceiling`);
+      } catch (error) {
+        failures.push(`${file} (${mode}): ${error instanceof Error ? error.message : String(error)}`);
+      }
     }
+    expect(failures, failures.join("\n")).toEqual([]);
   });
 
   it("bounds every tracked mapped reading signature in both modes", () => {
     readingSignatures ??= enumerateReadingSignatures();
     const documents: RouteContextDocumentCache = new Map();
     const measuredBytes = new Map<string, number>();
+    const failures: string[] = [];
     expect(new Set(readingSignatures.map((entry) => entry.mode))).toEqual(new Set(["auto", "contract"]));
     for (const { file, mode, contract } of readingSignatures) {
       // Selector signatures can select identical reading sets. Measure their
       // union once, but compare every signature against its own class ceiling.
-      const key = JSON.stringify([
-        [...contract.scopedContext].sort(),
-        contract.docs.map((doc) => `${doc.path}#${doc.anchor ?? ""}`).sort(),
-      ]);
-      let bytes = measuredBytes.get(key);
-      if (bytes === undefined) {
-        bytes = buildRouteContext(contract, { documents }).total.bytes;
-        measuredBytes.set(key, bytes);
+      // An unreadable document or anchor is reported and enumeration continues;
+      // it is never treated as zero bytes or as a pass.
+      try {
+        const key = JSON.stringify([
+          [...contract.scopedContext].sort(),
+          contract.docs.map((doc) => `${doc.path}#${doc.anchor ?? ""}`).sort(),
+        ]);
+        let bytes = measuredBytes.get(key);
+        if (bytes === undefined) {
+          bytes = buildRouteContext(contract, { documents }).total.bytes;
+          measuredBytes.set(key, bytes);
+        }
+        const routeClass = classifyRouteContext(contract);
+        failures.push(...routeBudgetFailures(`${file} (${mode}, ${routeClass})`, bytes, ROUTE_CONTEXT_CEILINGS[routeClass]));
+      } catch (error) {
+        failures.push(`${file} (${mode}): ${error instanceof Error ? error.message : String(error)}`);
       }
-      const routeClass = classifyRouteContext(contract);
-      const ceiling = ROUTE_CONTEXT_CEILINGS[routeClass];
-      expect(bytes, `${file} (${mode}): ${bytes} > ${ceiling} (${routeClass})`).toBeLessThanOrEqual(ceiling);
     }
+    expect(failures, failures.join("\n")).toEqual([]);
+  });
+
+  it("labels every budget breach so one enumeration reports all of them", () => {
+    expect([
+      ...routeBudgetFailures("a (auto)", 120, 100),
+      ...routeBudgetFailures("b (contract)", 100, 100),
+      ...routeBudgetFailures("c (contract)", 131, 100),
+    ]).toEqual(["a (auto): 120 bytes > 100 (excess 20)", "c (contract): 131 bytes > 100 (excess 31)"]);
   });
 
   it("retains the evaluator and Functions map acceptance limits in both modes", () => {
