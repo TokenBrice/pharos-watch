@@ -4,14 +4,21 @@ import { createPrTestPlan } from "../lib/pr-test-plan.mts";
 import { selectPrTestFiles } from "../lib/pr-test-selection.mts";
 
 const docRatchet = "scripts/__tests__/doc-ownership-registry.test.ts";
+const router = "scripts/__tests__/pharos-change-contract.test.ts";
 const manifest = "scripts/__tests__/generate-safety-score-v9-evaluation-build-manifest.test.ts";
 const isolate = "scripts/__tests__/isolate-local-state-registry.test.ts";
 
 describe("declared non-import-graph PR test ownership", () => {
   it.each([
-    ["docs/report-cards.md", [docRatchet]],
-    ["docs/worker-infrastructure.md", [docRatchet]],
-    ["docs/doc-ownership.json", [docRatchet]],
+    ["docs/report-cards.md", [docRatchet, router]],
+    ["docs/worker-infrastructure.md", [docRatchet, router]],
+    ["docs/status-dashboard.md", [docRatchet, router]],
+    ["docs/doc-ownership.json", [docRatchet, router]],
+    ["AGENTS.md", [router]],
+    ["CLAUDE.md", [router]],
+    ["src/AGENTS.md", [router]],
+    ["worker/AGENTS.md", [router]],
+    ["scripts/AGENTS.md", [router]],
     ["shared/lib/safety-score-v9/mint-posture.ts", [manifest]],
     ["shared/types/reserve-input.ts", [manifest]],
     ["shared/lib/supply.ts", [manifest, isolate]],
@@ -38,7 +45,18 @@ describe("declared non-import-graph PR test ownership", () => {
     const imported = "scripts/__tests__/critical-ownership.test.ts";
     const selected = selectPrTestFiles([changed, docRatchet], [mandatory], ["docs/report-cards.md"],
       new Map([["docs/report-cards.md", [imported]]]));
-    expect(selected).toEqual([changed, mandatory, imported, docRatchet].sort());
+    expect(selected).toEqual([changed, mandatory, imported, docRatchet, router].sort());
+  });
+
+  it("selects the router once for mixed doc and guide inputs", () => {
+    const selected = selectPrTestFiles([], [], ["docs/status-dashboard.md", "AGENTS.md", "worker/AGENTS.md"], new Map());
+    expect(selected.filter((file) => file === router)).toHaveLength(1);
+    expect(selected).toEqual(expect.arrayContaining([docRatchet, router]));
+  });
+
+  it("fails closed when the router test is missing", () => {
+    expect(() => selectPrTestFiles([], [], ["AGENTS.md"], new Map(), (file) => file !== resolve(router)))
+      .toThrow(router);
   });
 
   it("fails closed rather than silently skipping a missing declared invariant", () => {

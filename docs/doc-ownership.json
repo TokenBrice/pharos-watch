@@ -1490,6 +1490,12 @@
       ],
       "docs": ["docs/process/agent-start-here.md", { "path": "docs/process/agent-artifacts.md", "anchor": "harness-configuration" }, { "path": "docs/process/agent-artifacts.md", "anchor": "agent-skills" }],
       "checks": ["npx vitest run scripts/__tests__/pharos-change-contract.test.ts scripts/__tests__/doc-ownership-registry.test.ts"],
+      "testOwnership": [
+        {
+          "sources": ["docs/**", "AGENTS.md", "**/AGENTS.md", "CLAUDE.md"],
+          "tests": ["scripts/__tests__/pharos-change-contract.test.ts"]
+        }
+      ],
       "rules": [
         "Root AGENTS.md is the single authored instruction file; CLAUDE.md imports it.",
         "Temporary agent output belongs in ignored scratch locations, not committed docs."

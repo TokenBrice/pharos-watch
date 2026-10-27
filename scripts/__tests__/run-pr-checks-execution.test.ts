@@ -247,9 +247,24 @@ describe("readiness execution", () => {
     expect(executed).toEqual(expect.arrayContaining([
       expect.objectContaining({ id: "pr-static:check:verified-doc-links", status: "failed" }),
       expect.objectContaining({ id: "pr-static:check:doc-sync", status: "passed" }),
-      expect.objectContaining({ id: "pr-static:doc-ownership-invariants", status: "passed", command: "npm exec -- vitest run scripts/__tests__/doc-ownership-registry.test.ts" }),
+      expect.objectContaining({ id: "pr-static:doc-ownership-invariants", status: "passed", command: "npm exec -- vitest run scripts/__tests__/doc-ownership-registry.test.ts scripts/__tests__/pharos-change-contract.test.ts" }),
     ]));
     expect(h.runCommandImpl.mock.calls.filter(([command]) => command.cmd === "npm run check:doc-sync")).toHaveLength(1);
+    expect(h.receipts[0].outcome).toBe("failed");
+  });
+
+  it("propagates a failing router invariant from the shared docs command", async () => {
+    fixture.changedFiles = ["README.md", "src/app/page.tsx"];
+    const h = harness();
+    h.runCommandImpl.mockImplementation(async (command) => ({
+      status: command.cmd.includes("pharos-change-contract.test.ts") ? 1 : 0,
+      aborted: false,
+      output: command.cmd.startsWith("git rev-parse") ? baseSha : command.cmd.startsWith("git show") ? "0" : "",
+    }));
+    expect(await runPrChecks([`--base=${baseSha}`], testEnv, h.options)).toBe(1);
+    expect(h.receipts[0].leaves).toEqual(expect.arrayContaining([
+      expect.objectContaining({ id: "pr-static:doc-ownership-invariants", status: "failed" }),
+    ]));
     expect(h.receipts[0].outcome).toBe("failed");
   });
 

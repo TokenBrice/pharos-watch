@@ -44,7 +44,7 @@ export interface PrLaneCommandContext {
 export const PR_DOC_COMMANDS: readonly PrLaneCommandDefinition[] = [
   { id: "verified-doc-links", program: "npm", args: ["run", "check:verified-doc-links"] },
   { id: "doc-sync", program: "npm", args: ["run", "check:doc-sync"] },
-  { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts"] },
+  { id: "doc-ownership-invariants", program: "npm", args: ["exec", "--", "vitest", "run", "scripts/__tests__/doc-ownership-registry.test.ts", "scripts/__tests__/pharos-change-contract.test.ts"] },
 ];
 
 export const PR_LANES: readonly PrLaneDefinition[] = [

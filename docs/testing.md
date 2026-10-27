@@ -139,7 +139,7 @@ The workflow YAML and shared selectors are executable authority: [PR](../.github
 | Owner | Required outcome |
 | --- | --- |
 | `secrets` | Snapshot trusted-base scanner/import closure/policy before candidate checkout; run one combined `--range --tree` invocation after merge checkout for commits and merge-resolution lines, then check changed candidate policy. Candidate policy cannot replace trusted success. |
-| `prepare` | Freeze event base/branch-head identities, bootstrap full-history/offline inputs, classify the tested merge checkout, and serialize the selected test plan. Internal-docs-only PRs run shared docs checks inline instead of validation jobs; editorial-style changes retain full static selection. |
+| `prepare` | Freeze event base/branch-head identities, bootstrap full-history/offline inputs, classify the tested merge checkout, and serialize the selected test plan. Internal-docs-only PRs run shared docs checks inline instead of validation jobs (links, doc-sync and the doc-ownership plus router invariant suites, enrolled automatically from docs, guide and registry changes); editorial-style changes retain full static selection. |
 | `validation` | Restore the exact producer workspace; execute selected compile, guards, uninstrumented test partitions and V9 resource lane. Mixed/source-owned docs checks run once inside static guards. |
 | `pages-artifact` | When selected, build and check without publishing or live refresh. Only trusted retained release-data replay may waive mirror wall-clock age, as described below. |
 | `PR gate` | `always()` requires secrets/prepare success, selected jobs successful and unselected jobs explicitly skipped. Missing classification, failure, cancellation and unexpected skip all fail closed. |
