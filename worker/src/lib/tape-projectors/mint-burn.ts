@@ -14,8 +14,11 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { formatCompactUsd } from "@shared/lib/format";
+import { FLOW_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
+import { batchExecute } from "../d1-primitives";
+import { MINT_BURN_TAPE_NOTICE_USD as NOTICE_USD, mintBurnTapeClaimStaleSql, mintBurnTapeEligibleSql } from "../mint-burn-tape-claim";
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import type { TapeEventInsert } from "../tape-event-types";
 import {
@@ -33,7 +36,6 @@ const CURSOR_KEY = "mint_burn.large_flow";
 // tracked coins. ~$10M single-transaction flows are already newsworthy in
 // the stablecoin context — daily aggregate flows are much larger but a
 // single tx of this size signals a counterparty event worth surfacing.
-const NOTICE_USD = 10_000_000;
 const WARNING_USD = 25_000_000;
 const SEVERE_USD = 100_000_000;
 
@@ -49,7 +51,7 @@ interface MintBurnSourceRow {
   symbol: string;
   chain_id: string;
   direction: string;
-  amount_usd: number;
+  amount_usd: number | null;
   counterparty: string | null;
   timestamp: number;
   flow_type: string | null;
@@ -99,6 +101,7 @@ function chainLabel(chainId: string): string {
 
 function buildFlowEvent(row: MintBurnSourceRow): TapeEventInsert | null {
   if (row.direction !== "mint" && row.direction !== "burn") return null;
+  if (row.amount_usd == null) return null;
   const tsMs = row.timestamp * 1000;
   const type = row.direction === "mint" ? "mint_burn.large_mint" : "mint_burn.large_burn";
   const severity = severityForFlow(row.amount_usd);
@@ -151,13 +154,44 @@ async function projectLargeFlows(
   // Eligibility can change in place after price healing or burn review. Reconcile
   // recent source identities independently of the watermark; older repairs use
   // explicit operator bounds instead of a full-history scan on every cron.
-  const rows = await fetchLargeFlows(db, sourceReconciliationSince(options), until, limit);
+  const reconcileSince = sourceReconciliationSince(options);
+
+  // Already-projected, unsuppressed claims whose source changed. Retract those
+  // that became ineligible; republish eligible corrections in place. A pruned
+  // source never matches the join, so a retention delete is never a retraction.
+  const changedRows = (await db.prepare(
+    `SELECT m.id, m.stablecoin_id, m.symbol, m.chain_id, m.direction, m.amount_usd,
+            m.counterparty, m.timestamp, m.flow_type, m.burn_type,
+            NOT (${mintBurnTapeEligibleSql("m")}) AS ineligible
+       FROM mint_burn_events AS m INDEXED BY idx_mbe2_ts
+       JOIN tape_events AS t INDEXED BY idx_tape_source_key
+         ON t.source_table = 'mint_burn_events' AND t.source_row_id = m.id AND t.transition = 'updated'
+      WHERE m.timestamp > ?${until == null ? "" : " AND m.timestamp <= ?"}
+        AND t.suppressed_at IS NULL
+        AND ${mintBurnTapeClaimStaleSql("t", "m")}
+      ORDER BY m.timestamp ASC, m.id ASC LIMIT ?`,
+  ).bind(reconcileSince, ...(until == null ? [] : [until]), limit)
+    .all<MintBurnSourceRow & { ineligible: number }>()).results ?? [];
+  const retracted = changedRows.filter((row) => row.ineligible === 1);
+  if (!options?.dryRun && retracted.length > 0) {
+    await batchExecute(db, retracted.map((row) => db.prepare(
+      `UPDATE tape_events SET suppressed_at = ?, suppression_reason = ?
+        WHERE source_table = 'mint_burn_events' AND source_row_id = ? AND transition = 'updated'
+          AND suppressed_at IS NULL
+          AND EXISTS (SELECT 1 FROM mint_burn_events AS s WHERE s.id = ?
+                        AND NOT (${mintBurnTapeEligibleSql("s")}))`,
+    ).bind(Math.floor(Date.now() / 1000), FLOW_CLAIM_RETRACTED_REASON, row.id, row.id)));
+  }
+
+  const freshRows = await fetchLargeFlows(db, reconcileSince, until, limit);
+  const rows = [...freshRows, ...changedRows.filter((row) => row.ineligible !== 1)];
   if (rows.length === 0) return { projected: 0, advanced: null };
 
   const events: TapeEventInsert[] = [];
   let maxCursor = since;
+  // Only fresh rows advance the watermark; corrected rows were already consumed.
+  for (const row of freshRows) if (row.timestamp > maxCursor) maxCursor = row.timestamp;
   for (const row of rows) {
-    if (row.timestamp > maxCursor) maxCursor = row.timestamp;
     const event = buildFlowEvent(row);
     if (event) events.push(event);
   }

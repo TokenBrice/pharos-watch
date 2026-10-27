@@ -340,7 +340,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
         name: "event",
         in: "query",
         schema: { type: "string", minLength: 1, maxLength: 200 },
-        description: "Exact permalink event ID, independent of list filters. Returns one event with the normal response schema, or 404 with no event body. Retracted freeze claims return reason freeze-claim-retracted.",
+        description: "Exact permalink event ID, independent of list filters. Returns one event with the normal response schema, or 404 with no event body. Retracted freeze claims return reason freeze-claim-retracted; retracted large mint/burn claims return flow-claim-retracted.",
       },
       {
         name: "type",

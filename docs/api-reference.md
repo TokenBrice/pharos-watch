@@ -417,7 +417,7 @@ Tape `type=freeze.*` and `class=freeze` select the literal dot-delimited prefix 
 
 `GET /api/events?event=<id>` resolves one permalink independently of listing filters or pagination. Success keeps the normal events response with exactly one event, `nextCursor: null`, `total: 1` and `totalExact: true`; the ordinary listing mode is unchanged. The ID must contain 1–200 characters. Missing or invalid stored events return `404` with `{ "error": "Event not found", "reason": "event-not-found" }`.
 
-Source-retracted freeze claims are absent from lists, search and counts. Exact lookup returns `404`, `Cache-Control: no-store` and `{ "error": "Event not found", "reason": "freeze-claim-retracted" }`, without an event body. There is no public tombstone representation. Deploy this additive Worker query mode before Pages switches permalink resolution to it.
+Source-retracted freeze and large mint/burn claims are absent from lists, search and counts. Exact lookup returns `404`, `Cache-Control: no-store` and `{ "error": "Event not found", "reason": "freeze-claim-retracted" }` (or `"flow-claim-retracted"` for a large mint/burn claim), without an event body. There is no public tombstone representation. Deploy this additive Worker query mode before Pages switches permalink resolution to it.
 
 
 ## Public Endpoints

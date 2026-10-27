@@ -14,7 +14,6 @@ import { logWorkerEvent } from "../lib/structured-log";
 import type { TapeEventRow } from "../lib/tape-event-types";
 import {
   SEVERITY_RANK,
-  FREEZE_CLAIM_RETRACTED_REASON,
   TAPE_EVENT_SEVERITY_VALUES,
   type TapeEvent,
   type TapeEventSeverity,
@@ -114,7 +113,7 @@ export const handleEvents = async (db: D1Database, url: URL): Promise<Response> 
     if (eventId.length === 0 || eventId.length > 200) return errorResponse(400, "Invalid event id");
     const row = await db.prepare("SELECT * FROM tape_events WHERE event_id = ?").bind(eventId).first<TapeEventRow>();
     if (row?.suppressed_at != null) {
-      return jsonResponse({ error: "Event not found", reason: FREEZE_CLAIM_RETRACTED_REASON }, {
+      return jsonResponse({ error: "Event not found", reason: row.suppression_reason ?? "event-not-found" }, {
         status: 404, noStore: true,
       });
     }

@@ -15,10 +15,12 @@ const SEC = 1_700_000_000;
 beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(SEC * 1000));
 const RECONCILIATION_SINCE = SEC - SOURCE_RECONCILIATION_LOOKBACK_SEC;
 
-const MATCH_FETCH_FLOWS = "FROM mint_burn_events";
+const MATCH_FETCH_FLOWS = "amount_usd >= ?";
+const NO_CHANGED_CLAIMS: MockTableConfig = { match: "JOIN tape_events AS t", rows: [] };
 
 function withRows(rows: Record<string, unknown>[]): MockTableConfig[] {
   return [
+    NO_CHANGED_CLAIMS,
     { match: "FROM cache WHERE key", rows: [] },
     { match: MATCH_FETCH_FLOWS, rows },
   ];
@@ -113,7 +115,7 @@ describe("mint_burn projector", () => {
     insert.run("newer-priced", "mint", 20_000_000, SEC, null);
 
     expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 1, advanced: SEC });
-    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("FROM mint_burn_events"));
+    const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("amount_usd >= ?"));
     expect(sourceSql).toBeDefined();
     const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sourceSql!}`)
       .all(RECONCILIATION_SINCE, 10_000_000, 500)
@@ -153,6 +155,57 @@ describe("mint_burn projector", () => {
       .toEqual({ value: String(SEC) });
   });
 
+  it("retracts claims whose source became ineligible and republishes eligible corrections in place", async () => {
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
+       flow_type, burn_type, tx_hash, block_number, explorer_tx_url)
+      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 1, 20000000, ?, 'standard', ?, '0xtest', 1, 'https://example.com')`);
+    for (const id of ["internal", "small", "unpriced", "review", "bridge", "amount", "same", "pruned"]) {
+      insert.run(id, id === "review" ? "burn" : "mint", SEC - 100, id === "review" ? "effective_burn" : null);
+    }
+    await projectMintBurnLargeFlows(db);
+    const claim = (id: string) => sqlite.prepare(
+      "SELECT id, event_id, created_at, title, suppressed_at, suppression_reason FROM tape_events WHERE source_row_id = ?",
+    ).get(id)!;
+    const before = Object.fromEntries(["amount", "same", "pruned", "internal"].map((id) => [id, claim(id)]));
+
+    const update = (set: string, id: string) => sqlite.prepare(`UPDATE mint_burn_events SET ${set} WHERE id = ?`).run(id);
+    update("flow_type = 'protocol_internal'", "internal");
+    update("amount_usd = 5000000", "small");
+    update("amount_usd = NULL", "unpriced");
+    update("burn_type = 'review_required'", "review");
+    update("flow_type = 'bridge_transfer'", "bridge");
+    update("amount_usd = 30000000", "amount");
+    sqlite.prepare("DELETE FROM mint_burn_events WHERE id = 'pruned'").run();
+
+    // Dry-run reports without mutating.
+    await projectMintBurnLargeFlows(db, { dryRun: true });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events WHERE suppressed_at IS NOT NULL").get()).toEqual({ n: 0 });
+
+    await projectMintBurnLargeFlows(db);
+    for (const id of ["internal", "small", "unpriced", "review", "bridge"]) {
+      expect(claim(id)).toMatchObject({ suppressed_at: SEC, suppression_reason: "flow-claim-retracted" });
+    }
+    // Eligible correction keeps identity and clocks; only presentation fields change.
+    expect(claim("amount")).toMatchObject({
+      id: before.amount.id, event_id: before.amount.event_id, created_at: before.amount.created_at,
+      suppressed_at: null, title: expect.stringContaining("$30"),
+    });
+    expect(JSON.parse((sqlite.prepare("SELECT payload_json FROM tape_events WHERE source_row_id = 'amount'").get() as { payload_json: string }).payload_json).amountUsd)
+      .toBe(30_000_000);
+    expect(claim("same")).toEqual(before.same);
+    // A pruned source is never a retraction.
+    expect(claim("pruned")).toEqual(before.pruned);
+
+    // A retracted identity is never revived, even when the source becomes eligible again.
+    update("flow_type = 'standard'", "internal");
+    await projectMintBurnLargeFlows(db);
+    await projectMintBurnLargeFlows(db, { since: 0 });
+    expect(claim("internal")).toEqual({ ...before.internal, suppressed_at: SEC, suppression_reason: "flow-claim-retracted" });
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM tape_events WHERE source_row_id = 'internal'").get()).toEqual({ n: 1 });
+  });
+
   it("derives the same nonempty event identity independently of persistence", async () => {
     const first = mockTapeD1(withRows([makeFlow()])) as MockD1Database;
     const second = mockTapeD1(withRows([makeFlow()])) as MockD1Database;
@@ -170,6 +223,7 @@ describe("mint_burn projector", () => {
       makeFlow({ id: "ethereum-0xc-0", timestamp: SEC }),
     ];
     const db = mockTapeD1([
+      NO_CHANGED_CLAIMS,
       { match: "FROM cache WHERE key", rows: [] },
       { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, 10_000_000, 2], rows: rows.slice(0, 2) },
       { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, SEC, 10_000_000], rows },

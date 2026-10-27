@@ -2,6 +2,7 @@ import { batchExecute, executeAtomicBatch } from "./db";
 import { D1_BATCH_SIZE } from "./constants";
 import { getCache, setCache } from "./db-cache";
 import { runWithOverloadRetry } from "./d1-overload-retry";
+import { mintBurnTapeEligibleSql } from "./mint-burn-tape-claim";
 import type { TapeEventInsert, TapeEventRow } from "./tape-event-types";
 
 const WATERMARK_KEY_PREFIX = "tape-projector:cursor:";
@@ -28,10 +29,48 @@ export async function setProjectorWatermark(
   await setCache(db, tapeProjectorCursorKey(eventClass), String(Math.floor(value)));
 }
 
+function prepareFlowInsert(db: D1Database, event: TapeEventInsert, nowSec: number): D1PreparedStatement {
+  const payload = event.payload as Record<string, unknown>;
+  return db
+    .prepare(
+      `INSERT INTO tape_events
+         (event_id, type, severity, ts, ends_at, coin_id, issuer_id, peg_currency,
+          chain, title, summary, payload_json, source_table, source_row_id,
+          transition, source_url, methodology_version, created_at)
+       SELECT ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+        WHERE EXISTS (
+          SELECT 1 FROM mint_burn_events AS source
+           WHERE source.id = ?
+             AND source.amount_usd IS ?
+             AND source.flow_type IS ?
+             AND source.burn_type IS ?
+             AND ${mintBurnTapeEligibleSql("source")}
+        )
+       ON CONFLICT(source_table, source_row_id, transition) DO UPDATE SET
+         severity = excluded.severity, title = excluded.title,
+         summary = excluded.summary, payload_json = excluded.payload_json
+       WHERE tape_events.suppressed_at IS NULL
+         AND tape_events.type = excluded.type
+         AND (tape_events.severity IS NOT excluded.severity
+           OR tape_events.title IS NOT excluded.title
+           OR tape_events.summary IS NOT excluded.summary
+           OR tape_events.payload_json IS NOT excluded.payload_json)`,
+    )
+    .bind(
+      event.eventId, event.type, event.severity, event.ts, event.endsAt, event.coinId,
+      event.issuerId, event.pegCurrency, event.chain, event.title, event.summary,
+      JSON.stringify(event.payload), event.sourceTable, event.sourceRowId, event.transition,
+      event.sourceUrl, event.methodologyVersion, nowSec,
+      event.sourceRowId, payload.amountUsd ?? null, payload.flowType ?? null, payload.burnType ?? null,
+    );
+}
+
 /**
  * Source-key reclassification replaces ordinary events. Peak observations are
  * insert-if-absent; freeze corrections update only current, unsuppressed source
- * amounts. Both retain the first permalink, ingestion ID and source/creation
+ * amounts. Large-flow claims insert only while the source is still eligible
+ * and matches the event's snapshot, and a correction updates only presentation
+ * fields of an unsuppressed claim. All retain the first permalink, ingestion ID and source/creation
  * clocks. An optional checkpoint commits with the final bounded event batch.
  */
 export async function insertTapeEvents(
@@ -41,8 +80,9 @@ export async function insertTapeEvents(
 ): Promise<number> {
   if (events.length === 0 && !checkpoint) return 0;
   const nowSec = Math.floor(Date.now() / 1000);
-  const stmts = events.map((event) =>
-    db
+  const stmts = events.map((event) => {
+    if (event.sourceTable === "mint_burn_events") return prepareFlowInsert(db, event, nowSec);
+    return db
       .prepare(
         `INSERT OR REPLACE INTO tape_events
            (event_id, type, severity, ts, ends_at, coin_id, issuer_id, peg_currency,
@@ -87,8 +127,8 @@ export async function insertTapeEvents(
         event.sourceUrl,
         event.methodologyVersion,
         nowSec,
-      ),
-  );
+      );
+  });
   if (checkpoint) {
     // Reserve one slot so even an exact multiple of the batch limit ends with
     // event writes and the checkpoint in the same transaction.
