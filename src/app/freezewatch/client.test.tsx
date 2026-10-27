@@ -261,11 +261,12 @@ describe("FreezeWatchClient", () => {
     const observedOnly = CLIENT_ACTIVE_STABLECOINS
       .filter((meta) => CLIENT_TRACKED_META_BY_ID.get(meta.id)?.blacklistStatus === false)
       .map((meta) => makeStablecoin({ id: meta.id, circulating: { peggedUSD: 1_000_000 } }));
+    mocks.useBlacklistSummary.mockReturnValue(stubQuery({ data: makeSummary() }));
     mocks.useStablecoins.mockReturnValue(stubQuery({ data: { peggedAssets: observedOnly } }));
 
     render(<FreezeWatchClient />);
 
-    const stat = screen.getByText("Freeze-exposed value").parentElement;
+    const stat = screen.getByText("Freeze-exposed value").closest("div");
     expect(stat?.textContent).toContain("—");
     expect(stat?.textContent).not.toContain("$0");
     // Registry counts stay visible.
