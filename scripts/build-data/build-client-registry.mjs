@@ -16,7 +16,7 @@
  *   node --import tsx scripts/build-data/build-client-registry.mjs --check   # CI guard
  */
 
-import { existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -29,6 +29,7 @@ import {
 } from "../../shared/types/stablecoin-client-meta.ts";
 import { resolveMintAuthorityStatusKind } from "../../shared/lib/classification/mint-authority.ts";
 import { resolveMechanismArchetype } from "../../shared/lib/classification/resolve-mechanism-archetype.ts";
+import { atomicWriteFileSync } from "../lib/atomic-artifact-write.mts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 /** @typedef {import("../../shared/types/stablecoin-client-meta").StablecoinClientMeta} StablecoinClientMeta */
@@ -888,17 +889,17 @@ export function runCli({ checkMode = process.argv.includes("--check") } = {}) {
     );
   } else {
     mkdirSync(dirname(LIST_OUTPUT_JSON_ABS), { recursive: true });
-    writeFileSync(LIST_OUTPUT_JSON_ABS, output, "utf8");
+    atomicWriteFileSync(LIST_OUTPUT_JSON_ABS, output);
     mkdirSync(DETAIL_OUTPUT_DIR_ABS, { recursive: true });
     for (const { id, output: detailOutput } of detailOutputs) {
-      writeFileSync(detailOutputPath(id), detailOutput, "utf8");
+      atomicWriteFileSync(detailOutputPath(id), detailOutput);
     }
     mkdirSync(dirname(COMPLIANCE_OUTPUT_JSON_ABS), { recursive: true });
-    writeFileSync(COMPLIANCE_OUTPUT_JSON_ABS, complianceOutput, "utf8");
+    atomicWriteFileSync(COMPLIANCE_OUTPUT_JSON_ABS, complianceOutput);
     mkdirSync(dirname(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS), { recursive: true });
-    writeFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, telegramMiniAppOutput, "utf8");
+    atomicWriteFileSync(TELEGRAM_MINI_APP_OUTPUT_JSON_ABS, telegramMiniAppOutput);
     mkdirSync(dirname(WORKER_RUNTIME_OUTPUT_JSON_ABS), { recursive: true });
-    writeFileSync(WORKER_RUNTIME_OUTPUT_JSON_ABS, workerRuntimeOutput, "utf8");
+    atomicWriteFileSync(WORKER_RUNTIME_OUTPUT_JSON_ABS, workerRuntimeOutput);
     console.log(`${LIST_OUTPUT_JSON_REL}: wrote client list (${listCoins.length} entries, ${output.length} bytes)`);
     console.log(
       `${DETAIL_OUTPUT_DIR_REL}: wrote client details (${detailOutputs.length} entries, ${detailOutputs.reduce((sum, entry) => sum + entry.output.length, 0)} bytes)`,

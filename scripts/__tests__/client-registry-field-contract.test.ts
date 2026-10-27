@@ -1,5 +1,5 @@
 import { execFileSync } from "node:child_process";
-import { mkdtempSync, rmSync, writeFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
@@ -322,6 +322,16 @@ describe("client registry field contract", () => {
     const projected = JSON.parse(JSON.stringify(projectListCoin({ id: "unreviewed" }, STABLECOIN_CLIENT_LIST_FIELDS, "core-stablecoin")));
     expect(projected).not.toHaveProperty("mintAuthoritySummary");
     expect(projected).not.toHaveProperty("mintAuthorityStatus");
+  });
+
+  it("publishes every projection through the atomic writer and registers the helper as a source", () => {
+    const script = readFileSync(resolve("scripts/build-data/build-client-registry.mjs"), "utf8");
+    expect(script).toContain("atomicWriteFileSync");
+    expect(script).not.toMatch(/\bwriteFileSync\b/);
+    for (const id of ["stablecoin-catalog", "stablecoin-client-registry"]) {
+      const artifact = GENERATED_ARTIFACT_REGISTRY.find((entry: { id: string }) => entry.id === id)!;
+      expect(artifact.sourcePaths).toContain("scripts/lib/atomic-artifact-write.mts");
+    }
   });
 
   it("loads the real classifier closure using the registered write/check transport", () => {

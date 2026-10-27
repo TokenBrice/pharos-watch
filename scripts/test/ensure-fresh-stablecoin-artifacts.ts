@@ -15,9 +15,10 @@
  */
 import { execFileSync } from "node:child_process";
 import { createHash } from "node:crypto";
-import { existsSync, globSync, mkdirSync, readFileSync, readdirSync, statSync, writeFileSync } from "node:fs";
+import { existsSync, globSync, mkdirSync, readFileSync, readdirSync, rmSync, statSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { atomicWriteFileSync } from "../lib/atomic-artifact-write.mts";
 import { selectGeneratedArtifacts } from "../lib/automation-registry.mjs";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
@@ -35,19 +36,56 @@ function metadataFingerprint(paths: string[]): string {
   return hash.digest("hex");
 }
 
+const LOCK_POLL_MS = 50;
+const LOCK_TIMEOUT_MS = 60_000;
+
+/**
+ * Admit one bootstrap at a time per cache path through an exclusive directory.
+ * Waiters poll; a lock is never stolen. If a crashed bootstrap left one behind,
+ * remove `${cachePath}.lock` only after confirming no bootstrap is running.
+ */
+async function withBootstrapLock<T>(lockPath: string, run: () => Promise<T>): Promise<T> {
+  mkdirSync(dirname(lockPath), { recursive: true });
+  const deadline = Date.now() + LOCK_TIMEOUT_MS;
+  for (;;) {
+    try {
+      mkdirSync(lockPath);
+      break;
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== "EEXIST") throw error;
+      if (Date.now() >= deadline) {
+        throw new Error(`Timed out after ${LOCK_TIMEOUT_MS}ms waiting for ${lockPath}; remove it only if no stablecoin artifact bootstrap is running`);
+      }
+      await new Promise((resolveWait) => setTimeout(resolveWait, LOCK_POLL_MS));
+    }
+  }
+  try {
+    return await run();
+  } finally {
+    rmSync(lockPath, { recursive: true, force: true });
+  }
+}
+
 export async function refreshArtifactsIfChanged({ artifactPaths, inputPaths, cachePath, build }: {
   artifactPaths: string[];
   inputPaths: string[];
   cachePath: string;
   build: () => void | Promise<void>;
 }): Promise<void> {
-  const inputs = metadataFingerprint(inputPaths);
-  const current = `${inputs}\n${metadataFingerprint(artifactPaths)}\n`;
-  if (existsSync(cachePath) && readFileSync(cachePath, "utf8") === current) return;
-  await build();
-  mkdirSync(dirname(cachePath), { recursive: true });
-  // ponytail: metadata catches normal edits/deletions; CI checks content when metadata is preserved.
-  writeFileSync(cachePath, `${inputs}\n${metadataFingerprint(artifactPaths)}\n`);
+  await withBootstrapLock(`${cachePath}.lock`, async () => {
+    // Fingerprint only after admission, so a waiter observes the winner's output.
+    const inputs = metadataFingerprint(inputPaths);
+    const current = `${inputs}\n${metadataFingerprint(artifactPaths)}\n`;
+    if (existsSync(cachePath) && readFileSync(cachePath, "utf8") === current) return;
+    rmSync(cachePath, { force: true });
+    await build();
+    if (metadataFingerprint(inputPaths) !== inputs) {
+      throw new Error("Stablecoin artifact inputs changed during the bootstrap build; rerun to stamp a coherent generation");
+    }
+    mkdirSync(dirname(cachePath), { recursive: true });
+    // ponytail: metadata catches normal edits/deletions; CI checks content when metadata is preserved.
+    atomicWriteFileSync(cachePath, `${inputs}\n${metadataFingerprint(artifactPaths)}\n`);
+  });
 }
 
 export default async function ensureFreshStablecoinArtifacts(): Promise<void> {
