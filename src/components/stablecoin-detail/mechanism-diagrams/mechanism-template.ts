@@ -151,8 +151,8 @@ export function resolveMechanismFlowTemplate(
   const stressFootnote = override?.stressFootnote ?? copy.stressFootnote;
   return {
     accentColor: copy.accentColor,
-    ariaLabel: copy.ariaLabel(symbol),
-    description: copy.description(symbol),
+    ariaLabel: override?.ariaLabel ?? copy.ariaLabel(symbol),
+    description: override?.description ?? copy.description(symbol),
     steps: [mergeStep(first, override?.steps, 0), mergeStep(second, override?.steps, 1), mergeStep(third, override?.steps, 2)],
     loop: copy.loop,
     stressFootnote: stressFootnote || null,

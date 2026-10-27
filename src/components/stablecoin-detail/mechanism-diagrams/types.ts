@@ -14,6 +14,10 @@ export interface CoinOverride {
    * fields the caller wants to override need to be set.
    */
   steps?: ReadonlyArray<{ label?: string; subtitle?: string }>;
+  /** Replace the archetype's screen-reader summary when the coin's backing departs from it. */
+  ariaLabel?: string;
+  /** Replace the archetype's screen-reader description, paired with `ariaLabel`. */
+  description?: string;
   /**
    * Override the stress footnote for this specific coin, e.g. to name the
    * coin's own dated incident. Archetype footnotes name no coin, so this is

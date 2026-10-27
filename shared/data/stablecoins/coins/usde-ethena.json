@@ -2,14 +2,14 @@
   "id": "usde-ethena",
   "name": "Ethena USDe",
   "symbol": "USDe",
-  "oneLiner": "USDe is a synthetic dollar that stays near $1 by hedging crypto collateral with equal short positions; funding yield accrues to sUSDe stakers.",
+  "oneLiner": "USDe is a synthetic dollar now backed mostly by stablecoins and lending, with its remaining crypto hedged by equal shorts; yield accrues to sUSDe stakers.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
   "collateral": "Liquid Cash strategy basket (81.3% of the issuer collateral API's October 1, 2026 backing): stablecoins, DeFi lending, tokenized funds and institutional lending, with constituent balances undisclosed; remaining adapter categories are BTC (9.8%), ETH and liquid-staking collateral (7.6%), and other collateral including SOL, XRP, BNB and Gold (1.3%). The complete backing-assets API denominator is separate from the monthly custodian report and category breakdown.",
-  "pegMechanism": "Delta-neutral hedging: spot collateral custodied off-exchange (Copper, Ceffu, Anchorage Digital, Kraken) with equal short perpetual positions on CEXes (Binance, Bybit, OKX)",
+  "pegMechanism": "Mostly Liquid Cash (stablecoins, DeFi and institutional lending, tokenized funds); the crypto remainder is delta-hedged with short perps on CEXes",
   "llamaId": "146",
   "detailProvider": "defillama",
   "geckoId": "ethena-usde",
