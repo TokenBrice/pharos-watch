@@ -86,7 +86,7 @@ interface PysNullReasonInput {
 // folds a non-finite apy30d to 0, hiding it from this ladder. An above-envelope
 // APY or non-finite effective yield is failed source math; an unavailable
 // sustainability multiplier is unmeasured variance. Both withhold the score.
-export function derivePysNullReasonFromComponents(
+function derivePysNullReasonFromComponents(
   apy30d: number,
   scalingFactor: number,
   components: Pick<PysComponents, "effectiveYield" | "sustainabilityMultiplier">,

@@ -30,7 +30,7 @@ export function withoutSuspendedLiveReserves(stablecoin: StablecoinMeta): Stable
   // Preserve lazy evidence getters instead of materializing them into a
   // second isolate-lived catalog row while stripping the optional feed.
   const { liveReservesConfig: _suspendedConfig, ...descriptors } = Object.getOwnPropertyDescriptors(stablecoin);
-  return Object.create(Object.getPrototypeOf(stablecoin), descriptors) as StablecoinMeta;
+  return Object.create(Object.getPrototypeOf(stablecoin) as object | null, descriptors) as StablecoinMeta;
 }
 
 /**

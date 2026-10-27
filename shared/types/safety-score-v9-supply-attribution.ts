@@ -575,7 +575,7 @@ export type ReviewedEconomicDeploymentPartition = z.infer<typeof ReviewedEconomi
 export type EconomicSupplyObservation = z.infer<typeof EconomicSupplyObservationSchema>;
 export type EconomicSupplyReference = z.infer<typeof EconomicSupplyReferenceSchema>;
 
-export const ReviewedDeploymentSupplyObservationSchema = z.strictObject({
+const ReviewedDeploymentSupplyObservationSchema = z.strictObject({
   routeId: z.string().trim().min(1),
   chainId: z.string().trim().min(1),
   contractAddress: z.string().trim().min(1),
@@ -594,7 +594,7 @@ export const ReviewedDeploymentSupplyObservationSchema = z.strictObject({
   mintAuthority: z.string().trim().min(1).optional(),
 });
 export type ReviewedDeploymentSupplyObservation = z.output<typeof ReviewedDeploymentSupplyObservationSchema>;
-export const ReviewedDeploymentSupplyRowSchema = ReviewedDeploymentSupplyObservationSchema.extend({
+const ReviewedDeploymentSupplyRowSchema = ReviewedDeploymentSupplyObservationSchema.extend({
   currentSupplyUsd: z.number().finite().nonnegative(),
 });
 export type ReviewedDeploymentSupplyRow = z.output<typeof ReviewedDeploymentSupplyRowSchema>;
@@ -613,7 +613,7 @@ export const ReviewedDeploymentUnitPartitionSchema = z.strictObject({
 });
 export type ReviewedDeploymentUnitPartitionV1 = z.output<typeof ReviewedDeploymentUnitPartitionSchema>;
 
-export const XautLockMintObservationSchema = z.strictObject({
+const XautLockMintObservationSchema = z.strictObject({
   chainId: z.literal("ethereum"),
   canonicalTokenAddress: EvmAddressSchema,
   adapterAddress: EvmAddressSchema,

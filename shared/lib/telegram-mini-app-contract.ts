@@ -272,8 +272,6 @@ export type TelegramDewsBand = z.infer<typeof TelegramDewsBandSchema>;
 export type TelegramDepegStepBps = z.infer<typeof TelegramDepegStepBpsSchema>;
 export type TelegramSafetyMode = z.infer<typeof TelegramSafetyModeSchema>;
 export type TelegramSnoozeDurationToken = z.infer<typeof SnoozeDurationTokenSchema>;
-export type TelegramCoinSnoozeDurationToken = z.infer<typeof CoinSnoozeDurationTokenSchema>;
-
 const VersionCapabilitySchema = z.object({
   contractVersion: z.string().min(1).max(64).optional(),
   catalogVersion: z.string().min(1).max(64).optional(),

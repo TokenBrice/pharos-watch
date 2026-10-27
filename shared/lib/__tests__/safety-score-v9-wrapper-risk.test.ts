@@ -93,7 +93,10 @@ describe("near-total admitted collateral parent limits", () => {
     for (const status of [
       { ...STATUS, observationState: "missing" as const },
       { ...STATUS, evidenceRefIds: [] },
-      { ...STATUS, applicability: { ...STATUS.applicability, state: "unresolved" as const } },
+      { ...STATUS, applicability: {
+        state: "unresolved" as const, policyRuleId: STATUS.applicability.policyRuleId,
+        gapId: "gap:fixture", rationale: "Unresolved fixture.",
+      } },
     ]) expect(concentratedParent(1, 64, status).required).toBe(false);
   });
 

@@ -10,9 +10,6 @@ import {
 /** Re-exported under the worker-local name every Telegram store module already imports. */
 export { unixNow };
 
-export const PENDING_OWNERSHIP_CONFLICT_MESSAGE =
-  "Another user has a pending selection in this chat. Ask them to finish or /cancel it first.";
-
 function prepareEnsureSubscriberExists(
   db: D1Database,
   chatId: string,

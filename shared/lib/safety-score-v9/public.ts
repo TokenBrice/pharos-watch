@@ -1463,7 +1463,7 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       const foreignCauseGaps = [...foreignGapIds].sort();
       const refs = new Map(foreignCauseGaps.map((id, index) => [id, index]));
       const cards = ids.map((id) => {
-        const draft: V9InternedPublicCardDraft = JSON.parse(strFromU8(drafts.get(id)!));
+        const draft: V9InternedPublicCardDraft = JSON.parse(strFromU8(drafts.get(id)!)) as V9InternedPublicCardDraft;
         drafts.delete(id);
         return compactCard(finalizeV9PublicCauseGapCard(draft, refs));
       });

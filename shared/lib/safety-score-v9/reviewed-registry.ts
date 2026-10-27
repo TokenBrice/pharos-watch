@@ -59,6 +59,12 @@ export function createReviewedRegistryReferenceExpander(
   };
 }
 
+function isObservationTable(table: unknown): table is { id: string; value: unknown }[] {
+  return Array.isArray(table) && table.every((entry: unknown) =>
+    isRecord(entry) && typeof entry.id === "string" && "value" in entry &&
+    Object.keys(entry).every((key) => key === "id" || key === "value"));
+}
+
 /** Expand an authored envelope before its existing strict schema and digest boundary. */
 export function expandReviewedRegistryReferences(
   value: Record<string, unknown>,
@@ -69,9 +75,7 @@ export function expandReviewedRegistryReferences(
   const tables: Record<string, { id: string; value: unknown }[]> = {};
   for (const [field, tableKey] of Object.entries(tableFields)) {
     const table = value[tableKey];
-    if (!Array.isArray(table) || table.some((entry) =>
-      !isRecord(entry) || typeof entry.id !== "string" || !("value" in entry) ||
-      Object.keys(entry).some((key) => key !== "id" && key !== "value"))) {
+    if (!isObservationTable(table)) {
       throw new ReviewedRegistryEntryError(tableKey, "Expected an authored observation table");
     }
     const ids = new Set<string>();

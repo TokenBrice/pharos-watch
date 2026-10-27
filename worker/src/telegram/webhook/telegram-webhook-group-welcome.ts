@@ -39,7 +39,7 @@ function isBotAddedTransition(
   return wasAbsent && isPresent;
 }
 
-export function isBotRemovedTransition(
+function isBotRemovedTransition(
   oldStatus: string | undefined,
   newStatus: string | undefined,
 ): boolean {

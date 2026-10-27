@@ -208,7 +208,7 @@ describe("public status components", () => {
     const interval = CRON_INTERVALS["compute-safety-score-v9"];
     const budget = { delayedAfterSec: 3 * interval, degradedAfterSec: 6 * interval, outageAfterSec: 12 * interval };
     expect(getPublicProducerGraceBudget(interval)).toEqual(budget);
-    const at = (age: number, status: "accepted" | "held" = "accepted") => {
+    const at = (age: number, status: "current" | "held" = "current") => {
       health.safetyScorePublication = { ...health.safetyScorePublication!, status, acceptedAtSec: NOW - age, attemptedAtSec: NOW };
       return component(health, "safety-scores");
     };

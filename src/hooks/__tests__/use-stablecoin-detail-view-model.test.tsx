@@ -150,7 +150,7 @@ describe("useStablecoinDetailViewModel", () => {
       const old = Date.now() - 5 * 3600_000;
       const summaryKey = FRONTEND_API_QUERY_DESCRIPTORS.stablecoinLiveSummary(coin.id).queryKey;
       const supplyKey = FRONTEND_API_QUERY_DESCRIPTORS.supplyHistory(coin.id, STABLECOIN_DETAIL_SUPPLY_HISTORY_DAYS).queryKey;
-      const data = { price: 1, circulating: { peggedUSD: 100 } } as StablecoinLiveSummary;
+      const data = { price: 1, circulating: { peggedUSD: 100 } } as unknown as StablecoinLiveSummary;
       seedStablecoinDetailQueryCache(queryClient, {
         version: 1, stablecoinId: coin.id, generatedAt: Date.now(),
         updatedAt: { liveSummary: old, supplyHistory: Date.now() - 13 * 86400_000 },
@@ -200,9 +200,9 @@ describe("useStablecoinDetailViewModel", () => {
         expect(queryClient.getQueryState(summaryKey)?.errorUpdateCount).toBe(1);
       } else {
         const updatedAt = outcome === "fresh" ? Date.now() : old;
-        response.resolve({ data, meta: { updatedAt: updatedAt / 1000, status: "fresh" } });
+        response.resolve({ data, meta: { updatedAt: updatedAt / 1000, ageSeconds: 0, status: "fresh" } });
         supplyResponse.resolve({ ...queryClient.getQueryData<{ data: unknown; meta: ApiMeta }>(supplyKey)!,
-          meta: { updatedAt: Date.now() / 1000, status: "fresh" } });
+          meta: { updatedAt: Date.now() / 1000, ageSeconds: 0, status: "fresh" } });
         await Promise.all([pending, supplyPending]);
       }
       rerender();
@@ -248,7 +248,7 @@ describe("useStablecoinDetailViewModel", () => {
       const data = {
         price: 1, circulating: { peggedUSD: 100 }, circulatingPrevDay: {}, circulatingPrevWeek: {}, circulatingPrevMonth: {},
         nativeSupply: { current: 100, prevWeek: 100, prevMonth: 100 },
-      } as StablecoinLiveSummary;
+      } as unknown as StablecoinLiveSummary;
       if (state === "seed") seedStablecoinDetailQueryCache(queryClient, {
         version: 1, stablecoinId: coin.id, generatedAt: Date.now(),
         updatedAt: { liveSummary: updatedAt * 1000 }, lanes: { liveSummary: data },

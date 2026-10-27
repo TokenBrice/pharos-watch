@@ -37,7 +37,7 @@ export function serializeV9FactShard(asset: V9AssetFactsV3): Uint8Array {
     if (value === null || typeof value === "number" || typeof value === "boolean") return value;
     if (typeof value !== "object") throw new Error("Admitted V9 facts contain a non-JSON value");
     if (!Array.isArray(value)) {
-      const prototype = Object.getPrototypeOf(value);
+      const prototype: unknown = Object.getPrototypeOf(value);
       if (prototype !== Object.prototype && prototype !== null) {
         throw new Error("Admitted V9 facts contain a non-plain object");
       }
@@ -64,7 +64,7 @@ export function serializeV9FactShard(asset: V9AssetFactsV3): Uint8Array {
 export function deserializeV9FactShard(shard: Uint8Array): V9AssetFactsV3 {
   // Only serializeV9FactShard's owned output reaches this function. External
   // inputs must still pass the compiled-fact schema and identity admission.
-  const [strings, nodes]: [string[], Node[]] = JSON.parse(strFromU8(inflateSync(shard)));
+  const [strings, nodes]: [string[], Node[]] = JSON.parse(strFromU8(inflateSync(shard))) as [string[], Node[]];
   const objects: Array<unknown[] | Record<string, unknown>> =
     nodes.map((node) => node[0] === 0 ? [] : {});
   function decode(value: Value): unknown {

@@ -95,10 +95,13 @@ function decodeWarningEvidence(raw: string | null | undefined): WarningEvidence 
     return { status: "unavailable", reason: "malformed-json" };
   }
   if (!Array.isArray(parsed)) return { status: "unavailable", reason: "non-array" };
-  if (parsed.some((value) => typeof value !== "string" || value.length === 0)) {
-    return { status: "unavailable", reason: "invalid-member" };
+  const members: unknown[] = parsed;
+  const signals: string[] = [];
+  for (const value of members) {
+    if (typeof value !== "string" || value.length === 0) return { status: "unavailable", reason: "invalid-member" };
+    signals.push(value);
   }
-  return { status: parsed.length === 0 ? "valid-empty" : "valid-signals", signals: parsed };
+  return { status: signals.length === 0 ? "valid-empty" : "valid-signals", signals };
 }
 
 interface WarningDegradation {

@@ -3,7 +3,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { HorizonConstellation } from "@/components/horizon-constellation";
-import type { DriftStatus } from "@/lib/pre-launch";
+import type { DriftDisplayStatus } from "@/lib/pre-launch";
 
 const fixture = vi.hoisted(() => [
   ...Array.from({ length: 13 }, (_, index) => ({
@@ -17,7 +17,7 @@ const fixture = vi.hoisted(() => [
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({ CLIENT_TRACKED_STABLECOINS: fixture }));
 vi.mock("@/lib/logos", () => ({ logosById: {}, getLogoSrc: () => undefined }));
 
-const DRIFT = new Map<string, DriftStatus>([
+const DRIFT = new Map<string, DriftDisplayStatus>([
   ["coin-0", "pushed-once"],
   ["coin-10", "overdue"],
   ["coin-11", "pushed-multiple"],

@@ -22,7 +22,7 @@ async function loadScanCursor(db: D1Database, cutoff: number): Promise<PriceHeal
   const cached = await getCache(db, SCAN_CURSOR_KEY);
   if (!cached) return null;
   try {
-    const cursor: Partial<PriceHealCursor> | null = JSON.parse(cached.value);
+    const cursor: Partial<PriceHealCursor> | null = JSON.parse(cached.value) as Partial<PriceHealCursor> | null;
     return cursor != null
       && typeof cursor.timestamp === "number" && Number.isSafeInteger(cursor.timestamp) && cursor.timestamp >= cutoff
       && typeof cursor.id === "string" && cursor.id.length > 0

@@ -201,7 +201,7 @@ function publicationInputReloader(
   normalize: (value: SafetyScoreV9CompilerInput) => SafetyScoreV9CompilerInput,
 ) {
   const bytes = deflateSync(strToU8(JSON.stringify(fixedInput)), { level: 1 });
-  return () => normalize(JSON.parse(strFromU8(inflateSync(bytes))));
+  return () => normalize(JSON.parse(strFromU8(inflateSync(bytes))) as SafetyScoreV9CompilerInput);
 }
 
 function publicationReplayInputReloader(fixedInput: Readonly<SafetyScoreV9CompilerInput>) {
@@ -211,7 +211,7 @@ function publicationReplayInputReloader(fixedInput: Readonly<SafetyScoreV9Compil
     baseInputGenerationId, clockSec, safetyScoreV9SupplyAttributionById, evidenceJournalById,
     supplyAttributionJournalById, pegProvenanceById, pipelineGapByAssetId,
   } satisfies SafetyScoreV9ReplayCaptureInput)), { level: 1 });
-  return (): SafetyScoreV9ReplayCaptureInput => JSON.parse(strFromU8(inflateSync(bytes)));
+  return (): SafetyScoreV9ReplayCaptureInput => JSON.parse(strFromU8(inflateSync(bytes))) as SafetyScoreV9ReplayCaptureInput;
 }
 
 async function preparePublicationInput(
@@ -609,7 +609,7 @@ export async function retryPendingSafetyScoreV9PublicMaterialization(
     checkBudget();
     let source = await loadSafetyScoreV9PublicationStoredRow(db, retrySignal);
     checkBudget();
-    if (!source || source.updatedAt !== row.published_at || JSON.parse(source.value).payloadSha256 !== row.payload_sha256) {
+    if (!source || source.updatedAt !== row.published_at || (JSON.parse(source.value) as { payloadSha256?: unknown }).payloadSha256 !== row.payload_sha256) {
       throw new Error("v9-public-materialization-retry-source-changed");
     }
     const publication = await parseSafetyScoreV9Publication(source.value, retrySignal);

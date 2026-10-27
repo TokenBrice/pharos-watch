@@ -49,7 +49,7 @@ export const CRON_SCHEDULE_CADENCES = {
 
 // Config/prerequisite recovery keeps the original :01/:06/... opportunities,
 // which are again every reserve-recovery slot.
-export const RESERVE_CONFIG_RECOVERY_CADENCE = CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery;
+const RESERVE_CONFIG_RECOVERY_CADENCE = CRON_SCHEDULE_CADENCES.fiveMinuteReserveRecovery;
 
 export function isReserveConfigRecoverySlot(slotStartedAtSec: number): boolean {
   const { intervalSec, offsetSec } = RESERVE_CONFIG_RECOVERY_CADENCE;

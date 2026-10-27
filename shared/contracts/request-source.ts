@@ -13,7 +13,7 @@ export const REQUEST_SOURCE_MEASUREMENT_VERSION = 2;
 export const REQUEST_SOURCE_POLICY_ID = "request-source-bernoulli-64-v1";
 export const REQUEST_SOURCE_SAMPLE_INVERSE_RATE = 64;
 export const REQUEST_SOURCE_LOW_SAMPLE_MINIMUM = 30;
-export const AttributionMeasurementSchema = z.object({
+const AttributionMeasurementSchema = z.object({
   kind: z.enum(["observed", "estimated", "mixed", "unavailable"]),
   observedSampleCount: z.number().int().nonnegative(),
   recordedCount: z.number().int().nonnegative(),
@@ -52,9 +52,7 @@ const ApiRequestAttributionSplitSchema = z.object({
 });
 export type ApiRequestAttributionSplit = z.output<typeof ApiRequestAttributionSplitSchema>;
 const ApiRequestAttributionRouteStatSchema = ApiRequestAttributionSplitSchema.extend({ routeKey: z.string(), routePath: z.string() });
-export type ApiRequestAttributionRouteStat = z.output<typeof ApiRequestAttributionRouteStatSchema>;
 const ApiRequestAttributionTimeBucketSchema = ApiRequestAttributionSplitSchema.extend({ bucketStart: z.number() });
-export type ApiRequestAttributionTimeBucket = z.output<typeof ApiRequestAttributionTimeBucketSchema>;
 const ApiRequestAttributionLaneStatSchema = ApiRequestAttributionSplitSchema.extend({ lane: z.enum(["public-api", "site-api"]) });
 export type ApiRequestAttributionLaneStat = z.output<typeof ApiRequestAttributionLaneStatSchema>;
 export type ApiRequestWorkerLane = ApiRequestAttributionLaneStat["lane"];
@@ -68,7 +66,6 @@ const ApiRequestAttributionSiteDeliverySchema = z.object({
     pagesUpstreamErrors: AttributionMeasurementSchema, publicApiSiteRequests: AttributionMeasurementSchema,
   }),
 });
-export type ApiRequestAttributionSiteDelivery = z.output<typeof ApiRequestAttributionSiteDeliverySchema>;
 const ApiRequestAttributionKeyedPublicApiSummarySchema = z.object({
   keyedRequests: z.number(), unkeyedRequests: z.number().nullable(), totalRequests: z.number().nullable(),
   keyedSharePct: z.number().nullable(), unkeyedSharePct: z.number().nullable(),
@@ -79,7 +76,6 @@ const ApiRequestAttributionKeyedPublicApiSummarySchema = z.object({
     unkeyedSharePct: AttributionMeasurementSchema,
   }),
 });
-export type ApiRequestAttributionKeyedPublicApiSummary = z.output<typeof ApiRequestAttributionKeyedPublicApiSummarySchema>;
 const ApiRequestAttributionApiKeyStatSchema = z.object({
   apiKeyId: z.number(), name: z.string(), maskedToken: z.string(), trafficClass: ApiKeyTrafficClassSchema,
   isActive: z.boolean(), expiresAt: z.number().nullable(), rateLimitPerMinute: z.number(), requestCount: z.number(),

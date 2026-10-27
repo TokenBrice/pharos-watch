@@ -101,11 +101,6 @@ export function formatWhyPayload(coinId: string): string {
   return `${WHY_PAYLOAD_PREFIX}${coinId}`;
 }
 
-/** Constructs a `coverage_<id>` payload. Does not validate `coinId`. */
-export function formatCoveragePayload(coinId: string): string {
-  return `${COVERAGE_PAYLOAD_PREFIX}${coinId}`;
-}
-
 /**
  * Parse a raw payload string into a `TelegramMiniAppPayload`, or null if the
  * payload is empty, too long, contains invalid characters, or is not a known

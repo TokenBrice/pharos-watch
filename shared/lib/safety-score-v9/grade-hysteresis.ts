@@ -25,7 +25,7 @@ interface V9GradeHysteresisCard {
 const isLetter = (grade: V9Grade | null): grade is Exclude<V9Grade, "NR"> =>
   grade !== null && grade !== "NR";
 
-export function resolveV9GradeHold(
+function resolveV9GradeHold(
   card: V9GradeHysteresisCard,
   accepted: V9GradeHysteresisBaseline["cards"][number] | undefined,
   acceptedGenerationId: string,

@@ -180,7 +180,7 @@ export const MINT_AUTHORITY_STATUS_CONFIG: Record<MintAuthorityStatusKind, MintA
   },
 };
 
-export const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; detail: string }> = {
+const V9_MINT_POSTURE_BANDS: Record<V9MintPostureBand, { label: string; detail: string }> = {
   hardened: {
     label: "Hardened",
     detail: "No live mint authority, or a bounded administrator that cannot expand the claim.",

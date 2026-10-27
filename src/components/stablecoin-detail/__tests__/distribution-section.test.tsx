@@ -305,7 +305,7 @@ it.each([
   { meta: { status: "fresh", dependencies: { source: { status: "stale", reason: "source-old" } } }, state: null },
 ] as { meta: ApiMeta; state: string | null }[])("qualifies distribution metadata independently of a fresh receipt ($state)", ({ meta, state }) => {
   const receipt = Date.now();
-  mockDistributions({ updatedAt: Math.floor(receipt / 1000), ...meta }, receipt);
+  mockDistributions({ updatedAt: Math.floor(receipt / 1000), ...meta } as ApiMeta, receipt);
   const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
   // Source advisories over a current generation are operator signal; only stale or missing data is public.
   expect(container.querySelectorAll(state ? `[data-health-state="${state}"]` : "[data-health-state]"))
@@ -332,7 +332,7 @@ it("ages both distribution notices in place under their served budgets", () => {
   vi.useFakeTimers();
   vi.setSystemTime(new Date("2026-10-20T12:00:00Z"));
   const receipt = Date.now();
-  mockDistributions({ updatedAt: receipt / 1000, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, receipt);
+  mockDistributions({ updatedAt: receipt / 1000, ageSeconds: 0, status: "fresh", freshBudgetSec: 60, degradedBudgetSec: 120 }, receipt);
   const { container } = render(<DistributionSection stablecoinId="usdc-circle" />);
   expect(container.querySelector("[data-health-state]")).toBeNull();
   act(() => vi.advanceTimersByTime(50));

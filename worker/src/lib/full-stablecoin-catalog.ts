@@ -46,7 +46,7 @@ function unpackBytes(bytes: unknown, payload: unknown, maximum: number, id: stri
 function lazyEvidence(compressed: Uint8Array, bytes: number, decoder: TextDecoder): () => unknown {
   // A separate closure scope must not retain the catalog's interning table or
   // reusable inflate buffer after initialization.
-  return () => JSON.parse(decoder.decode(gunzipSync(compressed, new Uint8Array(bytes))));
+  return () => JSON.parse(decoder.decode(gunzipSync(compressed, new Uint8Array(bytes)))) as unknown;
 }
 
 /** Decode one complete source record at a time without keeping inflate buffers. */
@@ -111,4 +111,4 @@ export function decodeWorkerStablecoinCatalog(asset: PackedCatalog): readonly St
 
 // Parse once at initialization; the temporary manifest and base64 strings can be
 // collected after decoding. Only the imported module text remains retained.
-export default decodeWorkerStablecoinCatalog(JSON.parse(packedAssetText));
+export default decodeWorkerStablecoinCatalog(JSON.parse(packedAssetText) as PackedCatalog);

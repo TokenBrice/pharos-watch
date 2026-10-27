@@ -19,7 +19,7 @@ let admitted: ReviewedCollateralClasses | undefined;
 export function getLenderCollateralClassesRegistry(): ReviewedCollateralClasses {
   if (admitted) return admitted;
   const registry = deepFreeze(LenderCollateralClassesRegistrySchema.parse(registryJson));
-  const byToken: Record<string, Readonly<LenderCollateralClassReview>> = Object.create(null);
+  const byToken: Record<string, Readonly<LenderCollateralClassReview>> = Object.create(null) as Record<string, Readonly<LenderCollateralClassReview>>;
   for (const row of registry.reviews) byToken[`${row.chain}:${row.address}`] = row;
   admitted = Object.freeze({
     registry,

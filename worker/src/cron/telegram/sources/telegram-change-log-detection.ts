@@ -13,7 +13,7 @@ import type { DewsRow, SafetySnapshot } from "./telegram-alert-snapshots";
  * separate from the live-alert baseline, which holds the last *alerted* grade
  * while a move is pending, so every published move is logged exactly once.
  */
-export const SAFETY_OBSERVED_CACHE_KEY = "telegram:rollup:safety-observed";
+const SAFETY_OBSERVED_CACHE_KEY = "telegram:rollup:safety-observed";
 
 type ObservedSafety = Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>;
 
@@ -62,7 +62,7 @@ function utcDate(nowSec: number): string {
 }
 
 /** DEWS moves for the roll-up: every escalation (for digest-only global opt-ins) and every unsent de-escalation. */
-export function buildDewsChangeLogEntries(
+function buildDewsChangeLogEntries(
   changes: readonly DewsChange[],
   rows: readonly DewsRow[],
   nowSec: number,
@@ -81,7 +81,7 @@ export function buildDewsChangeLogEntries(
   });
 }
 
-export function buildReserveChangeLogEntries(alerts: readonly ReserveAlert[], nowSec: number): TelegramChangeLogEntry[] {
+function buildReserveChangeLogEntries(alerts: readonly ReserveAlert[], nowSec: number): TelegramChangeLogEntry[] {
   return alerts.map((alert) => ({
     kind: "reserve",
     stablecoinId: alert.stablecoinId,

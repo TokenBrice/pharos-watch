@@ -366,11 +366,13 @@ describe("Safety Score v9 methodology policy", () => {
     expect(() => loadV9MethodologyPolicy(weights)).toThrow(/weights must sum to 1/i);
 
     const trackBands = candidateClone();
-    trackBands.semantic.formula.trackRecordCeilings[0]!.minMonthsInclusive = 1;
+    // Deliberately invalid: the schema pins the first ceiling band at 0 months.
+    (trackBands.semantic.formula.trackRecordCeilings[0] as { minMonthsInclusive: number }).minMonthsInclusive = 1;
     expect(() => loadV9MethodologyPolicy(trackBands)).toThrow();
 
     const extraAgeTier = candidateClone();
-    extraAgeTier.semantic.formula.trackRecordCeilings.push({
+    // Deliberately invalid: the schema admits exactly one ceiling band.
+    (extraAgeTier.semantic.formula.trackRecordCeilings as unknown[]).push({
       minMonthsInclusive: 24,
       maxMonthsExclusive: 36,
       limit: 86,

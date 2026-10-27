@@ -30,7 +30,7 @@ const REVIEW_QUANTITATIVE_TOLERANCE = 1e-6;
 const UNRESOLVED_RESERVE_DISPOSITIONS = new Set(["basket-needs-split", "insufficient-evidence"]);
 const DAY_MS = 86_400_000;
 /** A `launched` pre-launch row must reach a decision (promotion, listing decision or renewed review) within this dwell. */
-export const LAUNCHED_PHASE_MAX_DWELL_DAYS = 60;
+const LAUNCHED_PHASE_MAX_DWELL_DAYS = 60;
 
 function canonicalDeploymentPart(value: string): string {
   const trimmed = value.trim();

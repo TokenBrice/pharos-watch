@@ -255,7 +255,7 @@ API smoke validates the complete redemption response with `RedemptionBackstopsRe
 
 `ops:watch-worker-cron` and `ops:night-watch-worker` preserve literal `ok`, `degraded`, `error`, `skipped_neutral` and `skipped_locked` counts; `synthetic` counts only the orthogonal `stale-slot-reconciled` subset. Unknown stored statuses retain their own bucket. Productive and publication counts use explicit columns, with unknown counts separate; terminal success is never substituted for publication. Synthetic children group by invocation and slot as “1 started + N not-started”, with execution-unknown children separate; grouping never changes their stored error status. Generation-ledger states are a separate table/count, not extra publications inferred from a terminal.
 
-`npm run ops:worker-evidence-report -- --fixture agents/worker-cron-snapshot.json` renders the same literal-status/output table from a saved watcher JSON snapshot; add `--json` for the computed summary. All three standalone tools use strict CLI parsing. The profiler lives in `worker/scripts/` because it executes Worker source; generic maintenance reporting does not import `worker/src/`.
+`npm run ops:worker-evidence-report -- --fixture agents/worker-cron-snapshot.json` renders the same literal-status/output table from a saved watcher JSON snapshot; add `--json` for the computed summary. All three standalone tools use strict CLI parsing. The profiler and its test live in `worker/scripts/` because they execute Worker source; generic maintenance reporting and the root test-typing project (`tsconfig.test-typecheck.json`, which excludes `worker/`) never import `worker/src/`. The profiler's typed surface is `worker-status-profile.d.mts`.
 
 Read-only status D1 profiling (run from the root):
 

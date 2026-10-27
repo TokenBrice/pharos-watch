@@ -43,7 +43,7 @@ function asset(value: unknown, symbol: "HBD" | "HIVE", allowZero = false): numbe
   if (!Number.isSafeInteger(milli) || milli < 0 || (!allowZero && milli === 0)) reject("invalid_response");
   return milli;
 }
-export function parseHiveTime(value: unknown): number {
+function parseHiveTime(value: unknown): number {
   if (typeof value !== "string" || !/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d$/.test(value)) reject("invalid_response");
   const ms = Date.parse(`${value}Z`);
   if (!Number.isFinite(ms) || new Date(ms).toISOString().slice(0, 19) !== value) reject("invalid_response");
@@ -56,7 +56,7 @@ function readHead(value: unknown, now: number) {
   return head;
 }
 
-export function inspectHiveBook(value: unknown, packet: HiveMarketDiagnostic): void {
+function inspectHiveBook(value: unknown, packet: HiveMarketDiagnostic): void {
   const book = object(value);
   const sides = [book.bids, book.asks];
   const parsed = sides.map((side, index) => {
@@ -94,7 +94,7 @@ export function inspectHiveBook(value: unknown, packet: HiveMarketDiagnostic): v
   for (const depth of depths) if (depth.hbd < HIVE_MARKET_POLICY.depthMinHbd) reject(depth.complete ? "insufficient_depth" : "depth_unproven");
 }
 
-export function inspectHiveTrades(value: unknown, now: number, packet: HiveMarketDiagnostic): void {
+function inspectHiveTrades(value: unknown, now: number, packet: HiveMarketDiagnostic): void {
   if (!Array.isArray(value) || value.length > HIVE_MARKET_POLICY.tradeLimit) reject("invalid_response");
   let previous = Infinity;
   let oldest: number | null = null;

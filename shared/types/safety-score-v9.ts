@@ -104,7 +104,7 @@ export const V9_REASON_CODES = [
 export const V9ReasonCodeSchema = z.enum(V9_REASON_CODES);
 export type V9ReasonCode = z.infer<typeof V9ReasonCodeSchema>;
 
-export const IsoTimestampSchema = z.string().datetime({ offset: true });
+const IsoTimestampSchema = z.string().datetime({ offset: true });
 
 function exactEnumScoreMapSchema<const Value extends string>(values: readonly Value[]) {
   return z
@@ -159,7 +159,7 @@ const V9PillarEvidenceSchema = z
 /** Liability-share totals within this limit are rounding noise, not overlap diagnostics. */
 export const V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT = 1.001;
 
-export const V9StructuralSignalKindSchema = z.enum([
+const V9StructuralSignalKindSchema = z.enum([
   "unsafe-backing",
   "speculative-credit",
   "algorithmic-reflexivity",
@@ -1065,29 +1065,6 @@ const V9MethodologySemanticSchema = z
   })
   .strict();
 export type V9MethodologySemantic = z.infer<typeof V9MethodologySemanticSchema>;
-
-export interface V9UnknownRungLedgerEntry {
-  path: string;
-  polarity: "credit" | "retained-charge";
-  current: number;
-  value: number;
-  ordinaryMinimum: number | null;
-  required: number;
-}
-
-/** The one cause-dependent unknown-price authority, exposed for audit tooling. */
-export function v9UnknownRungLedger(semantic: V9MethodologySemantic): V9UnknownRungLedgerEntry[] {
-  return (["backing", "exit", "control"] as const).flatMap((pillar) =>
-    (["C", "U"] as const).map((cause) => ({
-      path: `unknownQuality.${pillar}.${cause}`,
-      polarity: "retained-charge" as const,
-      current: semantic.unknownQuality[pillar][cause],
-      value: semantic.unknownQuality[pillar][cause],
-      ordinaryMinimum: null,
-      required: semantic.unknownQuality[pillar][cause],
-    })),
-  );
-}
 
 const V9_RATED_GRADES = ["A+", "A", "A-", "B+", "B", "B-", "C+", "C", "C-", "D", "F"] as const;
 

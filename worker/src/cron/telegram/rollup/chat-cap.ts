@@ -16,7 +16,7 @@ function isDepegExempt(delivery: TelegramDeliveryInput): boolean {
 }
 
 /** Live non-depeg messages per chat in the rolling cap window (one per job, whatever its chunk count). */
-export async function countCappedMessages(
+async function countCappedMessages(
   db: D1Database,
   chatIds: readonly string[],
   nowSec: number,

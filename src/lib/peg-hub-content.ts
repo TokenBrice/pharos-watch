@@ -18,9 +18,9 @@ import { formatRegisterDeathDate } from "@/components/cemetery/cemetery-register
 import { formatFuzzyDate } from "@/lib/pre-launch";
 
 /** MiCA status is shown only where EU authorization is the cohort's live question. */
-export const MICA_AT_A_GLANCE_PEGS: ReadonlySet<PegCurrency> = new Set<PegCurrency>(["EUR", "GBP", "CHF"]);
+const MICA_AT_A_GLANCE_PEGS: ReadonlySet<PegCurrency> = new Set<PegCurrency>(["EUR", "GBP", "CHF"]);
 /** Rows shown in the static table; the directory below it links every profile. */
-export const AT_A_GLANCE_ROW_LIMIT = 24;
+const AT_A_GLANCE_ROW_LIMIT = 24;
 
 const NOT_RECORDED = "Not recorded";
 
@@ -51,7 +51,7 @@ export interface PegAtAGlanceRow {
 }
 
 /** Reviewed freeze capability from the registry's blacklistability review. */
-export function describeFreezeCapability(status: AtAGlanceCoin["blacklistStatus"]): string {
+function describeFreezeCapability(status: AtAGlanceCoin["blacklistStatus"]): string {
   if (status === true) return "Issuer can freeze";
   if (status === "inherited") return "Via collateral";
   if (status === "possible") return "Possible";

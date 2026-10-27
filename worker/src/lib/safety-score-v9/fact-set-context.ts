@@ -503,14 +503,6 @@ export function researchEvidence(context: AssetBuildContext, componentKey?: stri
 }
 
 
-export function timestampSec(value: string, label: string, asOfSec: number): number {
-  const timestampMs = Date.parse(value);
-  if (!Number.isFinite(timestampMs)) throw new Error(`Safety Score v9 ${label} has an invalid timestamp`);
-  const timestamp = Math.floor(timestampMs / 1_000);
-  if (timestamp > asOfSec) throw new Error(`Safety Score v9 ${label} is later than the scoring clock`);
-  return timestamp;
-}
-
 export function normalizeReviewedFactStatus(
   context: AssetBuildContext,
   original: V9FactStatusV2,

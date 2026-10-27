@@ -15,8 +15,3 @@ export function base64UrlToBytes(value: string): Uint8Array {
   const binary = atob(padded);
   return Uint8Array.from(binary, (char) => char.charCodeAt(0));
 }
-
-/** base64url to UTF-8 string. Throws on invalid base64; callers wrap in try/catch. */
-export function base64UrlToString(value: string): string {
-  return new TextDecoder().decode(base64UrlToBytes(value));
-}

@@ -20,7 +20,6 @@ const D1_TABLE_GROWTH_SNAPSHOT_VERSION = 1;
 const D1_TABLE_GROWTH_TOP_N = 10;
 
 export type D1TableGrowthRow = z.output<typeof D1TableGrowthRowSchema>;
-export type D1TableGrowthTopGrower = z.output<typeof D1TableGrowthTopGrowerSchema>;
 export type D1TableGrowthSnapshot = z.output<typeof D1TableGrowthSnapshotSchema>;
 
 export type D1UsageSummaryWithTableGrowth = D1UsageSummary & {

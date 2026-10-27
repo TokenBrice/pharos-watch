@@ -33,7 +33,7 @@ function isUnavailableDexEvidence(liq: DexLiquidityData): boolean {
  * A retained DEX market with classified evidence. Rated or NR, it counts as
  * observed: an NR score is a missing activity reading, not a missing market.
  */
-export function isObservedOnDex(liq: DexLiquidityData): boolean {
+function isObservedOnDex(liq: DexLiquidityData): boolean {
   return !isUnavailableDexEvidence(liq) && liq.poolCount > 0 && liq.totalTvlUsd > 0 &&
     liq.coverageClass != null && liq.coverageClass !== "unobserved" &&
     liq.liquidityEvidenceClass != null && liq.liquidityEvidenceClass !== "unobserved";

@@ -7,13 +7,6 @@ export const V9OperationalResilienceSourceConfidenceSchema = z.enum([
   "audited",
 ]);
 
-export const V9OperationalResilienceClaimConfidenceSchema = z.enum([
-  "issuer-reported",
-  "independent-assurance",
-  "audited",
-  "unknown",
-]);
-
 const V9OperationalResilienceStressSettlementStateSchema = z.enum([
   "settled-in-full",
   "not-settled-in-full",
@@ -123,7 +116,3 @@ export const V9OperationalResilienceIncidentSchema = z
       issue(ctx, ["resolvedAt"], "An incident cannot resolve before it occurred");
     }
   });
-
-export type V9OperationalResilienceClaimConfidence = z.infer<
-  typeof V9OperationalResilienceClaimConfidenceSchema
->;

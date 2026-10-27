@@ -1,11 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
+import { applySafetyScoreV9GradeHysteresis, type V9GradeHysteresisBaseline } from "@shared/lib/safety-score-v9/grade-hysteresis";
 import { SafetyScoreV9ResolvedCurrentCardSchema } from "@shared/types/safety-score-v9-public";
 import { makeReportCardsV9Card, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 
 const ACCEPTED = "report-cards:v9:v1:accepted";
 
-function baseline(cards: { id: string; grade: "A" | "B" | "C" | "C-" | "D" | "NR" | null; score: number | null }[]) {
+function baseline(cards: V9GradeHysteresisBaseline["cards"]) {
   return { publicationGenerationId: ACCEPTED, cards };
 }
 

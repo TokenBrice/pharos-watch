@@ -111,17 +111,15 @@ export const SafetyScoreV9PillarFreshnessSchema = z.object({
 }).strict();
 export type SafetyScoreV9PillarFreshness = z.infer<typeof SafetyScoreV9PillarFreshnessSchema>;
 
-export const SafetyScoreV9FreshnessReasonSchema = z.enum([
-  "within-budget", "source-too-old", "source-unavailable", "future-source-time",
-  "pillar-clock-unavailable", "historical-operands-unavailable",
-]);
 export type SafetyScoreV9FreshnessAssessment = {
   verdict: SafetyScoreV9EvidenceFreshness;
   assessedAtSec: number;
   observedAtSec: number | null;
   sourceGenerationId: string | null;
   maxAgeSec: number | null;
-  reason: z.infer<typeof SafetyScoreV9FreshnessReasonSchema>;
+  reason:
+    | "within-budget" | "source-too-old" | "source-unavailable" | "future-source-time"
+    | "pillar-clock-unavailable" | "historical-operands-unavailable";
 };
 
 /** No publication clock or sibling source may stand in for an unwired pillar. */

@@ -72,7 +72,7 @@ interface ScoreColorThreshold {
   className: string;
 }
 
-export function scoreToColorClass(
+function scoreToColorClass(
   score: number | null | undefined,
   thresholds: readonly ScoreColorThreshold[],
   fallbackClass = "text-muted-foreground",

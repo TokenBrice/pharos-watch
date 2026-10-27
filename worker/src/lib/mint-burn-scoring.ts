@@ -74,7 +74,6 @@ export {
   getGaugeBand,
   getGaugeScoreInterval,
   isGaugeBandRobustToWithheldWeight,
-  type GaugeBand,
 } from "@shared/lib/mint-burn-gauge-bands";
 
 // ---------------------------------------------------------------------------

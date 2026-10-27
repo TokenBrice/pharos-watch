@@ -1,40 +1,5 @@
-import type { ReactNode } from "react";
-import { ChartSkeleton } from "@/components/chart-skeleton";
 import { Skeleton } from "@/components/ui/skeleton";
 import { cn } from "@/lib/utils";
-
-export function PageLoadingShell({ children }: { children: ReactNode }) {
-  return (
-    <div className="space-y-6" aria-busy="true" aria-live="polite">
-      {children}
-    </div>
-  );
-}
-
-export function PageLoadingHeader({
-  sectionWidth = "w-28",
-  titleWidth = "w-64 sm:w-80",
-  eyebrowWidth = "w-48",
-  includeEyebrow = true,
-}: {
-  sectionWidth?: string;
-  titleWidth?: string;
-  eyebrowWidth?: string;
-  includeEyebrow?: boolean;
-}) {
-  return (
-    <div className="space-y-2.5">
-      <div className="flex items-center gap-1.5">
-        <Skeleton className="h-4 w-20 rounded-sm" />
-        <span className="text-xs text-muted-foreground">/</span>
-        <Skeleton className={cn("h-4 rounded-sm", sectionWidth)} />
-      </div>
-      <Skeleton className={cn("h-9 rounded-md sm:h-11", titleWidth)} />
-      {includeEyebrow ? <Skeleton className={cn("h-3.5 rounded-sm", eyebrowWidth)} /> : null}
-      <Skeleton className="h-4 w-full max-w-2xl rounded-sm" />
-    </div>
-  );
-}
 
 /**
  * Placeholder shaped like the rail-page split hero (`FeatureHeroSplit`,
@@ -61,23 +26,6 @@ export function PageLoadingSplitHero({ visualClassName }: { visualClassName: str
       </div>
     </div>
   );
-}
-
-export function PageLoadingChartBlock({
-  className,
-  shimmer = false,
-}: {
-  className: string;
-  shimmer?: boolean;
-}) {
-  if (shimmer) {
-    return (
-      <div className={cn("pharos-card-shell p-4", className)}>
-        <Skeleton className="h-full w-full rounded-md" variant="shimmer" />
-      </div>
-    );
-  }
-  return <ChartSkeleton className={className} />;
 }
 
 export function PageLoadingRowList({

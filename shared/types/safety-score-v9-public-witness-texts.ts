@@ -16,7 +16,7 @@ const WITNESS_TEXT_REFERENCE = /^~(?:0|[1-9a-z][0-9a-z]*)$/u;
 
 /** Card-local strings shared by public reason and attribution views. */
 export function isV9WitnessTextReference(value: string): boolean { return value.startsWith("~"); }
-export function isV9WitnessTextField(key: string, node: object): boolean {
+function isV9WitnessTextField(key: string, node: object): boolean {
   return key === "message" || key === "path" || key === "field" || key === "label" || key === "controlKey" || key === "posture" ||
     key === "key" && "posture" in node && "binding" in node ||
     key === "signalKey" || key === "exposureKey" || key === "riskEventKey" ||
@@ -24,7 +24,7 @@ export function isV9WitnessTextField(key: string, node: object): boolean {
     key === "reason" && ("limit" in node || "exposureKey" in node || "upstreamLabel" in node);
 }
 
-export function isV9WitnessTextArrayField(key: string, node: object): boolean {
+function isV9WitnessTextArrayField(key: string, node: object): boolean {
   return key === "localCauseGaps" || key === "failureDomainKeys" || key === "supportedComponentKeys" || key === "components" && "evidenceLevel" in node;
 }
 export const V9WitnessTextIdentityArraySchema = z.array(CanonicalTextSchema)

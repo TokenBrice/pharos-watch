@@ -7,7 +7,7 @@ import { BULK_CONFIRM_TTL_SEC } from "./action-runner";
  * `/forget` two-step confirmation. The Delete button carries its own expiry,
  * so nothing is stored between the prompt and the tap.
  */
-export function buildForgetConfirmReplyMarkup(nowSec: number) {
+function buildForgetConfirmReplyMarkup(nowSec: number) {
   return {
     inline_keyboard: [[
       { text: "Delete my data", callback_data: `forget:yes:${(nowSec + BULK_CONFIRM_TTL_SEC).toString(36)}` },
@@ -17,7 +17,7 @@ export function buildForgetConfirmReplyMarkup(nowSec: number) {
 }
 
 // What survives must match prepareSubscriberPurge in store/subscriber-lifecycle.ts.
-export const FORGET_CONFIRM_MESSAGE = [
+const FORGET_CONFIRM_MESSAGE = [
   "This permanently deletes what Pharos Watch stores about this chat:",
   "- your coin and preset follows, global alerts, quiet hours and pause",
   "- queued alerts and the record of alerts sent to you",

@@ -267,7 +267,6 @@ function fixture(assetId: string, options: FixtureOptions): V9PublicCardProjecti
               observationConfidence: "high",
               modelConfidence: "high",
               observationHistory: null,
-              horizon: "immediate",
               capacityScoringHorizon: "immediate",
               settlementDelaySec: 0,
               queueDepthUsd: null,
@@ -330,18 +329,19 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
 describe("Safety Score v9 public projection", () => {
   it("keeps card shards byte-identical, immutable and independent across cache eviction", () => {
     const compact = createV9PublicCardShardViewFactory();
-    const original = projectSafetyScoreV9Card(fixture("usdc-circle", { score: 90, grade: "A+" })).card;
+    const original: ReturnType<typeof projectSafetyScoreV9Card>["card"] & { name?: string } =
+      projectSafetyScoreV9Card(fixture("usdc-circle", { score: 90, grade: "A+" })).card;
     original.name = "Unicode \u20ac \ud83d\ude80";
     const expected = stableJsonStringifyV1(original);
     const view = compact(original);
     const other = compact({ ...original, id: "usdt-tether" });
     expect(Object.keys(view)).toEqual(Object.keys(original));
     expect(stableJsonStringifyV1(view)).toBe(expected);
-    original.pillars.backing.reasons.push({ code: "missing-reserve-composition", message: "Caller mutation" });
+    original.pillars.backing.reasons.push({ code: "missing-reserve-composition", path: null, message: "Caller mutation" });
     expect(Object.isFrozen(original)).toBe(false);
     expect(Object.isFrozen(view)).toBe(true);
     expect(Object.isFrozen(view.pillars.backing.reasons)).toBe(true);
-    expect(() => view.pillars.backing.reasons.push({ code: "missing-reserve-composition", message: "Mutation" })).toThrow();
+    expect(() => view.pillars.backing.reasons.push({ code: "missing-reserve-composition", path: null, message: "Mutation" })).toThrow();
     const memoized = view.pillars;
     expect(other.pillars).toEqual(view.pillars);
     expect(view.pillars).toBe(memoized);
@@ -1367,7 +1367,8 @@ describe("Safety Score v9 public projection", () => {
   it.each(["backing", "exit"] as const)("uses the existing %s pillar reason without borrowing another pillar", (pillar) => {
     const input = fixture("pillar-reason", { score: 91.8, grade: "A+" });
     input.scoreInput.pillars[pillar].reasons = [{
-      code: "missing-pillar-evidence", message: "The scoped evidence remains unresolved.",
+      code: "missing-pillar-evidence", path: pillar, message: "The scoped evidence remains unresolved.",
+      responsibility: "integration-missing",
     }];
     const card = projectSafetyScoreV9Card(input).card;
     const withWeakest = { ...card, weakestPillar: { pillar, score: card.pillars[pillar].score! }, breakdowns: null };

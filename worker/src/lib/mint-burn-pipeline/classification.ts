@@ -192,7 +192,7 @@ const ZERO_WORD = `0x${"0".repeat(64)}`;
 const ADDRESS_WORD = /^0x0{24}[0-9a-f]{40}$/i;
 
 /** Admission is orthogonal to bridge/roundtrip economics and never infers an internal call from a selector. */
-export function applyReviewedSupplyBurnAdmission(
+function applyReviewedSupplyBurnAdmission(
   rows: MintBurnRow[],
   config: MintBurnContractConfig,
   contexts: ReadonlyMap<string, MintBurnTxContext | null>,

@@ -5,7 +5,6 @@ import { issue,
   NonNegativeFiniteSchema,
   StrictIsoDateSchema,
   uniqueKeyedCollectionSchema,
-  reviewedAssetCollectionEnvelopeSchema,
 } from "./safety-schema-primitives";
 import {
   V9OperationalResilienceIncidentSchema,
@@ -170,7 +169,7 @@ const SafetyScoreV9OperationalResilienceOverlayShapeSchema = z
   })
   .strict();
 
-export const SafetyScoreV9OperationalResilienceOverlaySchema =
+const SafetyScoreV9OperationalResilienceOverlaySchema =
   SafetyScoreV9OperationalResilienceOverlayShapeSchema.superRefine((overlay, ctx) => {
     const reviewedAtMs = Date.parse(overlay.reviewedAt);
     const expiresAtMs = Date.parse(overlay.expiresAt);
@@ -333,8 +332,3 @@ export const SafetyScoreV9OperationalResilienceOverlayFileSchema = uniqueKeyedCo
   duplicateMessage: "Duplicate operational-resilience overlay assetId",
   noteSchema: CanonicalTextSchema,
 });
-export const SafetyScoreV9OperationalResilienceOverlayEnvelopeSchema = reviewedAssetCollectionEnvelopeSchema("overlays", CanonicalTextSchema);
-
-export type SafetyScoreV9OperationalResilienceOverlay = z.infer<
-  typeof SafetyScoreV9OperationalResilienceOverlaySchema
->;

@@ -139,26 +139,6 @@ export interface TelegramMutationOperations {
   wasMutationApplied: boolean;
 }
 
-export type TelegramMutationContext = Partial<Pick<
-  TelegramMutationOperations,
-  | "beforeIrreversibleEffect"
-  | "planIntent"
-  | "prepareMutationAppliedStatement"
-  | "confirmAtomicMutationApplied"
-  | "storedIntent"
-  | "wasMutationApplied"
->>;
-
-export type TelegramPendingWriteContext = TelegramMutationContext & Partial<Pick<
-  TelegramMutationOperations,
-  "preparePendingMutationAppliedStatement" | "markMutationApplied"
->>;
-
-export type TelegramCommandMutationContext = TelegramPendingWriteContext & Partial<Pick<
-  TelegramMutationOperations,
-  "prepareMutationOperationStatements"
->>;
-
 export type TelegramCallbackMutationContext = Pick<
   TelegramMutationOperations,
   "beforeIrreversibleEffect" | "markMutationApplied"
