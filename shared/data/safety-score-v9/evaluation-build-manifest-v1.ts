@@ -22,7 +22,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/exit-execution-model-reviews-v1.json",
-      "sha256": "1fae11cd9f8d16b466dbd09e7a277c051bd9d80faa874f301960f49cf08c6674"
+      "sha256": "430982057d7d8e8597ca86aa2d603183fbdada165e8c8b5994ee0967317cfd9d"
     },
     {
       "path": "shared/data/safety-score-v9/incident-reviews-v1.json",
@@ -54,11 +54,11 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/supply-attribution-reviews-v1.json",
-      "sha256": "fb5602010e589f326a49fbb6c701be572e7d3bde274750d4250e73cd7a3e7e18"
+      "sha256": "46e123e8fc8e2dc86ac3158c6cfd94913bf6d1dd33d977d6efc173304a671e18"
     },
     {
       "path": "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
-      "sha256": "744b10a3e840d05bd7e0a462365229044e44db7cbaaeb90ceb644e2f37ea3a35"
+      "sha256": "48453bcf925de1633000116fca0c0891bba6a405fcc1596446cc6f00b48beeff"
     },
     {
       "path": "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
@@ -70,15 +70,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "eb88954f2b3d7613131d854c3f52d44634604b26514f5b156045110308eb474b"
+      "sha256": "5b966c86b682f6a9410cb6dcd77744914146354c92919a84260dc56dc7fc5db8"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "7cc45957c80e10632275b26f9f5f0efcfac46fc29ac1250923befbd69dc7395b"
+      "sha256": "b2b94c0610fe39834e92a1b83658e36598a3940ecbafaec1feeb441dd0708b4b"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "27b2cdb6312dddb8ba15c6250cb5aa0124ceffe7284839dcb8b5312b35fe1978"
+      "sha256": "76a12190526bcaa1108b1d2f4641ecd66bf650c8d7b79cb8aa528b919c2bc396"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -1335,7 +1335,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-27-block-26283011-shock-coverage.json.gz"
     }
   ],
-  "digest": "6459417cbc05db91b934075a2cefee221f021268d76142a8830dab35a1eb9245"
+  "digest": "5dac1c275417e637d7b588c1fe024a8e71280db5919b08a6f6c8e51b4ded19b9"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
