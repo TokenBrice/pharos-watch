@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 import {
   YIELD_BENCHMARK_AGE_FALLBACK_BOUND_SEC,
+  getYieldBenchmarkDisplayLabel,
   getYieldRankingBenchmarkKey,
   resolveYieldBenchmarkAge,
+  resolveYieldBenchmarkDisplayHealth,
   resolveYieldDisplayRebaseReferenceRate,
   resolveYieldRowBenchmark,
   resolveYieldScatterBenchmarkFrame,
@@ -174,6 +176,50 @@ describe("resolveYieldBenchmarkAge", () => {
       { ageSeconds: 49 * 3600, isFallback: false, fallbackMode: null },
       { recordDate: "2026-09-12", maxRecordAgeSec: 5 * 86400, nowSec: NOW / 1000 },
     )).toBe("stale");
+  });
+});
+
+describe("resolveYieldBenchmarkDisplayHealth", () => {
+  const NOW = Date.parse("2026-09-12T00:00:00Z");
+  const DAY = 24 * 60 * 60;
+  const entry = (fetchAgeSec: number | null, overrides: Record<string, unknown> = {}) => ({
+    ageSeconds: fetchAgeSec,
+    fetchedAt: fetchAgeSec === null ? null : NOW / 1000 - fetchAgeSec,
+    recordDate: "2026-09-11",
+    isFallback: false,
+    fallbackMode: null,
+    ...overrides,
+  });
+
+  it("warns only beyond the daily producer's public stale band (12x, inclusive)", () => {
+    expect(resolveYieldBenchmarkDisplayHealth(entry(12 * DAY), NOW)).toEqual({ warning: false, marker: "" });
+    expect(resolveYieldBenchmarkDisplayHealth(entry(12 * DAY), NOW + 1)).toEqual({ warning: true, marker: "12d old" });
+  });
+
+  it("keeps scoring-stale, fallback and calendar-bounded records neutral while the fetch generation is fresh", () => {
+    const cases = [
+      entry(60, { recordDate: "2026-08-01" }),
+      entry(60, { recordDate: "2026-10-01" }),
+      entry(60, { recordDate: null }),
+      entry(49 * 3600),
+      entry(60, { isFallback: true, fallbackMode: "eur-retained" }),
+      entry(60, { recordDate: "2026-08-01", maxRecordAgeSec: 45 * DAY }),
+    ];
+    for (const value of cases) {
+      // Score qualification is unchanged; only the reader display gate is separate.
+      expect(resolveYieldBenchmarkDisplayHealth(value, NOW).warning).toBe(false);
+      expect(getYieldBenchmarkDisplayLabel({ label: "Benchmark", ...value })).toBe("Benchmark");
+    }
+    expect(resolveYieldBenchmarkAge(cases[0], NOW).stale).toBe(true);
+    expect(resolveYieldBenchmarkAge(cases[3], NOW).stale).toBe(true);
+    expect(resolveYieldBenchmarkAge(cases[5], NOW).stale).toBe(false);
+  });
+
+  it("treats a missing or invalid fetch clock as unavailable, never zero-age evidence", () => {
+    expect(resolveYieldBenchmarkDisplayHealth(entry(null), NOW)).toEqual({ warning: true, marker: "unavailable" });
+    expect(resolveYieldBenchmarkDisplayHealth(entry(60, { fetchedAt: Number.NaN }), NOW).warning).toBe(true);
+    expect(resolveYieldBenchmarkDisplayHealth(null, NOW).warning).toBe(true);
+    expect(getYieldBenchmarkDisplayLabel({ label: "Benchmark", ...entry(13 * DAY) })).toBe("Benchmark (13d old)");
   });
 });
 
