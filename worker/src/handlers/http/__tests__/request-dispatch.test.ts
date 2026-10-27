@@ -451,6 +451,80 @@ describe("handleHttpRequestImpl", () => {
     expect(mocks.notFoundResponse).toHaveBeenCalledOnce();
   });
 
+  it("answers the retired report-cards path with a 410 migration disposition after the gate admits it", async () => {
+    mocks.resolveRoute.mockReturnValue(null);
+    mocks.addCorsHeaders.mockImplementation((response: Response) => {
+      response.headers.set("Access-Control-Allow-Origin", "https://pharos.watch");
+      return response;
+    });
+
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/api/report-cards"),
+      makeEnv(),
+      makeCtx(),
+    );
+
+    expect(response.status).toBe(410);
+    expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expect(response.headers.get("Access-Control-Allow-Origin")).toBe("https://pharos.watch");
+    expect(await response.json()).toEqual({
+      error: "Endpoint retired",
+      reason: "endpoint_retired",
+      replacement: "/api/report-cards/v9",
+      documentation: "https://pharos.watch/api/reference/#safety-score-availability",
+    });
+    expect(mocks.evaluateAccessGate).toHaveBeenCalledOnce();
+    expect(mocks.recordRequestSource).toHaveBeenCalledOnce();
+    expect(mocks.addCorsHeaders).toHaveBeenCalledOnce();
+    expect(mocks.notFoundResponse).not.toHaveBeenCalled();
+    expect(mocks.route).not.toHaveBeenCalled();
+    expect(mocks.writeEdgeCache).not.toHaveBeenCalled();
+  });
+
+  it.each([401, 429, 503])("lets a denied gate's %s win over the retired report-cards disposition", async (status) => {
+    const gateResponse = new Response(JSON.stringify({ error: "denied" }), { status });
+    mocks.evaluateAccessGate.mockResolvedValue({
+      isAdmin: false, isSiteProxy: false, apiKey: null, requestLane: "public-api", response: gateResponse,
+    });
+
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/api/report-cards"),
+      makeEnv(),
+      makeCtx(),
+    );
+
+    expect(response).toBe(gateResponse);
+    expect(mocks.resolveRoute).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["https://api.pharos.watch/api/report-cards", "POST"],
+    ["https://api.pharos.watch/api/report-cards", "HEAD"],
+    ["https://api.pharos.watch/api/report-cards/", "GET"],
+    ["https://api.pharos.watch/api/report-cards/old", "GET"],
+    ["https://pharos.watch/api/report-cards", "GET"],
+    ["https://site-api.pharos.watch/api/report-cards", "GET"],
+    ["https://ops-api.pharos.watch/api/report-cards", "GET"],
+  ])("keeps the generic 404 for %s %s", async (url, method) => {
+    mocks.resolveRoute.mockReturnValue(null);
+
+    const response = await handleHttpRequestImpl(new Request(url, { method }), makeEnv(), makeCtx());
+
+    expect(response.status).toBe(404);
+    expect(mocks.notFoundResponse).toHaveBeenCalledOnce();
+  });
+
+  it("still dispatches the registered report-cards v9 route", async () => {
+    const response = await handleHttpRequestImpl(
+      new Request("https://api.pharos.watch/api/report-cards/v9"),
+      makeEnv(),
+      makeCtx(),
+    );
+
+    expect(response.status).toBe(200);
+    expect(mocks.route).toHaveBeenCalledOnce();
+  });
+
   it("records attribution and writes edge cache on successful routing", async () => {
     const routedResponse = new Response(JSON.stringify({ ok: true }), {
       status: 200,
