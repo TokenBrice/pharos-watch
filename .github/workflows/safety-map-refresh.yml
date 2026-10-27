@@ -20,15 +20,14 @@ name: Safety Map Refresh
 
 on:
   # GitHub starts scheduled runs five to eight hours late (observed September
-  # 2026), so these slots alone routinely miss the 08:05 UTC digest. The
-  # Worker's pre-digest producer kick (digest trigger poll, 06:20-08:00 UTC)
-  # dispatches this workflow in `ensure` mode whenever today's manifest is
-  # missing; the slots remain a no-cost fallback because `ensure` and
-  # `schedule` runs exit early once today's map is live.
+  # 2026), so this slot alone can miss the 08:05 UTC digest. The Worker's
+  # pre-digest producer kick (digest trigger poll, 06:20-08:00 UTC) dispatches
+  # this workflow in `ensure` mode whenever today's manifest is missing; the
+  # single 07:20 slot (about 45 minutes before the digest) remains a no-cost
+  # fallback because `ensure` and `schedule` runs exit early once today's map
+  # is live.
   schedule:
-    - cron: "20 1 * * *"
-    - cron: "20 3 * * *"
-    - cron: "20 5 * * *"
+    - cron: "20 7 * * *"
   workflow_dispatch:
     inputs:
       mode:
