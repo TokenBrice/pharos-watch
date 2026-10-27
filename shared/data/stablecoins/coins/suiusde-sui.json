@@ -4,7 +4,7 @@
   "detailProvider": "defillama",
   "name": "eSui Dollar",
   "symbol": "suiUSDe",
-  "oneLiner": "suiUSDe is Sui's Ethena-whitelabel synthetic dollar; peg depends on Ethena-style delta-neutral basis-trade backing and the Sui deployment's admin controls.",
+  "oneLiner": "suiUSDe is Sui's Ethena-whitelabel dollar, backed mainly by USDe (itself mostly Liquid Cash plus a hedged crypto sleeve) and USDC, under Sui admin controls.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"

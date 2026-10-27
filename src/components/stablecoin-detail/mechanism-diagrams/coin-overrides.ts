@@ -40,7 +40,7 @@ const COIN_OVERRIDES: Record<string, CoinOverride> = {
   "usde-ethena": {
     steps: [
       { label: "Collateral deposit", subtitle: "mostly stables + loans" },
-      { label: "Liquid Cash + hedged crypto", subtitle: "minority perp-hedged" },
+      { label: "Mostly Liquid Cash", subtitle: "minority perp-hedged" },
       { label: "USDe minted", subtitle: "lending + funding yield" },
     ],
     ariaLabel:
