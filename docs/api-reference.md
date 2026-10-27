@@ -24,7 +24,7 @@ The `depeg-history` topic is **retrospective windowed history**, not a historica
 
 The static `depeg-history` dataset publishes each event's `id` as a string in JSON and NDJSON (and as text in CSV), preserving the established export contract. This differs from the numeric event IDs in the runtime depeg-events API and internal archive rows.
 
-Public onboarding artifacts are served at `https://pharos.watch/openapi.json`, `https://pharos.watch/postman/pharos-api.postman_collection.json`, and `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files and replace the environment `apiKey` placeholder with a real `X-API-Key`. OpenAPI includes named Yield Intelligence ranking/history schemas; Postman includes best-source and source-key history examples. The integration/read catalogue is owned by `scripts/lib/public-api-artifact-catalog.ts`, not an inventory of every no-key route: it excludes admin routes, supporter-key claims, feedback, Telegram webhook/Mini App endpoints, and dynamic OG images. Request keys through `https://pharos.watch/api/`.
+Public onboarding artifacts are served at `https://pharos.watch/openapi.json`, `https://pharos.watch/postman/pharos-api.postman_collection.json`, and `https://pharos.watch/postman/pharos-api.postman_environment.json`. Import both Postman files and replace the environment `apiKey` placeholder with a real `X-API-Key`. OpenAPI includes named Yield Intelligence ranking/history schemas; Postman includes best-source and source-key history examples. Both Postman variable lists declare `snapshotDate` (example `2026-10-25`, not evidence of availability): call `/api/snapshots/index` (API key required), then set `snapshotDate` to a returned `snapshots[].snapshotDate` before running either snapshot request. The integration/read catalogue is owned by `scripts/lib/public-api-artifact-catalog.ts`, not an inventory of every no-key route: it excludes admin routes, supporter-key claims, feedback, Telegram webhook/Mini App endpoints, and dynamic OG images. Request keys through `https://pharos.watch/api/`.
 
 Browser consumers use same-origin `/_site-data/*` via `src/lib/api.ts`; production Pages targets `https://site-api.pharos.watch` through `SITE_API_ORIGIN`. Direct integrations and CI smoke target `https://api.pharos.watch` with `X-API-Key` for protected reads, including `/api/telegram-pulse`. Pages build-input syncs read allowlisted `GET` endpoints through `https://stablecoin-dashboard.pages.dev/_site-data/*` with an allowed site caller header and reject missing/invalid input. A release can retain failed producers' committed snapshots, but fails before build if all three fail or a failed public-dataset refresh cannot roll back cleanly.
 
@@ -283,7 +283,7 @@ When the per-key limiter is exceeded, the API returns `429 Too Many Requests`:
 }
 ```
 
-Rate-limited responses include the retry delay in the HTTP `Retry-After` header when the worker can compute one.
+Rate-limited responses include the retry delay in the HTTP `Retry-After` header (integer seconds, minimum 1) when the worker can compute one; the same header is sent with some `503` responses. The free Safety Score grades, dependency graph, and dependency scenarios routes return the same `429` shape to anonymous clients.
 
 `POST /api/feedback` also has a form-specific limiter. Its `429` body is `{ "error": "Too many submissions. Please wait a few minutes." }`, and it should be handled as a local submission throttle rather than as a public API quota response. If the feedback limiter's D1 dependency is unavailable, the endpoint returns `503 Service Unavailable` with `{ "error": "Feedback service temporarily unavailable. Please try again." }` and `Retry-After: 60`.
 
@@ -298,7 +298,7 @@ API-key auth and quotas normally rely on D1. Protected cacheable `GET` edge-cach
 
 ## Error Response Conventions
 
-JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` returns `image/png` on success for known image routes; unknown OG route patterns return the normal JSON error body, while OG data/render failures inside known image routes can return `text/plain`.
+JSON API handlers use `{ "error": "message" }` JSON format; some errors add `reason`, `message` or domain diagnostics (the generated OpenAPI `ApiError` schema requires only a string `error` and allows additional properties). `GET /api/og/*` returns `image/png` on success for known image routes; unknown OG route patterns return the normal JSON error body, while OG data/render failures inside known image routes can return `text/plain`.
 
 | Status | Meaning               | When                                                                                                                                                                                                                                                                                                                                           |
 | ------ | --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -306,8 +306,9 @@ JSON API handlers use `{ "error": "message" }` JSON format. `GET /api/og/*` retu
 | 401    | Unauthorized          | Public `/api/*` endpoint called without a valid `X-API-Key`, or admin endpoint called without a valid `ops-api` Access JWT (typically obtained through Cloudflare Access user login or service-token auth)                                                                                                                                     |
 | 403    | Forbidden             | Disallowed CORS preflight from a foreign `Origin`, Pages ops proxy mutating request without a matching same-origin `Origin`, or mutating admin request missing `X-Pharos-Admin: 1`                                                                                                                                                             |
 | 404    | Not Found             | Unknown stablecoin ID or missing resource                                                                                                                                                                                                                                                                                                      |
+| 410    | Gone                  | Authenticated `GET https://api.pharos.watch/api/report-cards`, the retired unversioned Safety Score route (see [Full cards](#full-cards)) |
 | 413    | Payload Too Large     | Public JSON `POST` body exceeds that endpoint's defensive byte cap before parsing or side effects                                                                                                                                                                                                                                              |
-| 429    | Too Many Requests     | Rate limit exceeded (per-key public API limiter or feedback-specific limiter; feedback uses its own message body)                                                                                                                                                                                                                              |
+| 429    | Too Many Requests     | Rate limit exceeded (per-key public API limiter, anonymous Safety Score feed limiter, or feedback-specific limiter; feedback uses its own message body)                                                                                                                                                                                                                              |
 | 500 | Internal Server Error | Unhandled handler exception caught by `withErrorHandler` or the router error boundary |
 | 502    | Bad Gateway           | Upstream fetch failed (external data provider or Pages proxy upstream), or the ops proxy received a Cloudflare Access login redirect from `ops-api`                                                                                                                                                                                            |
 | 503    | Service Unavailable   | Cache-passthrough endpoint where cache has never been populated, cached payload is corrupt / rejected by validation, a protected public API request cannot be authenticated from D1 or the recent verified-key cache, the feedback limiter/storage dependency fails, or `MAINTENANCE_MODE=true` (global kill switch via `wrangler secret put`) |
@@ -330,13 +331,15 @@ HTTP method allowance is defined centrally in `shared/lib/api-endpoints/` and en
 - `GET` is accepted on `/api/api-keys/lifecycle-summary` for counts-only Triage credential monitoring.
 - `POST` is accepted on `/api/api-keys/:id/update`, `/api/api-keys/:id/deactivate`, and `/api/api-keys/:id/rotate`.
 - `/api/backfill-dews` allows `GET` for the historical backtest and for `repair=...&dry-run=true` previews; mutating repair runs are `POST`-only.
-- Unknown public `/api/*` requests can return `401` first when the API key is missing or invalid. After lane auth succeeds, unregistered paths return `404`. Known paths with disallowed methods, including unsupported verbs, return `405` with the route's allowed methods in `Allow`, not a generic `GET, POST` fallback.
+- Unknown public `/api/*` requests can return `401` first when the API key is missing or invalid. After lane auth succeeds, unregistered paths return `404`, except authenticated `GET /api/report-cards` on the public API host, which returns `410` (see [Full cards](#full-cards)). Known paths with disallowed methods, including unsupported verbs, return `405` with the route's allowed methods in `Allow`, not a generic `GET, POST` fallback.
 
 The same shared endpoint descriptors now also carry static worker dependency-hydration hints consumed by `worker/src/routes/registry.ts`, where the worker binds shared endpoint keys directly to handlers through a single static route-definition list. That keeps endpoint metadata, router behavior, method guards, admin status-page actions, and worker-side static route wiring aligned from one source of truth plus one worker binding table.
 
 ## Safety Score Availability
 
 ### Full cards
+
+The retired unversioned `GET /api/report-cards` is not a redirect and not an active endpoint. With a valid `X-API-Key` on `https://api.pharos.watch` it returns `410` with `no-store` and `{ "error": "Endpoint retired", "reason": "endpoint_retired", "replacement": "/api/report-cards/v9", "documentation": "https://pharos.watch/api/reference/#safety-score-availability" }`. This is the migration pointer, not a compatible target: the v9 response schema is different, so update your client before switching. Missing or invalid keys still receive `401`, and dependency or quota failures keep their `503` / `429`.
 
 [Safety Score contract](./report-cards.md#api). The route remains `/api/report-cards/v9`; current body `schemaVersion` is 8, wrapping public breakdown/publication schema 7 with score trace 4. Model-family/route naming, methodology decimal and body schema are distinct identities. Persisted public v6 is unavailable until a compatible accepted publication; no legacy route-key inference or fabricated cause defaults is allowed.
 
@@ -461,7 +464,7 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/chains` | Chains | Chains | `X-API-Key` required | `chain` (query, optional, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin-reserves/{stablecoinId}` | Stablecoin reserves | Stablecoins, Reserves | `X-API-Key` required | `stablecoinId` (path, required, string) | 200, 400, 401, 429, 503 |
 | GET | `/api/stablecoin-charts` | Stablecoin charts | Stablecoins, History | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
-| GET | `/api/blacklist` | Blacklist events | Blacklist | `X-API-Key` required | `stablecoin` (query, optional, string); `chain` (query, optional, string); `chainId` (query, optional, string); `eventType` (query, optional, string); `q` (query, optional, string); `sortBy` (query, optional, string); `sortDirection` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `includeTotal` (query, optional, boolean) | 200, 400, 401, 429, 503 |
+| GET | `/api/blacklist` | Blacklist events | Blacklist | `X-API-Key` required | `stablecoin` (query, optional, string); `chain` (query, optional, string); `chainId` (query, optional, string); `eventType` (query, optional, string); `q` (query, optional, string); `sortBy` (query, optional, string); `sortDirection` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `includeTotal` (query, optional, boolean) | 200, 400, 401, 429, 503 |
 | GET | `/api/blacklist-summary` | Blacklist summary | Blacklist | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-events` | Depeg incidents | Peg Monitoring | `X-API-Key` required | `stablecoin` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `active` (query, optional, boolean); `includeTotal` (query, optional, boolean); `includePending` (query, optional, boolean) | 200, 400, 401, 429, 503 |
 | GET | `/api/depeg-resolver` | Depeg Duration Resolver | Risk, Peg Monitoring | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
@@ -483,9 +486,9 @@ Generated from `public/openapi.json` (`Pharos API` v1.0.0). Total OpenAPI operat
 | GET | `/api/telegram-pulse` | Telegram pulse | Status | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/stability-index` | Pharos Stability Index | Risk | `X-API-Key` required | `detail` (query, optional, boolean); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
 | GET | `/api/report-cards/v9` | Safety Score V9 report cards | Risk | `X-API-Key` required | `freshness` (query, optional, string) | 200, 400, 401, 429, 503 |
-| GET | `/api/safety-grades` | Safety Score grades (no key) | Risk | exempt | — | 200, 400, 503 |
-| GET | `/api/dependency-graph/v1` | Dependency graph (no key) | Risk | exempt | — | 200, 400, 503 |
-| GET | `/api/dependency-scenarios/v1` | Modeled dependency scenarios (no key) | Risk | exempt | — | 200, 400, 503 |
+| GET | `/api/safety-grades` | Safety Score grades (no key) | Risk | exempt | — | 200, 400, 429, 503 |
+| GET | `/api/dependency-graph/v1` | Dependency graph (no key) | Risk | exempt | — | 200, 400, 429, 503 |
+| GET | `/api/dependency-scenarios/v1` | Modeled dependency scenarios (no key) | Risk | exempt | — | 200, 400, 429, 503 |
 | GET | `/api/redemption-backstops` | Redemption backstops | Risk, Reserves | `X-API-Key` required | — | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history` | Safety score history | Risk, History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
 | GET | `/api/safety-score-history-v2` | Safety score history (identity-aware) | Risk, History | `X-API-Key` required | `stablecoin` (query, required, string); `days` (query, optional, integer) | 200, 400, 401, 429, 503 |
@@ -596,7 +599,7 @@ Normalized issuer freeze, unfreeze, blacklist, and destruction events with optio
 
 - **Operation ID:** `blacklist`
 - **Path:** `/api/blacklist`
-- **Parameters:** `stablecoin` (query, optional, string); `chain` (query, optional, string); `chainId` (query, optional, string); `eventType` (query, optional, string); `q` (query, optional, string); `sortBy` (query, optional, string); `sortDirection` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `includeTotal` (query, optional, boolean)
+- **Parameters:** `stablecoin` (query, optional, string); `chain` (query, optional, string); `chainId` (query, optional, string); `eventType` (query, optional, string); `q` (query, optional, string); `sortBy` (query, optional, string); `sortDirection` (query, optional, string); `limit` (query, optional, integer); `offset` (query, optional, integer); `cursor` (query, optional, string); `includeTotal` (query, optional, boolean)
 - **Success response schema:** [`BlacklistResponse`](https://pharos.watch/openapi.json#/components/schemas/BlacklistResponse)
 - **Policy:** authentication `X-API-Key` required; shared endpoint caching allowed (`cacheBypass: false`).
 

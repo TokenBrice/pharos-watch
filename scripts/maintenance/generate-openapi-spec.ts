@@ -62,16 +62,43 @@ function buildParameters(endpoint: PublicApiArtifactEndpoint) {
   })) ?? [];
 }
 
-function buildErrorResponses(endpoint: PublicApiArtifactEndpoint) {
+const ERROR_RESPONSE_CONTENT = {
+  "application/json": { schema: { $ref: "#/components/schemas/ApiError" } },
+} as const;
+
+const RETRY_AFTER_HEADER_DESCRIPTION = "Seconds to wait before retrying, sent with 429 and sometimes with 503.";
+
+function retryAfterHeader(required: boolean) {
   return {
-    "400": { description: "Bad request" },
-    ...(endpoint.security === "none"
-      ? {}
-      : {
-        "401": { description: "Missing or invalid API key" },
-        "429": { description: "Rate limit exceeded" },
-      }),
-    "503": { description: "Service unavailable or cache not populated" },
+    "Retry-After": {
+      description: RETRY_AFTER_HEADER_DESCRIPTION,
+      required,
+      schema: { type: "integer", minimum: 1 },
+    },
+  };
+}
+
+function buildErrorResponses(endpoint: PublicApiArtifactEndpoint) {
+  const protectedRoute = endpoint.security !== "none";
+  return {
+    "400": { description: "Bad request", content: ERROR_RESPONSE_CONTENT },
+    ...(protectedRoute
+      ? { "401": { description: "Missing or invalid API key", content: ERROR_RESPONSE_CONTENT } }
+      : {}),
+    ...(protectedRoute || endpoint.anonymousThrottle
+      ? {
+        "429": {
+          description: "Rate limit exceeded",
+          headers: retryAfterHeader(true),
+          content: ERROR_RESPONSE_CONTENT,
+        },
+      }
+      : {}),
+    "503": {
+      description: "Service unavailable or cache not populated",
+      headers: retryAfterHeader(false),
+      content: ERROR_RESPONSE_CONTENT,
+    },
   };
 }
 
