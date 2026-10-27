@@ -388,6 +388,63 @@ describe("dispatchTelegramAlerts", () => {
     expect(metadata.deliveryV2.planningErrors).toEqual(expect.arrayContaining([expect.stringMatching(/^freeze-retraction:/)]));
   });
 
+  it("cancels a queued batch whose freeze claim was retracted at its blacklist source after planning", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }, { chatId: "678", lastActiveAt: now }] });
+    queueBroadcastRow(harness, now);
+    harness.sqlite.prepare(
+      `INSERT INTO blacklist_events
+        (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+         timestamp, amount_usd_at_event, config_key, contract_address, explorer_tx_url, explorer_address_url, suppression_reason)
+        VALUES ('b-gone', 'USDC', 1, 'Ethereum', 'blacklist', '0x1', 'tx', 1, ?, 5000, 'k', '0x2', '', '', 'reorged')`,
+    ).run(now);
+    // The Tape row itself is not suppressed: only its source is.
+    harness.sqlite.prepare(
+      `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at)
+       VALUES ('gone', 'freeze.blocked', 'warning', 1, 'x', 'x', '{}', 'blacklist_events', 'b-gone', 'opened', 1)`,
+    ).run();
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('freeze_batch:0-1', 'freeze_batch', '{}', 'ready', ?, ?)`,
+    ).run(now, now + 3600);
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_deliveries (job_id, kind, chat_id, audience, body, body_hash, options_json, families, state, next_attempt_at, expires_at, created_at)
+       VALUES ('freeze_batch:0-1', 'freeze_batch', '678', 'alert', 'USDC 1 freeze event, $5,000 known', 'h', ?, 'freeze', 'pending', ?, ?, ?)`,
+    ).run(JSON.stringify({ freezeSourceKeys: ["freeze:gone"] }), now, now + 3600, now);
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+
+    expect(result.status).toBeUndefined();
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+    expect(harness.sqlite.prepare("SELECT state, attempts, reason FROM telegram_deliveries WHERE chat_id = '678'").get())
+      .toEqual({ state: "cancelled", attempts: 0, reason: "freeze-claim-retracted" });
+  });
+
+  it("holds a freeze-bearing roll-up and degrades the run when freeze revalidation cannot read", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }, { chatId: "678", lastActiveAt: now }] });
+    queueBroadcastRow(harness, now);
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('rollup:2026-04-23:678', 'rollup', '{}', 'ready', ?, ?)`,
+    ).run(now, now + 3600);
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_deliveries (job_id, kind, chat_id, audience, body, body_hash, options_json, families, state, next_attempt_at, expires_at, created_at)
+       VALUES ('rollup:2026-04-23:678', 'rollup', '678', 'alert', 'Daily changes', 'h', ?, 'freeze', 'pending', ?, ?, ?)`,
+    ).run(JSON.stringify({ freezeSourceKeys: ["freeze:t1"] }), now, now + 3600, now);
+    harness.sqlite.exec("DROP TABLE tape_events");
+    const result = await dispatchTelegramAlerts(harness.db, "bot-token");
+    const metadata = JSON.parse(result.metadata);
+
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("telegram-planning-failed");
+    expect(metadata.deliveryV2.planningErrors).toEqual(expect.arrayContaining([expect.stringMatching(/^freeze-revalidation:/)]));
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "12345" })]);
+    expect(harness.sqlite.prepare("SELECT state, attempts, reason FROM telegram_deliveries WHERE chat_id = '678'").get())
+      .toEqual({ state: "retry", attempts: 0, reason: "freeze-retraction-read-failed" });
+  });
+
   it("holds a fresh severe safety drop for the dwell, so a one-run flip never alerts", async () => {
     const now = Math.floor(Date.now() / 1000);
     const harness = createDispatchHarness();

@@ -509,6 +509,54 @@ describe("bounded freeze batch audience", () => {
   });
 });
 
+describe("freeze claim manifests", () => {
+  it("records each freeze batch message's exact constituents on every chunk", async () => {
+    const { sqlite, db, follow } = fixture();
+    try {
+      follow.run("1", "usdc", 0, 1);
+      sqlite.prepare(
+        `INSERT INTO tape_events (event_id, type, severity, ts, title, summary, payload_json, source_table, source_row_id, transition, created_at, suppressed_at)
+         VALUES ('gone', 'freeze.blocked', 'warning', 1, 'x', 'x', '{}', 'blacklist_events', 'b-gone', 'opened', 1, 1)`,
+      ).run();
+      await recordTelegramChangeLog(db, [
+        freeze("usdc", "gone", 1, DAY1_0905Z), freeze("usdc", "a", null, DAY1_0905Z), freeze("usdc", "b", 0, DAY1_0905Z),
+      ]);
+      const page = await buildFreezeBatchJobPage({
+        db, job: {} as TelegramJobRow, payload: { fromChangeId: 0, toChangeId: 3 }, cursor: null, nowSec: 0, limit: 10,
+      });
+      // A retraction excluded before planning is not part of the manifest.
+      expect(page.deliveries.map((row) => row.freezeSourceKeys)).toEqual([["freeze:a", "freeze:b"]]);
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("records the freeze constituents of a roll-up summary, null and zero amounts alike", async () => {
+    const { sqlite, db, subscriber, follow, deliveries } = fixture();
+    try {
+      subscriber.run("2", null, 0, null, null, 1, 1); // global safety and freeze
+      await recordTelegramChangeLog(db, [
+        freeze("usdc", "n", null, DAY1_0905Z - 60),
+        freeze("usdc", "z", 0, DAY1_0905Z - 60),
+        safety("usdx", "A", "D", DAY1_0905Z - 60),
+      ]);
+      follow.run("3", "usdx", 1, 0);
+      subscriber.run("3", null, 0, null, null, 0, 0); // safety only: no freeze manifest
+      await runDailyRollup(db, DAY1_0905Z);
+      const options = sqlite.prepare("SELECT chat_id, families, options_json FROM telegram_deliveries ORDER BY chat_id").all() as Array<{
+        chat_id: string; families: string; options_json: string;
+      }>;
+      expect(options.map((row) => [row.chat_id, row.families, JSON.parse(row.options_json).freezeSourceKeys ?? null])).toEqual([
+        ["2", "freeze,safety", ["freeze:n", "freeze:z"]],
+        ["3", "safety", null],
+      ]);
+      expect(deliveries().find((row) => row.chat_id === "2")?.body).toContain("2 freeze events");
+    } finally {
+      sqlite.close();
+    }
+  });
+});
+
 describe("per-chat cap", () => {
   it("admits up to the cap, exempts depeg, and turns the excess into roll-up overflow", async () => {
     const { sqlite, db } = fixture();

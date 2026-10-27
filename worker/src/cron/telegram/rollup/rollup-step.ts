@@ -180,6 +180,7 @@ export async function buildFreezeBatchJobPage(
       disableWebPagePreview: true,
       coinIds: [...new Set(freeze.map((alert) => alert.stablecoinId))],
       families: ["freeze"],
+      freezeSourceKeys: freeze.map((alert) => alert.sourceEventId),
     }));
   }
   return { deliveries, nextCursor };
@@ -402,11 +403,14 @@ export async function runDailyRollup(db: D1Database, nowSec: number): Promise<Te
   for (const { row, localDate, sinceSec } of batch) {
     const chatId = row.chat_id;
     const chatCoverage = coverage.get(chatId);
+    const included = chatCoverage ? chatChanges(changes, chatCoverage, sinceSec, liveAlertedAt.get(chatId)) : [];
     const net = chatCoverage
-      ? computeNetRollupChanges(chatChanges(changes, chatCoverage, sinceSec, liveAlertedAt.get(chatId)))
+      ? computeNetRollupChanges(included)
         .filter((change) => change.kind !== "safety" || chatCoverage.coins.safety.has(change.stablecoinId) ||
           isMaterialGlobalSafetyChange(change))
       : [];
+    // Every freeze counted in this chat's summary, revalidated before each send.
+    const freezeSourceKeys = included.flatMap((change) => change.kind === "freeze" ? [change.sourceKey] : []);
     const message = formatRollupMessage({ changes: net, overflowCount: overflowCounts.get(chatId) ?? 0 });
     const marker = db.prepare(
       `INSERT INTO telegram_rollup_state (chat_id, last_rollup_local_date, last_rollup_at) VALUES (?, ?, ?)
@@ -433,6 +437,7 @@ export async function runDailyRollup(db: D1Database, nowSec: number): Promise<Te
         disableWebPagePreview: true,
         coinIds: [...new Set(net.map((change) => change.stablecoinId))],
         families: [...new Set(net.map((change) => change.kind))],
+        ...(freezeSourceKeys.length > 0 ? { freezeSourceKeys } : {}),
       })),
     });
     result.sentChats++;

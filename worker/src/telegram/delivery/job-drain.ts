@@ -19,6 +19,7 @@ import {
 } from "../../cron/telegram/delivery/backoff";
 import {
   parseTelegramDeliveryOptions,
+  parseTelegramFreezeSourceKeys,
   type TelegramDeliveryAudience,
   type TelegramDeliveryState,
   type TelegramJobKind,
@@ -53,6 +54,7 @@ export interface ClaimedTelegramDelivery {
   body: string | null;
   options_json: string | null;
   coin_ids: string | null;
+  families: string | null;
   attempts: number;
   expires_at: number;
 }
@@ -105,6 +107,12 @@ export interface TelegramDeliveryDrainOptions {
   sendMessage?: typeof sendToChat;
   sendPhoto?: typeof sendPhotoToChat;
   onDeliveryStarted?: () => void;
+  /**
+   * Retracted keys among `freeze:<tapeEventId>` claims, read fresh before each
+   * send wave; null when the read failed. Absent means unavailable: freeze-
+   * bearing rows are then held, never sent unverified.
+   */
+  validateFreezeClaims?: (keys: readonly string[]) => Promise<ReadonlySet<string> | null>;
 }
 
 /**
@@ -147,7 +155,7 @@ async function claimDueDeliveries(
       )
         AND state IN ('pending', 'retry')
       RETURNING id, job_id, kind, chat_id, seq, audience, method, body, options_json,
-                coin_ids, attempts, expires_at`,
+                coin_ids, families, attempts, expires_at`,
   ).bind(owner, nowSec, jobId ?? null, limit, JSON.stringify(holdKinds)).all<ClaimedTelegramDelivery>();
   return (result.results ?? []).sort((a, b) =>
     a.job_id.localeCompare(b.job_id) || a.chat_id.localeCompare(b.chat_id) || a.seq - b.seq);
@@ -286,6 +294,27 @@ async function persistSettlements(
   }
 }
 
+/**
+ * A cancelled freeze message must not strand its unclaimed later chunks:
+ * cancel the message's still-queued siblings too. Sent, unknown and in-flight
+ * rows are untouched.
+ */
+async function cancelFreezeMessageSiblings(
+  db: D1Database,
+  verdicts: ReadonlyMap<string, FreezeClaimVerdict>,
+  nowSec: number,
+): Promise<void> {
+  const statements = [...verdicts].flatMap(([messageKey, verdict]) => {
+    if (verdict.state !== "cancelled") return [];
+    const [jobId, chatId] = messageKey.split("\0");
+    return [db.prepare(
+      `UPDATE telegram_deliveries SET state = 'cancelled', done_at = ?, body = NULL, reason = ?
+        WHERE job_id = ? AND chat_id = ? AND state IN ('pending', 'retry')`,
+    ).bind(nowSec, verdict.reason, jobId, chatId)];
+  });
+  for (const chunk of chunkArray(statements, D1_BATCH_SIZE)) await executeAtomicBatch(db, chunk);
+}
+
 function classifyAttempt(
   row: ClaimedTelegramDelivery,
   result: BatchResult,
@@ -343,6 +372,67 @@ function classifyAttempt(
     reason: result.retryable ? "max_attempts" : (result.errorClass ?? "permanent_failure"),
   };
 }
+
+type FreezeClaimVerdict = { state: "cancelled" | "retry"; reason: string; notBefore?: number };
+
+/**
+ * The freeze claims a claimed row states: a live `freeze` job is its own
+ * claim; a freeze batch, or a roll-up carrying the freeze family, needs its
+ * persisted manifest (null when missing or malformed). Other rows: none.
+ */
+function freezeClaimKeys(row: ClaimedTelegramDelivery): string[] | null | undefined {
+  if (row.kind === "freeze") return [row.job_id];
+  const freezeBearing = row.kind === "freeze_batch"
+    || (row.kind === "rollup" && (row.families ?? "").split(",").includes("freeze"));
+  return freezeBearing ? parseTelegramFreezeSourceKeys(row.options_json) : undefined;
+}
+
+/**
+ * Send-wave freeze revalidation, keyed by (job, chat) so a message's later
+ * chunks share its head's verdict: a retracted claim cancels the message, an
+ * unverifiable manifest cancels it, an unavailable read defers it with backoff.
+ */
+async function revalidateFreezeClaims(
+  rows: readonly ClaimedTelegramDelivery[],
+  validate: TelegramDeliveryDrainOptions["validateFreezeClaims"],
+  nowSec: number,
+  verdicts: Map<string, FreezeClaimVerdict>,
+): Promise<void> {
+  const claimed = rows.flatMap((row) => {
+    const keys = freezeClaimKeys(row);
+    return keys === undefined ? [] : [{ row, keys }];
+  });
+  if (claimed.length === 0) return;
+  const keys = [...new Set(claimed.flatMap(({ keys }) => keys ?? []))];
+  const retracted = keys.length > 0 && validate ? await validate(keys) : null;
+  for (const { row, keys } of claimed) {
+    const messageKey = `${row.job_id}\0${row.chat_id}`;
+    if (keys == null) {
+      verdicts.set(messageKey, { state: "cancelled", reason: "freeze-claim-manifest-missing" });
+    } else if (retracted == null) {
+      verdicts.set(messageKey, {
+        state: "retry",
+        reason: "freeze-retraction-read-failed",
+        notBefore: nowSec + pendingBackoffSec(row.attempts, null),
+      });
+    } else if (keys.some((key) => retracted.has(key))) {
+      verdicts.set(messageKey, { state: "cancelled", reason: "freeze-claim-retracted" });
+    }
+  }
+}
+
+/** A local pre-send skip: never a fabricated Telegram failure. */
+const PRE_SEND_SKIP: PreSendBatchResult = {
+  ok: false,
+  blocked: false,
+  retryable: true,
+  permanentFailure: false,
+  statusCode: null,
+  errorClass: null,
+  delivery: "retryable_failure",
+  retryAfterSec: null,
+  skippedReason: "pre_send",
+};
 
 function sendClaimedRow(
   row: ClaimedTelegramDelivery,
@@ -414,6 +504,20 @@ export async function drainTelegramDeliveries(
       // here are proven unsent, whatever their persisted attempts say.
       const attemptedIds = new Set<number>();
       let globalStop: number | null = null;
+      const freezeVerdicts = new Map<string, FreezeClaimVerdict>();
+      // An unattempted row whose message failed freeze revalidation settles
+      // by that verdict, before any transport classification.
+      const settle = (row: ClaimedTelegramDelivery, batch: BatchResult, settleNow: number, failedHeadJob?: string): Settlement => {
+        const verdict = batch.attempted === false ? freezeVerdicts.get(`${row.job_id}\0${row.chat_id}`) : undefined;
+        if (!verdict) return classifyAttempt(row, batch, settleNow, failedHeadJob);
+        return {
+          row,
+          attempted: false,
+          state: verdict.state,
+          reason: verdict.reason,
+          ...(verdict.notBefore != null ? { nextAttemptAt: verdict.notBefore } : {}),
+        };
+      };
       try {
         const gate = await gateClaimedRows(db, claimed, claimNow);
         const preSettled: Settlement[] = [];
@@ -456,7 +560,26 @@ export async function drainTelegramDeliveries(
             signal: options.signal,
             softDeadlineAtMs: options.softDeadlineAtMs ?? null,
             beforeSendBatch: async (entries) => {
-              if (globalStop == null) return;
+              if (globalStop == null) {
+                await revalidateFreezeClaims(
+                  entries.map((entry) => entry.item.row), options.validateFreezeClaims, now(), freezeVerdicts,
+                );
+                // A slow read grants no fresh send time.
+                const budgetSpent = options.signal?.aborted === true
+                  || (options.softDeadlineAtMs != null && Date.now() >= options.softDeadlineAtMs);
+                const skipped = new Map<number, PreSendBatchResult>();
+                for (const entry of entries) {
+                  if (budgetSpent) {
+                    skipped.set(entry.index, {
+                      ...PRE_SEND_SKIP,
+                      skippedReason: options.signal?.aborted ? "aborted" : "soft_deadline",
+                    });
+                  } else if (freezeVerdicts.has(`${entry.item.row.job_id}\0${entry.item.row.chat_id}`)) {
+                    skipped.set(entry.index, PRE_SEND_SKIP);
+                  }
+                }
+                return skipped.size > 0 ? skipped : undefined;
+              }
               return new Map<number, PreSendBatchResult>(entries.map((entry) => [entry.index, {
                 ok: false,
                 blocked: false,
@@ -472,7 +595,7 @@ export async function drainTelegramDeliveries(
             afterSendBatch: async (entries, waveResults) => {
               const settleNow = now();
               const settlements = entries.map((entry, index) =>
-                classifyAttempt(entry.item.row, waveResults[index]!, settleNow, failedHeadJobByChat.get(entry.item.row.chat_id)));
+                settle(entry.item.row, waveResults[index]!, settleNow, failedHeadJobByChat.get(entry.item.row.chat_id)));
               for (const settlement of settlements) {
                 if (settlement.attempted && settlement.state !== "sent") {
                   failedHeadJobByChat.set(settlement.row.chat_id, settlement.row.job_id);
@@ -535,8 +658,9 @@ export async function drainTelegramDeliveries(
         const tails = items.flatMap((item, index) =>
           settledIds.has(item.row.id)
             ? []
-            : [classifyAttempt(item.row, scheduled[index]!, tailNow, failedHeadJobByChat.get(item.row.chat_id))]);
+            : [settle(item.row, scheduled[index]!, tailNow, failedHeadJobByChat.get(item.row.chat_id))]);
         await persistSettlements(db, tails, tailNow, owner);
+        await cancelFreezeMessageSiblings(db, freezeVerdicts, tailNow);
         for (const settlement of tails) {
           if (settlement.state === "cancelled") result.cancelled += 1;
           else result.deferred += 1;

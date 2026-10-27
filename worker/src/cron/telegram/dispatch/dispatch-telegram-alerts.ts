@@ -32,6 +32,7 @@ import {
 } from "../jobs/freeze-job";
 import { fanOutPlanningTelegramJobs, sweepTelegramJobs } from "../jobs/run-jobs";
 import { runTelegramRollupStep, type TelegramRollupStepResult } from "../rollup/rollup-step";
+import { loadRetractedFreezeAlertIds } from "../freeze/telegram-alert-freeze";
 import { classifyTelegramLogError, logTelegramEvent } from "../../../telegram/common/log";
 
 export type { TelegramDispatchSharedState } from "./dispatch-telegram-state";
@@ -191,7 +192,13 @@ export async function dispatchTelegramAlerts(
   }
 
   const drain = transportAllowed
-    ? await drainTelegramDeliveries(db, botToken, { signal, softDeadlineAtMs, holdKinds })
+    ? await drainTelegramDeliveries(db, botToken, {
+      signal,
+      softDeadlineAtMs,
+      holdKinds,
+      // Fresh per send wave; a failed read holds freeze-bearing rows and degrades the run.
+      validateFreezeClaims: (keys) => isolate("freeze-revalidation", null, () => loadRetractedFreezeAlertIds(db, keys)),
+    })
     : null;
   const sweep = await sweepTelegramJobs(db, Math.floor(Date.now() / 1000));
 

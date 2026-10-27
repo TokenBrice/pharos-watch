@@ -489,6 +489,148 @@ describe("telegram drain pre-send failures", () => {
   });
 });
 
+describe("telegram drain freeze claim revalidation", () => {
+  function freezeJob(
+    jobId: string,
+    kind: "freeze_batch" | "rollup" | "freeze",
+    deliveries: Array<Partial<TelegramDeliveryInput> & { chatId: string }>,
+  ) {
+    return {
+      jobId, kind, payload: {}, createdAt: NOW, expiresAt: NOW + 3600,
+      deliveries: deliveries.map((delivery) => ({
+        body: "freeze message", families: ["freeze"], ...delivery,
+      })) as TelegramDeliveryInput[],
+    };
+  }
+  const states = (sqlite: DatabaseSync) => sqlite.prepare(
+    "SELECT job_id, chat_id, seq, state, attempts, reason, next_attempt_at FROM telegram_deliveries ORDER BY job_id, chat_id, seq",
+  ).all() as Array<Record<string, unknown>>;
+
+  it("cancels a retracted batch claim before transport while unrelated chats and kinds still send", async () => {
+    const { sqlite, db } = setup();
+    for (const chat of ["1", "2", "3"]) addSubscriber(sqlite, chat);
+    await enqueueTelegramJob(db, freezeJob("freeze_batch:0-2", "freeze_batch", [
+      { chatId: "1", freezeSourceKeys: ["freeze:gone", "freeze:kept"] },
+      { chatId: "2", freezeSourceKeys: ["freeze:kept"] },
+    ]));
+    await enqueueTelegramJob(db, job("broadcast:other", [{ chatId: "3", body: "notice", audience: "notice" }]));
+    const validateFreezeClaims = vi.fn(async () => new Set(["freeze:gone"]));
+    const sendMessage = vi.fn(async (_chatId: string) => ok);
+    const result = await drainTelegramDeliveries(db, "token", { nowSec: () => NOW, sendMessage, validateFreezeClaims });
+
+    expect(validateFreezeClaims).toHaveBeenCalledWith(expect.arrayContaining(["freeze:gone", "freeze:kept"]));
+    expect(sendMessage.mock.calls.map((call) => call[0]).sort()).toEqual(["2", "3"]);
+    expect(result).toMatchObject({ attempted: 2, sent: 2, cancelled: 1 });
+    expect(states(sqlite).map((row) => [row.chat_id, row.state, row.attempts, row.reason])).toEqual([
+      ["3", "sent", 1, null],
+      ["1", "cancelled", 0, "freeze-claim-retracted"],
+      ["2", "sent", 1, null],
+    ]);
+  });
+
+  it("revalidates every wave: a retraction between chunks cancels the rest of that message", async () => {
+    const { sqlite, db } = setup();
+    addSubscriber(sqlite, "1");
+    await enqueueTelegramJob(db, freezeJob("freeze_batch:0-1", "freeze_batch", [
+      { chatId: "1", seq: 0, body: "c0", freezeSourceKeys: ["freeze:a"] },
+      { chatId: "1", seq: 1, body: "c1", freezeSourceKeys: ["freeze:a"] },
+      { chatId: "1", seq: 2, body: "c2", freezeSourceKeys: ["freeze:a"] },
+    ]));
+    let retracted = false;
+    const validateFreezeClaims = vi.fn(async () => {
+      const set = new Set(retracted ? ["freeze:a"] : []);
+      retracted = true;
+      return set;
+    });
+    const sendMessage = vi.fn(async (_chatId: string) => ok);
+    // Only chunks 0 and 1 are claimed; chunk 2 is an unclaimed sibling.
+    await drainTelegramDeliveries(db, "token", { nowSec: () => NOW, sendMessage, validateFreezeClaims, maxRows: 2 });
+
+    expect(validateFreezeClaims).toHaveBeenCalledTimes(2);
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(states(sqlite).map((row) => [row.seq, row.state, row.attempts, row.reason])).toEqual([
+      [0, "sent", 1, null],
+      [1, "cancelled", 0, "freeze-claim-retracted"],
+      [2, "cancelled", 0, "freeze-claim-retracted"],
+    ]);
+  });
+
+  it.each([
+    ["the read fails", async () => null],
+    ["no validator is supplied", undefined],
+  ] as const)("defers freeze-bearing rows with backoff when %s, then sends after recovery", async (_label, validator) => {
+    const { sqlite, db } = setup();
+    addSubscriber(sqlite, "1");
+    await enqueueTelegramJob(db, freezeJob("freeze:tape-1", "freeze", [{ chatId: "1" }]));
+    const sendMessage = vi.fn(async (_chatId: string) => ok);
+    const result = await drainTelegramDeliveries(db, "token", {
+      nowSec: () => NOW, sendMessage, ...(validator ? { validateFreezeClaims: validator } : {}),
+    });
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(result.attempted).toBe(0);
+    expect(states(sqlite)[0]).toMatchObject({
+      state: "retry", attempts: 0, reason: "freeze-retraction-read-failed", next_attempt_at: NOW + 60,
+    });
+    const validateFreezeClaims = vi.fn(async (keys: readonly string[]) => {
+      expect(keys).toEqual(["freeze:tape-1"]);
+      return new Set<string>();
+    });
+    await drainTelegramDeliveries(db, "token", { nowSec: () => NOW + 60, sendMessage, validateFreezeClaims });
+    expect(sendMessage).toHaveBeenCalledTimes(1);
+    expect(states(sqlite)[0]).toMatchObject({ state: "sent", attempts: 1 });
+  });
+
+  it("cancels freeze-bearing messages whose manifest is missing or malformed, sparing non-freeze roll-ups", async () => {
+    const { sqlite, db } = setup();
+    for (const chat of ["1", "2", "3", "4"]) addSubscriber(sqlite, chat);
+    await enqueueTelegramJob(db, freezeJob("freeze_batch:legacy", "freeze_batch", [{ chatId: "1" }]));
+    await enqueueTelegramJob(db, freezeJob("rollup:2026-10-27:2", "rollup", [{ chatId: "2", families: ["safety", "freeze"] }]));
+    await enqueueTelegramJob(db, freezeJob("rollup:2026-10-27:3", "rollup", [{ chatId: "3", families: ["safety"] }]));
+    await enqueueTelegramJob(db, freezeJob("freeze_batch:bad", "freeze_batch", [{ chatId: "4" }]));
+    sqlite.prepare("UPDATE telegram_deliveries SET options_json = ? WHERE chat_id = '4'")
+      .run(JSON.stringify({ freezeSourceKeys: ["freeze:", "tape-x"] }));
+    const validateFreezeClaims = vi.fn(async () => new Set<string>());
+    const sendMessage = vi.fn(async (_chatId: string) => ok);
+    await drainTelegramDeliveries(db, "token", { nowSec: () => NOW, sendMessage, validateFreezeClaims });
+
+    expect(sendMessage.mock.calls.map((call) => call[0])).toEqual(["3"]);
+    expect(states(sqlite).map((row) => [row.chat_id, row.state, row.reason])).toEqual([
+      ["4", "cancelled", "freeze-claim-manifest-missing"],
+      ["1", "cancelled", "freeze-claim-manifest-missing"],
+      ["2", "cancelled", "freeze-claim-manifest-missing"],
+      ["3", "sent", null],
+    ]);
+  });
+
+  it.each([
+    ["abort", (controller: AbortController) => controller.abort(), "aborted"],
+    ["deadline", () => vi.setSystemTime(Date.now() + 10_000), "soft_deadline"],
+  ] as const)("grants no fresh send time when validation outlasts the %s", async (_label, expire, reason) => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const { sqlite, db } = setup();
+      addSubscriber(sqlite, "1");
+      await enqueueTelegramJob(db, freezeJob("freeze_batch:slow", "freeze_batch", [{ chatId: "1", freezeSourceKeys: ["freeze:a"] }]));
+      const controller = new AbortController();
+      const sendMessage = vi.fn(async (_chatId: string) => ok);
+      await drainTelegramDeliveries(db, "token", {
+        nowSec: () => NOW,
+        sendMessage,
+        signal: controller.signal,
+        softDeadlineAtMs: Date.now() + 5_000,
+        validateFreezeClaims: async () => {
+          expire(controller);
+          return new Set<string>();
+        },
+      });
+      expect(sendMessage).not.toHaveBeenCalled();
+      expect(states(sqlite)[0]).toMatchObject({ state: "retry", attempts: 0, reason });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 describe("telegram job fan-out", () => {
   it("resumes a large fan-out across runs without duplicate rows", async () => {
     const { sqlite, db } = setup();
