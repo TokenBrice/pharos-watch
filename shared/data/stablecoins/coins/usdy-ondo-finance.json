@@ -25,8 +25,8 @@
     "cadence": "daily-nav",
     "attestorJurisdiction": "United States",
     "latestReport": {
-      "periodEnd": "2026-10-15",
-      "publishedAt": "2026-10-15",
+      "periodEnd": "2026-10-21",
+      "publishedAt": "2026-10-21",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "attestation",
       "scope": "assets-and-liabilities",
@@ -35,7 +35,7 @@
       "confidence": "verified",
       "sources": [
         {
-          "label": "Ondo USDY LLC ATCAttest daily report 2026-10-15 (LLC issuance only; publication date not stated; retrieved 2026-10-20; SHA-256 132296e20a7abed62bc6df3a0ae95507373504a26655afbed07680a955f0213d)",
+          "label": "Ondo USDY LLC ATCAttest daily report 2026-10-21 (LLC issuance only; publication date not stated; retrieved 2026-10-27; SHA-256 e14685c9b082bcc520f6181dd9b2098be4d5cdb7d58247f0e9a98f5e078486ef; Permitted Assets $2,093,630,882.37 / Token Principal Outstanding $2,062,240,342.43 = 1.015222)",
           "url": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AK-03xW6UBqCvZyI-Enizhk/2026/10%20October?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
         }
       ]

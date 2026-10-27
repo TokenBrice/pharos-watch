@@ -44,17 +44,21 @@
     "attestorTier": "niche",
     "cadence": "daily",
     "latestReport": {
-      "periodEnd": "2026-07-21",
-      "publishedAt": "2026-07-21",
+      "periodEnd": "2026-10-26",
+      "publishedAt": "2026-10-26",
       "assuranceMethod": "onchain-proof",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "OpenAI Codex V9 NR-recovery review",
+      "reviewer": "OpenAI Codex V9 NR-recovery review; period renewed 2026-10-27 from a fresh Chainlink feed round (D01 evidence lane)",
       "confidence": "verified",
       "sources": [
         {
           "label": "Backed public assetReserves GraphQL feed - C3M.MI",
           "url": "https://api.backed.fi/graphql"
+        },
+        {
+          "label": "Polygon Chainlink LedgerLens bC3M PoR feed 0x648e0ff6a36d58f6fce5927cb77601b73cadc2af, latestRoundData round 0x20000000000000392 answer 0.7 C3M.MI shares (8 decimals), updatedAt 2026-10-26T15:49:41Z, read 2026-10-27T08:46Z via eth_call at Polygon block 96256944; Backed API Ethereum circulatingSupply 0.7000000000023 bC3M matches",
+          "url": "https://data.chain.link/feeds/polygon/mainnet/bc3m-por"
         },
         {
           "label": "Backed proof-of-reserves methodology",
