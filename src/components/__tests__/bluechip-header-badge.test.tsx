@@ -33,7 +33,7 @@ describe("BluechipHeaderBadge", () => {
     const html = renderToStaticMarkup(<BluechipHeaderBadge stablecoinId={grade} />);
     expect(html).toContain('href="https://bluechip.org/en/coins/usdc"');
     expect(html).toContain(`>${grade}<`);
-    expect(html).toContain(`aria-label="Bluechip rating: ${grade} (via bluechip.org)"`);
+    expect(html).toContain(`aria-label="Bluechip rating: ${grade} · Observed `);
     expect(html).not.toContain("Pharos Bluechip");
     expect(html).not.toContain("/about/bluechip/");
     expect(html).not.toContain("since");
@@ -41,36 +41,48 @@ describe("BluechipHeaderBadge", () => {
     expect(html).not.toContain("designation");
   });
 
+  const DAY = 86_400;
   it.each([
-    { state: "current", age: 0, label: null },
-    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC, label: "retained" },
-    { state: "current", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC + 1, label: "stale retained" },
-    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC + 1, label: "stale retained" },
-    { state: "unknown", age: null, label: "observation unknown" },
-    { state: "current", age: -1, label: "observation unknown" },
-  ])("exposes $state age=$age beside the grade and in its accessible name", ({ state, age, label }) => {
+    { state: "current", age: 0, reason: null },
+    { state: "retained", age: BLUECHIP_OBSERVATION_MAX_AGE_SEC, reason: "http-500" },
+    { state: "retained", age: 3 * DAY, reason: "http-500" },
+    { state: "stale", age: 3 * DAY, reason: "observation-expired" },
+    { state: "retained", age: 12 * DAY, reason: "http-500" },
+    { state: "retained", age: 12 * DAY + 1, reason: "http-500" },
+  ] as const)("shows a neutral observation date for $state age=$age", ({ state, age, reason }) => {
     const now = 1_790_000_000;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     ratings.usdc = {
       ...makeUnreportedBluechipRating(),
       slug: "usdc",
-      lastObservedAt: age == null ? null : now - age,
+      dateOfRating: "2024-08-15",
+      lastObservedAt: now - age,
       observationState: state,
-      observationReason: state === "retained" ? "http-500" : null,
+      observationReason: reason,
     };
+    const date = new Date((now - age) * 1000).toISOString().slice(0, 10);
     const html = renderToStaticMarkup(<BluechipHeaderBadge stablecoinId="usdc" />);
     expect(html).toContain('href="https://bluechip.org/en/coins/usdc"');
     expect(html).toContain(">A</span>");
-    if (label) {
-      expect(html).toContain(`>(${label})</span>`);
-      expect(html).toContain(`aria-label="Bluechip rating: A · ${label} (via bluechip.org)"`);
-    } else {
-      expect(html).not.toMatch(/retained|observation unknown/);
-    }
-    expect(html).not.toContain("/about/bluechip/");
+    expect(html).toContain(`>Observed ${date}</span>`);
+    expect(html).toContain(`aria-label="Bluechip rating: A · Observed ${date} (via bluechip.org)"`);
+    expect(html).not.toMatch(/retained|stale|observation unknown|2024-08/);
   });
 
-  it("marks a mounted rating stale when its own observation window expires", () => {
+  it.each([
+    { label: "missing", lastObservedAt: null },
+    { label: "future", lastObservedAt: 1_790_000_001 },
+    { label: "non-finite", lastObservedAt: Number.NaN },
+  ])("shows an unavailable date, never a fabricated one, for a $label clock", ({ lastObservedAt }) => {
+    vi.spyOn(Date, "now").mockReturnValue(1_790_000_000 * 1000);
+    ratings.usdc = { ...makeUnreportedBluechipRating(), lastObservedAt, observationState: "unknown", observationReason: null };
+    const html = renderToStaticMarkup(<BluechipHeaderBadge stablecoinId="usdc" />);
+    expect(html).toContain(">Observation date unavailable</span>");
+    expect(html).toContain('aria-label="Bluechip rating: A · Observation date unavailable (via bluechip.org)"');
+    expect(html).not.toMatch(/Observed \d|observation unknown/);
+  });
+
+  it("keeps a mounted badge neutral across the 48h admission boundary", () => {
     const now = 1_790_000_000;
     vi.useFakeTimers();
     vi.setSystemTime(now * 1000);
@@ -80,10 +92,12 @@ describe("BluechipHeaderBadge", () => {
       observationState: "current",
       observationReason: null,
     };
-    render(<BluechipHeaderBadge stablecoinId="usdc" />);
-    expect(screen.getByRole("link").getAttribute("aria-label")).not.toContain("stale");
+    const { rerender } = render(<BluechipHeaderBadge stablecoinId="usdc" />);
     act(() => { vi.advanceTimersByTime(1000); });
-    expect(screen.getByRole("link").getAttribute("aria-label")).toContain("stale retained");
+    rerender(<BluechipHeaderBadge stablecoinId="usdc" />);
+    const label = screen.getByRole("link").getAttribute("aria-label");
+    expect(label).toContain(`Observed ${new Date((now - BLUECHIP_OBSERVATION_MAX_AGE_SEC) * 1000).toISOString().slice(0, 10)}`);
+    expect(label).not.toContain("stale");
   });
 
   it("renders nothing when the stablecoin has no Bluechip rating", () => {

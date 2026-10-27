@@ -17,6 +17,12 @@ describe("chain-ui", () => {
     expect(deltaColor(0)).toBe("text-foreground");
     expect(deltaColor(0.001)).toBe(DIRECTION_TONE_CLASSES.up);
     expect(deltaColor(-0.001)).toBe(DIRECTION_TONE_CLASSES.down);
+    // Ratios print as two-decimal percentage points: a rounded 0.00% is neutral, not signed.
+    expect(deltaColor(-0)).toBe("text-foreground");
+    expect(deltaColor(0.00001)).toBe("text-foreground");
+    expect(deltaColor(-0.000049)).toBe("text-foreground");
+    expect(deltaColor(-0.000051)).toBe(DIRECTION_TONE_CLASSES.down);
+    expect(deltaColor(0.000051)).toBe(DIRECTION_TONE_CLASSES.up);
   });
 
   it("never prints a nonzero share as 0.0%", () => {

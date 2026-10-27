@@ -15,7 +15,7 @@
  * runtime constant exists, so a methodology change cannot leave this copy stale.
  */
 import { DEWS_SIGNAL_LABELS, DEWS_THREAT_BANDS } from "@shared/lib/dews-config";
-import { DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
+import { DEPEG_PENDING_MIN_AGE_SEC, DEPEG_THRESHOLD_BPS, DEPEG_THRESHOLD_BPS_NON_USD } from "@shared/lib/depeg-config";
 import { LIQUIDITY_SCORE_WEIGHTS } from "@shared/lib/liquidity-score-weights";
 import { PSI_CONDITION_BANDS } from "@shared/lib/psi-policy";
 import { GAUGE_BAND_RANGES } from "@shared/lib/mint-burn-gauge-bands";
@@ -74,6 +74,7 @@ const MINT_BURN_PATH = "/methodology/#mint-burn-flow-methodology";
 const YIELD_PATH = "/methodology/#yield-intelligence-methodology";
 const CHAIN_HEALTH_PATH = "/methodology/#chain-health-score";
 const DDR_PATH = "/methodology/#depeg-resolver-methodology";
+const PRICING_PATH = "/methodology/#pricing-pipeline-methodology";
 
 const PSI = { methodologyPath: PSI_PATH, versionLabel: PSI_METHODOLOGY_VERSION_LABEL, changelogPath: PSI_METHODOLOGY_CHANGELOG_PATH };
 const SAFETY = { methodologyPath: SAFETY_PATH, versionLabel: SAFETY_SCORE_METHODOLOGY_VERSION_LABEL, changelogPath: SAFETY_SCORE_METHODOLOGY_CHANGELOG_PATH };
@@ -247,7 +248,7 @@ export const DEFINITIONS = {
     label: "Active Depegs",
     short: "Open depeg events that have crossed Pharos thresholds and passed the live confirmation rules.",
     detail:
-      "Large-cap, low-confidence, and extreme moves can require secondary confirmation before they count as live events.",
+      `Every new depeg must hold for at least ${DEPEG_PENDING_MIN_AGE_SEC / 60} minutes and pass source-trust checks before it counts as live.`,
     ...PEG,
   },
   coinsAtPeg: {
@@ -276,6 +277,11 @@ export const DEFINITIONS = {
     listed: true,
     seeAlso: ["depeg", "dews", "safetyScore"],
     ...PEG,
+  },
+  priceTransparency: {
+    label: "Price Transparency",
+    short: "The current USD price with its confidence, candidate source depth and, where available, a DEX check.",
+    methodologyPath: PRICING_PATH,
   },
   pegStatus: {
     label: "Peg Status",
@@ -403,6 +409,11 @@ export const DEFINITIONS = {
     seeAlso: ["yieldStability", "safetyScore"],
     ...YIELD,
   },
+  excessYield: {
+    label: "Excess yield",
+    short: "30-day average APY minus its benchmark rate.",
+    methodologyPath: YIELD_PATH,
+  },
   yieldStability: {
     label: "Yield Stability",
     short:
@@ -478,6 +489,11 @@ export const DEFINITIONS = {
     short: "HHI-based metric measuring stablecoin supply diversity on the chain.",
     detail: "100 = perfectly distributed, 0 = single coin dominates. Prevents unhealthy over-concentration in one stablecoin.",
     ...CHAIN_HEALTH,
+  },
+  supplyByChain: {
+    label: "Supply by Chain",
+    short: "Current circulating supply of this stablecoin on each chain, in USD.",
+    methodologyPath: PRICING_PATH,
   },
   chainHealthPegStability: {
     label: "Peg Stability",

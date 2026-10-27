@@ -52,6 +52,8 @@ Safety pillar radars use the absolute numeric domain `[0, 100]`; adding a compar
 
 Stablecoin data often spans several orders of magnitude. Use an appropriate non-linear or piecewise scale for magnitude and give every rendered size an explicit floor and ceiling. Documented exception: Watershed ribbon width is linear in mapped USD with a disclosed 1 px floor ("Links under $X draw at the 1px minimum"), because a linear width keeps each coin's stacked ports additive. Exact values are in the tooltip and the table ([Dependency Map: Watershed](./dependency-map.md#watershed)). The view model must handle null, empty, non-finite, negative, and out-of-range inputs without producing invalid SVG geometry.
 
+Signed percentages choose sign, arrow and direction color from the printed value (`roundForDisplay` in `shared/lib/format.ts`): a change that rounds to zero prints `0.00%` in neutral ink with no arrow, while missing inputs stay unavailable. Raw values, sorting and exports are never rounded.
+
 Derived layout must be deterministic. Seed any jitter or long-tail accent from a stable identifier; do not use `Math.random()` during render.
 
 ## Composition

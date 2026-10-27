@@ -56,7 +56,7 @@ With the default-on DDR/DDRR feature flags enabled, the order is deliberate:
 5. Forecast-grading section (`#forecast-grading`) wrapping `DepegResolverReviewerModule`
 6. `DepegFeed` + Timeline link — recent resolved events
 7. `DepegEventArchivePreview` (server) — latest month of permanent event pages
-8. `FaqSection` (server)
+8. `FaqSection` (server) — the depeg-event answer interpolates `DEPEG_THRESHOLD_BPS`, `DEPEG_THRESHOLD_BPS_NON_USD` and `DEPEG_PENDING_MIN_AGE_SEC`: every new event is pending first (universal minimum, not a publication SLA), and opposite-direction evidence never confirms. Visible copy and FAQPage JSON-LD share `FAQ_ITEMS`; `activeDepegs.detail` states the same minimum.
 
 The route reads answer → table to act on → evidence/audit. The board deliberately follows the
 forecast worklist rather than preceding it: a visitor arriving during an incident needs the verdict

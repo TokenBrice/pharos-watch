@@ -172,7 +172,7 @@ The active route has one server-owned screen-reader `h1` and one visible identit
 
 ### Scrollspy vs section rules
 
-Zone IDs and existing deep links are stable even when visible labels change. The outer compositor owns the sole `#overview`; child modules must not duplicate it. `LongformScrollspyNav` admits only visible zones; malformed fragments are ignored. Context requires dependency content, Activity requires yield or blacklist content, and How it breaks requires a publishable scenario. Flow availability alone cannot create an empty Activity destination. Without dependency context, below-`xl` reference cards may remain without a Dependencies heading/pill.
+Zone IDs and existing deep links are stable even when visible labels change. The outer compositor owns the sole `#overview`; child modules must not duplicate it. `LongformScrollspyNav` admits only visible zones; malformed fragments are ignored. Context requires dependency content, Activity requires yield or blacklist content, and How it breaks requires a publishable scenario. Flow availability alone cannot create an empty Activity destination. Without dependency context, below-`xl` reference cards may remain without a Dependencies heading/pill. Context's direct USD exposure follows the [dependency-map availability contract](./dependency-map.md#direct-exposure-and-shared-books): a total prints only when some direct dependent has both known supply and known share (`directKnown`), otherwise "Direct USD exposure unavailable."
 
 Detail navigation uses the shared horizontal `pill-tabs` recipe, with neutral selected pills and active-pill centering. Sticky-summary clearance, resume markers and deferred hash reveal remain part of the navigation contract; it does not render a separate vertical TOC or reading-progress beam.
 
@@ -195,7 +195,7 @@ Unknown evidence is not a failed review. `EvidenceStateStrip` keeps an archetype
 
 Frozen dossiers use the reduced-state rules above. The rail's missing grade is “Not scored” (or “Frozen · not scored”) only after a settled read. During the first read (the prerender included), the rail and the mobile hero show the build snapshot's release grade with its `as of` date, or a neutral placeholder without one; failure is “Grade unavailable”. A missing DEWS reading for NAV/frozen assets keeps the same explicit inapplicability reason as the main module.
 
-The same first-read rule covers the hero DEWS, Peg Score, Liquidity and 30d Excess tiles and the rail rows. A pending read renders a placeholder of the same size, or the dated release DEWS band or liquidity score where the snapshot has one, never “— data unavailable”. Settled reads keep their own verdicts; a release value never stands in for them. A pending Safety Score publication reads “Mint score loading” in Mint Authority, not unavailable.
+The 30d Excess tile's help is the unlisted `excessYield` definition (APY minus benchmark), not PYS. The same first-read rule covers the hero DEWS, Peg Score, Liquidity and 30d Excess tiles and the rail rows. A pending read renders a placeholder of the same size, or the dated release DEWS band or liquidity score where the snapshot has one, never “— data unavailable”. Settled reads keep their own verdicts; a release value never stands in for them. A pending Safety Score publication reads “Mint score loading” in Mint Authority, not unavailable.
 
 ### Compact desktop hero / SafetyGradeHero (mobile)
 
@@ -203,7 +203,7 @@ The same first-read rule covers the hero DEWS, Peg Score, Liquidity and 30d Exce
 
 Liquidity styling requires a non-null score, regardless of measured pool count. Null is a neutral unavailable mark; numeric zero is measured zero. While the Pharos Bluechip roster is suspended, the external grade/report link grants no Pharos designation and its report date grants no tenure.
 
-NAV presentation does not consume the asset's peg-score, active-depeg, deviation or event fields as a fixed-peg verdict. Distressed requires measured active depeg or DEWS WARNING/DANGER, not merely a weak Safety Score. Weak published grades resolve to Low Safety Score/watch (`RISKY_GRADES` is D/F, not nonexistent D±), ahead of archetype labels except the NAV/yield hybrid. Pure NAV rows omit the Record fact and DepegHistory.
+NAV presentation does not consume the asset's peg-score, active-depeg, deviation or event fields as a fixed-peg verdict. Distressed requires measured active depeg or DEWS WARNING/DANGER, not merely a weak Safety Score. Weak published grades resolve to Low Safety Score/watch (`RISKY_GRADES` is D/F, not nonexistent D±), ahead of archetype labels except the NAV/yield hybrid. Uncategorized and the internal institutional-default archetype render no verdict chip (`isHeroVerdictShown`); the lane keeps its reserved height. Pure NAV rows omit the Record fact and DepegHistory.
 
 ### View transitions
 
@@ -269,6 +269,8 @@ Taxonomy URLs come only from `buildGovernanceTaxonomyUrl`, `buildBackingTaxonomy
 
 ### Price Transparency Card
 
+The noncompact title binds the unlisted current-price `priceTransparency` definition, not historical Peg Score help; the compact rail title stays plain.
+
 `src/components/stablecoin-detail/price-transparency-card.tsx` uses `stablecoinLiveSummary(id)` (or frozen archive) for price/provenance, plus peg-summary consensus/agree sources and DEX checks. A non-null observed price, nominal reference or DEX check may admit the module; nominal par is separately labelled and never an observation. Protocol overrides name Protocol Redemption rather than presenting independent market rows. DEX checks require an observed current price. NAV DEX deviation uses the token's own observed reference price, never the peg unit; without it there is no deviation/verdict.
 
 Hero deviation and severity use published `peg-summary.currentDeviationBps` and require a finite positive observed display price. Missing display price says Observed price unavailable even if bps survives; missing published bps stays N/A. Independently refreshed raw price is display/provenance, not a second deviation calculation. NAV retains explicit no-fixed-peg wording. Relative update ages wait until hydration, including rail/source dialogs. The module retains `#price` and legacy `#price-transparency`.
@@ -298,7 +300,7 @@ Curated identifiers use reviewed obligor labels when needed. Live source freshne
 
 Market history, distribution and DEX liquidity are separate from review evidence. Chain distribution retains valid unresolved labels and escrow residuals as Unattributed, including below the ordinary Other threshold, in the total/share denominator. Any unavailable current chain balance withholds the entire distribution rather than renormalizing observed chains. Positive pool/TVL observations without protocol entries mean breakdown unavailable/retry, not no pools; genuinely empty aggregates may omit the distribution. Aggregate DEX liquidity is not V9's single-route Exit test; unobserved rows retain explicit no-direct-market and unobserved-history states.
 
-Distribution figure labels count positive source categories before the 2% Other grouping: protocols retain their full count, chains count canonical identities, and Unattributed supply is named separately rather than counted as a known chain. Grouping does not change totals or share denominators.
+Distribution figure labels count positive source categories before the 2% Other grouping: protocols retain their full count, chains count canonical identities, and Unattributed supply is named separately rather than counted as a known chain. Grouping does not change totals or share denominators. Every Supply by Chain title state binds the one-coin `supplyByChain` definition; `chainHealthConcentration` stays with chain-health consumers.
 
 Distribution and freeze-ledger usage keep the producer generation in their freshness chips across successful and failed refetches. HTTP-200 stale metadata, unavailable clocks and source/dependency warnings remain locally qualified without changing observed values or the distinction between observed zero usage and missing usage.
 

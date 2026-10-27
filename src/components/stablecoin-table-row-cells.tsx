@@ -16,7 +16,7 @@ import { confidenceClass } from "@/lib/confidence";
 import { getScoreColor, pegScoreColor } from "@/lib/severity-colors";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 import { BACKING_BADGE_STYLES, BACKING_LABELS_SHORT, DIRECTION_TONE_CLASSES, GOVERNANCE_BADGE_STYLES, GOVERNANCE_LABELS_SHORT, QUALITY_TIER_3_CLASSES } from "@shared/lib/classification";
-import { formatBps, formatCurrency, formatPercentChange, getNetColor } from "@shared/lib/format";
+import { formatBps, formatCurrency, formatPercentChange, getNetColor, roundForDisplay } from "@shared/lib/format";
 import { getSafetyGradeBadgeClassName } from "@/lib/report-card-ui";
 import { describePartialEvidence, formatPartialEvidenceGap } from "@/lib/safety-score-reason-labels";
 
@@ -176,6 +176,12 @@ function IdentityCells({ row, model }: RowCellsProps) {
   );
 }
 
+/** Direction from the printed two-decimal percentage: a rounded zero gets no arrow. */
+function changeArrow(changePct: number): string {
+  const rounded = roundForDisplay(changePct, 2);
+  return rounded > 0 ? "↑ " : rounded < 0 ? "↓ " : "";
+}
+
 function MarketCells({ row, model }: RowCellsProps) {
   return (
     <>
@@ -208,28 +214,26 @@ function MarketCells({ row, model }: RowCellsProps) {
       ) : null}
       {row.isVisible("change24h") ? (
         <TableCell className="text-right pharos-numeric text-sm">
-          <span className={model.change24h == null ? "text-muted-foreground" : getNetColor(model.change24h, {
+          <span className={model.change24h == null ? "text-muted-foreground" : getNetColor(roundForDisplay(model.change24h, 2), {
             positiveClass: DIRECTION_TONE_CLASSES.up,
             negativeClass: DIRECTION_TONE_CLASSES.down,
-            positiveInclusiveZero: true,
           })}>
             {model.change24h != null && model.circulating != null && model.prevDay != null ? (
-              <>{model.change24h >= 0 ? "↑" : "↓"} {formatPercentChange(model.circulating, model.prevDay)}</>
+              <>{changeArrow(model.change24h)}{formatPercentChange(model.circulating, model.prevDay)}</>
             ) : "—"}
           </span>
         </TableCell>
       ) : null}
       {row.isVisible("change7d") ? (
         <TableCell className="text-right pharos-numeric text-sm">
-          <span className={model.change7d == null ? "text-muted-foreground" : getNetColor(model.change7d, {
+          <span className={model.change7d == null ? "text-muted-foreground" : getNetColor(roundForDisplay(model.change7d, 2), {
             positiveClass: DIRECTION_TONE_CLASSES.up,
             negativeClass: DIRECTION_TONE_CLASSES.down,
-            positiveInclusiveZero: true,
           })}>
             {model.change7d != null && model.circulating != null && model.prevWeek != null ? (
               <>
                 <span className="hidden lg:inline"><MiniSparkline values={model.supplySparklineValues} /></span>
-                {model.change7d >= 0 ? "↑" : "↓"} {formatPercentChange(model.circulating, model.prevWeek)}
+                {changeArrow(model.change7d)}{formatPercentChange(model.circulating, model.prevWeek)}
               </>
             ) : "—"}
           </span>

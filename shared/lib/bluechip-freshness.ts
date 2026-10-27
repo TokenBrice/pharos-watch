@@ -24,13 +24,3 @@ export function isBluechipRatingCurrent(rating: BluechipRating | null | undefine
     && assessed.observationReason !== "empty-data"
     && assessed.observationReason !== "no-grade";
 }
-
-export function bluechipObservationLabel(rating: BluechipRating, nowSeconds: number): string | null {
-  const assessed = assessBluechipRating(rating, nowSeconds);
-  switch (assessed.observationState) {
-    case "current": return null;
-    case "retained": return "retained";
-    case "stale": return "stale retained";
-    case "unknown": return "observation unknown";
-  }
-}

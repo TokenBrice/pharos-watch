@@ -13,6 +13,7 @@ import { makeReportCardsV9Response } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
 import { getScoreColor } from "@/lib/severity-colors";
+import { DIRECTION_TONE_CLASSES } from "@shared/lib/classification";
 
 vi.mock("@/components/row-sparkline", async (importOriginal) => {
   const actual = await importOriginal<typeof RowSparklineModule>();
@@ -127,6 +128,27 @@ describe("StablecoinTableRowCells supply availability", () => {
     expect(html).toContain("$0");
     expect(html).toContain("-100.00%");
     expect(html).not.toContain("Supply unavailable");
+  });
+
+  it.each([
+    { label: "exact zero", current: 100, text: "0.00%", tone: null },
+    { label: "tiny decline", current: 99.999, text: "0.00%", tone: null },
+    { label: "tiny gain", current: 100.001, text: "0.00%", tone: null },
+    { label: "material decline", current: 99, text: "↓ -1.00%", tone: DIRECTION_TONE_CLASSES.down },
+    { label: "material gain", current: 101, text: "↑ +1.00%", tone: DIRECTION_TONE_CLASSES.up },
+  ])("keys 24h/7d arrows and tone to the printed percentage for $label", ({ current, text, tone }) => {
+    const html = renderSupply({ peggedUSD: current }, { peggedUSD: 100 });
+    const cells = html.match(/<span class="[^"]*">(?:(?!<\/span>)[\s\S])*?%<\/span>/g) ?? [];
+    expect(cells.length).toBeGreaterThanOrEqual(1);
+    for (const cell of cells) {
+      expect(cell).toContain(text);
+      if (tone) expect(cell).toContain(tone);
+      else {
+        expect(cell).not.toMatch(/↑|↓|-0\.00%|\+0\.00%/);
+        expect(cell).not.toContain(DIRECTION_TONE_CLASSES.up);
+        expect(cell).not.toContain(DIRECTION_TONE_CLASSES.down);
+      }
+    }
   });
 
   it("names the unchanged USD-valued history as a market-cap sparkline", () => {

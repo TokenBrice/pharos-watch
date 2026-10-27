@@ -21,11 +21,21 @@ describe("detail verdict lane", () => {
     expect(lane.textContent).toBe("");
     const taxonomy = lane.nextElementSibling!;
     const initialTaxonomy = taxonomy.innerHTML;
-    rerender(<HeroChipRail coin={coin} verdict={{ archetype: "institutional-default", label: "Institutional Default" }} />);
+    rerender(<HeroChipRail coin={coin} verdict={{ archetype: "yield-bearing-hybrid", label: "Yield-Bearing Hybrid" }} />);
     expect(container.querySelector("[data-hero-verdict-lane]")).toBe(lane);
-    expect(lane.textContent).toContain("Institutional Default");
+    expect(lane.textContent).toContain("Yield-Bearing Hybrid");
     expect(lane.nextElementSibling).toBe(taxonomy);
     expect(taxonomy.innerHTML).toBe(initialTaxonomy);
-    expect(taxonomy.textContent).not.toContain("Institutional Default");
+    expect(taxonomy.textContent).not.toContain("Yield-Bearing Hybrid");
+  });
+
+  it("shows no chip for the internal institutional-default archetype, keeping the lane", () => {
+    const coin = TRACKED_META_BY_ID.get("usdc-circle")!;
+    const { container } = render(<HeroChipRail coin={coin} verdict={{ archetype: "institutional-default", label: "Institutional Default" }} />);
+    const lane = container.querySelector("[data-hero-verdict-lane]")!;
+    expect(lane.className).toContain("min-h-5");
+    expect(lane.textContent).toBe("");
+    expect(container.querySelector(`#hero-verdict-${coin.id}`)).toBeNull();
+    expect(container.textContent).not.toContain("Institutional");
   });
 });

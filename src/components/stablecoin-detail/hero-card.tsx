@@ -11,7 +11,6 @@ import { BluechipHeaderBadge } from "@/components/bluechip-header-badge";
 import { StablecoinLogo } from "@/components/stablecoin-logo";
 import { StablecoinIdentityTransition } from "@/components/view-transitions";
 import { STABLECOIN_DETAIL_IDENTITY_LOGO_SIZE } from "@/components/stablecoin-detail/constants";
-import { isHeroVerdictEnabled } from "@/lib/feature-flags";
 import { formatDataHealthTimestamp } from "@/lib/data-health";
 import { useHydrated } from "@/hooks/use-hydrated";
 import { formatRelativeAgeSeconds } from "@shared/lib/relative-time";
@@ -23,6 +22,7 @@ import {
   HeroCardDesktopSection,
   HeroCardMobileSection,
   HeroChipRail,
+  isHeroVerdictShown,
   type HeroSectionBaseProps,
   type HeroTertiaryMetricConfig,
 } from "./hero-card-sections";
@@ -143,7 +143,7 @@ export function HeroIdentityHeader({
 }) {
   const { coin, logoSrc, header, reportCard, verdict, variantParent, variantChipClass } = model;
   const links = (coin.links ?? []).slice(0, 3);
-  const verdictId = isHeroVerdictEnabled() && verdict.archetype !== "uncategorized" ? `hero-verdict-${coin.id}` : null;
+  const verdictId = isHeroVerdictShown(verdict) ? `hero-verdict-${coin.id}` : null;
   // 44px tap targets below lg, the compact 32px cluster at lg+.
   const actionClass =
     "pharos-focus-ring inline-flex size-11 items-center justify-center rounded-md border border-border/60 bg-card text-muted-foreground transition-colors hover:border-border hover:bg-muted/60 hover:text-foreground lg:size-8";

@@ -1,4 +1,4 @@
-import { buildDirectHubExposures, type HubExposure, type SupplyOf } from "@shared/lib/dependency-exposure";
+import { buildDirectHubExposures, exposureKnown, type HubExposure, type SupplyOf } from "@shared/lib/dependency-exposure";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
@@ -6,6 +6,8 @@ import type { PublishedCollateralUsageEntry } from "./collateral-usage-section";
 
 export interface DetailDependencyContext {
   exposure: HubExposure | undefined;
+  /** False when no direct dependent has both known supply and known share: the total is not an observed $0. */
+  directKnown: boolean;
   upstreams: PublishedCollateralUsageEntry[];
 }
 
@@ -52,5 +54,6 @@ export function buildDetailDependencyContext(
       marketCap: mcapMap.get(edge.from) ?? null,
     };
   });
-  return { exposure, upstreams };
+  const directKnown = exposure ? exposureKnown(exposure.direct, edges.filter((edge) => edge.from === stablecoinId)) : true;
+  return { exposure, directKnown, upstreams };
 }

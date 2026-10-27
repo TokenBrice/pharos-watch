@@ -49,7 +49,8 @@ describe("HomeAltHero producer freshness", () => {
       meta: { updatedAt: NOW / 1000, ageSeconds: 0, status: "fresh" },
     });
     render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
-    expect(screen.getByText("Known market cap subtotal")).toBeTruthy();
+    expect(screen.getByText("Core market cap, known subtotal")).toBeTruthy();
+    expect(screen.queryByText("Core market cap")).toBeNull();
     expect(screen.getByText("Shares of known market cap subtotal")).toBeTruthy();
     expect(screen.getByText("80.0%")).toBeTruthy();
     expect(screen.getAllByText("20.0%")).toHaveLength(2);
@@ -65,6 +66,8 @@ describe("HomeAltHero producer freshness", () => {
     });
     render(<HomeAltHero snapshot={fallback} fallbackSelectedAtMs={NOW} />);
     expect(screen.getByText(/^As of October 10, 2026/)).toBeTruthy();
+    const headline = screen.getByText(/^Core market cap/);
+    expect(headline.getAttribute("title")).toBe("Excludes 2 off-catalog PSI historical assets");
     expect(screen.queryByRole("status")).toBeNull();
   });
 
@@ -114,6 +117,9 @@ describe("HomeAltHero producer freshness", () => {
     expect(screen.queryByText(/^As of/)).toBeNull();
     expect(screen.getByText("Updating")).toBeTruthy();
     expect(screen.getAllByText("—").length).toBeGreaterThan(0);
+    // Unavailable keeps the plain Core headline, never a known-subtotal claim.
+    expect(screen.getByText("Core market cap")).toBeTruthy();
+    expect(screen.queryByText(/known subtotal/)).toBeNull();
   });
 
   it("ages a healthy producer generation during a long-lived page session without a warning", () => {

@@ -4,9 +4,10 @@ import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { DependencyContextDetails } from "../dependency-context-details";
-import type { DetailDependencyContext } from "../dependency-context-model";
+import { buildDetailDependencyContext, type DetailDependencyContext } from "../dependency-context-model";
+import type { ReportCardsV9DependencyEdge } from "@shared/types/report-cards-v9";
 
-const EMPTY_CONTEXT: DetailDependencyContext = { exposure: undefined, upstreams: [] };
+const EMPTY_CONTEXT: DetailDependencyContext = { exposure: undefined, directKnown: true, upstreams: [] };
 
 describe("DependencyContextDetails", () => {
   it("shows scored roles independently of serial and basket graph links", () => {
@@ -46,5 +47,57 @@ describe("DependencyContextDetails", () => {
     expect(coverage.textContent).toContain("Share unknown");
     expect(coverage.textContent).toContain("Identity unverified");
     expect(screen.queryByRole("region", { name: "What depends on me" })).toBeNull();
+  });
+
+  describe("direct USD exposure availability", () => {
+    const HUB = "usdc-circle";
+    const edge = (from: string, to: string, kind: "serial" | "basket", weight: number | null): ReportCardsV9DependencyEdge => ({
+      from, to, kind, weight, upstreamScore: 80,
+      materiality: kind === "serial" ? "serial" : weight === null ? "basket-bounded-unknown" : "basket-weighted",
+    });
+    const cards = ["a", "b", "other", HUB].map((id) => ({ id, sharedBookId: null }));
+    function renderContext(edges: ReportCardsV9DependencyEdge[], mcap: Record<string, number | null>) {
+      const context = buildDetailDependencyContext(HUB, cards, edges, new Map(Object.entries(mcap)), 100);
+      const { container } = render(<DependencyContextDetails card={makeV9Card({ id: HUB })} context={context} marketCapAsOf={100} />);
+      return { context, text: container.textContent ?? "" };
+    }
+
+    it.each([
+      { label: "all shares unknown with known supplies", edges: [edge(HUB, "a", "basket", null), edge(HUB, "b", "basket", null)], mcap: { a: 100, b: 200 } },
+      { label: "known share with missing supply plus unknown share with known supply", edges: [edge(HUB, "a", "basket", 0.5), edge(HUB, "b", "basket", null)], mcap: { a: null, b: 200 } },
+      { label: "all supplies missing", edges: [edge(HUB, "a", "basket", 0.5), edge(HUB, "b", "serial", null)], mcap: {} },
+      { label: "unrelated known edge and missing-endpoint edge", edges: [edge(HUB, "a", "basket", null), edge("other", "b", "basket", 0.5), edge(HUB, "missing", "basket", 0.5)], mcap: { a: 100, b: 200, missing: 300 } },
+    ])("withholds a $0 total for $label", ({ edges, mcap }) => {
+      const { context, text } = renderContext(edges, mcap);
+      expect(context.directKnown).toBe(false);
+      expect(text).toContain("Direct USD exposure unavailable.");
+      expect(text).not.toContain("known direct exposure");
+      expect(text).not.toContain("$0");
+    });
+
+    it("keeps an observed zero share and zero supply as $0", () => {
+      const { context, text } = renderContext([edge(HUB, "a", "basket", 0), edge(HUB, "b", "basket", 0.5)], { a: 100, b: 0 });
+      expect(context.directKnown).toBe(true);
+      expect(text).toContain("$0.00 known direct exposure.");
+    });
+
+    it("shows a positive known subtotal beside unknown contributors with its incomplete note", () => {
+      const { text } = renderContext([edge(HUB, "a", "basket", 0.5), edge(HUB, "b", "basket", null)], { a: 1_000, b: 200 });
+      expect(text).toMatch(/\$500(\.00)? known direct exposure\./);
+      expect(text).toContain("2 direct dependents.");
+      expect(text).toContain("1 published link has an unknown share; USD exposure is incomplete.");
+    });
+
+    it("counts a serial claim with a null weight as a full known share", () => {
+      const { context, text } = renderContext([edge(HUB, "a", "serial", null)], { a: 300 });
+      expect(context.directKnown).toBe(true);
+      expect(text).toMatch(/\$300(\.00)? known direct exposure\./);
+    });
+
+    it("treats an empty context as known without a dependents section", () => {
+      const { context, text } = renderContext([], {});
+      expect(context.directKnown).toBe(true);
+      expect(text).not.toContain("What depends on me");
+    });
   });
 });

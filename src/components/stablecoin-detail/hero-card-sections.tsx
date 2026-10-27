@@ -45,8 +45,13 @@ function HeroCompactChip({ href, children }: { href?: string | null; children: R
   );
 }
 
+// The institutional-default archetype stays internal: as a reader chip it said nothing.
+export function isHeroVerdictShown(verdict: StablecoinVerdict): boolean {
+  return isHeroVerdictEnabled() && verdict.archetype !== "uncategorized" && verdict.archetype !== "institutional-default";
+}
+
 export function HeroChipRail({ coin, verdict }: { coin: StablecoinMeta; verdict: StablecoinVerdict }) {
-  const showVerdict = isHeroVerdictEnabled() && verdict.archetype !== "uncategorized";
+  const showVerdict = isHeroVerdictShown(verdict);
   const launchDate = formatChipLaunchDate(coin.launchDate);
   const pegLabel = coin.flags.navToken
     ? getHeroPegLabel(
