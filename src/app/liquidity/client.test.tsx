@@ -60,3 +60,17 @@ describe("LiquidityClient evidence cohorts", () => {
     }
   });
 });
+
+describe("LiquidityClient pool quality fold", () => {
+  it("labels the TVL-weighted base-yield share and its map threshold", () => {
+    const [coin] = CLIENT_ACTIVE_STABLECOINS;
+    response.data = { [coin.id]: makeDexLiquidityData({ totalTvlUsd: 100, poolCount: 1, coverageClass: "primary", liquidityEvidenceClass: "measured" }) };
+    const html = renderToStaticMarkup(createElement(QueryClientProvider, { client: new QueryClient() }, createElement(LiquidityClient)));
+    const text = (html.replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ");
+    expect(text).toContain("Base-yield share, TVL-weighted");
+    expect(text).toContain(
+      "On the map, rails turn dashed when pool balance is under 70% and flow lines turn dashed when base-yield share is under 60%. Durability is scored per coin; see the Durability column in the leaderboard.",
+    );
+    expect(text).not.toMatch(/Organic liquidity, fee-based/);
+  });
+});
