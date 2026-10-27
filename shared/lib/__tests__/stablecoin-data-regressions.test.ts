@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import felixMintAuthority from "../../data/stablecoins/domains/mint-authority/feusd-felix.json";
 import usdkgReserves from "../../data/stablecoins/domains/reserves/usdkg-gold-dollar.json";
 import usdkgMetadata from "../../data/stablecoins/coins/usdkg-gold-dollar.json";
+import ejpyMetadata from "../../data/stablecoins/coins/ejpy-jbfd.json";
 import usdcCompliance from "../../data/stablecoins/domains/compliance/usdc-circle.json";
 
 describe("stablecoin source-data regressions", () => {
@@ -39,5 +40,13 @@ describe("stablecoin source-data regressions", () => {
       label: "EBA: USDC classified as a significant EMT on October 14, 2026; dual supervision announced to begin November 12, 2026 (official text via search index, accessed October 26, 2026)",
       url: "https://www.eba.europa.eu/publications-and-media/press-releases/eba-classifies-usdc-first-significant-e-money-token-european-union",
     });
+  });
+
+  it("keeps EJPY's fiscal-year target as prose instead of a calendar-year date", () => {
+    expect(ejpyMetadata).toMatchObject({ status: "pre-launch", launchPhase: "announced", announcedDate: "2026-05" });
+    expect("expectedLaunchDate" in ejpyMetadata).toBe(false);
+    expect("dateHistory" in ejpyMetadata).toBe(false);
+    expect(ejpyMetadata.launchPhaseDetail).toContain("within FY2026 (through March 2027)");
+    expect(ejpyMetadata.milestones[0].sourceUrl).toBe("https://www.jbfd.org/news/joc-ejpy");
   });
 });
