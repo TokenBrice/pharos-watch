@@ -26,7 +26,7 @@ afterEach(() => {
 });
 
 describe("HomeAltHero static fallback from a pre-provenance dataset (K-031, ADR-42)", () => {
-  it("treats unrecorded chain coverage as legacy: no Partial marker, no known-subtotal label", async () => {
+  it("treats unrecorded chain coverage as legacy and renders the plain headline", async () => {
     vi.stubGlobal("fetch", vi.fn().mockRejectedValue(new Error("offline build")));
     const { getHomepageHeroSnapshot } = await import("@/lib/homepage-static-snapshot");
     const { HomeAltHero } = await import("@/components/home-alt-hero");

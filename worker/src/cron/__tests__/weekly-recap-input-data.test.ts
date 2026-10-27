@@ -136,6 +136,15 @@ describe("weekly recap canonical candidate aggregation", () => {
     expect(prompt).toContain("OBS: WATCH -> ALERT, score 60, $2.00M mcap");
   });
 
+  it("carries a stored null seven-day change into the weekly evidence without restoring zero", () => {
+    const rows = [0, 1, 2, 3, 4, 5, 6].map((index) => row(index, {
+      mcap7dDelta: null, mcap7dDeltaCoverage: { coveredCoins: 0, totalCoins: 3, coveredMcapUsd: 0 },
+    }));
+    const weekly = buildWeeklyInputData(rows)!;
+    expect(weekly.dailyDigests.map((digest) => digest.inputData.mcap7dDelta)).toEqual(Array(7).fill(null));
+    expect(buildWeeklyPrompt(weekly)).not.toContain("7-day market cap change: +$0");
+  });
+
   it("filters archived operational yield advisories before the weekly top-N ranking", () => {
     const anomaly = (symbol: string, warnings: string[], mcapUsd: number) => ({ symbol, currentApy: 5, apy7d: 5, apy30d: 5, warnings, mcapUsd });
     const weekly = buildWeeklyInputData(Array.from({ length: 7 }, (_, index) => row(index, {

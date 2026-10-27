@@ -175,7 +175,8 @@ describe("DigestSnapshot", () => {
 
     render(<DigestSnapshot date="2026-09-01" />);
 
-    expect(screen.getAllByText("Not captured for this edition")).toHaveLength(1);
+    expect(screen.queryByText("Not captured for this edition")).toBeNull();
+    expect(screen.getByText(/7d matched-cohort change:/).closest("p")!.textContent).toBe("7d matched-cohort change: —");
     expect(screen.queryByText(/\$0/)).toBeNull();
     expect(screen.queryByText(/\+0\.00%/)).toBeNull();
   });
@@ -218,7 +219,7 @@ describe("DigestSnapshot", () => {
     mockSnapshot({ totalMcapUsd: 1e12, mcap7dDelta, mcap7dDeltaCoverage });
     render(<DigestSnapshot date="2026-09-01" />);
     const line = screen.getByText(/7d matched-cohort change:/).closest("p")!;
-    expect(line.textContent).toContain("Not captured for this edition");
+    expect(line.textContent).toBe("7d matched-cohort change: —");
     expect(line.textContent).not.toContain("$0");
   });
 
