@@ -155,7 +155,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
   });
 
   describe("capture --require-current", () => {
-    const withCapture = async (nowSec: number, extra: string[], run: (paths: { raw: string; output: string }) => Promise<void>) => {
+    const withCapture = async (nowSec: number, run: (paths: { raw: string; output: string }) => Promise<void>) => {
       const dir = mkdtempSync(resolve(tmpdir(), "pharos-v9-require-current-"));
       const now = vi.spyOn(Date, "now").mockReturnValue(nowSec * 1_000);
       try {
@@ -172,7 +172,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       ["current", 0, true], ["exact budget", SOURCE_FIXED_INPUT_MAX_AGE_SEC, true],
       ["budget + 1", SOURCE_FIXED_INPUT_MAX_AGE_SEC + 1, false], ["future by 1s", -1, false],
     ])("%s", async (_name, ageSec, accepted) => {
-      await withCapture(CLOCK_SEC + ageSec, [], async ({ raw, output }) => {
+      await withCapture(CLOCK_SEC + ageSec, async ({ raw, output }) => {
         const run = () => runReportCardsFixedInputCaptureCli([
           "--exact-cache-export", raw, "--output", output, "--normalized-only", "--require-current",
         ]);
@@ -195,7 +195,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     });
 
     it("rejects malformed input and incompatible flag combinations without output", async () => {
-      await withCapture(CLOCK_SEC, [], async ({ raw, output }) => {
+      await withCapture(CLOCK_SEC, async ({ raw, output }) => {
         writeFileSync(raw, JSON.stringify({ clockSec: CLOCK_SEC }));
         await expect(runReportCardsFixedInputCaptureCli([
           "--exact-cache-export", raw, "--output", output, "--normalized-only", "--require-current",
@@ -213,7 +213,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
     });
 
     it("keeps default historical capture of an old input unchanged", async () => {
-      await withCapture(CLOCK_SEC + 10 * SOURCE_FIXED_INPUT_MAX_AGE_SEC, [], async ({ raw, output }) => {
+      await withCapture(CLOCK_SEC + 10 * SOURCE_FIXED_INPUT_MAX_AGE_SEC, async ({ raw, output }) => {
         await runReportCardsFixedInputCaptureCli(["--exact-cache-export", raw, "--output", output, "--normalized-only"]);
         expect(JSON.parse(readFileSync(output, "utf8")).clockSec).toBe(CLOCK_SEC);
       });

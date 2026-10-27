@@ -103,7 +103,7 @@ Preserve ignored `agents/dex-acceptance/` archives externally as required before
 `npm run report-cards:capture-fixed-input -- --exact-cache-export <path> --output <path>`
 exports a registry-bound wrapper with normalized `fixedInput` and a verified `registrySnapshot`.
 
-`--require-current` (only with `--exact-cache-export --normalized-only`, used by the scheduled curation sweep) rejects an input whose `clockSec` is older than one preparation cycle (`SOURCE_FIXED_INPUT_MAX_AGE_SEC`) or in the future with `capture-stale` / `capture-future` before writing; default and historical modes are unchanged.
+`--require-current` (only with `--exact-cache-export --normalized-only`, used by the scheduled curation sweep) rejects an input whose `clockSec` is older than one `prepare-safety-score-v9-input` cycle or in the future with `capture-stale` / `capture-future` before writing; default and historical modes are unchanged.
 
 `npm run safety-score-v9:replay -- --input <path> --output <path> --published-at <seconds> --registry-ref <git-sha>`
 replays against the capture-time registry.
