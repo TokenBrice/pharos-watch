@@ -18,10 +18,20 @@ describe("Dwellir Growth endpoint capabilities", () => {
       } else {
         expect(entry.maxLogBlockSpan).toBe(nodeCaps[entry.chainId] ?? 10_000);
         expect(entry.verifiedAt).toBe(
-          entry.chainId === "ethereum" || entry.chainId === "arc" ? "2026-10-13" : "2026-10-11",
+          entry.chainId === "lisk" || entry.chainId === "viction" ? "2026-10-28"
+            : entry.chainId === "ethereum" || entry.chainId === "arc" ? "2026-10-13" : "2026-10-11",
         );
       }
     }
+  });
+
+  it("appends the newly verified chains without inventing Chiliz log history or Chiliz/Viction finality", () => {
+    expect(DWELLIR_CHAINS).toHaveLength(40);
+    expect(DWELLIR_CHAINS.slice(-3)).toMatchObject([
+      { chainId: "chiliz", stateHistory: "archive", logsHistory: "none", finalizedTagUnsupported: true, verifiedAt: "2026-10-28" },
+      { chainId: "lisk", stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-28" },
+      { chainId: "viction", stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, finalizedTagUnsupported: true, verifiedAt: "2026-10-28" },
+    ]);
   });
 
   it("uses Polygon's verified archive host and preserves archive observations", () => {

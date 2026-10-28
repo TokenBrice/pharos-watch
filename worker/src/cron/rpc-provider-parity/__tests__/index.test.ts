@@ -122,7 +122,7 @@ describe("rpc parity job", () => {
       truncated: false,
       aborted: false,
       rotation: {
-        windowHours: 3, maxChainsPerRun: 13, targetCount: RPC_PARITY_TARGETS.length,
+        windowHours: 3, maxChainsPerRun: 14, targetCount: RPC_PARITY_TARGETS.length,
         selectedChains: expect.any(Array),
       },
       runsRetained: 1,

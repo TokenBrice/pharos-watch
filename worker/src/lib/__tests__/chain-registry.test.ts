@@ -206,6 +206,16 @@ describe("buildChainRpcs", () => {
     expect(logScanRpcEndpoints(admitted).slice(1)).toEqual(logScanRpcEndpoints(baseline));
   });
 
+  it.each(["chiliz", "lisk", "viction"])("keeps new %s coverage supplemental without a registry incumbent", (chainId) => {
+    expect(buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).has(chainId)).toBe(false);
+    const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId);
+    expect(admitted?.endpoints).toHaveLength(1);
+    expect(admitted?.endpoints[0]).toMatchObject({ operator: "dwellir", position: "supplemental" });
+    expect(registryRpcUrls(admitted)).toEqual([]);
+    expect(primaryRpcUrl(admitted)).toBeUndefined();
+    expect(logScanRpcEndpoints(admitted)).toEqual([]);
+  });
+
   it.each(["linea", "scroll", "unichain", "worldchain", "megaeth", "stable"])(
     "orders %s Dwellir before census Alchemy without adding registry or log eligibility", (chainId) => {
       const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);

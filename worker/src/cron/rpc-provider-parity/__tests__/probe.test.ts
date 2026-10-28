@@ -107,12 +107,12 @@ function runProbe(options: {
 
 describe("rpc parity probe", () => {
   it.each([0, 3600, 7200, 10800])(
-    "covers the complete roster in any three consecutive hours from %i at the fixed cap", (start) => {
+    "covers the complete roster in any three consecutive two-hour runs from %i at the fixed cap", (start) => {
       const observed = new Set<string>();
       for (let hour = 0; hour < RPC_PARITY_ROTATION_HOURS; hour++) {
-        const rotation = rpcParityRotation(RPC_PARITY_TARGETS, start + hour * 3600);
+        const rotation = rpcParityRotation(RPC_PARITY_TARGETS, start + hour * 7200);
         expect(rotation.targets.length).toBeLessThanOrEqual(RPC_PARITY_MAX_CHAINS_PER_RUN);
-        expect(rotation).toEqual(rpcParityRotation(RPC_PARITY_TARGETS, start + hour * 3600));
+        expect(rotation).toEqual(rpcParityRotation(RPC_PARITY_TARGETS, start + hour * 7200));
         for (const target of rotation.targets) observed.add(target.chainId);
       }
       expect([...observed].sort()).toEqual(RPC_PARITY_TARGETS.map((target) => target.chainId).sort());

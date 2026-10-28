@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getCache } from "../../db-cache";
 import { RPC_PARITY_TARGETS } from "../targets";
+import { rpcParityRotation } from "../../../cron/rpc-provider-parity/probe";
 import { RPC_PARITY_LATEST_MAX_NUMERIC_CALLS, RPC_PARITY_MAX_CALLS_PER_OPERATOR } from "../types";
 import { headLagThresholdBlocks, RPC_PARITY_GATE_MIN_RUNS } from "../report";
 import {
@@ -79,12 +80,46 @@ describe("rpc parity store merging", () => {
     let row: RpcParityStoreRow | null = null;
     for (let index = 0; index < RPC_PARITY_RETENTION_RUNS + 5; index += 1) {
       const atSec = NOW_SEC + index * 3600;
-      row = mergeRpcParityRun(row, fullParityRun(atSec), { nowSec: atSec }).row;
+      row = mergeRpcParityRun(row, { atSec, samples: [paritySample("base")] }, { nowSec: atSec }).row;
     }
     expect(row?.runs).toHaveLength(RPC_PARITY_RETENTION_RUNS);
     expect(row?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
     expect(row?.gateRuns?.[0][0]).toBe(NOW_SEC + 5 * 3600);
     expect(row?.runs[0].atSec).toBe(NOW_SEC + 5 * 3600);
+  });
+
+  it("fits seven days of the forty-chain two-hour rotation without byte pruning", () => {
+    let row: RpcParityStoreRow | null = null;
+    let seed = 1_234_567;
+    const runCount = WEEK_SEC / 7200;
+    for (let index = 0; index < runCount; index += 1) {
+      const atSec = NOW_SEC - (runCount - 1 - index) * 7200;
+      const selected = new Set(rpcParityRotation(RPC_PARITY_TARGETS, atSec).targets.map((target) => target.chainId));
+      const run = fullParityRun(atSec);
+      run.samples = run.samples.filter((sample) => selected.has(sample.chainId));
+      for (const sample of run.samples) {
+        for (const operator of ["dwellir", "comparator"] as const) {
+          sample.calls![operator] = Array.from({ length: RPC_PARITY_MAX_CALLS_PER_OPERATOR[operator] }, (_, callIndex) => {
+            seed = (Math.imul(seed, 1_664_525) + 1_013_904_223) >>> 0;
+            return {
+              step: "state", phase: callIndex === 0 ? "firstTouch" : "warm",
+              latencyMs: seed % 8_001, errorClass: null,
+            };
+          });
+        }
+      }
+      const merged = mergeRpcParityRun(row, run, { nowSec: atSec });
+      expect(merged.droppedOldest).toBe(0);
+      row = merged.row;
+    }
+    expect(row?.chains).toHaveLength(40);
+    expect(row?.runs).toHaveLength(runCount);
+    expect(row?.gateRuns).toHaveLength(runCount);
+    const encoded = encodeRpcParityStoreRow(row!);
+    expect(encoded.length).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
+    const envelope = JSON.parse(encoded) as { payload: string };
+    expect(gunzipSync(Buffer.from(envelope.payload, "base64")).byteLength).toBeLessThan(RPC_PARITY_MAX_DECOMPRESSED_BYTES);
+    expect(decodeRpcParityStoreRow(encoded)?.runs).toHaveLength(runCount);
   });
 
 
@@ -569,7 +604,7 @@ describe("rpc parity store wire form", () => {
       chains: RPC_PARITY_TARGETS.map((target) => target.chainId),
       comparators: [], dwellirHosts: [], runs: runs.slice(0, -1), latest: {},
     }, runs[runs.length - 1], { nowSec: NOW_SEC }).row;
-    expect(row.chains).toHaveLength(37);
+    expect(row.chains).toHaveLength(40);
     expect(encodeRpcParityStoreRow(row).length).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
     const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row));
     expect(decoded?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
@@ -577,7 +612,7 @@ describe("rpc parity store wire form", () => {
     expect(row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
     expect(row.runs.length).toBeLessThanOrEqual(RPC_PARITY_RETENTION_RUNS);
     expect(decoded?.runs).toHaveLength(row.runs.length);
-    expect(decoded?.runs[row.runs.length - 1]?.samples[36].calls).toEqual(runs[167].samples[36].calls);
+    expect(decoded?.runs[row.runs.length - 1]?.samples[39].calls).toEqual(runs[167].samples[39].calls);
     expect(decoded?.runs[0].atSec).toBe(runs[RPC_PARITY_RETENTION_RUNS - row.runs.length].atSec);
   });
 
