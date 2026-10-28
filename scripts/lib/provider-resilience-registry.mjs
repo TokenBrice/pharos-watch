@@ -518,20 +518,23 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
   {
     id: "alchemy-log-rpc",
     family: "evm-rpc",
-    description: "Alchemy JSON-RPC log, receipt, and timestamp fetch helpers.",
+    description: "Mint/burn JSON-RPC log, receipt, and timestamp helpers with per-provider circuit attribution.",
     files: [
       "worker/src/lib/alchemy-logs.ts",
+      "worker/src/lib/evm-rpc.ts",
+      "worker/src/lib/rpc-request-observer.ts",
       "worker/src/handlers/scheduled/mint-burn-slot.ts",
       "worker/src/lib/fetch-retry.ts",
     ],
-    tests: ["worker/src/lib/__tests__/alchemy-logs.test.ts"],
+    tests: ["worker/src/lib/__tests__/alchemy-logs.test.ts", "worker/src/lib/__tests__/rpc-request-observer.test.ts",
+      "worker/src/handlers/scheduled/__tests__/mint-burn-slot.test.ts"],
     allowBareFetch: true,
     directFetchJustification: "Alchemy JSON-RPC helpers split block ranges and preserve partial-completeness metadata.",
     resilience: {
       transport: "fetchTextWithRetry through the central fetch-retry policy",
       timeout: "Uses the central createTimeoutSignal() policy plus the caller signal.",
       body: "The central policy reads bounded response bodies before Alchemy parses JSON-RPC responses.",
-      circuitSources: ["CIRCUIT_SOURCE.ALCHEMY"],
+      circuitSources: ["CIRCUIT_SOURCE.ALCHEMY", "CIRCUIT_SOURCE.DWELLIR_EVM"],
     },
     requiredMarkers: [
       "fetchTextWithRetry",

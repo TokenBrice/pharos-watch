@@ -150,6 +150,8 @@ Only public events (`suppression_reason IS NULL`) enter either window. Suppresse
 
 ### S_flow — Mint/Burn Flow
 
+Mint/burn v6.31 limits hourly rows and materialization debt to admitted, enabled legs named in the published scope, intersected with DEWS's existing canonical-chain rule. Pending or disabled legs do not contribute. A retained publication without scope metadata leaves this signal unavailable until the next aggregate publication; an empty admitted scope never proves quiet zero.
+
 Requires complete 24h/30d coverage at one published common closed-hour watermark for windows/debt. Legacy assurance is not v2 proof. Age uses that end; reader/24h-DEWS limits stay. Requires >=7 baseline days, complete 24h USD and no partial burn-baseline valuation (unknown legacy allowed). Failed gates are unavailable; valued admitted zero is calm. Measures:
 
 - **Burn surge:** 24h burn volume / 30d daily average

@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { completeMintBurnRun, type CompleteMintBurnRunInput } from "../mint-burn/run-completion";
-import type { MintBurnConfigSummary } from "../mint-burn/sync-config";
+import { createMintBurnConfigSummary, type MintBurnConfigSummary } from "../mint-burn/sync-config";
+import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { setMintBurnRunState } from "../mint-burn/run-state";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
@@ -329,6 +331,53 @@ describe("completeMintBurnRun", () => {
     input.phase.apiErrors = 0;
     expect((await completeMintBurnRun(input)).status).toBe("ok");
     expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, 0, null);
+  });
+
+  it.each(["critical", "extended"] as const)("keeps pending findings visible without escalating %s publication health", async (lane) => {
+    const input = buildRunInput({ apiErrors: 3 });
+    const admitted = makeMintBurnConfig({ asset: { startBlock: 1, tier: "critical" } });
+    const pending = makeMintBurnConfig({ chain: { chainId: "synthetic-pending" },
+      asset: { stablecoinId: "synthetic-coin", startBlock: 1, tier: "critical" } });
+    const admittedKey = mintBurnConfigKey(admitted);
+    const pendingKey = mintBurnConfigKey(pending);
+    input.lane = lane;
+    input.configs = [admitted, pending];
+    input.enabledConfigs = input.configs;
+    input.pendingAdmissionKeys = new Set([pendingKey]);
+    input.criticalContractsEnabled = 1;
+    input.phase.criticalContractsSatisfied = 1;
+    input.phase.admittedApiErrors = 0;
+    input.phase.rowsInserted = 7;
+    input.phase.configBreakdown = [
+      { ...createMintBurnConfigSummary(admitted, admittedKey, "critical"), skippedReason: "up-to-date" },
+      { ...createMintBurnConfigSummary(pending, pendingKey, "critical"), attempted: true, rowsInserted: 7,
+        errors: 3, advanceReason: "scan-coverage-unproven", conservationFailure: true, conservationStatus: "mismatch" },
+    ];
+    input.runState.degradedStreak = 2;
+
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("ok");
+    expect(result.metadata).toMatchObject({
+      apiErrors: 3, admittedApiErrors: 0,
+      conservationFailures: 1, admittedConservationFailures: 0,
+      scanCoverageUnproven: 1, admittedScanCoverageUnproven: 0,
+      finality: { unavailableChains: ["synthetic-pending"] }, admittedFinalityUnavailableChains: [],
+      degradedSignal: false, degradedStreak: 0, outputPublishedAt: null,
+    });
+    expect(result.metadata.configSamples).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: pendingKey, admissionStatus: "pending-admission", errors: 3 }),
+    ]));
+    expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, 0, null);
+
+    input.pendingAdmissionKeys = new Set();
+    input.phase.admittedApiErrors = 3;
+    const admittedFailure = await completeMintBurnRun(input);
+    expect(admittedFailure.status).toBe(lane === "critical" ? "error" : "degraded");
+    expect(admittedFailure.metadata).toMatchObject({
+      admittedApiErrors: 3, admittedConservationFailures: 1, admittedScanCoverageUnproven: 1,
+      admittedFinalityUnavailableChains: ["synthetic-pending"], degradedSignal: true, degradedStreak: 3,
+      reason: "mint-burn-conservation-failure",
+    });
   });
 
   it("keeps extended failures degraded at the critical error threshold", async () => {

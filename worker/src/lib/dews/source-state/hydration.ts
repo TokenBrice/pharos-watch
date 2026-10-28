@@ -509,8 +509,15 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
     const published = await readPublishedMintBurnGauge(ctx.db, ctx.nowSec);
     const end = published.kind === "ok" && published.gauge.window != null
       ? published.gauge.window.end : Math.floor(ctx.nowSec / 3600) * 3600;
+    const admittedPairs = new Set(published.kind === "ok"
+      ? published.gauge.publication?.legs.filter((leg) => leg.status === "admitted"
+        && isCanonicalMintBurnPair(leg.stablecoinId, leg.chainId))
+        .map((leg) => `${leg.stablecoinId}|${leg.chainId}`) ?? [] : []);
+    const admittedCoinIds = new Set([...admittedPairs].map((pair) => pair.split("|")[0]));
+    const scopedPairsJson = JSON.stringify([...admittedPairs].map((pair) => pair.split("|")));
     const scanCoverageById = new Map(published.kind === "ok" && published.gauge.window != null
-      ? published.gauge.coins.map((coin) => [coin.id, coin.scanCoverage] as const) : []);
+      ? published.gauge.coins.filter((coin) => admittedCoinIds.has(coin.id))
+        .map((coin) => [coin.id, coin.scanCoverage] as const) : []);
     type FlowRow = MintBurnValuationTallyRow & {
       stablecoin_id: string;
       chain_id: string;
@@ -528,9 +535,11 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
                 ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL},
                 MAX(hour_ts) as latest_hour_ts
          FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-         WHERE hour_ts >= ? AND hour_ts < ? GROUP BY stablecoin_id, chain_id`,
+         WHERE hour_ts >= ? AND hour_ts < ? AND (stablecoin_id, chain_id) IN (
+           SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)
+         ) GROUP BY stablecoin_id, chain_id`,
       )
-      .bind(end - DAY_SECONDS, end),
+      .bind(end - DAY_SECONDS, end, scopedPairsJson),
       ctx.db
       .prepare(
         `SELECT /* pharos:dews:mint-burn-30d */
@@ -540,9 +549,11 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
                 ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL},
                 MAX(hour_ts) as latest_hour_ts
          FROM mint_burn_hourly INDEXED BY idx_mbh_ts
-         WHERE hour_ts >= ? AND hour_ts < ? GROUP BY stablecoin_id, chain_id`,
+         WHERE hour_ts >= ? AND hour_ts < ? AND (stablecoin_id, chain_id) IN (
+           SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)
+         ) GROUP BY stablecoin_id, chain_id`,
       )
-      .bind(end - 30 * DAY_SECONDS, end),
+      .bind(end - 30 * DAY_SECONDS, end, scopedPairsJson),
       ctx.db.prepare(`SELECT stablecoin_id, chain_id FROM mint_burn_dirty_hours
         WHERE hour_ts >= ? AND hour_ts < ? GROUP BY stablecoin_id, chain_id`)
         .bind(end - 30 * DAY_SECONDS, end),
@@ -550,7 +561,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
     const mb24h = snapshot[0] as D1Result<FlowRow>;
     const mb30d = snapshot[1] as D1Result<FlowRow>;
     const dirtyIds = new Set((snapshot[2].results as Array<{ stablecoin_id: string; chain_id: string }>)
-      .filter((row) => isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)).map((row) => row.stablecoin_id));
+      .filter((row) => admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)).map((row) => row.stablecoin_id));
     mintBurnRowsRead = (mb24h.results?.length ?? 0) + (mb30d.results?.length ?? 0);
 
     const mb24hMap = new Map<string, {
@@ -560,7 +571,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       valuation: MintBurnValuationTally;
     }>();
     for (const row of mb24h.results) {
-      if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+      if (!admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
       const aggregate = mb24hMap.get(row.stablecoin_id)
         ?? { total_burn: 0, total_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally() };
       aggregate.total_burn += row.total_burn;
@@ -581,7 +592,7 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
       valuation: MintBurnValuationTally;
     }>();
     for (const row of mb30d.results) {
-      if (!isCanonicalMintBurnPair(row.stablecoin_id, row.chain_id)) continue;
+      if (!admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`)) continue;
       const aggregate = mb30dMap.get(row.stablecoin_id)
         ?? { avg_burn: 0, avg_mint: 0, latest_hour_ts: null, valuation: emptyMintBurnValuationTally() };
       // A proven 30-day scan includes quiet days, not only event-bearing days.

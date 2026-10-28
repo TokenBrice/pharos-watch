@@ -16,12 +16,29 @@ Public mint/burn availability causes (`mint_burn_public_degraded`, `mint_burn_pu
 1. For the trigger codes above, inspect `onchain_supply` monitor freshness/divergence first. **Pipeline → Mint/Burn Integrity** is a separate native-conservation surface: inspect the affected contract, config fingerprint, reviewed law, block range/hashes and raw residual. A one-base-unit mismatch matters.
 2. **Critical/extended crons:** inspect each contract's lane, observed head and stored cursor. A passing record requires a completed fresh scan covering its audited blocks; an unrelated new run cannot renew it.
 3. **`mintBurnReconciliation`:** inspect `conservationIssue`, per-record reason, both audit/checkpoint ages and `coverageStatus`. Missing supply-cache data must not hide native records. Unsupported identities require reviewed admission, not a fabricated pass.
+4. **Publication versus ingestion:** inspect the flow response's `publication.legs` before attributing a stale watermark to a new config. `pending-admission` does not enter published totals or weights. In Access-protected cron detail, `providerOutcomes` identifies actual RPC successes/failures, neutral reads and blocked requests; the cron's overall `error` status is not proof of an Alchemy outage.
 
 ## Remediation
 
 - **Native mismatch:** investigate exact identity, reviewed conservation law, fetched/parsed/stored native event completeness and checkpoint hashes before choosing any repair. A mismatch stays unresolved until a verified pass replaces it; do not clear audit caches to make it green.
 - **Coverage/backfill:** use the existing bounded mint/burn backfill only after identifying missing events/cursor coverage. Price backfill repairs valuation debt, never the native residual.
 - **On-chain monitor unavailable:** usually indicates the recent `onchain_supply` monitor rows are missing or unreadable globally. Check the relevant supply-monitoring cron/status sections before treating it as a mint/burn config issue.
+
+### Publication admission and operator disable
+
+New legs need durable current-fingerprint scan proof for the 90-day baseline through the incumbent publication watermark, plus a fresh frontier under the existing watermark budget. The baseline must also pass the existing hourly valuation-completeness rule: `valuation-incomplete` means the proof-qualified candidate still has incomplete or unknown valuation. Use the historical-price debt workflow below; scan proof alone cannot repair missing USD values. A proven zero-event baseline can qualify without prices. Inspect `publication.evaluatedAt`, `requiredBaselineSec`, `freshnessBudgetSec`, and each leg's `reason`, `baselineFrom`, `baselineTo`, `coveredSeconds` and `frontierAgeSec`. Missing proof is unavailable, not zero progress. Scheduled catch-up serves admitted configs first and spends only leftover bounded capacity on pending legs; event/receipt cost and provider errors can slow it. Do not move a cursor or add a grandfathered fingerprint to make admission pass.
+
+The immutable legacy-cutover fingerprint roster pins the 137 pre-gate identities grandfathered for publication membership only; future configs use ordinary admission. It does not certify current coverage or extend legacy historical assurance. The new admission valuation check does not re-gate grandfathered or previously admitted legs. Once durably admitted, an unchanged fingerprint stays in scope if it later stalls; normal freshness/window gates then apply. Automatic stall quarantine is not implemented.
+
+For a misbehaving config, use the supported configuration rollback:
+
+1. Set `MINT_BURN_DISABLED_IDS` to the exact `configKey` from publication metadata to disable one leg, or its stablecoin ID to disable all that coin's configs. Values are comma-separated and matched case-insensitively. `MINT_BURN_DISABLED_SYMBOLS` remains supported; `enabled=false` is the checked-in configuration equivalent. Changing the runtime switch requires configuration activation, not a code revert.
+2. Observe the first scheduled mint/burn run using that configuration. Before scanning it persists the effective disabled-key policy and atomically purges affected flow caches. Publication readers and later cache writes obey that durable policy, including the aggregate gauge and downstream published-flow readers. A configuration update alone is not evidence that the policy has been applied; verify the affected legs report `disabled` and that the next aggregate's watermark/totals/weights use the remaining admitted scope.
+3. Preserve raw events, scan proofs and admission rows for diagnosis. Removing the switch resumes the same exact-fingerprint admission and ordinary freshness checks; a changed fingerprint must qualify afresh. Verify a new publication rather than treating the re-enabled config's first attempted scan as recovery.
+
+Existing same-coin/same-chain contracts share an hourly bucket. Disabling one therefore removes that shared chain leg (`shared-bucket-disabled`). A newly added sibling cannot be safely isolated in that bucket yet: it remains `pending-admission` / `unsupported-shared-bucket` and is excluded before scanning. Add per-contract event/hourly attribution before supporting such siblings; independent new-chain configs follow ordinary catch-up.
+
+Provider recovery is separate: an open Alchemy circuit blocks only Alchemy requests; another admitted endpoint can continue. Inspect that provider's measured `providerOutcomes` and circuit, not a non-Alchemy config's degraded streak. The publication sidecar cannot fail a provider circuit. Do not clear another provider's breaker to cure a local write, conservation or coverage failure.
 
 ### Historical price debt
 

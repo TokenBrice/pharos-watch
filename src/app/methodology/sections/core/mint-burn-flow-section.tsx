@@ -111,11 +111,23 @@ export function MintBurnFlowMethodologySection() {
               </p>
               <p>
                 An N-hour flow window covers N closed UTC hours ending at the common fully scanned hour
-                across configured sources, within the published freshness budget, not a rolling window ending now.
+                across admitted sources, within the published freshness budget, not a rolling window ending now.
                 The response exposes that watermark; pressure, largest events, baselines and longer net-flow windows
                 share it. Verified CCTP V2 destination recipient and fee mints are bridge transfers, while unrelated issuance in that transaction
                 stays counted. Historical valuation requires an actual observation within the inclusive 24-hour
                 distance from the event; retention preserves all hourly siblings until repair and aggregation settle.
+              </p>
+              <p>
+                A new issuance leg joins published flows only after contiguous scan proof for its current
+                configuration covers 90 days through the publication watermark, its frontier is fresh,
+                and that baseline passes the existing valuation-completeness rules. Missing or unknown
+                valuation keeps it pending; a proven zero-event baseline can qualify without prices.
+                Supported new legs keep catching up, with their reason and progress disclosed, while the coin&apos;s
+                admitted legs keep publishing. Pending or operator-disabled legs contribute neither totals nor
+                gauge weights. Existing contracts sharing a chain bucket must be disabled together; a new
+                sibling contract waits for independently attributable history. The frozen 137 pre-gate source identities are explicitly grandfathered for membership;
+                their ordinary historical coverage and freshness checks still apply. An admitted leg that
+                later stalls stays in scope, and a changed configuration must qualify again.
               </p>
               <p>
                 Historical hours before the fixed October 20, 2026 noon UTC cutover may use explicitly labelled
@@ -291,7 +303,7 @@ export function MintBurnFlowMethodologySection() {
                   <h3 className="text-foreground font-medium">Bank Run Gauge</h3>
                   <p>
                     Market-cap-weighted composite of all tracked coins&apos; pressure-shift values, producing a single
-                    ecosystem-wide configured issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s canonical tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
+                    ecosystem-wide admitted issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s admitted tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
                   </p>
                   <ContentTable
                     tableId="methodology-mint-burn-bank-run-gauge"

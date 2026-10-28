@@ -45,7 +45,6 @@ export async function runHalfHourlyMintBurnCriticalSlot(runtime: ScheduledRuntim
   return runMintBurnSlot(runtime, {
     lane: "critical",
     jobName: "sync-mint-burn",
-    skipMessage: "[cron] Alchemy circuit open - skipping mint/burn sync",
     runSidecar: publishHotAggregateCaches,
   });
 }

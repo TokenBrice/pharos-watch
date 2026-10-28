@@ -5,6 +5,7 @@ import {
   makeMintBurnMintLog as makeMintLog,
   mintBurnEventInsertBinds,
   resetMintBurnMocks,
+  seedMintBurnAdmissions,
   USDT_CONTRACT,
 } from "./mint-burn.test-support";
 
@@ -89,6 +90,7 @@ const sqliteFixtures = createLatestSchemaFixtureTracker();
 
 function makeDb(): D1Database {
   return makeMintBurnDb({
+    admittedConfigs: MINT_BURN_CONFIGS,
     syncRows: [
       { config_key: `ethereum-${USDT_CONTRACT}`, last_block: 21_999_999 },
       { config_key: "arbitrum-0x2bd7d6b2e6bfcf61716bf5d7167e4c6b62a3f9c0", last_block: 249_499_999 },
@@ -206,6 +208,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it.each([false, true])("publishes only finalized canonical rows and resumes without gaps (eventful=%s)", async (eventful) => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
     const actualPersistence = await vi.importActual<typeof PersistenceModule>("../../lib/mint-burn-pipeline/persistence");
     vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
@@ -250,6 +253,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it.each(["missing", "unsupported"])("names %s finality coverage immediately without blocking a healthy chain", async (failure) => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
     vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
     const actualRpc = await vi.importActual<typeof MintBurnRpcModule>("../../lib/mint-burn-pipeline/rpc");
@@ -288,6 +292,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it("uses each chain's own finalized ceiling before querying logs", async () => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
     vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
     sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
@@ -318,6 +323,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it("holds a failed topic and automatically repairs an old-writer cursor gap", async () => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
     const source = MINT_BURN_CONFIGS[0]!;
     const events = source.events;
@@ -356,6 +362,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it.each(["success", "headers", "materialization"])("replays eventful holes through the materialization fence: %s", async (outcome) => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
     vi.mocked(recalcAffectedHours).mockImplementation(
       (await vi.importActual<typeof PersistenceModule>("../../lib/mint-burn-pipeline/persistence")).recalcAffectedHours);
@@ -395,6 +402,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it("withholds staged proof and cursor when required hourly materialization fails", async () => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
     const key = `ethereum-${USDT_CONTRACT}`;
     const timestamp = Math.floor(Date.now() / 1000) - 60;
@@ -413,6 +421,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it.each(["missing", "reversed", "future"])("never certifies an invalid boundary, but retries a smaller prefix: %s", async (failure) => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
     const timestamp = Math.floor(Date.now() / 1000) - 60;
     sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
@@ -432,6 +441,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it.each(["end", "first"])("bounds persistent %s-header failure retries and commits only a certified prefix", async (failure) => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
     const key = `ethereum-${USDT_CONTRACT}`;
     const timestamp = Math.floor(Date.now() / 1000) - 60;
@@ -467,6 +477,7 @@ describe("syncMintBurn — multi-chain invariant", () => {
 
   it("commits the exact proven prefix before a persistent interior timestamp failure near the start", async () => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
     const key = `ethereum-${USDT_CONTRACT}`;
     const timestamp = Math.floor(Date.now() / 1000) - 60;

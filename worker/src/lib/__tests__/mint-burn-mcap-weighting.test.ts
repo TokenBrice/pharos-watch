@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { getMintBurnTrackedChains, sumMcapForTrackedChains } from "../mint-burn-mcap-weighting";
+import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 
 // Per-coin tracked-chain contract pins. When a coin adds a second tracked
 // chain (e.g., USDC on Base via CCTP), update the assertion here deliberately —
@@ -19,6 +20,15 @@ describe("getMintBurnTrackedChains — per-coin contract pins", () => {
 });
 
 describe("sumMcapForTrackedChains", () => {
+  it("withholds global fallback when a publication excludes one configured chain", () => {
+    const source = MINT_BURN_CONFIGS.find((config) => getMintBurnTrackedChains(config.stablecoinId).length > 1)!;
+    expect(source).toBeDefined();
+    const scope = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === source.stablecoinId
+      && config.chain.chainId === source.chain.chainId);
+    expect(sumMcapForTrackedChains(source.stablecoinId, undefined, { peggedUSD: 1000 }, scope)).toBeNull();
+    expect(sumMcapForTrackedChains(source.stablecoinId,
+      { [source.chain.chainId]: { current: 100 } }, { peggedUSD: 1000 }, scope)).toBe(100);
+  });
   // Real DefiLlama payloads key chainCirculating by display name ("Ethereum",
   // "Arbitrum", "Solana"). The canonicalizer resolves these to lowercase
   // canonical chain ids before lookup.

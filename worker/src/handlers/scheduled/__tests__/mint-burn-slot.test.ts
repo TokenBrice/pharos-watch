@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
+import { recordOutcomeDecision, shouldAttemptFetch } from "../../../lib/circuit-breaker";
+import { fetchEvmBlockNumber, requestJsonRpcAtUrl } from "../../../lib/evm-rpc";
+import { CIRCUIT_SOURCE } from "../../../lib/constants";
+import type { RpcEndpoint } from "../../../lib/chain-registry";
 
 const mocks = vi.hoisted(() => ({
   syncMintBurn: vi.fn(),
@@ -21,6 +25,22 @@ vi.mock("../../../lib/circuit-breaker", () => ({
 import { runHalfHourlyMintBurnCriticalSlot } from "../twenty-minute-mint-burn-critical";
 import { runHalfHourlyMintBurnExtendedSlot } from "../twenty-minute-mint-burn-extended";
 
+const ALCHEMY_URL = "https://alchemy-r2.example.test";
+const DWELLIR_URL = "https://dwellir-r2.example.test";
+
+function withProviders(rt: ScheduledRuntimeContext): ScheduledRuntimeContext {
+  const endpoints: RpcEndpoint[] = [
+    { url: ALCHEMY_URL, operator: "alchemy", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" },
+    { url: DWELLIR_URL, operator: "dwellir", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" },
+  ];
+  rt.chainRpcs.set("ethereum", { chainId: "ethereum", chainName: "Ethereum", type: "evm", explorerUrl: "", endpoints });
+  return rt;
+}
+
+function rpcRead(url: string, signal?: AbortSignal) {
+  return requestJsonRpcAtUrl(url, { jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] }, { signal, maxRetries: 0 });
+}
+
 function runtime(scheduleKey: string, cron: string): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
   return makeScheduledRuntime({
@@ -33,12 +53,16 @@ function runtime(scheduleKey: string, cron: string): ScheduledRuntimeContext {
 describe("mint/burn slot lanes", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(true);
     mocks.syncMintBurn.mockResolvedValue({ status: "ok", itemCount: 1 });
     mocks.refreshAggregateMintBurnFlowCache.mockImplementation(async () =>
       new Response("{}", { headers: { "X-Data-Freshness": "fresh" } }));
   });
 
-  afterEach(() => vi.restoreAllMocks());
+  afterEach(() => {
+    vi.restoreAllMocks();
+    vi.unstubAllGlobals();
+  });
 
   it("runs the critical lane with 24h and 168h aggregate cache publication", async () => {
     const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
@@ -128,5 +152,135 @@ describe("mint/burn slot lanes", () => {
     );
     expect(mocks.refreshAggregateMintBurnFlowCache).not.toHaveBeenCalled();
     expect(summary.jobs.map((job) => job.job)).toEqual(["sync-mint-burn-extended"]);
+  });
+
+  it.each([runHalfHourlyMintBurnCriticalSlot, runHalfHourlyMintBurnExtendedSlot])(
+    "keeps non-Alchemy failures separate through degraded-to-error escalation (%#)",
+    async (runSlot) => {
+      vi.stubGlobal("fetch", vi.fn(async (url: string) => new Response(JSON.stringify({ id: 1, result: "0x7b" }), {
+        status: url === DWELLIR_URL ? 503 : 200,
+      })));
+      const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+      for (const status of ["degraded", "degraded", "error"] as const) {
+        mocks.syncMintBurn.mockImplementationOnce(async () => {
+          await rpcRead(DWELLIR_URL);
+          await rpcRead(ALCHEMY_URL);
+          return { status, metadata: JSON.stringify({ reason: "mint-burn-source-coverage-degraded" }) };
+        });
+        await runSlot(rt);
+      }
+      expect(vi.mocked(recordOutcomeDecision).mock.calls.filter(([, source, decision]) =>
+        source === CIRCUIT_SOURCE.DWELLIR_EVM && decision === "failure")).toHaveLength(3);
+      expect(vi.mocked(recordOutcomeDecision).mock.calls.filter(([, source, decision]) =>
+        source === CIRCUIT_SOURCE.ALCHEMY && decision === "success")).toHaveLength(3);
+      expect(recordOutcomeDecision).not.toHaveBeenCalledWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "failure");
+      const result = await vi.mocked(rt.runLeasedCron).mock.results[2].value;
+      expect(JSON.parse(result?.metadata ?? "{}").providerOutcomes).toEqual(expect.arrayContaining([
+        expect.objectContaining({ provider: "dwellir", successes: 0, failures: 1 }),
+        expect.objectContaining({ provider: "alchemy", successes: 1, failures: 0 }),
+      ]));
+    },
+  );
+
+  it("records a genuine Alchemy transport failure even when the run otherwise succeeds", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => { throw new Error("connection reset"); }));
+    mocks.syncMintBurn.mockImplementationOnce(async () => {
+      await rpcRead(ALCHEMY_URL);
+      return { status: "ok" };
+    });
+    const rt = withProviders(runtime("halfHourlyMintBurnExtended", "18 * * * *"));
+    await runHalfHourlyMintBurnExtendedSlot(rt);
+    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "failure");
+  });
+
+  it("keeps another provider usable when Alchemy's circuit is open", async () => {
+    vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
+    const fetchMock = vi.fn(async (_url: string) => new Response(JSON.stringify({ id: 1, result: "0x7b" })));
+    vi.stubGlobal("fetch", fetchMock);
+    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    rt.mintBurnDisabledIds = ["synthetic-disabled-coin"];
+    rt.mintBurnDisabledSymbols = ["SYNTH"];
+    mocks.syncMintBurn.mockImplementationOnce(async () => {
+      expect((await rpcRead(ALCHEMY_URL)).status).toBe("control-error");
+      expect(await fetchEvmBlockNumber("ethereum", { chainRpcs: rt.chainRpcs, maxRetries: 0 })).toBe(123);
+      return { status: "ok" };
+    });
+    await runHalfHourlyMintBurnCriticalSlot(rt);
+    expect(mocks.syncMintBurn).toHaveBeenCalledWith(rt.db, rt.env.ALCHEMY_API_KEY ?? null,
+      expect.objectContaining({ disabledConfigIds: ["synthetic-disabled-coin"], disabledSymbols: ["SYNTH"] }));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe(DWELLIR_URL);
+    expect(recordOutcomeDecision).toHaveBeenCalledWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "neutral");
+    expect(recordOutcomeDecision).toHaveBeenCalledWith(rt.db, CIRCUIT_SOURCE.DWELLIR_EVM, "success");
+    expect(mocks.refreshAggregateMintBurnFlowCache).toHaveBeenCalledTimes(2);
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+    expect(JSON.parse(result?.metadata ?? "{}").providerOutcomes[0]).toMatchObject({
+      provider: "alchemy", blockedRequests: 1, failures: 0, reasons: { "circuit-open": 1 },
+    });
+  });
+
+  it("does not treat sidecar failures, missing requests or thrown local errors as provider failures", async () => {
+    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    mocks.refreshAggregateMintBurnFlowCache.mockRejectedValue(new Error("D1 unavailable"));
+    await runHalfHourlyMintBurnCriticalSlot(rt);
+    expect(recordOutcomeDecision).not.toHaveBeenCalled();
+    mocks.syncMintBurn.mockRejectedValueOnce(new Error("D1 write failed"));
+    await expect(runHalfHourlyMintBurnCriticalSlot(rt)).rejects.toThrow("D1 write failed");
+    expect(recordOutcomeDecision).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    { status: 400, code: -32602, message: "Invalid params", decision: "neutral" },
+    { status: 422, code: 3, message: "execution reverted", decision: "neutral" },
+    { status: 400, code: -32603, message: "Internal error", decision: "failure" },
+    { status: 400, code: -32005, message: "Rate limit exceeded", decision: "failure" },
+    ...[401, 402, 403, 408, 429, 503].map((status) => ({
+      status, code: -32602, message: "Invalid params", decision: "failure",
+    })),
+  ])("attributes Alchemy HTTP $status / $message as $decision", async ({ status, code, message, decision }) => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: 1, error: { code, message } }), { status })));
+    const rt = withProviders(runtime("halfHourlyMintBurnExtended", "18 * * * *"));
+    mocks.syncMintBurn.mockImplementationOnce(async () => {
+      await rpcRead(ALCHEMY_URL);
+      return { status: "error" };
+    });
+    await runHalfHourlyMintBurnExtendedSlot(rt);
+    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, decision);
+  });
+
+  it.each([
+    { code: -32603, message: "Internal error", reason: "rpc-server-error" },
+    { code: -32000, message: "Rate limit exceeded", reason: "rpc-rate-limited" },
+    { code: -32005, message: "Too many requests", reason: "rpc-rate-limited" },
+  ])("records Alchemy RPC service failures ($message)", async ({ code, message, reason }) => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: 1, error: { code, message } }))));
+    const rt = withProviders(runtime("halfHourlyMintBurnExtended", "18 * * * *"));
+    mocks.syncMintBurn.mockImplementationOnce(async () => {
+      await rpcRead(ALCHEMY_URL);
+      return { status: "degraded" };
+    });
+    await runHalfHourlyMintBurnExtendedSlot(rt);
+    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "failure");
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+    expect(JSON.parse(result?.metadata ?? "{}").providerOutcomes[0].reasons).toEqual({ [reason]: 1 });
+  });
+
+  it.each([
+    { code: 3, message: "execution reverted" },
+    { code: -32603, message: "execution reverted" },
+    { code: -32601, message: "Method not found" },
+    { code: -32602, message: "Invalid params" },
+    { code: -32005, message: "Block range limit exceeded" },
+  ])("keeps RPC semantic errors neutral ($message)", async ({ code, message }) => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({
+      id: 1, error: { code, message },
+    }))));
+    const rt = withProviders(runtime("halfHourlyMintBurnExtended", "18 * * * *"));
+    mocks.syncMintBurn.mockImplementationOnce(async () => {
+      await rpcRead(ALCHEMY_URL);
+      return { status: "error", metadata: JSON.stringify({ reason: "mint-burn-source-coverage-degraded" }) };
+    });
+    await runHalfHourlyMintBurnExtendedSlot(rt);
+    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "neutral");
   });
 });

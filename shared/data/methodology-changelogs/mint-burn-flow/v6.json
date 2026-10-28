@@ -1,5 +1,23 @@
 [
   {
+    "version": "6.31",
+    "title": "Admission-gated mint/burn scope and per-provider circuit attribution",
+    "date": "2026-10-29",
+    "effectiveAt": 1793232000,
+    "summary": "New issuance legs catch up outside publication until durable scan evidence covers the longest published window, while operator disables and provider-specific circuit outcomes isolate failures.",
+    "impact": [
+      "New legs remain pending-admission until durable, current-fingerprint contiguous scan proof covers the 90-day baseline required by netFlow90dUsd through the existing publication watermark, their own frontier is within the existing freshness budget, and the baseline passes existing hourly valuation-completeness rules. Incomplete or unknown valuation keeps a proof-qualified candidate pending as valuation-incomplete; a proven zero-event baseline can qualify. Pending legs keep scanning and persisting, but do not enter the common watermark, per-coin aggregates, Bank Run Gauge weights or downstream published-flow consumers; metadata names their reason and progress.",
+      "Admission is durable for an exact config fingerprint and survives later stalls; ordinary admitted-leg coverage and freshness rules still apply. The frozen legacy-cutover roster pins the 137 pre-gate identities explicitly grandfathered for membership only, preserving their publication scope without manufacturing 90-day v2 proof or changing the bounded historical assurance rules. The admission valuation check does not re-gate grandfathered or previously admitted legs, and future configs qualify normally without extending the roster.",
+      "Pending catch-up follows admitted configs and uses only remaining request and runtime capacity, with a bounded larger scan range inside unchanged global and per-config caps. No new cron trigger, connection peak or token configuration is introduced.",
+      "MINT_BURN_DISABLED_IDS, the existing symbol switch and enabled=false remove matching legs from both ingestion and publication. Scheduled policy persistence invalidates flow caches and fences later cache writes, making configuration rollback possible without reverting code; re-enabling retains exact-fingerprint admission history.",
+      "Legacy contracts sharing a coin and chain share one hourly bucket: disabling a sibling removes that chain leg. New same-coin/same-chain siblings remain pending with unsupported-shared-bucket and are excluded before scanning until per-contract event/hourly attribution can isolate their history; independent new-chain legs use ordinary catch-up.",
+      "Mint/burn circuits use observed RPC outcomes per provider instead of whole-run status. Alchemy transport, HTTP, parse, envelope and explicit RPC server/rate-limit failures retain Alchemy protection; a non-Alchemy failure, local write error, critical degraded-streak escalation or publication sidecar failure cannot open Alchemy's circuit. Open Alchemy admission leaves other admitted endpoints usable.",
+      "Activation at 2026-10-29 00:00 UTC (1793232000) is provisional and must be re-dated by the release owner. The additive admission/policy migration must precede Worker activation; first production execution and publication observations remain outstanding release acceptance."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.30",
     "title": "Exclude curated non-circulating inventory from economic flow",
     "date": "2026-10-25",

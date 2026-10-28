@@ -320,7 +320,7 @@ describe("mint/burn valuation completeness on real SQLite", () => {
 
     // DEWS reads the same hourly buckets: the mixed window cannot score a burn surge.
     sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24),
-      JSON.stringify({ gauge: { score: null }, coins, updatedAt: NOW,
+      JSON.stringify({ gauge: { score: null }, coins, updatedAt: NOW, publication: data.publication,
         window: { start: Math.floor(NOW / HOUR) * HOUR - 86400, end: Math.floor(NOW / HOUR) * HOUR, semantics: "closed-utc-hours" } }), NOW);
     const hydration = await hydrateMintBurn(hydrationContext(db));
     const snapshot = hydration.mintBurnMap.get("usdt-tether")!;
