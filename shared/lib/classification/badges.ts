@@ -18,6 +18,8 @@ import { mapPegMetadata, PEG_METADATA } from "./pegs";
 type ProofOfReserves = NonNullable<StablecoinMeta["proofOfReserves"]>;
 type ProofOfReservesType = ProofOfReserves["type"];
 type ProofAssuranceMethod = NonNullable<ProofOfReserves["latestReport"]>["assuranceMethod"];
+type ProofAssuranceScope = NonNullable<ProofOfReserves["latestReport"]>["scope"];
+type LiabilityReconciliation = NonNullable<ProofOfReserves["latestReport"]>["liabilityReconciliation"];
 
 /** Governance badge styles for the detail page. */
 export const GOVERNANCE_BADGE_STYLES: Record<GovernanceType, BadgeStyle> = projectDescriptors(
@@ -98,6 +100,39 @@ export function getProofOfReservesStyle(
   const methodLabel = proof.latestReport ? POR_ASSURANCE_METHOD_LABELS[proof.latestReport.assuranceMethod] : undefined;
   return methodLabel ? { label: methodLabel, cls: POR_INDEPENDENT_ENGAGEMENT_CLS } : style;
 }
+
+/**
+ * Reviewed report-method vocabulary for structured scope rows. This projects
+ * the recorded `latestReport.assuranceMethod` field itself; it is not a
+ * substitute engagement label. `getProofOfReservesStyle` deliberately keeps
+ * non-opinion methods neutral (`Independent Report`), while a scope row must
+ * name the recorded method so an attestation is never silently promoted.
+ */
+export const PROOF_ASSURANCE_METHOD_LABELS: Record<ProofAssuranceMethod, string> = {
+  audit: "Audit",
+  examination: "Examination",
+  review: "Review",
+  "agreed-upon-procedures": "Agreed-upon procedures",
+  attestation: "Attestation",
+  "onchain-proof": "Onchain proof",
+  "self-verification": "Self-verification",
+  unknown: "Method not established",
+};
+
+/** Report-scope phrases for compact evidence rows. */
+export const PROOF_ASSURANCE_SCOPE_LABELS: Record<ProofAssuranceScope, string> = {
+  "assets-only": "assets only",
+  "assets-and-liabilities": "assets and liabilities",
+  unknown: "scope unknown",
+};
+
+/** Liability-reconciliation phrases for compact evidence rows. */
+export const LIABILITY_RECONCILIATION_LABELS: Record<LiabilityReconciliation, string> = {
+  full: "full liability reconciliation",
+  partial: "partial liability reconciliation",
+  none: "no liability reconciliation",
+  unknown: "liability reconciliation unknown",
+};
 
 /**
  * Proof-of-reserves attestor tier badge styles for the detail page.

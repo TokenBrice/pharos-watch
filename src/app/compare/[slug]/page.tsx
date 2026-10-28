@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
-import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT } from "@shared/lib/classification";
+import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS_SHORT, getProofOfReservesStyle } from "@shared/lib/classification";
 import { FaqSection } from "@/components/faq-section";
 import { FeaturePageShell } from "@/components/feature-page-shell";
 import { JsonLdScript } from "@/components/json-ld-script";
@@ -22,6 +22,7 @@ import {
   getStaticComparisonPagesForCoin,
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
+  type ComparisonRowSource,
 } from "@/lib/compare-pages";
 import { buildComparePrefillUrl } from "@/lib/compare-links";
 import { safeJsonLd } from "@/lib/json-ld";
@@ -30,7 +31,39 @@ import { createStaticSlugRoute } from "@/lib/static-slug-page";
 import { buildBackingTaxonomyUrl, buildGovernanceTaxonomyUrl } from "@/lib/stablecoin-taxonomy-urls";
 import { buildStablecoinUrl } from "@shared/lib/urls";
 
+function ComparisonCell({
+  text,
+  sources,
+  accessiblePrefix,
+}: {
+  text: string;
+  sources?: readonly ComparisonRowSource[];
+  accessiblePrefix: string;
+}) {
+  return (
+    <>
+      <span>{text}</span>
+      {sources && sources.length > 0 ? (
+        <span className="mt-1 flex flex-wrap gap-1 text-xs">
+          {sources.map((source, index) => (
+            <a
+              key={`${source.href}-${index}`}
+              href={source.href}
+              title={source.label}
+              aria-label={`${accessiblePrefix}: ${source.label}`}
+              className="pharos-focus-ring rounded-sm underline underline-offset-4 hover:text-foreground"
+            >
+              [{index + 1}]
+            </a>
+          ))}
+        </span>
+      ) : null}
+    </>
+  );
+}
+
 function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number]) {
+  // One build-time clock feeds both the evidence projection and its JSON-LD.
   const comparisonRows = buildComparisonAtAGlanceRows(page);
   const faqItems = buildComparisonFaqItems(page);
   const researchLinks = buildComparisonResearchLinks(page);
@@ -79,7 +112,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
       title={`${page.left.name} (${page.left.symbol}) vs ${page.right.name} (${page.right.symbol})`}
       leadParagraphs={[page.intro]}
       preface={
-        <JsonLdScript json={safeJsonLd(buildStaticComparisonJsonLd(page))} />
+        <JsonLdScript json={safeJsonLd(buildStaticComparisonJsonLd(page, comparisonRows))} />
       }
     >
       <section className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(18rem,0.58fr)]">
@@ -167,9 +200,7 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
               <li>{coin.flags.yieldBearing ? "Yield-bearing design" : "Non-yield-bearing design"}</li>
               <li>{coin.contracts?.length ?? 0} tracked chain deployments</li>
               <li>
-                {coin.proofOfReserves?.provider
-                  ? `${coin.proofOfReserves.provider} reserve attestations`
-                  : "No linked proof-of-reserves provider"}
+                {getProofOfReservesStyle(coin.proofOfReserves)?.label ?? "No linked proof-of-reserves provider"}
               </li>
             </ul>
             <Link
@@ -219,7 +250,11 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
                       : "whitespace-normal px-4 py-3 text-muted-foreground"
                   }
                 >
-                  {row.left}
+                  <ComparisonCell
+                    text={row.left}
+                    sources={row.leftSources}
+                    accessiblePrefix={`${page.left.symbol} ${row.label}`}
+                  />
                 </TableCell>
                 <TableCell
                   className={
@@ -228,16 +263,19 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
                       : "whitespace-normal px-4 py-3 text-muted-foreground"
                   }
                 >
-                  {row.right}
+                  <ComparisonCell
+                    text={row.right}
+                    sources={row.rightSources}
+                    accessiblePrefix={`${page.right.symbol} ${row.label}`}
+                  />
                 </TableCell>
               </TableRow>
             ))}
           </TableBody>
         </TableFrame>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Source: checked-in StablecoinMeta profile fields in the current Pharos build. Static deployment counts and
-          reserve-provider labels are structural context; open the live detail and compare tools for current market,
-          peg, liquidity, and reserve freshness.
+          Report periods and redemption review dates refer to the linked evidence. Fees describe issuer or protocol
+          charges; bank, network and delivery costs may apply.
         </p>
       </section>
 

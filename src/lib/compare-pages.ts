@@ -1,11 +1,24 @@
-import { BACKING_LABELS_SHORT, GOVERNANCE_LABELS, PEG_LABELS_SHORT } from "@shared/lib/classification";
+import {
+  BACKING_LABELS_SHORT,
+  GOVERNANCE_LABELS,
+  LIABILITY_RECONCILIATION_LABELS,
+  PEG_LABELS_SHORT,
+  PROOF_ASSURANCE_METHOD_LABELS,
+  PROOF_ASSURANCE_SCOPE_LABELS,
+  REDEMPTION_HOLDER_ELIGIBILITY_LABELS,
+  getProofOfReservesStyle,
+} from "@shared/lib/classification";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { FROZEN_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta } from "@shared/types";
+import { resolveDefaultHolderEligibility } from "@shared/lib/redemption-backstop-configs/shared";
+import type { RedemptionBackstopConfig } from "@shared/lib/redemption-backstop-configs/shared";
+import type { RedemptionDocSourceSupport, StablecoinMeta } from "@shared/types";
+import { isValidIsoDateOnly } from "@shared/types/date-primitives";
 import { getResolvedBlacklistStatus } from "@shared/lib/blacklist-status";
 import { STATIC_COMPARE_PAIRS, buildComparePrefillUrl, buildStaticComparisonSlug } from "@/lib/compare-links";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import { trimTextAtWordBoundary } from "@/lib/page-metadata";
+import { getCurrentRedemptionConfig } from "@/lib/redemption-review-currency";
 import { getSnapshotSafetyAssessment, type SnapshotSafetyAssessment } from "@/lib/safety-grade-snapshot";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 import { buildStablecoinUrl } from "@shared/lib/urls";
@@ -178,7 +191,10 @@ function describeBlacklistability(coin: StablecoinMeta): string {
 
 function describeReserveSignal(coin: StablecoinMeta): string {
   if (coin.proofOfReserves?.type === "real-time") return "Real-time reserve reporting";
-  if (coin.proofOfReserves?.provider) return `${coin.proofOfReserves.provider} attestations`;
+  // The storage type cannot distinguish an examination from an audit, so the
+  // blanket "{provider} attestations" label is replaced by the shared resolver.
+  const proofStyle = getProofOfReservesStyle(coin.proofOfReserves);
+  if (proofStyle) return proofStyle.label;
   if (coin.reserves?.[0]?.name) return coin.reserves[0].name.replace(/\s*\([^)]*\)/g, "").trim();
   if (coin.collateral) return coin.collateral.split(/[.;]/)[0]?.trim() ?? "Collateral profile disclosed";
   return "Collateral profile disclosed";
@@ -329,6 +345,26 @@ export const STATIC_COMPARISON_PAGES: StaticComparisonPage[] = buildStaticCompar
 
 export const STATIC_COMPARISON_PAGE_BY_SLUG = new Map(STATIC_COMPARISON_PAGES.map((page) => [page.slug, page]));
 
+/**
+ * The bounded W2/C8 evidence pilot. Reviewed report and redemption facts are
+ * projected only for these registered pairs; every other pair keeps its
+ * existing structural rows.
+ */
+export const COMPARISON_EVIDENCE_PILOT_SLUGS: ReadonlySet<string> = new Set([
+  "usdc-circle-vs-usdg-paxos",
+  "usdt-tether-vs-usdg-paxos",
+  "rlusd-ripple-vs-usdc-circle",
+  "paxg-paxos-vs-xaut-tether",
+  "usdt-tether-vs-usdc-circle",
+  "usde-ethena-vs-usds-sky",
+]);
+
+for (const slug of COMPARISON_EVIDENCE_PILOT_SLUGS) {
+  if (!STATIC_COMPARISON_PAGE_BY_SLUG.has(slug)) {
+    throw new Error(`[compare-pages] Evidence-row pilot slug is not a registered static comparison page: ${slug}`);
+  }
+}
+
 export function getStaticComparisonPagesForCoin(coinId: string): StaticComparisonPage[] {
   return STATIC_COMPARISON_PAGES
     .filter((page) => page.left.id === coinId || page.right.id === coinId)
@@ -397,7 +433,368 @@ export function buildComparisonSnippetAnswer(page: StaticComparisonPage): Compar
   };
 }
 
-export function buildComparisonAtAGlanceRows(page: StaticComparisonPage) {
+export interface ComparisonRowSource {
+  label: string;
+  href: string;
+}
+
+export interface ComparisonRow {
+  label: string;
+  left: string;
+  right: string;
+  leftSources?: ComparisonRowSource[];
+  rightSources?: ComparisonRowSource[];
+}
+
+export interface ComparisonEvidenceRow {
+  label: string;
+  left: string | null;
+  right: string | null;
+  leftSources?: ComparisonRowSource[];
+  rightSources?: ComparisonRowSource[];
+}
+
+const NOT_RECORDED = "Not recorded";
+const SUSPENDED_ROUTE_ELIGIBILITY = "Route suspended";
+
+interface ComparisonFact {
+  value: string;
+  sources: ComparisonRowSource[];
+}
+
+interface ComparisonReportEvidence {
+  period: string | null;
+  scope: string;
+  sources: ComparisonRowSource[];
+}
+
+/**
+ * Audited display overrides for the pilot pairs. Each one only restates the
+ * reviewed terms already carried by the redemption config: no new research
+ * value or source authority enters here. `termsClock` names which reviewed
+ * date the displayed terms actually belong to.
+ */
+interface ComparisonFeeBasisOverride {
+  feeBasis: string;
+  termsClock: "config" | "route-review-terms" | "physical";
+}
+
+const COMPARISON_FEE_BASIS_OVERRIDES: Readonly<Record<string, ComparisonFeeBasisOverride>> = {
+  // Keep the percentage distinct from its fee minimum, and that minimum
+  // distinct from the $100,000 redemption minimum.
+  "usdt-tether": {
+    feeBasis: "0.10%, with a minimum fee of $1,000",
+    termsClock: "config",
+  },
+  // Compact standard tariff with the controlling private-pricing and
+  // third-party-cost qualifications retained; never an all-in ceiling.
+  "paxg-paxos": {
+    feeBasis:
+      "Standard tariff effective 2026-09-01: 12.5-50 bps on rolling-30-day net redemptions, plus 5 bps for in-kind gold conversion. Customer-specific pricing may override it; delivery, dealer, tax and bank costs are separate.",
+    termsClock: "route-review-terms",
+  },
+  // The physical issuer fee, never the delivery model's default zeros.
+  "xaut-tether": {
+    feeBasis: "25 bps issuer redemption fee, plus delivery and applicable fees",
+    termsClock: "physical",
+  },
+  // Compact semantic projection of the reviewed USDe fee description.
+  "usde-ethena": {
+    feeBasis: "10 bps for USDT/USDC redemption under the reviewed USDe terms",
+    termsClock: "config",
+  },
+};
+
+function isHttpSourceUrl(url: string): boolean {
+  return url.startsWith("http://") || url.startsWith("https://");
+}
+
+function getComparisonReportEvidence(coin: StablecoinMeta): ComparisonReportEvidence | null {
+  const report = coin.proofOfReserves?.latestReport;
+  // The reviewed structured report is the authority: never infer a period or
+  // scope from the storage type, provider note or build date.
+  if (!report || report.confidence !== "verified") return null;
+  const sources = report.sources
+    .filter((source) => isHttpSourceUrl(source.url))
+    .map((source) => ({ label: source.label, href: source.url }));
+  if (sources.length === 0) return null;
+  return {
+    period: report.periodEnd !== undefined && isValidIsoDateOnly(report.periodEnd) ? report.periodEnd : null,
+    scope: `${PROOF_ASSURANCE_METHOD_LABELS[report.assuranceMethod]}; ${PROOF_ASSURANCE_SCOPE_LABELS[report.scope]}; ${LIABILITY_RECONCILIATION_LABELS[report.liabilityReconciliation]}`,
+    sources,
+  };
+}
+
+type RedemptionDoc = NonNullable<RedemptionBackstopConfig["docs"]>[number];
+
+function docsSupporting(
+  docs: readonly RedemptionDoc[] | undefined,
+  support: RedemptionDocSourceSupport,
+): ComparisonRowSource[] {
+  return (docs ?? [])
+    .filter((doc) => doc.supports?.includes(support))
+    .map((doc) => ({ label: doc.label, href: doc.url }));
+}
+
+function mergeRowSources(...groups: readonly ComparisonRowSource[][]): ComparisonRowSource[] {
+  const seen = new Set<string>();
+  const merged: ComparisonRowSource[] = [];
+  for (const group of groups) {
+    for (const source of group) {
+      if (seen.has(source.href)) continue;
+      seen.add(source.href);
+      merged.push(source);
+    }
+  }
+  return merged;
+}
+
+function formatUsdAmount(value: number): string {
+  return `$${value.toLocaleString("en-US", { maximumFractionDigits: 2 })}`;
+}
+
+function formatTokenAmount(value: number): string {
+  return value.toLocaleString("en-US", { maximumSignificantDigits: 4 });
+}
+
+function withReviewedDate(value: string, reviewedAt: string): string {
+  return `${value} (reviewed ${reviewedAt})`;
+}
+
+function todayFromSeconds(nowSec: number): string {
+  return new Date(nowSec * 1_000).toISOString().slice(0, 10);
+}
+
+function sourceLabelFromUrl(url: string): string {
+  try {
+    return new URL(url).hostname.replace(/^www\./u, "");
+  } catch {
+    return "Route suspension source";
+  }
+}
+
+function resolvePhysicalMinimumTokens(
+  config: RedemptionBackstopConfig,
+  today: string,
+): { tokens: number; reviewedAt: string } | null {
+  const route = config.physicalToUsd;
+  if (route) {
+    // On the expiry day the review is still current; the following day is not.
+    if (route.reviewExpiresAt < today) return null;
+    const tokens = route.lot.minimumTokens ?? config.physicalCommodityDelivery?.minimumDeliveryTokens;
+    return tokens == null ? null : { tokens, reviewedAt: route.reviewedAt };
+  }
+  const tokens = config.physicalCommodityDelivery?.minimumDeliveryTokens;
+  if (tokens == null || !config.reviewedAt) return null;
+  return { tokens, reviewedAt: config.reviewedAt };
+}
+
+function resolveRedemptionEligibility(config: RedemptionBackstopConfig, today: string): ComparisonFact | null {
+  if (config.routeStatus === "suspended") {
+    const suspension = config.routeSuspension;
+    if (!suspension) return null;
+    return {
+      value: withReviewedDate(SUSPENDED_ROUTE_ELIGIBILITY, suspension.reviewedAt),
+      sources: suspension.sources.map((source) => ({ label: sourceLabelFromUrl(source.url), href: source.url })),
+    };
+  }
+  const accessSources = docsSupporting(config.docs, "access");
+  if (accessSources.length === 0) return null;
+  const physicalRoute = config.physicalToUsd;
+  if (physicalRoute) {
+    if (physicalRoute.reviewExpiresAt < today) return null;
+    // The config's access-scoped docs are the issuer terms; the physical
+    // evidence array also carries LBMA and dealer-model sources that cannot
+    // support an issuer eligibility claim.
+    return {
+      value: withReviewedDate(
+        REDEMPTION_HOLDER_ELIGIBILITY_LABELS[physicalRoute.eligibility],
+        physicalRoute.reviewedAt,
+      ),
+      sources: accessSources,
+    };
+  }
+  const eligibility = config.holderEligibility ?? resolveDefaultHolderEligibility(config);
+  if (eligibility === "unknown" || !config.reviewedAt) return null;
+  return {
+    value: withReviewedDate(REDEMPTION_HOLDER_ELIGIBILITY_LABELS[eligibility], config.reviewedAt),
+    sources: accessSources,
+  };
+}
+
+function resolveRedemptionMinimum(
+  config: RedemptionBackstopConfig,
+  coin: StablecoinMeta,
+  today: string,
+): ComparisonFact | null {
+  const sources = mergeRowSources(
+    docsSupporting(config.docs, "access"),
+    docsSupporting(config.v9RouteReviewTerms?.docs, "access"),
+  );
+  if (sources.length === 0) return null;
+  const reviewedMinimum = config.v9RouteReviewTerms?.minRedeemUsd;
+  if (reviewedMinimum !== undefined) {
+    if (!Number.isFinite(reviewedMinimum)) return null;
+    const reviewedAt = config.v9RouteReviewTerms?.reviewedAt ?? config.reviewedAt;
+    return reviewedAt ? { value: withReviewedDate(formatUsdAmount(reviewedMinimum), reviewedAt), sources } : null;
+  }
+  const physical = resolvePhysicalMinimumTokens(config, today);
+  if (!physical) return null;
+  return {
+    value: withReviewedDate(
+      `${formatTokenAmount(physical.tokens)} ${coin.symbol} deposit for a full bar; excess tokens returned`,
+      physical.reviewedAt,
+    ),
+    sources,
+  };
+}
+
+function resolveFeeBasisReviewedAt(
+  override: ComparisonFeeBasisOverride,
+  config: RedemptionBackstopConfig,
+  today: string,
+): string | null {
+  switch (override.termsClock) {
+    case "config":
+      return config.reviewedAt ?? null;
+    case "route-review-terms":
+      return config.v9RouteReviewTerms?.reviewedAt ?? null;
+    case "physical": {
+      const route = config.physicalToUsd;
+      if (!route || route.reviewExpiresAt < today) return null;
+      return route.reviewedAt;
+    }
+  }
+}
+
+function resolveRedemptionFeeBasis(
+  config: RedemptionBackstopConfig,
+  coinId: string,
+  today: string,
+): ComparisonFact | null {
+  const feeDescription = config.costModel.feeDescription?.trim();
+  if (!feeDescription) return null;
+  const sources = mergeRowSources(
+    docsSupporting(config.docs, "fees"),
+    docsSupporting(config.v9RouteReviewTerms?.docs, "fees"),
+  );
+  if (sources.length === 0) return null;
+  const override = COMPARISON_FEE_BASIS_OVERRIDES[coinId];
+  if (override) {
+    const reviewedAt = resolveFeeBasisReviewedAt(override, config, today);
+    return reviewedAt ? { value: withReviewedDate(override.feeBasis, reviewedAt), sources } : null;
+  }
+  if (!config.reviewedAt) return null;
+  return { value: withReviewedDate(feeDescription, config.reviewedAt), sources };
+}
+
+interface ComparisonSideEvidence {
+  report: ComparisonReportEvidence | null;
+  eligibility: ComparisonFact | null;
+  minimum: ComparisonFact | null;
+  feeBasis: ComparisonFact | null;
+}
+
+function buildComparisonSideEvidence(coin: StablecoinMeta, nowSec: number, today: string): ComparisonSideEvidence {
+  const config = getCurrentRedemptionConfig(coin.id, nowSec);
+  return {
+    report: getComparisonReportEvidence(coin),
+    eligibility: config ? resolveRedemptionEligibility(config, today) : null,
+    minimum: config ? resolveRedemptionMinimum(config, coin, today) : null,
+    feeBasis: config ? resolveRedemptionFeeBasis(config, coin.id, today) : null,
+  };
+}
+
+function appendComparisonEvidenceRow(
+  rows: ComparisonEvidenceRow[],
+  label: string,
+  left: string | null,
+  right: string | null,
+  leftSources?: ComparisonRowSource[],
+  rightSources?: ComparisonRowSource[],
+): void {
+  // A row with no evidenced side is omitted entirely, never rendered empty.
+  if (left === null && right === null) return;
+  rows.push({
+    label,
+    left,
+    right,
+    ...(left !== null && leftSources?.length ? { leftSources } : {}),
+    ...(right !== null && rightSources?.length ? { rightSources } : {}),
+  });
+}
+
+/**
+ * Bounded source-linked evidence rows for the W2/C8 pilot pairs. Cells stay
+ * `null` until the final row assembler turns them into "Not recorded", so a
+ * one-sided omission is never mistaken for an observed value.
+ */
+export function buildComparisonEvidenceRows(
+  page: StaticComparisonPage,
+  nowSec = Math.floor(Date.now() / 1_000),
+): ComparisonEvidenceRow[] {
+  if (!COMPARISON_EVIDENCE_PILOT_SLUGS.has(page.slug)) return [];
+  const today = todayFromSeconds(nowSec);
+  const left = buildComparisonSideEvidence(page.left, nowSec, today);
+  const right = buildComparisonSideEvidence(page.right, nowSec, today);
+  const rows: ComparisonEvidenceRow[] = [];
+  appendComparisonEvidenceRow(
+    rows,
+    "Latest reviewed report period",
+    left.report?.period ?? null,
+    right.report?.period ?? null,
+    left.report?.sources,
+    right.report?.sources,
+  );
+  appendComparisonEvidenceRow(
+    rows,
+    "Assurance scope",
+    left.report?.scope ?? null,
+    right.report?.scope ?? null,
+    left.report?.sources,
+    right.report?.sources,
+  );
+  appendComparisonEvidenceRow(
+    rows,
+    "Direct redemption eligibility",
+    left.eligibility?.value ?? null,
+    right.eligibility?.value ?? null,
+    left.eligibility?.sources,
+    right.eligibility?.sources,
+  );
+  appendComparisonEvidenceRow(
+    rows,
+    "Redemption minimum",
+    left.minimum?.value ?? null,
+    right.minimum?.value ?? null,
+    left.minimum?.sources,
+    right.minimum?.sources,
+  );
+  appendComparisonEvidenceRow(
+    rows,
+    "Redemption fee basis",
+    left.feeBasis?.value ?? null,
+    right.feeBasis?.value ?? null,
+    left.feeBasis?.sources,
+    right.feeBasis?.sources,
+  );
+  return rows;
+}
+
+function finalizeComparisonEvidenceRow(row: ComparisonEvidenceRow): ComparisonRow {
+  return {
+    label: row.label,
+    left: row.left ?? NOT_RECORDED,
+    right: row.right ?? NOT_RECORDED,
+    ...(row.leftSources ? { leftSources: row.leftSources } : {}),
+    ...(row.rightSources ? { rightSources: row.rightSources } : {}),
+  };
+}
+
+export function buildComparisonAtAGlanceRows(
+  page: StaticComparisonPage,
+  nowSec = Math.floor(Date.now() / 1_000),
+): ComparisonRow[] {
   const { left, right } = page;
   const grades = getComparisonGrades(left, right);
   return [
@@ -443,6 +840,7 @@ export function buildComparisonAtAGlanceRows(page: StaticComparisonPage) {
       left: describeReserveSignal(left),
       right: describeReserveSignal(right),
     },
+    ...buildComparisonEvidenceRows(page, nowSec).map(finalizeComparisonEvidenceRow),
     {
       label: "Tracked chains",
       left: `${left.contracts?.length ?? 0} deployments`,
@@ -464,12 +862,14 @@ function buildComparisonCoinThingJsonLd(coin: StablecoinMeta) {
   };
 }
 
-export function buildStaticComparisonJsonLd(page: StaticComparisonPage) {
+export function buildStaticComparisonJsonLd(
+  page: StaticComparisonPage,
+  rows: readonly ComparisonRow[] = buildComparisonAtAGlanceRows(page),
+) {
   const pageUrl = `${SITE_URL}${page.href}`;
   const itemListId = `${pageUrl}#comparison-rows`;
   const leftThing = buildComparisonCoinThingJsonLd(page.left);
   const rightThing = buildComparisonCoinThingJsonLd(page.right);
-  const rows = buildComparisonAtAGlanceRows(page);
 
   return [
     {
