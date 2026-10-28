@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { ContentTable } from "@/components/table";
 import type { ContentTableColumn, ContentTableRow } from "@/components/table/content-table";
-import { buildContractDeploymentAnchor } from "@/lib/contract-deployment-summary";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import type { ChainTrackedDeployment } from "../static-chain-content";
 
@@ -37,9 +36,10 @@ function buildChainContractRows(deployments: readonly ChainTrackedDeployment[]) 
 
 /**
  * Bounded, server-rendered contract lookup for the three pilot chain hubs.
- * Each row links to the exact recorded deployment row on the coin profile; the
- * complete coin directory below keeps every profile (and therefore every
- * overflow deployment) reachable.
+ * Each row links to the `#contracts` module on the coin profile, whose closed
+ * `Contract addresses` fold lists the recorded address with the full profile
+ * context; the complete coin directory below keeps every profile (and
+ * therefore every overflow deployment) reachable.
  */
 export function ChainContractTable({
   chainName,
@@ -55,7 +55,6 @@ export function ChainContractTable({
 
   const shown = candidates.slice(0, CHAIN_CONTRACT_TABLE_ROW_LIMIT);
   const rows: ContentTableRow[] = shown.map(({ deployment, contract }) => {
-    const anchor = buildContractDeploymentAnchor(contract);
     const explorerUrl = buildExplorerUrl({
       chainKey: contract.chain,
       deploymentKind: contract.kind,
@@ -64,11 +63,12 @@ export function ChainContractTable({
     });
 
     return {
-      id: anchor,
+      // Row identity only: React keys never reach the DOM.
+      id: `${contract.chain}:${contract.address}`,
       cells: {
         stablecoin: (
           <Link
-            href={`${deployment.href}#${encodeURIComponent(anchor)}`}
+            href={`${deployment.href}#contracts`}
             className="pharos-focus-ring rounded-sm font-medium text-foreground hover:underline"
           >
             {deployment.name} ({deployment.symbol})

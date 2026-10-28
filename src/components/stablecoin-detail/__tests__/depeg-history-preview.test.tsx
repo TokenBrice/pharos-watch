@@ -68,7 +68,9 @@ describe("DepegHistoryPreview", () => {
 
     expect(screen.getByText("Recovered")).toBeTruthy();
     expect(screen.getByText("Open at capture")).toBeTruthy();
-    expect(screen.getByLabelText("Duration unavailable at capture")).toBeTruthy();
+    expect(screen.getByText("Duration unavailable at capture")).toBeTruthy();
+    // The dash is decoration: the screen-reader-only text carries the meaning.
+    expect(screen.getByText("—").getAttribute("aria-hidden")).toBe("true");
     expect(screen.getByText("+128 bps")).toBeTruthy();
     expect(screen.getByText("-481 bps")).toBeTruthy();
   });

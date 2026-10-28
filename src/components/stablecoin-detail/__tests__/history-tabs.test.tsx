@@ -143,6 +143,19 @@ describe("HistoryTabs", () => {
     expect(screen.getByRole("tab", { name: "Depeg" }).getAttribute("aria-selected")).toBe("false");
   });
 
+  it("opens the Depeg view first when the route's loading branch asks for it", () => {
+    render(
+      <HistoryTabs stablecoinId="usdc-circle" isNavToken={false} historyActive={false}
+        initialTab="depeg" depegHistoryPreview={preview} {...depegProps} />,
+    );
+
+    expect(screen.getByRole("tab", { name: "Depeg" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tab", { name: "Grade" }).getAttribute("aria-selected")).toBe("false");
+    expect(document.getElementById("depeg-history")?.hasAttribute("hidden")).toBe(false);
+    expect(screen.getByTestId("depeg-preview")).toBeTruthy();
+    expect(screen.queryByTestId("grade-panel")).toBeNull();
+  });
+
   it("keeps the preview node mounted across tab changes", async () => {
     render(
       <HistoryTabs stablecoinId="usdc-circle" isNavToken={false} historyActive

@@ -42,7 +42,7 @@ import {
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { MechanismArchetype } from "@shared/types";
 import { DetailContent } from "./detail-content";
-import { HistoryTabs } from "./detail-lazy-sections";
+import { HistoryTabsShell } from "./detail-lazy-sections";
 
 function DetailLoadingShell({
   id,
@@ -90,13 +90,15 @@ function DetailLoadingShell({
       </div>
       <Skeleton className="mt-12 h-[420px] rounded-xl" />
       {/* Static recorded facts outlive the loading read: the History shell owns
-          the retained-ledger preview here, exactly as the ready dossier does. */}
+          the retained-ledger preview here, exactly as the ready dossier does.
+          Depeg is the selected view because Grade has no source to read yet. */}
       {depegHistoryPreview ? (
         <div className="mt-12">
-          <HistoryTabs
+          <HistoryTabsShell
             stablecoinId={id}
             isNavToken={coin.flags.navToken === true}
             historyActive={false}
+            initialTab="depeg"
             depegHistoryPreview={depegHistoryPreview}
           />
         </div>
@@ -263,13 +265,15 @@ function StablecoinDetailClientContent({
         </Button>
         <QueryErrorNotice error={viewModel.listError} hasData={false} onRetry={viewModel.handleRetryAll} />
         {/* The list read failed, but the recorded depeg ledger is static: keep
-            its dated facts at the History module's lower-page position. */}
+            its dated facts at the History module's lower-page position, with
+            Depeg selected because the Grade tab cannot resolve here. */}
         {depegHistoryPreview ? (
           <div className="mt-8">
-            <HistoryTabs
+            <HistoryTabsShell
               stablecoinId={id}
               isNavToken={coin.flags.navToken === true}
               historyActive={false}
+              initialTab="depeg"
               depegHistoryPreview={depegHistoryPreview}
             />
           </div>

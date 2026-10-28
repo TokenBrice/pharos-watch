@@ -67,7 +67,10 @@ export function DepegHistoryPreview({ snapshot }: { snapshot: StablecoinDetailHi
             <td className="text-right">{formatBps(event.peakDeviationBps)}</td>
             <td className="text-right">
               {event.endedAt == null ? (
-                <span aria-label="Duration unavailable at capture">—</span>
+                <>
+                  <span className="sr-only">Duration unavailable at capture</span>
+                  <span aria-hidden="true">—</span>
+                </>
               ) : (
                 formatDuration(event.startedAt, event.endedAt)
               )}

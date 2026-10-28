@@ -1,6 +1,5 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
-import { buildContractDeploymentAnchor } from "@/lib/contract-deployment-summary";
 import type { StablecoinMeta } from "@shared/types";
 import type { ChainTrackedDeployment } from "../static-chain-content";
 import { ChainContractTable } from "./chain-contract-table";
@@ -70,7 +69,7 @@ describe("ChainContractTable", () => {
     expect(html).toContain("—");
   });
 
-  it("keeps two addresses on one chain as two distinct rows and destinations", () => {
+  it("keeps two addresses on one chain as two distinct rows pointing at the profile fold", () => {
     const contracts: ContractDeployment[] = [
       { chain: "base", address: "0x1111111111111111111111111111111111111111", decimals: 18 },
       { chain: "base", address: "0x2222222222222222222222222222222222222222", decimals: 18 },
@@ -80,10 +79,11 @@ describe("ChainContractTable", () => {
     expect(rowCount(html)).toBe(2);
     for (const contract of contracts) {
       expect(html).toContain(contract.address);
-      expect(html).toContain(
-        `href="/stablecoin/fixture-usd#${encodeURIComponent(buildContractDeploymentAnchor(contract))}"`,
-      );
     }
+    // One shared module target: the profile's `#contracts` fold lists both
+    // addresses, so rows need no per-deployment fragment.
+    expect(html.match(/href="\/stablecoin\/fixture-usd#contracts"/g)).toHaveLength(2);
+    expect(html).not.toContain("contract-base");
   });
 
   it("caps rows at 20 while the caption reports the complete candidate total", () => {

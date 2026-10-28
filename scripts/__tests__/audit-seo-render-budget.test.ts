@@ -277,7 +277,8 @@ describe("SEO render audit sentinels", () => {
     };
     const expectations = getRouteExpectations("/stablecoin/usdt-tether/");
     expect(expectations).toEqual({ panels: { required: ["depeg"] }, depegHistoryPreview: true, deploymentFacts: true });
-    expect(getRouteExpectations("/stablecoin/usde-ethena/")).not.toBeNull();
+    expect(getRouteExpectations("/stablecoin/tusd-trueusd/")).not.toBeNull();
+    expect(getRouteExpectations("/stablecoin/usde-ethena/")).toBeNull();
     expect(getRouteExpectations("/stablecoin/usds-sky/")).toBeNull();
 
     const raw = makeSnapshot(previewPanel({ hrefs: 1 }));
@@ -461,16 +462,14 @@ describe("SEO render audit sentinels", () => {
     expect(byId(lost, "safety-scores.card-facts")).toMatchObject({ status: "present" });
   });
 
-  it("enrolls the C3 contract fold from raw element text and ids", () => {
+  it("enrolls the C3 contract fold from its plain row text", () => {
     const profile = ({
       rows = 3,
-      ids = true,
       duplicate = false,
       fold = true,
       label = "Contract addresses",
-    }: { rows?: number; ids?: boolean; duplicate?: boolean; fold?: boolean; label?: string } = {}) => {
-      const items = Array.from({ length: rows }, (_, index) =>
-        `<li${ids ? ` id="contract-ethereum:0xabc${index}"` : ""}>Ethereum 0xabc${index}</li>`);
+    }: { rows?: number; duplicate?: boolean; fold?: boolean; label?: string } = {}) => {
+      const items = Array.from({ length: rows }, (_, index) => `<li>Ethereum 0xabc${index}</li>`);
       if (duplicate) items.push(items[0]);
       return "<main><h1>USDT (USDT)</h1>"
         + (fold
@@ -480,21 +479,18 @@ describe("SEO render audit sentinels", () => {
     };
     const expectations = { deploymentFacts: true };
 
-    expect(makeSnapshot(profile()).deploymentFold).toMatchObject({ folds: 1, rows: 3, anchorIds: 3, uniqueAnchorIds: 3 });
+    expect(makeSnapshot(profile()).deploymentFold).toMatchObject({ folds: 1, rows: 3 });
     expect(byId(evaluate(makeSnapshot(profile()), { raw: makeSnapshot(profile()), expectations }), "profile.deployment-facts"))
       .toMatchObject({ status: "present", observedCount: 3 });
+    // Plain rows only: no per-deployment ids are required or expected.
+    expect(byId(evaluate(
+      makeSnapshot(profile({ duplicate: true })),
+      { raw: makeSnapshot(profile({ duplicate: true })), expectations },
+    ), "profile.deployment-facts")).toMatchObject({ status: "present", observedCount: 4 });
     expect(byId(evaluate(
       makeSnapshot(profile({ fold: false })),
       { raw: makeSnapshot(profile({ fold: false })), expectations },
     ), "profile.deployment-facts")).toMatchObject({ status: "not-observed", reason: "contract-fold-absent" });
-    expect(byId(evaluate(
-      makeSnapshot(profile({ ids: false })),
-      { raw: makeSnapshot(profile({ ids: false })), expectations },
-    ), "profile.deployment-facts")).toMatchObject({ status: "missing", reason: "contract-fold-without-anchors" });
-    expect(byId(evaluate(
-      makeSnapshot(profile({ duplicate: true })),
-      { raw: makeSnapshot(profile({ duplicate: true })), expectations },
-    ), "profile.deployment-facts")).toMatchObject({ status: "missing", reason: "duplicate-deployment-anchor-id" });
     expect(byId(evaluate(
       makeSnapshot(profile({ rows: 0 })),
       { raw: makeSnapshot(profile({ rows: 0 })), expectations },

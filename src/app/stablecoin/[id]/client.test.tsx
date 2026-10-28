@@ -216,6 +216,26 @@ describe("StablecoinDetailClient", () => {
     expect(screen.queryByTestId("dews-detail")).toBeNull();
   });
 
+  it("keeps a non-pilot profile on the pre-wave lazy History placeholder", () => {
+    useNearViewportMock.mockImplementation(() => ({ ref: () => {}, near: false }));
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const { container } = render(
+      <StablecoinDetailClient
+        id={coin.id}
+        coin={coin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+      />,
+    );
+
+    // No preview: the shell and its tab markup stay behind the 390px reserve.
+    expect(container.querySelector("#depeg-history")).toBeNull();
+    expect(screen.queryByTestId("history-tabs")).toBeNull();
+    const historyPlaceholder = [...container.querySelectorAll<HTMLElement>("[data-lazy-section]")]
+      .find((node) => node.style.minHeight === "390px");
+    expect(historyPlaceholder).toBeTruthy();
+  });
+
   it("shows a health notice only once detail evidence is past the stale band", () => {
     const now = Date.now();
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;

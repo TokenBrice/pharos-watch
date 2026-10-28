@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
@@ -145,7 +145,9 @@ export function DepegHistory({
   useEffect(() => {
     onDisplayStateChangeRef.current = onDisplayStateChange;
   }, [onDisplayStateChange]);
-  useEffect(() => {
+  // Layout effect: the shell must hide its static preview before the browser
+  // paints, or one frame shows the preview and the live table together.
+  useLayoutEffect(() => {
     onDisplayStateChangeRef.current?.(liveDisplayable);
     return () => onDisplayStateChangeRef.current?.(false);
   }, [liveDisplayable]);

@@ -4,7 +4,6 @@ import { getActiveChainIds } from "@shared/lib/chains";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { isChainProfileIndexable, MIN_INDEXABLE_CHAIN_STABLECOINS } from "@/lib/chain-indexing";
 import { buildChainProfileJsonLd } from "@/lib/chain-json-ld";
-import { buildContractDeploymentAnchor } from "@/lib/contract-deployment-summary";
 import { getTrackedDeploymentsForChain } from "../static-chain-content";
 import ChainProfilePage, { generateMetadata } from "./page";
 
@@ -37,14 +36,9 @@ async function renderChainPage(chain: string) {
  * `<Link>` keeps the canonical `trailingSlash` form in a real build and strips
  * it in this bare SSR environment, so accept either before the fragment.
  */
-function expectDeploymentFragment(
-  html: string,
-  href: string,
-  contract: Parameters<typeof buildContractDeploymentAnchor>[0],
-) {
+function expectContractModuleHref(html: string, href: string) {
   const base = href.replace(/\/+$/, "");
-  const fragment = `#${encodeURIComponent(buildContractDeploymentAnchor(contract))}"`;
-  const candidates = [`href="${base}${fragment}`, `href="${base}/${fragment}`];
+  const candidates = [`href="${base}#contracts"`, `href="${base}/#contracts"`];
   expect(candidates.some((candidate) => html.includes(candidate)), candidates.join(" | ")).toBe(true);
 }
 
@@ -128,7 +122,7 @@ describe("ChainProfilePage", () => {
 
     for (const { deployment, contract } of shown) {
       expect(html).toContain(`>${contract.address}<`);
-      expectDeploymentFragment(html, deployment.href, contract);
+      expectContractModuleHref(html, deployment.href);
     }
   });
 
@@ -159,7 +153,7 @@ describe("ChainProfilePage", () => {
     const contract = deployment!.contracts[0];
 
     expect(html).toContain(contract.address);
-    expectDeploymentFragment(html, deployment!.href, contract);
+    expectContractModuleHref(html, deployment!.href);
   });
 
   it("keeps the nonpilot Ethereum profile unchanged", async () => {

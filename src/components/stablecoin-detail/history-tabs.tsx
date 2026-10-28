@@ -23,6 +23,8 @@ type HistoryTabsProps = DepegHistoryProps & {
   historyActive: boolean;
   /** Server-rendered retained-ledger preview for the pilot profiles, otherwise null. */
   depegHistoryPreview?: ReactNode;
+  /** The view to select first; the route's loading and list-error branches open Depeg. */
+  initialTab?: HistoryTabKey;
 };
 
 type HistoryTabKey = "grade" | "depeg" | "ddr";
@@ -47,7 +49,9 @@ const LiveSafetyScoreHistorySection = dynamic(
 
 const LiveDepegHistory = dynamic(
   () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
-  { loading: () => <Skeleton className="h-40 w-full rounded-xl" /> },
+  // The shell's retained preview already fills the panel, so a chunk-load
+  // skeleton would stack a second loading surface under it.
+  { loading: () => null },
 );
 
 const LiveDdrTrackRecordSection = dynamic(
@@ -100,17 +104,19 @@ function HistoryTabAvailabilityProbe({
  * Grade history, depeg history and the DDR record share one tabbed module:
  * three stacked cards cost ~1,400px for what readers scan one at a time.
  *
- * The shell itself is synchronous so the retained-ledger depeg preview is in
- * the initial HTML even while its panel is inactive. Every live module (and
- * every availability query) stays behind the route's History viewport gate and
- * the active-tab gate; inactive panels keep their anchor id and reveal on a
- * hash jump.
+ * The shell itself is synchronous for pilots so the retained-ledger depeg
+ * preview is in the initial HTML even while its panel is inactive; every other
+ * profile keeps the lazy wrapper in `detail-lazy-sections.tsx`. Every live
+ * module (and every availability query) stays behind the route's History
+ * viewport gate and the active-tab gate; inactive panels keep their anchor id
+ * and reveal on a hash jump.
  */
 export function HistoryTabs({
   stablecoinId,
   isNavToken,
   historyActive,
   depegHistoryPreview = null,
+  initialTab,
   ...depegProps
 }: HistoryTabsProps) {
   const [selected, setSelected] = useState<HistoryTabKey | null>(null);
@@ -164,7 +170,9 @@ export function HistoryTabs({
       content: <LiveDdrTrackRecordSection stablecoinId={stablecoinId} />,
     });
   }
-  const active = tabs.find((tab) => tab.key === selected) ?? tabs[0];
+  const active = tabs.find((tab) => tab.key === selected)
+    ?? tabs.find((tab) => tab.key === initialTab)
+    ?? tabs[0];
 
   // A hash naming a panel (or anything inside it) selects that tab: on load,
   // on `hashchange`, and synchronously when `revealAnchorId` asks before scrolling.

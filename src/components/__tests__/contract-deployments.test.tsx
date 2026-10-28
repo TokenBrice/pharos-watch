@@ -5,8 +5,6 @@ import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 
 import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
-import { revealAnchorId } from "@/lib/anchor-reveal";
-import { buildContractDeploymentAnchor } from "@/lib/contract-deployment-summary";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import type { StablecoinMeta } from "@shared/types";
 
@@ -158,9 +156,9 @@ describe("ContractDeployments interactions", () => {
     expect(
       screen.getByRole("link", { name: "View Arbitrum contract on explorer" }).getAttribute("href"),
     ).toBe("https://arbiscan.io/address/0x2222222222222222222222222222222222222222");
-    // 7 contracts fit the 9-row desktop preview: only the mobile Show-all
-    // (6-item preview) renders, not a second desktop toggle.
-    expect(screen.getAllByRole("button", { name: "Show all 7 chains" }).length).toBe(1);
+    // 7 contracts fit the 9-row desktop preview: the in-flow card has no
+    // show-all toggle any more, only the closed `Contract addresses` fold.
+    expect(screen.queryAllByRole("button", { name: "Show all 7 chains" })).toHaveLength(0);
   });
 
 });
@@ -180,8 +178,8 @@ const manyContracts = [
   { chain: "injective", address: "factory/inj1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/inj1bb", decimals: null, kind: "native-denom" },
 ] as unknown as NonNullable<StablecoinMeta["contracts"]>;
 
-function fullListRows(container: ParentNode) {
-  return [...container.querySelectorAll<HTMLElement>("li[id^='contract-']")];
+function foldRows(container: ParentNode) {
+  return [...container.querySelectorAll<HTMLElement>("details[data-module-fold] li")];
 }
 
 describe("ContractDeployments complete address list", () => {
@@ -207,9 +205,12 @@ describe("ContractDeployments complete address list", () => {
     expect(list.length / manyContracts.length).toBeLessThan(150);
     expect(list).not.toContain("<button");
     expect(list).not.toContain("<svg");
+    // Plain rows: no per-deployment ids or rail twins to resolve.
+    expect(list).not.toContain(" id=");
+    expect(list).not.toContain("data-anchor-twin");
   });
 
-  it("gives every deployment exactly one id and one rail twin across both mounts", () => {
+  it("renders the plain list once, only in the in-flow card", () => {
     const { container } = render(
       <>
         <ContractDeployments coinId={meta.id} contracts={manyContracts} compact />
@@ -217,13 +218,11 @@ describe("ContractDeployments complete address list", () => {
       </>,
     );
 
-    const expected = manyContracts.map((contract) => buildContractDeploymentAnchor(contract));
-    expect(fullListRows(container).map((row) => row.id)).toEqual(expected);
-    expect(new Set(fullListRows(container).map((row) => row.id)).size).toBe(expected.length);
-    expect(
-      [...container.querySelectorAll<HTMLElement>("li[data-anchor-twin^='contract-']")]
-        .map((row) => row.getAttribute("data-anchor-twin")),
-    ).toEqual(expected);
+    const folds = container.querySelectorAll("details[data-module-fold]");
+    expect(folds).toHaveLength(1);
+    expect(foldRows(container)).toHaveLength(manyContracts.length);
+    expect(container.querySelectorAll("[id^='contract-']")).toHaveLength(0);
+    expect(container.querySelectorAll("li[data-anchor-twin]")).toHaveLength(0);
     // The card's own `#contracts` owner stays single across responsive mounts.
     expect(container.querySelectorAll("#contracts")).toHaveLength(1);
   });
@@ -236,28 +235,21 @@ describe("ContractDeployments complete address list", () => {
 
     disclosure!.open = true;
     fireEvent(disclosure!, new Event("toggle"));
-    expect(fullListRows(container)).toHaveLength(manyContracts.length);
+    expect(foldRows(container)).toHaveLength(manyContracts.length);
 
     disclosure!.open = false;
     fireEvent(disclosure!, new Event("toggle"));
-    expect(fullListRows(container)).toHaveLength(manyContracts.length);
+    expect(foldRows(container)).toHaveLength(manyContracts.length);
   });
 
-  it("reveals the last deployment in the rail twin and opens its fold", () => {
-    render(
-      <>
-        <ContractDeployments coinId={meta.id} contracts={manyContracts} compact />
-        <ContractDeployments coinId={meta.id} contracts={manyContracts} />
-      </>,
-    );
-    const anchor = buildContractDeploymentAnchor(manyContracts[manyContracts.length - 1]);
+  it("keeps the rail show-all toggle and adds no fold there", () => {
+    const { container } = render(<ContractDeployments coinId={meta.id} contracts={manyContracts} compact />);
 
-    // jsdom has no layout, so the in-flow row reads as display-hidden and the
-    // shared helper must resolve the rail twin instead.
-    const target = revealAnchorId(anchor);
-    expect(target?.getAttribute("data-anchor-twin")).toBe(anchor);
-    expect(target?.textContent).toBe("Injective factory/inj1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/inj1bb");
-    expect(target?.closest("details")?.open).toBe(true);
+    expect(container.querySelectorAll("details[data-module-fold]")).toHaveLength(0);
+    expect(screen.queryByRole("button", { name: "Copy Injective contract address" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Show all 12 contract deployments" }));
+    expect(screen.getByRole("button", { name: "Collapse contract deployments" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Copy Injective contract address" })).toBeTruthy();
   });
 
   it("renders no card for an empty contract list", () => {

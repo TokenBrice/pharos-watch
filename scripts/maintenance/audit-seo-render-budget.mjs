@@ -8,7 +8,7 @@ const DEFAULT_ROUTES = [
   "/",
   "/stablecoin/usdt-tether/",
   "/stablecoin/usdc-circle/",
-  "/stablecoin/usde-ethena/",
+  "/stablecoin/tusd-trueusd/",
   "/stablecoin/dai-makerdao/",
   "/stablecoin/fdusd-first-digital/",
   "/chains/ethereum/",
@@ -59,7 +59,7 @@ export const UNENROLLED_SENTINEL_EXPECTATIONS = [
 export const HISTORY_PREVIEW_PILOT_ROUTES = [
   "/stablecoin/usdt-tether/",
   "/stablecoin/usdc-circle/",
-  "/stablecoin/usde-ethena/",
+  "/stablecoin/tusd-trueusd/",
   "/stablecoin/dai-makerdao/",
   "/stablecoin/fdusd-first-digital/",
 ];
@@ -619,16 +619,13 @@ export function collectSnapshotFacts(document, options = {}) {
     const summary = details.querySelector("summary");
     return summary ? normalize(summary.textContent).startsWith("Contract addresses") : false;
   });
-  // C3: the fold rows are plain static rows, so read their element text and
-  // ids even while the fold is closed and the dossier segment is hidden.
+  // C3: the fold rows are plain, id-less static text, so read the fold's
+  // element text and row count even while the fold is closed and the dossier
+  // segment is hidden.
   const foldTexts = contractFolds.map((fold) => textOf(fold));
-  const foldIds = contractFolds.flatMap((fold) =>
-    Array.from(fold.querySelectorAll('[id^="contract-"]')).map((row) => row.id));
   const deploymentFold = {
     folds: contractFolds.length,
     rows: contractFolds.reduce((total, fold) => total + fold.querySelectorAll("li").length, 0),
-    anchorIds: foldIds.length,
-    uniqueAnchorIds: new Set(foldIds).size,
     open: contractFolds.some((fold) => fold.hasAttribute("open")),
     textChars: foldTexts.reduce((longest, text) => Math.max(longest, text.length), 0),
   };
@@ -905,8 +902,9 @@ export function evaluateSentinels({
     }
 
     if (expectations?.deploymentFacts) {
-      // C3: the fold is static, so its ids and raw element text must exist in
-      // the JS-disabled parse and survive hydration and an API-failure replay.
+      // C3: the fold is static and its rows are plain text, so the fold's raw
+      // element text must exist in the JS-disabled parse and survive hydration
+      // and an API-failure replay.
       const rawFold = raw?.deploymentFold ?? null;
       const mobileFold = mobile.deploymentFold ?? null;
       if (!rawFold) {
@@ -915,14 +913,10 @@ export function evaluateSentinels({
         results.push(sentinel("profile.deployment-facts", "not-observed", "contract-fold-absent", null, sourceGeneration));
       } else if (rawFold.rows === 0 || rawFold.textChars < 20) {
         results.push(sentinel("profile.deployment-facts", "missing", "contract-fold-without-address-text", rawFold.rows, sourceGeneration));
-      } else if (rawFold.anchorIds === 0) {
-        results.push(sentinel("profile.deployment-facts", "missing", "contract-fold-without-anchors", 0, sourceGeneration));
-      } else if (rawFold.uniqueAnchorIds !== rawFold.anchorIds) {
-        results.push(sentinel("profile.deployment-facts", "missing", "duplicate-deployment-anchor-id", rawFold.anchorIds, sourceGeneration));
       } else if (!mobileFold || mobileFold.folds === 0) {
-        results.push(sentinel("profile.deployment-facts", "missing", "deployment-fold-lost-after-hydration", rawFold.anchorIds, sourceGeneration));
+        results.push(sentinel("profile.deployment-facts", "missing", "deployment-fold-lost-after-hydration", rawFold.rows, sourceGeneration));
       } else {
-        results.push(sentinel("profile.deployment-facts", "present", null, rawFold.anchorIds, sourceGeneration));
+        results.push(sentinel("profile.deployment-facts", "present", null, rawFold.rows, sourceGeneration));
       }
     }
   }

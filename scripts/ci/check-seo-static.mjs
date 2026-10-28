@@ -1009,7 +1009,7 @@ const STATIC_PROFILE_MARKER = 'id="stablecoin-static-profile-title"';
 const HISTORY_PREVIEW_PILOT_IDS = new Set([
   "usdt-tether",
   "usdc-circle",
-  "usde-ethena",
+  "tusd-trueusd",
   "dai-makerdao",
   "fdusd-first-digital",
 ]);
@@ -1231,7 +1231,8 @@ const CHAIN_CONTRACT_TABLE_PILOTS = [
 ];
 const CHAIN_CONTRACT_TABLE_ROW_LIMIT = 20;
 const COIN_DATA_DIR = path.resolve("shared/data/stablecoins/coins");
-const CONTRACT_DEPLOYMENT_ID_PREFIX = "contract-";
+/** C6 hub rows deep-link to the profile's Contracts module, never a per-row id. */
+const CONTRACT_MODULE_ANCHOR_ID = "contracts";
 
 const ATTRIBUTE_VALUE_PATTERNS = {
   id: /\bid="([^"]*)"/g,
@@ -1265,12 +1266,26 @@ function extractDocumentText(html) {
     .trim();
 }
 
+/** Outer HTML of the in-flow `Contract addresses` fold, or null when absent. */
+function findContractAddressFold(html) {
+  const stripped = stripNonElementMarkup(html);
+  const tags = collectElementTags(stripped);
+  const folds = openingElementTags(tags, (tag) => tag.name === "details" && tag.attrs.has("data-module-fold"));
+  for (const { index } of folds) {
+    const outer = elementOuterHtml(stripped, tags, index);
+    const summary = /<summary\b[^>]*>([\s\S]*?)<\/summary>/i.exec(outer);
+    if (summary && extractMarkupText(summary[1]).startsWith("Contract addresses")) return outer;
+  }
+  return null;
+}
+
 /**
  * C3: every profile keeps the complete recorded deployment set in the closed
- * `Contract addresses` fold as exact address text with unique anchors.
+ * `Contract addresses` fold as exact, plain address text.
  * C6: the three pilot hubs keep their bounded table, report a truthful
- * `shown/total`, and every table destination resolves to exactly one id on the
- * target profile. The complete profile directory stays as the overflow path.
+ * `shown/total`, and every row links to the target profile's `#contracts`
+ * module, which must exist exactly once. The complete profile directory stays
+ * as the overflow path.
  */
 function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
   const htmlByRoute = new Map(
@@ -1285,25 +1300,24 @@ function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
     const coinId = route.split("/")[2];
     const coin = readCheckedInCoin(coinId);
     const contracts = coin?.contracts ?? [];
-    const lastDeployment = contracts.at(-1);
-    if (!lastDeployment) {
+    if (contracts.length === 0) {
       warnings.push(`${route}: no checked-in contract deployment for the contract-fold sentinel`);
       continue;
     }
 
-    const visibleText = extractDocumentText(html);
-    if (!visibleText.includes("Contract addresses")) {
+    const foldHtml = findContractAddressFold(html);
+    if (!foldHtml) {
       errors.push(`${route}: contract address fold summary missing`);
+      continue;
     }
-    if (!visibleText.includes(lastDeployment.address)) {
-      errors.push(`${route}: contract address fold omits the last recorded address ${lastDeployment.address}`);
-    }
-    const deploymentIds = attributeValues(html, "id").filter((value) => value.startsWith(CONTRACT_DEPLOYMENT_ID_PREFIX));
-    if (deploymentIds.length === 0) {
-      errors.push(`${route}: no contract deployment anchor ids`);
-    }
-    if (new Set(deploymentIds).size !== deploymentIds.length) {
-      errors.push(`${route}: duplicate contract deployment anchor ids`);
+    const foldText = extractDocumentText(foldHtml);
+    const missingAddresses = contracts
+      .map((contract) => contract.address)
+      .filter((address) => !foldText.includes(address));
+    if (missingAddresses.length > 0) {
+      errors.push(
+        `${route}: contract address fold omits ${missingAddresses.length} of ${contracts.length} recorded addresses (${formatIdList(missingAddresses)})`,
+      );
     }
     const previewChain = contracts[0]?.chain;
     if (
@@ -1351,31 +1365,28 @@ function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
       }
     }
 
-    const destinations = [...sectionHtml.matchAll(/href="(\/stablecoin\/[^"#]+)#([^"]+)"/g)];
+    const destinations = [...sectionHtml.matchAll(/href="(\/stablecoin\/[^"#]+)#([^"]*)"/g)];
     if (destinations.length === 0) {
-      errors.push(`${route}: no contract table destinations to recorded profile rows`);
+      errors.push(`${route}: no contract table destinations to recorded profile modules`);
     }
     if (caption && destinations.length !== Number(caption[1])) {
       errors.push(`${route}: contract table shows ${caption[1]} rows but links ${destinations.length} destinations`);
     }
 
     for (const [, href, fragment] of destinations) {
+      if (fragment !== CONTRACT_MODULE_ANCHOR_ID) {
+        errors.push(`${route}: contract table destination ${href}#${fragment} does not target #${CONTRACT_MODULE_ANCHOR_ID}`);
+        continue;
+      }
       const targetRoute = `${href.replace(/\/+$/, "")}/`;
       const targetHtml = htmlByRoute.get(targetRoute);
       if (!targetHtml) {
         errors.push(`${route}: contract table destination ${targetRoute} is not part of the export`);
         continue;
       }
-      let targetId;
-      try {
-        targetId = decodeURIComponent(fragment);
-      } catch {
-        errors.push(`${route}: malformed contract table fragment ${fragment}`);
-        continue;
-      }
-      const matches = attributeValues(targetHtml, "id").filter((value) => value === targetId).length;
+      const matches = attributeValues(targetHtml, "id").filter((value) => value === CONTRACT_MODULE_ANCHOR_ID).length;
       if (matches !== 1) {
-        errors.push(`${route}: contract table fragment ${fragment} resolves to ${matches} ids on ${targetRoute}`);
+        errors.push(`${route}: contract table destination ${targetRoute}#${CONTRACT_MODULE_ANCHOR_ID} resolves to ${matches} ids`);
       }
     }
 

@@ -168,8 +168,8 @@ describe("stablecoin detail history snapshot", () => {
     expect([...STABLECOIN_DETAIL_HISTORY_PILOT_IDS].sort()).toEqual([
       "dai-makerdao",
       "fdusd-first-digital",
+      "tusd-trueusd",
       "usdc-circle",
-      "usde-ethena",
       "usdt-tether",
     ]);
   });

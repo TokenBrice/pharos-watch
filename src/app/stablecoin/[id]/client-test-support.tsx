@@ -70,7 +70,9 @@ export const createDetailLazySectionsMock = async () => {
 
   return {
     ...placeholders,
+    // The lazy placeholder and the synchronous pilot shell share the probe.
     HistoryTabs: HistoryTabsProbe,
+    HistoryTabsShell: HistoryTabsProbe,
     // Wiring probe: the Mechanism card owns `#mechanism-review` when it receives a review.
     PegStabilityCard: ({
       mechanismReview,
