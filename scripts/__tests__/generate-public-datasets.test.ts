@@ -200,7 +200,11 @@ describe("generate-public-datasets", () => {
     expect((json.data ?? json.rows)[0].supplyProvenance).toEqual(expected);
     const ndjsonRow = artifacts.ndjson.trim().split("\n").map((line) => JSON.parse(line)).find((line) => line.id === "usdc-circle");
     expect(ndjsonRow.supplyProvenance).toEqual(expected);
-    expect(artifacts.csv).toContain(`"${JSON.stringify(spec.rows[0]!.supplyProvenance).replace(/"/g, '""')}"`);
+    const row = spec.rows[0];
+    if (row == null || typeof row !== "object" || !("supplyProvenance" in row)) {
+      throw new Error("Expected a top-stablecoins row with supply provenance");
+    }
+    expect(artifacts.csv).toContain(`"${JSON.stringify(row.supplyProvenance).replace(/"/g, '""')}"`);
   });
 
   it.each([

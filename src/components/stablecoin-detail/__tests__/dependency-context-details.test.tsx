@@ -62,7 +62,7 @@ describe("DependencyContextDetails", () => {
       return { context, text: container.textContent ?? "" };
     }
 
-    it.each([
+    it.each<{ label: string; edges: ReportCardsV9DependencyEdge[]; mcap: Record<string, number | null> }>([
       { label: "all shares unknown with known supplies", edges: [edge(HUB, "a", "basket", null), edge(HUB, "b", "basket", null)], mcap: { a: 100, b: 200 } },
       { label: "known share with missing supply plus unknown share with known supply", edges: [edge(HUB, "a", "basket", 0.5), edge(HUB, "b", "basket", null)], mcap: { a: null, b: 200 } },
       { label: "all supplies missing", edges: [edge(HUB, "a", "basket", 0.5), edge(HUB, "b", "serial", null)], mcap: {} },

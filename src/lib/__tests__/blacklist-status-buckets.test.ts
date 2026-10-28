@@ -108,7 +108,8 @@ describe("blacklist status buckets", () => {
 
   it("keeps the freezable subtotal unavailable when no exposed member reports supply", () => {
     // An observed non-freezable coin must not turn the missing exposed subset into $0 / 0%.
-    for (const exposed of [[], [{ id: "usdt-tether", circulating: {} }, { id: "usdp-parallel", circulating: { peggedUSD: Number.NaN } }]]) {
+    const exposedCases: Partial<StablecoinData>[][] = [[], [{ id: "usdt-tether", circulating: {} }, { id: "usdp-parallel", circulating: { peggedUSD: Number.NaN } }]];
+    for (const exposed of exposedCases) {
       const buckets = buildBlacklistStatusBuckets([
         ...exposed.map((coin) => makeStablecoin(coin)),
         makeStablecoin({ id: "lusd-liquity", circulating: { peggedUSD: 10 } }),

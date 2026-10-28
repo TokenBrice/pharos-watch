@@ -79,16 +79,16 @@ describe("homepage supply completeness", () => {
 
   it("never certifies a partial-chain remainder as complete; unrecorded coverage is legacy (K-031)", () => {
     // All 267 members numeric, one excluding a chain: still a known subtotal.
-    expect(isHomepageSupplyComplete({
+    const partial = {
       supplyObservedCount: 267, supplyExpectedCount: 267, supplyPartialCount: 1, supplyCoverageUnknownCount: 0,
-    })).toBe(false);
-    expect(describeHomepageSupplyCoverage({
-      supplyObservedCount: 267, supplyExpectedCount: 267, supplyPartialCount: 1, supplyCoverageUnknownCount: 0,
-    })).toBe("Partial · 266/267 assets observed");
+    };
+    expect(isHomepageSupplyComplete(partial)).toBe(false);
+    expect(describeHomepageSupplyCoverage(partial)).toBe("Partial · 266/267 assets observed");
     // Unrecorded coverage (and old payloads without counts) is legacy, never a Partial marker.
-    expect(isHomepageSupplyComplete({
+    const unrecorded = {
       supplyObservedCount: 267, supplyExpectedCount: 267, supplyPartialCount: 0, supplyCoverageUnknownCount: 267,
-    })).toBe(true);
+    };
+    expect(isHomepageSupplyComplete(unrecorded)).toBe(true);
     expect(isHomepageSupplyComplete({ supplyObservedCount: 267, supplyExpectedCount: 267 })).toBe(true);
   });
 });

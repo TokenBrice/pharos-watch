@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { ReserveResult } from "@shared/lib/reserve-templates";
 import type { MintBurnFlowsResponse, PegSummaryCoin, PegSummaryResponse } from "@shared/types";
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { makePegSummaryCoin as makePegSummaryCoinBase } from "@/test-utils/peg-summary-fixtures";
@@ -310,7 +311,7 @@ describe("stablecoin detail view-model builder", () => {
           sourceAgeBudgetSec: 30 * 86400, sourceAgeBudgetCap: "scoring" as const,
         },
       },
-    };
+    } satisfies ReserveResult;
     const params = makeBuildStablecoinDetailViewModelParams({ supplemental: {
       reserves: { live, enabled: true, dataUpdatedAt: now },
     } });

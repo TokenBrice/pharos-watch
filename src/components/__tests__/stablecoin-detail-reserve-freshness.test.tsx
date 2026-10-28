@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { buildDetailStaleQueries } from "@/lib/stablecoin-detail-query-view-model";
 import { makeBuildStablecoinDetailViewModelParams } from "@/lib/__tests__/fixtures/stablecoin-detail-view-model";
+import type { ReserveResult } from "@shared/lib/reserve-templates";
 
 const DAY = 86_400;
 
@@ -21,7 +22,7 @@ describe("detail page reserve freshness banner", () => {
     vi.setSystemTime(new Date((fetchedAt + 24 * DAY) * 1000 - 1000));
     const fetchMock = vi.fn();
     vi.stubGlobal("fetch", fetchMock);
-    const live = {
+    const live: ReserveResult = {
       mode: "live-stale" as const, reserves: [], estimated: false, liveAt: fetchedAt,
       sync: {
         enabled: true, status: "degraded" as const, stale: true, bootstrap: false,
