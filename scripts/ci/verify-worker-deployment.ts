@@ -126,6 +126,7 @@ export async function fetchWorkerDeployments(
   env: NodeJS.ProcessEnv,
   fetchApi: typeof fetch = fetch,
   scriptName: string = readWorkerScriptName(),
+  timeoutMs: number = 30_000,
 ): Promise<(ActiveWorkerDeployment & ListedWorkerDeployment)[]> {
   const accountId = requireEnv(env, "CLOUDFLARE_ACCOUNT_ID");
   const token = requireEnv(env, "CLOUDFLARE_API_TOKEN");
@@ -133,7 +134,7 @@ export async function fetchWorkerDeployments(
     + `/workers/scripts/${encodeURIComponent(scriptName)}/deployments`;
   const response = await fetchApi(url, {
     headers: { Authorization: `Bearer ${token}` },
-    signal: AbortSignal.timeout(30_000),
+    signal: AbortSignal.timeout(timeoutMs),
   });
   if (!response.ok) {
     throw new Error(`Cloudflare Worker deployments API returned HTTP ${response.status}.`);
@@ -143,6 +144,18 @@ export async function fetchWorkerDeployments(
     result?: { deployments?: (ActiveWorkerDeployment & ListedWorkerDeployment)[] };
   } | null;
   if (payload?.success !== true || !Array.isArray(payload.result?.deployments)) {
+    throw new Error("Cloudflare Worker deployments API returned an unsuccessful or malformed response.");
+  }
+  const active = payload.result.deployments[0];
+  if (active !== undefined && (
+    active === null || typeof active !== "object"
+    || (active.id !== undefined && typeof active.id !== "string") || !Array.isArray(active.versions)
+    || active.versions.some((version) => version === null || typeof version !== "object"
+      || typeof version.percentage !== "number" || !Number.isFinite(version.percentage)
+      || version.percentage < 0 || version.percentage > 100 || typeof version.version_id !== "string")
+    || (active.annotations !== undefined && (active.annotations === null || typeof active.annotations !== "object"
+      || Array.isArray(active.annotations) || Object.values(active.annotations).some((value) => typeof value !== "string")))
+  )) {
     throw new Error("Cloudflare Worker deployments API returned an unsuccessful or malformed response.");
   }
   return payload.result.deployments;
@@ -159,10 +172,36 @@ export async function runWorkerDeploymentVerification(
   scriptName: string = readWorkerScriptName(),
 ): Promise<void> {
   const expectedMessage = workerDeployMessage(requireEnv(env, "GITHUB_SHA"));
-  const deployments = await fetchWorkerDeployments(env, fetchApi, scriptName);
-  const deployment = deployments[0];
-  if (!deployment) throw new Error("Cloudflare Worker deployment history is empty; active identity is unavailable.");
-  const verified = verifyActiveWorkerDeployment(deployment, expectedMessage);
+  const deadline = Date.now() + 60_000;
+  let deployments: (ActiveWorkerDeployment & ListedWorkerDeployment)[];
+  let verified: VerifiedWorkerDeployment;
+  let lastMismatch: unknown = "unavailable (no deployment read)";
+  const deadlineError = () => new Error(
+    `Worker deployment verification exhausted its 60-second deadline. Last observed identity: ${lastMismatch}`,
+  );
+  for (;;) {
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) throw deadlineError();
+    try {
+      deployments = await fetchWorkerDeployments(env, fetchApi, scriptName, Math.min(30_000, remainingMs));
+    } catch (error) {
+      if (Date.now() >= deadline) throw deadlineError();
+      throw error;
+    }
+    const deployment = deployments[0];
+    if (!deployment) throw new Error("Cloudflare Worker deployment history is empty; active identity is unavailable.");
+    try {
+      verified = verifyActiveWorkerDeployment(deployment, expectedMessage);
+      if (Date.now() < deadline) break;
+    } catch (error) {
+      lastMismatch = error;
+    }
+    if (Date.now() >= deadline) {
+      lastMismatch = JSON.stringify(deployment);
+      throw deadlineError();
+    }
+    await new Promise((resolveWait) => setTimeout(resolveWait, Math.max(0, Math.min(10_000, deadline - Date.now()))));
+  }
   const activation = selectWorkerActivationAt({
     deploymentId: verified.deploymentId,
     deployments,
