@@ -13,7 +13,7 @@ import satoriStandalone from "satori/standalone";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
-import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-contracts";
+import { getMintBurnConfigsForStablecoin, MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import * as activeSafetyScoreSource from "../../lib/safety-score-index";
@@ -185,16 +185,22 @@ describe("stablecoin OG card data", () => {
     expect(observedMarkup).not.toContain("NOMINAL PAR");
   });
 
-  it("withholds an OG hourly net while its materialization debt remains", async () => {
+  it("excludes pending OG legs and withholds flow on materialization debt or a scope read failure", async () => {
     const { db, sqlite } = createLatestSchemaSqlite();
     const now = Math.floor(Date.now() / 1000);
     const end = Math.floor(now / 3600) * 3600;
+    const config = getMintBurnConfigsForStablecoin("usdt-tether")[0];
+    const pending = { ...config, chain: { ...config.chain, chainId: "synthetic-pending" } };
+    MINT_BURN_CONFIGS.push(pending);
     try {
       sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES ('stablecoins', ?, ?)")
         .run(JSON.stringify({ peggedAssets: [makeAsset({ id: "usdt-tether", symbol: "USDT" })] }), now);
       sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
         mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
         VALUES ('usdt-tether', 'ethereum', ?, 1, 0, 0, 0, 100, 0, 100)`).run(end - 3600);
+      sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+        mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+        VALUES ('usdt-tether', 'synthetic-pending', ?, 1, 0, 0, 0, 1000000, 0, 1000000)`).run(end - 3600);
       for (const config of getMintBurnConfigsForStablecoin("usdt-tether")) {
         await db.batch(mintBurnScanCoverageStatements(db, {
           configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config),
@@ -206,13 +212,22 @@ describe("stablecoin OG card data", () => {
       const beforeCalls = vi.mocked(satoriStandalone).mock.calls;
       const before = beforeCalls[beforeCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
       expect(before.props.data.flow7dSource).toBe("mint-burn");
+      expect(before.props.data.flow7d).toBe(100);
       sqlite.prepare("INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts) VALUES ('usdt-tether', 'ethereum', ?)")
         .run(end - 3600);
       expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
       const afterCalls = vi.mocked(satoriStandalone).mock.calls;
       const after = afterCalls[afterCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
       expect(after.props.data.flow7dSource).not.toBe("mint-burn");
-    } finally { sqlite.close(); }
+      sqlite.exec("DROP TABLE mint_burn_admission");
+      expect((await handleOg(db, "/api/og/stablecoin/usdt-tether"))?.status).toBe(200);
+      const failedCalls = vi.mocked(satoriStandalone).mock.calls;
+      const failed = failedCalls[failedCalls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
+      expect(failed.props.data.flow7dSource).not.toBe("mint-burn");
+    } finally {
+      MINT_BURN_CONFIGS.splice(MINT_BURN_CONFIGS.indexOf(pending), 1);
+      sqlite.close();
+    }
   });
 
   describe("peg-analytics cache hits", () => {
@@ -247,6 +262,9 @@ describe("stablecoin OG card data", () => {
         { match: "depeg_events", rows: [] },
         { match: "mint_burn_hourly", rows: [] },
         { match: "mint_burn_scan_coverage", rows: [] },
+        { match: "FROM mint_burn_admission", rows: [] },
+        { match: "FROM mint_burn_publication_policy", rows: [] },
+        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
       ]);
     }
 
@@ -321,6 +339,9 @@ describe("stablecoin OG card data", () => {
         { match: "depeg_events", rows: [] },
         { match: "mint_burn_hourly", rows: [] },
         { match: "mint_burn_scan_coverage", rows: [] },
+        { match: "FROM mint_burn_admission", rows: [] },
+        { match: "FROM mint_burn_publication_policy", rows: [] },
+        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
       ]);
       const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
 
@@ -509,6 +530,9 @@ describe("stablecoin OG card data", () => {
         { match: "depeg_events", rows: [] },
         { match: "mint_burn_hourly", rows: [] },
         { match: "mint_burn_scan_coverage", rows: [] },
+        { match: "FROM mint_burn_admission", rows: [] },
+        { match: "FROM mint_burn_publication_policy", rows: [] },
+        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
       ]);
 
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
@@ -532,6 +556,9 @@ describe("stablecoin OG card data", () => {
         { match: "current_snapshot", rows: [], first: { current_price: 1.02, current_date, prev_day_date, prev_day_price } },
         { match: "supply_history", rows: [] }, { match: "depeg_events", rows: [] }, { match: "mint_burn_hourly", rows: [] },
         { match: "mint_burn_scan_coverage", rows: [] },
+        { match: "FROM mint_burn_admission", rows: [] },
+        { match: "FROM mint_burn_publication_policy", rows: [] },
+        { match: "pharos:mint-burn-legacy-evidence", rows: [] },
       ]);
       const data = await renderedCardData(db, "/api/og/stablecoin/usdt-tether");
       expect(data.change24h).toBeNull();
@@ -555,6 +582,9 @@ describe("stablecoin OG card data", () => {
       { match: "depeg_events", rows: [] },
       { match: "mint_burn_hourly", rows: [] },
       { match: "mint_burn_scan_coverage", rows: [] },
+      { match: "FROM mint_burn_admission", rows: [] },
+      { match: "FROM mint_burn_publication_policy", rows: [] },
+      { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     ]);
 
     const res = await handleOg(db, "/api/og/stablecoin/usdt-tether");
@@ -683,6 +713,9 @@ describe("depeg OG handler aggregation", () => {
       { match: "depeg_events", rows: [] },
       { match: "mint_burn_hourly", rows: [] },
       { match: "mint_burn_scan_coverage", rows: [] },
+      { match: "FROM mint_burn_admission", rows: [] },
+      { match: "FROM mint_burn_publication_policy", rows: [] },
+      { match: "pharos:mint-burn-legacy-evidence", rows: [] },
       { match: "stability_index_samples", rows: [] },
     ]);
     const options = { staleAfterSec: API_FRESHNESS_MAX_AGE_SEC.stressSignals * 8 };

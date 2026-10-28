@@ -3,19 +3,78 @@ import { syncMintBurn } from "../../cron/sync-mint-burn";
 import type { MintBurnLane } from "../../lib/mint-burn-pipeline/types";
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
-import { runCircuitGatedLeasedScheduledJob } from "./run-circuit-gated-job";
+import { mapCronStatusToCircuitOutcome, recordOutcomeDecision, shouldAttemptFetch, type CircuitOutcomeDecision } from "../../lib/circuit-breaker";
+import { getRpcAuth, type RpcOperator } from "../../lib/chain-registry";
+import type { JsonRpcTransportOutcome } from "../../lib/evm-rpc";
+import { withRpcRequestObserver, type RpcRequestScope } from "../../lib/rpc-request-observer";
+import { logWorkerEvent } from "../../lib/structured-log";
 import {
   buildScheduledSlotSummary,
   summarizeCronResult,
-  summarizeSkippedScheduledJob,
 } from "./slot-summary";
 import { parseJsonObject } from "../../lib/json-parse";
 
 interface MintBurnSlotOptions {
   lane: MintBurnLane;
   jobName: string;
-  skipMessage: string;
   runSidecar?: (runtime: ScheduledRuntimeContext, signal: AbortSignal) => Promise<MintBurnSidecarOutcome>;
+}
+
+interface MintBurnProviderOutcome {
+  provider: RpcOperator | "trongrid";
+  circuitSource: string | null;
+  successes: number;
+  failures: number;
+  neutral: number;
+  blockedRequests: number;
+  terminalFailures: number;
+  reasons: Record<string, number>;
+}
+
+const RPC_RATE_LIMIT_MESSAGE = /rate[- ]?limit|too many requests|throughput|quota (?:exceeded|exhausted)/i;
+
+function isSemanticRpcError({ code, message = "" }: { code?: number; message?: string }): boolean {
+  return !RPC_RATE_LIMIT_MESSAGE.test(message) && (code === 3 || code === -32601 || code === -32602 || code === -32005
+    || /execution reverted|does not support|not supported|unsupported|block range|block limit|out of range|range (?:is )?(?:too|exceed)|too many logs|max(?:imum)? results|query returned more than|response size/i.test(message));
+}
+
+function rpcErrorDecision(error: { code?: number; message?: string }): { decision: CircuitOutcomeDecision; reason: string } {
+  const { code, message = "" } = error;
+  if (RPC_RATE_LIMIT_MESSAGE.test(message)) return { decision: "failure", reason: "rpc-rate-limited" };
+  if (!isSemanticRpcError(error) && (code === -32603
+    || /internal (?:server )?error|server error|service unavailable|overload|timed? out|timeout/i.test(message))) {
+    return { decision: "failure", reason: "rpc-server-error" };
+  }
+  return { decision: "neutral", reason: "rpc-semantic-error-or-unavailable-result" };
+}
+
+function providerDecision(outcome: JsonRpcTransportOutcome): { decision: CircuitOutcomeDecision; reason: string } {
+  if (outcome.status === "control-error") return { decision: "neutral", reason: "request-not-completed" };
+  if (outcome.status === "transport-error" || outcome.status === "parse-error"
+    || outcome.status === "invalid-envelope") {
+    return { decision: "failure", reason: outcome.status };
+  }
+  if (outcome.invalidRows > 0 || outcome.rows.size === 0) return { decision: "failure", reason: "invalid-envelope" };
+  const rows = [...outcome.rows.values()];
+  if (outcome.status === "http-error") {
+    const status = outcome.response.status;
+    // Providers may return a valid request/config rejection with HTTP 400. Auth, throttle and outage status wins.
+    const semanticClientError = status >= 400 && status < 500 && ![401, 402, 403, 408, 429].includes(status)
+      && rows.every((row) => row.error && isSemanticRpcError(row.error));
+    return semanticClientError
+      ? { decision: "neutral", reason: "rpc-semantic-error-or-unavailable-result" }
+      : { decision: "failure", reason: "http-error" };
+  }
+  for (const row of rows) {
+    if (!row.error) continue;
+    const outcome = rpcErrorDecision(row.error);
+    if (outcome.decision === "failure") return outcome;
+  }
+  // Other semantic failures and absent objects are read evidence, without enough evidence to blame the provider.
+  if (rows.some((row) => row.error || row.result == null)) {
+    return { decision: "neutral", reason: "rpc-semantic-error-or-unavailable-result" };
+  }
+  return { decision: "success", reason: "rpc-response" };
 }
 
 export interface MintBurnSidecarOutcome {
@@ -65,13 +124,77 @@ export async function runMintBurnSlot(
   runtime: ScheduledRuntimeContext,
   options: MintBurnSlotOptions,
 ) {
-  const result = await runCircuitGatedLeasedScheduledJob(runtime, {
-    circuitSource: CIRCUIT_SOURCE.ALCHEMY,
-    outcomeLabel: "Alchemy",
-    skipMessage: options.skipMessage,
-    job: options.jobName,
-    fn: async (signal, reportProgress) => {
-      const primary = await syncMintBurn(runtime.db, runtime.env.ALCHEMY_API_KEY ?? null, {
+  const result = await runtime.runLeasedCron(options.jobName, async (signal, reportProgress) => {
+    const alchemyAllowed = await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.ALCHEMY);
+    const endpoints = new Map([...runtime.chainRpcs.values()].flatMap((config) =>
+      config.endpoints.map((endpoint) => [endpoint.url, endpoint.operator] as const)));
+    const providerOutcomes = new Map<MintBurnProviderOutcome["provider"], MintBurnProviderOutcome>();
+    const scopeFailures = new Map<string, Set<MintBurnProviderOutcome["provider"]>>();
+    const terminalScopes = new Map<string, RpcRequestScope>();
+    const observationForProvider = (provider: MintBurnProviderOutcome["provider"]): MintBurnProviderOutcome => {
+      let observation = providerOutcomes.get(provider);
+      if (!observation) {
+        observation = { provider, circuitSource: provider === "alchemy" ? CIRCUIT_SOURCE.ALCHEMY : null,
+        successes: 0, failures: 0, neutral: 0, blockedRequests: 0, terminalFailures: 0, reasons: {} };
+        providerOutcomes.set(provider, observation);
+      }
+      return observation;
+    };
+    const observationFor = (url: string) => observationForProvider(endpoints.get(url) ?? getRpcAuth(url)?.provider ?? "public");
+    const recordObservation = (observation: MintBurnProviderOutcome, decision: CircuitOutcomeDecision, reason: string) => {
+      if (decision === "success") observation.successes++;
+      else if (decision === "failure") observation.failures++;
+      else observation.neutral++;
+      observation.reasons[reason] = (observation.reasons[reason] ?? 0) + 1;
+    };
+    let primary: CronResult | undefined;
+    try {
+      primary = await withRpcRequestObserver({
+        beforeRequest: (url) => {
+          const observation = observationFor(url);
+          if (observation.provider === "alchemy" && !alchemyAllowed) {
+            observation.blockedRequests++;
+            observation.reasons["circuit-open"] = (observation.reasons["circuit-open"] ?? 0) + 1;
+            return false;
+          }
+          return true;
+        },
+        onOutcome: (url, outcome, scope) => {
+          const observation = observationFor(url);
+          const { decision, reason } = providerDecision(outcome);
+          recordObservation(observation, decision, reason);
+          if (scope?.affectsRun && (scope.kind === "operation" || scope.kind === "chain-head")) {
+            const scopeKey = `${scope.kind}:${scope.key}`;
+            const failures = scopeFailures.get(scopeKey) ?? new Set<MintBurnProviderOutcome["provider"]>();
+            if (decision === "failure") failures.add(observation.provider);
+            scopeFailures.set(scopeKey, failures);
+          }
+        },
+        onScopeStart: (scope) => {
+          if (scope.kind !== "config-attempt") return;
+          // Only the final attempt's unresolved operations can explain a failed config.
+          for (const [scopeKey, terminal] of terminalScopes) {
+            if (terminal.kind === "operation" && terminal.configKey === scope.key) {
+              terminalScopes.delete(scopeKey);
+              scopeFailures.delete(scopeKey);
+            }
+          }
+        },
+        onScopeComplete: (scope, failed) => {
+          const scopeKey = `${scope.kind}:${scope.key}`;
+          if (scope.affectsRun && failed) terminalScopes.set(scopeKey, scope);
+          else {
+            terminalScopes.delete(scopeKey);
+            scopeFailures.delete(scopeKey);
+          }
+        },
+        onNativeOutcome: (provider, outcome) => {
+          // Mint/burn native diagnostics never write the shared Dwellir parity circuit.
+          const { decision, reason } = outcome.status === "rpc-error" ? rpcErrorDecision(outcome.error)
+            : { decision: outcome.status, reason: outcome.reason };
+          recordObservation(observationForProvider(provider), decision, reason);
+        },
+      }, () => syncMintBurn(runtime.db, runtime.env.ALCHEMY_API_KEY ?? null, {
         signal,
         disabledConfigIds: runtime.mintBurnDisabledIds,
         disabledSymbols: runtime.mintBurnDisabledSymbols,
@@ -79,17 +202,44 @@ export async function runMintBurnSlot(
         jobName: options.jobName,
         onProgress: reportProgress,
         chainRpcs: runtime.chainRpcs,
-      });
-      if (!options.runSidecar || (primary.status !== undefined && primary.status !== "ok" && primary.status !== "degraded")) {
-        return primary;
+        dwellirNative: runtime.dwellirNative,
+        trongridApiKey: runtime.env.TRONGRID_API_KEY ?? null,
+      }));
+    } finally {
+      const metadata = primary?.metadata ? parseJsonObject(primary.metadata) : null;
+      const unavailableChains = metadata?.admittedFinalityUnavailableChains;
+      const counted = new Set<string>();
+      for (const scope of terminalScopes.values()) {
+        if (scope.kind === "operation" && !terminalScopes.has(`config:${scope.configKey}`)) continue;
+        if (scope.kind === "chain-head" && (!Array.isArray(unavailableChains) || !unavailableChains.includes(scope.key))) continue;
+        for (const provider of scopeFailures.get(`${scope.kind}:${scope.key}`) ?? []) {
+          const key = `${provider}:${scope.kind === "operation" ? `config:${scope.configKey}` : `${scope.kind}:${scope.key}`}`;
+          if (counted.has(key)) continue;
+          counted.add(key);
+          providerOutcomes.get(provider)!.terminalFailures++;
+        }
       }
-      const sidecar = await options.runSidecar(runtime, signal);
-      return appendSidecarOutcome(primary, sidecar);
-    },
+      const alchemy = providerOutcomes.get("alchemy");
+      if (alchemy && primary) {
+        const statusDecision = mapCronStatusToCircuitOutcome(primary.status);
+        const decision = statusDecision === "failure" ? alchemy.terminalFailures > 0 ? "failure" : "neutral"
+          : statusDecision === "success" && alchemy.successes + alchemy.failures + alchemy.neutral > 0 ? "success" : "neutral";
+        await recordOutcomeDecision(runtime.db, CIRCUIT_SOURCE.ALCHEMY, decision).catch((error) => {
+          logWorkerEvent({ scope: "handler", level: "error", event: "mint_burn_provider_outcome_write_failed",
+            message: "Failed to record observed mint/burn RPC outcome", job: options.jobName,
+            provider: "alchemy", error });
+        });
+      }
+    }
+    primary = { ...primary, metadata: JSON.stringify({
+      ...(primary.metadata ? parseJsonObject(primary.metadata) ?? { rawMetadata: primary.metadata } : {}),
+      providerOutcomes: [...providerOutcomes.values()],
+    }) };
+    if (!options.runSidecar || (primary.status !== undefined && primary.status !== "ok" && primary.status !== "degraded")) {
+      return primary;
+    }
+    const sidecar = await options.runSidecar(runtime, signal);
+    return appendSidecarOutcome(primary, sidecar);
   });
-  return buildScheduledSlotSummary([
-    result === null
-      ? summarizeSkippedScheduledJob(options.jobName, "circuit-open")
-      : summarizeCronResult(options.jobName, result),
-  ]);
+  return buildScheduledSlotSummary([summarizeCronResult(options.jobName, result)]);
 }

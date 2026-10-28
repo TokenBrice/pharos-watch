@@ -132,4 +132,22 @@ describe("bounded scanner coverage repair", () => {
     await repairMintBurnCoverage({ ...input(db), runTimestamp: now + 1800 }, gaps, [], new Map());
     expect(vi.mocked(syncMintBurnConfig).mock.calls[0]![0].fromBlock).not.toBe(firstStart);
   });
+  it.each([330_000, 360_000])("caps pending repairs at six minutes without blocking admitted repairs (%i ms)", async (elapsed) => {
+    const { db } = fixtures.open();
+    const pending = makeMintBurnConfig({ asset: { contractAddress: "0x0000000000000000000000000000000000000002" } });
+    const pendingKey = mintBurnConfigKey(pending);
+    vi.setSystemTime(now * 1000 + elapsed);
+    const request = { ...input(db), pendingAdmissionKeys: new Set([pendingKey]), deadlineMs: now * 1000 + 9 * 60_000 };
+    const summaries = await repairMintBurnCoverage(request, [
+      { config: pending, fromBlock: 111, toBlock: 120 }, { config, fromBlock: 111, toBlock: 120 },
+    ], [], new Map());
+    const calls = vi.mocked(syncMintBurnConfig).mock.calls.map(([scan]) => scan);
+    expect(calls.find((scan) => scan.key === key)?.deadlineMs).toBe(Date.now() + 60_000);
+    if (elapsed < 360_000) {
+      expect(calls.find((scan) => scan.key === pendingKey)?.deadlineMs).toBe(now * 1000 + 360_000);
+    } else {
+      expect(calls).toHaveLength(1);
+      expect(summaries.find((summary) => summary.key === pendingKey)?.repairReason).toBe("repair-runtime-exhausted");
+    }
+  });
 });

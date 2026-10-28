@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCache } from "../lib/db-cache";
+import { compactMintBurnPublication } from "../lib/mint-burn-publication";
 import { resolveOrReject, parseQueryParams } from "../lib/api-params";
 import { errorResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
@@ -59,7 +60,6 @@ import {
   buildAggregateScope,
   buildCoinSummaries,
   fetchAggregateData,
-  TRACKED_IDS,
 } from "./mint-burn-flows/aggregate";
 
 // ---------------------------------------------------------------------------
@@ -112,14 +112,15 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     }
     return errorResponse(503, "Stablecoins data not yet available");
   }
+  const data = await fetchAggregateData(db, params);
+  const trackedIds = new Set(data.configs.map((config) => config.stablecoinId));
   for (const asset of stablecoinsCacheResult.payload.peggedAssets as StablecoinData[]) {
-    if (TRACKED_IDS.has(asset.id)) {
-      const mcap = sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating);
+    if (trackedIds.has(asset.id)) {
+      const mcap = sumMcapForTrackedChains(asset.id, asset.chainCirculating, asset.circulating, data.configs);
       if (mcap !== null) mcapById.set(asset.id, mcap);
     }
   }
 
-  const data = await fetchAggregateData(db, params);
   const {
     coins,
     gaugeInputs,
@@ -136,7 +137,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   );
 
   const gaugeScanCoverage = {
-    ...mintBurnScanWindow(coins.every((coin) => coin.coverage.has24hWindow)),
+    ...mintBurnScanWindow(coins.length > 0 && coins.every((coin) => coin.coverage.has24hWindow)),
     ...(coins.some((coin) => coin.coverage.windows?.window24h.provenance === "legacy-pre-cutover")
       ? { provenance: "legacy-pre-cutover" as const } : {}),
     admittedCoins: coins.filter((coin) => coin.coverage.has24hWindow).length,
@@ -149,7 +150,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   const gaugeScore = computeGaugeScore(gaugeInputs);
   const gaugeBand = gaugeScore !== null ? getGaugeBand(gaugeScore) : null;
   const hourly = buildHourlyFlowSeries(data.hourlyRows, (ts) =>
-    mintBurnWindowCoverage(ACTIVE_MINT_BURN_CONFIGS, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark).complete);
+    mintBurnWindowCoverage(data.configs, data.scanSegments, data.legacy, ts, ts + 3600, data.watermark).complete);
   const updatedAt = resolveFlowUpdatedAt(data.hourlyRows, nowSec);
   // Per-chain 24h net flow over the same tracked-pair universe as `coins`, so
   // consumers of the published payload (daily digest) never re-derive a chain
@@ -159,7 +160,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     .map(([chainId, aggregate]) => {
       const valuation = summarizeMintBurnValuation(aggregate.valuation).completeness;
       const scanCoverage = mintBurnWindowCoverage(
-        ACTIVE_MINT_BURN_CONFIGS.filter((config) => config.chain.chainId === chainId),
+        data.configs.filter((config) => config.chain.chainId === chainId),
         data.scanSegments, data.legacy, data.windowEnd - 24 * 3600, data.windowEnd, data.watermark,
       );
       return { chainId, netFlow24hUsd: !scanCoverage.complete || valuation === "partial" ? null : aggregate.netFlow, valuation, scanCoverage };
@@ -195,7 +196,8 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     updatedAt,
     windowHours: hours,
     window: { ...mintBurnHourlyWindow(data.windowEnd, hours), watermark: data.watermark },
-    scope: buildAggregateScope(),
+    scope: buildAggregateScope(data.configs),
+    publication: compactMintBurnPublication(data.publication),
     sync: {
       ...data.sync,
       warning: appendSyncWarning(data.sync.warning, data.freshnessLookupWarning),
@@ -204,7 +206,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
   };
 
   return finalizeMintBurnFlowResponse(
-    db, cacheKey, syncStartSec, applyAggregateFtqState(body, ftqSource), data.freshnessLookup,
+    db, cacheKey, syncStartSec, applyAggregateFtqState(body, ftqSource), data.freshnessLookup, data.publicationPolicy,
   );
 }
 
@@ -359,19 +361,22 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
 // ---------------------------------------------------------------------------
 
 async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number): Promise<Response> {
-  const configs = getMintBurnConfigsForStablecoin(stablecoinId);
-  if (configs.length === 0) {
+  const nowSec = Math.floor(Date.now() / 1000);
+  const configured = getMintBurnConfigsForStablecoin(stablecoinId);
+  if (configured.length === 0) {
     return errorResponse(404, `Stablecoin "${stablecoinId}" is not tracked for mint/burn flows`);
   }
-  const symbol = configs[0]!.symbol;
-  const trackedChainIds = [...new Set(configs.map((config) => config.chain.chainId))];
-  const chainInClause = buildInClause(trackedChainIds);
-
   const cacheKey = perCoinFlowCacheKey(stablecoinId, hours);
   return withMintBurnFlowFallback(db, "per-coin", cacheKey, async () => {
-    const nowSec = Math.floor(Date.now() / 1000);
+    // Quarantined known coins retain detail history without joining the public aggregate.
+    const roster = ACTIVE_MINT_BURN_CONFIGS.some((config) => config.stablecoinId === stablecoinId)
+      ? ACTIVE_MINT_BURN_CONFIGS : configured;
+    const context = await readMintBurnWindowContext(db, nowSec, roster);
+    const configs = context.configs.filter((config) => config.stablecoinId === stablecoinId);
+    const symbol = configured[0]!.symbol;
+    const trackedChainIds = [...new Set(configs.map((config) => config.chain.chainId))];
+    const chainInClause = trackedChainIds.length > 0 ? buildInClause(trackedChainIds) : { sql: "NULL", binds: [] };
     const syncStartSec = nowSec;
-    const context = await readMintBurnWindowContext(db, nowSec, ACTIVE_MINT_BURN_CONFIGS);
     const window = {
       ...mintBurnHourlyWindow(context.watermark.timestamp ?? nowSec, hours),
       watermark: context.watermark,
@@ -447,6 +452,8 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     const body = {
       stablecoinId,
       symbol,
+      publication: compactMintBurnPublication({ ...context.publication,
+        legs: context.publication.legs.filter((leg) => leg.stablecoinId === stablecoinId) }),
       mintVolumeUsd: totalMint,
       burnVolumeUsd: totalBurn,
       netFlowUsd: !scanCoverage.complete || valuation.completeness === "partial" ? null : totalMint - totalBurn,
@@ -470,6 +477,6 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
       },
     };
 
-    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncLookup);
+    return finalizeMintBurnFlowResponse(db, cacheKey, syncStartSec, body, latestSuccessfulSyncLookup, context.policy);
   });
 }

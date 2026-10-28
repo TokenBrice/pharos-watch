@@ -101,7 +101,25 @@ describe("parseMintBurnLogs — custom event encodings", () => {
     expect(rows[0].amount_usd).toBe(10_000);
     expect(rows[0].symbol).toBe("USDT");
     expect(rows[0].stablecoin_id).toBe("usdt-tether");
+    expect(rows[0].explorer_tx_url).toBe(`https://etherscan.io/tx/${makeLog().transactionHash}`);
     expect(dropped).toBe(0);
+  });
+
+  it.each(["0x", ""])("links Tron Issue events to Tronscan with a %s-prefixed input hash", (prefix) => {
+    const config = makeUsdtConfig();
+    config.chain = {
+      chainId: "tron", chainName: "Tron", evmChainId: null,
+      explorerUrl: "https://tronscan.org", type: "tron",
+    };
+    const hash = "abc1230000000000000000000000000000000000000000000000000000000001";
+    const { rows } = parseMintBurnLogs(
+      config, usdtIssueEventDef, [makeLog({ transactionHash: `${prefix}${hash}` })],
+      blockTimestamps, usdtPriceContext,
+    );
+
+    expect(rows).toHaveLength(1);
+    expect(rows[0].tx_hash).toBe(`${prefix}${hash}`);
+    expect(rows[0].explorer_tx_url).toBe(`https://tronscan.org/#/transaction/${hash}`);
   });
 
   it("parses USDT Redeem event as burn with correct amount", () => {

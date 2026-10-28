@@ -143,6 +143,8 @@ The `/blog/` hub uses the authored shared `public/og-blog.png` card. Individual 
 
 ## 8. Dynamic Worker cards (`/api/og/*`)
 
+Since mint/burn v6.31, stablecoin cards select the admitted, enabled mint/burn scope before reading seven-day hourly totals and scan proof. Pending and disabled legs contribute neither; an empty scope cannot prove a measured zero. Untracked or inactive coins skip the scope read. Failed scope reads withhold the optional flow evidence while the rest of the card remains available.
+
 Rendered on-request by `worker/src/api/og.tsx` using satori + resvg WASM, cached 15 minutes via `API_CACHE_PROFILES.ogImage`. The shared frame follows the current light product shell and semantic status colors. **Self-renewing — no manual step.**
 
 Stablecoin and depeg cards read DEWS through `stress-signals-current-rows.ts`, the same publication owner as `/api/stress-signals`. They honor completed-generation coverage rather than selecting raw maximum timestamps, so superseded or staged rows cannot override the published generation. Both use the API's eight-times-freshness fallback threshold for materialized rows and retain the owner's last-valid/history fallback (including an older single-coin result); unavailable authority yields no DEWS row. Existing rendering and response-cache limits are unchanged.

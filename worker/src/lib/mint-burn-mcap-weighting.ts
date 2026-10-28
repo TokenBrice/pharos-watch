@@ -3,33 +3,20 @@
 //
 // This module imports the full MINT_BURN_CONFIGS registry intentionally; it
 // must NOT be imported from hot paths that should stay lightweight
-// (DEWS, daily digest). Those consumers should use mint-burn-canonical-chain
-// instead.
+// (DEWS, daily digest). DEWS uses mint-burn-canonical-chain; the digest reads
+// the published gauge instead of recomputing its weights.
 
-import { MINT_BURN_CONFIGS } from "./mint-burn-contracts";
+import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "./mint-burn-contracts";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import {
   canonicalizeChainCirculating,
   type RawChainCirculating,
 } from "@shared/lib/chains/circulating";
 
-const TRACKED_CHAINS_BY_COIN: Map<string, Set<string>> = (() => {
-  const map = new Map<string, Set<string>>();
-  for (const c of MINT_BURN_CONFIGS) {
-    let chains = map.get(c.stablecoinId);
-    if (!chains) {
-      chains = new Set<string>();
-      map.set(c.stablecoinId, chains);
-    }
-    chains.add(c.chain.chainId);
-  }
-  return map;
-})();
-
-/** Chains we actively track in mint/burn ingestion for this stablecoin. */
-export function getMintBurnTrackedChains(stablecoinId: string): string[] {
-  const chains = TRACKED_CHAINS_BY_COIN.get(stablecoinId);
-  return chains ? [...chains] : [];
+/** Chains admitted by the caller's publication snapshot. */
+export function getMintBurnTrackedChains(stablecoinId: string, configs: readonly MintBurnContractConfig[] = MINT_BURN_CONFIGS): string[] {
+  return [...new Set(configs.filter((config) => config.stablecoinId === stablecoinId && config.enabled !== false)
+    .map((config) => config.chain.chainId))];
 }
 
 /**
@@ -44,6 +31,8 @@ export function getMintBurnTrackedChains(stablecoinId: string): string[] {
  *      the canonical circulating total (keeps CG-fallback assets with empty
  *      chainCirculating alive).
  *   3. Otherwise sum `chainCirculating[chainId].current` across tracked chains.
+ * An explicit empty publication scope returns null; a partial scope cannot use
+ * the global fallback because it includes supply from withheld chains.
  *
  * Returns `null` when the fallback path has no observed circulating bucket: the
  * coin's weight is unavailable, never a measured `0`. Callers exclude it from
@@ -58,10 +47,14 @@ export function sumMcapForTrackedChains(
   stablecoinId: string,
   chainCirculating: RawChainCirculating | null | undefined,
   circulating: Record<string, number> | undefined,
+  configs?: readonly MintBurnContractConfig[],
 ): number | null {
-  const fallbackSupply = getCirculatingRawOrNull({ circulating });
-  const trackedChains = getMintBurnTrackedChains(stablecoinId);
-  if (trackedChains.length === 0) return fallbackSupply;
+  const trackedChains = getMintBurnTrackedChains(stablecoinId, configs);
+  const fullScope = configs == null || MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === stablecoinId)
+    .every((config) => trackedChains.includes(config.chain.chainId));
+  // A global fallback cannot separate supply on a withheld chain.
+  const fallbackSupply = fullScope ? getCirculatingRawOrNull({ circulating }) : null;
+  if (trackedChains.length === 0) return configs ? null : fallbackSupply;
 
   const canonical = canonicalizeChainCirculating(chainCirculating);
   if (canonical.size === 0) return fallbackSupply;

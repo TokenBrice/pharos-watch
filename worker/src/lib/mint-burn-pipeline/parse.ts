@@ -1,4 +1,5 @@
 import type { AlchemyLogEntry } from "../alchemy-logs";
+import { buildExplorerUrl } from "@shared/lib/explorer";
 import { decodeAddress, decodeUint256AtSlotOrNull, readDataWord } from "../evm-logs";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import { requiresReviewedSupplyBurnProof } from "../mint-burn-conservation";
@@ -92,7 +93,12 @@ export function parseMintBurnLogs(
       tx_hash: log.transactionHash,
       block_number: blockNum,
       timestamp,
-      explorer_tx_url: `${config.chain.explorerUrl}/tx/${log.transactionHash}`,
+      explorer_tx_url: buildExplorerUrl({
+        chainType: config.chain.type,
+        explorerUrl: config.chain.explorerUrl,
+        entityType: "tx",
+        value: config.chain.type === "tron" ? log.transactionHash.replace(/^0x/, "") : log.transactionHash,
+      }) ?? `${config.chain.explorerUrl}/tx/${log.transactionHash}`,
     });
   }
 

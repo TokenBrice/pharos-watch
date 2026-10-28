@@ -7,6 +7,7 @@ import {
   type RpcEndpoint,
 } from "./chain-registry";
 import { recordDwellirCredits } from "./rpc-provider-budget";
+import { getRpcRequestObserver } from "./rpc-request-observer";
 import { ETHERSCAN_V2_BASE } from "./constants";
 import { encodeAddress, encodeUint256 } from "./evm-selectors";
 import { fetchJsonWithRetry, fetchTextWithRetry } from "./fetch-retry";
@@ -486,7 +487,7 @@ interface JsonRpcRequest {
   params: readonly unknown[];
 }
 
-type JsonRpcTransportOutcome =
+export type JsonRpcTransportOutcome =
   | { status: "response" | "http-error" | "rpc-error" | "invalid-envelope"; response: Response;
       body: unknown; rows: ReadonlyMap<number, JsonRpcEnvelope<unknown>>; invalidRows: number }
   | { status: "parse-error"; response: Response; error: unknown }
@@ -507,6 +508,12 @@ export async function requestJsonRpcAtUrl(
     responseMode?: "text";
   },
 ): Promise<JsonRpcTransportOutcome> {
+  const observer = getRpcRequestObserver();
+  let attempted = false;
+  const finish = (outcome: JsonRpcTransportOutcome): JsonRpcTransportOutcome => {
+    if (attempted && !options.signal?.aborted) observer?.onOutcome(rpcUrl, outcome);
+    return outcome;
+  };
   try {
     const fetched = await (options.responseMode === "text" ? fetchTextWithRetry : fetchJsonWithRetry<unknown>)(
       rpcUrl,
@@ -515,19 +522,23 @@ export async function requestJsonRpcAtUrl(
       {
         timeoutMs: options.timeoutMs,
         deadlineMs: options.deadlineMs,
-        beforeRequest: options.beforeRequest,
+        beforeRequest: () => {
+          if (observer?.beforeRequest(rpcUrl) === false || options.beforeRequest?.() === false) return false;
+          attempted = true;
+          return true;
+        },
         retryMode: "network-only",
         ...(options.responseMode === "text" ? { returnFinalResponse: true } : {}),
         ...(options.maxResponseBytes === undefined ? {} : { maxResponseBytes: options.maxResponseBytes }),
       },
     );
-    if (!fetched) return { status: "transport-error", error: null };
+    if (!fetched) return finish({ status: "transport-error", error: null });
     let body = fetched.body;
     if (options.responseMode === "text") {
       try {
         body = JSON.parse(body as string) as unknown;
       } catch (error) {
-        return { status: "parse-error", response: fetched.response, error };
+        return finish({ status: "parse-error", response: fetched.response, error });
       }
     }
     const batch = Array.isArray(payload);
@@ -552,10 +563,10 @@ export async function requestJsonRpcAtUrl(
     const status = !fetched.response.ok ? "http-error"
       : (batch ? !Array.isArray(body) : invalidRows > 0) ? "invalid-envelope"
       : !batch && rows.get(payload.id)?.error ? "rpc-error" : "response";
-    return { status, response: fetched.response, body, rows, invalidRows };
+    return finish({ status, response: fetched.response, body, rows, invalidRows });
   } catch (error) {
-    return { status: error instanceof FetchRequestNotStartedError || options.signal?.aborted
-      ? "control-error" : "transport-error", error };
+    return finish({ status: error instanceof FetchRequestNotStartedError || options.signal?.aborted
+      ? "control-error" : "transport-error", error });
   }
 }
 

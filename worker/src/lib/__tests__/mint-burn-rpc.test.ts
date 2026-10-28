@@ -9,6 +9,7 @@ import type { MintBurnRow } from "../mint-burn-pipeline/types";
 import * as credits from "../rpc-provider-budget";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { syncMintBurnConfig } from "../../cron/mint-burn/sync-config";
+import { loadMintBurnChainContexts } from "../../cron/mint-burn/chain-context";
 
 import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
 import { buildAlchemyUrl } from "../alchemy-logs";
@@ -195,6 +196,22 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(meter).toHaveBeenCalled();
   });
 
+  it.each([true, false])("honors the head preparation deadline before an EVM request or fallback (expired=%s)", async (expired) => {
+    let clock = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => clock);
+    const deadlineMs = clock + (expired ? 0 : 1_000);
+    const fetcher = recorder(() => { clock += 1_000; return unavailable; });
+    const budget = createBudget(20);
+    const contexts = await loadMintBurnChainContexts({
+      configs: [MINT_BURN_CONFIGS.find((config) => config.chain.chainId === "base")!],
+      apiKey: "alchemy-test", chainRpcs: buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test" }),
+      budget, deadlineMs,
+    });
+    expect(contexts.get("base")?.chainHead).toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(expired ? 0 : 1);
+    expect(budget.count).toBe(expired ? 0 : 1);
+  });
+
   it("uses the ordered fallback for pinned conservation boundaries", async () => {
     const endpoints = admitted();
     const original = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "gusd-gemini")!;
@@ -286,7 +303,8 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(fetcher.mock.calls.some(([url]) => url === endpoints[1].url)).toBe(true);
   });
 
-  it.each([...new Set(MINT_BURN_CONFIGS.filter(config => config.enabled !== false).map(config => config.chain.chainId))])
+  it.each([...new Set(MINT_BURN_CONFIGS.filter(config => config.enabled !== false && config.chain.type === "evm")
+    .map(config => config.chain.chainId))])
     ("uses %s's validated finalized header, not its raw tip or a common block margin", async (chain) => {
       const endpoints = admitted(chain);
       const fetcher = recorder((_url, call) => ({ result: call.method === "eth_blockNumber" ? "0xffff"

@@ -19,6 +19,7 @@ import {
   resolveRotatedConfigs,
 } from "../mint-burn/run-state";
 import type * as ScanRetryModule from "../mint-burn/scan-with-retry";
+import { withRpcRequestObserver } from "../../lib/rpc-request-observer";
 
 vi.mock("../mint-burn/scan-with-retry", async (importOriginal) => ({
   ...await importOriginal<typeof ScanRetryModule>(),
@@ -212,6 +213,27 @@ describe("runMintBurnConfigPhase deferral integration", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it.each([
+    { apiErrors: 1, rpcEvidenceIncomplete: true, advanceReason: "scan-coverage-unproven", pending: false, failed: true },
+    { apiErrors: 1, rpcEvidenceIncomplete: true, advanceReason: "full-success-empty", pending: false, failed: false },
+    { apiErrors: 1, rpcEvidenceIncomplete: false, advanceReason: "scan-coverage-unproven", pending: false, failed: false },
+    { apiErrors: 1, rpcEvidenceIncomplete: true, advanceReason: "scan-coverage-unproven", pending: true, failed: true },
+  ] as const)("reports final config causality for $advanceReason / pending=$pending / errors=$apiErrors", async (scenario) => {
+    const { db } = fixtures.open();
+    const config = makeConfig();
+    const key = `${config.chain.chainId}-${config.contractAddress}`;
+    vi.mocked(syncMintBurnConfig).mockResolvedValue({
+      summary: makeSummary({ advanceReason: scenario.advanceReason }), apiErrors: scenario.apiErrors,
+      rpcEvidenceIncomplete: scenario.rpcEvidenceIncomplete,
+      effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0, newLastBlock: null,
+    });
+    const onScopeComplete = vi.fn();
+    await withRpcRequestObserver({ beforeRequest: () => true, onOutcome: vi.fn(), onScopeComplete }, () =>
+      runMintBurnConfigPhase({ ...makePhaseInput({ db, configs: [config] }),
+        pendingAdmissionKeys: scenario.pending ? new Set([key]) : new Set() }));
+    expect(onScopeComplete).toHaveBeenCalledExactlyOnceWith({ kind: "config", key, affectsRun: !scenario.pending }, scenario.failed);
   });
 
   it("covers a healthy extended roster in two rotated runs despite one hot config", async () => {

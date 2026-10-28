@@ -3,7 +3,7 @@ import { fetchConservationBoundaries } from "../../lib/mint-burn-conservation";
 import { mintBurnScanFingerprint, type MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
-import type { runMintBurnConfigPhase } from "./run-configs";
+import { MINT_BURN_PENDING_RUNTIME_BUDGET_MS, type runMintBurnConfigPhase } from "./run-configs";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
 import { createMintBurnConfigSummary, syncMintBurnConfig, type MintBurnConfigSummary } from "./sync-config";
 
@@ -127,6 +127,8 @@ export async function repairMintBurnCoverage(
     const gap = gaps[(offset + i) % gaps.length]!;
     const { config, fromBlock, toBlock } = gap;
     const key = mintBurnConfigKey(config);
+    const configDeadlineMs = input.pendingAdmissionKeys?.has(key)
+      ? Math.min(deadlineMs, input.runTimestamp * 1000 + MINT_BURN_PENDING_RUNTIME_BUDGET_MS) : deadlineMs;
     const summary: MintBurnCoverageRepairSummary = {
       ...createMintBurnConfigSummary(config, key, config.tier ?? "critical", { scanFrom: fromBlock, scanTo: toBlock }),
       repairReason: "scan-coverage-unproven",
@@ -141,9 +143,9 @@ export async function repairMintBurnCoverage(
       summary.repairReason = "provider-deferred";
       continue;
     }
-    if (Date.now() + 5_000 >= deadlineMs) {
+    if (Date.now() + 5_000 >= configDeadlineMs) {
       summary.repairReason = "repair-runtime-exhausted";
-      break;
+      continue;
     }
     const limit = Math.min(input.extendedConfigBudgetLimit, repairBudget.limit - repairBudget.count);
     if (limit < config.events.length + 2) {
@@ -155,14 +157,15 @@ export async function repairMintBurnCoverage(
       const boundaries = await fetchConservationBoundaries({
         requests: [{ key, config, fromBlock, toBlock }],
         rpcEndpointsByChain: new Map([[config.chain.chainId, context.rpcEndpoints]]),
-        budget, checkedAt: input.runTimestamp, signal: input.signal, deadlineMs,
+        budget, checkedAt: input.runTimestamp, signal: input.signal, deadlineMs: configDeadlineMs,
       });
       const result = await syncMintBurnConfig({
         db: input.db, config, key, tier: config.tier ?? "critical", fromBlock, scanTo: toBlock,
         chainHead: context.chainHead, rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads,
+        tronReader: context.tronReader,
         signal: input.signal, configBudgetLimit: Math.max(0, limit - budget.count), runTimestamp: input.runTimestamp,
         priceContext: input.priceContext, chainTimestampCache: context.chainTimestampCache,
-        txContextCache: context.txContextCache, affectedHours: input.affectedHours, deadlineMs,
+        txContextCache: context.txContextCache, affectedHours: input.affectedHours, deadlineMs: configDeadlineMs,
         conservationBoundary: boundaries.get(key),
       });
       budget.count += result.summary.requestBudgetUsed;

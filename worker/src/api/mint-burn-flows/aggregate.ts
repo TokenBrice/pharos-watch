@@ -20,6 +20,7 @@ import {
   buildMintBurnScope,
   getMintBurnTrackedPairs,
   MINT_BURN_CONFIGS,
+  type MintBurnContractConfig,
 } from "../../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-state";
 import {
@@ -54,8 +55,8 @@ import {
   readMintBurnWindowContext,
 } from "../../lib/mint-burn-flows-service";
 
+/** Candidate roster only; readMintBurnWindowContext owns the admitted, enabled publication scope. */
 export const ACTIVE_MINT_BURN_CONFIGS = MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId));
-export const TRACKED_IDS = new Set(ACTIVE_MINT_BURN_CONFIGS.map((config) => config.stablecoinId));
 
 export type CoinFlowSummary = MintBurnCoinFlow & Required<Pick<MintBurnCoinFlow, "coverage" | "valuation">>;
 
@@ -78,6 +79,9 @@ export interface AggregateQueryParams {
 }
 
 export interface AggregateData {
+  configs: MintBurnContractConfig[];
+  publication: Awaited<ReturnType<typeof readMintBurnWindowContext>>["publication"];
+  publicationPolicy: string;
   hourlyRows: HourlyRow[];
   hourly24hRows: HourlyRow[];
   net7dMap: Map<string, WindowNetFlow>;
@@ -157,12 +161,12 @@ export async function fetchAggregateData(
   db: D1Database,
   requestedParams: AggregateQueryParams,
 ): Promise<AggregateData> {
-  const { watermark, legacy } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
+  const { watermark, legacy, configs, publication, policy } = await readMintBurnWindowContext(db, requestedParams.nowSec, ACTIVE_MINT_BURN_CONFIGS);
   const params = buildAggregateQueryParams(
     watermark.timestamp ?? requestedParams.windowEnd,
     (requestedParams.windowEnd - requestedParams.windowStart) / 3600,
   );
-  const trackedPairs = getMintBurnTrackedPairs(ACTIVE_MINT_BURN_CONFIGS);
+  const trackedPairs = getMintBurnTrackedPairs(configs);
   const trackedPairsJson = JSON.stringify([...trackedPairs].map((pair) => pair.split("|")));
   const hourlyScanStart = Math.min(params.windowStart, params.window24h);
   const eventResultIndex = 5;
@@ -266,10 +270,10 @@ export async function fetchAggregateData(
            WHERE row_num = 1`,
         )
         .bind(trackedPairsJson, params.window24h, params.windowEnd),
-      prepareMintBurnScanCoverage(db, ACTIVE_MINT_BURN_CONFIGS, params.window90d, params.windowEnd),
+      prepareMintBurnScanCoverage(db, configs, params.window90d, params.windowEnd),
     ]),
     Promise.all([
-      readMintBurnSyncStateBatch(db, ACTIVE_MINT_BURN_CONFIGS),
+      readMintBurnSyncStateBatch(db, configs),
       readMintBurnCronSnapshotResult(db),
     ]),
   ]);
@@ -291,22 +295,23 @@ export async function fetchAggregateData(
     : null;
   const coverageMap = buildCoinCoverageMap(
     params.nowSec, scanSegments, lastBlocks, latestCronSnapshot.chainHeads,
-    latestCronSnapshotResult.error ? "cron-snapshot-unavailable" : null, ACTIVE_MINT_BURN_CONFIGS, legacy, watermark,
+    latestCronSnapshotResult.error ? "cron-snapshot-unavailable" : null, configs, legacy, watermark,
   );
   // Only a continuous admitted suffix of complete UTC days enters the baseline.
   const baselineStarts: FirstSeenRow[] = [];
   for (const [stablecoinId, coverage] of coverageMap) {
     if (coverage.historyStartAt == null || watermark.unavailableReason) continue;
-    const configs = ACTIVE_MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === stablecoinId);
+    const coinConfigs = configs.filter((config) => config.stablecoinId === stablecoinId);
     let start = params.nowDayTs;
     for (let day = params.nowDayTs - DAY_SECONDS; day >= params.baselineWindowStart; day -= DAY_SECONDS) {
-      if (!mintBurnWindowAdmits(configs, scanSegments, legacy, day, day + DAY_SECONDS)) break;
+      if (!mintBurnWindowAdmits(coinConfigs, scanSegments, legacy, day, day + DAY_SECONDS)) break;
       start = day;
     }
     if (start < params.nowDayTs) baselineStarts.push({ stablecoin_id: stablecoinId, chain_id: "", first_hour_ts: start });
   }
 
   return {
+    configs, publication, publicationPolicy: policy,
     hourlyRows,
     hourly24hRows,
     net7dMap: buildGroupedNetFlowMap((batchResults[1].results ?? []) as GroupedNetFlowRow[], trackedPairs),
@@ -375,7 +380,7 @@ export function buildCoinSummaries(
   let scoredMcapUsd = 0;
 
   const seenCoinIds = new Set<string>();
-  for (const config of ACTIVE_MINT_BURN_CONFIGS) {
+  for (const config of data.configs) {
     const id = config.stablecoinId;
     if (seenCoinIds.has(id)) continue;
     seenCoinIds.add(id);
@@ -503,6 +508,6 @@ export function buildCoinSummaries(
   };
 }
 
-export function buildAggregateScope() {
-  return buildMintBurnScope(ACTIVE_MINT_BURN_CONFIGS);
+export function buildAggregateScope(configs: MintBurnContractConfig[]) {
+  return buildMintBurnScope(configs);
 }

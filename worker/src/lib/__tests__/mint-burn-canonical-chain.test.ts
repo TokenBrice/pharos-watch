@@ -42,6 +42,10 @@ describe("isCanonicalMintBurnPair", () => {
     expect(chains.size).toBeGreaterThan(0);
     for (const chain of chains) {
       const endpoints = mintBurnRpcEndpoints(chain, "alchemy-test", chainRpcs);
+      if (chain === "tron") {
+        expect(endpoints).toEqual([]); // Solidified native-reader admission is tested separately.
+        continue;
+      }
       expect(endpoints.length, `${chain} needs admitted log/finality endpoints`).toBeGreaterThan(0);
       expect(endpoints.some(endpoint => !endpoint.finalizedTagUnsupported), `${chain} lacks a finalized-tag authority`).toBe(true);
       for (const endpoint of endpoints) {

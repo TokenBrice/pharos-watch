@@ -30,7 +30,7 @@ vi.mock("@shared/data/stablecoins/coins.worker-runtime.generated.json", async ()
 vi.mock("../lib/mint-burn-contracts", () => ({
   MINT_BURN_CONFIGS: [{
     stablecoinId: "fixture-frozen",
-    chain: { chainId: "ethereum" },
+    chain: { chainId: "ethereum", type: "evm" },
     contractAddress: "0x0000000000000000000000000000000000000001",
   }],
 }));

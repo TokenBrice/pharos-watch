@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCacheIfNewer } from "./db-cache";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { buildCronFreshnessHeaders, buildCronFreshnessMeta, type CronTimestampLookupResult } from "./api-freshness";
 import { jsonResponse, jsonResponseWithHeaders } from "./api-response";
 import { readCachedJsonOr503 } from "./api-cache-read";
@@ -26,9 +27,14 @@ import {
 import { MINT_BURN_FTQ_DEPENDENCY_KEY, type MintBurnCoinCoverage, type MintBurnScanWindow, type MintBurnValuationCompleteness, type MintBurnWatermark } from "@shared/types/mint-burn";
 import { mintBurnScanCoverageAdmits, mintBurnWindowAdmits, buildMintBurnLegacySpans, decodeMintBurnScanCoverage, prepareMintBurnScanCoverage, prepareMintBurnLegacyEvidence, MINT_BURN_LEGACY_CUTOVER, type MintBurnLegacySpan, type MintBurnLegacyRow, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
 import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
-import { type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
+import { MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, readMintBurnValuationTallyRow } from "./mint-burn-hourly-valuation";
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
+import {
+  decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, persistMintBurnAdmissions, persistMintBurnResumptions,
+  prepareMintBurnAdmissions, prepareMintBurnPublicationPolicy, resolveMintBurnPublication,
+  type MintBurnAdmissionRow,
+} from "./mint-burn-publication";
 
 export {
   aggregateFlowCacheKey,
@@ -72,7 +78,7 @@ export function resolveMintBurnWatermark(
   };
 }
 
-/** Select the full-roster frontier before querying buckets; callers re-read debt/proof
+/** Select the admitted-roster frontier before querying buckets; callers re-read debt/proof
  * with their data snapshot, so a concurrent dirty-hour mark can never be admitted.
  */
 export async function readMintBurnWindowContext(
@@ -83,15 +89,63 @@ export async function readMintBurnWindowContext(
   const transitionActive = start < MINT_BURN_LEGACY_CUTOVER;
   const results = await db.batch([
     prepareMintBurnScanCoverage(db, configs, start, end),
+    prepareMintBurnAdmissions(db),
+    prepareMintBurnPublicationPolicy(db),
     ...(transitionActive ? [prepareMintBurnLegacyEvidence(db, configs)] : []),
   ]);
   const segments = decodeMintBurnScanCoverage(results[0] as D1Result<MintBurnScanSegment>);
   const legacy = transitionActive ? buildMintBurnLegacySpans(
-    configs, results[1].results as MintBurnLegacyRow[], segments, expectedBlockTimeSec,
+    configs.filter(isGrandfatheredMintBurnConfig), results[3].results as MintBurnLegacyRow[], segments, expectedBlockTimeSec,
   ) : new Map<string, MintBurnLegacySpan>();
+  const admissions = results[1].results as MintBurnAdmissionRow[];
+  const storedPolicy = (results[2].results as Array<{ disabled_keys: string; paused_keys?: string }>)[0];
+  const policy = storedPolicy?.disabled_keys ?? "[]";
+  const disabledKeys = decodeMintBurnDisabledKeys(policy);
+  const pausedKeys = decodeMintBurnDisabledKeys(storedPolicy?.paused_keys ?? "[]");
+  const pausedPairs = new Set(configs.filter((config) => pausedKeys.has(mintBurnConfigKey(config))
+    && mintBurnPreviouslyAdmitted(config, admissions)).map((config) => `${config.stablecoinId}|${config.chain.chainId}`));
+  const existing = configs.filter((config) => !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys)
+    && !pausedPairs.has(`${config.stablecoinId}|${config.chain.chainId}`)
+    && mintBurnPreviouslyAdmitted(config, admissions));
+  const current = resolveMintBurnWatermark(nowSec, existing, segments, legacy);
+  // A new leg must cover the incumbent window, so admission cannot move its frontier backwards.
+  const scope = resolveMintBurnPublication(configs, admissions, disabledKeys, segments, nowSec,
+    current.unavailableReason == null ? current.timestamp! : end, MINT_BURN_WATERMARK_MAX_AGE_SEC, pausedKeys);
+  if (scope.newAdmissions.length > 0) {
+    // Scan coverage alone cannot stop an unpriced joining leg from nulling an incumbent's nets.
+    const candidateKeys = new Set(scope.newAdmissions.map((row) => row.config_key));
+    const candidates = scope.configs.filter((config) => candidateKeys.has(mintBurnConfigKey(config)));
+    const baseline = scope.newAdmissions[0];
+    const valuation = await db.prepare(`SELECT stablecoin_id, chain_id, ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
+      FROM mint_burn_hourly WHERE (stablecoin_id, chain_id) IN (
+        SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)
+      ) AND hour_ts >= ? AND hour_ts < ? GROUP BY stablecoin_id, chain_id`)
+      .bind(JSON.stringify(candidates.map((config) => [config.stablecoinId, config.chain.chainId])),
+        baseline.baseline_from, baseline.baseline_to)
+      .all<MintBurnValuationTallyRow & { stablecoin_id: string; chain_id: string }>();
+    const incompletePairs = new Set(valuation.results.filter((row) =>
+      summarizeMintBurnValuation(readMintBurnValuationTallyRow(row)).completeness !== "complete")
+      .map((row) => `${row.stablecoin_id}|${row.chain_id}`));
+    const blockedKeys = new Set(candidates.filter((config) => incompletePairs.has(`${config.stablecoinId}|${config.chain.chainId}`))
+      .map(mintBurnConfigKey));
+    scope.configs = scope.configs.filter((config) => !blockedKeys.has(mintBurnConfigKey(config)));
+    scope.newAdmissions = scope.newAdmissions.filter((row) => !blockedKeys.has(row.config_key));
+    for (const leg of scope.publication.legs) {
+      if (!blockedKeys.has(leg.configKey)) continue;
+      leg.status = "pending-admission";
+      leg.reason = "valuation-incomplete";
+      leg.admittedAt = null;
+    }
+  }
+  await persistMintBurnAdmissions(db, scope.newAdmissions);
+  await persistMintBurnResumptions(db, scope.resumedKeys, policy);
   return {
-    watermark: resolveMintBurnWatermark(nowSec, configs, segments, legacy),
+    watermark: resolveMintBurnWatermark(nowSec, scope.configs, segments, legacy),
+    segments,
     legacy,
+    configs: scope.configs,
+    publication: scope.publication,
+    policy,
   };
 }
 
@@ -177,6 +231,7 @@ const MINT_BURN_EXPECTED_BLOCK_TIME_SEC_BY_EVM_CHAIN_ID: Readonly<Record<number,
 const CONSERVATIVE_EVM_BLOCK_TIME_SEC = 1;
 
 function expectedBlockTimeSec(chainId: string): number | null {
+  if (chainId === "tron") return 3;
   const evmChainId = CHAIN_META[chainId]?.evmChainId;
   if (evmChainId == null) return null;
   return MINT_BURN_EXPECTED_BLOCK_TIME_SEC_BY_EVM_CHAIN_ID[evmChainId]
@@ -497,9 +552,25 @@ export async function finalizeMintBurnFlowResponse(
   syncStartSec: number,
   body: Record<string, unknown>,
   freshness: CronTimestampLookupResult,
+  publicationPolicy?: string,
 ): Promise<Response> {
   const { responseBody, response } = buildMintBurnFlowResponse(body, freshness);
-  await setCacheIfNewer(db, cacheKey, JSON.stringify(responseBody), syncStartSec);
+  if (publicationPolicy === undefined) {
+    await setCacheIfNewer(db, cacheKey, JSON.stringify(responseBody), syncStartSec);
+  } else {
+    // A kill switch can race a slow producer. Its old scope must never restore the purged cache.
+    const written = await runWithOverloadRetry(() => db.prepare(`INSERT INTO cache (key, value, updated_at)
+      SELECT ?, ?, ? WHERE COALESCE((SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1), '[]') = ?
+      ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
+      WHERE cache.updated_at <= excluded.updated_at`)
+      .bind(cacheKey, JSON.stringify(responseBody), syncStartSec, publicationPolicy).run());
+    if (written.meta.changes === 0) {
+      const current = await prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>();
+      if ((current?.disabled_keys ?? "[]") !== publicationPolicy) {
+        return jsonResponse({ error: "Mint/burn publication scope changed; retry", reason: "mint-burn-publication-scope-changed" }, { status: 503 });
+      }
+    }
+  }
   return response;
 }
 

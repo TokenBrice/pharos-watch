@@ -1,6 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { completeMintBurnRun, type CompleteMintBurnRunInput } from "../mint-burn/run-completion";
-import type { MintBurnConfigSummary } from "../mint-burn/sync-config";
+import { createMintBurnConfigSummary, type MintBurnConfigSummary } from "../mint-burn/sync-config";
+import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
+import { mintBurnPublicationMetadata } from "../mint-burn/publication-metadata";
+import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
+import type { MintBurnPublication } from "@shared/types/mint-burn";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { setMintBurnRunState } from "../mint-burn/run-state";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
 import { sweepRecentRoundtrips } from "../../lib/mint-burn-pipeline/roundtrip-sweep";
@@ -93,6 +98,51 @@ describe("completeMintBurnRun", () => {
     vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
     vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
     vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
+  });
+
+  it.each([0, 3, 200])("persists provider and config evidence with a 200-leg roster (%s pending)", async (pendingCount) => {
+    const input = buildRunInput();
+    const configs = Array.from({ length: 200 }, (_, index) => makeMintBurnConfig({
+      asset: { stablecoinId: `synthetic-${index}`, contractAddress: `0x${index.toString(16).padStart(40, "0")}` },
+    }));
+    input.configs = input.enabledConfigs = configs;
+    input.contractsTotal = configs.length;
+    input.phase.configBreakdown = configs.map((config) => createMintBurnConfigSummary(config, mintBurnConfigKey(config), "critical"));
+    const publication: MintBurnPublication = {
+      evaluatedAt: 1_793_232_000, requiredBaselineSec: 90 * 86400, freshnessBudgetSec: 3600,
+      legs: configs.map((config, index) => ({
+        configKey: mintBurnConfigKey(config), configFingerprint: "fingerprint".repeat(15),
+        stablecoinId: config.stablecoinId, chainId: config.chain.chainId,
+        status: index < pendingCount ? "pending-admission" : "admitted",
+        reason: index < pendingCount ? "frontier-stale" : "legacy-grandfathered", admittedAt: null,
+        baselineFrom: 1_785_456_000, baselineTo: 1_793_000_000,
+        coveredSeconds: 7_544_000, frontierAgeSec: 232_000,
+      })),
+    };
+    const completion = await completeMintBurnRun(input);
+    const providerOutcomes = [{ provider: "alchemy", circuitSource: "alchemy", successes: 12, failures: 0 }];
+    const metadata = {
+      ...completion.metadata, publication: mintBurnPublicationMetadata(publication), providerOutcomes,
+      schedulerMetadata: { detail: "x".repeat(4 * 1024) },
+    };
+    const persisted = compactCronMetadataForPersistence(JSON.stringify(metadata), undefined, "sync-mint-burn");
+    expect(persisted.compacted).toBe(false);
+    expect(persisted.persistedBytes).toBeLessThan(32 * 1024);
+    const parsed = JSON.parse(persisted.metadata!);
+    expect(parsed.providerOutcomes).toEqual(providerOutcomes);
+    expect(parsed.configBreakdownSummary).toEqual(completion.metadata.configBreakdownSummary);
+    expect(parsed.configSamples).toEqual(completion.metadata.configSamples);
+    expect(parsed.finality).toEqual(completion.metadata.finality);
+    expect(parsed.publication).toMatchObject({
+      legCount: 200, admittedCount: 200 - pendingCount, pendingAdmissionCount: pendingCount,
+      nonAdmittedLegCount: pendingCount,
+    });
+    expect(parsed.publication.legs).toHaveLength(parsed.publication.legsShown);
+    expect(parsed.publication.legsShown + parsed.publication.legsOmitted).toBe(pendingCount);
+    expect(parsed.publication.legs.length).toBeLessThanOrEqual(200);
+    expect(parsed.publication.legs.every((leg: { status: string; reason: string; coveredSeconds: number }) =>
+      leg.status === "pending-admission" && leg.reason === "frontier-stale" && leg.coveredSeconds === 7_544_000)).toBe(true);
+    expect(parsed.publication.legsTruncated).toBe(pendingCount === 200);
   });
 
   it.each(["extended", "critical"] as const)("immediately degrades %s for one verified conservation failure", async (lane) => {
@@ -329,6 +379,53 @@ describe("completeMintBurnRun", () => {
     input.phase.apiErrors = 0;
     expect((await completeMintBurnRun(input)).status).toBe("ok");
     expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, 0, null);
+  });
+
+  it.each(["critical", "extended"] as const)("keeps pending findings visible without escalating %s publication health", async (lane) => {
+    const input = buildRunInput({ apiErrors: 3 });
+    const admitted = makeMintBurnConfig({ asset: { startBlock: 1, tier: "critical" } });
+    const pending = makeMintBurnConfig({ chain: { chainId: "synthetic-pending" },
+      asset: { stablecoinId: "synthetic-coin", startBlock: 1, tier: "critical" } });
+    const admittedKey = mintBurnConfigKey(admitted);
+    const pendingKey = mintBurnConfigKey(pending);
+    input.lane = lane;
+    input.configs = [admitted, pending];
+    input.enabledConfigs = input.configs;
+    input.pendingAdmissionKeys = new Set([pendingKey]);
+    input.criticalContractsEnabled = 1;
+    input.phase.criticalContractsSatisfied = 1;
+    input.phase.admittedApiErrors = 0;
+    input.phase.rowsInserted = 7;
+    input.phase.configBreakdown = [
+      { ...createMintBurnConfigSummary(admitted, admittedKey, "critical"), skippedReason: "up-to-date" },
+      { ...createMintBurnConfigSummary(pending, pendingKey, "critical"), attempted: true, rowsInserted: 7,
+        errors: 3, advanceReason: "scan-coverage-unproven", conservationFailure: true, conservationStatus: "mismatch" },
+    ];
+    input.runState.degradedStreak = 2;
+
+    const result = await completeMintBurnRun(input);
+    expect(result.status).toBe("ok");
+    expect(result.metadata).toMatchObject({
+      apiErrors: 3, admittedApiErrors: 0,
+      conservationFailures: 1, admittedConservationFailures: 0,
+      scanCoverageUnproven: 1, admittedScanCoverageUnproven: 0,
+      finality: { unavailableChains: ["synthetic-pending"] }, admittedFinalityUnavailableChains: [],
+      degradedSignal: false, degradedStreak: 0, outputPublishedAt: null,
+    });
+    expect(result.metadata.configSamples).toEqual(expect.arrayContaining([
+      expect.objectContaining({ key: pendingKey, admissionStatus: "pending-admission", errors: 3 }),
+    ]));
+    expect(setMintBurnRunState).toHaveBeenLastCalledWith(input.db, input.jobName, 0, null);
+
+    input.pendingAdmissionKeys = new Set();
+    input.phase.admittedApiErrors = 3;
+    const admittedFailure = await completeMintBurnRun(input);
+    expect(admittedFailure.status).toBe(lane === "critical" ? "error" : "degraded");
+    expect(admittedFailure.metadata).toMatchObject({
+      admittedApiErrors: 3, admittedConservationFailures: 1, admittedScanCoverageUnproven: 1,
+      admittedFinalityUnavailableChains: ["synthetic-pending"], degradedSignal: true, degradedStreak: 3,
+      reason: "mint-burn-conservation-failure",
+    });
   });
 
   it("keeps extended failures degraded at the critical error threshold", async () => {

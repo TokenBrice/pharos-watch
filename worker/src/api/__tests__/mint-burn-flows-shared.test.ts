@@ -399,7 +399,8 @@ describe("buildBaselineMap", () => {
 describe("buildCoinCoverageMap", () => {
   // Pick a single-config Ethereum coin for isolation in each test.
   function pickSingleConfigCoin() {
-    const config = MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === ETHEREUM_CHAIN_ID);
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === ETHEREUM_CHAIN_ID
+      && MINT_BURN_CONFIGS.filter((candidate) => candidate.stablecoinId === entry.stablecoinId).length === 1);
     expect(config).toBeDefined();
     return config!;
   }
@@ -506,6 +507,27 @@ describe("buildCoinCoverageMap", () => {
       isPartial: true,
       lagBlocks: 301,
     });
+  });
+
+  it.each([
+    { lagBlocks: 1_200, status: "full" },
+    { lagBlocks: 1_201, status: "lagging" },
+  ])("uses Tron's three-second blocks for a $lagBlocks-block coverage lag", ({ lagBlocks, status }) => {
+    const config = MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === "tron");
+    expect(config).toBeDefined();
+    const nowSec = 200 * DAY_SECONDS;
+    const head = config!.startBlock + 1_000_000;
+    const segments = makeMintBurnScanSegments(nowSec, 150, [config!]);
+    const coverage = buildCoinCoverageMap(
+      nowSec,
+      new Map(segments.map((segment) => [segment.config_key, [segment]])),
+      new Map([[`tron-${config!.contractAddress}`, head - lagBlocks]]),
+      new Map([["tron", head]]),
+      null,
+      [config!],
+    );
+
+    expect(coverage.get(config!.stablecoinId)).toMatchObject({ status, lagBlocks, has90dWindow: true });
   });
 
   it("returns unknown for established coverage when chain-head metadata is missing", () => {

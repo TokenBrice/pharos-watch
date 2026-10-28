@@ -334,6 +334,8 @@ export type YieldHealthSummary = z.output<typeof YieldHealthSummarySchema>;
 const ConservationUnsignedRawSchema = z.string().max(100).regex(/^(0|[1-9][0-9]*)$/);
 const ConservationSignedRawSchema = z.string().max(100).regex(/^(0|-?[1-9][0-9]*)$/);
 const ConservationBlockSchema = z.number().int().nonnegative().max(Number.MAX_SAFE_INTEGER);
+const ConservationEvmAddressPattern = /^0x[0-9a-fA-F]{40}$/;
+const ConservationTronAddressPattern = /^T[1-9A-HJ-NP-Za-km-z]{33}$/;
 export const MintBurnConservationRecordSchema = z.object({
   version: z.literal(1),
   key: z.string(),
@@ -341,7 +343,8 @@ export const MintBurnConservationRecordSchema = z.object({
   configFingerprint: z.string().optional(),
   stablecoinId: z.string(),
   chainId: z.string(),
-  address: z.string().regex(/^0x[0-9a-fA-F]{40}$/),
+  // Wire shape only; checksum and reviewed identity admission remain in shared/lib and the Worker.
+  address: z.union([z.string().regex(ConservationEvmAddressPattern), z.string().regex(ConservationTronAddressPattern)]),
   decimals: z.number().int().min(0).max(255),
   checkedAt: ConservationBlockSchema,
   status: z.enum(["ok", "mismatch", "unavailable", "unsupported"]),
@@ -358,6 +361,8 @@ export const MintBurnConservationRecordSchema = z.object({
   residualRaw: ConservationSignedRawSchema.optional(),
   logCount: ConservationBlockSchema.optional(),
   units: z.string().max(32).optional(),
+}).refine((record) => (record.chainId === "tron" ? ConservationTronAddressPattern : ConservationEvmAddressPattern).test(record.address), {
+  path: ["address"], message: "Conservation address format must match its chain",
 });
 export type MintBurnConservationRecord = z.output<typeof MintBurnConservationRecordSchema>;
 
