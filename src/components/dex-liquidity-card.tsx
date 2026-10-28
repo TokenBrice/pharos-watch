@@ -273,11 +273,12 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
         <ModuleDisclosure
           label="Full market breakdown"
           deferredChildren={
-            /* recharts + the pools table only mount once the fold first
-               opens — closed, they were paying full render cost unseen. */
+            /* Only the recharts TVL history chart waits for the first open —
+               closed, it was paying full render cost unseen. The bounded pool
+               table stays with the ordinary children so its facts survive a
+               closed fold. */
             <div className="mt-4 space-y-4">
               <TvlTrendChart stablecoinId={stablecoinId} />
-              {liq.topPools.length > 0 && <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />}
             </div>
           }
         >
@@ -365,6 +366,10 @@ export function DexLiquidityCard({ stablecoinId }: { stablecoinId: string }) {
           <ProtocolBar protocolTvl={liq.protocolTvl} />
 
           <ChainBar chainTvl={liq.chainTvl} />
+
+          {liq.topPools.length > 0 && (
+            <TopPoolsTable pools={liq.topPools} totalPoolCount={liq.poolCount} />
+          )}
         </div>
         </ModuleDisclosure>
 
