@@ -1577,6 +1577,7 @@
         "public/logos/**",
         "public/chains/**",
         "public/datasets/stablecoin-cemetery.*",
+        "public/llms.txt",
         "public/og-cemetery.png",
         "shared/lib/public-docs.ts",
         "shared/lib/og-route-cards.ts",
@@ -1605,6 +1606,15 @@
         "docs/upcoming-page.md"
       ],
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
+      "reading": [
+        {
+          "sources": ["public/llms.txt"],
+          "local": [
+            { "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" },
+            { "path": "docs/stablecoin-detail-page.md", "anchor": "route-shape" }
+          ]
+        }
+      ],
       "background": [
         {"path": "docs/design-language.md", "anchor": "context"},
         {"path": "docs/architecture.md", "anchor": "adr-42"},

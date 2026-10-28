@@ -191,6 +191,17 @@ describe("doc-ownership registry integrity", () => {
     expect(pricing!.required).toContainEqual({ path: "docs/architecture.md", anchor: "adr-3" });
   });
 
+  it("routes the generated llms index to bounded frontend discovery sections", () => {
+    const file = "public/llms.txt";
+    const frontend = mappings.find((mapping) => mapping.id === "frontend-routes");
+    expect(frontend && matchesAny(file, frontend.sources)).toBe(true);
+    const selector = frontend!.reading?.find((entry) => matchesAny(file, entry.sources));
+    expect(selector?.local).toEqual([
+      { path: "docs/architecture.md", anchor: "frontend-runtime-and-seo-surface" },
+      { path: "docs/stablecoin-detail-page.md", anchor: "route-shape" },
+    ]);
+  });
+
   it("routes the public licence text and About principles copy to the About contract", () => {
     const about = mappings.find((mapping) => mapping.id === "about-page");
     expect(about).toBeDefined();

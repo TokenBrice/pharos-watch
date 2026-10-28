@@ -120,6 +120,7 @@ export function parseDiagnosticReason(text) {
   }
 }
 
+/** @param {Record<string, string | undefined>} [env] */
 export function captureReleaseIdentity(env = process.env) {
   const commit = env.GITHUB_SHA?.trim() || null;
   const runId = env.GITHUB_RUN_ID?.trim() || null;

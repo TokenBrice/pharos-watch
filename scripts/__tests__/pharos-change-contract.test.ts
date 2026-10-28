@@ -64,14 +64,14 @@ function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, meth
 // reading shrinks; never regenerate them automatically or trade away obligations.
 // Manually ratcheted after moving implementation inventories/details into linked appendices.
 const ROUTE_FIXTURES = [
-  ["src/components/stablecoin-table.tsx", 20_327, 20_327],
+  ["src/components/stablecoin-table.tsx", 20_684, 20_684],
   ["src/app/yield/page.tsx", 49_506, 49_506],
   ["worker/src/cron/dex-liquidity/orchestrator.ts", 42_303, 42_303],
-  ["worker/src/api/yield-history.ts", 70_417, 70_417],
+  ["worker/src/api/yield-history.ts", 71_063, 71_063],
   ["shared/lib/safety-score-v9/evaluate-asset.ts", 59_880, 59_880],
-  ["shared/lib/classification.ts", 45_995, 45_995],
+  ["shared/lib/classification.ts", 46_444, 46_444],
   ["functions/safety-scores/map.json.ts", 24_468, 29_549],
-  ["shared/data/stablecoins/coins/usdt-tether.json", 45_995, 45_995],
+  ["shared/data/stablecoins/coins/usdt-tether.json", 46_444, 46_444],
   ["worker/src/telegram/webhook/telegram-webhook.ts", 46_593, 46_593],
   ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 26_618, 26_618],
 ] as const;
@@ -449,6 +449,18 @@ describe("reading selectors and context modes", () => {
     expect(docKeys(contract)).toContain("docs/scripts.md#build-and-generated-artifacts");
     expect(DECLARED_TEST_OWNERSHIP.find((entry) => entry.sources.includes(file))?.tests)
       .toContain("scripts/__tests__/inline-homepage-critical-css.test.ts");
+  });
+
+  it("routes the generated llms index to bounded frontend discovery docs", () => {
+    const file = "public/llms.txt";
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["frontend-routes"]);
+    expect(docKeys(contract)).toEqual([
+      "docs/architecture.md#frontend-runtime-and-seo-surface",
+      "docs/stablecoin-detail-page.md#route-shape",
+    ]);
+    expect(buildRouteContext(contract).status).toBe("within-budget");
   });
 
   it("routes the DexScreener parser to DEX discovery docs and its parser/census tests", () => {
