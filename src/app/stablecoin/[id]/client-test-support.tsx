@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta, StablecoinObituary } from "@shared/types";
+import { getMechanismArchetypeCtaNoun, getMechanismExplainerPath } from "@shared/lib/classification";
+import type { MechanismArchetype, StablecoinMeta, StablecoinObituary } from "@shared/types";
 import type { StablecoinSafetyScoreV9CardProps } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 
 export async function createNextLinkMock() {
@@ -56,8 +57,21 @@ export const createDetailLazySectionsMock = async () => {
   return {
     ...placeholders,
     // Wiring probe: the Mechanism card owns `#mechanism-review` when it receives a review.
-    PegStabilityCard: ({ mechanismReview }: { mechanismReview?: unknown }) => (
-      <div data-testid="dynamic-detail-section">{mechanismReview ? <details id="mechanism-review" /> : null}</div>
+    PegStabilityCard: ({
+      mechanismReview,
+      resolvedMechanismArchetype,
+    }: {
+      mechanismReview?: unknown;
+      resolvedMechanismArchetype?: MechanismArchetype | null;
+    }) => (
+      <div data-testid="dynamic-detail-section">
+        {mechanismReview ? <details id="mechanism-review" /> : null}
+        {resolvedMechanismArchetype ? (
+          <a href={getMechanismExplainerPath(resolvedMechanismArchetype)}>
+            Learn how {getMechanismArchetypeCtaNoun(resolvedMechanismArchetype)} stablecoins work
+          </a>
+        ) : null}
+      </div>
     ),
     ReservesSection: ({
       reserves,

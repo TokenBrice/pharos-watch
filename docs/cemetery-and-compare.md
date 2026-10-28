@@ -153,7 +153,7 @@ Peak market cap is never presented as a loss: the section copy states that it me
 
 ### Route shell and SEO
 
-`/compare/` is the indexable live tool plus complete server-rendered pair directory/FAQ. Registered `/compare/<left-id>-vs-<right-id>/` briefs generate static params/metadata from `STATIC_COMPARISON_PAGES` and reject unknown slugs. Pair actions do not promise saved watchlists.
+`/compare/` is the indexable live tool plus complete server-rendered pair directory/FAQ. Registered `/compare/<left-id>-vs-<right-id>/` briefs generate static params/metadata from `STATIC_COMPARISON_PAGES` and reject unknown slugs. Pair actions do not promise saved watchlists. Profile actions and research links name the full recorded entity and ticker (`Open Tether (USDT) profile`, `Tether (USDT) profile`) so the destination reads as a profile, not a generic detail page.
 
 Editorial briefs link issuer sources and keep visible short answers equal to FAQ answers. Sources-checked dates are source verification, not human review, independent audits or live reserve freshness. Enriched briefs lead without disturbing relative order within enriched/fallback groups.
 

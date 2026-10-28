@@ -441,3 +441,32 @@ describe("same-ticker disambiguation", () => {
     expect(container.innerHTML).toBe("");
   });
 });
+
+describe("variant relationship labels", () => {
+  it("names the parent and sibling entities in their existing links", async () => {
+    const { TRACKED_META_BY_ID } = await import("@shared/lib/stablecoins/registry");
+
+    // USN and its savings wrapper stay distinct records: the parent link names
+    // the full entity and the block adds no duplicate sibling entry for it.
+    const usnSavings = TRACKED_META_BY_ID.get("susn-noon")!;
+    const usn = render(<StablecoinDetailSeoContent coin={usnSavings} />);
+    expect(screen.getAllByRole("link", { name: "View Noon USN (USN) parent asset" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "View Noon USN (USN) parent asset" }).textContent).toBe("Noon USN (USN)");
+    expect(usn.container.querySelectorAll('a[href="/stablecoin/usn-noon/"]')).toHaveLength(1);
+    usn.unmount();
+
+    // A USDS variant lists the other USDS wrappers by full recorded name.
+    const usdsVariant = TRACKED_META_BY_ID.get("stusds-sky")!;
+    const usds = render(<StablecoinDetailSeoContent coin={usdsVariant} />);
+    expect(screen.getByRole("link", { name: "View Sky Dollar (USDS) parent asset" }).textContent).toBe("Sky Dollar (USDS)");
+    expect(screen.getByRole("link", { name: "View related Sky Savings USDS (sUSDS) variant" }).textContent).toBe(
+      "Sky Savings USDS (sUSDS)",
+    );
+    expect(screen.getByRole("link", { name: "View related sky.money USDS Flagship (skyMoneyUsdsFlagship) variant" }).textContent).toBe(
+      "sky.money USDS Flagship (skyMoneyUsdsFlagship)",
+    );
+    const siblingHrefs = screen.getAllByRole("link", { name: /variant$/ }).map((link) => link.getAttribute("href"));
+    expect(new Set(siblingHrefs).size).toBe(siblingHrefs.length);
+    usds.unmount();
+  });
+});

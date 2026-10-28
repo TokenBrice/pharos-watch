@@ -85,6 +85,31 @@ describe("ExploreNextSection", () => {
     expect(screen.queryByRole("link", { name: /watchlist.*preset/i })).toBeNull();
   });
 
+  it("names the peer category with its canonical peg label and hub, without the generic action", () => {
+    for (const { peg, slug, label } of [
+      { peg: "GBP" as const, slug: "gbp", label: "British Pound" },
+      { peg: "SILVER" as const, slug: "silver", label: "Silver" },
+    ]) {
+      const pegCoin = { ...coin, flags: { ...coin.flags, pegCurrency: peg } };
+      const { unmount } = render(
+        <ExploreNextSection
+          coin={pegCoin}
+          related={CLIENT_ACTIVE_STABLECOINS.slice(0, 1)}
+          staticComparisonPages={[]}
+          logos={{}}
+        />,
+      );
+      const actions = screen.getAllByRole("link", { name: `All ${label} stablecoins` });
+      expect(actions).toHaveLength(2);
+      for (const action of actions) {
+        expect(action.getAttribute("href")).toBe(`/stablecoins/${slug}/`);
+        expect(action.getAttribute("data-prefetch")).toBe("disabled");
+      }
+      expect(screen.queryByRole("link", { name: "See all peers" })).toBeNull();
+      unmount();
+    }
+  });
+
   it("links a static comparison tile to the crawlable brief and omits the overflow line under the cap", () => {
     render(
       <ExploreNextSection
@@ -154,6 +179,7 @@ describe("Explore Next peer ranking", () => {
     pegCurrency: StablecoinMeta["flags"]["pegCurrency"],
     mechanismArchetype: StablecoinMeta["mechanismArchetype"],
     flags: Partial<StablecoinMeta["flags"]> = {},
+    status: StablecoinClientListMeta["status"] = "active",
   ): StablecoinClientListMeta {
     return {
       ...CLIENT_ACTIVE_STABLECOINS[0],
@@ -162,18 +188,86 @@ describe("Explore Next peer ranking", () => {
       symbol: id,
       variantOf: undefined,
       mechanismArchetype,
+      status,
       flags: { ...coin.flags, pegCurrency, ...flags },
     };
   }
 
-  it("fills remaining slots with the existing candidates when currency matches are scarce", () => {
+  it("keeps the first five ranked peers and fills the sixth from its relevance tier", () => {
     const candidates = [
       ...Array.from({ length: 6 }, (_, index) => peer(`usd-vault-${index}`, "USD", "protocol-position")),
       peer("chf-fiat", "CHF", "fiat-cash", { governance: "centralized", backing: "rwa-backed" }),
     ];
-    expect(getRelatedStablecoins(current, { candidates }).map((entry) => entry.id)).toEqual([
-      "chf-fiat", "usd-vault-0", "usd-vault-1", "usd-vault-2", "usd-vault-3", "usd-vault-4",
+    const ids = getRelatedStablecoins(current, { candidates }).map((entry) => entry.id);
+
+    expect(ids.slice(0, 5)).toEqual([
+      "chf-fiat", "usd-vault-0", "usd-vault-1", "usd-vault-2", "usd-vault-3",
     ]);
+    expect(ids).toHaveLength(6);
+    expect(new Set(ids).size).toBe(6);
+    // The treated slot stays inside the original sixth-place tuple (all six
+    // USD/CDP vaults tie), so it cannot fall back to a weaker peer.
+    expect(["usd-vault-4", "usd-vault-5"]).toContain(ids[5]);
     expect(getRelatedStablecoins(current, { candidates: candidates.slice(0, 6) })).toHaveLength(6);
+  });
+
+  it("leaves the five leading peers in place and never promotes a weaker tier", () => {
+    const strong = Array.from({ length: 6 }, (_, index) => peer(`strong-${index}`, "CHF", "cdp"));
+    const weak = [
+      ...Array.from({ length: 5 }, (_, index) => peer(`weak-${index}`, "USD", "fiat-cash")),
+      peer("prelaunch-zzz", "USD", "fiat-cash", { governance: "centralized" }),
+    ];
+    const ids = getRelatedStablecoins(current, { candidates: [...strong, ...weak] }).map((entry) => entry.id);
+
+    expect(ids).toHaveLength(6);
+    expect(ids.every((id) => id.startsWith("strong-"))).toBe(true);
+    // The weaker record has a lower hash; tuple filtering still excludes it.
+    expect(ids).not.toContain("prelaunch-zzz");
+  });
+
+  it("keeps the sixth slot deterministic and free of the current coin or duplicates", () => {
+    const candidates = [
+      peer("test-cdp-dollar", "CHF", "cdp"),
+      ...Array.from({ length: 8 }, (_, index) => peer(`usd-vault-${index}`, "USD", "protocol-position")),
+    ];
+    const runs = Array.from({ length: 5 }, () =>
+      getRelatedStablecoins(current, { candidates }).map((entry) => entry.id));
+    for (const ids of runs) expect(ids).toEqual(runs[0]);
+    expect(runs[0]).not.toContain("test-cdp-dollar");
+    expect(new Set(runs[0]).size).toBe(runs[0].length);
+  });
+
+  it("keeps caller-supplied pre-launch candidates eligible for the treated slot", () => {
+    const candidates = [
+      ...Array.from({ length: 6 }, (_, index) => peer(`peer-${index}`, "USD", "protocol-position")),
+      peer("prelaunch-zzz", "USD", "protocol-position", {}, "pre-launch"),
+    ];
+    const ids = getRelatedStablecoins(current, { candidates }).map((entry) => entry.id);
+
+    expect(ids.slice(0, 5)).toEqual(["peer-0", "peer-1", "peer-2", "peer-3", "peer-4"]);
+    // peer-5 held sixth place in registry order; the tie-break may promote the
+    // caller-supplied pre-launch record because its relevance tuple matches.
+    expect(ids[5]).toBe("prelaunch-zzz");
+  });
+
+  it("returns the ordinary bounded result for zero through five candidates", () => {
+    const candidates = Array.from({ length: 5 }, (_, index) => peer(`usd-vault-${index}`, "USD", "protocol-position"));
+    expect(getRelatedStablecoins(current, { candidates: [] })).toEqual([]);
+    for (let count = 1; count <= 5; count += 1) {
+      expect(getRelatedStablecoins(current, { candidates: candidates.slice(0, count) }).map((entry) => entry.id)).toEqual(
+        candidates.slice(0, count).map((entry) => entry.id),
+      );
+    }
+  });
+
+  it("keeps non-six limits in today's registry order", () => {
+    const candidates = Array.from({ length: 8 }, (_, index) => peer(`usd-vault-${index}`, "USD", "protocol-position"));
+    expect(getRelatedStablecoins(current, { candidates, limit: 4 }).map((entry) => entry.id)).toEqual([
+      "usd-vault-0", "usd-vault-1", "usd-vault-2", "usd-vault-3",
+    ]);
+    expect(getRelatedStablecoins(current, { candidates, limit: 7 }).map((entry) => entry.id)).toEqual([
+      "usd-vault-0", "usd-vault-1", "usd-vault-2", "usd-vault-3", "usd-vault-4", "usd-vault-5", "usd-vault-6",
+    ]);
+    expect(getRelatedStablecoins(current, { candidates, limit: 10 })).toHaveLength(8);
   });
 });

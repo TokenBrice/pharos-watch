@@ -177,8 +177,8 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
               className="pharos-focus-ring mt-4 inline-flex text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
             >
               {/* Single span: inline-flex containers drop the whitespace between
-                  SSR text nodes, collapsing "Open USDT detail page". */}
-              <span>Open {coin.symbol} detail page &rarr;</span>
+                  SSR text nodes, collapsing "Open Tether (USDT) profile". */}
+              <span>Open {coin.name} ({coin.symbol}) profile &rarr;</span>
             </Link>
           </article>
         ))}

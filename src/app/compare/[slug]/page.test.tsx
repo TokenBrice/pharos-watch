@@ -31,6 +31,23 @@ describe("ComparePairPage", () => {
     expect(section!.textContent).toContain("USDT vs USDe");
   });
 
+  it("names each coin and ticker in the profile action without splitting the single span", async () => {
+    const document = await renderPair("usdt-tether-vs-usdc-circle");
+    const profileLinks = [...document.querySelectorAll('a[href^="/stablecoin/"]')].filter((link) =>
+      link.textContent?.startsWith("Open "));
+    expect(profileLinks.map((link) => link.textContent)).toEqual([
+      "Open Tether (USDT) profile →",
+      "Open USD Coin (USDC) profile →",
+    ]);
+    expect(profileLinks.map((link) => link.getAttribute("href"))).toEqual([
+      expect.stringMatching(/^\/stablecoin\/usdt-tether\/?$/),
+      expect.stringMatching(/^\/stablecoin\/usdc-circle\/?$/),
+    ]);
+    const research = [...document.querySelectorAll('a[href^="/stablecoin/usdt-tether"]')]
+      .filter((link) => link.textContent === "Tether (USDT) profile");
+    expect(research).toHaveLength(1);
+  });
+
   it.each([
     "jpyc-jpyc-vs-jpysc-sbi-startale",
     "usdy-ondo-finance-vs-usyc-hashnote",

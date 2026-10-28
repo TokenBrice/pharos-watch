@@ -192,7 +192,7 @@ function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
             className={LINK_PILL_CLASS}
             aria-label={`View related ${sibling.name} (${sibling.symbol}) variant`}
           >
-            {sibling.symbol}
+            {sibling.name} ({sibling.symbol})
           </Link>
         ))}
       </div>

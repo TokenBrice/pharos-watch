@@ -339,11 +339,11 @@ export function buildComparisonResearchLinks(page: StaticComparisonPage) {
   return [
     {
       href: buildStablecoinUrl(page.left.id),
-      label: `${page.left.name} (${page.left.symbol}) detail page`,
+      label: `${page.left.name} (${page.left.symbol}) profile`,
     },
     {
       href: buildStablecoinUrl(page.right.id),
-      label: `${page.right.name} (${page.right.symbol}) detail page`,
+      label: `${page.right.name} (${page.right.symbol}) profile`,
     },
     {
       href: buildComparePrefillUrl([page.left.id, page.right.id]),

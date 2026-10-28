@@ -1,9 +1,15 @@
 // @vitest-environment jsdom
 
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import type { StablecoinClientMeta } from "@shared/lib/stablecoins/client-registry";
 import type { V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
-import { SafetyGradeHero } from "../hero-card-identity";
+import { HeroVariantChip, SafetyGradeHero } from "../hero-card-identity";
+
+vi.mock("next/link", async () => {
+  const { createNextLinkMock } = await import("@/test-utils/frontend");
+  return createNextLinkMock();
+});
 
 describe("SafetyGradeHero read states", () => {
   it("shows a neutral placeholder, not a dash, while the first report-card read is in flight", () => {
@@ -47,5 +53,24 @@ describe("SafetyGradeHero read states", () => {
       expect(track.className).toBe(trackClass);
       expect(track.textContent).toContain(grade ?? "Pipeline gap");
     }
+  });
+});
+
+describe("HeroVariantChip", () => {
+  it("names the wrapped parent and lets the chip wrap instead of clipping it", () => {
+    const parent = { id: "usds-sky", name: "Sky Dollar", symbol: "USDS" } as StablecoinClientMeta;
+    const { container } = render(
+      <HeroVariantChip
+        variantParent={parent}
+        variantChipClass="border-frost-blue/30 bg-frost-blue/10 text-frost-blue"
+        mobile
+      />,
+    );
+    const link = container.querySelector("a")!;
+    expect(link.getAttribute("href")).toBe("/stablecoin/usds-sky/");
+    expect(link.getAttribute("aria-label")).toBe("Variant of Sky Dollar — wraps USDS");
+    expect(link.textContent).toContain("Wraps Sky Dollar (USDS)");
+    expect(link.className).toContain("min-w-0");
+    expect(link.querySelector("span.min-w-0")?.textContent).toBe("Wraps Sky Dollar (USDS)");
   });
 });

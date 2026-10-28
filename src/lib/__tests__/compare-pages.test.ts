@@ -22,6 +22,7 @@ const {
   STATIC_COMPARISON_PAGES,
   buildComparisonAtAGlanceRows,
   buildComparisonFaqItems,
+  buildComparisonResearchLinks,
   buildComparisonSnippetAnswer,
   buildComparisonTitle,
 } = await import("@/lib/compare-pages");
@@ -53,6 +54,13 @@ describe("static comparison metadata", () => {
     expect(description).toMatch(/^USDT vs USDe comparison:/);
     expect(description).not.toContain("N/A");
     expect(description).not.toContain("/100");
+  });
+
+  it("names each coin and ticker as a profile destination in the research list", () => {
+    expect(buildComparisonResearchLinks(getPage("usdt-tether-vs-usdc-circle")).slice(0, 2)).toEqual([
+      { href: "/stablecoin/usdt-tether/", label: "Tether (USDT) profile" },
+      { href: "/stablecoin/usdc-circle/", label: "USD Coin (USDC) profile" },
+    ]);
   });
 });
 

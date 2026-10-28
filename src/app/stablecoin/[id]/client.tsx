@@ -4,9 +4,10 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { IntentLink } from "@/components/intent-link";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,17 +34,26 @@ import {
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { hasDataBootstrap } from "@/lib/data-bootstrap";
 import { DetailEvidenceProvider } from "@/lib/detail-evidence";
+import {
+  getMechanismArchetypeCtaNoun,
+  getMechanismExplainerPath,
+  resolveMechanismArchetype,
+} from "@shared/lib/classification";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import type { MechanismArchetype } from "@shared/types";
 import { DetailContent } from "./detail-content";
 
 function DetailLoadingShell({
   coin,
   logoSrc,
   heading,
+  mechanismArchetype,
   exploreNextContent,
 }: {
   coin: StablecoinStaticMeta;
   logoSrc?: string;
   heading?: string;
+  mechanismArchetype?: MechanismArchetype | null;
   exploreNextContent: ReactNode;
 }) {
   return (
@@ -74,6 +84,17 @@ function DetailLoadingShell({
         <Skeleton className="h-[200px] rounded-xl" />
       </div>
       <Skeleton className="mt-12 h-[420px] rounded-xl" />
+      {mechanismArchetype ? (
+        <div className="mt-8">
+          <IntentLink
+            href={getMechanismExplainerPath(mechanismArchetype)}
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs font-medium text-brand-accent-text underline-offset-4 hover:underline sm:min-h-0 sm:py-0"
+          >
+            Learn how {getMechanismArchetypeCtaNoun(mechanismArchetype)} stablecoins work
+            <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          </IntentLink>
+        </div>
+      ) : null}
       {/* Explore's links need no live data, so the loading state keeps them. */}
       {exploreNextContent}
     </div>
@@ -201,8 +222,15 @@ function StablecoinDetailClientContent({
   });
 
   if (viewModel.status === "loading") {
+    const mechanismArchetype = resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID);
     return (
-      <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} heading={heading} exploreNextContent={exploreNextContent} />
+      <DetailLoadingShell
+        coin={staticCoin}
+        logoSrc={logoSrc}
+        heading={heading}
+        mechanismArchetype={mechanismArchetype}
+        exploreNextContent={exploreNextContent}
+      />
     );
   }
   if (viewModel.status === "list-error") {
