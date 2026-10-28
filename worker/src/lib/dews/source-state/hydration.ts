@@ -25,6 +25,9 @@ import {
 import { getDexTrustPolicy, isTrustedDexPriceRow } from "../../depeg-trust-policy";
 import { isCanonicalMintBurnPair } from "../../mint-burn-canonical-chain";
 import { readPublishedMintBurnGauge } from "../../mint-burn-published-gauge";
+import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
+import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
+import { readMintBurnWindowContext } from "../../mint-burn-flows-service";
 import {
   MINT_BURN_HOURLY_VALUATION_TALLY_SQL,
   type MintBurnValuationTallyRow,
@@ -509,10 +512,19 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
     const published = await readPublishedMintBurnGauge(ctx.db, ctx.nowSec);
     const end = published.kind === "ok" && published.gauge.window != null
       ? published.gauge.window.end : Math.floor(ctx.nowSec / 3600) * 3600;
-    const admittedPairs = new Set(published.kind === "ok"
-      ? published.gauge.publication?.legs.filter((leg) => leg.status === "admitted"
+    let publication = published.kind === "ok" ? published.gauge.publication : null;
+    if (published.kind === "ok" && publication == null && published.gauge.window != null) {
+      // Retained pre-admission publications describe only the pinned incumbent roster.
+      // Reapply current policy so rollback still removes a legacy leg immediately.
+      const publishedIds = new Set(published.gauge.coins.map((coin) => coin.id));
+      const legacyConfigs = MINT_BURN_CONFIGS.filter((config) => publishedIds.has(config.stablecoinId)
+        && isGrandfatheredMintBurnConfig(config));
+      publication = (await readMintBurnWindowContext(ctx.db, ctx.nowSec, legacyConfigs)).publication;
+    }
+    const admittedPairs = new Set(publication
+      ? publication.legs.filter((leg) => leg.status === "admitted"
         && isCanonicalMintBurnPair(leg.stablecoinId, leg.chainId))
-        .map((leg) => `${leg.stablecoinId}|${leg.chainId}`) ?? [] : []);
+        .map((leg) => `${leg.stablecoinId}|${leg.chainId}`) : []);
     const admittedCoinIds = new Set([...admittedPairs].map((pair) => pair.split("|")[0]));
     const scopedPairsJson = JSON.stringify([...admittedPairs].map((pair) => pair.split("|")));
     const scanCoverageById = new Map(published.kind === "ok" && published.gauge.window != null

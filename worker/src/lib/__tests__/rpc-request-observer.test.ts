@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { requestJsonRpcAtUrl } from "../evm-rpc";
-import { getRpcRequestObserver, withRpcRequestObserver } from "../rpc-request-observer";
+import { getRpcRequestObserver, withRpcRequestObserver, withRpcRequestScope } from "../rpc-request-observer";
 
 const payload = { jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] };
 
@@ -49,5 +49,17 @@ describe("RPC request observation", () => {
     expect(result.status).toBe("control-error");
     expect(observer.onOutcome).not.toHaveBeenCalled();
     expect(getRpcRequestObserver()).toBeUndefined();
+  });
+
+  it("does not certify a failed scope after a request was denied before starting", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(JSON.stringify({ id: 1, result: null }), { status: 503 })));
+    const onScopeComplete = vi.fn();
+    const observer = { beforeRequest: vi.fn().mockReturnValueOnce(true).mockReturnValueOnce(false), onOutcome: vi.fn(), onScopeComplete };
+    const scope = { kind: "config" as const, key: "denied-after-failure", affectsRun: true };
+    await withRpcRequestObserver(observer, () => withRpcRequestScope(scope, async () => {
+      await requestJsonRpcAtUrl("https://rpc.example.test", payload, {});
+      await requestJsonRpcAtUrl("https://rpc.example.test", payload, {});
+    }, () => true));
+    expect(onScopeComplete).toHaveBeenCalledExactlyOnceWith(scope, false);
   });
 });

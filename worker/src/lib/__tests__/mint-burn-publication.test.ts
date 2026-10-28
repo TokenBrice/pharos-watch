@@ -1,4 +1,5 @@
-import { afterEach, describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
+import * as hashing from "@shared/lib/sha256";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
@@ -9,7 +10,7 @@ import { isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPubl
 import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
+afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
 const end = Date.parse("2027-02-01T12:00:00Z") / 1000;
 const day = 86400;
 const config = makeMintBurnConfig();
@@ -21,7 +22,7 @@ async function proof(db: D1Database, days: number, to = end, fromBlock = 1, toBl
 }
 
 describe("mint/burn durable publication admission", () => {
-  it("explicitly grandfathers every current fingerprint without fabricating scan coverage", async () => {
+  it("explicitly grandfathers every pre-gate key without fabricating scan coverage", async () => {
     const { db } = fixtures.open();
     const legacy = MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig);
     expect(legacy).toHaveLength(137);
@@ -46,7 +47,7 @@ describe("mint/burn durable publication admission", () => {
     expect(scope.configs).toEqual([config]);
     expect(scope.watermark.unavailableReason).toBe("scan-watermark-stale");
     const revised = { ...config, decimals: config.decimals + 1 };
-    expect((await readMintBurnWindowContext(db, end + 60, [revised])).configs).toEqual([]);
+    expect((await readMintBurnWindowContext(db, end + 60, [revised])).configs).toEqual([revised]);
   });
 
   it.each(["gap", "dirty", "stale"])("rejects %s proof without latching admission", async (defect) => {
@@ -84,7 +85,83 @@ describe("mint/burn durable publication admission", () => {
     expect(superseded.status).toBe(503);
     expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toBeUndefined();
     await syncMintBurnPublicationPolicy(db, [], end + 4);
-    expect((await readMintBurnWindowContext(db, end + day, [config])).configs).toEqual([config]);
+    const stale = await readMintBurnWindowContext(db, end + day, [config]);
+    expect(stale.configs).toEqual([]);
+    expect(stale.publication.legs[0].reason).toBe("reactivation-pending");
+    await proof(db, 1, end + day, 100, 101);
+    expect((await readMintBurnWindowContext(db, end + day + 60, [config])).configs).toEqual([config]);
+    expect((await readMintBurnWindowContext(db, end + 2 * day, [config])).configs).toEqual([config]);
+  });
+
+  it("preserves edited grandfathered keys and both edited BUIDL siblings in scope", async () => {
+    const { db } = fixtures.open();
+    const existing = MINT_BURN_CONFIGS.find((entry) => entry.stablecoinId === "usdt-tether")!;
+    const revised = { ...existing, decimals: existing.decimals + 1, startBlock: existing.startBlock + 1 };
+    expect(isGrandfatheredMintBurnConfig(revised)).toBe(true);
+    expect((await readMintBurnWindowContext(db, end, [revised])).configs).toEqual([revised]);
+    const siblings = MINT_BURN_CONFIGS.filter((entry) => entry.stablecoinId === "buidl-blackrock" && entry.chain.chainId === "ethereum");
+    const edited = siblings.map((entry, i) => i ? entry : { ...entry, decimals: entry.decimals + 1 });
+    const scope = await readMintBurnWindowContext(db, end, edited);
+    expect(scope.configs).toEqual(edited);
+    expect(scope.publication.legs.every((leg) => leg.status === "admitted")).toBe(true);
+  });
+
+  it("keeps a re-activated key pending without repeating its 90-day admission", async () => {
+    const { db } = fixtures.open();
+    await proof(db, 90);
+    await readMintBurnWindowContext(db, end, [config]);
+    await syncMintBurnPublicationPolicy(db, [], end + 1, []);
+    await syncMintBurnPublicationPolicy(db, [], end + day, [mintBurnConfigKey(config)]);
+    expect((await readMintBurnWindowContext(db, end + day, [config])).publication.legs[0].reason).toBe("reactivation-pending");
+    await proof(db, 1, end + day, 101, 102);
+    expect((await readMintBurnWindowContext(db, end + day + 60, [config])).configs).toEqual([config]);
+  });
+
+  it("holds a shared BUIDL bucket together during stale re-enable", async () => {
+    const { db } = fixtures.open();
+    const siblings = MINT_BURN_CONFIGS.filter((entry) => entry.stablecoinId === "buidl-blackrock" && entry.chain.chainId === "ethereum");
+    await syncMintBurnPublicationPolicy(db, [mintBurnConfigKey(siblings[0])], end);
+    await syncMintBurnPublicationPolicy(db, [], end + day);
+    const scope = await readMintBurnWindowContext(db, end + day, siblings);
+    expect(scope.configs).toEqual([]);
+    expect(scope.publication.legs.map((leg) => leg.reason)).toEqual(["reactivation-pending", "reactivation-pending"]);
+  });
+
+  it("memoizes identical fingerprints but invalidates an edited source on the same object", () => {
+    const hash = vi.spyOn(hashing, "sha256Hex");
+    const edited = { ...makeMintBurnConfig(), decimals: 17 };
+    const first = mintBurnScanFingerprint(edited);
+    expect(mintBurnScanFingerprint(edited)).toBe(first);
+    expect(hash).toHaveBeenCalledTimes(1);
+    edited.decimals = 16;
+    expect(mintBurnScanFingerprint(edited)).not.toBe(first);
+    expect(hash).toHaveBeenCalledTimes(2);
+  });
+
+  it("retries a guarded cache write on D1 overload without bypassing the policy fence", async () => {
+    const { db, sqlite } = fixtures.open();
+    const prepare = db.prepare.bind(db);
+    let attempts = 0;
+    vi.spyOn(db, "prepare").mockImplementation((sql) => {
+      const statement = prepare(sql);
+      if (!sql.includes("INSERT INTO cache")) return statement;
+      const bind = statement.bind.bind(statement);
+      statement.bind = (...values) => {
+        const bound = bind(...values);
+        const run = bound.run.bind(bound);
+        bound.run = async () => {
+          if (++attempts === 1) throw new Error("D1 DB is overloaded");
+          return run();
+        };
+        return bound;
+      };
+      return statement;
+    });
+    const key = aggregateFlowCacheKey(24);
+    const response = await finalizeMintBurnFlowResponse(db, key, end, {}, { status: "ok", timestamp: end }, "[]");
+    expect(response.status).toBe(200);
+    expect(attempts).toBe(2);
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key = ?").get(key)).toEqual({ key });
   });
 
   it("keeps new sibling contracts pending and disables an indivisible legacy shared bucket", async () => {

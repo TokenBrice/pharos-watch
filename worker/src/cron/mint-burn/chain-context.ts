@@ -3,6 +3,7 @@ import type { ChainRpcConfig, RpcEndpoint } from "../../lib/chain-registry";
 import { throwIfAborted } from "../../lib/abort";
 import type { MintBurnTxContext } from "../../lib/mint-burn-bridge-classifier";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts";
+import { withRpcRequestScope } from "../../lib/rpc-request-observer";
 
 export interface MintBurnChainContext {
   /** Admitted finalized ceiling, never the provisional tip. */
@@ -25,7 +26,9 @@ export async function loadMintBurnChainContexts(input: {
     throwIfAborted(input.signal);
     const rpcEndpoints = mintBurnRpcEndpoints(chainId, input.apiKey, input.chainRpcs);
     const endpointHeads = new Map<string, number>();
-    const finalized = await getMintBurnFinalizedHead(chainId, rpcEndpoints, input.budget, input.signal);
+    const finalized = await withRpcRequestScope({ kind: "chain-head", key: chainId, affectsRun: true },
+      () => getMintBurnFinalizedHead(chainId, rpcEndpoints, input.budget, input.signal),
+      (head) => head == null && input.budget.count < input.budget.limit);
     const chainHead = finalized?.number ?? null;
     chainContexts.set(chainId, {
       chainHead,

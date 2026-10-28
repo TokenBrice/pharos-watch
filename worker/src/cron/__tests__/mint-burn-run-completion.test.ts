@@ -2,6 +2,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { completeMintBurnRun, type CompleteMintBurnRunInput } from "../mint-burn/run-completion";
 import { createMintBurnConfigSummary, type MintBurnConfigSummary } from "../mint-burn/sync-config";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
+import { mintBurnPublicationMetadata } from "../mint-burn/publication-metadata";
+import { compactCronMetadataForPersistence } from "../../lib/cron-metadata-persistence";
+import type { MintBurnPublication } from "@shared/types/mint-burn";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import { setMintBurnRunState } from "../mint-burn/run-state";
 import { getNullPriceBacklog, healNullPrices } from "../../lib/mint-burn-pipeline/price-heal";
@@ -95,6 +98,51 @@ describe("completeMintBurnRun", () => {
     vi.mocked(getNullPriceBacklog).mockResolvedValue({ recent: 0, historical: 0 });
     vi.mocked(healNullPrices).mockResolvedValue({ healed: 0, affectedHours: new Map() });
     vi.mocked(sweepRecentRoundtrips).mockResolvedValue({ reclassified: 0, affectedHours: new Map(), saturated: false });
+  });
+
+  it.each([0, 3, 200])("persists provider and config evidence with a 200-leg roster (%s pending)", async (pendingCount) => {
+    const input = buildRunInput();
+    const configs = Array.from({ length: 200 }, (_, index) => makeMintBurnConfig({
+      asset: { stablecoinId: `synthetic-${index}`, contractAddress: `0x${index.toString(16).padStart(40, "0")}` },
+    }));
+    input.configs = input.enabledConfigs = configs;
+    input.contractsTotal = configs.length;
+    input.phase.configBreakdown = configs.map((config) => createMintBurnConfigSummary(config, mintBurnConfigKey(config), "critical"));
+    const publication: MintBurnPublication = {
+      evaluatedAt: 1_793_232_000, requiredBaselineSec: 90 * 86400, freshnessBudgetSec: 3600,
+      legs: configs.map((config, index) => ({
+        configKey: mintBurnConfigKey(config), configFingerprint: "fingerprint".repeat(15),
+        stablecoinId: config.stablecoinId, chainId: config.chain.chainId,
+        status: index < pendingCount ? "pending-admission" : "admitted",
+        reason: index < pendingCount ? "frontier-stale" : "legacy-grandfathered", admittedAt: null,
+        baselineFrom: 1_785_456_000, baselineTo: 1_793_000_000,
+        coveredSeconds: 7_544_000, frontierAgeSec: 232_000,
+      })),
+    };
+    const completion = await completeMintBurnRun(input);
+    const providerOutcomes = [{ provider: "alchemy", circuitSource: "alchemy", successes: 12, failures: 0 }];
+    const metadata = {
+      ...completion.metadata, publication: mintBurnPublicationMetadata(publication), providerOutcomes,
+      schedulerMetadata: { detail: "x".repeat(4 * 1024) },
+    };
+    const persisted = compactCronMetadataForPersistence(JSON.stringify(metadata), undefined, "sync-mint-burn");
+    expect(persisted.compacted).toBe(false);
+    expect(persisted.persistedBytes).toBeLessThan(32 * 1024);
+    const parsed = JSON.parse(persisted.metadata!);
+    expect(parsed.providerOutcomes).toEqual(providerOutcomes);
+    expect(parsed.configBreakdownSummary).toEqual(completion.metadata.configBreakdownSummary);
+    expect(parsed.configSamples).toEqual(completion.metadata.configSamples);
+    expect(parsed.finality).toEqual(completion.metadata.finality);
+    expect(parsed.publication).toMatchObject({
+      legCount: 200, admittedCount: 200 - pendingCount, pendingAdmissionCount: pendingCount,
+      nonAdmittedLegCount: pendingCount,
+    });
+    expect(parsed.publication.legs).toHaveLength(parsed.publication.legsShown);
+    expect(parsed.publication.legsShown + parsed.publication.legsOmitted).toBe(pendingCount);
+    expect(parsed.publication.legs.length).toBeLessThanOrEqual(200);
+    expect(parsed.publication.legs.every((leg: { status: string; reason: string; coveredSeconds: number }) =>
+      leg.status === "pending-admission" && leg.reason === "frontier-stale" && leg.coveredSeconds === 7_544_000)).toBe(true);
+    expect(parsed.publication.legsTruncated).toBe(pendingCount === 200);
   });
 
   it.each(["extended", "critical"] as const)("immediately degrades %s for one verified conservation failure", async (lane) => {

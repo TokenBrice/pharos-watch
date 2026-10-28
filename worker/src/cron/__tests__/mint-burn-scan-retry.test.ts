@@ -49,7 +49,8 @@ describe("certified adaptive scan prefixes", () => {
     vi.mocked(syncMintBurnConfig).mockImplementation(async (scan) => ({
       summary: { ...createMintBurnConfigSummary(config, scan.key, scan.tier), requestBudgetUsed: 2,
         errors: scan.scanTo === 199 ? 1 : 0, advanceReason: "full-success-empty" },
-      apiErrors: scan.scanTo === 199 ? 1 : 0, effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0,
+      apiErrors: scan.scanTo === 199 ? 1 : 0, rpcEvidenceIncomplete: scan.scanTo === 199,
+      effectiveBurns: 0, bridgeBurns: 0, reviewBurns: 0, atomicRoundtripsDetected: 0,
       newLastBlock: scan.scanTo === 199 ? null : scan.scanTo,
       ...(scan.scanTo === 199 ? {} : { scanCoverage: { configKey: scan.key, configFingerprint: "test", chainId: config.chain.chainId,
         fromBlock: scan.fromBlock, toBlock: scan.scanTo, fromTimestamp: 1000, toTimestamp: 1100, finalizedBlock: 200, acceptedAt: 1200 } }),
@@ -57,6 +58,7 @@ describe("certified adaptive scan prefixes", () => {
     const result = await syncMintBurnConfigWithRetries(request);
     expect(result.newLastBlock).toBe(149);
     expect(result.scanCoverage?.toBlock).toBe(149);
+    expect(result.rpcEvidenceIncomplete).toBe(false);
     expect(result.summary).toMatchObject({ scanAttempts: 2, advanceReason: "partial-frontier", requestBudgetUsed: 5, errors: 1 });
     expect(fetchConservationBoundaries).toHaveBeenCalledWith(expect.objectContaining({
       requests: [{ key: request.key, config, fromBlock: 100, toBlock: 149 }],

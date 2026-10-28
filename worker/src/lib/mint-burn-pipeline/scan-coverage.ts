@@ -115,12 +115,19 @@ export interface MintBurnScanCoverage {
   acceptedAt: number;
 }
 
+const fingerprintCache = new WeakMap<MintBurnContractConfig, { source: string; fingerprint: string }>();
+
 /** Version the source/decoder contract here when changing scan semantics. */
 export function mintBurnScanFingerprint(config: MintBurnContractConfig): string {
   const { chain, symbol: _symbol, enabled: _enabled, tier: _tier, ...source } = config;
-  return sha256Hex(stableJsonStringifyV1({
+  const serialized = stableJsonStringifyV1({
     domain: "mint-burn-finalized-scan-v2", chainId: chain.chainId, source,
-  }));
+  });
+  const cached = fingerprintCache.get(config);
+  if (cached?.source === serialized) return cached.fingerprint;
+  const fingerprint = sha256Hex(serialized);
+  fingerprintCache.set(config, { source: serialized, fingerprint });
+  return fingerprint;
 }
 
 /** Called only after exhaustive topics, row persistence and hourly materialization succeed.

@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import { getCache, setCacheIfNewer } from "./db-cache";
+import { runWithOverloadRetry } from "./d1-overload-retry";
 import { buildCronFreshnessHeaders, buildCronFreshnessMeta, type CronTimestampLookupResult } from "./api-freshness";
 import { jsonResponse, jsonResponseWithHeaders } from "./api-response";
 import { readCachedJsonOr503 } from "./api-cache-read";
@@ -30,7 +31,7 @@ import { MINT_BURN_HOURLY_VALUATION_TALLY_SQL, type MintBurnValuationTallyRow, r
 
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import {
-  decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, persistMintBurnAdmissions,
+  decodeMintBurnDisabledKeys, isGrandfatheredMintBurnConfig, mintBurnPreviouslyAdmitted, mintBurnPublicationDisabled, persistMintBurnAdmissions, persistMintBurnResumptions,
   prepareMintBurnAdmissions, prepareMintBurnPublicationPolicy, resolveMintBurnPublication,
   type MintBurnAdmissionRow,
 } from "./mint-burn-publication";
@@ -97,14 +98,19 @@ export async function readMintBurnWindowContext(
     configs.filter(isGrandfatheredMintBurnConfig), results[3].results as MintBurnLegacyRow[], segments, expectedBlockTimeSec,
   ) : new Map<string, MintBurnLegacySpan>();
   const admissions = results[1].results as MintBurnAdmissionRow[];
-  const policy = (results[2].results as Array<{ disabled_keys: string }>)[0]?.disabled_keys ?? "[]";
+  const storedPolicy = (results[2].results as Array<{ disabled_keys: string; paused_keys?: string }>)[0];
+  const policy = storedPolicy?.disabled_keys ?? "[]";
   const disabledKeys = decodeMintBurnDisabledKeys(policy);
+  const pausedKeys = decodeMintBurnDisabledKeys(storedPolicy?.paused_keys ?? "[]");
+  const pausedPairs = new Set(configs.filter((config) => pausedKeys.has(mintBurnConfigKey(config))
+    && mintBurnPreviouslyAdmitted(config, admissions)).map((config) => `${config.stablecoinId}|${config.chain.chainId}`));
   const existing = configs.filter((config) => !mintBurnPublicationDisabled(config, configs, admissions, disabledKeys)
+    && !pausedPairs.has(`${config.stablecoinId}|${config.chain.chainId}`)
     && mintBurnPreviouslyAdmitted(config, admissions));
   const current = resolveMintBurnWatermark(nowSec, existing, segments, legacy);
   // A new leg must cover the incumbent window, so admission cannot move its frontier backwards.
   const scope = resolveMintBurnPublication(configs, admissions, disabledKeys, segments, nowSec,
-    current.unavailableReason == null ? current.timestamp! : end, MINT_BURN_WATERMARK_MAX_AGE_SEC);
+    current.unavailableReason == null ? current.timestamp! : end, MINT_BURN_WATERMARK_MAX_AGE_SEC, pausedKeys);
   if (scope.newAdmissions.length > 0) {
     // Scan coverage alone cannot stop an unpriced joining leg from nulling an incumbent's nets.
     const candidateKeys = new Set(scope.newAdmissions.map((row) => row.config_key));
@@ -132,6 +138,7 @@ export async function readMintBurnWindowContext(
     }
   }
   await persistMintBurnAdmissions(db, scope.newAdmissions);
+  await persistMintBurnResumptions(db, scope.resumedKeys, policy);
   return {
     watermark: resolveMintBurnWatermark(nowSec, scope.configs, segments, legacy),
     legacy,
@@ -550,11 +557,11 @@ export async function finalizeMintBurnFlowResponse(
     await setCacheIfNewer(db, cacheKey, JSON.stringify(responseBody), syncStartSec);
   } else {
     // A kill switch can race a slow producer. Its old scope must never restore the purged cache.
-    const written = await db.prepare(`INSERT INTO cache (key, value, updated_at)
+    const written = await runWithOverloadRetry(() => db.prepare(`INSERT INTO cache (key, value, updated_at)
       SELECT ?, ?, ? WHERE COALESCE((SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1), '[]') = ?
       ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at
       WHERE cache.updated_at <= excluded.updated_at`)
-      .bind(cacheKey, JSON.stringify(responseBody), syncStartSec, publicationPolicy).run();
+      .bind(cacheKey, JSON.stringify(responseBody), syncStartSec, publicationPolicy).run());
     if (written.meta.changes === 0) {
       const current = await prepareMintBurnPublicationPolicy(db).first<{ disabled_keys: string }>();
       if ((current?.disabled_keys ?? "[]") !== publicationPolicy) {

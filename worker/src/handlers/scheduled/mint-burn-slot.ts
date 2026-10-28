@@ -3,10 +3,10 @@ import { syncMintBurn } from "../../cron/sync-mint-burn";
 import type { MintBurnLane } from "../../lib/mint-burn-pipeline/types";
 import type { CronResult } from "../../lib/cron-logger";
 import type { ScheduledRuntimeContext } from "./context";
-import { recordOutcomeDecision, shouldAttemptFetch, type CircuitOutcomeDecision } from "../../lib/circuit-breaker";
+import { mapCronStatusToCircuitOutcome, recordOutcomeDecision, shouldAttemptFetch, type CircuitOutcomeDecision } from "../../lib/circuit-breaker";
 import { getRpcAuth, type RpcOperator } from "../../lib/chain-registry";
 import type { JsonRpcTransportOutcome } from "../../lib/evm-rpc";
-import { withRpcRequestObserver } from "../../lib/rpc-request-observer";
+import { withRpcRequestObserver, type RpcRequestScope } from "../../lib/rpc-request-observer";
 import { logWorkerEvent } from "../../lib/structured-log";
 import {
   buildScheduledSlotSummary,
@@ -27,6 +27,7 @@ interface MintBurnProviderOutcome {
   failures: number;
   neutral: number;
   blockedRequests: number;
+  terminalFailures: number;
   reasons: Record<string, number>;
 }
 
@@ -125,18 +126,19 @@ export async function runMintBurnSlot(
     const endpoints = new Map([...runtime.chainRpcs.values()].flatMap((config) =>
       config.endpoints.map((endpoint) => [endpoint.url, endpoint.operator] as const)));
     const providerOutcomes = new Map<RpcOperator, MintBurnProviderOutcome>();
+    const scopeFailures = new Map<string, Set<RpcOperator>>();
+    const terminalScopes = new Map<string, RpcRequestScope>();
     const observationFor = (url: string): MintBurnProviderOutcome => {
       const provider = endpoints.get(url) ?? getRpcAuth(url)?.provider ?? "public";
       let observation = providerOutcomes.get(provider);
       if (!observation) {
-        observation = { provider, circuitSource: provider === "alchemy" ? CIRCUIT_SOURCE.ALCHEMY
-          : provider === "dwellir" ? CIRCUIT_SOURCE.DWELLIR_EVM : null,
-        successes: 0, failures: 0, neutral: 0, blockedRequests: 0, reasons: {} };
+        observation = { provider, circuitSource: provider === "alchemy" ? CIRCUIT_SOURCE.ALCHEMY : null,
+        successes: 0, failures: 0, neutral: 0, blockedRequests: 0, terminalFailures: 0, reasons: {} };
         providerOutcomes.set(provider, observation);
       }
       return observation;
     };
-    let primary: CronResult;
+    let primary: CronResult | undefined;
     try {
       primary = await withRpcRequestObserver({
         beforeRequest: (url) => {
@@ -148,13 +150,37 @@ export async function runMintBurnSlot(
           }
           return true;
         },
-        onOutcome: (url, outcome) => {
+        onOutcome: (url, outcome, scope) => {
           const observation = observationFor(url);
           const { decision, reason } = providerDecision(outcome);
           if (decision === "success") observation.successes++;
           else if (decision === "failure") observation.failures++;
           else observation.neutral++;
           observation.reasons[reason] = (observation.reasons[reason] ?? 0) + 1;
+          if (scope?.affectsRun && (scope.kind === "operation" || scope.kind === "chain-head")) {
+            const scopeKey = `${scope.kind}:${scope.key}`;
+            const failures = scopeFailures.get(scopeKey) ?? new Set<RpcOperator>();
+            if (decision === "failure") failures.add(observation.provider);
+            scopeFailures.set(scopeKey, failures);
+          }
+        },
+        onScopeStart: (scope) => {
+          if (scope.kind !== "config-attempt") return;
+          // Only the final attempt's unresolved operations can explain a failed config.
+          for (const [scopeKey, terminal] of terminalScopes) {
+            if (terminal.kind === "operation" && terminal.configKey === scope.key) {
+              terminalScopes.delete(scopeKey);
+              scopeFailures.delete(scopeKey);
+            }
+          }
+        },
+        onScopeComplete: (scope, failed) => {
+          const scopeKey = `${scope.kind}:${scope.key}`;
+          if (scope.affectsRun && failed) terminalScopes.set(scopeKey, scope);
+          else {
+            terminalScopes.delete(scopeKey);
+            scopeFailures.delete(scopeKey);
+          }
         },
       }, () => syncMintBurn(runtime.db, runtime.env.ALCHEMY_API_KEY ?? null, {
         signal,
@@ -166,13 +192,28 @@ export async function runMintBurnSlot(
         chainRpcs: runtime.chainRpcs,
       }));
     } finally {
-      for (const observation of providerOutcomes.values()) {
-        if (!observation.circuitSource) continue;
-        const decision = observation.failures > 0 ? "failure" : observation.successes > 0 ? "success" : "neutral";
-        await recordOutcomeDecision(runtime.db, observation.circuitSource, decision).catch((error) => {
+      const metadata = primary?.metadata ? parseJsonObject(primary.metadata) : null;
+      const unavailableChains = metadata?.admittedFinalityUnavailableChains;
+      const counted = new Set<string>();
+      for (const scope of terminalScopes.values()) {
+        if (scope.kind === "operation" && !terminalScopes.has(`config:${scope.configKey}`)) continue;
+        if (scope.kind === "chain-head" && (!Array.isArray(unavailableChains) || !unavailableChains.includes(scope.key))) continue;
+        for (const provider of scopeFailures.get(`${scope.kind}:${scope.key}`) ?? []) {
+          const key = `${provider}:${scope.kind === "operation" ? `config:${scope.configKey}` : `${scope.kind}:${scope.key}`}`;
+          if (counted.has(key)) continue;
+          counted.add(key);
+          providerOutcomes.get(provider)!.terminalFailures++;
+        }
+      }
+      const alchemy = providerOutcomes.get("alchemy");
+      if (alchemy && primary) {
+        const statusDecision = mapCronStatusToCircuitOutcome(primary.status);
+        const decision = statusDecision === "failure" ? alchemy.terminalFailures > 0 ? "failure" : "neutral"
+          : statusDecision === "success" && alchemy.successes + alchemy.failures + alchemy.neutral > 0 ? "success" : "neutral";
+        await recordOutcomeDecision(runtime.db, CIRCUIT_SOURCE.ALCHEMY, decision).catch((error) => {
           logWorkerEvent({ scope: "handler", level: "error", event: "mint_burn_provider_outcome_write_failed",
             message: "Failed to record observed mint/burn RPC outcome", job: options.jobName,
-            provider: observation.provider, error });
+            provider: "alchemy", error });
         });
       }
     }

@@ -31,6 +31,7 @@ export interface BurnClassificationCounters {
   bridgeBurns: number;
   reviewBurns: number;
   txContextShortfalls: number;
+  txContextRequestsNotStarted?: number;
   deferredTxHashes: string[];
 }
 

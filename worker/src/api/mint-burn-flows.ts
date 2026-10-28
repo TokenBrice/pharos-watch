@@ -3,7 +3,7 @@ import { getCache } from "../lib/db-cache";
 import { resolveOrReject, parseQueryParams } from "../lib/api-params";
 import { errorResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
-import { buildMintBurnScope } from "../lib/mint-burn-contracts";
+import { buildMintBurnScope, getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { buildMintBurnSyncHealth } from "../lib/mint-burn-health-config";
 import {
   computeGaugeScore,
@@ -361,17 +361,20 @@ async function handleAggregate(db: D1Database, hours: number): Promise<Response>
 
 async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number): Promise<Response> {
   const nowSec = Math.floor(Date.now() / 1000);
-  const context = await readMintBurnWindowContext(db, nowSec, ACTIVE_MINT_BURN_CONFIGS);
-  const configs = context.configs.filter((config) => config.stablecoinId === stablecoinId);
-  if (configs.length === 0) {
+  const configured = getMintBurnConfigsForStablecoin(stablecoinId);
+  if (configured.length === 0) {
     return errorResponse(404, `Stablecoin "${stablecoinId}" is not tracked for mint/burn flows`);
   }
-  const symbol = configs[0]!.symbol;
-  const trackedChainIds = [...new Set(configs.map((config) => config.chain.chainId))];
-  const chainInClause = buildInClause(trackedChainIds);
-
   const cacheKey = perCoinFlowCacheKey(stablecoinId, hours);
   return withMintBurnFlowFallback(db, "per-coin", cacheKey, async () => {
+    // Quarantined known coins retain detail history without joining the public aggregate.
+    const roster = ACTIVE_MINT_BURN_CONFIGS.some((config) => config.stablecoinId === stablecoinId)
+      ? ACTIVE_MINT_BURN_CONFIGS : configured;
+    const context = await readMintBurnWindowContext(db, nowSec, roster);
+    const configs = context.configs.filter((config) => config.stablecoinId === stablecoinId);
+    const symbol = configured[0]!.symbol;
+    const trackedChainIds = [...new Set(configs.map((config) => config.chain.chainId))];
+    const chainInClause = trackedChainIds.length > 0 ? buildInClause(trackedChainIds) : { sql: "NULL", binds: [] };
     const syncStartSec = nowSec;
     const window = {
       ...mintBurnHourlyWindow(context.watermark.timestamp ?? nowSec, hours),

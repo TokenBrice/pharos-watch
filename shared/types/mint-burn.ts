@@ -77,7 +77,7 @@ export const MintBurnPublicationSchema = z.object({
     stablecoinId: z.string(),
     chainId: z.string(),
     status: z.enum(["admitted", "pending-admission", "disabled"]),
-    reason: z.enum(["legacy-grandfathered", "baseline-incomplete", "frontier-stale", "proof-unavailable", "valuation-incomplete", "operator-disabled", "shared-bucket-disabled", "unsupported-shared-bucket"]).nullable(),
+    reason: z.enum(["legacy-grandfathered", "baseline-incomplete", "frontier-stale", "proof-unavailable", "valuation-incomplete", "operator-disabled", "shared-bucket-disabled", "unsupported-shared-bucket", "reactivation-pending"]).nullable(),
     admittedAt: z.number().int().nonnegative().nullable(),
     baselineFrom: z.number().int().nonnegative().nullable(),
     baselineTo: z.number().int().nonnegative().nullable(),

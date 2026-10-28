@@ -97,4 +97,23 @@ describe("mint/burn publication scope on real SQLite", () => {
     await syncMintBurnPublicationPolicy(db, [mintBurnConfigKey(pending)], end + 1);
     expect(await readPublishedMintBurnGauge(db, end + 2)).toEqual({ kind: "unavailable", reason: "missing" });
   });
+
+  it("keeps a stale re-enabled leg out of an incumbent's fresh watermark", async () => {
+    const { db } = await fixture(90);
+    await fetchAggregateData(db, buildAggregateQueryParams(end + 60, 24));
+    await syncMintBurnPublicationPolicy(db, [mintBurnConfigKey(pending)], end + 61);
+    const now = end + 3 * day;
+    const fromBlock = existing.startBlock + 3_000_001;
+    await upsertMintBurnSyncState(db, mintBurnConfigKey(existing), fromBlock + 10_000, "monotonic-max", {
+      configKey: mintBurnConfigKey(existing), configFingerprint: mintBurnScanFingerprint(existing), chainId: existing.chain.chainId,
+      fromBlock, toBlock: fromBlock + 10_000, fromTimestamp: end, toTimestamp: now,
+      finalizedBlock: fromBlock + 10_000, acceptedAt: now,
+    });
+    await syncMintBurnPublicationPolicy(db, [], now);
+    const data = await fetchAggregateData(db, buildAggregateQueryParams(now + 60, 24));
+    expect(data.configs).toEqual([existing]);
+    expect(data.watermark).toMatchObject({ timestamp: now, unavailableReason: null });
+    expect(data.publication.legs[1].reason).toBe("reactivation-pending");
+    expect(buildCoinSummaries(data, new Map(), null).coins[0].netFlow90dUsd).toBe(10);
+  });
 });

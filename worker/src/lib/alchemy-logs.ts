@@ -49,6 +49,7 @@ export interface AlchemyTransactionReceipt {
 export interface AlchemyTransactionContextBatch {
   tx: AlchemyTransactionEntry | null;
   receipt: AlchemyTransactionReceipt | null;
+  unavailableReason?: "rpc-request-not-started";
 }
 
 interface JsonRpcResponse<T> {
@@ -63,6 +64,7 @@ interface JsonRpcCallResult<T> {
   error: { code: number; message: string } | null;
   status: number;
   transientHttpError: boolean;
+  unavailableReason?: "rpc-request-not-started";
 }
 
 export interface AlchemyLogsFetchResult {
@@ -162,8 +164,13 @@ async function jsonRpcCall<T>(
     timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs)),
     maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
   });
-  if ((fetched.status === "transport-error" || fetched.status === "control-error") && fetched.error != null) throw fetched.error;
-  if (fetched.status === "transport-error" || fetched.status === "control-error") {
+  if (fetched.status === "control-error") {
+    throwIfAborted(signal);
+    return { result: null, error: { code: -1, message: "rpc-request-not-started" }, status: 0,
+      transientHttpError: false, unavailableReason: "rpc-request-not-started" };
+  }
+  if (fetched.status === "transport-error") {
+    throwIfAborted(signal);
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -332,8 +339,13 @@ export async function getAlchemyTransactionContextBatchMany(
     timeoutMs: Math.max(1, Math.min(ALCHEMY_RPC_TIMEOUT_MS, timeoutMs, deadlineMs != null ? deadlineMs - Date.now() : Infinity)),
     maxResponseBytes: ALCHEMY_RPC_MAX_RESPONSE_BYTES,
   });
-  if ((fetched.status === "transport-error" || fetched.status === "control-error") && fetched.error != null) throw fetched.error;
-  if (fetched.status === "transport-error" || fetched.status === "control-error") {
+  if (fetched.status === "control-error") {
+    throwIfAborted(signal);
+    for (const context of results.values()) context.unavailableReason = "rpc-request-not-started";
+    return results;
+  }
+  if (fetched.status === "transport-error") {
+    throwIfAborted(signal);
     logWorkerEvent({
       scope: "lib",
       level: "debug",
@@ -398,6 +410,7 @@ export async function getAlchemyTransactionContextBatchMany(
       const retried = await jsonRpcCall<unknown>(alchemyUrl, request.method, request.params, signal, retryTimeoutMs);
       item.result = retried.result;
       item.error = retried.error ?? undefined;
+      if (retried.unavailableReason) results.get(uniqueTxHashes[Math.floor(item.id / 2)]!)!.unavailableReason = retried.unavailableReason;
     }
     if (item?.error) {
       logWorkerEvent({
@@ -590,6 +603,10 @@ async function fetchAlchemyLogsRange(
     const timeoutMs =
       options?.deadlineMs != null ? Math.max(1, options.deadlineMs - Date.now()) : ALCHEMY_RPC_TIMEOUT_MS;
     const rpc = await jsonRpcCall<AlchemyLogEntry[]>(alchemyUrl, "eth_getLogs", params, signal, timeoutMs);
+    if (rpc.unavailableReason) {
+      return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 0, maxDepth: depth,
+        failureReason: rpc.unavailableReason };
+    }
     if (Array.isArray(rpc.result)) {
       if (!rpc.result.every((log) => isAlchemyLogEntry(log) && log.blockHash.length > 0)) {
         return { logs: [], complete: false, scannedToBlock: fromBlock - 1, calls: 1, maxDepth: depth,

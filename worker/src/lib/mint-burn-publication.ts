@@ -3,17 +3,17 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import type { MintBurnContractConfig } from "./mint-burn-contracts";
 import { mintBurnConfigKey } from "./mint-burn-pipeline/sync-state";
 import { mintBurnScanCoverageAdmits, mintBurnScanFingerprint, type MintBurnScanSegment } from "./mint-burn-pipeline/scan-coverage";
-import grandfatheredFingerprints from "./mint-burn-pipeline/legacy-cutover-fingerprints.json";
+import grandfatheredConfigKeys from "./mint-burn-pipeline/grandfathered-config-keys.json";
 import { FLOW_CACHE_PREFIX } from "./mint-burn-flow-cache-keys";
 import { batchExecute, executeAtomicBatch } from "./db";
 
 /** netFlow90dUsd is the longest published aggregate. */
 export const MINT_BURN_ADMISSION_BASELINE_SEC = 90 * DAY_SECONDS;
 // Immutable pre-admission roster, not a claim that legacy history is durable-v2.
-const grandfathered = new Set(grandfatheredFingerprints);
+const grandfathered = new Set(grandfatheredConfigKeys);
 
 export function isGrandfatheredMintBurnConfig(config: MintBurnContractConfig): boolean {
-  return grandfathered.has(mintBurnScanFingerprint(config));
+  return grandfathered.has(mintBurnConfigKey(config));
 }
 
 export function mintBurnDisabledReason(
@@ -40,7 +40,7 @@ export function prepareMintBurnAdmissions(db: D1Database) {
 }
 
 export function prepareMintBurnPublicationPolicy(db: D1Database) {
-  return db.prepare("SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1");
+  return db.prepare("SELECT disabled_keys, paused_keys FROM mint_burn_publication_policy WHERE id = 1");
 }
 
 export function decodeMintBurnDisabledKeys(policy: string): Set<string> {
@@ -52,24 +52,36 @@ export function decodeMintBurnDisabledKeys(policy: string): Set<string> {
 }
 
 /** The scheduled runtime is the authority for the env switch; readers share its durable policy. */
-export async function syncMintBurnPublicationPolicy(db: D1Database, keys: Iterable<string>, now: number): Promise<void> {
-  const policy = JSON.stringify([...new Set(keys)].sort());
+export async function syncMintBurnPublicationPolicy(
+  db: D1Database, keys: Iterable<string>, now: number, activeKeys?: Iterable<string>,
+): Promise<void> {
+  const disabled = new Set(keys);
+  const policy = JSON.stringify([...disabled].sort());
+  const active = activeKeys == null ? null : new Set([...activeKeys].filter((key) => !disabled.has(key)));
+  const activeJson = active == null ? null : JSON.stringify([...active]);
+  const paused = JSON.stringify([...disabled, ...grandfatheredConfigKeys.filter((key) => active != null && !active.has(key))]);
+  const pauseCandidatesSql = `SELECT value AS config_key FROM json_each(?)
+    UNION SELECT config_key FROM mint_burn_admission
+      WHERE ? IS NOT NULL AND config_key NOT IN (SELECT value FROM json_each(?))`;
   await executeAtomicBatch(db, [
     db.prepare(`DELETE FROM cache WHERE key >= ? AND key < ?
       AND COALESCE((SELECT disabled_keys FROM mint_burn_publication_policy WHERE id = 1), '[]') != ?`)
       .bind(`${FLOW_CACHE_PREFIX}:`, `${FLOW_CACHE_PREFIX}:\uffff`, policy),
-    db.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)
-      ON CONFLICT(id) DO UPDATE SET disabled_keys = excluded.disabled_keys, updated_at = excluded.updated_at
-      WHERE mint_burn_publication_policy.disabled_keys != excluded.disabled_keys`).bind(policy, now),
+    db.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
+      VALUES (1, ?, (SELECT json_group_array(config_key) FROM (${pauseCandidatesSql})), ?)
+      ON CONFLICT(id) DO UPDATE SET disabled_keys = excluded.disabled_keys, updated_at = excluded.updated_at,
+        paused_keys = (SELECT json_group_array(value) FROM (
+          SELECT value FROM json_each(mint_burn_publication_policy.paused_keys)
+          UNION SELECT value FROM json_each(excluded.paused_keys)
+        ))`).bind(policy, paused, activeJson, activeJson, now),
   ]);
 }
 
 export function mintBurnPreviouslyAdmitted(
   config: MintBurnContractConfig, rows: readonly MintBurnAdmissionRow[],
 ): MintBurnAdmissionRow | "grandfathered" | null {
-  const fingerprint = mintBurnScanFingerprint(config);
-  return rows.find((row) => row.config_key === mintBurnConfigKey(config) && row.config_fingerprint === fingerprint)
-    ?? (grandfathered.has(fingerprint) ? "grandfathered" : null);
+  const key = mintBurnConfigKey(config);
+  return rows.find((row) => row.config_key === key) ?? (grandfathered.has(key) ? "grandfathered" : null);
 }
 
 export function mintBurnPublicationDisabled(
@@ -88,12 +100,23 @@ export function resolveMintBurnPublication(
   configs: readonly MintBurnContractConfig[], rows: readonly MintBurnAdmissionRow[],
   disabledKeys: ReadonlySet<string>, segments: ReadonlyMap<string, readonly MintBurnScanSegment[]>,
   now: number, targetEnd: number, freshnessBudgetSec: number,
+  pausedKeys: ReadonlySet<string> = new Set(),
 ) {
   const admittedConfigs: MintBurnContractConfig[] = [];
   const newAdmissions: MintBurnAdmissionRow[] = [];
   const publication: MintBurnPublication = {
     evaluatedAt: now, requiredBaselineSec: MINT_BURN_ADMISSION_BASELINE_SEC, freshnessBudgetSec, legs: [],
   };
+  const pairOf = (config: MintBurnContractConfig) => `${config.stablecoinId}|${config.chain.chainId}`;
+  const reactivationPendingPairs = new Set(configs.filter((config) => {
+    const key = mintBurnConfigKey(config);
+    if (!pausedKeys.has(key) || !mintBurnPreviouslyAdmitted(config, rows)) return false;
+    const proof = (segments.get(key) ?? []).filter((row) => row.dirty_hour_ts == null);
+    const frontier = Math.max(0, ...proof.map((row) => row.to_timestamp));
+    return frontier === 0 || now - frontier > freshnessBudgetSec
+      || !mintBurnScanCoverageAdmits([config], segments, targetEnd - 3600, targetEnd);
+  }).map(pairOf));
+  const resumedKeys: string[] = [];
   for (const config of configs) {
     const key = mintBurnConfigKey(config);
     const fingerprint = mintBurnScanFingerprint(config);
@@ -107,13 +130,15 @@ export function resolveMintBurnPublication(
     const unsupportedSibling = !prior && configs.some((sibling) => mintBurnConfigKey(sibling) !== key
       && sibling.stablecoinId === config.stablecoinId && sibling.chain.chainId === config.chain.chainId);
     const disabled = disabledReason != null;
+    const reactivating = reactivationPendingPairs.has(pairOf(config));
     const reason = disabledReason ?? (unsupportedSibling ? "unsupported-shared-bucket"
+      : reactivating ? "reactivation-pending"
       : prior === "grandfathered" ? "legacy-grandfathered"
       : prior ? null
       : frontier == null ? "proof-unavailable"
       : frontierAgeSec! > freshnessBudgetSec ? "frontier-stale"
       : !baselineComplete ? "baseline-incomplete" : null);
-    const admitted = !disabled && (prior != null || reason == null);
+    const admitted = !disabled && !reactivating && (prior != null || reason == null);
     // Ledger segments are compacted by contiguous blocks. Progress is the observed tail, not event age.
     const tail = proof.find((row) => row.to_timestamp === frontier);
     publication.legs.push({
@@ -127,10 +152,19 @@ export function resolveMintBurnPublication(
     });
     if (!admitted) continue;
     admittedConfigs.push(config);
+    if (prior && pausedKeys.has(key)) resumedKeys.push(key);
     if (!prior) newAdmissions.push({ config_key: key, config_fingerprint: fingerprint, admitted_at: now,
       baseline_from: from, baseline_to: targetEnd });
   }
-  return { configs: admittedConfigs, publication, newAdmissions };
+  return { configs: admittedConfigs, publication, newAdmissions, resumedKeys };
+}
+
+export async function persistMintBurnResumptions(db: D1Database, keys: readonly string[], policy: string) {
+  if (keys.length === 0) return;
+  await executeAtomicBatch(db, [db.prepare(`UPDATE mint_burn_publication_policy SET paused_keys = (
+    SELECT json_group_array(value) FROM json_each(paused_keys)
+    WHERE value NOT IN (SELECT value FROM json_each(?))
+  ) WHERE id = 1 AND disabled_keys = ?`).bind(JSON.stringify(keys), policy)]);
 }
 
 export async function persistMintBurnAdmissions(db: D1Database, rows: readonly MintBurnAdmissionRow[]) {
