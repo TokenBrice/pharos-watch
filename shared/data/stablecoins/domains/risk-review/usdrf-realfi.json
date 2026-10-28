@@ -1,0 +1,13 @@
+{
+  "id": "usdrf-realfi",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      { "label": "RealFi USDrf reserve model", "url": "https://docs.realfi.co/realfi-tokens/usdrf-base-stablecoin" },
+      { "label": "RealFi reserve strategy", "url": "https://docs.realfi.co/real-world-backing/real-world-backing" }
+    ],
+    "evidence": "Pre-launch issuer-model review: RealFi's base-token and backing pages read by HTTP GET on 2026-10-28 at 09:52:06 UTC describe the entire external reserve as managed Treasury, money-market and credit claims. All declared reserve categories depend on off-chain issuer or custodian control, so the model implies 100% upstream exposure regardless of undisclosed allocation weights. This is structural documentation, not a measured current reserve balance or attestation. The AML/KYC framework does not independently establish a holder-transfer freeze on the Cardano native asset; no direct freeze power is asserted.",
+    "reviewer": "Codex registry sweep",
+    "reviewedAt": "2026-10-28"
+  }
+}

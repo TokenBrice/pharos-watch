@@ -1,0 +1,13 @@
+{
+  "id": "dotusd-polkadot",
+  "blacklistabilityReview": {
+    "reviewedStatus": "inherited",
+    "sources": [
+      { "label": "dotUSD first-phase USDT backing", "url": "https://pcf.network/news/dotusd-approved/" },
+      { "label": "Asset Hub asset 7873 authorities", "url": "https://assethub-polkadot.subscan.io/assets/7873" }
+    ],
+    "evidence": "Pre-launch issuer-model review: PCF's launch record read by HTTP GET on 2026-10-28 at 09:52:32 UTC describes first-phase minting and redemption entirely against USDT, implying 100% of the declared external backing inherits Tether's issuer controls. DOT in the swap pool is not DOT-vault collateral. Subscan's asset 7873 page read at 09:51:25 UTC assigns Owner, Admin, Issuer and Freezer to 12Sg2E9vYxvGsknGKRSXserzHWTXfNej8jqAXjp499RT6Sit; its reachable dispatch powers were not established, so an assigned role alone is not treated as proof of direct holder freezing. No current reserve attestation or measured allocation is claimed.",
+    "reviewer": "Codex registry sweep",
+    "reviewedAt": "2026-10-28"
+  }
+}
