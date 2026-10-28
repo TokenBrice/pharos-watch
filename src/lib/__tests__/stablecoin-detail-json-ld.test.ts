@@ -55,6 +55,80 @@ describe("buildStablecoinDatasetJsonLd", () => {
     expect(jsonLd.mainEntityOfPage).toBe(jsonLd.url);
     expect(jsonLd).not.toHaveProperty("image");
   });
+
+  it("limits the asset sameAs to provider identity URLs, never catalog links", () => {
+    const links = [
+      { label: "Website", url: "https://tether.to/" },
+      { label: "Transparency", url: "https://tether.to/en/transparency/?tab=reports" },
+      { label: "USDT0", url: "https://usdt0.to/" },
+    ];
+    const coin = makeStablecoinMeta({
+      id: "usdt-tether",
+      name: "Tether",
+      symbol: "USDT",
+      geckoId: "tether",
+      llamaId: "1",
+      cmcSlug: "tether",
+      links,
+      proofOfReserves: { type: "attestation", url: "https://tether.to/en/transparency" },
+    });
+    const jsonLd = buildStablecoinDatasetJsonLd(coin);
+    const about = jsonLd.about as Record<string, unknown>;
+
+    expect(about.sameAs).toEqual([
+      "https://www.coingecko.com/en/coins/tether",
+      "https://defillama.com/stablecoin/1",
+      "https://coinmarketcap.com/currencies/tether/",
+    ]);
+    for (const link of links) expect(about.sameAs).not.toContain(link.url);
+    // Dataset identity stays the Pharos landing page and the catalog links remain source data.
+    expect(jsonLd.sameAs).toEqual([jsonLd.url]);
+    expect(coin.links).toEqual(links);
+    expect(jsonLd.citation).toEqual(["https://tether.to/en/transparency"]);
+    expect(jsonLd.license).toBe("https://creativecommons.org/licenses/by/4.0/");
+    expect(jsonLd.distribution).toMatchObject([{ contentUrl: `${jsonLd.url}index.md` }]);
+    expect(about["@id"]).toBe(`${jsonLd.url}#stablecoin`);
+  });
+
+  it("keeps a USDC-shaped profile on provider identity URLs only", () => {
+    const links = [
+      { label: "Website", url: "https://www.circle.com/" },
+      { label: "Docs", url: "https://developers.circle.com/" },
+      { label: "X", url: "https://x.com/circle" },
+    ];
+    const coin = makeStablecoinMeta({
+      id: "usdc-circle",
+      name: "USD Coin",
+      symbol: "USDC",
+      geckoId: "usd-coin",
+      llamaId: "2",
+      cmcSlug: "usd-coin",
+      links,
+    });
+    const jsonLd = buildStablecoinDatasetJsonLd(coin);
+    expect((jsonLd.about as Record<string, unknown>).sameAs).toEqual([
+      "https://www.coingecko.com/en/coins/usd-coin",
+      "https://defillama.com/stablecoin/2",
+      "https://coinmarketcap.com/currencies/usd-coin/",
+    ]);
+    expect(JSON.stringify(jsonLd.about)).not.toMatch(/circle\.com|x\.com\/circle/);
+  });
+
+  it("omits the Thing sameAs when no provider identity exists, keeping Dataset identity", () => {
+    const links = [{ label: "Website", url: "https://example.com/" }];
+    const coin = makeStablecoinMeta({ id: "bare-coin", links });
+    const jsonLd = buildStablecoinDatasetJsonLd(coin);
+    expect(jsonLd.about).not.toHaveProperty("sameAs");
+    expect(jsonLd.sameAs).toEqual([jsonLd.url]);
+    expect(coin.links).toEqual(links);
+
+    const [, preLaunchThing] = buildPreLaunchStablecoinJsonLd(makeStablecoinMeta({
+      id: "bare-pre-launch",
+      status: "pre-launch",
+      links,
+    }));
+    expect(preLaunchThing).not.toHaveProperty("sameAs");
+  });
 });
 
 describe("buildPreLaunchStablecoinJsonLd", () => {
@@ -95,6 +169,18 @@ describe("buildPreLaunchStablecoinJsonLd", () => {
     });
     expect(webPage).toHaveProperty("url");
     expect(thing).toMatchObject({ "@type": "Thing", image: "https://pharos.watch/logos/coin.png" });
+  });
+
+  it("uses only provider identity URLs on the pre-launch Thing", () => {
+    const [, thing] = buildPreLaunchStablecoinJsonLd(makeStablecoinMeta({
+      status: "pre-launch",
+      geckoId: "tether",
+      links: [
+        { label: "Website", url: "https://tether.to/" },
+        { label: "USDT0", url: "https://usdt0.to/" },
+      ],
+    }));
+    expect((thing as { sameAs?: string[] }).sameAs).toEqual(["https://www.coingecko.com/en/coins/tether"]);
   });
 });
 

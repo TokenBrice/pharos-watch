@@ -24,12 +24,15 @@ import {
   resolveAiSummaryClaims,
 } from "@shared/lib/ai-summary-claims";
 import { stripTermMarkup } from "../../src/lib/term-markup";
+import { PUBLIC_DATASET_CURRENT_DATE } from "../../src/lib/datasets/public-dataset-current";
+import { getCurrentRedemptionConfig } from "../../src/lib/redemption-review-currency";
 import { formatSnapshotSafetyScoreLabel } from "../../src/lib/safety-grade-snapshot";
 import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/static-seo-content";
 import { isActiveStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type {
   DigestContentEntry,
   StablecoinAiSummariesById,
+  StablecoinMeta,
 } from "@shared/types";
 import { DigestStoredSnapshotSchema } from "@shared/types/digest";
 
@@ -59,6 +62,89 @@ export function frontMatterBlock(attrs: Record<string, string>): string {
 function cleanMarkdownText(value: string | undefined): string | null {
   const text = value?.trim();
   return text ? text : null;
+}
+
+type MarkdownSourceLink = { label: string; url: string };
+
+/** Keep a quoted source label on one line and inside its link text. */
+function escapeMarkdownLinkLabel(value: string): string {
+  return value
+    .replaceAll("\\", "\\\\")
+    .replaceAll("[", "\\[")
+    .replaceAll("]", "\\]")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * Angle-delimited destinations keep parentheses and fragments intact; the two
+ * characters that would close or confuse that delimiter are percent-encoded.
+ */
+function safeMarkdownDestination(url: string): string {
+  return url.replaceAll("<", "%3C").replaceAll(">", "%3E");
+}
+
+function renderMarkdownLink(link: MarkdownSourceLink): string {
+  return `- [${escapeMarkdownLinkLabel(link.label)}](<${safeMarkdownDestination(link.url)}>)`;
+}
+
+function dedupeSourceLinks(links: readonly MarkdownSourceLink[]): MarkdownSourceLink[] {
+  const seen = new Set<string>();
+  return links.filter((link) => {
+    if (seen.has(link.url)) return false;
+    seen.add(link.url);
+    return true;
+  });
+}
+
+/** Reviewed reserve evidence, in source order; the transparency page is the labelled fallback. */
+function buildReserveSourceLinks(coin: StablecoinMeta): MarkdownSourceLink[] {
+  return dedupeSourceLinks([
+    ...(coin.reserveReview?.sources ?? []),
+    ...(coin.proofOfReserves?.latestReport?.sources ?? []),
+    ...(coin.proofOfReserves?.url ? [{ label: "Reserve source", url: coin.proofOfReserves.url }] : []),
+  ]);
+}
+
+/**
+ * Reviewed redemption documents only while the same route is current for the
+ * FAQ: an expired or absent review contributes no source group.
+ */
+function buildRedemptionSourceLinks(coin: StablecoinMeta): MarkdownSourceLink[] {
+  if (!isActiveStablecoinMeta(coin)) return [];
+  const config = getCurrentRedemptionConfig(coin.id);
+  if (!config?.reviewedAt) return [];
+  return dedupeSourceLinks(config.docs ?? []);
+}
+
+function renderSourcesSection(coin: StablecoinMeta): string | null {
+  const reserveLinks = buildReserveSourceLinks(coin);
+  const redemptionLinks = buildRedemptionSourceLinks(coin);
+  if (reserveLinks.length === 0 && redemptionLinks.length === 0) return null;
+  return [
+    "## Sources",
+    ...(reserveLinks.length > 0 ? ["### Reserve sources", reserveLinks.map(renderMarkdownLink).join("\n")] : []),
+    ...(redemptionLinks.length > 0 ? ["### Redemption sources", redemptionLinks.map(renderMarkdownLink).join("\n")] : []),
+  ].join("\n\n");
+}
+
+/**
+ * Public snapshot handoff for active and frozen profiles. The filename date is
+ * the generated release label, not an observation clock; each file carries its
+ * own source dates. Bounded datasets may omit the asset, so this never
+ * promises live analytics.
+ */
+function renderPublicSnapshotsSection(releaseDate: string): string {
+  return [
+    "## Public snapshots",
+    `Public release snapshots (${releaseDate}); each file records its own source dates and coverage.`,
+    [
+      `- [Top stablecoins](https://pharos.watch/datasets/top-stablecoins/${releaseDate}.json)`,
+      `- [Safety Scores](https://pharos.watch/datasets/scores-latest/${releaseDate}.json)`,
+      `- [Depeg history](https://pharos.watch/datasets/depeg-history/${releaseDate}.json)`,
+    ].join("\n"),
+    "These bounded datasets can omit this asset and do not replace authenticated live analytics. See [API access](https://pharos.watch/api/) and [API reference](https://pharos.watch/api/reference/).",
+  ].join("\n\n");
 }
 
 export function renderStablecoinDetail(
@@ -119,6 +205,18 @@ export function renderStablecoinDetail(
     );
   }
 
+  if (coin.status !== "pre-launch") {
+    parts.push(
+      [
+        "## Quick answers",
+        ...buildStablecoinFaqItems(coin).map((item) => `### ${item.question}\n\n${item.answer}`),
+      ].join("\n\n"),
+    );
+  }
+
+  const sources = renderSourcesSection(coin);
+  if (sources) parts.push(sources);
+
   if (coin.contracts?.length) {
     parts.push(
       [
@@ -133,15 +231,6 @@ export function renderStablecoinDetail(
     );
   }
 
-  if (coin.status !== "pre-launch") {
-    parts.push(
-      [
-        "## Quick answers",
-        ...buildStablecoinFaqItems(coin).map((item) => `### ${item.question}\n\n${item.answer}`),
-      ].join("\n\n"),
-    );
-  }
-
   if (coin.status === "pre-launch" && coin.launchPhase === "launched") {
     parts.push(
       `## Live Data\n\nThis stablecoin has launched, but Pharos has not yet admitted a price and supply source.${coin.listingStatusReview ? ` ${coin.listingStatusReview.reason}` : ""} Live API data is unavailable, not zero, until both can be verified.`,
@@ -153,9 +242,7 @@ export function renderStablecoinDetail(
       `## Listing Status\n\n${coin.listingStatusReview?.reason ?? "This record is outside Pharos's active universe."} Current live monitoring is disabled; the canonical profile remains available for historical reference.`,
     );
   } else {
-    parts.push(
-      `## Live Data\n\nReal-time price, supply, peg score, liquidity, and flow data live at https://api.pharos.watch/api/stablecoin/${id}.`,
-    );
+    parts.push(renderPublicSnapshotsSection(PUBLIC_DATASET_CURRENT_DATE));
   }
 
   return `${parts.join("\n\n")}\n`;

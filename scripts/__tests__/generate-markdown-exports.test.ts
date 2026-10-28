@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
-import { mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { buildMethodologyChangelogMarkdown, buildMethodologyIndexMarkdown } from "../lib/methodology-to-markdown";
@@ -9,11 +9,14 @@ import {
   renderStablecoinDetail,
 } from "../lib/markdown-renderers";
 import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
+import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/static-seo-content";
+import { getCurrentRedemptionConfig } from "../../src/lib/redemption-review-currency";
 import { changelogs } from "../../src/data/changelogs";
 import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "../../src/lib/changelog-history";
 import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
 
 // Pin the release grade and date so the byte fixture does not move with each data refresh.
@@ -28,6 +31,23 @@ vi.mock("../../src/lib/safety-grade-snapshot", async (importOriginal) => ({
 }));
 
 afterEach(() => { vi.restoreAllMocks(); });
+
+/** One Markdown section, from its heading to the next level-two heading. */
+function markdownSection(markdown: string, heading: string): string {
+  const start = markdown.indexOf(heading);
+  if (start < 0) return "";
+  const next = markdown.indexOf("\n## ", start + heading.length);
+  return markdown.slice(start, next < 0 ? undefined : next);
+}
+
+/** One level-three heading and its list, stopping at the next heading of either level. */
+function markdownSubsection(markdown: string, heading: string): string {
+  const start = markdown.indexOf(heading);
+  if (start < 0) return "";
+  const offset = start + heading.length;
+  const next = markdown.slice(offset).search(/\n##{2,3} /);
+  return markdown.slice(start, next < 0 ? undefined : offset + next);
+}
 
 
 describe("writeMarkdownRoute", () => {
@@ -59,6 +79,7 @@ describe("stablecoin markdown", () => {
     expect(md).toContain(`**Status:** ${status}`);
     expect(md).not.toContain("Live price, supply, peg, liquidity, and flow data are served by the Pharos API");
     expect(md).not.toContain("https://api.pharos.watch/api/stablecoin/");
+    expect(md).not.toContain("## Public snapshots");
     if (status === "pre-launch") expect(md).toContain("not available until launch");
     else {
       expect(md).toContain("Explicit fixture listing reason.");
@@ -75,6 +96,7 @@ describe("stablecoin markdown", () => {
     expect(md).toContain("has launched, but Pharos has not yet admitted a price and supply source. No admitted price lane yet.");
     expect(md).toContain("unavailable, not zero");
     expect(md).not.toContain("not available until launch");
+    expect(md).not.toContain("## Public snapshots");
   });
 
   it("withholds registered live claims instead of asserting unavailable grades", () => {
@@ -91,7 +113,7 @@ describe("stablecoin markdown", () => {
     expect(md).not.toContain("{{grade}}");
   });
 
-  it("leads the overview with the dated release grade and appends the profile quick answers", () => {
+  it("leads the overview with the dated release grade ahead of the profile quick answers", () => {
     const md = renderStablecoinDetail("usdt-tether", {
       "usdt-tether": {
         title: "Summary",
@@ -106,7 +128,183 @@ describe("stablecoin markdown", () => {
     );
     expect(md).toContain("## Quick answers\n\n### What is Tether (USDT)?");
     expect(md).toContain("### Is USDT safe?\n\nAs of Oct 22, 2026, Pharos grades USDT A (83/100) on its Safety Score.");
-    expect(md.indexOf("## Quick answers")).toBeLessThan(md.indexOf("## Live Data"));
+    expect(md.indexOf("## Quick answers")).toBeLessThan(md.indexOf("## Contracts"));
+    expect(md.indexOf("## Quick answers")).toBeLessThan(md.indexOf("## Public snapshots"));
+  });
+
+  it("puts Quick answers and reviewed Sources before Contracts for USDT and USDC", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date("2026-10-27T00:00:00Z"));
+    try {
+      for (const id of ["usdt-tether", "usdc-circle"] as const) {
+        const tracked = TRACKED_META_BY_ID.get(id)!;
+        const md = renderStablecoinDetail(id, {});
+        expect(md.indexOf("## Quick answers")).toBeLessThan(md.indexOf("## Sources"));
+        expect(md.indexOf("## Sources")).toBeLessThan(md.indexOf("## Contracts"));
+
+        const contracts = markdownSection(md, "## Contracts");
+        const rows = contracts
+          .split("\n")
+          .filter((line) => line.startsWith("| ") && !line.startsWith("| Chain") && !line.startsWith("| ---"));
+        expect(rows).toHaveLength(tracked.contracts?.length ?? 0);
+        for (const contract of tracked.contracts ?? []) {
+          expect(contracts).toContain(`| ${contract.chain} | \`${contract.address}\` |`);
+        }
+
+        const reserveSources = markdownSubsection(md, "### Reserve sources");
+        const expectedReserveLinks = new Map<string, string>();
+        for (const source of [
+          ...(tracked.reserveReview?.sources ?? []),
+          ...(tracked.proofOfReserves?.latestReport?.sources ?? []),
+        ]) {
+          if (!expectedReserveLinks.has(source.url)) expectedReserveLinks.set(source.url, source.label);
+        }
+        const transparencyUrl = tracked.proofOfReserves!.url;
+        if (!expectedReserveLinks.has(transparencyUrl)) expectedReserveLinks.set(transparencyUrl, "Reserve source");
+        for (const [url, label] of expectedReserveLinks) {
+          expect(reserveSources.split(`(<${url}>)`).length - 1).toBe(1);
+          expect(reserveSources).toContain(label);
+        }
+
+        const redemptionSources = markdownSubsection(md, "### Redemption sources");
+        const docs = getCurrentRedemptionConfig(id)?.docs ?? [];
+        expect(docs.length).toBeGreaterThan(0);
+        for (const doc of docs) expect(redemptionSources).toContain(doc.url);
+
+        // Facts stay the shared HTML/FAQ builder's, not a second Markdown copy.
+        for (const item of buildStablecoinFaqItems(tracked)) expect(md).toContain(item.answer);
+      }
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("renders a deduplicated Sources module only when reviewed links exist", () => {
+    const fixture = coin({ id: "sources-fixture" });
+    vi.spyOn(TRACKED_META_BY_ID, "get").mockReturnValue(fixture);
+    const withoutSources = renderStablecoinDetail(fixture.id, {});
+    expect(withoutSources).not.toContain("## Sources");
+    expect(withoutSources).not.toContain("### Reserve sources");
+
+    fixture.reserveReview = {
+      sources: [
+        { label: "Reserve review [draft]", url: "https://example.com/report#page-2" },
+        { label: "Repeated reserve review", url: "https://example.com/report#page-2" },
+        { label: "Back\\slash (parentheses) [brackets]\nnewline", url: "https://example.com/report?x=1&y=<2>" },
+      ],
+    } as unknown as NonNullable<StablecoinMeta["reserveReview"]>;
+    fixture.contracts = [{ chain: "ethereum", address: "0xfixture", decimals: 6 }];
+
+    const md = renderStablecoinDetail(fixture.id, {});
+    const sources = markdownSection(md, "## Sources");
+    expect(sources).toContain("- [Reserve review \\[draft\\]](<https://example.com/report#page-2>)");
+    expect(sources).not.toContain("Repeated reserve review");
+    expect(sources.match(/https:\/\/example\.com\/report#page-2/g)).toHaveLength(1);
+    expect(sources).toContain(
+      "- [Back\\\\slash (parentheses) \\[brackets\\] newline](<https://example.com/report?x=1&y=%3C2%3E>)",
+    );
+    expect(sources).not.toContain("### Redemption sources");
+    expect(md.indexOf("## Sources")).toBeLessThan(md.indexOf("## Contracts"));
+  });
+
+  it.each([
+    ["examination", "Examination"],
+    ["audit", "Audit"],
+    ["unknown", "Independent Report"],
+    [null, "Independent Report"],
+  ] as const)("renders the reviewed %s engagement in the Markdown backing answer", (method, label) => {
+    const latestReport = method
+      ? {
+          periodEnd: "2026-08-31",
+          publishedAt: "2026-09-05",
+          assuranceMethod: method,
+          scope: "assets-and-liabilities" as const,
+          liabilityReconciliation: "full" as const,
+          reviewer: "test",
+          confidence: "verified" as const,
+          sources: [{ label: "Report", url: "https://example.com/report" }],
+        }
+      : undefined;
+    const fixture = coin({ id: `assurance-${method ?? "absent"}` });
+    fixture.proofOfReserves = {
+      type: "independent-audit",
+      url: "https://example.com/reserves",
+      provider: "Example Auditor",
+      ...(latestReport ? { latestReport } : {}),
+    } as StablecoinMeta["proofOfReserves"];
+    vi.spyOn(TRACKED_META_BY_ID, "get").mockReturnValue(fixture);
+
+    const md = renderStablecoinDetail(fixture.id, {});
+    const backingAnswer = buildStablecoinFaqItems(fixture)[2].answer;
+    expect(backingAnswer).toContain(`Reserve evidence: ${label} by Example Auditor`);
+    // Markdown inherits the same shared answer instead of a second formatter.
+    expect(md).toContain(backingAnswer);
+    expect(md).not.toContain("Independent Audit");
+  });
+
+  it("exports reviewed redemption sources only while the route is current", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-10-27T00:00:00Z"));
+      const current = renderStablecoinDetail("usdt-tether", {});
+      expect(current).toContain("### Redemption sources");
+      expect(current).toContain("### How do you redeem USDT?");
+
+      vi.setSystemTime(new Date("2028-01-01T00:00:00Z"));
+      const expired = renderStablecoinDetail("usdt-tether", {});
+      expect(expired).not.toContain("### Redemption sources");
+      expect(expired).not.toContain("How do you redeem USDT?");
+      // The reserve evidence is reviewed catalog data, not an ageing route.
+      expect(expired).toContain("### Reserve sources");
+      expect(expired).not.toContain("https://api.pharos.watch/api/stablecoin/");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("hands off to dated public snapshots without the gated profile endpoint", () => {
+    const md = renderStablecoinDetail("usdt-tether", {});
+    expect(md).toContain(
+      [
+        "## Public snapshots",
+        "",
+        "Public release snapshots (2026-10-22); each file records its own source dates and coverage.",
+        "",
+        "- [Top stablecoins](https://pharos.watch/datasets/top-stablecoins/2026-10-22.json)",
+        "- [Safety Scores](https://pharos.watch/datasets/scores-latest/2026-10-22.json)",
+        "- [Depeg history](https://pharos.watch/datasets/depeg-history/2026-10-22.json)",
+        "",
+        "These bounded datasets can omit this asset and do not replace authenticated live analytics. See [API access](https://pharos.watch/api/) and [API reference](https://pharos.watch/api/reference/).",
+      ].join("\n"),
+    );
+    expect(md).not.toContain("https://api.pharos.watch/api/stablecoin/");
+    // The release filename never rewrites an underlying observation date.
+    expect(md).toContain("latest period ending Jun 30, 2026");
+    const backingAnswer = buildStablecoinFaqItems(TRACKED_META_BY_ID.get("usdt-tether")!)[2].answer;
+    expect(backingAnswer).toContain("Jun 30, 2026");
+    expect(backingAnswer).not.toContain("2026-10-22");
+  });
+
+  it("points the dated snapshot handoff at generated files and latest rewrites", async () => {
+    const actual = await vi.importActual<typeof import("../../src/lib/datasets/public-dataset-current")>(
+      "../../src/lib/datasets/public-dataset-current",
+    );
+    const redirects = readFileSync(new URL("../../public/_redirects", import.meta.url), "utf8");
+    for (const topic of ["top-stablecoins", "scores-latest", "depeg-history"]) {
+      const dated = `/datasets/${topic}/${actual.PUBLIC_DATASET_CURRENT_DATE}.json`;
+      expect(existsSync(new URL(`../../public${dated}`, import.meta.url))).toBe(true);
+      expect(redirects).toContain(`/datasets/${topic}/latest.json ${dated} 200`);
+    }
+  });
+
+  it("keeps archived wording while sharing the bounded snapshot handoff", () => {
+    const frozen = coin({ id: "frozen-snapshot-fixture", status: "frozen" });
+    vi.spyOn(TRACKED_META_BY_ID, "get").mockReturnValue(frozen);
+    const md = renderStablecoinDetail(frozen.id, {});
+    expect(md).toContain("frozen Pharos archive");
+    expect(md).toContain("## Public snapshots");
+    expect(md).not.toContain("currently monitored");
+    expect(md).not.toContain("https://api.pharos.watch/api/stablecoin/");
   });
 
   it("omits the grade for unrated coins and quick answers for pre-launch profiles", () => {
@@ -146,6 +344,21 @@ describe("authored Markdown export fixtures", () => {
     ["stablecoin-usdt-tether.md", () => renderStablecoinDetail("usdt-tether")],
   ] as const)("preserves exported bytes for %s", (name, render) => {
     expect(render()).toBe(readFileSync(new URL(`./fixtures/markdown/${name}`, import.meta.url), "utf8"));
+  });
+});
+
+describe("public llms index", () => {
+  it("lists the compliance page and both snapshot datasets with their scope", () => {
+    const llms = readFileSync(new URL("../../public/llms.txt", import.meta.url), "utf8");
+    expect(llms).toContain(
+      "- [Compliance](https://pharos.watch/compliance/): MiCA and GENIUS Act status, applicability, pathway and disclosure evidence from reviewed records.",
+    );
+    expect(llms).toContain(
+      "- [Safety Scores dataset (JSON)](https://pharos.watch/datasets/scores-latest/latest.json): Dated release snapshot of grades and score fields; source dates and scope are recorded in the file.",
+    );
+    expect(llms).toContain(
+      "- [Depeg history dataset (JSON)](https://pharos.watch/datasets/depeg-history/latest.json): Retrospective depeg-event snapshot with source dates and historical coverage; current depegs are shown on the Depeg Tracker.",
+    );
   });
 });
 

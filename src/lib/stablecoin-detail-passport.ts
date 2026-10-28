@@ -5,8 +5,8 @@ import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers
 import {
   BACKING_BADGE_STYLES,
   MECHANISM_ARCHETYPE_SHORT_LABELS,
-  POR_BADGE_STYLES,
   POR_TIER_STYLES,
+  getProofOfReservesStyle,
 } from "@shared/lib/classification";
 import { GENIUS_REGIME_STATE } from "@shared/lib/compliance-regime-state";
 import { GENIUS_STATUS_SHORT_LABELS, GENIUS_STATUS_TEXT_CLS } from "@shared/lib/genius";
@@ -339,14 +339,18 @@ export function buildHeroPassportItems({
   if (!isDecentralized && coin.proofOfReserves) {
     const attestorTier = coin.proofOfReserves.attestorTier ?? null;
     const tierStyle = attestorTier ? POR_TIER_STYLES[attestorTier] : null;
-    const attestorLabel = tierStyle?.label ?? POR_BADGE_STYLES[coin.proofOfReserves.type].label;
+    // The engagement stays in the accessible name: the short visible value is
+    // the tier, which must not hide whether the report is an examination.
+    const reportLabel = getProofOfReservesStyle(coin.proofOfReserves)?.label ?? "Independent Report";
     items.push({
       key: "attestor",
       category: "Attestor",
-      value: attestorTier ? ATTESTOR_PASSPORT_LABELS[attestorTier] : attestorLabel,
+      value: attestorTier ? ATTESTOR_PASSPORT_LABELS[attestorTier] : reportLabel,
       href: "#attestation",
       valueClass: tierStyle?.textCls,
-      ariaLabel: `Reserve attestation: ${attestorLabel} — jump to Proof of Reserves`,
+      ariaLabel: tierStyle
+        ? `Reserve report: ${reportLabel}; ${tierStyle.label} — jump to Proof of Reserves`
+        : `Reserve report: ${reportLabel} — jump to Proof of Reserves`,
     });
   }
 

@@ -27,11 +27,14 @@ function compactStrings(values: readonly (string | null | undefined)[]): string[
 }
 
 function buildStablecoinSameAs(coin: StablecoinMeta): string[] {
+  // Only provider asset-identity pages. Catalog `links[]` mix issuer homepages,
+  // documentation, social accounts and other tokens; nothing reviewed says
+  // they identify this asset, so they stay visible references rather than
+  // structured identity claims.
   return compactStrings([
     coin.geckoId ? `https://www.coingecko.com/en/coins/${coin.geckoId}` : null,
     coin.llamaId ? `https://defillama.com/stablecoin/${coin.llamaId}` : null,
     coin.cmcSlug ? `https://coinmarketcap.com/currencies/${coin.cmcSlug}/` : null,
-    ...(coin.links?.map((link) => link.url) ?? []),
   ]);
 }
 
@@ -137,7 +140,7 @@ export function buildStablecoinDatasetJsonLd(
   );
   const governanceLabel = GOVERNANCE_LABELS[coin.flags.governance] ?? coin.flags.governance;
   const backingLabel = BACKING_LABELS[coin.flags.backing] ?? coin.flags.backing;
-  // Third-party identity links (CoinGecko, DefiLlama, CMC, issuer) describe the
+  // Provider asset-identity pages (CoinGecko, DefiLlama, CMC) describe the
   // STABLECOIN, so they belong on the nested `about` Thing. Putting them on the
   // Dataset would claim those sites host copies of the Pharos dataset.
   const stablecoinIdentityUrls = buildStablecoinSameAs(coin);

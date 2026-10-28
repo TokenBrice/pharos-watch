@@ -6,7 +6,7 @@ import type {
   MicaStatus,
   StablecoinMeta,
 } from "@shared/types";
-import { POR_BADGE_STYLES, POR_TIER_STYLES } from "@shared/lib/classification";
+import { POR_TIER_STYLES, getProofOfReservesStyle } from "@shared/lib/classification";
 import {
   GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES,
   GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS,
@@ -250,6 +250,20 @@ function reviewedState(present: boolean | undefined): IssuerDisclosureState {
 }
 
 /**
+ * Attestor byline for the disclosure tooltips. The tier describes the firm;
+ * `Report:` names the reviewed engagement (examination, audit or the neutral
+ * Independent Report fallback). Missing provider or tier clauses drop out
+ * rather than inventing either fact.
+ */
+function buildAttestationByline(proofOfReserves: ProofOfReserves): string {
+  const provider = proofOfReserves.provider;
+  const tierLabel = proofOfReserves.attestorTier ? POR_TIER_STYLES[proofOfReserves.attestorTier].label : null;
+  const attestor = provider && tierLabel ? `${provider} (${tierLabel})` : provider ?? tierLabel;
+  const reportLabel = getProofOfReservesStyle(proofOfReserves)?.label ?? "Independent Report";
+  return attestor ? `Attestor: ${attestor}. Report: ${reportLabel}.` : `Report: ${reportLabel}.`;
+}
+
+/**
  * The attestation cell. The proof-of-reserves record, the fact behind the
  * hero passport's Attestor entry, is the source of truth whenever it names an
  * attestation: its cadence is the value, and a cadence slower than monthly or
@@ -277,8 +291,7 @@ function buildAttestationDisclosure(
     };
   }
 
-  const attestor = tier ? POR_TIER_STYLES[tier].label : POR_BADGE_STYLES[proofOfReserves.type].label;
-  const byline = `Attestor: ${proofOfReserves.provider ? `${proofOfReserves.provider} (${attestor})` : attestor}.`;
+  const byline = buildAttestationByline(proofOfReserves);
   const cadence = proofOfReserves.cadence ? ATTESTATION_CADENCES[proofOfReserves.cadence] : undefined;
   if (cadence) {
     return {
