@@ -6,8 +6,8 @@ import { getBlacklistEventBySignature } from "../../lib/blacklist-contracts";
 import { type RateLimitedFetch } from "../../lib/evm-logs";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
 import { decimalNumberFromBigInt } from "../../lib/bigint";
-import { throwIfAborted } from "../../lib/abort";
-import { buildBlacklistRow, type BlacklistRow } from "../../lib/blacklist/shared";
+import { FetchRequestNotStartedError, throwIfAborted } from "../../lib/abort";
+import { buildBlacklistRow, type BlacklistRow, type TronScanTelemetry } from "../../lib/blacklist/shared";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "../../lib/blacklist/run-budget";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { canonicalTronAddress } from "@shared/lib/tron-address";
@@ -28,7 +28,7 @@ interface TronEventsResponse {
 }
 
 const TRONGRID_ORIGIN = "https://api.trongrid.io";
-const TRON_INDEXING_SAFETY_MS = 15 * 60_000;
+export const TRON_INDEXING_SAFETY_MS = 15 * 60_000;
 const MAX_TRON_PAGES_PER_EVENT = 100;
 const MAX_TRON_PAGINATION_URL_LENGTH = 4_096;
 
@@ -42,6 +42,10 @@ export interface FetchTronEventsIncrementalResult {
   topicCount: number;
   coveredTopicCount: number;
   providerCalls: number;
+  usedRpcLogs?: boolean;
+  maxSplitDepth?: number;
+  failureSamples?: string[];
+  tronRpc?: TronScanTelemetry;
 }
 
 export function validateTronPaginationUrl(
@@ -104,7 +108,9 @@ export function parseTronEvent(config: ContractEventConfig, evt: TronEventResult
     ? (evt.result[eventDef.tronResultKey] ?? "")
     : (evt.result._user || evt.result._blackListedUser || evt.result["0"] || ""));
   if (!affectedAddress) throw new BlacklistDecodeError("invalid-address");
-  const rawAmountStr = evt.result._balance || evt.result._value || evt.result["1"];
+  // Every configured Tron amount is the final uint256; USD1 has preceding indexed addresses.
+  const amountPosition = eventDef.signature.slice(eventDef.signature.indexOf("(") + 1, -1).split(",").length - 1;
+  const rawAmountStr = evt.result._balance || evt.result._value || evt.result.amount || evt.result[String(amountPosition)];
   const amount =
     eventDef.hasAmount && rawAmountStr && /^[0-9]+$/.test(rawAmountStr)
       ? decimalNumberFromBigInt(BigInt(rawAmountStr), config.decimals) : null;
@@ -139,6 +145,7 @@ export async function fetchTronEventsIncremental(
   rateLimit: RateLimitedFetch,
   signal?: AbortSignal,
   db?: D1Database,
+  safeHeadCeilingMs?: number,
 ): Promise<FetchTronEventsIncrementalResult> {
   const rows: BlacklistRow[] = [];
   const rowTimestamps = new Map<string, number>();
@@ -148,7 +155,7 @@ export async function fetchTronEventsIncremental(
   let apiError = false;
   let coveredTopicCount = 0;
   let providerCalls = 0;
-  const safeHead = Math.max(lastTimestampMs, Date.now() - TRON_INDEXING_SAFETY_MS);
+  const safeHead = Math.min(safeHeadCeilingMs ?? Infinity, Math.max(lastTimestampMs, Date.now() - TRON_INDEXING_SAFETY_MS));
   const headers: Record<string, string> = {};
   if (apiKey) headers["TRON-PRO-API-KEY"] = apiKey;
 
@@ -205,10 +212,19 @@ export async function fetchTronEventsIncremental(
       seenUrls.add(url);
       pageCount++;
 
-      runBudget.subrequestBudget.count++;
-      providerCalls++;
       const json: TronEventsResponse | null = await rateLimit(async () => {
-        const result = await fetchJsonWithRetry<unknown>(url!, { headers, signal });
+        const result = await fetchJsonWithRetry<unknown>(url!, { headers, signal }, 2, {
+          deadlineMs: runBudget.deadlineMs,
+          beforeRequest: () => {
+            if (blacklistRuntimeBudgetReached(runBudget) || blacklistSubrequestBudgetReached(runBudget)) return false;
+            runBudget.subrequestBudget.count++;
+            providerCalls++;
+            return true;
+          },
+        }).catch((error: unknown) => {
+          if (error instanceof FetchRequestNotStartedError) return null;
+          throw error;
+        });
         if (!result) return null;
         if (!result.response.ok) {
           apiError = true;

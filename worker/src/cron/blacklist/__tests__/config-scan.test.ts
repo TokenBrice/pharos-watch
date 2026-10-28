@@ -1,7 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { CONTRACT_CONFIGS } from "../../../lib/blacklist-contracts";
+import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import type { BlacklistConfigState } from "../state";
+import type { FetchTronEventsIncrementalResult } from "../tron-source";
 
 const mocks = vi.hoisted(() => ({
   loadBlacklistConfigStates: vi.fn(),
@@ -23,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   recordOutcomeSafe: vi.fn(),
   fetchEvmEventsIncremental: vi.fn(),
   fetchTronEventsIncremental: vi.fn(),
+  fetchTronEventsWithRpc: vi.fn(),
   processFetchedBlacklistRows: vi.fn(),
   blacklistShouldStopBeforeNextConfig: vi.fn(),
   blacklistSubrequestBudgetReached: vi.fn(),
@@ -54,6 +57,8 @@ vi.mock("../evm-source", () => ({
 vi.mock("../tron-source", () => ({
   fetchTronEventsIncremental: mocks.fetchTronEventsIncremental,
 }));
+
+vi.mock("../tron-rpc-source", () => ({ fetchTronEventsWithRpc: mocks.fetchTronEventsWithRpc }));
 
 vi.mock("../post-fetch", () => ({
   processFetchedBlacklistRows: mocks.processFetchedBlacklistRows,
@@ -363,5 +368,140 @@ describe("blacklist config scan accounting", () => {
       undefined,
     );
     expect(state).toMatchObject({ lastOutcome: "exception", consecutiveFailures: 1, consecutiveSkips: 0 });
+  });
+});
+
+
+describe("Tron native scan admission", () => {
+  const telemetry = {
+    source: "dwellir-jsonrpc", dwellirCalls: 5, trongridRpcCalls: 0, eventApiCalls: 0,
+    trongridFailureReason: null,
+    fallbackReason: null, orderRepairSkippedRows: 0, orderRepairSkipReason: null,
+    amountRepairSkippedRows: 0, amountRepairSkipReason: null,
+  };
+  const result = {
+    rows: [], maxBlock: 200, scannedToTimestamp: 200, safeHead: 200,
+    incomplete: false, apiError: false, topicCount: 3, coveredTopicCount: 3,
+    providerCalls: 5, usedRpcLogs: true, tronRpc: telemetry,
+  };
+
+  it("keeps admitted Dwellir scanning with TronGrid's circuit open without recording a TronGrid success", async () => {
+    const state = makeState(TRON_CONFIG);
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    mocks.shouldAttemptFetch.mockResolvedValue(false);
+    mocks.fetchTronEventsWithRpc.mockResolvedValue(result);
+    const summary = await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn() } });
+    expect(mocks.fetchTronEventsWithRpc).toHaveBeenCalledWith(expect.objectContaining({ eventApiAllowed: false }));
+    expect(mocks.fetchTronEventsIncremental).not.toHaveBeenCalled();
+    expect(mocks.recordOutcomeSafe).not.toHaveBeenCalled();
+    expect(summary.tronRpc[TRON_CONFIG.configKey]).toEqual(telemetry);
+    expect(summary.configsSucceeded).toBe(1);
+    expect(summary.rpcLogConfigs).toBe(1);
+    expect(mocks.finalizeBlacklistConfigAttempt).toHaveBeenCalledWith(expect.anything(), expect.anything(),
+      expect.objectContaining({ nextCursor: 200, observedSafeHead: 200, outcome: "quiet" }), undefined);
+  });
+
+  it("preserves partial all-topic progress without renewing the full-coverage clock", async () => {
+    const state = makeState(TRON_CONFIG, { lastSucceededAt: 10 });
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    mocks.fetchTronEventsWithRpc.mockResolvedValue({ ...result, safeHead: 300, incomplete: true });
+    const summary = await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn() } });
+    expect(summary.configsSucceeded).toBe(0);
+    expect(state.lastSucceededAt).toBe(10);
+    expect(state.cursorValue).toBe(200);
+    expect(mocks.finalizeBlacklistConfigAttempt).toHaveBeenCalledWith(expect.anything(), expect.anything(),
+      expect.objectContaining({ nextCursor: 200, outcome: "partial" }), undefined);
+  });
+
+  it("keeps a stale solid-head failure unavailable without advancing its cursor or success clock", async () => {
+    const desiredSafeHead = 1_793_196_000_000;
+    const cursorValue = desiredSafeHead - 6 * 60 * 60_000;
+    const lastSucceededAt = Math.floor(cursorValue / 1000);
+    const state = makeState(TRON_CONFIG, { cursorValue, lastSucceededAt });
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    const staleResult: FetchTronEventsIncrementalResult = {
+      ...result,
+      maxBlock: cursorValue,
+      scannedToTimestamp: null,
+      safeHead: desiredSafeHead,
+      incomplete: true,
+      apiError: true,
+      coveredTopicCount: 0,
+      failureSamples: ["tron-rpc-stale-solid-head"],
+      tronRpc: { ...telemetry, source: "unavailable", fallbackReason: "tron-rpc-stale-solid-head" },
+    };
+    mocks.fetchTronEventsWithRpc.mockResolvedValueOnce(staleResult);
+
+    const summary = await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn() } });
+
+    expect(state).toMatchObject({ cursorValue, lastSucceededAt, lastOutcome: "provider_error", consecutiveFailures: 1 });
+    expect(summary).toMatchObject({ configsAttempted: 1, configsSucceeded: 0, apiErrors: 1,
+      runtimeBudgetHit: false, coverageOutcomeCounts: { provider_error: 1 } });
+    expect(summary.coverageVerdicts[state.configKey]).toBe("failed");
+    expect(summary.configLag[state.configKey]).toEqual({
+      cursorKind: "tron_timestamp_ms", frontier: null, safeHead: desiredSafeHead, lag: null,
+    });
+    expect(summary.coverageFailureConfigs).toEqual([{
+      configKey: state.configKey, outcome: "provider_error", cursorKind: "tron_timestamp_ms",
+      frontier: null, safeHead: desiredSafeHead, lag: null, samples: ["tron-rpc-stale-solid-head"],
+    }]);
+    expect(mocks.finalizeBlacklistConfigAttempt).toHaveBeenCalledExactlyOnceWith(
+      expect.anything(), expect.objectContaining({ expectedCursor: cursorValue }),
+      expect.objectContaining({ nextCursor: null, observedSafeHead: desiredSafeHead, outcome: "provider_error" }),
+      undefined,
+    );
+    expect(mocks.fetchTronEventsIncremental).not.toHaveBeenCalled();
+  });
+
+  it("retains the old event path when Tron is disabled in the admitted capability", async () => {
+    const state = makeState(TRON_CONFIG);
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [state], zeroCursorConfigs: [] });
+    mocks.fetchTronEventsIncremental.mockResolvedValue({ ...result, usedRpcLogs: false, tronRpc: undefined });
+    await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn(), isNetworkEnabled: () => false } });
+    expect(mocks.fetchTronEventsWithRpc).not.toHaveBeenCalled();
+    expect(mocks.fetchTronEventsIncremental).toHaveBeenCalledOnce();
+  });
+
+  it("records an observed TronGrid failure even when the scan ends on a neutral request budget limit", async () => {
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: [makeState(TRON_CONFIG)], zeroCursorConfigs: [] });
+    mocks.fetchTronEventsWithRpc.mockResolvedValue({ ...result, incomplete: true, apiError: false, safeHead: 300,
+      tronRpc: { ...telemetry, trongridRpcCalls: 1, fallbackReason: "tron-rpc-budget-exhausted",
+        trongridFailureReason: "tron-rpc-transport-error" },
+    });
+    await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson: vi.fn() } });
+    expect(mocks.recordOutcomeSafe).toHaveBeenCalledExactlyOnceWith(expect.anything(), CIRCUIT_SOURCE.TRONGRID, false);
+    expect(mocks.finalizeBlacklistConfigAttempt).toHaveBeenCalledWith(expect.anything(), expect.anything(),
+      expect.objectContaining({ nextCursor: 200, outcome: "partial" }), undefined);
+  });
+
+  it("rechecks TronGrid admission after a failed config opens its circuit while continuing Dwellir", async () => {
+    const configs = CONTRACT_CONFIGS.filter((config) => config.chain.type === "tron");
+    mocks.loadBlacklistConfigStates.mockResolvedValue({ configStates: configs.map((config) => makeState(config)), zeroCursorConfigs: [] });
+    let tronGridAllowed = true;
+    mocks.shouldAttemptFetch.mockImplementation(async (_db, source) => source !== CIRCUIT_SOURCE.TRONGRID || tronGridAllowed);
+    mocks.recordOutcomeSafe.mockImplementationOnce(async (_db, source, successful) => {
+      if (source === CIRCUIT_SOURCE.TRONGRID && !successful) tronGridAllowed = false;
+    });
+    mocks.fetchTronEventsWithRpc.mockResolvedValueOnce({ ...result,
+      incomplete: true, apiError: true, scannedToTimestamp: null, coveredTopicCount: 0,
+      tronRpc: { ...telemetry, trongridRpcCalls: 1, fallbackReason: "tron-rpc-providers-unavailable",
+        trongridFailureReason: "tron-rpc-transport-error" },
+    }).mockResolvedValue(result);
+    const readJson = vi.fn().mockRejectedValue(new Error("Dwellir unavailable"));
+    const summary = await scanBlacklistConfigs({ ...scanArgs(), dwellirNative: { readJson } });
+    expect(mocks.fetchTronEventsWithRpc.mock.calls.map(([args]) => args.eventApiAllowed)).toEqual([true, false]);
+    expect(summary.configsAttempted).toBe(2);
+    expect(mocks.fetchTronEventsIncremental).not.toHaveBeenCalled();
+    expect(mocks.recordOutcomeSafe).toHaveBeenCalledExactlyOnceWith(expect.anything(), CIRCUIT_SOURCE.TRONGRID, false);
+
+    // The shared RPC reader must honor the updated gate too, not only the event fallback.
+    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(Response.json({}));
+    try {
+      await expect(mocks.fetchTronEventsWithRpc.mock.calls[1][0].reader.getBlock(1))
+        .rejects.toThrow("tron-rpc-providers-unavailable");
+      expect(fetcher).not.toHaveBeenCalled();
+    } finally {
+      fetcher.mockRestore();
+    }
   });
 });

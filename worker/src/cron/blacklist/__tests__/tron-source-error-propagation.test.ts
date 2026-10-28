@@ -52,6 +52,17 @@ describe("fetchTronEventsIncremental error propagation", () => {
     expect(result.rows).toHaveLength(0);
   });
 
+  it("meters each physical retry and refuses a retry beyond the shared cap", async () => {
+    const fetcher = mockFetch([{ match: "api.trongrid.io", body: "server error", status: 503 }]);
+    const budget = makeRunBudget();
+    budget.subrequestBudget.limit = 2;
+    const result = await fetchTronEventsIncremental(configStub, null, 0, budget, noopLimiter);
+    expect(fetcher.getHistory()).toHaveLength(2);
+    expect(budget.subrequestBudget.count).toBe(2);
+    expect(result.providerCalls).toBe(2);
+    expect(result).toMatchObject({ apiError: true, incomplete: true, scannedToTimestamp: null });
+  });
+
   it("returns apiError=true when TronGrid returns success=false", async () => {
     mockFetch([{ match: "api.trongrid.io", body: { success: false, data: [] }, status: 200 }]);
     const result = await fetchTronEventsIncremental(

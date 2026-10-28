@@ -24,6 +24,7 @@ import { CIRCUIT_SOURCE } from "../lib/constants";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { getOldestBlacklistSuccessAt } from "./blacklist/state";
 import { BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS, scanBlacklistConfigs } from "./blacklist/config-scan";
+import type { DwellirNativeCapability } from "../lib/dwellir-native";
 import { reconcileCurrentBalanceDebt } from "../lib/blacklist/current-balance-debt";
 
 const SYNC_BLACKLIST_RUNTIME_BUDGET_MS = 10 * 60_000;
@@ -71,6 +72,7 @@ export interface SyncBlacklistOptions {
   signal?: AbortSignal;
   onProgress?: CronProgressReporter;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
 }
 
 export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBlacklistResult> {
@@ -100,6 +102,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     signal,
     onProgress,
     chainRpcs,
+    dwellirNative: opts.dwellirNative,
   });
   const {
     totalFetchedEvents,
@@ -360,6 +363,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         coverageLagToleranceBlocks: BLACKLIST_COVERAGE_LAG_TOLERANCE_BLOCKS,
         stateConflicts,
         rpcLogConfigs,
+        tronRpc: scan.tronRpc,
         providerCircuitSkips,
         etherscanCircuitSkips,
         tronGridCircuitSkips,
