@@ -9,6 +9,7 @@ import { deviationColorClass } from "@/lib/severity-colors";
 import { formatNativePrice } from "@shared/lib/format";
 import { CLIENT_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull } from "@shared/lib/supply";
+import { buildSupplyObservationProvenance, classifySupplyCoverage } from "@shared/lib/supply-provenance";
 import { getVariantAccessibleLabel, getVariantDisplay } from "@shared/lib/variant-display";
 import type { DexLiquidityTableMap, PegSummaryCoin, StablecoinData } from "@shared/types";
 import type { TableDensity } from "@/hooks/use-table-density";
@@ -59,9 +60,10 @@ export function buildStablecoinTableRowModel({
     blacklistStatus: getResolvedBlacklistStatus(coin.id),
     mintAuthorityStatus: resolveMintAuthorityStatus(meta?.mintAuthoritySummary),
     mintAuthorityScore: resolveMintAuthorityScoreDisplay(reportCards?.[coin.id]?.mint),
-    change24h: getSupplyChangePercent(circulating, prevDay),
-    change7d: getSupplyChangePercent(circulating, prevWeek),
-    supplySparklineValues: [prevWeek, prevDay, circulating],
+    change24h: getSupplyChangePercent(coin, prevDay),
+    change7d: getSupplyChangePercent(coin, prevWeek),
+    supplySparklineValues: classifySupplyCoverage(buildSupplyObservationProvenance(coin)) === "partial"
+      ? [] : [prevWeek, prevDay, circulating],
     isOverview,
     isCompactDensity: density === "compact",
     riskClass: isOverview

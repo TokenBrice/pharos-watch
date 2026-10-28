@@ -67,7 +67,7 @@ Before hydration, a real leading-core profile directory plus Screener link remai
 
 Deviation text/severity uses published `peg-summary.currentDeviationBps`, not a second calculation from independently refreshed price. Liquidity zero remains measured/coloured; only missing data is `—`. Mint is the published Economic Control component, never a second score lane; missing breakdowns show NR. Curated route describes review coverage, not score. Shared table/export owners define headers and band keys; homepage suppresses header methodology hints while Screener retains them.
 
-Pinning moves rows without renumbering their rank in the current filtered sort. CSV exports retain those same per-asset ranks and the complete displayed order, not only the paginated or virtualized slice, alongside the original source-generation preamble.
+Pins retain filtered-sort ranks. CSV keeps those ranks, full displayed order (not the page/virtual slice) and source-generation preamble. Partial-chain supply stays visible; its 24h/7d changes and sparkline are withheld via the shared provenance classifier. Changes show `—`, sort last in either direction and export empty; observed zero stays numeric.
 
 ## Loading Strategy
 
