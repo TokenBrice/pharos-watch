@@ -10,6 +10,9 @@ import { WORKER_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtim
 import * as activeSafetyScoreSource from "../../../lib/safety-score-active-source";
 import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../../test-helpers/report-cards-v9";
 import { toStructural } from "../utils";
+import { MINT_BURN_CONFIGS } from "../../../lib/mint-burn-contracts";
+import { mintBurnConfigKey } from "../../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnScanCoverageStatements, mintBurnScanFingerprint } from "../../../lib/mint-burn-pipeline/scan-coverage";
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
@@ -20,6 +23,39 @@ const startedAt = NOW_SEC - 10 * 86400;
 const key: DdrStratumKey = { direction: "below", depth: "catastrophic", structural: "fragile", currency: "USD" };
 
 describe("DDR historical context", () => {
+  it("excludes pending and disabled legs from both mint-surge rows and its scan proof", async () => {
+    const { sqlite, db } = fixtures.open();
+    seedResolverInputs(sqlite);
+    const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdc-circle");
+    const pending = { ...configs[0], chain: { ...configs[0].chain, chainId: "synthetic-pending" } };
+    const end = Math.floor(activeRow().started_at / 3600) * 3600;
+    MINT_BURN_CONFIGS.push(pending);
+    try {
+      for (const config of configs) {
+        await db.batch(mintBurnScanCoverageStatements(db, {
+          configKey: mintBurnConfigKey(config), configFingerprint: mintBurnScanFingerprint(config),
+          chainId: config.chain.chainId, fromBlock: 1, toBlock: 2, fromTimestamp: end - 7 * 86400,
+          toTimestamp: end, finalizedBlock: 2, acceptedAt: NOW_SEC,
+        }));
+      }
+      const insert = sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+        mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+        VALUES ('usdc-circle', ?, ?, 1, 0, 0, 0, ?, 0, ?)`);
+      insert.run(configs[0].chain.chainId, end - 3600, 100, 100);
+      insert.run(pending.chain.chainId, end - 3600, 1_000_000, 1_000_000);
+      const admitted = await loadDdrContext(db, [activeRow()], NOW_SEC);
+      if (admitted.kind !== "ok") throw new Error(admitted.reason);
+      expect(admitted.context.mintBurnCoveredEventIds.has(activeRow().id)).toBe(true);
+      expect(admitted.context.mintBurnHourlyByCoin.get("usdc-circle")?.map((row) => row.netFlowUsd)).toEqual([100]);
+      sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)")
+        .run(JSON.stringify(configs.map(mintBurnConfigKey)), NOW_SEC);
+      const disabled = await loadDdrContext(db, [activeRow()], NOW_SEC);
+      if (disabled.kind !== "ok") throw new Error(disabled.reason);
+      expect(disabled.context.mintBurnCoveredEventIds.size).toBe(0);
+      expect(disabled.context.mintBurnHourlyByCoin.size).toBe(0);
+    } finally { MINT_BURN_CONFIGS.splice(MINT_BURN_CONFIGS.indexOf(pending), 1); }
+  });
+
   it("classifies historical and active coins from the same run-local admitted posture", async () => {
     const { sqlite, db } = fixtures.open();
     seedResolverInputs(sqlite);

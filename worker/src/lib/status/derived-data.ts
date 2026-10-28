@@ -1,15 +1,16 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { canonicalTronAddress } from "@shared/lib/tron-address";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
-import { buildCoinCoverageMap, readMintBurnCronSnapshot, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
+import { buildCoinCoverageMap, readMintBurnCronSnapshot, readMintBurnWindowContext, type MintBurnCronSnapshot } from "../mint-burn-flows-service";
 import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
-import { mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
+import { conservationIdentityAddress, mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEvent } from "../structured-log";
-import { readMintBurnScanCoverage, type MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
+import type { MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
 import { readDewsPublishedGenerationResult } from "../dews-publication-pointer";
 import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import { CONFIRMED_CRON_OUTPUT_AT_SQL } from "../cron-output";
@@ -232,7 +233,8 @@ function validateConservationRecord(
   if (record.key !== mintBurnConservationCacheKey(config)
     || record.configFingerprint !== mintBurnConservationFingerprint(config)
     || record.stablecoinId !== config.stablecoinId || record.chainId !== config.chain.chainId
-    || record.address.toLowerCase() !== config.contractAddress.toLowerCase()
+    || conservationIdentityAddress(config.chain.chainId, record.address) !== conservationIdentityAddress(config.chain.chainId, config.contractAddress)
+    || (config.chain.chainId === "tron" && canonicalTronAddress(record.address) == null)
     || record.decimals !== config.decimals || record.checkedAt > now) {
     return unavailable("Conservation evidence does not match the current contract configuration or clock.");
   }
@@ -267,24 +269,21 @@ export async function getMintBurnReconciliation(
   now: number,
 ): Promise<MintBurnReconciliationSummary> {
   const activeConfigs = MINT_BURN_CONFIGS.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId));
-  const configsByStablecoin = new Map<string, MintBurnContractConfig[]>();
-  for (const config of activeConfigs) {
-    const configs = configsByStablecoin.get(config.stablecoinId) ?? [];
-    configs.push(config);
-    configsByStablecoin.set(config.stablecoinId, configs);
-  }
+  let admittedConfigs: MintBurnContractConfig[];
   let lastBlocks: Map<string, number>;
   let cronSnapshot: MintBurnCronSnapshot;
   let extendedSnapshot: MintBurnCronSnapshot;
   let scanSegments: Map<string, MintBurnScanSegment[]>;
   let conservationRecords: Map<string, unknown>;
   try {
-    [scanSegments, lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
-      readMintBurnScanCoverage(db, activeConfigs, Math.floor(now / 3600) * 3600 - 90 * 86400, Math.floor(now / 3600) * 3600),
-      readMintBurnSyncStateBatch(db, activeConfigs),
+    const context = await readMintBurnWindowContext(db, now, activeConfigs);
+    admittedConfigs = context.configs;
+    scanSegments = context.segments;
+    [lastBlocks, cronSnapshot, extendedSnapshot, conservationRecords] = await Promise.all([
+      readMintBurnSyncStateBatch(db, admittedConfigs),
       readMintBurnCronSnapshot(db),
       readMintBurnCronSnapshot(db, "sync-mint-burn-extended"),
-      readMintBurnConservationRecords(db, activeConfigs),
+      readMintBurnConservationRecords(db, admittedConfigs),
     ]);
   } catch (err) {
     logWorkerEvent({
@@ -302,6 +301,13 @@ export async function getMintBurnReconciliation(
     throw err;
   }
 
+  const configsByStablecoin = new Map<string, MintBurnContractConfig[]>();
+  for (const config of admittedConfigs) {
+    const configs = configsByStablecoin.get(config.stablecoinId) ?? [];
+    configs.push(config);
+    configsByStablecoin.set(config.stablecoinId, configs);
+  }
+
   const freshHeads = new Map<string, number>();
   for (const snapshot of [cronSnapshot, extendedSnapshot]) {
     if (snapshot.startedAt == null || now - snapshot.startedAt > MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC) continue;
@@ -309,7 +315,8 @@ export async function getMintBurnReconciliation(
       freshHeads.set(chainId, Math.max(freshHeads.get(chainId) ?? 0, head));
     }
   }
-  const coverageMap = buildCoinCoverageMap(now, scanSegments, lastBlocks, freshHeads, null, activeConfigs);
+  const conservationConfigs = admittedConfigs.filter((config) => getMintBurnConservationEligibility(config).supported);
+  const coverageMap = buildCoinCoverageMap(now, scanSegments, lastBlocks, freshHeads, null, conservationConfigs);
 
   const rows = [...configsByStablecoin.entries()]
     .map<MintBurnReconciliationRow>(([stablecoinId, configs]) => {
@@ -330,11 +337,13 @@ export async function getMintBurnReconciliation(
           && (snapshot.chainHeads.get(config.chain.chainId) ?? -1) >= record.toBlock!;
         return freshScan ? record : { ...record, status: "unavailable" as const, reason: "A fresh scan covering the audited blocks is required." };
       });
-      const status: MintBurnReconciliationRow["status"] = conservation.some((record) => record.status === "mismatch")
-        ? "critical" : conservation.length > 0 && conservation.every((record) => record.status === "ok")
+      // Unsupported laws stay visible with their reason but cannot invalidate another leg's proof.
+      const supported = conservation.filter((record) => record.status !== "unsupported");
+      const status: MintBurnReconciliationRow["status"] = supported.some((record) => record.status === "mismatch")
+        ? "critical" : supported.length > 0 && supported.every((record) => record.status === "ok")
           ? "ok" : "insufficient-source";
       const conservationIssue = status === "ok" ? undefined
-        : conservation.find((record) => record.status !== "ok")?.reason ?? "Conservation evidence is incomplete.";
+        : supported.find((record) => record.status !== "ok")?.reason ?? conservation[0]?.reason ?? "Conservation evidence is incomplete.";
 
       return {
         stablecoinId,

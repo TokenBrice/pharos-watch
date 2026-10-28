@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
 import { getMintBurnTrackedChains, sumMcapForTrackedChains } from "../mint-burn-mcap-weighting";
+import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
 
 // Per-coin tracked-chain contract pins. When a coin adds a second tracked
 // chain (e.g., USDC on Base via CCTP), update the assertion here deliberately —
 // the change will shift gauge weighting, and that's a methodology decision
 // that should be reflected in the version timeline.
 describe("getMintBurnTrackedChains — per-coin contract pins", () => {
+  it("USDT configures Ethereum and Tron issuance", () => {
+    expect(getMintBurnTrackedChains("usdt-tether")).toEqual(["ethereum", "tron"]);
+  });
+
   it("USDC tracks ethereum only (until Base/CCTP expansion)", () => {
     expect(getMintBurnTrackedChains("usdc-circle")).toEqual(["ethereum"]);
   });
@@ -19,6 +24,33 @@ describe("getMintBurnTrackedChains — per-coin contract pins", () => {
 });
 
 describe("sumMcapForTrackedChains", () => {
+  it("adds Tron supply only when its config is in the admitted publication scope", () => {
+    const allUsdt = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdt-tether");
+    const ethereumOnly = allUsdt.filter((config) => config.chain.chainId === "ethereum");
+    const supply = { Ethereum: { current: 60e9 }, Tron: { current: 80e9 }, Solana: { current: 2e9 } };
+    expect(sumMcapForTrackedChains("usdt-tether", supply, { peggedUSD: 142e9 }, ethereumOnly)).toBe(60e9);
+    expect(sumMcapForTrackedChains("usdt-tether", supply, { peggedUSD: 142e9 }, allUsdt)).toBe(140e9);
+    expect(sumMcapForTrackedChains("usdt-tether", undefined, { peggedUSD: 142e9 }, ethereumOnly)).toBeNull();
+  });
+
+  it("preserves unavailable and measured zero Tron supply after admission", () => {
+    expect(sumMcapForTrackedChains("usdt-tether", {
+      Ethereum: { current: 60e9 }, Tron: { current: null },
+    }, { peggedUSD: 140e9 })).toBeNull();
+    expect(sumMcapForTrackedChains("usdt-tether", {
+      Ethereum: { current: 60e9 }, Tron: { current: 0 },
+    }, { peggedUSD: 140e9 })).toBe(60e9);
+  });
+
+  it("withholds global fallback when a publication excludes one configured chain", () => {
+    const source = MINT_BURN_CONFIGS.find((config) => getMintBurnTrackedChains(config.stablecoinId).length > 1)!;
+    expect(source).toBeDefined();
+    const scope = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === source.stablecoinId
+      && config.chain.chainId === source.chain.chainId);
+    expect(sumMcapForTrackedChains(source.stablecoinId, undefined, { peggedUSD: 1000 }, scope)).toBeNull();
+    expect(sumMcapForTrackedChains(source.stablecoinId,
+      { [source.chain.chainId]: { current: 100 } }, { peggedUSD: 1000 }, scope)).toBe(100);
+  });
   // Real DefiLlama payloads key chainCirculating by display name ("Ethereum",
   // "Arbitrum", "Solana"). The canonicalizer resolves these to lowercase
   // canonical chain ids before lookup.

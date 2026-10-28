@@ -431,10 +431,12 @@ table	dex_prices
 table	dex_source_pagination_state
 table	feedback_rate_limit
 table	kv_config
+table	mint_burn_admission
 table	mint_burn_config_deferral
 table	mint_burn_dirty_hours
 table	mint_burn_events
 table	mint_burn_hourly
+table	mint_burn_publication_policy
 table	mint_burn_run_state
 table	mint_burn_scan_coverage
 table	mint_burn_sync_state

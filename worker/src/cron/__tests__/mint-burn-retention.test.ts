@@ -9,7 +9,9 @@ import {
 } from "../mint-burn/retention";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnScanCoverageAdmits, mintBurnScanFingerprint, readMintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
+import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { recalcAffectedHours } from "../../lib/mint-burn-pipeline/persistence";
 import { repairHistoricalMintBurnPrices } from "../../lib/mint-burn-historical-price-repair";
 import {
@@ -528,6 +530,118 @@ describe("mint/burn retention", () => {
     expect(converged.frontierProtection).toEqual({ configs: [], error: null });
     expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly").get())
       .toEqual({ mint_count: 2, mint_volume_usd: 120 });
+  });
+
+  it("preserves an old pending backfill hour across mid-hour commits, retention, and continuation", async () => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const config = makeMintBurnConfig({ asset: { stablecoinId: "usdc-circle", startBlock: 1 } });
+    const key = mintBurnConfigKey(config);
+    const hour = hourFor(NOW_SEC - 90 * 24 * HOUR_SEC);
+    const affected = new Map([["hour", { stablecoinId: "usdc-circle", chainId: "ethereum", hourTs: hour }]]);
+    const options = { enabledConfigs: [config], pendingAdmissionKeys: new Set([key]) };
+    const proof = { configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: "ethereum",
+      fromBlock: 1, toBlock: 100, fromTimestamp: hour, toTimestamp: hour + 1800,
+      finalizedBlock: 200, acceptedAt: NOW_SEC };
+
+    insertEvent(sqlite, { id: "first-prefix", timestamp: hour + 10, amountUsd: 10, withHourly: false });
+    sqlite.prepare("UPDATE mint_burn_events SET block_number = 100 WHERE id = 'first-prefix'").run();
+    await recalcAffectedHours(db, affected);
+    await upsertMintBurnSyncState(db, key, 100, "monotonic-max", proof);
+    const firstPrune = await pruneMintBurnRetention(db, NOW_SEC, undefined, options);
+    expect(firstPrune.error).toBeNull();
+    expect(firstPrune.eventRows.deletedRows).toBe(0);
+    expect(eventIds(sqlite)).toEqual(["first-prefix"]);
+
+    insertEvent(sqlite, { id: "second-prefix", timestamp: hour + 1803, amountUsd: 20, withHourly: false });
+    sqlite.prepare("UPDATE mint_burn_events SET block_number = 101 WHERE id = 'second-prefix'").run();
+    await recalcAffectedHours(db, affected);
+    await upsertMintBurnSyncState(db, key, 200, "monotonic-max", {
+      ...proof, fromBlock: 101, toBlock: 200, fromTimestamp: hour + 1803, toTimestamp: hour + HOUR_SEC,
+    });
+    expect(mintBurnScanCoverageAdmits([config], await readMintBurnScanCoverage(db, [config], hour, hour + HOUR_SEC),
+      hour, hour + HOUR_SEC)).toBe(true);
+    expect((await pruneMintBurnRetention(db, NOW_SEC, undefined, options)).eventRows.deletedRows).toBe(2);
+    expect(eventIds(sqlite)).toEqual([]);
+    expect(sqlite.prepare("SELECT mint_count, mint_volume_usd FROM mint_burn_hourly WHERE hour_ts = ?").get(hour))
+      .toEqual({ mint_count: 2, mint_volume_usd: 30 });
+  });
+
+  it.each(["config-disabled", "operator-disabled"])("protects pending raw rows and skips retention repair when %s", async (disabled) => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const config = disabled === "config-disabled"
+      ? makeMintBurnConfig({ asset: { stablecoinId: "usdc-circle", startBlock: 1, enabled: false } })
+      : MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "usdc-circle" && item.chain.chainId === "ethereum")!;
+    const hour = hourFor(NOW_SEC - 90 * 24 * HOUR_SEC);
+    insertEvent(sqlite, { id: "pending-unmaterialized", timestamp: hour + 10, withHourly: false });
+    insertEvent(sqlite, { id: "pending-materialized", timestamp: hour + HOUR_SEC + 10 });
+    const result = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+      enabledConfigs: disabled === "config-disabled" ? [config] : [],
+      pendingAdmissionKeys: new Set([mintBurnConfigKey(config)]),
+    });
+    expect(result.error).toBeNull();
+    expect(result.aggregationRepair).toMatchObject({ repairedRows: 0, oldestRepairableAt: null });
+    expect(result.eventRows).toMatchObject({ deletedRows: 0, oldestEligibleAt: null });
+    expect(eventIds(sqlite)).toEqual(["pending-materialized", "pending-unmaterialized"]);
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_hourly WHERE hour_ts = ?").get(hour)).toEqual({ count: 0 });
+  });
+
+  it.each(["enabled", "config-disabled", "operator-disabled"])("prunes proven closed pending hours while protecting the frontier and later rows (%s)", async (mode) => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const config = mode === "operator-disabled"
+      ? MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "usdc-circle" && item.chain.chainId === "ethereum")!
+      : makeMintBurnConfig({ asset: { stablecoinId: "usdc-circle", startBlock: 1, enabled: mode !== "config-disabled" } });
+    const key = mintBurnConfigKey(config);
+    const hour = hourFor(NOW_SEC - 90 * 24 * HOUR_SEC);
+    insertEvent(sqlite, { id: "closed-materialized", timestamp: hour + 10 });
+    insertEvent(sqlite, { id: "closed-needs-repair", timestamp: hour + HOUR_SEC + 10, withHourly: false });
+    insertEvent(sqlite, { id: "frontier", timestamp: hour + 2 * HOUR_SEC + 10, withHourly: false });
+    insertEvent(sqlite, { id: "later", timestamp: hour + 3 * HOUR_SEC + 10, withHourly: false });
+    sqlite.prepare("UPDATE mint_burn_events SET block_number = ?").run(config.startBlock + 1);
+    sqlite.prepare("UPDATE mint_burn_events SET block_number = ? WHERE id = 'frontier'").run(config.startBlock + 99);
+    sqlite.prepare("UPDATE mint_burn_events SET block_number = ? WHERE id = 'later'").run(config.startBlock + 101);
+    await upsertMintBurnSyncState(db, key, config.startBlock + 100, "monotonic-max", {
+      configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
+      fromBlock: config.startBlock, toBlock: config.startBlock + 100, fromTimestamp: hour,
+      toTimestamp: hour + 2 * HOUR_SEC + 1800, finalizedBlock: config.startBlock + 1000, acceptedAt: NOW_SEC,
+    });
+
+    const result = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+      enabledConfigs: mode === "operator-disabled" ? [] : [config], pendingAdmissionKeys: new Set([key]),
+    });
+    expect(result.error).toBeNull();
+    expect(result.aggregationRepair.repairedRows).toBe(1);
+    expect(result.eventRows.deletedRows).toBe(2);
+    expect(eventIds(sqlite)).toEqual(["frontier", "later"]);
+    expect(sqlite.prepare("SELECT hour_ts FROM mint_burn_hourly ORDER BY hour_ts").all())
+      .toEqual([{ hour_ts: hour }, { hour_ts: hour + HOUR_SEC }]);
+  });
+
+  it.each(["missing", "old-fingerprint", "cursor-mismatch", "disjoint-tail"])("retains pending raw history when frontier proof is %s", async (kind) => {
+    const { sqlite, db } = setupDb();
+    openDb = sqlite;
+    const config = makeMintBurnConfig({ asset: { stablecoinId: "usdc-circle", startBlock: 1 } });
+    const key = mintBurnConfigKey(config);
+    const hour = hourFor(NOW_SEC - 90 * 24 * HOUR_SEC);
+    insertEvent(sqlite, { id: "unproved", timestamp: hour + 10, withHourly: false });
+    await upsertMintBurnSyncState(db, key, 200, "monotonic-max", kind === "missing" ? undefined : {
+      configKey: key, configFingerprint: kind === "old-fingerprint" ? "old" : mintBurnScanFingerprint(config), chainId: "ethereum",
+      fromBlock: kind === "disjoint-tail" ? 101 : 1, toBlock: 200,
+      fromTimestamp: kind === "disjoint-tail" ? hour + HOUR_SEC : hour,
+      toTimestamp: hour + 2 * HOUR_SEC, finalizedBlock: 1000, acceptedAt: NOW_SEC,
+    });
+    if (kind === "cursor-mismatch") await upsertMintBurnSyncState(db, key, 201, "monotonic-max");
+
+    const result = await pruneMintBurnRetention(db, NOW_SEC, undefined, {
+      enabledConfigs: [config], pendingAdmissionKeys: new Set([key]),
+    });
+    expect(result.error).toBeNull();
+    expect(result.aggregationRepair.repairedRows).toBe(0);
+    expect(result.eventRows.deletedRows).toBe(0);
+    expect(eventIds(sqlite)).toEqual(["unproved"]);
+    expect(sqlite.prepare("SELECT * FROM mint_burn_hourly").all()).toEqual([]);
   });
 
   it.each([true, false])("only enabled secondary configs hold frontier protection (enabled=%s)", async (enabled) => {

@@ -10,7 +10,7 @@ stubCryptoForAuth();
 
 vi.mock("../../../src/lib/alchemy-logs", async (importOriginal) => ({
   ...(await importOriginal<typeof AlchemyLogsModule>()),
-  buildAlchemyUrl: vi.fn(() => "https://eth-mainnet.g.alchemy.com/v2/"),
+  buildAlchemyUrl: vi.fn((chainId: string) => chainId === "tron" ? null : "https://eth-mainnet.g.alchemy.com/v2/"),
   getAlchemyBlockNumber: vi.fn(async () => 22_000_000),
   getAlchemyTransactionContextBatchMany: vi.fn(async () => new Map()),
   fetchAlchemyLogs: vi.fn(async () => ({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })),
@@ -27,12 +27,16 @@ vi.mock("../../../src/lib/mint-burn-pipeline/rpc", async (importOriginal) => ({
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { handleBackfillMintBurn } from "../backfill-mint-burn";
 import {
+  buildAlchemyUrl,
   fetchAlchemyLogs,
   getAlchemyTransactionContextBatchMany,
   resolveBlockTimestamps,
 } from "../../../src/lib/alchemy-logs";
+import { getMintBurnFinalizedHead } from "../../../src/lib/mint-burn-pipeline/rpc";
 import { MINT_BURN_CONFIGS } from "../../../src/lib/mint-burn-contracts";
 import { cctpReceiveContext } from "../../../src/lib/__tests__/mint-burn-bridge-classifier.test-support";
+
+const TRON_USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
 
 const mutableActiveIds = ACTIVE_IDS as Set<string>;
 
@@ -72,6 +76,8 @@ describe("handleBackfillMintBurn", () => {
     expect(body.selectedSymbol).toBe("USDT");
     expect(body.selectionMode).toBe("auto");
     expect(body.autoSelectedReason).toBe("critical-first-most-behind");
+    expect(vi.mocked(buildAlchemyUrl).mock.calls.every(([chainId]) => chainId !== "tron")).toBe(true);
+    expect(vi.mocked(getMintBurnFinalizedHead).mock.calls.every(([chainId]) => chainId !== "tron")).toBe(true);
   });
 
   it("skips inactive configs during automatic selection", async () => {
@@ -106,6 +112,19 @@ describe("handleBackfillMintBurn", () => {
 
     const body = (await readJsonResponse(response, 404)) as { error: string };
     expect(body.error).toContain("Unknown mint/burn configKey");
+  });
+
+  it("rejects explicit Tron backfill before credentials, provider reads or selection writes", async () => {
+    const db = makeBackfillDb();
+    const response = await handleBackfillMintBurn({ db, url: makeApiUrl("/api/backfill-mint-burn"), request: makeApiRequest("/api/backfill-mint-burn", {
+      method: "POST", adminKey: "secret", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ configKey: `tron-${TRON_USDT}` }),
+    }) });
+    expect(await readJsonResponse(response, 400)).toEqual({ error: "mint-burn-operator-chain-unsupported: tron" });
+    expect(db.getHistory()).toEqual([]);
+    expect(buildAlchemyUrl).not.toHaveBeenCalled();
+    expect(getMintBurnFinalizedHead).not.toHaveBeenCalled();
+    expect(fetchAlchemyLogs).not.toHaveBeenCalled();
   });
 
   it("rejects malformed JSON bodies", async () => {

@@ -106,13 +106,36 @@ describe("mint-burn-contracts removals", () => {
 });
 
 describe("mint-burn-contracts configured scope", () => {
-  it("exposes Ethereum, Arbitrum, and Base issuance tracking", () => {
+  it("exposes Ethereum, Tron, Arbitrum, and Base issuance tracking", () => {
     const uniqueChains = new Set(MINT_BURN_CONFIGS.map((c) => c.chain.chainId));
-    expect(uniqueChains).toEqual(new Set(["ethereum", "arbitrum", "base"]));
+    expect(uniqueChains).toEqual(new Set(["ethereum", "tron", "arbitrum", "base"]));
     expect(buildMintBurnScope()).toEqual({
-      chainIds: ["ethereum", "base", "arbitrum"],
+      chainIds: ["ethereum", "tron", "base", "arbitrum"],
       label: "Configured issuance chains",
     });
+  });
+
+  it("tracks Tron USDT once through Issue/Redeem in the same critical tier as Ethereum", () => {
+    const configs = getMintBurnConfigsForStablecoin("usdt-tether");
+    const ethereum = configs.find((entry) => entry.chain.chainId === "ethereum")!;
+    const tron = configs.find((entry) => entry.chain.chainId === "tron")!;
+    expect(configs).toHaveLength(2);
+    expect(tron).toMatchObject({
+      chain: { chainId: "tron", type: "tron" },
+      symbol: "USDT",
+      contractAddress: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      decimals: 6,
+      dustThreshold: 10_000,
+      startBlock: 84_842_059,
+      startBlockSource: "dwellir-tron-header-2026-07-28-reviewed-2026-10-28",
+      startBlockConfidence: "high",
+      adapterKind: "custom-events",
+    });
+    expect(tron.tier ?? "critical").toBe("critical");
+    expect(tron.tier).toBe(ethereum.tier);
+    expect(tron.events).toEqual(ethereum.events);
+    expect(tron.events.map((event) => event.signature)).toEqual(["Issue(uint256)", "Redeem(uint256)"]);
+    expect(tron.events.some((event) => event.topicHash === TRANSFER_TOPIC)).toBe(false);
   });
 
   it("tracks USDai on Arbitrum with LayerZero bridge detection", () => {

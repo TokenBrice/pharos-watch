@@ -95,8 +95,9 @@ export function MintBurnFlowMethodologySection() {
             changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.mintBurnFlow.changelogHover}
           >
               <p>
-                Pharos tracks on-chain mint and burn events for major stablecoins via Alchemy JSON-RPC (Transfer mints/burns
-                plus USDT Issue/Redeem). These raw events are aggregated into hourly buckets and exposed as two separate
+                Pharos tracks on-chain mint and burn events for major stablecoins via JSON-RPC (Transfer mints/burns
+                plus USDT Issue/Redeem). EVM reads use admitted Dwellir with Alchemy fallback; Tron uses admitted Dwellir
+                with TronGrid JSON-RPC fallback. These raw events are aggregated into hourly buckets and exposed as two separate
                 signals: raw net flow for current direction, and a baseline-relative pressure score for context. Counted
                 flow excludes bridge transfers, review-required burns, atomic roundtrips, and individually reviewed
                 protocol-internal movements such as an issuer deploying reserves into its own loan book. Mints to
@@ -111,11 +112,34 @@ export function MintBurnFlowMethodologySection() {
               </p>
               <p>
                 An N-hour flow window covers N closed UTC hours ending at the common fully scanned hour
-                across configured sources, within the published freshness budget, not a rolling window ending now.
+                across admitted sources, within the published freshness budget, not a rolling window ending now.
                 The response exposes that watermark; pressure, largest events, baselines and longer net-flow windows
                 share it. Verified CCTP V2 destination recipient and fee mints are bridge transfers, while unrelated issuance in that transaction
                 stays counted. Historical valuation requires an actual observation within the inclusive 24-hour
                 distance from the event; retention preserves all hourly siblings until repair and aggregation settle.
+              </p>
+              <p>
+                A new issuance leg joins published flows only after contiguous scan proof for its current
+                configuration covers 90 days through the publication watermark, its frontier is fresh,
+                and that baseline passes the existing valuation-completeness rules. Missing or unknown
+                valuation keeps it pending; a proven zero-event baseline can qualify without prices.
+                Supported new legs keep catching up, with their reason and progress disclosed, while the coin&apos;s
+                admitted legs keep publishing. Pending or operator-disabled legs contribute neither totals nor
+                gauge weights. Existing contracts sharing a chain bucket must be disabled together; a new
+                sibling contract waits for independently attributable history. The frozen 137 pre-gate config keys are grandfathered for membership;
+                source-field edits retain that membership, while current-fingerprint coverage remains required.
+                An active admitted leg that later stalls stays in scope. A re-enabled stale leg waits for
+                fresh frontier and incumbent-hour proof without repeating the 90-day gate; shared buckets resume together.
+              </p>
+              <p>
+                USDT Tron joins through that admission gate in the critical lane. Only Issue/Redeem count;
+                their paired zero-address Transfers would duplicate the same flow. Scans stop at a fresh
+                solidified head. Historical conservation remains unsupported because Tron cannot supply the
+                required historical state. Once admitted, Tron joins USDT&apos;s totals, pressure baseline and
+                tracked-chain gauge weight. The digest re-bins the published gauge and uses its coin nets;
+                DDR&apos;s mint-surge input includes all admitted chains. DEWS keeps Ethereum as USDT&apos;s
+                canonical chain. The 90-day admission baseline protects the published 90-day net from a
+                newly joined chain with shorter history.
               </p>
               <p>
                 Historical hours before the fixed October 20, 2026 noon UTC cutover may use explicitly labelled
@@ -291,7 +315,7 @@ export function MintBurnFlowMethodologySection() {
                   <h3 className="text-foreground font-medium">Bank Run Gauge</h3>
                   <p>
                     Market-cap-weighted composite of all tracked coins&apos; pressure-shift values, producing a single
-                    ecosystem-wide configured issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s canonical tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
+                    ecosystem-wide admitted issuance-chain flow-pressure reading. Gauge weights use each coin&apos;s admitted tracked-chain circulating supply. The gauge score maps to one of seven condition bands:
                   </p>
                   <ContentTable
                     tableId="methodology-mint-burn-bank-run-gauge"

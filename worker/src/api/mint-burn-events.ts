@@ -9,6 +9,8 @@ import { buildPaginatedEventResponse } from "../lib/api-pagination";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { API_CACHE_PROFILES as CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
+import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
+import { ACTIVE_MINT_BURN_CONFIGS } from "./mint-burn-flows/aggregate";
 import { buildInClause } from "../lib/db";
 
 const VALID_DIRECTIONS = new Set(["mint", "burn"]);
@@ -53,8 +55,6 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
     if (chain && !trackedChainIds.includes(chain)) {
       return errorResponse(400, "Invalid chain parameter");
     }
-    const queryChainIds = chain ? [chain] : trackedChainIds;
-    const chainInClause = buildInClause(queryChainIds);
     const burnType = parseOptionalEnumParam(params.get("burnType"), VALID_BURN_TYPES, "burnType");
     if (burnType instanceof Response) return burnType;
     const scope = parseEnumParam(params.get("scope"), VALID_SCOPES, "scope", "all");
@@ -63,6 +63,13 @@ export const handleMintBurnEvents = async (db: D1Database, url: URL): Promise<Re
       rangePolicy: "reject",
     });
     if (minAmount instanceof Response) return minAmount;
+
+    const roster = ACTIVE_MINT_BURN_CONFIGS.some((config) => config.stablecoinId === stablecoinId)
+      ? ACTIVE_MINT_BURN_CONFIGS : configs;
+    const context = await readMintBurnWindowContext(db, Math.floor(Date.now() / 1000), roster);
+    const queryChainIds = [...new Set(context.configs.filter((config) => config.stablecoinId === stablecoinId
+      && (!chain || config.chain.chainId === chain)).map((config) => config.chain.chainId))];
+    const chainInClause = queryChainIds.length > 0 ? buildInClause(queryChainIds) : { sql: "NULL", binds: [] };
 
     // Build WHERE conditions
     const conditions: string[] = ["stablecoin_id = ?", `chain_id IN (${chainInClause.sql})`];

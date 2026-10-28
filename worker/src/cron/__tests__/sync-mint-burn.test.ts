@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   makeMintBurnDb,
   makeMintBurnMintLog as makeMintLog,
   resetMintBurnMocks,
+  seedMintBurnAdmissions,
   MINT_BURN_TRANSFER_TOPIC as TRANSFER_TOPIC,
   MINT_BURN_ZERO_TOPIC as ZERO_TOPIC,
   USDT_CONTRACT,
@@ -118,12 +118,14 @@ import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import * as mintBurnConservation from "../../lib/mint-burn-conservation";
 import type * as DbModule from "../../lib/db";
 import type * as PersistenceModule from "../../lib/mint-burn-pipeline/persistence";
+import { withRpcRequestObserver } from "../../lib/rpc-request-observer";
 
 const USDT_CONFIG_KEY = `ethereum-${USDT_CONTRACT}`;
 
 // Keep the default event fixtures inside one inclusive 50k request ending at finality.
 function makeDb(options: MintBurnDbOptions = {}) {
   return makeMintBurnDb({
+    admittedConfigs: MINT_BURN_CONFIGS,
     syncRows: [
       { config_key: USDT_CONFIG_KEY, last_block: 21_950_000 },
       { config_key: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", last_block: 21_950_000 },
@@ -183,6 +185,7 @@ describe("syncMintBurn", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     sqliteFixtures.closeAll();
   });
 
@@ -246,6 +249,7 @@ describe("syncMintBurn", () => {
     { disabledSymbols: ["USDT"], disabledConfigIds: ["ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"], protectedRows: 0 },
   ])("applies all-lane runtime enablement to critical retention: %j", async (scenario) => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     const nowSec = Math.floor(Date.now() / 1000);
     const timestamp = nowSec - 10 * 86_400;
     sqlite.prepare(`INSERT INTO mint_burn_events
@@ -425,6 +429,7 @@ describe("syncMintBurn", () => {
     expect(result.summary.rowsDropped).toBe(0);
     expect(result.summary.rowsDroppedDecode).toBe(1);
     expect(result.summary.earliestDecodeFailureBlock).toBe(failedBlock);
+    expect(result.rpcEvidenceIncomplete).toBe(false);
     expect(result.newLastBlock).toBeNull();
   });
 
@@ -480,6 +485,7 @@ describe("syncMintBurn", () => {
     expect(result.newLastBlock).toBeNull();
     expect(result.summary.rowsDroppedDecode).toBe(1);
     expect(result.summary.rowsQuarantinedDecode).toBe(1);
+    expect(result.rpcEvidenceIncomplete).toBe(false);
     expect(result.summary.decodeQuarantines).toEqual([expect.objectContaining({
       blockNumber: failedBlock,
       reason: "amount-decode-retry-exhausted",
@@ -490,6 +496,7 @@ describe("syncMintBurn", () => {
 
   it("holds the durable sync-state frontier through a config-phase rejection and advances it on the retry run", async () => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     sqlite
       .prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
       .run(USDT_CONFIG_KEY, 21_950_000);
@@ -519,6 +526,7 @@ describe("syncMintBurn", () => {
 
   it("holds a cursor after recalc failure, protects retained inputs, and rebuilds a complete bucket on duplicate replay", async () => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
     const actualPersistence = await vi.importActual<typeof PersistenceModule>(
       "../../lib/mint-burn-pipeline/persistence",
@@ -858,6 +866,28 @@ describe("syncMintBurn", () => {
     expect(usdt?.advanceReason).toBe("partial-frontier");
   });
 
+  it("isolates an Alchemy circuit-denied transaction context and continues another config", async () => {
+    const actualAlchemy = await vi.importActual<typeof import("../../lib/alchemy-logs")>("../../lib/alchemy-logs");
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementation(actualAlchemy.getAlchemyTransactionContextBatchMany);
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({ logs: [makeMintLog({ txHash: "0xdenied-context" })], complete: true,
+        scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const result = await withRpcRequestObserver({ beforeRequest: () => false, onOutcome: vi.fn() }, () =>
+      syncMintBurn(makeDb(), "alchemy-key"));
+    const meta = JSON.parse(result.metadata);
+    const affected = meta.configSamples.find((entry: { symbol: string }) => entry.symbol === "USDT");
+    expect(affected.failedEventDefs).toContain("tx-context-request-not-started:1");
+    expect(affected.bridgeClassificationDeferredRows).toBe(1);
+    expect(meta.sourceCoverage.contractsProcessed).toBe(2);
+    expect(vi.mocked(fetchAlchemyLogs).mock.calls.some(([, address]) => address === MINT_BURN_CONFIGS[1].contractAddress)).toBe(true);
+    expect(fetch).not.toHaveBeenCalled();
+  });
+
   it("keeps status ok when only extended configs are deferred", async () => {
     const db = makeDb({ runState: { degradedStreak: 2 } });
     vi.mocked(createBudget).mockImplementation(() => ({ count: 190, limit: 200 }));
@@ -986,22 +1016,18 @@ describe("syncMintBurn", () => {
   });
 
   it("keeps the published aggregate gauge cache row when the extended lane invalidates", async () => {
-    const db = makeDb();
+    const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
+    const aggregateKey = "mint-burn-flows:v6:aggregate:24";
+    const coinKey = "mint-burn-flows:v6:coin:usdt-tether:24";
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
+    insert.run(aggregateKey, Math.floor(Date.now() / 1000));
+    insert.run(coinKey, Math.floor(Date.now() / 1000));
 
     await syncMintBurn(db, "alchemy-key", { lane: "extended", jobName: "sync-mint-burn-extended" });
 
-    const history = (db as MockD1Database).getHistory();
-    const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
-    expect(
-      cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v6:coin:" && entry.binds[1] === "mint-burn-flows:v6:coin:\uffff",
-      ),
-    ).toBe(true);
-    expect(
-      cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v6:" || entry.binds[0] === "mint-burn-flows:v6:aggregate:",
-      ),
-    ).toBe(false);
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key IN (?, ?)").all(aggregateKey, coinKey))
+      .toEqual([{ key: aggregateKey }]);
   });
 
   it("emits nullPriceBacklog and roundtripsBacklogSaturated in metadata", async () => {

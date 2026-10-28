@@ -44,6 +44,7 @@ interface BridgeClassificationOptions {
 interface TxContextResolution {
   context: MintBurnTxContext | null;
   shortfall: boolean;
+  unavailableReason?: AlchemyTransactionContextBatch["unavailableReason"];
 }
 
 function hasRuntimeWindow(options?: BridgeClassificationOptions): boolean {
@@ -54,7 +55,7 @@ function toTxContext(batch: AlchemyTransactionContextBatch): TxContextResolution
   const tx = batch.tx as unknown;
   const receipt = batch.receipt as unknown;
   if (!tx || typeof tx !== "object" || !receipt || typeof receipt !== "object") {
-    return { context: null, shortfall: true };
+    return { context: null, shortfall: true, ...(batch.unavailableReason ? { unavailableReason: batch.unavailableReason } : {}) };
   }
   const txRecord = tx as Record<string, unknown>;
   const receiptRecord = receipt as Record<string, unknown>;
@@ -166,7 +167,8 @@ async function resolveTxContextBatch(
         && (batch.tx?.blockHash == null || (typeof batch.tx.blockHash === "string" && batch.tx.blockHash.toLowerCase() === expectedHash))
         && batch.receipt.logs.length > 0
         && batch.receipt.logs.every((log) => log.blockHash?.toLowerCase() === expectedHash));
-      const resolution = hashMatches ? toTxContext(batch) : { context: null, shortfall: true };
+      const resolution = hashMatches ? toTxContext(batch) : { context: null, shortfall: true,
+        ...(batch.unavailableReason ? { unavailableReason: batch.unavailableReason } : {}) };
       if (!resolution.shortfall) {
         txContextCache.set(`${txHash}:${expectedHash ?? "unverified"}`, resolution.context);
       } else {
@@ -293,6 +295,7 @@ export async function classifyBridgeBurnRows(
   );
   const txContextByHash = new Map<string, MintBurnTxContext | null>();
   let txContextShortfalls = 0;
+  let txContextRequestsNotStarted = 0;
   const deferredTxHashes: string[] = [];
   const resolutions = new Map<string, TxContextResolution>();
   for (const batchResult of batchResults) {
@@ -305,6 +308,7 @@ export async function classifyBridgeBurnRows(
     txContextByHash.set(txHash, resolution.context);
     if (resolution.shortfall && config.bridgeDetection) {
       txContextShortfalls++;
+      if (resolution.unavailableReason === "rpc-request-not-started") txContextRequestsNotStarted++;
       deferredTxHashes.push(txHash);
     }
   }
@@ -328,7 +332,8 @@ export async function classifyBridgeBurnRows(
     }
   }
 
-  return { effectiveBurns, bridgeBurns, reviewBurns, txContextShortfalls, deferredTxHashes };
+  return { effectiveBurns, bridgeBurns, reviewBurns, txContextShortfalls, deferredTxHashes,
+    ...(txContextRequestsNotStarted > 0 ? { txContextRequestsNotStarted } : {}) };
 }
 
 /** Bounded retained-ledger cutover; never rewrites hours whose raw events have expired. */

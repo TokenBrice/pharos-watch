@@ -34,6 +34,7 @@ export interface CompleteMintBurnRunInput {
   resumeConfigKey: string | null;
   enabledConfigs: MintBurnContractConfig[];
   configs: MintBurnContractConfig[];
+  pendingAdmissionKeys?: ReadonlySet<string>;
   configsDisabled: number;
   contractsTotal: number;
   lastBlocksAfterRun: Map<string, number>;
@@ -52,6 +53,8 @@ export interface CompleteMintBurnRunInput {
 
 export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Promise<{ status: SyncMintBurnStatus; metadata: Record<string, unknown>; error: string | null }> {
   const phase = input.phase;
+  const isPending = (key: string) => input.pendingAdmissionKeys?.has(key) === true;
+  const admittedBreakdown = phase.configBreakdown.filter((summary) => !isPending(summary.key));
   const laggingConfigs = input.configs
     .map((config) => {
       const key = mintBurnConfigKey(config);
@@ -59,6 +62,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       const head = input.chainHeads.get(config.chain.chainId) ?? null;
       return {
         key,
+        admissionStatus: isPending(key) ? "pending-admission" : "admitted",
         symbol: config.symbol,
         chainId: config.chain.chainId,
         lagBlocks: head != null ? Math.max(0, head - last) : null,
@@ -73,21 +77,28 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
   const criticalCoverageRatio =
     input.criticalContractsEnabled > 0 ? phase.criticalContractsSatisfied / input.criticalContractsEnabled : 1;
   const conservationFailures = phase.configBreakdown.filter((summary) => summary.conservationFailure).length;
+  const admittedConservationFailures = admittedBreakdown.filter((summary) => summary.conservationFailure).length;
   const conservationUnavailable = phase.configBreakdown.filter((summary) => summary.conservationStatus === "unavailable").length;
   const scanCoverageUnproven = phase.configBreakdown.filter((summary) =>
     summary.advanceReason === "scan-coverage-unproven").length;
+  const admittedScanCoverageUnproven = admittedBreakdown.filter((summary) =>
+    summary.advanceReason === "scan-coverage-unproven").length;
+  const admittedApiErrors = phase.admittedApiErrors ?? phase.apiErrors;
   const finalityUnavailableChains = [...new Set(input.configs
     .filter((config) => !input.chainHeads.has(config.chain.chainId))
+    .map((config) => config.chain.chainId))];
+  const admittedFinalityUnavailableChains = [...new Set(input.configs
+    .filter((config) => !isPending(mintBurnConfigKey(config)) && !input.chainHeads.has(config.chain.chainId))
     .map((config) => config.chain.chainId))];
   // The extended lane is judged on full-pass completion inside the expected
   // window, never on a per-config attempt age: a rotated roster that drains
   // 39–44 of 129 configs per run is healthy while the pass is still inside the
   // window. `cycle-in-progress` (no completed pass yet) stays neutral.
   const coverageCycleStalled = input.coverageCycle?.status === "stalled";
-  const degradedSignal = scanCoverageUnproven > 0 || finalityUnavailableChains.length > 0 || conservationFailures > 0 || (
+  const degradedSignal = admittedScanCoverageUnproven > 0 || admittedFinalityUnavailableChains.length > 0 || admittedConservationFailures > 0 || (
     input.lane === "extended"
-      ? phase.apiErrors > 1 || coverageCycleStalled
-      : criticalCoverageRatio < 1 || phase.apiErrors > 1);
+      ? admittedApiErrors > 1 || coverageCycleStalled
+      : criticalCoverageRatio < 1 || admittedApiErrors > 1);
   const degradedStreak = degradedSignal ? input.runState.degradedStreak + 1 : 0;
 
   let status: SyncMintBurnStatus = "ok";
@@ -97,15 +108,15 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     error =
       `Degraded for ${degradedStreak} consecutive runs: ` +
       `critical coverage ${phase.criticalContractsSatisfied}/${input.criticalContractsEnabled}, ` +
-      `apiErrors=${phase.apiErrors}`;
+      `admittedApiErrors=${admittedApiErrors}`;
   } else if (degradedStreak >= input.degradeConsecutiveThreshold) {
     status = "degraded";
   }
   if (
     status === "ok"
     && (
-      conservationFailures > 0
-      || finalityUnavailableChains.length > 0
+      admittedConservationFailures > 0
+      || admittedFinalityUnavailableChains.length > 0
       || coverageCycleStalled
       || input.attemptCoverage.persistenceFailed
       || input.runDrilldown.persistenceFailed
@@ -271,6 +282,7 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
     .slice(0, 12)
     .map((summary) => ({
       key: summary.key,
+      admissionStatus: isPending(summary.key) ? "pending-admission" : "admitted",
       symbol: summary.symbol,
       chainId: summary.chainId,
       tier: summary.tier,
@@ -289,6 +301,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       coverageFrontier: summary.coverageFrontier,
       advanceReason: summary.advanceReason,
       failedEventDefs: summary.failedEventDefs.slice(0, 8),
+      sourceFailureReason: summary.sourceFailureReason,
+      headFailureReason: summary.headFailureReason,
       missingTimestampCount: summary.missingTimestampCount,
       earliestMissingTimestampBlock: summary.earliestMissingTimestampBlock,
       txContextShortfalls: summary.txContextShortfalls,
@@ -301,14 +315,14 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
 
   const metadata = withBudgetMetadata(input.budget, {
     scanCoverageUnproven,
-    outputPublishedAt: status !== "error" && (
-      phase.rowsInserted > 0
-      || phase.configBreakdown.some((summary) =>
-        summary.advancedTo != null && summary.scanFrom != null && summary.advancedTo >= summary.scanFrom)
+    admittedScanCoverageUnproven,
+    outputPublishedAt: status !== "error" && admittedBreakdown.some((summary) =>
+      summary.rowsInserted > 0
+      || (summary.advancedTo != null && summary.scanFrom != null && summary.advancedTo >= summary.scanFrom)
     ) ? Math.floor(Date.now() / 1000) : null,
     ...(status !== "ok" ? {
-      reason: conservationFailures > 0 ? "mint-burn-conservation-failure"
-        : finalityUnavailableChains.length > 0 ? "finality-head-unavailable"
+      reason: admittedConservationFailures > 0 ? "mint-burn-conservation-failure"
+        : admittedFinalityUnavailableChains.length > 0 ? "finality-head-unavailable"
         : coverageCycleStalled ? "mint-burn-coverage-cycle-stalled"
         : runStatePersistenceFailed || input.attemptCoverage.persistenceFailed || input.runDrilldown.persistenceFailed
           ? "mint-burn-state-persistence-failed"
@@ -332,12 +346,15 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       contractsTotal: input.contractsTotal,
     },
     finality: { tag: "finalized", unavailableChains: finalityUnavailableChains },
+    admittedFinalityUnavailableChains,
     configsDisabled: input.configsDisabled,
     contractsProcessed: phase.contractsProcessed,
     contractsSkipped: phase.contractsSkipped,
     contractsDeferredExtended: phase.contractsDeferredExtended,
     apiErrors: phase.apiErrors,
+    admittedApiErrors,
     conservationFailures,
+    admittedConservationFailures,
     conservationUnavailable,
     burnClassification: {
       effectiveBurns: phase.effectiveBurns,

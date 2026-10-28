@@ -69,6 +69,7 @@ describe("parsePublishedMintBurnGauge", () => {
       ],
       chains: [{ chainId: "ethereum", net24hUsd: -4_000_000, valuation: "unknown" }],
       window: null,
+      publication: null,
       updatedAt: null,
       publishedAt: NOW_SEC,
       stale: false,

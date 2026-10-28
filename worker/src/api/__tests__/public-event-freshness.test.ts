@@ -14,6 +14,12 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 const NOW = 1_800_000_000;
+const mintBurnScopeTables = [
+  { match: "FROM mint_burn_admission", rows: [] },
+  { match: "FROM mint_burn_publication_policy", rows: [] },
+  { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
+  { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+];
 const tapeRow = {
   id: 1, event_id: "freshness-event", type: "depeg.opened", severity: "warning", ts: NOW * 1000,
   ends_at: null, coin_id: "usdt-tether", issuer_id: "tether", peg_currency: "peggedUSD", chain: null,
@@ -40,6 +46,7 @@ for (const feed of feeds) {
           { match: "FROM cron_runs", rows: [], first: { started_at: timestamp }, ...(state === "lookup_failed" ? { throwError: new Error("history unavailable") } : {}) },
           { match: `FROM ${feed.table}`, rows: populated ? [feed.row] : [] },
           ...(feed.name === "depeg-events" ? [{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }] : []),
+          ...(feed.name === "mint-burn-events" ? mintBurnScopeTables : []),
         ]);
         const response = await feed.handler(db, new URL(`https://x/api/${feed.name}?${feed.query}`));
         expect(response.status).toBe(200);
@@ -65,6 +72,7 @@ for (const feed of feeds) {
         const db = mockD1([
           { match: `FROM ${feed.table}`, rows: [] },
           ...(feed.name === "depeg-events" ? [{ match: "pharos:depeg-event-projection:active-incidents", rows: [] }] : []),
+          ...(feed.name === "mint-burn-events" ? mintBurnScopeTables : []),
         ]);
         const response = await feed.handler(db, new URL(`https://x/api/${feed.name}?${feed.query}&offset=${feed.offset}`));
         expect(response.status).toBe(200);

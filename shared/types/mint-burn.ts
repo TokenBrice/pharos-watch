@@ -66,6 +66,34 @@ export const MintBurnWatermarkSchema = z.object({
   unavailableReason: z.enum(["scan-watermark-stale", "scan-watermark-unavailable"]).nullable(),
 });
 export type MintBurnWatermark = z.infer<typeof MintBurnWatermarkSchema>;
+
+export const MintBurnPublicationSchema = z.object({
+  evaluatedAt: z.number().int().nonnegative(),
+  requiredBaselineSec: z.number().int().positive(),
+  freshnessBudgetSec: z.number().positive(),
+  /** Absent on legacy payloads whose legs contain the full roster. */
+  legsScope: z.literal("non-admitted").optional(),
+  legCount: z.number().int().nonnegative().optional(),
+  admittedCount: z.number().int().nonnegative().optional(),
+  pendingAdmissionCount: z.number().int().nonnegative().optional(),
+  disabledCount: z.number().int().nonnegative().optional(),
+  /** Exact producer membership for consumers, without per-contract diagnostics. */
+  admittedPairs: z.array(z.tuple([z.string(), z.string()])).optional(),
+  legs: z.array(z.object({
+    configKey: z.string(),
+    configFingerprint: z.string(),
+    stablecoinId: z.string(),
+    chainId: z.string(),
+    status: z.enum(["admitted", "pending-admission", "disabled"]),
+    reason: z.enum(["legacy-grandfathered", "baseline-incomplete", "frontier-stale", "proof-unavailable", "valuation-incomplete", "operator-disabled", "shared-bucket-disabled", "unsupported-shared-bucket", "reactivation-pending"]).nullable(),
+    admittedAt: z.number().int().nonnegative().nullable(),
+    baselineFrom: z.number().int().nonnegative().nullable(),
+    baselineTo: z.number().int().nonnegative().nullable(),
+    coveredSeconds: z.number().nonnegative().nullable(),
+    frontierAgeSec: z.number().nonnegative().nullable(),
+  })),
+});
+export type MintBurnPublication = z.infer<typeof MintBurnPublicationSchema>;
 const MintBurnGaugeSchema = z.object({
   score: SignedFlowIntensitySchema.nullable(),
   band: z.string().nullable(),
@@ -262,6 +290,7 @@ const MintBurnHourlyWindowSchema = z.object({
 });
 
 export const MintBurnFlowsResponseSchema = z.object({
+  publication: MintBurnPublicationSchema.optional(),
   gauge: MintBurnGaugeSchema,
   coins: z.array(MintBurnCoinFlowSchema),
   chains: z.array(MintBurnAggregateChainSchema).optional(),
@@ -288,6 +317,7 @@ const MintBurnPerCoinChainSchema = z.object({
 });
 
 export const MintBurnPerCoinResponseSchema = z.object({
+  publication: MintBurnPublicationSchema.optional(),
   stablecoinId: z.string(),
   symbol: z.string(),
   mintVolumeUsd: z.number().finite().nonnegative(),

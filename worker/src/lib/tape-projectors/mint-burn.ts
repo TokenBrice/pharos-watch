@@ -11,13 +11,15 @@
  * time (`worker/src/api/mint-burn-flows.ts`) and have no persistent history
  * table today, so gauge-band-changed events are left for a follow-up.
  */
-import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_IDS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { formatCompactUsd } from "@shared/lib/format";
 import { FLOW_CLAIM_RETRACTED_REASON } from "@shared/types/tape-event-constants";
 import type { TapeEventSeverity } from "@shared/types/tape-event";
 
 import { batchExecute } from "../d1-primitives";
+import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
+import { readMintBurnWindowContext } from "../mint-burn-flows-service";
 import { MINT_BURN_TAPE_NOTICE_USD as NOTICE_USD, mintBurnTapeClaimStaleSql, mintBurnTapeEligibleSql } from "../mint-burn-tape-claim";
 import { buildTapeEventId, deriveIssuerId } from "../tape-event-helpers";
 import type { TapeEventInsert } from "../tape-event-types";
@@ -63,6 +65,8 @@ async function fetchLargeFlows(
   since: number,
   until: number | null,
   limit: number,
+  scopedPairsJson: string,
+  admissionFloorsJson: string,
 ): Promise<MintBurnSourceRow[]> {
   // Bridge transfers and reviewed protocol-internal movements are not
   // economic mint/burn — exclude them. `review_required` burns are still
@@ -76,6 +80,15 @@ async function fetchLargeFlows(
     trailingWhereSql: `
                    AND amount_usd IS NOT NULL
                    AND amount_usd >= ?
+                   AND (stablecoin_id, chain_id) IN (
+                     SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)
+                   )
+                   AND NOT EXISTS (
+                     SELECT 1 FROM json_each(?)
+                     WHERE mint_burn_events.stablecoin_id = json_extract(value, '$[0]')
+                       AND mint_burn_events.chain_id = json_extract(value, '$[1]')
+                       AND mint_burn_events.timestamp < json_extract(value, '$[2]')
+                   )
                    AND (flow_type IS NULL OR flow_type NOT IN ('bridge_transfer', 'protocol_internal'))
                    AND (direction = 'mint' OR burn_type IS NULL OR burn_type != 'review_required')
                    AND direction IN ('mint', 'burn')
@@ -84,7 +97,7 @@ async function fetchLargeFlows(
                      WHERE source_table = 'mint_burn_events'
                        AND source_row_id = mint_burn_events.id AND transition = 'updated'
                    )`,
-    trailingBinds: [NOTICE_USD],
+    trailingBinds: [NOTICE_USD, scopedPairsJson, admissionFloorsJson],
     orderBySql: "timestamp ASC, id ASC",
     since,
     until,
@@ -150,6 +163,15 @@ async function projectLargeFlows(
   options: ProjectorOptions | undefined,
 ): Promise<ProjectorResult> {
   const { since, until, limit } = await resolveProjectorOptions(db, CURSOR_KEY, options);
+  const scope = await readMintBurnWindowContext(db, Math.floor(Date.now() / 1000),
+    MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)));
+  const admittedPairs = new Set(scope.configs.map((config) => `${config.stablecoinId}|${config.chain.chainId}`));
+  // Scheduled admission must not announce the pending leg's historical baseline.
+  // Explicit operator bounds retain historical repair; grandfathered legs have no floor.
+  const scopedPairsJson = JSON.stringify(scope.configs.map((config) => [config.stablecoinId, config.chain.chainId]));
+  const admissionFloorsJson = JSON.stringify(options?.since != null ? [] : scope.publication.legs
+    .filter((leg) => leg.status === "admitted" && leg.admittedAt != null)
+    .map((leg) => [leg.stablecoinId, leg.chainId, leg.admittedAt]));
 
   // Eligibility can change in place after price healing or burn review. Reconcile
   // recent source identities independently of the watermark; older repairs use
@@ -183,8 +205,9 @@ async function projectLargeFlows(
     ).bind(Math.floor(Date.now() / 1000), FLOW_CLAIM_RETRACTED_REASON, row.id, row.id)));
   }
 
-  const freshRows = await fetchLargeFlows(db, reconcileSince, until, limit);
-  const rows = [...freshRows, ...changedRows.filter((row) => row.ineligible !== 1)];
+  const freshRows = await fetchLargeFlows(db, reconcileSince, until, limit, scopedPairsJson, admissionFloorsJson);
+  const rows = [...freshRows, ...changedRows.filter((row) => row.ineligible !== 1
+    && admittedPairs.has(`${row.stablecoin_id}|${row.chain_id}`))];
   if (rows.length === 0) return { projected: 0, advanced: null };
 
   const events: TapeEventInsert[] = [];

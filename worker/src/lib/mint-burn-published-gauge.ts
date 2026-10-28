@@ -2,7 +2,7 @@
 //
 // The gauge has exactly one producer: `refreshAggregateMintBurnFlowCache`
 // (`worker/src/api/mint-burn-flows.ts`), which computes it over the
-// `ACTIVE_MINT_BURN_CONFIGS` tracked-pair universe with tracked-chain mcap
+// admitted, enabled tracked-pair universe with tracked-chain mcap
 // weighting and publishes it under `aggregateFlowCacheKey(24)`. Every other
 // surface — the daily digest included — reads that publication through this
 // module instead of recomputing the composite from `mint_burn_hourly`, so the
@@ -93,6 +93,8 @@ export interface PublishedMintBurnGauge {
   chains: PublishedGaugeChain[];
   /** Exact producer window; legacy or unreadable provenance is unavailable. */
   window: NonNullable<MintBurnFlowsResponse["window"]> | null;
+  /** Exact admitted scope used by the producer; absent legacy scope proves nothing. */
+  publication: NonNullable<MintBurnFlowsResponse["publication"]> | null;
   /** Producer body clock, independent of the cache publication clock. */
   updatedAt: number | null;
   /** Producer cache publication timestamp, not a unique generation ID or read clock. */
@@ -215,11 +217,14 @@ export function parsePublishedMintBurnGauge(
     ? parsedWindow.data : null;
   const scanCoverage = MintBurnFlowsResponseSchema.shape.gauge.shape.scanCoverage.safeParse(payload.gauge.scanCoverage);
   if (!scanCoverage.success) return null;
+  const publication = MintBurnFlowsResponseSchema.shape.publication.safeParse(payload.publication);
+  if (!publication.success) return null;
   const producerClock = numberValue(payload.updatedAt);
   const updatedAt = producerClock !== null && Number.isInteger(producerClock) && producerClock >= 0
     ? producerClock : null;
   return { score, partialValuationInputs, partialValuationMcapUsd, scoredMcapUsd, coins, chains,
-    ...(scanCoverage.data ? { scanCoverage: scanCoverage.data } : {}), window, updatedAt, publishedAt, stale };
+    ...(scanCoverage.data ? { scanCoverage: scanCoverage.data } : {}), window,
+    publication: publication.data ?? null, updatedAt, publishedAt, stale };
 }
 
 /** Read the single published gauge. Fails closed rather than recomputing. */

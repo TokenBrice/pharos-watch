@@ -518,13 +518,19 @@ export const PROVIDER_RESILIENCE_REGISTRY = [
   {
     id: "alchemy-log-rpc",
     family: "evm-rpc",
-    description: "Alchemy JSON-RPC log, receipt, and timestamp fetch helpers.",
+    description: "Mint/burn RPC observations with config-attributed Alchemy run outcomes; Dwellir observations never write the parity circuit.",
     files: [
       "worker/src/lib/alchemy-logs.ts",
+      "worker/src/lib/evm-rpc.ts",
+      "worker/src/lib/rpc-request-observer.ts",
       "worker/src/handlers/scheduled/mint-burn-slot.ts",
+      "worker/src/cron/mint-burn/run-configs.ts",
+      "worker/src/cron/mint-burn/chain-context.ts",
       "worker/src/lib/fetch-retry.ts",
     ],
-    tests: ["worker/src/lib/__tests__/alchemy-logs.test.ts"],
+    tests: ["worker/src/lib/__tests__/alchemy-logs.test.ts", "worker/src/lib/__tests__/rpc-request-observer.test.ts",
+      "worker/src/handlers/scheduled/__tests__/mint-burn-slot.test.ts", "worker/src/cron/__tests__/sync-mint-burn.test.ts",
+      "worker/src/cron/__tests__/mint-burn-config-deferral.test.ts"],
     allowBareFetch: true,
     directFetchJustification: "Alchemy JSON-RPC helpers split block ranges and preserve partial-completeness metadata.",
     resilience: {

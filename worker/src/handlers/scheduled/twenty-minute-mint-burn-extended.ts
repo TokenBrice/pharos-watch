@@ -5,6 +5,5 @@ export async function runHalfHourlyMintBurnExtendedSlot(runtime: ScheduledRuntim
   return runMintBurnSlot(runtime, {
     lane: "extended",
     jobName: "sync-mint-burn-extended",
-    skipMessage: "[cron] Alchemy circuit open - skipping extended mint/burn sync",
   });
 }

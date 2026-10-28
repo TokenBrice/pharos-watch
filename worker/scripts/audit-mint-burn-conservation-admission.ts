@@ -36,7 +36,9 @@ import { renderMintBurnConservationRuntime } from "../../scripts/maintenance/gen
 import { fetchEvmRpcBatchDetailed } from "../src/lib/evm-rpc";
 import {
   completeMintBurnConservationAudit,
+  conservationIdentityAddress,
   fetchConservationBoundaries,
+  getMintBurnConservationRuntimeEntry,
   reviewedConservationIdentityKey,
   validateReviewedConservationEntry,
   type ConservationBoundaryRequest,
@@ -135,7 +137,7 @@ interface SemanticReview {
 
 interface ConfigAudit {
   config: MintBurnContractConfig;
-  window: AuditWindow;
+  window: AuditWindow | null;
   record: MintBurnConservationRecord;
 }
 
@@ -254,7 +256,8 @@ function parseSemanticReview(path: string, config: MintBurnContractConfig): Sema
   const review = parsed as SemanticReview;
   assertCliUsage(
     review.chainId === config.chain.chainId && review.stablecoinId === config.stablecoinId &&
-      typeof review.address === "string" && review.address.toLowerCase() === config.contractAddress.toLowerCase() &&
+      typeof review.address === "string" && conservationIdentityAddress(review.chainId, review.address) ===
+        conservationIdentityAddress(config.chain.chainId, config.contractAddress) &&
       review.configDecimals === config.decimals,
     `semantic file ${path} identity does not match the config`,
   );
@@ -287,8 +290,12 @@ const VERDICT_LAWS: Readonly<Record<string, { eventSet: "transfer" | "config-eve
 };
 
 function candidateEntryFor(review: SemanticReview | undefined, config: MintBurnContractConfig): ReviewedConservationEntry {
+  const committed = getMintBurnConservationRuntimeEntry(config);
+  // A semantic review cannot establish a capability the chain's RPC does not serve.
+  if (committed?.unsupportedReason === "tron-historical-state-unavailable" ||
+    (review == null && committed?.disposition === "unsupported")) return committed;
   const base = { chainId: config.chain.chainId, stablecoinId: config.stablecoinId,
-    address: config.contractAddress.toLowerCase(), decimals: config.decimals };
+    address: conservationIdentityAddress(config.chain.chainId, config.contractAddress), decimals: config.decimals };
   if (review?.semanticVerdict === "unsupported") {
     return { ...base, disposition: "unsupported", unsupportedReason: review.unsupportedReason, eventSet: "transfer" };
   }
@@ -334,11 +341,11 @@ function writeSummary(outDir: string, audits: readonly ConfigAudit[]): void {
     : "| --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: |";
   const seen = new Map<MintBurnContractConfig, number>();
   const rows: string[] = [];
-  for (const { config, record } of audits) {
+  for (const { config, record, window } of audits) {
     const occurrence = seen.get(config) ?? 0;
     seen.set(config, occurrence + 1);
-    const label = multiWindow ? `w${occurrence + 1}` : null;
-    rows.push(`| ${config.stablecoinId} | ${config.contractAddress.toLowerCase()}${label === null ? "" : ` | ${label}`} | ` +
+    const label = multiWindow ? window == null ? "not audited" : `w${occurrence + 1}` : null;
+    rows.push(`| ${config.stablecoinId} | ${conservationIdentityAddress(config.chain.chainId, config.contractAddress)}${label === null ? "" : ` | ${label}`} | ` +
       `${record.status} | ${record.reason ?? ""} | ${record.mintRaw ?? ""} | ${record.burnRaw ?? ""} | ` +
       `${record.supplyDeltaRaw ?? ""} | ${record.residualRaw ?? ""} | ${record.logCount ?? ""} |`);
   }
@@ -351,7 +358,7 @@ function buildSidecarEntry(review: SemanticReview, config: MintBurnContractConfi
   const entry: ReviewedConservationEntry = {
     chainId: config.chain.chainId,
     stablecoinId: config.stablecoinId,
-    address: config.contractAddress.toLowerCase(),
+    address: conservationIdentityAddress(config.chain.chainId, config.contractAddress),
     decimals: config.decimals,
     disposition,
     unsupportedReason: disposition === "unsupported" ? review.unsupportedReason : null,
@@ -386,9 +393,9 @@ function mergeEntriesIntoSidecar(entries: readonly ReviewedConservationEntry[], 
     ? ((existing as { entries: ReviewedConservationEntry[] }).entries) : [];
   // Same chain + stablecoin + address is one identity: a decimals change replaces, never duplicates.
   const byIdentity = new Map(previous.map((entry) =>
-    [`${entry.chainId}\u0000${entry.stablecoinId}\u0000${entry.address.toLowerCase()}`, entry]));
+    [`${entry.chainId}\u0000${entry.stablecoinId}\u0000${conservationIdentityAddress(entry.chainId, entry.address)}`, entry]));
   for (const entry of entries) {
-    byIdentity.set(`${entry.chainId}\u0000${entry.stablecoinId}\u0000${entry.address.toLowerCase()}`, entry);
+    byIdentity.set(`${entry.chainId}\u0000${entry.stablecoinId}\u0000${conservationIdentityAddress(entry.chainId, entry.address)}`, entry);
   }
   const merged = [...byIdentity.values()].sort((a, b) =>
     a.chainId < b.chainId ? -1 : a.chainId > b.chainId ? 1 :
@@ -450,27 +457,13 @@ export async function runAdmissionAuditCli(
   }
   configs.sort((a, b) => a.chain.chainId < b.chain.chainId ? -1 : a.chain.chainId > b.chain.chainId ? 1 :
     a.stablecoinId < b.stablecoinId ? -1 : a.stablecoinId > b.stablecoinId ? 1 :
-      a.contractAddress.toLowerCase() < b.contractAddress.toLowerCase() ? -1 : 1);
-
-  const envFile = resolve(REPO_ROOT, ".env.local");
-  if (existsSync(envFile)) process.loadEnvFile(envFile);
-  const alchemyApiKey = process.env.ALCHEMY_API_KEY?.trim();
-  // Replay never reaches the network; a placeholder only shapes the redacted match URL.
-  const apiKeyForUrls = alchemyApiKey != null && alchemyApiKey.length > 0
-    ? alchemyApiKey : replayPath !== null ? "replay-no-network" : null;
-  assertCliUsage(apiKeyForUrls !== null, "ALCHEMY_API_KEY not found in env or .env.local");
-
-  const rpcUrlByChain = new Map<string, string>();
-  for (const chainId of new Set(configs.map((config) => config.chain.chainId))) {
-    const url = buildAlchemyUrl(chainId, apiKeyForUrls);
-    assertCliUsage(url !== null, `no Alchemy endpoint for chain ${chainId}`);
-    rpcUrlByChain.set(chainId, url!);
-  }
+      conservationIdentityAddress(a.chain.chainId, a.contractAddress) < conservationIdentityAddress(b.chain.chainId, b.contractAddress) ? -1 : 1);
 
   const reviews = new Map<string, SemanticReview>();
   if (semanticDir !== null) {
     for (const config of configs) {
-      const path = resolve(semanticDir, `${config.stablecoinId}__${config.chain.chainId}-${config.contractAddress.toLowerCase()}.json`);
+      const path = resolve(semanticDir, `${config.stablecoinId}__${config.chain.chainId}-${conservationIdentityAddress(config.chain.chainId, config.contractAddress)}.json`);
+      if (!existsSync(path) && getMintBurnConservationRuntimeEntry(config)?.disposition === "unsupported") continue;
       reviews.set(reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals),
         parseSemanticReview(path, config));
     }
@@ -479,6 +472,22 @@ export async function runAdmissionAuditCli(
   // sidecar will apply once merged; only the law source differs.
   const lawFor: MintBurnConservationLawResolver = (config) =>
     candidateEntryFor(reviews.get(reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals)), config);
+  const networkConfigs = configs.filter((config) => lawFor(config)?.disposition !== "unsupported");
+  const rpcUrlByChain = new Map<string, string>();
+  if (networkConfigs.length > 0) {
+    const envFile = resolve(REPO_ROOT, ".env.local");
+    if (existsSync(envFile)) process.loadEnvFile(envFile);
+    const alchemyApiKey = process.env.ALCHEMY_API_KEY?.trim();
+    // Replay never reaches the network; a placeholder only shapes the redacted match URL.
+    const apiKeyForUrls = alchemyApiKey != null && alchemyApiKey.length > 0
+      ? alchemyApiKey : replayPath !== null ? "replay-no-network" : null;
+    assertCliUsage(apiKeyForUrls !== null, "ALCHEMY_API_KEY not found in env or .env.local");
+    for (const chainId of new Set(networkConfigs.map((config) => config.chain.chainId))) {
+      const url = buildAlchemyUrl(chainId, apiKeyForUrls);
+      assertCliUsage(url !== null, `no Alchemy endpoint for chain ${chainId}`);
+      rpcUrlByChain.set(chainId, url!);
+    }
+  }
 
   const exchanges: JournalExchange[] = [];
   let replayHeader: JournalRunHeader | null = null;
@@ -545,7 +554,7 @@ export async function runAdmissionAuditCli(
     `${reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals)}#${window.fromBlock}-${window.toBlock}`;
 
   const boundaryRequests: ConservationBoundaryRequest[] = [];
-  for (const config of configs) {
+  for (const config of networkConfigs) {
     for (const window of windowsOf(config)) {
       boundaryRequests.push({ key: boundaryKey(config, window), config, fromBlock: window.fromBlock, toBlock: window.toBlock });
     }
@@ -558,6 +567,16 @@ export async function runAdmissionAuditCli(
 
   const audits: ConfigAudit[] = [];
   for (const config of configs) {
+    if (lawFor(config)?.disposition === "unsupported") {
+      const record = completeMintBurnConservationAudit({
+        config, logs: [], fromBlock: config.startBlock, toBlock: config.startBlock,
+        checkedAt, complete: false, boundary: undefined, lawFor,
+      });
+      record.fromBlock = null;
+      record.toBlock = null;
+      audits.push({ config, window: null, record });
+      continue;
+    }
     const rpcUrl = rpcUrlByChain.get(config.chain.chainId)!;
     for (const window of windowsOf(config)) {
       const batches: Array<{ eventDef: MintBurnEventDef; logs: AlchemyLogEntry[] }> = [];
@@ -608,15 +627,15 @@ export async function runAdmissionAuditCli(
   }
   for (const [config, group] of auditsByConfig) {
     const [primary, ...rest] = group;
-    writeFileSync(join(outDir, `${config.chain.chainId}-${config.contractAddress.toLowerCase()}.json`), `${JSON.stringify({
+    writeFileSync(join(outDir, `${config.chain.chainId}-${conservationIdentityAddress(config.chain.chainId, config.contractAddress)}.json`), `${JSON.stringify({
       config: {
         stablecoinId: config.stablecoinId, chainId: config.chain.chainId,
-        address: config.contractAddress.toLowerCase(), decimals: config.decimals, symbol: config.symbol,
+        address: conservationIdentityAddress(config.chain.chainId, config.contractAddress), decimals: config.decimals, symbol: config.symbol,
       },
-      window: { fromBlock: primary.window.fromBlock, toBlock: primary.window.toBlock },
+      window: primary.window,
       record: primary.record,
       journalSha256,
-      ...(rest.length > 0 ? { secondWindow: { fromBlock: rest[0]!.window.fromBlock, toBlock: rest[0]!.window.toBlock }, secondRecord: rest[0]!.record } : {}),
+      ...(rest.length > 0 ? { secondWindow: rest[0]!.window, secondRecord: rest[0]!.record } : {}),
     }, null, 2)}\n`);
   }
   writeSummary(outDir, audits);
@@ -625,7 +644,8 @@ export async function runAdmissionAuditCli(
     const entries: ReviewedConservationEntry[] = [];
     const pending: string[] = [];
     for (const [config, group] of auditsByConfig) {
-      const review = reviews.get(reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals))!;
+      const review = reviews.get(reviewedConservationIdentityKey(config.chain.chainId, config.stablecoinId, config.contractAddress, config.decimals));
+      if (!review) continue;
       const allOk = group.length > 0 && group.every(({ record }) => record.status === "ok");
       if (VERDICT_LAWS[review.semanticVerdict] !== undefined && allOk) {
         entries.push(buildSidecarEntry(review, config, "admitted",
@@ -637,7 +657,7 @@ export async function runAdmissionAuditCli(
           ? review.unsupportedReason : "unverified-implementation-source";
         entries.push(buildSidecarEntry({ ...review, unsupportedReason: reason }, config, "unsupported", []));
       } else {
-        pending.push(`${config.stablecoinId} ${config.contractAddress.toLowerCase()} ` +
+        pending.push(`${config.stablecoinId} ${conservationIdentityAddress(config.chain.chainId, config.contractAddress)} ` +
           `(semanticVerdict=${review.semanticVerdict}, records=${group.map(({ record }) => record.status).join("/")})`);
       }
     }
@@ -655,7 +675,8 @@ export async function runAdmissionAuditCli(
   const failing = audits.filter(({ record }) => record.status !== "ok");
   if (failing.length > 0) {
     throw new Error(`${failing.length} audited window(s) not ok:\n${failing.map(({ config, window, record }) =>
-      `  ${config.stablecoinId} ${config.contractAddress.toLowerCase()} [${window.fromBlock}-${window.toBlock}]: ` +
+      `  ${config.stablecoinId} ${conservationIdentityAddress(config.chain.chainId, config.contractAddress)} ` +
+      `${window == null ? "[not audited]" : `[${window.fromBlock}-${window.toBlock}]`}: ` +
       `${record.status}${record.reason ? ` (${record.reason})` : ""}`).join("\n")}`);
   }
 }

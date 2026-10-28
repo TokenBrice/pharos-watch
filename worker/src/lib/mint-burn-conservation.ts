@@ -1,4 +1,5 @@
 import type { MintBurnConservationRecord } from "@shared/types/status";
+import { canonicalTronAddress } from "@shared/lib/tron-address";
 import type { MintBurnContractConfig, MintBurnEventDef } from "./mint-burn-contracts";
 import type { MintBurnSupplyBurnProof } from "./mint-burn-contracts-types";
 import type { AlchemyLogEntry } from "./alchemy-logs";
@@ -110,7 +111,7 @@ export interface MintBurnConservationRuntimeLookup {
 }
 
 // Reviewed-identity evidence sidecar: worker/src/lib/mint-burn-conservation-reviewed.json.
-// One entry per config identity (chain, stablecoin id, lowercase address, decimals) with the
+// One entry per config identity (chain, stablecoin id, canonical address, decimals) with the
 // reviewer's identity evidence and audited windows. Structural rules are enforced by tests and
 // by the admission CLI; only they import the sidecar. The Worker runtime imports the small
 // generated lookup mint-burn-conservation-runtime.generated.json (registered generated
@@ -173,6 +174,7 @@ const UNSUPPORTED_REASON_LITERALS: Readonly<Record<string, true>> = {
   "total-supply-override": true,
   "deprecated-upgrade-forwarding": true,
   "unverified-implementation-source": true,
+  "tron-historical-state-unavailable": true,
 };
 const UNSUPPORTED_REASON_PREFIXES: readonly string[] = [
   "unpaired-supply-path:",
@@ -184,8 +186,12 @@ export function isMintBurnConservationUnsupportedReason(reason: unknown): reason
     UNSUPPORTED_REASON_PREFIXES.some((prefix) => reason.startsWith(prefix)));
 }
 
+export function conservationIdentityAddress(chainId: string, address: string): string {
+  return chainId === "tron" ? address : address.toLowerCase();
+}
+
 export function reviewedConservationIdentityKey(chainId: string, stablecoinId: string, address: string, decimals: number): string {
-  return `${chainId}\u0000${stablecoinId}\u0000${address.toLowerCase()}\u0000${decimals}`;
+  return `${chainId}\u0000${stablecoinId}\u0000${conservationIdentityAddress(chainId, address)}\u0000${decimals}`;
 }
 
 function buildReviewedConservationIndex(entries: readonly MintBurnConservationRuntimeEntry[]):
@@ -284,7 +290,11 @@ export function validateReviewedConservationEntry(entry: ReviewedConservationEnt
   if (entry.disposition !== "admitted" && entry.disposition !== "unsupported") {
     return [`${label}: disposition must be "admitted" or "unsupported"`];
   }
-  if (!/^0x[0-9a-f]{40}$/.test(entry.address)) return [`${label}: address must be a lowercase 0x-hex value`];
+  if (entry.chainId === "tron") {
+    if (!/^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(entry.address) || canonicalTronAddress(entry.address) == null) {
+      return [`${label}: address must be a checksummed Tron Base58 value`];
+    }
+  } else if (!/^0x[0-9a-f]{40}$/.test(entry.address)) return [`${label}: address must be a lowercase 0x-hex value`];
   if (!Number.isSafeInteger(entry.decimals) || entry.decimals < 0) return [`${label}: decimals must be a non-negative integer`];
   if (entry.disposition === "unsupported") {
     return isMintBurnConservationUnsupportedReason(entry.unsupportedReason)
@@ -296,7 +306,7 @@ export function validateReviewedConservationEntry(entry: ReviewedConservationEnt
     problems.push(`${label}: admitted requires identity.sourceVerified or a notes exception starting "source-exception:"`);
   }
   const externalMatch = Array.isArray(entry.identity?.externalMatches) && entry.identity.externalMatches.some((match) =>
-    typeof match?.value === "string" && match.value.toLowerCase() === entry.address);
+    typeof match?.value === "string" && conservationIdentityAddress(entry.chainId, match.value) === entry.address);
   const identityIssue = typeof entry.identityIssue === "string" ? entry.identityIssue : "";
   if (!externalMatch && !identityIssue.startsWith("no-external-match:")) {
     problems.push(`${label}: admitted requires an externalMatches value equal to the address or an identityIssue starting "no-external-match:"`);
@@ -444,7 +454,7 @@ export function mintBurnConservationCacheKey(config: MintBurnContractConfig): st
 }
 
 export function mintBurnConservationFingerprint(config: MintBurnContractConfig): string {
-  const base = [1, config.stablecoinId, config.chain.chainId, config.contractAddress.toLowerCase(),
+  const base = [1, config.stablecoinId, config.chain.chainId, conservationIdentityAddress(config.chain.chainId, config.contractAddress),
     config.decimals, config.adapterKind, config.startBlock, config.dustThreshold,
     config.events.map((event) => {
       const tuple = [event.signature, event.topicHash.toLowerCase(), event.direction,
@@ -912,7 +922,8 @@ export function completeMintBurnConservationAudit(input: {
   const eligibility = resolveMintBurnConservationEligibility(entry, config);
   const record: MintBurnConservationRecord = {
     version: 1, key: mintBurnConservationCacheKey(config), configFingerprint: mintBurnConservationFingerprint(config),
-    stablecoinId: config.stablecoinId, chainId: config.chain.chainId, address: config.contractAddress.toLowerCase(),
+    stablecoinId: config.stablecoinId, chainId: config.chain.chainId,
+    address: conservationIdentityAddress(config.chain.chainId, config.contractAddress),
     decimals: config.decimals, checkedAt, status: eligibility.supported ? "unavailable" : "unsupported",
     fromBlock: fromBlock - 1, toBlock,
   };

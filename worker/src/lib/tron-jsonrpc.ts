@@ -8,6 +8,7 @@ import type { DwellirNativeCapability } from "./dwellir-native";
 import type { RateLimitedFetch, SubrequestBudget } from "./evm-logs";
 import { isResponseBodyTooLargeError } from "./response-body";
 import { throwIfAborted } from "./abort";
+import { getRpcRequestObserver } from "./rpc-request-observer";
 
 export interface TronRpcLog {
   address: string;
@@ -65,6 +66,16 @@ export class TronJsonRpcReader {
     signal: AbortSignal;
   }) {}
 
+  /** Reuse the verified invocation head/cache while charging a config's own request cap. */
+  withBudget(budget: SubrequestBudget, deadlineMs = this.options.deadlineMs): TronJsonRpcReader {
+    const reader = new TronJsonRpcReader({ ...this.options, budget,
+      deadlineMs: Math.min(deadlineMs, this.options.deadlineMs) });
+    reader.blocks = this.blocks;
+    reader.solidHead = this.solidHead;
+    reader.shared = this.shared;
+    return reader;
+  }
+
   setTronGridAllowed(allowed: boolean): void { this.options.trongridAllowed = allowed; }
 
   private async read<T>(path: string, body: unknown, decode: (value: unknown) => T): Promise<T> {
@@ -76,6 +87,8 @@ export class TronJsonRpcReader {
       ...(options.trongridAllowed !== false ? ["trongrid" as const] : []),
     ];
     for (const provider of providers) {
+      let attempted = false;
+      let rpcError: { code?: number; message?: string } | undefined;
       try {
         if (provider === "trongrid" && record(body) && body.method === "eth_getLogs"
           && Array.isArray(body.params) && record(body.params[0])) {
@@ -95,6 +108,7 @@ export class TronJsonRpcReader {
           const timeoutMs = Math.min(10_000, options.deadlineMs - Date.now());
           options.budget.count++;
           this.calls[provider]++;
+          attempted = true;
           const result = provider === "dwellir"
             ? await options.dwellirNative!.readJson<unknown>("tron", path, options.signal, undefined, body, timeoutMs)
             : await fetchJsonPostWithRetry<unknown>(`https://api.trongrid.io${path}`, body, options.signal, timeoutMs,
@@ -110,6 +124,7 @@ export class TronJsonRpcReader {
           if ("error" in result) {
             const error = record(result.error) ? result.error : {};
             const message = typeof error.message === "string" ? error.message : "";
+            rpcError = { ...(typeof error.code === "number" ? { code: error.code } : {}), message };
             throw new TronRpcError("tron-rpc-provider-error", body.method === "eth_getLogs" && isLogRangeOrSizeError(message));
           }
           if (!("result" in result) || result.result == null) throw new TronRpcError("tron-rpc-missing-result");
@@ -119,11 +134,19 @@ export class TronJsonRpcReader {
           }
           return value;
         });
+        getRpcRequestObserver()?.onNativeOutcome?.(provider, { status: "success", reason: "tron-rpc-response" });
         this.successfulCalls[provider]++;
         return decoded;
       } catch (error) {
         throwIfAborted(options.signal);
         const failure = isResponseBodyTooLargeError(error) ? new TronRpcError("tron-rpc-body-too-large", true) : error;
+        if (attempted) {
+          getRpcRequestObserver()?.onNativeOutcome?.(provider, rpcError ? { status: "rpc-error", error: rpcError } : {
+            status: failure instanceof TronRpcError && (failure.splittable || failure.reason === "tron-rpc-missing-result")
+              ? "neutral" : "failure",
+            reason: failure instanceof TronRpcError ? failure.reason : "tron-rpc-transport-error",
+          });
+        }
         if (failure instanceof TronRpcError && failure.splittable) {
           const filter = record(body) && body.method === "eth_getLogs" && Array.isArray(body.params)
             && record(body.params[0]) ? body.params[0] : null;
