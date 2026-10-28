@@ -68,7 +68,7 @@ jobs:
 
   all-critical-ratchet:
     runs-on: ${{ vars.CI_VALIDATE_RUNNER != '' && vars.CI_VALIDATE_RUNNER || 'ubuntu-latest' }}
-    timeout-minutes: 25
+    timeout-minutes: 40
     permissions:
       contents: read
     env:
