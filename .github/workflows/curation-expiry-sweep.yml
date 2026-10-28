@@ -240,10 +240,14 @@ jobs:
           path = Path(sys.argv[1])
           body = path.read_bytes()
           footer = (f"\nRun: {os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}\n").encode()
-          marker = b"\n```\n... output truncated to fit the 60,000-byte issue body budget; download the full artifact ...\n"
+          marker = b"\n... output truncated to fit the 60,000-byte issue body budget; download the full artifact ...\n"
+          closing_fence = b"\n```"
           limit = 60_000
           if len(body) + len(footer) > limit:
-              body = body[:limit - len(marker) - len(footer)].decode("utf-8", errors="ignore").encode() + marker
+              body = body[:limit - len(closing_fence) - len(marker) - len(footer)].decode("utf-8", errors="ignore").encode()
+              if sum(line.startswith(b"```") for line in body.splitlines()) % 2:
+                  body += closing_fence
+              body += marker
           path.write_bytes(body + footer)
           assert path.stat().st_size <= limit
           PY
