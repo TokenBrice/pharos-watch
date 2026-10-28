@@ -32,6 +32,8 @@ Class precedence follows the guard's branches: delisted → `excluded`; `variant
 
 An unresolved mechanism review preserves delisted, variant, credit-fund and NAV/T-bill invariants before applying its hold. Remaining unresolved mechanisms require `stable-value-investment`; the currently authored class cannot validate itself or promote an unresolved asset into core aggregates. USDR Ring is held on that basis pending exact-product qualification; its listing class does not assert a proven credit-fund mechanism.
 
+USDrf follows the credit-fund branch because RealFi describes a managed off-chain credit portfolio. Its launched-awaiting-data lifecycle remains separate from that instrument classification.
+
 ## Instrument Eligibility
 
 An in-scope asset must make a stable-value claim that users can test through an ordinary transfer, trade, redemption, or modeled NAV path. It must also have a distinct, verifiable identity and enough public evidence to explain the issuer, backing, peg mechanism, and holder exit.

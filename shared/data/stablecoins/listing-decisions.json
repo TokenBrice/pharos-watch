@@ -491,6 +491,8 @@
     "btd-alpen": "core-stablecoin",
     "jpy-megabank-consortium": "core-stablecoin",
     "jpydf-deltaforesight": "core-stablecoin",
-    "swanusd-swan": "core-stablecoin"
+    "swanusd-swan": "core-stablecoin",
+    "dotusd-polkadot": "core-stablecoin",
+    "usdrf-realfi": "stable-value-investment"
   }
 }
