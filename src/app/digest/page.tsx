@@ -70,7 +70,7 @@ export default function DigestArchivePage() {
         </Link>
       </p>
 
-      <DigestArchiveClient />
+      <DigestArchiveClient initialLead={LATEST_DAILY_DIGEST} />
 
       <nav aria-labelledby="digest-month-index" className="space-y-3 border-t border-border pt-6">
         <h2 id="digest-month-index" className="text-lg font-semibold">Browse every edition by month</h2>

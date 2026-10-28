@@ -168,7 +168,7 @@ See the [public API reference](https://pharos.watch/api/) for the wire contract.
 
 ## Consumers
 
-Canonical V9 serves Safety Scores, home, detail, comparison, portfolio/dependency map, yield, digest/flight-to-quality, Telegram, OG, datasets, status and grade history.
+Safety Scores prerenders the eager hero/map; unavailable stats/distribution use skeletons, never numbers. Consumers use canonical V9.
 
 Graph, DDR, digest-detail and ops read the accepted cohort; grade/identity readers use the index; daily datasets decode full cards. Projections bind accepted identity/health. Missing, invalid or mismatched cohorts fail closed with a machine-readable reason, without decoding full cards.
 

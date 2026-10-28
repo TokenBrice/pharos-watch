@@ -1,5 +1,5 @@
 import { Skeleton } from "@/components/ui/skeleton";
-import { PageLoadingSplitHero } from "@/components/page-loading-skeleton";
+import { SafetyScoresHero } from "./presentational";
 
 // Analytics tier: split instrument hero, filter band, then ~12 graded rows.
 const SAFETY_SKELETON_ROW_COUNT = 12;
@@ -7,7 +7,7 @@ const SAFETY_SKELETON_ROW_COUNT = 12;
 export function SafetyScoresContentLoadingState() {
   return (
     <>
-      <PageLoadingSplitHero visualClassName="h-48 lg:h-auto" />
+      <SafetyScoresHero data={null} />
 
       <div className="pharos-card-shell space-y-3 p-4">
         <Skeleton className="h-3.5 w-32 rounded-sm" />

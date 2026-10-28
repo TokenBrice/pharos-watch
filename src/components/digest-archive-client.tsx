@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,7 +11,7 @@ import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import { formatBps, formatCurrency, formatLongDate } from "@shared/lib/format";
-import type { DigestArchiveEntry, DigestRiskSignal } from "@shared/types";
+import type { DigestArchiveEntry, DigestContentEntry, DigestRiskSignal } from "@shared/types";
 import {
   buildDigestTriggerRecord,
   EDITORIAL_BODY_STYLE,
@@ -33,13 +33,6 @@ function tsToDateSlug(ts: number): string {
 function toDigestSlug(ts: number, digestType: "daily" | "weekly"): string {
   const date = tsToDateSlug(ts);
   return digestType === "weekly" ? `${date}-weekly` : date;
-}
-
-export function resolveLatestDailyDigestSlug(
-  entries: readonly Pick<DigestArchiveEntry, "generatedAt" | "digestType">[],
-): string | null {
-  const latestDaily = entries.find((entry) => (entry.digestType ?? "daily") !== "weekly");
-  return latestDaily ? tsToDateSlug(latestDaily.generatedAt) : null;
 }
 
 function tsToMonthKey(ts: number): string {
@@ -95,7 +88,7 @@ function filterDigestArchiveEntries(
   const query = options.query.trim().toLocaleLowerCase();
   return entries.filter((entry) => {
     const isWeekly = entry.digestType === "weekly";
-    if (options.latestDailySlug && !isWeekly && tsToDateSlug(entry.generatedAt) === options.latestDailySlug) {
+    if (options.latestDailySlug && toDigestSlug(entry.generatedAt, entry.digestType ?? "daily") === options.latestDailySlug) {
       return false;
     }
     if (options.view !== "all" && (isWeekly ? "weekly" : "daily") !== options.view) return false;
@@ -281,7 +274,28 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
   );
 }
 
-export function DigestArchiveClient() {
+export function DigestArchiveClient({ initialLead }: { initialLead?: DigestContentEntry } = {}) {
+  const [lead] = useState(initialLead);
+  const leadSlug = lead?.date ?? null;
+  const leadDate = lead ? formatLongDate(new Date(lead.generatedAt * 1000), { utc: true }) : null;
+
+  return (
+    <div className="space-y-8">
+      {lead && leadDate ? (
+        <section aria-label={leadDate} className="min-h-[58rem] space-y-4 sm:min-h-[34rem]">
+          <WireSectionRule label={leadDate} />
+          <DailyDigest
+            data={{ digest: lead.text, digestTitle: lead.title, digestExtended: lead.extended, generatedAt: lead.generatedAt }}
+            detailHref={`/digest/${leadSlug}/`}
+          />
+        </section>
+      ) : null}
+      <DigestArchive latestDailySlug={leadSlug} />
+    </div>
+  );
+}
+
+function DigestArchive({ latestDailySlug }: { latestDailySlug: string | null }) {
   const { data, isLoading, dataUpdatedAt, error, refetch, meta } = useDigestArchive();
   const { searchParams, setParam, replaceParams } = useUrlFilters();
 
@@ -321,8 +335,6 @@ export function DigestArchiveClient() {
     return data?.digests.find((d) => d.digestType === "weekly") ?? null;
   }, [data]);
 
-  // Skip only today's daily digest (shown in broadsheet above), filter by month.
-  const latestDailySlug = useMemo(() => resolveLatestDailyDigestSlug(data?.digests ?? []), [data]);
   const wireDigests = useMemo(
     () => filterDigestArchiveEntries(data?.digests ?? [], {
       view: activeView,
@@ -388,14 +400,6 @@ export function DigestArchiveClient() {
   return (
     <div className="space-y-8">
       {healthBanner}
-
-      {/* Lead story: today's digest (nameplate above carries the edition + date) */}
-      <section aria-label="Today's lead digest" className="min-h-[58rem] space-y-4 sm:min-h-[34rem]">
-        <WireSectionRule label="Today's Lead" />
-        <DailyDigest
-          detailHref={latestDailySlug ? `/digest/${latestDailySlug}/` : undefined}
-        />
-      </section>
 
       {/* Weekly column: compact teaser */}
       {latestWeekly && latestWeekly.digestExtended && (

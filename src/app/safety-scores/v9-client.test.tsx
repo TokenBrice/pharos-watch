@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -50,6 +51,25 @@ describe("ReportCardsV9Client", () => {
   });
 
   afterEach(cleanupFrontendTest);
+
+  it.each(["loading", "failed"])("keeps the hero map without numeric stats while ratings are %s", (state) => {
+    mocks.useReportCardsV9.mockReturnValue({
+      ...query(undefined),
+      isLoading: state === "loading",
+      error: state === "failed" ? new Error("Ratings unavailable") : null,
+    });
+    const html = renderToStaticMarkup(<ReportCardsV9Client />);
+    expect(html.match(/<img\b[^>]*src="\/safety-scores\/map\.webp"/g)).toHaveLength(1);
+    const { container } = render(<ReportCardsV9Client />);
+    const hero = screen.getByRole("group", { name: "Ecosystem safety overview" });
+    const image = hero.querySelector("img")!;
+    expect(image.getAttribute("src")).toBe("/safety-scores/map.webp");
+    expect(image.getAttribute("fetchPriority")).toBe("high");
+    expect(image.getAttribute("loading")).toBe("eager");
+    expect(container.querySelectorAll('img[src="/safety-scores/map.webp"]')).toHaveLength(1);
+    expect(hero.textContent).not.toMatch(/[0-9]/);
+    expect(hero.querySelectorAll("[data-slot=skeleton]").length).toBeGreaterThan(0);
+  });
 
   it("keeps the high-priority PNG preview when the WebP derivative is missing or fails", () => {
     render(<ReportCardsV9Client />);
