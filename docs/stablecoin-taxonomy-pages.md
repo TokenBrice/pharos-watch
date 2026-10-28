@@ -38,6 +38,8 @@ The gold and silver peg pages add a static "Physical delivery terms" table direc
 
 Keep legacy protocol-lineage redirects to infrastructure and out of sitemap. Directory/cohort discovery flows through footer hub, command palette and in-page links including homepage/Alt-Pegs, not individual primary-nav entries. Route lists belong to model projection, not a second doc index.
 
+`public/_redirects` sends `/stablecoins/dola-inverse-finance/` to its singular profile and the retired `/stablecoins/backing/algorithmic/` cohort to the backing hub with 301s, including slashless aliases before dynamic rules.
+
 ## Adding A Cohort Or Peg Slug
 
 This adds indexed content, not just enum data:
