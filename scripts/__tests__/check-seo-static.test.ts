@@ -1036,7 +1036,7 @@ describe("safety scores dated preview", () => {
     );
   });
 
-  it("names an unavailable projection instead of inventing preview facts", async () => {
+  it("rejects a preview the build cannot prove from an admissible projection", async () => {
     const root = await makeOutDir();
     await writeSafetyScoresPage(root, safetyPreviewRegion());
 
@@ -1044,7 +1044,20 @@ describe("safety scores dated preview", () => {
       safetyScoresPreviewExpectation: { status: "unavailable", reason: "display-projection-missing" },
     });
     expect(result.errors).toContainEqual(
-      expect.stringContaining("Safety Scores dated preview expectation is unavailable (display-projection-missing)"),
+      expect.stringContaining("Safety Scores preview rendered without an admissible dated projection (display-projection-missing)"),
+    );
+  });
+
+  it("accepts the neutral skeleton and names the reason when no projection is admissible", async () => {
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(root, "<div class=\"pharos-card-shell\"></div>");
+
+    const result = collectFixtureSeoResult(root, {
+      safetyScoresPreviewExpectation: { status: "unavailable", reason: "display-projection-missing" },
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContainEqual(
+      expect.stringContaining("Safety Scores dated preview unavailable (display-projection-missing)"),
     );
   });
 

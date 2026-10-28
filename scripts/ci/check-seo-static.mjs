@@ -1544,7 +1544,7 @@ export function buildSafetyScoresPreviewExpectation({
  * scores, and a caption denominator taken from the full admitted set rather
  * than from the rendered slice.
  */
-function validateSafetyScoresPreview(pageRecords, errors, expectation) {
+function validateSafetyScoresPreview(pageRecords, errors, warnings, expectation) {
   const record = pageRecords.find((entry) =>
     entry.route === SAFETY_SCORES_ROUTE && entry.filePath && fs.existsSync(entry.filePath));
   if (!record) return;
@@ -1556,6 +1556,18 @@ function validateSafetyScoresPreview(pageRecords, errors, expectation) {
   // parse. Count every region, hidden or not: a duplicated preview (route
   // fallback plus client render) is two result sets for the same facts.
   const regions = openingElementTags(tags, (tag) => tag.attrs.get("aria-label") === SAFETY_RESULTS_REGION_LABEL);
+  if (expectation?.status !== "ok") {
+    // Without an admissible dated projection the page keeps the neutral
+    // skeleton (B0 fails closed). A held publication or a replayed pre-B0
+    // dataset is not a release failure; a preview the build cannot prove is.
+    const reason = expectation?.reason ?? "not-provided";
+    if (regions.length > 0) {
+      errors.push(`${route}: Safety Scores preview rendered without an admissible dated projection (${reason})`);
+    } else {
+      warnings.push(`${route}: Safety Scores dated preview unavailable (${reason}); the page serves the neutral skeleton`);
+    }
+    return;
+  }
   if (regions.length !== 1) {
     errors.push(
       `${route}: expected exactly one Safety Scores results region (aria-label "${SAFETY_RESULTS_REGION_LABEL}"), found ${regions.length}`,
@@ -1569,13 +1581,6 @@ function validateSafetyScoresPreview(pageRecords, errors, expectation) {
   if (dataAnchors.length !== 1) {
     errors.push(`${route}: expected exactly one #${SAFETY_RESULTS_REGION_ID} region, found ${dataAnchors.length}`);
   }
-  if (expectation?.status !== "ok") {
-    errors.push(
-      `${route}: Safety Scores dated preview expectation is unavailable (${expectation?.reason ?? "not-provided"}); the build cannot prove the projected preview`,
-    );
-    return;
-  }
-
   const preview = expectation.preview;
   const regionHtml = elementOuterHtml(html, tags, regions[0].index);
   const regionTags = collectElementTags(regionHtml);
@@ -2174,7 +2179,7 @@ export function collectSeoStaticCheckResult({
   if (pageRecords.some((record) => record.route === SAFETY_SCORES_ROUTE)) {
     const expectation = safetyScoresPreviewExpectation
       ?? (safetyScoresPreviewExpectationCache ??= buildSafetyScoresPreviewExpectation());
-    validateSafetyScoresPreview(pageRecords, errors, expectation);
+    validateSafetyScoresPreview(pageRecords, errors, warnings, expectation);
   }
   if (pageRecords.some((record) => record.route === COMPLIANCE_ROUTE)) {
     const expectation = compliancePanelExpectation
