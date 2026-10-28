@@ -12,22 +12,27 @@ import {
   BlacklistHistorySection,
   FlowHistorySection,
   HistoryTabs,
+  HistoryTabsShell,
 } from "./detail-lazy-sections";
 
 type ReadyDetailViewModel = Extract<StablecoinDetailViewModel, { status: "ready" }>;
 
 interface DetailHistoryExploreSectionsProps {
   activeBannerId: string;
+  depegHistoryPreview: ReactNode;
   exploreNextContent: ReactNode;
   frozenNote: ReactNode;
+  historyActive: boolean;
   historyGateRef: Ref<HTMLDivElement>;
   viewModel: ReadyDetailViewModel;
 }
 
 export function DetailHistoryExploreSections({
   activeBannerId,
+  depegHistoryPreview,
   exploreNextContent,
   frozenNote,
+  historyActive,
   historyGateRef,
   viewModel,
 }: DetailHistoryExploreSectionsProps) {
@@ -41,10 +46,15 @@ export function DetailHistoryExploreSections({
             <TapeForCoinTeaser coinId={viewModel.id} />
           </LazySection>
         </section>
-        <LazySection minHeight={390}>
-          <HistoryTabs
+        {/* C1 pilots own a retained-ledger preview, so their shell is
+            synchronous and the facts are in the initial HTML. Every other
+            profile keeps the pre-wave lazy placeholder and its 390px reserve. */}
+        {depegHistoryPreview ? (
+          <HistoryTabsShell
             stablecoinId={viewModel.id}
             isNavToken={viewModel.isNavToken}
+            historyActive={historyActive}
+            depegHistoryPreview={depegHistoryPreview}
             observationStartedAt={viewModel.pegScoreResult?.observationStartedAt ?? null}
             hasPriceData={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null}
             depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
@@ -52,7 +62,21 @@ export function DetailHistoryExploreSections({
             recent90d={viewModel.pegScoreResult?.recent90d ?? null}
             scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
           />
-        </LazySection>
+        ) : (
+          <LazySection minHeight={390}>
+            <HistoryTabs
+              stablecoinId={viewModel.id}
+              isNavToken={viewModel.isNavToken}
+              historyActive={historyActive}
+              observationStartedAt={viewModel.pegScoreResult?.observationStartedAt ?? null}
+              hasPriceData={isObservedPrice(viewModel.coinData) && viewModel.coinData.price != null}
+              depegEventCoverageLimited={viewModel.pegScoreResult?.depegEventCoverageLimited === true}
+              historyCoverage={viewModel.pegScoreResult?.historyCoverage ?? null}
+              recent90d={viewModel.pegScoreResult?.recent90d ?? null}
+              scoreWindowIncidentCount={viewModel.pegScoreResult?.eventCount ?? null}
+            />
+          </LazySection>
+        )}
         {viewModel.hasFlowHistory ? (
           <LazySection minHeight={340}>
             <FlowHistorySection stablecoinId={viewModel.id} />

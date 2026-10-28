@@ -23,18 +23,36 @@ afterEach(() => {
 });
 
 describe("priority operator CLI parsers", () => {
-  it("preserves SEO audit defaults and accepts strict route/wait options", () => {
-    expect(parseSeoRenderBudgetArgs([])).toMatchObject({ waitMs: 4000, json: false, help: false });
+  it("preserves SEO audit defaults and accepts strict route/wait/replay options", () => {
+    expect(parseSeoRenderBudgetArgs([])).toMatchObject({ waitMs: 4000, json: false, help: false, apiFailureReplay: false });
     expect(parseSeoRenderBudgetArgs(["--routes=/,/api/", "--wait-ms=0", "--json"]))
       .toMatchObject({ routes: ["/", "/api/"], waitMs: 0, json: true });
+    expect(parseSeoRenderBudgetArgs(["--url=https://example.test", "--api-failure-replay"]))
+      .toMatchObject({ baseUrl: "https://example.test", apiFailureReplay: true });
     expect(parseSeoRenderBudgetArgs(["-h"]).help).toBe(true);
   });
 
   it.each([
     ["--unknown"], ["--url"], ["--wait-ms=invalid"], ["--wait-ms=-1"],
     ["--url=one", "--url=two"], ["extra"], ["--routes=,"],
+    ["--api-failure-replay", "--api-failure-replay"],
   ])("rejects invalid SEO audit usage %j", (...argv) => {
     expect(() => parseSeoRenderBudgetArgs(argv)).toThrow(expect.objectContaining({ exitCode: 2 }));
+  });
+
+  it("prints SEO audit help without launching a browser", async () => {
+    const log = vi.spyOn(console, "log").mockImplementation(() => undefined);
+    launchBrowser.mockReset();
+    try {
+      await expect(runSeoRenderBudget(["--help"])).resolves.toBeUndefined();
+      expect(log).toHaveBeenCalledWith(expect.stringContaining("--api-failure-replay"));
+      expect(log).toHaveBeenCalledWith(expect.stringContaining(
+        "Replay selected profile, Alt-Pegs and seed-pilot routes with API reads returning an injected 503.",
+      ));
+      expect(launchBrowser).not.toHaveBeenCalled();
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it.each([

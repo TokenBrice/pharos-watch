@@ -137,13 +137,13 @@ export function HeroVariantChip({
   return (
     <Link
       href={buildStablecoinUrl(variantParent.id)}
-      aria-label={`Variant of ${variantParent.name} — wraps ${variantParent.symbol}`}
-      className={`pharos-focus-ring inline-flex items-center gap-1.5 rounded-full border font-semibold ${variantChipClass} ${
+      aria-label={`Wraps ${variantParent.name} (${variantParent.symbol}), variant of ${variantParent.name}`}
+      className={`pharos-focus-ring inline-flex min-w-0 items-center gap-1.5 rounded-full border font-semibold ${variantChipClass} ${
         mobile ? "mt-1 px-2 py-1 text-2xs" : "px-3 py-1 text-xs"
       }`}
     >
       <StablecoinLogo src={logos?.[variantParent.id]} name={variantParent.name} size={mobile ? 14 : 16} />
-      <span>Wraps {variantParent.symbol}</span>
+      <span className="min-w-0 text-left">Wraps {variantParent.name} ({variantParent.symbol})</span>
       <span aria-hidden>→</span>
     </Link>
   );

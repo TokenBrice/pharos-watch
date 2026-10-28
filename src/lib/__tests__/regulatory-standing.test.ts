@@ -219,6 +219,45 @@ describe("buildRegulatoryStandingView", () => {
       expect(attestation).toMatchObject({ state: "gap", value: notFound.value });
       expect(disclosures(true).attestation.state).toBe("published");
     });
+
+    it("names the reviewed engagement in the byline without changing state or cadence", () => {
+      const attested: NonNullable<StablecoinMeta["proofOfReserves"]> = {
+        type: "independent-audit",
+        url: "https://example.com/transparency",
+        provider: "Deloitte",
+        attestorTier: "big4",
+        cadence: "quarterly",
+      };
+      const states = (["examination", "audit", "unknown"] as const).map((assuranceMethod) => {
+        const { attestation } = disclosures(false, { ...attested, latestReport: { ...REPORT, assuranceMethod } });
+        return { assuranceMethod, state: attestation.state, value: attestation.value, title: attestation.title };
+      });
+
+      expect(new Set(states.map((entry) => `${entry.state}/${entry.value}`))).toEqual(new Set(["gap/Quarterly"]));
+      expect(states.find((entry) => entry.assuranceMethod === "examination")?.title)
+        .toBe("Attestor: Deloitte (Big-4 attestor). Report: Examination. Cadence: Quarterly. GENIUS requires a monthly attestation.");
+      expect(states.find((entry) => entry.assuranceMethod === "audit")?.title).toContain("Report: Audit.");
+      expect(states.find((entry) => entry.assuranceMethod === "unknown")?.title).toContain("Report: Independent Report.");
+    });
+
+    it("omits unavailable provider and tier clauses instead of inventing them", () => {
+      const report = {
+        type: "independent-audit",
+        url: "https://example.com/transparency",
+        provider: "BDO Italia",
+        attestorTier: "regional",
+        cadence: "monthly",
+        latestReport: REPORT,
+      } satisfies NonNullable<StablecoinMeta["proofOfReserves"]>;
+      expect(disclosures(undefined, report).attestation.title)
+        .toBe("Attestor: BDO Italia (Regional CPA). Report: Examination. Cadence: Monthly.");
+
+      const { attestorTier: _tier, ...noTier } = report;
+      expect(disclosures(undefined, noTier).attestation.title)
+        .toBe("Attestor: BDO Italia. Report: Examination. Cadence: Monthly.");
+      expect(disclosures(undefined, { ...noTier, provider: undefined }).attestation.title)
+        .toBe("Report: Examination. Cadence: Monthly.");
+    });
   });
 
   it.each([

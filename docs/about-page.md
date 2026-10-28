@@ -10,11 +10,13 @@ Keep canonical `/about/`, public indexability, AboutPage schema and FAQPage sche
 
 Explain what is directly tracked, what is computed and where evidence/methodology can be inspected. The dependency principle distinguishes serial final-score limits from proportional backing inheritance; map means direct links/structural look-through, not a failure simulator. Do not move curated narratives into a computed-feature roster.
 
+The team section discloses that the owner also works on Polaris, and that Polaris-related coverage, like everything else on Pharos, remains purely data-driven. No dossier link, affiliation table, independent-review claim or scoring intervention follows from that disclosure.
+
 Failure scenarios describe a maintainer-approved hypothetical path per coin in How it breaks: no computation, score change or universal availability. Dependency Exposure uses publication-bound supply and is not a loss estimate. The About computed roster does not promise a failure-scenario scoreboard/stress panel. Bluechip copy obeys its explicit publication hold and external/Pharos grade intersection, not an invented hidden floor model.
 
 ## Navigation Contract
 
-Use shared `src/lib/nav-config.ts`, not a copied menu roster. Peg Tracker links `/depeg/`; Dependency Map links `/dependency-map/`. Trust-policy links use the canonical About fragments above. Methodology and source/code/support links remain explicit; Funding and public listing policy are discoverable inline. The project is MIT-licensed open source, not a proprietary data endorsement.
+Use shared `src/lib/nav-config.ts`, not a copied menu roster. Peg Tracker links `/depeg/`; Dependency Map links `/dependency-map/`. Trust-policy links use the canonical About fragments above. Methodology and source/code/support links remain explicit; Funding and public listing policy are discoverable inline. Pharos code and data are [MIT-licensed](../LICENSE); original editorial prose is [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/); third-party material retains its original terms, so reuse terms follow content rather than transport. The project is open source, not a proprietary data endorsement. A press and research contact line uses `me@tokenbrice.com` under the zone's existing email-obfuscation handling; it is not API-key issuance.
 
 ## Content Notes
 

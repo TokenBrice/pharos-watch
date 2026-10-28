@@ -5,7 +5,18 @@ import {
 } from "@/lib/datasets/public-dataset-current";
 import { isThreatBand, type ThreatBand } from "@shared/lib/classification";
 import { getV9GradeRiskBucket, type V9GradeRiskBucket } from "@shared/lib/safety-grade-buckets";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { StablecoinMeta } from "@shared/types";
+import { buildStablecoinUrl } from "@shared/lib/urls";
 import { SAFETY_GRADE_VALUES, type SafetyGrade } from "@shared/types/report-card-grade";
+import { V9PublicationHealthSchema, type V9PublicationHealth } from "@shared/types/report-cards-v9";
+import { SafetyScoreV9CompletenessSchema } from "@shared/types/safety-score-v9-public";
+import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
+import {
+  SafetyScoreV9PublicationIdentitySchema,
+  type SafetyScoreV9PublicationIdentity,
+} from "@shared/types/safety-score-publication";
+import { z } from "zod";
 
 interface ScoresLatestDatasetRow {
   stablecoinId?: unknown;
@@ -14,10 +25,12 @@ interface ScoresLatestDatasetRow {
   dewsScore?: unknown;
   dewsBand?: unknown;
   liquidityScore?: unknown;
+  ratingStatus?: unknown;
+  safetyDisplay?: unknown;
 }
 
 interface ScoresLatestDataset {
-  _meta?: { asOfISO?: unknown };
+  _meta?: { asOfISO?: unknown; methodologyLabel?: unknown; displayProjection?: unknown };
   rows?: ScoresLatestDatasetRow[];
 }
 
@@ -154,4 +167,297 @@ export function formatSnapshotSafetyScoreLabel(stablecoinId: string): string | n
   if (!assessment) return null;
   const score = assessment.score !== null ? ` (${assessment.score}/100)` : "";
   return `Safety Score ${assessment.grade}${score} as of ${PUBLIC_DATASET_CURRENT_DATE}`;
+}
+
+// --- Bounded Safety Scores preview -----------------------------------------
+// The preview is a build-time projection of the current scores-latest export.
+// It is never a query-cache envelope: client components receive only this
+// bounded serializable object and import its type, not the dataset.
+
+export interface SafetyScoresPreviewRow {
+  id: string;
+  name: string;
+  symbol: string;
+  href: string;
+  grade: SafetyGrade;
+  score: number;
+  provisional: boolean;
+  /** Recorded raw score band when the published letter is held; never re-derived. */
+  gradeHoldRawGrade: SafetyGrade | null;
+}
+
+export interface SafetyScoresPreviewCompleteness {
+  expectedCount: number;
+  ratedCount: number;
+  notRatedCount: number;
+  pipelineGapCount: number;
+}
+
+export interface SafetyScoresPreview {
+  kind: "safety-grade-preview";
+  rows: readonly SafetyScoresPreviewRow[];
+  shownCount: number;
+  eligibleRatedCount: number;
+  publicationCompleteness: SafetyScoresPreviewCompleteness;
+  publicationHealth: V9PublicationHealth;
+  identity: SafetyScoreV9PublicationIdentity;
+  publishedAtSec: number;
+  capturedAtSec: number;
+  snapshotDate: string;
+  expiresAtSec: number;
+}
+
+type RegistryIdentity = Pick<StablecoinMeta, "id" | "name" | "symbol">;
+
+const SafetyScoresPreviewDisplayProjectionSchema = z
+  .object({
+    version: z.literal(1),
+    snapshotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    capturedAtSec: z.number().int().nonnegative(),
+    sourceSnapshotPath: z.string().min(1),
+    safety: z
+      .object({
+        identity: SafetyScoreV9PublicationIdentitySchema,
+        asOfSec: z.number().int().nonnegative(),
+        publishedAtSec: z.number().int().nonnegative(),
+        sourceGenerations: z.record(z.string().min(1), z.string().min(1)),
+        publicationHealth: V9PublicationHealthSchema,
+        completeness: SafetyScoreV9CompletenessSchema,
+      })
+      .strict()
+      .nullable(),
+    safetyUnavailableReason: z.literal("legacy-source-metadata-unavailable").nullable(),
+  })
+  .strict();
+
+const SafetyScoresPreviewDatasetSchema = z
+  .object({
+    _meta: z
+      .object({
+        methodologyLabel: z.string().optional(),
+        displayProjection: z.unknown().optional(),
+      })
+      .passthrough()
+      .optional(),
+    rows: z.array(z.unknown()),
+  })
+  .passthrough();
+
+const SafetyScoresPreviewRowSchema = z
+  .object({
+    stablecoinId: z.string().min(1),
+    safetyScore: z.number().finite().nullable().optional(),
+    safetyGrade: z.string().nullable().optional(),
+    ratingStatus: z.enum(["rated", "not-rated", "pipeline-gap"]).nullable().optional(),
+    safetyDisplay: z
+      .object({
+        gradeHold: z
+          .object({
+            rawGrade: z.string(),
+            heldFromGenerationId: z.string().min(1),
+          })
+          .strict()
+          .optional(),
+        provisional: z.unknown().optional(),
+      })
+      .passthrough()
+      .nullable()
+      .optional(),
+  })
+  .passthrough();
+
+interface PreviewAdmission {
+  preview: SafetyScoresPreview | null;
+  omitted: Array<{ id: string; reason: string }>;
+}
+
+function admitSafetyScoresPreview(
+  dataset: unknown,
+  registry: readonly RegistryIdentity[],
+  assessedAtSec: number,
+): PreviewAdmission {
+  const parsedDataset = SafetyScoresPreviewDatasetSchema.safeParse(dataset);
+  if (!parsedDataset.success) return { preview: null, omitted: [] };
+  const projection = SafetyScoresPreviewDisplayProjectionSchema.safeParse(
+    parsedDataset.data._meta?.displayProjection,
+  );
+  if (!projection.success) {
+    // Legacy exports and missing metadata deliberately yield no preview.
+    return { preview: null, omitted: [] };
+  }
+  const display = projection.data;
+  if (display.safety === null) return { preview: null, omitted: [] };
+  const safety = display.safety;
+  const snapshotMidnightSec = Math.floor(Date.parse(`${display.snapshotDate}T00:00:00Z`) / 1000);
+  if (!Number.isFinite(snapshotMidnightSec)) return { preview: null, omitted: [] };
+  const assessedMidnightSec = Math.floor(assessedAtSec / 86_400) * 86_400;
+  const ageDays = (assessedMidnightSec - snapshotMidnightSec) / 86_400;
+  const replay = process.env.PHAROS_PAGES_REPLAY === "1";
+  if (
+    !Number.isInteger(ageDays)
+    || ageDays < 0
+    || (ageDays > PUBLIC_DATASET_MAX_AGE_DAYS && !replay)
+    || snapshotMidnightSec > assessedAtSec
+    || safety.asOfSec > safety.publishedAtSec
+    || safety.publishedAtSec > display.capturedAtSec
+    || display.capturedAtSec > assessedAtSec
+    || safety.publishedAtSec > assessedAtSec
+  ) {
+    return { preview: null, omitted: [] };
+  }
+  // The dataset's declared Safety methodology must be the publication identity
+  // that supplied these facts; two incompatible scores are never mixed.
+  const methodologyLabel = parsedDataset.data._meta?.methodologyLabel;
+  const methodologyVersion = safety.identity.methodologyVersion.replace(/^v/, "");
+  if (
+    typeof methodologyLabel !== "string"
+    || !methodologyLabel.includes(`safety-score v${methodologyVersion}`)
+  ) {
+    return { preview: null, omitted: [] };
+  }
+
+  const registryById = new Map(registry.map((coin) => [coin.id, coin]));
+  const omitted: Array<{ id: string; reason: string }> = [];
+  const eligible: SafetyScoresPreviewRow[] = [];
+  const seenIds = new Set<string>();
+  let ratedCount = 0;
+  let notRatedCount = 0;
+  let pipelineGapCount = 0;
+
+  for (const rawRow of parsedDataset.data.rows) {
+    const row = SafetyScoresPreviewRowSchema.safeParse(rawRow);
+    if (!row.success) continue;
+    const { stablecoinId, ratingStatus } = row.data;
+    if (seenIds.has(stablecoinId)) {
+      // One row per asset is a publication invariant; do not publish a
+      // partially reconciled census.
+      return { preview: null, omitted: [] };
+    }
+    seenIds.add(stablecoinId);
+    if (ratingStatus === null || ratingStatus === undefined) continue;
+    if (ratingStatus === "not-rated") {
+      if (row.data.safetyScore !== null || row.data.safetyGrade !== "NR") {
+        return { preview: null, omitted };
+      }
+      notRatedCount += 1;
+      continue;
+    }
+    if (ratingStatus === "pipeline-gap") {
+      if (row.data.safetyScore !== null || row.data.safetyGrade !== null) {
+        return { preview: null, omitted };
+      }
+      pipelineGapCount += 1;
+      continue;
+    }
+    ratedCount += 1;
+    const score = row.data.safetyScore;
+    const grade = row.data.safetyGrade;
+    if (typeof score !== "number" || !Number.isFinite(score) || score < 0 || score > 100) {
+      omitted.push({ id: stablecoinId, reason: "invalid-rated-score" });
+      continue;
+    }
+    if (!isSafetyGrade(grade)) {
+      omitted.push({ id: stablecoinId, reason: "invalid-rated-grade" });
+      continue;
+    }
+    const provisional = row.data.safetyDisplay?.provisional;
+    if (provisional !== undefined && provisional !== true) {
+      omitted.push({ id: stablecoinId, reason: "invalid-provisional-label" });
+      continue;
+    }
+    const gradeHold = row.data.safetyDisplay?.gradeHold ?? null;
+    const rawGrade = scoreToGrade(score);
+    if (gradeHold) {
+      if (
+        !isSafetyGrade(gradeHold.rawGrade)
+        || gradeHold.rawGrade !== rawGrade
+        || grade === gradeHold.rawGrade
+      ) {
+        omitted.push({ id: stablecoinId, reason: "invalid-grade-hold" });
+        continue;
+      }
+    } else if (grade !== rawGrade) {
+      omitted.push({ id: stablecoinId, reason: "score-grade-mismatch" });
+      continue;
+    }
+    const identity = registryById.get(stablecoinId);
+    if (!identity) {
+      omitted.push({ id: stablecoinId, reason: "not-active-in-registry" });
+      continue;
+    }
+    eligible.push({
+      id: stablecoinId,
+      name: identity.name,
+      symbol: identity.symbol,
+      href: buildStablecoinUrl(stablecoinId),
+      grade,
+      score,
+      provisional: provisional === true,
+      gradeHoldRawGrade: gradeHold ? (gradeHold.rawGrade as SafetyGrade) : null,
+    });
+  }
+
+  const completeness = safety.completeness;
+  if (
+    ratedCount !== completeness.ratedCount
+    || notRatedCount !== completeness.notRatedCount
+    || pipelineGapCount !== completeness.pipelineGapCount
+  ) {
+    return { preview: null, omitted };
+  }
+  if (eligible.length === 0) return { preview: null, omitted };
+
+  eligible.sort((left, right) => right.score - left.score
+    || (left.id < right.id ? -1 : left.id > right.id ? 1 : 0));
+  const rows = eligible.slice(0, 20);
+  return {
+    preview: {
+      kind: "safety-grade-preview",
+      rows,
+      shownCount: rows.length,
+      eligibleRatedCount: eligible.length,
+      publicationCompleteness: {
+        expectedCount: completeness.expectedCount,
+        ratedCount: completeness.ratedCount,
+        notRatedCount: completeness.notRatedCount,
+        pipelineGapCount: completeness.pipelineGapCount,
+      },
+      publicationHealth: safety.publicationHealth,
+      identity: safety.identity,
+      publishedAtSec: safety.publishedAtSec,
+      capturedAtSec: display.capturedAtSec,
+      snapshotDate: display.snapshotDate,
+      expiresAtSec: snapshotMidnightSec + (PUBLIC_DATASET_MAX_AGE_DAYS + 1) * 86_400,
+    },
+    omitted,
+  };
+}
+
+/**
+ * Builds the bounded dated top-20 Safety preview from the exported
+ * scores-latest dataset. Returns null when the global contract fails, the
+ * dataset predates the display projection, or no rated active asset survives.
+ */
+export function buildSafetyScoresPreview(
+  dataset: unknown,
+  registry: readonly RegistryIdentity[],
+  assessedAtSec: number,
+): SafetyScoresPreview | null {
+  return admitSafetyScoresPreview(dataset, registry, assessedAtSec).preview;
+}
+
+/** Committed-data wrapper used by the Safety Scores page at build time. */
+export function getSafetyScoresPreview(): SafetyScoresPreview | null {
+  const admission = admitSafetyScoresPreview(
+    SCORES_LATEST_DATASET,
+    ACTIVE_STABLECOINS,
+    Math.floor(Date.now() / 1000),
+  );
+  if (admission.omitted.length > 0) {
+    console.warn(
+      "[safety-grade-preview] omitted rated rows: "
+        + admission.omitted.map((entry) => `${entry.id} (${entry.reason})`).join(", "),
+    );
+  }
+  return admission.preview;
 }

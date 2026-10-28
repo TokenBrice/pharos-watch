@@ -2,7 +2,7 @@
 
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { ComplianceRow, GeniusComplianceRow } from "@/lib/compliance-model";
+import type { ComplianceRow, GeniusComplianceRow, MicaComplianceRow } from "@/lib/compliance-model";
 
 const fixtures = vi.hoisted(() => ({ loadDetail: vi.fn() }));
 vi.mock("@shared/lib/stablecoins/client-registry", () => ({
@@ -38,24 +38,98 @@ const detail = {
   },
 };
 
-function renderTable(id: string) {
-  const row: GeniusComplianceRow = {
+function geniusRow(id: string): GeniusComplianceRow {
+  return {
     regime: "genius", id, name: "Fixture Dollar", symbol: "FIX", peg: "USD",
     status: "unknown", applicability: "unclear", issuerPathway: "unknown",
     issuerEntity: "Fixture Issuer", primaryFederalRegulator: "OCC",
     hasAnyDisclosure: true, reserveDisclosurePresent: true,
     redemptionPolicyPresent: false, monthlyAttestationPresent: false,
     reserveReportNote: "Latest report period end 2026-09-30",
+    reviewedAt: "2026-09-30",
   };
+}
+
+function renderTable(id: string, options: { forceCollapsedBandsOpen?: boolean } = {}) {
   return render(
     <ComplianceTable
-      rows={[row]} regime="genius" logos={undefined} tableId="test-compliance"
-      testId="compliance-table" ariaLabel="GENIUS compliance" forceCollapsedBandsOpen
+      rows={[geniusRow(id)]} regime="genius" logos={undefined} tableId="test-compliance"
+      testId="compliance-table" ariaLabel="GENIUS compliance"
+      forceCollapsedBandsOpen={options.forceCollapsedBandsOpen ?? true}
+    />,
+  );
+}
+
+function micaRow(overrides: Partial<MicaComplianceRow> = {}): MicaComplianceRow {
+  return {
+    regime: "mica", id: "fixture-emt", name: "Fixture EMT", symbol: "FEMT", peg: "EUR",
+    status: "authorized", tokenType: "EMT", authorizationType: "emi", competentAuthority: "ACPR",
+    significant: false, references: [reference], ...overrides,
+  };
+}
+
+function renderMicaTable(row: ComplianceRow, forceCollapsedBandsOpen = false) {
+  return render(
+    <ComplianceTable
+      rows={[row]} regime="mica" logos={undefined} tableId="test-mica"
+      testId="compliance-mica-table" ariaLabel="MiCA compliance"
+      forceCollapsedBandsOpen={forceCollapsedBandsOpen}
     />,
   );
 }
 
 beforeEach(() => fixtures.loadDetail.mockReset());
+
+describe("ComplianceTable mounted folds", () => {
+  it("keeps collapsed GENIUS summary folds in the DOM without loading evidence", async () => {
+    fixtures.loadDetail.mockResolvedValue(detail);
+    renderTable("fold-mounted");
+
+    expect(fixtures.loadDetail).not.toHaveBeenCalled();
+    expect(screen.getByText("Reviewed 2026-09-30")).toBeTruthy();
+    expect(screen.getAllByText("Reserve disclosure").length).toBeGreaterThan(0);
+    expect(screen.getByText("Latest report period end 2026-09-30")).toBeTruthy();
+    const fold = document.getElementById("test-compliance-genius-fold-mounted-details");
+    expect(fold?.hidden).toBe(true);
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand details for FIX" }));
+    expect(document.getElementById("test-compliance-genius-fold-mounted-details")?.hidden).toBe(false);
+    expect(fixtures.loadDetail).toHaveBeenCalledExactlyOnceWith("fold-mounted");
+  });
+
+  it("leaves default-collapsed bands unmounted until the band is expanded", () => {
+    renderTable("fold-band", { forceCollapsedBandsOpen: false });
+
+    expect(screen.queryByText("Fixture Dollar")).toBeNull();
+    expect(screen.queryByText("Reviewed 2026-09-30")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Unknown .*expand/ }));
+    expect(screen.getByText("Fixture Dollar")).toBeTruthy();
+    expect(screen.getByText("Reviewed 2026-09-30")).toBeTruthy();
+    expect(fixtures.loadDetail).not.toHaveBeenCalled();
+  });
+
+  it("mounts MiCA source hrefs in a closed fold without accessible controls", () => {
+    const { container } = renderMicaTable(micaRow());
+
+    const fold = document.getElementById("test-mica-mica-fixture-emt-details");
+    expect(fold?.hidden).toBe(true);
+    const link = container.querySelector('a[href="https://example.com/register"]');
+    expect(link?.textContent).toBe("Regulator register");
+    expect(within(fold as HTMLElement).queryByRole("link")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "Expand details for FEMT" }));
+    expect(fold?.hidden).toBe(false);
+    expect(screen.getByRole("link", { name: "Regulator register" }).getAttribute("href"))
+      .toBe("https://example.com/register");
+  });
+
+  it("omits the fold control for MiCA rows without references", () => {
+    renderMicaTable(micaRow({ references: [] }));
+
+    expect(screen.queryByRole("button", { name: /details for FEMT/ })).toBeNull();
+    expect(document.getElementById("test-mica-mica-fixture-emt-details")).toBeNull();
+  });
+});
 
 describe("ComplianceTable lazy GENIUS evidence", () => {
   it("loads per-coin evidence only on expand, deduplicates sources, and caches across folds", async () => {
@@ -82,7 +156,12 @@ describe("ComplianceTable lazy GENIUS evidence", () => {
     expect(screen.getByText(detail.genius.foreignExceptionEvidence.summary)).toBeTruthy();
     expect(screen.getByText(detail.genius.negativeEvidenceReview.summary)).toBeTruthy();
     expect(screen.getByText("OCC public releases")).toBeTruthy();
-    expect(screen.getByText("Reviewed 2026-10-08 by pharos")).toBeTruthy();
+    // The summary review date stays the only date owner; the lazy evidence
+    // contributes only its reviewer credit.
+    expect(screen.getAllByText(/^Reviewed 20\d{2}-\d{2}-\d{2}$/)).toHaveLength(1);
+    expect(screen.getByText("Reviewed 2026-09-30")).toBeTruthy();
+    expect(screen.getByText("Reviewed by pharos")).toBeTruthy();
+    expect(screen.queryByText("Reviewed 2026-10-08")).toBeNull();
     expect(screen.getAllByRole("link", { name: reference.label })).toHaveLength(1);
     expect(screen.getByRole("link", { name: "Applicability source" }).getAttribute("href")).toBe("https://example.com/basis");
     expect(screen.getByRole("link", { name: "Foreign exception source" })).toBeTruthy();
@@ -104,6 +183,8 @@ describe("ComplianceTable lazy GENIUS evidence", () => {
     fireEvent.click(screen.getByRole("button", { name: "Expand details for FIX" }));
     expect((await screen.findByRole("alert")).textContent).toContain("Evidence could not be loaded");
     expect(screen.getByText("Fixture Issuer")).toBeTruthy();
+    expect(screen.getByText("Reviewed 2026-09-30")).toBeTruthy();
+    expect(screen.queryByText("Reviewed 2026-10-08")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Retry loading evidence" }));
     await screen.findByText(detail.genius.notes);
     expect(fixtures.loadDetail).toHaveBeenCalledTimes(2);
@@ -112,21 +193,17 @@ describe("ComplianceTable lazy GENIUS evidence", () => {
 });
 
 describe("MicaPathwayCell significance badge", () => {
-  const micaRow = (significant: boolean): Extract<ComplianceRow, { regime: "mica" }> => ({
-    regime: "mica", id: "fixture-emt", name: "Fixture EMT", symbol: "FEMT", peg: "EUR",
-    status: "authorized", tokenType: "EMT", authorizationType: "emi", competentAuthority: "ACPR",
-    significant, references: [],
-  });
+  const row = (significant: boolean): MicaComplianceRow => micaRow({ significant, references: [] });
 
   it("describes a significant token as an EBA designation, not active EBA supervision", () => {
-    const { container } = render(<MicaPathwayCell row={micaRow(true)} />);
+    const { container } = render(<MicaPathwayCell row={row(true)} />);
     const badge = within(container).getByText("Significant").closest("span");
     expect(badge?.getAttribute("title")).toBe("Classified by the EBA as a significant EMT or ART");
     expect(container.querySelector('[title*="supervised"]')).toBeNull();
   });
 
   it("omits the badge when the token is not designated", () => {
-    const { container } = render(<MicaPathwayCell row={micaRow(false)} />);
+    const { container } = render(<MicaPathwayCell row={row(false)} />);
     expect(within(container).queryByText("Significant")).toBeNull();
   });
 });

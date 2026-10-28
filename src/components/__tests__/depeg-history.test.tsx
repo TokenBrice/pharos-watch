@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { DepegHistory } from "@/components/depeg-history";
 import type { DepegEvent, PegSummaryCoin } from "@shared/types";
 import { makeEvent } from "./depeg.test-support";
@@ -208,4 +208,65 @@ describe("DepegHistory incident fold", () => {
     expect(screen.queryByLabelText("Go to next page")).toBeNull();
   });
 
+});
+
+describe("DepegHistory embedded preview handoff", () => {
+  it("suppresses its skeleton while loading and reports that the shell preview owns the panel", () => {
+    const onDisplayStateChange = vi.fn();
+    mockEvents([], { data: undefined, isLoading: true, isFullyLoaded: false });
+    const { container } = render(
+      <DepegHistory stablecoinId="usdc-circle" embeddedPreview onDisplayStateChange={onDisplayStateChange} />,
+    );
+
+    expect(container.firstChild).toBeNull();
+    expect(onDisplayStateChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("keeps the preview beside the retry notice when the read fails with nothing admitted", () => {
+    const onDisplayStateChange = vi.fn();
+    mockEvents([], { error: new Error("history unavailable"), refetch: vi.fn() });
+    const { container } = render(
+      <DepegHistory stablecoinId="usdc-circle" embeddedPreview onDisplayStateChange={onDisplayStateChange} />,
+    );
+
+    expect(within(container).getByRole("button", { name: /retry/i })).toBeTruthy();
+    expect(container.querySelector("table")).toBeNull();
+    expect(onDisplayStateChange).toHaveBeenLastCalledWith(false);
+  });
+
+  it("takes ownership once a partial response is renderable", async () => {
+    const onDisplayStateChange = vi.fn();
+    mockEvents([makeEvent()], { data: { events: [makeEvent()], total: 2, totalExact: true }, isFullyLoaded: false, isFetchingNextPage: true });
+    const { container } = render(
+      <DepegHistory stablecoinId="usdc-circle" embeddedPreview onDisplayStateChange={onDisplayStateChange} />,
+    );
+
+    expect(container.querySelectorAll("table")).toHaveLength(1);
+    await waitFor(() => expect(onDisplayStateChange).toHaveBeenLastCalledWith(true));
+  });
+
+  it("takes ownership of a successfully empty result without rewriting historical provenance", async () => {
+    const onDisplayStateChange = vi.fn();
+    mockEvents([]);
+    render(
+      <DepegHistory stablecoinId="usdc-circle" embeddedPreview onDisplayStateChange={onDisplayStateChange} />,
+    );
+
+    expect(screen.getByText("No depeg incidents are recorded in the observed coverage window.")).toBeTruthy();
+    expect(screen.queryByText(/archived incidents/)).toBeNull();
+    expect(screen.queryByText(/Recorded history; coverage may be incomplete/)).toBeNull();
+    await waitFor(() => expect(onDisplayStateChange).toHaveBeenLastCalledWith(true));
+  });
+
+  it("renders no duplicate table when it owns the panel", async () => {
+    const onDisplayStateChange = vi.fn();
+    mockEvents([makeEvent()]);
+    const { container } = render(
+      <DepegHistory stablecoinId="usdc-circle" embeddedPreview onDisplayStateChange={onDisplayStateChange} />,
+    );
+
+    expect(container.querySelectorAll("table")).toHaveLength(1);
+    expect(screen.getAllByTestId("stablecoin-depeg-history-table")).toHaveLength(1);
+    await waitFor(() => expect(onDisplayStateChange).toHaveBeenLastCalledWith(true));
+  });
 });

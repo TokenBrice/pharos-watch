@@ -51,6 +51,7 @@ const fixtures = vi.hoisted(() => {
         stateRegulator: "Nebraska Department of Banking",
         monthlyAttestationPresent: true,
         reserveDisclosurePresent: true,
+        reviewedAt: "2026-09-30",
       },
     },
     {
@@ -186,6 +187,7 @@ describe("Compliance model", () => {
     expect(intent.reserveReportNote).toContain("published 2026-07-29");
     expect(intent.monthlyAttestationPresent).toBe(true);
     expect(intent.hasAnyDisclosure).toBe(true);
+    expect(intent.reviewedAt).toBe("2026-09-30");
     expect(intent).not.toHaveProperty("references");
 
     // No disclosure evidence at all must not read as "has disclosure".
@@ -193,6 +195,8 @@ describe("Compliance model", () => {
     expect(review.reserveReportNote).toBeUndefined();
     expect(review.monthlyAttestationPresent).toBe(false);
     expect(review.foreignExceptionStatus).toBe("unknown");
+    // A missing review date stays unavailable; no current or build date stands in.
+    expect(review.reviewedAt).toBeUndefined();
     for (const field of ["notes", "negativeEvidenceSummary", "negativeEvidenceSourcesChecked", "applicabilitySummary", "references"]) {
       expect(review).not.toHaveProperty(field);
     }

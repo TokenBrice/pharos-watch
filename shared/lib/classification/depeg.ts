@@ -1,9 +1,37 @@
 import type { DdrResolutionTier } from "../../types/depeg-resolver";
+import type { DepegClosureClassification } from "../depeg-closure";
 
 /**
  * Depeg tracker, depeg history and Depeg Resolver (DDR) presentation.
  * Pills share one spelling: `border-X-500/30 bg-X-500/10 text-X-700 dark:text-X-400`.
  */
+
+/**
+ * Recorded-outcome labels for `classifyDepegClosure()`. These name the record's
+ * closure state, never the coin's current peg: `open` is still "Ongoing" on an
+ * event page written while tracking had not closed, while a snapshot of a
+ * retained ledger reads "Open at capture".
+ */
+export const DEPEG_CLOSURE_LABELS = {
+  open: "Ongoing",
+  recovered: "Recovered",
+  legacy_recovered: "Recovered",
+  coverage_lost: "Tracking closed: coverage lost",
+  superseded: "Tracking closed: direction superseded",
+  orphan: "Tracking closed: asset removed",
+  unknown_closed: "Tracking closed: recovery unconfirmed",
+} as const satisfies Record<DepegClosureClassification, string>;
+
+/**
+ * Time-qualified closure label for a retained-ledger snapshot. Only the two
+ * states whose meaning depends on the observation clock override the shared
+ * base label; an ended event is never called recovered on its own.
+ */
+export function getDepegClosureSnapshotLabel(closure: DepegClosureClassification): string {
+  if (closure === "open") return "Open at capture";
+  if (closure === "legacy_recovered") return "Legacy recovery";
+  return DEPEG_CLOSURE_LABELS[closure];
+}
 
 /** Historical depeg event-load meter: filled pips share the DEWS `watch` orange. */
 export const DEPEG_EVENT_LOAD_PIP_CLASS = "border-orange-500/40 bg-orange-500";

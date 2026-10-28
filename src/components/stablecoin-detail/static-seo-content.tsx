@@ -5,8 +5,8 @@ import { ArrowRight, Bell, Code2, Rss } from "lucide-react";
 import {
   BACKING_LABELS,
   GOVERNANCE_LABELS,
-  POR_BADGE_STYLES,
   getProfilePegLabel,
+  getProofOfReservesStyle,
 } from "@shared/lib/classification";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { getInfrastructureLabel } from "@shared/lib/infrastructure";
@@ -192,7 +192,7 @@ function VariantRelationshipSummary({ coin }: { coin: StablecoinMeta }) {
             className={LINK_PILL_CLASS}
             aria-label={`View related ${sibling.name} (${sibling.symbol}) variant`}
           >
-            {sibling.symbol}
+            {sibling.name} ({sibling.symbol})
           </Link>
         ))}
       </div>
@@ -213,14 +213,9 @@ function buildProfileSentence(coin: StablecoinMeta): string {
 
 function describeReserveEvidence(coin: StablecoinMeta): string {
   const proof = coin.proofOfReserves;
-  if (proof?.provider) {
-    const style = POR_BADGE_STYLES[proof.type];
-    const label = style?.label ?? proof.type.replace(/-/g, " ");
-    return `${label} from ${proof.provider}`;
-  }
   if (proof) {
-    const style = POR_BADGE_STYLES[proof.type];
-    return style?.label ?? proof.type.replace(/-/g, " ");
+    const label = getProofOfReservesStyle(proof)?.label ?? proof.type.replace(/-/g, " ");
+    return proof.provider ? `${label} from ${proof.provider}` : label;
   }
   if (coin.liveReservesConfig) {
     return "live reserve feed configured";
@@ -471,7 +466,7 @@ function buildBackingAnswer(coin: StablecoinMeta): string {
   }
 
   const proof = coin.proofOfReserves;
-  const proofLabel = proof ? POR_BADGE_STYLES[proof.type]?.label ?? proof.type.replace(/-/g, " ") : null;
+  const proofLabel = getProofOfReservesStyle(proof)?.label ?? proof?.type.replace(/-/g, " ") ?? null;
   // Some provider fields carry review prose rather than a name; only short names read as an attestor.
   const attestor = proof?.provider && proof.provider.length <= 80 && !/\.\s/.test(proof.provider) ? proof.provider : null;
   const periodEnd = proof?.latestReport?.periodEnd;
@@ -555,7 +550,7 @@ function ProofOfReservesValue({ coin }: { coin: StablecoinMeta }) {
     return <span>No proof-of-reserves entry in the static profile.</span>;
   }
 
-  const style = POR_BADGE_STYLES[proof.type];
+  const style = getProofOfReservesStyle(proof);
   const label = style?.label ?? proof.type.replace(/-/g, " ");
   const providerText = proof.provider ? `${label} by ${proof.provider}` : label;
 

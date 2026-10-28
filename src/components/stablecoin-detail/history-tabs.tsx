@@ -1,19 +1,30 @@
 "use client";
 
-import { useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
+import dynamic from "next/dynamic";
+import { useCallback, useEffect, useRef, useState, type ComponentProps, type ReactNode } from "react";
 import { flushSync } from "react-dom";
-import { DepegHistory } from "@/components/depeg-history";
-import { DdrTrackRecordSection } from "@/components/stablecoin-detail/ddr-track-record-section";
-import { SafetyScoreHistorySection } from "@/components/stablecoin-detail/safety-score-history-section";
+import type { DepegHistory as DepegHistoryComponent } from "@/components/depeg-history";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useDepegResolverReview, useSafetyScoreHistory, useSafetyScoreHistoryV2 } from "@/hooks/api-hooks";
 import { TAB_PANEL_REVEAL_EVENT } from "@/lib/anchor-reveal";
 import { isDepegResolverEnabled, isDepegResolverReviewerEnabled } from "@/lib/feature-flags";
 import { projectDdrTrackRecordSummary } from "@/lib/stablecoin-detail-ddr-track-record-client";
 import { cn } from "@/lib/utils";
 
-type HistoryTabsProps = Omit<ComponentProps<typeof DepegHistory>, "stablecoinId"> & {
+type DepegHistoryProps = Omit<
+  ComponentProps<typeof DepegHistoryComponent>,
+  "stablecoinId" | "embeddedPreview" | "onDisplayStateChange"
+>;
+
+type HistoryTabsProps = DepegHistoryProps & {
   stablecoinId: string;
   isNavToken: boolean;
+  /** The route's History viewport gate; no live module mounts before it. */
+  historyActive: boolean;
+  /** Server-rendered retained-ledger preview for the pilot profiles, otherwise null. */
+  depegHistoryPreview?: ReactNode;
+  /** The view to select first; the route's loading and list-error branches open Depeg. */
+  initialTab?: HistoryTabKey;
 };
 
 type HistoryTabKey = "grade" | "depeg" | "ddr";
@@ -26,55 +37,149 @@ interface HistoryTab {
   content: ReactNode;
 }
 
+interface HistoryTabAvailability {
+  grade: boolean;
+  ddr: boolean;
+}
+
+const LiveSafetyScoreHistorySection = dynamic(
+  () => import("@/components/stablecoin-detail/safety-score-history-section").then((mod) => mod.SafetyScoreHistorySection),
+  { loading: () => <Skeleton className="h-40 w-full rounded-xl" /> },
+);
+
+const LiveDepegHistory = dynamic(
+  () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
+  { loading: () => <Skeleton className="h-40 w-full rounded-xl" /> },
+);
+
+// With a retained ledger preview the shell already fills the panel, so a
+// chunk-load skeleton would stack a second loading surface under it.
+const PreviewedLiveDepegHistory = dynamic(
+  () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
+  { loading: () => null },
+);
+
+const LiveDdrTrackRecordSection = dynamic(
+  () => import("@/components/stablecoin-detail/ddr-track-record-section").then((mod) => mod.DdrTrackRecordSection),
+  { loading: () => <Skeleton className="h-40 w-full rounded-xl" /> },
+);
+
 /**
- * Grade history, depeg history and the DDR record share one tabbed module:
- * three stacked cards cost ~1,400px for what readers scan one at a time.
- * A tab renders only when its module would: Grade while its history loads or
- * once any point (or an error) is published; Depeg for non-NAV coins (its own
- * empty and limited-coverage states stay stated inside); DDR when a record
- * exists or its source is unavailable, mirroring `DdrTrackRecordSection`.
- * Inactive panels keep their anchor id and reveal on a hash jump.
+ * Availability reads live behind the History viewport gate, not in the shell.
+ * The initial grade tab is therefore a deterministic loading state instead of
+ * an eager `useSafetyScoreHistory` query, and no DDR tab is speculated before
+ * its source answers.
  */
-export function HistoryTabs({ stablecoinId, isNavToken, ...depegProps }: HistoryTabsProps) {
+function HistoryTabAvailabilityProbe({
+  stablecoinId,
+  isNavToken,
+  onAvailabilityChange,
+}: {
+  stablecoinId: string;
+  isNavToken: boolean;
+  onAvailabilityChange: (availability: HistoryTabAvailability) => void;
+}) {
   const legacyGrades = useSafetyScoreHistory(stablecoinId);
   const identityGrades = useSafetyScoreHistoryV2(stablecoinId);
   const ddrEnabled = !isNavToken && isDepegResolverEnabled() && isDepegResolverReviewerEnabled();
   const ddrQuery = useDepegResolverReview({ enabled: ddrEnabled });
-  const [selected, setSelected] = useState<HistoryTabKey | null>(null);
-  const rootRef = useRef<HTMLDivElement>(null);
+  const ddrData = ddrQuery.data;
 
-  const gradesLoading = legacyGrades.isLoading || identityGrades.isLoading;
-  const hasGrades = gradesLoading
+  const grade = legacyGrades.isLoading
+    || identityGrades.isLoading
     || legacyGrades.error != null
     || identityGrades.error != null
     || (legacyGrades.data?.length ?? 0) > 0
     || (identityGrades.data?.history.length ?? 0) > 0;
-  const ddrData = ddrQuery.data;
-  const hasDdr = ddrEnabled && (
+  const ddr = ddrEnabled && (
     projectDdrTrackRecordSummary(ddrData, stablecoinId) != null
     || ddrQuery.error != null
     || ddrData?._meta?.degraded === true
     || (ddrData != null && ddrData.summary.byStablecoin == null)
   );
 
+  useEffect(() => {
+    onAvailabilityChange({ grade, ddr });
+  }, [ddr, grade, onAvailabilityChange]);
+
+  return null;
+}
+
+/**
+ * Grade history, depeg history and the DDR record share one tabbed module:
+ * three stacked cards cost ~1,400px for what readers scan one at a time.
+ *
+ * The shell itself is synchronous for pilots so the retained-ledger depeg
+ * preview is in the initial HTML even while its panel is inactive; every other
+ * profile keeps the lazy wrapper in `detail-lazy-sections.tsx`. Every live
+ * module (and every availability query) stays behind the route's History
+ * viewport gate and the active-tab gate; inactive panels keep their anchor id
+ * and reveal on a hash jump.
+ */
+export function HistoryTabs({
+  stablecoinId,
+  isNavToken,
+  historyActive,
+  depegHistoryPreview = null,
+  initialTab,
+  ...depegProps
+}: HistoryTabsProps) {
+  const [selected, setSelected] = useState<HistoryTabKey | null>(null);
+  const [availability, setAvailability] = useState<HistoryTabAvailability | null>(null);
+  const [liveHistoryDisplayed, setLiveHistoryDisplayed] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
+
+  const handleAvailabilityChange = useCallback((next: HistoryTabAvailability) => {
+    setAvailability((previous) =>
+      previous && previous.grade === next.grade && previous.ddr === next.ddr ? previous : next,
+    );
+  }, []);
+
+  const previousStablecoinId = useRef(stablecoinId);
+  useEffect(() => {
+    if (previousStablecoinId.current === stablecoinId) return;
+    previousStablecoinId.current = stablecoinId;
+    setAvailability(null);
+    setLiveHistoryDisplayed(false);
+  }, [stablecoinId]);
+
   const tabs: HistoryTab[] = [];
-  if (hasGrades) {
-    tabs.push({ key: "grade", label: "Grade", anchorId: "grade-history", content: <SafetyScoreHistorySection stablecoinId={stablecoinId} /> });
+  if (availability == null || availability.grade) {
+    tabs.push({
+      key: "grade",
+      label: "Grade",
+      anchorId: "grade-history",
+      content: <LiveSafetyScoreHistorySection stablecoinId={stablecoinId} />,
+    });
   }
   if (!isNavToken) {
     tabs.push({
       key: "depeg",
       label: "Depeg",
       anchorId: "depeg-history",
-      content: (
-        <DepegHistory stablecoinId={stablecoinId} {...depegProps} />
+      content: depegHistoryPreview ? (
+        <PreviewedLiveDepegHistory
+          stablecoinId={stablecoinId}
+          {...depegProps}
+          embeddedPreview
+          onDisplayStateChange={setLiveHistoryDisplayed}
+        />
+      ) : (
+        <LiveDepegHistory stablecoinId={stablecoinId} {...depegProps} />
       ),
     });
   }
-  if (hasDdr) {
-    tabs.push({ key: "ddr", label: "DDR record", anchorId: "ddr-track-record", content: <DdrTrackRecordSection stablecoinId={stablecoinId} /> });
+  if (availability?.ddr) {
+    tabs.push({
+      key: "ddr",
+      label: "DDR record",
+      anchorId: "ddr-track-record",
+      content: <LiveDdrTrackRecordSection stablecoinId={stablecoinId} />,
+    });
   }
-  const active = tabs.find((tab) => tab.key === selected) ?? tabs[0];
+  const active = tabs.find((tab) => tab.key === selected)
+    ?? tabs.find((tab) => tab.key === initialTab)
+    ?? tabs[0];
 
   // A hash naming a panel (or anything inside it) selects that tab: on load,
   // on `hashchange`, and synchronously when `revealAnchorId` asks before scrolling.
@@ -110,7 +215,20 @@ export function HistoryTabs({ stablecoinId, isNavToken, ...depegProps }: History
   if (!active) return null;
 
   return (
-    <div ref={rootRef} className="space-y-3">
+    <div
+      ref={rootRef}
+      className="space-y-3"
+      // The removed LazySection reserved 390px until mount; keep that reserve
+      // while the live portion is still gated so the page does not jump.
+      style={historyActive ? undefined : { minHeight: 390 }}
+    >
+      {historyActive ? (
+        <HistoryTabAvailabilityProbe
+          stablecoinId={stablecoinId}
+          isNavToken={isNavToken}
+          onAvailabilityChange={handleAvailabilityChange}
+        />
+      ) : null}
       {tabs.length > 1 ? (
         <div role="tablist" aria-label="History views" className="flex flex-wrap gap-1">
           {tabs.map((tab) => (
@@ -132,20 +250,26 @@ export function HistoryTabs({ stablecoinId, isNavToken, ...depegProps }: History
           ))}
         </div>
       ) : null}
-      {tabs.map((tab) => (
-        <div
-          key={tab.key}
-          id={tab.anchorId}
-          role={tabs.length > 1 ? "tabpanel" : undefined}
-          aria-labelledby={tabs.length > 1 ? `history-tab-${tab.key}` : undefined}
-          data-history-tab={tab.key}
-          data-tab-panel=""
-          hidden={tab.key !== active.key}
-          className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
-        >
-          {tab.key === active.key ? tab.content : null}
-        </div>
-      ))}
+      {tabs.map((tab) => {
+        const showLive = historyActive && tab.key === active.key;
+        return (
+          <div
+            key={tab.key}
+            id={tab.anchorId}
+            role={tabs.length > 1 ? "tabpanel" : undefined}
+            aria-labelledby={tabs.length > 1 ? `history-tab-${tab.key}` : undefined}
+            data-history-tab={tab.key}
+            data-tab-panel=""
+            hidden={tab.key !== active.key}
+            className="scroll-mt-[calc(10rem+var(--pharos-sticky-summary-h,0px))] lg:scroll-mt-6"
+          >
+            {tab.key === "depeg" && depegHistoryPreview ? (
+              <div hidden={liveHistoryDisplayed}>{depegHistoryPreview}</div>
+            ) : null}
+            {showLive ? tab.content : null}
+          </div>
+        );
+      })}
     </div>
   );
 }

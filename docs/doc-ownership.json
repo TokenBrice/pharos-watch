@@ -373,7 +373,15 @@
       "id": "about-page",
       "label": "About page contract",
       "risk": "medium",
-      "sources": ["src/app/about/**", "src/components/about/**", "src/lib/media-appearances.ts", "public/media/**", "docs/about-page.md"],
+      "sources": [
+        "src/app/about/**",
+        "src/components/about/**",
+        "src/lib/about-principles-content.ts",
+        "src/lib/media-appearances.ts",
+        "public/media/**",
+        "LICENSE",
+        "docs/about-page.md"
+      ],
       "docs": [{ "path": "docs/about-page.md", "anchor": "section-contract" }],
       "rules": ["Keep public data-source descriptions aligned with the implemented sources."]
     },
@@ -415,6 +423,7 @@
       "sources": [
         "src/app/compliance/**",
         "src/components/compliance/**",
+        "src/lib/compliance-model.ts",
         "shared/data/stablecoins/domains/compliance/**",
         "shared/lib/compliance*.ts",
         "shared/lib/mica.ts",
@@ -1429,12 +1438,35 @@
       "id": "scripts-tooling",
       "label": "Script implementation and local tooling",
       "risk": "medium",
-      "sources": ["scripts/**", "public/critical-css-loader.js"],
+      "sources": [
+        "scripts/**",
+        "public/critical-css-loader.js",
+        "public/datasets/top-stablecoins/**",
+        "public/datasets/depeg-history/**",
+        "public/datasets/scores-latest/**",
+        "public/datasets/peg-mechanism-distribution/**",
+        "src/lib/datasets/public-dataset-current.ts"
+      ],
       "docs": [
         { "path": "docs/scripts.md", "anchor": "operator-cli-contract" },
         { "path": "docs/testing.md", "anchor": "smallest-adequate-check-per-area" }
       ],
       "reading": [
+        {
+          "sources": [
+            "public/datasets/top-stablecoins/**",
+            "public/datasets/depeg-history/**",
+            "public/datasets/scores-latest/**",
+            "public/datasets/peg-mechanism-distribution/**",
+            "scripts/maintenance/generate-public-datasets.ts",
+            "scripts/lib/public-dataset-artifacts.ts",
+            "src/lib/datasets/public-dataset-current.ts"
+          ],
+          "local": [
+            { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" },
+            { "path": "docs/api-reference.md", "anchor": "surface-split" }
+          ]
+        },
         {
           "sources": ["public/critical-css-loader.js", "scripts/maintenance/inline-homepage-critical-css.ts", "scripts/__tests__/inline-homepage-critical-css.test.ts"],
           "local": [{ "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }]
@@ -1569,6 +1601,7 @@
         "public/logos/**",
         "public/chains/**",
         "public/datasets/stablecoin-cemetery.*",
+        "public/llms.txt",
         "public/og-cemetery.png",
         "shared/lib/public-docs.ts",
         "shared/lib/og-route-cards.ts",
@@ -1597,6 +1630,15 @@
         "docs/upcoming-page.md"
       ],
       "docs": [{ "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" }],
+      "reading": [
+        {
+          "sources": ["public/llms.txt"],
+          "local": [
+            { "path": "docs/architecture.md", "anchor": "frontend-runtime-and-seo-surface" },
+            { "path": "docs/stablecoin-detail-page.md", "anchor": "route-shape" }
+          ]
+        }
+      ],
       "background": [
         {"path": "docs/design-language.md", "anchor": "context"},
         {"path": "docs/architecture.md", "anchor": "adr-42"},

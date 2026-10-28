@@ -64,14 +64,14 @@ function expectIntegrityObligations(contract: Pick<ChangeContract, "docs">, meth
 // reading shrinks; never regenerate them automatically or trade away obligations.
 // Manually ratcheted after moving implementation inventories/details into linked appendices.
 const ROUTE_FIXTURES = [
-  ["src/components/stablecoin-table.tsx", 20_327, 20_327],
-  ["src/app/yield/page.tsx", 49_506, 49_506],
+  ["src/components/stablecoin-table.tsx", 21_706, 21_706],
+  ["src/app/yield/page.tsx", 50_065, 50_065],
   ["worker/src/cron/dex-liquidity/orchestrator.ts", 42_303, 42_303],
-  ["worker/src/api/yield-history.ts", 70_417, 70_417],
+  ["worker/src/api/yield-history.ts", 71_737, 71_737],
   ["shared/lib/safety-score-v9/evaluate-asset.ts", 59_880, 59_880],
-  ["shared/lib/classification.ts", 45_995, 45_995],
+  ["shared/lib/classification.ts", 46_435, 46_435],
   ["functions/safety-scores/map.json.ts", 24_468, 29_549],
-  ["shared/data/stablecoins/coins/usdt-tether.json", 45_995, 45_995],
+  ["shared/data/stablecoins/coins/usdt-tether.json", 46_435, 46_435],
   ["worker/src/telegram/webhook/telegram-webhook.ts", 46_593, 46_593],
   ["worker/migrations/0268_telegram_planning_lookup_indexes.sql", 26_618, 26_618],
 ] as const;
@@ -442,6 +442,18 @@ describe("reading selectors and context modes", () => {
     expect(commands.join("\n")).toContain("shared/lib/__tests__/ai-summary-claims.test.ts");
   });
 
+  it("routes the compliance model to the compliance owner's primary references", () => {
+    const file = "src/lib/compliance-model.ts";
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("compliance");
+    expect(docKeys(contract)).toEqual(expect.arrayContaining([
+      "docs/compliance-page.md#data-projection",
+      "docs/mica-tracker.md#status-criteria",
+      "docs/genius-tracker.md#sourcing--source-kinds",
+    ]));
+  });
+
   it("routes the browser CSS loader to its build contract and runtime tests", () => {
     const file = "public/critical-css-loader.js";
     const contract = classifyChangedFiles([file]);
@@ -449,6 +461,48 @@ describe("reading selectors and context modes", () => {
     expect(docKeys(contract)).toContain("docs/scripts.md#build-and-generated-artifacts");
     expect(DECLARED_TEST_OWNERSHIP.find((entry) => entry.sources.includes(file))?.tests)
       .toContain("scripts/__tests__/inline-homepage-critical-css.test.ts");
+  });
+
+  it("routes the generated llms index to bounded frontend discovery docs", () => {
+    const file = "public/llms.txt";
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["frontend-routes"]);
+    expect(docKeys(contract)).toEqual([
+      "docs/architecture.md#frontend-runtime-and-seo-surface",
+      "docs/stablecoin-detail-page.md#route-shape",
+    ]);
+    expect(buildRouteContext(contract).status).toBe("within-budget");
+  });
+
+  it.each([
+    "public/datasets/top-stablecoins/2026-10-28.json",
+    "public/datasets/depeg-history/2026-10-28.json",
+    "public/datasets/scores-latest/2026-10-28.json",
+    "public/datasets/peg-mechanism-distribution/2026-10-28.json",
+  ])("routes the dated dataset output %s to its generation and public-surface contracts", (file) => {
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toEqual(["scripts-tooling"]);
+    expect(docKeys(contract)).toEqual([
+      "docs/scripts.md#build-and-generated-artifacts",
+      "docs/api-reference.md#surface-split",
+    ]);
+    expect(buildRouteContext(contract).status).toBe("within-budget");
+  });
+
+  it.each([
+    "scripts/maintenance/generate-public-datasets.ts",
+    "scripts/lib/public-dataset-artifacts.ts",
+    "src/lib/datasets/public-dataset-current.ts",
+  ])("selects the generated-dataset contracts for %s", (file) => {
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(docKeys(contract)).toEqual(expect.arrayContaining([
+      "docs/scripts.md#build-and-generated-artifacts",
+      "docs/api-reference.md#surface-split",
+    ]));
+    expect(buildRouteContext(contract).status).toBe("within-budget");
   });
 
   it("routes the DexScreener parser to DEX discovery docs and its parser/census tests", () => {

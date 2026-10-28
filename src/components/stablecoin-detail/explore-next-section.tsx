@@ -57,12 +57,13 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, depeg
   const firstInfrastructure = coin.infrastructures?.[0];
   const infrastructureLabel = firstInfrastructure ? getInfrastructureLabel(firstInfrastructure) : null;
   const pegSlug = PEG_SLUGS[coin.flags.pegCurrency];
+  const pegLabel = PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency;
 
   const taxonomyLinks = [
     pegSlug
       ? {
           href: `/stablecoins/${pegSlug}/`,
-          label: `All ${PEG_LABELS_SHORT[coin.flags.pegCurrency] ?? coin.flags.pegCurrency} stablecoins`,
+          label: `All ${pegLabel} stablecoins`,
         }
       : null,
     {
@@ -156,7 +157,7 @@ export function ExploreNextSection({ coin, related, staticComparisonPages, depeg
                 href={`/stablecoins/${pegSlug}/`}
                 className="pharos-focus-ring inline-flex items-center gap-1 rounded-sm text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
-                See all peers
+                All {pegLabel} stablecoins
                 <ArrowRight aria-hidden="true" className="h-3 w-3" />
               </IntentLink>
             ) : null}

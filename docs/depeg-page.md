@@ -37,6 +37,11 @@ softening rules for discovery surfaces do not apply here.
   `classifyDepegClosure` result: only recovered and legacy-recovered records claim
   recovery. Coverage loss, superseded direction, removed tracking and unknown
   closure remain tracking closures; an end timestamp alone is not recovery.
+  `DEPEG_CLOSURE_LABELS` in `shared/lib/classification/depeg.ts` is the single
+  recorded-outcome vocabulary for event pages and history tables;
+  `getDepegClosureSnapshotLabel()` time-qualifies only the clock-dependent
+  `Open at capture` and `Legacy recovery`, and presentation never infers recovery
+  from an end date.
   Authored editorial entries add the briefing lede, timeline and watchpoints and
   state recorded figures (deviation, low, start, recovery) only from the event
   record; sourced context such as an announcement date stays separate and never

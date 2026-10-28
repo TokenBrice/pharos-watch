@@ -1,12 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import {
+  buildSafetyScoresPreview,
   formatSnapshotSafetyScoreLabel,
   getScoresLatestSnapshotRow,
   getSnapshotSafetyAssessment,
   toScoresLatestSnapshotRow,
   toSnapshotSafetyAssessment,
 } from "@/lib/safety-grade-snapshot";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
 
 describe("toSnapshotSafetyAssessment", () => {
   it("maps rated grades to the shared risk buckets", () => {
@@ -112,5 +115,292 @@ describe("production scores-latest freshness assertion", () => {
     const snapshotModule = import("@/lib/safety-grade-snapshot");
     if (allowed) await expect(snapshotModule).resolves.toHaveProperty("getSnapshotSafetyAssessment");
     else await expect(snapshotModule).rejects.toThrow("Public scores-latest mirror is stale");
+  });
+});
+
+const PREVIEW_IDENTITY = {
+  model: "v9" as const,
+  schemaVersion: 1 as const,
+  methodologyVersion: "10.34",
+  evaluationBuildDigest: "a".repeat(64),
+  baseInputGenerationId: `report-cards-input:v1:${"b".repeat(64)}`,
+  publicationGenerationId: "v9-publication-1",
+  policyId: "safety-score-v9",
+  policyDigest: "c".repeat(64),
+};
+const PREVIEW_SNAPSHOT_DATE = "2026-10-27";
+const PREVIEW_PUBLISHED_AT_SEC = Date.parse("2026-10-27T08:00:00Z") / 1000;
+const PREVIEW_ASSESSED_AT_SEC = Date.parse("2026-10-28T12:00:00Z") / 1000;
+const PREVIEW_REGISTRY = [
+  { id: "asset-a", name: "Asset A", symbol: "AAA" },
+  { id: "asset-b", name: "Asset B", symbol: "BBB" },
+  { id: "asset-c", name: "Asset C", symbol: "CCC" },
+];
+
+interface PreviewTestRow {
+  stablecoinId: string;
+  safetyScore?: number | null;
+  safetyGrade?: string | null;
+  ratingStatus?: "rated" | "not-rated" | "pipeline-gap" | null;
+  safetyDisplay?: Record<string, unknown> | null;
+}
+
+function completenessFor(rows: readonly PreviewTestRow[]) {
+  const cardRows = rows.filter((row) => row.ratingStatus != null);
+  const notRatedIds = cardRows.filter((row) => row.ratingStatus === "not-rated").map((row) => row.stablecoinId).sort();
+  const pipelineGapIds = cardRows.filter((row) => row.ratingStatus === "pipeline-gap").map((row) => row.stablecoinId).sort();
+  return {
+    expectedCount: cardRows.length,
+    ratedCount: cardRows.filter((row) => row.ratingStatus === "rated").length,
+    notRatedCount: notRatedIds.length,
+    notRatedIds,
+    pipelineGapCount: pipelineGapIds.length,
+    pipelineGapIds,
+  };
+}
+
+function makePreviewDataset(
+  rows: readonly PreviewTestRow[],
+  overrides: {
+    snapshotDate?: string;
+    publishedAtSec?: number;
+    methodologyLabel?: string;
+    identity?: Record<string, unknown>;
+    completeness?: Record<string, unknown>;
+    safety?: null;
+    safetyUnavailableReason?: "legacy-source-metadata-unavailable" | null;
+    displayProjection?: unknown;
+  } = {},
+) {
+  const publishedAtSec = overrides.publishedAtSec ?? PREVIEW_PUBLISHED_AT_SEC;
+  const identity = overrides.identity ?? PREVIEW_IDENTITY;
+  return {
+    _meta: {
+      methodologyLabel: overrides.methodologyLabel ?? "safety-score v10.34 | dews v6.38 | liquidity v6.98",
+      asOfISO: new Date(publishedAtSec * 1000).toISOString(),
+      displayProjection: overrides.displayProjection ?? {
+        version: 1,
+        snapshotDate: overrides.snapshotDate ?? PREVIEW_SNAPSHOT_DATE,
+        capturedAtSec: publishedAtSec + 300,
+        sourceSnapshotPath: `/api/snapshots/${overrides.snapshotDate ?? PREVIEW_SNAPSHOT_DATE}.json`,
+        safety: overrides.safety === null ? null : {
+          identity,
+          asOfSec: publishedAtSec - 60,
+          publishedAtSec,
+          sourceGenerations: { reportCards: "source-1" },
+          publicationHealth: {
+            schemaVersion: 2,
+            status: "current",
+            acceptedPublicationGenerationId: (identity as { publicationGenerationId?: string }).publicationGenerationId,
+            acceptedAtSec: publishedAtSec,
+            attemptedAtSec: publishedAtSec,
+            heldSinceSec: null,
+            reasons: [],
+          },
+          completeness: overrides.completeness ?? completenessFor(rows),
+        },
+        safetyUnavailableReason: overrides.safetyUnavailableReason ?? null,
+      },
+    },
+    rows,
+  };
+}
+
+function ratedRow(id: string, score: number, grade: string, extra: Partial<PreviewTestRow> = {}): PreviewTestRow {
+  return {
+    stablecoinId: id,
+    safetyScore: score,
+    safetyGrade: grade,
+    ratingStatus: "rated",
+    safetyDisplay: { nrReasons: [], reasonCodes: [], partialEvidence: null },
+    ...extra,
+  };
+}
+
+describe("buildSafetyScoresPreview", () => {
+  it("selects the top 20 by score with a code-unit id tie-break and reports full counts", () => {
+    const rows: PreviewTestRow[] = [];
+    for (let index = 0; index < 22; index += 1) {
+      rows.push(ratedRow(`asset-${String(index).padStart(2, "0")}`, 90 - index, scoreToGrade(90 - index)));
+    }
+    const preview = buildSafetyScoresPreview(
+      makePreviewDataset(rows),
+      PREVIEW_REGISTRY.concat(
+        Array.from({ length: 22 }, (_, index) => ({
+          id: `asset-${String(index).padStart(2, "0")}`,
+          name: `Asset ${index}`,
+          symbol: `A${index}`,
+        })),
+      ),
+      PREVIEW_ASSESSED_AT_SEC,
+    )!;
+
+    expect(preview.kind).toBe("safety-grade-preview");
+    expect(preview.shownCount).toBe(20);
+    expect(preview.eligibleRatedCount).toBe(22);
+    expect(preview.rows).toHaveLength(20);
+    expect(preview.rows[0]).toMatchObject({ id: "asset-00", grade: "A+", score: 90 });
+    expect(preview.publicationCompleteness).toEqual({
+      expectedCount: 22,
+      ratedCount: 22,
+      notRatedCount: 0,
+      pipelineGapCount: 0,
+    });
+    expect(preview.publishedAtSec).toBe(PREVIEW_PUBLISHED_AT_SEC);
+    expect(preview.expiresAtSec).toBe(Date.parse("2026-10-30T00:00:00Z") / 1000);
+  });
+
+  it("breaks equal scores by code-unit id rather than registry order", () => {
+    const rows = [
+      ratedRow("asset-b", 80, "A-"),
+      ratedRow("asset-a", 80, "A-"),
+      ratedRow("asset-c", 70, "B"),
+    ];
+    const preview = buildSafetyScoresPreview(makePreviewDataset(rows), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC)!;
+    expect(preview.rows.map((row) => row.id)).toEqual(["asset-a", "asset-b", "asset-c"]);
+  });
+
+  it("keeps zero-valued rated rows and excludes NR and pipeline gaps from the ranking", () => {
+    const rows = [
+      ratedRow("asset-a", 0, "F"),
+      { stablecoinId: "asset-b", safetyScore: null, safetyGrade: "NR", ratingStatus: "not-rated" as const },
+      { stablecoinId: "asset-c", safetyScore: null, safetyGrade: null, ratingStatus: "pipeline-gap" as const },
+    ];
+    const preview = buildSafetyScoresPreview(makePreviewDataset(rows), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC)!;
+    expect(preview.rows).toEqual([expect.objectContaining({ id: "asset-a", score: 0, grade: "F" })]);
+    expect(preview.eligibleRatedCount).toBe(1);
+    expect(preview.publicationCompleteness).toMatchObject({ ratedCount: 1, notRatedCount: 1, pipelineGapCount: 1 });
+  });
+
+  it("omits unknown or inactive ids and invalid rating invariants without changing publication counts", () => {
+    const rows = [
+      ratedRow("asset-a", 85, "A"),
+      ratedRow("delisted-coin", 84, "A"),
+      ratedRow("asset-b", 83, "B+"),
+      ratedRow("asset-c", 82, "A-"),
+    ];
+    const preview = buildSafetyScoresPreview(makePreviewDataset(rows), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC)!;
+    expect(preview.rows.map((row) => row.id)).toEqual(["asset-a", "asset-c"]);
+    expect(preview.eligibleRatedCount).toBe(2);
+    expect(preview.publicationCompleteness.ratedCount).toBe(4);
+  });
+
+  it("preserves recorded grade-hold facts and rejects an inconsistent held letter", () => {
+    const rows = [
+      ratedRow("asset-a", 84, "A-", {
+        safetyDisplay: {
+          nrReasons: [],
+          reasonCodes: [],
+          partialEvidence: null,
+          gradeHold: { rawGrade: "A", heldFromGenerationId: "v9-publication-prior" },
+        },
+      }),
+      ratedRow("asset-b", 84, "A-", {
+        safetyDisplay: {
+          nrReasons: [],
+          reasonCodes: [],
+          partialEvidence: null,
+          gradeHold: { rawGrade: "B+", heldFromGenerationId: "v9-publication-prior" },
+        },
+      }),
+    ];
+    const preview = buildSafetyScoresPreview(makePreviewDataset(rows), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC)!;
+    expect(preview.rows).toHaveLength(1);
+    expect(preview.rows[0]).toMatchObject({ id: "asset-a", grade: "A-", gradeHoldRawGrade: "A" });
+    expect(preview.eligibleRatedCount).toBe(1);
+  });
+
+  it("returns null for a legacy projection, missing metadata or a mismatched methodology label", () => {
+    const rows = [ratedRow("asset-a", 85, "A")];
+    expect(buildSafetyScoresPreview(makePreviewDataset(rows, { safety: null }), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC))
+      .toBeNull();
+    expect(buildSafetyScoresPreview({ _meta: {}, rows }, PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC)).toBeNull();
+    expect(buildSafetyScoresPreview(
+      makePreviewDataset(rows, { methodologyLabel: "safety-score v9.0 | dews v6.38" }),
+      PREVIEW_REGISTRY,
+      PREVIEW_ASSESSED_AT_SEC,
+    )).toBeNull();
+  });
+
+  it("enforces the calendar retention boundary, non-future clocks and the replay waiver", () => {
+    const rows = [ratedRow("asset-a", 85, "A")];
+    const boundary = Date.parse("2026-10-29T23:59:00Z") / 1000;
+    expect(buildSafetyScoresPreview(makePreviewDataset(rows), PREVIEW_REGISTRY, boundary)).not.toBeNull();
+    expect(buildSafetyScoresPreview(
+      makePreviewDataset(rows),
+      PREVIEW_REGISTRY,
+      Date.parse("2026-10-30T00:00:00Z") / 1000,
+    )).toBeNull();
+    expect(buildSafetyScoresPreview(
+      makePreviewDataset(rows, { snapshotDate: "2026-10-29" }),
+      PREVIEW_REGISTRY,
+      PREVIEW_ASSESSED_AT_SEC,
+    )).toBeNull();
+    expect(buildSafetyScoresPreview(
+      makePreviewDataset(rows, { publishedAtSec: PREVIEW_ASSESSED_AT_SEC + 1 }),
+      PREVIEW_REGISTRY,
+      PREVIEW_ASSESSED_AT_SEC,
+    )).toBeNull();
+
+    vi.stubEnv("PHAROS_PAGES_REPLAY", "1");
+    try {
+      expect(buildSafetyScoresPreview(
+        makePreviewDataset(rows),
+        PREVIEW_REGISTRY,
+        Date.parse("2026-11-05T00:00:00Z") / 1000,
+      )).not.toBeNull();
+      expect(buildSafetyScoresPreview(
+        makePreviewDataset(rows, { snapshotDate: "2026-11-06" }),
+        PREVIEW_REGISTRY,
+        Date.parse("2026-11-05T00:00:00Z") / 1000,
+      )).toBeNull();
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it("rejects a dataset whose completeness does not reconcile with its rows", () => {
+    const rows = [ratedRow("asset-a", 85, "A")];
+    const completeness = { ...completenessFor(rows), ratedCount: 2 };
+    expect(buildSafetyScoresPreview(
+      makePreviewDataset(rows, { completeness }),
+      PREVIEW_REGISTRY,
+      PREVIEW_ASSESSED_AT_SEC,
+    )).toBeNull();
+  });
+
+  it("rejects NR and pipeline-gap rows that carry rated values", () => {
+    const notRated = [{
+      stablecoinId: "asset-b",
+      safetyScore: 50,
+      safetyGrade: "NR",
+      ratingStatus: "not-rated" as const,
+    }];
+    expect(buildSafetyScoresPreview(makePreviewDataset(notRated), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC))
+      .toBeNull();
+    const pipelineGap = [{
+      stablecoinId: "asset-c",
+      safetyScore: null,
+      safetyGrade: "NR",
+      ratingStatus: "pipeline-gap" as const,
+    }];
+    expect(buildSafetyScoresPreview(makePreviewDataset(pipelineGap), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC))
+      .toBeNull();
+  });
+
+  it("returns null when no rated row belongs to the active registry", () => {
+    const rows = [ratedRow("delisted-coin", 85, "A")];
+    expect(buildSafetyScoresPreview(makePreviewDataset(rows), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC)).toBeNull();
+  });
+
+  it("indexes the committed scores-latest mirror without requiring a display projection", () => {
+    // The committed dataset may predate B0; the wrapper must stay fail-closed
+    // rather than throw when the projection is absent.
+    const usdt = buildSafetyScoresPreview(
+      { rows: [{ stablecoinId: "usdt-tether", safetyScore: 80, safetyGrade: "A-", ratingStatus: "rated" }] },
+      ACTIVE_STABLECOINS,
+      PREVIEW_ASSESSED_AT_SEC,
+    );
+    expect(usdt).toBeNull();
   });
 });

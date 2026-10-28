@@ -6,11 +6,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DexLiquidityCard } from "@/components/dex-liquidity-card";
 import { PoolSourceLabel, TvlTrendChart } from "@/components/dex-liquidity-card-parts";
 import { makeDexLiquidityData } from "@/test/fixtures/dex-liquidity";
-import type { DexLiquidityHistoryPoint } from "@shared/types";
+import type { DexLiquidityHistoryPoint, DexLiquidityPool } from "@shared/types";
 import { summarizeDexVolumeWindow, type DexPoolVolumeObservationInput } from "@shared/lib/dex-volume-availability";
 import { formatCurrency } from "@shared/lib/format";
 
-/** The market-breakdown fold defers charts/tables until first open. */
+/** The market-breakdown fold defers only the TVL chart until first open. */
 function openMarketBreakdown(container: HTMLElement) {
   const details = Array.from(container.querySelectorAll("details")).find((node) =>
     node.textContent?.includes("Full market breakdown"),
@@ -57,6 +57,17 @@ vi.mock("@/components/methodology-hint", () => ({
   MethodologyTriggerButton: ({ children }: { children?: ReactNode }) => <>{children}</>,
 }));
 
+function makePools(count: number): DexLiquidityPool[] {
+  return Array.from({ length: count }, (_, index) => ({
+    project: index === 0 ? "curve" : `venue-${index}`,
+    chain: index % 2 === 0 ? "ethereum" : "arbitrum",
+    tvlUsd: 1_000_000 - index * 10_000,
+    symbol: `POOL${index}`,
+    volumeUsd1d: 25_000,
+    poolType: "amm",
+  }));
+}
+
 function makeHistoryPoint(overrides: Partial<DexLiquidityHistoryPoint> = {}): DexLiquidityHistoryPoint {
   return {
     tvl: 0,
@@ -71,6 +82,24 @@ function makeHistoryPoint(overrides: Partial<DexLiquidityHistoryPoint> = {}): De
     methodologyVersion: "5.3",
     ...overrides,
   };
+}
+
+function makeTrendHistory(): DexLiquidityHistoryPoint[] {
+  return [
+    makeHistoryPoint({
+      tvl: 1_000,
+      coverageClass: "primary",
+      liquidityEvidenceClass: "measured",
+      hasMeasuredLiquidityEvidence: true,
+    }),
+    makeHistoryPoint({
+      date: 1_775_779_200,
+      tvl: 1_200,
+      coverageClass: "primary",
+      liquidityEvidenceClass: "measured",
+      hasMeasuredLiquidityEvidence: true,
+    }),
+  ];
 }
 
 describe("PoolSourceLabel", () => {
@@ -257,6 +286,91 @@ describe("DexLiquidityCard", () => {
       screen.getByText("Related-asset liquidity is intentionally not merged into the canonical Liquidity Score."),
     ).toBeTruthy();
     expect(screen.queryByLabelText("TVL trend chart")).toBeNull();
+  });
+
+  describe("pool text retention", () => {
+    function marketBreakdown(container: HTMLElement): HTMLDetailsElement {
+      const details = Array.from(container.querySelectorAll("details")).find((node) =>
+        node.textContent?.includes("Full market breakdown"),
+      );
+      if (!details) throw new Error("Full market breakdown disclosure not found");
+      return details;
+    }
+
+    function poolTables(container: HTMLElement) {
+      return container.querySelectorAll('[data-testid="dex-liquidity-top-pools-table"]');
+    }
+
+    function trendCharts(container: HTMLElement) {
+      return container.querySelectorAll('[role="figure"][aria-label="TVL trend chart"]');
+    }
+
+    function renderCard({ poolCount = 6, pools = makePools(6) }: { poolCount?: number; pools?: DexLiquidityPool[] } = {}) {
+      useDexLiquidityMock.mockReturnValue({
+        data: { "usdc-circle": makeDexLiquidityData({ poolCount, totalTvlUsd: 1_000_000, topPools: pools }) },
+        isLoading: false,
+      });
+      useDexLiquidityHistoryMock.mockReturnValue({ data: makeTrendHistory(), isLoading: false });
+      return render(<DexLiquidityCard stablecoinId="usdc-circle" />);
+    }
+
+    it("keeps the bounded pool table mounted inside the closed fold without mounting the chart", () => {
+      const { container } = renderCard();
+      const details = marketBreakdown(container);
+
+      expect(details.open).toBe(false);
+      expect(poolTables(container)).toHaveLength(1);
+      expect(poolTables(container)[0]!.textContent).toContain("POOL0");
+      expect(poolTables(container)[0]!.textContent).toContain("(curve)");
+      expect(poolTables(container)[0]!.querySelectorAll("tbody tr")).toHaveLength(5);
+      expect(container.textContent).toContain("Top 5 of 6 pools");
+      expect(useDexLiquidityHistoryMock).not.toHaveBeenCalled();
+      expect(trendCharts(container)).toHaveLength(0);
+    });
+
+    it("mounts one table and one chart on first open and keeps both after closing", () => {
+      const { container } = renderCard();
+      const details = marketBreakdown(container);
+
+      openMarketBreakdown(container);
+      expect(useDexLiquidityHistoryMock).toHaveBeenCalledTimes(1);
+      expect(poolTables(container)).toHaveLength(1);
+      expect(trendCharts(container)).toHaveLength(1);
+      expect(poolTables(container)[0]!.querySelectorAll("tbody tr")).toHaveLength(5);
+
+      details.open = false;
+      fireEvent(details, new Event("toggle", { bubbles: false }));
+      expect(poolTables(container)).toHaveLength(1);
+      expect(trendCharts(container)).toHaveLength(1);
+    });
+
+    it("orders the open fold as diagnostics, then the pool table, then the TVL chart", () => {
+      const { container } = renderCard();
+      openMarketBreakdown(container);
+
+      const order = Array.from(
+        marketBreakdown(container).querySelectorAll(
+          '[data-testid="dex-liquidity-top-pools-table"], [role="figure"][aria-label="TVL trend chart"]',
+        ),
+      );
+      expect(order.map((node) => node.getAttribute("data-testid") ?? node.getAttribute("aria-label"))).toEqual([
+        "dex-liquidity-top-pools-table",
+        "TVL trend chart",
+      ]);
+    });
+
+    it("labels five displayed rows from the authoritative pool count rather than the sliced list", () => {
+      const { container } = renderCard({ poolCount: 9 });
+      expect(poolTables(container)[0]!.querySelectorAll("tbody tr")).toHaveLength(5);
+      expect(container.textContent).toContain("Top 5 of 9 pools");
+    });
+
+    it("renders no pool table or label when no pools were admitted", () => {
+      const { container } = renderCard({ poolCount: 1, pools: [] });
+      expect(poolTables(container)).toHaveLength(0);
+      expect(container.textContent).not.toContain("Top pools");
+      expect(container.textContent).not.toMatch(/\d+ of \d+ pools/);
+    });
   });
 
   describe("DEC-19 volume availability", () => {

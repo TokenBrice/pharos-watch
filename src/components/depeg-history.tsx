@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useInfiniteDepegEvents } from "@/hooks/use-depeg-events";
 import { useTablePagination } from "@/hooks/use-table-pagination";
 import { DepegProvenanceBadges } from "@/components/depeg-provenance-badges";
@@ -77,6 +77,8 @@ export function DepegHistory({
   historyCoverage = null,
   recent90d = null,
   scoreWindowIncidentCount = null,
+  embeddedPreview = false,
+  onDisplayStateChange,
 }: {
   stablecoinId: string;
   observationStartedAt?: number | null;
@@ -86,6 +88,14 @@ export function DepegHistory({
   recent90d?: PegSummaryCoin["recent90d"];
   /** Peg-summary `eventCount`: incidents inside the score coverage window, the figure the hero cites. */
   scoreWindowIncidentCount?: number | null;
+  /**
+   * C1: the route shell already owns a retained-ledger preview. While this
+   * module has nothing admitted to show, suppress its duplicate skeleton or
+   * table chrome instead of stacking two surfaces.
+   */
+  embeddedPreview?: boolean;
+  /** Report whether the live module can own the panel, so the shell hides its preview. */
+  onDisplayStateChange?: (displayed: boolean) => void;
 }) {
   const {
     data,
@@ -127,7 +137,23 @@ export function DepegHistory({
   const paginationTotal = isFullyLoaded ? knownTotal ?? loadedCount : loadedCount;
   const showPagination = (isFullyLoaded || isAutoLoadCapped) && sorted.length > 0 && !isFolded;
 
+  // A loading read, or a failure with nothing admitted, does not own the
+  // panel: the shell's dated ledger preview stays visible. A successfully
+  // empty or populated result does own it, including a retained partial set.
+  const liveDisplayable = !isLoading && (error == null || events.length > 0);
+  const onDisplayStateChangeRef = useRef(onDisplayStateChange);
+  useEffect(() => {
+    onDisplayStateChangeRef.current = onDisplayStateChange;
+  }, [onDisplayStateChange]);
+  // Layout effect: the shell must hide its static preview before the browser
+  // paints, or one frame shows the preview and the live table together.
+  useLayoutEffect(() => {
+    onDisplayStateChangeRef.current?.(liveDisplayable);
+    return () => onDisplayStateChangeRef.current?.(false);
+  }, [liveDisplayable]);
+
   if (isLoading) {
+    if (embeddedPreview) return null;
     return (
       <DepegHistoryShell>
         <div className="space-y-3">
@@ -140,6 +166,9 @@ export function DepegHistory({
   }
 
   if (error && !data?.events?.length) {
+    if (embeddedPreview) {
+      return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
+    }
     return (
       <DepegHistoryShell>
         <QueryErrorNotice error={error} onRetry={() => void refetch()} />
