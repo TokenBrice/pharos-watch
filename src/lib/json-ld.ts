@@ -48,6 +48,7 @@ export const PHAROS_ORG_NODE = {
     "https://x.com/PharosWatch",
     "https://github.com/TokenBrice/pharos-watch",
     "https://t.me/pharoswatch",
+    "https://www.wikidata.org/wiki/Q141899217",
   ],
   contactPoint: [
     {

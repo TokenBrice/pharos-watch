@@ -2,15 +2,12 @@
 
 import type { ReactNode } from "react";
 import Link from "next/link";
-import { Skeleton } from "@/components/ui/skeleton";
-import { useDailyDigest } from "@/hooks/api-hooks";
 import { getDigestBodyParagraphs, EDITORIAL_BODY_STYLE, parseDigestParagraph } from "@/lib/digest";
-import { QueryErrorNotice } from "@/components/query-error-notice";
 import { DigestIntelligencePanel } from "@/components/digest-intelligence";
 import { digestDisplay } from "@/lib/fonts/digest";
 import { cn } from "@/lib/utils";
 import { formatCurrency } from "@shared/lib/format";
-import type { DigestRiskSignal } from "@shared/types";
+import type { DailyDigestResponse, DigestRiskSignal } from "@shared/types";
 
 
 // Editorial body style imported from @/lib/digest for consistent wire-service aesthetic
@@ -122,45 +119,18 @@ function HomepagePreviewLayout({ title, riskSignal, compactIntelligence, bodyBlo
 }
 
 interface DailyDigestProps {
+  data: Partial<DailyDigestResponse> & Pick<DailyDigestResponse, "digest">;
   /** Override the CTA link target (e.g. point to the detail page instead of the archive). */
   detailHref?: string;
 }
 
-export function DailyDigest({ detailHref }: DailyDigestProps) {
-  const { data, isLoading, error, refetch } = useDailyDigest();
+export function DailyDigest({ data, detailHref }: DailyDigestProps) {
   const paragraphs = getDigestBodyParagraphs({
     digest: data?.digest,
     digestExtended: data?.digestExtended,
   });
   const visibleParagraphs = paragraphs.slice(0, 1);
   const ctaLabel = detailHref ? "Continue reading" : "Read today's full digest";
-
-  if (!isLoading && !data) {
-    if (error) return <QueryErrorNotice error={error} onRetry={() => void refetch()} />;
-    return null;
-  }
-
-  if (isLoading) {
-    return (
-      <div className="animate-pulse space-y-5 border-t border-b border-border py-6">
-        <div className="flex flex-wrap items-center justify-between gap-3">
-          <Skeleton className="h-3 w-48" />
-          <Skeleton className="h-3 w-36" />
-        </div>
-        <div className="grid gap-5 lg:grid-cols-[minmax(0,0.64fr)_minmax(0,1.36fr)]">
-          <div className="space-y-3">
-            <Skeleton className="h-3 w-36" />
-            <Skeleton className="h-20 w-full max-w-[20rem] sm:max-w-[24rem]" />
-          </div>
-          <div className="space-y-3">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-11/12" />
-          </div>
-        </div>
-      </div>
-    );
-  }
-
 
   const title = data?.digestTitle || "Signal & Noise";
   const bodyBlock = (

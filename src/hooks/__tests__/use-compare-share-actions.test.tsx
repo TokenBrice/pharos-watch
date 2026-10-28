@@ -60,11 +60,18 @@ describe("useCompareShareActions", () => {
     vi.restoreAllMocks();
   });
 
-  it("renders unavailable supply as a dash, never $0 or a -100% weekly change", async () => {
+  it.each(["unavailable", "partial"])("withholds %s supply changes while preserving observed zero", async (coverage) => {
     vi.spyOn(HTMLAnchorElement.prototype, "click").mockImplementation(() => undefined);
     vi.stubGlobal("URL", { ...URL, createObjectURL: () => "blob:pharos-compare", revokeObjectURL: vi.fn() });
     const missing = makeCoin("usdc-circle", "USDC");
-    missing.data = { ...missing.data, circulating: {} };
+    missing.data = coverage === "unavailable" ? { ...missing.data, circulating: {} } : {
+      ...missing.data,
+      supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
+        chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+          baselineUsd: 50, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
+      },
+    };
     const zero = makeCoin("usdt-tether", "USDT");
     zero.data = { ...zero.data, circulating: { peggedUSD: 0 } };
     const { result } = renderHook(() => useCompareShareActions({
@@ -79,7 +86,7 @@ describe("useCompareShareActions", () => {
     await act(async () => result.current.handleDownload());
 
     const [coins] = shareImageMocks.renderCompareShareImage.mock.calls.at(-1) as [Array<{ symbol: string; marketCap: string; weeklyChange: string }>];
-    expect(coins.find((coin) => coin.symbol === "USDC")).toMatchObject({ marketCap: "—", weeklyChange: "—" });
+    expect(coins.find((coin) => coin.symbol === "USDC")).toMatchObject({ marketCap: coverage === "unavailable" ? "—" : "$1.00M", weeklyChange: "—" });
     expect(coins.find((coin) => coin.symbol === "USDT")).toMatchObject({ marketCap: "$0.00", weeklyChange: "-100.00%" });
   });
 

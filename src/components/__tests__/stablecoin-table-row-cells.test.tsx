@@ -101,6 +101,26 @@ describe("StablecoinTableRowCells peg deviation", () => {
 });
 
 describe("StablecoinTableRowCells supply availability", () => {
+  it("renders partial current supply but uses existing unavailable glyphs for changes without a sparkline", () => {
+    const row = buildRow();
+    row.coin = makeStablecoin({
+      circulating: { peggedUSD: 50 },
+      circulatingPrevDay: { peggedUSD: 100 }, circulatingPrevWeek: { peggedUSD: 100 },
+      supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
+        chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+          baselineUsd: 50, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
+      },
+    });
+    row.isVisible = (column) => ["mcap", "change24h", "change7d"].includes(column);
+    const model = buildStablecoinTableRowModel({ coin: row.coin, density: row.density, variant: "default" });
+    const html = renderToStaticMarkup(<table><tbody><tr><StablecoinTableRowCells row={row} model={model} /></tr></tbody></table>);
+    expect(html).toContain("$50");
+    expect(html.match(/>—<\/span>/g)).toHaveLength(2);
+    expect(html).not.toContain("-50.00%");
+    expect(html).not.toContain("<svg");
+  });
+
   function renderSupply(circulating: Record<string, number>, prevDay: Record<string, number> = { peggedUSD: 100 }) {
     const row = buildRow();
     row.coin.circulating = circulating;

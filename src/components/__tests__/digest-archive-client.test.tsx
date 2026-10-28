@@ -5,6 +5,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import type { DigestContentEntry } from "@shared/types/digest";
 
 const { useDigestArchiveMock, useUrlFiltersMock, bannerMode } = vi.hoisted(() => ({
   useDigestArchiveMock: vi.fn(),
@@ -14,13 +15,16 @@ const { useDigestArchiveMock, useUrlFiltersMock, bannerMode } = vi.hoisted(() =>
 
 vi.mock("@/hooks/api-hooks", () => ({
   useDigestArchive: useDigestArchiveMock,
+  useDailyDigest: () => ({ data: undefined, isLoading: true, error: null, refetch: vi.fn() }),
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
   useUrlFilters: useUrlFiltersMock,
 }));
 
-vi.mock("@/components/daily-digest", () => ({ DailyDigest: () => null }));
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
+}));
 vi.mock("@/components/stale-data-banner", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/stale-data-banner")>();
   return {
@@ -49,6 +53,7 @@ vi.mock("@/lib/digest", () => ({
   formatDigestTriggerRate: () => "—",
   parseDigestParagraph: () => ({ bodyText: "" }),
   splitDigestParagraphs: () => [],
+  getDigestBodyParagraphs: ({ digest }: { digest: string }) => [digest],
 }));
 
 function digest(generatedAt: number, digestTitle: string) {
@@ -65,6 +70,67 @@ function digest(generatedAt: number, digestTitle: string) {
     riskSignal: null,
   };
 }
+
+const leadEdition: DigestContentEntry = {
+  date: "2026-08-31",
+  generatedAt: Date.parse("2026-08-31T00:30:00Z") / 1000,
+  digestType: "daily",
+  title: "Build-time lead",
+  text: "Captured edition text",
+  extended: null,
+  editionNumber: 42,
+};
+
+describe("DigestArchiveClient build-time lead", () => {
+  function mockArchive(overrides: Record<string, unknown> = {}) {
+    useDigestArchiveMock.mockReturnValue({
+      data: undefined, isLoading: true, dataUpdatedAt: 0, error: null, refetch: vi.fn(), meta: null,
+      ...overrides,
+    });
+    useUrlFiltersMock.mockReturnValue({
+      searchParams: new URLSearchParams(), setParam: vi.fn(), replaceParams: vi.fn(),
+    });
+  }
+
+  it("renders the dated seed during loading and after a failed initial refresh", () => {
+    mockArchive();
+    const view = render(<DigestArchiveClient initialLead={leadEdition} />);
+    expect(screen.getByRole("heading", { name: "Build-time lead" })).toBeTruthy();
+    expect(screen.getByText("August 31, 2026")).toBeTruthy();
+    expect(screen.queryByText("Today's Lead")).toBeNull();
+    expect(screen.getByRole("link", { name: /Continue reading/ }).getAttribute("href")).toBe("/digest/2026-08-31");
+
+    mockArchive({ isLoading: false, error: new Error("Offline") });
+    view.rerender(<DigestArchiveClient initialLead={leadEdition} />);
+    expect(screen.getByRole("heading", { name: "Build-time lead" })).toBeTruthy();
+    expect(screen.getByText("Query error notice")).toBeTruthy();
+  });
+
+  it("leaves every live edition in the archive when the seed is missing", () => {
+    mockArchive({ data: { digests: [digest(leadEdition.generatedAt, "Live edition")] }, isLoading: false });
+    render(<DigestArchiveClient />);
+    expect(screen.getByRole("link", { name: /Live edition/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Continue reading/ })).toBeNull();
+  });
+
+  it("pins the lead, excludes only its exact slug, and keeps a newer live edition", () => {
+    const olderLead = { ...leadEdition, date: "2026-08-30", generatedAt: leadEdition.generatedAt - 86400 };
+    mockArchive({ data: { digests: [digest(olderLead.generatedAt, "Seed archive row")] }, isLoading: false });
+    const view = render(<DigestArchiveClient initialLead={olderLead} />);
+    const newerAt = leadEdition.generatedAt;
+    mockArchive({ data: { digests: [
+      digest(newerAt, "Newer live edition"),
+      { ...digest(olderLead.generatedAt, "Same-day weekly"), digestType: "weekly" },
+      digest(olderLead.generatedAt, "Seed archive row"),
+    ] }, isLoading: false });
+    view.rerender(<DigestArchiveClient initialLead={{ ...leadEdition, date: "2026-09-01", generatedAt: newerAt, title: "Newer seed" }} />);
+    expect(screen.getByRole("heading", { name: "Build-time lead" })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Continue reading/ }).getAttribute("href")).toBe("/digest/2026-08-30");
+    expect(screen.queryByRole("link", { name: /Seed archive row/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Newer live edition/ })).toBeTruthy();
+    expect(screen.getByRole("link", { name: /Same-day weekly/ })).toBeTruthy();
+  });
+});
 
 describe("DigestArchiveClient UTC dates", () => {
   it("renders the same UTC day in the archive label and digest slug", () => {
@@ -214,8 +280,8 @@ describe("DigestArchiveClient retention and health", () => {
     useDigestArchiveMock.mockReturnValue({
       data: { digests }, isLoading: false, dataUpdatedAt: 1, error: new Error("Offline"), refetch: vi.fn(), meta: null,
     });
-    render(<DigestArchiveClient />);
-    expect(screen.getByText("Today's Lead")).toBeTruthy();
+    render(<DigestArchiveClient initialLead={leadEdition} />);
+    expect(screen.getByText("August 31, 2026")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Archived digest/i }).getAttribute("href")).toBe("/digest/2026-08-30");
     expect(screen.queryByText("Query error notice")).toBeNull();
   });

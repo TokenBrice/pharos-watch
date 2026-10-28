@@ -67,7 +67,7 @@ Before hydration, a real leading-core profile directory plus Screener link remai
 
 Deviation text/severity uses published `peg-summary.currentDeviationBps`, not a second calculation from independently refreshed price. Liquidity zero remains measured/coloured; only missing data is `—`. Mint is the published Economic Control component, never a second score lane; missing breakdowns show NR. Curated route describes review coverage, not score. Shared table/export owners define headers and band keys; homepage suppresses header methodology hints while Screener retains them.
 
-Pinning moves rows without renumbering their rank in the current filtered sort. CSV exports retain those same per-asset ranks and the complete displayed order, not only the paginated or virtualized slice, alongside the original source-generation preamble.
+Pins retain filtered-sort ranks. CSV keeps those ranks, full displayed order (not the page/virtual slice) and source-generation preamble. Partial-chain supply stays visible; its 24h/7d changes and sparkline are withheld via the shared provenance classifier. Changes show `—`, sort last in either direction and export empty; observed zero stays numeric.
 
 ## Loading Strategy
 
@@ -81,7 +81,7 @@ The canonical query attempt atomically adopts each raw `{status, headers, bodyTe
 
 Unclaimed transports are released on the first pathname transition, popstate, pagehide (including bfcache departure), request-fingerprint mismatch, or the bounded twenty-second document handoff expiry. Later polls and SPA visits use ordinary transport; the document registry cannot restart on A→B→A. Startup/adoption clocks never replace producer timestamps, freshness budgets, warnings or unavailable reasons, and static/first-client markup remains unchanged.
 
-The visible, hydrated hero chart uses a 2.5-second idle deadline where `requestIdleCallback` exists. Without it, two animation frames plus a separate 150 ms fallback delay activate the gate after paint rather than imposing that deadline as a fixed wait. Analytics waits for window `load`, then idle with its own five-second deadline/fallback.
+The visible, hydrated hero chart uses a 2.5-second idle deadline where `requestIdleCallback` exists. Without it, two animation frames plus a separate 150 ms fallback delay activate the gate after paint rather than imposing that deadline as a fixed wait. Analytics schedules idle work immediately in its effect with its own two-second deadline/post-paint fallback, without waiting for window `load`.
 
 An initial URL anchor force-mounts only its owning deferred section; unrelated panels keep their viewport gates and responsive height reserves. Section headings inside unloaded chunks are resolved and scrolled to once their DOM arrives. `/#home-alt-rankings` and its heading target mount rankings, not the pulse cards or lower overview modules. Unknown/top-fold hashes do not bypass any gates. The Horizon constellation and its registry/logo dependencies are dynamically imported only when its below-fold gate mounts, including a matching anchor entry.
 
