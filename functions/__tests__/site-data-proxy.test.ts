@@ -47,6 +47,11 @@ function makeWaitUntil() {
 
 const siteApi = mockUpstream("https://site-api.pharos.watch");
 
+/** Every website-data response is a machine read, never an indexable document. */
+function expectNoindex(response: Response) {
+  expect(response.headers.get("X-Robots-Tag")).toBe("noindex, nofollow");
+}
+
 function expectAttribution(
   db: MockD1Database,
   route: string,
@@ -87,6 +92,7 @@ describe("site-data proxy", () => {
       "Cache-Control": "public, max-age=60",
       "X-Data-Age": "12",
       "X-Data-Updated-At": "1700000000.125",
+      "X-Robots-Tag": "index",
     });
 
     const response = await onRequest(
@@ -94,7 +100,7 @@ describe("site-data proxy", () => {
         headers: { Origin: "https://pharos.watch" },
       })),
     );
-    const observed = await observeHttpResponse(response, ["Cache-Control", "Content-Type", "X-Data-Age", "X-Data-Updated-At"]);
+    const observed = await observeHttpResponse(response, ["Cache-Control", "Content-Type", "X-Data-Age", "X-Data-Updated-At", "X-Robots-Tag"]);
     const expected: HttpResponseObservation = {
       status: 200,
       headers: {
@@ -102,6 +108,7 @@ describe("site-data proxy", () => {
         "content-type": "application/json",
         "x-data-age": "12",
         "x-data-updated-at": "1700000000.125",
+        "x-robots-tag": "noindex, nofollow",
       },
       bodyKind: "json",
       canonicalBody: { a: "first", z: "last" },
@@ -135,6 +142,7 @@ describe("site-data proxy", () => {
     await expect(response.text()).resolves.toBe("");
     for (const [name, value] of Object.entries(headers)) expect(response.headers.get(name)).toBe(value);
     expect(response.headers.get("X-Private-Upstream")).toBeNull();
+    expectNoindex(response);
     if (useBinding) {
       const request = binding.fetch.mock.calls[0][0];
       expect(request.headers.get("If-None-Match")).toBe(headers.ETag);
@@ -178,6 +186,7 @@ describe("site-data proxy", () => {
       expect(response.headers.get(name)).toBe(value);
     }
     expect(response.headers.get("X-Private-Upstream")).toBeNull();
+    expectNoindex(response);
     expect(cachePut).not.toHaveBeenCalled();
   });
 
@@ -216,6 +225,7 @@ describe("site-data proxy", () => {
     for (const [name, value] of Object.entries(upstreamHeaders)) {
       expect(response.headers.get(name)).toBe(value);
     }
+    expectNoindex(response);
     expectAttribution(db, "stablecoin-summary", "/api/stablecoin-summary/:id");
     expect(networkFetch).not.toHaveBeenCalled();
     expect(cacheMatch).not.toHaveBeenCalled();
@@ -234,6 +244,7 @@ describe("site-data proxy", () => {
       headers: { Origin: "https://pharos.watch" },
     }), makeEnv(undefined, { ...overrides, SITE_API: binding })));
     expect(response.status).toBe(status);
+    expectNoindex(response);
     expect(binding.fetch).not.toHaveBeenCalled();
     expect(networkFetch).not.toHaveBeenCalled();
   });
@@ -248,6 +259,7 @@ describe("site-data proxy", () => {
     }), makeEnv(db, { SITE_API: binding })));
     expect(response.status).toBe(502);
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expectNoindex(response);
     expectAttribution(db, "stablecoins", "/api/stablecoins", "pages-upstream-error");
     expect(networkFetch).not.toHaveBeenCalled();
   });
@@ -266,6 +278,7 @@ describe("site-data proxy", () => {
     expect(response.headers.get("X-Data-Age")).toBe("unavailable");
     expect(response.headers.get("X-Data-Freshness")).toBe("unknown");
     expect(response.headers.get("X-Data-Freshness-Reason")).toBe("freshness-lookup-failed");
+    expectNoindex(response);
     expect(cachePut).not.toHaveBeenCalled();
   });
 
@@ -279,6 +292,7 @@ describe("site-data proxy", () => {
     })));
     expect(response.headers.get("X-Safety-Score-Status")).toBe("held");
     expect(response.headers.get("Cache-Control")).toBe("no-store");
+    expectNoindex(response);
     expect(cachePut).not.toHaveBeenCalled();
     await expect(response.json()).resolves.toEqual({ publicationStatus: "held" });
   });
@@ -291,15 +305,21 @@ describe("site-data proxy", () => {
         { headers: { Origin: origin } },
       )));
       expect(response.status).toBe(404);
+      expectNoindex(response);
       expect(fetch).not.toHaveBeenCalled();
       expect(cachePut).not.toHaveBeenCalled();
     },
   );
 
-  it("rejects requests without Origin or Referer", async () => {
-    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins")));
+  it.each<[string, Record<string, string>]>([
+    ["missing Origin and Referer", {}],
+    ["foreign Origin", { Origin: "https://foreign.example" }],
+    ["foreign Referer", { Referer: "https://foreign.example/stablecoin/usdc-circle/" }],
+  ])("rejects requests with %s", async (_label, headers) => {
+    const response = await onRequest(siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", { headers })));
 
     expect(response.status).toBe(404);
+    expectNoindex(response);
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
@@ -311,19 +331,21 @@ describe("site-data proxy", () => {
     );
 
     expect(response.status).toBe(404);
+    expectNoindex(response);
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
-  it("enforces GET-only method rules", async () => {
+  it.each(["POST", "HEAD"])("enforces GET-only method rules for %s", async (method) => {
     const response = await onRequest(
       siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
-        method: "POST",
+        method,
         headers: { Origin: "https://pharos.watch" },
       })),
     );
 
     expect(response.status).toBe(405);
     expect(response.headers.get("Allow")).toBe("GET");
+    expectNoindex(response);
     expect(cacheMatch).not.toHaveBeenCalled();
   });
 
@@ -400,6 +422,7 @@ describe("site-data proxy", () => {
     expect(response.headers.get("Cache-Control")).toBe("public, max-age=60");
     expect(response.headers.get("Warning")).toContain("advisory");
     expect(response.headers.get("X-Data-Age")).toBe("12");
+    expectNoindex(response);
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
     expectAttribution(db, "stablecoin-summary", "/api/stablecoin-summary/:id");
@@ -438,6 +461,7 @@ describe("site-data proxy", () => {
 
     expect(response.status).toBe(429);
     expect(response.headers.get("Retry-After")).toBe("45");
+    expectNoindex(response);
     await expect(response.json()).resolves.toEqual({ error: "Rate limit exceeded" });
     expect(cachePut).not.toHaveBeenCalled();
   });
@@ -452,6 +476,7 @@ describe("site-data proxy", () => {
     );
 
     expect(response.status).toBe(500);
+    expectNoindex(response);
     await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
@@ -467,6 +492,7 @@ describe("site-data proxy", () => {
     );
 
     expect(response.status).toBe(500);
+    expectNoindex(response);
     await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });
     expect(fetchSpy).not.toHaveBeenCalled();
     expect(cachePut).not.toHaveBeenCalled();
@@ -485,9 +511,27 @@ describe("site-data proxy", () => {
     );
 
     expect(response.status).toBe(502);
+    expectNoindex(response);
     await expect(response.json()).resolves.toEqual({ error: "Site API upstream fetch failed" });
     expectAttribution(db, "stablecoins", "/api/stablecoins", "pages-upstream-error");
     expect(warn).toHaveBeenCalledWith("[site-data-proxy] upstream fetch failed (Error): network down");
+  });
+
+  it("rejects an oversized upstream body with a noindexed 502", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    siteApi.response("/api/stablecoins", new Response("{}", {
+      headers: { "Content-Length": String(16 * 1024 * 1024 + 1) },
+    }));
+
+    const response = await onRequest(
+      siteDataContext(new Request("https://pharos.watch/_site-data/stablecoins", {
+        headers: { Origin: "https://pharos.watch" },
+      })),
+    );
+
+    expect(response.status).toBe(502);
+    expectNoindex(response);
+    await expect(response.json()).resolves.toEqual({ error: "Site API upstream fetch failed" });
   });
 
   it.each([200, 503])("does not record unselected upstream HTTP %s responses", async (status) => {
@@ -500,6 +544,7 @@ describe("site-data proxy", () => {
     }), makeEnv(db), ctx.waitUntil));
     await ctx.flush();
     expect(response.status).toBe(status);
+    expectNoindex(response);
     await expect(response.json()).resolves.toEqual({ status });
     expect(db.getHistory()).toEqual([]);
   });
@@ -511,6 +556,7 @@ describe("site-data proxy", () => {
       headers: { Origin: "https://pharos.watch" },
     }), makeEnv(db)));
     expect(response.status).toBe(503);
+    expectNoindex(response);
     expectAttribution(db, "stablecoins", "/api/stablecoins");
   });
 
@@ -527,6 +573,7 @@ describe("site-data proxy", () => {
     );
 
     expect(response.status).toBe(200);
+    expectNoindex(response);
     await expect(response.json()).resolves.toEqual({ ok: true });
     expect(record).toHaveBeenCalledOnce();
     expect(warn).toHaveBeenCalledWith(
@@ -557,7 +604,9 @@ describe("site-data proxy", () => {
     expect(settled).toBe(false);
     expect(cancel).not.toHaveBeenCalled();
     await vi.advanceTimersByTimeAsync(1);
-    expect((await pending).status).toBe(504);
+    const response = await pending;
+    expect(response.status).toBe(504);
+    expectNoindex(response);
     expect(cancel).toHaveBeenCalledOnce();
     await vi.runAllTimersAsync();
     await ctx.flush();
@@ -574,6 +623,7 @@ describe("site-data proxy", () => {
     );
 
     expect(response.status).toBe(500);
+    expectNoindex(response);
     await expect(response.json()).resolves.toEqual({ error: "Site API proxy is not configured" });
     expect(cacheMatch).not.toHaveBeenCalled();
     expect(fetchSpy).not.toHaveBeenCalled();

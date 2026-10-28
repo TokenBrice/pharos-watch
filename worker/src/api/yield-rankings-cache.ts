@@ -34,6 +34,7 @@ import { YIELD_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/cons
 import { addFreshnessHeaders, buildFreshnessMeta } from "../lib/api-freshness";
 import { createCacheHandler } from "../lib/api-cache-read";
 import { errorResponse, jsonResponse, jsonResponseWithHeaders } from "../lib/api-response";
+import { sleep } from "../lib/abort";
 
 import { loadActiveSafetyScoreIndex, type ActiveSafetyScoreIndex, type SafetyScoreGradeSnapshot } from "../lib/safety-score-index";
 import { resolveYieldBenchmarkDependencies } from "../lib/yield-config/yield-benchmark-dependencies";
@@ -894,6 +895,17 @@ export async function handleYieldRankingsCoin(db: D1Database, url: URL): Promise
       const owner = randomUUID();
       if (!await claimYieldCoinCohort(db, signature, owner, now)) {
         cohort = await readYieldCoinCohort(db, id, signature, Math.floor(Date.now() / 1000));
+        if (cohort === null) {
+          // The claimant may be a fast builder that publishes within its lease.
+          // Wait twice (250 ms, then 500 ms), re-reading only this coin's scoped
+          // derivative under the invocation's exact signature each time. The
+          // wait is bounded so stalled or abandoned leases stay retryable.
+          for (const waitMs of [250, 500]) {
+            await sleep(waitMs);
+            cohort = await readYieldCoinCohort(db, id, signature, Math.floor(Date.now() / 1000));
+            if (cohort !== null) break;
+          }
+        }
         if (cohort === null) return yieldCoinUnavailable("yield-cohort-preparing", true);
       } else {
         try {
