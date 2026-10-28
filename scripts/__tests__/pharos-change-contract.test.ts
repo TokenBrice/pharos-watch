@@ -442,6 +442,18 @@ describe("reading selectors and context modes", () => {
     expect(commands.join("\n")).toContain("shared/lib/__tests__/ai-summary-claims.test.ts");
   });
 
+  it("routes the compliance model to the compliance owner's primary references", () => {
+    const file = "src/lib/compliance-model.ts";
+    const contract = classifyChangedFiles([file]);
+    expect(contract.unmappedPaths).toEqual([]);
+    expect(contract.mappings.map((mapping) => mapping.id)).toContain("compliance");
+    expect(docKeys(contract)).toEqual(expect.arrayContaining([
+      "docs/compliance-page.md#data-projection",
+      "docs/mica-tracker.md#status-criteria",
+      "docs/genius-tracker.md#sourcing--source-kinds",
+    ]));
+  });
+
   it("routes the browser CSS loader to its build contract and runtime tests", () => {
     const file = "public/critical-css-loader.js";
     const contract = classifyChangedFiles([file]);

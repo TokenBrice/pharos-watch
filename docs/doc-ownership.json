@@ -423,6 +423,7 @@
       "sources": [
         "src/app/compliance/**",
         "src/components/compliance/**",
+        "src/lib/compliance-model.ts",
         "shared/data/stablecoins/domains/compliance/**",
         "shared/lib/compliance*.ts",
         "shared/lib/mica.ts",

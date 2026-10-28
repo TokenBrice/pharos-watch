@@ -210,10 +210,28 @@ function ComplianceTableRow({
           ) : null}
         </TableCell>
       </TableRow>
-      {hasExtraDetail && isExpanded ? (
-        <TableRow id={detailId} rowIntent="static" className="bg-muted/15 hover:bg-muted/15">
+      {hasExtraDetail ? (
+        <TableRow id={detailId} rowIntent="static" hidden={!isExpanded} className="bg-muted/15 hover:bg-muted/15">
           <TableCell colSpan={6} className="whitespace-normal px-4 py-4">
-            <ComplianceRowDetails row={row} />
+            {row.regime === "genius" ? (
+              <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+                {/* Summary-owned fold content stays mounted while collapsed so the
+                    static HTML carries the reviewed date and disclosure facts. */}
+                {row.reviewedAt ? (
+                  <p className="min-w-0 text-xs text-muted-foreground">Reviewed {row.reviewedAt}</p>
+                ) : null}
+                {row.hasAnyDisclosure ? (
+                  <div className="min-w-0 space-y-2">
+                    <p className="pharos-label">Reserve disclosure</p>
+                    <GeniusReserveCell row={row} />
+                  </div>
+                ) : null}
+                {/* Full evidence imports only when the row is actually open. */}
+                {isExpanded ? <GeniusRowDetails row={row} /> : null}
+              </div>
+            ) : (
+              <ComplianceRowDetails row={row} />
+            )}
           </TableCell>
         </TableRow>
       ) : null}
@@ -228,8 +246,7 @@ function hasGeniusReviewDetails(row: GeniusComplianceEvidence): boolean {
       row.foreignExceptionSummary ||
       row.negativeEvidenceSummary ||
       row.negativeEvidenceSourcesChecked.length > 0 ||
-      row.reviewer ||
-      row.reviewedAt,
+      row.reviewer,
   );
 }
 
@@ -275,7 +292,7 @@ function GeniusRowDetails({ row }: { row: Extract<ComplianceRow, { regime: "geni
   }, [row.id, attempt]);
 
   return (
-    <div className="grid gap-5 md:grid-cols-2 xl:grid-cols-3">
+    <>
       {state.status === "loading" ? (
         <p role="status" className="text-sm text-muted-foreground">Loading evidence…</p>
       ) : state.status === "error" ? (
@@ -303,12 +320,6 @@ function GeniusRowDetails({ row }: { row: Extract<ComplianceRow, { regime: "geni
           {hasGeniusReviewDetails(state.evidence) ? <GeniusReviewDetails evidence={state.evidence} /> : null}
         </>
       )}
-      {row.hasAnyDisclosure ? (
-        <div className="min-w-0 space-y-2">
-          <p className="pharos-label">Reserve disclosure</p>
-          <GeniusReserveCell row={row} />
-        </div>
-      ) : null}
-    </div>
+    </>
   );
 }
