@@ -2,14 +2,14 @@
   "id": "susd-hedgecore",
   "name": "Staked USD Coin",
   "symbol": "sUSD",
-  "oneLiner": "HedgeCore sUSD is a soul-bound BSC yield wrapper minted from USDC and routed through Venus lending; early redemption is operator-controlled, not a backstop.",
+  "oneLiner": "HedgeCore sUSD is the transferable BSC wrapper over hedge-locked hUSDC staking receipts; unwrapping is disabled with exit via the operator or PancakeSwap.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
     "yieldBearing": true
   },
-  "collateral": "USDC supplied to the Venus Protocol USDC lending market on BNB Chain via HedgeCore's StrategyRouter and Venus USD vault; the on-chain vUSDC lending position is the only backing (no fiat reserve or attestation)",
-  "pegMechanism": "Users deposit USDC to mint soul-bound sUSD 1:1; Venus lending interest accrues in vUSDC and is distributed to holders by operator-triggered rewardMint() calls (93% to sUSD holders, 7% protocol fee); liquidity is provided only through a one-way hUSDC->sUSD ERC-20 wrapper (no reverse conversion), and redemption is operator-controlled rather than a free liquid backstop. Issuer documentation conflicts on wrapper direction: the introductory overview describes sUSD->hUSDC, while the detailed wrapper documentation describes only hUSDC->sUSD and explicitly rules out reverse conversion.",
+  "collateral": "USDC supplied to the Venus Protocol USDC lending market on BNB Chain via HedgeCore's StrategyRouter and Venus USD vault; the tracked sUSD wraps hedge-locked hUSDC staking receipts held by the HUSDCWrapper, whose operator can sweep them out to treasury; the on-chain vUSDC lending position is the only backing (no fiat reserve or attestation)",
+  "pegMechanism": "USDC deposits mint hedge-locked hUSDC, HedgeCore's transfer-restricted staking token whose deposits route into Venus lending; the one-way HUSDCWrapper mints transferable sUSD 1:1 against wrapped hUSDC with no unwrap function, and sUSD transfers are ordinary ERC-20 transfers except while a wrapper vesting lock is active. The issuer's sUSD page lists the tracked contract as the sUSD token and markets it as transferable liquidity tradable against USDC at an indicative 1:1 rate on PancakeSwap. Issuer materials conflict on labels and direction: introductory docs describe sUSD as soul-bound and hUSDC as tradeable, while the contract repository implements the tracked sUSD as the tradeable wrapper minted one-way from hUSDC. Venus interest accrues in vUSDC and is distributed by operator-triggered rewardMint() calls (93% to sUSD holders, 7% protocol fee). Redemption is operator-controlled rather than a free liquid backstop, and the wrapper operator can burn holder balances and sweep the wrapped hUSDC.",
   "detailProvider": "coingecko",
   "geckoId": "staked-usd-coin",
   "links": [
@@ -24,6 +24,14 @@
     {
       "label": "Docs",
       "url": "https://docs.hedgecore.io/docs/protocol/yield-generation"
+    },
+    {
+      "label": "sUSD product page",
+      "url": "https://hedgecore.io/susd"
+    },
+    {
+      "label": "GitHub",
+      "url": "https://github.com/hedgecore-org/hedgecore-contracts"
     }
   ],
   "contracts": [
@@ -60,8 +68,8 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Restricted transfer and redemption path",
-      "message": "HedgeCore docs describe sUSD as soul-bound, and early redemption is operator-controlled rather than a general liquid backstop."
+      "title": "Disabled unwrap and operator-controlled exit",
+      "message": "HedgeCore markets sUSD as transferable liquidity, but unwrapping is disabled: there is no holder-initiated redemption, exit relies on PancakeSwap USDC liquidity, and the wrapper operator can burn balances and sweep the wrapped hUSDC backing."
     }
   ],
   "launchDate": "2025-10-11",

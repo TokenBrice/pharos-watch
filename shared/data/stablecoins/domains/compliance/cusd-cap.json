@@ -3,7 +3,7 @@
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {
-      "summary": "cUSD targets dollar value and permits minting/burning at oracle value or proportional basket redemption. Those documented exits return backing digital assets and can transmit underlying depegs to redeemers. Public terms identify Covered Agents S.A. as platform operator but do not identify a legal obligor to redeem cUSD for fixed monetary value as required by GENIUS section 2(22). Stablecoin marketing and unresolved issuer/redemption rights support unclear applicability.",
+      "summary": "cUSD targets dollar value. Cap's 2026-10-26 announcement states that anyone can now mint and redeem cUSD 1:1 with USDC, 24/7, without fees, whitelists, or delays, while the protocol documentation separately describes mint/burn at oracle value with dynamic fees and proportional basket redemption for a fixed fee. Those documented exits return backing digital assets and can transmit underlying depegs to redeemers on the oracle-value and basket routes. Public terms identify Covered Agents S.A. as platform operator but do not identify a legal obligor to redeem cUSD for fixed monetary value as required by GENIUS section 2(22); the announced USDC exit is a digital-asset route, not a stated fixed monetary-value obligation. Stablecoin marketing and unresolved issuer/redemption rights support unclear applicability.",
       "references": [
         {
           "label": "Cap platform terms: Covered Agents S.A. platform operator",
@@ -24,6 +24,13 @@
           "sourceKind": "statute",
           "accessedAt": "2026-10-07",
           "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "Cap blog: fixed 1:1 USDC mint and redemption announced",
+          "url": "https://www.cap.app/blog/introducing-zero-deposit-fees",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-10-26",
+          "accessedAt": "2026-10-29"
         }
       ]
     },
@@ -32,7 +39,7 @@
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "notes": "Cap documents oracle-value burning and proportional basket redemption into backing digital assets, including loss transmission when underlying assets depeg. Covered Agents S.A. is identified as a Panama website/platform operator, not expressly as the cUSD legal issuer or fixed-monetary-value redemption obligor; issuerEntity and domicile are therefore omitted. The cUSD reserves-dashboard URL opens, but its static response contains zero placeholders, so actual current reserve-data disclosure is not asserted. Documented token redemption does not establish a fixed 1:1 monetary-value redemption policy. No reserve/redemption/monthly-attestation booleans are asserted. The reopened named public-source review located no qualifying GENIUS authorization or U.S. token/operator enforcement action. Federal issuer proposals and SCRC procedural rules do not themselves qualify this token. DASP posture refers only to pre-effective GENIUS restrictions, not universal availability or lawfulness.",
+    "notes": "Cap's 2026-10-26 announcement states that anyone can now mint and redeem cUSD 1:1 with USDC, 24/7, without fees, whitelists, or delays. The protocol documentation as re-read on 2026-10-29 still describes mint/burn at oracle value with dynamic fees and proportional basket redemption for a fixed fee, including loss transmission when underlying assets depeg. The fixed-rate route is an issuer blog statement rather than operative redemption terms, so reserve/redemption/monthly-attestation booleans stay unasserted. Covered Agents S.A. is identified as a Panama website/platform operator, not expressly as the cUSD legal issuer or fixed-monetary-value redemption obligor; issuerEntity and domicile are therefore omitted, and the announced 1:1 USDC exit is a digital-asset route, not a stated fixed monetary-value redemption obligation. The cUSD reserves-dashboard URL opens, but its static response contains zero placeholders, so actual current reserve-data disclosure is not asserted. The 2026-10-07 named public-source review located no qualifying GENIUS authorization or U.S. token/operator enforcement action. DASP posture refers only to pre-effective GENIUS restrictions, not universal availability or lawfulness.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -118,6 +125,13 @@
         "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
         "sourceKind": "regulator-directory",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Cap blog: Introducing Zero Deposit Fees, fixed 1:1 USDC mint and redemption",
+        "url": "https://www.cap.app/blog/introducing-zero-deposit-fees",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-10-26",
+        "accessedAt": "2026-10-29"
       }
     ],
     "negativeEvidenceReview": {
@@ -181,6 +195,6 @@
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-10-29"
   }
 }

@@ -28,9 +28,6 @@
       "url": "https://beraborrow.gitbook.io/docs"
     }
   ],
-  "jurisdiction": {
-    "country": "Croatia"
-  },
   "contracts": [
     {
       "chain": "berachain",

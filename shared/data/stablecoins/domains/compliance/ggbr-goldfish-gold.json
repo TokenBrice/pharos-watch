@@ -28,9 +28,9 @@
     "daspOfferSaleStatus": "not-applicable",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://goldfishgold.com/collateral",
-    "redemptionPolicyPresent": false,
+    "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "The official entity disclosure identifies GGBR, Ltd as the BVI token issuer and GGBR, Inc. as the U.S. manager. Goldfish publishes issuer collateral claims concerning in-situ gold held through the GGBR Trust. The website advertises redemption but the reviewed pages do not establish a complete holder-eligibility, minimum, timing or contractual redemption policy; redemptionPolicyPresent is therefore false for the reviewed public record. No independent monthly reserve-to-token-liability attestation series was found on the reviewed collateral/support pages. Smart-contract audits and geological/collateral claims are not reserve attestations. No GENIUS payment-stablecoin authorization posture applies to the gold-denominated token. The OCC digital-assets list is a charter application list, not evidence of token-specific GENIUS approval.",
+    "notes": "The official entity disclosure identifies GGBR, Ltd as the BVI token issuer and GGBR, Inc. as the U.S. manager. Goldfish publishes issuer collateral claims concerning in-situ gold held through the GGBR Trust. The redemption app publishes operative redemption terms: a 1,000 GGBR minimum, a 3% redemption fee, 5-7 business days of processing, vault storage or physical delivery, and KYC verification for physical gold redemption; the base profile records the minimum and fee as confirmed at Ethereum block 26236714 on 2026-10-20, so redemptionPolicyPresent is true for the reviewed public record. No independent monthly reserve-to-token-liability attestation series was found on the reviewed collateral/support pages. Smart-contract audits and geological/collateral claims are not reserve attestations. No GENIUS payment-stablecoin authorization posture applies to the gold-denominated token. The OCC digital-assets list is a charter application list, not evidence of token-specific GENIUS approval.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",
@@ -75,9 +75,15 @@
         "sourceKind": "statute",
         "sourceDate": "2025-07-18",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Goldfish redemption app: minimum, fee, KYC and processing terms",
+        "url": "https://app.goldfishgold.com/redemption",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-29"
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-10-29"
   }
 }

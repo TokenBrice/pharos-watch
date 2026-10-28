@@ -1128,11 +1128,11 @@
   },
   "cadc-cad-coin": {
     "title": "Backed by Scanned Bank Letters",
-    "text": "CADC is Loon's Canadian-dollar stablecoin, live since 2021 and issued natively on six chains, with FINTRAC registration as a money services business and 1:1 {{term:redemption}}redemption{{/term}} for CAD held in a segregated account at ATB Financial. Its reserve evidence is thinner than that profile suggests. Loon publishes monthly scanned bank-confirmation forms that carry no accountant's opinion and do not reconcile the balance against circulating supply. Loon's terms describe a trust for holders, but the indenture is available only on request, so holder protection in an issuer insolvency remains unverified. Pharos scores backing without a reserve composition, and on-chain depth absorbs only a sliver of a stress-size sale. The peg record carries a long tail of deviation events, though none since May 2024. Canada's Stablecoin Act, which received royal assent in March 2026, exempts regulated financial institutions, and Loon, on record only as a registered money services business, appears to fall in scope. That would require it to register with the Bank of Canada and file reserve reports carrying an independent accountant's opinion. Until those provisions take effect, expected in 2027, the backing evidence remains a balance confirmation rather than an attestation.",
-    "updatedAt": "2026-10-27",
+    "text": "CADC is a Canadian-dollar stablecoin issued by CADC Reserve Trust, an Ontario special purpose trust, with 1:1 {{term:redemption}}redemption{{/term}} for CAD held in a segregated account at ATB Financial. The Ontario Securities Commission receipted the trust's final prospectus on October 22, 2026. Loon Payments services the token, and the FINTRAC money-services registrations on record belong to Loon and Paytrie, not to the trust. Issuance is moving to new Ethereum, Base, Polygon and Solana contracts by November 26, 2026, and the addresses Pharos tracks for supply are now labeled legacy. The reserve evidence is thinner than that regulatory profile suggests. Loon publishes monthly scanned bank-confirmation forms that carry no accountant's opinion and do not reconcile the balance against circulating supply. Loon's terms still make the trust indenture available only on request, so holder protection in an issuer insolvency remains unverified. On-chain depth absorbs only a sliver of a stress-size sale. The peg record carries a long tail of deviation events, though none since May 2024. Canada's Stablecoin Act, which received royal assent in March 2026, exempts regulated financial institutions, and the issuer trust, with no financial-institution charter on record, appears to fall in scope. That would require it to register with the Bank of Canada and file reserve reports carrying an independent accountant's opinion. Until those provisions take effect, expected in 2027, the backing evidence remains a balance confirmation rather than an attestation.",
+    "updatedAt": "2026-10-29",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19"
+    "model": "glm-5.3",
+    "factsAsOf": "2026-10-29"
   },
   "cadd-cad-digital": {
     "title": "Canada's Institutional CAD Rail",
@@ -2024,17 +2024,17 @@
   },
   "cusd-cap": {
     "title": "Basket Wrapper, Mostly USDC",
-    "text": "cUSD is Cap's dollar minted against a governance-whitelisted vault of regulated stablecoins and tokenized {{term:treasury}}Treasury{{/term}} {{term:money-market-fund}}money-market funds{{/term}}, with borrowers underwritten through shared security networks such as EigenLayer and Symbiotic. Pharos's reviewed vault read found only two assets, roughly nine-tenths USDC and the rest WisdomTree's WTGXX fund shares, so the basket is concentrated in USDC rather than diversified across {{term:rwa}}RWA{{/term}} holdings, and backing is the strongest pillar on the card. Dynamic fees on minting and {{term:redemption}}redemption{{/term}} manage utilisation, and redemptions return a proportional slice of every underlying asset, which socialises any single reserve depeg across all redeemers. That same design leaves the exit pillar weak, because a basket payout carries no explicit same-notional dollar value for Pharos to score. The {{grade}} overall grade comes from economic control, the weakest of the three: a Safe-rooted one-day timelock can add assets, replace mint logic, or authorize a Tempo issuer with no effective supply cap. cUSD's backing therefore rests mostly on Circle's USDC, plus whatever the vault's credit strategies do with idle capital.",
-    "updatedAt": "2026-10-19",
+    "text": "cUSD is Cap's dollar minted against a governance-whitelisted vault of regulated stablecoins and tokenized {{term:treasury}}Treasury{{/term}} {{term:money-market-fund}}money-market funds{{/term}}, with borrowers underwritten through shared security networks such as EigenLayer and Symbiotic. Pharos's reviewed vault read found only two assets, roughly nine-tenths USDC and the rest WisdomTree's WTGXX fund shares, so the basket is concentrated in USDC rather than diversified across {{term:rwa}}RWA{{/term}} holdings, and backing is the strongest pillar on the card. Cap's October 26, 2026 announcement says anyone can now mint and redeem cUSD 1:1 with USDC, 24/7, without fees, whitelists or delays. The protocol documentation still describes minting at oracle-determined value under dynamic fees and basket {{term:redemption}}redemption{{/term}} for a fixed fee, and that payout returns a proportional slice of every underlying asset, socialising any single reserve depeg across all redeemers. That same design leaves the exit pillar weak, because a basket payout carries no explicit same-notional dollar value for Pharos to score. The {{grade}} overall grade comes from economic control, the weakest of the three: a Safe-rooted one-day timelock can add assets, replace mint logic, or authorize a Tempo issuer with no effective supply cap. cUSD's backing therefore rests mostly on Circle's USDC, plus whatever the vault's credit strategies do with idle capital.",
+    "updatedAt": "2026-10-29",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "model": "glm-5.3",
+    "factsAsOf": "2026-10-29",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-10-29"
       }
     ]
   },
@@ -3401,24 +3401,24 @@
     ]
   },
   "usdnr-nerona": {
-    "title": "Private-Bank Wrapper on M0",
-    "text": "Nerona's USDnr is a permissioned 1:1 wrapper over M0's $M, the tokenized short-term {{term:treasury}}T-bill{{/term}} exposure minted through MXON, an M0 minter. The T-bill carry accrues to the M0 reserve and Nerona rather than to holders, who must stake into the separate sUSDnr vault for yield. Minting and {{term:redemption}}redemption{{/term}} are open only to KYC-onboarded clients of Nerona's private-wealth platform. The canonical token is on Ethereum, but at the latest read nearly all of the {{supplyUsd}} outstanding sat on Fluent, an M0 spoke reached through Hyperlane bridge adapters. Parts of that route, including one module of its message-security check and the mailbox's ownership path, remain unverified, which makes economic control the weakest pillar on the {{grade}} card. The wrapper adds keys of its own: a single externally owned key controls the Ethereum proxy admin and can replace the wrap, unwrap and freeze logic immediately, while a freeze manager can lock individual accounts. The overall grade is capped at M's own rating, since a wrapper cannot rate above the asset it wraps, and the on-chain unwrap back to $M is the strongest pillar. Holders carry every M0-layer risk plus the discretion of the wrapper's and the bridge route's administrators.",
-    "updatedAt": "2026-10-19",
+    "title": "Yield-Free T-Bill Wrapper",
+    "text": "Nerona's USDnr is a 1:1 wrapper over M0's $M, the tokenized short-term {{term:treasury}}T-bill{{/term}} exposure, minted through the M0 SwapFacility. The T-bill carry accrues to the M0 reserve and Nerona rather than to holders, who must stake into the separate sUSDnr vault for yield. The USDC deposit path is open to any address, with no protocol-level KYC, under an admin-set asset cap, while M-path wrap and {{term:redemption}}redemption{{/term}} are limited to M-swapper-role addresses. The canonical token is on Ethereum, but at the latest read nearly all of the {{supplyUsd}} outstanding sat on Fluent, an M0 spoke reached through Hyperlane bridge adapters. Parts of that route, including one module of its message-security check and the mailbox's ownership path, remain unverified, which makes economic control the weakest pillar on the {{grade}} card. The wrapper adds keys of its own: a single externally owned key controls the Ethereum proxy admin and can replace the wrap, unwrap and freeze logic immediately, while a freeze manager can lock individual accounts. The overall grade is capped at M's own rating, since a wrapper cannot rate above the asset it wraps, and the on-chain unwrap back to $M is the strongest pillar. Holders carry every M0-layer risk plus the discretion of the wrapper's and the bridge route's administrators.",
+    "updatedAt": "2026-10-29",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "model": "glm-5.3",
+    "factsAsOf": "2026-10-29",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-10-29"
       },
       {
         "token": "supplyUsd",
         "placeholder": "{{supplyUsd}}",
         "source": "stablecoin.circulating-usd",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-10-29"
       }
     ]
   },

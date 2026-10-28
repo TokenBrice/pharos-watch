@@ -21,9 +21,9 @@
     },
     "authorizationStatus": "no-public-authorization-found",
     "issuerPathway": "unknown",
-    "issuerEntity": "Loon Payments Inc.",
-    "issuerDomicile": "Canada",
-    "licensingRegulator": "FINTRAC (Canadian AML/ATF registration context; publicly claimed MSB status does not establish GENIUS authorization)",
+    "issuerEntity": "CADC Reserve Trust",
+    "issuerDomicile": "Canada (Ontario)",
+    "licensingRegulator": "Ontario Securities Commission (Canadian prospectus regime for CADC Reserve Trust; not a GENIUS authorization). FINTRAC registers the service entities Loon Payments Inc. and PayTrie AB Inc., not the issuer trust",
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
@@ -31,7 +31,7 @@
     "reserveDisclosureUrl": "https://loon.finance/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "IssuerEntity corrected from Loon Technology Inc. (website publisher) to Loon Payments Inc., explicitly named as the CADC issuer in Paytrie's current terms and service disclosures. This legal-entity correction retains the normalized Loon issuer key. Customers purchase and redeem with Paytrie and are not granted universal direct redemption rights against Loon. The August 31, 2026 public PDF is an ATB bank confirmation for PayTrie AB Inc., with CAD 1,820,785.35; it does not include an independent accountant opinion or token-supply reconciliation. API auditor metadata and monthly marketing do not establish an independent monthly reserve attestation. FINTRAC registration is AML context, not a license/endorsement; the current CSV was blocked, so the prior exact registration-number assertion is omitted. Searches covered both Loon legal entities; no public GENIUS approval, filing or foreign registration was found. Treasury's section 3 rules remain proposed and the SCRC IFR is procedural; pre-effective DASP timing does not establish U.S. distribution permission.",
+    "notes": "IssuerEntity corrected from Loon Payments Inc. to CADC Reserve Trust. Paytrie terms amended 2026-10-14 and Loon's current disclosures name CADC Reserve Trust as issuer, and an OSC decision dated 2026-10-22 describes it as a special purpose trust established under the laws of Ontario, originally declared 2023-11-14 by Paytrie as trustee and amended and restated 2026-03-20, with Odyssey Trust Company as trustee. Loon Payments Inc. (Alberta corporation, FINTRAC MSB C10001420, wholly owned by Loon Technology Inc.) is servicer, administrator and promoter of the issuer; Paytrie AB Inc. (FINTRAC M19690633, also a wholly owned Loon Technology subsidiary) operates the Paytrie Platform as an Authorized Participant under a liquidity agreement with the trust. The OSC receipted the trust's final prospectus on 2026-10-22, qualifying continuous distribution of CADC in every Canadian jurisdiction; this is a Canadian securities pathway and does not establish GENIUS authorization. CADC holders redeem through Authorized Participants rather than directly against the trust. The issuer trust holds no FINTRAC MSB registration of its own, and FINTRAC registration is AML context, not a license. The monthly bank-confirmation series still carries no independent accountant opinion or token-supply reconciliation. New CADC contracts on Ethereum, Base, Polygon and Solana are live, the tracked contracts are labeled legacy, and the migration window closes 2026-11-26; Pharos supply still reads the legacy contracts, so issuer and contract continuity across the migration is recorded under followups. GENIUS negative evidence rests on the dated 2026-10-07 review, which found no public GENIUS approval, filing or foreign registration for CADC or the Loon entities.",
     "references": [
       {
         "label": "GENIUS Act Public Law 119-27",
@@ -93,10 +93,11 @@
         "accessedAt": "2026-10-07"
       },
       {
-        "label": "Paytrie terms: exact CADC issuer and redemption access",
+        "label": "Paytrie terms amended October 14, 2026: CADC Reserve Trust as issuer",
         "url": "https://paytrie.com/terms-and-conditions",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07"
+        "sourceDate": "2026-10-14",
+        "accessedAt": "2026-10-29"
       },
       {
         "label": "Paytrie published application script: rendered contractual disclosures",
@@ -115,6 +116,32 @@
         "url": "https://fintrac-canafe.canada.ca/msb-esm/reg-eng?wbdisable=false",
         "sourceKind": "foreign-regulator",
         "accessedAt": "2026-10-07"
+      },
+      {
+        "label": "Loon CADC product page: issuer, administrator and legacy contract labels",
+        "url": "https://loon.finance/cadc/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-29"
+      },
+      {
+        "label": "OSC decision for CADC Reserve Trust and Loon Payments Inc.",
+        "url": "https://www.osc.ca/sites/default/files/2026-10/ord_20261022_cadc.pdf",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2026-10-22",
+        "accessedAt": "2026-10-29"
+      },
+      {
+        "label": "OSC undertaking from CADC Reserve Trust, signed by Loon Payments as servicer",
+        "url": "https://www.osc.ca/sites/default/files/2026-10/oth_20261022_cadc.pdf",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2026-10-22",
+        "accessedAt": "2026-10-29"
+      },
+      {
+        "label": "FINTRAC MSB registry CSV: Loon Payments and PayTrie AB registrations, no CADC Reserve Trust entry",
+        "url": "https://fintrac-canafe.canada.ca/msb-esm/reg-eng.csv",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-29"
       }
     ],
     "negativeEvidenceReview": {
@@ -168,6 +195,6 @@
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-10-29"
   }
 }
