@@ -164,7 +164,7 @@ const REDEMPTION_FACTS: Record<
     eligibility: "Verified customers (reviewed 2026-10-01)",
     minimum: "430 PAXG deposit for a full bar; excess tokens returned (reviewed 2026-10-01)",
     feeBasis:
-      "Standard tariff effective 2026-09-01: 12.5-50 bps on rolling-30-day net redemptions, plus 5 bps for in-kind gold conversion. Customer-specific pricing may override it; delivery, dealer, tax and bank costs are separate. (reviewed 2026-10-09)",
+      "Standard tariff effective 2026-09-01: 12.5-50 bps on rolling-30-day net redemptions, plus 5 bps for in-kind gold conversion. Customer-specific pricing may override it; delivery, dealer, tax and bank costs are separate (reviewed 2026-10-09).",
   },
   "xaut-tether": {
     eligibility: "Verified customers (reviewed 2026-10-01)",
@@ -439,6 +439,22 @@ describe("report evidence admission", () => {
       findRow(buildComparisonAtAGlanceRows(invalidPeriod, NOW_SEC), "Latest reviewed report period"),
     ).toEqual(expect.objectContaining({ left: "Not recorded", right: "2026-09-30" }));
   });
+
+  it("never cites a machine JSON endpoint in place of a readable report", () => {
+    const apiOnly = pageWithProofs(
+      slug,
+      proofWith(report({
+        sources: [{
+          label: "Circle published KB0010644 direct Knowledge API",
+          url: "https://help.circle.com/api/sn_km_api/knowledge/articles/KB0010644?fields=number",
+        }],
+      })),
+      undefined,
+    );
+    const labels = buildComparisonEvidenceRows(apiOnly, NOW_SEC).map((row) => row.label);
+    expect(labels).not.toContain("Latest reviewed report period");
+    expect(labels).not.toContain("Assurance scope");
+  });
 });
 
 describe("reviewed redemption evidence", () => {
@@ -545,6 +561,35 @@ describe("reviewed redemption evidence", () => {
     expect(findRow(rows, "Redemption fee basis")?.left).toBe("Not recorded");
     expect(findRow(rows, "Direct redemption eligibility")?.right).toBe(
       "Verified customers (reviewed 2026-06-10)",
+    );
+  });
+
+  it("keeps only human-readable source pages, never raw API endpoints", () => {
+    const rows = buildComparisonAtAGlanceRows(getPage("usdc-circle-vs-usdg-paxos"), NOW_SEC);
+    const hrefs = findRow(rows, "Redemption fee basis")?.leftSources?.map((source) => source.href) ?? [];
+    expect(hrefs).toContain("https://www.circle.com/legal/usdc-terms");
+    expect(hrefs).toContain("https://help.circle.com/support/en/usdc-eurc-redemption-structure?id=kb_article_view&sysparm_article=KB0010644");
+    expect(hrefs.some((href) => href.includes("/api/sn_km_api/"))).toBe(false);
+
+    // Where the API endpoint is the row's only citation, the fact is withheld
+    // rather than published with a link no reader can use.
+    const usdc = REDEMPTION_BACKSTOP_CONFIGS["usdc-circle"];
+    const apiOnlyDocs = usdc.docs?.map((doc) => (
+      doc.supports?.includes("fees")
+        ? {
+            ...doc,
+            url: "https://help.circle.com/api/sn_km_api/knowledge/articles/KB0010644",
+          }
+        : { ...doc, supports: doc.supports?.filter((support) => support !== "fees") }
+    ));
+    const apiOnly: RedemptionBackstopConfig = { ...structuredClone(usdc), docs: apiOnlyDocs };
+    mockGetCurrentRedemptionConfig.mockImplementation((id) =>
+      id === "usdc-circle" ? apiOnly : (REDEMPTION_BACKSTOP_CONFIGS[id] ?? null),
+    );
+    const withheld = buildComparisonAtAGlanceRows(getPage("usdc-circle-vs-usdg-paxos"), NOW_SEC);
+    expect(findRow(withheld, "Redemption fee basis")?.left).toBe("Not recorded");
+    expect(findRow(withheld, "Redemption fee basis")?.right).toBe(
+      "Paxos states it does not charge a USDG redemption fee (reviewed 2026-06-10)",
     );
   });
 

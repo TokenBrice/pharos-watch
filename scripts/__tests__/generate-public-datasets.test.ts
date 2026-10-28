@@ -470,7 +470,7 @@ describe("generate-public-datasets", () => {
       .toEqual([expect.objectContaining({ stablecoinId: "usdc-circle", safetyScore: 0, safetyGrade: "F" })]);
   });
 
-  it("emits the versioned display projection in JSON, NDJSON and the CSV preamble", () => {
+  it("emits the versioned display projection in JSON and NDJSON but not the CSV preamble", () => {
     const envelope = makeCurrentEnvelope("2026-05-16");
     const spec = testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((item) => item.topic === "scores-latest")!;
 
@@ -496,7 +496,22 @@ describe("generate-public-datasets", () => {
     expect(json._meta.asOfISO).toBe("2026-05-16T10:00:00.000Z");
     expect(json._meta.displayProjection).toEqual(spec.displayProjection);
     expect(ndjsonMeta._meta.displayProjection).toEqual(spec.displayProjection);
-    expect(artifacts.csv).toContain(`# Display projection: ${JSON.stringify(spec.displayProjection)}`);
+    // Sheets IMPORTDATA reads only the leading `#` preamble; a second comment
+    // line would fold the whole CSV into one cell. The appended row columns do
+    // stay, because they are ordinary escaped fields.
+    expect(artifacts.csv.split("\n").filter((line) => line.startsWith("#"))).toHaveLength(1);
+    expect(artifacts.csv).not.toContain("Display projection");
+    expect(artifacts.csv).not.toContain('"version":1');
+    expect(artifacts.csv.split("\n").find((line) => !line.startsWith("#"))?.split(",")).toEqual(
+      expect.arrayContaining([
+        "ratingStatus",
+        "safetyDisplay",
+        "dewsComputedAt",
+        "liquidityUpdatedAt",
+        "liquidityUnavailableReason",
+        "liquidityMethodologyVersion",
+      ]),
+    );
     expect(json.rows).toEqual([expect.objectContaining({
       stablecoinId: "usdc-circle",
       ratingStatus: "rated",

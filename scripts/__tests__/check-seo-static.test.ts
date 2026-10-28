@@ -833,6 +833,7 @@ type SafetyPreviewExpectation = {
     snapshotDate: string;
     publishedAtSec: number;
     publishedAtIso: string;
+    publishedDate: string;
     eligibleRatedCount: number;
     rows: { id: string; href: string; grade: string; score: number }[];
   };
@@ -855,7 +856,7 @@ function safetyPreviewRegion({
   rows = SAFETY_PREVIEW.rows,
   caption = `Top <!-- -->${SAFETY_PREVIEW.rows.length}<!-- --> of <!-- -->${SAFETY_PREVIEW.eligibleRatedCount}<!-- --> rated active stablecoins by Safety Score`,
   datetime = SAFETY_PREVIEW.publishedAtIso,
-  dateText = SAFETY_PREVIEW.snapshotDate,
+  dateText = SAFETY_PREVIEW.publishedDate,
   omitTime = false,
   extraCards = "",
   extraHtml = "",
@@ -906,27 +907,76 @@ describe("safety scores dated preview", () => {
     expect(result.errors).toEqual([]);
   });
 
-  it("counts only the rendered region when Next streams a hidden copy", async () => {
+  it("accepts the preview when only Next's streamed segment carries it", async () => {
     const root = await makeOutDir();
-    const region = safetyPreviewRegion();
-    // Next streams the resolved client render into a hidden segment that
-    // hydration swaps in; it is not a second visible result set.
-    await writeSafetyScoresPage(root, `${region}<div hidden id="S:0">${region}</div>`);
+    // The route-level fallback is the neutral skeleton; the client's pending
+    // render lands in the hidden segment that hydration reveals.
+    await writeSafetyScoresPage(root, `<div hidden id="S:0">${safetyPreviewRegion()}</div>`);
 
     const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
     expect(result.errors).toEqual([]);
   });
 
-  it("rejects duplicate rendered results regions, a missing grade date and a slice caption", async () => {
+  it("rejects a second results region inside Next's streamed segment", async () => {
+    const root = await makeOutDir();
+    const region = safetyPreviewRegion();
+    // A fallback that also renders the preview duplicates every fact: the
+    // exported document carries two result sets for the same grades.
+    await writeSafetyScoresPage(root, `${region}<div hidden id="S:0">${region}</div>`);
+
+    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 2'),
+    );
+  });
+
+  it("dates the caption with the publication clock rather than the dataset date", async () => {
+    const publishedAtSec = SAFETY_PREVIEW.publishedAtSec + 86_400;
+    const expectation = {
+      ...SAFETY_EXPECTATION,
+      preview: {
+        ...SAFETY_PREVIEW,
+        publishedAtSec,
+        publishedAtIso: new Date(publishedAtSec * 1000).toISOString(),
+        publishedDate: new Date(publishedAtSec * 1000).toISOString().slice(0, 10),
+      },
+    } satisfies SafetyPreviewExpectation;
+    expect(expectation.preview.publishedDate).not.toBe(SAFETY_PREVIEW.snapshotDate);
+
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(
+      root,
+      `<div hidden id="S:0">${safetyPreviewRegion({
+        datetime: expectation.preview.publishedAtIso,
+        dateText: expectation.preview.publishedDate,
+      })}</div>`,
+    );
+    expect(collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: expectation }).errors).toEqual([]);
+
+    // A publication that slips past UTC midnight is no longer the dataset's
+    // calendar date, and the check names the publication date it expects.
+    const staleDate = await makeOutDir();
+    await writeSafetyScoresPage(
+      staleDate,
+      safetyPreviewRegion({ datetime: expectation.preview.publishedAtIso }),
+    );
+    expect(
+      collectFixtureSeoResult(staleDate, { safetyScoresPreviewExpectation: expectation }).errors,
+    ).toContainEqual(
+      expect.stringContaining(`preview <time> does not carry "Grades as of ${expectation.preview.publishedDate}"`),
+    );
+  });
+
+  it("rejects duplicate results regions, a missing grade date and a slice caption", async () => {
     const cases: Array<[string, string, string]> = [
       [
         "duplicate",
         safetyPreviewRegion({ regionCount: 2 }),
-        'expected exactly one rendered Safety Scores results region (aria-label "Safety score cards"), found 2',
+        'expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 2',
       ],
       ["time", safetyPreviewRegion({ omitTime: true }), "must carry exactly one <time> grade date (found 0)"],
       ["datetime", safetyPreviewRegion({ datetime: "2026-01-01T00:00:00.000Z" }), "is not the publication clock"],
-      ["datetext", safetyPreviewRegion({ dateText: "2026-10-01" }), `preview <time> does not carry "Grades as of ${SAFETY_PREVIEW.snapshotDate}"`],
+      ["datetext", safetyPreviewRegion({ dateText: "2026-10-01" }), `preview <time> does not carry "Grades as of ${SAFETY_PREVIEW.publishedDate}"`],
       [
         "caption",
         safetyPreviewRegion({ caption: `Top ${SAFETY_PREVIEW.rows.length} of ${SAFETY_PREVIEW.rows.length} rated active stablecoins by Safety Score` }),
@@ -982,7 +1032,7 @@ describe("safety scores dated preview", () => {
 
     const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
     expect(result.errors).toContainEqual(
-      expect.stringContaining('expected exactly one rendered Safety Scores results region (aria-label "Safety score cards"), found 0'),
+      expect.stringContaining('expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 0'),
     );
   });
 

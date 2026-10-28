@@ -13,7 +13,6 @@ import {
   getFaqEntries,
   getMetaContents,
   hasMeaningfulPathValue,
-  isHiddenElement,
   nodeHasSchemaType,
   normalizeTextForSearch,
   parseAttributes,
@@ -1124,32 +1123,6 @@ function formatIdList(values, max = 6) {
   return `${values.slice(0, max).join(", ")}${values.length > max ? ` (+${values.length - max} more)` : ""}`;
 }
 
-/**
- * Whether the element opened at `index` sits inside a hidden subtree. Next's
- * streamed export carries the resolved client render in a `<div hidden
- * id="S:n">` segment that hydration swaps into the place of the route-level
- * loading fallback, so only the rendered copy counts as the visible surface.
- */
-function elementIsHiddenAt(tags, index) {
-  const nameStack = [];
-  const hiddenStack = [];
-  for (let cursor = 0; cursor <= index; cursor += 1) {
-    const tag = tags[cursor];
-    if (tag.closing) {
-      const position = nameStack.lastIndexOf(tag.name);
-      if (position >= 0) {
-        nameStack.length = position;
-        hiddenStack.length = position;
-      }
-      continue;
-    }
-    if (tag.selfClosing || VOID_ELEMENT_NAMES.has(tag.name)) continue;
-    nameStack.push(tag.name);
-    hiddenStack.push(isHiddenElement(tag.attrs));
-  }
-  return hiddenStack.includes(true);
-}
-
 function countHistoryPreviewRows(html) {
   const host = html.indexOf('data-testid="depeg-history-preview"');
   if (host < 0) return null;
@@ -1465,7 +1438,7 @@ function gradeForScore(score, thresholds) {
  * `buildSafetyScoresPreview` in `src/lib/safety-grade-snapshot.ts`; any
  * divergence surfaces as missing/unexpected profile links in the artifact.
  *
- * @returns {{ status: "ok", preview: { snapshotDate: string, publishedAtSec: number, publishedAtIso: string, eligibleRatedCount: number, rows: { id: string, href: string, grade: string, score: number }[] } } | { status: "unavailable", reason: string }}
+ * @returns {{ status: "ok", preview: { snapshotDate: string, publishedAtSec: number, publishedAtIso: string, publishedDate: string, eligibleRatedCount: number, rows: { id: string, href: string, grade: string, score: number }[] } } | { status: "unavailable", reason: string }}
  */
 export function buildSafetyScoresPreviewExpectation({
   currentModulePath = PUBLIC_DATASET_CURRENT_MODULE_PATH,
@@ -1555,6 +1528,9 @@ export function buildSafetyScoresPreviewExpectation({
       snapshotDate: datasetDate,
       publishedAtSec,
       publishedAtIso: new Date(publishedAtSec * 1000).toISOString(),
+      // The caption names the publication clock, which can be a later UTC day
+      // than the dataset's calendar date.
+      publishedDate: new Date(publishedAtSec * 1000).toISOString().slice(0, 10),
       eligibleRatedCount: rows.length,
       rows: rows.slice(0, SAFETY_PREVIEW_MAX_ROWS),
     },
@@ -1562,7 +1538,8 @@ export function buildSafetyScoresPreviewExpectation({
 }
 
 /**
- * B1 semantic sentinels for `/safety-scores/`: one results region, a `<time>`
+ * B1 semantic sentinels for `/safety-scores/`: exactly one results region in the
+ * whole exported document (the hidden streamed segment included), a `<time>`
  * grade date, the projected canonical profile links with their exact grades and
  * scores, and a caption denominator taken from the full admitted set rather
  * than from the rendered slice.
@@ -1575,21 +1552,22 @@ function validateSafetyScoresPreview(pageRecords, errors, expectation) {
   const html = stripNonElementMarkup(fs.readFileSync(record.filePath, "utf8"));
   const tags = collectElementTags(html);
 
+  // The client's pending render lands in the streamed segment Next swaps in on
+  // parse. Count every region, hidden or not: a duplicated preview (route
+  // fallback plus client render) is two result sets for the same facts.
   const regions = openingElementTags(tags, (tag) => tag.attrs.get("aria-label") === SAFETY_RESULTS_REGION_LABEL);
-  const renderedRegions = regions.filter(({ index }) => !elementIsHiddenAt(tags, index));
-  if (renderedRegions.length !== 1) {
+  if (regions.length !== 1) {
     errors.push(
-      `${route}: expected exactly one rendered Safety Scores results region (aria-label "${SAFETY_RESULTS_REGION_LABEL}"), found ${renderedRegions.length}`,
+      `${route}: expected exactly one Safety Scores results region (aria-label "${SAFETY_RESULTS_REGION_LABEL}"), found ${regions.length}`,
     );
     return;
   }
-  if (renderedRegions[0].tag.attrs.get("id") !== SAFETY_RESULTS_REGION_ID) {
+  if (regions[0].tag.attrs.get("id") !== SAFETY_RESULTS_REGION_ID) {
     errors.push(`${route}: Safety Scores results region lost its #${SAFETY_RESULTS_REGION_ID} anchor`);
   }
-  const visibleDataAnchors = openingElementTags(tags, (tag) => tag.attrs.get("id") === SAFETY_RESULTS_REGION_ID)
-    .filter(({ index }) => !elementIsHiddenAt(tags, index));
-  if (visibleDataAnchors.length !== 1) {
-    errors.push(`${route}: expected exactly one rendered #${SAFETY_RESULTS_REGION_ID} region, found ${visibleDataAnchors.length}`);
+  const dataAnchors = openingElementTags(tags, (tag) => tag.attrs.get("id") === SAFETY_RESULTS_REGION_ID);
+  if (dataAnchors.length !== 1) {
+    errors.push(`${route}: expected exactly one #${SAFETY_RESULTS_REGION_ID} region, found ${dataAnchors.length}`);
   }
   if (expectation?.status !== "ok") {
     errors.push(
@@ -1599,7 +1577,7 @@ function validateSafetyScoresPreview(pageRecords, errors, expectation) {
   }
 
   const preview = expectation.preview;
-  const regionHtml = elementOuterHtml(html, tags, renderedRegions[0].index);
+  const regionHtml = elementOuterHtml(html, tags, regions[0].index);
   const regionTags = collectElementTags(regionHtml);
   const regionText = extractMarkupText(regionHtml);
 
@@ -1614,8 +1592,8 @@ function validateSafetyScoresPreview(pageRecords, errors, expectation) {
       );
     }
     const timeText = extractMarkupText(elementOuterHtml(regionHtml, regionTags, timeTags[0].index));
-    if (!timeText.includes(`Grades as of ${preview.snapshotDate}`)) {
-      errors.push(`${route}: preview <time> does not carry "Grades as of ${preview.snapshotDate}"`);
+    if (!timeText.includes(`Grades as of ${preview.publishedDate}`)) {
+      errors.push(`${route}: preview <time> does not carry "Grades as of ${preview.publishedDate}"`);
     }
   }
 

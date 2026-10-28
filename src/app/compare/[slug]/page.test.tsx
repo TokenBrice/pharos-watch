@@ -234,4 +234,13 @@ describe("ComparePairPage reviewed evidence rows", () => {
     );
     expect(sectionText).not.toContain("Source: checked-in StablecoinMeta profile fields");
   });
+
+  it("keeps the pre-wave provenance note on pairs without evidence rows", async () => {
+    const document = await renderPair("usdt-tether-vs-dai-makerdao");
+    const sectionText = getComparisonTable(document)?.closest("section")?.textContent ?? "";
+    expect(sectionText).toContain(
+      "Source: checked-in StablecoinMeta profile fields in the current Pharos build. Static deployment counts and reserve-provider labels are structural context; open the live detail and compare tools for current market, peg, liquidity, and reserve freshness.",
+    );
+    expect(sectionText).not.toContain("Report periods and redemption review dates refer to the linked evidence");
+  });
 });

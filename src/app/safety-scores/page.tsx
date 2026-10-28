@@ -61,7 +61,9 @@ const route = createClientFeaturePage({
   },
   loadClient: () => import("./v9-client").then((m) => ({ default: m.ReportCardsV9Client })),
   clientProps: { initialPreview },
-  loading: <SafetyScoresContentLoadingState preview={initialPreview} />,
+  // The route-level fallback stays the neutral skeleton: the client's pending
+  // branch renders the preview once, and Next streams that render instead.
+  loading: <SafetyScoresContentLoadingState />,
   shell: {
     breadcrumbName: "Safety Scores",
     title: "Safety Scores",

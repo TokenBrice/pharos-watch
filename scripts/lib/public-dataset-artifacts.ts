@@ -21,7 +21,11 @@ export interface PublicDatasetMetadata {
   windowSnapshotAsOfISO?: string;
   metadataStatus?: "approximated";
   metadataNote?: string;
-  /** Optional versioned display projection; JSON in `_meta`, JSON in the CSV comment preamble. */
+  /**
+   * Optional versioned display projection; JSON in `_meta` and the NDJSON
+   * preamble only. The CSV keeps its pre-wave single `#` preamble so Sheets
+   * `IMPORTDATA` users still read a table, not a comment block.
+   */
   displayProjection?: Readonly<Record<string, unknown>>;
 }
 
@@ -70,9 +74,6 @@ export function buildPublicDatasetArtifacts<T>({
   return {
     csv: [
       `# ${preambleLine(metadata, "csv")}`,
-      ...(metadata.displayProjection
-        ? [`# Display projection: ${JSON.stringify(metadata.displayProjection)}`]
-        : []),
       columns.map((column) => column.header).join(","),
       ...csvRows,
     ].join("\n") + "\n",

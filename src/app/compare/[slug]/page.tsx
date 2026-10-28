@@ -20,6 +20,7 @@ import {
   buildComparisonSnippetAnswer,
   buildStaticComparisonJsonLd,
   getStaticComparisonPagesForCoin,
+  hasComparisonEvidenceRows,
   STATIC_COMPARISON_PAGE_BY_SLUG,
   STATIC_COMPARISON_PAGES,
   type ComparisonRowSource,
@@ -65,6 +66,9 @@ function ComparisonCell({
 function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number]) {
   // One build-time clock feeds both the evidence projection and its JSON-LD.
   const comparisonRows = buildComparisonAtAGlanceRows(page);
+  // The evidence-scoped note describes rows only the pilot pairs carry; a
+  // structural-only pair keeps its StablecoinMeta provenance note.
+  const evidenceNote = hasComparisonEvidenceRows(comparisonRows);
   const faqItems = buildComparisonFaqItems(page);
   const researchLinks = buildComparisonResearchLinks(page);
   const snippetAnswer = buildComparisonSnippetAnswer(page);
@@ -274,8 +278,18 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
           </TableBody>
         </TableFrame>
         <p className="text-xs leading-relaxed text-muted-foreground">
-          Report periods and redemption review dates refer to the linked evidence. Fees describe issuer or protocol
-          charges; bank, network and delivery costs may apply.
+          {evidenceNote ? (
+            <>
+              Report periods and redemption review dates refer to the linked evidence. Fees describe issuer or protocol
+              charges; bank, network and delivery costs may apply.
+            </>
+          ) : (
+            <>
+              Source: checked-in StablecoinMeta profile fields in the current Pharos build. Static deployment counts and
+              reserve-provider labels are structural context; open the live detail and compare tools for current market,
+              peg, liquidity, and reserve freshness.
+            </>
+          )}
         </p>
       </section>
 

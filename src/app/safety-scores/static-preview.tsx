@@ -50,6 +50,9 @@ function PreviewCard({ row }: { row: SafetyScoresPreviewRow }) {
  */
 export function StaticSafetyScoresPreview({ preview }: { preview: SafetyScoresPreview }) {
   const publishedIso = new Date(preview.publishedAtSec * 1000).toISOString();
+  // The visible date names the publication clock the <time> carries, not the
+  // dataset's calendar date: a late publication can land on the next UTC day.
+  const publishedDate = publishedIso.slice(0, 10);
   return (
     <section id="data" aria-label="Safety score cards" tabIndex={-1}>
       <div className="mb-3 flex flex-wrap items-baseline gap-x-3 gap-y-1">
@@ -58,7 +61,7 @@ export function StaticSafetyScoresPreview({ preview }: { preview: SafetyScoresPr
           prefetch={false}
           className="pharos-focus-ring rounded-sm text-sm text-muted-foreground underline-offset-4 hover:text-foreground hover:underline"
         >
-          <time dateTime={publishedIso}>Grades as of {preview.snapshotDate}</time>
+          <time dateTime={publishedIso}>Grades as of {publishedDate}</time>
         </Link>
         <span className="text-xs text-muted-foreground">
           Top {preview.shownCount} of {preview.eligibleRatedCount} rated active stablecoins by Safety Score

@@ -454,6 +454,29 @@ export interface ComparisonEvidenceRow {
   rightSources?: ComparisonRowSource[];
 }
 
+/**
+ * The reviewed evidence rows, in the order they follow `Reserve signal`. The
+ * route's table note switches to the evidence-scoped wording only when one of
+ * these rows is actually present, so structural-only pairs keep their original
+ * provenance note.
+ */
+const COMPARISON_EVIDENCE_ROW_LABELS = {
+  reportPeriod: "Latest reviewed report period",
+  assuranceScope: "Assurance scope",
+  eligibility: "Direct redemption eligibility",
+  minimum: "Redemption minimum",
+  feeBasis: "Redemption fee basis",
+} as const;
+
+const COMPARISON_EVIDENCE_ROW_LABEL_SET: ReadonlySet<string> = new Set(
+  Object.values(COMPARISON_EVIDENCE_ROW_LABELS),
+);
+
+/** Whether this page's row projection admitted at least one reviewed evidence row. */
+export function hasComparisonEvidenceRows(rows: readonly ComparisonRow[]): boolean {
+  return rows.some((row) => COMPARISON_EVIDENCE_ROW_LABEL_SET.has(row.label));
+}
+
 const NOT_RECORDED = "Not recorded";
 const SUSPENDED_ROUTE_ELIGIBILITY = "Route suspended";
 
@@ -509,14 +532,38 @@ function isHttpSourceUrl(url: string): boolean {
   return url.startsWith("http://") || url.startsWith("https://");
 }
 
+/**
+ * Citations point readers at a human-readable page. Machine JSON endpoints
+ * (an `/api/` path segment, an `api.` host or a `.json` file) are never
+ * rendered as a public source: a fact whose only citation is one of those is
+ * withheld rather than published with an unreadable link.
+ */
+function isCitationPageUrl(url: string): boolean {
+  if (!isHttpSourceUrl(url)) return false;
+  try {
+    const parsed = new URL(url);
+    if (/\.json$/i.test(parsed.pathname)) return false;
+    if (parsed.hostname.toLowerCase().startsWith("api.")) return false;
+    return !parsed.pathname.toLowerCase().split("/").includes("api");
+  } catch {
+    return false;
+  }
+}
+
+function toCitationSources(
+  sources: readonly { label: string; url: string }[],
+): ComparisonRowSource[] {
+  return sources
+    .filter((source) => isCitationPageUrl(source.url))
+    .map((source) => ({ label: source.label, href: source.url }));
+}
+
 function getComparisonReportEvidence(coin: StablecoinMeta): ComparisonReportEvidence | null {
   const report = coin.proofOfReserves?.latestReport;
   // The reviewed structured report is the authority: never infer a period or
   // scope from the storage type, provider note or build date.
   if (!report || report.confidence !== "verified") return null;
-  const sources = report.sources
-    .filter((source) => isHttpSourceUrl(source.url))
-    .map((source) => ({ label: source.label, href: source.url }));
+  const sources = toCitationSources(report.sources);
   if (sources.length === 0) return null;
   return {
     period: report.periodEnd !== undefined && isValidIsoDateOnly(report.periodEnd) ? report.periodEnd : null,
@@ -533,6 +580,7 @@ function docsSupporting(
 ): ComparisonRowSource[] {
   return (docs ?? [])
     .filter((doc) => doc.supports?.includes(support))
+    .filter((doc) => isCitationPageUrl(doc.url))
     .map((doc) => ({ label: doc.label, href: doc.url }));
 }
 
@@ -558,7 +606,10 @@ function formatTokenAmount(value: number): string {
 }
 
 function withReviewedDate(value: string, reviewedAt: string): string {
-  return `${value} (reviewed ${reviewedAt})`;
+  // The review date is a parenthetical on the fact, so a value that already
+  // ends a sentence keeps its full stop last: "… are separate (reviewed DATE)."
+  const suffix = ` (reviewed ${reviewedAt})`;
+  return value.endsWith(".") ? `${value.slice(0, -1)}${suffix}.` : `${value}${suffix}`;
 }
 
 function todayFromSeconds(nowSec: number): string {
@@ -595,7 +646,9 @@ function resolveRedemptionEligibility(config: RedemptionBackstopConfig, today: s
     if (!suspension) return null;
     return {
       value: withReviewedDate(SUSPENDED_ROUTE_ELIGIBILITY, suspension.reviewedAt),
-      sources: suspension.sources.map((source) => ({ label: sourceLabelFromUrl(source.url), href: source.url })),
+      sources: suspension.sources
+        .filter((source) => isCitationPageUrl(source.url))
+        .map((source) => ({ label: sourceLabelFromUrl(source.url), href: source.url })),
     };
   }
   const accessSources = docsSupporting(config.docs, "access");
@@ -740,7 +793,7 @@ export function buildComparisonEvidenceRows(
   const rows: ComparisonEvidenceRow[] = [];
   appendComparisonEvidenceRow(
     rows,
-    "Latest reviewed report period",
+    COMPARISON_EVIDENCE_ROW_LABELS.reportPeriod,
     left.report?.period ?? null,
     right.report?.period ?? null,
     left.report?.sources,
@@ -748,7 +801,7 @@ export function buildComparisonEvidenceRows(
   );
   appendComparisonEvidenceRow(
     rows,
-    "Assurance scope",
+    COMPARISON_EVIDENCE_ROW_LABELS.assuranceScope,
     left.report?.scope ?? null,
     right.report?.scope ?? null,
     left.report?.sources,
@@ -756,7 +809,7 @@ export function buildComparisonEvidenceRows(
   );
   appendComparisonEvidenceRow(
     rows,
-    "Direct redemption eligibility",
+    COMPARISON_EVIDENCE_ROW_LABELS.eligibility,
     left.eligibility?.value ?? null,
     right.eligibility?.value ?? null,
     left.eligibility?.sources,
@@ -764,7 +817,7 @@ export function buildComparisonEvidenceRows(
   );
   appendComparisonEvidenceRow(
     rows,
-    "Redemption minimum",
+    COMPARISON_EVIDENCE_ROW_LABELS.minimum,
     left.minimum?.value ?? null,
     right.minimum?.value ?? null,
     left.minimum?.sources,
@@ -772,7 +825,7 @@ export function buildComparisonEvidenceRows(
   );
   appendComparisonEvidenceRow(
     rows,
-    "Redemption fee basis",
+    COMPARISON_EVIDENCE_ROW_LABELS.feeBasis,
     left.feeBasis?.value ?? null,
     right.feeBasis?.value ?? null,
     left.feeBasis?.sources,
