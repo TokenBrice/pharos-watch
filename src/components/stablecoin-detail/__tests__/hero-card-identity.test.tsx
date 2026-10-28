@@ -68,7 +68,7 @@ describe("HeroVariantChip", () => {
     );
     const link = container.querySelector("a")!;
     expect(link.getAttribute("href")).toBe("/stablecoin/usds-sky/");
-    expect(link.getAttribute("aria-label")).toBe("Variant of Sky Dollar — wraps USDS");
+    expect(link.getAttribute("aria-label")).toBe("Wraps Sky Dollar (USDS), variant of Sky Dollar");
     expect(link.textContent).toContain("Wraps Sky Dollar (USDS)");
     expect(link.className).toContain("min-w-0");
     expect(link.querySelector("span.min-w-0")?.textContent).toBe("Wraps Sky Dollar (USDS)");

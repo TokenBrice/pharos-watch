@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "../../../types";
-import { POR_BADGE_STYLES, getProofOfReservesStyle } from "../badges";
+import { POR_BADGE_STYLES, POR_NEUTRAL_REPORT_LABEL, getProofOfReservesStyle } from "../badges";
 
 type ProofOfReserves = NonNullable<StablecoinMeta["proofOfReserves"]>;
 type AssuranceMethod = NonNullable<ProofOfReserves["latestReport"]>["assuranceMethod"];
@@ -75,7 +75,8 @@ describe("getProofOfReservesStyle", () => {
   });
 
   it("pins the raw storage-type fallback away from audit wording", () => {
-    expect(POR_BADGE_STYLES["independent-audit"].label).toBe("Independent Report");
+    expect(POR_NEUTRAL_REPORT_LABEL).toBe("Independent Report");
+    expect(POR_BADGE_STYLES["independent-audit"].label).toBe(POR_NEUTRAL_REPORT_LABEL);
     expect(POR_BADGE_STYLES["independent-audit"].cls).not.toContain("bg-blue-500");
   });
 });

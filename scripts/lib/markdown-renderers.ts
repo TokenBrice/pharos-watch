@@ -160,9 +160,9 @@ export function renderStablecoinDetail(
       title: `${coin.name} (${coin.symbol}) Stablecoin Analytics`,
       canonical: `https://pharos.watch${buildStablecoinUrl(id)}`,
       description: `Build-time stablecoin profile for ${coin.name} (${coin.symbol}).${
-        coin.status === "pre-launch" || coin.status === "quarantined" || coin.status === "delisted"
-          ? ""
-          : " Live price, supply, peg, liquidity, and flow data are served by the Pharos API."
+        isActiveStablecoinMeta(coin)
+          ? " Live price, supply, peg, liquidity, and flow data are served by the Pharos API."
+          : ""
       }`,
       ...(summary?.updatedAt ? { dateModified: summary.updatedAt } : {}),
     }),

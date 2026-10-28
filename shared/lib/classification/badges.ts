@@ -42,6 +42,13 @@ const POR_INDEPENDENT_ENGAGEMENT_CLS = "bg-blue-500/10 text-blue-700 dark:text-b
 const POR_NEUTRAL_ENGAGEMENT_CLS = "bg-muted/40 text-muted-foreground border-border/60";
 
 /**
+ * Neutral engagement label for a proof-of-reserves record whose reviewed
+ * method establishes no audit-grade opinion. Consumers that render a record
+ * without a resolved style share this label instead of repeating the string.
+ */
+export const POR_NEUTRAL_REPORT_LABEL = "Independent Report";
+
+/**
  * Storage-level fallback for the proof-of-reserves engagement. The
  * `independent-audit` storage type covers examinations, audits and unresolved
  * methods alike (26 examinations among 47 records were not audits), so the
@@ -52,7 +59,7 @@ export const POR_BADGE_STYLES: Record<ProofOfReservesType, BadgeStyle> = {
   // Never audit-blue by default: only a reviewed audit or examination method
   // earns the engagement tone in `getProofOfReservesStyle`.
   "independent-audit": {
-    label: "Independent Report",
+    label: POR_NEUTRAL_REPORT_LABEL,
     cls: POR_NEUTRAL_ENGAGEMENT_CLS,
   },
   // A third-party engagement that expresses no assurance opinion: neutral

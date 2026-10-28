@@ -367,6 +367,7 @@ describe("stablecoin markdown", () => {
     const md = renderStablecoinDetail(frozen.id, {});
     expect(md).toContain("frozen Pharos archive");
     expect(md).toContain("## Public snapshots");
+    expect(md).not.toContain("Live price, supply, peg, liquidity, and flow data are served by the Pharos API");
     expect(md).not.toContain("currently monitored");
     expect(md).not.toContain("https://api.pharos.watch/api/stablecoin/");
   });

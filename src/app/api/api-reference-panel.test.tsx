@@ -70,6 +70,19 @@ describe("API reference dataset cards", () => {
     }
   });
 
+  it("scopes every copy citation control to its dataset card", async () => {
+    render(await ApiReferencePanel());
+
+    const names = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.map((descriptor) => {
+      const card = document.getElementById(`dataset-${descriptor.slug}`) as HTMLElement;
+      const button = within(card).getByRole("button", { name: `Copy citation for ${descriptor.name}` });
+      return button.getAttribute("aria-label");
+    });
+
+    expect(names).toHaveLength(PUBLIC_DATASET_JSON_LD_DESCRIPTORS.length);
+    expect(new Set(names).size).toBe(PUBLIC_DATASET_JSON_LD_DESCRIPTORS.length);
+  });
+
   it("copies the canonical dated citation once and announces success politely", async () => {
     const writeText = vi.fn().mockResolvedValue(undefined);
     Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
@@ -78,7 +91,7 @@ describe("API reference dataset cards", () => {
     const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "depeg-history");
     if (!descriptor) throw new Error("Missing depeg-history descriptor");
     const card = document.getElementById(`dataset-${descriptor.slug}`) as HTMLElement;
-    const button = within(card).getByRole("button", { name: "Copy citation" });
+    const button = within(card).getByRole("button", { name: `Copy citation for ${descriptor.name}` });
 
     await act(async () => {
       fireEvent.click(button);
@@ -103,8 +116,10 @@ describe("API reference dataset cards", () => {
 
     try {
       render(await ApiReferencePanel());
-      const card = document.getElementById("dataset-scores-latest") as HTMLElement;
-      const button = within(card).getByRole("button", { name: "Copy citation" });
+      const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "scores-latest");
+      if (!descriptor) throw new Error("Missing scores-latest descriptor");
+      const card = document.getElementById(`dataset-${descriptor.slug}`) as HTMLElement;
+      const button = within(card).getByRole("button", { name: `Copy citation for ${descriptor.name}` });
 
       await act(async () => {
         fireEvent.click(button);

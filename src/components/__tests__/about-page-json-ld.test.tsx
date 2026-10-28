@@ -51,11 +51,16 @@ describe("About disclosure and reuse copy", () => {
     expect(teamHtml.split(POLARIS_SENTENCE)).toHaveLength(2);
   });
 
-  it("states the content-type reuse scope and keeps existing contact links", () => {
+  it("states the content-type reuse scope with license links and keeps existing contact links", () => {
     const html = renderToStaticMarkup(<AboutPageContent />);
-    expect(html).toContain(
-      "Pharos code, data and data exports are MIT-licensed. Editorial content, including profile prose, methodology and case studies, is licensed under CC BY 4.0. Third-party material retains its original terms.",
+    expect(html).toMatch(
+      /are <a [^>]*href="https:\/\/github\.com\/TokenBrice\/pharos-watch\/blob\/main\/LICENSE"[^>]*>MIT-licensed<\/a> and reproducible\./,
     );
+    expect(html).toMatch(
+      /licensed under <a [^>]*href="https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/"[^>]*>CC BY 4\.0<\/a>\./,
+    );
+    expect(html).toContain("Third-party material retains its original terms.");
+    expect(html).not.toContain("Pharos code, data and data exports are MIT-licensed.");
     expect(html).toContain("Pharos code and data are MIT-licensed.");
     expect(html).toContain('href="mailto:me@tokenbrice.com"');
     expect(html).toContain("Press and research enquiries:");

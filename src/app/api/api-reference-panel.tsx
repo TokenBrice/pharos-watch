@@ -465,7 +465,10 @@ export async function ApiReferencePanel() {
                   ))}
                   <li><a className="pharos-prose-link" href={`/sheets/${dataset.slug}.csv`}>Sheets CSV</a></li>
                 </ul>
-                <CemeteryDatasetCopyCitation citation={buildPublicDatasetCitation(dataset)} />
+                <CemeteryDatasetCopyCitation
+                  citation={buildPublicDatasetCitation(dataset)}
+                  ariaLabel={`Copy citation for ${dataset.name}`}
+                />
               </article>
             );
           })}

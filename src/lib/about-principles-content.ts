@@ -1,7 +1,15 @@
+export interface PrincipleLink {
+  /** Exact substring of `body` that becomes a link. */
+  text: string;
+  href: string;
+}
+
 export interface PrincipleAxiom {
   id: string;
   title: string;
   body: string;
+  /** Inline links rendered inside `body`, in body order. */
+  links?: readonly PrincipleLink[];
 }
 
 export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
@@ -53,7 +61,11 @@ export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
   {
     id: "open-code-open-data",
     title: "Open code, open data, published curation.",
-    body: "The dashboard, the worker pipeline, the scoring engines, and the data exports are MIT-licensed and reproducible. What is tracked is a curatorial decision, and the curation is published. Additions land with explicit rationale, exclusions are documented when contested, and the inbound funding that supports the work is logged at /funding/ for inspection. Pharos code, data and data exports are MIT-licensed. Editorial content, including profile prose, methodology and case studies, is licensed under CC BY 4.0. Third-party material retains its original terms.",
+    body: "The dashboard, the worker pipeline, the scoring engines, and the data exports are MIT-licensed and reproducible. What is tracked is a curatorial decision, and the curation is published. Additions land with explicit rationale, exclusions are documented when contested, and the inbound funding that supports the work is logged at /funding/ for inspection. Editorial content, including profile prose, methodology and case studies, is licensed under CC BY 4.0. Third-party material retains its original terms.",
+    links: [
+      { text: "MIT-licensed", href: "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE" },
+      { text: "CC BY 4.0", href: "https://creativecommons.org/licenses/by/4.0/" },
+    ],
   },
 ];
 

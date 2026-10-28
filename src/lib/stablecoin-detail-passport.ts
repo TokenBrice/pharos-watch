@@ -5,6 +5,7 @@ import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers
 import {
   BACKING_BADGE_STYLES,
   MECHANISM_ARCHETYPE_SHORT_LABELS,
+  POR_NEUTRAL_REPORT_LABEL,
   POR_TIER_STYLES,
   getProofOfReservesStyle,
 } from "@shared/lib/classification";
@@ -341,7 +342,7 @@ export function buildHeroPassportItems({
     const tierStyle = attestorTier ? POR_TIER_STYLES[attestorTier] : null;
     // The engagement stays in the accessible name: the short visible value is
     // the tier, which must not hide whether the report is an examination.
-    const reportLabel = getProofOfReservesStyle(coin.proofOfReserves)?.label ?? "Independent Report";
+    const reportLabel = getProofOfReservesStyle(coin.proofOfReserves)?.label ?? POR_NEUTRAL_REPORT_LABEL;
     items.push({
       key: "attestor",
       category: "Attestor",

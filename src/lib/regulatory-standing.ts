@@ -6,7 +6,7 @@ import type {
   MicaStatus,
   StablecoinMeta,
 } from "@shared/types";
-import { POR_TIER_STYLES, getProofOfReservesStyle } from "@shared/lib/classification";
+import { POR_NEUTRAL_REPORT_LABEL, POR_TIER_STYLES, getProofOfReservesStyle } from "@shared/lib/classification";
 import {
   GENIUS_AUTHORIZATION_STATUS_BADGE_STYLES,
   GENIUS_AUTHORIZATION_STATUS_DESCRIPTIONS,
@@ -259,7 +259,7 @@ function buildAttestationByline(proofOfReserves: ProofOfReserves): string {
   const provider = proofOfReserves.provider;
   const tierLabel = proofOfReserves.attestorTier ? POR_TIER_STYLES[proofOfReserves.attestorTier].label : null;
   const attestor = provider && tierLabel ? `${provider} (${tierLabel})` : provider ?? tierLabel;
-  const reportLabel = getProofOfReservesStyle(proofOfReserves)?.label ?? "Independent Report";
+  const reportLabel = getProofOfReservesStyle(proofOfReserves)?.label ?? POR_NEUTRAL_REPORT_LABEL;
   return attestor ? `Attestor: ${attestor}. Report: ${reportLabel}.` : `Report: ${reportLabel}.`;
 }
 

@@ -25,7 +25,12 @@ import {
   type AboutFeatureItem,
 } from "@/lib/about-content";
 import { MEDIA_APPEARANCES, WALKTHROUGH_APPEARANCES, type MediaAppearance } from "@/lib/media-appearances";
-import { PRINCIPLES_AI_POLICY, PRINCIPLES_AXIOMS, PRINCIPLES_CORRECTIONS } from "@/lib/about-principles-content";
+import {
+  PRINCIPLES_AI_POLICY,
+  PRINCIPLES_AXIOMS,
+  PRINCIPLES_CORRECTIONS,
+  type PrincipleAxiom,
+} from "@/lib/about-principles-content";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { BLUECHIP_GATES, BLUECHIP_LEDE, BLUECHIP_REFUSALS, BLUECHIP_WHAT_IT_MEANS } from "./bluechip-content";
 import {
@@ -285,6 +290,34 @@ function AboutSection({
   );
 }
 
+/** Renders a principle body with its declared inline links. */
+function PrincipleBody({ principle }: { principle: PrincipleAxiom }) {
+  const links = principle.links ?? [];
+  if (links.length === 0) return <>{principle.body}</>;
+
+  const parts: ReactNode[] = [];
+  let cursor = 0;
+  for (const link of links) {
+    const start = principle.body.indexOf(link.text, cursor);
+    if (start < 0) continue;
+    parts.push(principle.body.slice(cursor, start));
+    parts.push(
+      <a
+        key={`${link.href}:${start}`}
+        href={link.href}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="pharos-prose-link"
+      >
+        {link.text}
+      </a>,
+    );
+    cursor = start + link.text.length;
+  }
+  parts.push(principle.body.slice(cursor));
+  return <>{parts}</>;
+}
+
 function AboutFeatureSection({
   eyebrow,
   title,
@@ -454,7 +487,7 @@ export function AboutPageContent() {
             {operatingPrinciples.map((axiom) => (
               <article key={axiom.title} className="rounded-xl border border-border/60 bg-muted/20 px-4 py-3">
                 <h3 className="text-sm font-semibold tracking-tight text-foreground">{axiom.title}</h3>
-                <p className="mt-1">{axiom.body}</p>
+                <p className="mt-1"><PrincipleBody principle={axiom} /></p>
               </article>
             ))}
           </div>
