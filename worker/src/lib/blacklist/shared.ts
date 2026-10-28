@@ -53,6 +53,19 @@ export interface BlacklistPersistedRow {
 
 export type BlacklistRow = BlacklistPersistedRow;
 
+export interface TronScanTelemetry {
+  source: "dwellir-jsonrpc" | "trongrid-jsonrpc" | "mixed-jsonrpc" | "trongrid-events" | "unavailable";
+  dwellirCalls: number;
+  trongridRpcCalls: number;
+  eventApiCalls: number;
+  fallbackReason: string | null;
+  trongridFailureReason: string | null;
+  orderRepairSkippedRows: number;
+  orderRepairSkipReason: string | null;
+  amountRepairSkippedRows: number;
+  amountRepairSkipReason: string | null;
+}
+
 export interface BlacklistScanResult {
   rows: BlacklistRow[];
   latestCursor: number;
@@ -68,6 +81,7 @@ export interface BlacklistScanResult {
   providerCalls: number;
   maxSplitDepth: number;
   failureSamples: string[];
+  tronRpc?: TronScanTelemetry;
 }
 
 export type BlacklistScanCoverageOutcome =

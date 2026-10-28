@@ -141,6 +141,27 @@ describe("insertBlacklistRows", () => {
     })).toThrow("invalid-address");
   });
 
+  it("persists observed Tron transaction order without replacing canonical event identities", async () => {
+    const { db, sqlite } = fixtures.open();
+    const [config] = getBlacklistConfigsForSymbolAndChain("USDT", "tron");
+    const row = parseTronEvent(config, {
+      block_number: 100, block_timestamp: 1_710_000_000_000,
+      transaction_id: "ab".repeat(32), event_index: 1, event_name: "DestroyedBlackFunds",
+      result: { _blackListedUser: "0x2004662f694f30fd269e4cccba222654b5f0538b", _balance: "12500000" },
+    })!;
+    row.transaction_index = 0;
+    expect(await insertBlacklistRows(db, [row])).toBe(1);
+    expect(await insertBlacklistRows(db, [{ ...row, id: `tron-${row.tx_hash}-0x1`, transaction_index: 99 }])).toBe(0);
+    expect(sqlite.prepare("SELECT id, transaction_index, amount_native FROM blacklist_events").all())
+      .toEqual([{ id: row.id, transaction_index: 0, amount_native: 12.5 }]);
+
+    const fallback = { ...row, id: `tron-${"cd".repeat(32)}-1`, tx_hash: "cd".repeat(32) };
+    delete fallback.transaction_index;
+    expect(await insertBlacklistRows(db, [fallback])).toBe(1);
+    expect(sqlite.prepare("SELECT transaction_index FROM blacklist_events WHERE id = ?").get(fallback.id))
+      .toEqual({ transaction_index: null });
+  });
+
   // 2026-08-29 dropped the legacy `amount` column from the statement but left its
   // placeholder behind; production rejected every new event for four days with
   // `D1_ERROR: 26 values for 25 columns`. Run the real statement against the

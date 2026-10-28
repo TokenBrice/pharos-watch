@@ -16,6 +16,7 @@ export async function runSixHourlyBlacklistSlot(runtime: ScheduledRuntimeContext
       signal,
       onProgress: reportProgress,
       chainRpcs: runtime.chainRpcs,
+      dwellirNative: runtime.dwellirNative,
     });
   });
 }

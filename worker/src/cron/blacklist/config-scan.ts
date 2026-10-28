@@ -13,7 +13,10 @@ import {
   type FetchEvmEventsIncrementalResult,
 } from "./evm-source";
 import { fetchTronEventsIncremental, type FetchTronEventsIncrementalResult } from "./tron-source";
-import type { BlacklistScanResult } from "../../lib/blacklist/shared";
+import { TronJsonRpcReader } from "../../lib/tron-jsonrpc";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
+import { fetchTronEventsWithRpc } from "./tron-rpc-source";
+import type { BlacklistScanResult, TronScanTelemetry } from "../../lib/blacklist/shared";
 import { processFetchedBlacklistRows } from "./post-fetch";
 import {
   blacklistShouldStopBeforeNextConfig,
@@ -95,6 +98,7 @@ type ScanState = {
   coverageOutcomeCounts: Record<string, number>;
   configLag: Record<string, { cursorKind: string; frontier: number | null; safeHead: number | null; lag: number | null }>;
   coverageVerdicts: Record<string, BlacklistCoverageVerdict>;
+  tronRpc: Record<string, TronScanTelemetry>;
   coverageFailureConfigs: Array<{
     configKey: string;
     outcome: BlacklistScanResult["coverageOutcome"];
@@ -123,6 +127,7 @@ type ScanBlacklistConfigsArgs = {
   signal?: AbortSignal;
   onProgress?: CronProgressReporter;
   chainRpcs?: Map<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
 };
 
 type ScanSingleConfigArgs = ScanBlacklistConfigsArgs & {
@@ -131,12 +136,15 @@ type ScanSingleConfigArgs = ScanBlacklistConfigsArgs & {
   attempt: BlacklistConfigAttempt;
   etherscanCircuitAllowed: boolean;
   chainHeadCache: Map<number, number>;
+  tronReader?: TronJsonRpcReader;
+  tronGridAllowed: boolean;
   getChainTimestampCache: (chainId: string) => Map<string, number>;
 };
 
 function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCursor: number): BlacklistScanResult {
   const nextCursor = result.scannedToTimestamp != null ? Math.max(lastCursor, result.scannedToTimestamp) : lastCursor;
-  const coverageOutcome = result.apiError
+  const coverageOutcome = result.usedRpcLogs && result.incomplete && result.scannedToTimestamp != null
+    ? "partial" : result.apiError
     ? result.coveredTopicCount > 0
       ? "missing_topic"
       : "provider_error"
@@ -154,15 +162,16 @@ function buildTronScanResult(result: FetchTronEventsIncrementalResult, lastCurso
     nextCursor: nextCursor > lastCursor ? nextCursor : null,
     apiError: result.apiError,
     incomplete: result.incomplete,
-    usedRpcLogs: false,
+    usedRpcLogs: result.usedRpcLogs ?? false,
     scannedToCursor: result.scannedToTimestamp,
     safeHead: result.safeHead,
     coverageOutcome,
     topicCount: result.topicCount,
     coveredTopicCount: result.coveredTopicCount,
     providerCalls: result.providerCalls,
-    maxSplitDepth: 0,
-    failureSamples: result.apiError || result.incomplete ? ["trongrid-incomplete"] : [],
+    maxSplitDepth: result.maxSplitDepth ?? 0,
+    failureSamples: result.failureSamples ?? (result.apiError || result.incomplete ? ["trongrid-incomplete"] : []),
+    tronRpc: result.tronRpc,
   };
 }
 
@@ -206,11 +215,17 @@ async function scanBlacklistConfig(args: {
   tronLimiter: RateLimitedFetch;
   signal?: AbortSignal;
   chainHeadCache: Map<number, number>;
+  tronReader?: TronJsonRpcReader;
+  tronGridAllowed: boolean;
   chainRpcs?: Map<string, ChainRpcConfig>;
   getChainTimestampCache: (chainId: string) => Map<string, number>;
 }): Promise<BlacklistScanResult> {
   if (args.config.chain.type === "tron") {
-    const result = await fetchTronEventsIncremental(
+    const result = args.tronReader ? await fetchTronEventsWithRpc({
+      config: args.config, apiKey: args.trongridApiKey, lastTimestampMs: args.lastBlock,
+      runBudget: args.runBudget, rateLimit: args.tronLimiter, signal: args.signal, db: args.db,
+      reader: args.tronReader, eventApiAllowed: args.tronGridAllowed,
+    }) : await fetchTronEventsIncremental(
       args.config,
       args.trongridApiKey,
       args.lastBlock,
@@ -369,15 +384,22 @@ async function processConfigScan(args: ScanSingleConfigArgs): Promise<void> {
       tronLimiter: args.tronLimiter,
       signal: args.signal,
       chainHeadCache: args.chainHeadCache,
+      tronReader: args.tronReader,
+      tronGridAllowed: args.tronGridAllowed,
       chainRpcs: args.chainRpcs,
       getChainTimestampCache: args.getChainTimestampCache,
     });
 
     if (config.chain.type === "tron") {
-      await recordOutcomeSafe(args.db, CIRCUIT_SOURCE.TRONGRID, !result.apiError);
+      if (result.tronRpc) state.tronRpc[configKey] = result.tronRpc;
+      if (!result.tronRpc || result.tronRpc.trongridRpcCalls > 0 || result.tronRpc.eventApiCalls > 0) {
+        await recordOutcomeSafe(args.db, CIRCUIT_SOURCE.TRONGRID,
+          result.tronRpc ? result.tronRpc.trongridFailureReason == null : !result.apiError);
+      }
+      if (result.usedRpcLogs) state.rpcLogConfigs++;
       if (result.apiError) {
         state.apiErrors++;
-        recordApiErrorConfig(state.apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, "trongrid-failed");
+        recordApiErrorConfig(state.apiErrorConfigs, configKey, config.stablecoin, config.chain.chainId, result.tronRpc ? "tron-rpc-failed" : "trongrid-failed");
       }
     } else {
       if (!shouldPreferRpcLogScan(config.chain.chainId) && args.etherscanCircuitAllowed) {
@@ -465,7 +487,7 @@ async function recordConfigScanException(args: ScanSingleConfigArgs, err: unknow
 async function skipTronGridCircuitConfig(args: ScanSingleConfigArgs): Promise<boolean> {
   const { configState, state } = args;
   const { config, configKey } = configState;
-  if (config.chain.type !== "tron" || (await shouldAttemptFetch(args.db, CIRCUIT_SOURCE.TRONGRID))) return false;
+  if (config.chain.type !== "tron" || args.tronReader || args.tronGridAllowed) return false;
 
   logWorkerEventArgs("handler", "info", `[sync-blacklist] TronGrid circuit open, skipping ${configKey}`);
   state.contractsSkipped++;
@@ -519,6 +541,7 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     coverageOutcomeCounts: {},
     configLag: {},
     coverageVerdicts: {},
+    tronRpc: {},
     coverageFailureConfigs: [],
   };
   const chainTimestampCaches = new Map<string, Map<string, number>>();
@@ -544,6 +567,11 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     args.runBudget.subrequestBudget,
   );
   const chainHeadCache = new Map<number, number>();
+  const tronReader = args.dwellirNative && args.dwellirNative.isNetworkEnabled?.("tron") !== false ? new TronJsonRpcReader({
+    dwellirNative: args.dwellirNative, trongridApiKey: args.trongridApiKey, trongridAllowed: false,
+    budget: args.runBudget.subrequestBudget, deadlineMs: args.runBudget.deadlineMs,
+    rateLimit: args.tronLimiter, signal: args.signal ?? new AbortController().signal,
+  }) : undefined;
 
   for (let ci = 0; ci < orderedConfigStates.length; ci++) {
     throwIfAborted(args.signal);
@@ -589,6 +617,8 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
     configState.lastAttemptedAt = attemptedAt;
     configState.lastOutcome = "running";
 
+    const tronGridAllowed = config.chain.type === "tron" && await shouldAttemptFetch(args.db, CIRCUIT_SOURCE.TRONGRID);
+    if (config.chain.type === "tron") tronReader?.setTronGridAllowed(tronGridAllowed);
     const singleConfigArgs: ScanSingleConfigArgs = {
       ...args,
       state,
@@ -596,6 +626,8 @@ export async function scanBlacklistConfigs(args: ScanBlacklistConfigsArgs): Prom
       attempt,
       etherscanCircuitAllowed,
       chainHeadCache,
+      tronReader,
+      tronGridAllowed,
       getChainTimestampCache,
     };
     if (await skipTronGridCircuitConfig(singleConfigArgs)) continue;

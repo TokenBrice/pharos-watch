@@ -1074,7 +1074,13 @@ Redemption `applyOutputDependencyResolution()` uses a run-local index and immuta
 
 `shared/lib/chain-rpc-registry.ts` keeps RPC profiles separate. `hasRegistryRpc()`/`registryRpcUrls()` establish inventory membership; supplemental presence does not. [ADR-40](../architecture.md#adr-40) prefers eligible Dwellir without reordering incumbents or expanding inventory.
 
-The shared Dwellir registries own capabilities. Scheduled EVM/native reads share credit-ledger/breaker admission; missing key, denial or `DWELLIR_ROUTING_DISABLED_CHAINS` excludes Dwellir. HTTP gets no native capability. Native operations retain exact pins, header credentials and ledger-floor checks, not TRON history or Sui object-history permission.
+The shared Dwellir registries own capabilities. Scheduled EVM/native reads share credit-ledger/breaker admission; missing key, denial or `DWELLIR_ROUTING_DISABLED_CHAINS` excludes Dwellir. HTTP gets no native capability. Native operations retain exact pins, header credentials and ledger-floor checks. Tron additionally admits solidified-head reads and JSON-RPC block numbers, headers and bounded logs; this grants neither historical contract state nor Sui object history.
+
+`worker/src/lib/tron-jsonrpc.ts` bounds inclusive log spans to 10,000 blocks, splits explicit block-range/log-result-size failures left-first and returns only the proven contiguous frontier below the admitted solidified head. A `-32005` code or generic limit error alone is not range evidence: rate-limit and provider failures use fallback. Unsplittable single-block range/size failures may also use the next provider. TronGrid JSON-RPC is the fallback, using `TRON-PRO-API-KEY`; Dwellir uses `X-Api-Key` and one credit per response. Each serial attempt shares the caller's request cap and deadline.
+
+`TRON_SOLID_HEAD_MAX_AGE_MS` admits heads no older than ten minutes; older evidence fails with `tron-rpc-stale-solid-head`. `TRON_SOLID_HEAD_MAX_FUTURE_MS` rejects timestamps more than 30 seconds ahead with `tron-rpc-future-solid-head`. Cached heads are rechecked and refreshed; rejected head evidence uses fallback. Hash-matched JSON-RPC headers bind that head and event timestamps. Timestamp lookup uses the nominal three-second block interval only to seed a bracket, then widens and searches observed block timestamps to prove the exact boundary.
+
+`shared/lib/tron-jsonrpc.ts` owns the body ceilings: filtered logs and other JSON-RPC reads retain 128 KiB; unfiltered single-block log context allows 2 MiB; `/walletsolidity/getnowblock` allows 1 MiB because it includes full transactions. Full single-block context validates contiguous block-global indices to recover transaction-local freeze event IDs; oversized or inconsistent context cannot advance a cursor. All paths retain bounded intake.
 
 Native reads use `redirect: "manual"` (Workers rejects `"error"`); non-2xx is rejected, so keys never follow redirects.
 
