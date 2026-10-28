@@ -1,0 +1,163 @@
+{
+  "id": "dusd-dtrinity",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "dUSD is a transferable dollar-targeted stablecoin. Users mint and redeem it at dollar-valued parity against whitelisted stablecoins and yieldcoins rather than currency or bank deposits. The operative terms deny token-holder redemption rights against protocol participants and identify no legal issuer promising fixed monetary-value redemption. Stablecoin use and the documented in-kind redemption mechanism leave the GENIUS issuer-obligation element unresolved, supporting unclear applicability.",
+      "references": [
+        {
+          "label": "GENIUS Act sections 2(17) and 2(22): monetary value and payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "dTRINITY dUSD: dollar target and atomic reserve-asset minting and redemption",
+          "url": "https://docs.dtrinity.org/protocol-components/dusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "dTRINITY terms: no redemption rights or token-value guarantees",
+          "url": "https://docs.dtrinity.org/informational/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-05-24"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "redemptionPolicyPresent": true,
+    "notes": "This assessment concerns dUSD, not the separately tracked sdUSD ERC-4626 yieldcoin. dUSD documentation describes atomic redemption for available reserve assets, with up to 0.5 percent fees; redemptionPolicyPresent records that published mechanism, not an enforceable right to redeem for fiat. The FAQ excludes United States users. Terms describe autonomous and semi-autonomous smart contracts, reserve and AMO administration through multisignatures and governance, and no guarantees of redemption or peg maintenance. No exact legal issuerEntity or domicile is attributed; Cayman governing law does not establish issuer domicile. No GENIUS issuance application or announced issuance route was identified. The clearer exclusion for sdUSD is not inherited by its stablecoin parent.",
+    "references": [
+      {
+        "label": "GENIUS Act sections 2(17) and 2(22): monetary value and payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "dTRINITY dUSD: dollar target and atomic reserve-asset minting and redemption",
+        "url": "https://docs.dtrinity.org/protocol-components/dusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "dTRINITY terms: no redemption rights or token-value guarantees",
+        "url": "https://docs.dtrinity.org/informational/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-05-24"
+      },
+      {
+        "label": "dTRINITY FAQ: reserve-asset redemption and United States restriction",
+        "url": "https://docs.dtrinity.org/informational/faq",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "dTRINITY website: native stablecoin and borrower subsidy use",
+        "url": "https://dtrinity.org",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC GENIUS issuer resources and application submission status",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC pending digital asset bank licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "FDIC GENIUS requirements and standards proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-04-07"
+      },
+      {
+        "label": "Treasury state certification review procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search including dTRINITY: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22dEURO%22%20OR%20%22Frankencoin%22%20OR%20%22dTRINITY%22%20OR%20%22Electronic%20Dollar%22&per_page=20&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=html_url&fields%5B%5D=type",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search including dUSD: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Reserve%20Protocol%22%20OR%20%22dUSD%22%20OR%20%22EUSD%22%20OR%20%22DEURO%22&per_page=20&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=html_url&fields%5B%5D=type",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Reserve%20Protocol%22%20OR%20%22dUSD%22%20OR%20%22EUSD%22%20OR%20%22DEURO%22&per_page=20&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=html_url&fields%5B%5D=type",
+        "https://dtrinity.org",
+        "https://docs.dtrinity.org",
+        "https://docs.dtrinity.org/protocol-components/dusd",
+        "https://docs.dtrinity.org/informational/faq",
+        "https://docs.dtrinity.org/informational/terms-of-use",
+        "Official-domain search across OCC, FDIC, Federal Reserve, NCUA and Treasury for the researched token and project names with GENIUS approval and application terms, reviewed 2026-10-28."
+      ],
+      "summary": "The public regulator resources, directories, exact-name Federal Register query and project disclosures checked on 2026-10-28 did not identify a GENIUS permitted issuer approval, state qualification, official pending application or registered foreign-issuer exception for dTRINITY dUSD. No named GENIUS issuance path was established in the reviewed project disclosures. This bounded finding does not rule out confidential, unindexed or differently named filings and does not treat general bank or virtual currency licenses as GENIUS permission.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer resources and application submission status",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC pending digital asset bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact token and project name search: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Reserve%20Protocol%22%20OR%20%22dUSD%22%20OR%20%22EUSD%22%20OR%20%22DEURO%22&per_page=20&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=html_url&fields%5B%5D=type",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

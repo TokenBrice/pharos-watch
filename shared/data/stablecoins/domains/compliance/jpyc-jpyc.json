@@ -1,5 +1,26 @@
 {
   "id": "jpyc-jpyc",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "JPYC EX eligibility: applicants living outside Japan cannot apply",
+        "url": "https://faq.jpyc.co.jp/s/article/jpycex-getting-started"
+      },
+      {
+        "label": "JPYC current issuance and redemption service and distinction from JPYC Prepaid",
+        "url": "https://jpyc.co.jp/"
+      },
+      {
+        "label": "JPYC funds-transfer pre-contract disclosure",
+        "url": "https://jpyc.co.jp/legal/pre-contract-disclosure.pdf"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

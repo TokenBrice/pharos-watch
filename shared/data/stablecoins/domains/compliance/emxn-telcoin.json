@@ -1,5 +1,18 @@
 {
   "id": "emxn-telcoin",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Telcoin eXYZ terms: eMXN issuer and explicit EU/EEA no-offer restriction",
+        "url": "https://www.telco.in/en/terms-of-use"
+      },
+      {
+        "label": "Telcoin Digital Cash: exact eMXN deployment and forthcoming EEA products",
+        "url": "https://www.telco.in/en/digital-cash"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

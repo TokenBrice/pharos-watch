@@ -1,0 +1,185 @@
+{
+  "id": "usdm-mega",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "MegaUSD (BVI) Ltd issues USDm as dollar-denominated stored value for use across MegaETH applications. The April 2026 holder terms describe a non-guaranteed dollar-notional redemption rate in USDC or other supported assets, available only to approved Mint Users. The Mint User Agreement commits to supported-asset redemption corresponding to the redeemed tokens' pro rata reserve value. GENIUS section 2(17) defines monetary value as national currency or a currency-denominated deposit; section 2(22) requires a fixed monetary-value repayment obligation and excludes a digital asset denominated in that value from satisfying that limb. These reserve-linked digital-asset terms do not establish an ordinary fixed fiat repayment obligation, while the product remains a transferable stablecoin used across applications. The statutory payment-stablecoin classification is therefore genuinely unclear rather than a verified payment-stablecoin or non-payment-token classification.",
+      "references": [
+        {
+          "label": "MegaUSD holder terms and redemption conditions",
+          "url": "https://app.megausd.money/terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "MegaUSD Mint User Agreement: issuer and reserve-linked redemption",
+          "url": "https://app.megausd.money/mint-agreement",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "MegaUSD reserve model and upstream USDtb regulatory claim",
+          "url": "https://megausd.money/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2 definitions of monetary value and payment stablecoin",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "MegaUSD (BVI) Ltd",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.megausd.money/api/transparency/backing-and-supply/current",
+    "redemptionPolicyPresent": true,
+    "notes": "The holder terms and Mint User Agreement directly identify MegaUSD (BVI) Ltd as the USDm issuer. Holding Users cannot redeem directly until onboarded as Mint Users; U.S. users cannot become Mint Users. The general terms aim at a dollar-notional rate without guaranteeing it, while the Mint User Agreement describes pro rata reserve-linked redemption in supported assets. This documented distinction supports unclear statutory applicability, not a categorical exclusion based on backing or protocol branding. MegaUSD's own website attributes the GENIUS compliance pathway and Anchorage issuance statement to the separate reserve asset USDtb, not to USDm or MegaUSD (BVI) Ltd. No USDm-specific issuance path, qualifying authorization, official application or registered foreign exception was identified in the checked public sources. The reserve API publishes issuer-reported USDC and USDtb backing data; it is not independent accountant assurance. No USDm monthly-attestation claim is made, and an upstream USDtb report cannot establish that flag for USDm. The negative authorization finding is bounded by the sources checked and does not exclude nonpublic filings.",
+    "references": [
+      {
+        "label": "MegaUSD holder terms and redemption conditions",
+        "url": "https://app.megausd.money/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "MegaUSD Mint User Agreement: issuer and reserve-linked redemption",
+        "url": "https://app.megausd.money/mint-agreement",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "MegaUSD reserve model and upstream USDtb regulatory claim",
+        "url": "https://megausd.money/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2 definitions of monetary value and payment stablecoin",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "MegaUSD issuer-reported backing and supply API",
+        "url": "https://app.megausd.money/api/transparency/backing-and-supply/current",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC payment-stablecoin program and application intake",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC application submission guidance",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-51.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-10-21"
+      },
+      {
+        "label": "Federal Register exact MegaUSD search",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22MegaUSD%22",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS regulated entities and authorized issuance Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve 2026 public announcement index",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC current public announcement index",
+        "url": "https://www.fdic.gov/news/press-releases",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS program page and Bulletin 2026-51, fetched 2026-10-28: checked for a named MegaUSD (BVI) Ltd or USDm approval, official application or foreign registration; none identified.",
+        "Federal Register API exact MegaUSD query, fetched 2026-10-28: returned count 0. The common USDM ticker was not treated as a unique issuer identifier.",
+        "NYDFS regulated-entities and issuance Greenlist tables, fetched 2026-10-28: no MegaUSD entity or USDm issuance entry identified. Ordinary licenses would not independently establish GENIUS authorization.",
+        "Federal Reserve 2026 press-release index and FDIC current press-release list, fetched 2026-10-28: checked the current displayed announcements for an issuer-specific authorization; none identified. Official-domain exact-name searches across OCC, Federal Reserve, FDIC and Federal Register did not locate a qualifying record.",
+        "MegaUSD holder terms, Mint User Agreement, official homepage and MegaETH launch announcement, fetched 2026-10-28: mapped the issuer and separated upstream USDtb/Anchorage GENIUS statements from any USDm-specific announcement."
+      ],
+      "summary": "As of 2026-10-28, the checked public sources did not identify a qualifying GENIUS permitted-issuer approval, state-qualified designation, official application or registered foreign-issuer exception for USDm or MegaUSD (BVI) Ltd. MegaUSD's GENIUS discussion names upstream USDtb, a different token with a different issuer. This is a dated finding about the reviewed public record, not a claim that no confidential application or other unpublished action exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC payment-stablecoin program and application intake",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC application submission guidance",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-51.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-10-21"
+        },
+        {
+          "label": "Federal Register exact MegaUSD search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22MegaUSD%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS regulated entities and authorized issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve 2026 public announcement index",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC current public announcement index",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "MegaUSD holder terms and redemption conditions",
+          "url": "https://app.megausd.money/terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "MegaUSD Mint User Agreement: issuer and reserve-linked redemption",
+          "url": "https://app.megausd.money/mint-agreement",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "MegaUSD reserve model and upstream USDtb regulatory claim",
+          "url": "https://megausd.money/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

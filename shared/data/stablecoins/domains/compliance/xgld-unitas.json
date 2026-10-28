@@ -24,5 +24,67 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "XGLD represents an XAUt-backed strategy position with variable NAV. Unitas uses XAUt collateral to borrow USDT, deploys the borrowed assets into strategies, and distributes returns through XGLD NAV appreciation. Whitelisted redemption is into XAUt, with a seven-day cooldown and a 0.1% fee. The reviewed disclosures describe a gold strategy position rather than a fixed-national-currency payment instrument and do not establish an issuer obligation to redeem for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Unitas XGLD strategy, NAV, redemption and deployments",
+          "url": "https://docs.unitas.so/overview/xgld.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Unitas XGLD access and earnings guide",
+          "url": "https://docs.unitas.so/guides/how-to-buy-xgld.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2 monetary value and payment stablecoin definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment as of 2026-10-28 applies to XGLD separately from underlying XAUt and borrowed USDT. The product documentation identifies exact BNB Chain and Base XGLD deployments, variable NAV growth, and whitelisted redemption into XAUt. The seven-day cooldown is a redemption step, not an established end-to-end settlement guarantee. The access guide states that displayed earnings are measured in XAUt and translated to USD at the current XAUt market price. These features support the non-payment-token perimeter finding without deciding securities law. Generic Unitas terms name Unipay Labs Limited as operator of USDu and sUSDu services but do not name XGLD; they are not used to assign a legal issuer or domicile to XGLD. No GENIUS authorization or foreign registration is asserted, and authorizations or attestations of underlying tokens are not attributed to this strategy position.",
+    "references": [
+      {
+        "label": "Unitas XGLD strategy, NAV, redemption and deployments",
+        "url": "https://docs.unitas.so/overview/xgld.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Unitas XGLD access and earnings guide",
+        "url": "https://docs.unitas.so/guides/how-to-buy-xgld.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Unitas terms naming USDu and sUSDu services",
+        "url": "https://docs.unitas.so/resources/terms-of-service.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-27",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2 monetary value and payment stablecoin definitions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

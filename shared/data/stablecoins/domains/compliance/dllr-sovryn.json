@@ -1,5 +1,30 @@
 {
   "id": "dllr-sovryn",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "MiCA recital 22: crypto-assets without an identifiable issuer",
+        "url": "https://eur-lex.europa.eu/legal-content/en/TXT/?uri=CELEX%3A32023R1114"
+      },
+      {
+        "label": "ESMA European Commission answer on crypto-assets without an identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "Sovryn Dollar: Mynt protocol issuance and collateral redemption",
+        "url": "https://sovryn.com/sovryn-dollar"
+      },
+      {
+        "label": "Sovryn terms: community-governed protocol and no affiliated transaction counterparty",
+        "url": "https://sovryn.com/terms-conditions"
+      },
+      {
+        "label": "Mynt protocol: DLLR mint and redeem against supported Bitcoin-backed stablecoins",
+        "url": "https://github.com/DistributedCollective/mynt"
+      }
+    ]
+  },
   "genius": {
     "applicability": "unclear",
     "applicabilityBasis": {

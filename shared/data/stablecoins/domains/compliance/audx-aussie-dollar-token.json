@@ -1,5 +1,27 @@
 {
   "id": "audx-aussie-dollar-token",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken: current EEA restrictions naming AUDX",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "AUDX: legal issuer and Australian-dollar redemption terms",
+        "url": "https://www.audxtoken.com/terms-and-conditions"
+      },
+      {
+        "label": "Kraken: Aussie Dollar Token and AUDX identity",
+        "url": "https://www.kraken.com/au/prices/aussie-dollar-token"
+      },
+      {
+        "label": "ESMA: EMT issuer and whitepaper register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

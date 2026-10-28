@@ -1,0 +1,79 @@
+{
+  "id": "bd-basedollar",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Base Dollar documentation: decentralized borrowing protocol that mints BD against crypto collateral with limited governance scope",
+        "url": "https://docs.basedollar.org/docs/user-docs/general"
+      },
+      {
+        "label": "Base Dollar launch announcement: contributor-built licensed Liquity V2 fork with no Coinbase or Base affiliation",
+        "url": "https://basedollar.org/blog/launch"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "BD is a transferable dollar-targeted token minted by borrowing against ETH, liquid staking tokens, cbBTC and Aero LP collateral through permissionless Base contracts. Holders can redeem BD for dollar-valued collateral at face value, but public materials identify no legal person obligated to redeem BD for a fixed amount of US dollars or bank-deposit monetary value under GENIUS section 2(22). Stablecoin-shaped payment use with an unresolved issuer redemption obligation keeps applicability genuinely unclear.",
+      "references": [
+        {
+          "label": "Base Dollar documentation: borrowing, redemption and liquidation mechanics",
+          "url": "https://docs.basedollar.org/docs/user-docs/borrowing-and-liquidations",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Base Dollar documentation: protocol overview and governance scope",
+          "url": "https://docs.basedollar.org/docs/user-docs/general",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-28. No legal issuer of BD is identified in official materials. The launch post credits Base Dollar contributors, states the protocol is a licensed Liquity V2 friendly fork on Base, and disclaims affiliation with Coinbase or Base. Governance scope is limited to revenue routing, fee limits, collateral debt limits and adding branches, and no entity accepts a redemption obligation in national currency. No issuerEntity is recorded because no exact legal entity is evidenced. Redemption returns collateral value, not currency or bank-deposit monetary value.",
+    "references": [
+      {
+        "label": "Base Dollar documentation: borrowing, redemption and liquidation mechanics",
+        "url": "https://docs.basedollar.org/docs/user-docs/borrowing-and-liquidations",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Base Dollar launch announcement: contributor-built licensed Liquity V2 fork",
+        "url": "https://basedollar.org/blog/launch",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register API full-text search for Base Dollar on 2026-10-28 returned 11 phrase matches, all generic uses in unrelated rules with no token or issuer item",
+        "Official Base Dollar domains basedollar.org and docs.basedollar.org reviewed 2026-10-28 name no GENIUS application, authorization plan or regulated issuance path",
+        "Web searches for Base Dollar and BD on 2026-10-28 surfaced protocol documentation and community coverage only; no regulator bulletin, authorization announcement or enforcement item naming the token"
+      ],
+      "summary": "As of 2026-10-28, the Federal Register search, official issuer domains and token-specific web searches found no GENIUS permitted payment stablecoin issuer approval, state qualification, official application or foreign-issuer registration for Base Dollar or BD. The token has no identified legal issuer to hold such a status. This is a bounded public-evidence finding, not proof that no unpublished filing exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

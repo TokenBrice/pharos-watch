@@ -16,5 +16,72 @@
         "url": "https://docs.analytics.gnosis.io/protocols/savings/"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "Savings xDAI on Gnosis is the ERC-4626 savings-vault share at 0xaf204776c7245bf4147c2612bf6e5972ee483701. Its verified implementation accepts WXDAI assets and redeems shares for WXDAI using the current vault asset/share ratio. Gnosis documentation describes interest distributions that increase assets per share. This is a variable-value savings position rather than a fixed-value payment instrument or an issuer obligation to redeem each share for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Gnosis SavingsXDai verified source and ERC-4626 accounting",
+          "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Gnosis Savings xDAI vault and variable share-price mechanics",
+          "url": "https://docs.analytics.gnosis.io/protocols/savings/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Gnosis bridge savings shares and interest distribution",
+          "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment concerns the exact Gnosis SavingsXDai share, not Ethereum Savings Dai, native xDAI, WXDAI, USDS or sUSDS. The verified non-proxy implementation fixes WXDAI as its underlying asset and inherits ERC-4626 deposit, redemption and variable asset/share accounting. Direct native-xDAI transfers revert; frontend or adapter descriptions of native-xDAI deposits do not change the vault asset. Gnosis documentation supplies the product and yield mechanism, but does not establish a separate legal payment-stablecoin issuer for this share, so issuerEntity and issuerDomicile are omitted. No GENIUS authorization or issuer pathway is asserted, and no underlying asset's authorization or attestation is attributed to the share. This payment-stablecoin scope assessment does not determine securities-law status or venue obligations under other laws.",
+    "references": [
+      {
+        "label": "Gnosis SavingsXDai verified source and ERC-4626 accounting",
+        "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Gnosis Savings xDAI vault and variable share-price mechanics",
+        "url": "https://docs.analytics.gnosis.io/protocols/savings/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Gnosis bridge savings shares and interest distribution",
+        "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

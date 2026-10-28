@@ -24,5 +24,53 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "senpathUSD is the receipt token for Sentora pathUSD, a Sentora-curated Morpho Vault V2 denominated in pathUSD and offered for a curated lending strategy. The exact-address Morpho product page identifies the underlying asset, curator and lending strategy. Morpho's Vault V2 documentation and published source describe variable assets per share, interest accrual, fees and recognized losses. Withdrawals return pathUSD under the vault accounting and available liquidity, rather than a fixed amount of national currency or a bank deposit. This supports a non-payment lending-position classification under GENIUS Act section 2(22), separately from the underlying stablecoin.",
+      "references": [
+        {
+          "label": "Morpho: exact Sentora pathUSD vault",
+          "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 lending receipt tokens and liquidity mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho VaultV2 published framework share accounting",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Sentora terms and vaults addendum",
+          "url": "https://sentora.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the Tempo vault share at 0x9a044ae05e5e6290dcf56afd69548565e957a626, separately from underlying pathUSD and any collateral token. Sentora's terms identify Sentora Digital Holdings (BVI) Ltd, together with affiliates, as the service counterparty and describe vaults as non-custodial smart-contract configurations. They disclaim capital preservation and condition withdrawal on smart-contract logic and protocol constraints. The reviewed materials do not establish a separate legal payment-stablecoin issuer or fixed-monetary-value redemption undertaking for this share, so issuerEntity and issuerDomicile are omitted. The linked GitHub source supports framework accounting, not a fresh bytecode match for this Tempo deployment. No underlying-token authorization or attestation is attributed to the vault share. This scope classification does not decide securities, investment-services or other legal obligations.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

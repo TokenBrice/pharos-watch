@@ -28,5 +28,74 @@
         "url": "https://eur-lex.europa.eu/eli/reg/2023/1114/oj/eng"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "earnUSD is a performance-linked share in the Lido Earn USD strategy vault, not a fixed-dollar payment token. Deposits are allocated to yield-generating protocols, and returns compound into the share token. Withdrawal proceeds are USDC under vault share accounting and liquidity-dependent processing. The opened product, risk and strategist disclosures support a variable-value strategy position rather than a payment instrument or an issuer obligation to redeem for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Lido Earn share-token performance and withdrawals",
+          "url": "https://docs.lido.fi/earn/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Lido earnUSD exact ShareManager and vault registry",
+          "url": "https://docs.lido.fi/earn/deployment-contracts",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Mellow earnUSD strategy-vault shares and USDC withdrawals",
+          "url": "https://docs.mellow.finance/lido-earn/earnusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Lido earnUSD interface and strategy risks",
+          "url": "https://stake.lido.fi/earn/usd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Runtime Global strategist terms and variable asset value",
+          "url": "https://mellow.finance/Runtime-Labs-Vault-Legal-Notice.pdf",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-11-10",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment covers Ethereum earnUSD ShareManager 0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981, mapped to vault 0x014e6da8f283c4af65b2aa0f201438680a004452 by Lido's registry. The exact product interface links the Runtime Global S.A. legal notice as the strategist terms. That notice identifies a Panama strategist, not a legal payment-stablecoin issuer, so issuerEntity and issuerDomicile are omitted. Lido, Mellow, Runtime Global and underlying stablecoin issuers are not inferred to be a separate fixed-value payment issuer for this vault share. This classification follows the strategy-vault family precedent and does not decide whether the share is a security or exempt from other laws. Underlying USDC or USDT authorization and reserve reports are not earnUSD authorization or attestations. The overview describes one subvault while the deployment registry and Mellow documentation identify additional underlying vaults; that documentation discrepancy does not affect the performance-linked share classification. Optional reserve, redemption and monthly-attestation flags are not asserted.",
+    "references": [
+      {
+        "label": "GENIUS Act payment-stablecoin and monetary-value definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Lido Earn strategy, liquidity and NAV risk disclosures",
+        "url": "https://lido.fi/earn/risk-disclosures",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-03-12",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Lido interface terms and EarnUSD eligibility",
+        "url": "https://lido.fi/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-23",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

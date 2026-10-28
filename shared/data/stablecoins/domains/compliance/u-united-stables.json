@@ -1,5 +1,18 @@
 {
   "id": "u-united-stables",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "United Stables distribution disclosure: EU offering and distribution excluded",
+        "url": "https://u.tech/"
+      },
+      {
+        "label": "United Stables terms: legal issuer and restricted-territory services",
+        "url": "https://u.tech/resources/legal-policy/terms/"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

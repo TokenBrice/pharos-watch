@@ -1,5 +1,31 @@
 {
   "id": "eurs-stasis",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Telcoin Europe MiCAR notice: EURS trading restricted from March 31, 2025",
+        "url": "https://www.telcoin.co.jp/en/support-center/digital-assets/micar-stablecoins-compliance"
+      },
+      {
+        "label": "YouHodler MiCA notice: EURS restricted for some EU services",
+        "url": "https://help.youhodler.com/en/articles/9540317-important-mica-update"
+      },
+      {
+        "label": "ESMA EMT issuer register: no STSS or EURS entry in the fetched register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "MFSA issuer search: STSS (MALTA) LIMITED legacy whitepaper deregistered",
+        "url": "https://fsr.mfsa.mt/Licences/searchLicencesByLicenceHolder?filter=STSS"
+      },
+      {
+        "label": "STASIS terms: STSS (Malta) Limited and EURS euro redemption",
+        "url": "https://stasis.net/terms"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

@@ -1,0 +1,185 @@
+{
+  "id": "eusd-electronic-usd",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Electronic Dollar eUSD targets a one-dollar peg and has documented fintech payment use. Holders do not receive the collateral yield, which the project report allocates to revenue-share partners and RSR stakers. Minting and redemption exchange the token for digital-asset collateral; governance discussion describes the Reserve Protocol as the sole issuer of new units, and no legal obligor promising fixed-dollar currency or deposit redemption was identified. The payment use and unresolved statutory issuer obligation support unclear GENIUS applicability.",
+      "references": [
+        {
+          "label": "GENIUS Act sections 2(17) and 2(22): monetary value and payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "eUSD quarterly report: holder yield treatment and fintech payment use",
+          "url": "https://forum.reserve.org/t/report-eusd-quarterly-report-q3-2025/1263",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-10-06"
+        },
+        {
+          "label": "eUSD governance discussion: dollar peg mandate, protocol issuance and regulatory uncertainty",
+          "url": "https://forum.reserve.org/t/rfc-eusd-collateral-basket-change-proposal-5/1330",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Reserve Yield DTF minting and redemption into collateral",
+          "url": "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Reserve terms: third-party DTF creation and no ABC Labs control",
+          "url": "https://reserve.org/terms-and-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-06-03"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://api.reserve.org/discover/dtfs",
+    "redemptionPolicyPresent": true,
+    "notes": "This row is for Electronic Dollar at Ethereum contract 0xa0d69e286b938e21cbf7e51d71f6a4c8918f482f, not Telcoin eUSD or the Paxos/Membrane eUSD in the ESMA register. Reserve discovery data matches that contract and classifies it as a yield DTF, with yield-bearing stablecoin vault collateral and a market price near one dollar. That taxonomy does not establish a holder yield share: the eUSD report says holders receive no underlying yield, and the governance mandate is to maintain a one-dollar peg while rewarding overcollateralizing RSR stakers. The USD3 non-payment-token precedent is therefore not inherited. ABC Labs, LLC is the website provider; its terms disclaim protocol operation and responsibility for third-party DTFs, so it is not assigned as issuerEntity. The reserve flag records a public basket disclosure, not an audited reserve balance or proof of complete liabilities. The redemption flag records in-kind protocol mechanics rather than a legal right to dollar cash. The fetched GENIUS discussion concerns distribution obstacles and collateral choices, not an announced issuance application or authorization route. No independent enforcement or monthly-attestation finding is asserted.",
+    "references": [
+      {
+        "label": "GENIUS Act sections 2(17) and 2(22): monetary value and payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "eUSD quarterly report: holder yield treatment and fintech payment use",
+        "url": "https://forum.reserve.org/t/report-eusd-quarterly-report-q3-2025/1263",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-10-06"
+      },
+      {
+        "label": "eUSD governance discussion: dollar peg mandate, protocol issuance and regulatory uncertainty",
+        "url": "https://forum.reserve.org/t/rfc-eusd-collateral-basket-change-proposal-5/1330",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Reserve Yield DTF minting and redemption into collateral",
+        "url": "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Reserve terms: third-party DTF creation and no ABC Labs control",
+        "url": "https://reserve.org/terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-06-03"
+      },
+      {
+        "label": "Reserve discovery data: exact Electronic Dollar contract, basket and product category",
+        "url": "https://api.reserve.org/discover/dtfs",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC GENIUS issuer resources and application submission status",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC pending digital asset bank licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve GENIUS issuer and application proposals",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "FDIC GENIUS requirements and standards proposal",
+        "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-04-07"
+      },
+      {
+        "label": "Treasury state certification review procedures",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-09-30"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search including Electronic Dollar: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22dEURO%22%20OR%20%22Frankencoin%22%20OR%20%22dTRINITY%22%20OR%20%22Electronic%20Dollar%22&per_page=20&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=html_url&fields%5B%5D=type",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search including Reserve Protocol and EUSD: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Reserve%20Protocol%22%20OR%20%22dUSD%22%20OR%20%22EUSD%22%20OR%20%22DEURO%22&per_page=20&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=html_url&fields%5B%5D=type",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+        "https://www.govinfo.gov/content/pkg/FR-2026-09-30/html/2026-19966.htm",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Reserve%20Protocol%22%20OR%20%22dUSD%22%20OR%20%22EUSD%22%20OR%20%22DEURO%22&per_page=20&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=html_url&fields%5B%5D=type",
+        "https://reserve.org/terms-and-conditions",
+        "https://docs.reserve.org/core-components/yield-dtfs/minting-and-redeeming.md",
+        "https://api.reserve.org/discover/dtfs",
+        "https://forum.reserve.org/t/report-eusd-quarterly-report-q3-2025/1263",
+        "https://forum.reserve.org/t/rfc-eusd-collateral-basket-change-proposal-5/1330",
+        "Official-domain search across OCC, FDIC, Federal Reserve, NCUA and Treasury for the researched token and project names with GENIUS approval and application terms, reviewed 2026-10-28."
+      ],
+      "summary": "The public regulator resources, directories, exact-name Federal Register query and project disclosures checked on 2026-10-28 did not identify a GENIUS permitted issuer approval, state qualification, official pending application or registered foreign-issuer exception for Electronic Dollar eUSD or Reserve Protocol. No named GENIUS issuance path was established in the reviewed project disclosures. This bounded finding does not rule out confidential, unindexed or differently named filings and does not treat general bank or virtual currency licenses as GENIUS permission.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer resources and application submission status",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC pending digital asset bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact token and project name search: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Reserve%20Protocol%22%20OR%20%22dUSD%22%20OR%20%22EUSD%22%20OR%20%22DEURO%22&per_page=20&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=html_url&fields%5B%5D=type",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

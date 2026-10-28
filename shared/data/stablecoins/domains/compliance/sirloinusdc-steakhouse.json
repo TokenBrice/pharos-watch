@@ -16,5 +16,53 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sirloinUSDC represents the Base Morpho VaultV2 at 0xbeeff2490feffa212fac2f6553682c219e6a8845, a yield-accruing USDC-denominated lending position. The exact product disclosure identifies a lending vault, and its verified protocol source calculates redemption from total assets and share supply after interest, losses and fee-share accrual. Holders burn shares for available underlying USDC, without a fixed monetary-value redemption obligation from a payment-stablecoin issuer under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho exact Steakhouse High Yield USDC Edition vault",
+          "url": "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho published VaultV2 source verified for the exact vault",
+          "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=all",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 lending, adapters and receipt-token exits",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Steakhouse DeFi vault service operator and governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the sirloinUSDC vault share separately from underlying USDC. Current Steakhouse terms identify Carniceria Tropical SA, incorporated in Panama and wholly owned by Steakhouse Financial Ltd, as the service operator and vault curator. They do not establish Carniceria Tropical SA, Steakhouse Financial Ltd or the underlying stablecoin issuer as a legal payment-stablecoin issuer for this vault share; issuerEntity and issuerDomicile are omitted. The exact VaultV2 source realizes investment losses, converts shares using variable total assets and supply, and burns shares before transferring underlying assets on redemption. No GENIUS authorization, foreign registration or issuer pathway is asserted. Underlying USDC authorizations and reserve reports are not attributed to the vault. This scope assessment does not decide securities, investment-company, adviser, money-transmission or other legal treatment.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22), payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

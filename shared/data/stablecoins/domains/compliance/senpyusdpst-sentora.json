@@ -16,5 +16,53 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "senPYUSDPST is the receipt token for Sentora Huma PST Main, a Sentora-curated Morpho Vault V2 denominated in PYUSD and offered for lending against Huma PST. The exact-address Morpho product page identifies the underlying asset, curator and lending strategy. Morpho's Vault V2 documentation and published source describe variable assets per share, interest accrual, fees and recognized losses. Withdrawals return PYUSD under the vault accounting and available liquidity, rather than a fixed amount of national currency or a bank deposit. This supports a non-payment lending-position classification under GENIUS Act section 2(22), separately from the underlying stablecoin.",
+      "references": [
+        {
+          "label": "Morpho: exact Sentora Huma PST Main vault",
+          "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 lending receipt tokens and liquidity mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Blockscout: published VaultV2 source for Sentora Huma PST Main",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Sentora terms and vaults addendum",
+          "url": "https://sentora.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the Ethereum vault share at 0x8381a156958711e230f325428b5eb4b6555c75d9, separately from underlying PYUSD and any collateral token. Sentora's terms identify Sentora Digital Holdings (BVI) Ltd, together with affiliates, as the service counterparty and describe vaults as non-custodial smart-contract configurations. They disclaim capital preservation and condition withdrawal on smart-contract logic and protocol constraints. The reviewed materials do not establish a separate legal payment-stablecoin issuer or fixed-monetary-value redemption undertaking for this share, so issuerEntity and issuerDomicile are omitted. Blockscout reports is_verified true and is_fully_verified false; the published source is used with the exact-address product disclosure, without a fresh runtime-equivalence claim. No underlying-token authorization or attestation is attributed to the vault share. This scope classification does not decide securities, investment-services or other legal obligations.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

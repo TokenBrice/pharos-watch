@@ -1,0 +1,80 @@
+{
+  "id": "honey-berachain",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Berachain documentation: BUSD minting and redemption run through the HoneyFactory contract with governance-configured rates",
+        "url": "https://docs.berachain.com/general/tokens/busd.md"
+      },
+      {
+        "label": "BUSD application page: live total supply and redeemable collateral basket",
+        "url": "https://busd.berachain.com/"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "BUSD is minted one to one through the HoneyFactory contract against a governance-set basket of whitelisted stablecoins and redeemed for those digital assets, subject to per-asset fees and Basket Mode proportional redemption when any collateral depegs. Official materials market it for payments and remittances, but they identify no legal issuer obligated to redeem for a fixed amount of national currency or bank-deposit monetary value, and documented redemption delivers other digital assets, so applicability remains unclear.",
+      "references": [
+        {
+          "label": "Berachain documentation: BUSD token page with mint, redemption, fees and Basket Mode",
+          "url": "https://docs.berachain.com/general/tokens/busd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Berachain documentation: FAQ on BUSD and the HONEY rename",
+          "url": "https://docs.berachain.com/general/help/faqs.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://busd.berachain.com/",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-28. Formerly HONEY; renamed Bera USD with symbol BUSD on 2026-08-19 at the same contract address, with no migration. The Coinbase MiCA restriction list names no BUSD or Bera USD entry; its BUST entry is a different asset. Official documentation credits minting and redemption to the HoneyFactory contract under governance-configured rates and names no issuing legal person, so no issuerEntity is recorded. reserveDisclosurePresent reflects the live redeemable-collateral display on the official BUSD application page; it is an on-chain collateral view, not an attested reserve report. Redemption delivers collateral stablecoins, not currency or bank-deposit monetary value.",
+    "references": [
+      {
+        "label": "Berachain documentation: BUSD token page with mint, redemption, fees and Basket Mode",
+        "url": "https://docs.berachain.com/general/tokens/busd.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "BUSD application page: live total supply and redeemable collateral basket",
+        "url": "https://busd.berachain.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register API full-text searches for Berachain and for Bera USD on 2026-10-28 returned zero documents",
+        "Official Berachain domains docs.berachain.com and busd.berachain.com reviewed 2026-10-28 describe protocol minting and redemption and name no GENIUS application, authorization plan or regulated issuance path",
+        "Rebrand coverage from 2026-08-19 describes institutional positioning for the rename but discloses no regulator filing; token-specific searches surfaced no regulator bulletin, authorization announcement or enforcement item naming HONEY or Bera USD"
+      ],
+      "summary": "As of 2026-10-28, Federal Register searches, official issuer domains and token-specific searches found no GENIUS permitted payment stablecoin issuer approval, state qualification, official application or foreign-issuer registration for Berachain's Bera USD (BUSD, formerly HONEY). No legal issuer is identified to hold such a status. This is a bounded public-evidence finding, not proof that no unpublished filing exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

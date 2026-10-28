@@ -1,5 +1,27 @@
 {
   "id": "fidd-fidelity",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken EEA restrictions: FIDD deposits and trading unavailable",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken FIDD identity: Fidelity Digital Dollar and its legal issuer",
+        "url": "https://www.kraken.com/buy/fidd"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Fidelity FIDD terms: dollar payment token and sole issuer",
+        "url": "https://www.fidelitydigitalassets.com/fidd-terms"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

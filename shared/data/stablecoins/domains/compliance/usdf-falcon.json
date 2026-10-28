@@ -1,0 +1,194 @@
+{
+  "id": "usdf-falcon",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Falcon identifies USDf as a medium of exchange and supports Visa card spending that deducts USDf at one token per U.S. dollar. However, its operative terms give eligible account users redemption into original or adjusted crypto collateral or other stablecoins, and expressly do not support users holding, depositing or withdrawing fiat through the card service. GENIUS section 2(22) requires an issuer obligation to redeem for fixed monetary value and excludes a digital asset denominated in that value from the redemption limb. The documented payment use and digital-asset redemption terms leave applicability ambiguous rather than establishing either a categorical non-payment exclusion or a fixed bank-money redemption promise.",
+      "references": [
+        {
+          "label": "Falcon USDf terms and risk disclosures",
+          "url": "https://docs.falcon.finance/resources/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-08-11"
+        },
+        {
+          "label": "GENIUS Act payment stablecoin and monetary value definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Falcon Digital Limited",
+    "issuerDomicile": "British Virgin Islands",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://app.falcon.finance/transparency",
+    "redemptionPolicyPresent": true,
+    "notes": "Reviewed 2026-10-28. Current terms dated August 11, 2026 identify Falcon Digital Limited, state in the risk disclosure that it is not currently licensed by any regulatory authority, list the United States as a restricted jurisdiction and define excluded U.S. persons. The April 30, 2026 reserve report identifies that same company as the BVI USDf issuer and reviewed the tracked Ethereum token contract. The issuer roadmap of July 29, 2025, updated August 15, 2025, describes discussions with U.S. and international regulators aimed at licenses under the GENIUS and CLARITY Acts. On May 27, 2026 Falcon announced fUSD, a separate U.S. dollar payment stablecoin issued by Anchorage Digital Bank, N.A., while USDf continues to serve DeFi-native users. The GENIUS-era issuance path therefore currently runs through a separate token and legal issuer, and the dated roadmap signal is not elevated to issuer-announced-intent for USDf. No token-specific public GENIUS approval, state qualification, official pending application or foreign registration was located in the checked sources, and no route is named, so issuerPathway remains unknown. The public reserve API discloses supply, collateral and venue balances; the presence flag does not assert eligible GENIUS reserve composition or independent verification of the live data. A quarterly reasonable-assurance report is not treated as a monthly attestation series, and monthlyAttestationPresent is omitted. The card issuer is a separate third-party electronic money institution and its authorization is not attributed to Falcon or USDf.",
+    "references": [
+      {
+        "label": "Falcon USDf terms and risk disclosures",
+        "url": "https://docs.falcon.finance/resources/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-08-11"
+      },
+      {
+        "label": "Falcon roadmap signal of GENIUS licensing discussions",
+        "url": "https://falcon.finance/news/falcon-finance-unveils-ambitious-roadmap-and-reaches-1b-in-usdf-circulating-supply",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-08-15"
+      },
+      {
+        "label": "Falcon and Anchorage fUSD launch announcement",
+        "url": "https://falcon.finance/news/falcon-finance-and-anchorage-digital-bank-launch-fusd-a-genius-ready-stablecoin-with-rewards-on-ceffu",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-05-27"
+      },
+      {
+        "label": "GENIUS Act payment stablecoin and monetary value definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Falcon USDf collateral and minting mechanism",
+        "url": "https://docs.falcon.finance/mechanism/usdf-synthetic-dollar",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Falcon issuer-operated transparency dashboard",
+        "url": "https://app.falcon.finance/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Falcon public collateral and supply API",
+        "url": "https://api.falcon.finance/api/v1/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Falcon USDf reserve assurance and issuer identification",
+        "url": "https://falcon.finance/api/media/file/Final%20Falcon%20assurance%20report%20and%20opinion%20-%20signed%20final%2030%20April%202026.pdf?prefix=media",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-06-19"
+      },
+      {
+        "label": "OCC public digital asset licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve 2026 press releases",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC current press releases",
+        "url": "https://www.fdic.gov/news/press-releases",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search for Falcon Digital Limited",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Falcon%20Digital%20Limited%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search for Falcon Finance",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Falcon%20Finance%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search for USDf",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22USDf%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "https://www.fdic.gov/news/press-releases",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Falcon%20Digital%20Limited%22&per_page=20",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Falcon%20Finance%22&per_page=20",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22USDf%22&per_page=20",
+        "https://docs.falcon.finance/resources/terms-of-use",
+        "https://falcon.finance/news/falcon-finance-unveils-ambitious-roadmap-and-reaches-1b-in-usdf-circulating-supply",
+        "https://falcon.finance/news/falcon-finance-and-anchorage-digital-bank-launch-fusd-a-genius-ready-stablecoin-with-rewards-on-ceffu",
+        "Exact-name searches for Falcon Digital Limited, Falcon Finance and USDf with GENIUS, stablecoin approval and application across OCC, Federal Reserve, FDIC, Federal Register, NYDFS and Treasury domains on 2026-10-28."
+      ],
+      "summary": "The opened public directories, release listings, Federal Register name searches, issuer disclosures and issuer news pages did not identify a USDf-specific public GENIUS approval, state qualification, official pending application or foreign registration. Federal Register searches for Falcon Digital Limited and Falcon Finance returned zero documents; the USDf search returned one unrelated 2008 Air Force notice. The May 27, 2026 issuer announcement presents the GENIUS-era issuance path as fUSD issued by Anchorage Digital Bank, N.A., a separate token and legal issuer, and the July 2025 roadmap supplies only a dated licensing-discussion signal for the offshore product. This bounded public-evidence review does not exclude unpublished applications or filings under another name.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC public digital asset licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve 2026 press releases",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC current press releases",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register search for Falcon Digital Limited",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Falcon%20Digital%20Limited%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register search for Falcon Finance",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Falcon%20Finance%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register search for USDf",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22USDf%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

@@ -1,0 +1,188 @@
+{
+  "id": "zsd-zephyr-protocol",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Zephyr ZSD protocol reserve and decentralized issuance",
+        "url": "https://zephyrprotocol.com/"
+      },
+      {
+        "label": "Zephyr user minting and redemption source documentation",
+        "url": "https://github.com/ZephyrProtocol/zephyr"
+      },
+      {
+        "label": "Zephyr project disclosure of no centralized issuer dependence",
+        "url": "https://zephyrprotocol.com/blog/2025-08-28-Zephyr-Vision"
+      },
+      {
+        "label": "ESMA interpretation of crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "ZSD is a transferable dollar-targeted native asset created and redeemed through the Zephyr protocol in exchange for ZEPH. The project describes a private store of value and money-use goals, but explicitly states that its reserve is protocol-held rather than controlled by a centralized issuer. The published mechanism provides dollar-valued ZEPH conversion, not an identified person obligated to redeem for national currency or bank-deposit monetary value. Its stablecoin and planned payment use make applicability ambiguous rather than a categorical non-payment exclusion.",
+      "references": [
+        {
+          "label": "Zephyr protocol reserve and decentralized ZSD design",
+          "url": "https://zephyrprotocol.com/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Zephyr source repository and ZEPH conversion mechanism",
+          "url": "https://github.com/ZephyrProtocol/zephyr",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Zephyr ZSD store-of-value use and planned payment utility",
+          "url": "https://zephyrprotocol.com/blog/2025-08-28-Zephyr-Vision",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-08-28",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act payment stablecoin and issuer definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+    "redemptionPolicyPresent": true,
+    "notes": "No legal issuer entity or domicile is assigned. The protocol documentation and source repository describe user minting and redemption against the native ZEPH reserve. The project team and software contributors are not inferred to be ZSD legal issuers. The public redemption mechanism is cryptoasset conversion and is not an issuer cash-redemption promise. The official scanner API publishes reserve balances and ZSD circulation; this is a protocol reserve disclosure, not an independent accountant attestation. Native ZSD is distinct from ZYS yield shares and any proposed wrapped ZSD bridge asset.",
+    "references": [
+      {
+        "label": "Zephyr protocol reserve and decentralized ZSD design",
+        "url": "https://zephyrprotocol.com/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Zephyr source repository and ZEPH conversion mechanism",
+        "url": "https://github.com/ZephyrProtocol/zephyr",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Zephyr ZSD store-of-value use and planned payment utility",
+        "url": "https://zephyrprotocol.com/blog/2025-08-28-Zephyr-Vision",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-08-28",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act payment stablecoin and issuer definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Zephyr native asset integration documentation",
+        "url": "https://zephyrprotocol.com/documentation",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Zephyr protocol reserve snapshot disclosure",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC digital asset licensing application directory",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve stablecoin framework notice",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC 2026 press releases",
+        "url": "https://www.fdic.gov/news/press-releases/2026",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register exact Zephyr Stable Dollar search",
+        "url": "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22Zephyr%20Stable%20Dollar%22",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.occ.gov/news-events/newsroom/?q=&nr=NewsRelease,Bulletin&topic=82&dte=0",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/press-releases/2026",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22Zephyr%20Stable%20Dollar%22",
+        "https://zephyrprotocol.com/",
+        "https://zephyrprotocol.com/documentation",
+        "https://github.com/ZephyrProtocol/zephyr",
+        "https://zephyrprotocol.com/blog/2025-08-28-Zephyr-Vision",
+        "Official-domain searches on 2026-10-28 for Zephyr and ZSD with GENIUS or stablecoin across OCC, FDIC, Federal Reserve, Federal Register, NYDFS and Treasury domains."
+      ],
+      "summary": "The checked OCC application directory, FDIC press-release index, Federal Reserve notice, NYDFS directory and project disclosures did not identify a ZSD GENIUS approval, state qualification, official application or registered foreign exception. The exact Federal Register search for Zephyr Stable Dollar returned zero documents in a browser. Official-domain token and protocol searches returned no relevant named record. The static OCC newsroom response exposed no release results and was not counted as a complete news search. This is a bounded public-evidence review, not proof about unpublished filings or a categorical legal scope determination.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC digital asset licensing application directory",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve stablecoin framework notice",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC 2026 press releases",
+          "url": "https://www.fdic.gov/news/press-releases/2026",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact Zephyr Stable Dollar search",
+          "url": "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22Zephyr%20Stable%20Dollar%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

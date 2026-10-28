@@ -16,5 +16,53 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sreUSD represents a revenue-accruing ERC-4626 savings-vault position in reUSD. Official documentation describes weekly protocol revenue streamed to depositors, while published contract code adds rewards to total assets and redeems shares for the underlying token. The resulting variable reUSD assets per share are a savings position, not a fixed amount of currency or bank-deposit monetary value owed by a payment-stablecoin issuer under GENIUS Act section 2(22). This classification applies to sreUSD separately from its underlying reUSD.",
+      "references": [
+        {
+          "label": "Resupply savings vault design and revenue accrual",
+          "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Resupply savings share accounting and underlying redemption",
+          "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/src/protocol/sreusd/LinearRewardsErc4626.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Resupply official reUSD and sreUSD deployment identities",
+          "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act monetary value and payment stablecoin definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment as of 2026-10-28 concerns the Ethereum savings share at 0x557ab1e003951a73c12d16f0fea8490e39c33c35. The official deployment roster and contract-address documentation identify it as sreUSD; the opened verified constructor identifies the underlying asset as Resupply reUSD at 0x57ab1e0003f623289cd798b1824be09a793e4bec. Protocol revenue accrues through vault asset/share accounting, and native redemption returns reUSD rather than a fixed dollar amount. Resupply is a protocol brand; the reviewed sources do not identify a separate exact legal payment-stablecoin issuer for this savings share, so issuerEntity and issuerDomicile are omitted. No authorization, reserve attestation or regulatory posture is inherited from underlying reUSD, crvUSD, frxUSD, Convex or Yearn. This structural savings-share classification does not resolve parent reUSD's GENIUS applicability or other securities and service-provider requirements.",
+    "references": [
+      {
+        "label": "Resupply official contract addresses",
+        "url": "https://docs.resupply.finance/faq/contract-addresses.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

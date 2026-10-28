@@ -1,0 +1,83 @@
+{
+  "id": "nect-beraborrow",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Beraborrow documentation: Dens mint the overcollateralized NECT stablecoin against Berachain collateral",
+        "url": "https://beraborrow.gitbook.io/docs"
+      },
+      {
+        "label": "Beraborrow documentation: NECT redemptions return collateral at face value minus a fee",
+        "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg.md"
+      },
+      {
+        "label": "Beraborrow legal page: no token issuer named, BVI governing law, US and UK app geo-blocking",
+        "url": "https://www.beraborrow.com/legal"
+      },
+      {
+        "label": "ESMA MiCA Q&A: crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      },
+      {
+        "label": "ESMA MiCA Q&A: EMT offering or admission to trading requires an authorized issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2404"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "NECT is minted against collateral deposited in Beraborrow Dens and is redeemed through the protocol for collateral at face value minus a dynamic fee, with redemptions liquidating the least collateralized borrower positions. Public documentation and the site legal page identify no legal issuer obligated to pay holders a fixed amount of US currency or bank-deposit monetary value, so GENIUS payment-stablecoin applicability stays unclear despite dollar-pegged payment marketing.",
+      "references": [
+        {
+          "label": "Beraborrow documentation: NECT peg and redemption mechanics",
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Beraborrow documentation: what is Nectar",
+          "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/what-is-nectar-usdnect.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-28. No legal issuer of NECT is identified. The legal page names Base Zero Labs Ltd only as the owner of brand and intellectual property, applies British Virgin Islands law, and geo-blocks the application for US and UK persons; it names no EEA restriction and no token issuer. No issuerEntity is recorded because no exact legal entity is evidenced. Redemption returns collateral at face value, not currency or bank-deposit monetary value. The US and UK application geo-block is an interface access restriction, not a token-level exclusion.",
+    "references": [
+      {
+        "label": "Beraborrow documentation: NECT peg and redemption mechanics",
+        "url": "https://beraborrow.gitbook.io/docs/nect-stablecoin/redemptions/usdnect-peg.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Beraborrow legal and compliance page",
+        "url": "https://www.beraborrow.com/legal",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register API full-text search for Beraborrow on 2026-10-28 returned zero documents",
+        "Beraborrow legal page and documentation reviewed 2026-10-28 name no GENIUS application, authorization plan or regulated issuance path",
+        "Web searches for Beraborrow and NECT on 2026-10-28 surfaced protocol documentation and analytics pages only; no regulator bulletin, authorization announcement or enforcement item naming the token"
+      ],
+      "summary": "As of 2026-10-28, the Federal Register search, official issuer domains and token-specific web searches found no GENIUS permitted payment stablecoin issuer approval, state qualification, official application or foreign-issuer registration for Beraborrow or NECT. The token has no identified legal issuer to hold such a status. This is a bounded public-evidence finding, not proof that no unpublished filing exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28"
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

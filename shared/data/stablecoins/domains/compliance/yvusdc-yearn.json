@@ -16,5 +16,60 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "yvUSDC-1 is an ERC-4626 share in Yearn's multi-strategy USDC vault. The exact product page identifies contract 0xbe53a109b494e5c9f97b9cd39fe969be68bf6204, USDC as the underlying asset and a price per share of 1.122925 at the 2026-10-28 fetch. Yearn defines vault shares as proportional claims on underlying assets allocated to yield strategies. This is a variable-value investment position redeemable through asset/share accounting, not a fixed-monetary-value payment instrument or a documented issuer obligation to redeem for national currency or bank deposits under GENIUS sections 2(17) and 2(22).",
+      "references": [
+        {
+          "label": "Yearn USDC-1: tracked vault, underlying USDC and variable share price",
+          "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Yearn v3: proportional ERC-4626 shares and strategy allocation",
+          "url": "https://docs.yearn.fi/developers/v3/overview",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act: monetary value and payment stablecoin definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed 2026-10-28. Assessment covers the tracked Yearn vault share separately from Circle's underlying USDC. The product documentation establishes proportional strategy shares and variable assets per share. It does not identify a legal entity undertaking fixed-dollar redemption of yvUSDC-1, so issuerEntity and issuerDomicile are omitted. No USDC authorization, reserve attestation or licensing status is attributed to the vault. This assessment does not determine securities-law status or assert a GENIUS enforcement finding.",
+    "references": [
+      {
+        "label": "Yearn USDC-1: exact Ethereum vault deployment",
+        "url": "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Yearn v3: ERC-4626 vault-share accounting",
+        "url": "https://docs.yearn.fi/developers/v3/overview",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act: sections 2(17) and 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

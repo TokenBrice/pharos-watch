@@ -1,5 +1,23 @@
 {
   "id": "frnt-wyoming",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA deposit and trading restriction explicitly naming FRNT",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "ESMA interim EMT issuer register reviewed for Wyoming Stable Token Commission and FRNT",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Wyoming Governor announcement identifying FRNT and its issuing Commission",
+        "url": "https://content.govdelivery.com/accounts/WYGOV/bulletins/3ee734a"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

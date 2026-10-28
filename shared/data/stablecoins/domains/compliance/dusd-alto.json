@@ -1,0 +1,83 @@
+{
+  "id": "dusd-alto",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "DUSD is a transferable dollar-targeted CDP stablecoin created against posted collateral. Alto explicitly accepts it as payment for reward-option exercises and permits circulation beyond its markets. Its public USDC swap facility is inventory-limited, charges fees and is administratively pausable. Alto also expressly denies an obligation to repurchase or redeem DUSD for any consideration. These documented payment uses and contrary redemption terms create a genuine payment-stablecoin applicability ambiguity under GENIUS section 2(22); a swap into USDC alone does not establish an obligation to redeem for currency or bank-deposit monetary value.",
+      "references": [
+        {
+          "label": "Alto DUSD collateralized issuance and circulation",
+          "url": "https://docs.alto.money/alto-protocol/dusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Alto DUSD limited USDC swap facility",
+          "url": "https://docs.alto.money/alto-protocol/psm",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Alto DUSD risk disclosure and no-redemption provision",
+          "url": "https://www.altofoundation.org/legal/risk-disclosure",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-10-19",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act monetary-value and payment-stablecoin definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "notes": "This is a sourced assessment of documented scope ambiguity, not an authorization or statutory-exclusion finding. Alto Foundation is identified as a Cayman Islands foundation company that deployed and provides protocol software. Mesh Interface Corp. is identified as the separate Panama front-end operator. Neither role is treated as evidence that the entity is a legal DUSD payment-stablecoin issuer or monetary-redemption obligor, so issuerEntity and issuerDomicile are omitted. The Owner Safe, Timelock and emergency controls prevent assuming Liquity-style immutability or a fully decentralized no-issuer design. Payment use is expressly documented, so the CDP label and no-redemption disclaimer do not support a categorical non-payment-token classification. Public GENIUS authorization posture and issuer pathway remain unresolved. No no-public-authorization-found status, enforcement finding, reserve-disclosure flag or attestation finding is asserted from the bounded searches. This treatment follows the unclear-applicability convention for LUSD, GHO and crvUSD without importing their separate negative-authorization reviews.",
+    "references": [
+      {
+        "label": "Alto DUSD collateralized issuance and circulation",
+        "url": "https://docs.alto.money/alto-protocol/dusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Alto DUSD limited USDC swap facility",
+        "url": "https://docs.alto.money/alto-protocol/psm",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Alto DUSD risk disclosure and no-redemption provision",
+        "url": "https://www.altofoundation.org/legal/risk-disclosure",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-10-19",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Alto Foundation terms and administration controls",
+        "url": "https://www.altofoundation.org/legal/terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-10-22",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Alto exact DUSD mainnet deployment",
+        "url": "https://raw.githubusercontent.com/altomoney/security-review-engagements/main/deployments/mainnet.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act monetary-value and payment-stablecoin definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

@@ -1,0 +1,172 @@
+{
+  "id": "weusd-picwe",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "PicWe markets WEUSD as the settlement currency of its RWA ecosystem with a one dollar target, cross-chain payment use and redemption into USDC. Section 2(22) of the GENIUS Act requires an issuer obligation to convert, redeem or repurchase for a fixed amount of monetary value and expressly excludes a digital asset denominated in a fixed amount of monetary value from that limb, and section 2(17) confines monetary value to national currency or deposits. The published materials identify no legal WEUSD issuer or redemption obligor, the mint page and FAQ disagree on redemption fees, and the wallet terms cover only a non-custodial wallet service, so the statutory issuer obligation element is unresolved and applicability remains unclear.",
+      "references": [
+        {
+          "label": "PicWe WEUSD documentation",
+          "url": "https://docs.picwe.org/what-is-weusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "PicWe mint and redeem documentation",
+          "url": "https://docs.picwe.org/mint-and-redeem",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "PicWe FAQ",
+          "url": "https://docs.picwe.org/faq",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act definitions, sections 2(17) and 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-28. PicWe docs describe 1:1 USDC minting and USDC redemption with a 1% redemption fee while the FAQ claims instant fee free 1:1 redemption; the published route converts only into USDC, a digital asset. PicWe FAQ decentralization claims coexist with emergency pause controls, and no disclosure names a legal WEUSD issuer, so no issuerEntity is supplied. The PicWe Wallet terms bind only Copariot Labs for a non-custodial wallet service and do not create a WEUSD issuance obligation. Base coin notices record disputed backing and a market price below one dollar; that is a peg quality issue and not a statutory classification ground. No exact token public GENIUS approval, application, state qualification, foreign registration or enforcement action was found in the checked sources, and GENIUS remains pre-effective in the reviewed primary sources.",
+    "references": [
+      {
+        "label": "PicWe WEUSD documentation",
+        "url": "https://docs.picwe.org/what-is-weusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "PicWe mint and redeem documentation",
+        "url": "https://docs.picwe.org/mint-and-redeem",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "PicWe FAQ",
+        "url": "https://docs.picwe.org/faq",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "PicWe website",
+        "url": "https://www.picwe.org/en",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "PicWe Wallet terms of service",
+        "url": "https://wallet.picwe.org/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act definitions, sections 2(17) and 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC digital asset licensing applications index",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register document search for PicWe",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=PicWe&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register document search for Copariot",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=Copariot&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve Board 2026 press release index",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC press releases",
+        "url": "https://www.fdic.gov/news/press-releases",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS virtual currency business licensing, regulated entities and greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC pending digital asset licensing application table",
+        "Federal Register full text search for PicWe and for Copariot",
+        "Federal Reserve Board 2026 press release index",
+        "FDIC press release listing",
+        "NYDFS virtual currency regulated entity and greenlisted coin tables",
+        "PicWe website, documentation and wallet terms"
+      ],
+      "summary": "On 2026-10-28 the OCC digital asset licensing table listed unrelated bank and trust applicants, Federal Register searches for PicWe and for Copariot returned zero documents, and the Federal Reserve 2026 press index, the FDIC press listing and the NYDFS regulated entity and greenlist tables contained no WEUSD, PicWe or Copariot entry. No public qualifying GENIUS approval, application, state qualification or registered foreign exception naming this token or its issuer was found. The exact legal issuer is unresolved, so this is a bounded public evidence finding, not proof that no unpublished filing exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC digital asset licensing applications index",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register document search for PicWe",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=PicWe&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register document search for Copariot",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=Copariot&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve Board 2026 press release index",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC press releases",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual currency business licensing, regulated entities and greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

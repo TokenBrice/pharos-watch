@@ -24,5 +24,78 @@
         "url": "https://www.clearstar.xyz/legal/terms-of-service.html"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "CSCBUSDC is the ERC-4626 share of the Clearstar cbAssets USDC lending vault on Base. Its assets per share vary with lending interest, fees, and recognized losses, and ordinary withdrawals depend on idle assets and strategy liquidity. The disclosed product is a yield-accruing strategy position, without a fixed monetary-value issuer redemption undertaking or payment and settlement design for the share itself.",
+      "references": [
+        {
+          "label": "Clearstar cbAssets Vault: exact Base deployment",
+          "url": "https://app.morpho.org/base/vault/0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c/clearstar-cbassets-vault",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2: interest, losses, shares, and liquidity",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho VaultV2: variable share accounting and redemption",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Clearstar terms: website operator and vault curator",
+          "url": "https://www.clearstar.xyz/legal/terms-of-service.html",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment-stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "This assessment concerns the vault share at Base 0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c, separately from underlying USDC and borrower collateral. Current terms identify NovaFusion S.A. in Panama as the Clearstar website operator and vault curator, and Clearstar Labs AG as the intellectual-property licensor. Neither role establishes a separate fixed-value payment-stablecoin issuer for CSCBUSDC, so issuerEntity and issuerDomicile are omitted. Circle, Coinbase, and Morpho authorizations, reserve reports, and corporate identities are not inherited by the share. Redemption follows variable asset/share accounting and available liquidity; in-kind exits are a separate protocol-position route. No vault-level GENIUS authorization, reserve attestation, or statutory segregation is asserted. This scope assessment does not resolve other securities or financial-services laws.",
+    "references": [
+      {
+        "label": "Clearstar cbAssets Vault: exact Base deployment",
+        "url": "https://app.morpho.org/base/vault/0x91C056B6d4311a743614FBc03ac32d4E6A2d3a3c/clearstar-cbassets-vault",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Morpho Vault V2: curated yield strategies",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Clearstar curator and website terms",
+        "url": "https://www.clearstar.xyz/legal/terms-of-service.html",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act payment-stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

@@ -1,0 +1,69 @@
+{
+  "id": "zeusd-zoth",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "ZeUSD is documented as a real-world-asset-collateralized debt-position token for DeFi liquidity, lending and yield strategies. Users post eligible collateral under Safe LTV limits and repay their ZeUSD position to retrieve their collateral, subject to fees. The token-specific product and legal terms describe collateralized borrowing and DeFi use, without a holder-level issuer promise to redeem for a fixed amount of national currency or bank-deposit monetary value. These documented uses and repayment mechanics support non-payment-token for the tracked GENIUS authorization model.",
+      "references": [
+        {
+          "label": "Zoth archived ZeUSD collateralized borrowing and repayment mechanics",
+          "url": "https://web.archive.org/web/20260519034706id_/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Zoth archived ZeUSD terms identifying the platform counterparty and CDP obligations",
+          "url": "https://web.archive.org/web/20260519041506id_/https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Zoth archived ZeUSD product description and DeFi use cases",
+          "url": "https://web.archive.org/web/20260606203655id_/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment concerns the tracked legacy ZeUSD V1 token, not Zoth payment services, a collateral fund share or ZeUSD V2. The archived official deployment page lists Ethereum token 0x7DC9748DA8E762e569F9269f48F69A1a9F8Ea761 under deprecated infrastructure and identifies a different V2 token. The archived ZeUSD terms name Metaco Intelligence Corporation as platform counterparty; that does not establish a separate legal payment-stablecoin issuer obligated to redeem holders in currency, so issuerEntity is omitted. This conclusion follows the documented CDP borrowing and DeFi product purpose, not an automatic exclusion of all CDPs. No assertion is made that V1 is currently operational, fully decentralized, reserve-compliant, authorized or exempt from other law. Reserve, redemption-policy and attestation presence flags are omitted because the current token-specific documentation URLs return 404 and archived mechanics do not establish a current disclosure footprint.",
+    "references": [
+      {
+        "label": "Zoth archived ZeUSD collateralized borrowing and repayment mechanics",
+        "url": "https://web.archive.org/web/20260519034706id_/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token/mechanics-of-zeusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Zoth archived ZeUSD terms identifying the platform counterparty and CDP obligations",
+        "url": "https://web.archive.org/web/20260519041506id_/https://docs.zoth.io/zoth/legal/zeusd/terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Zoth archived ZeUSD product description and DeFi use cases",
+        "url": "https://web.archive.org/web/20260606203655id_/https://docs.zoth.io/zoth/products/zeusd-an-omni-chain-and-composable-stable-token",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Zoth archived official deployments distinguishing deprecated ZeUSD V1 from V2",
+        "url": "https://web.archive.org/web/20260519041844id_/https://docs.zoth.io/zoth/tech-center/contract-deployments",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2 payment stablecoin and monetary value definitions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

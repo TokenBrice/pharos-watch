@@ -1,0 +1,152 @@
+{
+  "id": "usdo-openeden",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USDO has a fixed $1 target, rebasing balances and documented institutional settlement use. However, the current FAQ expressly states that primary redemption is in USDC and that direct USD fiat redemption is not available. User Agreement section 38.7 specifies a contractual right to corresponding value in USDC or other supported digital assets, while other clauses mention fiat only where supported. GENIUS Act section 2(22)(A)(ii)(I) excludes redemption merely in a digital asset denominated in fixed monetary value. The documented combination supports unclear applicability rather than treating yield alone as an exclusion or assuming a current fiat-redemption obligation.",
+      "references": [
+        {
+          "label": "OpenEden USDO user agreement: issuer, redemption and segregated account",
+          "url": "https://1846699559-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNjlMezbFeyn4pWdMN4xV%2Fuploads%2F6KSopl2YVcjSeb8gqeao%2FUSDO%20-%20User%20Agreement%20-%2020261014.pdf?alt=media&token=cf474fc9-af48-41fa-8f6f-756613bbb64c",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OpenEden USDO FAQ: no current direct USD redemption",
+          "url": "https://docs.openeden.com/usdo/faq.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OpenEden USDO institutional settlement disclosure",
+          "url": "https://openeden.com/news/usdo-settlement-currency-otc-trade-galaxy-digital-defiance-capital/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-02",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "OpenEden Digital Limited",
+    "issuerDomicile": "Bermuda",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://docs.openeden.com/usdo/introduction/usdo-reserves.md",
+    "redemptionPolicyPresent": true,
+    "notes": "The governing user agreement identifies OpenEden Digital Limited acting for and on behalf of Segregated Account USDO as issuer, and describes the company as a Bermuda segregated accounts company, registration 202403468. Its Class F license statement is issuer-disclosed context, not independently verified U.S. authorization. The agreement restricts U.S. and Canadian persons. The FAQ states that direct USD fiat redemption is not currently available; agreement section 38.7 specifies a claim for corresponding value in USDC or other supported digital assets. Other agreement clauses mention fiat only where supported. USDO has a fixed $1 target and documented institutional settlement use, unlike the appreciating cUSDO wrapper. The combination supports documented unclear applicability rather than exclusion based on yield or an assumed current fiat-redemption obligation. The independently reviewed official sources did not establish a token-specific GENIUS approval, official pending application or registered foreign exception. No enforcement or DASP posture is asserted. Public reserve policy and redemption documents support the disclosure flags. No current numerical holdings or monthly accountant attestation is asserted.",
+    "references": [
+      {
+        "label": "OpenEden USDO user agreement: issuer, redemption and segregated account",
+        "url": "https://1846699559-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FNjlMezbFeyn4pWdMN4xV%2Fuploads%2F6KSopl2YVcjSeb8gqeao%2FUSDO%20-%20User%20Agreement%20-%2020261014.pdf?alt=media&token=cf474fc9-af48-41fa-8f6f-756613bbb64c",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OpenEden USDO FAQ: no current direct USD redemption",
+        "url": "https://docs.openeden.com/usdo/faq.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OpenEden USDO institutional settlement disclosure",
+        "url": "https://openeden.com/news/usdo-settlement-currency-otc-trade-galaxy-digital-defiance-capital/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-02",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC digital assets licensing applications directory",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register API exact OpenEden document search",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=OpenEden&per_page=100",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve 2026 press release index",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC current press release index",
+        "url": "https://www.fdic.gov/news/press-releases",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OpenEden public USDO reserve policy",
+        "url": "https://docs.openeden.com/usdo/introduction/usdo-reserves.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OpenEden USDO primary redemption workflow",
+        "url": "https://docs.openeden.com/usdo/usdo-token/redemption-workflow.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC digital assets licensing applications directory, fetched 2026-10-28; the displayed pending-applicant table did not name OpenEden Digital Limited or USDO.",
+        "Federal Register API exact OpenEden document query, fetched 2026-10-28; the response described Documents matching OpenEden and returned count 0. The website search URL redirected to an automated-access challenge and was not treated as a negative result.",
+        "Federal Reserve 2026 press-release index, fetched 2026-10-28; a search of the complete fetched response found no OpenEden, OpenDollar or USDO match.",
+        "FDIC current press-release index, fetched 2026-10-28; the displayed release titles did not identify an OpenEden or USDO authorization. This is limited to the displayed index.",
+        "Exact OpenEden government-domain web query across occ.gov, federalreserve.gov, fdic.gov and federalregister.gov, 2026-10-28; no relevant issuer-specific result surfaced. This bounded indexed search is supplementary to the fetched official pages.",
+        "OpenEden USDO user agreement, FAQ, reserve policy, redemption workflow and institutional settlement announcement, each independently fetched 2026-10-28; none disclosed a token-specific GENIUS approval, application or registered foreign exception.",
+        "No U.S. state issuing authority was identified for the Bermuda issuer in the reviewed disclosures; no state-qualified pathway is inferred."
+      ],
+      "summary": "As of 2026-10-28, the fetched OCC applicant table, Federal Register API exact-name query, Federal Reserve annual press index, FDIC displayed press index and issuer disclosures did not establish a token-specific GENIUS approval, official pending application or registered foreign exception for OpenEden Digital Limited and USDO. The official-domain indexed search was also negative. This is a bounded public-source finding, not a statement about nonpublic submissions. Issuer-disclosed Bermuda licensing does not establish U.S. authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC digital assets licensing applications directory",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register API exact OpenEden document search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=OpenEden&per_page=100",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve 2026 press release index",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC current press release index",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

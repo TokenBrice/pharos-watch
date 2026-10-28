@@ -24,5 +24,53 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sxsRLUSD is an ERC-4626 Morpho Vault V2 lending share over RLUSD. Its assets-per-share conversion changes with interest, fees and losses, and withdrawals depend on available underlying assets. The product, contract and governing terms describe a strategy position rather than a payment or settlement instrument with a fixed monetary redemption obligation under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho: Sentora x Spark RLUSD exact vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xfc8c624b6080a0a780583799f2a862de936f6e22",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2: lending adapters, accounting and liquidity",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "sxsRLUSD: partially verified VaultV2 source and constructor asset",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Sentora terms of use and vaults addendum",
+          "url": "https://sentora.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "This assessment applies to sxsRLUSD at Ethereum address 0xfc8c624b6080a0a780583799f2a862de936f6e22, separately from underlying RLUSD. Sentora terms identify Sentora Digital Holdings (BVI) Ltd and its affiliates as the service counterparty. The vaults addendum describes direct smart-contract interactions, denies capital preservation guarantees and makes withdrawal subject to contract and protocol constraints. These disclosures do not establish a separate legal payment-stablecoin issuer or fixed monetary redemption obligor for the share, so issuerEntity and issuerDomicile are omitted. No GENIUS issuer authorization or registration is asserted. Underlying stablecoin approvals and reserve reports do not establish authorization or attestations for this vault share. This payment-stablecoin scope assessment does not determine securities-law treatment or authorize distribution of the yield product.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27: section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

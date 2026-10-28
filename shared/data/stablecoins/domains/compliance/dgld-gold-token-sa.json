@@ -1,5 +1,22 @@
 {
   "id": "dgld-gold-token-sa",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "ESMA Title II white-paper register: Gold Token SA and DGLD",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/OTHER.csv"
+      },
+      {
+        "label": "DGLD FAQ: issuer identity and classification outside ART and EMT",
+        "url": "https://dgld.ch/about-faq"
+      },
+      {
+        "label": "DGLD terms section 4.1: co-ownership rights and no stable-value undertaking",
+        "url": "https://dgld.ch/docs/terms"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

@@ -20,5 +20,84 @@
         "url": "https://sentora.com/legal/terms-of-use"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "senPYUSDmWIN is an ERC-4626 share in the Sentora mWIN Main PYUSD lending vault on Morpho. The exact vault listing identifies PYUSD as its asset and lending against mWIN as its strategy. The deployed VaultV2 source calculates redemption from total assets and total share supply, accrues interest and fees, and recognizes losses that can reduce share value. Sentora terms disclaim capital preservation and guaranteed yield. This variable-value lending position is not a fixed-value payment or settlement instrument or an issuer obligation to redeem for fixed monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho: exact Sentora mWIN Main PYUSD lending vault",
+          "url": "https://app.morpho.org/ethereum/vault/0x7cBcfc4F64be199eDE6db1D916ddcdb69f666B57/sentora-mwin-main",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 lending strategies, fees and liquidity mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Verified Morpho VaultV2 source at the tracked share address",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Sentora vault terms and capital-loss disclosures",
+          "url": "https://sentora.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22) payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the share at Ethereum address 0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57, separately from underlying PYUSD and borrower collateral mWIN. Sentora Digital Holdings (BVI) Ltd is the contracting service party named in Sentora terms; Morpho lists Sentora as curator. Neither source establishes a separate legal payment-stablecoin issuer or fixed-dollar redemption obligor for this vault share, so issuerEntity is omitted consistently with the lending-vault precedent. Share redemption follows variable asset/share accounting and available protocol liquidity. No GENIUS authorization or licensing conclusion is made about PYUSD or mWIN, and no underlying issuer approval or attestation is attributed to the share. This is a payment-stablecoin scope assessment, not a securities-law classification.",
+    "references": [
+      {
+        "label": "Morpho: exact Sentora mWIN Main PYUSD lending vault",
+        "url": "https://app.morpho.org/ethereum/vault/0x7cBcfc4F64be199eDE6db1D916ddcdb69f666B57/sentora-mwin-main",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Morpho Vault V2 lending strategies, fees and liquidity mechanics",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Verified Morpho VaultV2 source at the tracked share address",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Sentora vault terms and capital-loss disclosures",
+        "url": "https://sentora.com/legal/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22) payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

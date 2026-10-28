@@ -1,5 +1,23 @@
 {
   "id": "brl1-brl1",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken EEA restrictions: BRL1 deposits and trading unavailable, notice updated September 30, 2026",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "ESMA interim MiCA EMT issuer register: no BRL1 Consortium entry located on October 28, 2026",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "BRL1 October 1, 2026 reserve report identifies BRL1 CONSORTIUM S.A. as issuer",
+        "url": "https://drive.google.com/file/d/1BuRUC6u3UTzf17kOChhKby_L9hE5IU73/view"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "no-public-authorization-found",

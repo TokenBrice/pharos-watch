@@ -1,5 +1,22 @@
 {
   "id": "ousd-open-standard",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Open Standard geographic restrictions: EEA promotion excluded",
+        "url": "https://joinopenstandard.com/legal/geo-restrictions-and-prohibited-use-cases"
+      },
+      {
+        "label": "Open Standard OUSD access is subject to geographic restrictions",
+        "url": "https://joinopenstandard.com/integrate"
+      },
+      {
+        "label": "Bridge identifies Bridge Building Inc. as current OUSD issuer",
+        "url": "https://www.withbridge.com/blog/ousd-is-live-issued-by-bridge"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

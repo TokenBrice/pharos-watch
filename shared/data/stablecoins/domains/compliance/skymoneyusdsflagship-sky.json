@@ -24,5 +24,87 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "skyMoneyUsdsFlagship is an ERC-4626 receipt share in a USDS-denominated Morpho Vault V2 strategy curated through Sky.money. The exact product holds idle USDS and allocates to curated lending markets. Interest and realized losses change assets per share, and withdrawals depend on available liquidity. The share is marketed as a yield strategy and carries no fixed monetary-value redemption promise of the kind described in GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho exact USDS vault product and curator disclosure",
+          "url": "https://app.morpho.org/ethereum/vault/0xe15fcc81118895b67b6647bbd393182df44e11e0",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho VaultV2 verified source for the exact USDS vault",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Skybase International terms, section 1.9: curator role, principal risk and liquidity-dependent withdrawals",
+          "url": "https://docs.sky.money/legal/skybase-international/terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-09-01"
+        },
+        {
+          "label": "Sky.money vault product mechanics and risks",
+          "url": "https://sky.money/vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 receipt tokens, asset reporting and withdrawal mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Sky.money product guide naming USDT Savings and USDS Flagship",
+          "url": "https://sky.money/blog/what-are-sky-vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-08-07"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment-stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the vault share at Ethereum address 0xe15fcc81118895b67b6647bbd393182df44e11e0 separately from underlying USDS. Skybase International is identified by its governing terms as the interface operator and vault curator; this role does not establish a separate payment-stablecoin issuer or fixed-fiat redemption obligor for the share. issuerEntity and issuerDomicile are therefore omitted. Returns and losses affect the share exchange rate, and redemption returns the underlying cryptoasset through smart-contract accounting and available liquidity. No GENIUS authorization, foreign registration or issuer pathway is asserted. Underlying-token authorizations and reserve reports are not inherited by the vault share. Reserve, redemption-policy and monthly-attestation flags are omitted rather than inferred from underlying-token disclosures. This payment-stablecoin scope assessment does not determine treatment under securities or other financial-services law.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22): payment-stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Skybase International terms, section 1.9: curator role, principal risk and liquidity-dependent withdrawals",
+        "url": "https://docs.sky.money/legal/skybase-international/terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-09-01"
+      },
+      {
+        "label": "Morpho exact USDS vault product and curator disclosure",
+        "url": "https://app.morpho.org/ethereum/vault/0xe15fcc81118895b67b6647bbd393182df44e11e0",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

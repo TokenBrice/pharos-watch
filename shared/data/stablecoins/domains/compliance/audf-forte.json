@@ -1,5 +1,34 @@
 {
   "id": "audf-forte",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "AUDF currently linked issuer whitepaper: Australia-only intended use, page 7",
+        "url": "https://www.forteaud.com/api/documents/view/whitepaper"
+      },
+      {
+        "label": "Forte issuer PDS dated June 30, 2026: Australian distribution and issuer identity",
+        "url": "https://www.forteaud.com/api/documents/view/product-disclosure-statement"
+      },
+      {
+        "label": "Forte Tech Solutions notice: no EU or EEA crypto-asset services or marketing",
+        "url": "https://www.forte-sol.com/legal/important-information/"
+      },
+      {
+        "label": "AUDF terms: Forte Securities issuer and Forte Tech Solutions account and conversion appointment",
+        "url": "https://www.forteaud.com/api/documents/view/terms-of-use"
+      },
+      {
+        "label": "AUDF target-market determination dated June 30, 2026: Australian residents and other permitted jurisdictions",
+        "url": "https://www.forteaud.com/api/documents/view/target-market-determination"
+      },
+      {
+        "label": "MiCA Article 2: Union issuance, offering and trading scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

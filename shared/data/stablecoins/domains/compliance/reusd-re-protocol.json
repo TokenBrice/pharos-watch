@@ -24,5 +24,75 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
       }
     ]
+  },
+  "genius": {
+    "applicability": "excluded-security",
+    "applicabilityBasis": {
+      "summary": "reUSD is a privately offered senior investment tranche issued by Resilience (BVI) Ltd. Its purchase agreement characterizes the tokens as derivative tranched debt obligations and tranches of notes, incorporates a confidential private placement memorandum, and restricts sales and transfers under securities-law exemptions or safe harbors. The token value is linked to senior-class net asset value rather than fixed-dollar redemption. This evidence supports the securities exclusion in GENIUS Act section 2(22)(B)(iii).",
+      "references": [
+        {
+          "label": "Re reUSD token purchase agreement",
+          "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Re senior tranche and variable token price",
+          "url": "https://docs.re.xyz/products/about-reusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22) securities exclusion",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Resilience (BVI) Ltd",
+    "issuerDomicile": "British Virgin Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "redemptionPolicyPresent": true,
+    "notes": "Scope assessment applies to reUSD, not the deposited USDC, USDT, sUSDe or other collateral. The purchase agreement identifies Resilience (BVI) Ltd as the token issuer and registered-holder counterparty. Resilience Foundation governs the protocol, while Cover Reinsurance SPC Ltd is the separate reinsurer; neither role substitutes for the legal token issuer. reUSD redemptions use current NAV and available liquidity, with a quarterly queue when the onchain buffer is exhausted. The agreement states that the company and affiliates need not maintain redemption liquidity or sell assets to satisfy requests. Non-U.S. investor restrictions are distribution terms, not the basis for the securities exclusion. This is an evidence-based scope classification, not a regulator-issued determination or U.S. issuer authorization. Reserve and monthly-attestation flags are omitted: the opened custody disclosure describes offchain AUP work, which is not evidence of a current token-level monthly reserve and liability attestation.",
+    "references": [
+      {
+        "label": "Re reUSD token purchase agreement",
+        "url": "https://storage.googleapis.com/re-files-production/docs/token_agreement_reUSD_v2.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Re senior tranche and variable token price",
+        "url": "https://docs.re.xyz/products/about-reusd.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Re token issuer and principal-at-risk note structure",
+        "url": "https://docs.re.xyz/transparency-and-data-show-me-the-receipts/audits-attestations-custody-structure.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Re NAV-based redemption policy",
+        "url": "https://docs.re.xyz/minting-and-redemptions/redemptions.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22) securities exclusion",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }
