@@ -1,0 +1,72 @@
+name: HyperCore USDC Cross-check
+
+on:
+  schedule:
+    - cron: "29 */6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: hypercore-usdc-cross-check
+  cancel-in-progress: false
+
+jobs:
+  cross-check:
+    if: ${{ github.ref == 'refs/heads/main' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: $/.github/actions/setup-workspace
+        with:
+          bootstrap-generated: "false"
+          bootstrap-history: "false"
+          install-playwright-chromium: "false"
+          install-playwright-firefox: "false"
+      - name: Compare fresh published and on-chain observations
+        env:
+          PHAROS_API_KEY: ${{ secrets.PHAROS_API_KEY }}
+        run: >-
+          node --import tsx scripts/maintenance/check-hypercore-usdc.ts
+          --report "$RUNNER_TEMP/hypercore-usdc.json"
+          --body "$RUNNER_TEMP/hypercore-usdc.md"
+      - name: Append evidence
+        if: ${{ always() }}
+        shell: bash
+        run: |
+          if [[ -f "$RUNNER_TEMP/hypercore-usdc.md" ]]; then
+            cat "$RUNNER_TEMP/hypercore-usdc.md" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Reconcile divergence issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          status=$(node -p 'JSON.parse(require("node:fs").readFileSync(process.env.RUNNER_TEMP + "/hypercore-usdc.json", "utf8")).status')
+          case "$status" in healthy|divergence) ;; *) exit 1 ;; esac
+          title='HyperCore USDC cross-check divergence'
+          body="$RUNNER_TEMP/hypercore-usdc.md"
+          issue_number=$(gh issue list --state open --limit 100 --search 'in:title "HyperCore USDC cross-check divergence"' --json number,title --jq '[.[] | select(.title == "HyperCore USDC cross-check divergence")][0].number // empty')
+          if [[ "$status" == 'divergence' ]]; then
+            if [[ -n "$issue_number" ]]; then
+              gh issue edit "$issue_number" --add-label 'ops:followup' --body-file "$body"
+            else
+              gh issue create --title "$title" --label 'ops:followup' --body-file "$body"
+            fi
+          elif [[ -n "$issue_number" ]]; then
+            issue_body=$(gh issue view "$issue_number" --json body --jq .body)
+            marker="<!-- hypercore-usdc-recovery:$(printf '%s' "$issue_body" | sha256sum | cut -d ' ' -f1) -->"
+            gh api --paginate "repos/$GH_REPO/issues/$issue_number/comments" --jq '.[] | select(.user.login == "github-actions[bot]") | .body' > "$RUNNER_TEMP/hypercore-comments.txt"
+            if ! grep -Fq -- "$marker" "$RUNNER_TEMP/hypercore-comments.txt"; then
+              printf '\n%s\n' "$marker" >> "$body"
+              gh issue comment "$issue_number" --body-file "$body"
+            fi
+            gh issue close "$issue_number" --reason completed
+          fi
