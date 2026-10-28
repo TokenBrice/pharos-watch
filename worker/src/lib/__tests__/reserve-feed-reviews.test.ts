@@ -1,4 +1,5 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, expectTypeOf, it } from "vitest";
+import { ReserveFeedReviewSchema, type ReserveFeedReview } from "@shared/types/live-reserves";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { RESERVE_FEED_REVIEWS, matchReserveFeedReview, resolveReserveFeedReviews } from "../reserve-feed-reviews";
 import type { ReserveSyncStateRecord } from "../live-reserves/store-shared";
@@ -18,14 +19,12 @@ function state(overrides: Partial<ReserveSyncStateRecord> = {}): ReserveSyncStat
 
 describe("reserve feed review policy", () => {
   it.each(RESERVE_FEED_REVIEWS)("matches only the reviewed failure for $stablecoinId", async (item) => {
-    const errorPrefix = item.stablecoinId === "gusd-gemini"
-      ? "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index"
-      : "primary:onchain-evm: midas-mtbill:save-rounded-totals-mismatch";
+    const now = item.reviewedAt + 1;
     const observed = state({
       stablecoinId: item.stablecoinId, adapterKey: item.adapterKey,
-      lastStatus: "error", lastError: `${errorPrefix} observed failure`,
+      lastStatus: "error", lastError: item.errorPrefix,
       warnings: [],
-      metadata: { failureCategory: "unknown" },
+      metadata: { failureCategory: item.failureCategory },
     });
     expect(await matchReserveFeedReview(mockD1(), observed, now)).toEqual(item);
     expect(await matchReserveFeedReview(mockD1(), { ...observed, lastStatus: "ok", lastSuccessAt: now }, now)).toBeNull();
@@ -38,6 +37,15 @@ describe("reserve feed review policy", () => {
       }],
     }, now)).toBeNull();
     expect(await matchReserveFeedReview(mockD1(), { ...observed, lastError: "Different failure" }, now)).toBeNull();
+    expect(await matchReserveFeedReview(mockD1(), { ...observed, lastError: `${item.errorPrefix}: changed cause` }, now)).toBeNull();
+  });
+  it.each(["adapter-timeout", "run-budget-exhausted", "network", "storage-write"])("cannot authorize operational failure category %s", (failureCategory) => {
+    expect(ReserveFeedReviewSchema.safeParse({ ...review, failureCategory }).success).toBe(false);
+    expect(resolveReserveFeedReviews(now, [{ ...review, failureCategory } as ReserveFeedReview]).invalidIds).toEqual([review.stablecoinId]);
+  });
+  it("excludes timeout and budget categories from the review type", () => {
+    expectTypeOf<"adapter-timeout">().not.toExtend<ReserveFeedReview["failureCategory"]>();
+    expectTypeOf<"run-budget-exhausted">().not.toExtend<ReserveFeedReview["failureCategory"]>();
   });
   it.each([-1, 0, 1])("expires at equality %+is", (offset) => {
     const resolved = resolveReserveFeedReviews(review.expiresAt + offset, [review]);
@@ -54,7 +62,7 @@ describe("reserve feed review policy", () => {
     { sources: [{ url: "https://example.com", evidenceDate: "2026-10-20" }] },
     { expiresAt: review.reviewedAt }, { failureCategory: "" },
   ])("rejects malformed/future review %j", (overrides) => {
-    expect(resolveReserveFeedReviews(now, [{ ...review, ...overrides }]).invalidIds).toEqual([review.stablecoinId]);
+    expect(resolveReserveFeedReviews(now, [{ ...review, ...overrides } as ReserveFeedReview]).invalidIds).toEqual([review.stablecoinId]);
   });
   it("rejects every copy of a duplicate identity", () => {
     const result = resolveReserveFeedReviews(now, [review, review]);
@@ -67,6 +75,8 @@ describe("reserve feed review policy", () => {
       { lastError: "primary:http-json: midas-mtbill:future-portfolio-timestamp" },
       { lastError: "primary:http-json: midas-mtbill: stale or future portfolio timestamp" },
       { metadata: { failureCategory: "adapter-timeout" } },
+      { metadata: { failureCategory: "run-budget-exhausted" } },
+      { metadata: { failureCategory: review.failureCategory, uncertainWrite: true } },
       { warnings: [{ code: "new-failure", message: "new", severity: "warning", effect: "degraded" }] },
     ] satisfies Partial<ReserveSyncStateRecord>[]) expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
   });
@@ -119,6 +129,14 @@ describe("reserve feed review policy", () => {
   });
   it.each([false, true])("fails closed on missing/unreadable circuit history (%s)", async (failed) => {
     const db = mockD1([{ match: "status != 'skipped'", rows: [], first: null, ...(failed ? { throwError: new Error("read") } : {}) }]);
+    expect(await matchReserveFeedReview(db, state({ lastStatus: "skipped", metadata: { failureCategory: "circuit-open" } }), now)).toBeNull();
+  });
+  it("cannot inherit an uncertain prior attempt through a circuit skip", async () => {
+    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
+      stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,
+      breaker_key: "test", status: "error", warnings: "[]", last_error: review.errorPrefix,
+      metadata: JSON.stringify({ failureCategory: review.failureCategory, uncertainWrite: true }),
+    } }]);
     expect(await matchReserveFeedReview(db, state({ lastStatus: "skipped", metadata: { failureCategory: "circuit-open" } }), now)).toBeNull();
   });
   it.each(["not-json", "{}", "[{}]"])("rejects unreadable warning evidence %s rather than assuming no warnings", async (warnings) => {

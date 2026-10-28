@@ -106,9 +106,7 @@ export async function syncViaCoingeckoFallback(
   const { assets } = intake;
 
   const { previousAssetsById, previousCacheState } = await restoreFallbackCacheState({ db, assets });
-  // A successful complete curated read replaces the fresh aggregate and unavailable
-  // chain packet. Failed probes leave the CoinGecko aggregate and its clock intact.
-  await overlayFallbackCuratedAggregateSupply(assets, signal, dwellirNative);
+  await overlayFallbackCuratedAggregateSupply(assets, signal, dwellirNative, previousAssetsById);
   const { fxFallbackRates, validationReferences } = await loadFreshFxRates(
     db,
     "[sync-stablecoins:fallback]",

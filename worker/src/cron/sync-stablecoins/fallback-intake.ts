@@ -1,13 +1,14 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
+import { getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { throwIfAborted } from "../../lib/abort";
 import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshness";
 import type { CronResult } from "./shared";
-import { buildSyncMetadata } from "./shared";
+import { buildSyncMetadata, restorePreferredNativeSupply } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
@@ -121,12 +122,10 @@ export async function runFallbackIntakePhase(
  * fallback assets whose upstream market row carries no chain breakdown (Sky
  * savings NAV wrappers such as sUSDS/sDAI have a null DefiLlama id, so the
  * CoinGecko intake hardcodes an empty `chainCirculating`). Run this after the
- * previous-cache restore so a successful probe supersedes the carried row. If
- * any configured chain read fails the probe returns null and the asset keeps its
- * restored carry — fail closed per asset, never a partial map. Both curated
- * assets are USD NAV tokens, so the per-chain supply shares the V9 review derives
- * are price-invariant and the aggregate reuses the same on-chain-units x price
- * basis as `circulating`; a missing observed price is not replaced with par.
+ * previous-cache load. Failed/skipped preferred probes restore eligible native
+ * packets or publish unavailable supply while retaining price. Partition-excluded
+ * fresh CoinGecko caps and nonpreferred totals remain. Native units use the
+ * admitted price, never a par substitute when observed valuation is missing.
  * The probe reads each contract sequentially, so the added calls stay within
  * Cloudflare's 6-connection per-trigger pool.
  */
@@ -134,17 +133,24 @@ export async function overlayFallbackCuratedAggregateSupply(
   assets: PeggedAsset[],
   signal?: AbortSignal,
   dwellirNative?: DwellirNativeCapability,
+  previousAssetsById?: ReadonlyMap<string, PeggedAsset>,
 ): Promise<void> {
   for (const asset of assets) {
     throwIfAborted(signal);
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
-    if (!meta || (!selectCuratedAggregateOnchainSupplyProbeContracts(meta) && meta.id !== SFRAX_STOCK_PERIMETER.assetId)) continue;
+    if (!meta || (!prefersOnChainSupplyMcap(meta) && !selectCuratedAggregateOnchainSupplyProbeContracts(meta))) continue;
+    if (isOnchainSupplyPartitionExcluded(meta.id) && asset.supplySource === "coingecko-fallback"
+      && getCirculatingRawOrNull(asset) !== null) continue;
 
     const priceUsd = toPositiveFiniteNumber(asset.price);
-    if (priceUsd == null) continue;
-
-    const onChainMcap = await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal, dwellirNative);
-    if (!onChainMcap?.chainCirculating) continue;
+    const onChainMcap = priceUsd == null ? null
+      : await fetchCuratedAggregateOnChainMcap(meta, priceUsd, undefined, signal, dwellirNative);
+    if (!onChainMcap?.chainCirculating) {
+      if (prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)) {
+        Object.assign(asset, restorePreferredNativeSupply(asset, previousAssetsById?.get(meta.id), Math.floor(Date.now() / 1000)));
+      }
+      continue;
+    }
 
     const pegKey = pegTypeKey(meta);
     asset.circulating = { [pegKey]: onChainMcap.mcap };
@@ -154,6 +160,8 @@ export async function overlayFallbackCuratedAggregateSupply(
     asset.chains = Object.keys(onChainMcap.chainCirculating);
     if (meta.id === SFRAX_STOCK_PERIMETER.assetId) {
       asset.supplyPerimeter = onChainMcap.supplyPerimeter;
+    }
+    if (prefersOnChainSupplyMcap(meta)) {
       asset.circulatingPrevDay = null;
       asset.circulatingPrevWeek = null;
       asset.circulatingPrevMonth = null;
@@ -161,6 +169,7 @@ export async function overlayFallbackCuratedAggregateSupply(
       delete asset.supplyRestored;
       delete asset.supplyGapFill;
       delete asset.supplyChainGuard;
+      delete asset.chainPartition;
     }
   }
 }

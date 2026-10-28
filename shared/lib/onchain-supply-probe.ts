@@ -124,10 +124,36 @@ export function getOnchainSupplyHoldReason(assetId: string): SupplyUnavailableRe
     ? REVIEWED_ONCHAIN_SUPPLY_HOLDS[assetId] : null;
 }
 
+export function isOnchainSupplyPartitionExcluded(assetId: string): boolean {
+  // USTB includes off-chain book entries; gtUSDCp has independent vault NAVs.
+  return assetId === "ustb-superstate" || assetId === "gtusdcp-gauntlet";
+}
+
+const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
+  // Prefer the complete native Ethereum + Sui receipt aggregate over a
+  // CoinGecko row that historically covered only Sui.
+  "eearn-ember",
+  // Reviewed 2026-10-02: fresh CG cap values 3,997.66 FIUSD units, but the
+  // complete native zkSync + Arbitrum roster reads only 1,517.66 + 0 units.
+  // Never admit that contradictory cap, even when a native leg is unreadable.
+  "fiusd-sygnum",
+  // Reviewed complete native stock reconciled 2026-10-28; see supply-snapshot.md.
+  "acrdx-anemoy-apollo",
+  "susdai-usd-ai",
+  "myrc-blox",
+  "stac-securitize",
+  "eurspkcc-spiko",
+]);
+
+export function prefersOnChainSupplyMcap(meta: Pick<StablecoinMeta, "id">): boolean {
+  return meta.id === SFRAX_STOCK_PERIMETER.assetId || PREFER_ONCHAIN_SUPPLY_MCAP_IDS.has(meta.id);
+}
+
 const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   string,
   readonly CuratedOnchainSupplyContractConfig[]
 > = {
+  "cdp-enosys": [supplyProbeChain("flare")],
   // Reviewed 2026-10-25: all nine EVM issuer registers sum; Solana/Stellar
   // are Ethereum-escrowed representations listed explicitly below, not new stock.
   "jaaa-janus-henderson-anemoy": [
@@ -188,8 +214,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("etherlink", { allowZeroSupply: true }), { chain: "starknet", allowZeroSupply: true },
     { chain: "stellar", allowZeroSupply: true }, { chain: "solana", allowZeroSupply: true },
   ],
-  // Reviewed 2026-10-25: complete stock agrees with issuer totals; CoinGecko's
-  // overstated share count gives ratio 0.713155, so partition admission stays closed.
+  // Complete native stock matches Spiko's issuer total; the reviewed preference
+  // replaces CoinGecko's overstated shares without widening partition admission.
   "eurspkcc-spiko": [
     { chain: "arbitrum", allowZeroSupply: true }, { chain: "ethereum", allowZeroSupply: true },
     { chain: "polygon", allowZeroSupply: true }, { chain: "base", allowZeroSupply: true },
@@ -356,6 +382,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     supplyProbeChain("tempo", { allowZeroSupply: true }),
     { chain: "solana", allowZeroSupply: true },
   ],
+  // Reviewed 2026-10-28: independently issued Solana shares add to Ethereum.
+  "stac-securitize": [{ chain: "ethereum" }, { chain: "solana" }],
   // Reviewed 2026-10-25: Ethereum syrupUSDG includes CCIP LockRelease custody;
   // remote BurnMint stocks reallocate it. Ink and Solana currently read zero.
   // https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md
@@ -596,9 +624,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     // Kaia cUSDO wraps its local USDO, like the other independent vaults.
     supplyProbeChain("klaytn"),
   ],
-  // Reviewed 2026-10-25: sUSDai uses direct burn/mint across all six deployments;
-  // include Solana (6 decimals) and Arc as additive stock. Complete stock
-  // remains outside the CoinGecko partition admission band.
+  // sUSDai uses direct burn/mint across all six deployments; the reviewed
+  // preference includes additive Solana (6 decimals) and Arc stock omitted by CG.
   "susdai-usd-ai": [
     { chain: "arbitrum" },
     { chain: "ethereum" },
@@ -811,7 +838,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
   // Ethereum 67,696,661.464479 + Plume 169,698.550490 + Solana 224,120.571877
   // = 68,090,480.586846, matching Superstate's token rows exactly. Superstate
   // book-entry 16,278,150.21 (19.29% of AUM) is not a token and stays outside
-  // this aggregate (CG circulating 84,341,804.96 includes it). Plume is absent
+  // this token-stock fallback; never partition the book-entry-inclusive CG cap.
+  // CG circulating 84,341,804.96 includes it. Plume is absent
   // from buildChainRpcs(), so pin the reviewed public endpoint.
   "ustb-superstate": [
     { chain: "ethereum" },
@@ -913,13 +941,6 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "arbitrum", allowZeroSupply: true },
     supplyProbeChain("xlayer"),
   ],
-  // gtUSDCp is a local Gauntlet/Morpho ERC-4626 on each chain. Verified
-  // 2026-08-19: Ethereum 70,509,526.219773 (NAV 1.032007 USDC) + Base
-  // 387,163,856.589938 (NAV 1.107844) + Arbitrum 485,663.027798 (NAV
-  // 1.033408) = 458,159,045.837508 shares. No adapter/lockbox. Probe
-  // multiplies shares by the single CG price; Base NAV is higher, so USD
-  // weights are share-weighted, not NAV-weighted.
-  "gtusdcp-gauntlet": [{ chain: "ethereum" }, { chain: "base" }, { chain: "arbitrum" }],
   // sdUSD is a chain-isolated ERC-4626 over local dUSD (no shared lockbox).
   // Verified 2026-08-18: Ethereum 452,761.7318268991 + Fraxtal 63,189.932854
   // = 515,951.6646808991, exact CoinGecko totalSupply; Fraxtal needs a public RPC.

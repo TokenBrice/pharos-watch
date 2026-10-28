@@ -1,6 +1,9 @@
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { raceWithTimeout } from "@shared/lib/timeout-signal";
+import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import { throwIfAborted } from "../lib/abort";
+import { matchReserveFeedReview, resolveReserveFeedReviews } from "../lib/reserve-feed-reviews";
 import {
   filterStaleLiveReserveCircuitStates,
   getCircuitRecordsForSources,
@@ -14,6 +17,7 @@ import {
   cleanupStaleLiveReserveArtifacts,
   pruneLiveReserveHistory,
   type LiveReserveArtifactCleanupResult,
+  type ReserveSyncStateRecord,
 } from "../lib/live-reserves/store";
 import {
   LIVE_RESERVE_ARTIFACT_KEEP_COIN_IDS,
@@ -48,6 +52,7 @@ export interface FinalizeReserveSyncRunArgs {
   deferredTail: LiveReserveDeferredTailOutcome;
   checkpointOwned: boolean;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
+  persistedFailures?: readonly ReserveSyncStateRecord[];
   budgetConfig: LiveReserveSyncBudgetConfig;
   phaseTimings: LiveReservePhaseTimings;
   cohortItemsDoneBeforeRun?: number;
@@ -240,7 +245,6 @@ export function resolveReserveSyncRunStatus(
 export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): Promise<CronResult> {
   const finalizationStartedMs = Date.now();
   const finalizationBudget = resolveFinalizationBudget(args);
-  const runStatus = resolveReserveSyncRunStatus(args);
 
   await reportCronProgress(args.reportProgress, {
     stage: "finalizing",
@@ -337,11 +341,39 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
   }
 
   finalizationBudget.remainingMs = Math.max(0, finalizationBudget.deadlineMs - Date.now());
+  const reviews = resolveReserveFeedReviews(Math.floor(Date.now() / 1000));
+  const acknowledgedFeeds: ReserveFeedReview[] = [];
+  let acknowledgedFailed = 0;
+  let acknowledgedCircuitSkipped = 0;
+  for (const state of args.persistedFailures ?? []) {
+    throwIfAborted(args.signal);
+    if (!hasD1FinalizationWindow(args, finalizationBudget)) break;
+    if (!reviews.activeById.has(state.stablecoinId)) continue;
+    let review: ReserveFeedReview | null = null;
+    try {
+      review = await raceWithTimeout(
+        matchReserveFeedReview(args.db, state, Math.floor(Date.now() / 1000), reviews.activeById),
+        finalizationBudget.remainingMs - args.budgetConfig.finalizationMarginMs,
+        "reserve-review-budget-exhausted",
+      );
+    } catch { /* Unreadable evidence cannot acknowledge a failed attempt. */ }
+    if (!review || Date.now() / 1000 >= review.expiresAt || !hasD1FinalizationWindow(args, finalizationBudget)) continue;
+    acknowledgedFeeds.push(review);
+    if (state.lastStatus === "skipped") acknowledgedCircuitSkipped++;
+    else acknowledgedFailed++;
+  }
+  const requiredCounts = {
+    ...args.counts,
+    failed: args.counts.failed - acknowledgedFailed,
+    circuitSkipped: args.counts.circuitSkipped - acknowledgedCircuitSkipped,
+    skipped: args.counts.skipped - acknowledgedCircuitSkipped,
+  };
+  const runStatus = resolveReserveSyncRunStatus({ ...args, counts: requiredCounts });
   const reasons = [
-    ...(args.counts.failed > 0 ? ["reserve-adapter-or-persistence-failed"] : []),
+    ...(requiredCounts.failed > 0 ? ["reserve-adapter-or-persistence-failed"] : []),
     ...(args.counts.deferredCoins > 0 || args.counts.deferredSkipped > 0
       ? [args.checkpointOwned ? "reserve-continuation-pending" : "reserve-run-budget-deferred"] : []),
-    ...(args.counts.circuitSkipped > 0 ? ["reserve-circuit-open"] : []),
+    ...(requiredCounts.circuitSkipped > 0 ? ["reserve-circuit-open"] : []),
   ];
 
   return {
@@ -353,9 +385,9 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       ...(args.counts.latestPublishedAt != null ? { outputPublishedAt: args.counts.latestPublishedAt } : {}),
       ...(runStatus !== "ok"
         ? {
-            reason: args.counts.failed > 0
+            reason: requiredCounts.failed > 0
               ? "reserve-adapter-or-persistence-failed"
-              : args.counts.circuitSkipped > 0
+              : requiredCounts.circuitSkipped > 0
                 ? "reserve-circuit-open"
                 : args.checkpointOwned ? "reserve-continuation-pending" : "reserve-run-budget-deferred",
           }
@@ -364,6 +396,13 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       structureVersion: 2,
       synced: args.counts.synced,
       failed: args.counts.failed,
+      unacknowledgedFailed: requiredCounts.failed,
+      unacknowledgedCircuitSkipped: requiredCounts.circuitSkipped,
+      ...(acknowledgedFeeds.length > 0 ? { quality: {
+        reason: "reserve-feed-failure-reviewed",
+        acknowledgedFeedIds: acknowledgedFeeds.map((review) => review.stablecoinId),
+        acknowledgedFeeds,
+      } } : {}),
       skipped: args.counts.skipped,
       total: args.total,
       warningCount: args.warningMessages.length,

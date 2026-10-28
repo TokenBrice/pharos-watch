@@ -103,15 +103,35 @@ describe("ReserveSyncHealthCard", () => {
   });
   it.each([
     [{ adapterReliabilityAvailability: { status: "unavailable", reason: "reserve_adapter_reliability_query_failed" } }, "reserve_adapter_reliability_query_failed"],
-    [{ adapterReliabilityAvailability: { status: "available" } }, "No adapter attempts recorded in the last 30 days."],
-    [{ configuredCoins: 0, freshCoins: 0, adapterReliabilityAvailability: { status: "available" } }, "No live reserve adapters are configured."],
-    [{}, "Unknown: this payload does not report whether reliability history was read."],
+    [{ adapterReliabilityAvailability: { status: "available" } }, "No attempts in 30 days"],
+    [{ configuredCoins: 0, freshCoins: 0, adapterReliabilityAvailability: { status: "available" } }, "No configured adapters"],
+    [{}, "History unknown (legacy payload)"],
   ] as const)("names the adapter reliability state before reading empty rows (%#)", (overrides, expected) => {
     const { container } = render(
       <ReserveSyncHealthCard health={makeReserveHealth({ adapterReliability: [], ...overrides })} nowSeconds={1_712_600_120} />,
     );
     expect(screen.getByText("30-day Adapter Reliability")).toBeTruthy();
     expect(screen.getByText(expected)).toBeTruthy();
+    expect(container.querySelector("table[aria-label='30-day adapter reliability']")).toBeNull();
+  });
+
+  it("keeps failed reliability reads unknown even with retained rows or no configured adapters", () => {
+    const { container } = render(
+      <ReserveSyncHealthCard
+        health={makeReserveHealth({
+          configuredCoins: 0,
+          freshCoins: 0,
+          adapterReliabilityAvailability: { status: "unavailable", reason: "reserve_adapter_reliability_query_failed" },
+          adapterReliability: [{ adapterKey: "retained", attempts: 12, ok: 12, degraded: 0, error: 0, skipped: 0, successRate: 1 }],
+        })}
+        nowSeconds={1_712_600_120}
+      />,
+    );
+    const reliability = screen.getByText("30-day Adapter Reliability").parentElement!;
+    expect(screen.getByText("Unavailable · counts unknown")).toBeTruthy();
+    expect(screen.getByText("reserve_adapter_reliability_query_failed")).toBeTruthy();
+    expect(reliability.querySelector("p")).toBeNull();
+    expect(screen.queryByText("No configured adapters")).toBeNull();
     expect(container.querySelector("table[aria-label='30-day adapter reliability']")).toBeNull();
   });
 });

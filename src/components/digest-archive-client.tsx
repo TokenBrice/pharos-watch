@@ -1,17 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDigestArchive } from "@/hooks/api-hooks";
+import { useDailyDigest, useDigestArchive } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
 import { QueryErrorNotice } from "@/components/query-error-notice";
 import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification";
 import { formatBps, formatCurrency, formatLongDate } from "@shared/lib/format";
-import type { DigestArchiveEntry, DigestRiskSignal } from "@shared/types";
+import type { DigestArchiveEntry, DigestContentEntry, DigestRiskSignal } from "@shared/types";
 import {
   buildDigestTriggerRecord,
   EDITORIAL_BODY_STYLE,
@@ -33,13 +33,6 @@ function tsToDateSlug(ts: number): string {
 function toDigestSlug(ts: number, digestType: "daily" | "weekly"): string {
   const date = tsToDateSlug(ts);
   return digestType === "weekly" ? `${date}-weekly` : date;
-}
-
-export function resolveLatestDailyDigestSlug(
-  entries: readonly Pick<DigestArchiveEntry, "generatedAt" | "digestType">[],
-): string | null {
-  const latestDaily = entries.find((entry) => (entry.digestType ?? "daily") !== "weekly");
-  return latestDaily ? tsToDateSlug(latestDaily.generatedAt) : null;
 }
 
 function tsToMonthKey(ts: number): string {
@@ -95,7 +88,7 @@ function filterDigestArchiveEntries(
   const query = options.query.trim().toLocaleLowerCase();
   return entries.filter((entry) => {
     const isWeekly = entry.digestType === "weekly";
-    if (options.latestDailySlug && !isWeekly && tsToDateSlug(entry.generatedAt) === options.latestDailySlug) {
+    if (options.latestDailySlug && toDigestSlug(entry.generatedAt, entry.digestType ?? "daily") === options.latestDailySlug) {
       return false;
     }
     if (options.view !== "all" && (isWeekly ? "weekly" : "daily") !== options.view) return false;
@@ -281,8 +274,45 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
   );
 }
 
-export function DigestArchiveClient() {
-  const { data, isLoading, dataUpdatedAt, error, refetch, meta } = useDigestArchive();
+export function DigestArchiveClient({ initialLead }: { initialLead?: DigestContentEntry } = {}) {
+  const [seed] = useState(initialLead);
+  const archiveQuery = useDigestArchive();
+  const { data: dailyLead } = useDailyDigest();
+  const archiveLead = seed ? archiveQuery.data?.digests.find((entry) => entry.digestType !== "weekly") : null;
+  const liveLead = archiveLead && (!dailyLead?.digest || !dailyLead.generatedAt || archiveLead.generatedAt > dailyLead.generatedAt)
+    ? { ...archiveLead, digest: archiveLead.digestText }
+    : dailyLead;
+  const liveSlug = liveLead?.digest && liveLead.generatedAt ? tsToDateSlug(liveLead.generatedAt) : null;
+  const seedData = seed ? {
+    digest: seed.text, digestTitle: seed.title, digestExtended: seed.extended, generatedAt: seed.generatedAt,
+  } : null;
+  const lead = liveSlug && (!seed || liveSlug > seed.date) ? liveLead : seedData && liveSlug === seed?.date ? {
+    ...seedData,
+    riskSignal: liveLead?.riskSignal,
+    riskTape: liveLead?.riskTape,
+    nextTriggers: liveLead?.nextTriggers,
+  } : seedData;
+  const leadSlug = lead?.generatedAt ? tsToDateSlug(lead.generatedAt) : null;
+  const leadDate = lead?.generatedAt ? formatLongDate(new Date(lead.generatedAt * 1000), { utc: true }) : null;
+
+  return (
+    <div className="space-y-8">
+      {lead && leadDate ? (
+        <section aria-label={leadDate} className="min-h-[58rem] space-y-4 sm:min-h-[34rem]">
+          <WireSectionRule label={leadDate} />
+          <DailyDigest
+            data={lead}
+            detailHref={`/digest/${leadSlug}/`}
+          />
+        </section>
+      ) : null}
+      <DigestArchive latestDailySlug={leadSlug} query={archiveQuery} />
+    </div>
+  );
+}
+
+function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | null; query: ReturnType<typeof useDigestArchive> }) {
+  const { data, isLoading, dataUpdatedAt, error, refetch, meta } = query;
   const { searchParams, setParam, replaceParams } = useUrlFilters();
 
   const setSearchQuery = (value: string): void => {
@@ -321,8 +351,6 @@ export function DigestArchiveClient() {
     return data?.digests.find((d) => d.digestType === "weekly") ?? null;
   }, [data]);
 
-  // Skip only today's daily digest (shown in broadsheet above), filter by month.
-  const latestDailySlug = useMemo(() => resolveLatestDailyDigestSlug(data?.digests ?? []), [data]);
   const wireDigests = useMemo(
     () => filterDigestArchiveEntries(data?.digests ?? [], {
       view: activeView,
@@ -388,14 +416,6 @@ export function DigestArchiveClient() {
   return (
     <div className="space-y-8">
       {healthBanner}
-
-      {/* Lead story: today's digest (nameplate above carries the edition + date) */}
-      <section aria-label="Today's lead digest" className="min-h-[58rem] space-y-4 sm:min-h-[34rem]">
-        <WireSectionRule label="Today's Lead" />
-        <DailyDigest
-          detailHref={latestDailySlug ? `/digest/${latestDailySlug}/` : undefined}
-        />
-      </section>
 
       {/* Weekly column: compact teaser */}
       {latestWeekly && latestWeekly.digestExtended && (

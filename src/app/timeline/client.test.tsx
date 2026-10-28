@@ -491,9 +491,9 @@ describe("TimelineClient", () => {
   });
 
   it.each([
-    { label: "degraded", meta: { updatedAt: 0, ageSeconds: 0, status: "degraded" } as ApiMeta, error: null, isFullyLoaded: true },
+    { label: "degraded", meta: { updatedAt: 0, ageSeconds: 0, status: "degraded" } satisfies ApiMeta, error: null, isFullyLoaded: true },
     { label: "error", meta: null, error: new Error("active refresh failed"), isFullyLoaded: false },
-    { label: "stale", meta: { updatedAt: 0, ageSeconds: 0, status: "stale" } as ApiMeta, error: null, isFullyLoaded: true },
+    { label: "stale", meta: { updatedAt: 0, ageSeconds: 0, status: "stale" } satisfies ApiMeta, error: null, isFullyLoaded: true },
   ])("retains a complete $label cohort as a dated observation", ({ label, meta, ...overrides }) => {
     vi.useFakeTimers();
     const observedAt = Date.UTC(2026, 9, 26);
@@ -687,7 +687,7 @@ describe("TimelineClient", () => {
     expect(screen.queryByText("▌")).toBeNull();
   });
 
-  it.each<[string, Partial<UseEventsResult>]>([
+  it.each<[string, Partial<Omit<UseEventsResult, "meta">> & { meta?: Extract<ApiMeta, { updatedAt: number }> }]>([
     ["fresh", {}],
     ["source-degraded", { meta: { updatedAt: 1_700_000_000, ageSeconds: 0, status: "degraded", warning: "199 - \"source delayed\"" } }],
     ["retained-error", { error: new Error("refresh failed") }],

@@ -37,7 +37,7 @@ function lowBand(id: string, up: boolean, ts: number): TapeEvent {
     type: up ? "dews.escalated" : "dews.deescalated",
     severity: up ? "warning" : "info",
     coinId: "usde-ethena",
-    transition: null,
+    transition: "updated",
     title: up ? "USDe DEWS CALM → WATCH" : "USDe DEWS WATCH → CALM",
     summary: up ? "DEWS threat band escalated from CALM to WATCH." : "DEWS threat band de-escalated from WATCH to CALM.",
     payload: up ? { prevBand: "CALM", newBand: "WATCH" } : { prevBand: "WATCH", newBand: "CALM" },
@@ -52,7 +52,7 @@ function other(id: string, ts: number): TapeEvent {
     type: "mint_burn.large_mint",
     severity: "info",
     coinId: "usde-ethena",
-    transition: null,
+    transition: "updated",
     summary: "Large mint observed.",
     sourceUrl: null,
   });

@@ -22,7 +22,9 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { breakerKeyForConfig, SYNC_ORDERED_CONFIGURED_COINS } from "../sync-live-reserves-shared";
 import { finalizeReserveSyncRun } from "../sync-live-reserves-finalize";
 import { resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
-import { createAdapterLatencyCollector } from "../sync-live-reserves-core";
+import { createAdapterLatencyCollector, syncReserveCoin } from "../sync-live-reserves-core";
+import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
+import type { ReserveSyncStateRecord } from "../../lib/live-reserves/store";
 import {
   checkpointIdentity as makeCheckpointIdentity,
   checkpointTable as makeCheckpointTable,
@@ -729,7 +731,7 @@ describe("syncLiveReserves", () => {
     const result = await syncLiveReserves(db, new AbortController().signal, {});
     const metadata = JSON.parse(result?.metadata ?? "{}") as { warningCount?: number };
 
-    // Warnings no longer affect status (any failed or circuit-held member triggers degraded)
+    // Warnings remain metadata; unacknowledged failures determine execution status.
     expect(result?.status).toBe("ok");
     expect(metadata.warningCount).toBeGreaterThanOrEqual(configuredCoinCount);
   });
@@ -1565,6 +1567,122 @@ describe("syncLiveReserves", () => {
       reason: "reserve-run-budget-deferred",
       reasons: ["reserve-run-budget-deferred"],
     });
+  });
+
+  it("keeps Yuzu's failed attempt and retained snapshot unchanged when acknowledging the cron finding", async () => {
+    let now = Math.floor(Date.now() / 1000);
+    const reviews = await import("../../lib/reserve-feed-reviews");
+    const review = { ...RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!, reviewedAt: now - 1, expiresAt: now + 86400 };
+    vi.spyOn(reviews, "resolveReserveFeedReviews").mockReturnValue({ activeById: new Map([[review.stablecoinId, review]]), expiredIds: [], invalidIds: [] });
+    vi.spyOn(Date, "now").mockImplementation(() => now * 1000);
+    let fail = false;
+    mockAdapterRegistry(async (coin) => {
+      if (fail && coin?.id === review.stablecoinId) throw new Error(review.errorPrefix!.replace("primary:http-json: ", ""));
+      return { slices: [{ name: "Mock Farm", pct: 100, risk: "low" as const }] };
+    });
+    const { db, sqlite } = fixtures.open();
+    const { syncLiveReserves } = await import("../sync-live-reserves");
+    await syncLiveReserves(db, new AbortController().signal, {});
+    const snapshot = sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(review.stablecoinId);
+    expect(snapshot).toBeDefined();
+    const originalSuccess = sqlite.prepare("SELECT last_success_at, last_success_attempt_id FROM reserve_sync_state WHERE stablecoin_id = ?").get(review.stablecoinId);
+    now += 60;
+    fail = true;
+    const result = await syncLiveReserves(db, new AbortController().signal, {});
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      failed: 1, unacknowledgedFailed: 0,
+      quality: { reason: "reserve-feed-failure-reviewed", acknowledgedFeedIds: [review.stablecoinId] },
+    });
+    const state = sqlite.prepare("SELECT * FROM reserve_sync_state WHERE stablecoin_id = ?").get(review.stablecoinId)!;
+    expect(state).toMatchObject({ ...originalSuccess, last_status: "error", last_error: review.errorPrefix, last_attempted_at: now });
+    expect(JSON.parse(String(state.metadata)).failureCategory).toBe(review.failureCategory);
+    expect(sqlite.prepare("SELECT * FROM reserve_composition WHERE stablecoin_id = ?").get(review.stablecoinId)).toEqual(snapshot);
+  });
+
+  it.each([0, 1])("exposes only a confirmed persisted failure for review (changed rows: %s)", async (changes) => {
+    const coin = SYNC_ORDERED_CONFIGURED_COINS.find((item) => item.id === "yzusd-yuzu")!;
+    const config = coin.liveReservesConfig!;
+    const db = mockD1([{ match: "UPDATE reserve_sync_state", rows: [], runMeta: { changes } }]);
+    const result = await syncReserveCoin({
+      db, coin, signal: new AbortController().signal,
+      adapter: { ...LIVE_RESERVE_ADAPTER_DEFINITIONS[config.adapter], fetch: vi.fn() },
+      runAdapter: async () => { throw new Error("issuer failure"); },
+      breakerCanFetch: new Map([[breakerKeyForConfig(config), true]]), previousState: null,
+      d1FinalizeTimeoutMs: 1_000,
+    });
+    expect(result.status).toBe("failed");
+    if (changes) expect(result.persistedFailure).toMatchObject({ stablecoinId: coin.id, lastStatus: "error", lastError: "issuer failure" });
+    else expect(result.persistedFailure).toBeUndefined();
+  });
+
+  it.each([
+    { name: "reviewed failure only", remaining: 0, expected: "ok" },
+    { name: "mixed reviewed and unexplained failures", remaining: 1, expected: "degraded" },
+    { name: "expired review", expired: true, expected: "degraded" },
+    { name: "changed cause", changed: true, expected: "degraded" },
+    { name: "timeout", timeout: true, expected: "degraded" },
+    { name: "uncertain persistence", uncertain: true, expected: "degraded" },
+    { name: "unconfirmed persistence", unconfirmed: true, expected: "degraded" },
+    { name: "all failed but reviewed", synced: 0, expected: "ok" },
+    { name: "reviewed circuit skip", circuit: true, expected: "ok" },
+    { name: "unreadable circuit history", circuit: true, unreadable: true, expected: "degraded" },
+    { name: "budget exhausted before matching", budget: true, expected: "degraded" },
+  ])("keeps raw attempts while accounting for $name", async (scenario) => {
+    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
+    const now = scenario.expired ? review.expiresAt : review.reviewedAt + 1;
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const failure: ReserveSyncStateRecord = {
+      stablecoinId: review.stablecoinId, adapterKey: review.adapterKey, breakerKey: "live-reserves:midas-mtbill",
+      lastStatus: scenario.circuit ? "skipped" : "error", lastAttemptedAt: now, lastSuccessAt: now - 86400,
+      lastAttemptId: "current-attempt", lastSuccessAttemptId: "retained-success", warningCount: 0, warnings: [],
+      lastError: scenario.circuit ? null : `${review.errorPrefix}${scenario.changed ? ": new cause" : ""}`,
+      metadata: {
+        failureCategory: scenario.timeout ? "network" : scenario.circuit ? "circuit-open" : review.failureCategory,
+        ...(scenario.uncertain ? { uncertainWrite: true } : {}),
+      },
+    };
+    const original = structuredClone(failure);
+    const collector = createAdapterLatencyCollector();
+    const synced = scenario.synced ?? 1;
+    const failed = scenario.circuit ? 0 : 1 + (scenario.remaining ?? 0);
+    const circuitSkipped = scenario.circuit ? 1 : 0;
+    const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
+      stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,
+      breaker_key: failure.breakerKey, status: "error", warnings: "[]", last_error: review.errorPrefix,
+      metadata: JSON.stringify({ failureCategory: review.failureCategory }),
+    }, ...(scenario.unreadable ? { throwError: new Error("history unreadable") } : {}) }]);
+    const result = await finalizeReserveSyncRun({
+      db, total: synced + failed + circuitSkipped, runStartedAt: now,
+      runStartedMs: (scenario.budget ? now - 3600 : now) * 1000,
+      counts: { synced, failed, skipped: circuitSkipped, circuitSkipped, deferredCoins: 0, deferredSkipped: 0,
+        attemptedCoins: synced + failed + circuitSkipped, ...(synced ? { latestPublishedAt: now - 2 } : {}) },
+      persistedFailures: scenario.unconfirmed ? [] : [failure],
+      warningMessages: [], coinsWithErrors: failed ? [review.stablecoinId] : [], coinsWithWarnings: [],
+      breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
+      deferredTail: { nextCursorStablecoinId: null, cursorTailState: null, cursorRecordedAt: null,
+        cursorTailCompletedAt: null, cursorTailFailedAt: null, cursorTailError: null, runBudgetTruncationCount: 0 },
+      checkpointOwned: false, attemptFailureSummaries: [], budgetConfig: resolveLiveReserveSyncBudgetConfig(),
+      phaseTimings: { setup: 0, queue: 0, adapter: 0, d1CoinPersistence: 0 },
+      adapterLatency: collector.finalize(), adapterTelemetryProgress: collector.progress(),
+    });
+    expect(result.status).toBe(scenario.expected);
+    expect(failure).toEqual(original);
+    const metadata = JSON.parse(result.metadata!);
+    const acknowledged = scenario.expected === "ok" || scenario.remaining === 1;
+    expect(metadata).toMatchObject({
+      failed, skipped: circuitSkipped, synced,
+      unacknowledgedFailed: failed - (acknowledged && !scenario.circuit ? 1 : 0),
+      unacknowledgedCircuitSkipped: circuitSkipped - (acknowledged && scenario.circuit ? 1 : 0),
+    });
+    if (acknowledged) {
+      expect(metadata.quality).toMatchObject({ reason: "reserve-feed-failure-reviewed", acknowledgedFeedIds: [review.stablecoinId] });
+      expect(metadata.quality.acknowledgedFeeds).toEqual([review]);
+    } else expect(metadata.quality).toBeUndefined();
+    expect(metadata.reason).toBe(scenario.expected === "ok" ? undefined
+      : scenario.circuit ? "reserve-circuit-open" : "reserve-adapter-or-persistence-failed");
+    expect(result.productivity).toEqual({ productive: synced > 0 });
+    expect(metadata.outputPublishedAt).toBe(synced ? now - 2 : undefined);
   });
 
   it.each([

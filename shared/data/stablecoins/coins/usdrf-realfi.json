@@ -1,0 +1,40 @@
+{
+  "id": "usdrf-realfi",
+  "name": "RealFi USDrf",
+  "symbol": "USDrf",
+  "oneLiner": "USDrf is RealFi's Cardano dollar token backed by off-chain credit, with a Treasury liquidity buffer and institution-only direct redemption.",
+  "flags": {
+    "backing": "rwa-backed",
+    "governance": "centralized",
+    "rwa": true
+  },
+  "collateral": "Off-chain Treasury bills, money market funds, floating-rate credit, CLO ETFs and private credit; published allocation ranges describe strategy rather than verified current holdings.",
+  "pegMechanism": "Whitelisted institutions mint and redeem through a human-approved FIFO queue with daily and monthly limits. Retail exits depend on secondary markets. Protocol first-loss reserves and the junior sUSDrf tranche absorb losses before USDrf.",
+  "mechanismArchetype": "rwa-credit-fund",
+  "llamaId": "445",
+  "geckoId": "realfi-usdrf",
+  "links": [
+    { "label": "Website", "url": "https://realfi.co/" },
+    { "label": "Docs", "url": "https://docs.realfi.co/realfi-tokens/usdrf-base-stablecoin" },
+    { "label": "Launch announcement", "url": "https://realfi.co/blog/realfi-is-live-on-cardano" },
+    { "label": "Reserve Attestation", "url": "https://docs.realfi.co/resources/reserve-attestation" },
+    { "label": "Audit Reports", "url": "https://docs.realfi.co/resources/audit-reports" }
+  ],
+  "status": "pre-launch",
+  "launchDate": "2026-10-01",
+  "launchPhase": "launched",
+  "milestones": [
+    {
+      "date": "2026-10-01",
+      "type": "milestone",
+      "title": "RealFi launches on Cardano mainnet",
+      "description": "RealFi announced its Cardano mainnet launch with USDrf and the junior staked token sUSDrf.",
+      "sourceUrl": "https://realfi.co/blog/realfi-is-live-on-cardano"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-10-28",
+    "reason": "Missing lane: price. CoinGecko's realfi-usdrf preview has null price and market cap. DefiLlama 445 reports supply, but its generic fallback quote is not an admitted market price.",
+    "reviewBy": "2026-12-27"
+  }
+}

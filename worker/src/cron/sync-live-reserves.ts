@@ -49,6 +49,7 @@ import {
   didReserveSyncAttemptBecomeAuthoritative,
 } from "../lib/live-reserves/store";
 import { createD1CostTracker } from "../lib/d1-cost";
+import { resolveReserveFeedReviews } from "../lib/reserve-feed-reviews";
 
 interface ReserveCoinQueueResult {
   counts: LiveReserveQueueCounts;
@@ -58,6 +59,7 @@ interface ReserveCoinQueueResult {
   breaker: LiveReserveBreakerOutcome;
   deferredTail: LiveReserveDeferredTailOutcome;
   attemptFailureSummaries: ReserveSyncAttemptFailureGroup[];
+  persistedFailures: ReserveSyncStateRecord[];
   phaseTimings: Pick<LiveReservePhaseTimings, "adapter" | "d1CoinPersistence" | "stages">;
 }
 
@@ -136,6 +138,8 @@ async function runReserveCoinQueue(args: {
   const coinsWithErrors: string[] = [];
   const coinsWithWarnings: string[] = [];
   const attemptFailureSummaries: ReserveCoinQueueResult["attemptFailureSummaries"] = [];
+  const persistedFailures: ReserveSyncStateRecord[] = [];
+  const reviewCandidates = resolveReserveFeedReviews(Math.floor(Date.now() / 1000)).activeById;
   const breakerKeys = new Set<string>();
   const breakerOutcomes = new Map<string, boolean>();
   const breakerCanFetch = new Map<string, boolean>();
@@ -291,6 +295,7 @@ async function runReserveCoinQueue(args: {
     counts.attemptedCoins++;
     phaseTimings.adapter += result.adapterDurationMs;
     phaseTimings.d1CoinPersistence += result.d1DurationMs;
+    if (result.persistedFailure && reviewCandidates.has(coin.id)) persistedFailures.push(result.persistedFailure);
 
     if (result.status === "synced") {
       counts.synced++;
@@ -346,6 +351,7 @@ async function runReserveCoinQueue(args: {
     breaker: { breakerKeys, breakerOutcomes },
     deferredTail,
     attemptFailureSummaries,
+    persistedFailures,
     phaseTimings,
   };
 }

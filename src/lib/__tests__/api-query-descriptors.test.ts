@@ -118,13 +118,14 @@ describe("frontend API query descriptors", () => {
     expect(summary.supplyRestored).not.toBe(true);
   });
 
-  it("does not apply current restoration provenance to provider history fallback", () => {
+  it("keeps an explicitly unavailable current overlay from restoring provider history", () => {
     const summary = projectStablecoinLiveSummary({
       currentCirculatingUSD: {}, currentSupplyRestored: true,
       tokens: [{ date: 1_790_726_400, totalCirculatingUSD: { peggedUSD: 100 } }],
     });
-    expect(summary.circulating).toEqual({ peggedUSD: 100 });
-    expect(summary.supplyRestored).not.toBe(true);
+    expect(summary.circulating).toEqual({});
+    expect(summary.supplyObservedAt).toBeNull();
+    expect(summary.nativeSupply.current).toBeNull();
   });
 
   it.each([null, 0, -1])("does not value missing USD buckets at an unavailable price %s", (price) => {

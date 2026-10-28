@@ -5,8 +5,10 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { DigestArchiveClient } from "@/components/digest-archive-client";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { FRESHNESS_RATIOS } from "@shared/lib/status-thresholds";
+import type { DailyDigestResponse, DigestContentEntry } from "@shared/types/digest";
 
-const { useDigestArchiveMock, useUrlFiltersMock, bannerMode } = vi.hoisted(() => ({
+const { useDailyDigestMock, useDigestArchiveMock, useUrlFiltersMock, bannerMode } = vi.hoisted(() => ({
+  useDailyDigestMock: vi.fn(() => ({ data: undefined as Partial<DailyDigestResponse> | undefined, isLoading: true, error: null as Error | null })),
   useDigestArchiveMock: vi.fn(),
   useUrlFiltersMock: vi.fn(),
   bannerMode: { real: false },
@@ -14,13 +16,16 @@ const { useDigestArchiveMock, useUrlFiltersMock, bannerMode } = vi.hoisted(() =>
 
 vi.mock("@/hooks/api-hooks", () => ({
   useDigestArchive: useDigestArchiveMock,
+  useDailyDigest: useDailyDigestMock,
 }));
 
 vi.mock("@/hooks/use-url-filters", () => ({
   useUrlFilters: useUrlFiltersMock,
 }));
 
-vi.mock("@/components/daily-digest", () => ({ DailyDigest: () => null }));
+vi.mock("next/font/local", () => ({
+  default: () => ({ className: "mock-local-font", variable: "--mock-local-font" }),
+}));
 vi.mock("@/components/stale-data-banner", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/components/stale-data-banner")>();
   return {
@@ -47,8 +52,9 @@ vi.mock("@/lib/digest", () => ({
   EDITORIAL_BODY_STYLE: {},
   EDITORIAL_META_STYLE: {},
   formatDigestTriggerRate: () => "—",
-  parseDigestParagraph: () => ({ bodyText: "" }),
+  parseDigestParagraph: (paragraph: string) => ({ bodyText: paragraph }),
   splitDigestParagraphs: () => [],
+  getDigestBodyParagraphs: ({ digest }: { digest: string }) => [digest],
 }));
 
 function digest(generatedAt: number, digestTitle: string) {
@@ -65,6 +71,121 @@ function digest(generatedAt: number, digestTitle: string) {
     riskSignal: null,
   };
 }
+
+const leadEdition: DigestContentEntry = {
+  date: "2026-08-31",
+  generatedAt: Date.parse("2026-08-31T00:30:00Z") / 1000,
+  digestType: "daily",
+  title: "Build-time lead",
+  text: "Captured edition text",
+  extended: "",
+  editionNumber: 42,
+};
+
+const liveRiskContent: Pick<DailyDigestResponse, "riskSignal" | "riskTape" | "nextTriggers"> = {
+  riskSignal: { kind: "depeg", symbol: "PMUSD", bps: -5284, mcapUsd: null, severity: "critical" },
+  riskTape: [{ id: "depegs", label: "Depegs", value: "1 active", tone: "critical" }],
+  nextTriggers: [{ id: "pmusd", label: "PMUSD recovery", metric: "depeg-bps", comparator: "lte", thresholdLabel: "100 bps",
+    rationale: "Watch the peg", detail: "PMUSD returns within 100 bps." }],
+};
+
+afterEach(() => {
+  useDailyDigestMock.mockReturnValue({ data: undefined, isLoading: true, error: null });
+});
+
+describe("DigestArchiveClient build-time lead", () => {
+  function mockArchive(overrides: Record<string, unknown> = {}) {
+    useDigestArchiveMock.mockReturnValue({
+      data: undefined, isLoading: true, dataUpdatedAt: 0, error: null, refetch: vi.fn(), meta: null,
+      ...overrides,
+    });
+    useUrlFiltersMock.mockReturnValue({
+      searchParams: new URLSearchParams(), setParam: vi.fn(), replaceParams: vi.fn(),
+    });
+  }
+
+  it("renders the dated seed during loading and after a failed initial refresh", () => {
+    mockArchive();
+    const view = render(<DigestArchiveClient initialLead={leadEdition} />);
+    expect(screen.getByRole("heading", { name: "Build-time lead" })).toBeTruthy();
+    expect(screen.getByText("August 31, 2026")).toBeTruthy();
+    expect(screen.queryByText("Today's Lead")).toBeNull();
+    expect(screen.getByRole("link", { name: /Continue reading/ }).getAttribute("href")).toBe("/digest/2026-08-31");
+
+    useDailyDigestMock.mockReturnValue({ data: undefined, isLoading: false, error: new Error("Offline") });
+    mockArchive({ isLoading: false, error: new Error("Offline") });
+    view.rerender(<DigestArchiveClient initialLead={leadEdition} />);
+    expect(screen.getByRole("heading", { name: "Build-time lead" })).toBeTruthy();
+    expect(screen.getByText("Query error notice")).toBeTruthy();
+    expect(screen.queryByText(/Critical depeg:/)).toBeNull();
+    expect(screen.queryByText("Depegs")).toBeNull();
+    expect(screen.queryByText("Next:")).toBeNull();
+  });
+
+  it.each(["daily", "archive"])("enriches the same slug in place from %s with risk content below the lead paragraph", (source) => {
+    mockArchive();
+    const view = render(<DigestArchiveClient initialLead={leadEdition} />);
+    const paragraph = screen.getByText("Captured edition text");
+
+    if (source === "daily") {
+      useDailyDigestMock.mockReturnValue({ data: {
+        digest: "Live summary", digestTitle: "Live title", digestExtended: "Live extended",
+        generatedAt: leadEdition.generatedAt + 60, ...liveRiskContent,
+      }, isLoading: false, error: null });
+    } else {
+      mockArchive({ data: { digests: [{ ...digest(leadEdition.generatedAt + 60, "Live title"), ...liveRiskContent }] }, isLoading: false });
+    }
+    view.rerender(<DigestArchiveClient initialLead={leadEdition} />);
+
+    expect(screen.getByRole("heading", { name: "Build-time lead" })).toBeTruthy();
+    expect(screen.getByText("Captured edition text")).toBe(paragraph);
+    for (const risk of [screen.getByText(/Critical depeg: PMUSD/), screen.getByText("Depegs"), screen.getByText("Next:")]) {
+      expect(paragraph.compareDocumentPosition(risk) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    expect(screen.getByText("PMUSD returns within 100 bps.")).toBeTruthy();
+    expect(screen.getByText("August 31, 2026")).toBeTruthy();
+  });
+
+  it("leaves every live edition in the archive when the seed is missing", () => {
+    mockArchive({ data: { digests: [digest(leadEdition.generatedAt, "Live edition")] }, isLoading: false });
+    render(<DigestArchiveClient />);
+    expect(screen.getByRole("link", { name: /Live edition/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Continue reading/ })).toBeNull();
+  });
+
+  it.each(["daily", "archive"])("replaces an older seed from %s with a newer live edition, including its date and risk content", (source) => {
+    const olderLead = { ...leadEdition, date: "2026-08-30", generatedAt: leadEdition.generatedAt - 86400 };
+    mockArchive({ data: { digests: [digest(olderLead.generatedAt, "Seed archive row")] }, isLoading: false });
+    const view = render(<DigestArchiveClient initialLead={olderLead} />);
+    const newerAt = leadEdition.generatedAt;
+    if (source === "daily") {
+      useDailyDigestMock.mockReturnValue({ data: {
+        digest: "Newer live text", digestTitle: "Newer live edition", generatedAt: newerAt, ...liveRiskContent,
+      }, isLoading: false, error: null });
+    } else {
+      useDailyDigestMock.mockReturnValue({ data: {
+        digest: "Older daily text", digestTitle: "Older daily edition", generatedAt: olderLead.generatedAt,
+      }, isLoading: false, error: null });
+    }
+    mockArchive({ data: { digests: [
+      { ...digest(newerAt, "Newer live edition"), ...(source === "archive" ? liveRiskContent : {}) },
+      { ...digest(olderLead.generatedAt, "Same-day weekly"), digestType: "weekly" },
+      digest(olderLead.generatedAt, "Seed archive row"),
+    ] }, isLoading: false });
+    view.rerender(<DigestArchiveClient initialLead={{ ...leadEdition, date: "2026-09-01", generatedAt: newerAt, title: "Newer seed" }} />);
+    expect(screen.getByRole("heading", { name: "Newer live edition" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "Build-time lead" })).toBeNull();
+    expect(screen.getByRole("link", { name: /Continue reading/ }).getAttribute("href")).toBe("/digest/2026-08-31");
+    expect(screen.getByRole("link", { name: /Seed archive row/ })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: /Newer live edition/ })).toBeNull();
+    expect(screen.getByRole("link", { name: /Same-day weekly/ })).toBeTruthy();
+    expect(screen.getByText("August 31, 2026")).toBeTruthy();
+    expect(screen.getByText(/Critical depeg: PMUSD/)).toBeTruthy();
+    expect(screen.getByText("Depegs")).toBeTruthy();
+    expect(screen.getByText("Next:")).toBeTruthy();
+    expect(screen.queryByText("Today's Lead")).toBeNull();
+  });
+});
 
 describe("DigestArchiveClient UTC dates", () => {
   it("renders the same UTC day in the archive label and digest slug", () => {
@@ -214,8 +335,8 @@ describe("DigestArchiveClient retention and health", () => {
     useDigestArchiveMock.mockReturnValue({
       data: { digests }, isLoading: false, dataUpdatedAt: 1, error: new Error("Offline"), refetch: vi.fn(), meta: null,
     });
-    render(<DigestArchiveClient />);
-    expect(screen.getByText("Today's Lead")).toBeTruthy();
+    render(<DigestArchiveClient initialLead={leadEdition} />);
+    expect(screen.getByText("August 31, 2026")).toBeTruthy();
     expect(screen.getByRole("link", { name: /Archived digest/i }).getAttribute("href")).toBe("/digest/2026-08-30");
     expect(screen.queryByText("Query error notice")).toBeNull();
   });

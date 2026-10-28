@@ -25,7 +25,7 @@ import {
 } from "../stablecoins/schema";
 
 const EURR_PRE_LAUNCH_ID = "eurr-revolut";
-const EXPECTED_TRACKED_STABLECOIN_COUNT = 489;
+const EXPECTED_TRACKED_STABLECOIN_COUNT = 491;
 
 function makeStablecoinAsset(overrides: Record<string, unknown> = {}): Record<string, unknown> {
   return {
@@ -143,6 +143,8 @@ describe("tracked stablecoin metadata", () => {
       "jpy-megabank-consortium",
       "jpydf-deltaforesight",
       "swanusd-swan",
+      "dotusd-polkadot",
+      "usdrf-realfi",
     ]);
   });
 
@@ -1107,6 +1109,18 @@ describe("RedCoin issuer-disclosure reconciliation", () => {
 });
 
 describe("launched-awaiting-data review reasons", () => {
+  it.each([
+    ["dotusd-polkadot", "2026-10-08"],
+    ["usdrf-realfi", "2026-10-01"],
+  ])("keeps %s outside live collection until a market price is admitted", (id, launchDate) => {
+    const coin = TRACKED_META_BY_ID.get(id)!;
+    expect(coin).toMatchObject({ status: "pre-launch", launchPhase: "launched", launchDate });
+    expect(coin.listingStatusReview).toMatchObject({ changedAt: "2026-10-28", reviewBy: "2026-12-27" });
+    expect(coin.listingStatusReview?.reason).toMatch(/^Missing lane: price\./);
+    expect(coin.milestones?.some((milestone) => milestone.date === launchDate && milestone.sourceUrl)).toBe(true);
+    expect(ACTIVE_META_BY_ID.has(id)).toBe(false);
+  });
+
   it.each([
     ["usdf-flipcash", /DefiLlama returned a quote for the Solana mint without naming its source market.*not enough to admit the quote \(#1663\)/],
     ["swanusd-swan", /DefiLlama returned a fresh contract quote on October 26, 2026, but its source is unverified and the quote has not been admitted/],

@@ -455,6 +455,40 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
     expect(bnusd.reason).toContain("not an observed market price");
   });
 
+  it("bounds the October 28 USDFC continuing-gap review without dropping the asset at expiry", () => {
+    const id = "usdfc-secured-finance";
+    const review = STABLECOIN_PRICE_GAP_REVIEWS.find((entry) => entry.stablecoinId === id)!;
+    const reviewedAt = Date.UTC(2026, 9, 28, 9, 52) / 1000;
+    const expiresAt = Date.UTC(2026, 10, 4, 9, 52) / 1000;
+    expect(review).toMatchObject({ owner: "ops", reviewedAt, expiresAt });
+    expect(expiresAt - reviewedAt).toBe(7 * 86_400);
+    expect(review.reason).toContain("2026-10-28 09:51");
+    expect(review.reason).toContain("2026-10-14 18:27:04 UTC");
+    expect(review.reason).toContain("missing-quote");
+    expect(review.sources.some((source) => source.includes("/onchain/networks/filecoin/tokens/multi/"))).toBe(true);
+    const assets = [{ id, price: null, circulating: { peggedUSD: 184_320.6279474966 } }];
+    const coverage = evaluateStablecoinActivePriceCoverage(assets, [id], {
+      nowSec: Date.UTC(2026, 9, 30, 6, 36) / 1000, priceGapReviews: [review],
+    });
+    expect(coverage).toMatchObject({
+      complete: false, missingActiveIds: [id], pricedActiveIds: [],
+      acknowledgedGapIds: [id], alertEligibleIds: [], expiredGapReviewIds: [],
+    });
+    const compact = compactStablecoinActivePriceCoverage(coverage, 0);
+    expect(parsePersistedMissingActivePriceState(compact.missingActiveState[0], { nowSec: expiresAt - 1 }))
+      .toMatchObject({ acknowledgedGap: { reviewedAt, expiresAt }, alertEligible: false });
+    const expired = evaluateStablecoinActivePriceCoverage(assets, [id], {
+      nowSec: expiresAt, priceGapReviews: [review], previousCoverage: coverage,
+    });
+    expect(expired).toMatchObject({
+      missingActiveIds: [id], pricedActiveIds: [], acknowledgedGapIds: [],
+      alertEligibleIds: [id], expiredGapReviewIds: [id],
+    });
+    expect(evaluateStablecoinPublicationCoverage([id], expiresAt, STABLECOIN_PUBLICATION_WAIVERS, [id]))
+      .toMatchObject({ complete: true, presentActiveCount: 1, waivedActiveIds: [] });
+    expect(assets[0]!.price).toBeNull();
+  });
+
   it("excludes frozen USDKG from the active census even when upstream retains its row", () => {
     const id = "usdkg-gold-dollar";
     const activeIds = ACTIVE_STABLECOINS.map((coin) => coin.id);

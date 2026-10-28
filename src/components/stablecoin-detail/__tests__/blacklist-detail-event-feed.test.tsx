@@ -26,7 +26,7 @@ const EVENT: BlacklistEvent = {
   address: "0x0000000000000000000000000000000000000001",
   amountNative: 0,
   amountUsdAtEvent: null,
-  amountSource: "historical",
+  amountSource: "historical_balance",
   amountStatus: "resolved",
   txHash: "0x0000000000000000000000000000000000000000000000000000000000000000",
   blockNumber: 1,

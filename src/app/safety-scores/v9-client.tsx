@@ -318,13 +318,16 @@ export function ReportCardsV9Client() {
         ]}
       />
       <SafetyScoresHero
-        stats={headlineStats}
-        gradeCounts={gradeCounts}
-        totalCards={totalCards - gradeCounts["pipeline-gap"]}
-        scoredCount={scoredCount}
-        cardCount={totalCards}
-        supplyMix={supplyMix}
-        pillarAverages={pillarAverages}
+        loading={reportCardsQuery.isLoading}
+        data={reportCardsQuery.data ? {
+          stats: headlineStats,
+          gradeCounts,
+          totalCards: totalCards - gradeCounts["pipeline-gap"],
+          scoredCount,
+          cardCount: totalCards,
+          supplyMix,
+          pillarAverages,
+        } : null}
       />
 
       <SafetyPillarExplainer />

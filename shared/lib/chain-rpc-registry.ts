@@ -85,6 +85,9 @@ export const SUPPLY_RPC_DEFAULTS = {
   // 0G mainnet (16661 / 0x4115), exact PYUSDx deployment and decimals verified
   // 2026-10-15. Supply-only profile; no archive/log routing is inferred.
   "0g": { rpcUrl: "https://evmrpc.0g.ai" },
+  // Flare CDP latest-state supply verified 2026-10-28; pruned historical
+  // state returned missing trie node. No archive/log capability is inferred.
+  "flare": { rpcUrl: "https://flare-api.flare.network/ext/C/rpc" },
   "plume": { rpcUrl: PUBLIC_RPC_URLS["plume"], fallbackRpcUrl: "https://plume.drpc.org" },
   "plasma": { rpcUrl: PUBLIC_RPC_URLS["plasma"], fallbackRpcUrl: "https://plasma.drpc.org" },
   "monad": { rpcUrl: PUBLIC_RPC_URLS["monad"], fallbackRpcUrl: "https://rpc-mainnet.monadinfra.com" },

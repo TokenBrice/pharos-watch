@@ -3,7 +3,8 @@ import { ChainPartitionProvenanceSchema, PriceDerivationSchema, StablecoinListRe
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
+import { pegTypeFromCurrency } from "@shared/lib/peg-taxonomy";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
 import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
 import { SFRAX_STOCK_MAX_AGE_SEC } from "@shared/types/sfrax-supply";
 import {
@@ -111,7 +112,7 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
 > | null {
   const assetId = String(asset.id);
   const reason = getOnchainSupplyHoldReason(assetId);
-  if (!reason) return null;
+  if (!reason && !(prefersOnChainSupplyMcap(asset) && asset.supplySource === "onchain-supply-withheld")) return null;
   const meta = ACTIVE_META_BY_ID.get(assetId);
   if (meta && runStartedAt != null && asset.supplyPerimeter && !asset.supplyRestored && !asset.supplyUnavailableReason
     && asset.supplySource === "onchain-circulating-supply" && isSfraxStockContractRoster(meta)) {
@@ -131,7 +132,7 @@ export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
   ]));
   return {
     supplySource: "onchain-supply-withheld",
-    supplyUnavailableReason: reason,
+    supplyUnavailableReason: reason ?? undefined,
     supplyObservedAt: undefined,
     supplyRestored: undefined,
     supplyGapFill: undefined,
@@ -350,7 +351,7 @@ function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset {
   const restored = cloneCachedAsset(asset);
   restored.supplyRestored = true;
   restored.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
-  if (asset.chainPartition) {
+  if (asset.chainPartition || (asset.supplySource === "coingecko-fallback" && isOnchainSupplyPartitionExcluded(String(asset.id)))) {
     const partition = restoreCuratedAggregateChainPartition({ ...restored, chainCirculating: {} }, asset, nowSec, true);
     restored.chainCirculating = partition && !partition.expired ? partition.asset.chainCirculating : {};
     if (partition && !partition.expired) restored.chainPartition = partition.asset.chainPartition;
@@ -433,6 +434,7 @@ export function isSupplyObservationWithinRestoreCeiling(observedAt: number, nowS
 }
 
 function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean {
+  if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous)) return false;
   // Cached on-chain totals must still satisfy today's deployment roster. A
   // removed or expanded aggregate cannot re-enter through generic carry-forward.
   if (previous.supplySource === "onchain-total-supply") {
@@ -451,6 +453,42 @@ function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean 
   // supplyObservedAt from the cache row, so age accrues from there.
   if (observedAt == null) return true;
   return isSupplyObservationWithinRestoreCeiling(observedAt, nowSec);
+}
+
+/** Preserve current price/identity while carrying only an eligible native supply packet. */
+export function restorePreferredNativeSupply(
+  asset: PeggedAsset,
+  previous: PeggedAsset | undefined,
+  nowSec: number,
+): PeggedAsset {
+  const restored = previous?.supplySource === "onchain-total-supply" && !previous.supplyUnavailableReason
+    && getCirculatingRawOrNull(previous) !== null && isWithinRestoreCeiling(previous, nowSec)
+    ? markRestoredSupply(previous, nowSec) : null;
+  const unavailable = reviewedOnchainSupplyHoldFields({
+    id: asset.id, supplySource: "onchain-supply-withheld",
+  })!;
+  logWorkerEvent({
+    scope: "handler", level: "warn", job: "sync-stablecoins", event: "preferred-native-supply-unavailable",
+    message: "Preferred native supply read unavailable; retaining the asset and independent price",
+    metadata: { stablecoinId: String(asset.id), reason: "preferred-native-supply-unavailable",
+      resolution: restored ? "restored" : "unavailable", supplyObservedAt: restored?.supplyObservedAt ?? null },
+  });
+  return {
+    ...asset,
+    ...unavailable,
+    ...(restored ? {
+      circulating: restored.circulating,
+      circulatingPrevDay: restored.circulatingPrevDay,
+      circulatingPrevWeek: restored.circulatingPrevWeek,
+      circulatingPrevMonth: restored.circulatingPrevMonth,
+      chainCirculating: restored.chainCirculating,
+      chains: restored.chains,
+      supplySource: restored.supplySource,
+      supplyObservedAt: restored.supplyObservedAt,
+      supplyRestored: true,
+      supplyUnavailableReason: undefined,
+    } : {}),
+  };
 }
 
 function getSinglePositiveCirculatingBucket(asset: PeggedAsset): string | null {
@@ -555,6 +593,7 @@ export function restoreCuratedAggregateChainPartition(
   nowSec: number,
   rescaleShares = false,
 ): { asset: PeggedAsset; expired: boolean } | null {
+  if (isOnchainSupplyPartitionExcluded(String(current.id))) return null;
   let expectedChainLabels = CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID.get(String(current.id));
   if (rescaleShares && !expectedChainLabels) {
     const meta = ACTIVE_META_BY_ID.get(String(current.id));
@@ -701,9 +740,9 @@ export interface TrackedCoverageRestoreResult {
  * Restore-or-degrade for tracked-id coverage regressions: when the DefiLlama
  * list omits an active tracked coin that was published last cycle, re-publish
  * the previous row (marked supplyRestored, same 7-day ceiling as supplemental
- * carry-forward) instead of silently dropping the coin for a cycle. Past the
- * ceiling — or with no previous row or usable previous supply — the coin stays
- * out and is reported as dropped. droppedIds is derived from the active
+ * carry-forward) instead of silently dropping the coin for a cycle. Preferred
+ * native assets without eligible supply remain published as unavailable; other
+ * unrestorable rows are reported as dropped. droppedIds is derived from the active
  * tracked universe (not the previous payload), so an already-dropped coin
  * keeps reporting every cycle instead of going silent after one run.
  */
@@ -720,6 +759,17 @@ export function restoreMissingTrackedAssets(
   for (const id of ACTIVE_TRACKED_IDS) {
     if (presentIds.has(id)) continue;
     const previous = previousAssetsById.get(id);
+    const meta = ACTIVE_META_BY_ID.get(id)!;
+    if (prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(id)) {
+      const current = previous ? markRestoredSupply(previous, nowSec) : {
+        id, name: meta.name, symbol: meta.symbol, geckoId: meta.geckoId,
+        pegType: pegTypeFromCurrency(meta.flags.pegCurrency), pegMechanism: meta.flags.backing, price: null,
+      };
+      const retained = restorePreferredNativeSupply(current, previous, nowSec);
+      restoredAssets.push(retained);
+      if (retained.supplyRestored) restoredIds.push(id);
+      continue;
+    }
     const previousSupply = getCirculatingRawOrNull(previous);
     if (!previous || previousSupply === null || previousSupply <= 0 || !isWithinRestoreCeiling(previous, nowSec)) {
       droppedIds.push(id);

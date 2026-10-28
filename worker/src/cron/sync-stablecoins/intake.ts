@@ -483,6 +483,8 @@ export async function loadStablecoinsIntake(
   );
   if (trackedCoverage.assets.length > 0) {
     assets = [...assets, ...trackedCoverage.assets];
+  }
+  if (trackedCoverage.restoredIds.length > 0) {
     logWorkerEvent({
       scope: "lib",
       job: "sync-stablecoins",

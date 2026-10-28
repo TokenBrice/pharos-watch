@@ -6,6 +6,10 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## Inactive Wrapper Evidence Windows — 2026-10-28
+
+The F-04/K-002 cohort tracked in [#945](https://github.com/TokenBrice/pharos-watch/issues/945) comprises 101 wrapper evidence windows through January 31, 2027 (59 whole-allocation, 13 allocation-claim and 29 local-review expiries). Retain all as `inactive-retained`, non-contributing windows under the [inactive/history census](../../worker/scripts/list-curation-expiry-queue.ts), not renewal work. Original evidence, review/expiry clocks and adverse history remain unchanged; independently consumed `parentBackingInheritance`, active execution reviews and xDAI/LVUSD reserve observations retain their separate admission obligations. This dated disposition neither renews evidence nor reactivates retired numerical consumers; no live generation, grade or alert receipt was obtained.
+
 ## NAV Pricing Review — 2026-10-25
 
 USYC's [reported fund share price](https://usyc.docs.hashnote.com/overview/token-price) and USDY's [issuer-administered primary conversion](https://docs.ondo.finance/developer-guides/usdy-instant-manager-integration) support privileged internal pricing with top-level applicability. Oracle publication does not establish independent valuation authority. These documentary reviews do not renew deployment controls, supply attribution, reserves or executable redemption evidence; same-notional capacity remains open.

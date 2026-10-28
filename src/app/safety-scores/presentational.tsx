@@ -10,6 +10,7 @@ import {
   type SafetyGradeSupplyMix,
 } from "@/components/safety-grade-distribution-bar";
 import { UniverseChip } from "@/components/universe-chip";
+import { Skeleton } from "@/components/ui/skeleton";
 import { useImageUnavailable } from "@/hooks/use-image-unavailable";
 import { cn } from "@/lib/utils";
 import { REPORT_CARD_GRADE_COLORS } from "@shared/lib/classification";
@@ -54,6 +55,7 @@ function SafetyMapPreview() {
             alt=""
             width={800}
             height={450}
+            loading="eager"
             fetchPriority="high"
             decoding="async"
             className="h-full min-h-32 w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.02]"
@@ -127,15 +129,7 @@ function PillarAveragesRow({
  * Safety Score Map. `stats` is the `buildV9HeadlineStats` array:
  * [ecosystem avg, supply in A/B].
  */
-export function SafetyScoresHero({
-  stats,
-  gradeCounts,
-  totalCards,
-  scoredCount,
-  cardCount,
-  supplyMix,
-  pillarAverages = [],
-}: {
+interface SafetyScoresHeroData {
   stats: Array<{ label: string; value: string; detail: string }>;
   gradeCounts: Record<string, number>;
   totalCards: number;
@@ -147,17 +141,27 @@ export function SafetyScoresHero({
   supplyMix?: SafetyGradeSupplyMix | null;
   /** `buildV9PillarAverages`: Backing / Exit / Economic Control ecosystem means. */
   pillarAverages?: readonly V9PillarAverage[];
-}) {
-  const [avg, abSupply] = stats;
-  if (!avg) return null;
-  const gradeClass = REPORT_CARD_GRADE_COLORS[avg.detail as ReportCardGrade];
+}
+
+export function SafetyScoresHero({ data, loading }: { data: SafetyScoresHeroData | null; loading: boolean }) {
+  const [avg, abSupply] = data?.stats ?? [];
+  const pillarAverages = data?.pillarAverages ?? [];
+  const gradeClass = avg ? REPORT_CARD_GRADE_COLORS[avg.detail as ReportCardGrade] : undefined;
+
+  if (!loading && !avg) {
+    return (
+      <div className="pharos-card-shell p-5 sm:p-6 lg:p-7" role="group" aria-label="Ecosystem safety overview">
+        <div className="max-w-sm"><SafetyMapPreview /></div>
+      </div>
+    );
+  }
 
   return (
     <FeatureHeroSplit
       ariaLabel="Ecosystem safety overview"
-      beamLabel={avg.label}
+      beamLabel={avg?.label ?? <span className="inline-block h-3.5 w-28 animate-pulse rounded-sm bg-accent" />}
       beamValue={
-        <span className="inline-flex items-baseline gap-3">
+        avg ? <span className="inline-flex items-baseline gap-3">
           {avg.value}
           {/* Grade is a semantic scale, so it alone carries color. */}
           <span
@@ -168,19 +172,24 @@ export function SafetyScoresHero({
           >
             Grade {avg.detail}
           </span>
-        </span>
+        </span> : <span className="inline-block h-10 w-32 animate-pulse rounded-md bg-accent" />
       }
-      universe={<UniverseChip universe="scored" value={`${scoredCount} of ${cardCount} active`} />}
+      universe={data ? <UniverseChip universe="scored" value={`${data.scoredCount} of ${data.cardCount} active`} /> : <Skeleton className="h-6 w-40 rounded-full" />}
       expand={{ href: "#data", label: "Jump to the full grade table" }}
       subKicker="Ecosystem read"
       sub={
-        abSupply || pillarAverages.length > 0 ? (
+        !data ? (
+          <div className="space-y-3 py-2">
+            <Skeleton className="h-4 w-full rounded-sm" />
+            <Skeleton className="h-4 w-4/5 rounded-sm" />
+          </div>
+        ) : abSupply || pillarAverages.length > 0 ? (
           <div className="divide-y divide-border/50">
             {abSupply ? (
               <HeroMetricRow label={abSupply.label} value={abSupply.value} detail={abSupply.detail} />
             ) : null}
             {pillarAverages.length > 0 ? (
-              <PillarAveragesRow pillarAverages={pillarAverages} scoredCount={scoredCount} />
+              <PillarAveragesRow pillarAverages={pillarAverages} scoredCount={data.scoredCount} />
             ) : null}
           </div>
         ) : null
@@ -188,7 +197,9 @@ export function SafetyScoresHero({
     >
       <div className="grid h-full gap-4 p-5 sm:p-6 lg:grid-cols-3 lg:p-7">
         <div className="flex min-w-0 flex-col justify-center lg:col-span-2">
-          <SafetyGradeDistributionBar gradeCounts={gradeCounts} totalCards={totalCards} supplyMix={supplyMix} />
+          {data ? (
+            <SafetyGradeDistributionBar gradeCounts={data.gradeCounts} totalCards={data.totalCards} supplyMix={data.supplyMix} />
+          ) : <Skeleton className="h-48 w-full rounded-md" variant="shimmer" />}
         </div>
         <SafetyMapPreview />
       </div>

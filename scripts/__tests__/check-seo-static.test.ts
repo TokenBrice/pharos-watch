@@ -1,4 +1,4 @@
-import { mkdir, mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -163,6 +163,22 @@ async function writeBaselinePages(
 }
 
 describe("check-seo-static", () => {
+  it.each([
+    ["/stablecoins/dola-inverse-finance", "/stablecoin/dola-inverse-finance/"],
+    ["/stablecoins/backing/algorithmic", "/stablecoins/backing/"],
+  ])("redirects retired taxonomy URL %s directly before dynamic rules", async (source, destination) => {
+    const redirects = await readFile(new URL("../../public/_redirects", import.meta.url), "utf8");
+    const rules = redirects.split("\n").filter((line) => line.trim() && !line.startsWith("#"));
+    const firstDynamic = rules.findIndex((line) => /[*:]/.test(line.split(/\s+/)[0]));
+    for (const alias of [source, `${source}/`]) {
+      const index = rules.indexOf(`${alias} ${destination} 301`);
+      expect(index).toBeGreaterThanOrEqual(0);
+      expect(index).toBeLessThan(firstDynamic);
+    }
+    expect(rules.some((line) => line.split(/\s+/)[0].replace(/\/$/, "") === destination.replace(/\/$/, "")))
+      .toBe(false);
+  });
+
   it("reuses complete redirect rules for archive continuity while retaining source-only sitemap conflicts", async () => {
     const root = await makeOutDir();
     await writeBaselinePages(root, ["/digest/new/"], {}, ["/", "/stability-index/", "/digest/new/"]);

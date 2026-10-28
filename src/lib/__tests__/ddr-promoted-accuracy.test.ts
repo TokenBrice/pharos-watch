@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { summarizeDdrrRows } from "@shared/lib/depeg-resolver-review";
+import { ratio } from "@shared/lib/stats";
 import type { DdrrSummary } from "@shared/types/depeg-resolver-review";
 import { makePredictionPolicySegment } from "@/components/depeg-resolver-review-test-support";
 import { describePromotedAccuracy, formatPromotedAccuracyLines } from "../ddr-promoted-accuracy";
@@ -21,7 +22,7 @@ function summary(options: {
       ...base.headline,
       recoveryLikelihoodCorrectCount: options.correct,
       recoveryLikelihoodScoredCount: options.scored,
-      recoveryLikelihoodAccuracyPct: options.scored > 0 ? options.correct / options.scored : null,
+      recoveryLikelihoodAccuracyPct: options.scored > 0 ? ratio(options.correct, options.scored) : null,
       baselineRecoverableCorrectCount: options.baseline,
     },
     byPredictionPolicy: options.segments,

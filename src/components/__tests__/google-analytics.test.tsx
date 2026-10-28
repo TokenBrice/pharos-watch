@@ -93,9 +93,9 @@ describe("GoogleAnalytics", () => {
       "page_view",
       expect.objectContaining({ page_path: "/" }),
     ]);
-    // Browsers without idle callbacks wait five seconds after the paint fallback.
+    // Browsers without idle callbacks wait two seconds after the paint fallback.
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
-    act(() => vi.advanceTimersByTime(5_031));
+    act(() => vi.advanceTimersByTime(2_031));
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
     act(() => vi.advanceTimersByTime(1));
     expect(document.getElementById("pharos-google-analytics")).toHaveProperty(
@@ -103,7 +103,7 @@ describe("GoogleAnalytics", () => {
     );
   });
 
-  it.each(["loading", "interactive"] as const)("queues events while %s and schedules idle only after load", (readyState) => {
+  it.each(["loading", "interactive"] as const)("queues events while %s and schedules idle without waiting for load", (readyState) => {
     vi.spyOn(document, "readyState", "get").mockReturnValue(readyState);
     const idle = vi.fn(() => 1);
     vi.stubGlobal("requestIdleCallback", idle);
@@ -114,26 +114,35 @@ describe("GoogleAnalytics", () => {
     expect(Array.from(window.dataLayer?.at(-1) ?? [])).toEqual([
       "event", "fresh_data_ready", { page: "home" },
     ]);
-    act(() => vi.advanceTimersByTime(10_000));
-    expect(idle).not.toHaveBeenCalled();
+    expect(idle).toHaveBeenCalledExactlyOnceWith(expect.any(Function), { timeout: 2_000 });
     expect(document.getElementById("pharos-google-analytics")).toBeNull();
 
-    act(() => window.dispatchEvent(new Event("load")));
-    expect(idle).toHaveBeenCalledExactlyOnceWith(expect.any(Function), { timeout: 5_000 });
     act(() => window.dispatchEvent(new Event("load")));
     expect(idle).toHaveBeenCalledTimes(1);
   });
 
-  it("schedules immediately after load and cancels the idle callback on unmount", () => {
+  it("schedules immediately and cancels the idle callback on unmount", () => {
     const idle = vi.fn(() => 7);
     const cancelIdle = vi.fn();
     vi.stubGlobal("requestIdleCallback", idle);
     vi.stubGlobal("cancelIdleCallback", cancelIdle);
     pathnameMock.mockReturnValue("/");
     const view = render(<GoogleAnalytics measurementId="G-TEST" />);
-    expect(idle).toHaveBeenCalledExactlyOnceWith(expect.any(Function), { timeout: 5_000 });
+    expect(idle).toHaveBeenCalledExactlyOnceWith(expect.any(Function), { timeout: 2_000 });
     view.unmount();
     expect(cancelIdle).toHaveBeenCalledWith(7);
+  });
+
+  it("injects the script only once when the effect runs again", () => {
+    pathnameMock.mockReturnValue("/");
+    const view = render(<GoogleAnalytics measurementId="G-TEST" />);
+    act(() => vi.runAllTimers());
+    pathnameMock.mockReturnValue("/admin/");
+    view.rerender(<GoogleAnalytics measurementId="G-TEST" />);
+    pathnameMock.mockReturnValue("/");
+    view.rerender(<GoogleAnalytics measurementId="G-TEST" />);
+    act(() => vi.runAllTimers());
+    expect(document.querySelectorAll("#pharos-google-analytics")).toHaveLength(1);
   });
 
   it("scrubs query-string verification tokens before page_view tracking", async () => {

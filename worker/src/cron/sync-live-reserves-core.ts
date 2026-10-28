@@ -319,6 +319,8 @@ export interface ReserveCoinSyncResult {
   breakerOutcome?: boolean;
   /** Present only after this attempt's canonical composition was confirmed authoritative. */
   publishedAt?: number;
+  /** Only an acknowledged durable attempt can qualify for a feed review. */
+  persistedFailure?: ReserveSyncStateRecord;
   warningMessages: string[];
   hasWarnings: boolean;
   attemptFailureSummaries?: ReserveAttemptFailureSummary[];
@@ -364,6 +366,7 @@ export async function syncReserveCoin(args: {
   let adapterStartMs: number | null = null;
   let adapterDurationMs = 0;
   let d1DurationMs = 0;
+  let persistedFailure: ReserveSyncStateRecord | undefined;
   let failureStage: "adapter-exception" | "storage-exception" = "storage-exception";
   const deadlineMs = args.deadlineMs ?? Number.POSITIVE_INFINITY;
   const timeStage = async <T>(stage: keyof NonNullable<LiveReservePhaseTimings["stages"]> | null, operation: () => Promise<T>): Promise<T> => {
@@ -381,7 +384,11 @@ export async function syncReserveCoin(args: {
 
   const timedResult = (
     result: Omit<ReserveCoinSyncResult, "adapterDurationMs" | "d1DurationMs">,
-  ): ReserveCoinSyncResult => ({ ...result, adapterDurationMs, d1DurationMs });
+  ): ReserveCoinSyncResult => ({
+    ...result,
+    ...(result.status !== "synced" && persistedFailure ? { persistedFailure } : {}),
+    adapterDurationMs, d1DurationMs,
+  });
 
   const recordFailure = async (
     status: ReserveSyncStateRecord["lastStatus"],
@@ -393,23 +400,26 @@ export async function syncReserveCoin(args: {
     if (!attemptStarted) return { finalized: false };
     const d1StartedMs = Date.now();
     try {
-      return await timeStage("failureWrite", () => finalizeReserveSyncAttempt(db, buildReserveSyncStateRecord({
-          stablecoinId: coin.id,
-          config,
-          breakerKey,
-          previousLastSuccessAt: prevSuccessAt,
-          previousLastSuccessAttemptId: prevSuccessAttemptId,
-          attemptId,
-          now: attemptStartedAt,
-          status,
-          lastError,
-          warnings,
-          metadata: {
-            reason,
-            failureCategory: classifyFailure(reason, lastError),
-            ...(metadataExtras ?? {}),
-          },
-      }), args.deadlineMs));
+      const state = buildReserveSyncStateRecord({
+        stablecoinId: coin.id,
+        config,
+        breakerKey,
+        previousLastSuccessAt: prevSuccessAt,
+        previousLastSuccessAttemptId: prevSuccessAttemptId,
+        attemptId,
+        now: attemptStartedAt,
+        status,
+        lastError,
+        warnings,
+        metadata: {
+          reason,
+          failureCategory: classifyFailure(reason, lastError),
+          ...(metadataExtras ?? {}),
+        },
+      });
+      const result = await timeStage("failureWrite", () => finalizeReserveSyncAttempt(db, state, args.deadlineMs));
+      if (result.finalized) persistedFailure = state;
+      return result;
     } finally {
       d1DurationMs += Date.now() - d1StartedMs;
     }

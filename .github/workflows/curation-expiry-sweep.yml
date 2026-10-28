@@ -133,28 +133,21 @@ jobs:
           echo "queue_status=$queue_status" >> "$GITHUB_OUTPUT"
           echo "live_withheld_status=$live_withheld_status" >> "$GITHUB_OUTPUT"
           echo "registry_status=$registry_status" >> "$GITHUB_OUTPUT"
-      - name: Upload the full missing-data registry
-        if: steps.generate.outputs.registry_status == '0'
+      - name: Retain complete sweep reports and logs
+        id: snapshots
+        if: always()
         uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
-          name: safety-score-v9-missing-data-registry-${{ github.run_id }}
-          path: agents/sweep/missing-data-registry.json
-          if-no-files-found: error
-          retention-days: 30
-      # Retain the full queue, including an explicitly partial report written
-      # before a nonzero queue status; absent output (fatal error) uploads nothing.
-      - name: Upload the full evidence pre-expiry queue
-        id: queue_artifact
-        if: ${{ !cancelled() && steps.capture.outcome == 'success' && hashFiles('agents/sweep/expiry-queue.md') != '' }}
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
-        with:
-          name: safety-score-v9-expiry-queue-${{ github.run_id }}
-          path: agents/sweep/expiry-queue.md
+          name: safety-score-v9-curation-sweep-${{ github.run_id }}-${{ github.run_attempt }}
+          path: agents/sweep/
           if-no-files-found: error
           retention-days: 30
       - name: Open or update the sweep issue
+        if: always() && steps.generate.outcome == 'success'
         env:
           GH_TOKEN: ${{ github.token }}
+          SNAPSHOT_URL: ${{ steps.snapshots.outputs.artifact-url }}
+          SNAPSHOT_STATUS: ${{ steps.snapshots.outcome }}
           REPLAY_STATUS: ${{ steps.generate.outputs.replay_status }}
           WORKLIST_STATUS: ${{ steps.generate.outputs.worklist_status }}
           QUEUE_STATUS: ${{ steps.generate.outputs.queue_status }}
@@ -170,9 +163,7 @@ jobs:
             echo
             echo "Generated from commit \`${GITHUB_SHA}\` on $(date -u +%F). Read-only review queues; no product data was changed. Drain per docs/process/safety-score-curation-expiry-sweep.md."
             echo
-            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}, live-withheld=${LIVE_WITHHELD_STATUS}, missing-data registry=${REGISTRY_STATUS}."
-            echo
-            echo "## Missing-data registry"
+            echo "## Summary"
             if [ -f agents/sweep/missing-data-registry.json ]; then
               jq -r '"- Open task rows: **\(.summary.openItemCount)**\n- Claim groups: **\(.summary.claimGroupCount)**\n- Compiled-fact tasks: **\(.summary.compiledFactItemCount)**\n- Score-projection supplements: **\(.summary.supplementalScoreItemCount)**\n- Affected stablecoins: **\(.summary.affectedStablecoinCount)**"' agents/sweep/missing-data-registry.json
               echo
@@ -180,6 +171,11 @@ jobs:
             else
               echo "Registry unavailable."
             fi
+            echo
+            echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}, live-withheld=${LIVE_WITHHELD_STATUS}, missing-data registry=${REGISTRY_STATUS}."
+            echo
+            echo "Full downloadable reports, capture, replay, and logs: ${SNAPSHOT_URL:-artifact upload unavailable}. Retained for 30 days; the excerpts below are not the backlog."
+            echo "Snapshot upload: ${SNAPSHOT_STATUS}."
             echo
             echo "## Live-withheld counterfactual grade-drop report"
             echo '```text'
@@ -191,9 +187,6 @@ jobs:
             echo '```'
             echo
             echo "## Evidence pre-expiry queue"
-            if [ -f agents/sweep/expiry-queue.md ]; then
-              echo "Bounded excerpt; full queue: workflow artifact \`safety-score-v9-expiry-queue-${GITHUB_RUN_ID}\` (30-day retention) at ${GITHUB_SERVER_URL}/${GITHUB_REPOSITORY}/actions/runs/${GITHUB_RUN_ID}."
-            fi
             echo '```text'
             if [ -f agents/sweep/expiry-queue.md ]; then
               awk 'NR <= 160 {print} NR == 161 {print "... output truncated after 160 lines ..."}' agents/sweep/expiry-queue.md
@@ -229,7 +222,7 @@ jobs:
                 if [ "$status" != 0 ]; then
                   echo "### $label (status $status)"
                   echo '```text'
-                  tail -30 "$log_file"
+                  if [ -f "$log_file" ]; then tail -30 "$log_file"; else echo "Command log unavailable."; fi
                   echo "... log truncated to the last 30 lines ..."
                   echo '```'
                 fi
@@ -237,6 +230,27 @@ jobs:
               echo
             fi
           } > "$body"
+
+          # Reserve the marker and footer before truncating at a UTF-8 boundary.
+          python3 - "$body" <<'PY'
+          import os
+          from pathlib import Path
+          import sys
+
+          path = Path(sys.argv[1])
+          body = path.read_bytes()
+          footer = (f"\nRun: {os.environ['GITHUB_SERVER_URL']}/{os.environ['GITHUB_REPOSITORY']}/actions/runs/{os.environ['GITHUB_RUN_ID']}\n").encode()
+          marker = b"\n... output truncated to fit the 60,000-byte issue body budget; download the full artifact ...\n"
+          closing_fence = b"\n```"
+          limit = 60_000
+          if len(body) + len(footer) > limit:
+              body = body[:limit - len(closing_fence) - len(marker) - len(footer)].decode("utf-8", errors="ignore").encode()
+              if sum(line.startswith(b"```") for line in body.splitlines()) % 2:
+                  body += closing_fence
+              body += marker
+          path.write_bytes(body + footer)
+          assert path.stat().st_size <= limit
+          PY
 
           issue_number=$(gh issue list --state open --search 'in:title "Safety Score curation expiry sweep"' --json number,title --jq '.[] | select(.title == "Safety Score curation expiry sweep") | .number' | head -1)
           if [ -n "$issue_number" ]; then

@@ -442,13 +442,13 @@ Posted to both Twitter/X and Telegram. Twitter/X uses the distinct replay-safe l
 
 ### Archive lead preview
 
-`src/components/daily-digest.tsx` reads the latest API edition through `useDailyDigest`; registered hook policy owns polling. It previews a complete first extended paragraph (short `text` fallback), with API-ranked risk evidence, never a mid-sentence clamp. Full persisted editions render in the dated server route, not this preview.
+`/digest/` renders dated `LATEST_DAILY_DIGEST` immediately without query-seeding. Live archive/daily reads enrich the same slug with API-ranked `riskSignal`, `riskTape` and `nextTriggers`, or replace it with a newer edition/date. Failed initial reads keep the seed without risk content. Risk follows the complete first extended paragraph (`text` fallback) to preserve LCP. CTA/archive exclusion use the displayed slug; full editions use dated routes.
 
 Search-title trimming is word-boundary/70-character bounded including date and suffix; published headline, article heading and structured-data headline remain intact. `text` stays the short metadata/distribution summary.
 
 ### Archive page
 
-`src/app/digest/page.tsx` and `src/components/digest-archive-client.tsx` separate the checked-in crawlable index from interactive API views. `view`, `month` and `q` filters are URL-addressable but never remove server-rendered links or change sitemap membership. Every checked-in edition is reachable without JavaScript/API through the monthly native-disclosure index (no link prefetch), with matching CollectionPage/ItemList JSON-LD. Dated detail pages remain canonical Articles.
+`/digest/` separates the checked-in crawlable index from API views. URL filters (`view`, `month`, `q`) never remove server links or change sitemap membership. All checked-in editions remain reachable without JavaScript/API through monthly native disclosures (no prefetch), with matching CollectionPage/ItemList JSON-LD. Dated details remain canonical Articles.
 
 A failed refetch keeps the admitted archive envelope (rows and links); the error notice appears only when nothing was retained. The shared health banner sits above both the empty and nonempty branches and uses envelope availability, not row count, so an empty generation ages against its own producer clock and warns only past its public stale band (ADR-42); receipt time never renews it.
 

@@ -2,7 +2,7 @@
 
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { API_PATHS, type StatusPageAction } from "@shared/lib/api-endpoints";
+import { API_PATHS, getEndpointDefinitionByKey, type StatusPageAction } from "@shared/lib/api-endpoints";
 import { AdminActionButton } from "@/components/status/admin-action-button";
 import {
   AdminActionExecutionProvider,
@@ -74,6 +74,12 @@ function installFetch(routes: Parameters<typeof mockFetch>[0] = [{ match: "/api/
 }
 
 describe("AdminActionButton", () => {
+  it.each(["reset-blacklist-sync", "debug-sync-state", "remediate-blacklist-amount-gaps"] as const)(
+    "keeps %s operator guidance separate from the public methodology", (key) => {
+      expect(getEndpointDefinitionByKey(key)?.statusPageAction?.runbookPath).toBe("docs/runbooks/blacklist-sync.md");
+    },
+  );
+
   beforeEach(() => {
     installFetch();
   });
@@ -170,7 +176,7 @@ describe("AdminActionButton", () => {
         expectedDuration: "Up to one minute",
         preconditions: ["Review candidate counts."],
         blockedBy: ["Live mode requires chain RPCs."],
-        runbookPath: "docs/blacklist-tracker.md",
+        runbookPath: "docs/runbooks/blacklist-sync.md",
       }),
     ]);
 
@@ -184,7 +190,7 @@ describe("AdminActionButton", () => {
       name: /Open operator reference.*opens in a new tab/i,
     });
     expect(runbookLink.getAttribute("href")).toBe(
-      "https://github.com/TokenBrice/pharos-watch/blob/main/docs/blacklist-tracker.md",
+      "https://github.com/TokenBrice/pharos-watch/blob/main/docs/runbooks/blacklist-sync.md",
     );
     expect(runbookLink.getAttribute("target")).toBe("_blank");
     expect(runbookLink.getAttribute("rel")).toBe("noopener noreferrer");

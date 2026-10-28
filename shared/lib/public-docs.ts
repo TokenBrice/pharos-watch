@@ -55,6 +55,13 @@ const PUBLIC_DOC_METADATA: readonly Omit<PublicDoc, "source">[] = [
     group: "methodology",
   },
   {
+    slug: "blacklist-tracker",
+    title: "Blacklist Tracker",
+    summary:
+      "Blacklist Tracker methodology for stablecoin freezes, releases, wipes, event coverage, frozen-balance valuation, and direct versus upstream exposure.",
+    group: "methodology",
+  },
+  {
     slug: "dex-liquidity",
     title: "DEX Liquidity",
     seoTitle: "DEX Liquidity Score Methodology for Stablecoins",

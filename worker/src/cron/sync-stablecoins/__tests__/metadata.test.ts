@@ -173,6 +173,67 @@ function sizeGuardRungBudget(
 }
 
 describe("stablecoins pricing metadata", () => {
+  it.each(["main", "fallback"] as const)("keeps preferred native supply findings as bounded quality on the %s path", (path) => {
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin): PeggedAsset => ({
+      id: coin.id, name: coin.name, symbol: coin.symbol, price: 1,
+      circulating: coin.id === "stac-securitize" || coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "myrc-blox" ? 0 : 1 },
+      supplySource: coin.id === "stac-securitize" || coin.id === "sfrax-frax" ? "onchain-supply-withheld" : "onchain-total-supply",
+      ...(coin.id === "myrc-blox" ? { supplyRestored: true } : {}),
+    }));
+    const input = {
+      ...syncInput(assets), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_000,
+      authoritativeOverrideCount: 0, cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
+    };
+    const build = (stalenessCheckFailed: boolean) => path === "main"
+      ? buildStablecoinsSyncResult({ ...input, stalenessCheckFailed })
+      : buildFallbackStablecoinsSyncResult({ ...input, stalenessCheckFailed });
+    const result = build(false);
+    const metadata = JSON.parse(result.metadata!);
+    const finding = {
+      reason: "preferred-native-supply-unavailable",
+      unavailableIds: { ids: ["stac-securitize"], total: 1, truncated: 0 },
+      restoredIds: { ids: ["myrc-blox"], total: 1, truncated: 0 },
+    };
+    expect(result.status).toBe("ok");
+    expect(metadata.reason).toBeUndefined();
+    expect(metadata.capabilities).toMatchObject({ stablecoinsCache: true, depegPipeline: true });
+    expect(metadata.quality).toEqual({ reason: finding.reason, preferredNativeSupply: finding });
+    const degraded = build(true);
+    expect(degraded.status).toBe("degraded");
+    expect(JSON.parse(degraded.metadata!).quality).toEqual({
+      reason: "price-staleness-check-failed",
+      reasons: ["price-staleness-check-failed", finding.reason],
+      preferredNativeSupply: finding,
+    });
+    const { guard } = allMissingSizeGuardFixture();
+    guard.metadata.quality = metadata.quality;
+    for (const budget of [Infinity, 2000]) {
+      expect(JSON.parse(buildSizeGuardedStablecoinsSyncMetadata(guard, budget)).quality).toEqual(metadata.quality);
+    }
+    const persisted = compactCronMetadataForPersistence(
+      JSON.stringify({ ...metadata, fullAssets: "x".repeat(100_000) }), undefined, "sync-stablecoins",
+    );
+    expect(persisted.compacted).toBe(true);
+    expect(JSON.parse(persisted.metadata!).quality).toEqual(metadata.quality);
+  });
+
+  it.each(["main", "fallback"] as const)("does not report healthy, observed-zero or reviewed-held preferred supply on the %s path", (path) => {
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin): PeggedAsset => ({
+      id: coin.id, name: coin.name, symbol: coin.symbol, price: 1,
+      circulating: coin.id === "sfrax-frax" ? {} : { peggedUSD: coin.id === "stac-securitize" ? 0 : 1 },
+      supplySource: coin.id === "sfrax-frax" ? "onchain-supply-withheld" : "onchain-total-supply",
+    }));
+    const input = {
+      ...syncInput(assets), providerDiagnostics: [], cacheKey: "stablecoins", syncStartSec: 1_777_000_000,
+      authoritativeOverrideCount: 0, cachedFallbackCount: 0, nativePegCorrectionCount: 0, nativePegFillCount: 0,
+      activePriceCoverage: evaluateStablecoinActivePriceCoverage(assets),
+    };
+    const result = path === "main" ? buildStablecoinsSyncResult(input) : buildFallbackStablecoinsSyncResult(input);
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata!).quality).toBeUndefined();
+  });
+
   it.each(["main", "fallback"] as const)("reports capacity holds as degraded with no depeg capability on the %s path", (path) => {
     const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((coin) => ({
       id: coin.id, name: coin.name, symbol: coin.symbol, price: 1, circulating: { peggedUSD: 1 },

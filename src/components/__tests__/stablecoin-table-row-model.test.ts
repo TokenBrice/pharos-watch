@@ -190,6 +190,34 @@ describe("buildStablecoinTableRowModel NAV price", () => {
 });
 
 describe("buildStablecoinTableRowModel supply changes", () => {
+  it.each([true, undefined] as const)("withholds partial-chain changes and incompatible sparkline (explicit partial=%s)", (partialCoverage) => {
+    const model = buildStablecoinTableRowModel({
+      coin: makeStablecoin({
+        circulating: { peggedUSD: 50 },
+        circulatingPrevDay: { peggedUSD: 100 },
+        circulatingPrevWeek: { peggedUSD: 100 },
+        supplyChainGuard: {
+          reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage,
+          chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+            baselineUsd: 50, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
+        },
+      }),
+      density: "spacious",
+      variant: "default",
+    });
+    expect(model.circulating).toBe(50);
+    expect(model.change24h).toBeNull();
+    expect(model.change7d).toBeNull();
+    expect(model.supplySparklineValues).toEqual([]);
+  });
+
+  it("retains complete coverage and a measured zero change", () => {
+    const model = buildStablecoinTableRowModel({ coin: makeCoin(1), density: "spacious", variant: "default" });
+    expect(model.change24h).toBe(0);
+    expect(model.change7d).toBe(0);
+    expect(model.supplySparklineValues).toEqual([1_000_000, 1_000_000, 1_000_000]);
+  });
+
   it("keeps changes null when previous supply is unavailable", () => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({

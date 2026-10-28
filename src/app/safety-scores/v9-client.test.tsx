@@ -1,6 +1,7 @@
 // @vitest-environment jsdom
 
 import { fireEvent, render, screen } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
@@ -50,6 +51,47 @@ describe("ReportCardsV9Client", () => {
   });
 
   afterEach(cleanupFrontendTest);
+
+  it.each(["loading", "failed"])("keeps the hero map without numeric stats while ratings are %s", (state) => {
+    mocks.useReportCardsV9.mockReturnValue({
+      ...query(undefined),
+      isLoading: state === "loading",
+      error: state === "failed" ? new Error("Ratings unavailable") : null,
+    });
+    const html = renderToStaticMarkup(<ReportCardsV9Client />);
+    expect(html.match(/<img\b[^>]*src="\/safety-scores\/map\.webp"/g)).toHaveLength(1);
+    const { container } = render(<ReportCardsV9Client />);
+    const hero = screen.getByRole("group", { name: "Ecosystem safety overview" });
+    const image = hero.querySelector("img")!;
+    expect(image.getAttribute("src")).toBe("/safety-scores/map.webp");
+    expect(image.getAttribute("fetchPriority")).toBe("high");
+    expect(image.getAttribute("loading")).toBe("eager");
+    expect(container.querySelectorAll('img[src="/safety-scores/map.webp"]')).toHaveLength(1);
+    expect(hero.textContent).not.toMatch(/[0-9]/);
+    if (state === "loading") {
+      expect(hero.querySelectorAll("[data-slot=skeleton]").length).toBeGreaterThan(0);
+    } else {
+      expect(hero.querySelector("[data-slot=skeleton], .animate-pulse")).toBeNull();
+      expect(hero.textContent).not.toContain("Ecosystem read");
+    }
+  });
+
+  it.each([
+    ["empty", []],
+    ["unrated", [makeV9Card({ id: "nr", score: null, grade: "NR" })]],
+    ["pipeline gaps", [makeReportCardsV9PipelineGapCard("control", "A", { id: "gap" })]],
+  ] as const)("hides hero stat slots for loaded %s ratings", (_state, cards) => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({ cards: [...cards] })));
+
+    const { container } = render(<ReportCardsV9Client />);
+    const hero = screen.getByRole("group", { name: "Ecosystem safety overview" });
+    expect(container.querySelectorAll('img[src="/safety-scores/map.webp"]')).toHaveLength(1);
+    const image = hero.querySelector("img")!;
+    expect(image.getAttribute("fetchPriority")).toBe("high");
+    expect(image.getAttribute("loading")).toBe("eager");
+    expect(hero.querySelector("[data-slot=skeleton], .animate-pulse")).toBeNull();
+    expect(hero.textContent).not.toMatch(/Ecosystem read|Ecosystem avg|Supply in A\/B|By asset count|[0-9]/);
+  });
 
   it("keeps the high-priority PNG preview when the WebP derivative is missing or fails", () => {
     render(<ReportCardsV9Client />);

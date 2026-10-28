@@ -7,6 +7,7 @@ import type {
 import { HiveMarketDiagnosticSchema } from "@shared/types/hive-market-price";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { hasMissingPrice, type PeggedAsset } from "./enrich-prices";
 import { buildSyncMetadata, type CronResult, type PriceSourceHealth, type TrackedCoverageRestoreResult } from "./shared";
 import type { CanonicalDeduplicationResult } from "./phase-helpers";
@@ -155,6 +156,25 @@ function boundedIds(ids: readonly string[]): { ids: string[]; total: number; tru
     ids: ids.slice(0, MAX_DIAGNOSTIC_ARRAY_ITEMS),
     total: ids.length,
     truncated: Math.max(0, ids.length - MAX_DIAGNOSTIC_ARRAY_ITEMS),
+  };
+}
+
+function preferredNativeSupplyQuality(assets: readonly PeggedAsset[]) {
+  const unavailableIds: string[] = [];
+  const restoredIds: string[] = [];
+  for (const asset of assets) {
+    if (!prefersOnChainSupplyMcap(asset) || getOnchainSupplyHoldReason(asset.id)) continue;
+    const supply = getCirculatingRawOrNull(asset);
+    if (asset.supplySource === "onchain-supply-withheld" && supply === null) unavailableIds.push(asset.id);
+    else if (asset.supplySource === "onchain-total-supply" && asset.supplyRestored === true && supply !== null) {
+      restoredIds.push(asset.id);
+    }
+  }
+  if (unavailableIds.length === 0 && restoredIds.length === 0) return null;
+  return {
+    reason: "preferred-native-supply-unavailable",
+    unavailableIds: boundedIds(unavailableIds),
+    restoredIds: boundedIds(restoredIds),
   };
 }
 
@@ -612,10 +632,12 @@ export function buildStablecoinsSyncResult(input: {
   // R4: the status driver leads the findings; quarantine stays an
   // informational finding that never degrades a completed publication (ADR-35).
   const depegObservation = depegObservationQuality(input);
+  const preferredNativeSupply = preferredNativeSupplyQuality(input.assets);
   const qualityReasons = [
     ...(degradedReason ? [degradedReason] : []),
     ...(supplyQuarantined ? ["supply-chain-dropout-quarantine"] : []),
     ...depegObservation.reasons,
+    ...(preferredNativeSupply ? [preferredNativeSupply.reason] : []),
   ];
   if (qualityReasons.length > 0 || depegObservation.fields) {
     metadata.quality = {
@@ -626,6 +648,7 @@ export function buildStablecoinsSyncResult(input: {
         unavailableAssetCount: input.supplyChainGuard!.unavailableAssetIds.length,
       } : {}),
       ...depegObservation.fields,
+      ...(preferredNativeSupply ? { preferredNativeSupply } : {}),
     };
   }
   if (input.stalenessWarning) metadata.stalenessWarning = true;
@@ -728,7 +751,9 @@ export function buildFallbackStablecoinsSyncResult(input: {
 
   const degradedReason = resolveSyncDegradedReason(input, publicationGap);
   const depegObservation = depegObservationQuality(input);
-  const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons];
+  const preferredNativeSupply = preferredNativeSupplyQuality(input.assets);
+  const qualityReasons = [...(degradedReason ? [degradedReason] : []), ...depegObservation.reasons,
+    ...(preferredNativeSupply ? [preferredNativeSupply.reason] : [])];
 
   return {
     status: degradedReason ? "degraded" : "ok",
@@ -760,6 +785,7 @@ export function buildFallbackStablecoinsSyncResult(input: {
           ...(qualityReasons.length > 0 ? { reason: qualityReasons[0] } : {}),
           ...(qualityReasons.length > 1 ? { reasons: qualityReasons } : {}),
           ...depegObservation.fields,
+          ...(preferredNativeSupply ? { preferredNativeSupply } : {}),
         },
       } : {}),
       ...(input.depegHeldReason ? { depegHeldReason: input.depegHeldReason } : {}),

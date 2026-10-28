@@ -256,6 +256,7 @@ describe("DepegResolverModule", () => {
       live: { peak: number | null; current: number | null },
     ): DdrV2ResponseRow {
       const frozen = makeFrozenDdrV2Row(makeSourceRow({ stablecoinId: id, symbol: id.toUpperCase(), peakDeviationBps: frozenPeak ?? -1, currentDeviationBps: frozenPeak }));
+      if (frozen.frozen === null) throw new Error("Expected frozen fixture");
       if (frozenPeak == null) frozen.frozen.sourceRow.peakDeviationBps = null as unknown as number;
       return { ...frozen, live: { ...frozen.live, peakDeviationBps: live.peak, currentDeviationBps: live.current } } as DdrV2ResponseRow;
     }

@@ -8,7 +8,7 @@ Public static `/privacy/` describes processing elsewhere in the product; it fetc
 
 `src/lib/analytics.ts` owns the host/path/event gate. GA4 requires configured `NEXT_PUBLIC_GA_ID` and production `pharos.watch`. Operator hosts/routes (`/admin/`, `/admin-api/` and descendants), Pages previews and Telegram Mini App receive no bootstrap, page views, custom events or Web Vitals. Recheck browser location for delayed custom callbacks after navigation.
 
-The gtag stub queues page views and `fresh_data_ready` immediately after hydration. The external script waits for window `load`, then an idle callback with a five-second deadline (or a five-second post-paint fallback). Visits ending before it loads may not be recorded.
+The gtag stub queues page views and `fresh_data_ready` immediately after hydration. The external script is scheduled immediately in the effect at idle with a two-second deadline (or a two-second post-paint fallback), without waiting for window `load`. Visits ending before it loads may not be recorded.
 
 Explicitly configured localhost/127.0.0.1/[::1] is a test-only exception; use a test measurement ID. No other suffix/preview is allowed. Visible policy describes cookies, retention, hosting and actual typed event catalog, never hypothetical telemetry.
 

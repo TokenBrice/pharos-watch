@@ -1320,7 +1320,10 @@
         { "path": "docs/architecture.md", "anchor": "adr-32" },
         { "path": "docs/architecture.md", "anchor": "adr-33" },
         { "path": "docs/architecture.md", "anchor": "adr-34" },
-        { "path": "docs/runbooks/blacklist-sync.md", "runbook": { "label": "Blacklist gap checks", "kind": "symptom" } },
+        { "path": "docs/runbooks/blacklist-sync.md", "anchor": "first-checks", "runbook": { "label": "Blacklist gap checks", "kind": "symptom" } },
+        { "path": "docs/runbooks/blacklist-sync.md", "anchor": "symptom" },
+        { "path": "docs/runbooks/blacklist-sync.md", "anchor": "remediation" },
+        { "path": "docs/runbooks/blacklist-sync.md", "anchor": "prevention" },
         { "path": "docs/runbooks/review-renewal.md", "runbook": { "label": "Scoped review renewal", "kind": "procedure" } }
       ],
       "checks": ["npx vitest run src/lib/status worker/src/lib/status", "npx vitest run scripts/maintenance/__tests__/monitor-worker-memory.test.ts scripts/maintenance/__tests__/cron-delivery.test.ts scripts/maintenance/__tests__/worker-evidence-report.test.ts scripts/__tests__/night-watch-worker.test.ts scripts/__tests__/watch-worker-cron.test.ts worker/scripts/__tests__/worker-status-profile.test.ts"],
@@ -1711,7 +1714,8 @@
         {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "event-entry-recovery-details"},
         {"path": "docs/process/worker-infrastructure-appendix.md", "anchor": "database-maintenance-details"},
         {"path": "docs/blacklist-tracker.md", "anchor": "public-exposure-contract"},
-        {"path": "docs/blacklist-tracker.md", "anchor": "storage-semantics"}
+        {"path": "docs/runbooks/blacklist-sync.md", "anchor": "public-exposure-contract"},
+        {"path": "docs/runbooks/blacklist-sync.md", "anchor": "storage-semantics"}
       ],
       "alsoRead": ["worker/AGENTS.md"],
       "testOwnership": [

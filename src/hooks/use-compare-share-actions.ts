@@ -87,8 +87,7 @@ export function useCompareShareActions({
     const shareCoins: ShareCoinData[] = comparisonCoins.map((coin, index) => {
       const cap = getCirculatingRawOrNull(coin.data);
       const prev = getPrevWeekRawOrNull(coin.data);
-      // Both operands must be observed; an unavailable side renders "—", never $0 or -100%.
-      const weeklyPct = cap != null && prev != null ? getSupplyChangePercent(cap, prev) : null;
+      const weeklyPct = getSupplyChangePercent(coin.data, prev);
       const pegRef = getPegReference(coin.data.pegType, pegRates, coin.meta.commodityOunces);
 
       return {

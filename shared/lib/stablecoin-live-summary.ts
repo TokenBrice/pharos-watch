@@ -55,8 +55,9 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     undefined,
   );
   const latestDate = latest?.date ?? null;
-  // Canonical quarantine says current supply is unavailable: never back-fill it from provider history.
-  const supplyUnavailable = detail.currentSupplyUnavailableReason != null;
+  // An explicit unavailable current overlay must never back-fill from provider history.
+  const supplyUnavailable = detail.currentSupplyUnavailableReason != null ||
+    (detail.currentCirculatingUSD !== undefined && admitSupplyBuckets(detail.currentCirculatingUSD).status !== "observed");
   const hasCurrentSupply = !supplyUnavailable && admitSupplyBuckets(detail.currentCirculatingUSD).status === "observed";
   let circulating = supplyUnavailable ? {} : hasCurrentSupply ? detail.currentCirculatingUSD! : latest?.totalCirculatingUSD ?? {};
   // Older detail responses may have only native history. Never assume a $1 peg.
@@ -94,7 +95,7 @@ export function projectStablecoinLiveSummary(detail: StablecoinDetailResponse): 
     ...(supplyUnavailable || (hasCurrentSupply && detail.currentSupplyRestored === true) ? { supplyRestored: true } : {}),
     ...(hasCurrentSupply && detail.currentSupplyExcludedChains?.length ? { supplyExcludedChains: detail.currentSupplyExcludedChains } : {}),
     circulating,
-    circulatingPrevDay: hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
+    circulatingPrevDay: supplyUnavailable ? {} : hasCurrentSupply ? admittedDetailBuckets(detail.currentCirculatingPrevDayUSD)
       : latestDate == null ? {} : detailBucketsAt(detail, latestDate - 86_400, "totalCirculatingUSD"),
     circulatingPrevWeek: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 7 * 86_400, "totalCirculatingUSD"),
     circulatingPrevMonth: supplyObservedAt == null ? {} : detailBucketsAt(detail, supplyObservedAt - 30 * 86_400, "totalCirculatingUSD"),

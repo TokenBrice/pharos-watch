@@ -393,14 +393,21 @@ describe("DepegClient", () => {
     vi.useFakeTimers({ now: NOW_SEC * 1000 + 901_000, toFake: ["setTimeout", "clearTimeout", "Date"] });
     const surfaces = makeResolverSurfaces();
     const meta = { updatedAt: NOW_SEC, ageSeconds: 0, status: "fresh" as const };
-    surfaces.resolver.data!._meta = { ...surfaces.resolver.data!._meta, degraded: true, degradedReason: "stale-cache" };
     mocks.usePegSummary.mockReturnValue(makePegSummaryResult({ coins: [makeCoin("coin-a", "A")] }));
     mocks.useStressSignals.mockReturnValue(makeStressSignalsResult());
     mocks.useInfiniteDepegEvents.mockReturnValue(makeEventsResult());
     mocks.useUrlFilters.mockReturnValue(makeUrlFilters());
     mocks.useDepegResolverSurfaces.mockReturnValue({
       ...surfaces,
-      resolver: { ...surfaces.resolver, dataUpdatedAt: NOW_SEC * 1000, meta },
+      resolver: {
+        ...surfaces.resolver,
+        data: {
+          ...surfaces.resolver.data,
+          _meta: { ...surfaces.resolver.data!._meta, degraded: true, degradedReason: "stale-cache" },
+        },
+        dataUpdatedAt: NOW_SEC * 1000,
+        meta,
+      },
       resolverReview: { ...surfaces.resolverReview, dataUpdatedAt: NOW_SEC * 1000, meta, error: new Error("HTTP 503") },
     });
     render(<DepegClient />);

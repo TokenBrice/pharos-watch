@@ -47,16 +47,16 @@ Domain schema splits, catalog merging, numeric/display admission, reserve/depend
 
 `route-chrome.tsx` owns chrome/workspace boundaries; `src/lib/nav-config.ts` owns navigation.
 
-Stable providers outlive navigation; optional chrome never gates content. [Shell loading](./homepage.md#shared-shell-loading) owns lazy islands, PSI and footer; `page-loading-skeleton.tsx` retains only route-consumed loading helpers.
+Stable providers outlive navigation; optional chrome never gates content. [Shell loading](./homepage.md#shared-shell-loading) owns lazy islands, PSI/footer; `page-loading-skeleton.tsx` keeps route-used helpers. Root `error.tsx` retains retry/hard-reload recovery and `/status/` guidance without requests or backend-health diagnosis.
 
 - `src/lib/public-route-inventory.ts` and `src/app/sitemap.ts` share indexable paths, including registry-derived families. `npm run seo:check` checks coverage, orphans and depth.
 - History and API documents retain citations/fragments through [methodology archives](./methodology-page.md), [changelog archives](./process/blog-publishing.md#changelog) and [separate API documents](./api-page.md).
-- Routes ship no `loading.tsx` or page-wide Suspense.
-- `public/_redirects` owns non-sitemap aliases. Static rules precede dynamic rules: Cloudflare silently drops rules beyond its 100 post-dynamic-rule cap. `functions/stablecoin/[[path]].ts` redirects legacy numeric IDs. Retired IDs 301 to cemetery or peg hub.
-- `functions/_middleware.ts` negotiates Markdown; `scripts/maintenance/generate-markdown-exports.ts` emits `index.md`. Require `Vary: Accept` **and CDN no-store**: Cloudflare does not cache-key arbitrary `Vary`. `/llms.txt` replaces neither robots nor sitemap.
+- No route `loading.tsx` or page-wide Suspense.
+- `public/_redirects` owns non-sitemap aliases; static rules precede dynamic (Cloudflare drops rules past its 100 post-dynamic cap). `functions/stablecoin/[[path]].ts` redirects legacy numeric IDs; retired IDs 301 to cemetery/peg hub.
+- `functions/_middleware.ts` negotiates Markdown; `scripts/maintenance/generate-markdown-exports.ts` emits `index.md`. Require `Vary: Accept` **and CDN no-store**: Cloudflare cannot cache-key arbitrary `Vary`. `/llms.txt` replaces neither robots nor sitemap.
 - `public/_routes.json` uses one broad `/*` include and static-asset excludes; overlapping include splats are invalid. `public/_headers` owns static cache policy; route exceptions detach the broad cache rule with `! Cache-Control` to avoid comma-joining. Nonce injection and CSP ownership: [CSP posture](./security-governance.md#csp-posture).
 - [Static invocation exclusions](./process/worker-infrastructure-appendix.md#static-asset-invocation) keep public assets direct and privileged/function-backed routes gated.
-- Client navigation state does not infer a preceding route from `document.referrer`. Display projections may bound examples but retain authoritative totals and disclose omissions; [ADR-34](#adr-34) applies to search, detail and summary surfaces.
+- Navigation never infers a preceding route from `document.referrer`. Bounded examples retain authoritative totals and disclose omissions; [ADR-34](#adr-34) covers search/detail/summaries.
 
 ### Runtime host and env rules
 
@@ -72,7 +72,7 @@ Stable providers outlive navigation; optional chrome never gates content. [Shell
 ### Metadata and crawl ownership
 
 - `src/lib/page-metadata.ts` owns canonical/social/robots metadata; lifecycle overrides win. Route docs own experiments.
-- `src/lib/site-identity.ts` owns `og:site_name`.
+- `og:site_name`: `src/lib/site-identity.ts`.
 - `src/app/layout.tsx` owns sitewide metadata, RSS alternates and root JSON-LD identities. Do not emit `SearchAction` without a real query handler or preload analytics independently of its runtime gate.
 - Dataset JSON-LD requires explicit Pharos `Organization` creator/publisher, URL license, Pharos URN and canonical `sameAs`; included `DataCatalog` needs `@id`, `name`, `url`. `url`/`sameAs` identify HTML; `distribution.contentUrl` is a crawlable public download, never `/_site-data/*`. Profile Markdown is build-time catalog data, not live metrics.
 - `src/app/sitemap.ts` / `src/app/robots.ts` own crawl/membership policy. Git route dates are editorial, not metric clocks; summary/sidecar changes affect only their profile's floor. Profiles floor at a content-revision constant. Funding also uses checked-in data dates. History metadata generators reject shallow checkouts, never use filesystem dates; refresh via [Scripts](./scripts.md).
@@ -98,7 +98,7 @@ These same-origin Pages surfaces are **not** Worker API routes. Bindings/admissi
 
 ### Static feed route handlers
 
-The App Router feed handlers under `src/app/feed/**/route.ts` emit static RSS/XML from checked-in or generated inputs and own the feed inventory; sitemap and `npm run seo:check` cover HTML only. Feed links are native `<a>`, not `Link` (no RSC payload).
+`src/app/feed/**/route.ts` owns static RSS/XML feeds from checked-in/generated inputs; sitemap and `npm run seo:check` cover HTML only. Feed links use native `<a>`, not `Link` (no RSC payload).
 Depeg RSS uses `classifyDepegClosure`: only recovered events (including legacy) say `Resolved`; other terminal classes name tracking closure, not recovery.
 
 ---

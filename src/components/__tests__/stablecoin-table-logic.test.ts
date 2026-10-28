@@ -454,6 +454,35 @@ describe("blacklistable projection", () => {
 });
 
 describe("supply-change semantics", () => {
+  it.each(["change24h", "change7d"] as const)("sorts partial %s last in both directions and exports no change", (key) => {
+    const partial = makeCoin("partial", "Partial", {
+      circulating: { peggedUSD: 50 },
+      supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage: true,
+        chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+          baselineUsd: 50, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
+      },
+    });
+    const unchanged = makeCoin("unchanged", "Unchanged", { circulating: { peggedUSD: 1_000_000 } });
+    const zero = makeCoin("zero", "Zero", { circulating: { peggedUSD: 0 } });
+    for (const direction of ["asc", "desc"] as const) {
+      const sorted = sortStablecoins({
+        filtered: [partial, unchanged, zero], sort: { key, direction }, effectiveSortKey: key,
+      });
+      expect(sorted.map((coin) => coin.id)).toEqual(direction === "asc"
+        ? ["zero", "unchanged", "partial"] : ["unchanged", "zero", "partial"]);
+    }
+    downloadCsvMock.mockReset();
+    exportStablecoinsCsv([partial, unchanged, zero], new Map());
+    const [, columns] = downloadCsvMock.mock.calls[0]! as [StablecoinData[], CsvColumn<StablecoinData>[]];
+    for (const header of ["24h Change (%)", "7d Change (%)"]) {
+      const column = columns.find((item) => item.header === header)!;
+      expect(column.accessor(partial, 0)).toBeNull();
+      expect(column.accessor(unchanged, 1)).toBe(0);
+      expect(column.accessor(zero, 2)).toBe(-100);
+    }
+  });
+
   it("sorts a missing previous supply last and exports it as null", () => {
     const missing = makeCoin("missing", "Missing", {
       circulating: { peggedUSD: 1_000_000 },

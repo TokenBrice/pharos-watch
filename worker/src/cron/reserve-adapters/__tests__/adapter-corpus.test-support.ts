@@ -102,7 +102,7 @@ export const CORPUS_BACKLOG = reasonsFromNames(
     : `No committed wire capture yet; the happy path and its failure modes are owned by ${name}.test.ts.`,
   {
     "money-llamma": "On-chain LLAMMA census; the adapter test mocks fetchOnchainMulticall3/fetchDefiLlamaPrices/pinnedBlockPlan directly and no wire capture is committed yet (owner: P4HedgecoreMoneySpusd).",
-    "hylo-solana": "Bound to hyusd-hylo but no committed wire capture yet; the happy path and its failure modes are owned by hylo-solana.test.ts.",
+    "hylo-solana": "The atomic Solana account census, separate price response and failure mutations are replayed by hylo-solana.test.ts using hylo-solana-account-census.json.",
     "icp-gldt": "On-chain ICP canister reads; the committed capture covers the swap canister's get_swap_configs candid reply only, and the balance/ledger-supply reads are owned by icp-gldt.test.ts (owner: P4GldtFinish).",
     "kerne-signed-por": "Pre-launch kUSD adapter; the signed payload is synthetic test data rather than a committed wire capture, so replay remains owned by kerne-signed-por.test.ts.",
     "leverup-lvusd": "Six captured Monad state responses at block 111423307 replay through the real RPC/price network boundary in leverup-lvusd.test.ts, including the severe designated-reserve deficit. A score-grade happy-path corpus capture is unavailable: the real book is undercollateralized and the historical market quote has no retained timestamp/confidence.",

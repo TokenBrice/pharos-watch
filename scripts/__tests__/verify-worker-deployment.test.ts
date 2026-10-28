@@ -21,6 +21,7 @@ const ACTIVATED_AT = "2026-03-01T08:15:00.000Z";
 const tempDirs: string[] = [];
 
 afterEach(() => {
+  vi.useRealTimers();
   for (const path of tempDirs.splice(0)) rmSync(path, { recursive: true, force: true });
 });
 
@@ -168,7 +169,7 @@ describe("Cloudflare deployment API verification", () => {
     };
   }
 
-  it("uses one authenticated GET for active status and history and publishes the activation second", async () => {
+  it("uses one authenticated GET when already active and publishes the activation second", async () => {
     const env = apiEnv();
     const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(Response.json(apiFixture()));
     await runWorkerDeploymentVerification(env, fetchApi);
@@ -197,14 +198,30 @@ describe("Cloudflare deployment API verification", () => {
     expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toContain("worker_version=version-2");
   });
 
-  it("does not accept a heavy gradual rollout just because public is fully activated", async () => {
+  it("polls until the SHA-tagged deployment is the sole version at 100%", async () => {
+    vi.useFakeTimers();
+    const env = apiEnv();
+    writeFileSync(env.GITHUB_OUTPUT!, "");
     const fetchApi = vi.fn<typeof fetch>()
-      .mockResolvedValueOnce(Response.json(apiFixture()))
-      .mockResolvedValueOnce(Response.json(apiFixture([activeDeployment({
-        versions: [{ percentage: 90, version_id: "heavy-new" }, { percentage: 10, version_id: "heavy-old" }],
-      })])));
-    await runWorkerDeploymentVerification(apiEnv(), fetchApi, "stablecoin-api");
-    await expect(runWorkerDeploymentVerification(apiEnv(), fetchApi, "stablecoin-heavy")).rejects.toThrow(/did not match this release/);
+      .mockImplementationOnce(async () => Response.json(apiFixture([activeDeployment({
+        annotations: { "workers/message": workerDeployMessage("other-sha") },
+      })])))
+      .mockImplementationOnce(async () => Response.json(apiFixture([activeDeployment({
+        versions: [{ percentage: 90, version_id: "version-2" }, { percentage: 10, version_id: "version-1" }],
+      })])))
+      .mockImplementation(async () => Response.json(apiFixture()));
+    const verification = runWorkerDeploymentVerification(env, fetchApi, "stablecoin-heavy");
+    await vi.advanceTimersByTimeAsync(9_999);
+    expect(fetchApi).toHaveBeenCalledTimes(1);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
+    await vi.advanceTimersByTimeAsync(1);
+    expect(fetchApi).toHaveBeenCalledTimes(2);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
+    await vi.advanceTimersByTimeAsync(10_000);
+    await verification;
+    expect(fetchApi).toHaveBeenCalledTimes(3);
+    expect(String(fetchApi.mock.calls[2][0])).toContain("/workers/scripts/stablecoin-heavy/deployments");
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toContain("worker_version=version-2");
   });
 
   it("uses the first API entry as active even when a later entry has a newer timestamp", async () => {
@@ -226,33 +243,103 @@ describe("Cloudflare deployment API verification", () => {
   });
 
   it.each<[string, () => Response, RegExp]>([
+    ["authentication error", () => new Response("unauthorized", { status: 401 }), /HTTP 401/],
     ["HTTP error", () => new Response("unavailable", { status: 503 }), /HTTP 503/],
     ["API failure", () => Response.json({ success: false, errors: [{ code: 10000, message: "Authentication error" }] }), /unsuccessful or malformed/],
     ["missing history", () => Response.json({ success: true, result: {} }), /unsuccessful or malformed/],
     ["Wrangler array", () => Response.json(unorderedHistory()), /unsuccessful or malformed/],
+    ["malformed deployment identity", () => Response.json({
+      success: true, result: { deployments: [{ ...activeDeployment(), id: 123 }] },
+    }), /unsuccessful or malformed/],
+    ["malformed deployment annotations", () => Response.json({
+      success: true, result: { deployments: [{ ...activeDeployment(), annotations: [] }] },
+    }), /unsuccessful or malformed/],
+    ["malformed active deployment", () => Response.json({
+      success: true, result: { deployments: [{ versions: "invalid" }] },
+    }), /unsuccessful or malformed/],
+    ["malformed active version", () => Response.json({
+      success: true, result: { deployments: [{ versions: [{ percentage: "100", version_id: "version-2" }] }] },
+    }), /unsuccessful or malformed/],
     ["empty history", () => Response.json(apiFixture([])), /history is empty/],
     ["invalid JSON", () => new Response("<html>gateway timeout</html>"), /JSON/],
   ])("fails closed without outputs on %s", async (_case, response, error) => {
+    vi.useFakeTimers();
     const env = apiEnv();
     writeFileSync(env.GITHUB_OUTPUT!, "");
     const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(response());
     await expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow(error);
+    expect(fetchApi).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
     expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
   });
 
-  it("fails with no outputs when the first deployment does not match the release SHA", async () => {
+  it("exhausts the 60-second deadline with no outputs and names the last observed identity", async () => {
+    vi.useFakeTimers();
     const env = apiEnv();
     writeFileSync(env.GITHUB_OUTPUT!, "");
-    const fixture = apiFixture();
-    fixture.result.deployments[0].annotations = { "workers/message": workerDeployMessage("other-sha") };
-    const fetchApi = vi.fn<typeof fetch>().mockResolvedValue(Response.json(fixture));
-    await expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow(/did not match this release/);
+    const fetchApi = vi.fn<typeof fetch>().mockImplementation(async () => Response.json(apiFixture([
+      activeDeployment({
+        id: `deployment-${fetchApi.mock.calls.length}`,
+        annotations: { "workers/message": workerDeployMessage("other-sha") },
+        versions: [{ percentage: 100, version_id: "old-version" }],
+      }),
+    ])));
+    const rejected = expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow(
+      /60.*deployment-6.*other-sha.*old-version/,
+    );
+    await vi.advanceTimersByTimeAsync(59_999);
+    expect(fetchApi).toHaveBeenCalledTimes(6);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
+    await vi.advanceTimersByTimeAsync(1);
+    await rejected;
+    expect(fetchApi).toHaveBeenCalledTimes(6);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
+  });
+
+  it("names the last observed identity if the final API request reaches the deadline", async () => {
+    vi.useFakeTimers();
+    const env = apiEnv();
+    writeFileSync(env.GITHUB_OUTPUT!, "");
+    const fetchApi = vi.fn<typeof fetch>().mockImplementation(async () => {
+      if (fetchApi.mock.calls.length === 6) {
+        return new Promise((_resolve, reject) => setTimeout(() => reject(new Error("request timed out")), 10_000));
+      }
+      return Response.json(apiFixture([activeDeployment({ id: "last-observed", annotations: {} })]));
+    });
+    const rejected = expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow(/60.*last-observed/);
+    await vi.advanceTimersByTimeAsync(60_000);
+    await rejected;
+    expect(fetchApi).toHaveBeenCalledTimes(6);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
+  });
+
+  it("does not publish a matching response that arrives after the deadline", async () => {
+    vi.useFakeTimers();
+    const env = apiEnv();
+    writeFileSync(env.GITHUB_OUTPUT!, "");
+    const fetchApi = vi.fn<typeof fetch>().mockImplementation(async () => {
+      await new Promise((resolveWait) => setTimeout(resolveWait, 60_001));
+      return Response.json(apiFixture());
+    });
+    const rejected = expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow(/60.*deployment-2/);
+    await vi.advanceTimersByTimeAsync(60_001);
+    await rejected;
+    expect(fetchApi).toHaveBeenCalledTimes(1);
     expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
   });
 
   it("propagates network failures instead of claiming history or active identity is available", async () => {
+    vi.useFakeTimers();
+    const env = apiEnv();
+    writeFileSync(env.GITHUB_OUTPUT!, "");
     const fetchApi = vi.fn<typeof fetch>().mockRejectedValue(new Error("network unavailable"));
-    await expect(fetchWorkerDeployments(apiEnv(), fetchApi)).rejects.toThrow("network unavailable");
+    await expect(fetchWorkerDeployments(env, fetchApi)).rejects.toThrow("network unavailable");
+    fetchApi.mockClear();
+    await expect(runWorkerDeploymentVerification(env, fetchApi)).rejects.toThrow("network unavailable");
+    expect(fetchApi).toHaveBeenCalledTimes(1);
+    expect(vi.getTimerCount()).toBe(0);
+    expect(readFileSync(env.GITHUB_OUTPUT!, "utf8")).toBe("");
   });
 
   it.each(["CLOUDFLARE_ACCOUNT_ID", "CLOUDFLARE_API_TOKEN", "GITHUB_SHA"])(

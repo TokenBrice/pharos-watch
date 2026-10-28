@@ -57,6 +57,34 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("missing detail price enrichment", () => {
+  it("keeps preferred withheld supply unavailable through detail and summary without a published reason", async () => {
+    const history = [0, 1, 7, 30].map((days) => ({
+      date: NOW - days * 86_400, totalCirculatingUSD: { peggedUSD: 900_000 }, totalCirculating: { peggedUSD: 800_000 },
+    }));
+    const result = await enrichMissingDetailPrice(makeDb({
+      id: "stac-securitize", circulating: {}, supplySource: "onchain-supply-withheld", price: 1.12,
+    }), "stac-securitize", makeResponse(JSON.stringify({
+      tokens: history, currentCirculatingUSD: { peggedUSD: 900_000 }, currentCirculatingPrevDayUSD: { peggedUSD: 890_000 },
+      currentSupplyObservedAt: NOW - 60, currentSupplyRestored: true,
+    })));
+    const body = await result.json() as Record<string, unknown>;
+    expect(body.currentCirculatingUSD).toEqual({});
+    expect(body.currentCirculatingPrevDayUSD).toBeUndefined();
+    expect(body.currentSupplyObservedAt).toBeUndefined();
+    expect(body.currentSupplyRestored).toBeUndefined();
+    expect(body.currentSupplyUnavailableReason).toBeUndefined();
+    expect(body.tokens).toEqual(history);
+    const summary = projectStablecoinLiveSummary(StablecoinDetailResponseSchema.parse(body));
+    expect(summary.circulating).toEqual({});
+    expect(summary.circulatingPrevDay).toEqual({});
+    expect(summary.circulatingPrevWeek).toEqual({});
+    expect(summary.circulatingPrevMonth).toEqual({});
+    expect(summary).toMatchObject({
+      price: 1.12,
+      supplyObservedAt: null, nativeSupply: { current: null, prevWeek: null, prevMonth: null },
+    });
+  });
+
   it("preserves the economic-float refusal through detail and summary despite positive provider overlays/history", async () => {
     const result = await enrichMissingDetailPrice(makeDb({
       id: "sfrax-frax", circulating: {}, supplySource: "onchain-supply-withheld", supplyUnavailableReason: "economic-float-unreconciled",

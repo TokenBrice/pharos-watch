@@ -1,0 +1,36 @@
+{
+  "id": "dotusd-polkadot",
+  "name": "dotUSD",
+  "symbol": "dotUSD",
+  "oneLiner": "dotUSD is Polkadot's OpenGov-governed dollar stablecoin, initially minted 1:1 against USDT through a capped peg stability module on Asset Hub.",
+  "flags": {
+    "backing": "crypto-backed",
+    "governance": "centralized-dependent"
+  },
+  "collateral": "USDT in the initial peg stability module; DOT-collateral vaults are planned for a later phase.",
+  "pegMechanism": "Capped 1:1 minting and redemption against USDT through an on-chain peg stability module; a treasury-seeded DOT/dotUSD pool supports swaps on Asset Hub.",
+  "geckoId": "dotusd",
+  "links": [
+    { "label": "Website", "url": "https://polkadot.com/" },
+    { "label": "Launch announcement", "url": "https://pcf.network/news/dotusd-approved/" },
+    { "label": "Governance", "url": "https://polkadot.subsquare.io/referenda/1944" },
+    { "label": "Asset Hub asset", "url": "https://assethub-polkadot.subscan.io/assets/7873" }
+  ],
+  "status": "pre-launch",
+  "launchDate": "2026-10-08",
+  "launchPhase": "launched",
+  "milestones": [
+    {
+      "date": "2026-10-08",
+      "type": "milestone",
+      "title": "dotUSD launches on Asset Hub",
+      "description": "Referendum 1944 took effect, enabling the USDT peg stability module and a treasury-seeded DOT/dotUSD pool. DOT-collateral vaults remain a later phase.",
+      "sourceUrl": "https://pcf.network/news/dotusd-approved/"
+    }
+  ],
+  "listingStatusReview": {
+    "changedAt": "2026-10-28",
+    "reason": "Missing lane: price. CoinGecko's dotusd preview has null price and market cap; no DefiLlama stablecoin listing was found. Asset Hub issuance is public, but no runtime supply lane is admitted.",
+    "reviewBy": "2026-12-27"
+  }
+}
