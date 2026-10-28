@@ -29,7 +29,6 @@ import { SAFETY_SCORE_V9_CACHE_KEYS, loadSafetyScoreV9PublicationHealth } from "
 import { V9PublicationAttemptSchema, loadSafetyScoreV9FailedPublicationAttempt, type V9PublicationAttempt } from "./publication-attempts";
 import {
   loadSafetyScoreV9PublicationStoredRow,
-  safetyScoreV9PublicationChunkCleanupStatement,
   shardSafetyScoreV9PublicationStoredValue,
   shardedSafetyScoreV9PublicationChunkStatements,
   shardSafetyScoreV9CohortStoredValue,
@@ -122,8 +121,6 @@ export interface PersistSafetyScoreV9PublicationInput {
    * batch, which every reader version tolerates.
    */
   deferPublicMaterialization?: boolean;
-  /** Store the payload in content-addressed chunk rows; only once every reader accepts sharded envelopes. */
-  chunkedPublicationWrites?: boolean;
 }
 
 export interface SafetyScoreV9PersistTiming {
@@ -397,16 +394,12 @@ export async function persistSafetyScoreV9Publication(
   );
   const statements: D1PreparedStatement[] = [];
   if (publicationValue !== null) {
-    let canonicalValue = publicationValue;
-    if (input.chunkedPublicationWrites) {
-      const sharded = shardSafetyScoreV9PublicationStoredValue(publicationValue);
-      canonicalValue = sharded.envelope;
-      statements.push(...shardedSafetyScoreV9PublicationChunkStatements(
-        db, sharded, publicationPayloadSha256!, input.publicationClockSec,
-      ));
-    } else {
-      statements.push(safetyScoreV9PublicationChunkCleanupStatement(db));
-    }
+    // Always sharded: an admitted stored value can exceed D1's 2 MB row limit.
+    const sharded = shardSafetyScoreV9PublicationStoredValue(publicationValue);
+    const canonicalValue = sharded.envelope;
+    statements.push(...shardedSafetyScoreV9PublicationChunkStatements(
+      db, sharded, publicationPayloadSha256!, input.publicationClockSec,
+    ));
     statements.push(
       db.prepare(`INSERT INTO cache (key, value, updated_at)
         VALUES (?, CASE WHEN

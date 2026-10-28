@@ -3,13 +3,13 @@
   "product": "CADD",
   "profile": "cadd-v1",
   "officialIndexUrl": "https://tetradg.com/cadd-reserve-attestations/",
-  "reportUrl": "https://drive.google.com/uc?export=download&id=1TGC4WdV7shMJPTwAYErRNrCns7LsH6TX&name=attestation.pdf",
-  "reportSha256": "3e6f9b22a834152cbb78492142031a3dc85625ca9d4016aebb8a4195c637aad7",
-  "reportByteLength": 165651,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T23:59:00Z",
+  "reportUrl": "https://drive.google.com/uc?export=download&id=1tMHO2EgZ6lRllAgp2h4BBanDTmGM1FBI&name=attestation.pdf",
+  "reportSha256": "16c28d036bcd8da2839eb8122dbad23f6e0f99ea2f098ecf1ac98a30f85b6fc4",
+  "reportByteLength": 239069,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T23:59:00Z",
   "reportTimeZone": "UTC (as printed in the report)",
-  "reportIssuedAt": "2026-09-15T23:59:00Z",
+  "reportIssuedAt": "2026-10-13T23:59:00Z",
   "attestor": "Baker Tilly WM LLP",
   "engagement": "Independent reasonable assurance engagement under Canadian Standard on Assurance Engagements (CSAE) 3000",
   "conclusion": "unmodified",
@@ -18,23 +18,23 @@
     {
       "code": "cad-cash",
       "label": "Canadian Dollar Cash",
-      "amount": "1207253.18"
+      "amount": "1320001.34"
     }
   ],
   "liabilities": [
     {
       "code": "base-tempo-ethereum",
       "label": "CADD in Circulation (Base, Tempo and Ethereum supply net of exclusions defined in the report)",
-      "amount": "1207019.18"
+      "amount": "1319658.34"
     }
   ],
-  "reportedAssetTotal": "1207253.18",
-  "computedAssetTotal": "1207253.18",
-  "reportedLiabilityTotal": "1207019.18",
+  "reportedAssetTotal": "1320001.34",
+  "computedAssetTotal": "1320001.34",
+  "reportedLiabilityTotal": "1319658.34",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "95dcecbe68892fa6c9d1656156cc8156e166875a25ea82acaeb75e665a438ba1",
+    "normalizedTextSha256": "b9cbe379d273427e896b55d9ea994d3798bf908fba577c5463c1ba3f1e13282e",
     "pageCount": 5
   },
   "assuranceTier": "independent-assurance"

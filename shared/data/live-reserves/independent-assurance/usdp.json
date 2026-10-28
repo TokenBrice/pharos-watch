@@ -3,13 +3,13 @@
   "product": "USDP",
   "profile": "usdp-v1",
   "officialIndexUrl": "https://www.paxos.com/usdp-transparency",
-  "reportUrl": "https://framerusercontent.com/assets/YXrlcnHgVxcHy66TMLVHn2fM71U.pdf",
-  "reportSha256": "aef3f04264d829804e45ccf24b2d5a084e7fa3aed2395a763fe5ee731f486ebc",
-  "reportByteLength": 512421,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T17:00:00-04:00",
+  "reportUrl": "https://framerusercontent.com/assets/oeOuRskMln0RvSNGMfgLTDIjQys.pdf",
+  "reportSha256": "6f71e376b6a9d45ae7be5422367ea6a2531b892a33955b39271388b66ddb913f",
+  "reportByteLength": 510924,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T17:00:00-04:00",
   "reportTimeZone": "Eastern Daylight Time (UTC-4)",
-  "reportIssuedAt": "2026-09-24T23:59:00-04:00",
+  "reportIssuedAt": "2026-10-23T23:59:00-04:00",
   "attestor": "KPMG LLP",
   "engagement": "Independent accountants examination under AICPA attestation standards",
   "conclusion": "unmodified",
@@ -18,19 +18,19 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "22220905"
+      "amount": "14178649"
     },
     {
       "code": "reverse-repo",
       "label": "Repurchase agreements, at fair value",
-      "amount": "6969000"
+      "amount": "11935000"
     }
   ],
   "liabilities": [
     {
       "code": "ethereum",
       "label": "USDP redeemable ethereum tokens",
-      "amount": "27473280"
+      "amount": "24389326"
     },
     {
       "code": "solana",
@@ -38,13 +38,13 @@
       "amount": "1694981"
     }
   ],
-  "reportedAssetTotal": "29189905",
-  "computedAssetTotal": "29189905",
-  "reportedLiabilityTotal": "29168261",
+  "reportedAssetTotal": "26113649",
+  "computedAssetTotal": "26113649",
+  "reportedLiabilityTotal": "26084307",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "0d453e80dcb481e8d4282a66132d704d9a29880ad5c1da04031eec5f8b52ef68",
+    "normalizedTextSha256": "0175a7d52cb12d1187096621b3faff69f68c2e79e8d030cad503082ee621129c",
     "pageCount": 9
   },
   "assuranceTier": "independent-assurance"

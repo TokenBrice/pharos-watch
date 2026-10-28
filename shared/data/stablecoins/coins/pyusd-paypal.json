@@ -22,23 +22,23 @@
     "attestorJurisdiction": "United States",
     "attestorLicense": "PCAOB-registered",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-24",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-23",
       "publishedAtBasis": "signed-date-standin",
       "reviewReference": {
-        "date": "2026-09-24",
-        "reviewedAt": "2026-10-01",
+        "date": "2026-10-23",
+        "reviewedAt": "2026-10-27",
         "dateKind": "unspecified"
       },
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol curation pass 2026-10-01 (RuleC14); August report and composition refreshed together under D01; examination date is not a verified publication date",
+      "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7); September 30 report PDF read; report and composition refreshed together; examination date is not a verified publication date",
       "confidence": "verified",
       "sources": [
         {
-          "label": "KPMG PYUSD Redemption Assets Report - August 2026 (examination dated September 24, 2026)",
-          "url": "https://framerusercontent.com/assets/VdMoM8qevL5j7tgTTmLhkemRdY.pdf"
+          "label": "KPMG PYUSD Redemption Assets Report - September 2026 (examination dated October 23, 2026)",
+          "url": "https://framerusercontent.com/assets/UZ8Eke3FvB5npXyceLEmiLRV6k.pdf"
         }
       ]
     }

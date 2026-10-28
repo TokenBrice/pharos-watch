@@ -12,6 +12,7 @@ import * as publicMaterialization from "../report-cards-v9-materialization";
 import { materializeV9AcceptedPublication } from "../report-cards-v9-materialization";
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import type * as PublicationStore from "../safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationStoredRow } from "../safety-score-v9/publication-chunks";
 import * as publicationHealth from "../safety-score-v9/publication-health";
 import * as publicationAttempts from "../safety-score-v9/publication-attempts";
 import type * as AcceptedProjectionReaders from "../safety-score-v9/accepted-projection-readers";
@@ -82,12 +83,12 @@ function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = fals
 }
 
 describe("Safety Score V9 publication runner", () => {
-  it.each([false, true])("retries an unselected acceptance without changing canonical bytes (chunked=%s)", async chunkedPublicationWrites => {
+  it("retries an unselected acceptance without changing canonical bytes", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
     const publication = makeWorkerSafetyScoreV9Publication();
     try {
-      await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true, chunkedPublicationWrites });
+      await store.persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
       const acceptedRows = sqlite.prepare("SELECT * FROM cache ORDER BY key").all();
       vi.useFakeTimers({ toFake: ["Date"] });
       const retry = await retryPendingSafetyScoreV9PublicMaterialization(db, undefined, Date.now() + 180_000);
@@ -267,10 +268,12 @@ describe("Safety Score V9 publication runner", () => {
       expect(result).toMatchObject({ status: "published", journal: { status: "failed" },
         captureArchive: { status: "written" } });
       const object = JSON.parse(put.mock.calls[0]![1]);
-      for (const row of [object.base, object.delta, object.cards]) {
+      for (const row of [object.base, object.delta]) {
         expect(sqlite.prepare("SELECT value, updated_at FROM cache WHERE key = ?").get(row.key))
           .toEqual({ value: row.value, updated_at: row.updatedAt });
       }
+      // The canonical row is a sharded envelope; the archive keeps the reassembled stored value.
+      expect(await loadSafetyScoreV9PublicationStoredRow(db)).toEqual({ value: object.cards.value, updatedAt: object.cards.updatedAt });
       expect(sqlite.prepare("SELECT generation_id FROM safety_score_capture_archive").get())
         .toEqual({ generation_id: result.status === "published" ? result.publicationGenerationId : null });
     } finally { sqlite.close(); }

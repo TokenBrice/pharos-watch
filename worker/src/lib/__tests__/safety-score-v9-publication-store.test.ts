@@ -27,7 +27,7 @@ import {
   parseSafetyScoreV9LenderCollateralProjection,
 } from "../safety-score-v9/accepted-projections";
 import { loadSafetyScoreV9AcceptedBaselineState, loadSafetyScoreV9LenderCollateralState } from "../safety-score-v9/accepted-projection-readers";
-import { SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX } from "../safety-score-v9/publication-chunks";
+import { SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX, SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX } from "../safety-score-v9/publication-chunks";
 
 const databases: DatabaseSync[] = [];
 
@@ -698,7 +698,8 @@ describe("Safety Score V9 publication store", () => {
     );
     expect(
       sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => String(row.key))
-        .filter((key) => !key.startsWith(SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX)),
+        .filter((key) => !key.startsWith(SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX)
+          && !key.startsWith(SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX)),
     ).toEqual([
       SAFETY_SCORE_V9_CACHE_KEYS.publication,
       SAFETY_SCORE_V9_CACHE_KEYS.acceptedBaseline,

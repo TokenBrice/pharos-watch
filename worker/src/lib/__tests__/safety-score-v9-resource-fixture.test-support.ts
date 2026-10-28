@@ -17,6 +17,7 @@ import { buildSafetyScoreV9CaptureControl, commitCaptureControl, hasPendingAttri
 import { appendSupplyAttributionJournalV1 } from "../safety-score-v9/supply-attribution-journal-store";
 import { computeSafetyScoreV9 } from "../../cron/compute-safety-score-v9";
 import { loadSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
+import { loadSafetyScoreV9PublicationStoredRow } from "../safety-score-v9/publication-chunks";
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
 import { ALERT_SAFETY_V9_SOURCE_CACHE_KEY, parsePersistedAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
 import { parseNativeV9InputCacheArtifact } from "../safety-score-v9/native-input";
@@ -34,10 +35,12 @@ const db = createSqliteD1(sqlite);
 const bucket = { async put(_key: string, body: unknown) {
   assert.equal(typeof body, "string");
   const object = JSON.parse(body as string);
-  for (const field of ["base", "delta", "cards"]) {
+  for (const field of ["base", "delta"]) {
     const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(object[field].key);
     assert.equal(row?.value, object[field].value, `archive-${field}-transport`);
   }
+  // The canonical row is a sharded envelope; the archive keeps the reassembled stored value.
+  assert.equal((await loadSafetyScoreV9PublicationStoredRow(db))?.value, object.cards.value, "archive-cards-transport");
   return {};
 } } as R2Bucket;
 
@@ -152,7 +155,7 @@ try {
     assert(alert);
     assert.equal(alert.publicationGenerationId, publication.publicationGenerationId);
     assert.equal(Number(sqlite.prepare("SELECT count(*) AS count FROM safety_score_capture_archive").get()!.count), 3);
-    const transport = String(rows.find((row) => row.key === SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value);
+    const transport = (await loadSafetyScoreV9PublicationStoredRow(db))!.value;
     const envelope = JSON.parse(transport);
     const enrichment = JSON.parse(String(deltaRow.value));
     const extension = buildSafetyScoreV9BaselineExtensionFromNormalizedInput(replay.fixedInput);

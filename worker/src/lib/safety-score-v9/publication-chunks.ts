@@ -13,8 +13,8 @@ import { SAFETY_SCORE_V9_CACHE_KEYS } from "./publication-health";
  * single-row-equivalent stored string, so codec parsing and every checksum are
  * unchanged, and no single D1 row approaches the 2 MB row limit.
  *
- * Readers accept both shapes. Writers shard only once every reader is live
- * (heavy `SAFETY_V9_CHUNKED_PUBLICATION_WRITES`).
+ * Readers accept both shapes, so historical inline rows stay readable; the
+ * writer always shards.
  */
 export const SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_PREFIX = "report-cards:v9:payload-chunk:v1:";
 export const SAFETY_SCORE_V9_COHORT_CHUNK_KEY_PREFIX = "report-cards:v9:cohort-chunk:v1:";
@@ -209,11 +209,6 @@ function chunkStatements(
       .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at")
       .bind(chunk.key, chunk.value, updatedAt)),
   ];
-}
-
-/** Statement removing all payload chunks, for an inline (single-row) publication write. */
-export function safetyScoreV9PublicationChunkCleanupStatement(db: D1Database): D1PreparedStatement {
-  return db.prepare("DELETE FROM cache WHERE key >= ? AND key < ?").bind(...SAFETY_SCORE_V9_PUBLICATION_CHUNK_KEY_RANGE);
 }
 
 /**

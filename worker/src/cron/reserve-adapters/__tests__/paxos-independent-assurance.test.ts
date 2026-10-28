@@ -27,8 +27,8 @@ const fixture = (name: string) => readFileSync(new NodeURL(`./fixtures/paxos/${n
   .replace(/^<!--[^]*?-->\s*/, "");
 const INDEX = fixture("index-2026-10-14.html");
 const MAIN = fixture("main-2026-10-14.mjs.txt");
-// The October 13 capture is byte-identical to the verified October 14 product.
-const PAGE = fixture("paxg-2026-10-13.mjs.txt");
+// October 27 capture of the live product module listing the reviewed September 30 report.
+const PAGE = fixture("paxg-2026-10-27.mjs.txt");
 const septemberCapture: { gzipBase64: string; rawSha256: string; rawByteLength: number } = JSON.parse(fixture("paxg-2026-09-30.module.json"));
 const septemberBytes = gunzipSync(Buffer.from(septemberCapture.gzipBase64, "base64"));
 const SEPTEMBER_PAGE = new TextDecoder("utf-8", { fatal: true, ignoreBOM: true }).decode(septemberBytes);
@@ -71,22 +71,23 @@ describe("Paxos discovered main module and report-selection list", () => {
     await expect(discover(html)).resolves.toEqual(admitted(PAGE));
   });
 
-  it("reads the same reviewed report selection from the real September 30 and October 13 captures", () => {
+  it("reads the reviewed report selection from the real October 27 capture and the older September 30 capture", () => {
     expect(septemberBytes.byteLength).toBe(septemberCapture.rawByteLength);
     expect(hash(SEPTEMBER_PAGE)).toBe(septemberCapture.rawSha256);
     expect(hash(SEPTEMBER_PAGE)).toBe("3abe90e5439ad20619f0a1f799e4c4279f7ab5cc378177ba8efd97367c6f7048");
-    expect(hash(PAGE)).toBe("cc505dc4eafcf862c1a9adda08da12c9864cda8ba52ffb4b22a4f9468d37e53a");
+    expect(hash(PAGE)).toBe("790704ff5bcc995fc7b25b69e7f4887ec69348e1e18755744be0608518588375");
     const selection = readPaxosReportSelection(PAGE);
-    expect(readPaxosReportSelection(SEPTEMBER_PAGE)).toEqual(selection);
+    // The September 30 capture predates only the September 30 report itself.
+    expect(readPaxosReportSelection(SEPTEMBER_PAGE)).toEqual(selection.filter((url) => url !== REPORT_URL));
     expect(selection).toContain(REPORT_URL);
     expect(selection.map((url) => url.replace(/^.*\/(\w+)\.pdf$/, "$1")).sort()).toEqual([...BINDING.reviewedReportAssetIds].sort());
   });
 
-  it("accepts historical import/export-name churn with identical locals and body", async () => {
+  it("rejects a re-served historical capture that predates the reviewed report", async () => {
     const oldUrl = `${SITE}/${PAXG_ID}.-iP-KhFb.mjs`;
     const oldMain = MAIN.replace(`${PAXG_ID}.${PAXG_CHUNK}.mjs`, `${PAXG_ID}.-iP-KhFb.mjs`);
     installAdapterNetwork({ html: { [MAIN_URL]: oldMain, [oldUrl]: SEPTEMBER_PAGE } });
-    await expect(discover()).resolves.toEqual(admitted(SEPTEMBER_PAGE));
+    await expectFailure(discover(), "report-binding-missing");
   });
 
   // Import expressions below are unexecuted upstream-source attack fixtures,
@@ -104,7 +105,7 @@ describe("Paxos discovered main module and report-selection list", () => {
   it.each([
     ["same-length report label change", PAGE.replace("buttonText:`Aug`", "buttonText:`Sep`")],
     ["local binding rename", PAGE.replace("D as t", "D as renamedLocal")],
-    ["module swap", PAGE.replace('from"./Pdfviewer.B-RMKdz-.mjs"', 'from"./PdfViewer.NewChunk.mjs"')],
+    ["module swap", PAGE.replace('from"./Pdfviewer.DCDdU355.mjs"', 'from"./PdfViewer.NewChunk.mjs"')],
     ["nonleading static imports", `const beforeImports=1;${PAGE}`],
     ["other byte change", beforeSourceMap("// non-source-map comment")],
   ])("admits cosmetic page churn while the reviewed selection is unchanged (%s)", async (_label, page) => {
@@ -257,10 +258,11 @@ describe("Paxos discovered main module and report-selection list", () => {
 
   it("reconciles every native gold liability and rejects an omitted Solana row", () => {
     const manifest = getIndependentAssuranceManifest("PAXG");
-    expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({ computedAssetTotal: "431313", liabilityTotal: "431313", collateralizationRatio: 1 });
-    expect(manifest.liabilities).toContainEqual({ code: "solana", label: "PAXG redeemable Solana tokens", amount: "2478" });
+    expect(reconcileIndependentAssuranceManifest(manifest)).toMatchObject({ computedAssetTotal: "435306", liabilityTotal: "435306", collateralizationRatio: 1 });
+    expect(manifest.liabilities).toContainEqual({ code: "solana", label: "PAXG redeemable Solana tokens", amount: "2560" });
     expect(manifest.liabilities).toContainEqual({ code: "robinhood", label: "PAXG redeemable Robinhood tokens", amount: "5" });
+    expect(manifest.liabilities).toContainEqual({ code: "base", label: "PAXG redeemable Base tokens", amount: "235" });
     expect(() => reconcileIndependentAssuranceManifest({ ...manifest, liabilities: manifest.liabilities.filter((row) => row.code !== "solana") }))
-      .toThrow("liability total 428835 does not match manifest 431313");
+      .toThrow("liability total 432746 does not match manifest 435306");
   });
 });
