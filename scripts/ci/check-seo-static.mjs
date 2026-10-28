@@ -1636,7 +1636,9 @@ function validateSafetyScoresPreview(pageRecords, errors, expectation) {
         `${route}: preview card ${row.href} carries ${gradeLabels.length === 0 ? "no" : `"${gradeLabels.join('", "')}"`} grade label, expected the projected "${row.grade}"`,
       );
     }
-    if (!extractMarkupText(anchor.html).includes(`${row.score}/100`)) {
+    // React separates adjacent text nodes with `<!-- -->`, which text
+    // extraction turns into a space, so the score may read "87 /100".
+    if (!extractMarkupText(anchor.html).replace(/\s*\/\s*/g, "/").includes(`${row.score}/100`)) {
       errors.push(`${route}: preview card ${row.href} does not carry the projected ${row.score}/100 score`);
     }
   }

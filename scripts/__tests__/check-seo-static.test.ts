@@ -847,7 +847,7 @@ function safetyPreviewCard(row: SafetyPreviewExpectation["preview"]["rows"][numb
   return `<a href="${row.href}" title="${row.id}"><div class="pharos-card-shell"><div>`
     + `<div><span class="truncate">${row.id} Stablecoin</span><span>SYM</span></div>`
     + `<span data-slot="badge" aria-label="Safety grade ${row.grade}">${row.grade}</span>`
-    + `<div><span class="pharos-numeric">${row.score}/100</span></div>`
+    + `<div><span class="pharos-numeric">${row.score}<!-- -->/100</span></div>`
     + "</div></div></a>";
 }
 
@@ -1001,7 +1001,7 @@ describe("safety scores dated preview", () => {
       ],
       [
         "score",
-        safetyPreviewRegion().replace(`${first.score}/100`, `${first.score + 1}/100`),
+        safetyPreviewRegion().replace(`${first.score}<!-- -->/100`, `${first.score + 1}<!-- -->/100`),
         `preview card ${first.href} does not carry the projected ${first.score}/100 score`,
       ],
       ["missing", safetyPreviewRegion({ rows: SAFETY_PREVIEW.rows.slice(1) }), `preview omits projected profile links: ${first.href}`],
