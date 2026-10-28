@@ -515,6 +515,8 @@ export function AboutPageContent() {
                 <ExternalLink className="h-3.5 w-3.5" />
               </a>{" "}
               created Pharos and leads product direction, scoring methodology, and the data pipeline.{" "}
+              TokenBrice also works on Polaris, and Polaris-related coverage, like everything else on Pharos,
+              remains purely data-driven.{" "}
               <a
                 href="https://x.com/Ikebillion_"
                 target="_blank"
@@ -753,7 +755,7 @@ export function AboutPageContent() {
           contentClassName="space-y-3 text-sm leading-relaxed text-muted-foreground"
         >
           <p>
-            Pharos is MIT-licensed open source. If you spot a bad data point, want a stablecoin added, or want to
+            Pharos code and data are MIT-licensed. If you spot a bad data point, want a stablecoin added, or want to
             understand how something is computed, open the code or reach out directly.
           </p>
           <div className="flex flex-wrap gap-2">
@@ -777,6 +779,12 @@ export function AboutPageContent() {
               </a>
             </Button>
           </div>
+          <p>
+            Press and research enquiries:{" "}
+            <a href="mailto:me@tokenbrice.com" className="pharos-prose-link">
+              me@tokenbrice.com
+            </a>
+          </p>
         </AboutSection>
       </div>
     </FeaturePageShell>

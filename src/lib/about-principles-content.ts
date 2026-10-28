@@ -53,7 +53,7 @@ export const PRINCIPLES_AXIOMS: readonly PrincipleAxiom[] = [
   {
     id: "open-code-open-data",
     title: "Open code, open data, published curation.",
-    body: "The dashboard, the worker pipeline, the scoring engines, and the data exports are MIT-licensed and reproducible. What is tracked is a curatorial decision, and the curation is published. Additions land with explicit rationale, exclusions are documented when contested, and the inbound funding that supports the work is logged at /funding/ for inspection.",
+    body: "The dashboard, the worker pipeline, the scoring engines, and the data exports are MIT-licensed and reproducible. What is tracked is a curatorial decision, and the curation is published. Additions land with explicit rationale, exclusions are documented when contested, and the inbound funding that supports the work is logged at /funding/ for inspection. Pharos code, data and data exports are MIT-licensed. Editorial content, including profile prose, methodology and case studies, is licensed under CC BY 4.0. Third-party material retains its original terms.",
   },
 ];
 

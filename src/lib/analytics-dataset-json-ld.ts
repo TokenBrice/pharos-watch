@@ -1,7 +1,7 @@
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { API_REFERENCE_URL } from "@shared/lib/public-api-contract";
 import type { PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
-import { PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
+import { PUBLIC_DATASET_CURRENT_DATE, PUBLIC_DATASET_CURRENT_EXPORTS } from "@/lib/datasets/public-dataset-current";
 import { buildPharosOrganizationNode } from "@/lib/json-ld";
 import { buildPharosUrnJsonLdIdentifier } from "@/lib/pharos-urn-json-ld";
 
@@ -11,6 +11,10 @@ type PublicDatasetExport = {
     asOfISO?: string;
     methodologyLabel?: string;
     rowCount?: number;
+    /** Exact shard capture identity, present when provenance is available. */
+    sourceGeneration?: string;
+    /** Observation semantics for the export's clock. */
+    freshnessContract?: string;
   };
   rows: Record<string, unknown>[];
 };
@@ -61,6 +65,24 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
   },
 ] as const;
 
+/**
+ * Plain-text citation for a public dataset card. The dated download uses the
+ * generated edition date; `_meta.asOfISO` may name an earlier observation
+ * clock (notably the depeg ledger capture) and must not be used for the path.
+ */
+export function buildPublicDatasetCitation(descriptor: PublicDatasetDescriptor): string {
+  const meta = descriptor.export._meta;
+  const editionDate = PUBLIC_DATASET_CURRENT_DATE;
+  const asOf = meta.asOfISO ?? PUBLIC_DATASET_AS_OF_UNAVAILABLE;
+  const methodology = meta.methodologyLabel ?? PUBLIC_DATASET_METHODOLOGY_UNAVAILABLE;
+  const provenance = meta.sourceGeneration
+    ? [`source generation ${meta.sourceGeneration}`, meta.freshnessContract]
+      .filter((value): value is string => Boolean(value))
+      .join("; ")
+    : "";
+  return `Pharos, "${descriptor.name}," snapshot edition ${editionDate}, as of ${asOf}; methodology ${methodology}${provenance ? `; ${provenance}` : ""}. ${API_REFERENCE_URL}#dataset-${descriptor.slug}. Data: ${SITE_URL}/datasets/${descriptor.slug}/${editionDate}.json. MIT.`;
+}
+
 const COVERAGE_VARIABLES = [
   {
     name: "priceAndDepegCoverage",
@@ -110,7 +132,9 @@ const COVERAGE_VARIABLES = [
   },
 ] as const;
 
-const PHAROS_DATA_LICENSE_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE";
+export const PHAROS_DATA_LICENSE_URL = "https://github.com/TokenBrice/pharos-watch/blob/main/LICENSE";
+export const PUBLIC_DATASET_AS_OF_UNAVAILABLE = "Snapshot time unavailable";
+export const PUBLIC_DATASET_METHODOLOGY_UNAVAILABLE = "Methodology version unavailable";
 export const PHAROS_PUBLIC_DATA_CATALOG_NAME = "Pharos Public API Data Catalog";
 
 /** Canonical `@id` of the public data catalog every dataset node points at. */

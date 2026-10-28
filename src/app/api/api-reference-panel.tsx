@@ -4,6 +4,7 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { cn } from "@/lib/utils";
 import { CopyButton } from "@/components/copy-button";
+import { CemeteryDatasetCopyCitation } from "@/components/cemetery/cemetery-dataset-copy";
 import { FaqSection } from "@/components/faq-section";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { markdownLinkComponent } from "@/components/markdown-link";
@@ -20,7 +21,13 @@ import {
 import type { FaqItem } from "@/lib/faq";
 import { safeJsonLd } from "@/lib/json-ld";
 import { buildApiArtifactCatalogJsonLd } from "@/lib/api-artifact-json-ld";
-import { PUBLIC_DATASET_JSON_LD_DESCRIPTORS } from "@/lib/analytics-dataset-json-ld";
+import {
+  buildPublicDatasetCitation,
+  PHAROS_DATA_LICENSE_URL,
+  PUBLIC_DATASET_AS_OF_UNAVAILABLE,
+  PUBLIC_DATASET_JSON_LD_DESCRIPTORS,
+  PUBLIC_DATASET_METHODOLOGY_UNAVAILABLE,
+} from "@/lib/analytics-dataset-json-ld";
 import { SITE_ORIGIN as SITE_URL } from "@shared/lib/runtime-origins";
 import { API_PATHS } from "@shared/lib/api-endpoints";
 import { DONOR_API_KEY_MIN_USD, DONOR_API_KEY_RATE_LIMIT_PER_MINUTE } from "@shared/lib/ops-limits";
@@ -435,22 +442,33 @@ export async function ApiReferencePanel() {
           </p>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
-          {PUBLIC_DATASET_JSON_LD_DESCRIPTORS.map((dataset) => (
-            <article key={dataset.slug} id={`dataset-${dataset.slug}`} className="space-y-2 rounded-xl border border-border/60 px-4 py-4">
-              <h3 className="font-semibold text-foreground">{dataset.name}</h3>
-              <p className="text-sm leading-relaxed text-muted-foreground">{dataset.description}</p>
-              <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
-                {(["json", "csv", "ndjson"] as const).map((format) => (
-                  <li key={format}>
-                    <a className="pharos-prose-link" href={`/datasets/${dataset.slug}/latest.${format}`}>
-                      {format.toUpperCase()}
-                    </a>
-                  </li>
-                ))}
-                <li><a className="pharos-prose-link" href={`/sheets/${dataset.slug}.csv`}>Sheets CSV</a></li>
-              </ul>
-            </article>
-          ))}
+          {PUBLIC_DATASET_JSON_LD_DESCRIPTORS.map((dataset) => {
+            const asOfISO = dataset.export._meta.asOfISO;
+            return (
+              <article key={dataset.slug} id={`dataset-${dataset.slug}`} className="space-y-2 rounded-xl border border-border/60 px-4 py-4">
+                <h3 className="font-semibold text-foreground">{dataset.name}</h3>
+                <p className="text-sm leading-relaxed text-muted-foreground">{dataset.description}</p>
+                <p className="text-xs leading-relaxed text-muted-foreground">
+                  <a href={PHAROS_DATA_LICENSE_URL} className="pharos-prose-link">MIT</a>
+                  {" · As of "}
+                  {asOfISO ? <time dateTime={asOfISO}>{asOfISO}</time> : PUBLIC_DATASET_AS_OF_UNAVAILABLE}
+                  {" · Methodology "}
+                  {dataset.export._meta.methodologyLabel ?? PUBLIC_DATASET_METHODOLOGY_UNAVAILABLE}
+                </p>
+                <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                  {(["json", "csv", "ndjson"] as const).map((format) => (
+                    <li key={format}>
+                      <a className="pharos-prose-link" href={`/datasets/${dataset.slug}/latest.${format}`}>
+                        {format.toUpperCase()}
+                      </a>
+                    </li>
+                  ))}
+                  <li><a className="pharos-prose-link" href={`/sheets/${dataset.slug}.csv`}>Sheets CSV</a></li>
+                </ul>
+                <CemeteryDatasetCopyCitation citation={buildPublicDatasetCitation(dataset)} />
+              </article>
+            );
+          })}
         </div>
       </section>
 
