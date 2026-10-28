@@ -168,17 +168,19 @@ See the [public API reference](https://pharos.watch/api/) for the wire contract.
 
 ## Consumers
 
-Canonical V9 serves Safety Scores, home, detail, comparison, portfolio/dependency map, yield, digest/flight-to-quality, Telegram, OG, datasets, status and grade history.
+V9 serves Safety Scores, home/detail/compare, portfolio/dependency map, yield, digest/flight-to-quality, Telegram, OG, datasets, status/grade history.
 
-Graph, DDR, digest-detail and ops read the accepted cohort; grade/identity readers use the index; daily datasets decode full cards. Projections bind accepted identity/health. Missing, invalid or mismatched cohorts fail closed with a machine-readable reason, without decoding full cards.
+Graph/DDR/digest-detail/ops read the accepted cohort; grade/identity readers use the index; daily datasets decode full cards. Projections bind accepted identity/health; missing/invalid/mismatched cohorts fail closed with machine-readable reasons without full-card decoding.
 
-Rated cards' read-only top-driver `reason` uses the binding cap, else weakest-pillar reason, preferring a recognized score-matching binding mint posture for Control; otherwise state pillar/score. Nonbinding/differently scored postures cannot supply it. Badges/reason codes may be empty. Scores, evidence, schema and withheld behavior stay unchanged; this explains current constraints, not historical changes or misconduct.
+Portfolio dependency exposure is unavailable, not $0, when a basket link's share is unknown. Observed zero shares stay $0, and unknown-share links still count as routes.
 
-Stability-index OG without PSI is unavailable, never `0`/`MELTDOWN`. Coverage labels `expectedCount` assets assessed, reconciles rated/NR/pipeline-gap separately, and uses scored-population wording only for `ratedCount`; a hold replaces the headline.
+Rated read-only top-driver `reason`: binding cap, else weakest pillar; Control prefers recognized score-matching binding mint posture, otherwise pillar/score. Nonbinding/score-mismatched postures cannot supply it. Badges/reason codes may be empty. Scores/evidence/schema/withholding stay unchanged; reasons explain current constraints, not history/misconduct.
 
-Current-only consumers reject held or over-7200 s ratings. Displays may show held data with notice; yield requires accepted identity within its stale-coherent window. No V8 cache/scoring fallback remains.
+Without PSI, stability-index OG is unavailable, never `0`/`MELTDOWN`. Coverage: `expectedCount` assets assessed, rated/NR/pipeline-gap reconciled; only `ratedCount` means scored. Holds replace headlines.
 
-Score-map/yield retain null denominators/ratios, empty score map, reason and null identity/time on unavailable input, never `0%`/`100%` ([yield wire](./yield-intelligence.md#public-wire-contract)). Selector creation recomputes live V9 (`functions/lib/selector-canonical-snapshot.ts`); `503` means source/schema failure, not policy hold. Signed snapshots retain historical readability.
+Current-only reads reject held/>7200 s ratings. Held-data displays require notice; yield needs accepted identity within its stale-coherent window. No V8 cache/scoring fallback.
+
+Score-map/yield retain null denominators/ratios, empty map, reason and null identity/time when unavailable, never `0%`/`100%` ([yield wire](./yield-intelligence.md#public-wire-contract)). Selector creation recomputes live V9 (`functions/lib/selector-canonical-snapshot.ts`); `503`: source/schema failure, not policy hold. Signed snapshots retain historical reads.
 
 ## History
 

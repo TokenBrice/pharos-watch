@@ -153,13 +153,15 @@ Missing measured-balance and organic TVL weights remain `null` through storage r
 
 ## Liquidity Page
 
-`/liquidity/` uses the instrument header (methodology line labelled "Liquidity Score methodology") and a stacked `FeatureHeroSplit`:
+`/liquidity/` uses the instrument header ("Liquidity Score methodology") and stacked `FeatureHeroSplit`:
 
 - **Beam:** "Secondary exit depth", the global row's `totalTvlUsd`; "—" plus a "Depth unavailable" chip when the global row is missing or quarantined. The universe chip counts observed markets (`isObservedOnDex` in `src/app/liquidity/model.ts`) over the active roster. Its `OpsStatusChip` uses the shared producer-clock health projection: saved fresh metadata ages to delayed/stale without another fetch, dependency/API warnings impose a floor, and an explicit unknown producer clock remains unavailable. The chip names the original snapshot time and endpoint fresh budget (`API_FRESHNESS_MAX_AGE_SEC.dexLiquidity` × `FRESHNESS_RATIOS.FRESH` when omitted); `warn-110` reads "Stale data". Transport errors retain the saved generation and body retry notice. A quarantined global row withholds its 24h volume with its depth.
 - **Facts:** the 7d change is labelled "coins with 7d history" because it is a pool-TVL-weighted change over coins with a 7d baseline, not the global total's own change (the global row has no history series); 24h DEX volume as above; rated and observed-NR counts.
-- **Visual:** the exit route map, unframed on the hero surface (`src/components/exit-route-map.tsx`). Doors and lanes show their share of depth; the throat, drawn from HHI, shows the crowding index; below 768px two short door/lane lists, led by the crowding index, replace the scene. At rest the aggregate throat is selected so no route is dimmed.
-- **Ledger:** the hero footer (`src/components/exit-route-ledger.tsx`) draws venue and chain mix in the map's exact door and lane colours with exact dollar depth, and breaks "Other routes" into its named tail plus a counted remainder (the tail sentence is hidden below 640px).
-- **Below the hero:** the leaderboard (rated rows, then unranked observed NR rows with their reason label; a partial window whose admitted sum rounds to $0.00 shows "—", not "≥ $0.00"), then folds for pool quality and for tracked coins not observed on DEX, then a source and snapshot-age footer.
+- **Visual:** unframed exit route map (`src/components/exit-route-map.tsx`): doors/lanes show depth shares; the HHI throat shows crowding. Below 768px, two door/lane lists led by crowding replace it. At rest the aggregate throat is selected; no route dims.
+- **Ledger:** hero footer (`src/components/exit-route-ledger.tsx`) uses exact map door/lane colours for venue/chain mix and dollar depth; "Other routes" names the tail plus counted remainder (tail sentence hidden below 640px).
+- **Below:** leaderboard (rated, then unranked observed NR rows with reasons; partial windows whose admitted sum rounds to $0.00 show "—", not "≥ $0.00"), pool-quality and tracked-but-unobserved folds, then source/snapshot-age footer.
+
+Base-yield share is base APY / total APY, TVL-weighted over measured evidence and bounded to 0–100%. Missing, invalid or negligible total APY uses finite positive base APY as all-base, nonpositive as zero; missing base evidence is excluded.
 
 ## Discovery Cron
 
