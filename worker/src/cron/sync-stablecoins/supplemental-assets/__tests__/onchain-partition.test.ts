@@ -14,11 +14,13 @@ import { ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT, OnchainPartitionSummarySchem
 import ftusd from "@shared/data/stablecoins/coins/ftusd-flying-tulip.json";
 import aa from "@shared/data/stablecoins/coins/aa-falconx-mev-capital.json";
 import susde from "@shared/data/stablecoins/coins/susde-ethena.json";
+import ustb from "@shared/data/stablecoins/coins/ustb-superstate.json";
+import gtusdcp from "@shared/data/stablecoins/coins/gtusdcp-gauntlet.json";
 
 const mocks = vi.hoisted(() => ({ read: vi.fn(), escrow: vi.fn(), partitionRead: vi.fn() }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [ftusd, { ...aa, geckoId: "fixture-aa" }, susde].map((meta) => ({
+  stablecoins: [ftusd, { ...aa, geckoId: "fixture-aa" }, susde, ustb, gtusdcp].map((meta) => ({
     ...meta, detailProvider: "coingecko", flags: { ...meta.flags, pegCurrency: "USD" },
   })),
 }));
@@ -64,10 +66,12 @@ vi.mock("../onchain-supply", async (importOriginal) => {
 });
 
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS, ONCHAIN_PARTITION_STAGE_BUDGET_MS, ONCHAIN_PARTITION_ROTATION_RUNS } from "../fiat-cg";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition } from "../onchain-supply";
 import { mergeSupplementalLastKnownGood, restoreMissingTrackedAssets } from "../../shared";
 
 const NOW_SEC = 1_790_000_000;
-const fixtureMetas = [...FIAT_CG_METAS];
+const excludedMetas = FIAT_CG_METAS.filter((meta) => [ustb.id, gtusdcp.id].includes(meta.id));
+const fixtureMetas = FIAT_CG_METAS.filter((meta) => !excludedMetas.includes(meta));
 const ftMeta = fixtureMetas.find((meta) => meta.id === ftusd.id)!;
 const aaMeta = fixtureMetas.find((meta) => meta.id === aa.id)!;
 const susdeMeta = fixtureMetas.find((meta) => meta.id === susde.id)!;
@@ -119,6 +123,34 @@ describe("CoinGecko on-chain share partitions", () => {
     FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...fixtureMetas);
     vi.useRealTimers();
     vi.restoreAllMocks();
+  });
+
+  it.each(excludedMetas)("never attempts a CoinGecko chain partition for $id", async (meta) => {
+    FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, meta);
+    mocks.read.mockResolvedValue(100n * 10n ** BigInt(meta.contracts![0].decimals!));
+    const report = vi.fn<(summary: OnchainPartitionSummary) => void>();
+    const [asset] = await fetchFiatCoinGeckoTokens(cgData(300, 1, meta), undefined, undefined, undefined,
+      undefined, undefined, undefined, report);
+    expect(asset).toMatchObject({ circulating: { peggedUSD: 300 }, supplySource: "coingecko-fallback", chainCirculating: {} });
+    expect(asset.chainPartition).toBeUndefined();
+    expect(report).toHaveBeenCalledWith(expect.objectContaining({ candidates: 0 }));
+    expect(mocks.partitionRead).not.toHaveBeenCalled();
+    expect(mocks.read).not.toHaveBeenCalled();
+    expect(await fetchOnChainSupplyPartition(meta, 300, 1, undefined))
+      .toEqual({ reason: "partition-invalid", ratio: null });
+    expect(mocks.read).not.toHaveBeenCalled();
+  });
+
+  it("retains USTB's separate token-stock fallback and rejects the gtUSDCp single-price fallback", async () => {
+    mocks.read.mockResolvedValue(100n * 10n ** 6n);
+    const ustbMeta = excludedMetas.find((meta) => meta.id === ustb.id)!;
+    expect(await fetchCuratedAggregateOnChainMcap(ustbMeta, 1)).toMatchObject({ mcap: 300, supplySource: "onchain-total-supply" });
+    expect(mocks.read).toHaveBeenCalledTimes(3);
+    mocks.read.mockClear().mockResolvedValue(100n * 10n ** 18n);
+    const gtMeta = excludedMetas.find((meta) => meta.id === gtusdcp.id)!;
+    expect(await fetchCuratedAggregateOnChainMcap(gtMeta, 1)).toBeNull();
+    expect(await fetchOnChainMcap(gtMeta, 1)).toBeNull();
+    expect(mocks.read).not.toHaveBeenCalled();
   });
 
   it("reports measured admissions, divergence, unreadable carry and expiry without changing supply", async () => {

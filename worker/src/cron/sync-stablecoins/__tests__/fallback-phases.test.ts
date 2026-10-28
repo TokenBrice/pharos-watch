@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import {
   buildFallbackAssetsFromCoinGecko,
   buildInsufficientFallbackResult,
@@ -8,7 +10,7 @@ import {
   runFallbackIntakePhase,
 } from "../fallback-intake";
 import { restoreFallbackCacheState } from "../fallback";
-import { loadPreviousStablecoinsById } from "../shared";
+import { loadPreviousStablecoinsById, normalizeStablecoinsPayload } from "../shared";
 import { checkStablecoinsPriceStaleness } from "../runtime";
 import {
   runStablecoinsPostIntakePublication,
@@ -597,6 +599,80 @@ describe("CoinGecko fallback phases", () => {
 describe("overlayFallbackCuratedAggregateSupply", () => {
   beforeEach(() => {
     onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockReset();
+  });
+
+  it.each([1, null])("preserves sFRAX's explicit publication hold after a failed overlay with price %s", async (price) => {
+    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
+    const assets = [makeAsset({ id: "sfrax-frax", price, supplySource: "coingecko-fallback" })];
+    await overlayFallbackCuratedAggregateSupply(assets);
+    expect(assets).toHaveLength(1);
+    const [published] = normalizeStablecoinsPayload({ peggedAssets: assets }, NOW_SEC).peggedAssets;
+    expect(published).toMatchObject({ supplySource: "onchain-supply-withheld", supplyUnavailableReason: "economic-float-unreconciled" });
+    expect(published.circulating).toEqual({});
+  });
+
+  it.each(ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)))(
+    "removes $id's fresh CoinGecko intake when native supply cannot be admitted", async (meta) => {
+      for (const price of [1, undefined]) {
+        onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockReset().mockResolvedValue(null);
+        const assets = buildFallbackAssetsFromCoinGecko({
+          stablecoins: [meta], syncStartSec: NOW_SEC,
+          cgData: { [meta.geckoId!]: { usd: price, usd_market_cap: 1_000_000, last_updated_at: NOW_SEC } },
+        });
+        expect(assets).toHaveLength(1);
+        await overlayFallbackCuratedAggregateSupply(assets);
+        expect(assets).toEqual([]);
+        expect(onchainSupplyMocks.fetchCuratedAggregateOnChainMcap).toHaveBeenCalledTimes(price == null ? 0 : 1);
+      }
+    },
+  );
+
+  it("keeps a preferred native packet on read failure and replaces fresh CoinGecko supply on success", async () => {
+    const native = makeAsset({
+      id: "stac-securitize", supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
+      supplyRestored: true, circulating: { peggedUSD: 300 },
+      chainCirculating: { Ethereum: { current: 100 }, Solana: { current: 200 } },
+    });
+    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
+    const carried = [native];
+    await overlayFallbackCuratedAggregateSupply(carried);
+    expect(carried).toEqual([native]);
+    expect(native.supplyObservedAt).toBe(NOW_SEC - 60);
+    expect(native.circulating).toEqual({ peggedUSD: 300 });
+    const fresh = [makeAsset({
+      id: native.id, supplySource: "coingecko-fallback", supplyRestored: true,
+      circulatingPrevDay: { peggedUSD: 1_000_000 }, circulatingPrevWeek: { peggedUSD: 900_000 },
+      circulatingPrevMonth: { peggedUSD: 800_000 },
+      chainPartition: { basis: "onchain-share", observedAt: NOW_SEC - 60, onchainUsd: 1_000_000, ratio: 1, admission: "carried" },
+      supplyUnavailableReason: "supply-chain-dropout",
+      supplyGapFill: {
+        method: "coingecko-single-missing-chain", admission: "entered", missingChainId: "solana",
+        canonicalSource: "defillama", canonicalCurrentUsd: 800_000, supplementalSource: "coingecko",
+        supplementalCurrentUsd: 1_000_000, ratio: 1.25, maxRatio: 1.5, observedAt: NOW_SEC - 60,
+      },
+      supplyChainGuard: {
+        reason: "supply-chain-dropout", status: "quarantined", chains: [{
+          chainId: "solana", chainLabel: "Solana", listCurrentUsd: null, baselineUsd: 200_000,
+          baselineObservedAt: NOW_SEC - 60, baselineSource: "state", resolution: "carried-baseline",
+        }],
+      },
+    })];
+    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue({
+      mcap: 400, supplySource: "onchain-total-supply", observedAt: NOW_SEC,
+      chainCirculating: { Ethereum: { current: 100, chainId: "ethereum" }, Solana: { current: 300, chainId: "solana" } },
+    });
+    await overlayFallbackCuratedAggregateSupply(fresh);
+    expect(fresh).toHaveLength(1);
+    expect(fresh[0]).toMatchObject({ supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC,
+      circulating: { peggedUSD: 400 }, chainCirculating: { Ethereum: { current: 100 }, Solana: { current: 300 } } });
+    expect(fresh[0].circulatingPrevDay).toBeNull();
+    expect(fresh[0].circulatingPrevWeek).toBeNull();
+    expect(fresh[0].circulatingPrevMonth).toBeNull();
+    expect(fresh[0].chainPartition).toBeUndefined();
+    expect(fresh[0].supplyRestored).toBeUndefined();
+    expect(fresh[0].supplyGapFill).toBeUndefined();
+    expect(fresh[0].supplyChainGuard).toBeUndefined();
+    expect(fresh[0].supplyUnavailableReason).toBeUndefined();
   });
 
   it("attaches the full per-chain map for a curated NAV wrapper and probes only curated assets", async () => {

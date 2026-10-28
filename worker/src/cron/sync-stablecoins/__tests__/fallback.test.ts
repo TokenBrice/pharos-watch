@@ -8,6 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PreviousStablecoinsLoadResult } from "../shared";
@@ -170,7 +171,8 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       if (omittedIds.includes(coin.id) && coin.geckoId) delete cgData[coin.geckoId];
     }
     const expectedMissingIds = ACTIVE_STABLECOINS
-      .filter((coin) => !coin.geckoId || !cgData[coin.geckoId])
+      .filter((coin) => !coin.geckoId || !cgData[coin.geckoId]
+        || (prefersOnChainSupplyMcap(coin) && !getOnchainSupplyHoldReason(coin.id)))
       .map((coin) => coin.id).sort();
     const db = mockD1([]);
 

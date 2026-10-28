@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.60",
+    "title": "Reviewed native supply and partition exclusions",
+    "date": "2026-10-28",
+    "effectiveAt": 1793145600,
+    "summary": "Complete native stock replaces mismatched CoinGecko caps for ACRDX, sUSDai, MYRC, STAC and EURSPKCC after fresh reconciliation.",
+    "impact": [
+      "Unreadable preferred legs fail closed. ONyc, thBILL and USD3 keep their existing supply policy. Headline totals and future daily observations can step up or down at adoption; historical rows are not rewritten, and current-only packets do not invent historical supply.",
+      "USTB book-entry shares and gtUSDCp's differing vault NAVs permanently exclude both assets from fresh or carried CoinGecko chain partitions. USTB retains its separate token-stock fallback; gtUSDCp loses the invalid single-price aggregate fallback.",
+      "CDP gains a reviewed Flare supply-at-latest route, without archive or log capability. USDFC's continuing price-gap review records fresh evidence without adding a price lane."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.59",
     "title": "Partial-chain supply provenance in history",
     "date": "2026-10-28",

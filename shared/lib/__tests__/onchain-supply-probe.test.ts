@@ -133,6 +133,7 @@ describe("curated on-chain supply paths", () => {
     { id: "nopal-nest", chains: ["ethereum", "plume", "bsc", "solana", "plasma", "worldchain", "avalanche", "arc", "monad", "robinhood"], zero: ["plasma"] },
     { id: "acred-apollo-securitize", chains: ["aptos", "avalanche", "ethereum", "ink", "polygon", "sei", "solana"], zero: [] },
     { id: "brsrv-blackrock", chains: ["ethereum", "tempo", "solana"], zero: ["tempo", "solana"] },
+    { id: "stac-securitize", chains: ["ethereum", "solana"], zero: [] },
     { id: "syrupusdg-maple", chains: ["ethereum", "robinhood", "arbitrum", "ink", "solana"], zero: ["ink", "solana"], canonical: "ethereum" },
     { id: "strusd-tori", chains: ["ethereum", "monad", "pharos"], zero: [], canonical: "ethereum" },
     { id: "susdat-saturn", chains: ["ethereum", "bsc", "monad"], zero: [], canonical: "ethereum" },
@@ -159,7 +160,7 @@ describe("curated on-chain supply paths", () => {
     }
   });
 
-  it.each(["stac-securitize", "ylds-figure", "sfrxusd-frax"])(
+  it.each(["ylds-figure", "sfrxusd-frax"])(
     "keeps %s aggregate supply unavailable until its complete perimeter is reviewed",
     (id) => expect(selectCuratedAggregateOnchainSupplyProbeContracts(TRACKED_META_BY_ID.get(id)!)).toBeNull(),
   );

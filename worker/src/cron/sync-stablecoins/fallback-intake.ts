@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
+import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, SFRAX_STOCK_PERIMETER } from "@shared/lib/onchain-supply-probe";
 import { MIN_VALID_ASSET_COUNT } from "../../lib/constants";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
@@ -122,11 +122,9 @@ export async function runFallbackIntakePhase(
  * savings NAV wrappers such as sUSDS/sDAI have a null DefiLlama id, so the
  * CoinGecko intake hardcodes an empty `chainCirculating`). Run this after the
  * previous-cache restore so a successful probe supersedes the carried row. If
- * any configured chain read fails the probe returns null and the asset keeps its
- * restored carry — fail closed per asset, never a partial map. Both curated
- * assets are USD NAV tokens, so the per-chain supply shares the V9 review derives
- * are price-invariant and the aggregate reuses the same on-chain-units x price
- * basis as `circulating`; a missing observed price is not replaced with par.
+ * any configured chain read fails, native carry and nonpreferred totals remain;
+ * contradictory preferred CoinGecko totals are removed. Native units use the
+ * admitted price, never a par substitute when observed valuation is missing.
  * The probe reads each contract sequentially, so the added calls stay within
  * Cloudflare's 6-connection per-trigger pool.
  */
@@ -154,6 +152,8 @@ export async function overlayFallbackCuratedAggregateSupply(
     asset.chains = Object.keys(onChainMcap.chainCirculating);
     if (meta.id === SFRAX_STOCK_PERIMETER.assetId) {
       asset.supplyPerimeter = onChainMcap.supplyPerimeter;
+    }
+    if (prefersOnChainSupplyMcap(meta)) {
       asset.circulatingPrevDay = null;
       asset.circulatingPrevWeek = null;
       asset.circulatingPrevMonth = null;
@@ -161,6 +161,11 @@ export async function overlayFallbackCuratedAggregateSupply(
       delete asset.supplyRestored;
       delete asset.supplyGapFill;
       delete asset.supplyChainGuard;
+      delete asset.chainPartition;
     }
   }
+  // Held assets still reach their explicit unavailable publication fence.
+  const admitted = assets.filter((asset) => getOnchainSupplyHoldReason(asset.id) != null
+    || asset.supplySource !== "coingecko-fallback" || !prefersOnChainSupplyMcap(asset));
+  assets.splice(0, assets.length, ...admitted);
 }

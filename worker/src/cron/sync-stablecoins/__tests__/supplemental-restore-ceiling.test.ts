@@ -1,6 +1,10 @@
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { StablecoinListResponseSchema } from "@shared/types/market";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { getOnchainSupplyHoldReason } from "@shared/lib/onchain-supply-probe";
+import { prefersOnChainSupplyMcap } from "../supplemental-assets/onchain-supply";
 import {
   getCirculatingRawOrNull,
   SUPPLEMENTAL_RESTORE_MAX_AGE_SEC,
@@ -55,6 +59,81 @@ function syrupChainCirculating(
 }
 
 describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
+  it.each(ACTIVE_STABLECOINS.filter((meta) => prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)))(
+    "restores only bounded native supply for preferred $id", (meta) => {
+      const labels = [...new Set(meta.contracts!.map((contract) => CHAIN_META[contract.chain].name))];
+      for (const [source, age, admitted] of [
+        ["coingecko-fallback", 60, false],
+        ["onchain-total-supply", 60, true],
+        ["onchain-total-supply", SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1, false],
+      ] as const) {
+        const previous = asset({
+          id: meta.id, symbol: meta.symbol, supplySource: source, supplyObservedAt: NOW_SEC - age,
+          circulating: { peggedUSD: labels.length * 100 },
+          chainCirculating: Object.fromEntries(labels.map((label) => [label, { current: 100 }])),
+        });
+        const previousById = new Map([[meta.id, previous]]);
+        const supplemental = mergeSupplementalLastKnownGood(
+          [asset({ id: meta.id, symbol: meta.symbol })], previousById, new Set(), NOW_SEC,
+        );
+        const tracked = restoreMissingTrackedAssets([], previousById, NOW_SEC);
+        expect(supplemental.restoredCount).toBe(admitted ? 1 : 0);
+        expect(tracked.restoredIds.includes(meta.id)).toBe(admitted);
+        if (admitted) {
+          for (const restored of [supplemental.assets[0], tracked.assets[0]]) {
+            expect(restored.supplySource).toBe(source);
+            expect(restored.circulating).toEqual(previous.circulating);
+            expect(restored.chainCirculating).toEqual(previous.chainCirculating);
+            expect(restored.supplyObservedAt).toBe(previous.supplyObservedAt);
+          }
+        } else {
+          expect(supplemental.assets[0].circulating).toEqual({});
+          expect(tracked.droppedIds).toContain(meta.id);
+        }
+      }
+    },
+  );
+
+  it.each([
+    { id: "ustb-superstate", labels: ["Ethereum", "Plume", "Solana"] },
+    { id: "gtusdcp-gauntlet", labels: ["Ethereum", "Base", "Arbitrum"] },
+  ])("rejects $id chain partitions through every carry path while preserving CoinGecko supply", ({ id, labels }) => {
+    const current = asset({ id, symbol: id, circulating: { peggedUSD: 300 }, supplySource: "coingecko-fallback" });
+    const previous = asset({
+      ...current, supplyObservedAt: NOW_SEC - 60,
+      chainCirculating: Object.fromEntries(labels.map((label) => [label, { current: 100 }])),
+    });
+    for (const withProvenance of [false, true]) {
+      previous.chainPartition = withProvenance ? {
+        basis: "onchain-share", observedAt: NOW_SEC - 60, onchainUsd: 300, ratio: 1, admission: "entered",
+      } : undefined;
+      expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC, true)).toBeNull();
+      const previousById = new Map([[id, previous]]);
+      const restored = [
+        mergeSupplementalLastKnownGood([asset({ id, symbol: id })], previousById, new Set(), NOW_SEC).assets[0],
+        restoreMissingTrackedAssets([], previousById, NOW_SEC).assets[0],
+      ];
+      for (const row of restored) {
+        expect(row.circulating).toEqual(previous.circulating);
+        expect(row.supplyObservedAt).toBe(previous.supplyObservedAt);
+        expect(row.chainCirculating).toEqual({});
+        expect(row.chainPartition).toBeUndefined();
+      }
+    }
+    previous.supplySource = "onchain-total-supply";
+    previous.chainPartition = undefined;
+    expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)).toBeNull();
+    const restoredStock = restoreMissingTrackedAssets([], new Map([[id, previous]]), NOW_SEC);
+    if (id === "ustb-superstate") {
+      expect(restoredStock.assets[0].chainCirculating).toEqual(previous.chainCirculating);
+      expect(restoredStock.assets[0].supplySource).toBe("onchain-total-supply");
+    } else {
+      expect(restoredStock.assets).toEqual([]);
+      expect(restoredStock.droppedIds).toContain(id);
+      expect(mergeSupplementalLastKnownGood([asset({ id, symbol: id })], new Map([[id, previous]]), new Set(), NOW_SEC).restoredCount).toBe(0);
+    }
+  });
+
   it("clears admitted chain partition provenance when the reviewed supply hold withholds the row", () => {
     const current = asset({
       id: "sfrax-frax", symbol: "sFRAX", supplySource: "coingecko-fallback", circulating: { peggedUSD: 100 },
