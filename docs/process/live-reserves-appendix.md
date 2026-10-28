@@ -114,6 +114,8 @@ The ERC4626 lender census batches known-address probes and complete enumerated m
 
 Schemas own fields. Ratios/reported headlines/share prices/NAV conformance differ; native units are not USD. Legacy flat redemption is read-only. `same-run-render-clock` names response time, not dated reserves. Tolerated unverified modes grant no scoring.
 
+Multichain liability reads use static registry membership under the [RPC routing contract](worker-infrastructure-appendix.md#initialization-and-rpc-boundaries). A reviewed Dwellir-only chain remains required without a key, after ledger/circuit denial or while disabled; `chainHasRpc()` cannot silently omit it. No admitted registry endpoint yields a read failure (`registry-rpc-unavailable` for scoped legs), retaining `partial-supply-read-failure` and `included-supply-read-failed` completeness semantics and withholding incomplete ratios. Supplemental-only chains outside that reviewed scope retain their existing omission policy; explicit issuer-native scopes still classify every catalog chain as included, excluded or unclassified.
+
 
 ## Cron Behavior
 
