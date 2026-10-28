@@ -1438,12 +1438,35 @@
       "id": "scripts-tooling",
       "label": "Script implementation and local tooling",
       "risk": "medium",
-      "sources": ["scripts/**", "public/critical-css-loader.js"],
+      "sources": [
+        "scripts/**",
+        "public/critical-css-loader.js",
+        "public/datasets/top-stablecoins/**",
+        "public/datasets/depeg-history/**",
+        "public/datasets/scores-latest/**",
+        "public/datasets/peg-mechanism-distribution/**",
+        "src/lib/datasets/public-dataset-current.ts"
+      ],
       "docs": [
         { "path": "docs/scripts.md", "anchor": "operator-cli-contract" },
         { "path": "docs/testing.md", "anchor": "smallest-adequate-check-per-area" }
       ],
       "reading": [
+        {
+          "sources": [
+            "public/datasets/top-stablecoins/**",
+            "public/datasets/depeg-history/**",
+            "public/datasets/scores-latest/**",
+            "public/datasets/peg-mechanism-distribution/**",
+            "scripts/maintenance/generate-public-datasets.ts",
+            "scripts/lib/public-dataset-artifacts.ts",
+            "src/lib/datasets/public-dataset-current.ts"
+          ],
+          "local": [
+            { "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" },
+            { "path": "docs/api-reference.md", "anchor": "surface-split" }
+          ]
+        },
         {
           "sources": ["public/critical-css-loader.js", "scripts/maintenance/inline-homepage-critical-css.ts", "scripts/__tests__/inline-homepage-critical-css.test.ts"],
           "local": [{ "path": "docs/scripts.md", "anchor": "build-and-generated-artifacts" }]
