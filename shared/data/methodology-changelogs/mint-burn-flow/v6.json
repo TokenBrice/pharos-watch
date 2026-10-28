@@ -3,7 +3,7 @@
     "version": "6.31",
     "title": "Admission-gated mint/burn scope and per-provider circuit attribution",
     "date": "2026-10-28",
-    "effectiveAt": 1793228400,
+    "effectiveAt": 1793224800,
     "summary": "New issuance legs catch up outside publication until durable scan evidence covers the longest published window, while operator disables and provider-specific circuit outcomes isolate failures.",
     "impact": [
       "New legs remain pending-admission until durable, current-fingerprint contiguous scan proof covers the 90-day baseline required by netFlow90dUsd through the existing publication watermark, their own frontier is within the existing freshness budget, and the baseline passes existing hourly valuation-completeness rules. Incomplete or unknown valuation keeps a proof-qualified candidate pending as valuation-incomplete; a proven zero-event baseline can qualify. Pending legs keep scanning and persisting, but do not enter the common watermark, per-coin aggregates, Bank Run Gauge weights or downstream published-flow consumers; metadata names their reason and progress.",
