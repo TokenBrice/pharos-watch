@@ -50,12 +50,14 @@ describe("API reference dataset cards", () => {
       const meta = descriptor.export._meta;
       const metadata = card!.textContent ?? "";
 
-      expect(metadata).toContain(`MIT · As of ${meta.asOfISO} · Methodology ${meta.methodologyLabel}`);
+      expect(metadata).toContain(
+        `MIT · As of ${meta.asOfISO?.slice(0, 10)} · Methodology ${meta.methodologyLabel?.split(" | ").join(", ")}`,
+      );
       expect(within(card as HTMLElement).getByRole("link", { name: "MIT" }).getAttribute("href")).toBe(
         PHAROS_DATA_LICENSE_URL,
       );
       expect(card!.querySelector("time")?.getAttribute("datetime")).toBe(meta.asOfISO);
-      expect(card!.querySelector("time")?.textContent).toBe(meta.asOfISO);
+      expect(card!.querySelector("time")?.textContent).toBe(meta.asOfISO?.slice(0, 10));
 
       for (const format of ["json", "csv", "ndjson"]) {
         expect(

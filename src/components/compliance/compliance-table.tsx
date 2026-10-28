@@ -78,7 +78,9 @@ export function ComplianceTable({
           <TableHead className="w-12"><span className="sr-only">Details</span></TableHead>
         </TableRow>
       </TableHeader>
-      <TableBody>
+      {/* A collapsed detail row can be the last child, so the last visible row
+          drops its border too; the frame already draws the bottom edge. */}
+      <TableBody className="[&_tr:has(+tr[hidden]:last-child)]:border-0">
         {bands.map((band) => {
           const canCollapse = band.collapsedByDefault && !forceCollapsedBandsOpen;
           const isExpanded = canCollapse ? (expandedBands[band.status] ?? false) : true;
@@ -218,7 +220,7 @@ function ComplianceTableRow({
                 {/* Summary-owned fold content stays mounted while collapsed so the
                     static HTML carries the reviewed date and disclosure facts. */}
                 {row.reviewedAt ? (
-                  <p className="min-w-0 text-xs text-muted-foreground">Reviewed {row.reviewedAt}</p>
+                  <p className="min-w-0 text-xs text-muted-foreground md:col-span-full">Reviewed {row.reviewedAt}</p>
                 ) : null}
                 {row.hasAnyDisclosure ? (
                   <div className="min-w-0 space-y-2">

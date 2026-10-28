@@ -15,7 +15,7 @@ function PreviewCard({ row }: { row: SafetyScoresPreviewRow }) {
       className="pharos-focus-ring block h-full rounded-xl transition-transform active:scale-[0.995]"
     >
       <Card className="pharos-card-shell pharos-interactive-card h-full min-h-[274px] cursor-pointer gap-0 py-0">
-        <CardContent className="relative flex flex-col items-center justify-center gap-2.5 px-2 pb-3 pt-3 sm:px-4">
+        <CardContent className="relative flex flex-1 flex-col items-center justify-center gap-2.5 px-2 pb-3 pt-3 sm:px-4">
           <div className="flex min-w-0 max-w-full items-center gap-2">
             <span className="truncate text-sm font-medium" title={row.name}>{row.name}</span>
             <span className="shrink-0 text-xs text-muted-foreground">{row.symbol}</span>

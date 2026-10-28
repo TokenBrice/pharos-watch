@@ -231,14 +231,15 @@ function StaticComparisonContent(page: (typeof STATIC_COMPARISON_PAGES)[number])
           testId="static-compare-at-a-glance-table"
           chrome="bare"
           className="overflow-hidden rounded-xl border border-border/60"
+          tableClassName="md:table-fixed"
           viewportProps={{ mobileScrollHint: false, scrollShadow: false, compactBottomPadding: false }}
         >
           <TableCaption className="sr-only">{page.shortTitle} comparison summary</TableCaption>
           <TableHeader className="bg-muted/35 text-left [&_tr]:border-0">
             <TableRow className="border-0 hover:bg-transparent">
-              <TableHead className="px-4 py-3 font-medium text-muted-foreground">Metric</TableHead>
-              <TableHead className="px-4 py-3 font-medium text-foreground">{page.left.symbol}</TableHead>
-              <TableHead className="px-4 py-3 font-medium text-foreground">{page.right.symbol}</TableHead>
+              <TableHead className="px-4 py-3 font-medium text-muted-foreground md:w-[28%]">Metric</TableHead>
+              <TableHead className="px-4 py-3 font-medium text-foreground md:w-[36%]">{page.left.symbol}</TableHead>
+              <TableHead className="px-4 py-3 font-medium text-foreground md:w-[36%]">{page.right.symbol}</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

@@ -307,7 +307,7 @@ function PrincipleBody({ principle }: { principle: PrincipleAxiom }) {
         href={link.href}
         target="_blank"
         rel="noopener noreferrer"
-        className="pharos-prose-link"
+        className="pharos-prose-link whitespace-nowrap"
       >
         {link.text}
       </a>,

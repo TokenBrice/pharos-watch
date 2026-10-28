@@ -103,3 +103,12 @@ export function SafetyPillarExplainer() {
     </section>
   );
 }
+
+export function SafetyPillarScoringNote() {
+  return (
+    <p className="text-xs text-muted-foreground">
+      Pipeline unavailable (A) and public data awaiting curation (B) do not score. Partial ratings exclude those components;
+      fewer than two available pillars means Pipeline gap, not Not Rated.
+    </p>
+  );
+}

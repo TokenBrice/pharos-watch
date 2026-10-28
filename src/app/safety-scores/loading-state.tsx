@@ -1,5 +1,6 @@
 import { Skeleton } from "@/components/ui/skeleton";
 import type { SafetyScoresPreview } from "@/lib/safety-grade-snapshot";
+import { SafetyPillarExplainer, SafetyPillarScoringNote } from "./pillar-explainer";
 import { SafetyScoresHero } from "./presentational";
 import { StaticSafetyScoresPreview } from "./static-preview";
 
@@ -11,6 +12,15 @@ export function SafetyScoresContentLoadingState({ preview = null }: { preview?: 
   return (
     <>
       <SafetyScoresHero data={null} loading />
+
+      {/* With a dated preview, the static explainer keeps the live layout's
+          order so the grid does not jump when live cards replace it. */}
+      {preview ? (
+        <>
+          <SafetyPillarExplainer />
+          <SafetyPillarScoringNote />
+        </>
+      ) : null}
 
       <div className="pharos-card-shell space-y-3 p-4">
         <Skeleton className="h-3.5 w-32 rounded-sm" />

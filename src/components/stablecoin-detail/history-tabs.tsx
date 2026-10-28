@@ -49,8 +49,13 @@ const LiveSafetyScoreHistorySection = dynamic(
 
 const LiveDepegHistory = dynamic(
   () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
-  // The shell's retained preview already fills the panel, so a chunk-load
-  // skeleton would stack a second loading surface under it.
+  { loading: () => <Skeleton className="h-40 w-full rounded-xl" /> },
+);
+
+// With a retained ledger preview the shell already fills the panel, so a
+// chunk-load skeleton would stack a second loading surface under it.
+const PreviewedLiveDepegHistory = dynamic(
+  () => import("@/components/depeg-history").then((mod) => mod.DepegHistory),
   { loading: () => null },
 );
 
@@ -152,13 +157,15 @@ export function HistoryTabs({
       key: "depeg",
       label: "Depeg",
       anchorId: "depeg-history",
-      content: (
-        <LiveDepegHistory
+      content: depegHistoryPreview ? (
+        <PreviewedLiveDepegHistory
           stablecoinId={stablecoinId}
           {...depegProps}
           embeddedPreview
           onDisplayStateChange={setLiveHistoryDisplayed}
         />
+      ) : (
+        <LiveDepegHistory stablecoinId={stablecoinId} {...depegProps} />
       ),
     });
   }

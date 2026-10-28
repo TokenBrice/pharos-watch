@@ -451,9 +451,9 @@ export async function ApiReferencePanel() {
                 <p className="text-xs leading-relaxed text-muted-foreground">
                   <a href={PHAROS_DATA_LICENSE_URL} className="pharos-prose-link">MIT</a>
                   {" · As of "}
-                  {asOfISO ? <time dateTime={asOfISO}>{asOfISO}</time> : PUBLIC_DATASET_AS_OF_UNAVAILABLE}
+                  {asOfISO ? <time dateTime={asOfISO}>{asOfISO.slice(0, 10)}</time> : PUBLIC_DATASET_AS_OF_UNAVAILABLE}
                   {" · Methodology "}
-                  {dataset.export._meta.methodologyLabel ?? PUBLIC_DATASET_METHODOLOGY_UNAVAILABLE}
+                  {dataset.export._meta.methodologyLabel?.split(" | ").join(", ") ?? PUBLIC_DATASET_METHODOLOGY_UNAVAILABLE}
                 </p>
                 <ul className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
                   {(["json", "csv", "ndjson"] as const).map((format) => (

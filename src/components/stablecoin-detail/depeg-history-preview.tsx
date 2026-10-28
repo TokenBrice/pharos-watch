@@ -44,6 +44,7 @@ export function DepegHistoryPreview({ snapshot }: { snapshot: StablecoinDetailHi
       chrome="embedded"
       mobileScrollHint={false}
       tableClassName="caption-top"
+      captionClassName="text-left"
       caption={
         <>
           Latest {shown} of {snapshot.recordedCount.toLocaleString("en-US")} archived incidents · as of{" "}
@@ -52,7 +53,7 @@ export function DepegHistoryPreview({ snapshot }: { snapshot: StablecoinDetailHi
       }
     >
       <thead>
-        <tr className="border-b [&>th]:px-2 [&>th]:py-2 [&>th]:text-left [&>th]:text-xs [&>th]:font-medium">
+        <tr className="border-b [&>th]:px-2 [&>th]:py-2 [&>th:not(.text-right)]:text-left [&>th]:text-xs [&>th]:font-medium">
           <th>Date</th>
           <th className="text-right">Peak deviation</th>
           <th className="text-right">Duration</th>
@@ -63,7 +64,7 @@ export function DepegHistoryPreview({ snapshot }: { snapshot: StablecoinDetailHi
       <tbody className="text-xs [&>tr]:border-b [&>tr>td]:px-2 [&>tr>td]:py-1">
         {snapshot.events.map((event) => (
           <tr key={event.id}>
-            <td>{formatIsoDate(event.startedAt)}</td>
+            <td className="whitespace-nowrap">{formatIsoDate(event.startedAt)}</td>
             <td className="text-right">{formatBps(event.peakDeviationBps)}</td>
             <td className="text-right">
               {event.endedAt == null ? (

@@ -18,7 +18,7 @@ import {
   SafetyResultsSummary,
   SafetyScoresHero,
 } from "./presentational";
-import { SafetyPillarExplainer } from "./pillar-explainer";
+import { SafetyPillarExplainer, SafetyPillarScoringNote } from "./pillar-explainer";
 import {
   GRADE_RANGES,
   buildSafetyMcapMap,
@@ -391,10 +391,7 @@ export function ReportCardsV9Client({ initialPreview = null }: { initialPreview?
       />
 
       <SafetyPillarExplainer />
-      <p className="text-xs text-muted-foreground">
-        Pipeline unavailable (A) and public data awaiting curation (B) do not score. Partial ratings exclude those components;
-        fewer than two available pillars means Pipeline gap, not Not Rated.
-      </p>
+      <SafetyPillarScoringNote />
 
       <V9Controls
         gradeFilter={gradeFilter}
