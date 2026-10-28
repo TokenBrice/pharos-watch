@@ -1,7 +1,7 @@
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it, vi } from "vitest";
 
-import DocPage, { generateMetadata } from "./page";
+import DocPage, { generateMetadata, generateStaticParams } from "./page";
 import { PUBLIC_DOCS } from "@shared/lib/public-docs";
 
 vi.mock("next/link", async () => {
@@ -25,6 +25,15 @@ function anchors(html: string): Anchor[] {
 }
 
 describe("DocPage", () => {
+  it("exports and renders the public Blacklist Tracker methodology without operator procedures", async () => {
+    expect(generateStaticParams()).toContainEqual({ slug: "blacklist-tracker" });
+    const metadata = await generateMetadata({ params: Promise.resolve({ slug: "blacklist-tracker" }) });
+    expect(metadata.alternates?.canonical).toBe("/docs/blacklist-tracker/");
+    const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "blacklist-tracker" }) }));
+    expect(html).toContain("Public Exposure Contract");
+    expect(html).not.toMatch(/npx |--execute|Maintenance Checklist|runbook/i);
+  });
+
   it("opens external markdown links in a new tab with an isolated opener", async () => {
     const html = renderToStaticMarkup(await DocPage({ params: Promise.resolve({ slug: "redemption-backstops" }) }));
     const rendered = anchors(html);

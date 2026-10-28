@@ -146,8 +146,7 @@ export default function FreezeWatchClient() {
       methodology={{
         version: BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL,
         changelogPath: BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH,
-        // No public doc covers FreezeWatch yet; its methodology section is the explainer.
-        docsPath: "/methodology/#blacklist-tracker-methodology",
+        docsPath: "/docs/blacklist-tracker/",
       }}
       header="instrument"
       headerActions={

@@ -898,7 +898,7 @@ Synthetic chronology uses the original evidence clock, not sweep wall time. A st
 
 ### Cursor Tracking (Blacklist)
 
-[Blacklist sync](../blacklist-tracker.md) owns cursor helpers. Claims bind the exact loaded cursor/generation; finalization monotonically dual-writes compatibility/current cursors and outcomes under that generation. An unstarted budget tail records a skip without advancing any cursor. A copied helper signature is not authority to bypass those claims.
+[Blacklist sync](../runbooks/blacklist-sync.md#cursor-state) owns cursor helpers. Claims bind the exact loaded cursor/generation; finalization monotonically dual-writes compatibility/current cursors and outcomes under that generation. An unstarted budget tail records a skip without advancing any cursor. A copied helper signature is not authority to bypass those claims.
 
 ### Price Cache
 

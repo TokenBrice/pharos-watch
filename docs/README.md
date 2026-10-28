@@ -1,6 +1,6 @@
 # Documentation Index
 
-Verified entry point for Pharos documentation. Code, schemas, registries, and checked runtime data remain the source of truth; docs explain durable contracts, operator procedures, and public methodology.
+Pharos documentation entry point. Code, schemas, registries and checked runtime data remain the source of truth; docs explain durable contracts, operator procedures, and public methodology.
 
 ## Start Here
 
@@ -58,7 +58,7 @@ Complete coverage of `docs/runbooks/` and `docs/incident-response/`. Labels and 
 
 | Applicability | Runbook |
 | --- | --- |
-| symptom | [Blacklist gap checks](./runbooks/blacklist-sync.md) |
+| symptom | [Blacklist gap checks](./runbooks/blacklist-sync.md#first-checks) |
 | symptom | [Blocked digest edition](./runbooks/blocked-digest-edition.md) |
 | symptom | [Scheduled delivery stall](./runbooks/cron-delivery-stall.md) |
 | symptom | [Cron slot abandonment](./runbooks/cron-slot-abandonment.md#first-checks) |

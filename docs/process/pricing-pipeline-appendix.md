@@ -379,7 +379,7 @@ The integrity policy spine is [ADR-28/R1](../architecture.md#adr-28), [ADR-29/R2
 - [Worker HTTP handling](../worker-infrastructure.md#http-request-handling) owns auth, security headers, request/retry policy and registry cache bypass; [Worker infrastructure](../worker-infrastructure.md) owns pruning. `fetchWithRetry` is not duplicated here.
 - [Depeg guardrails](../depeg-detection.md#edge-cases--guardrails) own dedupe, interval/direction/tracking windows, active-event continuity and atomic backfill.
 - [Yield engineering](../yield-intelligence.md#engineering-contract) owns schema/publication guards, transformed-cache refusal and exact Safety provenance; [PSI storage](../stability-index.md#cron--storage) and [DEWS data pipeline](../dews.md#data-pipeline) own dependency/generation admission.
-- [Blacklist storage](../blacklist-tracker.md#storage-semantics) and [mint/burn ingestion](../mint-burn-flows.md#shared-ingestion-pipeline-boundaries) own source/run-state contracts.
+- [Blacklist storage](../runbooks/blacklist-sync.md#storage-semantics) and [mint/burn ingestion](../mint-burn-flows.md#shared-ingestion-pipeline-boundaries) own source/run-state contracts.
 - [Status data quality](../status-dashboard.md#data-quality-status) owns sentinel validation and health display, never renewal of producer clocks or healthy claims from failed reads.
 
 The Kava USDX authoritative quote uses a six-second candidate deadline for its four serial, body-consumed requests (each remains capped at 2.2 seconds). The shared live-override budget and oracle identity, expiry, and dispersion guards still apply.

@@ -12,6 +12,17 @@ const DOC_SOURCES = PUBLIC_DOCS.map((doc) => ({
 }));
 
 describe("PUBLIC_DOCS registry", () => {
+  it("publishes the Blacklist Tracker methodology with matching source and metadata", () => {
+    expect(PUBLIC_DOCS.find((doc) => doc.slug === "blacklist-tracker")).toEqual({
+      source: "blacklist-tracker.md",
+      slug: "blacklist-tracker",
+      title: "Blacklist Tracker",
+      summary:
+        "Blacklist Tracker methodology for stablecoin freezes, releases, wipes, event coverage, frozen-balance valuation, and direct versus upstream exposure.",
+      group: "methodology",
+    });
+  });
+
   it("rewrites or removes non-public relative links before publication", () => {
     for (const { body } of DOC_SOURCES) {
       const rendered = preparePublicDocMarkdown(body, { absoluteLinks: true });
