@@ -174,7 +174,7 @@ describe("FreshnessIndicator", () => {
     expect(screen.getByRole("time").getAttribute("data-state")).toBe("retained");
     expect(screen.getByRole("time").getAttribute("data-stale")).toBe("false");
 
-    const unknown = deriveDataHealth({ ...base, meta: { updatedAt: null, ageSeconds: null, status: "unknown" } }, nowMs);
+    const unknown = deriveDataHealth({ ...base, meta: { updatedAt: null, ageSeconds: null, status: "unknown", reason: "producer-timestamp-unavailable" } }, nowMs);
     rerender(<FreshnessIndicator updatedAtMs={nowMs} staleAfterMs={1} health={unknown} labelPrefix="Updated" />);
     expect(screen.getByRole("time").getAttribute("data-state")).toBe("unavailable");
     expect(screen.getByRole("time").getAttribute("datetime")).toBeNull();

@@ -190,7 +190,7 @@ describe("buildStablecoinTableRowModel NAV price", () => {
 });
 
 describe("buildStablecoinTableRowModel supply changes", () => {
-  it.each([true, undefined])("withholds partial-chain changes and incompatible sparkline (explicit partial=%s)", (partialCoverage) => {
+  it.each([true, undefined] as const)("withholds partial-chain changes and incompatible sparkline (explicit partial=%s)", (partialCoverage) => {
     const model = buildStablecoinTableRowModel({
       coin: makeStablecoin({
         circulating: { peggedUSD: 50 },

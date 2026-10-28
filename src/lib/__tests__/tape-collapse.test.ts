@@ -120,7 +120,7 @@ function lowBand(direction: "up" | "down", overrides: Partial<TapeEvent> = {}): 
     type: direction === "up" ? "dews.escalated" : "dews.deescalated",
     severity: direction === "up" ? "warning" : "info",
     coinId: "usde-ethena",
-    transition: null,
+    transition: "updated",
     payload: direction === "up" ? { prevBand: "CALM", newBand: "WATCH" } : { prevBand: "WATCH", newBand: "CALM" },
     ...overrides,
   });
@@ -199,7 +199,7 @@ describe("collapseForCoinNews", () => {
 
   it("collapses before the caller caps entries so older stories surface", () => {
     const reversals = Array.from({ length: 52 }, (_, i) => lowBand(i % 2 === 0 ? "up" : "down", { id: `r${i}` }));
-    const others = Array.from({ length: 4 }, (_, i) => makeEvent({ id: `o${i}`, type: `score.upgraded`, transition: null }));
+    const others = Array.from({ length: 4 }, (_, i) => makeEvent({ id: `o${i}`, type: `score.upgraded`, transition: "updated" }));
     const visible = collapseForCoinNews([...reversals, ...others]).slice(0, 5);
 
     expect(visible.map((entry) => entry.event.id)).toEqual(["r0", "o0", "o1", "o2", "o3"]);

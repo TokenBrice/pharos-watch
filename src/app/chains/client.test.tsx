@@ -5,6 +5,7 @@ import { act, cleanup, render, screen } from "@testing-library/react";
 import { ChainsLeaderboardClient } from "./client";
 import { makeChain } from "@/hooks/__tests__/chain-profile-fixtures";
 import { formatCompactUsd } from "@shared/lib/format";
+import { RatioSchema } from "@shared/types/ratio";
 
 const { useChainsMock } = vi.hoisted(() => ({ useChainsMock: vi.fn() }));
 vi.mock("@/hooks/use-chains", () => ({ useChains: useChainsMock }));
@@ -160,8 +161,8 @@ describe("ChainsLeaderboardClient", () => {
   it("prints rounded-zero supply changes unsigned and keeps material declines negative", () => {
     mockChains({
       chains: [
-        makeChain({ id: "ethereum", name: "Ethereum", change7dPct: -0.000001 }),
-        makeChain({ id: "tron", name: "Tron", change7dPct: -0.05 }),
+        makeChain({ id: "ethereum", name: "Ethereum", change7dPct: RatioSchema.parse(-0.000001) }),
+        makeChain({ id: "tron", name: "Tron", change7dPct: RatioSchema.parse(-0.05) }),
       ],
       globalTotalUsd: 1_000_000_000,
       globalChange7dPct: -0.0001,

@@ -96,8 +96,8 @@ describe("speculative media prefetch", () => {
     render(
       <UpcomingClient
         coins={[
-          makeStablecoinMeta({ id: "fixture-announced", name: "Announced Coin", status: "pre-launch", launchPhase: "announced", expectedLaunchDate: "2027-01-01" }),
-          makeStablecoinMeta({ id: "fixture-beta", name: "Beta Coin", status: "pre-launch", launchPhase: "beta", expectedLaunchDate: "2027-02-01" }),
+          { ...makeStablecoinMeta({ id: "fixture-announced", name: "Announced Coin", status: "pre-launch", expectedLaunchDate: "2027-01-01" }), launchPhase: "announced" },
+          { ...makeStablecoinMeta({ id: "fixture-beta", name: "Beta Coin", status: "pre-launch", expectedLaunchDate: "2027-02-01" }), launchPhase: "beta" },
         ]}
         logos={{}}
         teasers={{}}

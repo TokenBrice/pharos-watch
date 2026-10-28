@@ -77,7 +77,7 @@ const leadEdition: DigestContentEntry = {
   digestType: "daily",
   title: "Build-time lead",
   text: "Captured edition text",
-  extended: null,
+  extended: "",
   editionNumber: 42,
 };
 
