@@ -30,6 +30,14 @@ export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
     reviewedAt: Date.UTC(2026, 9, 19, 18, 48, 40) / 1000,
     expiresAt: Date.UTC(2026, 9, 26, 18, 48, 40) / 1000,
   },
+  {
+    stablecoinId: "yzusd-yuzu", adapterKey: "accountable", failureCategory: "corroboration-mismatch",
+    warningCodes: [], errorPrefix: "primary:http-json: Accountable exposure_split bucket total 61782004.86065776 does not match total_reserves 63645930.21",
+    owner: "ops", reason: "GET observed 2026-10-28T09:51:19Z: the October 24 07:29:10 UTC exposure split totals $61,782,004.86065776 across all 24 buckets, including Rest_of_Assets. The October 23 23:46:39.331 UTC bracket is $63,645,930.21 (shortfall $1,863,925.34934224); the October 24 23:46:09.079 UTC bracket is $63,746,796.97 (shortfall $1,964,792.10934224). Neither reconciles within the unchanged 1% bound; today's $63,393,348.10 headline is not the split's reconciliation anchor. No source-supported omitted allocation was identified. Keep the snapshot rejected and original clocks unchanged pending issuer correction.",
+    sources: [{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-10-28" }],
+    reviewedAt: Date.UTC(2026, 9, 28, 9, 51, 19) / 1000,
+    expiresAt: Date.UTC(2026, 10, 4, 9, 51, 19) / 1000,
+  },
 ];
 
 export function resolveReserveFeedReviews(
@@ -93,6 +101,6 @@ export async function matchReserveFeedReview(
   // Exact warning set prevents a new fatal condition inheriting an old review.
   if (failure.warningCodes.length !== review.warningCodes.length
     || failure.warningCodes.some((code) => !review.warningCodes.includes(code))) return null;
-  if (review.errorPrefix != null && !failure.lastError?.startsWith(review.errorPrefix)) return null;
+  if (failure.lastError !== review.errorPrefix) return null;
   return review;
 }

@@ -131,7 +131,9 @@ export async function loadLatestNonSkippedReserveAttempt(
       WHERE stablecoin_id = ? AND status != 'skipped'
       ORDER BY attempted_at DESC, id DESC LIMIT 1`,
   ).bind(stablecoinId).first<AttemptHistoryRow>();
-  if (!row || !parseJsonObject(row.metadata, "reserve-feed-review-attempt.metadata")) return null;
+  if (!row) return null;
+  const metadata = parseJsonObject(row.metadata, "reserve-feed-review-attempt.metadata");
+  if (!metadata || metadata.uncertainWrite === true) return null;
   if (row.warnings) {
     try {
       const warnings: unknown = JSON.parse(row.warnings);

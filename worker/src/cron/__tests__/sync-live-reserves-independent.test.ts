@@ -818,6 +818,7 @@ describe("syncLiveReserves", () => {
 
       expect(outcome.result.status).toBe("synced");
       expect(outcome.result.publishedAt).toBeUndefined();
+      expect(outcome.result.persistedFailure).toBeUndefined();
       expect(outcome.resolved?.reserves).toEqual(priorSlices);
       expect(outcome.resolved?.provenance?.scoringEligible).toBe(true);
       expect(outcome.scoringReserves).toEqual(priorSlices);
