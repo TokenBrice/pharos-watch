@@ -7,7 +7,7 @@ const SAFETY_SKELETON_ROW_COUNT = 12;
 export function SafetyScoresContentLoadingState() {
   return (
     <>
-      <SafetyScoresHero data={null} />
+      <SafetyScoresHero data={null} loading />
 
       <div className="pharos-card-shell space-y-3 p-4">
         <Skeleton className="h-3.5 w-32 rounded-sm" />

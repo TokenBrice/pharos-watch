@@ -318,6 +318,7 @@ export function ReportCardsV9Client() {
         ]}
       />
       <SafetyScoresHero
+        loading={reportCardsQuery.isLoading}
         data={reportCardsQuery.data ? {
           stats: headlineStats,
           gradeCounts,
