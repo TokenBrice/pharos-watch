@@ -217,8 +217,7 @@ async function observeWithClient(
     deadlineMs: Date.now() + RPC_DEADLINE_MS,
     maxRetries: 0,
   };
-  // A supplemental-only config is not a registry read path, so it cannot make
-  // this route available.
+  // This Ethereum route needs reviewed registry membership or explicit extras.
   if (
     (rpcOptions.extraRpcUrls?.length ?? 0) === 0 &&
     !hasRegistryRpc(chainRpcs ? getChainRpc(chainRpcs, CHAIN) : undefined)

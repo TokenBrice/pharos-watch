@@ -115,7 +115,7 @@ describe("complete independent-liability censuses", () => {
     expect(move.mock.calls.every(call => call[3] === undefined)).toBe(true);
   });
 
-  it("uses archive supplemental-only RPCs without inventing registry capability", () => {
+  it("requires reviewed census capability independently of Dwellir registry placement", () => {
     const configured = buildChainRpcs(undefined, undefined, { dwellirApiKey: "test-dwellir" });
     for (const chain of ["hyperevm", "linea", "ink", "stable", "unichain", "worldchain", "scroll", "megaeth", "xdc"]) {
       expect(transferMaterialityObserverResolvesRpc(chain, configured), chain).toBe(true);
@@ -126,6 +126,13 @@ describe("complete independent-liability censuses", () => {
       ...stable, endpoints: stable.endpoints.map(endpoint => ({ ...endpoint, stateHistory: "recent" as const })),
     });
     expect(transferMaterialityObserverResolvesRpc("stable", recentOnly)).toBe(false);
+    const unadmitted = buildChainRpcs();
+    expect(transferMaterialityObserverResolvesRpc("stable", unadmitted)).toBe(false);
+    expect(transferMaterialityObserverResolvesRpc("linea", unadmitted)).toBe(true);
+    const disabled = buildChainRpcs(undefined, undefined, {
+      dwellirApiKey: "test-dwellir", dwellirRoutingDisabledChains: new Set(["stable"]),
+    });
+    expect(transferMaterialityObserverResolvesRpc("stable", disabled)).toBe(true);
   });
 
   it("keeps new Alchemy census readers state-only and outside log-scan inventories", () => {
@@ -135,8 +142,27 @@ describe("complete independent-liability censuses", () => {
     for (const chain of ["hyperevm", "linea", "scroll", "zksync", "abstract", "unichain", "worldchain", "megaeth", "stable"]) {
       expect(configured.get(chain)?.endpoints.find(endpoint => endpoint.operator === "alchemy"), chain)
         .toMatchObject({ position: "supplemental", stateHistory: "archive", logsHistory: "none" });
-      expect(logScanRpcEndpoints(configured.get(chain)), chain).toEqual([]);
+      expect(logScanRpcEndpoints(configured.get(chain)).some(endpoint => endpoint.operator === "alchemy"), chain).toBe(false);
     }
+  });
+
+  it("keeps the reviewed public census fallback when promoted Dwellir is unadmitted", async () => {
+    const dependencies = censusDependencies();
+    const worldchainUrls: string[] = [];
+    const generation = await observeSafetyScoreV9TransferMaterialityGeneration({
+      ...input(), activeAssetIds: ["sdai-sky"], chainRpcs: buildChainRpcs(),
+    }, {
+      ...dependencies,
+      fetchEvmMulticall3Aggregate3AtBlock: async (chain, calls, _block, options) => {
+        if (chain === "worldchain") {
+          worldchainUrls.push(...(options?.chainRpcs?.get(chain)?.endpoints ?? []).map(endpoint => endpoint.url));
+        }
+        return dependencies.fetchEvmMulticall3Aggregate3AtBlock(chain, calls);
+      },
+    });
+    expect(worldchainUrls).toContain("https://worldchain-mainnet.g.alchemy.com/public");
+    expect(generation.observationsByAssetId["sdai-sky"]?.find(row => row.deploymentKey.startsWith("worldchain:")))
+      .toMatchObject({ status: "accepted", rawTokenUnits: "100" });
   });
 
   it("admits all 30 sfrxUSD and 21 wsrUSD exact rows, including authentic Move zero supply", async () => {

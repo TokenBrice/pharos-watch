@@ -227,6 +227,18 @@ const PUBLIC_ONLY_EVM_CHAINS = ["tempo", "plasma", "plume", "monad", "mantle", "
 const PUBLIC_ONLY_OTHER_CHAINS = ["movement"] as const;
 const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
 
+/** Owner-reviewed 2026-10-28 seven-day parity passes; capability alone is not admission.
+ * Membership survives missing keys, ledger/circuit denial and routing rollback.
+ * Re-admission requires a fresh passing seven-day gate (including freshness),
+ * resolution of the recorded failure, and a reviewed edit here. Short-window
+ * parity does not prove long-span log completeness; scanners own that frontier.
+ * Excluded: hyperevm (stale latest), xdc (freshness sample deficit), flow (head lag),
+ * chiliz/lisk/viction (no history). See worker-infrastructure-appendix routing. */
+export const DWELLIR_ONLY_REGISTRY_CHAINS: ReadonlySet<string> = new Set([
+  "linea", "zksync", "stable", "megaeth", "worldchain", "scroll", "unichain",
+  "blast", "manta", "cronos", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko",
+]);
+
 
 /** Single attachment authority; callers must admit the scheduled runtime first. */
 function appendDwellirEndpoints(
@@ -245,7 +257,8 @@ function appendDwellirEndpoints(
     registerRpcAuth("dwellir", url, { "X-Api-Key": apiKey });
     const routingDisabled = disabledChains?.has(entry.chainId) === true;
     const endpoints = config?.endpoints.filter((row) => row.operator !== "dwellir") ?? [];
-    const promoted = !routingDisabled && endpoints.some((row) => row.position === "registry");
+    const promoted = DWELLIR_ONLY_REGISTRY_CHAINS.has(entry.chainId)
+      || (!routingDisabled && endpoints.some((row) => row.position === "registry"));
     const endpoint: RpcEndpoint = {
       url,
       operator: "dwellir",
@@ -385,6 +398,10 @@ export function buildChainRpcs(
     }
   }
 
+  // Required inventory must not disappear when scheduled provider admission fails.
+  for (const chainId of DWELLIR_ONLY_REGISTRY_CHAINS) {
+    if (!map.has(chainId)) map.set(chainId, rpcConfig(chainId, "evm", []));
+  }
 
   const dwellirApiKey = options?.dwellirApiKey;
   if (typeof dwellirApiKey === "string" && dwellirApiKey.length > 0) {
@@ -399,7 +416,7 @@ export function getChainRpc(chainRpcs: Map<string, ChainRpcConfig>, chainId: str
 }
 
 export function registryRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
-  return config?.endpoints.filter((endpoint) => endpoint.position === "registry") ?? [];
+  return config?.endpoints.filter((endpoint) => endpoint.position === "registry" && !endpoint.routingDisabled) ?? [];
 }
 
 /** Registry-position URLs in admitted runtime order; may include Dwellir. */
@@ -407,14 +424,15 @@ export function registryRpcUrls(config: ChainRpcConfig | undefined): string[] {
   return registryRpcEndpoints(config).map((endpoint) => endpoint.url);
 }
 
-/** First admitted registry URL; undefined for supplemental-only configs. */
+/** First admitted registry URL; undefined also means a required route is unavailable. */
 export function primaryRpcUrl(config: ChainRpcConfig | undefined): string | undefined {
-  return config?.endpoints.find((endpoint) => endpoint.position === "registry")?.url;
+  return registryRpcEndpoints(config)[0]?.url;
 }
 
-/** True when the chain has at least one registry endpoint (it is RPC-readable). */
+/** Static read inventory, not availability: a required but unadmitted route must fail. */
 export function hasRegistryRpc(config: ChainRpcConfig | undefined): boolean {
-  return config?.endpoints.some((endpoint) => endpoint.position === "registry") ?? false;
+  return config != null && (DWELLIR_ONLY_REGISTRY_CHAINS.has(config.chainId)
+    || config.endpoints.some((endpoint) => endpoint.position === "registry"));
 }
 
 /** Supplemental candidates only; method/pin eligibility belongs to the read resolver. */
@@ -422,7 +440,7 @@ export function supplementalRpcEndpoints(config: ChainRpcConfig | undefined): re
   return (config?.endpoints ?? []).filter(endpoint => endpoint.position === "supplemental");
 }
 
-/** Full-history logs on existing inventory chains; retained ranges need explicit resolver context. */
+/** Admitted full-history log routes; retained ranges need explicit resolver context. */
 export function logScanRpcEndpoints(config: ChainRpcConfig | undefined): readonly RpcEndpoint[] {
   if (!hasRegistryRpc(config)) return [];
   const endpoints = config?.endpoints.filter((endpoint) => endpoint.operator === "dwellir"

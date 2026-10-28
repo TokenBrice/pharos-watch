@@ -13,7 +13,7 @@ import type {
   LiveReserveLiabilityScopeMetadata,
   LiveReserveWarning,
 } from "@shared/types/live-reserves";
-import { hasRegistryRpc, registryRpcUrls } from "../../lib/chain-registry";
+import { hasRegistryRpc, registryRpcEndpoints, registryRpcUrls } from "../../lib/chain-registry";
 import { rethrowIfAborted } from "../../lib/abort";
 import { DECIMALS_SELECTOR } from "../../lib/evm-selectors";
 import { redactProviderUrls } from "../../lib/safe-error-message";
@@ -65,10 +65,9 @@ export function isTronContract(contract: ContractDeployment): boolean {
  * contexts) means the caller did not supply RPC resolution, so the chain is
  * treated as readable and left to fail through its normal read path.
  *
- * Supplemental endpoints do not count: a config whose only endpoints are
- * supplemental (a pin-only chain reached through the Dwellir trial) is not a
- * registry read path, so supply aggregates keep omitting exactly the chains
- * they omit without the trial key.
+ * Supplemental capability alone does not count. Reviewed Dwellir-only registry
+ * membership is static: denied/disabled routes remain required and fail the
+ * read below, rather than shrinking the denominator with runtime admission.
  */
 export function chainHasRpc(chain: string, ctx?: AdapterContext): boolean {
   const chainRpcs = ctx?.chainRpcs;
@@ -124,6 +123,10 @@ export async function aggregateMultichainErc20Supply(options: {
       }
       if (!isTronContract(contract) && !chainHasRpc(contract.chain, ctx)) {
         return { contract, raw: null, noRpc: true };
+      }
+      if (!isTronContract(contract) && ctx?.chainRpcs
+        && registryRpcEndpoints(ctx.chainRpcs.get(contract.chain)).length === 0) {
+        return { contract, raw: null, noRpc: false };
       }
       let raw: bigint | null;
       if (isTronContract(contract)) {
@@ -265,6 +268,9 @@ async function readIncludedSupply(
     case "evm-erc20": {
       if (chainType !== "evm") return fail(`reader evm-erc20 does not match chain type ${chainType ?? "unknown"}`);
       if (!chainHasRpc(entry.chain, ctx)) return fail("no RPC configured");
+      if (ctx?.chainRpcs && registryRpcEndpoints(ctx.chainRpcs.get(entry.chain)).length === 0) {
+        return fail("registry-rpc-unavailable");
+      }
       const read = await readEvmToken(contract);
       if (read.raw == null) return fail("totalSupply() read failed");
       if (read.decimals == null || read.decimals > 255n) return fail("decimals() read failed");
