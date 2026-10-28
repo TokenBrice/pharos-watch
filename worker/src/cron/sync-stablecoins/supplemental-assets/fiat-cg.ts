@@ -98,10 +98,6 @@ export async function fetchFiatCoinGeckoTokens(
   let partitionCandidateCount = 0;
   let partitionStartOffset = 0;
   let deadlineSkippedCount = 0;
-  // Added attribution must not spend the capped Dwellir budget; replacement reads keep their existing routes.
-  const partitionChainRpcs = chainRpcs && new Map([...chainRpcs].map(([id, config]) => [id, {
-    ...config, endpoints: config.endpoints.filter((endpoint) => endpoint.operator !== "dwellir"),
-  }]));
 
   try {
     const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => isZephyrScannerAssetId(meta.id));
@@ -354,7 +350,7 @@ export async function fetchFiatCoinGeckoTokens(
           return carryPartition();
         }
         try {
-          const partition = await fetchOnChainSupplyPartition(meta, mcap, priceForSupply, previousAssetsById?.get(meta.id), partitionChainRpcs, partitionStage.timeout.signal);
+          const partition = await fetchOnChainSupplyPartition(meta, mcap, priceForSupply, previousAssetsById?.get(meta.id), chainRpcs, partitionStage.timeout.signal, dwellirNative);
           throwIfAborted(signal);
           if ("reason" in partition && partition.reason !== "legs-unreadable") {
             diagnose(partition.reason, partition.ratio);
