@@ -718,14 +718,15 @@ export async function fetchOnChainSupplyPartition(
   previous: PeggedAsset | undefined,
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
+  dwellirNative?: DwellirNativeCapability,
 ): Promise<Pick<PeggedAsset, "chainCirculating" | "chainPartition"> | { reason: PartitionReadFailure | "ratio-out-of-band"; ratio: number | null }> {
   throwIfAborted(signal);
   if (isOnchainSupplyPartitionExcluded(meta.id)) return { reason: "partition-invalid", ratio: null };
   let failure: PartitionReadFailure = "partition-invalid";
   const onFailure = (reason: PartitionReadFailure) => { failure = reason; };
   const observation = selectCuratedAggregateOnchainSupplyProbeContracts(meta)
-    ? await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal, undefined, onFailure)
-    : await fetchOnChainMcap(meta, priceUsd, chainRpcs, signal, undefined, onFailure);
+    ? await fetchCuratedAggregateOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative, onFailure)
+    : await fetchOnChainMcap(meta, priceUsd, chainRpcs, signal, dwellirNative, onFailure);
   throwIfAborted(signal);
   if (!observation) return { reason: failure, ratio: null };
   const ratio = observation.mcap / total;

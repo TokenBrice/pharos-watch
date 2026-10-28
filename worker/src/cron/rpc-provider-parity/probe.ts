@@ -55,7 +55,7 @@ const RPC_PARITY_REQUEST_TIMEOUT_MS = 8_000;
  */
 export const RPC_PARITY_RUN_BUDGET_MS = 4 * 60_000;
 export const RPC_PARITY_ROTATION_HOURS = 3;
-export const RPC_PARITY_MAX_CHAINS_PER_RUN = 13;
+export const RPC_PARITY_MAX_CHAINS_PER_RUN = 14;
 
 export function rpcParityRotation(targets: readonly RpcParityTarget[], atSec: number) {
   if (targets.length > RPC_PARITY_MAX_CHAINS_PER_RUN * RPC_PARITY_ROTATION_HOURS) {

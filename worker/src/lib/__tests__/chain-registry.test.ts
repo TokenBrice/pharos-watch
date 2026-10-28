@@ -7,6 +7,7 @@ import { getPublicFallbackRpcUrls } from "../public-rpc-registry";
 import {
   buildAlchemyRpcUrl,
   buildChainRpcs,
+  DWELLIR_ONLY_REGISTRY_CHAINS,
   getRpcAuthHeaders,
   hasRegistryRpc,
   logScanRpcEndpoints,
@@ -174,14 +175,14 @@ describe("buildChainRpcs", () => {
     },
   );
 
-  it.each(KEY_COMBINATIONS)("attaches exactly one Dwellir endpoint without changing eligibility ($label)", ({ alchemyApiKey, drpcApiKey }) => {
+  it.each(KEY_COMBINATIONS)("attaches exactly one Dwellir endpoint without changing membership ($label)", ({ alchemyApiKey, drpcApiKey }) => {
     const withKey = buildChainRpcs(alchemyApiKey, drpcApiKey, { dwellirApiKey: DWELLIR_KEY });
     const withoutKey = buildChainRpcs(alchemyApiKey, drpcApiKey);
     for (const entry of DWELLIR_CHAINS) {
       const config = withKey.get(entry.chainId)!;
       const previous = withoutKey.get(entry.chainId);
       expect(hasRegistryRpc(config), entry.chainId).toBe(hasRegistryRpc(previous));
-      expect(Boolean(primaryRpcUrl(config)), entry.chainId).toBe(Boolean(primaryRpcUrl(previous)));
+      expect(Boolean(primaryRpcUrl(config)), entry.chainId).toBe(hasRegistryRpc(previous));
       expect(config.endpoints.filter((endpoint) => endpoint.operator !== "dwellir"))
         .toEqual(previous?.endpoints ?? []);
       const dwellir = config.endpoints.filter((endpoint) => endpoint.operator === "dwellir");
@@ -206,15 +207,25 @@ describe("buildChainRpcs", () => {
     expect(logScanRpcEndpoints(admitted).slice(1)).toEqual(logScanRpcEndpoints(baseline));
   });
 
+  it.each(["chiliz", "lisk", "viction"])("keeps new %s coverage supplemental without a registry incumbent", (chainId) => {
+    expect(buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).has(chainId)).toBe(false);
+    const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId);
+    expect(admitted?.endpoints).toHaveLength(1);
+    expect(admitted?.endpoints[0]).toMatchObject({ operator: "dwellir", position: "supplemental" });
+    expect(registryRpcUrls(admitted)).toEqual([]);
+    expect(primaryRpcUrl(admitted)).toBeUndefined();
+    expect(logScanRpcEndpoints(admitted)).toEqual([]);
+  });
+
   it.each(["linea", "scroll", "unichain", "worldchain", "megaeth", "stable"])(
-    "orders %s Dwellir before census Alchemy without adding registry or log eligibility", (chainId) => {
+    "promotes %s Dwellir while leaving census Alchemy supplemental", (chainId) => {
       const baseline = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).get(chainId);
       const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId);
-      expect(supplementalRpcEndpoints(admitted).map((endpoint) => endpoint.operator)).toEqual(["dwellir", "alchemy"]);
-      expect(registryRpcUrls(admitted)).toEqual(registryRpcUrls(baseline));
-      expect(primaryRpcUrl(admitted)).toBeUndefined();
-      expect(hasRegistryRpc(admitted)).toBe(false);
-      expect(logScanRpcEndpoints(admitted)).toEqual([]);
+      expect(supplementalRpcEndpoints(admitted).map((endpoint) => endpoint.operator)).toEqual(["alchemy"]);
+      expect(registryRpcUrls(baseline)).toEqual([]);
+      expect(primaryRpcUrl(admitted)).toBe(dwellirRpcUrl(dwellirEntry(chainId)));
+      expect(hasRegistryRpc(admitted)).toBe(true);
+      expect(logScanRpcEndpoints(admitted)).toEqual([expect.objectContaining({ operator: "dwellir" })]);
     },
   );
 
@@ -251,7 +262,7 @@ describe("buildChainRpcs", () => {
     expect(logScanRpcEndpoints(admitted).slice(1)).toEqual(logScanRpcEndpoints(baseline));
   });
 
-  it("rolls disabled chains back to supplemental-last and excludes their log scans", () => {
+  it("excludes disabled routes without dropping reviewed registry membership", () => {
     const disabled = new Set(DWELLIR_CHAINS.map(entry => entry.chainId));
     const rpcs = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, {
       dwellirApiKey: DWELLIR_KEY, dwellirRoutingDisabledChains: disabled,
@@ -260,17 +271,19 @@ describe("buildChainRpcs", () => {
     for (const chainId of disabled) {
       const config = rpcs.get(chainId)!;
       expect(registryRpcUrls(config)).toEqual(registryRpcUrls(baseline.get(chainId)));
-      expect(config.endpoints[config.endpoints.length - 1]).toMatchObject({ operator: "dwellir", position: "supplemental" });
+      expect(config.endpoints[config.endpoints.length - 1]).toMatchObject({
+        operator: "dwellir", position: DWELLIR_ONLY_REGISTRY_CHAINS.has(chainId) ? "registry" : "supplemental",
+      });
       expect(logScanRpcEndpoints(config).some((endpoint) => endpoint.operator === "dwellir")).toBe(false);
     }
   });
 
-  it("does not count state-only Alchemy census configs as registry RPC-readable", () => {
+  it("does not treat census-only endpoints as available registry routes", () => {
     const chainRpcs = buildChainRpcs(ALCHEMY_KEY);
     for (const chainId of ["hyperevm", "linea", "scroll", "zksync", "abstract", "unichain", "worldchain", "megaeth", "stable"]) {
       const config = chainRpcs.get(chainId);
       expect(config, chainId).toBeDefined();
-      expect(hasRegistryRpc(config), chainId).toBe(false);
+      expect(hasRegistryRpc(config), chainId).toBe(DWELLIR_ONLY_REGISTRY_CHAINS.has(chainId));
       expect(primaryRpcUrl(config), chainId).toBeUndefined();
       expect(registryRpcUrls(config), chainId).toEqual([]);
       expect(logScanRpcEndpoints(config), chainId).toEqual([]);
@@ -280,10 +293,10 @@ describe("buildChainRpcs", () => {
     }
   });
 
-  it("creates supplemental-only configs for pin-only chains", () => {
+  it("keeps every excluded chain supplemental", () => {
     const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: DWELLIR_KEY });
 
-    for (const chainId of ["hyperevm", "linea", "zksync", "cronos", "flow", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko"]) {
+    for (const chainId of ["hyperevm", "xdc", "flow", "chiliz", "lisk", "viction"]) {
       const config = chainRpcs.get(chainId);
       expect(config, chainId).toBeDefined();
       expect(hasRegistryRpc(config), chainId).toBe(false);
@@ -296,6 +309,31 @@ describe("buildChainRpcs", () => {
         explorerUrl: CHAIN_META[chainId]!.explorerUrl,
         type: "evm",
       });
+    }
+  });
+
+  it("promotes exactly the reviewed Dwellir-only scope and retains it without admission", () => {
+    expect([...DWELLIR_ONLY_REGISTRY_CHAINS]).toEqual([
+      "linea", "zksync", "stable", "megaeth", "worldchain", "scroll", "unichain",
+      "blast", "manta", "cronos", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko",
+    ]);
+    for (const { alchemyApiKey, drpcApiKey } of KEY_COMBINATIONS) {
+      const admitted = buildChainRpcs(alchemyApiKey, drpcApiKey, { dwellirApiKey: DWELLIR_KEY });
+      const unadmitted = buildChainRpcs(alchemyApiKey, drpcApiKey);
+      const disabled = buildChainRpcs(alchemyApiKey, drpcApiKey, {
+        dwellirApiKey: DWELLIR_KEY, dwellirRoutingDisabledChains: DWELLIR_ONLY_REGISTRY_CHAINS,
+      });
+      for (const chainId of DWELLIR_ONLY_REGISTRY_CHAINS) {
+        expect(registryRpcEndpoints(admitted.get(chainId))).toEqual([
+          expect.objectContaining({ operator: "dwellir", position: "registry" }),
+        ]);
+        for (const map of [admitted, unadmitted, disabled]) expect(hasRegistryRpc(map.get(chainId)), chainId).toBe(true);
+        for (const map of [unadmitted, disabled]) {
+          expect(registryRpcUrls(map.get(chainId)), chainId).toEqual([]);
+          expect(primaryRpcUrl(map.get(chainId)), chainId).toBeUndefined();
+          expect(logScanRpcEndpoints(map.get(chainId)), chainId).toEqual([]);
+        }
+      }
     }
   });
 

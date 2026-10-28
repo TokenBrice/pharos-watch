@@ -23,7 +23,7 @@ Move: --method 'GET /accounts/<address>/resource/<type>' --block <ledger_version
 Starknet: --method starknet_call --params '{"request":{...}}' --block <number>
 Solana: getBlock/getTransaction/getBlocks; Alchemy paid getAccountInfo with exact slot.
 Sui: public GraphQL sui_getObject/suix_getBalance (checkpoint-scoped state);
-     Dwellir legacy sui_getCheckpoint/sui_getTransactionBlock (execution only).
+     Dwellir gRPC is unsupported by this helper (no request is sent).
 Auth: provider's canonical *_API_KEY environment variable, then repo-root .env.local.
 Requests are serialized with at least 100 ms between response members (10 responses/s).
 JSON states: ok, empty (not proof of absence), error, unsupported. Usage exits 2; non-ok failures exit 1.`;
@@ -541,40 +541,6 @@ async function solanaRead(transport, method, params, requested, record) {
   return result;
 }
 
-async function suiRead(transport, method, params, requested, record) {
-  const checkpoint = safeNativePin(requested, "Sui checkpoint");
-  assertCliUsage(Array.isArray(params), "Sui --params must be an array");
-  async function header() {
-    const raw = await transport.rpc("sui_getCheckpoint", [String(checkpoint)]);
-    if (!raw || integer(raw.sequenceNumber, "checkpoint sequenceNumber") !== requested.number
-      || typeof raw.digest !== "string" || !/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(raw.digest)) {
-      throw new EvidenceError("missing-block-header", "Sui checkpoint digest is unavailable or mismatched");
-    }
-    return { raw, block: { number: String(checkpoint), hash: raw.digest, timestamp: timestamp(raw.timestampMs, 1000n) } };
-  }
-  const before = await header();
-  record.block = before.block;
-  record.checkpoint = String(checkpoint);
-  let result;
-  if (method === "sui_getCheckpoint") {
-    assertCliUsage(params.length <= 1, "sui_getCheckpoint accepts one matching checkpoint");
-    if (params[0] !== undefined) assertCliUsage(integer(params[0], "checkpoint") === requested.number, "Checkpoint parameter must match --block");
-    record.params = [String(checkpoint)];
-    result = before.raw;
-  } else {
-    assertCliUsage(params.length >= 1 && params.length <= 2 && typeof params[0] === "string", "sui_getTransactionBlock requires [digest, options]");
-    record.params = params;
-    result = await transport.rpc(method, params);
-    if (result !== null && (integer(result?.checkpoint, "transaction checkpoint") !== requested.number
-      || result.digest !== params[0] || !Array.isArray(before.raw.transactions)
-      || !before.raw.transactions.includes(result.digest))) {
-      throw new EvidenceError("block-pin-mismatch", "Sui transaction is not included in the pinned checkpoint");
-    }
-  }
-  sameHeader(record.block, (await header()).block);
-  return result;
-}
-
 async function suiGraphqlRead(transport, endpoint, method, params, requested, record) {
   const checkpoint = safeNativePin(requested, "Sui checkpoint");
   assertCliUsage(Array.isArray(params), "Sui GraphQL --params must be an array");
@@ -630,9 +596,6 @@ function assertPinnedCapability(protocol, method, provider) {
   if (protocol === "solana-jsonrpc" && !["getBlock", "getTransaction", "getBlocks", ...(provider === "alchemy" ? ["getAccountInfo"] : [])].includes(method)) {
     throw new UnsupportedError("unsupported-pinned-state", "Solana account/token/program state and address signature pagination do not accept an exact historical slot; minContextSlot is not a pin. Use finalized block/transaction execution records instead");
   }
-  if (protocol === "sui-jsonrpc" && !["sui_getCheckpoint", "sui_getTransactionBlock"].includes(method)) {
-    throw new UnsupportedError("unsupported-pinned-state", "Sui current object/balance/dynamic-field reads do not accept a checkpoint; object version reads alone do not prove the object's state at that checkpoint");
-  }
 }
 
 function empty(result) {
@@ -686,9 +649,7 @@ export async function main(argv = process.argv.slice(2)) {
             ? await starknetRead(client, record.method, record.params, requested, record)
             : target.protocol === "solana-jsonrpc"
               ? await solanaRead(client, record.method, record.params, requested, record)
-              : target.protocol === "sui-graphql"
-                ? await suiGraphqlRead(client, record.endpoint, record.method, record.params, requested, record)
-                : await suiRead(client, record.method, record.params, requested, record);
+              : await suiGraphqlRead(client, record.endpoint, record.method, record.params, requested, record);
     record.result = result;
     record.state = empty(result) || (record.method === "getAccountInfo" && result.value === null) ? "empty" : "ok";
     record.reason = record.state === "empty" ? "empty-result-not-proof-of-absence" : null;

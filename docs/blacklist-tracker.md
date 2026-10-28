@@ -109,6 +109,8 @@ Circle mirror actions are suppressed only when an emitted event-time zero proves
 
 Coverage advances only through contiguous evidence across every required event family. A bounded scan, incomplete pagination, provider failure or unresolved frontier is not full catch-up. Freshness uses the oldest required deployment's proven full-coverage success; rebuilding a summary or finishing a run cannot renew that observation clock. A deployment that has never succeeded leaves coverage freshness unavailable. Observations from other deployments can still contribute to the summary.
 
+Tron event scans prefer admitted Dwellir JSON-RPC, with TronGrid fallback. The provider change preserves the configured event families and historical event identities. RPC scans retain the 15-minute indexing margin and cannot pass a validated solidified head no older than ten minutes; stale head evidence cannot certify catch-up. Block hashes bind event timestamps, and complete block-log context proves transaction-local identities and execution order. An emitted destroy amount can resolve that event's quantity, while amountless freezes still require the confirmed transfer-replay evidence above.
+
 RLUSD clawbacks lack a dedicated event in the verified ABI and are not event-covered. USDA role-gated burns do not emit the configured destroy event. Binance-Peg USDT on BSC and legacy bridged USDT on Optimism emit no blacklist events and are not scanned; Optimism's separate USDT0 deployment is scanned. Removing a non-emitting scan preserves recorded history.
 
 ## Storage Semantics

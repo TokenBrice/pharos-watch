@@ -508,10 +508,8 @@ describe("pinned supplemental research RPC", () => {
     ["solana", "getAccountInfo", '["11111111111111111111111111111111",{"minContextSlot":1000}]'],
     ["solana", "getTokenSupply", '["11111111111111111111111111111111"]'],
     ["solana", "getProgramAccounts", '["11111111111111111111111111111111"]'],
-    ["sui", "suix_getBalance", '["0x1","0x2::sui::SUI"]'],
-    ["sui", "sui_tryGetPastObject", '["0x1","1000"]'],
   ])("refuses fabricated %s state provenance for %s before any fetch", async (chain, method, params) => {
-    const record = await invoke(["--provider", chain === "solana" ? "drpc" : "dwellir", "--block", "1000"], chain, method, params);
+    const record = await invoke(["--provider", "drpc", "--block", "1000"], chain, method, params);
     expect(record).toMatchObject({ state: "unsupported", reason: "unsupported-pinned-state", block: null, result: null });
     expect(fetchMock).not.toHaveBeenCalled();
   });
@@ -574,28 +572,18 @@ describe("pinned supplemental research RPC", () => {
     expect(record.chunks).toHaveLength(2);
   });
 
-  it("pins Sui transactions to checkpoint membership and time", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
-      return rpcResponse(body.id, body.method === "sui_getCheckpoint"
-        ? { sequenceNumber: "1000", digest: "1".repeat(32), timestampMs: "1700000000000", transactions: ["transaction-digest"] }
-        : { digest: "transaction-digest", checkpoint: "1000", effects: {} });
-    });
-    const record = await invoke(["--block", "1000"], "sui", "sui_getTransactionBlock", '["transaction-digest",{"showEffects":true}]');
-    expect(record).toMatchObject({ state: "ok", checkpoint: "1000", block: { number: "1000", timestamp: "2023-11-14T22:13:20.000Z" } });
+  it.each([
+    ["sui_getCheckpoint", '["1000"]'],
+    ["sui_getTransactionBlock", '["transaction-digest",{"showEffects":true}]'],
+    ["suix_getBalance", '["0x1","0x2::sui::SUI"]'],
+    ["sui_tryGetPastObject", '["0x1","1000"]'],
+  ])("reports retired Dwellir Sui %s unsupported before any fetch", async (method, params) => {
+    vi.stubEnv("DWELLIR_API_KEY", "");
+    const record = await invoke(["--block", "1000"], "sui", method, params);
+    expect(record).toMatchObject({ state: "unsupported", reason: "unsupported-chain-provider", endpoint: null, block: null, result: null });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(process.exitCode).toBe(1);
   });
-
-  it("withholds a Sui transaction absent from the pinned checkpoint", async () => {
-    fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {
-      const body = JSON.parse(String(init.body));
-      return rpcResponse(body.id, body.method === "sui_getCheckpoint"
-        ? { sequenceNumber: "1000", digest: "1".repeat(32), timestampMs: "1700000000000", transactions: [] }
-        : { digest: "transaction-digest", checkpoint: "1000" });
-    });
-    const record = await invoke(["--block", "1000"], "sui", "sui_getTransactionBlock", '["transaction-digest"]');
-    expect(record).toMatchObject({ state: "error", reason: "block-pin-mismatch", result: null });
-  });
-
 
   it.each(["public", "drpc"])("keeps missing Filecoin MsgMeta on %s unavailable without archive fallback", async (provider) => {
     fetchMock.mockImplementation(async (_url: string | URL, init: RequestInit) => {

@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { PriceConfidenceSchema } from "./core";
 
 export const SUI_CLMM_SHADOW_HISTORY_LIMIT = 8;
 export const SUI_CLMM_SHADOW_PACKET_MAX_BYTES = 256 * 1024;
@@ -25,6 +26,13 @@ export const SuiClmmShadowSampleSchema = z.object({
   coinTypeIn: CoinType,
   inputDecimals: z.number().int().min(0).max(18),
   inputPriceUsd: z.number().finite().positive(),
+  inputPriceReference: z.object({
+    source: z.string().min(1).max(500),
+    confidence: PriceConfidenceSchema.extract(["high", "single-source"]),
+    observedAtSec: z.number().int().positive(),
+    cacheUpdatedAtSec: z.number().int().positive(),
+    maxAgeSec: z.number().int().positive(),
+  }).optional(),
   quotePackage: ObjectId,
   sqrtPrice: UintString,
   currentTick: z.number().int().min(-443637).max(443636),

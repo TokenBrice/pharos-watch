@@ -8,6 +8,7 @@ import type { CoinGeckoMcapData } from "../shared";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
 import { fetchEvmBlockHeader } from "../../../../lib/evm-rpc";
+import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
 import { SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT, OnchainPartitionSummarySchema, type OnchainPartitionSummary } from "@shared/types/status/cron";
@@ -59,7 +60,7 @@ vi.mock("../onchain-supply", async (importOriginal) => {
   return {
     ...actual,
     fetchOnChainSupplyPartition: (...args: Parameters<typeof actual.fetchOnChainSupplyPartition>) => {
-      mocks.partitionRead(args[0].id);
+      mocks.partitionRead(args[0].id, args[6]);
       return actual.fetchOnChainSupplyPartition(...args);
     },
   };
@@ -436,15 +437,16 @@ describe("CoinGecko on-chain share partitions", () => {
       }));
   });
 
-  it("excludes Dwellir routes from the added partition reads without mutating the caller's routing map", async () => {
+  it("shares the admitted Dwellir routing map and native capability with partition reads", async () => {
     const chainRpcs = buildChainRpcs("test-alchemy", undefined, { dwellirApiKey: "test-dwellir" });
+    const dwellirNative = createDwellirNativeCapability("test-dwellir");
     expect(chainRpcs.get("ethereum")?.endpoints.some((endpoint) => endpoint.operator === "dwellir")).toBe(true);
-    const [asset] = await fetchFiatCoinGeckoTokens(cgData(100), undefined, chainRpcs);
+    const [asset] = await fetchFiatCoinGeckoTokens(cgData(100), undefined, chainRpcs,
+      undefined, undefined, undefined, dwellirNative);
     expect(asset.chainPartition?.admission).toBe("entered");
+    expect(mocks.partitionRead).toHaveBeenCalledWith(ftMeta.id, dwellirNative);
     for (const [, , , context] of mocks.read.mock.calls) {
-      expect(context.chainRpcs).not.toBe(chainRpcs);
-      expect([...context.chainRpcs.values()].flatMap((config: ChainRpcConfig) => config.endpoints)
-        .some((endpoint) => endpoint.operator === "dwellir")).toBe(false);
+      expect(context.chainRpcs).toBe(chainRpcs);
     }
     expect(chainRpcs.get("ethereum")?.endpoints.some((endpoint) => endpoint.operator === "dwellir")).toBe(true);
   });

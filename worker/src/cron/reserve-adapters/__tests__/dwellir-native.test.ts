@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 import { PUBLIC_RPC_URLS } from "@shared/lib/chain-rpc-registry";
+import { TRON_RPC_BLOCK_CONTEXT_MAX_RESPONSE_BYTES, TRON_RPC_MAX_RESPONSE_BYTES,
+  TRON_SOLID_HEAD_MAX_RESPONSE_BYTES } from "@shared/lib/tron-jsonrpc";
 import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 import * as budget from "../../../lib/rpc-provider-budget";
 import { fetchStarknetTotalSupply } from "../starknet";
@@ -239,5 +241,110 @@ describe("curated native endpoint preservation", () => {
     expect(fetcher.getHistory()).toHaveLength(1);
     expect(fetcher.getHistory()[0]?.headers["x-api-key"]).toBeUndefined();
     expect(budget.recordDwellirCredits).not.toHaveBeenCalled();
+  });
+});
+
+describe("admitted Tron JSON-RPC and solidified-head reads", () => {
+  const address = "0xa614f803b6fd780986a42c78ec9c7f77e6ded13c";
+  const topic = `0x${"ab".repeat(32)}`;
+  const rpc = (method: string, params: unknown[]) => ({ jsonrpc: "2.0", id: 1, method, params });
+  const filter = { fromBlock: "0x1", toBlock: "0x2710", address, topics: [[topic]] };
+
+  it.each([
+    ["/jsonrpc", rpc("eth_blockNumber", [])],
+    ["/jsonrpc", rpc("eth_getBlockByNumber", ["0x123", false])],
+    ["/jsonrpc", rpc("eth_getLogs", [filter])],
+    ["/jsonrpc", rpc("eth_getLogs", [{ fromBlock: "0x1", toBlock: "0x1" }])],
+    ["/walletsolidity/getnowblock", {}],
+  ])("admits %s %j with scoped auth and one credit", async (path, body) => {
+    const fetcher = mockFetch([{ match: "https://api-tron-mainnet.n.dwellir.com", body: { result: [] } }], { requireMatch: true });
+    await expect(native.readJson("tron", String(path), SIGNAL, undefined, body)).resolves.toEqual({ result: [] });
+    expect(fetcher.getHistory()).toHaveLength(1);
+    expect(fetcher.getHistory()[0].headers["x-api-key"]).toBe(KEY);
+    expect(fetcher.getHistory()[0].url).not.toContain(KEY);
+    expect(budget.recordDwellirCredits).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it.each([
+    ["/jsonrpc", rpc("eth_call", [{ to: address, data: "0x1234" }, "latest"])],
+    ["/jsonrpc", rpc("eth_getBlockByNumber", ["0x123", true])],
+    ["/jsonrpc", rpc("eth_getBlockByNumber", ["pending", false])],
+    ["/jsonrpc", rpc("eth_getLogs", [{ ...filter, toBlock: "0x2711" }])],
+    ["/jsonrpc", rpc("eth_getLogs", [{ ...filter, fromBlock: "0x2", toBlock: "0x1" }])],
+    ["/jsonrpc", rpc("eth_getLogs", [{ ...filter, address: "0x12" }])],
+    ["/jsonrpc", rpc("eth_getLogs", [{ ...filter, topics: [["0x12"]] }])],
+    ["/jsonrpc", rpc("eth_getLogs", [{ ...filter, blockHash: topic }])],
+    ["/jsonrpc", rpc("eth_getLogs", [{ fromBlock: "0x1", toBlock: "0x2" }])],
+    ["/jsonrpc", [rpc("eth_blockNumber", [])]],
+    ["/walletsolidity/getnowblock", { detail: false }],
+    ["/wallet/gettransactioninfobyblocknum", { num: 1 }],
+    ["/jsonrpc?method=eth_getLogs", rpc("eth_blockNumber", [])],
+  ])("refuses unadmitted %s %j before fetching or charging", async (path, body) => {
+    const fetcher = mockFetch([], { requireMatch: true });
+    await expect(native.readJson("tron", String(path), SIGNAL, undefined, body)).rejects.toThrow("outside the admitted");
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(budget.recordDwellirCredits).not.toHaveBeenCalled();
+  });
+
+  it("requires an admitted credential and honors Tron disablement for the newly admitted paths", async () => {
+    expect(() => createDwellirNativeCapability(" ")).toThrow("requires an admitted credential");
+    const disabled = createDwellirNativeCapability(KEY, new Set(["tron"]));
+    const fetcher = mockFetch([], { requireMatch: true });
+    await expect(disabled.readJson("tron", "/jsonrpc", SIGNAL, undefined, rpc("eth_blockNumber", []))).rejects.toThrow("routing disabled");
+    await expect(disabled.readJson("tron", "/walletsolidity/getnowblock", SIGNAL, undefined, {})).rejects.toThrow("routing disabled");
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
+  it("keeps the RPC body cap and overflow error identity while charging the received response", async () => {
+    const response = new Response(" ".repeat(TRON_RPC_MAX_RESPONSE_BYTES + 1));
+    const fetcher = vi.fn(async () => response);
+    vi.stubGlobal("fetch", fetcher);
+    await expect(native.readJson("tron", "/jsonrpc", SIGNAL, undefined, rpc("eth_blockNumber", [])))
+      .rejects.toMatchObject({ name: "ResponseBodyTooLargeError" });
+    expect(response.bodyUsed).toBe(true);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+    expect(budget.recordDwellirCredits).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it("admits a larger body only for validated unfiltered single-block context", async () => {
+    const result = { result: "x".repeat(TRON_RPC_MAX_RESPONSE_BYTES + 1) };
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(result)));
+    await expect(native.readJson("tron", "/jsonrpc", SIGNAL, undefined,
+      rpc("eth_getLogs", [{ fromBlock: "0x1", toBlock: "0x1" }]))).resolves.toEqual(result);
+    await expect(native.readJson("tron", "/jsonrpc", SIGNAL, undefined,
+      rpc("eth_getLogs", [{ ...filter, toBlock: "0x1" }]))).rejects.toMatchObject({ name: "ResponseBodyTooLargeError" });
+    expect(budget.recordDwellirCredits).toHaveBeenCalledTimes(2);
+  });
+
+  it("enforces the2MiB context cap on streamed bytes even with a smaller declared length", async () => {
+    let cancelled = false;
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new ReadableStream({
+      pull(controller) { controller.enqueue(new Uint8Array(TRON_RPC_BLOCK_CONTEXT_MAX_RESPONSE_BYTES / 2)); },
+      cancel() { cancelled = true; },
+    }), { headers: { "Content-Length": "1" } })));
+    await expect(native.readJson("tron", "/jsonrpc", SIGNAL, undefined,
+      rpc("eth_getLogs", [{ fromBlock: "0x1", toBlock: "0x1" }]))).rejects.toMatchObject({ name: "ResponseBodyTooLargeError" });
+    expect(cancelled).toBe(true);
+    expect(budget.recordDwellirCredits).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it("admits a bounded transaction-bearing solidity head larger than an RPC response", async () => {
+    const result = { transactions: "x".repeat(TRON_RPC_MAX_RESPONSE_BYTES + 1) };
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json(result)));
+    await expect(native.readJson("tron", "/walletsolidity/getnowblock", SIGNAL, undefined, {})).resolves.toEqual(result);
+    expect(budget.recordDwellirCredits).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it("rejects an oversized solidity head rather than reading it unbounded", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(" ".repeat(TRON_SOLID_HEAD_MAX_RESPONSE_BYTES + 1))));
+    await expect(native.readJson("tron", "/walletsolidity/getnowblock", SIGNAL, undefined, {}))
+      .rejects.toMatchObject({ name: "ResponseBodyTooLargeError" });
+    expect(budget.recordDwellirCredits).toHaveBeenCalledExactlyOnceWith(1);
+  });
+
+  it("redacts a key echoed in a Tron RPC error before it reaches reader diagnostics", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => Response.json({ error: { message: `unauthorized ${KEY}` } })));
+    expect(await native.readJson("tron", "/jsonrpc", SIGNAL, undefined, rpc("eth_blockNumber", [])))
+      .toEqual({ error: { message: "unauthorized [redacted]" } });
   });
 });

@@ -1,7 +1,5 @@
 import { isRecord } from "@shared/lib/type-guards";
-import { DEX_MEASURED_FRESHNESS_MAX_SEC, type DexRequestBudget } from "@shared/types/measured-execution";
-import { fetchTextWithRetry } from "../../../lib/fetch-retry";
-import { parseJson } from "../../../lib/json-parse";
+import { DEX_MEASURED_FRESHNESS_MAX_SEC } from "@shared/types/measured-execution";
 import { tickSqrtPrice } from "../solana/whirlpool-quote";
 import { SUI_CLMM_DEPLOYMENTS, suiCoinType, suiObjectId, type SuiClmmFamily } from "./identity";
 import type { SuiTransactionCheckpointResolver } from "./archival-checkpoints";
@@ -9,41 +7,6 @@ import type { SuiTransactionCheckpointResolver } from "./archival-checkpoints";
 export type SuiRpc = (method: string, params: readonly unknown[]) => Promise<unknown>;
 const SUI_CLMM_MAX_TICKS = 256;
 const OBJECT_OPTIONS = { showContent: true, showOwner: true, showPreviousTransaction: true };
-
-/** One request and fully consumed, capped body at a time; errors never expose the endpoint/auth. */
-export function createSuiClmmRpc(input: {
-  url: string; headers?: HeadersInit; signal: AbortSignal; budget: DexRequestBudget;
-  onResponse?: () => void;
-}): SuiRpc {
-  let id = 0;
-  let busy = false;
-  return async (method, params) => {
-    if (busy) throw new Error("sui-rpc-concurrent-request");
-    if (input.signal.aborted || !input.budget.tryConsume()) throw new Error("sui-rpc-budget-exhausted");
-    busy = true;
-    try {
-      const headers = new Headers(input.headers);
-      headers.set("content-type", "application/json");
-      // One budgeted attempt: transport retries must not bypass the shared
-      // request/credit limit. The shared reader owns timeout and body cleanup.
-      const fetched = await fetchTextWithRetry(input.url, { method: "POST", headers, signal: input.signal,
-        body: JSON.stringify({ jsonrpc: "2.0", id: ++id, method, params }) }, 0, {
-        timeoutMs: Math.max(1, Math.min(15_000, input.budget.deadlineMs - Date.now())),
-        maxResponseBytes: 2 * 1024 * 1024, returnFinalResponse: true,
-        onResponse: input.onResponse,
-      });
-      if (!fetched) throw new Error(`sui-rpc-transport-failed:${method}`);
-      const parsed = parseJson(fetched.body);
-      if (!fetched.response.ok || !parsed.ok || !isRecord(parsed.value) || parsed.value.id !== id || parsed.value.error != null || !("result" in parsed.value)) {
-        throw new Error(`sui-rpc-response-failed:${method}`);
-      }
-      return parsed.value.result;
-    } catch (error) {
-      if (error instanceof Error && error.message.startsWith("sui-")) throw error;
-      throw new Error(`sui-rpc-transport-failed:${method}`);
-    } finally { busy = false; }
-  };
-}
 
 function moveFields(value: unknown): Record<string, unknown> {
   if (!isRecord(value) || !isRecord(value.fields)) throw new Error("sui-invalid-move-fields");

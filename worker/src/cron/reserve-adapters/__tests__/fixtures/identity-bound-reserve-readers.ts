@@ -77,7 +77,7 @@ export const SPARK_L2_ZERO_RPC: NonNullable<AdapterNetworkSpec["rpc"]> = {
 
 export const SPARK_INVENTORY_NETWORK: AdapterNetworkSpec = {
   block,
-  // buildChainRpcs() without credentials omits this supplemental-only chain.
+  // Keyless registry membership retains Unichain but supplies no admitted route.
   chains: { unichain: "https://api-unichain-mainnet.n.dwellir.com" },
   rpc: {
     ...SPARK_L2_ZERO_RPC,

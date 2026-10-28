@@ -3,7 +3,9 @@ import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
-import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
+import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition } from "../onchain-supply";
+import { createDwellirNativeCapability } from "../../../../lib/dwellir-native";
+import { DWELLIR_NATIVE_ENDPOINTS } from "@shared/lib/dwellir-native-endpoints";
 import { CURATED_ONCHAIN_SUPPLY_EXCLUSIONS } from "../../../../lib/onchain-supply-exclusions";
 import { TOTAL_SUPPLY_SELECTOR } from "../../../../lib/evm-selectors";
 
@@ -33,6 +35,47 @@ afterEach(() => {
 });
 
 describe("supplemental on-chain supply RPC routing", () => {
+  it.each(["admitted", "disabled", "unadmitted"] as const)("uses %s EVM routing for a partition leg", async (admission) => {
+    const chainRpcs = buildChainRpcs(undefined, undefined, admission === "unadmitted" ? undefined : {
+      dwellirApiKey: DWELLIR_TEST_KEY,
+      dwellirRoutingDisabledChains: admission === "disabled" ? new Set(["ethereum"]) : undefined,
+    });
+    const ethereum = chainRpcs.get("ethereum")!;
+    const expectedUrl = admission === "admitted"
+      ? ethereum.endpoints.find((endpoint) => endpoint.operator === "dwellir")!.url
+      : ethereum.endpoints.find((endpoint) => endpoint.operator !== "dwellir")!.url;
+    const fetchMock = vi.fn(async () => supplyResponse(100n));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchOnChainSupplyPartition(TRACKED_META_BY_ID.get("aa-falconx-mev-capital")!,
+      100, 1, undefined, chainRpcs)).resolves.toMatchObject({ chainPartition: { admission: "entered" } });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]).toEqual([expectedUrl, expect.anything()]);
+  });
+
+  it.each(["admitted", "disabled", "unadmitted"] as const)("uses %s native routing for a partition leg", async (admission) => {
+    const meta: StablecoinMeta = {
+      ...TRACKED_META_BY_ID.get("aa-falconx-mev-capital")!, id: "native-partition-fixture",
+      contracts: [{ chain: "starknet", address: "0x1", decimals: 18 }],
+    };
+    const dwellirNative = admission === "unadmitted" ? undefined : createDwellirNativeCapability(
+      DWELLIR_TEST_KEY, admission === "disabled" ? new Set(["starknet"]) : undefined,
+    );
+    const fetchMock = vi.fn(async () => Response.json({
+      jsonrpc: "2.0", id: 1, result: [`0x${(100n * 10n ** 18n).toString(16)}`, "0x0"],
+    }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchOnChainSupplyPartition(meta, 100, 1, undefined, undefined, undefined, dwellirNative))
+      .resolves.toMatchObject({ chainPartition: { admission: "entered" } });
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]).toEqual([
+      admission === "admitted" ? DWELLIR_NATIVE_ENDPOINTS.find((endpoint) => endpoint.network === "starknet")!.baseUrl
+        : "https://api.cartridge.gg/x/starknet/mainnet",
+      expect.anything(),
+    ]);
+  });
+
   it("routes CDP through the reviewed latest-only Flare supply endpoint", async () => {
     const fetchMock = vi.fn(async () => supplyResponse(100n));
     vi.stubGlobal("fetch", fetchMock);

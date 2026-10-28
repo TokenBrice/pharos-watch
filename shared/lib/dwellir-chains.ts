@@ -80,6 +80,13 @@ export const DWELLIR_CHAINS: readonly DwellirChainEntry[] = [
   { chainId: "boba", host: "api-boba-mainnet", evmChainId: 288, stateHistory: "archive", logsHistory: "none", verifiedAt: "2026-10-05" },
   { chainId: "astar", host: "api-astar", evmChainId: 592, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 1_024, verifiedAt: "2026-10-11" },
   { chainId: "taiko", host: "api-taiko-mainnet", evmChainId: 167000, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-11" },
+  // 2026-10-28: non-zero year-old BRZ state; deployment Transfer windows empty.
+  // Finalized returns genesis, so the tag is treated as unsupported.
+  { chainId: "chiliz", host: "api-chiliz-mainnet-archive", evmChainId: 88888, stateHistory: "archive", logsHistory: "none", finalizedTagUnsupported: true, verifiedAt: "2026-10-28" },
+  // Non-zero year-old IDRX state and non-empty early-mint/year-old 10k logs.
+  { chainId: "lisk", host: "api-lisk-mainnet", evmChainId: 1135, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-28" },
+  // Non-zero year-old USDC state; 10k logs include its deployment Transfer.
+  { chainId: "viction", host: "api-viction-mainnet", evmChainId: 88, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, finalizedTagUnsupported: true, verifiedAt: "2026-10-28" },
 ];
 
 export function dwellirRpcUrl(entry: DwellirChainEntry): string {

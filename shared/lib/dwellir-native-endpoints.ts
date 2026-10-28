@@ -21,6 +21,8 @@ export const DWELLIR_NATIVE_ENDPOINTS = [
     baseUrl: "https://api-tron-mainnet.n.dwellir.com",
     protocol: "tron-http",
     allowedPath: "/wallet/triggerconstantcontract",
+    solidHeadPath: "/walletsolidity/getnowblock",
+    jsonRpcPath: "/jsonrpc",
   },
   {
     network: "starknet",

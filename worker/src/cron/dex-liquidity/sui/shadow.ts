@@ -1,17 +1,20 @@
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } from "@shared/lib/depeg-config";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { getDexMeasuredExecutionProbeNotionals, type DexRequestBudget } from "@shared/types/measured-execution";
 import { SuiClmmShadowHistorySchema, SuiClmmShadowSampleSchema, SUI_CLMM_SHADOW_HISTORY_LIMIT, SUI_CLMM_SHADOW_PACKET_MAX_BYTES, type SuiClmmShadowSample } from "@shared/types/sui-clmm";
 import { parseUnits } from "viem/utils";
 import { throwIfAborted } from "../../../lib/abort";
 import { getCache, setCachesAt } from "../../../lib/db-cache";
 import { loadDwellirBudgetState, recordDwellirCredits, type DwellirBudgetEnv } from "../../../lib/rpc-provider-budget";
-import { loadTrackedStablecoinMaps } from "../orchestrator-phases/lookups";
+import { hasUsableStablecoinsPayload, loadStablecoinsCache } from "../../../lib/stablecoins-cache";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../source-pagination-state";
 import { createSuiTransactionCheckpointResolver } from "./archival-checkpoints";
 import { quoteSuiClmmExactIn } from "./clmm-quote";
 import { inspectSuiClmmQuotes } from "./independent-quote";
 import { SUI_CLMM_DEPLOYMENTS, suiClmmFamily, suiClmmPoolId, suiCoinType } from "./identity";
-import { createSuiClmmRpc, decodeSuiClmmSnapshot, fetchSuiClmmCapture, type SuiClmmSnapshot, type SuiRpc } from "./state-reader";
+import { decodeSuiClmmSnapshot, fetchSuiClmmCapture, type SuiClmmSnapshot, type SuiRpc } from "./state-reader";
+import { createSuiClmmGrpc } from "./grpc";
 
 const MAX_POOLS = 2;
 const RUNTIME_MS = 45_000;
@@ -36,8 +39,9 @@ export function selectSuiShadowPools(rows: readonly RetainedSuiPool[], cursor: s
 
 /** Actual read/quote producer seam shared with live smoke. Nothing here writes production data. */
 export async function observeSuiClmmShadowPool(input: {
-  rpc: SuiRpc; snapshot: SuiClmmSnapshot; stablecoinId: string;
+  rpc: SuiRpc | null; snapshot: SuiClmmSnapshot; stablecoinId: string;
   coinTypeIn: string; inputDecimals: number; inputPriceUsd: number; retainedTvlUsd: number;
+  inputPriceReference?: SuiClmmShadowSample["inputPriceReference"];
   generationId: string;
 }): Promise<SuiClmmShadowSample> {
   if (!Number.isFinite(input.inputPriceUsd) || input.inputPriceUsd <= 0 || !Number.isInteger(input.inputDecimals) || input.inputDecimals < 0 || input.inputDecimals > 18) throw new Error("sui-trusted-input-reference-unavailable");
@@ -67,6 +71,7 @@ export async function observeSuiClmmShadowPool(input: {
   let independentCheck: "stationary-object-set" | "failed" = "failed";
   let independentCheckReason: string | null = null;
   try {
+    if (!input.rpc) throw new Error("sui-grpc-inspection-unsupported");
     const independent = await inspectSuiClmmQuotes(input.rpc, snapshot, requests);
     for (let i = 0; i < quotes.length; i++) {
       const local = quotes[i];
@@ -87,7 +92,7 @@ export async function observeSuiClmmShadowPool(input: {
     modelVersion: "sui-clmm-q64-v1", scoreEligible: false, checkpointBoundInspection: false,
     checkpoint: snapshot.checkpoint, checkpointDigest: snapshot.checkpointDigest, checkpointTimestampMs: snapshot.timestampMs,
     poolId: pool.poolId, coinA: pool.coinA, coinB: pool.coinB, coinTypeIn,
-    inputDecimals: input.inputDecimals, inputPriceUsd: input.inputPriceUsd,
+    inputDecimals: input.inputDecimals, inputPriceUsd: input.inputPriceUsd, inputPriceReference: input.inputPriceReference,
     quotePackage: SUI_CLMM_DEPLOYMENTS[pool.family].quotePackage,
     sqrtPrice: pool.sqrtPrice.toString(), currentTick: pool.currentTick, liquidity: pool.liquidity.toString(),
     tickSpacing: pool.tickSpacing, feePips: pool.feePips, protocolFeeRate: pool.protocolFeeRate,
@@ -103,9 +108,11 @@ export async function collectSuiClmmShadowQuotes(input: { db: D1Database; env: D
   const startedAt = Date.now();
   const nowSec = Math.floor(startedAt / 1000);
   const summary = { attempted: 0, persisted: 0, failed: 0, budgetExhausted: false,
-    scoreEligible: false as const, durationMs: 0, requests: 0, skipped: {} as Record<string, number>, failures: [] as string[] };
+    scoreEligible: false as const, durationMs: 0, requests: 0, reason: null as string | null,
+    lastFailureReason: null as string | null, independentCheckReason: null as string | null,
+    skipped: {} as Record<string, number>, failures: [] as string[] };
   const dwellir = await loadDwellirBudgetState(input.db, input.env, nowSec);
-  if (!dwellir.usable) { summary.skipped[dwellir.reason] = 1; return summary; }
+  if (!dwellir.usable) { summary.reason = dwellir.reason; summary.skipped[dwellir.reason] = 1; return summary; }
   const signal = AbortSignal.any([...(input.signal ? [input.signal] : []), AbortSignal.timeout(RUNTIME_MS)]);
   const budget: DexRequestBudget = {
     maxRequests: MAX_REQUESTS, deadlineMs: startedAt + RUNTIME_MS,
@@ -115,7 +122,7 @@ export async function collectSuiClmmShadowQuotes(input: { db: D1Database; env: D
       summary.requests += count; return true;
     },
   };
-  const rpc = createSuiClmmRpc({ url: "https://api-sui-mainnet-full.n.dwellir.com", headers: { "X-Api-Key": input.env.DWELLIR_API_KEY! }, signal, budget, onResponse: () => recordDwellirCredits(1) });
+  const rpc = createSuiClmmGrpc({ url: "https://api-sui-mainnet-full.n.dwellir.com", headers: { "X-Api-Key": input.env.DWELLIR_API_KEY! }, signal, budget, onResponse: () => recordDwellirCredits(1) });
   const archive = createSuiTransactionCheckpointResolver({ signal, budget });
   const state = await readDexSourcePaginationState(input.db, CURSOR_KEY, "sync-cl-exit-depth");
   const retained = await input.db.prepare(`SELECT json_extract(pool.value, '$.poolId') AS pool_id,
@@ -129,23 +136,39 @@ export async function collectSuiClmmShadowQuotes(input: { db: D1Database; env: D
       AND json_extract(pool.value, '$.project') IN ('cetus', 'cetus-clmm')
     ORDER BY json_extract(pool.value, '$.tvlUsd') DESC LIMIT 256`).bind(nowSec - 24 * 60 * 60).all<RetainedSuiPool>();
   const window = selectSuiShadowPools(retained.results ?? [], state.cursor);
-  const { stablecoinPriceById } = await loadTrackedStablecoinMaps(input.db, nowSec);
+  const prices = new Map<string, { price: number; reference: NonNullable<SuiClmmShadowSample["inputPriceReference"]> }>();
+  const cached = await loadStablecoinsCache(input.db, { contract: "published" });
+  if (hasUsableStablecoinsPayload(cached) && Number.isSafeInteger(cached.updatedAt) && cached.updatedAt! > 0 &&
+    cached.updatedAt! <= nowSec && nowSec - cached.updatedAt! <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) {
+    for (const asset of cached.payload.peggedAssets) {
+      const observedAt = asset.priceObservedAt ?? asset.priceUpdatedAt;
+      // Single-source prices size diagnostic inputs only; scored quote-leg trust remains unchanged.
+      if (typeof asset.price !== "number" || !Number.isFinite(asset.price) || asset.price <= 0 ||
+        !asset.priceSource?.trim() || asset.priceSource.length > 500 || !isObservedPrice(asset) ||
+        (asset.priceConfidence !== "high" && asset.priceConfidence !== "single-source") ||
+        !Number.isSafeInteger(observedAt) || observedAt! <= 0 || observedAt! > nowSec ||
+        nowSec - observedAt! > DEPEG_PRIMARY_PRICE_MAX_AGE_SEC) continue;
+      prices.set(asset.id, { price: asset.price, reference: { source: asset.priceSource, confidence: asset.priceConfidence,
+        observedAtSec: observedAt!, cacheUpdatedAtSec: cached.updatedAt!, maxAgeSec: DEPEG_PRIMARY_PRICE_MAX_AGE_SEC } });
+    }
+  }
   let examined = 0;
   for (const row of window.selected) {
-    if (signal.aborted || budget.remainingRequests <= 0) { summary.budgetExhausted = true; break; }
+    if (signal.aborted || budget.remainingRequests <= 0) { summary.reason ??= "sui-rpc-budget-exhausted"; summary.budgetExhausted = true; break; }
     examined++;
     summary.attempted++;
     try {
-      const price = stablecoinPriceById.get(row.stablecoin_id);
-      if (!price || !Number.isFinite(price) || price <= 0) throw new Error("sui-trusted-input-reference-unavailable");
+      const price = prices.get(row.stablecoin_id);
+      if (!price) throw new Error("sui-trusted-input-reference-unavailable");
       const family = suiClmmFamily(row.project)!;
       const capture = await fetchSuiClmmCapture(rpc, family, row.pool_id, undefined, archive);
       const snapshot = decodeSuiClmmSnapshot(capture, Math.floor(Date.now() / 1000), { poolId: row.pool_id });
       const contracts = (ACTIVE_META_BY_ID.get(row.stablecoin_id)?.contracts ?? []).filter((contract) => contract.chain === "sui" && [snapshot.pool.coinA, snapshot.pool.coinB].includes(suiCoinType(contract.address) ?? ""));
       if (contracts.length !== 1 || contracts[0].decimals == null) throw new Error("sui-tracked-input-identity-unresolved");
-      const sample = await observeSuiClmmShadowPool({ rpc, snapshot, stablecoinId: row.stablecoin_id,
-        coinTypeIn: contracts[0].address, inputDecimals: contracts[0].decimals, inputPriceUsd: price,
+      const sample = await observeSuiClmmShadowPool({ rpc: null, snapshot, stablecoinId: row.stablecoin_id,
+        coinTypeIn: contracts[0].address, inputDecimals: contracts[0].decimals, inputPriceUsd: price.price, inputPriceReference: price.reference,
         retainedTvlUsd: row.tvl_usd, generationId: `sui-clmm-shadow-${Math.floor(nowSec / 1800) * 1800}` });
+      summary.independentCheckReason ??= sample.independentCheckReason;
       throwIfAborted(signal);
       const key = `dex:sui-clmm-shadow:v1:${row.pool_id}:${row.stablecoin_id}`;
       const prior = await getCache(input.db, key, signal);
@@ -165,9 +188,12 @@ export async function collectSuiClmmShadowQuotes(input: { db: D1Database; env: D
       summary.persisted++;
     } catch (error) {
       throwIfAborted(input.signal);
+      const reason = error instanceof Error ? /^sui-[a-z0-9-]+/.exec(error.message)?.[0]?.slice(0, 180) ?? "sui-shadow-observation-failed" : "sui-shadow-observation-failed";
+      summary.reason ??= reason;
+      summary.lastFailureReason = reason;
       if (signal.aborted || budget.remainingRequests <= 0) { summary.budgetExhausted = true; break; }
       summary.failed++;
-      summary.failures.push(`${row.pool_id}:${error instanceof Error && error.message.startsWith("sui-") ? error.message : "sui-shadow-observation-failed"}`);
+      summary.failures.push(`${row.pool_id}:${error instanceof Error && error.message.startsWith("sui-") ? error.message.slice(0, 180) : reason}`);
     }
   }
   throwIfAborted(input.signal);
