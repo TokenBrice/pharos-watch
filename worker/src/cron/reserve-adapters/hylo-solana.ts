@@ -118,7 +118,7 @@ export async function fetchHyloSolanaReserves(_coin: ReserveAdapterCoin, config:
   }
   const slices = slicesFromValues(values).filter((slice) => slice.pct > 0);
   return { slices, warnings, metadata: {
-    ...notApplicableFreshnessMetadata({ proofKind: "hylo-solana-atomic-account-census", lstBreakdown, poolLiabilities: liabilities, hyusdSupply: supply, liabilityReconciliationDelta: liabilities - supply, usdcDustExcludedUsd: slices.some((slice) => slice.sourceKey === "hylo-solana:usdc-pool") ? 0 : usdcValue, exoInventoryScope: "SDK reviewed cbBTC/HYPE plus four inactive candidates; unknown activation fails closed" }),
+    ...notApplicableFreshnessMetadata({ proofKind: "hylo-solana-atomic-account-census", lstBreakdown, poolLiabilities: liabilities, hyusdSupply: supply, liabilityReconciliationDelta: liabilities - supply, usdcDustExcludedUsd: slices.some((slice) => slice.sourceKey === "hylo-solana:usdc-pool") ? 0 : usdcValue, exoInventoryScope: "SDK reviewed cbBTC/HYPE/ZEC plus three inactive candidates; unknown activation fails closed" }),
     observedBlock: census.observedBlock, totalCollateralUsd: total, ...(supply > 0 ? { collateralizationRatio: total / supply } : {}),
   } };
 }

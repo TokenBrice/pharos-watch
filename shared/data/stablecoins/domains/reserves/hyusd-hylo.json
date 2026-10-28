@@ -4,7 +4,7 @@
     {
       "name": "SOL LST pool collateral at current Hylo program state",
       "sourceKey": "hylo-solana:lst-pool",
-      "pct": 92.05801369,
+      "pct": 85.58684275143614,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Hylo SOL LST pool and underlying Solana LST protocols",
@@ -19,7 +19,7 @@
     {
       "name": "cbBTC pool collateral at current Hylo program state",
       "sourceKey": "hylo-solana:cbbtc-pool",
-      "pct": 4.55819504,
+      "pct": 8.80623600309532,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Coinbase cbBTC held by the Hylo cbBTC pool",
@@ -35,7 +35,7 @@
     {
       "name": "USDC pool collateral at current Hylo program state",
       "sourceKey": "hylo-solana:usdc-pool",
-      "pct": 1.77347232,
+      "pct": 9.604457552107162e-08,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -52,7 +52,7 @@
     {
       "name": "HYPE pool collateral at current Hylo program state",
       "sourceKey": "hylo-solana:hype-pool",
-      "pct": 1.61031895,
+      "pct": 5.60691757116242,
       "risk": "high",
       "assetClass": "cryptoasset",
       "issuerOrObligor": "Hyperliquid HYPE held by the Hylo HYPE pool",
@@ -63,57 +63,70 @@
         "concentration"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "ZEC pool collateral at current Hylo program state",
+      "sourceKey": "hylo-solana:zec-pool",
+      "pct": 3.578261552294672e-06,
+      "risk": "high",
+      "assetClass": "cryptoasset",
+      "riskFactors": [
+        "market",
+        "smart-contract",
+        "liquidity",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-20",
-    "reviewer": "OpenAI Codex current Hylo program-state Safety Score V9 curation",
+    "reviewedAt": "2026-10-28",
+    "reviewer": "OpenAI Codex Hylo ZEC pool admission review",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Hylo SDK current deployment and account layouts",
-        "url": "https://github.com/hylo-so/sdk/tree/526afa0ad28f4c872f4409b3690610ea6c051d89"
+        "label": "Hylo SDK deployment, account layouts and Pyth feed identities",
+        "url": "https://github.com/hylo-so/sdk/tree/c5f358dcf367c62ba2c97cefbe8cb76079dd1b75"
       },
       {
-        "label": "Hylo V2 multi-asset architecture",
-        "url": "https://docs.hylo.so/protocol-overview/multi-asset-architecture"
-      },
-      {
-        "label": "Hylo invariant equations",
-        "url": "https://docs.hylo.so/technical-addendum/hylo-equations"
-      },
-      {
-        "label": "Solana mainnet RPC used for account reads at finalized slot 433130492",
+        "label": "Solana mainnet getMultipleAccounts and getBlock at finalized slot 462444855, observed 2026-10-28T10:36:45.986Z",
         "url": "https://api.mainnet-beta.solana.com"
       }
     ],
-      "rationale": "At finalized Solana slot 440490236 (2026-08-20T14:28:00Z), the current Hylo SDK account graph contained two LST headers, two exogenous pairs (cbBTC and HYPE), and one USDC pair. The deployed accounts reported 227,816.804238214 SOL-equivalent LST collateral, 13.61363986 cbBTC, 4,767.397547854 HYPE, and 378,570.336855 USDC. The Pyth price paths at that slot valued those pools at $19,650,959.8427, $973,005.0004, $343,743.1663, and $378,570.3369 respectively; normalized weights are 92.05801369/4.55819504/1.61031895/1.77347232. Pool liabilities sum to 13,506,897.067133 HYUSD against the 13,506,896.782608 mint supply, a 0.284525 HYUSD accounting delta.",
-      "compositionBasis": "Current Hylo SDK account graph, finalized Solana pool and vault balances, exact HYUSD liability reconciliation, and deployed Pyth SOL/USD, BTC/USD, and HYPE/USD price paths",
-      "compositionAsOf": "2026-08-20",
+    "rationale": "At finalized Solana slot 462444855 (block time 2026-10-28T10:36:45Z; observed 2026-10-28T10:36:45.986Z), one getMultipleAccounts response covered all 33 reviewed accounts, including the complete SDK pair inventory, two LST headers and vaults, all active exogenous vaults, USDC, hyUSD supply and five Pyth price accounts. The accounts measured 226,446.085483504 jitoSOL at 1.307267444 SOL each, 21,679.335930694 hyloSOL at 1.081731677 SOL each, 41.57701554 cbBTC, 26,258.208405277 HYPE, 0.00104739 ZEC and 0.036936 USDC. Fully verified Pyth observations published at 2026-10-28T10:36:44Z valued SOL/BTC/HYPE/ZEC/USDC at $102.99443135/$81,429.7495982/$82.09281943/$1,313.43852276/$0.99969857. Gross collateral totals $38,445,551.121644445. Pool liabilities total 24,202,936.268997 hyUSD against mint supply 24,202,914.594102, a 21.674895 difference within the existing 24.202914594102 tolerance. ZEC is paused; ONYC, PST and WETH pair accounts are absent. The capture establishes held-token identity and valuation, not ZEC issuer, bridge or custody guarantees.",
+    "compositionBasis": "Single finalized Solana account census with SDK v2.0.5 layouts, derived vault identities, current LST SOL conversions, same-slot fully verified Pyth SOL/USD, BTC/USD, HYPE/USD, ZEC/USD and USDC/USD prices, and pool-liability reconciliation to the hyUSD mint",
+    "compositionAsOf": "2026-10-28",
     "scope": "full-composition",
-      "knownUnknownExposure": "No unidentified reserve exposure remains in the complete current deployment inventory: two LST pools, cbBTC and HYPE exogenous pools, and the USDC pool. The SOL-LST pool is represented at its exact program-accounted SOL-equivalent asset-class boundary rather than as stablecoin dependencies.",
+    "knownUnknownExposure": "The complete reviewed SDK inventory contains two LST headers, cbBTC/HYPE/ZEC exogenous pools and USDC; the three other SDK candidates remain absent. ZEC issuer, bridge and underlying custody are unverified and omitted from its classification. Its observed paused state remains adverse. Identified cryptoasset pools have no tracked stablecoin dependency.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "SOL LST pool collateral at current Hylo program state",
-        "pct": 92.05801369,
+        "pct": 85.58684275143614,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The measured SOL-equivalent LST collateral is an exogenous cryptoasset pool rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 1,
         "reserveName": "cbBTC pool collateral at current Hylo program state",
-        "pct": 4.55819504,
+        "pct": 8.80623600309532,
         "disposition": "untracked-exogenous-asset",
         "rationale": "cbBTC is an exogenous cryptoasset and has no canonical tracked stablecoin ID."
       },
       {
         "reserveIndex": 3,
         "reserveName": "HYPE pool collateral at current Hylo program state",
-        "pct": 1.61031895,
+        "pct": 5.60691757116242,
         "disposition": "untracked-exogenous-asset",
         "rationale": "HYPE is an exogenous cryptoasset and has no canonical tracked stablecoin ID."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "ZEC pool collateral at current Hylo program state",
+        "pct": 3.578261552294672e-06,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "The SDK identifies this exact mint as ZEC collateral. It is an exogenous cryptoasset without a tracked stablecoin ID; issuer, bridge and underlying custody are unverified."
       }
     ]
   }

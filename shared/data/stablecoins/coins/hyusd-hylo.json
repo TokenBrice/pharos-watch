@@ -56,13 +56,22 @@
           "pool": "hype-pool",
           "name": "HYPE pool collateral",
           "priceAddress": "hyperliquid"
+        },
+        {
+          "pair": "Atssq1iqXhUrPX1qV9e2UyQCWdeAd6DXQrccK9eu3Bc",
+          "vault": "AHF55B4PYC3YFtzsKdaAPefqm4fdaxL3fyRJFAXQKqTW",
+          "mint": "A7bdiYdS5GjqGFtxf17ppRHtDKPkkRqbKtR27dxvQXaS",
+          "oracle": "J6PtzWsBtLcuMM7cFS86XVRH4vQfDMcGmBUzSRCMrWMa",
+          "feedId": "be9b59d178f0d6a97ab4c343bff2aa69caa1eaae3e9048a65788c529b125bb24",
+          "pool": "zec-pool",
+          "name": "ZEC pool collateral",
+          "priceAddress": "zcash"
         }
       ],
       "inactiveExoPairs": [
         "J1KqodmuXBdRZZbiHV9LDh3uYDz1QZ3hzsWYXLraHJWZ",
         "ANbqWKsgtWxoaaYQPyAfZWsMxptmzaFJ6RJDW7yXvEf6",
-        "HRLWxMPgaBiZ8M37Z9MaTN1JQcQqwc2VoRojyQT2HsfZ",
-        "Atssq1iqXhUrPX1qV9e2UyQCWdeAd6DXQrccK9eu3Bc"
+        "HRLWxMPgaBiZ8M37Z9MaTN1JQcQqwc2VoRojyQT2HsfZ"
       ]
     }
   },

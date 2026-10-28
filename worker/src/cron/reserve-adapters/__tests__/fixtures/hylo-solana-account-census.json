@@ -1,0 +1,648 @@
+{
+  "_capture": "<!-- captured-at: 2026-10-28T10:36:45Z -->",
+  "source": "https://api.mainnet-beta.solana.com",
+  "method": "POST getMultipleAccounts",
+  "observedAt": "2026-10-28T10:36:45.986Z",
+  "sdk": "https://github.com/hylo-so/sdk/tree/c5f358dcf367c62ba2c97cefbe8cb76079dd1b75",
+  "request": {
+    "jsonrpc": "2.0",
+    "id": 7,
+    "method": "getMultipleAccounts",
+    "params": [
+      [
+        "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+        "9cd2sAfbBvKs4SX9YKo4dcjwP3TgTVQ8dT5koshGcDND",
+        "9Mb2Mt76AN7eNY3BBA4LgfTicARXhcEEokTBfsN47noK",
+        "5YMkXAYccHSGnHn9nob9xEvv6Pvka9DZWH7nTbotTu9E",
+        "7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE",
+        "CMNPACEDebyvNJDgBxRc5fbScF8kmx52ZPBY4Cu4wuwS",
+        "5ykRvDpEXwKEdoE6yfZ45zeuZ62CcRQRUoZoye4tTJd7",
+        "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v",
+        "J1KqodmuXBdRZZbiHV9LDh3uYDz1QZ3hzsWYXLraHJWZ",
+        "ANbqWKsgtWxoaaYQPyAfZWsMxptmzaFJ6RJDW7yXvEf6",
+        "HRLWxMPgaBiZ8M37Z9MaTN1JQcQqwc2VoRojyQT2HsfZ",
+        "Atssq1iqXhUrPX1qV9e2UyQCWdeAd6DXQrccK9eu3Bc",
+        "8mgw2TsNxTMndWPyswLELw3V2tPrPvtqS7Ex9RyiGhML",
+        "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "Hrdm1Q417g1kChwzZbdV1KhyPVGgzWvKnCSdafpqXNy",
+        "APgzQGGdv2qCgBkX6aHVkrGePtBVDDg68GiqaM7rmtf5",
+        "42GzNWvZ1H1hwXaBZ8mbeVZaSEgh6zMm8BABdS3v1BEB",
+        "98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g",
+        "FWPLy9vhx2VRto91bcqh7f8xSUd285Sz2N12H6JC29rr",
+        "9dAoWJ5ua81c43ntstN4xyg3Uo9Zt93x7BjCxSc27V6V",
+        "A7bdiYdS5GjqGFtxf17ppRHtDKPkkRqbKtR27dxvQXaS",
+        "AHF55B4PYC3YFtzsKdaAPefqm4fdaxL3fyRJFAXQKqTW",
+        "J6PtzWsBtLcuMM7cFS86XVRH4vQfDMcGmBUzSRCMrWMa",
+        "FgLfLhT3QoPWynZ53L3KUUsPhspWbdPUfMtmPfezXci6",
+        "8Ri52tZXZehgAHKbx1MQiXhWXXkVsvAL9op6C5HytDKF",
+        "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+        "2Y3TLkdGoJwbdizxqrZmQwNLYJyGKTgzC4tbetbkvQ43",
+        "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb",
+        "GMC2Q4ukPjiMjnhmxpZHDThQ4znC8oBAdveL62Tcu9rK",
+        "hy1oXYgrBW6PVcJ4s6s2FKavRdwgWTXdfE69AxT7kPT",
+        "7VNBQCDKt4cxLWW51suV8a6VAYC4R66CfyySiYJek7Rj",
+        "hy1oDeVCVRDGkxS26qLVDvRhDpZGfWJ6w9AMvwMegwL",
+        "6HAuqASbHEh4w4REJEUUUCginTLfj1kwCh215ZLtMkrT"
+      ],
+      {
+        "commitment": "finalized",
+        "encoding": "base64"
+      }
+    ]
+  },
+  "response": {
+    "jsonrpc": "2.0",
+    "result": {
+      "context": {
+        "apiVersion": "4.3.2",
+        "slot": 462444855
+      },
+      "value": [
+        {
+          "data": [
+            "AgAAAJboSLErPFG0r4KppeEOEUaMcT8QO0UPBS+hYOJefbPv",
+            "base64"
+          ],
+          "executable": true,
+          "lamports": 1141440,
+          "owner": "BPFLoaderUpgradeab1e11111111111111111111111",
+          "rentEpoch": 18446744073709552000,
+          "space": 36
+        },
+        {
+          "data": [
+            "cqGp0syvla4AT1UHmALpfRGhuYtazRZ0YjHoUV5EmPnFh2dIq4otnwtQMCbSihAp/YD+P3jebEnurh5uk75mv4DfO/YHBKLEfCOU/86i2TyODRztHJWZ1Cw0Bj1d/6RpcxPo6rnUhZJDdzccdPhuoYvxf7FgM4RSqmP63KzVox+zrPVLpS6IrTmDTe+d0IP2jD/aTO2kACtvMlis10qT4iosQWntnRAi7zmk374DxOESGgHjNC0W5hVRxXU05puCnM+mTfQZgkb//v7//wAKAAAAAAAAAAoAAAAAAAAA/B4AAAAAAAAA/DIAAAAAAAAA/B4AAAAAAAAA/GQAAAAAAAAA/GQAAAAAAAAA/DIAAAAAAAAA/JABAAAAAAAA/AAAAAAAAAAA/CADAAAAAAAA/C4EAAAAAAAAjHpb/o8iAQD3LgQAAAAAAAC+lSy4eBIAAPpcw1v/AAAAAPoAlDV3AAAAAPf0AQAAAAAAAPwAL2hZAAAAAPeCAAAAAAAAAP6AlpgAAAAAAPdbsRWwDdII6qyfKmvtWLaGyH3c9S5trfFYcCJDMhaezQoAAAAAAAAA/MJhHsr4EgAA+kBCDwAAAAAA90BCDwAAAAAA94CEHgAAAAAA90BCDwAAAAAA9wAAAAAAAAAAAAAAAAAAAAAAAAD6AAAAAAAAAAAAAAAAAA==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 4447440,
+          "owner": "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+          "rentEpoch": 18446744073709552000,
+          "space": 511
+        },
+        {
+          "data": [
+            "AQAAAP//////////WU+dFgAAAAAUAWnNiMB0FQtklMaVOT9hGR98to0GEgjGFH5wkPphaCTxAAANBDFljpP/apwY8gaUU2ekGoC27LoRUQcy0DLwph5vlmUmk2/DtzpwFYES5EY5Np9gROoWxqoGOfba5fcpg9dsBoFO1Mr2ihdGcv2shgMaY+hOoV76HUS3IpP229sAFlDMnF+N5+EgkpirpvMKaO4vm5wcLf3TyXtSRlz+jUpjSg0IgERy3BXXOpxD7acpi/ZLbS3lt1ckqg+u2c8cQAZ4aNMDzpIbyxrlY3LMPVMqhKZ6NEFgcd9Jb3iFI7YqdJoGgGV2lsuN5uUx3Bj92Wd5XxoemQsw5hWYXIPPAXMiM678+Ajk+CVnlOhpwuu6Kks73yYQxpjb0B9ZJEB4GyM2DQhx9J0PlR6ssQXqGSZ1GGqm1a9G+Hx9Hk/OizLrBXLLj8UENvXZ54OizRjxb4E6e0UoXw2X3jsOXx48CM4YqQaAyg+ZgX3GhgjErFucpSKjOlkp8WvagkSkHAMWuQjt+93BmYN0cd2CoOqJ4u0brhV+SyXEEmexvknh4tyAigQLa9YmETQ6o3CIdbNtUsaqsT3yL3P6Ebt8UqzGVi3FytVKN71cAbirntajkERR+5VVGuAKU2Q2Q7YyB+IdD2dPBUXjZb7yca11NQNnVl2kDaM23ByHm7FUinr8xVqpOR4yUCjYdb0y7/GwkcY92xuOXqReqBAMECyBho9BTq8ZPm5WL3QM98oqt6jTukS2RARmqzuyUAA2ewCue0/61OzK/NFB6YMsrxCtkXSVyg8nG1spPNRwJ+pzcAftQOs5oL0Wz3eIJAyFodgEj/+eiqs2AKdb3QJ5+ky3uAqGpHsxZASKPgjDtJW+F/RUJ9ib7FuAx+JpXBhk12dD2zm+00bW5Atik5nrlbevCWIBmi8ZzukARwceQ9/A9zzw26a305wKfpFBWJjH1BBj2zDYPTdpgClprYuV9PKWz5TQbMELUmBqVOxsL+/vwx1WdwlxYAOmt19tIpEX82by80+QdCVaCn6ROow9qEPTKpydY5mq/Jl4TGbdJ5BTL8kp6bbuT9M=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 6625920,
+          "owner": "AddressLookupTab1e1111111111111111111111111",
+          "rentEpoch": 18446744073709552000,
+          "space": 824
+        },
+        {
+          "data": [
+            "AQAAAK1n66kMGdYbS8shklj+ApsTUCpTVtEx35i1Trt1Tkw1Nn0gLgMWAAAGAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1461600,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 82
+        },
+        {
+          "data": [
+            "IvEjY51+9M1bsRWwDdII6qyfKmvtWLaGyH3c9S5trfFYcCJDMhaezQHvDYtv2izrpB2hXUCV0do5Kg0vjtDGx7wPTPrIwoC1bb8H5WUCAAAAavIpAAAAAAD4////PNDhagAAAAA70OFqAAAAACZubmQCAAAArzswAAAAAAA1WZAbAAAAAAA=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1823520,
+          "owner": "rec2HHDDnjLfj4kE7VyEtFA1HPGQLK33259532cRyHp",
+          "rentEpoch": 18446744073709552000,
+          "space": 134
+        },
+        {
+          "data": [
+            "gmHCThb+iWv7/wAAAAAAAAAA/DwAAAAAAAAAYOMWAAAAAAD3SJAAAAAAAAD6AEBCDwAAAAAA9xQAAAAAAAAA/ICWmAAAAAAA9wCAYhde0VgA9wAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2094960,
+          "owner": "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+          "rentEpoch": 18446744073709552000,
+          "space": 173
+        },
+        {
+          "data": [
+            "xvp6877brTo9ZfNqq8l0MbG75MLS9uDkfKYCA0UvXWHXUBLF8Zgvh0ZsQYojPaUJtgeAodKS5lIGOqPCqcqHQ0iQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2039280,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 165
+        },
+        {
+          "data": [
+            "AQAAAJj+huiNm+Lqi8HMpIeLKYjCQPUrhCS/tA7Rot3LXhmbJxgDDGyuGgAGAQEAAABicKqKWcWUBbRShshncubNEm6bil06OFNtN/e0FOi2Zw==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 557389803855,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 82
+        },
+        null,
+        null,
+        null,
+        {
+          "data": [
+            "+/RItSh36DCHadOvWYPfRGxOvyWEAK/aEl1xwT8SxhR8+8oxPJ7yE/3////9+HiJOasrfaCWjw8GgCiujd7novnjnsZoW7CP6ZRCBb6bWdF48NaperTDQ7/yqmnKoequPpBIpleIxSmxJbskCgAAAAAAAACAlpgAAAAAAPcAL2hZAAAAAPde+Q0AAAAAAPpwkwwAAAAAAPfgJhkAAAAAAPcuBAAAAAAAAAAAAAAAAAAA+gAAAAAAAAAA+gAAAAAAAAAA/GQAAAAAAAAA/AAAAAAAAAAA/GQAAAAAAAAA/AAAAAAAAAAA/CADAAAAAAAA/ICEHgAAAAAA90BCDwAAAAAA90BCDwAAAAAA90BCDwAAAAAA9/QBAAAAAAAA/AEAgFPue6gKAPcAAAAAAAAAAPpe+Q0AAAAAAPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2707640,
+          "owner": "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+          "rentEpoch": 18446744073709552000,
+          "space": 405
+        },
+        {
+          "data": [
+            "+/RItSh36DAJHnPRelUm1Ejlia6lr+fCLNYcW2aoakJ6smIwlRTlXPz//v+LiS02AgCwuDlL+x55st2kIkwZoNpG0wx4jSTIcTEc/OYt9si0qF/hpn20TcEt5dszD3rGa3LcZYr+3w9KQVtDCgAAAAAAAACAlpgAAAAAAPcAL2hZAAAAAPf7MJ9j4AEAAPpwkwwAAAAAAPfgJhkAAAAAAPcuBAAAAAAAAEPxa3t4EgAA+nukwDwAAAAA+mQAAAAAAAAA/GQAAAAAAAAA/DIAAAAAAAAA/GQAAAAAAAAA/AAAAAAAAAAA/CADAAAAAAAA/ICEHgAAAAAA90BCDwAAAAAA90BCDwAAAAAA90BCDwAAAAAA9/QBAAAAAAAA/AAAgFPue6gKAPcAAAAAAAAAAPo5nwwAAAAAAPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 3709680,
+          "owner": "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+          "rentEpoch": 18446744073709552000,
+          "space": 405
+        },
+        {
+          "data": [
+            "AQAAAKoz6yzOpQMSoLLEk9JQue0dVo65NoiFL7Q6iHB0233zDjf1m0MAAAAIAQEAAAC4w8iB6IaECTptFFc7SwwIK5GelttHc5YkHziM1W49cw==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 210726837,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 82
+        },
+        {
+          "data": [
+            "CR5z0XpVJtRI5Ymupa/nwizWHFtmqGpCerJiMJUU5VxkqjEqscEAW4Io42Qshi7Zc93JXvFAv5wXtwpfGVxUZLJ90fcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2039280,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 165
+        },
+        {
+          "data": [
+            "IvEjY51+9M2LiS02AgCwuDlL+x55st2kIkwZoNpG0wx4jSTIcTEc/AHmLfbItKhf4aZ9tE3BLeXbMw96xmty3GWK/t8PSkFbQ8xAIe9nBwAAtG9mlwEAAAD4////PNDhagAAAAA70OFqAAAAAODVxlFmBwAAnDh6mAEAAAA1WZAbAAAAAAA=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1823520,
+          "owner": "rec2HHDDnjLfj4kE7VyEtFA1HPGQLK33259532cRyHp",
+          "rentEpoch": 18446744073709552000,
+          "space": 134
+        },
+        {
+          "data": [
+            "+/RItSh36DB44X/5z57yixXj1YMnQezngE4H1cl/Qu8z7V8FnHSSX//9//+AIXzLk8y/ST8Kh93b6md8NwjaxnPKP20MvrzFvEAkzkJ54xzDabvML68CKzgrCA4yqOaJ/yD7xTDSpgPrbNmLCgAAAAAAAACAlpgAAAAAAPcAL2hZAAAAAPdiHJ8BKgEAAPpwkwwAAAAAAPfgJhkAAAAAAPcuBAAAAAAAAAGp9014EgAA+kJIdC0AAAAA+mQAAAAAAAAA/GQAAAAAAAAA/DIAAAAAAAAA/GQAAAAAAAAA/AAAAAAAAAAA/CADAAAAAAAA/ICEHgAAAAAA90BCDwAAAAAA90BCDwAAAAAA90BCDwAAAAAA9/QBAAAAAAAA/AAAgFPue6gKAPcAAAAAAAAAAPpkgQEAAAAAAPoAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 3709680,
+          "owner": "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+          "rentEpoch": 18446744073709552000,
+          "space": 405
+        },
+        {
+          "data": [
+            "AQAAACVqTcMM5sbnJex6VtAyjPMv3s9+a6GtCO9VoKUMCdZp0fbFFhFcAgAJAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 163856339,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 82
+        },
+        {
+          "data": [
+            "eOF/+c+e8osV49WDJ0Hs54BOB9XJf0LvM+1fBZx0kl/s88VrjZTheoouS5V45mtmdgO7f4CvSwP9B9gUGbqJRB03L7fhFwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2039280,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 165
+        },
+        {
+          "data": [
+            "IvEjY51+9M2AIXzLk8y/ST8Kh93b6md8NwjaxnPKP20MvrzFvEAkzgFCeeMcw2m7zC+vAis4KwgOMqjmif8g+8Uw0qYD62zZi5ezT+kBAAAAaYujAAAAAAD4////PNDhagAAAAA70OFqAAAAAJZWiOgBAAAAe3p5AAAAAAA1WZAbAAAAAAA=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1823520,
+          "owner": "rec2HHDDnjLfj4kE7VyEtFA1HPGQLK33259532cRyHp",
+          "rentEpoch": 18446744073709552000,
+          "space": 134
+        },
+        {
+          "data": [
+            "AQAAAN22T4c56SXz3m1wLL1wawhxUxlvdxhZc9ZCpLvjIOG+yEVcylgJAAAIAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1476318946,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 82
+        },
+        {
+          "data": [
+            "h2nTr1mD30RsTr8lhACv2hJdccE/EsYUfPvKMTye8hPlcKZHSuighsKLIfTnYne0OV3UN5SL62MplrTPABylBiOZAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1488440,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 165
+        },
+        {
+          "data": [
+            "IvEjY51+9M39+HiJOasrfaCWjw8GgCiujd7novnjnsZoW7CP6ZRCBQG+m1nRePDWqXq0w0O/8qppyqHqrj6QSKZXiMUpsSW7JPQitJQeAAAARQKhAgAAAAD4////PNDhagAAAAA70OFqAAAAANx1qp4eAAAAlm7FAgAAAAA1WZAbAAAAAAA=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1823520,
+          "owner": "rec2HHDDnjLfj4kE7VyEtFA1HPGQLK33259532cRyHp",
+          "rentEpoch": 18446744073709552000,
+          "space": 134
+        },
+        {
+          "data": [
+            "AQAAAOJxrhMgMHUk9TR2IzoHT/rJxmQzdY8eCV1FL3Eyj7dvr/wGAAAAAAAGAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1066800,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 82
+        },
+        {
+          "data": [
+            "fYfZl3rKijv80UHpgyyvEK2RdJXKDycbWyk81HAn6nNwB+1A6zmgvRbPd4gkDIWh2ASP/56KqzYAp1vdAnn6TLe4CoakezFkBIo+CMO0lb4X9FQn2JvsW4DH4mlcGGTXZ0PbOb7TRtYA14zoTQAAAAD3LQQAAAAAAAB0UetNAAAAAPcuBAAAAAAAAC4EAAAAAAAANwAAAAAAAAD7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2359440,
+          "owner": "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+          "rentEpoch": 18446744073709552000,
+          "space": 211
+        },
+        {
+          "data": [
+            "AQAAAFTlniTAUaihSnsel5fw4Szfp0kCFmUxlaalEqbxZmArycACiPtEHAAJAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 3826303234,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 82
+        },
+        {
+          "data": [
+            "/NFB6YMsrxCtkXSVyg8nG1spPNRwJ+pzcAftQOs5oL1oWm0l+bxLn9yq4RWLyhJNzx4AXj3AxH5Vb3+nSE3JGvBrfJbzzQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2039280,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 165
+        },
+        {
+          "data": [
+            "AUUePdUNO3uFNgRcK3rC7CWUc+vCWuO8vh++sX1S+8e+eXhXwruGsaac0PTcoWwisNzj3eyWuEBcCPHEcDrQj9NUtd6+o5sz4PHc+gqPYiqVuLTrluhPL6HjF2cPHpbB2P0j4HUJut3t/bUWqQuRl7tQR0MlXQ43xf9dzookHu3EMZ6naP7fZEyKrpuOIYit0GvFUPv3Fsgiuc5jx3g9lS4f/NFB6YMsrxCtkXSVyg8nG1spPNRwJ+pzcAftQOs5oL12jyijo7L7UvNaWKfli1lcRMd47QEs9xqm+cI2cAxkJwbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpGiE9Byj+JADJwAKI+0QcAC4EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAADoAwAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA6AMAAAAAAAABAAAAAAAAAAAr6yLC1UQcADYeURmn/CQAAwAAAAAAAAEAAAAAAAAAAPdO5G5V4RQApItSanmLFgAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2719416388,
+          "owner": "SPoo1Ku8WFXoNDMHPsrGSTSG1Y47rzgn41SLUNakuHy",
+          "rentEpoch": 18446744073709552000,
+          "space": 611
+        },
+        {
+          "data": [
+            "fYfZl3rKijsKfpFBWJjH1BBj2zDYPTdpgClprYuV9PKWz5TQbMELUmBqVOxsL+/vwx1WdwlxYAOmt19tIpEX82by80+QdCVaCn6ROow9qEPTKpydY5mq/Jl4TGbdJ5BTL8kp6bbuT9MCg3V3QAAAAAD3LQQAAAAAAABd6nlAAAAAAPcuBAAAAAAAAC4EAAAAAAAANwAAAAAAAAD7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2359440,
+          "owner": "HYEXCHtHkBagdStcJCp3xbbb9B7sdMdWXFNj6mdsG4hn",
+          "rentEpoch": 18446744073709552000,
+          "space": 211
+        },
+        {
+          "data": [
+            "AQAAABG2xhV52+uOGtlsnfURuER0htALTgoZ6quVDd36ao8GnRIbHuWgAAAJAQAAAAAKfpFHPfNiIy6upVazxIokK5WsGPpeIhdb4cwNpWN05g==",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1461600,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 82
+        },
+        {
+          "data": [
+            "Cn6RQViYx9QQY9sw2D03aYApaa2LlfTyls+U0GzBC1LTGsIooPuMhzCl85G7m3ELidKFCkgYDGcueW7+/5lh/kb7HZ23EwAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 2039280,
+          "owner": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA",
+          "rentEpoch": 18446744073709552000,
+          "space": 165
+        },
+        {
+          "data": [
+            "AV467Vh8O+gNg1X0GNMUhyxUbhS/nVOmTn/bu4RxGdOos3f1WivHplEtw5yB6lrlVf1ag18DTuJPrLcQoujMntzQwdF5JwJ4CI+MSs1qKPypXWGjfX5ne5KOzd9GM4MCmP8KfpE3POgiWi4OxEO5TFMvGWDhRSNo/3lfsLnEiLVgGwzN/ikTRWV5Ibm8jPnfWNC0/gf21DVKIArnYlW1ZeBsCn6RQViYx9QQY9sw2D03aYApaa2LlfTyls+U0GzBC1KCUFkdDeDXiHIheTDLTql+7p6gUju1XMRL04XjXeaUaQbd9uHXZaGT2cvhRs7reawctIXtX1s3kTqM9YV+/wCpVBmg9CGuAACdEhse5aAAAC4EAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAZAAAAAAAAAAAAAAAAAAAAAABCn6RPF/t1OQJpTpqVcP1VndEUDRjiQJapBoUbpo/jrEBCn6RPF/t1OQJpTpqVcP1VndEUDRjiQJapBoUbpo/jrEQJwAAAAAAAAUAAAAAAAAAECcAAAAAAAAFAAAAAAAAAAAAABAnAAAAAAAABQAAAAAAAAAAAQ3tpbsuy7UjahH74b+/43B/i1w0JkXP412xTemrYZLuECcAAAAAAAAFAAAAAAAAAAAw9Eiv5KAAAEiOA/IargAAECcAAAAAAAAFAAAAAAAAAOlPFouCegAA7at8HuR7AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 5143440,
+          "owner": "SPMBzsVUuoHA4Jm6KunbsotaahvVikZs1JyTW6iJvbn",
+          "rentEpoch": 18446744073709552000,
+          "space": 611
+        },
+        {
+          "data": [
+            "IvEjY51+9M1Obu8PnqBjv5eIEq7D76ieT8TUJqeUwLMkUfRhMcnEcAHqoCDGHMR5cSgTRhzhU4lKlqbACyHtDPwnmNH5qenJSkFr9QUAAAAAaBwAAAAAAAD4////PNDhagAAAAA70OFqAAAAALtq9QUAAAAA2xcAAAAAAAA1WZAbAAAAAAA=",
+            "base64"
+          ],
+          "executable": false,
+          "lamports": 1823520,
+          "owner": "rec2HHDDnjLfj4kE7VyEtFA1HPGQLK33259532cRyHp",
+          "rentEpoch": 18446744073709552000,
+          "space": 134
+        }
+      ]
+    },
+    "id": 7
+  },
+  "block": {
+    "request": {
+      "jsonrpc": "2.0",
+      "id": 8,
+      "method": "getBlock",
+      "params": [
+        462444855,
+        {
+          "commitment": "finalized",
+          "transactionDetails": "none",
+          "rewards": false,
+          "maxSupportedTransactionVersion": 0
+        }
+      ]
+    },
+    "response": {
+      "jsonrpc": "2.0",
+      "result": {
+        "blockHeight": 440469443,
+        "blockTime": 1793183805,
+        "blockhash": "DrwTFYKsCH2CxohdfTWLzBvxrp1USGnBoTpJYeyxZnEq",
+        "parentSlot": 462444854,
+        "previousBlockhash": "7Z2Jx9R3P4SaJMmPp1pZ4ZM3QJqLX26xvTFug4GbdNdm"
+      },
+      "id": 8
+    }
+  },
+  "quotes": {
+    "observedAt": "2026-10-28T10:36:46.379Z",
+    "url": "https://coins.llama.fi/prices/current/coingecko:coinbase-wrapped-btc,coingecko:hyperliquid,coingecko:jito-staked-sol,coingecko:usd-coin,coingecko:zcash,solana:hy1oXYgrBW6PVcJ4s6s2FKavRdwgWTXdfE69AxT7kPT",
+    "method": "GET",
+    "status": 200,
+    "result": {
+      "coins": {
+        "coingecko:coinbase-wrapped-btc": {
+          "price": 81407.4853789283,
+          "symbol": "CBBTC",
+          "timestamp": 1793183761,
+          "confidence": 0.99
+        },
+        "coingecko:hyperliquid": {
+          "price": 82.12791399071017,
+          "symbol": "HYPE",
+          "timestamp": 1793183750,
+          "confidence": 0.99
+        },
+        "coingecko:jito-staked-sol": {
+          "price": 134.5925639423765,
+          "symbol": "JITOSOL",
+          "timestamp": 1793183223,
+          "confidence": 0.99
+        },
+        "coingecko:usd-coin": {
+          "price": 0.9993346011785548,
+          "symbol": "USDC",
+          "timestamp": 1793183761,
+          "confidence": 0.99
+        },
+        "coingecko:zcash": {
+          "price": 1314.7058624128138,
+          "symbol": "ZEC",
+          "timestamp": 1793183750,
+          "confidence": 0.99
+        },
+        "solana:hy1oXYgrBW6PVcJ4s6s2FKavRdwgWTXdfE69AxT7kPT": {
+          "decimals": 9,
+          "symbol": "hyloSOL",
+          "price": 111.11644432518644,
+          "timestamp": 1793182980,
+          "confidence": 0.99
+        }
+      }
+    }
+  },
+  "verification": {
+    "observedAt": "2026-10-28T10:36:45.986Z",
+    "slot": 462444855,
+    "blockTime": 1793183805,
+    "blockhash": "DrwTFYKsCH2CxohdfTWLzBvxrp1USGnBoTpJYeyxZnEq",
+    "feeds": {
+      "SOL": {
+        "address": "7AviUf9nL62mcxNbQGKm4nKDQnPjswo6c5MX4D57HmyE",
+        "feedId": "ef0d8b6fda2ceba41da15d4095d1da392a0d2f8ed0c6c7bc0f4cfac8c280b56d",
+        "price": 102.99443135,
+        "publishTime": 1793183804,
+        "postedSlot": 462444853,
+        "ageSeconds": 1
+      },
+      "BTC": {
+        "address": "APgzQGGdv2qCgBkX6aHVkrGePtBVDDg68GiqaM7rmtf5",
+        "feedId": "e62df6c8b4a85fe1a67db44dc12de5db330f7ac66b72dc658afedf0f4a415b43",
+        "price": 81429.7495982,
+        "publishTime": 1793183804,
+        "postedSlot": 462444853,
+        "ageSeconds": 1
+      },
+      "HYPE": {
+        "address": "9dAoWJ5ua81c43ntstN4xyg3Uo9Zt93x7BjCxSc27V6V",
+        "feedId": "4279e31cc369bbcc2faf022b382b080e32a8e689ff20fbc530d2a603eb6cd98b",
+        "price": 82.09281943,
+        "publishTime": 1793183804,
+        "postedSlot": 462444853,
+        "ageSeconds": 1
+      },
+      "ZEC": {
+        "address": "J6PtzWsBtLcuMM7cFS86XVRH4vQfDMcGmBUzSRCMrWMa",
+        "feedId": "be9b59d178f0d6a97ab4c343bff2aa69caa1eaae3e9048a65788c529b125bb24",
+        "price": 1313.43852276,
+        "publishTime": 1793183804,
+        "postedSlot": 462444853,
+        "ageSeconds": 1
+      },
+      "USDC": {
+        "address": "6HAuqASbHEh4w4REJEUUUCginTLfj1kwCh215ZLtMkrT",
+        "feedId": "eaa020c61cc479712813461ce153894a96a6c00b21ed0cfc2798d1f9a9e9c94a",
+        "price": 0.9996985700000001,
+        "publishTime": 1793183804,
+        "postedSlot": 462444853,
+        "ageSeconds": 1
+      }
+    },
+    "lsts": [
+      {
+        "header": "8Ri52tZXZehgAHKbx1MQiXhWXXkVsvAL9op6C5HytDKF",
+        "mint": "J1toso1uCk3RLmjorhTtrVwY9HJ7X8V9yYac6Y7kGCPn",
+        "vault": "2Y3TLkdGoJwbdizxqrZmQwNLYJyGKTgzC4tbetbkvQ43",
+        "poolState": "Jito4APyf642JPZPx3hGc6WWJ8zPKtRbRs4P815Awbb",
+        "amount": 226446.085483504,
+        "priceSol": 1.307267444,
+        "valueUsd": 30488987.86057238
+      },
+      {
+        "header": "GMC2Q4ukPjiMjnhmxpZHDThQ4znC8oBAdveL62Tcu9rK",
+        "mint": "hy1oXYgrBW6PVcJ4s6s2FKavRdwgWTXdfE69AxT7kPT",
+        "vault": "7VNBQCDKt4cxLWW51suV8a6VAYC4R66CfyySiYJek7Rj",
+        "poolState": "hy1oDeVCVRDGkxS26qLVDvRhDpZGfWJ6w9AMvwMegwL",
+        "amount": 21679.335930694,
+        "priceSol": 1.081731677,
+        "valueUsd": 2415345.5228324407
+      }
+    ],
+    "active": [
+      {
+        "symbol": "CBBTC",
+        "mint": "cbbtcf3aa214zXHbiAZQwf4122FBYbraNdFqgw4iMij",
+        "decimals": 8,
+        "pair": "8mgw2TsNxTMndWPyswLELw3V2tPrPvtqS7Ex9RyiGhML",
+        "vault": "Hrdm1Q417g1kChwzZbdV1KhyPVGgzWvKnCSdafpqXNy",
+        "vaultOwner": "7mxHjVnX6BdWo9Zv4t67ZSKkqpe98PNXV9Afgi9n8Cmy",
+        "leverMint": "2zCo6bUowJMvr89ajxuWsPadAqJ2F9akCkxumNsSdgsL",
+        "amount": 41.57701554,
+        "valueUsd": 3385605.96446267,
+        "liability": 2063255.6792269999,
+        "liabilityRaw": "2063255679227",
+        "paused": false
+      },
+      {
+        "symbol": "HYPE",
+        "mint": "98sMhvDwXj1RQi5c5Mndm3vPe9cBqPrbLaufMXFNMh5g",
+        "decimals": 9,
+        "pair": "42GzNWvZ1H1hwXaBZ8mbeVZaSEgh6zMm8BABdS3v1BEB",
+        "vault": "FWPLy9vhx2VRto91bcqh7f8xSUd285Sz2N12H6JC29rr",
+        "vaultOwner": "GwxovvRAGWvhpmveKmFLZeojeyfzDG3FcBTgAeWnVW1Z",
+        "leverMint": "7ga6rtE9qSb3wdEiDCpTu2kHqoGVfT52jD8ign1rYTvx",
+        "amount": 26258.208405277,
+        "valueUsd": 2155610.361169713,
+        "liability": 1279927.4589139998,
+        "liabilityRaw": "1279927458914",
+        "paused": false
+      },
+      {
+        "symbol": "ZEC",
+        "mint": "A7bdiYdS5GjqGFtxf17ppRHtDKPkkRqbKtR27dxvQXaS",
+        "decimals": 8,
+        "pair": "Atssq1iqXhUrPX1qV9e2UyQCWdeAd6DXQrccK9eu3Bc",
+        "vault": "AHF55B4PYC3YFtzsKdaAPefqm4fdaxL3fyRJFAXQKqTW",
+        "vaultOwner": "GSdzTNg5iSuBcu5qHGXKWs9FTGhjProZ1rsrEXtDrwPj",
+        "leverMint": "FgLfLhT3QoPWynZ53L3KUUsPhspWbdPUfMtmPfezXci6",
+        "oracle": "J6PtzWsBtLcuMM7cFS86XVRH4vQfDMcGmBUzSRCMrWMa",
+        "feedId": "be9b59d178f0d6a97ab4c343bff2aa69caa1eaae3e9048a65788c529b125bb24",
+        "amount": 0.00104739,
+        "valueUsd": 1.3756823743535964,
+        "liability": 0.915806,
+        "liabilityRaw": "915806",
+        "paused": true
+      }
+    ],
+    "inactive": [
+      {
+        "symbol": "ONYC",
+        "mint": "5Y8NV33Vv7WbnLfq3zBcKSdYPrk7g2KoiQoe7M2tcxp5",
+        "decimals": 9,
+        "pair": "J1KqodmuXBdRZZbiHV9LDh3uYDz1QZ3hzsWYXLraHJWZ",
+        "vault": "3fReQsdmK7KyZ6Ggpgs1ayekZCEuqCSRH8U7CCqfvsFf",
+        "vaultOwner": "2KvKxvqCpQvBqki3VetLDpMTHpUm8p5J9jUwH4unx9Yg",
+        "leverMint": "BzaYb37TkhSMW8d7Xfa1zB697NWZdRG9DGWesdiYs5qA"
+      },
+      {
+        "symbol": "PST",
+        "mint": "59obFNBzyTBGowrkif5uK7ojS58vsuWz3ZCvg6tfZAGw",
+        "decimals": 6,
+        "pair": "ANbqWKsgtWxoaaYQPyAfZWsMxptmzaFJ6RJDW7yXvEf6",
+        "vault": "Aiu6u3wBzjMon8Jn3duXxWKP9Tcv6jeH5Qyc9ikYJs9y",
+        "vaultOwner": "EFC7NRrPzgND9kRvkSGDMvL68zqezH4gURBLFXMy9M6e",
+        "leverMint": "BmQFwSYrgd8vRRCYXbqUrpQ4vDaKmSYBMTGpKUorxziX"
+      },
+      {
+        "symbol": "WETH",
+        "mint": "7vfCXTUXx5WJV5JADk17DUJ4ksgau7utNKj4b963voxs",
+        "decimals": 8,
+        "pair": "HRLWxMPgaBiZ8M37Z9MaTN1JQcQqwc2VoRojyQT2HsfZ",
+        "vault": "64hai7zW52f3qnAJGURu51pKqp4nfi4ap78LLwJforJu",
+        "vaultOwner": "E5r4Zx42eJDogk2Pi6HGLpzDXB7XKPoDHrhYauYsvrrn",
+        "leverMint": "FZzTUcH4Zf7A9QbmZw2kkh9K4ZGq7z8VV5vQj8s2RPXp"
+      }
+    ],
+    "usdcAmount": 0.036936,
+    "hyusdSupply": 24202914.594102,
+    "poolLiabilities": 24202936.268997,
+    "liabilityDelta": 21.674895,
+    "tolerance": 24.202914594101998,
+    "rows": [
+      {
+        "pool": "lst-pool",
+        "valueUsd": 32904333.38340482,
+        "pct": 85.58684275143614
+      },
+      {
+        "pool": "cbbtc-pool",
+        "valueUsd": 3385605.96446267,
+        "pct": 8.80623600309532
+      },
+      {
+        "pool": "usdc-pool",
+        "valueUsd": 0.03692486638152,
+        "pct": 9.604457552107162e-8
+      },
+      {
+        "pool": "hype-pool",
+        "valueUsd": 2155610.361169713,
+        "pct": 5.60691757116242
+      },
+      {
+        "pool": "zec-pool",
+        "valueUsd": 1.3756823743535964,
+        "pct": 0.000003578261552294672
+      }
+    ],
+    "totalCollateralUsd": 38445551.121644445
+  }
+}
