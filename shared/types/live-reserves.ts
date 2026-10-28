@@ -122,8 +122,12 @@ export type ReserveSyncAdapterReliability = z.infer<typeof ReserveSyncAdapterRel
 export const ReserveFeedReviewSchema = /* @__PURE__ */ (() => z.object({
   stablecoinId: z.string().min(1),
   adapterKey: z.enum(LIVE_RESERVE_ADAPTER_KEYS),
-  failureCategory: z.string().min(1),
+  failureCategory: z.enum([
+    "upstream-http", "parser-drift", "parse-failure", "geo-restricted-egress",
+    "validation", "corroboration-mismatch", "schema-shape", "unknown",
+  ]),
   warningCodes: z.array(z.string().min(1)),
+  /** Legacy wire name; the entire error must match, never just a prefix. */
   errorPrefix: z.string().min(1).nullable(),
   owner: z.string().trim().min(1),
   reason: z.string().trim().min(1),

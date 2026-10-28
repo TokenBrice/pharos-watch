@@ -45,7 +45,7 @@ Edit `RESERVE_FEED_REVIEWS` in `worker/src/lib/reserve-feed-reviews.ts`:
 - Keep the exact configured stablecoin and adapter identity; only independent or static-validated feeds are eligible for operational review.
 - Record an accountable owner, specific reason, HTTPS evidence URLs, and valid `evidenceDate` values no later than `reviewedAt`. The review date must not be future-dated.
 - Set `expiresAt > reviewedAt` with `expiresAt - reviewedAt <= RESERVE_FEED_REVIEW_MAX_AGE_SEC` (14 days, in `shared/lib/status-thresholds.ts`).
-- Match the observed failure category, exact warning-code set, and error prefix when present. Retain at least warning codes or an error prefix; do not broaden them to acknowledge new failures. Timeouts, exhausted run budgets, uncertain writes, and future portfolio clocks are not excused by an existing stale-source review.
+- Match the category, exact warning-code set and full error text (legacy `errorPrefix`, null matches only null). Require warning codes or an error; never broaden a cause. Timeout/network, storage and budget categories are ineligible; uncertain writes, unreadable circuit history and future portfolio clocks remain unacknowledged.
 - Leave stale/erroring evidence quarantined. Do not rewrite source timestamps, admit an unreviewed report, raise source-age ceilings, or turn the review into scoring-grade evidence.
 
 Run the owning registry and status suites for any renewal, review the changed evidence, and deploy the approved registry before expiry through the normal release process. Never mutate production review state or reset leases/checkpoints as a renewal shortcut.

@@ -87,6 +87,29 @@ describe("ChinaAMC disclosed pooled fund holdings", () => {
     expect(() => parseChinaamcHoldings(payload, now)).toThrow("duplicate-holding-row");
   });
 
+  it("rejects the identical issuer positions observed on 2026-10-28", () => {
+    // GET https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsByFundId?fundId=USDDMMF&groupBy=none
+    // Observed 2026-10-28T09:50:42Z; raw SHA-256 422bc8635c01086e57cd3c001599341b7b333f83975ac98b3bb6991debaf6e51.
+    // Rows 44/45 of 64 (100.042% total); omitted other rows and presentation fields, retained issuer identity and quantities.
+    const duplicateFixture = {
+      success: true,
+      code: 200,
+      result: [
+        {
+          fundId: "USDDMMF", date: "20261028", securityNameEN: "SINOCHEM OFFSHORE CAPIT 2.25% 24/11/2026",
+          securityCode: "XS2408001365", isin: "XS2408001365", shares: 1350000, unitPrice: 99.86, weighting: 0.2315,
+        },
+        {
+          fundId: "USDDMMF", date: "20261028", securityNameEN: "SINOCHEM OFFSHORE CAPIT 2.25% 24/11/2026",
+          securityCode: "XS2408001365", isin: "XS2408001365", shares: 1350000, unitPrice: 99.86, weighting: 0.2315,
+        },
+      ],
+    };
+    expect(duplicateFixture.result[0]).toEqual(duplicateFixture.result[1]);
+    expect(() => parseChinaamcHoldings(duplicateFixture, Date.parse("2026-10-28T09:50:42Z") / 1000))
+      .toThrow("chinaamc-holdings-api: duplicate-holding-row");
+  });
+
   it("uses the original holdings date and rejects stale or future observations", () => {
     const date = Date.parse("2026-10-23T00:00:00+08:00") / 1000;
     expect(() => parseChinaamcHoldings(fixture, date + 5 * 86400)).not.toThrow();
