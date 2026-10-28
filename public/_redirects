@@ -209,6 +209,12 @@
 /v9-preview /safety-scores/ 301
 /v9-preview-412d818c031b7bc5 /safety-scores/ 301
 
+# Retired taxonomy URLs resolve directly to the current profile or backing hub.
+/stablecoins/dola-inverse-finance/ /stablecoin/dola-inverse-finance/ 301
+/stablecoins/dola-inverse-finance /stablecoin/dola-inverse-finance/ 301
+/stablecoins/backing/algorithmic/ /stablecoins/backing/ 301
+/stablecoins/backing/algorithmic /stablecoins/backing/ 301
+
 # ---- Dynamic rules: keep below every static rule. ----
 
 /pharosville/assets/* https://pharosville.pharos.watch/pharosville/assets/:splat 302

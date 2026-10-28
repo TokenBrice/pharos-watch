@@ -23,7 +23,7 @@ export type StatusPageActionRisk = "read-only" | "low" | "moderate" | "high";
 export type StatusPageActionResultMode = "immediate" | "queued" | "continuation";
 export type StatusPageActionAuditMode = "canonical" | "handler";
 export type StatusPageActionRunbookPath =
-  | "docs/blacklist-tracker.md"
+  | "docs/runbooks/blacklist-sync.md"
   | "docs/data-flow-map.md"
   | "docs/depeg-detection.md"
   | "docs/dews.md"
@@ -814,7 +814,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds; replay continues on scheduled syncs",
       preconditions: ["Use only when blacklist cursors require a controlled replay."],
       rollback: "No direct rollback; later syncs advance the rewound cursors.",
-      runbookPath: "docs/blacklist-tracker.md",
+      runbookPath: "docs/runbooks/blacklist-sync.md",
   }),
   adminGet({
     key: "debug-sync-state",
@@ -833,7 +833,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       preconditions: [],
       blockedBy: [],
       resultMode: "immediate",
-      runbookPath: "docs/blacklist-tracker.md",
+      runbookPath: "docs/runbooks/blacklist-sync.md",
     },
   }),
   adminAction({
@@ -854,7 +854,7 @@ const BASE_ENDPOINT_DEFINITIONS = [
       expectedDuration: "Seconds to minutes; bounded to 200 rows",
       preconditions: ["Review the dry-run candidate and resolution counts before live remediation."],
       blockedBy: ["Live mode requires configured chain RPCs."],
-      runbookPath: "docs/blacklist-tracker.md",
+      runbookPath: "docs/runbooks/blacklist-sync.md",
   }),
   adminDualModeMutation({
     key: "backfill-dews",

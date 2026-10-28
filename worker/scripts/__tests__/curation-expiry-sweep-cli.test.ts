@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { chmodSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { describe, expect, it } from "vitest";
@@ -48,6 +48,28 @@ describe("curation sweep executable workflow contract", () => {
     expect(issue.run).toContain("exit 1");
   });
 
+  it.each(["replay", "worklist", "queue", "registry", "live_withheld"])(
+    "preserves %s failure through the successful tee", (id) => {
+      const dir = mkdtempSync(join(tmpdir(), "curation-generator-"));
+      try {
+        mkdirSync(join(dir, "agents/sweep"), { recursive: true });
+        const npmPath = join(dir, "npm");
+        writeFileSync(npmPath, "#!/bin/bash\necho generator-failed\nexit 17\n");
+        chmodSync(npmPath, 0o755);
+        const output = join(dir, "outputs");
+        const result = spawnSync("bash", ["-c", stepRun(id)], {
+          cwd: dir, encoding: "utf8",
+          env: { ...process.env, PATH: `${dir}:${process.env.PATH}`, GITHUB_OUTPUT: output, CLOCK_SEC: "1" },
+        });
+        expect(result.status).toBe(17);
+        expect(readFileSync(output, "utf8")).toBe("status=17\n");
+        expect(result.stdout).toContain("generator-failed");
+      } finally {
+        rmSync(dir, { recursive: true, force: true });
+      }
+    },
+  );
+
   it("opts the scheduled capture into the current-input guard before emitting the replay clock", () => {
     const run = stepRun("capture");
     expect(run).toContain("--exact-cache-export agents/sweep/capture.raw.json");
@@ -62,29 +84,79 @@ describe("curation sweep executable workflow contract", () => {
     expect(stepRun("capture")).toContain("SELECT value FROM cache");
   });
 
-  it("retains the full expiry queue for 30 days, including an explicitly partial report", () => {
-    const upload = steps.find((step) => step.id === "queue_artifact")!;
-    const registryUpload = steps.find((step) => step.with?.path === "agents/sweep/missing-data-registry.json")!;
-    expect(upload.uses).toBe(registryUpload.uses);
+  it("retains every report and command log even when a generator fails", () => {
+    const upload = steps.find((step) => step.id === "snapshots")!;
     expect(upload.with).toMatchObject({
-      name: "safety-score-v9-expiry-queue-${{ github.run_id }}",
-      path: "agents/sweep/expiry-queue.md",
+      name: "safety-score-v9-curation-sweep-${{ github.run_id }}-${{ github.run_attempt }}",
+      path: "agents/sweep/",
       "if-no-files-found": "error",
       "retention-days": 30,
     });
-    // A partial report exits nonzero after writing; upload must not depend on queue_status.
-    expect(upload.if).toContain("!cancelled()");
-    expect(upload.if).toContain("steps.capture.outcome == 'success'");
-    expect(upload.if).toContain("hashFiles('agents/sweep/expiry-queue.md') != ''");
-    expect(upload.if).not.toContain("queue_status");
-    // The registry artifact stays independent and status-gated.
-    expect(registryUpload.if).toBe("steps.generate.outputs.registry_status == '0'");
+    expect(upload.if).toBe("always()");
     const issue = steps.find((step) => step.run?.includes("gh issue edit"))!;
     expect(steps.indexOf(upload)).toBeLessThan(steps.indexOf(issue));
-    expect(issue.run).toContain("## Evidence pre-expiry queue");
-    expect(issue.run).toContain("safety-score-v9-expiry-queue-${GITHUB_RUN_ID}");
-    expect(issue.run).toContain("actions/runs/${GITHUB_RUN_ID}");
+    expect(issue.if).toBe("always() && steps.generate.outcome == 'success'");
+    expect(issue.env?.SNAPSHOT_URL).toBe("${{ steps.snapshots.outputs.artifact-url }}");
+    expect(issue.env?.SNAPSHOT_STATUS).toBe("${{ steps.snapshots.outcome }}");
   });
+
+  function publishIssue(report: string, failedStatus?: string): { status: number | null; body: string } {
+    const dir = mkdtempSync(join(tmpdir(), "curation-issue-"));
+    try {
+      mkdirSync(join(dir, "agents/sweep"), { recursive: true });
+      for (const file of ["live-withheld.md", "expiry-queue.md", "worklist.md"]) {
+        writeFileSync(join(dir, "agents/sweep", file), report);
+      }
+      writeFileSync(join(dir, "agents/sweep/missing-data-registry.json"), JSON.stringify({ summary: {
+        openItemCount: 42, claimGroupCount: 8, compiledFactItemCount: 35,
+        supplementalScoreItemCount: 7, affectedStablecoinCount: 6,
+      } }));
+      for (const name of ["replay", "worklist", "queue", "live-withheld", "missing-data-registry"]) {
+        writeFileSync(join(dir, `agents/sweep/${name}-command.log`), `${name} diagnostic`);
+      }
+      const ghPath = join(dir, "gh");
+      writeFileSync(ghPath, '#!/bin/bash\nif [ "$2" = list ]; then echo 945; else cp "$5" "$PUBLISHED_BODY"; fi\n');
+      chmodSync(ghPath, 0o755);
+      const result = spawnSync("bash", ["-c", steps.find((step) => step.run?.includes("gh issue edit"))!.run!], {
+        cwd: dir, encoding: "utf8", env: {
+          ...process.env, PATH: `${dir}:${process.env.PATH}`, PUBLISHED_BODY: join(dir, "published.md"),
+          GITHUB_SHA: "test-sha", GITHUB_RUN_ID: "1", GITHUB_RUN_ATTEMPT: "1",
+          GITHUB_SERVER_URL: "https://github.com", GITHUB_REPOSITORY: "example/pharos",
+          SNAPSHOT_URL: "https://github.com/example/pharos/actions/runs/1/artifacts/2", SNAPSHOT_STATUS: "success",
+          REPLAY_STATUS: "0", WORKLIST_STATUS: "0", QUEUE_STATUS: "0", LIVE_WITHHELD_STATUS: "0", REGISTRY_STATUS: "0",
+          ...(failedStatus ? { [failedStatus]: "7" } : {}),
+        },
+      });
+      expect(result.stderr).toBe("");
+      return { status: result.status, body: readFileSync(join(dir, "published.md"), "utf8") };
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }
+
+  it("caps a huge single-line multibyte report at 60,000 UTF-8 bytes including its footer", () => {
+    const { status, body } = publishIssue(`## Dependencies\n${"🪙".repeat(40_000)}`);
+    expect(status).toBe(0);
+    expect(Buffer.byteLength(body, "utf8")).toBeLessThanOrEqual(60_000);
+    expect(body).not.toContain("\uFFFD");
+    expect(body).toContain("output truncated to fit the 60,000-byte issue body budget");
+    expect(body).toContain("Open task rows: **42**");
+    expect(body).toContain("Command status: replay=0, worklist=0, expiry queue=0, live-withheld=0, missing-data registry=0.");
+    expect(body.indexOf("Open task rows")).toBeLessThan(body.indexOf("Command status:"));
+    expect(body.indexOf("Command status:")).toBeLessThan(body.indexOf("Full downloadable reports"));
+    expect(body.indexOf("Full downloadable reports")).toBeLessThan(body.indexOf("## Live-withheld"));
+    expect(body.endsWith("Run: https://github.com/example/pharos/actions/runs/1\n")).toBe(true);
+  });
+
+  it.each(["REPLAY_STATUS", "WORKLIST_STATUS", "QUEUE_STATUS", "LIVE_WITHHELD_STATUS", "REGISTRY_STATUS"])(
+    "publishes diagnostics and fails the run when %s failed", (statusName) => {
+      const { status, body } = publishIssue("small report", statusName);
+      expect(status).toBe(1);
+      expect(body).toContain("## Generation failures");
+      expect(body).toContain("(status 7)");
+      expect(body).toContain("diagnostic");
+    },
+  );
 
   it("writes a labelled partial queue and exits nonzero when a required replay join is missing", () => {
     const dir = mkdtempSync(join(tmpdir(), "expiry-queue-cli-"));
@@ -94,8 +166,8 @@ describe("curation sweep executable workflow contract", () => {
       writeFileSync(replayPath, JSON.stringify({
         pipeline: { fixedInput: { clockSec: 1_793_059_200, liveReserveMap: {}, liveToFallbackCoins: [] }, evaluatedSet: { assets: [] } },
       }));
-      const result = spawnSync(resolve(root, "node_modules/.bin/tsx"),
-        ["worker/scripts/list-curation-expiry-queue.ts", "--replay", replayPath, "--output", outputPath],
+      const result = spawnSync(process.execPath,
+        ["--import", "tsx", "worker/scripts/list-curation-expiry-queue.ts", "--replay", replayPath, "--output", outputPath],
         { cwd: root, encoding: "utf8" });
       expect(result.status).toBe(1);
       expect(result.stderr).toContain("replay-field-missing:pipeline.compiledFacts.assets");

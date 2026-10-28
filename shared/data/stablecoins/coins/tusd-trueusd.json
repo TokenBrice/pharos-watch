@@ -16,7 +16,7 @@
   "proofOfReserves": {
     "type": "real-time",
     "url": "https://tusd.io/transparency",
-    "provider": "Moore CPA Limited; daily signed ISAE 3000 (Revised) reasonable-assurance reports at widget.verinumus.io, with the October 20, 2026 report reviewed. The engagement covers issued tokens and collateral at cost, not fund fair value or internal controls; management notes describe First Digital Trust redemption litigation and illiquidity.",
+    "provider": "Moore CPA Limited; daily signed ISAE 3000 (Revised) reasonable-assurance reports at widget.verinumus.io, with the October 27, 2026 report reviewed. The engagement covers issued tokens and collateral at cost, not fund fair value or internal controls; management notes describe First Digital Trust redemption litigation and illiquidity.",
     "attestorTier": "regional",
     "cadence": "daily",
     "attestorJurisdiction": "Hong Kong",

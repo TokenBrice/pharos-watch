@@ -244,33 +244,24 @@ policy, distinct from endpoint freshness and Telegram flow tolerated-context bud
 
 Status reliability, hysteresis, evaluation and probes share schema-derived `StatusHealthValue` via direct type imports from `shared/types/status/core.ts`. Health vocabulary differs from cron execution outcomes; canonical imports preserve wire values and hysteresis thresholds.
 
-**Terminal status and publication evidence are separate (R4).** `degraded` means required work was incomplete;
-it does not prove either publication or absence of publication. A completed job with only input-quality findings
-returns `ok` with `metadata.quality` (including growth capacity warnings and Bluechip partial-cache merges).
-Mixed producers can publish usable output while another required stage fails; their confirmed output clock
-advances independently of their degraded attempt. Held cohorts, failed writes, no-row attempts, retained reserve
-fallbacks and lost CAS writes cannot advance that clock. A deliberately published empty snapshot is real output.
+**Execution, publication and quality are separate (R4).** `degraded` means incomplete required work, not publication success/failure. Completed work with input findings returns `ok` plus `metadata.quality` (including growth capacity and Bluechip partial-cache warnings). Mixed producers can advance confirmed output while another required stage fails. Holds, failed writes, no-row attempts, retained reserve fallbacks and lost CAS writes never advance it; deliberately published empty snapshots do.
 `createCronResult` requires `metadata.reason: string` at compile time for every non-`ok` status, including skips.
 Direct `CronResult` producers retain the logger's runtime defense: unresolved degraded/error reasons become
 `unspecified-<status>` and warn in the Worker log. `cron_runs.degraded_reason` remains the terminal reason;
 successful-run quality reasons remain visible in status diagnostics and operator night-watch findings.
-Every retained cron run projects a nonblank `cron_runs.degraded_reason` as optional `degradedReason`.
-The admin detail summary prefers that column over legacy metadata and appends a generic reason for
-unknown jobs or column-only rows; canonical quality findings append without replacing specialized
-summaries. `degradedCrons` counts fresh degraded execution statuses only (including inheritance
+Retained nonblank `cron_runs.degraded_reason` projects as optional `degradedReason`. Admin detail prefers it over legacy metadata; generic reasons for unknown jobs/column-only rows and quality findings append to specialized summaries. `degradedCrons` counts fresh degraded execution statuses only (including inheritance
 behind neutral skips), never successful `metadata.quality` findings or legacy blacklist maintenance
 warnings. Errors and freshness remain independently evaluated.
 
-Duration-watchdog summaries assess runtime and slot-abandonment breaches independently.
-Only a validated empty string array renders `none`; absent, null, non-array or malformed-member
-evidence renders `unavailable`, preserving valid siblings. Sentinel-nested summaries retain each
-source's status and reason (or supplied error if reasonless), never presenting failure as no breach.
+Duration-watchdog runtime/slot-abandonment breaches are independent. Only validated empty string arrays mean `none`; absent/null/non-array/malformed members mean `unavailable`, preserving valid siblings. Nested sentinel summaries keep each source's status/reason (error if reasonless), never failure as no breach.
 
 Daily and weekly digest generation share `degraded` / `anthropic-circuit-open` terminals when Anthropic's circuit blocks generation. Missing Anthropic credentials are an intentional `skipped_neutral` / `missing-api-key` outcome, not a delivery-channel failure; required channel credentials still use degraded delivery accounting. Other deliberate no-work outcomes carry named neutral reasons. None of these no-generation attempts advances the confirmed output clock; the logger persists `outputPublishedAt: null` and projects the terminal reason into `degraded_reason`.
 
 V9's neutral pre-compile `v9-capture-already-accepted` requires a successful `current` publication-health read and records `captureClockSec` and `acceptedClockSec`. It inherits ordinary prior-run availability without renewing the confirmed output clock or proving this period's output; it is outside `PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS`. Workbench label: `Skipped: V10 capture already accepted`. See [canonical publication](process/report-cards-appendix.md#canonical-publication) for admission and failed reads.
 
 The [persistence appendix](#cron-metadata-persistence-budget) owns write-time byte budgets and diagnostic compaction. Consumer fields/counters retain their shape and unavailable values; persistence limits never drop evidence or prevent terminal accounting.
+
+`sync-stablecoins` stores the [depeg census](./depeg-detection.md#cron-scheduling) as `quality.depegObservation`; unavailable inputs add `depeg-observation-incomplete`, leaving execution status unchanged. If detection stops before the census, it is null; `quality.depegObservationUnavailableReason` names why.
 
 
 
@@ -937,7 +928,7 @@ Renders in the Admin Pipeline `Markets` tab next to `LiquidityHealthCard` and th
 - **Full-cache context** — original cache-wide row, missing, and confidence counts remain visible below the active tiles, including upstream assets outside the active catalog
 - **Last sync age** — how old the price-health snapshot is
 
-Distribution and confidence data comes from the latest `sync-stablecoins` cron metadata. Top-level distributions retain full-cache scope; `active` supplies catalog membership, confidence value subtotals, priced-value denominator, and reviewed missing counts. Markets and the Missing tile share acknowledgement subtraction and canonical missing-price severity, falling back to full-cache counts for legacy snapshots. Raw/acknowledged totals remain context, not alerts. The status supplement adds source-depth counts from active canonical cached assets; prices and confidence assignments are unchanged.
+Latest `sync-stablecoins` metadata owns distributions/confidence: full-cache at top level; `active` adds membership, confidence-value subtotals, priced-value denominator and reviewed missing counts. Markets/Missing share acknowledgement subtraction and canonical severity, using full-cache counts for legacy snapshots. Raw/acknowledged totals are context, not alerts. The supplement adds active canonical cached source-depth counts without changing prices/confidence.
 
 Monetary exposure fields are known subtotals. `supplyCoverage` names `complete`, `observedCount`, and `unavailableCount` over priced rows in the same scope. An unavailable supply is not measured zero; incomplete or legacy-unverified coverage must not certify full-cohort value shares or value-based severity. Explicit zero counts as observed.
 

@@ -18,7 +18,7 @@ export type SupplyCoverage = "complete" | "partial" | "unknown";
  * First Pricing Pipeline version whose published rows always carry `supplyChainGuard` when a chain was
  * excluded, so a guard-less row of a dated envelope at or above it attests full chain coverage.
  */
-export const GUARD_CAPABLE_PRICING_PIPELINE_VERSION = "6.55";
+const GUARD_CAPABLE_PRICING_PIPELINE_VERSION = "6.55";
 
 interface SupplyProvenanceSource {
   supplySource?: unknown;
@@ -27,7 +27,7 @@ interface SupplyProvenanceSource {
 }
 
 /** A chain-dropout guard whose published amount omits at least one unavailable chain. */
-export function isSupplyChainGuardPartial(guard: SupplyChainGuardProvenance): boolean {
+function isSupplyChainGuardPartial(guard: SupplyChainGuardProvenance): boolean {
   if (guard.partialCoverage === true) return true;
   return guard.status === "chains-unavailable" && guard.chains.some((chain) => chain.resolution === "unavailable");
 }
