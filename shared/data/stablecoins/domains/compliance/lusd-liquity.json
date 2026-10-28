@@ -56,7 +56,7 @@
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
     "redemptionPolicyPresent": true,
-    "notes": "Reviewed 2026-10-07. Liquity AG develops software and disclaims operation or control of the immutable V1 protocol; it is not recorded as LUSD issuerEntity. The public redemption policy concerns dollar-valued ETH less fees, not payment of one U.S. dollar by a legal issuer. No public GENIUS approval, state qualification, official application or foreign registration was identified in the checked sources. Prudential rules remain proposed; the effective September 30 Treasury SCRC rule is procedural and does not establish token authorization or general implementation effectiveness. DASP restrictions have distinct statutory timelines.",
+    "notes": "Reviewed 2026-10-07. Liquity AG develops software and disclaims operation or control of the immutable V1 protocol; it is not recorded as LUSD issuerEntity. The public redemption policy concerns dollar-valued ETH less fees, not payment of one U.S. dollar by a legal issuer. No public GENIUS approval, state qualification, official application or foreign registration was identified in the checked sources. The effective September 30 Treasury SCRC rule is procedural and does not establish token authorization or general implementation effectiveness. DASP restrictions have distinct statutory timelines.",
     "references": [
       {
         "label": "GENIUS Act: payment stablecoin definition and issuer limitation",

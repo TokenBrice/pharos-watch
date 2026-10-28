@@ -31,7 +31,7 @@
     "reserveDisclosureUrl": "https://brl1.io/como_funciona",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "The October 1, 2026 reserve report identifies BRL1 CONSORTIUM S.A. as issuer and explicitly states that it was prepared internally and has not been independently audited. Monthly reserve-report marketing does not establish a monthly independent attestation. GENIUS no-public-authorization and foreign-exception findings were refreshed on 2026-10-07; issuer pathway and foreign qualification remain unknown. Treasury section 3 and substantive federal rules are proposals; the September 30 SCRC rule is procedural. The expected general effective date remains January 18, 2027 and the general DASP restriction begins July 18, 2028. This timing field does not assert unrestricted market access under other law.",
+    "notes": "The October 1, 2026 reserve report identifies BRL1 CONSORTIUM S.A. as issuer and explicitly states that it was prepared internally and has not been independently audited. Monthly reserve-report marketing does not establish a monthly independent attestation. GENIUS no-public-authorization and foreign-exception findings were refreshed on 2026-10-07; issuer pathway and foreign qualification remain unknown. The expected general effective date remains January 18, 2027 and the general DASP restriction begins July 18, 2028. This timing field does not assert unrestricted market access under other law.",
     "references": [
       {
         "label": "BRL1 issuer reserve self-report for 2026-10-01",

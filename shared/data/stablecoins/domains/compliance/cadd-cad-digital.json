@@ -25,7 +25,7 @@
     "reserveDisclosureUrl": "https://tetradg.com/cadd-reserve-attestations/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "CADD terms identify Tetra Trust Company as issuer and CAD Digital Inc. solely as its agent. Direct redemption is at CAD1 gross per token, subject to registration, sanctions checks and the greater of CAD50 or 0.25% fee. Public monthly Baker Tilly reports are present. No qualifying public GENIUS permitted-issuer approval, state qualification, pending application or foreign registration was located for CADD/Tetra Trust in the checked sources. GENIUS issuer implementation remains proposed. This pre-effective DASP status does not establish that U.S. distribution is otherwise lawful or that every customer is eligible.",
+    "notes": "CADD terms identify Tetra Trust Company as issuer and CAD Digital Inc. solely as its agent. Direct redemption is at CAD1 gross per token, subject to registration, sanctions checks and the greater of CAD50 or 0.25% fee. Public monthly Baker Tilly reports are present. No qualifying public GENIUS permitted-issuer approval, state qualification, pending application or foreign registration was located for CADD/Tetra Trust in the checked sources. This pre-effective DASP status does not establish that U.S. distribution is otherwise lawful or that every customer is eligible.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule bulletin",
