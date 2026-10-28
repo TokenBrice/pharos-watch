@@ -12,6 +12,8 @@ const DEFAULT_ROUTES = [
   "/stablecoin/dai-makerdao/",
   "/stablecoin/fdusd-first-digital/",
   "/chains/ethereum/",
+  "/chains/solana/",
+  "/chains/base/",
   "/liquidity/",
   "/depeg/",
   "/yield/",
@@ -50,8 +52,6 @@ const GENERATION_HEADER_NAMES = ["x-safety-score-generation", "x-data-updated-at
  */
 export const UNENROLLED_SENTINEL_EXPECTATIONS = [
   { id: "profile.heading-semantics", ownerItem: "C4", reason: "enrolled-by-C4" },
-  { id: "profile.deployment-facts", ownerItem: "C3", reason: "enrolled-by-C3" },
-  { id: "safety-scores.dated-preview", ownerItem: "B1", reason: "enrolled-by-B1" },
   { id: "compliance.regime-panels", ownerItem: "B2", reason: "enrolled-by-B2" },
 ];
 
@@ -64,15 +64,23 @@ export const HISTORY_PREVIEW_PILOT_ROUTES = [
   "/stablecoin/fdusd-first-digital/",
 ];
 
+/** C3's pilot profiles: the complete `Contract addresses` fold must stay in the static HTML. */
+export const DEPLOYMENT_FOLD_PILOT_ROUTES = [
+  "/stablecoin/usdt-tether/",
+  "/stablecoin/usdc-circle/",
+];
+
 /** Route fixtures are declared here, never inferred from the live DOM. */
 export function getRouteExpectations(route) {
   const pathname = String(route ?? "").split(/[?#]/)[0].replace(/\/+$/, "") || "/";
   const normalized = `${pathname}/`;
-  if (!HISTORY_PREVIEW_PILOT_ROUTES.includes(normalized)) return null;
-  return {
-    panels: { required: ["depeg"] },
-    depegHistoryPreview: true,
-  };
+  const expectations = {};
+  if (HISTORY_PREVIEW_PILOT_ROUTES.includes(normalized)) {
+    expectations.panels = { required: ["depeg"] };
+    expectations.depegHistoryPreview = true;
+  }
+  if (DEPLOYMENT_FOLD_PILOT_ROUTES.includes(normalized)) expectations.deploymentFacts = true;
+  return Object.keys(expectations).length > 0 ? expectations : null;
 }
 
 export const SEO_RENDER_BUDGET_HELP = [
@@ -588,13 +596,42 @@ export function collectSnapshotFacts(document, options = {}) {
 
   let safetyScores = null;
   if (dataRoot) {
+    const dataText = textOf(dataRoot);
+    const caption = /Top (\d+) of (\d+) rated active stablecoins by Safety Score/.exec(dataText);
+    const gradeDates = Array.from(dataRoot.querySelectorAll("time[datetime]"))
+      .slice(0, 4)
+      .map((time) => ({ datetime: time.getAttribute("datetime"), text: normalize(time.textContent).slice(0, 80) }));
     safetyScores = {
       present: true,
       profileLinks: cards.dataRoot.profileLinks,
       factualProfileLinks: cards.dataRoot.factualProfileLinks,
       alertPresent: Boolean(dataRoot.querySelector('[role="alert"]')),
+      // B1: the dated preview is static markup, so these facts must survive an
+      // API-failure replay instead of being excused as not observed.
+      gradeDates,
+      gradesAsOf: /Grades as of \d{4}-\d{2}-\d{2}/.exec(dataText)?.[0] ?? null,
+      caption: caption ? { shown: Number(caption[1]), total: Number(caption[2]) } : null,
+      gradeBadges: Array.from(dataRoot.querySelectorAll('[aria-label^="Safety grade "]')).length,
     };
   }
+
+  const contractFolds = Array.from(document.querySelectorAll("details")).filter((details) => {
+    const summary = details.querySelector("summary");
+    return summary ? normalize(summary.textContent).startsWith("Contract addresses") : false;
+  });
+  // C3: the fold rows are plain static rows, so read their element text and
+  // ids even while the fold is closed and the dossier segment is hidden.
+  const foldTexts = contractFolds.map((fold) => textOf(fold));
+  const foldIds = contractFolds.flatMap((fold) =>
+    Array.from(fold.querySelectorAll('[id^="contract-"]')).map((row) => row.id));
+  const deploymentFold = {
+    folds: contractFolds.length,
+    rows: contractFolds.reduce((total, fold) => total + fold.querySelectorAll("li").length, 0),
+    anchorIds: foldIds.length,
+    uniqueAnchorIds: new Set(foldIds).size,
+    open: contractFolds.some((fold) => fold.hasAttribute("open")),
+    textChars: foldTexts.reduce((longest, text) => Math.max(longest, text.length), 0),
+  };
 
   const complianceHost = document.querySelector('[data-table-id="compliance-overview"]');
   const complianceOverview = complianceHost
@@ -620,6 +657,7 @@ export function collectSnapshotFacts(document, options = {}) {
     tables,
     cards,
     panels,
+    deploymentFold,
     disclosures,
     lazySections,
     internalHrefs,
@@ -675,9 +713,10 @@ function compareAssuranceAnswers(baselineSnapshot, replaySnapshot) {
 }
 
 /**
- * Wave 1 semantic sentinels. Statuses are advisory observations: only
- * unrecoverable capture failures affect the audit exit code. C1/C3/B1/B2 exact
- * expectations enroll in their own implementation, never here in advance.
+ * Wave 1 semantic sentinels plus the enrolled C1, C3 and B1 expectations.
+ * Statuses are advisory observations: only unrecoverable capture failures
+ * affect the audit exit code. B2's regime panels stay unenrolled until their
+ * owner adds the exact selector and fixtures.
  */
 /**
  * @param {{
@@ -688,7 +727,7 @@ function compareAssuranceAnswers(baselineSnapshot, replaySnapshot) {
  *   replay?: boolean,
  *   baseline?: { mobile: Record<string, any> | null } | null,
  *   sourceGeneration?: string | null,
- *   expectations?: { panels?: { required?: string[], notApplicable?: string[] } } | null,
+ *   expectations?: { panels?: { required?: string[], notApplicable?: string[] }, depegHistoryPreview?: boolean, deploymentFacts?: boolean } | null,
  * }} context
  * @returns {Array<{ id: string, status: string, reason: string | null, observedCount: number | null, sourceGeneration: string | null }>}
  */
@@ -864,6 +903,28 @@ export function evaluateSentinels({
           : sentinel("profile.static-assurance-answer", "present", null, answers.length, sourceGeneration));
       }
     }
+
+    if (expectations?.deploymentFacts) {
+      // C3: the fold is static, so its ids and raw element text must exist in
+      // the JS-disabled parse and survive hydration and an API-failure replay.
+      const rawFold = raw?.deploymentFold ?? null;
+      const mobileFold = mobile.deploymentFold ?? null;
+      if (!rawFold) {
+        results.push(sentinel("profile.deployment-facts", "not-observed", "raw-snapshot-unavailable", null, sourceGeneration));
+      } else if (rawFold.folds === 0) {
+        results.push(sentinel("profile.deployment-facts", "not-observed", "contract-fold-absent", null, sourceGeneration));
+      } else if (rawFold.rows === 0 || rawFold.textChars < 20) {
+        results.push(sentinel("profile.deployment-facts", "missing", "contract-fold-without-address-text", rawFold.rows, sourceGeneration));
+      } else if (rawFold.anchorIds === 0) {
+        results.push(sentinel("profile.deployment-facts", "missing", "contract-fold-without-anchors", 0, sourceGeneration));
+      } else if (rawFold.uniqueAnchorIds !== rawFold.anchorIds) {
+        results.push(sentinel("profile.deployment-facts", "missing", "duplicate-deployment-anchor-id", rawFold.anchorIds, sourceGeneration));
+      } else if (!mobileFold || mobileFold.folds === 0) {
+        results.push(sentinel("profile.deployment-facts", "missing", "deployment-fold-lost-after-hydration", rawFold.anchorIds, sourceGeneration));
+      } else {
+        results.push(sentinel("profile.deployment-facts", "present", null, rawFold.anchorIds, sourceGeneration));
+      }
+    }
   }
 
   if (surface === "alt-pegs") {
@@ -884,17 +945,53 @@ export function evaluateSentinels({
 
   if (surface === "safety-scores") {
     const safety = mobile.surfaces?.safetyScores ?? null;
-    if (replay) {
-      results.push(sentinel("safety-scores.card-facts", "not-observed", "api-failure-replay-no-score-seed", null, sourceGeneration));
-    } else if (!safety) {
+    // B1: the dated preview is static markup. Card facts are therefore
+    // present under an injected API failure instead of excused as unobserved.
+    if (!safety) {
       results.push(sentinel("safety-scores.card-facts", "not-observed", "safety-scores-data-section-not-found", null, sourceGeneration));
     } else if (safety.factualProfileLinks > 0) {
       results.push(sentinel("safety-scores.card-facts", "present", null, safety.factualProfileLinks, sourceGeneration));
+    } else if (replay) {
+      results.push(sentinel("safety-scores.card-facts", "not-observed", "api-failure-replay-no-score-seed", null, sourceGeneration));
     } else if (safety.alertPresent) {
       results.push(sentinel("safety-scores.card-facts", "not-observed", "report-cards-unavailable", null, sourceGeneration));
     } else {
       results.push(sentinel("safety-scores.card-facts", "not-observed", "card-facts-not-admitted", null, sourceGeneration));
     }
+
+    const evaluateDatedPreview = (candidate) => {
+      if (!candidate) return { status: "not-observed", reason: "safety-scores-data-section-not-found", count: null };
+      if (candidate.gradeDates.length === 0) return { status: "missing", reason: "grade-date-time-missing", count: null };
+      if (!candidate.gradesAsOf) return { status: "missing", reason: "grades-as-of-label-missing", count: candidate.gradeDates.length };
+      if (!candidate.caption) return { status: "missing", reason: "preview-caption-missing", count: null };
+      if (candidate.caption.shown < 1) return { status: "missing", reason: "preview-caption-without-rows", count: 0 };
+      if (candidate.caption.shown > 20) return { status: "missing", reason: "preview-row-bound-exceeded", count: candidate.caption.shown };
+      if (candidate.gradeBadges < candidate.caption.shown) {
+        return { status: "missing", reason: "preview-grade-facts-missing", count: candidate.gradeBadges };
+      }
+      return { status: "present", reason: null, count: candidate.caption.shown };
+    };
+    // The preview unmounts once an equal or newer live publication lands, so a
+    // healthy hydrated page proves it only from the JS-disabled parse of the
+    // fetched bytes. Under replay the live read fails and the preview must stay
+    // visible, which is the API-failure case this sentinel exists to catch.
+    const rawSafety = raw?.surfaces?.safetyScores ?? null;
+    let datedPreview = evaluateDatedPreview(replay ? safety : rawSafety);
+    if (!replay && raw == null) {
+      datedPreview = { status: "not-observed", reason: "raw-snapshot-unavailable", count: null };
+    } else if (replay && datedPreview.status !== "present") {
+      const baselinePreview = evaluateDatedPreview(rawSafety);
+      if (baselinePreview.status === "present") {
+        datedPreview = { status: "missing", reason: "dated-preview-lost-under-api-failure", count: datedPreview.count };
+      }
+    }
+    results.push(sentinel(
+      "safety-scores.dated-preview",
+      datedPreview.status,
+      datedPreview.reason,
+      datedPreview.count,
+      sourceGeneration,
+    ));
   }
 
   if (surface === "compliance") {

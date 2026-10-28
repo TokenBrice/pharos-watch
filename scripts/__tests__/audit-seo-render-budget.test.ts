@@ -76,7 +76,11 @@ function evaluate(snapshot: ReturnType<typeof makeSnapshot>, overrides: {
   replay?: boolean;
   baseline?: { mobile: ReturnType<typeof makeSnapshot> | null } | null;
   sourceGeneration?: string | null;
-  expectations?: { panels?: { required?: string[]; notApplicable?: string[] }; depegHistoryPreview?: boolean } | null;
+  expectations?: {
+    panels?: { required?: string[]; notApplicable?: string[] };
+    depegHistoryPreview?: boolean;
+    deploymentFacts?: boolean;
+  } | null;
 } = {}) {
   return evaluateSentinels({
     surface: overrides.surface ?? "profile",
@@ -272,7 +276,7 @@ describe("SEO render audit sentinels", () => {
         + `<table>${captionHtml}<tbody>${rowsHtml}</tbody></table>${links}</div></div></main>`;
     };
     const expectations = getRouteExpectations("/stablecoin/usdt-tether/");
-    expect(expectations).toEqual({ panels: { required: ["depeg"] }, depegHistoryPreview: true });
+    expect(expectations).toEqual({ panels: { required: ["depeg"] }, depegHistoryPreview: true, deploymentFacts: true });
     expect(getRouteExpectations("/stablecoin/usde-ethena/")).not.toBeNull();
     expect(getRouteExpectations("/stablecoin/usds-sky/")).toBeNull();
 
@@ -396,6 +400,116 @@ describe("SEO render audit sentinels", () => {
     });
   });
 
+  it("enrolls the B1 dated preview and keeps it under an API-failure replay", () => {
+    const preview = ({
+      cards = 2,
+      date = true,
+      caption = true,
+      badges = 2,
+      rowsShown = null,
+    }: { cards?: number; date?: boolean; caption?: boolean; badges?: number; rowsShown?: number | null } = {}) => {
+      const anchors = Array.from({ length: cards }, (_, index) =>
+        `<a href="/stablecoin/coin-${index}/">Coin ${index}${index < badges ? ' <span aria-label="Safety grade A">A</span>' : ""}</a>`).join("");
+      const captionText = caption
+        ? `<span>Top ${rowsShown ?? cards} of 394 rated active stablecoins by Safety Score</span>`
+        : "";
+      return "<main><h1>Safety Scores</h1>"
+        + '<section id="data" aria-label="Safety score cards">'
+        + (date ? '<a href="/datasets/scores-latest/2026-10-28.json"><time datetime="2026-10-28T07:18:26.000Z">Grades as of 2026-10-28</time></a>' : "")
+        + captionText
+        + anchors
+        + "</section></main>";
+    };
+    const url = "https://pharos.watch/safety-scores/";
+    const healthy = makeSnapshot(preview(), { url });
+    const healthyRaw = makeSnapshot(preview(), { url, mode: "raw" });
+
+    // The preview unmounts after live data lands, so the healthy page proves it
+    // from the JS-disabled parse of the fetched bytes.
+    expect(byId(evaluate(healthy, { surface: "safety-scores", raw: healthyRaw }), "safety-scores.dated-preview"))
+      .toMatchObject({ status: "present", observedCount: 2 });
+    expect(byId(evaluate(healthy, { surface: "safety-scores" }), "safety-scores.dated-preview"))
+      .toMatchObject({ status: "not-observed", reason: "raw-snapshot-unavailable" });
+    expect(byId(evaluate(healthy, { surface: "safety-scores", raw: makeSnapshot(preview({ date: false }), { url, mode: "raw" }) }), "safety-scores.dated-preview"))
+      .toMatchObject({ status: "missing", reason: "grade-date-time-missing" });
+    expect(byId(evaluate(healthy, { surface: "safety-scores", raw: makeSnapshot(preview({ caption: false }), { url, mode: "raw" }) }), "safety-scores.dated-preview"))
+      .toMatchObject({ status: "missing", reason: "preview-caption-missing" });
+    expect(byId(evaluate(healthy, { surface: "safety-scores", raw: makeSnapshot(preview({ rowsShown: 21 }), { url, mode: "raw" }) }), "safety-scores.dated-preview"))
+      .toMatchObject({ status: "missing", reason: "preview-row-bound-exceeded" });
+    expect(byId(evaluate(healthy, { surface: "safety-scores", raw: makeSnapshot(preview({ badges: 0 }), { url, mode: "raw" }) }), "safety-scores.dated-preview"))
+      .toMatchObject({ status: "missing", reason: "preview-grade-facts-missing" });
+
+    const retained = evaluate(healthy, {
+      surface: "safety-scores",
+      replay: true,
+      raw: healthyRaw,
+      baseline: { mobile: healthy },
+    });
+    expect(byId(retained, "safety-scores.dated-preview")).toMatchObject({ status: "present", observedCount: 2 });
+    expect(byId(retained, "safety-scores.card-facts")).toMatchObject({ status: "present" });
+
+    const lost = evaluate(makeSnapshot(preview({ date: false }), { url }), {
+      surface: "safety-scores",
+      replay: true,
+      raw: healthyRaw,
+      baseline: { mobile: healthy },
+    });
+    expect(byId(lost, "safety-scores.dated-preview")).toMatchObject({
+      status: "missing",
+      reason: "dated-preview-lost-under-api-failure",
+    });
+    expect(byId(lost, "safety-scores.card-facts")).toMatchObject({ status: "present" });
+  });
+
+  it("enrolls the C3 contract fold from raw element text and ids", () => {
+    const profile = ({
+      rows = 3,
+      ids = true,
+      duplicate = false,
+      fold = true,
+      label = "Contract addresses",
+    }: { rows?: number; ids?: boolean; duplicate?: boolean; fold?: boolean; label?: string } = {}) => {
+      const items = Array.from({ length: rows }, (_, index) =>
+        `<li${ids ? ` id="contract-ethereum:0xabc${index}"` : ""}>Ethereum 0xabc${index}</li>`);
+      if (duplicate) items.push(items[0]);
+      return "<main><h1>USDT (USDT)</h1>"
+        + (fold
+          ? `<details data-module-fold=""><summary>${label} (${rows})</summary><ul>${items.join("")}</ul></details>`
+          : "")
+        + "</main>";
+    };
+    const expectations = { deploymentFacts: true };
+
+    expect(makeSnapshot(profile()).deploymentFold).toMatchObject({ folds: 1, rows: 3, anchorIds: 3, uniqueAnchorIds: 3 });
+    expect(byId(evaluate(makeSnapshot(profile()), { raw: makeSnapshot(profile()), expectations }), "profile.deployment-facts"))
+      .toMatchObject({ status: "present", observedCount: 3 });
+    expect(byId(evaluate(
+      makeSnapshot(profile({ fold: false })),
+      { raw: makeSnapshot(profile({ fold: false })), expectations },
+    ), "profile.deployment-facts")).toMatchObject({ status: "not-observed", reason: "contract-fold-absent" });
+    expect(byId(evaluate(
+      makeSnapshot(profile({ ids: false })),
+      { raw: makeSnapshot(profile({ ids: false })), expectations },
+    ), "profile.deployment-facts")).toMatchObject({ status: "missing", reason: "contract-fold-without-anchors" });
+    expect(byId(evaluate(
+      makeSnapshot(profile({ duplicate: true })),
+      { raw: makeSnapshot(profile({ duplicate: true })), expectations },
+    ), "profile.deployment-facts")).toMatchObject({ status: "missing", reason: "duplicate-deployment-anchor-id" });
+    expect(byId(evaluate(
+      makeSnapshot(profile({ rows: 0 })),
+      { raw: makeSnapshot(profile({ rows: 0 })), expectations },
+    ), "profile.deployment-facts")).toMatchObject({ status: "missing", reason: "contract-fold-without-address-text" });
+    expect(byId(evaluate(
+      makeSnapshot(profile({ fold: false })),
+      { raw: makeSnapshot(profile()), expectations },
+    ), "profile.deployment-facts")).toMatchObject({ status: "missing", reason: "deployment-fold-lost-after-hydration" });
+    expect(byId(evaluate(makeSnapshot(profile()), { expectations }), "profile.deployment-facts"))
+      .toMatchObject({ status: "not-observed", reason: "raw-snapshot-unavailable" });
+    // A different fold label is not the contract fold.
+    expect(makeSnapshot(profile({ label: "Review notes" })).deploymentFold.folds).toBe(0);
+  });
+
+
   it("reports Compliance overview rows, empty rows and an unmounted overview distinctly", () => {
     const rows = makeSnapshot(
       '<main><h1>Compliance</h1><div data-table-id="compliance-overview"><table><tbody><tr><td>MiCA</td><td>Authorised</td></tr></tbody></table></div></main>',
@@ -455,13 +569,33 @@ describe("SEO render audit sentinels", () => {
     expect(sentinels.map((entry) => entry.id)).toEqual(["document.h1", "main.dom-text", "href.retention"]);
   });
 
-  it("lists later-wave expectations without evaluating them in Wave 1", () => {
+  it("lists only unenrolled later-wave expectations and evaluates the enrolled ones", () => {
     expect(UNENROLLED_SENTINEL_EXPECTATIONS.map((entry: { ownerItem: string }) => entry.ownerItem))
-      .toEqual(["C4", "C3", "B1", "B2"]);
-    const sentinels = evaluate(makeSnapshot(poolSection({ rows: 5 })));
-    expect(sentinels.map((entry) => entry.id)).not.toEqual(
-      expect.arrayContaining(UNENROLLED_SENTINEL_EXPECTATIONS.map((entry: { id: string }) => entry.id)),
+      .toEqual(["C4", "B2"]);
+    const unenrolledIds = UNENROLLED_SENTINEL_EXPECTATIONS.map((entry: { id: string }) => entry.id);
+    expect(unenrolledIds).not.toContain("safety-scores.dated-preview");
+    expect(unenrolledIds).not.toContain("profile.deployment-facts");
+
+    const plainProfile = evaluate(makeSnapshot(poolSection({ rows: 5 })));
+    expect(plainProfile.map((entry: { id: string }) => entry.id)).not.toEqual(
+      expect.arrayContaining(unenrolledIds),
     );
+    // Enrollment: the expectations now produce their own sentinels.
+    const safetyHtml =
+      '<main><h1>Safety Scores</h1><section id="data" aria-label="Safety score cards">'
+      + '<time datetime="2026-10-28T07:18:26.000Z">Grades as of 2026-10-28</time>'
+      + "<span>Top 2 of 394 rated active stablecoins by Safety Score</span>"
+      + '<a href="/stablecoin/usdt-tether/">USDT <span aria-label="Safety grade A">A</span></a>'
+      + '<a href="/stablecoin/usdc-circle/">USDC <span aria-label="Safety grade A+">A+</span></a>'
+      + "</section></main>";
+    const safety = evaluate(
+      makeSnapshot(safetyHtml, { url: "https://pharos.watch/safety-scores/" }),
+      {
+        surface: "safety-scores",
+        raw: makeSnapshot(safetyHtml, { url: "https://pharos.watch/safety-scores/", mode: "raw" }),
+      },
+    );
+    expect(byId(safety, "safety-scores.dated-preview")).toMatchObject({ status: "present", observedCount: 2 });
   });
 
   it("records capture failures as not-observed and propagates observed generation", () => {
@@ -627,6 +761,28 @@ describe("SEO render audit API-failure replay", () => {
       expect(fake.fallback).toHaveBeenCalledTimes(1);
       expect(fake.fulfill).not.toHaveBeenCalled();
     }
+  });
+
+  it("blocks both B1 score-seed reads and follows an API-base override", async () => {
+    const failures = makeFailures();
+    const intentional = { replayUrls: new Set<string>() };
+    const handler = createApiFailureReplayHandler({ origin: "https://staging.example.test", failures, intentional });
+
+    for (const url of [
+      "https://staging.example.test/_site-data/report-cards/v9-table",
+      "https://staging.example.test/_site-data/stablecoins",
+      "https://staging.example.test/api/report-cards/v9-table",
+    ]) {
+      const fake = makeFakeRoute(url);
+      await handler(fake.route);
+      expect(fake.fulfill, url).toHaveBeenCalledWith(expect.objectContaining({ status: 503 }));
+    }
+    expect(intentional.replayUrls.size).toBe(3);
+
+    const foreign = makeFakeRoute("https://api.example.test/_site-data/stablecoins");
+    await handler(foreign.route);
+    expect(foreign.fallback).toHaveBeenCalledTimes(1);
+    expect(foreign.fulfill).not.toHaveBeenCalled();
   });
 
   it("parses already-fetched bytes in a JS-disabled page with every request blocked before content", async () => {
@@ -942,6 +1098,9 @@ describe("SEO render audit CLI and report", () => {
     expect(isReplayEligibleRoute("/")).toBe(false);
     expect(isReplayEligibleRoute("/api/reference/")).toBe(false);
     expect(parseSeoRenderBudgetArgs([]).routes).toEqual(expect.arrayContaining(["/alt-pegs/", "/compliance/"]));
+    expect(parseSeoRenderBudgetArgs([]).routes).toEqual(
+      expect.arrayContaining(["/chains/ethereum/", "/chains/solana/", "/chains/base/"]),
+    );
   });
 
   it("adds capture, sentinel, href-loss, failure and injection counters to the text report", () => {

@@ -7,6 +7,8 @@ import { buildContractDeploymentAnchor } from "../../src/lib/contract-deployment
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
+  buildCompliancePanelExpectation,
+  buildSafetyScoresPreviewExpectation,
   collectSeoStaticCheckResult,
   findPublishedArchiveContinuityErrors,
 } from "../ci/check-seo-static.mjs";
@@ -144,12 +146,19 @@ async function writeSitemap(root: string, routes: string[]) {
   );
 }
 
-function collectFixtureSeoResult(root: string) {
+function collectFixtureSeoResult(
+  root: string,
+  options: {
+    safetyScoresPreviewExpectation?: unknown;
+    compliancePanelExpectation?: unknown;
+  } = {},
+) {
   return collectSeoStaticCheckResult({
     outDir: root,
     enforceGooglePreviewDirectives: false,
     enforceSnippetQuality: false,
     enforceStructuredDataMatrix: false,
+    ...options,
   });
 }
 
@@ -805,5 +814,355 @@ describe("contract deployment surfaces", () => {
     expect(result.errors).toContain(
       "/chains/solana/: complete profile directory missing, so contract table overflow has no destination",
     );
+  });
+});
+
+type SafetyPreviewExpectation = {
+  status: "ok";
+  preview: {
+    snapshotDate: string;
+    publishedAtSec: number;
+    publishedAtIso: string;
+    eligibleRatedCount: number;
+    rows: { id: string; href: string; grade: string; score: number }[];
+  };
+};
+
+const SAFETY_EXPECTATION = buildSafetyScoresPreviewExpectation() as SafetyPreviewExpectation;
+const SAFETY_PREVIEW = SAFETY_EXPECTATION.preview;
+
+/** One preview card, as the exported markup carries it. */
+function safetyPreviewCard(row: SafetyPreviewExpectation["preview"]["rows"][number]) {
+  return `<a href="${row.href}" title="${row.id}"><div class="pharos-card-shell"><div>`
+    + `<div><span class="truncate">${row.id} Stablecoin</span><span>SYM</span></div>`
+    + `<span data-slot="badge" aria-label="Safety grade ${row.grade}">${row.grade}</span>`
+    + `<div><span class="pharos-numeric">${row.score}/100</span></div>`
+    + "</div></div></a>";
+}
+
+/** The dated results region; React separators/scripts stay in the fixture on purpose. */
+function safetyPreviewRegion({
+  rows = SAFETY_PREVIEW.rows,
+  caption = `Top <!-- -->${SAFETY_PREVIEW.rows.length}<!-- --> of <!-- -->${SAFETY_PREVIEW.eligibleRatedCount}<!-- --> rated active stablecoins by Safety Score`,
+  datetime = SAFETY_PREVIEW.publishedAtIso,
+  dateText = SAFETY_PREVIEW.snapshotDate,
+  omitTime = false,
+  extraCards = "",
+  extraHtml = "",
+  regionCount = 1,
+}: {
+  rows?: SafetyPreviewExpectation["preview"]["rows"];
+  caption?: string;
+  datetime?: string;
+  dateText?: string;
+  omitTime?: boolean;
+  extraCards?: string;
+  extraHtml?: string;
+  regionCount?: number;
+} = {}) {
+  const region = `<section id="data" aria-label="Safety score cards" tabindex="-1">`
+    + '<div class="mb-3 flex flex-wrap">'
+    + (omitTime
+      ? ""
+      : `<a href="/datasets/scores-latest/${SAFETY_PREVIEW.snapshotDate}.json"><time datetime="${datetime}">Grades as of <!-- -->${dateText}</time></a>`)
+    + `<span>${caption}</span></div>`
+    + `<div class="grid">${rows.map(safetyPreviewCard).join("")}${extraCards}</div>${extraHtml}</section>`;
+  return `${region}${Array.from({ length: regionCount - 1 }, () => region).join("")}`;
+}
+
+async function writeSafetyScoresPage(root: string, extraMain: string) {
+  await writeBaselinePages(root, ["/safety-scores/"]);
+  await writePage(root, "/safety-scores/", { h1: "Safety Scores", extraMain });
+  await writeSitemap(root, ["/", "/stability-index/", "/safety-scores/"]);
+}
+
+describe("safety scores dated preview", () => {
+  it("projects the expected preview from the committed dataset instead of an inventory", () => {
+    expect(SAFETY_EXPECTATION.status).toBe("ok");
+    expect(SAFETY_PREVIEW.rows.length).toBeGreaterThan(0);
+    expect(SAFETY_PREVIEW.rows.length).toBeLessThanOrEqual(20);
+    expect(SAFETY_PREVIEW.eligibleRatedCount).toBeGreaterThanOrEqual(SAFETY_PREVIEW.rows.length);
+    expect(SAFETY_PREVIEW.publishedAtIso).toBe(new Date(SAFETY_PREVIEW.publishedAtSec * 1000).toISOString());
+    expect(SAFETY_PREVIEW.rows.every((row) => row.href === `/stablecoin/${row.id}/`)).toBe(true);
+    const scores = SAFETY_PREVIEW.rows.map((row) => row.score);
+    expect(scores).toEqual([...scores].sort((left, right) => right - left));
+  });
+
+  it("accepts exactly one dated results region with the projected facts", async () => {
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(root, safetyPreviewRegion());
+
+    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+    expect(result.errors).toEqual([]);
+  });
+
+  it("counts only the rendered region when Next streams a hidden copy", async () => {
+    const root = await makeOutDir();
+    const region = safetyPreviewRegion();
+    // Next streams the resolved client render into a hidden segment that
+    // hydration swaps in; it is not a second visible result set.
+    await writeSafetyScoresPage(root, `${region}<div hidden id="S:0">${region}</div>`);
+
+    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+    expect(result.errors).toEqual([]);
+  });
+
+  it("rejects duplicate rendered results regions, a missing grade date and a slice caption", async () => {
+    const cases: Array<[string, string, string]> = [
+      [
+        "duplicate",
+        safetyPreviewRegion({ regionCount: 2 }),
+        'expected exactly one rendered Safety Scores results region (aria-label "Safety score cards"), found 2',
+      ],
+      ["time", safetyPreviewRegion({ omitTime: true }), "must carry exactly one <time> grade date (found 0)"],
+      ["datetime", safetyPreviewRegion({ datetime: "2026-01-01T00:00:00.000Z" }), "is not the publication clock"],
+      ["datetext", safetyPreviewRegion({ dateText: "2026-10-01" }), `preview <time> does not carry "Grades as of ${SAFETY_PREVIEW.snapshotDate}"`],
+      [
+        "caption",
+        safetyPreviewRegion({ caption: `Top ${SAFETY_PREVIEW.rows.length} of ${SAFETY_PREVIEW.rows.length} rated active stablecoins by Safety Score` }),
+        "preview caption reports Top",
+      ],
+    ];
+    for (const [name, extraMain, expected] of cases) {
+      const root = await makeOutDir();
+      await writeSafetyScoresPage(root, extraMain);
+      const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+      expect(result.errors, `${name}: ${result.errors.join(" | ")}`).toContainEqual(expect.stringContaining(expected));
+    }
+  });
+
+  it("reports the exact grade, score and href mismatches", async () => {
+    const [first] = SAFETY_PREVIEW.rows;
+    const cases: Array<[string, string, string]> = [
+      [
+        "grade",
+        safetyPreviewRegion().replace(`aria-label="Safety grade ${first.grade}"`, 'aria-label="Safety grade B-"'),
+        `preview card ${first.href} carries "B-" grade label, expected the projected "${first.grade}"`,
+      ],
+      [
+        "score",
+        safetyPreviewRegion().replace(`${first.score}/100`, `${first.score + 1}/100`),
+        `preview card ${first.href} does not carry the projected ${first.score}/100 score`,
+      ],
+      ["missing", safetyPreviewRegion({ rows: SAFETY_PREVIEW.rows.slice(1) }), `preview omits projected profile links: ${first.href}`],
+      [
+        "unexpected",
+        safetyPreviewRegion({ extraCards: safetyPreviewCard({ id: "not-projected", href: "/stablecoin/not-projected/", grade: "C", score: 51 }) }),
+        "preview renders profile links outside the projected top rows: /stablecoin/not-projected/",
+      ],
+    ];
+    for (const [name, html, expected] of cases) {
+      const root = await makeOutDir();
+      await writeSafetyScoresPage(root, html);
+      const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+      expect(result.errors, name).toContainEqual(expect.stringContaining(expected));
+    }
+  });
+
+  it("fails when the preview facts exist only inside RSC script strings", async () => {
+    const root = await makeOutDir();
+    const flight = JSON.stringify({
+      caption: `Top ${SAFETY_PREVIEW.rows.length} of ${SAFETY_PREVIEW.eligibleRatedCount} rated active stablecoins by Safety Score`,
+      rows: SAFETY_PREVIEW.rows.map((row) => `${row.href} ${row.grade} ${row.score}/100`),
+    });
+    await writeSafetyScoresPage(
+      root,
+      `<script>self.__next_f.push(${flight})</script><script type="application/ld+json">{"@type":"Dataset"}</script>`,
+    );
+
+    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('expected exactly one rendered Safety Scores results region (aria-label "Safety score cards"), found 0'),
+    );
+  });
+
+  it("names an unavailable projection instead of inventing preview facts", async () => {
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(root, safetyPreviewRegion());
+
+    const result = collectFixtureSeoResult(root, {
+      safetyScoresPreviewExpectation: { status: "unavailable", reason: "display-projection-missing" },
+    });
+    expect(result.errors).toContainEqual(
+      expect.stringContaining("Safety Scores dated preview expectation is unavailable (display-projection-missing)"),
+    );
+  });
+
+  it("withholds the expectation when the committed projection is inconsistent", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "pharos-preview-source-"));
+    roots.push(root);
+    const datasetDir = path.join(root, "datasets");
+    const coinDir = path.join(root, "coins");
+    await mkdir(path.join(datasetDir, "scores-latest"), { recursive: true });
+    await mkdir(coinDir, { recursive: true });
+    await writeFile(path.join(coinDir, "coin-a.json"), JSON.stringify({ id: "coin-a", status: "active" }));
+    await writeFile(
+      path.join(root, "current.ts"),
+      'export const PUBLIC_DATASET_CURRENT_DATE = "2026-10-28";\n',
+    );
+
+    const row = (id: string, overrides: Record<string, unknown> = {}) => ({
+      stablecoinId: id,
+      ratingStatus: "rated",
+      safetyScore: 80,
+      safetyGrade: "A-",
+      ...overrides,
+    });
+    const dataset = (rows: unknown[], overrides: Record<string, unknown> = {}) => ({
+      _meta: {
+        methodologyLabel: "safety-score v10.36 | dews v6.38 | liquidity v6.98",
+        displayProjection: {
+          version: 1,
+          snapshotDate: "2026-10-28",
+          capturedAtSec: 1793174453,
+          sourceSnapshotPath: "/api/snapshots/2026-10-28.json",
+          safety: {
+            identity: { methodologyVersion: "10.36" },
+            asOfSec: 1793171906,
+            publishedAtSec: 1793171906,
+            completeness: { expectedCount: 3, ratedCount: 1, notRatedCount: 0, pipelineGapCount: 0 },
+            ...overrides,
+          },
+        },
+      },
+      rows,
+    });
+    const buildExpectation = async (payload: unknown) => {
+      await writeFile(path.join(datasetDir, "scores-latest", "2026-10-28.json"), JSON.stringify(payload));
+      return buildSafetyScoresPreviewExpectation({
+        currentModulePath: path.join(root, "current.ts"),
+        datasetsDir: datasetDir,
+        coinDataDir: coinDir,
+        gradePolicyPath: "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+      });
+    };
+
+    expect(await buildExpectation(dataset([row("coin-a"), row("coin-a")])))
+      .toEqual({ status: "unavailable", reason: "duplicate-dataset-row:coin-a" });
+    expect(await buildExpectation(dataset([row("coin-a")], { completeness: { expectedCount: 2, ratedCount: 2, notRatedCount: 0, pipelineGapCount: 0 } })))
+      .toEqual({ status: "unavailable", reason: "completeness-mismatch" });
+    expect(await buildExpectation(dataset([row("coin-a", { safetyGrade: "B+" })])))
+      .toEqual({ status: "unavailable", reason: "no-eligible-rated-rows" });
+    // A dataset smaller than the row bound yields a smaller expectation.
+    const notRated = row("coin-b", { ratingStatus: "not-rated", safetyScore: null, safetyGrade: "NR" });
+    const small = await buildExpectation(dataset([row("coin-a"), notRated], {
+      completeness: { expectedCount: 2, ratedCount: 1, notRatedCount: 1, pipelineGapCount: 0 },
+    }));
+    expect(small).toMatchObject({
+      status: "ok",
+      preview: { rows: [{ id: "coin-a", href: "/stablecoin/coin-a/", grade: "A-", score: 80 }], eligibleRatedCount: 1 },
+    });
+  });
+});
+
+type CompliancePanelExpectation =
+  | { status: "ok"; mica: { id: string; href: string } | null; genius: { id: string; href: string; reviewedAt: string | null } | null }
+  | { status: "unavailable"; reason: string };
+
+const COMPLIANCE_EXPECTATION = buildCompliancePanelExpectation() as CompliancePanelExpectation;
+const MICA_ROW = COMPLIANCE_EXPECTATION.status === "ok" && COMPLIANCE_EXPECTATION.mica
+  ? COMPLIANCE_EXPECTATION.mica
+  : { id: "mica-fixture", href: "/stablecoin/mica-fixture/" };
+const GENIUS_ROW = COMPLIANCE_EXPECTATION.status === "ok" && COMPLIANCE_EXPECTATION.genius
+  ? COMPLIANCE_EXPECTATION.genius
+  : { id: "genius-fixture", href: "/stablecoin/genius-fixture/", reviewedAt: "2026-10-07" };
+
+/** The three mounted regime panels, as the exported markup carries them. */
+function compliancePanels({
+  micaHidden = true,
+  geniusHidden = true,
+  micaRowIn = "mica",
+  geniusRowIn = "genius",
+  includeMicaHeading = true,
+  includeWatch = true,
+}: {
+  micaHidden?: boolean;
+  geniusHidden?: boolean;
+  micaRowIn?: "mica" | "genius" | "none";
+  geniusRowIn?: "mica" | "genius" | "none";
+  includeMicaHeading?: boolean;
+  includeWatch?: boolean;
+} = {}) {
+  const micaRow = `<tr><th scope="row"><a href="${MICA_ROW.href}">MT</a></th><td>Authorized</td></tr>`;
+  const geniusRow = `<tr><th scope="row"><a href="${GENIUS_ROW.href}">GT</a></th><td>Issuer Intent</td></tr>`;
+  return '<div role="tablist" aria-label="Compliance view">'
+    + '<button id="compliance-tab-all" role="tab">Overview</button>'
+    + '<button id="compliance-tab-mica" role="tab">MiCA</button>'
+    + '<button id="compliance-tab-genius" role="tab">GENIUS</button></div>'
+    + '<div id="compliance-overview-panel" role="tabpanel" aria-labelledby="compliance-tab-all" tabindex="0">'
+    + '<p class="pharos-label">Stablecoin directory</p>'
+    + '<div data-table-id="compliance-overview"><table><tbody><tr><td><a href="/stablecoin/overview-coin/">OC</a></td><td>MiCA</td><td>GENIUS</td></tr></tbody></table></div>'
+    + "</div>"
+    + `<div id="compliance-mica-panel" role="tabpanel" aria-labelledby="compliance-tab-mica" tabindex="0"${micaHidden ? " hidden" : ""}>`
+    + (includeMicaHeading
+      ? '<h2 id="mica" class="pharos-label"><a href="/compliance/?regime=mica#mica">MiCA authorization</a></h2>'
+      : "")
+    + `<div data-table-id="compliance-mica-authorization"><table><tbody>${micaRowIn === "mica" ? micaRow : ""}${geniusRowIn === "mica" ? geniusRow : ""}</tbody></table>`
+    + '<div><p class="pharos-label">Sources</p><a href="https://example.test/mica-source">Source</a></div></div>'
+    + "</div>"
+    + `<div id="compliance-genius-panel" role="tabpanel" aria-labelledby="compliance-tab-genius" tabindex="0"${geniusHidden ? " hidden" : ""}>`
+    + '<h2 id="genius" class="pharos-label"><a href="/compliance/?regime=genius#genius">GENIUS Act status</a></h2>'
+    + '<div data-table-id="compliance-genius-authorization"><table><tbody></tbody></table></div>'
+    + (includeWatch
+      ? '<div id="implementation-watch"><p class="pharos-label">GENIUS implementation watch</p>'
+        + `<div data-table-id="compliance-genius-watch"><table><tbody>${geniusRowIn === "genius" ? geniusRow : ""}${micaRowIn === "genius" ? micaRow : ""}</tbody></table></div>`
+        + (GENIUS_ROW.reviewedAt ? `<p class="text-xs">Reviewed <!-- -->${GENIUS_ROW.reviewedAt}</p>` : "")
+        + "</div>"
+      : "")
+    + "</div>";
+}
+
+async function writeCompliancePage(root: string, extraMain: string) {
+  await writeBaselinePages(root, ["/compliance/"]);
+  await writePage(root, "/compliance/", { h1: "Compliance Tracker", extraMain });
+  await writeSitemap(root, ["/", "/stability-index/", "/compliance/"]);
+}
+
+describe("compliance regime panels", () => {
+  it("accepts the three mounted panels with regime-scoped rows", async () => {
+    const root = await makeOutDir();
+    await writeCompliancePage(root, compliancePanels());
+
+    const result = collectFixtureSeoResult(root, { compliancePanelExpectation: COMPLIANCE_EXPECTATION });
+    expect(result.errors).toEqual([]);
+  });
+
+  it("rejects duplicate, visible-inactive and mislabelled panels", async () => {
+    const cases: Array<[string, string, string]> = [
+      ["visible", compliancePanels({ micaHidden: false }), "#compliance-mica-panel must stay hidden until its tab is selected"],
+      ["overview-hidden", compliancePanels().replace('aria-labelledby="compliance-tab-all" tabindex="0"', 'aria-labelledby="compliance-tab-all" tabindex="0" hidden'), "#compliance-overview-panel must not be hidden; it is the initial panel"],
+      ["duplicate", `${compliancePanels()}<div id="compliance-mica-panel"></div>`, "expected exactly one #compliance-mica-panel panel, found 2"],
+      ["heading", compliancePanels({ includeMicaHeading: false }), "expected exactly one #mica regime heading, found 0"],
+      ["watch", compliancePanels({ includeWatch: false }), "expected exactly one #implementation-watch block, found 0"],
+    ];
+    for (const [name, body, expected] of cases) {
+      const root = await makeOutDir();
+      await writeCompliancePage(root, body);
+      const result = collectFixtureSeoResult(root, { compliancePanelExpectation: COMPLIANCE_EXPECTATION });
+      expect(result.errors, `${name}: ${result.errors.join(" | ")}`).toContainEqual(expect.stringContaining(expected));
+    }
+  });
+
+  it("rejects regime rows mounted in the wrong panel", async () => {
+    const root = await makeOutDir();
+    await writeCompliancePage(root, compliancePanels({ micaRowIn: "genius", geniusRowIn: "mica" }));
+
+    const result = collectFixtureSeoResult(root, { compliancePanelExpectation: COMPLIANCE_EXPECTATION });
+    expect(result.errors).toContainEqual(expect.stringContaining(`MiCA row ${MICA_ROW.href} leaked into the GENIUS panel`));
+    expect(result.errors).toContainEqual(expect.stringContaining(`GENIUS row ${GENIUS_ROW.href} leaked into the MiCA panel`));
+  });
+
+  it("fails when the panel evidence exists only inside script strings", async () => {
+    const root = await makeOutDir();
+    const flight = JSON.stringify({
+      panels: ["compliance-overview-panel", "compliance-mica-panel", "compliance-genius-panel"],
+      headings: ["MiCA authorization", "GENIUS Act status"],
+      rows: [MICA_ROW.href, GENIUS_ROW.href],
+    });
+    await writeCompliancePage(root, `<script>self.__next_f.push(${flight})</script>`);
+
+    const result = collectFixtureSeoResult(root, { compliancePanelExpectation: COMPLIANCE_EXPECTATION });
+    expect(result.errors).toContainEqual(expect.stringContaining("expected exactly one #compliance-overview-panel panel, found 0"));
+    expect(result.errors).toContainEqual(expect.stringContaining("expected exactly one #mica regime heading, found 0"));
   });
 });
