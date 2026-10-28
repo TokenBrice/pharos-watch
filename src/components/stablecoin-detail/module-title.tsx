@@ -61,7 +61,7 @@ export function StablecoinModuleTitle({
       {resolvedSymbol ? (
         <>
           <StablecoinLogo src={resolvedLogoSrc} name={resolvedSymbol} size={26} />
-          <span className="shrink-0 text-sm font-semibold text-foreground">
+          <span className="shrink-0 text-sm font-semibold text-foreground" aria-hidden="true">
             {resolvedSymbol}
           </span>
           <span className="text-muted-foreground/50" aria-hidden="true">
@@ -70,6 +70,16 @@ export function StablecoinModuleTitle({
         </>
       ) : null}
       <DetailSectionTitle as={as} className={className} id={id}>
+        {/* The ticker above is visual only. The heading itself names the coin
+            so the semantic outline (`USDT Reserves`) matches what a reader
+            sees, without moving the logo or ticker out of the title row. The
+            space is a sibling text node: an accessible-name walk trims
+            trailing whitespace inside the sr-only span. */}
+        {resolvedSymbol ? (
+          <>
+            <span className="sr-only">{resolvedSymbol}</span>{" "}
+          </>
+        ) : null}
         {children}
       </DetailSectionTitle>
     </div>

@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 
 import { afterEach, describe, expect, it } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import {
   EvidenceModule,
   EvidenceStateStrip,
   expandEvidenceModuleFor,
 } from "../evidence-module";
+import { StablecoinDetailIdentityProvider } from "../module-title";
 
 function setHash(hash: string) {
   act(() => {
@@ -57,6 +58,36 @@ describe("EvidenceModule", () => {
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
     fireEvent.click(toggle);
     expect(toggle.getAttribute("aria-expanded")).toBe("false");
+  });
+
+  it("names the coin inside the heading while the phone accordion keeps its own name and target", () => {
+    render(
+      <StablecoinDetailIdentityProvider symbol="BD" logoSrc={undefined}>
+        <EvidenceModule
+          id="custody"
+          title="Custody"
+          variant="tile"
+          methodology={<button type="button" aria-label="Custody methodology">?</button>}
+        >
+          <p>Custodian breakdown.</p>
+        </EvidenceModule>
+      </StablecoinDetailIdentityProvider>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 3, name: "BD Custody" });
+    const toggle = within(heading).getByRole("button", { name: "Custody" });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(toggle.getAttribute("aria-controls")).toBe("custody-body");
+    expect(document.getElementById("custody-body")?.textContent).toContain("Custodian breakdown.");
+
+    // The help glyph stays outside both the heading and the accordion button.
+    const help = screen.getByRole("button", { name: "Custody methodology" });
+    expect(heading.contains(help)).toBe(false);
+    expect(toggle.contains(help)).toBe(false);
+
+    fireEvent.click(toggle);
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(document.getElementById("custody-body")?.textContent).toContain("Custodian breakdown.");
   });
 
   it("never folds a full-width module unless asked to", () => {

@@ -20,6 +20,7 @@ import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinMeta } from "@shared/types";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
@@ -63,6 +64,10 @@ export function ContractDeployments({
 
   if (contracts.length === 0) return null;
 
+  // This card keeps its literal H2s instead of `StablecoinModuleTitle` (it
+  // shows no logo/ticker), so the heading takes the tracked symbol itself.
+  // An id outside the tracked registry keeps the plain `Contracts` heading.
+  const coinSymbol = CLIENT_TRACKED_META_BY_ID.get(coinId)?.symbol ?? null;
   const contractSummary = buildContractDeploymentSummary(contracts);
   const mobileContractsPreview = contracts.slice(0, 6);
   const visibleMobileContracts = showAllContracts ? contracts : mobileContractsPreview;
@@ -98,7 +103,14 @@ export function ContractDeployments({
       >
         <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3.5">
           <div className="flex items-center gap-2">
-            <h2 className={DETAIL_MODULE_TITLE_CLASS}>Contracts</h2>
+            <h2 className={DETAIL_MODULE_TITLE_CLASS}>
+              {coinSymbol ? (
+                <>
+                  <span className="sr-only">{coinSymbol}</span>{" "}
+                </>
+              ) : null}
+              Contracts
+            </h2>
             <span className="text-muted-foreground/50" aria-hidden="true">
               ·
             </span>
@@ -142,7 +154,14 @@ export function ContractDeployments({
     >
       <div className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex items-center gap-2">
-          <h2 className={DETAIL_MODULE_TITLE_CLASS}>Contracts</h2>
+          <h2 className={DETAIL_MODULE_TITLE_CLASS}>
+              {coinSymbol ? (
+                <>
+                  <span className="sr-only">{coinSymbol}</span>{" "}
+                </>
+              ) : null}
+              Contracts
+            </h2>
           <span className="text-muted-foreground/50" aria-hidden="true">
             ·
           </span>
