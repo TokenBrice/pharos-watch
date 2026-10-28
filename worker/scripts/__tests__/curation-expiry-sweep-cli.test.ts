@@ -26,8 +26,8 @@ describe("curation sweep executable workflow contract", () => {
       ["live_withheld", "safety-score-v9:live-withheld", "live_withheld_status"],
     ];
     const collect = steps.find((step) => step.id === "generate")!;
-    expect(workflow.jobs.sweep["timeout-minutes"]).toBe(25);
-    expect(steps.find((step) => step.id === "live_withheld")!["timeout-minutes"]).toBe(15);
+    expect(workflow.jobs.sweep["timeout-minutes"]).toBe(40);
+    expect(steps.find((step) => step.id === "live_withheld")!["timeout-minutes"]).toBe(25);
     expect(stepRun("live_withheld")).toContain("--workers 3");
     expect(steps.findIndex((step) => step.id === "registry"))
       .toBeLessThan(steps.findIndex((step) => step.id === "live_withheld"));
