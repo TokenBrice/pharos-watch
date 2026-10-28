@@ -25,6 +25,7 @@ import type {
 } from "../../lib/mint-burn-contracts";
 import { requiresReviewedSupplyBurnProof } from "../../lib/mint-burn-conservation";
 import { MINT_BURN_EVENT_RETENTION_SEC } from "./retention";
+import { TronRpcError, type TronJsonRpcReader } from "../../lib/tron-jsonrpc";
 
 export interface MintBurnConfigSummary {
   key: string;
@@ -57,6 +58,8 @@ export interface MintBurnConfigSummary {
   conservationStatus?: MintBurnConservationRecord["status"];
   conservationReason?: string;
   failedEventDefs: string[];
+  sourceFailureReason?: string;
+  headFailureReason?: string;
   eventCoverage: Array<{
     eventDef: string;
     status: "ok" | "partial" | "fetch-failed" | "budget" | "finality-head-unavailable";
@@ -105,6 +108,7 @@ export interface SyncMintBurnConfigInput {
   affectedHours: Map<string, MintBurnAffectedHour>;
   deadlineMs?: number;
   conservationBoundary?: ConservationBoundaryEvidence;
+  tronReader?: TronJsonRpcReader;
 }
 
 export interface SyncMintBurnConfigResult {
@@ -143,6 +147,7 @@ export function createMintBurnConfigSummary(
     requestBudgetLimit?: number;
   } = {},
 ): MintBurnConfigSummary {
+  const conservation = getMintBurnConservationEligibility(config);
   return {
     key,
     symbol: config.symbol,
@@ -174,6 +179,7 @@ export function createMintBurnConfigSummary(
     bridgeClassificationDeferredRows: 0,
     requestBudgetLimit: options.requestBudgetLimit ?? 0,
     requestBudgetUsed: 0,
+    ...(!conservation.supported ? { conservationStatus: "unsupported", conservationReason: conservation.reason } : {}),
   };
 }
 
@@ -234,6 +240,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   } = input;
   const scanTo = Math.min(input.scanTo, chainHead);
   const configBudget = createBudget(configBudgetLimit);
+  const tronReader = input.tronReader?.withBudget(configBudget, deadlineMs);
   const summary = createMintBurnConfigSummary(config, key, tier, {
     attempted: true,
     scanFrom: fromBlock,
@@ -272,7 +279,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       scanTo,
       configBudget,
       signal,
-      { deadlineMs, endpointHeads },
+      { deadlineMs, endpointHeads, tronReader },
     ), logRpcEvidenceIncomplete);
 
     if (!fetched) {
@@ -303,6 +310,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       rpcEvidenceIncomplete ||= logRpcEvidenceIncomplete(fetched);
       apiErrors++;
       summary.errors++;
+      if (fetched.failureReason) summary.sourceFailureReason = fetched.failureReason;
       summary.failedEventDefs.push(`${label}:partial-coverage`);
     }
 
@@ -331,7 +339,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
       scanTo,
       configBudget,
       signal,
-      { deadlineMs, endpointHeads },
+      { deadlineMs, endpointHeads, tronReader },
     );
     if (!fetched) {
       conservationCoverageComplete = false;
@@ -359,6 +367,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
         localCache: chainTimestampCache,
         blockHashes: blockHashesForLogs(allConfigLogs.flatMap(({ logs }) => logs)),
         deadlineMs,
+        tronReader,
         persistentCache: {
           db,
           chainId: config.chain.chainId,
@@ -616,7 +625,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     const missingBoundaries = boundaries.filter((block) => !blockTimestamps.has(block));
     const resolved = missingBoundaries.length > 0
       ? await withRpcRequestOperation(key, "scan-boundaries", () => resolveMintBurnBlockTimestamps(rpcEndpoints, missingBoundaries, configBudget, {
-          signal, localCache: chainTimestampCache, deadlineMs,
+          signal, localCache: chainTimestampCache, deadlineMs, tronReader,
         }), (resolved) => missingBoundaries.some((block) => !resolved.has(block)))
       : blockTimestamps;
     const fromTimestamp = blockTimestamps.get(fromBlock) ?? resolved.get(fromBlock);
@@ -629,6 +638,18 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
         configKey: key, configFingerprint: mintBurnScanFingerprint(config), chainId: config.chain.chainId,
         fromBlock, toBlock: scanTo, fromTimestamp, toTimestamp, finalizedBlock: chainHead, acceptedAt: runTimestamp,
       };
+    }
+  }
+  if (tronReader) {
+    try {
+      await withRpcRequestOperation(key, "tron-solid-head", () => tronReader.getSolidHead(), () => false);
+    } catch (error) {
+      if (signal?.aborted) throw signal.reason;
+      summary.headFailureReason = error instanceof TronRpcError ? error.reason : "tron-rpc-read-failed";
+      summary.sourceFailureReason ??= summary.headFailureReason;
+      summary.errors++;
+      apiErrors++;
+      scanCoverage = undefined;
     }
   }
   // Event/topic success alone is not durable scan proof. Hold the frontier on

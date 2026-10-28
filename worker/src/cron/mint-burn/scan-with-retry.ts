@@ -2,6 +2,7 @@ import { throwIfAborted } from "../../lib/abort";
 import { withRpcRequestScope } from "../../lib/rpc-request-observer";
 import { conservationOnlyEventDefsFor, fetchConservationBoundaries, getMintBurnConservationEligibility } from "../../lib/mint-burn-conservation";
 import { syncMintBurnConfig, type SyncMintBurnConfigInput, type SyncMintBurnConfigResult } from "./sync-config";
+import { TRON_RPC_MAX_BLOCK_SPAN } from "@shared/lib/tron-jsonrpc";
 
 export const MINT_BURN_MAX_SCAN_ATTEMPTS = 4;
 // Header, pinned supply/state, then header recheck: three healthy batch requests.
@@ -11,7 +12,9 @@ export const MINT_BURN_RETRY_BOUNDARY_REQUESTS = 3;
 export function mintBurnScanRequestFloor(input: Pick<SyncMintBurnConfigInput,
   "config" | "fromBlock" | "scanTo" | "rpcEndpoints" | "endpointHeads">): number {
   const preferred = input.rpcEndpoints[0];
-  const pages = preferred?.operator === "dwellir" && preferred.maxLogBlockSpan
+  const pages = input.config.chain.chainId === "tron"
+    ? Math.ceil((input.scanTo - input.fromBlock + 1) / TRON_RPC_MAX_BLOCK_SPAN)
+    : preferred?.operator === "dwellir" && preferred.maxLogBlockSpan
     ? Math.ceil((input.scanTo - input.fromBlock + 1) / preferred.maxLogBlockSpan) : 1;
   const headRequest = input.rpcEndpoints.length > 1 && preferred && !input.endpointHeads?.has(preferred.url) ? 1 : 0;
   return pages * (input.config.events.length + conservationOnlyEventDefsFor(input.config).length) + headRequest + 2;
@@ -90,7 +93,7 @@ export async function syncMintBurnConfigWithRetries(input: SyncMintBurnConfigInp
       knownFrontier = Math.min(knownFrontier, quarantine.blockNumber - 1);
     }
     const nextScanTo = knownFrontier < scanTo ? knownFrontier : halfTo;
-    if (result.summary.conservationFailure || scanTo <= input.fromBlock || nextScanTo < input.fromBlock
+    if (result.summary.conservationFailure || result.summary.headFailureReason || scanTo <= input.fromBlock || nextScanTo < input.fromBlock
       || attempt + 1 >= MINT_BURN_MAX_SCAN_ATTEMPTS
       || input.configBudgetLimit - used < mintBurnScanRequestFloor({ ...input, scanTo: nextScanTo }) + boundaryRequests
       || (input.deadlineMs != null && Date.now() + 5_000 >= input.deadlineMs)) break;

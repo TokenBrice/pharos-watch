@@ -12,6 +12,7 @@ import { handleMintBurnFlows, refreshAggregateMintBurnFlowCache } from "../mint-
 import { MintBurnFlowsResponseSchema, type MintBurnValuationCompleteness } from "@shared/types/mint-burn";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
 
 function cachedCoinValuation(window24h: MintBurnValuationCompleteness) {
   return {
@@ -273,7 +274,8 @@ describe("handleMintBurnFlows contract tests", () => {
     const now = Math.floor(Date.now() / 1000);
     const cacheValue = JSON.stringify({
       peggedAssets: [
-        { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 } },
+        { id: "usdt-tether", symbol: "USDT", circulating: { peggedUSD: 100_000_000_000 },
+          chainCirculating: { Ethereum: { current: 100_000_000_000 } } },
         // Empty buckets are unavailable supply, not a measured zero weight.
         { id: "usdc-circle", symbol: "USDC", circulating: {} },
         // An explicit zero is a measured weight and is not counted as unavailable.
@@ -1163,7 +1165,7 @@ describe("handleMintBurnFlows contract tests", () => {
       if (state === "one-config-missing") scanCoverage = scanCoverage.slice(0, 1);
       if (state === "lagging") scanCoverage = scanCoverage.map((segment) => ({ ...segment, to_timestamp: end - 1 }));
       scanCoverage.push(...makeMintBurnScanSegments(end, 91,
-        MINT_BURN_CONFIGS.filter((config) => config.stablecoinId !== "buidl-blackrock")));
+        MINT_BURN_CONFIGS.filter((config) => config.stablecoinId !== "buidl-blackrock" && isGrandfatheredMintBurnConfig(config))));
       const db = mintBurnScenario({ nowSec: now, rows: { scanCoverage,
         syncState: state === "legacy" ? configs.map((config) => ({ config_key: mintBurnConfigKey(config), last_block: 100_000_000 })) : [],
       } });

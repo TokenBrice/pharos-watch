@@ -8,6 +8,8 @@ import type { RpcEndpoint } from "../../../lib/chain-registry";
 import { withRpcRequestOperation, withRpcRequestScope } from "../../../lib/rpc-request-observer";
 import { hasTerminalMintBurnRpcFailure } from "../../../cron/mint-burn/sync-config";
 import { getAlchemyTransactionContextBatchMany } from "../../../lib/alchemy-logs";
+import { TronJsonRpcReader } from "../../../lib/tron-jsonrpc";
+import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 
 const mocks = vi.hoisted(() => ({
   syncMintBurn: vi.fn(),
@@ -376,6 +378,125 @@ describe("mint/burn slot lanes", () => {
     });
     await runHalfHourlyMintBurnCriticalSlot(rt);
     expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, admitted ? "failure" : "neutral");
+  });
+
+  it.each([true, false])("keeps real Tron reader outcomes diagnostic without circuit writes (healthy fallback: %s)", async (healthyFallback) => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const hash = `0x${"a".repeat(64)}`;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+      if (url.includes("dwellir") || !healthyFallback) return new Response("unavailable", { status: 503 });
+      if (url.endsWith("/walletsolidity/getnowblock")) return Response.json({
+        blockID: hash.slice(2), block_header: { raw_data: { number: 100, timestamp: timestamp * 1000 } },
+      });
+      const body = JSON.parse(String(init.body));
+      return Response.json({ jsonrpc: "2.0", id: body.id, result: body.method === "eth_blockNumber"
+        ? "0x65" : { number: "0x64", hash, timestamp: `0x${timestamp.toString(16)}` } });
+    }));
+    const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
+    rt.dwellirNative = createDwellirNativeCapability("test-key");
+    rt.env.TRONGRID_API_KEY = "test-grid-key";
+    mocks.syncMintBurn.mockImplementationOnce(async (_db, _key, options) => {
+      expect(options.dwellirNative).toBe(rt.dwellirNative);
+      expect(options.trongridApiKey).toBe(rt.env.TRONGRID_API_KEY);
+      const reader = new TronJsonRpcReader({ ...options,
+        budget: { count: 0, limit: 10 }, deadlineMs: Date.now() + 30_000, rateLimit: (fn) => fn(),
+      });
+      if (healthyFallback) expect((await reader.getSolidHead()).number).toBe(100);
+      else await expect(reader.getSolidHead()).rejects.toMatchObject({ reason: "tron-rpc-providers-unavailable" });
+      return { status: healthyFallback ? "ok" : "error" };
+    });
+    await runHalfHourlyMintBurnCriticalSlot(rt);
+    expect(recordOutcomeDecision).not.toHaveBeenCalled();
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+    expect(JSON.parse(result?.metadata ?? "{}").providerOutcomes).toEqual([
+      expect.objectContaining({ provider: "dwellir", circuitSource: null, terminalFailures: 0, failures: 1, successes: 0,
+        reasons: { "tron-rpc-transport-error": 1 } }),
+      expect.objectContaining({ provider: "trongrid", circuitSource: null, terminalFailures: 0,
+        failures: healthyFallback ? 0 : 1, successes: healthyFallback ? 3 : 0 }),
+    ]);
+  });
+
+  it.each(["head", "scan"] as const)("does not blame recovered Alchemy work for a terminal Tron %s failure", async (operation) => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const hash = `0x${"a".repeat(64)}`;
+    let alchemyReads = 0;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+      if (url === ALCHEMY_URL) return Response.json({ id: 1, result: "0x7b" }, { status: ++alchemyReads === 1 ? 503 : 200 });
+      if (operation === "head") return new Response("unavailable", { status: 503 });
+      if (url.endsWith("/walletsolidity/getnowblock")) return Response.json({
+        blockID: hash.slice(2), block_header: { raw_data: { number: 100, timestamp: timestamp * 1000 } },
+      });
+      const body = JSON.parse(String(init.body));
+      if (body.method === "eth_getLogs") return new Response("unavailable", { status: 503 });
+      return Response.json({ jsonrpc: "2.0", id: body.id, result: body.method === "eth_blockNumber"
+        ? "0x65" : { number: "0x64", hash, timestamp: `0x${timestamp.toString(16)}` } });
+    }));
+    const rt = withProviders(runtime("halfHourlyMintBurnCritical", "4 * * * *"));
+    mocks.syncMintBurn.mockImplementationOnce(async (_db, _key, options) => {
+      await configScope("recovered", async () => {
+        await rpcRead(ALCHEMY_URL);
+        await rpcRead(ALCHEMY_URL);
+      }, () => false);
+      const reader = new TronJsonRpcReader({ signal: options.signal,
+        dwellirNative: createDwellirNativeCapability("test-key"), trongridAllowed: false,
+        budget: { count: 0, limit: 10 }, deadlineMs: Date.now() + 30_000, rateLimit: (fn) => fn(),
+      });
+      if (operation === "head") {
+        const head = await withRpcRequestScope({ kind: "chain-head", key: "tron", affectsRun: true },
+          () => reader.getSolidHead().catch(() => null), (value) => value == null);
+        expect(head).toBeNull();
+      } else {
+        const scan = await configScope("usdt-tether:tron", () =>
+          reader.getLogs(`0x${"1".repeat(40)}`, [`0x${"2".repeat(64)}`], 90, 100), (value) => !value.complete);
+        expect(scan).toMatchObject({ complete: false, reason: "tron-rpc-providers-unavailable" });
+      }
+      return { status: "error", metadata: JSON.stringify({ admittedFinalityUnavailableChains: operation === "head" ? ["tron"] : [] }) };
+    });
+    await runHalfHourlyMintBurnCriticalSlot(rt);
+    expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "neutral");
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+    expect(JSON.parse(result?.metadata ?? "{}").providerOutcomes).toEqual(expect.arrayContaining([
+      expect.objectContaining({ provider: "alchemy", terminalFailures: 0, successes: 1, failures: 1 }),
+      expect.objectContaining({ provider: "dwellir", circuitSource: null, terminalFailures: 0, failures: 1 }),
+    ]));
+  });
+
+  it.each([
+    { reason: "stale", decision: "failure", outcomeReason: "tron-rpc-stale-solid-head" },
+    { reason: "rate-limit", decision: "failure", outcomeReason: "rpc-rate-limited" },
+    { reason: "semantic", decision: "neutral", outcomeReason: "rpc-semantic-error-or-unavailable-result" },
+    { reason: "unavailable", decision: "neutral", outcomeReason: "tron-rpc-missing-result" },
+    { reason: "budget", decision: null, outcomeReason: null },
+    { reason: "disabled", decision: null, outcomeReason: null },
+  ])("keeps Tron $reason outcomes separate from Alchemy", async ({ reason, decision, outcomeReason }) => {
+    const timestamp = Math.floor(Date.now() / 1000) - 601;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      if (reason === "stale") return Response.json({ blockID: "a".repeat(64),
+        block_header: { raw_data: { number: 100, timestamp: timestamp * 1000 } } });
+      const body = JSON.parse(String(init.body));
+      if (reason === "unavailable") return Response.json({ jsonrpc: "2.0", id: body.id, result: null });
+      return Response.json({ jsonrpc: "2.0", id: body.id, error: reason === "rate-limit"
+        ? { code: -32005, message: "Rate limit exceeded" } : { code: -32602, message: "Invalid params" } });
+    }));
+    const rt = runtime("halfHourlyMintBurnExtended", "18 * * * *");
+    mocks.syncMintBurn.mockImplementationOnce(async (_db, _key, options) => {
+      const reader = new TronJsonRpcReader({ signal: options.signal,
+        dwellirNative: reason === "disabled" ? undefined : createDwellirNativeCapability("test-key"),
+        trongridAllowed: false, budget: { count: 0, limit: reason === "budget" ? 0 : 10 },
+        deadlineMs: Date.now() + 30_000, rateLimit: (fn) => fn(),
+      });
+      if (reason === "stale") await expect(reader.getSolidHead()).rejects.toMatchObject({ reason: outcomeReason });
+      else await expect(reader.getBlock(100)).rejects.toThrow();
+      return { status: "degraded" };
+    });
+    await runHalfHourlyMintBurnExtendedSlot(rt);
+    expect(recordOutcomeDecision).not.toHaveBeenCalled();
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+    expect(JSON.parse(result?.metadata ?? "{}").providerOutcomes).toEqual(decision == null ? [] : [
+      expect.objectContaining({ provider: "dwellir", circuitSource: null, terminalFailures: 0,
+        failures: decision === "failure" ? 1 : 0, neutral: decision === "neutral" ? 1 : 0,
+        reasons: { [outcomeReason!]: 1 } }),
+    ]);
   });
 
   it("keeps another provider usable when Alchemy's circuit is open", async () => {

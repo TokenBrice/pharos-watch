@@ -301,6 +301,8 @@ export async function completeMintBurnRun(input: CompleteMintBurnRunInput): Prom
       coverageFrontier: summary.coverageFrontier,
       advanceReason: summary.advanceReason,
       failedEventDefs: summary.failedEventDefs.slice(0, 8),
+      sourceFailureReason: summary.sourceFailureReason,
+      headFailureReason: summary.headFailureReason,
       missingTimestampCount: summary.missingTimestampCount,
       earliestMissingTimestampBlock: summary.earliestMissingTimestampBlock,
       txContextShortfalls: summary.txContextShortfalls,

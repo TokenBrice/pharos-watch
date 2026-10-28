@@ -6,14 +6,13 @@ import { handleMintBurnFlows } from "../mint-burn-flows";
 import { sumMcapForTrackedChains } from "../../lib/mint-burn-mcap-weighting";
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
-import { syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
+import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { readPublishedMintBurnGauge } from "../../lib/mint-burn-published-gauge";
 import { aggregateFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
 
 const roster = [...ACTIVE_MINT_BURN_CONFIGS];
 const existing = roster.find((config) => config.stablecoinId === "usdt-tether" && config.chain.chainId === "ethereum")!;
-const pending = { ...existing, chain: { ...existing.chain, chainId: "base", chainName: "Base" },
-  contractAddress: `0x${"a".repeat(40)}`, startBlock: 1 };
+const pending = roster.find((config) => config.stablecoinId === "usdt-tether" && config.chain.chainId === "tron")!;
 const fixtures = createLatestSchemaFixtureTracker();
 const end = Date.parse("2027-02-01T12:00:00Z") / 1000;
 const day = 86400;
@@ -46,14 +45,15 @@ async function fixture(days: number) {
 }
 
 describe("mint/burn publication scope on real SQLite", () => {
-  it("keeps a pending chain out of the watermark, every net window, per-coin totals and gauge weight", async () => {
+  it("keeps pending Tron out of the watermark, every net window, per-coin totals and gauge weight", async () => {
+    expect(isGrandfatheredMintBurnConfig(pending)).toBe(false);
     const { db } = await fixture(31);
     const data = await fetchAggregateData(db, buildAggregateQueryParams(end + 60, 24));
     expect(data.watermark.timestamp).toBe(end);
     expect(data.configs).toEqual([existing]);
     expect(data.publication.legs[1]).toMatchObject({ status: "pending-admission", reason: "baseline-incomplete" });
     const weight = sumMcapForTrackedChains(existing.stablecoinId, {
-      Ethereum: { current: 100 }, Base: { current: 900 },
+      Ethereum: { current: 100 }, Tron: { current: 900 },
     }, { peggedUSD: 1000 }, data.configs);
     expect(weight).toBe(100);
     const coin = buildCoinSummaries(data, new Map([[existing.stablecoinId, weight!]]), null).coins[0];
@@ -64,10 +64,12 @@ describe("mint/burn publication scope on real SQLite", () => {
     expect(body.chains.map((chain) => chain.chainId)).toEqual(["ethereum"]);
   });
 
-  it("admits a new chain only with the full baseline, then removes it with the durable rollback switch", async () => {
+  it("admits Tron with the full baseline without regressing netFlow90dUsd, then honors its kill switch", async () => {
     const { db } = await fixture(90);
     let data = await fetchAggregateData(db, buildAggregateQueryParams(end + 60, 24));
     expect(data.configs).toEqual([existing, pending]);
+    expect(data.watermark.timestamp).toBe(end);
+    expect(data.publication.legs[1]).toMatchObject({ status: "admitted", reason: null });
     expect(buildCoinSummaries(data, new Map(), null).coins[0].netFlow90dUsd).toBe(910);
     await syncMintBurnPublicationPolicy(db, [mintBurnConfigKey(pending)], end + 61);
     data = await fetchAggregateData(db, buildAggregateQueryParams(end + 62, 24));

@@ -8,6 +8,7 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-flows/aggregate";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 
 function mockD1(tables: MockTableConfig[] = []) {
   return createMockD1([...tables,
@@ -110,6 +111,30 @@ describe("handleMintBurnEvents", () => {
     const countQuery = db.getHistory().find((entry) => entry.sql.includes("COUNT(*) as total"));
     expect(countQuery?.sql).toContain("chain_id IN");
     expect(countQuery?.binds).toContain("arbitrum");
+  });
+
+  it("keeps Tron events pending until admission, then filters them and preserves the explorer URL", async () => {
+    const explorerTxUrl = `https://tronscan.org/#/transaction/${"a".repeat(64)}`;
+    const db = eventDb([
+      makeMintBurnRow({ id: "usdt-ethereum", chain_id: "ethereum" }),
+      makeMintBurnRow({ id: "usdt-tron", chain_id: "tron", explorer_tx_url: explorerTxUrl }),
+    ]);
+    const url = new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&chain=tron");
+    expect(await readJsonResponse(await handleMintBurnEvents(db, url), 200)).toMatchObject({ total: 0, events: [] });
+    const config = MINT_BURN_CONFIGS.find((config) => config.chain.chainId === "tron")!;
+    const now = Math.floor(Date.now() / 1000);
+    await db.prepare(`INSERT INTO mint_burn_admission
+      (config_key, config_fingerprint, admitted_at, baseline_from, baseline_to) VALUES (?, ?, ?, ?, ?)`)
+      .bind(mintBurnConfigKey(config), mintBurnScanFingerprint(config), now, now - 90 * 86400, now).run();
+    const res = await handleMintBurnEvents(
+      db, url,
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      total: 1,
+      events: [{ id: "usdt-tron", chainId: "tron", explorerTxUrl }],
+    });
   });
 
   it("rejects invalid burnType with 400", async () => {

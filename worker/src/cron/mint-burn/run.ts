@@ -29,6 +29,9 @@ import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import type { DwellirNativeCapability } from "../../lib/dwellir-native";
+import { CIRCUIT_SOURCE } from "../../lib/constants";
+import { shouldAttemptFetch } from "../../lib/circuit-breaker";
 import {
   COVERAGE_REPAIR_REQUEST_LIMIT, COVERAGE_REPAIR_WINDOW_MS,
   loadMintBurnCoverageGaps, repairMintBurnCoverage,
@@ -53,6 +56,8 @@ export interface SyncMintBurnOptions {
   jobName?: string;
   onProgress?: CronProgressReporter;
   chainRpcs?: ReadonlyMap<string, ChainRpcConfig>;
+  dwellirNative?: DwellirNativeCapability;
+  trongridApiKey?: string | null;
 }
 
 function laneIncludesConfig(lane: MintBurnLane, config: MintBurnContractConfig): boolean {
@@ -85,6 +90,7 @@ export class MintBurnRun {
     const jobName = resolveMintBurnJobName(lane, options.jobName);
     const reportProgress = options.onProgress;
     const runTimestamp = Math.floor(Date.now() / 1000);
+    const deadlineMs = Date.now() + 9 * 60_000;
 
     throwIfAborted(signal);
     const budget = createBudget(GLOBAL_BUDGET_LIMIT);
@@ -173,10 +179,10 @@ export class MintBurnRun {
       };
     }
 
-    if (!alchemyApiKey) {
+    if (!alchemyApiKey && enabledConfigs.some((config) => config.chain.chainId !== "tron")) {
       throw new Error("No ALCHEMY_API_KEY configured");
     }
-    const apiKey = alchemyApiKey;
+    const apiKey = alchemyApiKey ?? "";
 
     const runStateSnapshot = await getMintBurnRunState(db, jobName);
     const runState = runStateSnapshot.state;
@@ -200,18 +206,21 @@ export class MintBurnRun {
     const lastBlocks = await readMintBurnSyncStateBatch(db, configs);
     const lastBlocksAfterRun = this.lastBlocksAfterRun = new Map(lastBlocks);
 
+    const tronOptions = {
+      dwellirNative: options.dwellirNative,
+      trongridApiKey: options.trongridApiKey,
+      trongridAllowed: configs.some((config) => config.chain.chainId === "tron")
+        ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID) : false,
+      deadlineMs,
+    };
     const chainContexts = await loadMintBurnChainContexts({
       configs: configs.filter((config) => !pendingAdmissionKeys.has(configKey(config))),
       apiKey,
       budget,
       signal,
       chainRpcs: options.chainRpcs,
+      ...tronOptions,
     });
-    const chainHeads = new Map(
-      [...chainContexts.entries()].flatMap(([chainId, context]) =>
-        context.chainHead == null ? [] : [[chainId, context.chainHead] as const]),
-    );
-
     const stablecoinIds = [...new Set(configs.map((config) => config.stablecoinId))];
     const priceContext = await loadMintBurnPriceContextBatch(
       db,
@@ -251,10 +260,10 @@ export class MintBurnRun {
           configs: configs.filter((config) => pendingAdmissionKeys.has(configKey(config))
             && !chainContexts.has(config.chain.chainId)),
           apiKey, budget: pendingBudget, signal, chainRpcs: options.chainRpcs,
+          ...tronOptions,
         });
         for (const [chainId, context] of pendingContexts) {
           chainContexts.set(chainId, context);
-          if (context.chainHead != null) chainHeads.set(chainId, context.chainHead);
         }
       },
       signal,
@@ -269,7 +278,16 @@ export class MintBurnRun {
       criticalBridgeConfigBudgetLimit: CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT,
       extendedConfigBudgetLimit: EXTENDED_CONFIG_BUDGET_LIMIT,
       affectedHours,
+      deadlineMs,
     });
+
+    const chainHeads = new Map(
+      [...chainContexts.entries()].flatMap(([chainId, context]) =>
+        context.chainHead == null ? [] : [[chainId, context.chainHead] as const]),
+    );
+    for (const summary of [...phaseResult.configBreakdown, ...(phaseResult.coverageRepairs ?? [])]) {
+      if (summary.headFailureReason) chainHeads.delete(summary.chainId);
+    }
 
     const attemptState = await updateMintBurnAttemptState({
       db,
@@ -343,6 +361,11 @@ export class MintBurnRun {
       (await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs)).publication,
     );
     completion.metadata.coverageRepairs = phaseResult.coverageRepairs ?? [];
+    const tronReader = chainContexts.get("tron")?.tronReader;
+    if (tronReader) {
+      completion.metadata.tronRpc = { calls: tronReader.calls, failures: tronReader.failures,
+        conservationReason: phaseResult.configBreakdown.find((summary) => summary.chainId === "tron")?.conservationReason ?? null };
+    }
     if (recalcError) completion.metadata.recalcError = recalcError;
     if (lane === "critical") {
       const retention = await pruneMintBurnRetention(db, runTimestamp, signal, {

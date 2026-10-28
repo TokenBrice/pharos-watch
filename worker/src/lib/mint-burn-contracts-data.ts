@@ -26,8 +26,9 @@ function requireChainConfig(chainId: string): ChainConfig {
 const ETHEREUM = requireChainConfig("ethereum");
 const ARBITRUM = requireChainConfig("arbitrum");
 const BASE = requireChainConfig("base");
+const TRON = requireChainConfig("tron");
 
-// Phase 2 readiness — USDT Tron uses these instead of Transfer
+// USDT custom issuance events on Ethereum and Tron.
 const USDT_ISSUE_TOPIC = "0xcb8241adb0c3fdb35b70c24ce35c5eb0c17af7431c99f827d44a445ca624176a";
 const USDT_REDEEM_TOPIC = "0x702d5967f45f6513a38ffc42d6ba9bf230bd40e8f53b16363c7eb4fd2deb9a44";
 
@@ -38,6 +39,10 @@ const USD_AI_ARBITRUM_DEPLOY_BLOCK = 336_209_932;
 // Default Ethereum coverage-floor block: roughly 2025-01-13, the lower bound
 // for mint/burn coverage on assets without a reviewed deploy block.
 const ETHEREUM_COVERAGE_FLOOR_BLOCK = 21_900_000;
+
+// Observed 2026-07-28 00:00:00 UTC boundary (predecessor 23:59:57), reviewed
+// 2026-10-28: 92d22h before planned activation, covering the 90-day admission floor.
+const TRON_USDT_COVERAGE_FLOOR_BLOCK = 84_842_059;
 
 const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   stablecoinId: string;
@@ -172,8 +177,34 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     stablecoinId: "usdt-tether",
     dustThreshold: 10_000,
     startBlock: ETHEREUM_COVERAGE_FLOOR_BLOCK,
-    // USDT issue()/redeem() emit only Issue/Redeem, not Transfer.
+    // Ethereum USDT issue()/redeem() emit only Issue/Redeem, not Transfer.
     // No zero-address Transfer events are produced.
+    events: [
+      {
+        signature: "Issue(uint256)",
+        topicHash: USDT_ISSUE_TOPIC,
+        direction: "mint" as const,
+        amountEncoding: "first-data-uint256" as const,
+        topicArity: 1,
+      },
+      {
+        signature: "Redeem(uint256)",
+        topicHash: USDT_REDEEM_TOPIC,
+        direction: "burn" as const,
+        amountEncoding: "first-data-uint256" as const,
+        topicArity: 1,
+      },
+    ],
+  },
+  {
+    chain: TRON,
+    stablecoinId: "usdt-tether",
+    dustThreshold: 10_000,
+    startBlock: TRON_USDT_COVERAGE_FLOOR_BLOCK,
+    startBlockSource: "dwellir-tron-header-2026-07-28-reviewed-2026-10-28",
+    startBlockConfidence: "high",
+    // Issue/Redeem also emit paired zero-address Transfers on Tron. Consume
+    // the custom events alone so each supply change is counted exactly once.
     events: [
       {
         signature: "Issue(uint256)",

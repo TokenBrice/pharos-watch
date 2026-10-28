@@ -266,14 +266,14 @@ Cron `sync-mint-burn` automatically heals recent NULL-price events within a 48-h
 
 ## backfill-mint-burn
 
-Backfills mint/burn event ingestion for a specific contract config using the same parsing/classification pipeline as the cron.
-If `configKey` is omitted, the job auto-selects one tracked config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response.
+Backfills mint/burn event ingestion for a specific EVM contract config using the same parsing/classification pipeline as the cron.
+If `configKey` is omitted, the job auto-selects one tracked EVM config using a critical-first / major-symbol-first / most-behind policy and returns the selected config in the response. Tron uses scheduled pending-admission catch-up, with no pre-activation bootstrap requirement. Explicit Tron selection returns HTTP `400` with `mint-burn-operator-chain-unsupported: tron` before credential checks, provider reads or D1 selection writes; this operator path does not ingest Tron.
 
 **Request body or query parameters**
 
 | Param       | Type      | Default         | Description                                                                              |
 | ----------- | --------- | --------------- | ---------------------------------------------------------------------------------------- |
-| `configKey` | `string`  | auto-selected   | Optional config key: `{chainId}-{contractAddress}` across the tracked issuance-chain set |
+| `configKey` | `string`  | auto-selected   | Optional config key: `{chainId}-{contractAddress}` across the tracked EVM issuance-chain set |
 | `fromBlock` | `integer` | from sync state | Start block override                                                                     |
 | `toBlock`   | `integer` | finalized head  | End block override (clamped to the validated chain-specific finalized head)              |
 | `chunkSize` | `integer` | `50000`         | Block span per fetch chunk (max 50000)                                                   |

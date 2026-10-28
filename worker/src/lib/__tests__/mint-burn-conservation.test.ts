@@ -355,6 +355,37 @@ describe("raw token conservation", () => {
     expect(isMintBurnConservationUnsupportedReason("zero-address-transfer-without-supply-change:transferToSelf")).toBe(true);
     expect(isMintBurnConservationUnsupportedReason("unverified-implementation-source")).toBe(true);
   });
+  it("keeps Tron conservation explicitly unsupported without spending historical-state calls", async () => {
+    const tron = MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === "tron" && entry.stablecoinId === "usdt-tether")!;
+    const reason = "tron-historical-state-unavailable";
+    expect(isMintBurnConservationUnsupportedReason(reason)).toBe(true);
+    expect(getMintBurnConservationEligibility(tron)).toEqual({ supported: false, reason });
+    const args = boundaryInput([{ key: "tron", config: tron, fromBlock: tron.startBlock, toBlock: tron.startBlock + 9_999 }]);
+    args.rpcEndpointsByChain = new Map([["tron", [mintBurnAlchemyEndpoint("https://rpc.example")]]]);
+    expect(await fetchConservationBoundaries(args)).toEqual(new Map());
+    expect(args.budget.count).toBe(0);
+    expect(fetchEvmRpcBatchDetailed).not.toHaveBeenCalled();
+    const record = completeMintBurnConservationAudit({ ...input(), config: tron, logs: [], boundary: ready(0n) });
+    expect(record).toMatchObject({ status: "unsupported", reason, address: tron.contractAddress });
+    expect(record).not.toHaveProperty("supplyDeltaRaw");
+    expect(record).not.toHaveProperty("residualRaw");
+  });
+  it("requires checksummed Tron Base58 identities and preserves their case", () => {
+    const tron = MINT_BURN_CONFIGS.find((entry) => entry.chain.chainId === "tron" && entry.stablecoinId === "usdt-tether")!;
+    const entry = sidecarEntries.find((item) => item.chainId === "tron" && item.stablecoinId === "usdt-tether")!;
+    expect(validateReviewedConservationEntry(entry)).toEqual([]);
+    for (const address of [entry.address.toLowerCase(), `${entry.address.slice(0, -1)}u`, "0xa614f803b6fd780986a42c78ec9c7f77e6ded13c"]) {
+      expect(validateReviewedConservationEntry({ ...entry, address })).toEqual([
+        expect.stringContaining("address must be a checksummed Tron Base58 value"),
+      ]);
+    }
+    const key = reviewedConservationIdentityKey("tron", entry.stablecoinId, entry.address, entry.decimals);
+    expect(key).toContain(entry.address);
+    expect(key).not.toBe(reviewedConservationIdentityKey("tron", entry.stablecoinId, entry.address.toLowerCase(), entry.decimals));
+    expect(JSON.parse(mintBurnConservationFingerprint(tron))[3]).toBe(entry.address);
+    expect(getMintBurnConservationEligibility({ ...tron, contractAddress: entry.address.toLowerCase() }))
+      .toEqual({ supported: false, reason: "unreviewed-contract-or-event-semantics" });
+  });
   it("rejects changed decimals, adapters and single-event configs", () => {
     expect(getMintBurnConservationEligibility({ ...config, decimals: 18 }).supported).toBe(false);
     expect(getMintBurnConservationEligibility({ ...config, adapterKind: "mixed" }).supported).toBe(false);

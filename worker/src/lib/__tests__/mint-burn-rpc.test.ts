@@ -286,7 +286,8 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(fetcher.mock.calls.some(([url]) => url === endpoints[1].url)).toBe(true);
   });
 
-  it.each([...new Set(MINT_BURN_CONFIGS.filter(config => config.enabled !== false).map(config => config.chain.chainId))])
+  it.each([...new Set(MINT_BURN_CONFIGS.filter(config => config.enabled !== false && config.chain.type === "evm")
+    .map(config => config.chain.chainId))])
     ("uses %s's validated finalized header, not its raw tip or a common block margin", async (chain) => {
       const endpoints = admitted(chain);
       const fetcher = recorder((_url, call) => ({ result: call.method === "eth_blockNumber" ? "0xffff"

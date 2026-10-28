@@ -230,6 +230,7 @@ const MINT_BURN_EXPECTED_BLOCK_TIME_SEC_BY_EVM_CHAIN_ID: Readonly<Record<number,
 const CONSERVATIVE_EVM_BLOCK_TIME_SEC = 1;
 
 function expectedBlockTimeSec(chainId: string): number | null {
+  if (chainId === "tron") return 3;
   const evmChainId = CHAIN_META[chainId]?.evmChainId;
   if (evmChainId == null) return null;
   return MINT_BURN_EXPECTED_BLOCK_TIME_SEC_BY_EVM_CHAIN_ID[evmChainId]

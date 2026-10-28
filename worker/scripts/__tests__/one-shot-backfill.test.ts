@@ -5,6 +5,8 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { getEndpointDefinition, getStatusPageActions } from "@shared/lib/api-endpoints";
 import * as stabilityBackfill from "../backfills/backfill-stability-index";
 
+const TRON_USDT = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => { fixtures.closeAll(); vi.restoreAllMocks(); });
 
@@ -70,6 +72,18 @@ describe("one-shot backfill operator lane", () => {
       client: { queryRaw: vi.fn() }, write, env: {},
     })).rejects.toThrow("failed with status 500");
     expect(write).toHaveBeenCalledWith('{"error":"ALCHEMY_API_KEY is not configured"}\n');
+  });
+
+  it("refuses the unsupported Tron ingestion job without provider credentials or D1 access", async () => {
+    const write = vi.fn();
+    const client = { queryRaw: vi.fn(), executeStatementsRaw: vi.fn() };
+    await expect(runOneShotBackfillCli([
+      "backfill-mint-burn", "--execute", "--allow-atomic-import",
+      "--query", `configKey=tron-${TRON_USDT}`,
+    ], { client, write, env: {} })).rejects.toThrow("failed with status 400");
+    expect(write).toHaveBeenCalledWith('{"error":"mint-burn-operator-chain-unsupported: tron"}\n');
+    expect(client.queryRaw).not.toHaveBeenCalled();
+    expect(client.executeStatementsRaw).not.toHaveBeenCalled();
   });
 
   it("surfaces uncertain import receipts even if an algorithm catches the transport error", async () => {

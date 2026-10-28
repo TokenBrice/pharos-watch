@@ -8,12 +8,18 @@ export interface RpcRequestScope {
   configKey?: string;
 }
 
+export type NativeRpcOutcome =
+  | { status: "success" | "failure" | "neutral"; reason: string }
+  | { status: "rpc-error"; error: { code?: number; message?: string } };
+
 export interface RpcRequestObserver {
   beforeRequest: (url: string) => boolean;
   onOutcome: (url: string, outcome: JsonRpcTransportOutcome, scope?: RpcRequestScope) => void;
   onScopeComplete?: (scope: RpcRequestScope, failed: boolean) => void;
   onScopeStart?: (scope: RpcRequestScope) => void;
   scope?: RpcRequestScope;
+  // Native provider outcomes are diagnostics, not terminal Alchemy evidence.
+  onNativeOutcome?: (provider: "dwellir" | "trongrid", outcome: NativeRpcOutcome) => void;
 }
 
 // Scope follows only the awaited producer, including its nested RPC helpers.

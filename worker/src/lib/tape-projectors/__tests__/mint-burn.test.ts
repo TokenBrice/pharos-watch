@@ -13,7 +13,6 @@ import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
 import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
 import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
-import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 const SEC = 1_700_000_000;
 beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(SEC * 1000));
@@ -255,25 +254,25 @@ describe("mint_burn projector", () => {
   });
 
   it("expands a full batch to include all rows at the cutoff timestamp before advancing", async () => {
-    const rows = [
-      makeFlow({ id: "ethereum-0xa-0", timestamp: SEC }),
-      makeFlow({ id: "ethereum-0xb-0", timestamp: SEC }),
-      makeFlow({ id: "ethereum-0xc-0", timestamp: SEC }),
-    ];
-    const scopeJson = JSON.stringify(MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId))
-      .map((config) => [config.stablecoinId, config.chain.chainId]));
-    const db = mockTapeD1([
-      ...withRows([]).filter((table) => table.match !== MATCH_FETCH_FLOWS),
-      { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, 10_000_000,
-        scopeJson, "[]", 2], rows: rows.slice(0, 2) },
-      { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, SEC, 10_000_000,
-        scopeJson, "[]"], rows },
-    ]) as MockD1Database;
+    const { db, sqlite } = fixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
+       flow_type, tx_hash, block_number, explorer_tx_url)
+      VALUES (?, 'usdt-tether', 'USDT', ?, 'mint', 15000000, 15000000, ?,
+              'standard', '0xtest', 1, 'https://example.com')`);
+    for (const id of ["ethereum-0xa-0", "ethereum-0xb-0", "ethereum-0xc-0"]) {
+      insert.run(id, "ethereum", SEC);
+    }
+    insert.run("tron-pending", "tron", SEC);
 
     const result = await projectMintBurnLargeFlows(db, { maxRows: 2 });
 
-    expect(result.advanced).toBe(SEC);
-    expect(tapeInsertBindsForType(db, "mint_burn.large_mint")).toHaveLength(3);
+    expect(result).toEqual({ projected: 3, advanced: SEC });
+    expect(sqlite.prepare("SELECT source_row_id FROM tape_events ORDER BY source_row_id").all()).toEqual([
+      { source_row_id: "ethereum-0xa-0" }, { source_row_id: "ethereum-0xb-0" }, { source_row_id: "ethereum-0xc-0" },
+    ]);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'tape-projector:cursor:mint_burn.large_flow'").get())
+      .toEqual({ value: String(SEC) });
   });
 
   it("emits nothing on an empty source", async () => {

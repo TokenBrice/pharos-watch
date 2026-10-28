@@ -2,11 +2,11 @@
 // exclude known non-economic rows from downstream aggregates without loading
 // the full mint-burn contract registry.
 //
-// DEWS (worker/src/lib/dews/source-state.ts) and the daily digest
-// (worker/src/cron/daily-digest/collectors-market.ts) import from this file
+// DEWS (worker/src/lib/dews/source-state.ts) imports from this file
 // on a hot path — do NOT add imports that pull in mint-burn-contracts.ts or
 // other heavy registries here. Gauge mcap weighting helpers that need the
-// full MINT_BURN_CONFIGS list live in mint-burn-mcap-weighting.ts instead.
+// full MINT_BURN_CONFIGS list live in mint-burn-mcap-weighting.ts instead;
+// the daily digest reads the published gauge, including all admitted chains.
 
 // Open USD (ousd-open-standard) retains the Ethereum default while the
 // Alchemy-only lane cannot index Tempo. Switch to Tempo only when its canonical

@@ -3,8 +3,8 @@
 //
 // This module imports the full MINT_BURN_CONFIGS registry intentionally; it
 // must NOT be imported from hot paths that should stay lightweight
-// (DEWS, daily digest). Those consumers should use mint-burn-canonical-chain
-// instead.
+// (DEWS, daily digest). DEWS uses mint-burn-canonical-chain; the digest reads
+// the published gauge instead of recomputing its weights.
 
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "./mint-burn-contracts";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";

@@ -75,6 +75,21 @@ function harness(options: {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("Tron JSON-RPC contiguous log coverage", () => {
+  it("reuses the validated head and charges only the supplied config budget", async () => {
+    const { reader, budget } = harness();
+    await reader.getSolidHead();
+    const configBudget = { count: 0, limit: 1 };
+    const configReader = reader.withBudget(configBudget);
+    expect(await configReader.getLogs(ADDRESS, [TOPIC], 1, 2)).toMatchObject({ complete: true });
+    expect(await configReader.getLogs(ADDRESS, [TOPIC], 3, 4)).toMatchObject({
+      complete: false, reason: "tron-rpc-budget-exhausted",
+    });
+    expect(budget.count).toBe(3);
+    expect(configBudget.count).toBe(1);
+    expect(reader.calls).toEqual({ dwellir: 4, trongrid: 0 });
+    expect(configReader.calls).toBe(reader.calls);
+  });
+
   it("reuses the fallback head and failed-provider state across scans", async () => {
     const { reader, budget } = harness({ gridAllowed: true, respond: (url, request) =>
       url.includes("dwellir") && request.method === "eth_getLogs" ? new Response("unavailable", { status: 503 }) : undefined,

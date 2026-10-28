@@ -21,7 +21,7 @@ interface MintBurnSlotOptions {
 }
 
 interface MintBurnProviderOutcome {
-  provider: RpcOperator;
+  provider: RpcOperator | "trongrid";
   circuitSource: string | null;
   successes: number;
   failures: number;
@@ -36,6 +36,16 @@ const RPC_RATE_LIMIT_MESSAGE = /rate[- ]?limit|too many requests|throughput|quot
 function isSemanticRpcError({ code, message = "" }: { code?: number; message?: string }): boolean {
   return !RPC_RATE_LIMIT_MESSAGE.test(message) && (code === 3 || code === -32601 || code === -32602 || code === -32005
     || /execution reverted|does not support|not supported|unsupported|block range|block limit|out of range|range (?:is )?(?:too|exceed)|too many logs|max(?:imum)? results|query returned more than|response size/i.test(message));
+}
+
+function rpcErrorDecision(error: { code?: number; message?: string }): { decision: CircuitOutcomeDecision; reason: string } {
+  const { code, message = "" } = error;
+  if (RPC_RATE_LIMIT_MESSAGE.test(message)) return { decision: "failure", reason: "rpc-rate-limited" };
+  if (!isSemanticRpcError(error) && (code === -32603
+    || /internal (?:server )?error|server error|service unavailable|overload|timed? out|timeout/i.test(message))) {
+    return { decision: "failure", reason: "rpc-server-error" };
+  }
+  return { decision: "neutral", reason: "rpc-semantic-error-or-unavailable-result" };
 }
 
 function providerDecision(outcome: JsonRpcTransportOutcome): { decision: CircuitOutcomeDecision; reason: string } {
@@ -57,15 +67,8 @@ function providerDecision(outcome: JsonRpcTransportOutcome): { decision: Circuit
   }
   for (const row of rows) {
     if (!row.error) continue;
-    const { code, message = "" } = row.error;
-    if (RPC_RATE_LIMIT_MESSAGE.test(message)) {
-      return { decision: "failure", reason: "rpc-rate-limited" };
-    }
-    // These errors describe the request/config or its supported range, even when a provider uses -32603.
-    if (isSemanticRpcError(row.error)) continue;
-    if (code === -32603 || /internal (?:server )?error|server error|service unavailable|overload|timed? out|timeout/i.test(message)) {
-      return { decision: "failure", reason: "rpc-server-error" };
-    }
+    const outcome = rpcErrorDecision(row.error);
+    if (outcome.decision === "failure") return outcome;
   }
   // Other semantic failures and absent objects are read evidence, without enough evidence to blame the provider.
   if (rows.some((row) => row.error || row.result == null)) {
@@ -125,11 +128,10 @@ export async function runMintBurnSlot(
     const alchemyAllowed = await shouldAttemptFetch(runtime.db, CIRCUIT_SOURCE.ALCHEMY);
     const endpoints = new Map([...runtime.chainRpcs.values()].flatMap((config) =>
       config.endpoints.map((endpoint) => [endpoint.url, endpoint.operator] as const)));
-    const providerOutcomes = new Map<RpcOperator, MintBurnProviderOutcome>();
-    const scopeFailures = new Map<string, Set<RpcOperator>>();
+    const providerOutcomes = new Map<MintBurnProviderOutcome["provider"], MintBurnProviderOutcome>();
+    const scopeFailures = new Map<string, Set<MintBurnProviderOutcome["provider"]>>();
     const terminalScopes = new Map<string, RpcRequestScope>();
-    const observationFor = (url: string): MintBurnProviderOutcome => {
-      const provider = endpoints.get(url) ?? getRpcAuth(url)?.provider ?? "public";
+    const observationForProvider = (provider: MintBurnProviderOutcome["provider"]): MintBurnProviderOutcome => {
       let observation = providerOutcomes.get(provider);
       if (!observation) {
         observation = { provider, circuitSource: provider === "alchemy" ? CIRCUIT_SOURCE.ALCHEMY : null,
@@ -137,6 +139,13 @@ export async function runMintBurnSlot(
         providerOutcomes.set(provider, observation);
       }
       return observation;
+    };
+    const observationFor = (url: string) => observationForProvider(endpoints.get(url) ?? getRpcAuth(url)?.provider ?? "public");
+    const recordObservation = (observation: MintBurnProviderOutcome, decision: CircuitOutcomeDecision, reason: string) => {
+      if (decision === "success") observation.successes++;
+      else if (decision === "failure") observation.failures++;
+      else observation.neutral++;
+      observation.reasons[reason] = (observation.reasons[reason] ?? 0) + 1;
     };
     let primary: CronResult | undefined;
     try {
@@ -153,13 +162,10 @@ export async function runMintBurnSlot(
         onOutcome: (url, outcome, scope) => {
           const observation = observationFor(url);
           const { decision, reason } = providerDecision(outcome);
-          if (decision === "success") observation.successes++;
-          else if (decision === "failure") observation.failures++;
-          else observation.neutral++;
-          observation.reasons[reason] = (observation.reasons[reason] ?? 0) + 1;
+          recordObservation(observation, decision, reason);
           if (scope?.affectsRun && (scope.kind === "operation" || scope.kind === "chain-head")) {
             const scopeKey = `${scope.kind}:${scope.key}`;
-            const failures = scopeFailures.get(scopeKey) ?? new Set<RpcOperator>();
+            const failures = scopeFailures.get(scopeKey) ?? new Set<MintBurnProviderOutcome["provider"]>();
             if (decision === "failure") failures.add(observation.provider);
             scopeFailures.set(scopeKey, failures);
           }
@@ -182,6 +188,12 @@ export async function runMintBurnSlot(
             scopeFailures.delete(scopeKey);
           }
         },
+        onNativeOutcome: (provider, outcome) => {
+          // Mint/burn native diagnostics never write the shared Dwellir parity circuit.
+          const { decision, reason } = outcome.status === "rpc-error" ? rpcErrorDecision(outcome.error)
+            : { decision: outcome.status, reason: outcome.reason };
+          recordObservation(observationForProvider(provider), decision, reason);
+        },
       }, () => syncMintBurn(runtime.db, runtime.env.ALCHEMY_API_KEY ?? null, {
         signal,
         disabledConfigIds: runtime.mintBurnDisabledIds,
@@ -190,6 +202,8 @@ export async function runMintBurnSlot(
         jobName: options.jobName,
         onProgress: reportProgress,
         chainRpcs: runtime.chainRpcs,
+        dwellirNative: runtime.dwellirNative,
+        trongridApiKey: runtime.env.TRONGRID_API_KEY ?? null,
       }));
     } finally {
       const metadata = primary?.metadata ? parseJsonObject(primary.metadata) : null;
