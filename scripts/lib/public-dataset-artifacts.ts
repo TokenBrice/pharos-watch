@@ -21,6 +21,8 @@ export interface PublicDatasetMetadata {
   windowSnapshotAsOfISO?: string;
   metadataStatus?: "approximated";
   metadataNote?: string;
+  /** Optional versioned display projection; JSON in `_meta`, JSON in the CSV comment preamble. */
+  displayProjection?: Readonly<Record<string, unknown>>;
 }
 
 const FRESHNESS_CONTRACT = "point-in-time sample; not guaranteed to track production freshness";
@@ -36,6 +38,7 @@ function metadataFields(metadata: PublicDatasetMetadata, variant: DatasetVariant
     ...(metadata.sourceObservationStartedAtISO ? { sourceObservationStartedAtISO: metadata.sourceObservationStartedAtISO } : {}),
     ...(metadata.windowSnapshotAsOfISO ? { windowSnapshotAsOfISO: metadata.windowSnapshotAsOfISO } : {}),
     ...(metadata.metadataStatus ? { metadataStatus: metadata.metadataStatus, metadataNote: metadata.metadataNote } : {}),
+    ...(metadata.displayProjection ? { displayProjection: metadata.displayProjection } : {}),
   };
 }
 
@@ -67,6 +70,9 @@ export function buildPublicDatasetArtifacts<T>({
   return {
     csv: [
       `# ${preambleLine(metadata, "csv")}`,
+      ...(metadata.displayProjection
+        ? [`# Display projection: ${JSON.stringify(metadata.displayProjection)}`]
+        : []),
       columns.map((column) => column.header).join(","),
       ...csvRows,
     ].join("\n") + "\n",

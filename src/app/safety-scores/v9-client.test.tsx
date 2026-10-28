@@ -1,11 +1,12 @@
 // @vitest-environment jsdom
 
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen } from "@testing-library/react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanupFrontendTest, createNextLinkMock } from "@/test-utils/frontend";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import type { SafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 
 const mocks = vi.hoisted(() => ({
   useReportCardsV9: vi.fn(),
@@ -33,6 +34,77 @@ function query(data: unknown) {
     meta: null,
     refetch: vi.fn(),
   };
+}
+
+const PREVIEW_PUBLISHED_AT_SEC = Date.parse("2026-10-27T08:00:00Z") / 1000;
+
+function makePreview(overrides: Partial<SafetyScoresPreview> = {}): SafetyScoresPreview {
+  const identity = overrides.identity ?? {
+    model: "v9" as const,
+    schemaVersion: 1 as const,
+    methodologyVersion: "9.0",
+    evaluationBuildDigest: "b".repeat(64),
+    baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+    publicationGenerationId: "v9-publication-1",
+    policyId: "safety-score-v9",
+    policyDigest: "a".repeat(64),
+  };
+  return {
+    kind: "safety-grade-preview",
+    rows: [
+      {
+        id: "asset-a",
+        name: "Asset A",
+        symbol: "AAA",
+        href: "/stablecoin/asset-a/",
+        grade: "A",
+        score: 90,
+        provisional: false,
+        gradeHoldRawGrade: null,
+      },
+      {
+        id: "asset-b",
+        name: "Asset B",
+        symbol: "BBB",
+        href: "/stablecoin/asset-b/",
+        grade: "B",
+        score: 75,
+        provisional: true,
+        gradeHoldRawGrade: null,
+      },
+    ],
+    shownCount: 2,
+    eligibleRatedCount: 2,
+    publicationCompleteness: {
+      expectedCount: 2,
+      ratedCount: 2,
+      notRatedCount: 0,
+      pipelineGapCount: 0,
+    },
+    publicationHealth: {
+      schemaVersion: 2,
+      status: "current",
+      acceptedPublicationGenerationId: "v9-publication-1",
+      acceptedAtSec: PREVIEW_PUBLISHED_AT_SEC,
+      attemptedAtSec: PREVIEW_PUBLISHED_AT_SEC,
+      heldSinceSec: null,
+      reasons: [],
+    },
+    identity,
+    publishedAtSec: PREVIEW_PUBLISHED_AT_SEC,
+    capturedAtSec: PREVIEW_PUBLISHED_AT_SEC + 300,
+    snapshotDate: "2026-10-27",
+    expiresAtSec: Date.parse("2026-10-30T00:00:00Z") / 1000,
+    ...overrides,
+  };
+}
+
+function expectPreviewFacts() {
+  expect(screen.getAllByText("Grades as of 2026-10-27")).toHaveLength(1);
+  expect(screen.getByText("Top 2 of 2 rated active stablecoins by Safety Score")).toBeTruthy();
+  expect(document.querySelector('a[href="/stablecoin/asset-a/"]')).not.toBeNull();
+  expect(document.querySelector('a[href="/stablecoin/asset-b/"]')).not.toBeNull();
+  expect(screen.getByText("90/100")).toBeTruthy();
 }
 
 describe("ReportCardsV9Client", () => {
@@ -208,5 +280,111 @@ describe("ReportCardsV9Client", () => {
     expect(screen.getByText("$0.00")).toBeTruthy();
     expect(screen.queryByText("0%")).toBeNull();
     expect(screen.getAllByTestId("v9-card")).toHaveLength(2);
+  });
+
+  it("server-renders and hydrates the dated preview while the native query is pending", () => {
+    mocks.useReportCardsV9.mockReturnValue({ ...query(undefined), isLoading: true });
+    mocks.useStablecoins.mockReturnValue(query(undefined));
+    const preview = makePreview();
+
+    const html = renderToStaticMarkup(<ReportCardsV9Client initialPreview={preview} />);
+    expect(html).toContain("Grades as of 2026-10-27");
+    expect(html).toContain('href="/stablecoin/asset-a/"');
+    render(<ReportCardsV9Client initialPreview={preview} />);
+    expectPreviewFacts();
+    // Hero and controls stay neutral: no preview-derived aggregate.
+    expect(screen.getByRole("group", { name: "Ecosystem safety overview" }).textContent).not.toMatch(/[0-9]/);
+  });
+
+  it("retains the preview and its links through an initial API failure", () => {
+    mocks.useReportCardsV9.mockReturnValue({
+      ...query(undefined),
+      isLoading: false,
+      error: new Error("Ratings unavailable"),
+    });
+    render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    expectPreviewFacts();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("replaces the preview once an equal or newer admitted publication arrives", () => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      updatedAt: PREVIEW_PUBLISHED_AT_SEC,
+      cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
+    })));
+    render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+  });
+
+  it("follows a successful empty publication instead of retaining the preview", () => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      updatedAt: PREVIEW_PUBLISHED_AT_SEC,
+      cards: [],
+    })));
+    render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
+    expect(screen.getByText(/No coins match this filter/)).toBeTruthy();
+  });
+
+  it("takes an admitted live downgrade over a higher build preview", () => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      updatedAt: PREVIEW_PUBLISHED_AT_SEC + 600,
+      cards: [makeV9Card({ id: "asset-a", grade: "F", score: 30 })],
+    })));
+    render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+  });
+
+  it("never regresses to the build preview after a refetch failure with accepted live data", () => {
+    mocks.useReportCardsV9.mockReturnValue({
+      ...query(makeReportCardsV9Response({
+        updatedAt: PREVIEW_PUBLISHED_AT_SEC + 600,
+        cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
+      })),
+      error: new Error("Refetch failed"),
+    });
+    render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    expect(screen.queryByText("Grades as of 2026-10-27")).toBeNull();
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+  });
+
+  it("keeps the dated preview when the live publication is older, and lets a changed methodology win", () => {
+    mocks.useReportCardsV9.mockReturnValue(query(makeReportCardsV9Response({
+      updatedAt: PREVIEW_PUBLISHED_AT_SEC - 600,
+      cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
+    })));
+    const { unmount } = render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    expectPreviewFacts();
+    unmount();
+
+    const changed = makeReportCardsV9Response({
+      updatedAt: PREVIEW_PUBLISHED_AT_SEC - 600,
+      cards: [makeV9Card({ id: "asset-a", grade: "C", score: 55 })],
+    });
+    changed.safetyScoreIdentity = {
+      ...changed.safetyScoreIdentity,
+      methodologyVersion: "9.1",
+    };
+    changed.methodology = { ...changed.methodology, version: "9.1" };
+    mocks.useReportCardsV9.mockReturnValue(query(changed));
+    render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
+    expect(screen.getAllByTestId("v9-card")).toHaveLength(1);
+  });
+
+  it("drops an expired preview after hydration and falls back to the neutral unavailable state", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-31T00:00:00Z"));
+    mocks.useReportCardsV9.mockReturnValue({ ...query(undefined), isLoading: false });
+    mocks.useStablecoins.mockReturnValue(query(undefined));
+    render(<ReportCardsV9Client initialPreview={makePreview()} />);
+    act(() => {
+      vi.advanceTimersByTime(0);
+    });
+    expect(screen.queryByText(/Grades as of 2026-10-27/)).toBeNull();
+    expect(screen.getByRole("alert").textContent).toContain("V8 ratings are not used as a fallback");
+    vi.useRealTimers();
   });
 });

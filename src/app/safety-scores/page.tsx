@@ -9,6 +9,7 @@ import { ShareButton } from "@/components/share-button";
 import { buildApiOgImageUrl } from "@/lib/page-metadata";
 import { SafetyScoresContentLoadingState } from "@/app/safety-scores/loading-state";
 import { createClientFeaturePage } from "@/lib/client-feature-page";
+import { getSafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 import { buildPublicDatasetMirrorJsonLd } from "@/lib/analytics-dataset-json-ld";
 import { safeJsonLd } from "@/lib/json-ld";
 import type { FaqItem } from "@/lib/faq";
@@ -49,6 +50,8 @@ const FAQ_ITEMS = [
   },
 ] as const satisfies readonly FaqItem[];
 
+const initialPreview = getSafetyScoresPreview();
+
 const route = createClientFeaturePage({
   path: "/safety-scores/",
   metadata: {
@@ -57,7 +60,8 @@ const route = createClientFeaturePage({
     ogImage: buildApiOgImageUrl(API_PATHS.ogSafetyScores()),
   },
   loadClient: () => import("./v9-client").then((m) => ({ default: m.ReportCardsV9Client })),
-  loading: <SafetyScoresContentLoadingState />,
+  clientProps: { initialPreview },
+  loading: <SafetyScoresContentLoadingState preview={initialPreview} />,
   shell: {
     breadcrumbName: "Safety Scores",
     title: "Safety Scores",

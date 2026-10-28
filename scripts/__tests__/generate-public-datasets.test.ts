@@ -7,6 +7,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
+import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import * as depegSnapshot from "../../src/lib/depeg-event-snapshot";
 import { copyDatasetWorkspace, datasetBytes } from "./generate-public-datasets.test-support";
 import * as depegCapture from "../lib/depeg-ledger-capture";
@@ -85,8 +87,28 @@ function makeEnvelope(snapshotDate: string) {
   };
 }
 
-function makeEvent(pendingReason: string | null) {
+function makeCurrentEnvelope(snapshotDate: string) {
+  const response = makeReportCardsV9Response({
+    cards: [makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" })],
+  });
   return {
+    ...makeEnvelope(snapshotDate),
+    version: 2,
+    safetyScoreIdentity: response.safetyScoreIdentity,
+    reportCards: response,
+    dews: [{ stablecoinId: "usdc-circle", computedAt: 1_778_900_000, score: 4, band: "normal" }],
+    liquidity: [{
+      stablecoinId: "usdc-circle",
+      liquidityScore: 95,
+      coverageClass: "deep",
+      updatedAt: 1_778_900_100,
+      unavailableReason: null,
+      methodologyVersion: "6.98",
+    }],
+  };
+}
+
+function makeEvent(pendingReason: string | null) {  return {
     id: 42,
     slug: "usdc-circle-2026-05-14",
     stablecoinId: "usdc-circle",
@@ -214,7 +236,7 @@ describe("generate-public-datasets", () => {
     },
     {
       topic: "scores-latest",
-      header: "stablecoinId,symbol,pegScore,safetyScore,safetyGrade,dewsScore,dewsBand,liquidityScore,coverageClass",
+      header: "stablecoinId,symbol,pegScore,safetyScore,safetyGrade,dewsScore,dewsBand,liquidityScore,coverageClass,ratingStatus,safetyDisplay,dewsComputedAt,liquidityUpdatedAt,liquidityUnavailableReason,liquidityMethodologyVersion",
     },
     {
       topic: "peg-mechanism-distribution",
@@ -433,9 +455,9 @@ describe("generate-public-datasets", () => {
     };
     const rows = testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((spec) => spec.topic === "scores-latest")?.rows;
     expect(rows).toEqual([
-      { stablecoinId: "high", symbol: "USDC", pegScore: null, safetyScore: 88, safetyGrade: "B", dewsScore: 4, dewsBand: "normal", liquidityScore: null, coverageClass: null },
-      { stablecoinId: "zero", symbol: "USDC", pegScore: null, safetyScore: 0, safetyGrade: "F", dewsScore: null, dewsBand: null, liquidityScore: 0, coverageClass: "thin" },
-      { stablecoinId: "missing", symbol: "USDC", pegScore: null, safetyScore: null, safetyGrade: null, dewsScore: null, dewsBand: null, liquidityScore: null, coverageClass: null },
+      { stablecoinId: "high", symbol: "USDC", pegScore: null, safetyScore: 88, safetyGrade: "B", dewsScore: 4, dewsBand: "normal", liquidityScore: null, coverageClass: null, ratingStatus: null, safetyDisplay: null, dewsComputedAt: null, liquidityUpdatedAt: null, liquidityUnavailableReason: null, liquidityMethodologyVersion: null },
+      { stablecoinId: "zero", symbol: "USDC", pegScore: null, safetyScore: 0, safetyGrade: "F", dewsScore: null, dewsBand: null, liquidityScore: 0, coverageClass: "thin", ratingStatus: null, safetyDisplay: null, dewsComputedAt: null, liquidityUpdatedAt: null, liquidityUnavailableReason: null, liquidityMethodologyVersion: null },
+      { stablecoinId: "missing", symbol: "USDC", pegScore: null, safetyScore: null, safetyGrade: null, dewsScore: null, dewsBand: null, liquidityScore: null, coverageClass: null, ratingStatus: null, safetyDisplay: null, dewsComputedAt: null, liquidityUpdatedAt: null, liquidityUnavailableReason: null, liquidityMethodologyVersion: null },
     ]);
   });
 
@@ -446,6 +468,228 @@ describe("generate-public-datasets", () => {
     };
     expect(testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((spec) => spec.topic === "scores-latest")?.rows)
       .toEqual([expect.objectContaining({ stablecoinId: "usdc-circle", safetyScore: 0, safetyGrade: "F" })]);
+  });
+
+  it("emits the versioned display projection in JSON, NDJSON and the CSV preamble", () => {
+    const envelope = makeCurrentEnvelope("2026-05-16");
+    const spec = testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((item) => item.topic === "scores-latest")!;
+
+    expect(spec.displayProjection).toMatchObject({
+      version: 1,
+      snapshotDate: "2026-05-16",
+      capturedAtSec: envelope.generatedAt,
+      sourceSnapshotPath: "/api/snapshots/2026-05-16.json",
+      safetyUnavailableReason: null,
+      safety: {
+        identity: envelope.reportCards.safetyScoreIdentity,
+        asOfSec: envelope.reportCards.asOfSec,
+        publishedAtSec: envelope.reportCards.updatedAt,
+        sourceGenerations: envelope.reportCards.source.sourceGenerations,
+        publicationHealth: envelope.reportCards.publicationHealth,
+        completeness: envelope.reportCards.completeness,
+      },
+    });
+
+    const artifacts = testExports.buildTopicArtifacts(spec, "2026-05-16T10:00:00.000Z");
+    const json = JSON.parse(artifacts.json);
+    const ndjsonMeta = JSON.parse(artifacts.ndjson.split("\n")[0]!);
+    expect(json._meta.asOfISO).toBe("2026-05-16T10:00:00.000Z");
+    expect(json._meta.displayProjection).toEqual(spec.displayProjection);
+    expect(ndjsonMeta._meta.displayProjection).toEqual(spec.displayProjection);
+    expect(artifacts.csv).toContain(`# Display projection: ${JSON.stringify(spec.displayProjection)}`);
+    expect(json.rows).toEqual([expect.objectContaining({
+      stablecoinId: "usdc-circle",
+      ratingStatus: "rated",
+      safetyDisplay: { nrReasons: [], reasonCodes: [], partialEvidence: null },
+      dewsComputedAt: 1_778_900_000,
+      liquidityUpdatedAt: 1_778_900_100,
+      liquidityUnavailableReason: null,
+      liquidityMethodologyVersion: "6.98",
+    })]);
+  });
+
+  it("keeps rated cards absent from the market feed and marks their missing liquidity source", () => {
+    const base = makeCurrentEnvelope("2026-05-16");
+    const response = makeReportCardsV9Response({
+      cards: [
+        makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" }),
+        makeV9Card({ id: "usdt-tether", score: 86, grade: "A" }),
+      ],
+    });
+    const envelope = {
+      ...base,
+      safetyScoreIdentity: response.safetyScoreIdentity,
+      reportCards: response,
+    };
+    const rows = testExports.buildTopicSpecs(envelope, [], "2026-05-16")
+      .find((spec) => spec.topic === "scores-latest")?.rows as Array<Record<string, unknown>>;
+
+    expect(rows.map((row) => row.stablecoinId)).toEqual(["usdc-circle", "usdt-tether"]);
+    expect(rows[1]).toMatchObject({
+      symbol: "USDT",
+      safetyScore: 86,
+      safetyGrade: "A",
+      ratingStatus: "rated",
+      liquidityScore: null,
+      liquidityUnavailableReason: "source-row-missing",
+    });
+  });
+
+  it("preserves a recorded liquidity rejection reason and the row's methodology version", () => {
+    const envelope = makeCurrentEnvelope("2026-05-16");
+    const row = testExports.projectScoresLatest({
+      ...envelope,
+      liquidity: [{
+        stablecoinId: "usdc-circle",
+        liquidityScore: null,
+        coverageClass: null,
+        updatedAt: 1_778_900_100,
+        unavailableReason: "invalid-coverage-evidence",
+        methodologyVersion: "6.97",
+      }],
+    }).rows[0]!;
+    expect(row).toMatchObject({
+      liquidityScore: null,
+      coverageClass: null,
+      liquidityUpdatedAt: 1_778_900_100,
+      liquidityUnavailableReason: "invalid-coverage-evidence",
+      liquidityMethodologyVersion: "6.97",
+    });
+  });
+
+  it("rejects accepted card IDs that are neither market rows nor tracked assets", () => {    const base = makeCurrentEnvelope("2026-05-16");
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "ghost-coin", score: 88, grade: "A+" })],
+    });
+    const envelope = { ...base, safetyScoreIdentity: response.safetyScoreIdentity, reportCards: response };
+    expect(() => testExports.buildTopicSpecs(envelope, [], "2026-05-16")).toThrow(
+      "neither a market row nor a tracked registry identity",
+    );
+  });
+
+  it("rejects mismatched Safety identities and publication clocks that postdate collection", () => {
+    const envelope = makeCurrentEnvelope("2026-05-16");
+    expect(() => testExports.projectScoresLatest({
+      ...envelope,
+      safetyScoreIdentity: {
+        ...envelope.reportCards.safetyScoreIdentity,
+        publicationGenerationId: "another-publication",
+      },
+    })).toThrow("identity does not match");
+    expect(() => testExports.projectScoresLatest({
+      ...envelope,
+      generatedAt: envelope.reportCards.updatedAt - 1,
+    })).toThrow("clocks do not precede the snapshot collection clock");
+  });
+
+  it("preserves pipeline-gap, grade-hold and provisional facts without inventing NR", () => {
+    const base = makeCurrentEnvelope("2026-05-16");
+    const pipelineGap = makeReportCardsV9Response({
+      cards: [makeReportCardsV9PipelineGapCard("control", "A", { id: "usdc-circle" })],
+    });
+    const gapRow = testExports.projectScoresLatest({
+      ...base,
+      safetyScoreIdentity: pipelineGap.safetyScoreIdentity,
+      reportCards: pipelineGap,
+    }).rows[0]!;
+    expect(gapRow).toMatchObject({
+      safetyScore: null,
+      safetyGrade: null,
+      ratingStatus: "pipeline-gap",
+      safetyDisplay: { partialEvidence: expect.objectContaining({ reasonCode: "partial-evidence-pipeline-gap" }) },
+    });
+
+    const held = makeReportCardsV9Response({
+      cards: [makeV9Card({
+        id: "usdc-circle",
+        score: 84,
+        grade: "A-",
+        gradeHold: { rawGrade: "A", heldFromGenerationId: "v9-publication-prior" },
+      })],
+    });
+    const heldRow = testExports.projectScoresLatest({
+      ...base,
+      safetyScoreIdentity: held.safetyScoreIdentity,
+      reportCards: held,
+    }).rows[0]!;
+    expect(heldRow).toMatchObject({
+      safetyScore: 84,
+      safetyGrade: "A-",
+      safetyDisplay: {
+        gradeHold: { rawGrade: "A", heldFromGenerationId: "v9-publication-prior" },
+      },
+    });
+    expect(heldRow.safetyDisplay).not.toHaveProperty("provisional");
+  });
+
+  it("exports an explicit legacy-unavailable display projection for old envelopes", () => {
+    const spec = testExports.buildTopicSpecs(makeEnvelope("2026-05-16"), [], "2026-05-16")
+      .find((item) => item.topic === "scores-latest")!;
+    expect(spec.displayProjection).toEqual({
+      version: 1,
+      snapshotDate: "2026-05-16",
+      capturedAtSec: 1_779_000_000,
+      sourceSnapshotPath: "/api/snapshots/2026-05-16.json",
+      safety: null,
+      safetyUnavailableReason: "legacy-source-metadata-unavailable",
+    });
+    expect((spec.rows[0] as Record<string, unknown>).ratingStatus).toBeNull();
+    expect((spec.rows[0] as Record<string, unknown>).safetyDisplay).toBeNull();
+    expect((spec.rows[0] as Record<string, unknown>).liquidityUnavailableReason).toBeNull();
+  });
+
+  it("falls back to unavailable Safety metadata for a historical publication under an older schema", () => {
+    const envelope = makeCurrentEnvelope("2026-05-16");
+    const spec = testExports.buildTopicSpecs({
+      ...envelope,
+      reportCards: { ...envelope.reportCards, schemaVersion: 7 },
+    }, [], "2026-05-16", { historical: true }).find((item) => item.topic === "scores-latest")!;
+    expect(spec.displayProjection).toMatchObject({
+      safety: null,
+      safetyUnavailableReason: "legacy-source-metadata-unavailable",
+    });
+    expect((spec.rows[0] as Record<string, unknown>).ratingStatus).toBeNull();
+    expect((spec.rows[0] as Record<string, unknown>).safetyScore).toBe(88);
+  });
+
+  it("admits old dated score artifacts but requires the projection on the current alias target", async () => {
+    const root = await makeRoot();
+    const datasetsDir = path.join(root, "datasets");
+    const topicDir = path.join(datasetsDir, "scores-latest");
+    await mkdir(topicDir, { recursive: true });
+    const redirectsPath = await writeTopicRedirects(root, "scores-latest");
+    const rows = Array.from({ length: 493 }, (_, index) => ({ stablecoinId: `coin-${index}` }));
+    await writeFile(path.join(topicDir, "2026-05-16.csv"), "# Pharos pharos.watch\nstablecoinId\n");
+    await writeFile(
+      path.join(topicDir, "2026-05-16.ndjson"),
+      '{"_meta":{"endpoint":"scores-latest"}}\n',
+    );
+    await writeFile(
+      path.join(topicDir, "2026-05-16.json"),
+      JSON.stringify({ _meta: { endpoint: "scores-latest", rowCount: 493 }, rows }, null, 2),
+    );
+    expect(testExports.checkTopic("scores-latest", artifactDirs(datasetsDir, redirectsPath))).toEqual({
+      ok: false,
+      reason: expect.stringContaining("displayProjection is missing or invalid"),
+    });
+
+    const projection = {
+      version: 1,
+      snapshotDate: "2026-05-16",
+      capturedAtSec: 1_779_000_000,
+      sourceSnapshotPath: "/api/snapshots/2026-05-16.json",
+      safety: null,
+      safetyUnavailableReason: "legacy-source-metadata-unavailable",
+    };
+    await writeFile(
+      path.join(topicDir, "2026-05-16.json"),
+      JSON.stringify({ _meta: { endpoint: "scores-latest", rowCount: 493, displayProjection: projection }, rows }, null, 2),
+    );
+    expect(testExports.checkTopic("scores-latest", artifactDirs(datasetsDir, redirectsPath))).toEqual({ ok: true });
+    expect(testExports.validateScoresLatestDisplayProjection({
+      ...projection,
+      snapshotDate: "2026-05-15",
+    }, "2026-05-16")).toEqual({ ok: false, reason: expect.stringContaining("expected 2026-05-16") });
   });
 
   it("projects peg metadata and methodology versions from the snapshot envelope", () => {

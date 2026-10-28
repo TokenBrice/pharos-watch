@@ -1,6 +1,6 @@
 "use client";
 
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { Fragment, useCallback, useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { QueryFreshnessNotices } from "@/components/query-freshness-notices";
 import { ReportCardMiniV9 } from "@/components/report-card-mini-v9";
@@ -10,6 +10,7 @@ import { useStablecoins } from "@/hooks/use-stablecoins";
 import { refetchQueryGroup } from "@/lib/query-refetch-group";
 import { getSafetyGradeMetadata } from "@/lib/report-card-ui";
 import { cn } from "@/lib/utils";
+import type { SafetyScoresPreview } from "@/lib/safety-grade-snapshot";
 import type { V9TableConsumerCard as V9ConsumerCard } from "@/lib/safety-score-v9-consumers";
 import { SafetyScoresContentLoadingState } from "./loading-state";
 import {
@@ -232,13 +233,32 @@ function GradeSectionHeader({ grade, count }: { grade: string; count: number }) 
   );
 }
 
-export function ReportCardsV9Client() {
+function samePreviewMethodology(
+  identity: { model: string; methodologyVersion: string; policyId?: string; policyDigest?: string },
+  preview: SafetyScoresPreview,
+): boolean {
+  return identity.model === "v9"
+    && identity.methodologyVersion === preview.identity.methodologyVersion
+    && identity.policyId === preview.identity.policyId
+    && identity.policyDigest === preview.identity.policyDigest;
+}
+
+export function ReportCardsV9Client({ initialPreview = null }: { initialPreview?: SafetyScoresPreview | null }) {
   const reportCardsQuery = useReportCardsV9Table();
   const stablecoinsQuery = useStablecoins();
   const logos = logosById;
   const [gradeFilter, setGradeFilter] = useState<GradeFilter>("all");
   const [pegFilter, setPegFilter] = useState<PegFilter>("all");
   const [sortKey, setSortKey] = useState<V9SortKey>("overall");
+  // Hydration-stable first render: the build publication clock keeps server
+  // and client markup identical, then a deferred tick re-evaluates the
+  // calendar-date retention boundary with the viewer's clock.
+  const [nowSec, setNowSec] = useState(initialPreview?.capturedAtSec ?? 0);
+  useEffect(() => {
+    const timer = setTimeout(() => setNowSec(Math.floor(Date.now() / 1000)), 0);
+    return () => clearTimeout(timer);
+  }, []);
+  const previewActive = initialPreview !== null && nowSec < initialPreview.expiresAtSec;
 
   const cards = useMemo(
     () => reportCardsQuery.data?.cards ?? [],
@@ -273,7 +293,47 @@ export function ReportCardsV9Client() {
     [reportCardsQuery.refetch, stablecoinsQuery.refetch],
   );
 
-  if (reportCardsQuery.isLoading) return <SafetyScoresContentLoadingState />;
+  const liveData = reportCardsQuery.data;
+  // A live publication wins unless it is the same methodology and strictly
+  // older than the build preview. A methodology change is never compared.
+  const previewOutranksLive = initialPreview !== null
+    && liveData !== undefined
+    && samePreviewMethodology(liveData.safetyScoreIdentity, initialPreview)
+    && liveData.updatedAt < initialPreview.publishedAtSec;
+  const usePreview = previewActive && (liveData === undefined || previewOutranksLive);
+
+  if (reportCardsQuery.isLoading) {
+    return <SafetyScoresContentLoadingState preview={usePreview ? initialPreview : null} />;
+  }
+
+  if (usePreview && initialPreview) {
+    return (
+      <div className="space-y-6">
+        <QueryFreshnessNotices
+          error={reportCardsQuery.error ?? stablecoinsQuery.error}
+          hasData={false}
+          onRetry={handleRetry}
+          queries={[
+            {
+              preset: "reportCards",
+              dataUpdatedAt: reportCardsQuery.dataUpdatedAt,
+              error: reportCardsQuery.error,
+              hasData: false,
+              meta: reportCardsQuery.meta,
+            },
+            {
+              preset: "stablecoins",
+              dataUpdatedAt: stablecoinsQuery.dataUpdatedAt,
+              error: stablecoinsQuery.error,
+              hasData: !!stablecoinsQuery.data?.peggedAssets?.length,
+              meta: stablecoinsQuery.meta,
+            },
+          ]}
+        />
+        <SafetyScoresContentLoadingState preview={initialPreview} />
+      </div>
+    );
+  }
 
   const renderCard = (card: V9ConsumerCard, index: number) => (
     // content-visibility skips off-screen card rendering without a JS mount
