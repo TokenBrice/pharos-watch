@@ -159,6 +159,63 @@ describe("StablecoinDetailClient", () => {
     longformScrollspyNavMock.mockClear();
   });
 
+  it("keeps the retained History preview through loading and list-error, then hands it to the ready dossier", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const preview = <div data-testid="depeg-history-preview">Latest 6 of 248 archived incidents</div>;
+    const content = () => (
+      <StablecoinDetailClient
+        id={coin.id}
+        coin={coin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+        depegHistoryPreview={preview}
+      />
+    );
+
+    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading", handleRetryAll: vi.fn() });
+    const { container, rerender } = render(content());
+    expect(screen.getAllByTestId("depeg-history-preview")).toHaveLength(1);
+    expect(container.querySelectorAll("#depeg-history")).toHaveLength(1);
+    // The preview is not waiting behind the removed outer History lazy gate.
+    expect(container.querySelector("#depeg-history")?.closest("[data-lazy-section]")).toBeNull();
+
+    useStablecoinDetailViewModelMock.mockReturnValue({
+      status: "list-error",
+      listError: new Error("offline"),
+      handleRetryAll: vi.fn(),
+    });
+    rerender(content());
+    expect(screen.getAllByTestId("depeg-history-preview")).toHaveLength(1);
+    expect(container.querySelectorAll("#depeg-history")).toHaveLength(1);
+
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+    rerender(content());
+    expect(screen.getAllByTestId("depeg-history-preview")).toHaveLength(1);
+    expect(container.querySelectorAll("#depeg-history")).toHaveLength(1);
+    expect(container.querySelector("#depeg-history")?.closest("[data-lazy-section]")).toBeNull();
+  });
+
+  it("keeps the History shell outside the viewport gate while unrelated sections stay lazy", () => {
+    useNearViewportMock.mockImplementation(() => ({ ref: () => {}, near: false }));
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const preview = <div data-testid="depeg-history-preview">Latest 6 of 248 archived incidents</div>;
+    const { container } = render(
+      <StablecoinDetailClient
+        id={coin.id}
+        coin={coin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+        depegHistoryPreview={preview}
+      />,
+    );
+
+    expect(screen.getByTestId("depeg-history-preview")).toBeTruthy();
+    expect(container.querySelector("#depeg-history")?.closest("[data-lazy-section]")).toBeNull();
+    // The other distant modules still reserve and defer on their own gates.
+    expect(container.querySelectorAll("[data-lazy-section]").length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("dews-detail")).toBeNull();
+  });
+
   it("shows a health notice only once detail evidence is past the stale band", () => {
     const now = Date.now();
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;

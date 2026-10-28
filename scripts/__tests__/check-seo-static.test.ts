@@ -478,6 +478,53 @@ describe("check-seo-static", () => {
     }
   });
 
+  it("enforces the retained depeg History preview in pilot profile HTML", async () => {
+    // React streaming inserts hydration comment separators between text nodes.
+    const streamedCaption = "Latest <!-- -->6<!-- --> of <!-- -->248 archived incidents · as of <!-- -->2026-10-17<!-- --> UTC. Recorded history; coverage may be incomplete.";
+    const preview = ({ rows = 6, anchors = 1, withCaption = true }: { rows?: number; anchors?: number; withCaption?: boolean } = {}) => {
+      const anchor = '<div id="depeg-history" data-history-tab="depeg" hidden><div data-testid="depeg-history-preview"><table>'
+        + `${withCaption ? `<caption>${streamedCaption}</caption>` : ""}<tbody>`
+        + Array.from({ length: rows }, (_, index) => `<tr><td>2024-01-0${index + 1}</td><td>+1${index} bps</td><td>1h</td><td>Recovered</td><td>Historical backfill</td></tr>`).join("")
+        + "</tbody></table></div></div>";
+      return `<div data-history-tab="grade" hidden></div>${Array.from({ length: anchors }, () => anchor).join("")}`;
+    };
+    const collect = async (route: string, mainText: string) => {
+      const root = await makeOutDir();
+      await writeBaselinePages(root, [route]);
+      await writePage(root, route, { h1: "Pilot profile", mainText: `${"Useful stablecoin detail text ".repeat(20)}${mainText}` });
+      await writeSitemap(root, ["/", "/stability-index/", route]);
+      return collectFixtureSeoResult(root).errors.filter((error: string) => error.includes("History preview") || error.includes("NAV profile"));
+    };
+
+    expect(await collect("/stablecoin/usdt-tether/", preview())).toEqual([]);
+    expect(await collect("/stablecoin/usdt-tether/", preview({ anchors: 2 }))).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("History preview must own exactly one #depeg-history (found 2)"),
+        expect.stringContaining("History preview must render exactly once (found 2)"),
+      ]),
+    );
+    expect(await collect("/stablecoin/usdt-tether/", preview({ rows: 7 }))).toEqual([
+      expect.stringContaining("History preview renders 7 incident rows (maximum 6)"),
+    ]);
+    expect(await collect("/stablecoin/usdt-tether/", preview({ rows: 0 }))).toEqual([
+      expect.stringContaining("History preview renders no incident rows"),
+    ]);
+    expect(await collect("/stablecoin/usdt-tether/", preview({ withCaption: false }))).toEqual([
+      expect.stringContaining("History preview is missing its capture date or coverage caption"),
+    ]);
+    expect(await collect("/stablecoin/usdt-tether/", `<div data-history-tab="depeg" hidden><script>{"text":"Latest 6 of 248 archived incidents · as of 2026-10-17 UTC. Recorded history; coverage may be incomplete."}</script></div>`)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("History preview must render exactly once (found 0)"),
+      ]),
+    );
+    expect(await collect("/stablecoin/aa-falconx-mev-capital/", preview())).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("NAV profile renders a depeg history preview"),
+        expect.stringContaining("NAV profile renders a #depeg-history panel"),
+      ]),
+    );
+  });
+
   it("requires one visible <h1> inside <main> on former loading-boundary route families", async () => {
     const root = await makeOutDir();
     await writeBaselinePages(root, ["/depeg/", "/compare/", "/flows/"]);

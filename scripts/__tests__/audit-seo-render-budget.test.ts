@@ -15,6 +15,7 @@ import {
   evaluateSentinels,
   failedRouteRow,
   formatTable,
+  getRouteExpectations,
   installFailureListeners,
   isReplayEligibleRoute,
   parseSeoRenderBudgetArgs,
@@ -75,7 +76,7 @@ function evaluate(snapshot: ReturnType<typeof makeSnapshot>, overrides: {
   replay?: boolean;
   baseline?: { mobile: ReturnType<typeof makeSnapshot> | null } | null;
   sourceGeneration?: string | null;
-  expectations?: { panels?: { required?: string[]; notApplicable?: string[] } } | null;
+  expectations?: { panels?: { required?: string[]; notApplicable?: string[] }; depegHistoryPreview?: boolean } | null;
 } = {}) {
   return evaluateSentinels({
     surface: overrides.surface ?? "profile",
@@ -258,7 +259,48 @@ describe("SEO render audit sentinels", () => {
     });
   });
 
-  it("takes panel applicability from a route fixture instead of assuming every panel should exist", () => {
+  it("enrolls the five-pilot inactive depeg preview, its links and the replay snapshot", () => {
+    const previewPanel = ({ rows = 6, hrefs = 0, caption = true, scope = true } = {}) => {
+      const links = Array.from({ length: hrefs }, (_, index) => `<a href="/depeg/usdt-2023-0${index + 1}-01/">Event record</a>`).join("");
+      const rowsHtml = Array.from({ length: rows }, (_, index) =>
+        `<tr><td>2023-01-0${index + 1}</td><td>+1${index} bps</td><td>1h</td><td>Recovered</td><td>Historical backfill</td></tr>`).join("");
+      const captionHtml = caption
+        ? `<caption>Latest ${rows} of 248 archived incidents · as of 2026-10-17 UTC. ${scope ? "Recorded history; coverage may be incomplete." : ""}</caption>`
+        : "";
+      return `<main><h1>USDT</h1><div id="grade-history" data-history-tab="grade"></div>`
+        + `<div id="depeg-history" data-history-tab="depeg" hidden><div data-testid="depeg-history-preview">`
+        + `<table>${captionHtml}<tbody>${rowsHtml}</tbody></table>${links}</div></div></main>`;
+    };
+    const expectations = getRouteExpectations("/stablecoin/usdt-tether/");
+    expect(expectations).toEqual({ panels: { required: ["depeg"] }, depegHistoryPreview: true });
+    expect(getRouteExpectations("/stablecoin/usde-ethena/")).not.toBeNull();
+    expect(getRouteExpectations("/stablecoin/usds-sky/")).toBeNull();
+
+    const raw = makeSnapshot(previewPanel({ hrefs: 1 }));
+    const mobile = makeSnapshot(previewPanel({ hrefs: 1 }));
+    const present = evaluate(mobile, { raw, expectations });
+    expect(byId(present, "profile.depeg-history-preview")).toMatchObject({ status: "present", observedCount: 6 });
+    expect(byId(present, "profile.depeg-preview-hrefs")).toMatchObject({ status: "present", observedCount: 1 });
+    expect(byId(present, "profile.history-initial-scroll")).toMatchObject({ status: "present" });
+
+    const replay = evaluate(mobile, { raw, replay: true, baseline: { mobile: raw }, expectations });
+    expect(byId(replay, "profile.depeg-history-preview")).toMatchObject({ status: "present" });
+
+    expect(byId(evaluate(mobile, { raw, expectations }), "profile.depeg-history-preview").status).toBe("present");
+    expect(byId(evaluate(makeSnapshot(previewPanel({ rows: 7 })), { expectations }), "profile.depeg-history-preview"))
+      .toMatchObject({ status: "missing", reason: "depeg-preview-row-bound-exceeded" });
+    expect(byId(evaluate(makeSnapshot(previewPanel({ caption: false })), { expectations }), "profile.depeg-history-preview"))
+      .toMatchObject({ status: "missing", reason: "depeg-preview-capture-date-missing" });
+    expect(byId(evaluate(makeSnapshot(previewPanel({ scope: false })), { expectations }), "profile.depeg-history-preview"))
+      .toMatchObject({ status: "missing", reason: "depeg-preview-scope-missing" });
+    expect(byId(evaluate(makeSnapshot(previewPanel({ hrefs: 0 })), { raw, expectations }), "profile.depeg-preview-hrefs"))
+      .toMatchObject({ status: "missing", reason: "depeg-preview-destination-lost" });
+    expect(byId(evaluate(mobile, { raw: makeSnapshot(previewPanel({ hrefs: 1 }), { scrollY: 120 }), expectations }), "profile.history-initial-scroll"))
+      .toMatchObject({ status: "missing", reason: "initial-scroll-offset" });
+    expect(evaluate(mobile).map((entry: { id: string }) => entry.id)).not.toContain("profile.depeg-history-preview");
+  });
+
+  it("keeps panel applicability from a route fixture instead of assuming every panel should exist", () => {
     const navProfile = makeSnapshot('<main><h1>USDT</h1><div data-history-tab="peg" hidden>Peg facts</div></main>');
     const sentinels = evaluate(navProfile, {
       expectations: { panels: { required: ["peg"], notApplicable: ["depeg"] } },
@@ -415,7 +457,7 @@ describe("SEO render audit sentinels", () => {
 
   it("lists later-wave expectations without evaluating them in Wave 1", () => {
     expect(UNENROLLED_SENTINEL_EXPECTATIONS.map((entry: { ownerItem: string }) => entry.ownerItem))
-      .toEqual(["C4", "C1", "C3", "B1", "B2"]);
+      .toEqual(["C4", "C3", "B1", "B2"]);
     const sentinels = evaluate(makeSnapshot(poolSection({ rows: 5 })));
     expect(sentinels.map((entry) => entry.id)).not.toEqual(
       expect.arrayContaining(UNENROLLED_SENTINEL_EXPECTATIONS.map((entry: { id: string }) => entry.id)),

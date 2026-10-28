@@ -77,11 +77,14 @@ const DETAIL_SECTION_IDS = DETAIL_SECTIONS.map((section) => section.id);
 interface DetailContentProps {
   activeBannerId: string;
   activityGateRef: Ref<HTMLDivElement>;
+  /** C1: server-rendered retained-ledger preview for the History panel. */
+  depegHistoryPreview: ReactNode;
   exploreNextContent: ReactNode;
   feedbackOpen: boolean;
   /** The page heading; the visible identity title is the page's only h1. */
   heading?: string;
   heroRef: RefObject<HTMLDivElement | null>;
+  historyActive: boolean;
   historyGateRef: Ref<HTMLDivElement>;
   mechanismBacking: MechanismBackingView | null;
   mechanismCollateralization: MechanismCollateralizationView | null;
@@ -384,10 +387,12 @@ function DetailSummaryRail({
 export function DetailContent({
   activeBannerId,
   activityGateRef,
+  depegHistoryPreview,
   exploreNextContent,
   feedbackOpen,
   heading,
   heroRef,
+  historyActive,
   historyGateRef,
   mechanismBacking,
   mechanismCollateralization,
@@ -530,8 +535,10 @@ export function DetailContent({
             />
             <DetailHistoryExploreSections
               activeBannerId={activeBannerId}
+              depegHistoryPreview={depegHistoryPreview}
               exploreNextContent={exploreNextContent}
               frozenNote={frozenNote}
+              historyActive={historyActive}
               historyGateRef={historyGateRef}
               viewModel={viewModel}
             />

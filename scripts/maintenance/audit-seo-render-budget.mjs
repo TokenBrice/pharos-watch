@@ -8,6 +8,9 @@ const DEFAULT_ROUTES = [
   "/",
   "/stablecoin/usdt-tether/",
   "/stablecoin/usdc-circle/",
+  "/stablecoin/usde-ethena/",
+  "/stablecoin/dai-makerdao/",
+  "/stablecoin/fdusd-first-digital/",
   "/chains/ethereum/",
   "/liquidity/",
   "/depeg/",
@@ -47,11 +50,30 @@ const GENERATION_HEADER_NAMES = ["x-safety-score-generation", "x-data-updated-at
  */
 export const UNENROLLED_SENTINEL_EXPECTATIONS = [
   { id: "profile.heading-semantics", ownerItem: "C4", reason: "enrolled-by-C4" },
-  { id: "profile.inactive-event-facts", ownerItem: "C1", reason: "enrolled-by-C1" },
   { id: "profile.deployment-facts", ownerItem: "C3", reason: "enrolled-by-C3" },
   { id: "safety-scores.dated-preview", ownerItem: "B1", reason: "enrolled-by-B1" },
   { id: "compliance.regime-panels", ownerItem: "B2", reason: "enrolled-by-B2" },
 ];
+
+/** C1's five-profile cohort: each route must carry the inactive-panel facts. */
+export const HISTORY_PREVIEW_PILOT_ROUTES = [
+  "/stablecoin/usdt-tether/",
+  "/stablecoin/usdc-circle/",
+  "/stablecoin/usde-ethena/",
+  "/stablecoin/dai-makerdao/",
+  "/stablecoin/fdusd-first-digital/",
+];
+
+/** Route fixtures are declared here, never inferred from the live DOM. */
+export function getRouteExpectations(route) {
+  const pathname = String(route ?? "").split(/[?#]/)[0].replace(/\/+$/, "") || "/";
+  const normalized = `${pathname}/`;
+  if (!HISTORY_PREVIEW_PILOT_ROUTES.includes(normalized)) return null;
+  return {
+    panels: { required: ["depeg"] },
+    depegHistoryPreview: true,
+  };
+}
 
 export const SEO_RENDER_BUDGET_HELP = [
   "Usage: node scripts/maintenance/audit-seo-render-budget.mjs [--url <url>] [--routes <comma-separated-routes>] [--wait-ms <n>] [--api-failure-replay] [--json]",
@@ -434,12 +456,25 @@ export function collectSnapshotFacts(document, options = {}) {
 
   const panels = Array.from(document.querySelectorAll("[data-history-tab]")).map((panel) => {
     const text = textOf(panel);
+    const preview = panel.querySelector('[data-testid="depeg-history-preview"]');
+    const previewTable = preview ? preview.querySelector("table") : null;
+    const previewBody = previewTable ? previewTable.querySelector("tbody") : null;
+    const previewText = textOf(preview);
     return {
       id: panel.id || null,
       tab: panel.getAttribute("data-history-tab"),
       hidden: panel.hasAttribute("hidden") || panel.hidden === true,
       textChars: text.length,
       text: text.slice(0, 160),
+      preview: Boolean(preview),
+      previewRows: previewBody ? previewBody.querySelectorAll("tr").length : null,
+      previewHasCaptureDate: /as of \d{4}-\d{2}-\d{2} UTC/.test(previewText),
+      previewHasCoverageScope: previewText.includes("Recorded history; coverage may be incomplete."),
+      previewHrefs: preview
+        ? Array.from(preview.querySelectorAll('a[href^="/depeg/"]'))
+          .map((anchor) => anchor.getAttribute("href"))
+          .filter((href) => typeof href === "string")
+        : [],
     };
   });
 
@@ -734,6 +769,46 @@ export function evaluateSentinels({
       }
     }
 
+    if (expectations?.depegHistoryPreview) {
+      // The retained-ledger facts are static: an API-failure replay must still
+      // show them, so this sentinel evaluates the replay snapshot instead of
+      // excusing it as not observed.
+      const panel = (mobile.panels ?? []).find((candidate) => candidate.tab === "depeg");
+      if (!panel) {
+        results.push(sentinel("profile.depeg-history-preview", "missing", "depeg-history-panel-missing", null, sourceGeneration));
+      } else if (!panel.preview) {
+        results.push(sentinel("profile.depeg-history-preview", "missing", "depeg-preview-missing", null, sourceGeneration));
+      } else if (panel.previewRows == null) {
+        results.push(sentinel("profile.depeg-history-preview", "not-observed", "depeg-preview-table-missing", null, sourceGeneration));
+      } else if (panel.previewRows === 0) {
+        results.push(sentinel("profile.depeg-history-preview", "missing", "depeg-preview-without-rows", 0, sourceGeneration));
+      } else if (panel.previewRows > 6) {
+        results.push(sentinel("profile.depeg-history-preview", "missing", "depeg-preview-row-bound-exceeded", panel.previewRows, sourceGeneration));
+      } else if (!panel.previewHasCaptureDate) {
+        results.push(sentinel("profile.depeg-history-preview", "missing", "depeg-preview-capture-date-missing", panel.previewRows, sourceGeneration));
+      } else if (!panel.previewHasCoverageScope) {
+        results.push(sentinel("profile.depeg-history-preview", "missing", "depeg-preview-scope-missing", panel.previewRows, sourceGeneration));
+      } else {
+        results.push(sentinel("profile.depeg-history-preview", "present", null, panel.previewRows, sourceGeneration));
+      }
+
+      const rawPanel = (raw?.panels ?? []).find((candidate) => candidate.tab === "depeg") ?? null;
+      const rawHrefs = rawPanel?.previewHrefs ?? [];
+      const currentHrefs = new Set(panel?.previewHrefs ?? []);
+      const lostHrefs = rawHrefs.filter((href) => !currentHrefs.has(href));
+      results.push(lostHrefs.length > 0
+        ? sentinel("profile.depeg-preview-hrefs", "missing", "depeg-preview-destination-lost", lostHrefs.length, sourceGeneration)
+        : rawHrefs.length > 0
+          ? sentinel("profile.depeg-preview-hrefs", "present", null, rawHrefs.length, sourceGeneration)
+          : sentinel("profile.depeg-preview-hrefs", "not-observed", "no-permanent-event-link", 0, sourceGeneration));
+
+      results.push(raw == null
+        ? sentinel("profile.history-initial-scroll", "not-observed", "raw-snapshot-unavailable", null, sourceGeneration)
+        : raw.scrollY === 0
+          ? sentinel("profile.history-initial-scroll", "present", null, 0, sourceGeneration)
+          : sentinel("profile.history-initial-scroll", "missing", "initial-scroll-offset", raw.scrollY, sourceGeneration));
+    }
+
     const dex = mobile.surfaces?.dexLiquidity ?? null;
     if (replay) {
       results.push(sentinel("profile.dex-pool-table", "not-observed", "api-failure-replay-pool-data-unavailable", null, sourceGeneration));
@@ -994,7 +1069,7 @@ export function failedRouteRow(route, url, error) {
   };
 }
 
-async function runApiFailureReplay(browser, url, { waitMs, baseline, origin, surface }) {
+async function runApiFailureReplay(browser, url, { waitMs, baseline, origin, surface, expectations = null }) {
   const counters = emptyCounters();
   const failures = emptyFailures();
   const provenance = { sourceGeneration: null, source: null };
@@ -1034,6 +1109,7 @@ async function runApiFailureReplay(browser, url, { waitMs, baseline, origin, sur
         replay: true,
         baseline,
         sourceGeneration,
+        expectations,
       }),
     };
   } catch (error) {
@@ -1148,6 +1224,7 @@ export async function auditRoute(browser, baseUrl, route, options = {}) {
     ?? null;
   row.sourceGeneration = sourceGeneration;
   row.sourceGenerationSource = provenance.source ?? (sourceGeneration ? "dom:time[datetime]" : null);
+  const expectations = getRouteExpectations(route);
 
   row.sentinels = evaluateSentinels({
     surface,
@@ -1155,12 +1232,13 @@ export async function auditRoute(browser, baseUrl, route, options = {}) {
     hrefLoss: row.hrefLoss,
     captureStatus: row.captureStatus,
     sourceGeneration,
+    expectations,
   });
 
   if (options.apiFailureReplay === true) {
     const replayBaseline = { raw: row.snapshots.raw, mobile: row.snapshots.mobile, tall: row.snapshots.tall };
     row.apiFailureReplay = isReplayEligibleRoute(route)
-      ? await replayImpl(browser, url, { waitMs, baseline: replayBaseline, origin, surface })
+      ? await replayImpl(browser, url, { waitMs, baseline: replayBaseline, origin, surface, expectations })
       : { status: "not-applicable", reason: "route-not-replay-eligible", snapshots: null, hrefLoss: null, sentinels: [], failures: emptyFailures(), counters: emptyCounters(), injectedApiFailures: 0 };
   }
 

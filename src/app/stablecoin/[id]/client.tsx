@@ -42,19 +42,24 @@ import {
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { MechanismArchetype } from "@shared/types";
 import { DetailContent } from "./detail-content";
+import { HistoryTabs } from "./detail-lazy-sections";
 
 function DetailLoadingShell({
+  id,
   coin,
   logoSrc,
   heading,
   mechanismArchetype,
   exploreNextContent,
+  depegHistoryPreview,
 }: {
+  id: string;
   coin: StablecoinStaticMeta;
   logoSrc?: string;
   heading?: string;
   mechanismArchetype?: MechanismArchetype | null;
   exploreNextContent: ReactNode;
+  depegHistoryPreview?: ReactNode;
 }) {
   return (
     <div className="space-y-6">
@@ -84,6 +89,18 @@ function DetailLoadingShell({
         <Skeleton className="h-[200px] rounded-xl" />
       </div>
       <Skeleton className="mt-12 h-[420px] rounded-xl" />
+      {/* Static recorded facts outlive the loading read: the History shell owns
+          the retained-ledger preview here, exactly as the ready dossier does. */}
+      {depegHistoryPreview ? (
+        <div className="mt-12">
+          <HistoryTabs
+            stablecoinId={id}
+            isNavToken={coin.flags.navToken === true}
+            historyActive={false}
+            depegHistoryPreview={depegHistoryPreview}
+          />
+        </div>
+      ) : null}
       {mechanismArchetype ? (
         <div className="mt-8">
           <IntentLink
@@ -120,6 +137,8 @@ interface StablecoinDetailClientProps {
   /** The coin's publishable failure scenario (a marked draft in development), or null. */
   failureScenario?: FailureScenarioSelection | null;
   exploreNextContent?: ReactNode;
+  /** C1: server-rendered retained-ledger preview for the History panel (pilot profiles only). */
+  depegHistoryPreview?: ReactNode;
   snapshot?: StablecoinDetailSnapshot | null;
   /** Frozen coins only: archived list row used when the live detail row is unavailable. */
   archivedLiveSummary?: StablecoinLiveSummary | null;
@@ -185,6 +204,7 @@ function StablecoinDetailClientContent({
   transferReview = null,
   failureScenario = null,
   exploreNextContent = null,
+  depegHistoryPreview = null,
   heading,
   snapshot = null,
   archivedLiveSummary = null,
@@ -225,11 +245,13 @@ function StablecoinDetailClientContent({
     const mechanismArchetype = resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID);
     return (
       <DetailLoadingShell
+        id={id}
         coin={staticCoin}
         logoSrc={logoSrc}
         heading={heading}
         mechanismArchetype={mechanismArchetype}
         exploreNextContent={exploreNextContent}
+        depegHistoryPreview={depegHistoryPreview}
       />
     );
   }
@@ -240,6 +262,18 @@ function StablecoinDetailClientContent({
           <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
         </Button>
         <QueryErrorNotice error={viewModel.listError} hasData={false} onRetry={viewModel.handleRetryAll} />
+        {/* The list read failed, but the recorded depeg ledger is static: keep
+            its dated facts at the History module's lower-page position. */}
+        {depegHistoryPreview ? (
+          <div className="mt-8">
+            <HistoryTabs
+              stablecoinId={id}
+              isNavToken={coin.flags.navToken === true}
+              historyActive={false}
+              depegHistoryPreview={depegHistoryPreview}
+            />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -249,10 +283,12 @@ function StablecoinDetailClientContent({
       <DetailContent
         activeBannerId={activeBannerId}
         activityGateRef={activityGateRef}
+        depegHistoryPreview={depegHistoryPreview}
         exploreNextContent={exploreNextContent}
         feedbackOpen={feedbackOpen}
         heading={heading}
         heroRef={heroRef}
+        historyActive={historyActive}
         historyGateRef={historyGateRef}
         onActiveBannerChange={setActiveBannerId}
         mechanismBacking={mechanismBacking}

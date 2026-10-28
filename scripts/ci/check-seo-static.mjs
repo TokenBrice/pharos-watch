@@ -1004,6 +1004,98 @@ const UNRESOLVED_GRADE_CLAIM_PATTERN = /\bN\/A (?:overall grade|report card)\b/;
 const LOADING_DOSSIER_TEXT = "Loading research dossier";
 // The server-rendered static profile (StablecoinDetailSeoContent), outside the dossier's Suspense boundary.
 const STATIC_PROFILE_MARKER = 'id="stablecoin-static-profile-title"';
+// C1 pilot: profiles whose retained-ledger History preview must be in the export.
+const HISTORY_PREVIEW_PILOT_IDS = new Set([
+  "usdt-tether",
+  "usdc-circle",
+  "usde-ethena",
+  "dai-makerdao",
+  "fdusd-first-digital",
+]);
+const HISTORY_PREVIEW_CAPTION_PATTERN = /Latest [\d,]+ of [\d,]+ archived incidents · as of \d{4}-\d{2}-\d{2} UTC\. Recorded history; coverage may be incomplete\./;
+const STABLECOIN_CATALOG_PATH = path.resolve("shared/data/stablecoins/coins.generated.json");
+let navTokenProfileIdsCache;
+
+/** NAV profiles never get a Depeg preview; the catalog is the authority. */
+function getNavTokenProfileIds() {
+  if (navTokenProfileIdsCache) return navTokenProfileIdsCache;
+  navTokenProfileIdsCache = new Set();
+  try {
+    const catalog = JSON.parse(fs.readFileSync(STABLECOIN_CATALOG_PATH, "utf8"));
+    for (const coin of Array.isArray(catalog) ? catalog : []) {
+      if (coin?.flags?.navToken === true) navTokenProfileIdsCache.add(coin.id);
+    }
+  } catch {
+    // A missing catalog only skips the NAV assertion; profile checks still run.
+  }
+  return navTokenProfileIdsCache;
+}
+
+/** Only real exported markup: RSC flight data and JSON-LD live in `<script>`. */
+function stripEmbeddedScripts(html) {
+  return html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, "");
+}
+
+/** Text of the exported markup including hidden panels, ignoring tags and hydration comments. */
+function extractMarkupText(html) {
+  return decodeHtml(
+    html
+      .replace(/<!--[\s\S]*?-->/g, " ")
+      .replace(/<[^>]+>/g, " "),
+  ).replace(/\s+/g, " ").trim();
+}
+
+function countHistoryPreviewRows(html) {
+  const host = html.indexOf('data-testid="depeg-history-preview"');
+  if (host < 0) return null;
+  const tableStart = html.indexOf("<table", host);
+  const tableEnd = tableStart < 0 ? -1 : html.indexOf("</table>", tableStart);
+  if (tableStart < 0 || tableEnd < 0) return null;
+  const table = html.slice(tableStart, tableEnd);
+  const body = /<tbody[^>]*>([\s\S]*?)<\/tbody>/i.exec(table);
+  return body ? (body[1].match(/<tr\b/gi) ?? []).length : 0;
+}
+
+/**
+ * C1 semantic sentinels. The payload must be real table text, not a matching
+ * sentence inside an RSC string, and the inactive Depeg panel must carry the
+ * same facts as the rest of the HTML. Profiles outside the pilot are untouched.
+ */
+function validateStablecoinProfileHistoryPreview(route, html, errors) {
+  const profileId = route.slice("/stablecoin/".length, -1);
+  const stripped = stripEmbeddedScripts(html);
+  const hasHistoryShell = /data-history-tab=["']/.test(stripped);
+  if (!hasHistoryShell) return;
+  const previewCount = (stripped.match(/data-testid="depeg-history-preview"/g) ?? []).length;
+  const anchorCount = (stripped.match(/id=["']depeg-history["']/g) ?? []).length;
+  const isPilot = HISTORY_PREVIEW_PILOT_IDS.has(profileId);
+  const isNav = getNavTokenProfileIds().has(profileId);
+
+  if (isNav) {
+    if (previewCount > 0) errors.push(`${route}: NAV profile renders a depeg history preview`);
+    if (anchorCount > 0) errors.push(`${route}: NAV profile renders a #depeg-history panel`);
+    return;
+  }
+  if (!isPilot) return;
+  if (anchorCount !== 1) {
+    errors.push(`${route}: History preview must own exactly one #depeg-history (found ${anchorCount})`);
+  }
+  if (previewCount !== 1) {
+    errors.push(`${route}: History preview must render exactly once (found ${previewCount})`);
+    return;
+  }
+  if (!HISTORY_PREVIEW_CAPTION_PATTERN.test(extractMarkupText(stripped))) {
+    errors.push(`${route}: History preview is missing its capture date or coverage caption`);
+  }
+  const rows = countHistoryPreviewRows(stripped);
+  if (rows == null) {
+    errors.push(`${route}: History preview table is not parseable`);
+  } else if (rows === 0) {
+    errors.push(`${route}: History preview renders no incident rows`);
+  } else if (rows > 6) {
+    errors.push(`${route}: History preview renders ${rows} incident rows (maximum 6)`);
+  }
+}
 
 /**
  * Profiles are indexed in their prerendered state, hidden streamed segments
@@ -1019,6 +1111,7 @@ function validateStablecoinProfileRender(pageRecords, errors) {
     if (html.includes(LOADING_DOSSIER_TEXT) && !html.includes(STATIC_PROFILE_MARKER)) {
       errors.push(`${record.route}: profile HTML is a "${LOADING_DOSSIER_TEXT}" shell without the static profile`);
     }
+    validateStablecoinProfileHistoryPreview(record.route, html, errors);
   }
 }
 

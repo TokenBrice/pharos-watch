@@ -11,6 +11,8 @@ import { BreadcrumbJsonLd } from "@/components/breadcrumb-json-ld";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { getStaticComparisonPagesForCoin } from "@/lib/compare-pages";
 import { DEPEG_EVENT_ENTRIES } from "@/lib/depeg-event-page-data";
+import { buildStablecoinDetailHistorySnapshot } from "@/lib/stablecoin-detail-history-snapshot";
+import { DepegHistoryPreview } from "@/components/stablecoin-detail/depeg-history-preview";
 import { buildStablecoinDetailMetadata, hasRedundantName } from "@/lib/page-metadata";
 import { safeJsonLd } from "@/lib/json-ld";
 import { getRelatedStablecoins } from "@/lib/related-stablecoins";
@@ -49,6 +51,8 @@ const typedSummaries = aiSummaries as StablecoinAiSummariesById;
 const typedFailureScenarios = failureScenarios as FailureScenariosById;
 /** Explore next links at most this many of the coin's newest event pages. */
 const EXPLORE_DEPEG_EVENT_LIMIT = 5;
+/** Only a permanent event page may take a preview row's link. */
+const PERMANENT_DEPEG_EVENT_SLUGS: ReadonlySet<string> = new Set(DEPEG_EVENT_ENTRIES.map((event) => event.slug));
 
 /** The coin's newest permanent depeg event pages ("USDC depeg Mar 2023"). */
 function buildExploreDepegEvents(coinId: string, symbol: string): Array<{ href: string; label: string }> {
@@ -274,6 +278,13 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
   const structuredDataDateModified = summary?.updatedAt ?? coin.frozenAt;
   // The visible identity title is the page's only h1.
   const heading = hasRedundantName(coin) ? coin.name : `${coin.name} (${coin.symbol})`;
+  // C1: the retained ledger is read once per build; only the bounded rendered
+  // projection crosses into the client tree, never the ledger itself.
+  const depegHistorySnapshot = buildStablecoinDetailHistorySnapshot({
+    coin,
+    permanentPageSlugs: PERMANENT_DEPEG_EVENT_SLUGS,
+  });
+  const depegHistoryPreview = depegHistorySnapshot ? <DepegHistoryPreview snapshot={depegHistorySnapshot} /> : null;
 
   return (
     <>
@@ -297,6 +308,7 @@ export default async function StablecoinDetailPage({ params }: { params: Promise
           backingParent={backingParent}
           transferReview={buildTransferReviewView(id)}
           failureScenario={failureScenario}
+          depegHistoryPreview={depegHistoryPreview}
           exploreNextContent={
             <ExploreNextSection
               coin={coin}
