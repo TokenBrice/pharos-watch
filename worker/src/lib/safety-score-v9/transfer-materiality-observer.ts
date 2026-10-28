@@ -2,7 +2,7 @@ import { CHAIN_META, resolveChainId } from "@shared/types/chain-identity";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
-import { hasRegistryRpc, supplementalRpcEndpoints, registryRpcUrls, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
+import { registryRpcUrls, type ChainRpcConfig, type RpcEndpoint } from "../chain-registry";
 import { fetchEvmBlockNumber, fetchEvmBlockHeader, fetchEvmMulticall3Aggregate3AtBlock, resolveClosestBlockAtOrBeforeTimestamp } from "../evm-rpc";
 import { DECIMALS_SELECTOR, TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { getPublicRpcUrl, getSecondaryFallbackRpcUrl } from "../public-rpc-registry";
@@ -119,10 +119,9 @@ function rpcConfig(chainId: string, configured: Map<string, ChainRpcConfig>): Ma
   // TRON's block selector only checks existence; it executes latest state.
   // A configured endpoint cannot upgrade that to this historical contract.
   if (chainId === "tron" || configured.get(chainId)?.type === "tron") return null;
-  // Archive supplemental-only configs are usable by the state-read lane.
-  // Do not discard their credentials or upgrade near-head endpoints to archive.
-  if (hasRegistryRpc(configured.get(chainId)) ||
-      supplementalRpcEndpoints(configured.get(chainId)).some(endpoint => endpoint.stateHistory === "archive")) return configured;
+  // Preserve V9's reviewed census capability across registry promotion, including public fallbacks when unadmitted.
+  if (configured.get(chainId)?.endpoints.some(endpoint =>
+    (endpoint.operator !== "dwellir" && endpoint.position === "registry") || endpoint.stateHistory === "archive")) return configured;
   const meta = CHAIN_META[chainId];
   const extra = TRANSFER_MATERIALITY_EXTRA_RPCS[chainId];
   const rpcUrl = extra?.rpcUrl ?? getPublicRpcUrl(chainId);

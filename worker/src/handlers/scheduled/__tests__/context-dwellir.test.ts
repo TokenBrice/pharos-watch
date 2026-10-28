@@ -3,8 +3,10 @@ import { DWELLIR_CHAINS, dwellirRpcUrl } from "@shared/lib/dwellir-chains";
 
 import {
   buildChainRpcs,
+  DWELLIR_ONLY_REGISTRY_CHAINS,
   hasRegistryRpc,
   logScanRpcEndpoints,
+  registryRpcUrls,
   supplementalRpcEndpoints,
   type ChainRpcConfig,
 } from "../../../lib/chain-registry";
@@ -107,6 +109,8 @@ function buildRuntime(options: {
 }
 
 function dwellirUrls(chainRpcs: Map<string, ChainRpcConfig>): string[] {
+  // Every denial case using this helper also proves required inventory survived.
+  for (const chain of DWELLIR_ONLY_REGISTRY_CHAINS) expect(hasRegistryRpc(chainRpcs.get(chain)), chain).toBe(true);
   return [...chainRpcs.values()].flatMap((config) =>
     config.endpoints.filter((endpoint) => endpoint.operator === "dwellir").map((endpoint) => endpoint.url),
   );
@@ -181,21 +185,19 @@ describe("scheduled runtime Dwellir enablement", () => {
     expect(logScanRpcEndpoints(runtime.chainRpcs.get("arbitrum")).map((endpoint) => endpoint.operator))
       .toEqual(["dwellir", "alchemy", "public"]);
 
-    // State-only census endpoints and Dwellir can create supplemental-only
-    // configs; map membership does not establish registry RPC readability.
-    expect(hasRegistryRpc(registryOnly.get("megaeth"))).toBe(false);
+    // Reviewed inventory exists before runtime admission; only routes are conditional.
+    expect(hasRegistryRpc(registryOnly.get("megaeth"))).toBe(true);
+    expect(registryRpcUrls(registryOnly.get("megaeth"))).toEqual([]);
     const megaeth = runtime.chainRpcs.get("megaeth");
-    expect(hasRegistryRpc(megaeth)).toBe(false);
-    expect(supplementalRpcEndpoints(megaeth).map((endpoint) => endpoint.operator)).toEqual(["dwellir", "alchemy"]);
+    expect(hasRegistryRpc(megaeth)).toBe(true);
+    expect(supplementalRpcEndpoints(megaeth).map((endpoint) => endpoint.operator)).toEqual(["alchemy"]);
 
-    for (const chainId of ["cronos", "flow", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko"]) {
-      expect(registryOnly.has(chainId), chainId).toBe(false);
+    for (const chainId of DWELLIR_ONLY_REGISTRY_CHAINS) {
+      expect(hasRegistryRpc(registryOnly.get(chainId)), chainId).toBe(true);
+      expect(registryRpcUrls(registryOnly.get(chainId)), chainId).toEqual([]);
       const config = runtime.chainRpcs.get(chainId);
-      expect(config, chainId).toBeDefined();
-      expect(hasRegistryRpc(config), chainId).toBe(false);
-      expect(supplementalRpcEndpoints(config), chainId).toEqual([
-        expect.objectContaining({ operator: "dwellir", position: "supplemental" }),
-      ]);
+      expect(hasRegistryRpc(config), chainId).toBe(true);
+      expect(registryRpcUrls(config), chainId).toHaveLength(1);
     }
   });
 
@@ -216,7 +218,7 @@ describe("scheduled runtime Dwellir enablement", () => {
     for (const chain of ["ethereum", "arbitrum", "mantle", "base", "gnosis", "sonic", "linea"]) {
       const endpoints = runtime.chainRpcs.get(chain)!.endpoints;
       expect(endpoints[endpoints.length - 1]).toMatchObject({
-        operator: "dwellir", position: "supplemental", routingDisabled: true,
+        operator: "dwellir", position: DWELLIR_ONLY_REGISTRY_CHAINS.has(chain) ? "registry" : "supplemental", routingDisabled: true,
       });
     }
     expect(warnings.filter((line) => line.includes("dwellir_routing_disabled_unknown_chains"))).toHaveLength(1);

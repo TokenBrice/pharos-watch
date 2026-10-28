@@ -242,34 +242,34 @@ describe("Safety Score V9 supply observation primitives", () => {
     ]);
   });
 
-  it("rejects a supplemental-only chain config as chain-rpc-unavailable", async () => {
-    const supplementalOnly = new Map<string, ChainRpcConfig>([[
-      "ethereum",
+  it.each(["supplemental", "registry", "unadmitted"] as const)("rejects a Dwellir-only %s config without reviewed extras", async position => {
+    const dwellirOnly = new Map<string, ChainRpcConfig>([[
+      "linea",
       {
-        chainId: "ethereum",
-        chainName: "Ethereum",
+        chainId: "linea",
+        chainName: "Linea",
         type: "evm",
-        endpoints: [{
-          url: "https://api-ethereum-mainnet.n.dwellir.com",
+        endpoints: position === "unadmitted" ? [] : [{
+          url: "https://api-linea-mainnet.n.dwellir.com",
           operator: "dwellir",
           keyed: true,
-          position: "supplemental",
+          position,
           stateHistory: "archive",
           logsHistory: "full",
           maxLogBlockSpan: 10_000,
           verifiedAt: "2026-10-13",
         }],
-        explorerUrl: "https://etherscan.io",
+        explorerUrl: "https://lineascan.build",
       } satisfies ChainRpcConfig,
     ]]);
     const fetchMock = mockFetch([]);
 
     await expect(observeReviewedEvmDeployment({
-      routeId: "ethereum:demo-token",
-      chainId: "ethereum",
+      routeId: "linea:demo-token",
+      chainId: "linea",
       contractAddress: "0x0000000000000000000000000000000000000001",
       scoringClockSec: 1_700_000_000,
-      chainRpcs: supplementalOnly,
+      chainRpcs: dwellirOnly,
       dependencies: {
         sha256HexFromBytes,
         fetchEvmBlockNumber,
@@ -278,7 +278,7 @@ describe("Safety Score V9 supply observation primitives", () => {
         fetchEvmMulticall3Aggregate3AtBlock,
         fetchEvmStorageAtBlock,
       },
-      identity: () => ({ routeId: "ethereum:demo-token" }),
+      identity: () => ({ routeId: "linea:demo-token" }),
       safeBlockLag: () => 64,
       extraRpcUrls: () => undefined,
       protocolCalls: () => [],
@@ -287,7 +287,7 @@ describe("Safety Score V9 supply observation primitives", () => {
     })).resolves.toEqual({
       status: "rejected",
       rejectionCode: "chain-rpc-unavailable",
-      failedRouteId: "ethereum:demo-token",
+      failedRouteId: "linea:demo-token",
     });
     expect(fetchMock).not.toHaveBeenCalled();
   });

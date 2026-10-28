@@ -3,9 +3,8 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import type { ReviewedDeploymentSupplyObservation, ReviewedDeploymentUnitPartitionV1 } from "@shared/types/safety-score-v9-supply-attribution";
 import { throwIfAborted } from "../abort";
 import {
-  getChainRpc,
   getRpcAuthHeaders,
-  hasRegistryRpc,
+  registryRpcEndpoints,
   registryRpcUrls,
   type ChainRpcConfig,
 } from "../chain-registry";
@@ -101,7 +100,9 @@ export async function observeReviewedEvmDeployment<Identity>(input: {
   }
 
   const extraRpcUrls = input.extraRpcUrls(identity, chainId);
-  if (!hasRegistryRpc(getChainRpc(chainRpcs, chainId)) && (extraRpcUrls?.length ?? 0) === 0) {
+  // Registry promotion alone cannot expand the reviewed V9 deployment inventory.
+  const hasIncumbentRpc = registryRpcEndpoints(chainRpcs.get(chainId)).some(endpoint => endpoint.operator !== "dwellir");
+  if (!hasIncumbentRpc && (extraRpcUrls?.length ?? 0) === 0) {
     return rejectDeployment("chain-rpc-unavailable");
   }
   const options = safetyScoreV9EvmObservationOptions({ chainRpcs,
