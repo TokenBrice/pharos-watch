@@ -100,6 +100,25 @@ describe("SupplyMovesCard", () => {
     expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +20.0%" })).toBeTruthy();
   });
 
+  it.each([true, undefined] as const)("excludes partial-chain coins from mover ranking (explicit partial=%s)", (partialCoverage) => {
+    const partial = makeStablecoin({ id: "usdr-real", symbol: "USDR", currentSupply: 10_000_000, previousWeekSupply: 30_000_000 });
+    partial.supplyChainGuard = {
+      reason: "supply-chain-dropout", status: "chains-unavailable", partialCoverage,
+      chains: [{ chainId: "ethereum", chainLabel: "Ethereum", listCurrentUsd: 0,
+        baselineUsd: 20_000_000, baselineObservedAt: 1_792_700_000, baselineSource: "state", resolution: "unavailable" }],
+    };
+    useStablecoinsMock.mockReturnValue({
+      data: { peggedAssets: [partial, makeStablecoin({ id: "usdc-circle", symbol: "USDC", currentSupply: 12_000_000, previousWeekSupply: 10_000_000 })] },
+      isLoading: false,
+      dataUpdatedAt: Date.now(),
+    });
+
+    render(<SupplyMovesCard />);
+
+    expect(screen.queryByRole("link", { name: /USDR/ })).toBeNull();
+    expect(screen.getByRole("link", { name: "USDC — peak 7-day supply mover: +20.0%" })).toBeTruthy();
+  });
+
   it.each([
     [10_000_000, 5_000_000, "+100%"],
     [5_000_000, 10_000_000, "-50.0%"],

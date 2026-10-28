@@ -84,9 +84,9 @@ function ArchivePreviewLayout({ title, riskSignal, compactIntelligence, bodyBloc
       >
         {title}
       </h2>
+      {bodyBlock}
       <DigestRiskSignalPill signal={riskSignal} />
       {compactIntelligence}
-      {bodyBlock}
     </div>
   );
 }

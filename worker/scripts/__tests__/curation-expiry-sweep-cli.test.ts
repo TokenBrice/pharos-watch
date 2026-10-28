@@ -148,6 +148,18 @@ describe("curation sweep executable workflow contract", () => {
     expect(body.endsWith("Run: https://github.com/example/pharos/actions/runs/1\n")).toBe(true);
   });
 
+  it.each([
+    ["inside", ""],
+    ["outside", "```\n"],
+  ])("keeps the truncation note and footer outside code when cut %s a fence", (_, prefix) => {
+    const { status, body } = publishIssue(`${prefix}## Dependencies\n${"x".repeat(80_000)}`);
+    expect(status).toBe(0);
+    expect(Buffer.byteLength(body, "utf8")).toBeLessThanOrEqual(60_000);
+    expect(body.match(/^```/gm)).toHaveLength(2);
+    expect(body).toContain("output truncated to fit the 60,000-byte issue body budget");
+    expect(body.endsWith("Run: https://github.com/example/pharos/actions/runs/1\n")).toBe(true);
+  });
+
   it.each(["REPLAY_STATUS", "WORKLIST_STATUS", "QUEUE_STATUS", "LIVE_WITHHELD_STATUS", "REGISTRY_STATUS"])(
     "publishes diagnostics and fails the run when %s failed", (statusName) => {
       const { status, body } = publishIssue("small report", statusName);

@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useMemo } from "react";
 import { CoinCell } from "@/components/home-alt-mini-cards/coin-cell";
+import { getSupplyChangePercent } from "@/components/stablecoin-table-logic";
 import { PulseCard } from "@/components/home-alt-mini-cards/pulse-card-header";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getLogoSrc, logosById } from "@/lib/logos";
@@ -49,9 +50,8 @@ function computeSupplyMovers(coins: readonly StablecoinData[], nowSec: number): 
     const prev = getPrevWeekRawOrNull(c);
     if (current === null || prev === null) continue;
     if (current < MIN_TRACKED_MCAP_USD && prev < MIN_TRACKED_MCAP_USD) continue;
-    if (prev <= 0) continue;
-    const pctChange = ((current - prev) / prev) * 100;
-    if (!Number.isFinite(pctChange) || pctChange === 0) continue;
+    const pctChange = getSupplyChangePercent(c, prev);
+    if (pctChange === null || !Number.isFinite(pctChange) || pctChange === 0) continue;
     movers.push({ id: c.id, symbol: c.symbol, name: c.name, pctChange });
   }
   const ups = movers.filter((mover) => mover.pctChange > 0).sort((a, b) => b.pctChange - a.pctChange).slice(0, 4);

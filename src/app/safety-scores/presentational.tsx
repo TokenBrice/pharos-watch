@@ -143,10 +143,18 @@ interface SafetyScoresHeroData {
   pillarAverages?: readonly V9PillarAverage[];
 }
 
-export function SafetyScoresHero({ data }: { data: SafetyScoresHeroData | null }) {
+export function SafetyScoresHero({ data, loading }: { data: SafetyScoresHeroData | null; loading: boolean }) {
   const [avg, abSupply] = data?.stats ?? [];
   const pillarAverages = data?.pillarAverages ?? [];
   const gradeClass = avg ? REPORT_CARD_GRADE_COLORS[avg.detail as ReportCardGrade] : undefined;
+
+  if (!loading && !avg) {
+    return (
+      <div className="pharos-card-shell p-5 sm:p-6 lg:p-7" role="group" aria-label="Ecosystem safety overview">
+        <div className="max-w-sm"><SafetyMapPreview /></div>
+      </div>
+    );
+  }
 
   return (
     <FeatureHeroSplit
