@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
-import { type MockD1Database } from "@shared/test-utils/mock-d1";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import {
   makeMintBurnDb,
   makeMintBurnMintLog as makeMintLog,
   resetMintBurnMocks,
+  seedMintBurnAdmissions,
   MINT_BURN_TRANSFER_TOPIC as TRANSFER_TOPIC,
   MINT_BURN_ZERO_TOPIC as ZERO_TOPIC,
   USDT_CONTRACT,
@@ -124,6 +124,7 @@ const USDT_CONFIG_KEY = `ethereum-${USDT_CONTRACT}`;
 // Keep the default event fixtures inside one inclusive 50k request ending at finality.
 function makeDb(options: MintBurnDbOptions = {}) {
   return makeMintBurnDb({
+    admittedConfigs: MINT_BURN_CONFIGS,
     syncRows: [
       { config_key: USDT_CONFIG_KEY, last_block: 21_950_000 },
       { config_key: "ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48", last_block: 21_950_000 },
@@ -246,6 +247,7 @@ describe("syncMintBurn", () => {
     { disabledSymbols: ["USDT"], disabledConfigIds: ["ethereum-0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48"], protectedRows: 0 },
   ])("applies all-lane runtime enablement to critical retention: %j", async (scenario) => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     const nowSec = Math.floor(Date.now() / 1000);
     const timestamp = nowSec - 10 * 86_400;
     sqlite.prepare(`INSERT INTO mint_burn_events
@@ -490,6 +492,7 @@ describe("syncMintBurn", () => {
 
   it("holds the durable sync-state frontier through a config-phase rejection and advances it on the retry run", async () => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     sqlite
       .prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
       .run(USDT_CONFIG_KEY, 21_950_000);
@@ -519,6 +522,7 @@ describe("syncMintBurn", () => {
 
   it("holds a cursor after recalc failure, protects retained inputs, and rebuilds a complete bucket on duplicate replay", async () => {
     const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
     const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
     const actualPersistence = await vi.importActual<typeof PersistenceModule>(
       "../../lib/mint-burn-pipeline/persistence",
@@ -986,22 +990,18 @@ describe("syncMintBurn", () => {
   });
 
   it("keeps the published aggregate gauge cache row when the extended lane invalidates", async () => {
-    const db = makeDb();
+    const { sqlite, db } = sqliteFixtures.open();
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
+    const aggregateKey = "mint-burn-flows:v6:aggregate:24";
+    const coinKey = "mint-burn-flows:v6:coin:usdt-tether:24";
+    const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, '{}', ?)");
+    insert.run(aggregateKey, Math.floor(Date.now() / 1000));
+    insert.run(coinKey, Math.floor(Date.now() / 1000));
 
     await syncMintBurn(db, "alchemy-key", { lane: "extended", jobName: "sync-mint-burn-extended" });
 
-    const history = (db as MockD1Database).getHistory();
-    const cacheDeletes = history.filter(({ sql }) => sql.includes("DELETE FROM cache"));
-    expect(
-      cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v6:coin:" && entry.binds[1] === "mint-burn-flows:v6:coin:\uffff",
-      ),
-    ).toBe(true);
-    expect(
-      cacheDeletes.some(
-        (entry) => entry.binds[0] === "mint-burn-flows:v6:" || entry.binds[0] === "mint-burn-flows:v6:aggregate:",
-      ),
-    ).toBe(false);
+    expect(sqlite.prepare("SELECT key FROM cache WHERE key IN (?, ?)").all(aggregateKey, coinKey))
+      .toEqual([{ key: aggregateKey }]);
   });
 
   it("emits nullPriceBacklog and roundtripsBacklogSaturated in metadata", async () => {

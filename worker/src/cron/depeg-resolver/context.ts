@@ -12,7 +12,7 @@ import {
   type DdrV9ExitContext,
 } from "@shared/lib/depeg-resolver";
 import { DDR_V2_EFFECTIVE_AT } from "@shared/lib/methodology-versions/depeg-resolver";
-import { WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
+import { WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID as TRACKED_META_BY_ID } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { isTerminalStablecoinStatus } from "@shared/lib/stablecoin-lifecycle";
 import { chunkArray } from "../../lib/collections";
 import { buildInClause } from "../../lib/d1-primitives";
@@ -43,6 +43,7 @@ import {
 } from "./constants";
 import { MINT_BURN_COVERED_COIN_IDS } from "./mint-burn-coverage";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { readMintBurnWindowContext } from "../../lib/mint-burn-flows-service";
 import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { readDdrOpenTrainingHistory, readDdrTrainingHistory } from "./training-history";
 import type {
@@ -429,7 +430,7 @@ export async function loadDdrContext(
   }
 
   const mintBurnCoinIds = activeCoinIds.filter((id) => MINT_BURN_COVERED_COIN_IDS.has(id));
-  const scanConfigs = MINT_BURN_CONFIGS.filter((config) => mintBurnCoinIds.includes(config.stablecoinId));
+  let scanConfigs: typeof MINT_BURN_CONFIGS = [];
   let scanSegments = new Map<string, MintBurnScanSegment[]>();
   const scanFrom = Math.floor(Math.min(...active.map((event) => event.startedAt)) / 3600) * 3600 - 7 * DAY;
   const scanTo = Math.floor(Math.max(...active.map((event) => event.startedAt)) / 3600) * 3600;
@@ -443,14 +444,20 @@ export async function loadDdrContext(
     burn_unpriced_event_count: number | null;
   };
   const mintBurnResult = await queryRows<MintBurnStoredRow>("mint_burn_hourly", async () => {
+    if (mintBurnCoinIds.length === 0) return { results: [] };
+    const scope = await readMintBurnWindowContext(db, nowSec,
+      MINT_BURN_CONFIGS.filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId)));
+    scanConfigs = scope.configs.filter((config) => mintBurnCoinIds.includes(config.stablecoinId));
     if (scanConfigs.length === 0) return { results: [] };
     const snapshot = await db.batch([
       db.prepare(
         `SELECT stablecoin_id, hour_ts, net_flow_usd, mint_count, burn_count,
                 mint_unpriced_event_count, burn_unpriced_event_count FROM mint_burn_hourly
-         WHERE stablecoin_id IN (SELECT value FROM json_each(?)) AND hour_ts >= ? AND hour_ts < ?
+         WHERE (stablecoin_id, chain_id) IN (
+           SELECT json_extract(value, '$[0]'), json_extract(value, '$[1]') FROM json_each(?)
+         ) AND hour_ts >= ? AND hour_ts < ?
          ORDER BY stablecoin_id, hour_ts ASC`,
-      ).bind(JSON.stringify(mintBurnCoinIds), scanFrom, scanTo),
+      ).bind(JSON.stringify(scanConfigs.map((config) => [config.stablecoinId, config.chain.chainId])), scanFrom, scanTo),
       prepareMintBurnScanCoverage(db, scanConfigs, scanFrom, scanTo),
     ]);
     scanSegments = decodeMintBurnScanCoverage(snapshot[1] as D1Result<MintBurnScanSegment>);

@@ -37,7 +37,8 @@ import {
   type MintBurnValuationTallyRow,
   readMintBurnValuationTallyRow,
 } from "../lib/mint-burn-hourly-valuation";
-import { getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
+import { MINT_BURN_CONFIGS } from "../lib/mint-burn-contracts";
+import { readMintBurnWindowContext } from "../lib/mint-burn-flows-service";
 import { decodeMintBurnScanCoverage, mintBurnScanCoverageAdmits, prepareMintBurnScanCoverage, type MintBurnScanSegment } from "../lib/mint-burn-pipeline/scan-coverage";
 import { getVariantDisplay } from "@shared/lib/variant-display";
 import type { BackingType } from "@shared/types";
@@ -358,6 +359,44 @@ export function deriveStablecoinOgCardData({
 // /api/og/stablecoin/:id
 // ---------------------------------------------------------------------------
 
+async function readOgMintBurnFlow(db: D1Database, id: string, now: number): Promise<OgMintBurnFlow7d | null> {
+  if (!ACTIVE_IDS.has(id) || !MINT_BURN_CONFIGS.some((config) => config.stablecoinId === id)) return null;
+  try {
+    const flowScope = await readMintBurnWindowContext(db, now,
+      MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)));
+    const flowConfigs = flowScope.configs.filter((config) => config.stablecoinId === id);
+    const flowEnd = Math.floor(now / 3600) * 3600;
+    const flowStart = flowEnd - 7 * DAY_SECONDS;
+    const flowSnapshot = await db.batch([
+      db.prepare(
+        `SELECT COUNT(*) AS bucket_count,
+                SUM(net_flow_usd) AS net_flow,
+                SUM(mint_volume_usd + burn_volume_usd) AS gross_flow,
+                ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
+         FROM mint_burn_hourly
+         WHERE stablecoin_id = ? AND hour_ts >= ? AND hour_ts < ?
+           AND chain_id IN (SELECT value FROM json_each(?))`,
+      )
+      .bind(id, flowStart, flowEnd, JSON.stringify([...new Set(flowConfigs.map((config) => config.chain.chainId))])),
+      prepareMintBurnScanCoverage(db, flowConfigs, flowStart, flowEnd),
+    ]);
+    const flowRow = flowSnapshot[0].results[0] as
+      ({ bucket_count: number; net_flow: number | null; gross_flow: number | null } & MintBurnValuationTallyRow) | undefined;
+    const flowComplete = mintBurnScanCoverageAdmits(flowConfigs,
+      decodeMintBurnScanCoverage(flowSnapshot[1] as D1Result<MintBurnScanSegment>), flowStart, flowEnd);
+    return flowComplete && flowRow && flowRow.bucket_count > 0
+      ? {
+          knownNetUsd: flowRow.net_flow ?? 0,
+          knownGrossUsd: flowRow.gross_flow ?? 0,
+          completeness: summarizeMintBurnValuation(readMintBurnValuationTallyRow(flowRow)).completeness,
+        }
+      : null;
+  } catch (error) {
+    logWorkerEventArgs("api", "warn", "[og] mint-burn-scope-unavailable", id, error);
+    return null;
+  }
+}
+
 async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Response> {
   const now = Math.floor(Date.now() / 1000);
   const resolved = resolveOrReject(coinId);
@@ -367,9 +406,6 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
   const id = resolved.canonicalId;
 
   const isFrozen = FROZEN_IDS.has(id);
-  const flowConfigs = getMintBurnConfigsForStablecoin(id);
-  const flowEnd = Math.floor(now / 3600) * 3600;
-  const flowStart = flowEnd - 7 * DAY_SECONDS;
 
   // Parallel queries: stablecoins cache, dex liquidity, DEWS, report card, 7d price sparkline,
   // active depeg, 7d flow, and 24h price change.
@@ -380,7 +416,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
     safetySource,
     sparklineRows,
     activeDepegRow,
-    flowSnapshot,
+    mintBurn7d,
     price24hRow,
   ] = await Promise.all([
     loadStablecoinsCache(db, {
@@ -404,19 +440,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       )
       .bind(id)
       .first<{ id: number }>(),
-    db.batch([
-      db.prepare(
-        `SELECT COUNT(*) AS bucket_count,
-                SUM(net_flow_usd) AS net_flow,
-                SUM(mint_volume_usd + burn_volume_usd) AS gross_flow,
-                ${MINT_BURN_HOURLY_VALUATION_TALLY_SQL}
-         FROM mint_burn_hourly
-         WHERE stablecoin_id = ? AND hour_ts >= ? AND hour_ts < ?
-           AND chain_id IN (SELECT value FROM json_each(?))`,
-      )
-      .bind(id, flowStart, flowEnd, JSON.stringify([...new Set(flowConfigs.map((config) => config.chain.chainId))])),
-      prepareMintBurnScanCoverage(db, flowConfigs, flowStart, flowEnd),
-    ]),
+    readOgMintBurnFlow(db, id, now),
     db
       .prepare(
         `WITH current_snapshot AS (
@@ -436,10 +460,6 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       .bind(id, id, DAY_SECONDS)
       .first<{ current_price: number; current_date: number; prev_day_price: number | null; prev_day_date: number | null }>(),
   ]);
-  const flowRow = flowSnapshot[0].results[0] as
-    ({ bucket_count: number; net_flow: number | null; gross_flow: number | null } & MintBurnValuationTallyRow) | undefined;
-  const flowComplete = mintBurnScanCoverageAdmits(flowConfigs,
-    decodeMintBurnScanCoverage(flowSnapshot[1] as D1Result<MintBurnScanSegment>), flowStart, flowEnd);
 
   if (!hasUsableStablecoinsPayload(stablecoinsPayload)) {
     return ogDataNotYetAvailable();
@@ -503,13 +523,7 @@ async function handleStablecoinOg(db: D1Database, coinId: string): Promise<Respo
       grade: reportCardRow ? reportCardRow.grade ?? "Pipeline gap" : "Unavailable",
       sparklineRows: sparklineRows.results ?? [],
       hasActiveDepeg: activeDepegRow !== null,
-      mintBurn7d: flowComplete && flowRow && flowRow.bucket_count > 0
-        ? {
-            knownNetUsd: flowRow.net_flow ?? 0,
-            knownGrossUsd: flowRow.gross_flow ?? 0,
-            completeness: summarizeMintBurnValuation(readMintBurnValuationTallyRow(flowRow)).completeness,
-          }
-        : null,
+      mintBurn7d,
       pegScore,
       backing: meta?.flags.backing ?? null,
       governance: meta?.flags.governance ?? null,

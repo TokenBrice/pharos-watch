@@ -3,6 +3,10 @@ import { mockD1, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
 import type * as MintBurnRpcModule from "../../lib/mint-burn-pipeline/rpc";
 import type * as MintBurnMaterializationDebtModule from "../../lib/mint-burn-pipeline/materialization-debt";
+import type { DatabaseSync } from "node:sqlite";
+import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts-types";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 
 export const MINT_BURN_ZERO_TOPIC = "0x0000000000000000000000000000000000000000000000000000000000000000";
 export const MINT_BURN_TRANSFER_TOPIC =
@@ -131,6 +135,24 @@ export interface MintBurnDbOptions {
   syncRows?: Array<{ last_block: number; config_key?: string }>;
   cacheRows?: Array<{ key: string; value: string; updated_at: number }>;
   priceRows?: Array<{ asset_id: string; price: number }>;
+  admittedConfigs?: readonly MintBurnContractConfig[];
+}
+
+function admissionRows(configs: readonly MintBurnContractConfig[]) {
+  const now = Math.floor(Date.now() / 1000);
+  return configs.map((config) => ({
+    config_key: mintBurnConfigKey(config), config_fingerprint: mintBurnScanFingerprint(config),
+    admitted_at: now - 86_400, baseline_from: now - 91 * 86_400, baseline_to: now - 86_400,
+  }));
+}
+
+/** Existing scanner fixtures model already-admitted legs; scan proof itself remains independently tested. */
+export function seedMintBurnAdmissions(sqlite: DatabaseSync, configs: readonly MintBurnContractConfig[]): void {
+  const insert = sqlite.prepare(`INSERT OR IGNORE INTO mint_burn_admission
+    (config_key, config_fingerprint, admitted_at, baseline_from, baseline_to) VALUES (?, ?, ?, ?, ?)`);
+  for (const row of admissionRows(configs)) {
+    insert.run(row.config_key, row.config_fingerprint, row.admitted_at, row.baseline_from, row.baseline_to);
+  }
 }
 
 /** The table set every syncMintBurn run touches, with per-suite price rows. */
@@ -140,6 +162,10 @@ export function makeMintBurnDb(options: MintBurnDbOptions = {}): D1Database {
     ? { degraded_streak: runState.degradedStreak, last_config_key: runState.lastConfigKey ?? null }
     : null;
   return mockD1([
+    { match: "mint_burn_admission", rows: admissionRows(options.admittedConfigs ?? []) },
+    { match: "mint_burn_publication_policy", rows: [] },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
+    { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     { match: "mint_burn_run_state", rows: runStateRow ? [runStateRow] : [], first: runStateRow },
     { match: "mint_burn_sync_state", rows: options.syncRows ?? [] },
     { match: "pharos:mint-burn-scan-coverage:merge", rows: [] },

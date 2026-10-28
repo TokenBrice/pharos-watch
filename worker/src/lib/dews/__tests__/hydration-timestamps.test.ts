@@ -17,7 +17,7 @@ const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
 afterEach(() => vi.useRealTimers());
 
 describe("DEWS hydration timestamp admission", () => {
-  it.each(["missing", "incomplete", "wrong-window", "quiet", "eventful", "materialization-debt"] as const)(
+  it.each(["missing", "scope-missing", "pending", "disabled", "incomplete", "wrong-window", "quiet", "eventful", "materialization-debt"] as const)(
     "keeps mint/burn scan admission distinct from observed data: %s", async (state) => {
       const { sqlite, db } = createLatestSchemaSqlite();
       const end = Math.floor(RUN_AT / 3600) * 3600;
@@ -25,6 +25,13 @@ describe("DEWS hydration timestamp admission", () => {
         if (state !== "missing") {
           const window = { complete: state !== "incomplete", unavailableReason: state === "incomplete" ? "scan-coverage-incomplete" : null };
           const value = { gauge: { score: null }, updatedAt: end,
+            ...(state === "scope-missing" ? {} : { publication: {
+              evaluatedAt: RUN_AT, requiredBaselineSec: 90 * 86400, freshnessBudgetSec: 7200,
+              legs: [{ configKey: "synthetic", configFingerprint: "synthetic-v1", stablecoinId: "usdt-tether", chainId: "ethereum",
+                status: state === "pending" ? "pending-admission" : state === "disabled" ? "disabled" : "admitted",
+                reason: state === "pending" ? "baseline-incomplete" : state === "disabled" ? "operator-disabled" : null,
+                admittedAt: null, baselineFrom: end - 90 * 86400, baselineTo: end, coveredSeconds: 90 * 86400, frontierAgeSec: 0 }],
+            } }),
             window: { start: end - 86400, end: state === "wrong-window" ? end - 3600 : end, semantics: "closed-utc-hours" },
             coins: [{ stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, netFlow24hUsd: null,
               coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: end - 90 * 86400,
@@ -32,7 +39,7 @@ describe("DEWS hydration timestamp admission", () => {
                 windows: { window24h: window, window7d: window, window30d: window, window90d: window } } }] };
           sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24), JSON.stringify(value), RUN_AT);
         }
-        if (state === "eventful" || state === "missing" || state === "incomplete") {
+        if (["eventful", "missing", "incomplete", "scope-missing", "pending", "disabled"].includes(state)) {
           sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
             mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
             VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 3600);

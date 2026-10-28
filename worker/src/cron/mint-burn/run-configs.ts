@@ -2,6 +2,7 @@ import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { budgetExhausted } from "../../lib/evm-logs";
+import { rethrowIfAborted } from "../../lib/abort";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
@@ -18,6 +19,7 @@ import {
 
 const MINT_BURN_RUNTIME_BUDGET_MS = 9 * 60_000;
 const MINT_BURN_MIN_CONFIG_WINDOW_MS = 60_000;
+const MINT_BURN_PENDING_MAX_SCAN_RANGE = 500_000;
 
 function configCoverageRatio(summary: MintBurnConfigSummary): number | null {
   if (summary.eventCoverage.length === 0) return null;
@@ -36,9 +38,21 @@ export function configTier(config: MintBurnContractConfig): MintBurnTier {
 function configScanRange(
   config: MintBurnContractConfig, lastBlock: number | undefined, chainHead: number, maxScanRange: number,
   context: Pick<MintBurnChainContext, "rpcEndpoints" | "endpointHeads">, requestBudgetLimit: number,
+  maximizeAffordableRange = false,
 ) {
   const fromBlock = (lastBlock ?? (config.startBlock - 1)) + 1;
   let scanTo = Math.min(fromBlock + maxScanRange - 1, chainHead);
+  if (maximizeAffordableRange) {
+    let affordable = fromBlock;
+    while (affordable < scanTo) {
+      const candidate = affordable + Math.ceil((scanTo - affordable) / 2);
+      if (mintBurnScanRequestFloor({ config, fromBlock, scanTo: candidate,
+        rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads }) <= requestBudgetLimit) {
+        affordable = candidate;
+      } else scanTo = candidate - 1;
+    }
+    return { fromBlock, scanTo };
+  }
   while (scanTo > fromBlock && mintBurnScanRequestFloor({
     config, fromBlock, scanTo, rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads,
   }) > requestBudgetLimit) {
@@ -57,6 +71,7 @@ export interface MintBurnRunConfigPhaseResult {
   contractsSkipped: number;
   contractsDeferredExtended: number;
   apiErrors: number;
+  admittedApiErrors?: number;
   effectiveBurns: number;
   bridgeBurns: number;
   reviewBurns: number;
@@ -74,6 +89,8 @@ export interface MintBurnRunConfigPhaseResult {
 export async function runMintBurnConfigPhase(input: {
   db: D1Database;
   configs: MintBurnContractConfig[];
+  pendingAdmissionKeys?: ReadonlySet<string>;
+  preparePendingConfigs?: (budget: { limit: number; count: number }) => Promise<void>;
   lane: "all" | "critical" | "extended";
   jobName: string;
   reportProgress?: CronProgressReporter;
@@ -102,6 +119,7 @@ export async function runMintBurnConfigPhase(input: {
   let contractsSkipped = 0;
   let contractsDeferredExtended = 0;
   let apiErrors = 0;
+  let admittedApiErrors = 0;
   let effectiveBurns = 0;
   let bridgeBurns = 0;
   let reviewBurns = 0;
@@ -113,6 +131,8 @@ export async function runMintBurnConfigPhase(input: {
   let runtimeBudgetHit = false;
 
   const configBreakdown: MintBurnConfigSummary[] = [];
+  const isPending = (config: MintBurnContractConfig) => input.pendingAdmissionKeys?.has(configKey(config)) === true;
+  const configs = [...input.configs.filter((config) => !isPending(config)), ...input.configs.filter(isPending)];
   const affectedHours = input.affectedHours;
   const deadlineMs = input.deadlineMs ?? Date.now() + MINT_BURN_RUNTIME_BUDGET_MS;
   const minimumConfigWindowMs = input.minimumConfigWindowMs ?? MINT_BURN_MIN_CONFIG_WINDOW_MS;
@@ -126,10 +146,11 @@ export async function runMintBurnConfigPhase(input: {
       : configTier(config) === "critical" ? input.criticalConfigBudgetLimit : input.extendedConfigBudgetLimit;
   const scanRanges = new Map<string, { fromBlock: number; scanTo: number }>();
   const boundaryRequests = new Map<string, ConservationBoundaryRequest>();
-  for (const config of input.configs) {
+  for (const config of configs) {
     const key = configKey(config);
     const chainContext = input.chainContexts.get(config.chain.chainId);
-    if (deferredKeys.has(key) || chainContext?.chainHead == null) continue;
+    // Pending conservation reads must not spend budget before admitted scans.
+    if (isPending(config) || deferredKeys.has(key) || chainContext?.chainHead == null) continue;
     // Plan a fundable initial range before the conservation prepass so its
     // supply boundaries and the subsequent log/proof scan stay identical.
     const range = configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead,
@@ -151,11 +172,11 @@ export async function runMintBurnConfigPhase(input: {
   // Reserve log queries for the extended roster, but treat this as a soft
   // capacity target: starving the current scan of timestamps/proof headers
   // creates attempts without progress. Complete scans win over attempt counts.
-  const reservedScanRequests = new Array<number>(input.configs.length + 1).fill(0);
+  const reservedScanRequests = new Array<number>(configs.length + 1).fill(0);
   if (input.lane === "extended") {
-    const coverageTarget = Math.ceil(input.configs.length / 2);
+    const coverageTarget = Math.ceil(configs.filter((config) => !isPending(config)).length / 2);
     for (let i = coverageTarget - 1; i >= 0; i--) {
-      const config = input.configs[i]!;
+      const config = configs[i]!;
       const key = configKey(config);
       const context = input.chainContexts.get(config.chain.chainId);
       const needsScan = !deferredKeys.has(key) && context?.chainHead != null
@@ -165,23 +186,39 @@ export async function runMintBurnConfigPhase(input: {
     }
   }
 
-  for (let i = 0; i < input.configs.length; i++) {
+  let pendingPrepared = false;
+  let pendingPreparationFailed = false;
+  for (let i = 0; i < configs.length; i++) {
     if (input.signal?.aborted) {
       throw input.signal.reason instanceof Error ? input.signal.reason : new Error("sync-mint-burn aborted");
+    }
+
+    if (isPending(configs[i]!) && !pendingPrepared && !budgetExhausted(input.budget)
+      && Date.now() + minimumConfigWindowMs < deadlineMs) {
+      try {
+        await input.preparePendingConfigs?.(input.budget);
+      } catch (error) {
+        rethrowIfAborted(error, input.signal);
+        pendingPreparationFailed = true;
+        // A thrown loader can hide request accounting; stop this pending batch.
+        input.budget.count = input.budget.limit;
+        logWorkerEventArgs("handler", "warn", "[sync-mint-burn] pending-chain-context-failed", error);
+      }
+      pendingPrepared = true;
     }
 
     if (
       Date.now() + minimumConfigWindowMs >= deadlineMs
     ) {
       runtimeBudgetHit = true;
-      for (let remainingIndex = i; remainingIndex < input.configs.length; remainingIndex++) {
-        const remainingConfig = input.configs[remainingIndex]!;
+      for (let remainingIndex = i; remainingIndex < configs.length; remainingIndex++) {
+        const remainingConfig = configs[remainingIndex]!;
         const remainingKey = configKey(remainingConfig);
         const remainingTier = configTier(remainingConfig);
         const remainingSummary = createMintBurnConfigSummary(remainingConfig, remainingKey, remainingTier);
         remainingSummary.skippedReason = "runtime-budget-exhausted";
         contractsSkipped++;
-        if (remainingTier === "critical") {
+        if (remainingTier === "critical" && !isPending(remainingConfig)) {
           criticalContractsUnsatisfied++;
         }
         configBreakdown.push(remainingSummary);
@@ -189,15 +226,16 @@ export async function runMintBurnConfigPhase(input: {
       break;
     }
 
-    const config = input.configs[i]!;
+    const config = configs[i]!;
     const key = configKey(config);
     const tier = configTier(config);
+    const pending = isPending(config);
     const summary = createMintBurnConfigSummary(config, key, tier);
 
     await reportCronProgress(input.reportProgress, {
       stage: "scan-config",
       itemsDone: i,
-      itemsTotal: input.configs.length,
+      itemsTotal: configs.length,
       message: `Scanning ${config.symbol} on ${config.chain.chainName}`,
       metadata: {
         lane: input.lane,
@@ -209,7 +247,7 @@ export async function runMintBurnConfigPhase(input: {
     }, input.budget);
 
     const finalizeSummary = (criticalOutcome: "satisfied" | "unsatisfied" | "n/a" = "n/a"): void => {
-      if (tier === "critical") {
+      if (tier === "critical" && !pending) {
         if (criticalOutcome === "satisfied") {
           criticalContractsSatisfied++;
         } else if (criticalOutcome === "unsatisfied") {
@@ -220,6 +258,13 @@ export async function runMintBurnConfigPhase(input: {
     };
 
     const chainContext = input.chainContexts.get(config.chain.chainId);
+    if (pending && pendingPreparationFailed) {
+      summary.skippedReason = "pending-chain-context-failed";
+      summary.errors = 1;
+      contractsSkipped++;
+      finalizeSummary();
+      continue;
+    }
     if (chainContext?.chainHead == null) {
       summary.skippedReason = "finality-head-unavailable";
       summary.eventCoverage = config.events.map((eventDef) => ({
@@ -248,9 +293,9 @@ export async function runMintBurnConfigPhase(input: {
       continue;
     }
 
-    const remainingCritical = input.configs
+    const remainingCritical = configs
       .slice(i)
-      .filter((next) => configTier(next) === "critical").length;
+      .filter((next) => configTier(next) === "critical" && !isPending(next)).length;
     const remainingBudget = input.budget.limit - input.budget.count;
     const shouldDeferExtended = tier === "extended" && remainingBudget <= Math.max(10, remainingCritical * 6);
     if (shouldDeferExtended) {
@@ -261,13 +306,18 @@ export async function runMintBurnConfigPhase(input: {
       continue;
     }
 
-    const plannedRange = scanRanges.get(key)!;
+    const tierBudgetLimit = configBudgetLimitFor(config);
+    const boundaryReserve = pending && getMintBurnConservationEligibility(config).supported
+      ? MINT_BURN_RETRY_BOUNDARY_REQUESTS : 0;
+    const availableBudget = Math.min(tierBudgetLimit, remainingBudget - (tier === "extended" ? 10 : 0));
+    const plannedRange = scanRanges.get(key);
     const currentFromBlock = (input.lastBlocksAfterRun.get(key) ?? (config.startBlock - 1)) + 1;
-    const { fromBlock, scanTo } = plannedRange.fromBlock === currentFromBlock
+    const { fromBlock, scanTo } = plannedRange?.fromBlock === currentFromBlock
       && plannedRange.scanTo <= chainContext.chainHead
       ? plannedRange
       : configScanRange(config, input.lastBlocksAfterRun.get(key), chainContext.chainHead,
-        input.maxScanRange, chainContext, configBudgetLimitFor(config));
+        pending ? MINT_BURN_PENDING_MAX_SCAN_RANGE : input.maxScanRange, chainContext,
+        pending ? Math.max(0, availableBudget - boundaryReserve) : tierBudgetLimit, pending);
     if (fromBlock > chainContext.chainHead) {
       summary.skippedReason = "up-to-date";
       contractsSkipped++;
@@ -277,8 +327,7 @@ export async function runMintBurnConfigPhase(input: {
     const scanBudgetInput = { config, fromBlock, scanTo, rpcEndpoints: chainContext.rpcEndpoints,
       endpointHeads: chainContext.endpointHeads };
     const minimumScanRequests = mintBurnScanRequestFloor(scanBudgetInput);
-    const tierBudgetLimit = configBudgetLimitFor(config);
-    if (Math.min(tierBudgetLimit, remainingBudget - (tier === "extended" ? 10 : 0)) < minimumScanRequests) {
+    if (availableBudget < minimumScanRequests + boundaryReserve) {
       summary.skippedReason = tier === "extended" ? "extended-deferred-under-pressure" : "global-budget-exhausted";
       if (tier === "extended") contractsDeferredExtended++;
       contractsSkipped++;
@@ -302,29 +351,61 @@ export async function runMintBurnConfigPhase(input: {
       ),
     );
     const boundaryRequest = boundaryRequests.get(key);
-    const result = await syncMintBurnConfigWithRetries({
-      db: input.db,
-      config,
-      key,
-      tier,
-      fromBlock,
-      scanTo,
-      chainHead: chainContext.chainHead,
-      rpcEndpoints: chainContext.rpcEndpoints,
-      endpointHeads: chainContext.endpointHeads,
-      signal: input.signal,
-      configBudgetLimit,
-      runTimestamp: input.runTimestamp,
-      priceContext: input.priceContext,
-      chainTimestampCache: chainContext.chainTimestampCache,
-      txContextCache: chainContext.txContextCache,
-      affectedHours,
-      deadlineMs,
-      conservationBoundary: boundaryRequest && (boundaryRequest.fromBlock !== fromBlock || boundaryRequest.toBlock !== scanTo)
-        ? { status: "unavailable", reason: "incomplete-log-range" }
-        : conservationBoundaries.get(key),
-    });
+    let conservationBoundary = boundaryRequest && (boundaryRequest.fromBlock !== fromBlock || boundaryRequest.toBlock !== scanTo)
+      ? { status: "unavailable" as const, reason: "incomplete-log-range" as const }
+      : conservationBoundaries.get(key);
+    const pendingBoundaryBudget = { count: 0, limit: Math.max(0, configBudgetLimit - minimumScanRequests) };
+    let result: Awaited<ReturnType<typeof syncMintBurnConfigWithRetries>>;
+    try {
+      if (boundaryReserve > 0) {
+        const boundaries = await fetchConservationBoundaries({
+          requests: [{ key, config, fromBlock, toBlock: scanTo }],
+          rpcEndpointsByChain: new Map([[config.chain.chainId, chainContext.rpcEndpoints]]),
+          budget: pendingBoundaryBudget,
+          checkedAt: nowSec,
+          signal: input.signal,
+          deadlineMs: Math.min(deadlineMs, Date.now() + MINT_BURN_CONSERVATION_PREPASS_MAX_MS),
+        });
+        conservationBoundary = boundaries.get(key);
+      }
+      result = await syncMintBurnConfigWithRetries({
+        db: input.db,
+        config,
+        key,
+        tier,
+        fromBlock,
+        scanTo,
+        chainHead: chainContext.chainHead,
+        rpcEndpoints: chainContext.rpcEndpoints,
+        endpointHeads: chainContext.endpointHeads,
+        signal: input.signal,
+        configBudgetLimit: configBudgetLimit - pendingBoundaryBudget.count,
+        runTimestamp: input.runTimestamp,
+        priceContext: input.priceContext,
+        chainTimestampCache: chainContext.chainTimestampCache,
+        txContextCache: chainContext.txContextCache,
+        affectedHours,
+        deadlineMs,
+        conservationBoundary,
+      });
+    } catch (error) {
+      rethrowIfAborted(error, input.signal);
+      if (!pending) throw error;
+      summary.errors = 1;
+      summary.failedEventDefs = ["pending-scan-exception"];
+      summary.advanceReason = "scan-coverage-unproven";
+      summary.scanFrom = fromBlock;
+      summary.scanTo = scanTo;
+      summary.requestBudgetLimit = configBudgetLimit;
+      summary.requestBudgetUsed = configBudgetLimit;
+      input.budget.count += configBudgetLimit;
+      logWorkerEventArgs("handler", "warn", `[sync-mint-burn] pending-scan-exception: ${key}`, error);
+      finalizeSummary();
+      continue;
+    }
     Object.assign(summary, result.summary);
+    summary.requestBudgetUsed += pendingBoundaryBudget.count;
+    if (pending) summary.requestBudgetLimit = configBudgetLimit;
 
     rowsRead += summary.rowsRead;
     rowsParsed += summary.rowsParsed;
@@ -332,6 +413,7 @@ export async function runMintBurnConfigPhase(input: {
     rowsIgnored += summary.rowsIgnored;
     rowsDropped += summary.rowsDropped;
     apiErrors += result.apiErrors;
+    if (!pending) admittedApiErrors += result.apiErrors;
     effectiveBurns += result.effectiveBurns;
     bridgeBurns += result.bridgeBurns;
     reviewBurns += result.reviewBurns;
@@ -390,6 +472,7 @@ export async function runMintBurnConfigPhase(input: {
     contractsSkipped,
     contractsDeferredExtended,
     apiErrors,
+    admittedApiErrors,
     effectiveBurns,
     bridgeBurns,
     reviewBurns,

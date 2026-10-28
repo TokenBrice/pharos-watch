@@ -76,6 +76,8 @@
 | 0286     | `0286_telegram_change_log.sql`                            | Add the Telegram roll-up `telegram_change_log` (changes not sent live plus per-chat cap overflow, bounded retention) and `telegram_rollup_state` (last roll-up per chat); no existing row changes. |
 | 0287     | `0287_supply_history_provenance.sql`                      | Add the nullable daily-snapshot supply provenance (source, observation clock, chain-dropout guard) of `supply_history` (NULL = unrecorded: legacy, prior-Worker and admin-backfill rows); no backfill or row rewrite. |
 
+| 0288     | `0288_mint_burn_admission.sql`                            | Add fingerprint-bound publication admission and durable operator disable policy; no legacy proof seed or existing row changes. |
+
 Apply 0275 before the measurement-v2 Worker reader, then deploy the admin Pages UI. Keep the pre-window Time Travel bookmark, ledger and public/heavy version identities. Old named-column source/key inserts remain valid; no backfill, dual write, index removal or writer activation occurs in this PR. Code rollback leaves both tables and the defaulted marker installed. After sampled writers activate separately, the measurement-aware reader/UI is the rollback floor; never restore an exact-only reader over retained samples. Restore D1 only for unexpected schema/data mutation using the verified bookmark.
 
 ## Squashed Individual Migrations (absorbed into the 0000 baseline on 2026-07-30)
@@ -387,6 +389,8 @@ Duplicate numeric prefixes 0056 and 0061 existed in the squashed range (0001–0
 - The deploy workflow reruns `npm run check:migrations`, applies remote D1 migrations, deploys once with `wrangler deploy --strict`, and verifies that the SHA-tagged deployment owns 100% of production traffic.
 - Destructive cleanup must be scheduled as a separate, coordinated rollout after the old Worker code is no longer serving traffic. Do not merge those cleanup migrations into the normal deploy path without an explicit runbook/workflow change.
 - Worker rollback is an explicit operator action. It restores Worker code traffic but does not undo D1 schema or data changes.
+
+Migration `0288` adds empty mint/burn admission and publication-policy tables. Apply before the Worker; old readers/writers ignore them. Retain the pre-window Time Travel bookmark, ledger and Worker versions. Worker rollback preserves the tables but restores old publication semantics; an active disable policy requires the new reader as rollback floor. First-run scope and policy verification remain separate from schema application.
 
 Migration `0287` adds the nullable `supply_history.supply_provenance` column and mutates no existing row. Apply before the Worker: the new daily snapshot writes it and `/api/supply-history` selects it. Capture the pre-deploy Time Travel bookmark. Worker rollback ignores the column; a prior Worker's full-date replacement and admin backfills write NULL, so those rows read back as unrecorded coverage, never complete. Same-day price-only repairs never touch it. No backfill; retain the column on rollback.
 

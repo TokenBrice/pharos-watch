@@ -63,8 +63,8 @@ Canonical binding ownership now lives in `shared/lib/env-contract.ts`; the worke
 | `TELEGRAM_OPERATOR_CHAT_ID` | `string` | optional | - | - | Private Telegram chat for operator-only alerts (freshness, digest-publication and reserve post-sync watchdogs); operator alerts are suppressed when unset and never fall back to `TELEGRAM_CHAT_ID`. |
 | `TELEGRAM_WEBHOOK_SECRET` | `string` | optional | - | - | Telegram webhook secret used to authenticate the webhook lane. |
 | `TELEGRAM_WEBHOOK_SECRET_PREVIOUS` | `string` | optional | - | - | Optional overlap Telegram webhook secret accepted during secret rotation. |
-| `MINT_BURN_DISABLED_IDS` | `string` | optional | - | - | Mint/burn runtime disable list by stablecoin ID (CSV). |
-| `MINT_BURN_DISABLED_SYMBOLS` | `string` | optional | - | - | Mint/burn runtime disable list by symbol (CSV). |
+| `MINT_BURN_DISABLED_IDS` | `string` | optional | - | - | Mint/burn runtime disable list by stablecoin ID or exact configKey (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy. Shared coin/chain buckets disable together. |
+| `MINT_BURN_DISABLED_SYMBOLS` | `string` | optional | - | - | Mint/burn runtime disable list by symbol (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy. |
 | `MINT_BURN_MAJOR_SYMBOLS` | `string` | optional | - | - | Mint/burn health-check major-symbols override (CSV). |
 | `MINT_BURN_STALE_WARN_SEC` | `string` | optional | - | - | Mint/burn stale-warning threshold override (seconds). |
 | `MINT_BURN_STALE_CRIT_SEC` | `string` | optional | - | - | Mint/burn stale-critical threshold override (seconds). |

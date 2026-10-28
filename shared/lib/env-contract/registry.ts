@@ -457,7 +457,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "MINT_BURN_DISABLED_IDS",
     valueType: "string",
-    description: "Mint/burn runtime disable list by stablecoin ID (CSV).",
+    description: "Mint/burn runtime disable list by stablecoin ID or exact configKey (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy. Shared coin/chain buckets disable together.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },
@@ -466,7 +466,7 @@ const ENV_BINDING_DEFINITIONS = [
   {
     key: "MINT_BURN_DISABLED_SYMBOLS",
     valueType: "string",
-    description: "Mint/burn runtime disable list by symbol (CSV).",
+    description: "Mint/burn runtime disable list by symbol (case-insensitive CSV); excludes ingestion and publication after the scheduled run persists policy.",
     example: { section: "workerOptional", value: "" },
     runtimes: {
       worker: { status: "optional" },

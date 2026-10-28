@@ -238,6 +238,12 @@ function makeDb(sqlSeen: string[], opts: MakeDbOptions = {}): D1Database {
     vi.spyOn(publishedMintBurn, "readPublishedMintBurnGauge").mockResolvedValue({ kind: "ok", gauge: {
       score: null, partialValuationInputs: 0, partialValuationMcapUsd: 0, scoredMcapUsd: 0, chains: [],
       window: { start: proofEnd - 86400, end: proofEnd, semantics: "closed-utc-hours" },
+      publication: { evaluatedAt: proofEnd, requiredBaselineSec: 90 * 86400, freshnessBudgetSec: 7200,
+        legs: proofRows.map((row) => ({ configKey: `${row.stablecoin_id}-${row.chain_id ?? "ethereum"}`,
+          configFingerprint: "synthetic-admitted-proof", stablecoinId: row.stablecoin_id, chainId: row.chain_id ?? "ethereum",
+          status: "admitted", reason: null, admittedAt: proofEnd - 86400, baselineFrom: proofEnd - 90 * 86400,
+          baselineTo: proofEnd, coveredSeconds: 90 * 86400, frontierAgeSec: 0 })),
+      },
       updatedAt: proofEnd, publishedAt: proofEnd, stale: false,
       coins: [...new Set(proofRows.map((row) => row.stablecoin_id))].map((id) => ({
         id, symbol: id, intensity: null, net24hUsd: null, gaugeWeightUsd: null, baselineValuation: "unknown",
@@ -782,7 +788,7 @@ describe("computeAndStoreDEWS", () => {
     expect(input?.flowDataAgeDays).toBe(0);
   });
 
-  it("withholds an old eventful baseline when current scan proof is unavailable", async () => {
+  it("withholds an old eventful baseline outside the published scope without a freshness failure", async () => {
     const sqlSeen: string[] = [];
     const nowSec = Math.floor(Date.now() / 1000);
     const db = makeDb(sqlSeen, {
@@ -800,7 +806,7 @@ describe("computeAndStoreDEWS", () => {
 
     const result = await computeAndStoreDEWS(db);
 
-    expect(result.status).toBe("degraded");
+    expect(result.status).not.toBe("degraded");
     expect(computeDEWS).toHaveBeenCalledWith(
       expect.objectContaining({
         stablecoinId: "usdt-tether",
@@ -816,7 +822,7 @@ describe("computeAndStoreDEWS", () => {
       sourceFailures: Array<{ source: string }>;
       sourceCoverage: Record<string, number>;
     };
-    expect(metadata.sourceFailures).toContainEqual(
+    expect(metadata.sourceFailures).not.toContainEqual(
       expect.objectContaining({ source: "mint-burn-hourly-freshness" }),
     );
     expect(metadata.sourceCoverage.mintBurnHourlyStaleRows).toBe(0);

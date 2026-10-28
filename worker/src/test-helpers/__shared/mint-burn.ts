@@ -134,6 +134,8 @@ export function mintBurnScenario({
     { match: "FROM mint_burn_sync_state", rows: rows.syncState ?? [] },
     { match: "pharos:mint-burn-scan-coverage:read", rows: rows.scanCoverage ?? makeMintBurnScanSegments(Math.floor(nowSec / 3600) * 3600) },
     { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+    { match: "FROM mint_burn_admission", rows: [] },
+    { match: "FROM mint_burn_publication_policy", rows: [] },
     {
       match: "SELECT started_at, status, metadata",
       rows: rows.cronSnapshot ?? [],

@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
-import { invalidateMintBurnFlowCaches } from "../../lib/mint-burn-flows-service";
+import { invalidateMintBurnFlowCaches, readMintBurnWindowContext } from "../../lib/mint-burn-flows-service";
+import { isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
 import { createBudget } from "../../lib/evm-logs";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { loadMintBurnPriceContextBatch } from "../../lib/mint-burn-pipeline/context";
@@ -90,24 +91,16 @@ export class MintBurnRun {
 
     const allActiveConfigs = includeActiveTrackedIds(MINT_BURN_CONFIGS, (config) => config.stablecoinId);
     const allTrackableConfigs = allActiveConfigs.filter((config) => laneIncludesConfig(lane, config));
-    const enabledConfigs: MintBurnContractConfig[] = [];
+    let enabledConfigs: MintBurnContractConfig[] = [];
     const retentionConfigs: MintBurnContractConfig[] = [];
     const disabledConfigReasons = new Map<string, string>();
+    const disabledPublicationKeys: string[] = [];
 
     for (const config of allActiveConfigs) {
       const key = configKey(config);
-      const symbol = config.symbol.toUpperCase();
-      const isDisabledByConfig = config.enabled === false;
-      const isDisabledBySymbol = disabledSymbols.has(symbol);
-      const isDisabledById =
-        disabledConfigIds.has(config.stablecoinId.toLowerCase()) ||
-        disabledConfigIds.has(key.toLowerCase());
-
-      if (isDisabledByConfig || isDisabledBySymbol || isDisabledById) {
-        const reason =
-          isDisabledByConfig ? "config-disabled" :
-          isDisabledBySymbol ? "symbol-disabled" :
-          "id-disabled";
+      const reason = mintBurnDisabledReason(config, disabledConfigIds, disabledSymbols);
+      if (reason) {
+        disabledPublicationKeys.push(key);
         if (laneIncludesConfig(lane, config)) disabledConfigReasons.set(key, reason);
         continue;
       }
@@ -118,12 +111,23 @@ export class MintBurnRun {
 
     const configsDisabled = disabledConfigReasons.size;
     const contractsTotal = allTrackableConfigs.length;
+    await syncMintBurnPublicationPolicy(db, disabledPublicationKeys, runTimestamp);
+    const publicationContext = await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs);
+    const pendingAdmissionKeys = new Set(publicationContext.publication.legs
+      .filter((leg) => leg.status === "pending-admission").map((leg) => leg.configKey));
+    const grandfatheredKeys = new Set(allActiveConfigs.filter(isGrandfatheredMintBurnConfig).map(configKey));
+    const pendingRetentionKeys = new Set(publicationContext.publication.legs
+      .filter((leg) => leg.admittedAt == null && !grandfatheredKeys.has(leg.configKey)).map((leg) => leg.configKey));
+    const unsupportedKeys = new Set(publicationContext.publication.legs
+      .filter((leg) => leg.reason === "unsupported-shared-bucket").map((leg) => leg.configKey));
+    enabledConfigs = enabledConfigs.filter((config) => !unsupportedKeys.has(configKey(config)));
 
     if (enabledConfigs.length === 0) {
       const retention = lane === "critical"
-        ? await pruneMintBurnRetention(db, runTimestamp, signal, { enabledConfigs: retentionConfigs })
+        ? await pruneMintBurnRetention(db, runTimestamp, signal, { enabledConfigs: retentionConfigs, pendingAdmissionKeys: pendingRetentionKeys })
         : null;
       const metadata = JSON.stringify({
+        publication: publicationContext.publication,
         outputPublishedAt: null,
         ...(retention?.error ? { reason: "mint-burn-retention-failed" } : {}),
         lane,
@@ -181,9 +185,13 @@ export class MintBurnRun {
     );
     // Always process critical contracts first so extended backlogs cannot starve
     // core coverage when budget pressure is high.
-    const configs = [
+    const priorityConfigs = [
       ...rotatedConfigs.filter((config) => configTier(config) === "critical"),
       ...rotatedConfigs.filter((config) => configTier(config) === "extended"),
+    ];
+    const configs = [
+      ...priorityConfigs.filter((config) => !pendingAdmissionKeys.has(configKey(config))),
+      ...priorityConfigs.filter((config) => pendingAdmissionKeys.has(configKey(config))),
     ];
 
     await ensureMintBurnSyncStateRows(db, configs);
@@ -191,7 +199,7 @@ export class MintBurnRun {
     const lastBlocksAfterRun = this.lastBlocksAfterRun = new Map(lastBlocks);
 
     const chainContexts = await loadMintBurnChainContexts({
-      configs,
+      configs: configs.filter((config) => !pendingAdmissionKeys.has(configKey(config))),
       apiKey,
       budget,
       signal,
@@ -222,7 +230,8 @@ export class MintBurnRun {
       },
     }, budget);
 
-    const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical").length;
+    const criticalContractsEnabled = enabledConfigs.filter((config) => configTier(config) === "critical"
+      && !pendingAdmissionKeys.has(configKey(config))).length;
     const affectedHours = this.affectedHours = new Map<string, MintBurnAffectedHour>();
     const pendingCursorUpdates = this.pendingCursorUpdates = new Map<string, number>();
     const pendingScanCoverage = this.pendingScanCoverage = new Map<string, MintBurnScanCoverage>();
@@ -235,12 +244,24 @@ export class MintBurnRun {
       reportProgress,
       budget,
       chainContexts,
+      preparePendingConfigs: async (pendingBudget) => {
+        const pendingContexts = await loadMintBurnChainContexts({
+          configs: configs.filter((config) => pendingAdmissionKeys.has(configKey(config))
+            && !chainContexts.has(config.chain.chainId)),
+          apiKey, budget: pendingBudget, signal, chainRpcs: options.chainRpcs,
+        });
+        for (const [chainId, context] of pendingContexts) {
+          chainContexts.set(chainId, context);
+          if (context.chainHead != null) chainHeads.set(chainId, context.chainHead);
+        }
+      },
       signal,
       runTimestamp,
       priceContext,
       lastBlocksAfterRun,
       pendingCursorUpdates,
       pendingScanCoverage,
+      pendingAdmissionKeys,
       maxScanRange: MAX_SCAN_RANGE,
       criticalConfigBudgetLimit: CRITICAL_CONFIG_BUDGET_LIMIT,
       criticalBridgeConfigBudgetLimit: CRITICAL_BRIDGE_CONFIG_BUDGET_LIMIT,
@@ -252,7 +273,8 @@ export class MintBurnRun {
       db,
       jobName,
       lane,
-      enabledConfigKeys: enabledConfigs.map((config) => mintBurnConfigKey(config)),
+      enabledConfigKeys: enabledConfigs.filter((config) => !pendingAdmissionKeys.has(configKey(config)))
+        .map((config) => mintBurnConfigKey(config)),
       configBreakdown: phaseResult.configBreakdown,
       activeProviderDeferrals: phaseResult.activeProviderDeferrals,
       nowSec: runTimestamp,
@@ -294,6 +316,7 @@ export class MintBurnRun {
       degradeConsecutiveThreshold: DEGRADE_CONSECUTIVE_THRESHOLD,
       errorConsecutiveThreshold: ERROR_CONSECUTIVE_THRESHOLD,
       criticalContractsEnabled,
+      pendingAdmissionKeys,
       phase: phaseResult,
       attemptCoverage: attemptState.summary,
       coverageCycle: attemptState.coverageCycle,
@@ -309,10 +332,13 @@ export class MintBurnRun {
       completion.metadata.reason = "mint-burn-hourly-recalc-failed";
     }
     completion.metadata.recalcFailed = recalcFailed;
+    completion.metadata.publication = (await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs)).publication;
     completion.metadata.coverageRepairs = phaseResult.coverageRepairs ?? [];
     if (recalcError) completion.metadata.recalcError = recalcError;
     if (lane === "critical") {
-      const retention = await pruneMintBurnRetention(db, runTimestamp, signal, { enabledConfigs: retentionConfigs });
+      const retention = await pruneMintBurnRetention(db, runTimestamp, signal, {
+        enabledConfigs: retentionConfigs, pendingAdmissionKeys: pendingRetentionKeys,
+      });
       completion.metadata.retention = retention;
       if (retention.error && status === "ok") {
         status = "degraded";

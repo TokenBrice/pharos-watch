@@ -10,6 +10,10 @@ import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mo
 import { projectMintBurnLargeFlows } from "../mint-burn";
 import { mockTapeD1, tapeInsertBinds, tapeInsertBindsForType } from "./test-support";
 import { SOURCE_RECONCILIATION_LOOKBACK_SEC } from "../types";
+import { MINT_BURN_CONFIGS } from "../../mint-burn-contracts";
+import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
+import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
+import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 
 const SEC = 1_700_000_000;
 beforeEach(() => vi.spyOn(Date, "now").mockReturnValue(SEC * 1000));
@@ -21,6 +25,10 @@ const NO_CHANGED_CLAIMS: MockTableConfig = { match: "JOIN tape_events AS t", row
 function withRows(rows: Record<string, unknown>[]): MockTableConfig[] {
   return [
     NO_CHANGED_CLAIMS,
+    { match: "FROM mint_burn_admission", rows: [] },
+    { match: "FROM mint_burn_publication_policy", rows: [] },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
+    { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     { match: "FROM cache WHERE key", rows: [] },
     { match: MATCH_FETCH_FLOWS, rows },
   ];
@@ -43,6 +51,36 @@ function makeFlow(overrides: Partial<Record<string, unknown>> = {}): Record<stri
 }
 
 describe("mint_burn projector", () => {
+  it("projects admitted legs only and honors the operator disable policy before limiting rows", async () => {
+    const { db, sqlite } = fixtures.open();
+    const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdt-tether");
+    const pending = { ...configs[0], chain: { ...configs[0].chain, chainId: "synthetic-pending" } };
+    MINT_BURN_CONFIGS.push(pending);
+    try {
+      const insert = sqlite.prepare(`INSERT INTO mint_burn_events
+        (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, timestamp,
+         flow_type, tx_hash, block_number, explorer_tx_url)
+        VALUES (?, 'usdt-tether', 'USDT', ?, 'mint', 15000000, 15000000, ?, 'standard', '0xtest', 1, 'https://example.com')`);
+      insert.run("pending", pending.chain.chainId, SEC - 1);
+      insert.run("admitted", configs[0].chain.chainId, SEC);
+      expect(await projectMintBurnLargeFlows(db, { maxRows: 1 })).toEqual({ projected: 1, advanced: SEC });
+      expect(sqlite.prepare("SELECT source_row_id FROM tape_events").all()).toEqual([{ source_row_id: "admitted" }]);
+      insert.run("disabled", configs[0].chain.chainId, SEC + 1);
+      sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)")
+        .run(JSON.stringify(configs.map(mintBurnConfigKey)), SEC);
+      expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 0, advanced: null });
+      expect(sqlite.prepare("SELECT source_row_id FROM tape_events").all()).toEqual([{ source_row_id: "admitted" }]);
+      sqlite.prepare(`INSERT INTO mint_burn_admission
+        (config_key, config_fingerprint, admitted_at, baseline_from, baseline_to) VALUES (?, ?, ?, ?, ?)`)
+        .run(mintBurnConfigKey(pending), mintBurnScanFingerprint(pending), SEC, SEC - 90 * 86400, SEC);
+      // Admission enables current events without announcing the completed backfill.
+      expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 0, advanced: null });
+      insert.run("newly-admitted", pending.chain.chainId, SEC + 1);
+      expect(await projectMintBurnLargeFlows(db)).toEqual({ projected: 1, advanced: SEC + 1 });
+      expect(sqlite.prepare("SELECT source_row_id FROM tape_events ORDER BY source_row_id").all())
+        .toEqual([{ source_row_id: "admitted" }, { source_row_id: "newly-admitted" }]);
+    } finally { MINT_BURN_CONFIGS.splice(MINT_BURN_CONFIGS.indexOf(pending), 1); }
+  });
 
   it.each([
     { timestamp: 1777636800, version: "6.0" },
@@ -118,7 +156,7 @@ describe("mint_burn projector", () => {
     const sourceSql = prepare.mock.calls.map(([sql]) => sql).find((sql) => sql.includes("amount_usd >= ?"));
     expect(sourceSql).toBeDefined();
     const plan = sqlite.prepare(`EXPLAIN QUERY PLAN ${sourceSql!}`)
-      .all(RECONCILIATION_SINCE, 10_000_000, 500)
+      .all(RECONCILIATION_SINCE, 10_000_000, JSON.stringify([["usdt-tether", "ethereum"]]), "[]", 500)
       .map((row) => row.detail).join("\n");
     expect(plan).toContain("idx_mbe2_ts");
     expect(plan).toContain("timestamp>?");
@@ -222,11 +260,14 @@ describe("mint_burn projector", () => {
       makeFlow({ id: "ethereum-0xb-0", timestamp: SEC }),
       makeFlow({ id: "ethereum-0xc-0", timestamp: SEC }),
     ];
+    const scopeJson = JSON.stringify(MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId))
+      .map((config) => [config.stablecoinId, config.chain.chainId]));
     const db = mockTapeD1([
-      NO_CHANGED_CLAIMS,
-      { match: "FROM cache WHERE key", rows: [] },
-      { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, 10_000_000, 2], rows: rows.slice(0, 2) },
-      { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, SEC, 10_000_000], rows },
+      ...withRows([]).filter((table) => table.match !== MATCH_FETCH_FLOWS),
+      { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, 10_000_000,
+        scopeJson, "[]", 2], rows: rows.slice(0, 2) },
+      { match: MATCH_FETCH_FLOWS, matchBinds: [RECONCILIATION_SINCE, SEC, 10_000_000,
+        scopeJson, "[]"], rows },
     ]) as MockD1Database;
 
     const result = await projectMintBurnLargeFlows(db, { maxRows: 2 });

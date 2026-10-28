@@ -9,6 +9,7 @@ import { tapeProjectorCursorKey } from "../../lib/tape-event-store";
 import { mintBurnTapeClaimStaleSql } from "../../lib/mint-burn-tape-claim";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../../lib/mint-burn-contracts";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
 
@@ -70,7 +71,7 @@ const MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL = `event.timestamp < ?
  * fails closed for active enabled configs. Secondary configs conservatively
  * protect siblings until every matching enabled frontier covers them.
  */
-function mintBurnFinalHourSql(frontiersSql: string): string {
+function mintBurnFinalHourSql(frontiersSql: string, pendingProtectionSql: string): string {
   return `NOT EXISTS (
     SELECT 1 FROM mint_burn_dirty_hours dirty
      WHERE dirty.stablecoin_id = event.stablecoin_id
@@ -101,16 +102,16 @@ function mintBurnFinalHourSql(frontiersSql: string): string {
               ), -1)
          )
        )
-  )`;
+  )${pendingProtectionSql}`;
 }
 
 /**
  * Repair-eligible event: retention-eligible, its hour carries no aggregate row,
  * and every sibling in that hour is final. Bind order: cutoff, tape cursor.
  */
-function mintBurnRepairableEventSql(frontiersSql: string): string {
+function mintBurnRepairableEventSql(frontiersSql: string, pendingProtectionSql: string): string {
   return `${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
-  AND ${mintBurnFinalHourSql(frontiersSql)}
+  AND ${mintBurnFinalHourSql(frontiersSql, pendingProtectionSql)}
   AND NOT EXISTS (
     SELECT 1
       FROM mint_burn_hourly hourly
@@ -125,9 +126,9 @@ function mintBurnRepairableEventSql(frontiersSql: string): string {
  * order: cutoff, MINT_BURN_TAPE_CURSOR_KEY. Shared by the delete and the
  * oldest-eligible backlog probe.
  */
-function mintBurnAggregatedEventSql(frontiersSql: string): string {
+function mintBurnAggregatedEventSql(frontiersSql: string, pendingProtectionSql: string): string {
   return `${MINT_BURN_TAPE_ELIGIBLE_EVENT_SQL}
-  AND ${mintBurnFinalHourSql(frontiersSql)}
+  AND ${mintBurnFinalHourSql(frontiersSql, pendingProtectionSql)}
   AND EXISTS (
     SELECT 1
       FROM mint_burn_hourly hourly
@@ -200,6 +201,7 @@ export interface MintBurnFrontierProtectionResult {
  */
 interface MintBurnRetentionOptions {
   enabledConfigs?: readonly MintBurnContractConfig[];
+  pendingAdmissionKeys?: ReadonlySet<string>;
   repairCandidateEventLimit?: number;
   repairRunLimit?: number;
   eventBatchLimit?: number;
@@ -212,6 +214,7 @@ async function repairMissingHourlyRows(
   db: D1Database,
   nowSec: number,
   frontiersSql: string,
+  pendingProtectionSql: string,
   candidateEventLimit: number,
   runLimit: number,
   signal?: AbortSignal,
@@ -230,7 +233,7 @@ async function repairMissingHourlyRows(
                (event.timestamp / 3600) * 3600 AS hour_ts,
                event.timestamp
              FROM mint_burn_events event INDEXED BY idx_mbe2_ts
-             WHERE ${mintBurnRepairableEventSql(frontiersSql)}
+             WHERE ${mintBurnRepairableEventSql(frontiersSql, pendingProtectionSql)}
              ORDER BY event.timestamp ASC
              LIMIT ?
            ), candidate_hours AS MATERIALIZED (
@@ -264,7 +267,7 @@ async function repairMissingHourlyRows(
         sql: `/* pharos:mint-burn:aggregation-evidence-oldest-repairable */
            SELECT event.timestamp AS oldest_repairable_at
              FROM mint_burn_events event INDEXED BY idx_mbe2_ts
-            WHERE ${mintBurnRepairableEventSql(frontiersSql)}
+            WHERE ${mintBurnRepairableEventSql(frontiersSql, pendingProtectionSql)}
             ORDER BY event.timestamp ASC
             LIMIT 1`,
         binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY],
@@ -287,6 +290,7 @@ async function pruneEventRows(
   db: D1Database,
   nowSec: number,
   frontiersSql: string,
+  pendingProtectionSql: string,
   batchLimit: number,
   runLimit: number,
   signal?: AbortSignal,
@@ -302,7 +306,7 @@ async function pruneEventRows(
         WHERE id IN (
           SELECT event.id
             FROM mint_burn_events event
-           WHERE ${mintBurnAggregatedEventSql(frontiersSql)}
+           WHERE ${mintBurnAggregatedEventSql(frontiersSql, pendingProtectionSql)}
            ORDER BY event.timestamp ASC
            LIMIT ?
         )`,
@@ -317,7 +321,7 @@ async function pruneEventRows(
         sql: `/* pharos:mint-burn:event-retention-oldest-eligible */
            SELECT event.timestamp AS oldest_eligible_at
              FROM mint_burn_events event
-            WHERE ${mintBurnAggregatedEventSql(frontiersSql)}
+            WHERE ${mintBurnAggregatedEventSql(frontiersSql, pendingProtectionSql)}
             ORDER BY event.timestamp ASC
             LIMIT 1`,
         binds: [cutoff, MINT_BURN_TAPE_CURSOR_KEY],
@@ -453,11 +457,34 @@ export async function pruneMintBurnRetention(
     (config) => config.stablecoinId,
   );
   const frontiersSql = mintBurnConfigFrontiersSql(enabledConfigs);
+  const pendingConfigs = [...new Map([...MINT_BURN_CONFIGS, ...(options.enabledConfigs ?? [])]
+    .filter((config) => options.pendingAdmissionKeys?.has(mintBurnConfigKey(config)))
+    .map((config) => [mintBurnConfigKey(config), config])).values()];
+  // Pending cursors can commit mid-hour; only proven closed hours may lose raw siblings.
+  const pendingProtectionSql = pendingConfigs.length > 0 ? `
+  AND NOT EXISTS (
+    SELECT 1 FROM (VALUES ${pendingConfigs.map((config) =>
+      `('${config.stablecoinId}', '${config.chain.chainId}', '${mintBurnConfigKey(config)}', '${mintBurnScanFingerprint(config)}')`,
+    ).join(", ")}) pending
+     WHERE pending.column1 = event.stablecoin_id AND pending.column2 = event.chain_id
+       AND NOT EXISTS (
+         SELECT 1 FROM mint_burn_sync_state state
+         JOIN mint_burn_scan_coverage proof
+           ON proof.config_key = state.config_key AND proof.to_block = state.last_block
+          AND proof.config_fingerprint = pending.column4 AND proof.chain_id = pending.column2
+         WHERE pending.column3 = state.config_key
+           AND proof.finality_tag = 'finalized' AND proof.finalized_block >= proof.to_block
+           AND proof.accepted_at >= proof.to_timestamp
+           AND proof.from_timestamp <= (event.timestamp / 3600) * 3600
+           AND event.timestamp < (proof.to_timestamp / 3600) * 3600
+       )
+  )` : "";
 
   const aggregationRepair = await repairMissingHourlyRows(
     db,
     nowSec,
     frontiersSql,
+    pendingProtectionSql,
     repairCandidateEventLimit,
     repairRunLimit,
     signal,
@@ -467,6 +494,7 @@ export async function pruneMintBurnRetention(
     db,
     nowSec,
     frontiersSql,
+    pendingProtectionSql,
     Math.min(eventBatchLimit, eventRunLimit),
     eventRunLimit,
     signal,

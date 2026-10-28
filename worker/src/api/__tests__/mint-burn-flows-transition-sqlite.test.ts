@@ -51,7 +51,7 @@ async function openPublishedTransition() {
   const end = data.windowEnd;
   fixture.sqlite.prepare("INSERT INTO cache (key,value,updated_at) VALUES (?,?,?)")
     .run(aggregateFlowCacheKey(24), JSON.stringify({
-      gauge: { score: null }, coins, updatedAt: now,
+      gauge: { score: null }, coins, updatedAt: now, publication: data.publication,
       window: { start: end - DAY, end, semantics: "closed-utc-hours", watermark: data.watermark },
     }), now);
   const context = { db: fixture.db, nowSec: now, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() };
