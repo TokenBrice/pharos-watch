@@ -14,6 +14,7 @@ import { loadMintBurnChainContexts } from "./chain-context";
 import { recalcMintBurnAffectedHours } from "./recalc";
 import { pruneMintBurnRetention } from "./retention";
 import { completeMintBurnRun } from "./run-completion";
+import { mintBurnPublicationMetadata } from "./publication-metadata";
 import { configKey, configTier, runMintBurnConfigPhase, type MintBurnRunConfigPhaseResult } from "./run-configs";
 import {
   getMintBurnRunState,
@@ -25,7 +26,8 @@ import {
   updateMintBurnAttemptState,
 } from "./run-state";
 import { includeActiveTrackedIds } from "../shared/exclude-frozen";
-import { throwIfAborted } from "../../lib/abort";
+import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import {
   COVERAGE_REPAIR_REQUEST_LIMIT, COVERAGE_REPAIR_WINDOW_MS,
@@ -111,7 +113,7 @@ export class MintBurnRun {
 
     const configsDisabled = disabledConfigReasons.size;
     const contractsTotal = allTrackableConfigs.length;
-    await syncMintBurnPublicationPolicy(db, disabledPublicationKeys, runTimestamp);
+    await syncMintBurnPublicationPolicy(db, disabledPublicationKeys, runTimestamp, allActiveConfigs.map(configKey));
     const publicationContext = await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs);
     const pendingAdmissionKeys = new Set(publicationContext.publication.legs
       .filter((leg) => leg.status === "pending-admission").map((leg) => leg.configKey));
@@ -127,7 +129,7 @@ export class MintBurnRun {
         ? await pruneMintBurnRetention(db, runTimestamp, signal, { enabledConfigs: retentionConfigs, pendingAdmissionKeys: pendingRetentionKeys })
         : null;
       const metadata = JSON.stringify({
-        publication: publicationContext.publication,
+        publication: mintBurnPublicationMetadata(publicationContext.publication),
         outputPublishedAt: null,
         ...(retention?.error ? { reason: "mint-burn-retention-failed" } : {}),
         lane,
@@ -236,7 +238,7 @@ export class MintBurnRun {
     const pendingCursorUpdates = this.pendingCursorUpdates = new Map<string, number>();
     const pendingScanCoverage = this.pendingScanCoverage = new Map<string, MintBurnScanCoverage>();
 
-    const { phaseResult, recalcFailed, recalcError } = await this.scanAndMaterialize({
+    const { phaseResult, recalcFailed, recalcError, pendingMaterializationFailures } = await this.scanAndMaterialize({
       db,
       configs,
       lane,
@@ -332,7 +334,14 @@ export class MintBurnRun {
       completion.metadata.reason = "mint-burn-hourly-recalc-failed";
     }
     completion.metadata.recalcFailed = recalcFailed;
-    completion.metadata.publication = (await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs)).publication;
+    completion.metadata.pendingMaterialization = {
+      failedCount: pendingMaterializationFailures.length,
+      failures: pendingMaterializationFailures.slice(0, 12),
+      failuresTruncated: pendingMaterializationFailures.length > 12,
+    };
+    completion.metadata.publication = mintBurnPublicationMetadata(
+      (await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs)).publication,
+    );
     completion.metadata.coverageRepairs = phaseResult.coverageRepairs ?? [];
     if (recalcError) completion.metadata.recalcError = recalcError;
     if (lane === "critical") {
@@ -387,10 +396,12 @@ export class MintBurnRun {
     phaseResult: MintBurnRunConfigPhaseResult;
     recalcFailed: boolean;
     recalcError: string | null;
+    pendingMaterializationFailures: Array<{ key: string; reason: string; error: string | null }>;
   }> {
     let phaseResult!: MintBurnRunConfigPhaseResult;
     let recalcFailed = false;
     let recalcError: string | null = null;
+    const pendingMaterializationFailures: Array<{ key: string; reason: string; error: string | null }> = [];
     const repairProofs: MintBurnScanCoverage[] = [];
     const deadlineMs = input.deadlineMs ?? Date.now() + 9 * 60_000;
     try {
@@ -418,11 +429,36 @@ export class MintBurnRun {
         phaseResult.rowsDropped += repair.rowsDropped;
       }
     } finally {
-      const recalcResult = await recalcMintBurnAffectedHours(this.db, this.affectedHours, input.signal);
-      recalcFailed = recalcResult.failed;
-      recalcError = recalcResult.error;
-      if (!recalcFailed) {
+      const pendingBuckets = new Map<string, Set<string>>();
+      const admittedBuckets = new Set(input.configs
+        .filter((config) => !input.pendingAdmissionKeys?.has(configKey(config)))
+        .map((config) => `${config.stablecoinId}:${config.chain.chainId}`));
+      for (const config of input.configs) {
+        const key = configKey(config);
+        if (!input.pendingAdmissionKeys?.has(key)) continue;
+        const bucket = `${config.stablecoinId}:${config.chain.chainId}`;
+        // Legacy siblings share one hourly row. Mixed scope must keep that row
+        // behind the admitted fence until storage can attribute each contract.
+        if (admittedBuckets.has(bucket)) continue;
+        const keys = pendingBuckets.get(bucket) ?? new Set<string>();
+        keys.add(key);
+        pendingBuckets.set(bucket, keys);
+      }
+      const admittedHours = new Map<string, MintBurnAffectedHour>();
+      const pendingHours = new Map<string, Map<string, MintBurnAffectedHour>>();
+      for (const [key, hour] of this.affectedHours) {
+        const bucket = `${hour.stablecoinId}:${hour.chainId}`;
+        if (!pendingBuckets.has(bucket)) {
+          admittedHours.set(key, hour);
+          continue;
+        }
+        const hours = pendingHours.get(bucket) ?? new Map<string, MintBurnAffectedHour>();
+        hours.set(key, hour);
+        pendingHours.set(bucket, hours);
+      }
+      const commitProofs = async (includesKey: (key: string) => boolean) => {
         for (const [key, nextLastBlock] of this.pendingCursorUpdates) {
+          if (!includesKey(key)) continue;
           throwIfAborted(input.signal);
           const proof = this.pendingScanCoverage.get(key);
           if (proof?.toBlock !== nextLastBlock) continue;
@@ -430,6 +466,7 @@ export class MintBurnRun {
           this.lastBlocksAfterRun.set(key, nextLastBlock);
         }
         for (const proof of repairProofs) {
+          if (!includesKey(proof.configKey)) continue;
           throwIfAborted(input.signal);
           await upsertMintBurnSyncState(this.db, proof.configKey, proof.toBlock, "monotonic-max", proof);
           this.lastBlocksAfterRun.set(proof.configKey,
@@ -438,13 +475,42 @@ export class MintBurnRun {
             summary.key === proof.configKey && summary.scanFrom === proof.fromBlock);
           if (repair) repair.repairReason = "proof-committed";
         }
-      }
-      if (recalcFailed) {
+      };
+      const holdRepairProofs = (includesKey: (key: string) => boolean) => {
         for (const repair of phaseResult?.coverageRepairs ?? []) {
-          if (repair.repairReason === "proof-staged") repair.repairReason = "materialization-failed";
+          if (includesKey(repair.key) && repair.repairReason === "proof-staged") repair.repairReason = "materialization-failed";
+        }
+      };
+      const isolatedPendingKeys = new Set([...pendingBuckets.values()].flatMap((keys) => [...keys]));
+      const isAdmitted = (key: string) => !isolatedPendingKeys.has(key);
+      const recalcResult = await recalcMintBurnAffectedHours(this.db, admittedHours, input.signal);
+      recalcFailed = recalcResult.failed;
+      recalcError = recalcResult.error;
+      if (recalcFailed) holdRepairProofs(isAdmitted);
+      else await commitProofs(isAdmitted);
+
+      // Admitted commits are durable before any pending bucket can fail. A held
+      // pending cursor replays its raw rows and existing materialization debt.
+      for (const [bucket, keys] of pendingBuckets) {
+        const includesKey = (key: string) => keys.has(key);
+        const result = await recalcMintBurnAffectedHours(this.db, pendingHours.get(bucket) ?? new Map(), input.signal);
+        if (result.failed) {
+          holdRepairProofs(includesKey);
+          for (const key of keys) pendingMaterializationFailures.push({
+            key, reason: "pending-hourly-recalc-failed", error: result.error?.slice(0, 200) ?? null,
+          });
+          continue;
+        }
+        try {
+          await commitProofs(includesKey);
+        } catch (error) {
+          rethrowIfAborted(error, input.signal);
+          for (const key of keys) pendingMaterializationFailures.push({
+            key, reason: "pending-cursor-commit-failed", error: toErrorMessage(error).slice(0, 200),
+          });
         }
       }
     }
-    return { phaseResult, recalcFailed, recalcError };
+    return { phaseResult, recalcFailed, recalcError, pendingMaterializationFailures };
   }
 }

@@ -419,6 +419,64 @@ describe("syncMintBurn — multi-chain invariant", () => {
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM mint_burn_scan_coverage").get()).toEqual({ count: 0 });
   });
 
+  it.each(["recalc", "cursor-commit"])("commits admitted progress and retains pending replay inputs after pending %s failure", async (failure) => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const [admitted, pending] = MINT_BURN_CONFIGS;
+    seedMintBurnAdmissions(sqlite, [admitted!]);
+    const admittedKey = `ethereum-${USDT_CONTRACT}`;
+    const pendingKey = `arbitrum-${pending!.contractAddress}`;
+    const timestamp = Math.floor(Date.now() / 1000) - 60;
+    const hour = Math.floor(timestamp / 3600) * 3600;
+    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)").run(admittedKey, 21_999_999);
+    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)").run(pendingKey, 249_499_999);
+    sqlite.prepare("INSERT INTO mint_burn_dirty_hours VALUES (?, ?, ?)").run(pending!.stablecoinId, "arbitrum", hour);
+    if (failure === "cursor-commit") sqlite.exec(`CREATE TRIGGER fail_pending_proof BEFORE INSERT ON mint_burn_scan_coverage
+      WHEN NEW.chain_id = 'arbitrum' BEGIN SELECT RAISE(ABORT, 'pending proof write failed'); END`);
+    vi.mocked(batchExecute).mockImplementation((await vi.importActual<typeof DbModule>("../../lib/db")).batchExecute);
+    const actualRecalc = (await vi.importActual<typeof PersistenceModule>("../../lib/mint-burn-pipeline/persistence")).recalcAffectedHours;
+    vi.mocked(getMintBurnFinalizedHead).mockImplementation(async (chain) => ({
+      number: chain === "ethereum" ? 22_000_000 : 249_500_000,
+      timestamp, hash: `0x${"a".repeat(64)}`,
+    }));
+    vi.mocked(resolveBlockTimestamps).mockImplementation(async (_url, blocks) => new Map(blocks.map((block) => [block, timestamp])));
+    vi.mocked(fetchAlchemyLogs).mockImplementation(async (_url, contract, _topics, _from, to) => ({
+      logs: [makeMintLog({ contract, blockNumber: to, txHash: `0x${contract}-mint` })],
+      complete: true, scannedToBlock: to, calls: 1, maxDepth: 0,
+    }));
+    vi.mocked(recalcAffectedHours).mockImplementation(async (database, hours, options) => {
+      if ([...hours.values()].some((value) => value.chainId === "arbitrum")) {
+        expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(admittedKey))
+          .toEqual({ last_block: 22_000_000 });
+        if (failure === "recalc") throw new Error("pending hourly write failed");
+      }
+      await actualRecalc(database, hours, options);
+    });
+
+    const result = await syncMintBurn(db, "alchemy-key");
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      recalcFailed: false,
+      pendingMaterialization: { failedCount: 1, failures: [{ key: pendingKey,
+        reason: failure === "recalc" ? "pending-hourly-recalc-failed" : "pending-cursor-commit-failed" }] },
+    });
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(admittedKey))
+      .toEqual({ last_block: 22_000_000 });
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(pendingKey))
+      .toEqual({ last_block: 249_499_999 });
+    expect(sqlite.prepare("SELECT config_key FROM mint_burn_scan_coverage").all()).toEqual([{ config_key: admittedKey }]);
+    expect(sqlite.prepare("SELECT chain_id FROM mint_burn_events ORDER BY chain_id").all())
+      .toEqual([{ chain_id: "arbitrum" }, { chain_id: "ethereum" }]);
+    expect(sqlite.prepare("SELECT chain_id FROM mint_burn_dirty_hours").all()).toEqual([{ chain_id: "arbitrum" }]);
+    expect(sqlite.prepare("SELECT mint_count FROM mint_burn_hourly WHERE chain_id = 'ethereum'").get()).toEqual({ mint_count: 1 });
+
+    if (failure === "cursor-commit") sqlite.exec("DROP TRIGGER fail_pending_proof");
+    vi.mocked(recalcAffectedHours).mockImplementation(actualRecalc);
+    await syncMintBurn(db, "alchemy-key");
+    expect(sqlite.prepare("SELECT last_block FROM mint_burn_sync_state WHERE config_key = ?").get(pendingKey))
+      .toEqual({ last_block: 249_500_000 });
+    expect(sqlite.prepare("SELECT mint_count FROM mint_burn_hourly WHERE chain_id = 'arbitrum'").get()).toEqual({ mint_count: 1 });
+  });
+
   it.each(["missing", "reversed", "future"])("never certifies an invalid boundary, but retries a smaller prefix: %s", async (failure) => {
     const { sqlite, db } = sqliteFixtures.open();
     seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);

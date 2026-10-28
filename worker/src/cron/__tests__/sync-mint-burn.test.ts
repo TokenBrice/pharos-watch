@@ -118,6 +118,7 @@ import { createBudget, decodeUint256AtSlotOrNull } from "../../lib/evm-logs";
 import * as mintBurnConservation from "../../lib/mint-burn-conservation";
 import type * as DbModule from "../../lib/db";
 import type * as PersistenceModule from "../../lib/mint-burn-pipeline/persistence";
+import { withRpcRequestObserver } from "../../lib/rpc-request-observer";
 
 const USDT_CONFIG_KEY = `ethereum-${USDT_CONTRACT}`;
 
@@ -184,6 +185,7 @@ describe("syncMintBurn", () => {
   afterEach(() => {
     vi.useRealTimers();
     vi.restoreAllMocks();
+    vi.unstubAllGlobals();
     sqliteFixtures.closeAll();
   });
 
@@ -427,6 +429,7 @@ describe("syncMintBurn", () => {
     expect(result.summary.rowsDropped).toBe(0);
     expect(result.summary.rowsDroppedDecode).toBe(1);
     expect(result.summary.earliestDecodeFailureBlock).toBe(failedBlock);
+    expect(result.rpcEvidenceIncomplete).toBe(false);
     expect(result.newLastBlock).toBeNull();
   });
 
@@ -482,6 +485,7 @@ describe("syncMintBurn", () => {
     expect(result.newLastBlock).toBeNull();
     expect(result.summary.rowsDroppedDecode).toBe(1);
     expect(result.summary.rowsQuarantinedDecode).toBe(1);
+    expect(result.rpcEvidenceIncomplete).toBe(false);
     expect(result.summary.decodeQuarantines).toEqual([expect.objectContaining({
       blockNumber: failedBlock,
       reason: "amount-decode-retry-exhausted",
@@ -860,6 +864,28 @@ describe("syncMintBurn", () => {
     expect(usdt?.failedEventDefs).toContain("tx-context:1");
     expect(usdt?.advancedTo).toBe(21_999_999);
     expect(usdt?.advanceReason).toBe("partial-frontier");
+  });
+
+  it("isolates an Alchemy circuit-denied transaction context and continues another config", async () => {
+    const actualAlchemy = await vi.importActual<typeof import("../../lib/alchemy-logs")>("../../lib/alchemy-logs");
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockImplementation(actualAlchemy.getAlchemyTransactionContextBatchMany);
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({ logs: [makeMintLog({ txHash: "0xdenied-context" })], complete: true,
+        scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 })
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 22_000_000, calls: 1, maxDepth: 0 });
+    vi.mocked(resolveBlockTimestamps).mockResolvedValueOnce(new Map([[22_000_000, 1_718_650_752]]));
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    const result = await withRpcRequestObserver({ beforeRequest: () => false, onOutcome: vi.fn() }, () =>
+      syncMintBurn(makeDb(), "alchemy-key"));
+    const meta = JSON.parse(result.metadata);
+    const affected = meta.configSamples.find((entry: { symbol: string }) => entry.symbol === "USDT");
+    expect(affected.failedEventDefs).toContain("tx-context-request-not-started:1");
+    expect(affected.bridgeClassificationDeferredRows).toBe(1);
+    expect(meta.sourceCoverage.contractsProcessed).toBe(2);
+    expect(vi.mocked(fetchAlchemyLogs).mock.calls.some(([, address]) => address === MINT_BURN_CONFIGS[1].contractAddress)).toBe(true);
+    expect(fetch).not.toHaveBeenCalled();
   });
 
   it("keeps status ok when only extended configs are deferred", async () => {

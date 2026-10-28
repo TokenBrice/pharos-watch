@@ -1,4 +1,5 @@
 import { throwIfAborted } from "../../lib/abort";
+import { withRpcRequestScope } from "../../lib/rpc-request-observer";
 import { conservationOnlyEventDefsFor, fetchConservationBoundaries, getMintBurnConservationEligibility } from "../../lib/mint-burn-conservation";
 import { syncMintBurnConfig, type SyncMintBurnConfigInput, type SyncMintBurnConfigResult } from "./sync-config";
 
@@ -54,8 +55,9 @@ export async function syncMintBurnConfigWithRetries(input: SyncMintBurnConfigInp
       });
       conservationBoundary = boundaries.get(input.key);
     }
-    result = await syncMintBurnConfig({ ...input, scanTo, conservationBoundary,
-      configBudgetLimit: Math.max(0, attemptBudget.limit - attemptBudget.count) });
+    result = await withRpcRequestScope({ kind: "config-attempt", key: input.key, affectsRun: true }, () =>
+      syncMintBurnConfig({ ...input, scanTo, conservationBoundary,
+        configBudgetLimit: Math.max(0, attemptBudget.limit - attemptBudget.count) }), () => false);
     used += attemptBudget.count + result.summary.requestBudgetUsed;
     attempts.push({ scanTo, requestBudgetUsed: attemptBudget.count + result.summary.requestBudgetUsed,
       reason: result.summary.advanceReason });
@@ -70,6 +72,7 @@ export async function syncMintBurnConfigWithRetries(input: SyncMintBurnConfigInp
     }
     const accepted = result.newLastBlock != null && result.scanCoverage?.toBlock === result.newLastBlock;
     if (accepted) {
+      result.rpcEvidenceIncomplete = false;
       // A smaller certified range is real progress, not full catch-up health.
       if (attempt > 0) result.summary.advanceReason = "partial-frontier";
       result.summary.coverageFrontier = result.newLastBlock;

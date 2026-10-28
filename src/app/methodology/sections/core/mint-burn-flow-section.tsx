@@ -125,9 +125,10 @@ export function MintBurnFlowMethodologySection() {
                 Supported new legs keep catching up, with their reason and progress disclosed, while the coin&apos;s
                 admitted legs keep publishing. Pending or operator-disabled legs contribute neither totals nor
                 gauge weights. Existing contracts sharing a chain bucket must be disabled together; a new
-                sibling contract waits for independently attributable history. The frozen 137 pre-gate source identities are explicitly grandfathered for membership;
-                their ordinary historical coverage and freshness checks still apply. An admitted leg that
-                later stalls stays in scope, and a changed configuration must qualify again.
+                sibling contract waits for independently attributable history. The frozen 137 pre-gate config keys are grandfathered for membership;
+                source-field edits retain that membership, while current-fingerprint coverage remains required.
+                An active admitted leg that later stalls stays in scope. A re-enabled stale leg waits for
+                fresh frontier and incumbent-hour proof without repeating the 90-day gate; shared buckets resume together.
               </p>
               <p>
                 Historical hours before the fixed October 20, 2026 noon UTC cutover may use explicitly labelled

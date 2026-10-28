@@ -1,10 +1,22 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
 import { afterEach, describe, it, expect } from "vitest";
-import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
+import { mockD1 as createMockD1, type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
 import { makeMintBurnRow } from "../../test-helpers/__shared/fixtures";
 import { registerStablecoinParameterContract } from "../../test-helpers/__shared/endpoint-contracts";
 import { handleMintBurnEvents } from "../mint-burn-events";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-flows/aggregate";
+import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
+
+function mockD1(tables: MockTableConfig[] = []) {
+  return createMockD1([...tables,
+    { match: "FROM mint_burn_admission", rows: [] },
+    { match: "FROM mint_burn_publication_policy", rows: [] },
+    { match: "pharos:mint-burn-scan-coverage:read", rows: [] },
+    { match: "pharos:mint-burn-legacy-evidence", rows: [] },
+  ]);
+}
 
 const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
@@ -20,6 +32,33 @@ function eventDb(rows: Record<string, string | number | null>[]) {
 
 describe("handleMintBurnEvents", () => {
   const row = makeMintBurnRow();
+
+  it.each(["all", "counted"])("keeps %s event totals and pagination inside admitted enabled scope", async (scope) => {
+    const { sqlite, db } = fixtures.open();
+    const incumbent = MINT_BURN_CONFIGS.find((config) => config.stablecoinId === "usdt-tether")!;
+    const pending = { ...incumbent, chain: { ...incumbent.chain, chainId: "synthetic-pending" } };
+    MINT_BURN_CONFIGS.push(pending);
+    ACTIVE_MINT_BURN_CONFIGS.push(pending);
+    try {
+      for (const event of [makeMintBurnRow({ id: "pending", chain_id: pending.chain.chainId, timestamp: 100 }),
+        makeMintBurnRow({ id: "admitted", timestamp: 99 })]) {
+        sqlite.prepare(`INSERT INTO mint_burn_events (${Object.keys(event).join(",")}) VALUES (${Object.keys(event).map(() => "?").join(",")})`)
+          .run(...Object.values(event));
+      }
+      const url = new URL(`https://x/api/mint-burn-events?stablecoin=usdt-tether&scope=${scope}&limit=1`);
+      const admitted = await readJsonResponse(await handleMintBurnEvents(db, url), 200) as { events: Array<{ id: string }>; total: number };
+      expect(admitted.events.map((event) => event.id)).toEqual(["admitted"]);
+      expect(admitted.total).toBe(1);
+      sqlite.prepare("INSERT INTO mint_burn_publication_policy (id, disabled_keys, updated_at) VALUES (1, ?, ?)")
+        .run(JSON.stringify([mintBurnConfigKey(incumbent)]), 100);
+      const disabled = await readJsonResponse(await handleMintBurnEvents(db, url), 200) as { events: unknown[]; total: number };
+      expect(disabled.events).toEqual([]);
+      expect(disabled.total).toBe(0);
+    } finally {
+      MINT_BURN_CONFIGS.splice(MINT_BURN_CONFIGS.indexOf(pending), 1);
+      ACTIVE_MINT_BURN_CONFIGS.splice(ACTIVE_MINT_BURN_CONFIGS.indexOf(pending), 1);
+    }
+  });
 
   it("maps snake_case to camelCase", async () => {
     const db = mockD1([

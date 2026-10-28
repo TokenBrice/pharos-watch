@@ -291,6 +291,22 @@ describe("mint-burn shared pipeline modules", () => {
     expect(vi.mocked(classifyBridgeAwareBurnRows)).toHaveBeenCalledTimes(1);
   });
 
+  it("retains request-denied context reasons when the scan requires a matching block hash", async () => {
+    vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValueOnce(new Map([
+      ["0xdenied", { tx: null, receipt: null, unavailableReason: "rpc-request-not-started" }],
+    ]));
+    const counters = await classifyBridgeBurnRows(
+      [makeRow({ direction: "burn", tx_hash: "0xdenied" })],
+      makeMintBurnConfig({ bridgeDetection: {
+        protocol: "ccip", knownBridgePoolAddresses: [], knownBridgeRouterAddresses: [],
+        bridgeSignalTopics: [], bridgeSignalSelectors: [],
+      } }),
+      [mintBurnAlchemyEndpoint("https://rpc.invalid")], { count: 0, limit: 10 }, new Map(), undefined,
+      { blockHashesByTx: new Map([["0xdenied", `0x${"1".repeat(64)}`]]) },
+    );
+    expect(counters).toMatchObject({ txContextShortfalls: 1, txContextRequestsNotStarted: 1, deferredTxHashes: ["0xdenied"] });
+  });
+
   it("defers only the malformed transaction-context peer", async () => {
     vi.mocked(getAlchemyTransactionContextBatchMany).mockResolvedValue(new Map([
       ["0xmalformed", {

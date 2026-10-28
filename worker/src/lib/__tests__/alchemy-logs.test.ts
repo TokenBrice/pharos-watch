@@ -14,6 +14,8 @@ import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { fetchEvmBlockNumber, fetchEvmRpcBatch, requestJsonRpcAtUrl, usableCcipRpcEndpoints } from "../evm-rpc";
 import { registerRpcAuth, type ChainRpcConfig } from "../chain-registry";
 import * as rpcCredits from "../rpc-provider-budget";
+import * as evmRpc from "../evm-rpc";
+import { withRpcRequestObserver } from "../rpc-request-observer";
 
 let fetchMock: ReturnType<typeof mockFetch>;
 
@@ -268,6 +270,54 @@ describe("fetchAlchemyLogs runtime deadline", () => {
 describe("getAlchemyTransactionContextBatchMany", () => {
   beforeEach(() => {
     fetchMock = mockFetch([], { requireMatch: true });
+  });
+
+  it("returns named unavailable contexts when circuit admission denies a batch", async () => {
+    const onOutcome = vi.fn();
+    const result = await withRpcRequestObserver({ beforeRequest: () => false, onOutcome }, () =>
+      getAlchemyTransactionContextBatchMany("https://rpc.invalid", ["0xaaa"], createBudget(10)));
+    expect(result.get("0xaaa")).toEqual({ tx: null, receipt: null, unavailableReason: "rpc-request-not-started" });
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(onOutcome).not.toHaveBeenCalled();
+  });
+
+  it("still propagates caller cancellation during transaction-context admission", async () => {
+    const controller = new AbortController();
+    const run = withRpcRequestObserver({
+      beforeRequest: () => { controller.abort(new Error("caller stopped")); return false; }, onOutcome: vi.fn(),
+    }, () => getAlchemyTransactionContextBatchMany("https://rpc.invalid", ["0xaaa"], createBudget(10), controller.signal));
+    await expect(run).rejects.toThrow("caller stopped");
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it("returns unavailable contexts for a transport error carrying an exception", async () => {
+    const request = vi.spyOn(evmRpc, "requestJsonRpcAtUrl").mockResolvedValueOnce({
+      status: "transport-error", error: new Error("socket closed"),
+    });
+    try {
+      const result = await getAlchemyTransactionContextBatchMany("https://rpc.invalid", ["0xaaa"], createBudget(10));
+      expect(result.get("0xaaa")).toEqual({ tx: null, receipt: null });
+    } finally {
+      request.mockRestore();
+    }
+  });
+
+  it("keeps member-retry transport errors unavailable instead of aborting the batch", async () => {
+    const originalRequest = evmRpc.requestJsonRpcAtUrl;
+    const request = vi.spyOn(evmRpc, "requestJsonRpcAtUrl")
+      .mockImplementationOnce(originalRequest)
+      .mockResolvedValueOnce({ status: "transport-error", error: new Error("socket closed") });
+    const receipt = { transactionHash: "0xaaa", to: null, logs: [] };
+    fetchMock.mockResolvedValueOnce(Response.json([
+      { id: 0, error: { code: -32000, message: "batch not executed" } }, { id: 1, result: receipt },
+    ]));
+    try {
+      const result = await getAlchemyTransactionContextBatchMany("https://rpc.invalid", ["0xaaa"], createBudget(10));
+      expect(result.get("0xaaa")).toEqual({ tx: null, receipt });
+      expect(request).toHaveBeenCalledTimes(2);
+    } finally {
+      request.mockRestore();
+    }
   });
 
   it("batches transaction and receipt lookups into one HTTP request", async () => {

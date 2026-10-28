@@ -3,12 +3,13 @@ import type { CronProgressReporter } from "../../lib/cron-logger";
 import { reportCronProgress } from "../../lib/cron-progress";
 import { budgetExhausted } from "../../lib/evm-logs";
 import { rethrowIfAborted } from "../../lib/abort";
+import { withRpcRequestScope } from "../../lib/rpc-request-observer";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnAffectedHour, MintBurnPriceContext } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnScanCoverage } from "../../lib/mint-burn-pipeline/scan-coverage";
 import type { MintBurnContractConfig, MintBurnTier } from "../../lib/mint-burn-contracts";
 import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run-state";
-import { createMintBurnConfigSummary, type MintBurnConfigSummary } from "./sync-config";
+import { createMintBurnConfigSummary, hasTerminalMintBurnRpcFailure, type MintBurnConfigSummary } from "./sync-config";
 import { mintBurnScanRequestFloor, MINT_BURN_RETRY_BOUNDARY_REQUESTS, syncMintBurnConfigWithRetries } from "./scan-with-retry";
 import type { MintBurnChainContext } from "./chain-context";
 import type { MintBurnCoverageRepairSummary } from "./repair-coverage";
@@ -368,14 +369,14 @@ export async function runMintBurnConfigPhase(input: {
         });
         conservationBoundary = boundaries.get(key);
       }
-      result = await syncMintBurnConfigWithRetries({
+      result = await withRpcRequestScope({ kind: "config", key, affectsRun: !pending }, () => syncMintBurnConfigWithRetries({
         db: input.db,
         config,
         key,
         tier,
         fromBlock,
         scanTo,
-        chainHead: chainContext.chainHead,
+        chainHead: chainContext.chainHead!,
         rpcEndpoints: chainContext.rpcEndpoints,
         endpointHeads: chainContext.endpointHeads,
         signal: input.signal,
@@ -387,7 +388,7 @@ export async function runMintBurnConfigPhase(input: {
         affectedHours,
         deadlineMs,
         conservationBoundary,
-      });
+      }), hasTerminalMintBurnRpcFailure);
     } catch (error) {
       rethrowIfAborted(error, input.signal);
       if (!pending) throw error;
