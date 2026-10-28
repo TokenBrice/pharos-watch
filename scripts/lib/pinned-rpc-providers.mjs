@@ -11,9 +11,7 @@ export async function resolvePinnedProvider(chain, provider) {
     if (evm) return { endpoint: dwellirRpcUrl(evm), protocol: "evm", credential: "DWELLIR_API_KEY", maxLogBlockSpan: evm.maxLogBlockSpan };
     const native = DWELLIR_NATIVE_ENDPOINTS.find((entry) => entry.network === canonicalChain);
     if (native) return { endpoint: native.baseUrl, protocol: native.protocol, credential: "DWELLIR_API_KEY" };
-    // https://www.dwellir.com/networks/sui — checkpoint/execution only,
-    // not a promise of arbitrary historical object-state retention.
-    if (canonicalChain === "sui") return { endpoint: "https://api-sui-mainnet-full.n.dwellir.com", protocol: "sui-jsonrpc", credential: "DWELLIR_API_KEY" };
+    // Dwellir Sui serves gRPC, which this pinned research CLI does not support.
     return null;
   }
   if (provider === "public") {

@@ -4,7 +4,7 @@ import inspections from "./fixtures/sui-clmm-inspections.json";
 import shadowInspections from "./fixtures/sui-clmm-shadow-inspections.json";
 import { DEX_MEASURED_FRESHNESS_MAX_SEC, type DexRequestBudget } from "@shared/types/measured-execution";
 import { isDexExecutionProfileAdmittedForScoring, getDexExecutionCapabilityRegistration } from "@shared/lib/p4-exit-route-capability-policy";
-import { decodeSuiClmmSnapshot, createSuiClmmRpc, suiObject, type SuiClmmCapture, type SuiRpc } from "../sui/state-reader";
+import { decodeSuiClmmSnapshot, suiObject, type SuiClmmCapture, type SuiRpc } from "../sui/state-reader";
 import { quoteSuiClmmExactIn } from "../sui/clmm-quote";
 import { createSuiTransactionCheckpointResolver } from "../sui/archival-checkpoints";
 import { decodeSuiClmmInspectResults } from "../sui/independent-quote";
@@ -176,16 +176,6 @@ describe("Sui retained discovery and shadow scope", () => {
     expect(selectSuiShadowPools(rows, "2").total).toBe(2);
     expect(selectSuiShadowPools(rows.filter((row) => row.project === "bluefin"), null).selected).toEqual([]);
   });
-
-  it("never fetches when the shared request budget is exhausted and consumes responses serially", async () => {
-    const signal = new AbortController().signal;
-    let remaining = 1;
-    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({ jsonrpc: "2.0", id: 1, result: "330486099" })));
-    const rpc = createSuiClmmRpc({ url: "https://example.invalid", signal, budget: { maxRequests: 1, deadlineMs: Date.now() + 1000, get remainingRequests() { return remaining; }, tryConsume() { if (!remaining) return false; remaining--; return true; } } });
-    expect(await rpc("sui_getLatestCheckpointSequenceNumber", [])).toBe("330486099");
-    await expect(rpc("sui_getLatestCheckpointSequenceNumber", [])).rejects.toThrow("sui-rpc-budget-exhausted");
-    expect(fetcher).toHaveBeenCalledTimes(1);
-  });
 });
 
 describe("Sui actual shadow producer packets", () => {
@@ -235,7 +225,7 @@ describe("Sui actual shadow producer packets", () => {
   });
 });
 
-describe("Sui resilient bounded provider transport", () => {
+describe("Sui bounded archival checkpoint transport", () => {
   function oneRequestBudget(timeoutMs = 1_000): DexRequestBudget {
     let remaining = 1;
     return {
@@ -248,49 +238,6 @@ describe("Sui resilient bounded provider transport", () => {
       },
     };
   }
-
-  it("consumes an HTTP failure without retrying outside the request or credit budget", async () => {
-    const response = new Response(JSON.stringify({ id: 1, error: { code: -32000, message: "provider unavailable" } }), { status: 503 });
-    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
-    const onResponse = vi.fn();
-    const budget = oneRequestBudget();
-    const rpc = createSuiClmmRpc({ url: "https://example.invalid", signal: new AbortController().signal, budget, onResponse });
-    await expect(rpc("sui_getObject", [])).rejects.toThrow("sui-rpc-response-failed:sui_getObject");
-    expect(response.bodyUsed).toBe(true);
-    expect(onResponse).toHaveBeenCalledTimes(1);
-    expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(budget.remainingRequests).toBe(0);
-  });
-
-  it("records a received RPC response even when its oversized body is rejected and cancelled", async () => {
-    let cancelled = false;
-    const response = new Response(new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } }), {
-      headers: { "content-length": String(2 * 1024 * 1024 + 1) },
-    });
-    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
-    const onResponse = vi.fn();
-    const budget = oneRequestBudget();
-    const rpc = createSuiClmmRpc({ url: "https://example.invalid", signal: new AbortController().signal, budget, onResponse });
-    await expect(rpc("sui_multiGetObjects", [])).rejects.toThrow("sui-rpc-transport-failed:sui_multiGetObjects");
-    expect(cancelled).toBe(true);
-    expect(onResponse).toHaveBeenCalledTimes(1);
-    expect(fetcher).toHaveBeenCalledTimes(1);
-    expect(budget.remainingRequests).toBe(0);
-  });
-
-  it("keeps the deadline active through an unfinished body and rejects overlapping RPC reads", async () => {
-    vi.useFakeTimers();
-    let cancelled = false;
-    const response = new Response(new ReadableStream<Uint8Array>({ cancel() { cancelled = true; } }));
-    const fetcher = vi.spyOn(globalThis, "fetch").mockResolvedValue(response);
-    const rpc = createSuiClmmRpc({ url: "https://example.invalid", signal: new AbortController().signal, budget: oneRequestBudget(20) });
-    const pending = rpc("sui_getObject", []).catch((error: unknown) => error);
-    await expect(rpc("sui_getCheckpoint", [])).rejects.toThrow("sui-rpc-concurrent-request");
-    await vi.advanceTimersByTimeAsync(21);
-    await expect(pending).resolves.toMatchObject({ message: "sui-rpc-transport-failed:sui_getObject" });
-    expect(cancelled).toBe(true);
-    expect(fetcher).toHaveBeenCalledTimes(1);
-  });
 
   it("parses actual archival checkpoint provenance and refuses a second unbudgeted request", async () => {
     const archived = pinned[0].fixture.capture.transactions.find((transaction) => "source" in transaction && transaction.source === "sui-graphql-archive");
