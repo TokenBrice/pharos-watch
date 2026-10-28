@@ -115,6 +115,24 @@ afterEach(() => {
 });
 
 describe("Tron mint/burn admission transport", () => {
+  it("leaves an expired open TronGrid circuit untouched instead of acquiring a probe", async () => {
+    const network = transport({ respond: () => new Response("unavailable", { status: 503 }) });
+    const { db, sqlite } = fixtures.open();
+    const record = { state: "open", consecutiveFailures: 3, lastFailureAt: NOW - 7200,
+      lastSuccessAt: null, openedAt: NOW - 7200 };
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("circuit:trongrid", JSON.stringify(record), NOW - 7200);
+    const acquireProbe = vi.spyOn(circuit, "shouldAttemptFetch");
+    await syncMintBurn(db, null, {
+      lane: "critical", dwellirNative: network.native,
+      disabledConfigIds: MINT_BURN_CONFIGS.filter((config) => config.chain.chainId !== "tron").map(mintBurnConfigKey),
+    });
+    expect(acquireProbe).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = 'circuit:trongrid'").get())
+      .toEqual({ value: JSON.stringify(record) });
+    expect(network.fetcher.mock.calls.some(([url]) => String(url).includes("trongrid.io"))).toBe(false);
+  });
+
   it("scopes native heads and pending scan boundaries without Alchemy evidence", async () => {
     const network = transport();
     const { db } = fixtures.open();
@@ -188,13 +206,13 @@ describe("Tron mint/burn admission transport", () => {
 
   it("rechecks cached head freshness before skipping an already-scanned config", async () => {
     const head = CONFIG.startBlock + 600;
-    const network = transport({ head, timestamp: (block) => NOW - 300 - (head - block) * 3 });
+    const network = transport({ head, timestamp: (block) => NOW - 500 - (head - block) * 3 });
     const { db } = fixtures.open();
     const input = await phaseInput(network, db);
     const headBudget = input.budget;
     input.budget = { count: 0, limit: 1 };
     input.lastBlocksAfterRun.set(KEY, network.head);
-    vi.mocked(Date.now).mockReturnValue((NOW + 301) * 1000);
+    vi.mocked(Date.now).mockReturnValue((NOW + 101) * 1000);
     input.deadlineMs = Date.now() + 120_000;
     const result = await runMintBurnConfigPhase(input);
     expect(result.configBreakdown[0].skippedReason).toBe("tron-rpc-stale-solid-head");
@@ -238,7 +256,8 @@ describe("Tron mint/burn admission transport", () => {
         return undefined;
       },
     });
-    vi.spyOn(circuit, "shouldAttemptFetch").mockResolvedValue(false);
+    vi.spyOn(circuit, "getCircuitRecord").mockResolvedValue({ state: "open", consecutiveFailures: 3,
+      lastFailureAt: NOW - 1, lastSuccessAt: null, openedAt: NOW - 1 });
     const { db, sqlite } = fixtures.open();
     if (admitted) sqlite.prepare(`INSERT INTO mint_burn_admission
       (config_key, config_fingerprint, admitted_at, baseline_from, baseline_to) VALUES (?, ?, ?, ?, ?)`)

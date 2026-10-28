@@ -31,7 +31,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { DwellirNativeCapability } from "../../lib/dwellir-native";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
-import { shouldAttemptFetch } from "../../lib/circuit-breaker";
+import { getCircuitRecord } from "../../lib/circuit-breaker";
 import {
   COVERAGE_REPAIR_REQUEST_LIMIT, COVERAGE_REPAIR_WINDOW_MS,
   loadMintBurnCoverageGaps, repairMintBurnCoverage,
@@ -209,8 +209,9 @@ export class MintBurnRun {
     const tronOptions = {
       dwellirNative: options.dwellirNative,
       trongridApiKey: options.trongridApiKey,
+      // Native outcomes are diagnostic-only; do not acquire another job's half-open probe.
       trongridAllowed: configs.some((config) => config.chain.chainId === "tron")
-        ? await shouldAttemptFetch(db, CIRCUIT_SOURCE.TRONGRID) : false,
+        ? (await getCircuitRecord(db, CIRCUIT_SOURCE.TRONGRID)).state === "closed" : false,
       deadlineMs,
     };
     const chainContexts = await loadMintBurnChainContexts({
@@ -255,12 +256,13 @@ export class MintBurnRun {
       reportProgress,
       budget,
       chainContexts,
-      preparePendingConfigs: async (pendingBudget) => {
+      preparePendingConfigs: async (pendingBudget, pendingDeadlineMs) => {
         const pendingContexts = await loadMintBurnChainContexts({
           configs: configs.filter((config) => pendingAdmissionKeys.has(configKey(config))
             && !chainContexts.has(config.chain.chainId)),
           apiKey, budget: pendingBudget, signal, chainRpcs: options.chainRpcs,
           ...tronOptions,
+          deadlineMs: pendingDeadlineMs,
         });
         for (const [chainId, context] of pendingContexts) {
           chainContexts.set(chainId, context);

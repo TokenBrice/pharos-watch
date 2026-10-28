@@ -45,7 +45,7 @@ export async function loadMintBurnChainContexts(input: {
     let chainHeadFailureReason: string | undefined;
     try {
       finalized = await withRpcRequestScope({ kind: "chain-head", key: chainId, affectsRun: true },
-        () => getMintBurnFinalizedHead(chainId, rpcEndpoints, input.budget, input.signal, tronReader),
+        () => getMintBurnFinalizedHead(chainId, rpcEndpoints, input.budget, input.signal, tronReader, input.deadlineMs),
         (head) => head == null && input.budget.count < input.budget.limit);
     } catch (error) {
       throwIfAborted(input.signal);

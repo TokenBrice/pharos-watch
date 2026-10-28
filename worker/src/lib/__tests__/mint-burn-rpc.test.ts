@@ -9,6 +9,7 @@ import type { MintBurnRow } from "../mint-burn-pipeline/types";
 import * as credits from "../rpc-provider-budget";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { syncMintBurnConfig } from "../../cron/mint-burn/sync-config";
+import { loadMintBurnChainContexts } from "../../cron/mint-burn/chain-context";
 
 import { DWELLIR_CHAINS } from "@shared/lib/dwellir-chains";
 import { buildAlchemyUrl } from "../alchemy-logs";
@@ -193,6 +194,22 @@ describe("mint/burn ordered RPC fallback", () => {
     expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(12)]]) })).toEqual(new Map([[102, 1024]]));
     expect(await resolveMintBurnBlockTimestamps(endpoints, [102], createBudget(20), { blockHashes: new Map([[102, word(13)]]) })).toEqual(new Map());
     expect(meter).toHaveBeenCalled();
+  });
+
+  it.each([true, false])("honors the head preparation deadline before an EVM request or fallback (expired=%s)", async (expired) => {
+    let clock = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => clock);
+    const deadlineMs = clock + (expired ? 0 : 1_000);
+    const fetcher = recorder(() => { clock += 1_000; return unavailable; });
+    const budget = createBudget(20);
+    const contexts = await loadMintBurnChainContexts({
+      configs: [MINT_BURN_CONFIGS.find((config) => config.chain.chainId === "base")!],
+      apiKey: "alchemy-test", chainRpcs: buildChainRpcs("alchemy-test", undefined, { dwellirApiKey: "dwellir-test" }),
+      budget, deadlineMs,
+    });
+    expect(contexts.get("base")?.chainHead).toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(expired ? 0 : 1);
+    expect(budget.count).toBe(expired ? 0 : 1);
   });
 
   it("uses the ordered fallback for pinned conservation boundaries", async () => {

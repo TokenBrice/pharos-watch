@@ -115,7 +115,8 @@ export default defineConfig({
     coverage: {
       provider: "v8",
       reporter: ["text", "lcov"],
-      exclude: baseTestExcludes,
+      // Coverage matches absolute paths; ancestor agents/worktrees directories are not repo scratch.
+      exclude: baseTestExcludes.map((pattern) => pattern.startsWith("**/") ? pattern : `${normalizedRoot}/${pattern}`),
     },
   },
   resolve: {

@@ -332,6 +332,14 @@ export const ISOLATE_LOCAL_STATE_REGISTRY = [
     resetOrTtl: "WeakMap keyed by each scheduled runtime's chainRpcs Map; memoizes one shared EVM/native budget + circuit admission per runtime and dies with that map object or the isolate.",
     durableTruth: "The Dwellir credit ledger row and the dwellir-evm circuit row are authoritative; the memo only prevents repeat reads within one runtime.",
   },
+  {
+    sourcePath: "worker/src/lib/mint-burn-pipeline/scan-coverage.ts",
+    stateNames: ["fingerprintCache"],
+    owner: "Mint/burn scan-proof fingerprints",
+    kind: "cache",
+    resetOrTtl: "WeakMap keyed by config object; serialized source changes invalidate an entry, and entries disappear with the config object or isolate.",
+    durableTruth: "Current config source fields determine the fingerprint; durable D1 scan-coverage rows remain authoritative for proof. The cache only avoids hashing unchanged serialized source.",
+  },
 ] as const satisfies readonly IsolateLocalStateRegistryEntry[];
 
 export const ISOLATE_LOCAL_STATE_DOC_START = "<!-- ISOLATE-LOCAL-STATE:START -->";

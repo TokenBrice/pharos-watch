@@ -523,6 +523,29 @@ regexTarget = "secret"
 regexes = ['''^frontier\.column3$''']
 paths = ['''(?:^|/)worker/src/cron/mint-burn/retention\.ts$''']
 
+# Pending-retention predicates compare generated SQL columns, not credentials.
+# Restrict the column shape to the retention query owner.
+[[allowlists]]
+description = "Mint/burn pending-retention SQL column references are not secrets"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^pending\.column[0-9]+$''']
+paths = ['''(?:^|/)worker/src/cron/mint-burn/retention\.ts$''']
+
+# Tron backfill selection fixtures use the public chain-prefixed contract key.
+# Other values and uses outside these fixture files remain scanned.
+[[allowlists]]
+description = "Tron mint/burn config keys in backfill fixtures are public identifiers"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^tron-T[1-9A-HJ-NP-Za-km-z]{33}$''']
+paths = [
+  '''(?:^|/)worker/scripts/__tests__/one-shot-backfill\.test\.ts$''',
+  '''(?:^|/)worker/scripts/backfills/__tests__/backfill-mint-burn\.test\.ts$''',
+]
+
 # Safety Score 10.17 incident research (reviewed 2026-10-11). Bridge-control keys
 # end in a 20-hex digest of public route metadata, and review ids embed that key
 # after the asset id, so GLDT's ids open with the GitLab deploy-token prefix.

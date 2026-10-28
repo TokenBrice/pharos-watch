@@ -20,6 +20,7 @@ import {
 } from "../../lib/mint-burn-conservation";
 
 const MINT_BURN_RUNTIME_BUDGET_MS = 9 * 60_000;
+export const MINT_BURN_PENDING_RUNTIME_BUDGET_MS = 6 * 60_000;
 const MINT_BURN_MIN_CONFIG_WINDOW_MS = 60_000;
 const MINT_BURN_PENDING_MAX_SCAN_RANGE = 500_000;
 
@@ -96,7 +97,7 @@ export async function runMintBurnConfigPhase(input: {
   db: D1Database;
   configs: MintBurnContractConfig[];
   pendingAdmissionKeys?: ReadonlySet<string>;
-  preparePendingConfigs?: (budget: { limit: number; count: number }) => Promise<void>;
+  preparePendingConfigs?: (budget: { limit: number; count: number }, deadlineMs: number) => Promise<void>;
   lane: "all" | "critical" | "extended";
   jobName: string;
   reportProgress?: CronProgressReporter;
@@ -141,6 +142,8 @@ export async function runMintBurnConfigPhase(input: {
   const configs = [...input.configs.filter((config) => !isPending(config)), ...input.configs.filter(isPending)];
   const affectedHours = input.affectedHours;
   const deadlineMs = input.deadlineMs ?? Date.now() + MINT_BURN_RUNTIME_BUDGET_MS;
+  // Pending catch-up must leave time for admitted commits, retention and cache publication.
+  const pendingDeadlineMs = Math.min(deadlineMs, input.runTimestamp * 1000 + MINT_BURN_PENDING_RUNTIME_BUDGET_MS);
   const minimumConfigWindowMs = input.minimumConfigWindowMs ?? MINT_BURN_MIN_CONFIG_WINDOW_MS;
 
   const nowSec = Math.floor(Date.now() / 1000);
@@ -199,10 +202,12 @@ export async function runMintBurnConfigPhase(input: {
       throw input.signal.reason instanceof Error ? input.signal.reason : new Error("sync-mint-burn aborted");
     }
 
-    if (isPending(configs[i]!) && !pendingPrepared && !budgetExhausted(input.budget)
-      && Date.now() + minimumConfigWindowMs < deadlineMs) {
+    const pending = isPending(configs[i]!);
+    const configDeadlineMs = pending ? pendingDeadlineMs : deadlineMs;
+    if (pending && !pendingPrepared && !budgetExhausted(input.budget)
+      && Date.now() + minimumConfigWindowMs < configDeadlineMs) {
       try {
-        await input.preparePendingConfigs?.(input.budget);
+        await input.preparePendingConfigs?.(input.budget, configDeadlineMs);
       } catch (error) {
         rethrowIfAborted(error, input.signal);
         pendingPreparationFailed = true;
@@ -214,7 +219,7 @@ export async function runMintBurnConfigPhase(input: {
     }
 
     if (
-      Date.now() + minimumConfigWindowMs >= deadlineMs
+      Date.now() + minimumConfigWindowMs >= configDeadlineMs
     ) {
       runtimeBudgetHit = true;
       for (let remainingIndex = i; remainingIndex < configs.length; remainingIndex++) {
@@ -235,7 +240,6 @@ export async function runMintBurnConfigPhase(input: {
     const config = configs[i]!;
     const key = configKey(config);
     const tier = configTier(config);
-    const pending = isPending(config);
     const summary = createMintBurnConfigSummary(config, key, tier);
 
     await reportCronProgress(input.reportProgress, {
@@ -272,7 +276,7 @@ export async function runMintBurnConfigPhase(input: {
       continue;
     }
     if (chainContext?.tronReader && chainContext.chainHead != null) {
-      chainContext.tronReader = chainContext.tronReader.withBudget(input.budget, deadlineMs);
+      chainContext.tronReader = chainContext.tronReader.withBudget(input.budget, configDeadlineMs);
       try {
         chainContext.chainHead = (await withRpcRequestScope(
           { kind: "chain-head", key: config.chain.chainId, affectsRun: !pending },
@@ -383,7 +387,7 @@ export async function runMintBurnConfigPhase(input: {
           budget: pendingBoundaryBudget,
           checkedAt: nowSec,
           signal: input.signal,
-          deadlineMs: Math.min(deadlineMs, Date.now() + MINT_BURN_CONSERVATION_PREPASS_MAX_MS),
+          deadlineMs: Math.min(configDeadlineMs, Date.now() + MINT_BURN_CONSERVATION_PREPASS_MAX_MS),
         });
         conservationBoundary = boundaries.get(key);
       }
@@ -405,7 +409,7 @@ export async function runMintBurnConfigPhase(input: {
         chainTimestampCache: chainContext.chainTimestampCache,
         txContextCache: chainContext.txContextCache,
         affectedHours,
-        deadlineMs,
+        deadlineMs: configDeadlineMs,
         conservationBoundary,
       }), hasTerminalMintBurnRpcFailure);
     } catch (error) {

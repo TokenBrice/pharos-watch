@@ -141,6 +141,7 @@ export async function readMintBurnWindowContext(
   await persistMintBurnResumptions(db, scope.resumedKeys, policy);
   return {
     watermark: resolveMintBurnWatermark(nowSec, scope.configs, segments, legacy),
+    segments,
     legacy,
     configs: scope.configs,
     publication: scope.publication,

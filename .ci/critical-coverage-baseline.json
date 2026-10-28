@@ -186,6 +186,7 @@
     "worker/src/lib/live-reserves/store-views.ts": 94.4,
     "worker/src/lib/live-reserves/store-write.ts": 98.1,
     "worker/src/lib/mint-burn-historical-price-repair.ts": 88.8,
+    "worker/src/lib/mint-burn-publication.ts": 98.5,
     "worker/src/lib/mint-burn-scoring.ts": 100,
     "worker/src/lib/native-peg-implied-prices.ts": 92.6,
     "worker/src/lib/price-consensus.ts": 98.1,

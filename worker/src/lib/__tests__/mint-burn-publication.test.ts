@@ -6,7 +6,7 @@ import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config
 import { mintBurnConfigKey, upsertMintBurnSyncState } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_LEGACY_CUTOVER, mintBurnScanFingerprint } from "../mint-burn-pipeline/scan-coverage";
 import { readMintBurnWindowContext, resolveMintBurnWatermark, finalizeMintBurnFlowResponse } from "../mint-burn-flows-service";
-import { isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPublicationPolicy } from "../mint-burn-publication";
+import { compactMintBurnPublication, isGrandfatheredMintBurnConfig, mintBurnDisabledReason, syncMintBurnPublicationPolicy } from "../mint-burn-publication";
 import { aggregateFlowCacheKey } from "../mint-burn-flow-cache-keys";
 
 const fixtures = createLatestSchemaFixtureTracker();
@@ -48,6 +48,19 @@ describe("mint/burn durable publication admission", () => {
     expect(scope.watermark.unavailableReason).toBe("scan-watermark-stale");
     const revised = { ...config, decimals: config.decimals + 1 };
     expect((await readMintBurnWindowContext(db, end + 60, [revised])).configs).toEqual([revised]);
+  });
+
+  it("compacts publication diagnostics while retaining exact admitted pairs and non-admitted reasons", async () => {
+    const { db } = fixtures.open();
+    const { publication } = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
+    const compact = compactMintBurnPublication(publication);
+    expect(compact).toMatchObject({ legsScope: "non-admitted", legCount: MINT_BURN_CONFIGS.length,
+      admittedCount: 137, pendingAdmissionCount: 1, disabledCount: 0 });
+    expect(compact.legs).toEqual(publication.legs.filter((leg) => leg.status !== "admitted"));
+    expect(new Set(compact.admittedPairs!.map((pair) => JSON.stringify(pair)))).toEqual(new Set(publication.legs
+      .filter((leg) => leg.status === "admitted").map((leg) => JSON.stringify([leg.stablecoinId, leg.chainId]))));
+    expect(JSON.stringify(compact).length).toBeLessThan(JSON.stringify(publication).length / 4);
+    expect(publication.legs).toHaveLength(MINT_BURN_CONFIGS.length);
   });
 
   it.each(["gap", "dirty", "stale"])("rejects %s proof without latching admission", async (defect) => {

@@ -521,10 +521,12 @@ export async function hydrateMintBurn(ctx: HydrationContext): Promise<MintBurnHy
         && isGrandfatheredMintBurnConfig(config));
       publication = (await readMintBurnWindowContext(ctx.db, ctx.nowSec, legacyConfigs)).publication;
     }
-    const admittedPairs = new Set(publication
-      ? publication.legs.filter((leg) => leg.status === "admitted"
-        && isCanonicalMintBurnPair(leg.stablecoinId, leg.chainId))
-        .map((leg) => `${leg.stablecoinId}|${leg.chainId}`) : []);
+    const publishedPairs = publication?.legsScope === "non-admitted"
+      ? publication.admittedPairs ?? []
+      : publication?.legs.filter((leg) => leg.status === "admitted")
+        .map((leg) => [leg.stablecoinId, leg.chainId] as const) ?? [];
+    const admittedPairs = new Set(publishedPairs.filter(([id, chain]) => isCanonicalMintBurnPair(id, chain))
+      .map(([id, chain]) => `${id}|${chain}`));
     const admittedCoinIds = new Set([...admittedPairs].map((pair) => pair.split("|")[0]));
     const scopedPairsJson = JSON.stringify([...admittedPairs].map((pair) => pair.split("|")));
     const scanCoverageById = new Map(published.kind === "ok" && published.gauge.window != null

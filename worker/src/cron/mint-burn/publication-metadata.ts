@@ -3,7 +3,7 @@ import type { MintBurnPublication } from "@shared/types/mint-burn";
 const MAX_PUBLICATION_LEG_SAMPLES = 200;
 const MAX_PUBLICATION_LEG_SAMPLE_BYTES = 8 * 1_024;
 
-/** Keep the full roster on the public API; cron rows need counts and pending evidence. */
+/** Cron rows need counts and bounded pending evidence, not the full internal roster. */
 export function mintBurnPublicationMetadata(publication: MintBurnPublication) {
   const nonAdmitted = publication.legs.filter((leg) => leg.status !== "admitted");
   const legs = [];

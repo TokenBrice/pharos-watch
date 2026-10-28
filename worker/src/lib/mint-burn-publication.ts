@@ -59,7 +59,8 @@ export async function syncMintBurnPublicationPolicy(
   const policy = JSON.stringify([...disabled].sort());
   const active = activeKeys == null ? null : new Set([...activeKeys].filter((key) => !disabled.has(key)));
   const activeJson = active == null ? null : JSON.stringify([...active]);
-  const paused = JSON.stringify([...disabled, ...grandfatheredConfigKeys.filter((key) => active != null && !active.has(key))]);
+  // Inactive grandfathered keys retain historical detail reads unless explicitly disabled.
+  const paused = JSON.stringify([...disabled]);
   const pauseCandidatesSql = `SELECT value AS config_key FROM json_each(?)
     UNION SELECT config_key FROM mint_burn_admission
       WHERE ? IS NOT NULL AND config_key NOT IN (SELECT value FROM json_each(?))`;
@@ -157,6 +158,24 @@ export function resolveMintBurnPublication(
       baseline_from: from, baseline_to: targetEnd });
   }
   return { configs: admittedConfigs, publication, newAdmissions, resumedKeys };
+}
+
+/** Public responses retain exact scope and pending evidence without the admitted diagnostic roster. */
+export function compactMintBurnPublication(publication: MintBurnPublication): MintBurnPublication {
+  const admitted = publication.legs.filter((leg) => leg.status === "admitted");
+  return {
+    evaluatedAt: publication.evaluatedAt,
+    requiredBaselineSec: publication.requiredBaselineSec,
+    freshnessBudgetSec: publication.freshnessBudgetSec,
+    legsScope: "non-admitted",
+    legCount: publication.legs.length,
+    admittedCount: admitted.length,
+    pendingAdmissionCount: publication.legs.filter((leg) => leg.status === "pending-admission").length,
+    disabledCount: publication.legs.filter((leg) => leg.status === "disabled").length,
+    admittedPairs: [...new Map(admitted.map((leg) => [JSON.stringify([leg.stablecoinId, leg.chainId]),
+      [leg.stablecoinId, leg.chainId] as [string, string]])).values()],
+    legs: publication.legs.filter((leg) => leg.status !== "admitted"),
+  };
 }
 
 export async function persistMintBurnResumptions(db: D1Database, keys: readonly string[], policy: string) {

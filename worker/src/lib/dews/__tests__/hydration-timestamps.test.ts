@@ -19,7 +19,7 @@ const YIELD_BUDGET_SEC = CRON_INTERVALS["sync-yield-data"]
 afterEach(() => vi.useRealTimers());
 
 describe("DEWS hydration timestamp admission", () => {
-  it.each(["missing", "scope-missing", "scope-missing-disabled", "scope-missing-new", "pending", "disabled", "incomplete", "wrong-window", "quiet", "eventful", "materialization-debt"] as const)(
+  it.each(["missing", "scope-missing", "scope-missing-disabled", "scope-missing-new", "pending", "disabled", "incomplete", "wrong-window", "quiet", "eventful", "compact", "compact-missing-pairs", "materialization-debt"] as const)(
     "keeps mint/burn scan admission distinct from observed data: %s", async (state) => {
       const { sqlite, db } = createLatestSchemaSqlite();
       const end = Math.floor(RUN_AT / 3600) * 3600;
@@ -35,6 +35,8 @@ describe("DEWS hydration timestamp admission", () => {
                 status: state === "pending" ? "pending-admission" : state === "disabled" ? "disabled" : "admitted",
                 reason: state === "pending" ? "baseline-incomplete" : state === "disabled" ? "operator-disabled" : null,
                 admittedAt: null, baselineFrom: end - 90 * 86400, baselineTo: end, coveredSeconds: 90 * 86400, frontierAgeSec: 0 }],
+              ...(state.startsWith("compact") ? { legsScope: "non-admitted", legs: [],
+                ...(state === "compact" ? { admittedPairs: [["usdt-tether", "ethereum"], ["usdt-tether", "tron"]] } : {}) } : {}),
             } }),
             window: { start: end - 86400, end: state === "wrong-window" ? end - 3600 : end, semantics: "closed-utc-hours" },
             coins: [{ stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, netFlow24hUsd: null,
@@ -43,7 +45,7 @@ describe("DEWS hydration timestamp admission", () => {
                 windows: { window24h: window, window7d: window, window30d: window, window90d: window } } }] };
           sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(aggregateFlowCacheKey(24), JSON.stringify(value), RUN_AT);
         }
-        if (["eventful", "missing", "incomplete", "pending", "disabled"].includes(state) || state.startsWith("scope-missing")) {
+        if (["eventful", "compact", "compact-missing-pairs", "missing", "incomplete", "pending", "disabled"].includes(state) || state.startsWith("scope-missing")) {
           sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
             mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
             VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 3600);
@@ -61,7 +63,7 @@ describe("DEWS hydration timestamp admission", () => {
         }
         const hydrated = await hydrateMintBurn({ db, nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn() });
         const snapshot = hydrated.mintBurnMap.get("usdt-tether");
-        if (state === "quiet" || state === "eventful" || state === "scope-missing") {
+        if (state === "quiet" || state === "eventful" || state === "compact" || state === "scope-missing") {
           expect(snapshot).toMatchObject({ burn24h: state === "quiet" ? 0 : 700_000, baselineDays: 30,
             burnBaseline: state === "quiet" ? 0 : 700_000 / 30 });
         } else expect(snapshot).toBeUndefined();

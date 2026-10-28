@@ -28,7 +28,8 @@ export function mintBurnRpcEndpoints(chainId: string, apiKey: string,
 
 /** CHAIN owns tag capability admission and strict number/hash/timestamp validation. */
 export async function getMintBurnFinalizedHead(chainId: string, endpoints: readonly RpcEndpoint[],
-  budget: SubrequestBudget, signal?: AbortSignal, tronReader?: TronJsonRpcReader): Promise<EvmBlockHeader | null> {
+  budget: SubrequestBudget, signal?: AbortSignal, tronReader?: TronJsonRpcReader,
+  deadlineMs?: number): Promise<EvmBlockHeader | null> {
   if (chainId === "tron") {
     const block = await tronReader?.getSolidHead();
     return block ? { ...block, hash: block.hash as `0x${string}` } : null;
@@ -36,6 +37,7 @@ export async function getMintBurnFinalizedHead(chainId: string, endpoints: reado
   return fetchEvmBlockHeader(chainId, "finalized", {
     chainRpcs: new Map([[chainId, { chainId, chainName: chainId, type: "evm", endpoints, explorerUrl: "" }]]),
     signal,
+    deadlineMs,
     maxRetries: 0,
     beforeRequest: () => {
       throwIfAborted(signal);

@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "../lib/structured-log";
 import { getCache } from "../lib/db-cache";
+import { compactMintBurnPublication } from "../lib/mint-burn-publication";
 import { resolveOrReject, parseQueryParams } from "../lib/api-params";
 import { errorResponse } from "../lib/api-response";
 import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
@@ -196,7 +197,7 @@ export async function refreshAggregateMintBurnFlowCache(db: D1Database, hours: n
     windowHours: hours,
     window: { ...mintBurnHourlyWindow(data.windowEnd, hours), watermark: data.watermark },
     scope: buildAggregateScope(data.configs),
-    publication: data.publication,
+    publication: compactMintBurnPublication(data.publication),
     sync: {
       ...data.sync,
       warning: appendSyncWarning(data.sync.warning, data.freshnessLookupWarning),
@@ -451,7 +452,8 @@ async function handlePerCoin(db: D1Database, stablecoinId: string, hours: number
     const body = {
       stablecoinId,
       symbol,
-      publication: { ...context.publication, legs: context.publication.legs.filter((leg) => leg.stablecoinId === stablecoinId) },
+      publication: compactMintBurnPublication({ ...context.publication,
+        legs: context.publication.legs.filter((leg) => leg.stablecoinId === stablecoinId) }),
       mintVolumeUsd: totalMint,
       burnVolumeUsd: totalBurn,
       netFlowUsd: !scanCoverage.complete || valuation.completeness === "partial" ? null : totalMint - totalBurn,

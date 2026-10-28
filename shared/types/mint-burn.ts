@@ -71,6 +71,14 @@ export const MintBurnPublicationSchema = z.object({
   evaluatedAt: z.number().int().nonnegative(),
   requiredBaselineSec: z.number().int().positive(),
   freshnessBudgetSec: z.number().positive(),
+  /** Absent on legacy payloads whose legs contain the full roster. */
+  legsScope: z.literal("non-admitted").optional(),
+  legCount: z.number().int().nonnegative().optional(),
+  admittedCount: z.number().int().nonnegative().optional(),
+  pendingAdmissionCount: z.number().int().nonnegative().optional(),
+  disabledCount: z.number().int().nonnegative().optional(),
+  /** Exact producer membership for consumers, without per-contract diagnostics. */
+  admittedPairs: z.array(z.tuple([z.string(), z.string()])).optional(),
   legs: z.array(z.object({
     configKey: z.string(),
     configFingerprint: z.string(),

@@ -85,6 +85,8 @@ describe("pending-admission catch-up budget", () => {
     ]);
     expect(vi.mocked(syncMintBurnConfigWithRetries).mock.calls.map(([scan]) => scan.scanTo - scan.fromBlock + 1))
       .toEqual([50_000, 270_000]);
+    expect(vi.mocked(syncMintBurnConfigWithRetries).mock.calls.map(([scan]) => scan.deadlineMs))
+      .toEqual([(NOW + 9 * 60) * 1000, (NOW + 6 * 60) * 1000]);
     expect(result.configBreakdown[1]).toMatchObject({ requestBudgetLimit: 60, requestBudgetUsed: 59 });
     expect(args.budget.count).toBe(75);
     expect(result.criticalContractsSatisfied).toBe(1);
@@ -105,12 +107,28 @@ describe("pending-admission catch-up budget", () => {
 
   it("does not degrade admitted coverage when only pending work misses the deadline", async () => {
     const args = input();
+    args.preparePendingConfigs = vi.fn();
     args.reportProgress = async (progress) => {
-      if (progress.metadata?.configKey === configKey(admitted)) vi.setSystemTime((NOW + 8 * 60 + 30) * 1000);
+      if (progress.metadata?.configKey === configKey(admitted)) vi.setSystemTime((NOW + 5 * 60 + 30) * 1000);
     };
     const result = await runMintBurnConfigPhase(args);
     expect(result.configBreakdown[1]).toMatchObject({ attempted: false, skippedReason: "runtime-budget-exhausted" });
     expect(result.runtimeBudgetHit).toBe(true);
+    expect(result.criticalContractsUnsatisfied).toBe(0);
+    expect(args.preparePendingConfigs).not.toHaveBeenCalled();
+    expect(args.pendingCursorUpdates.get(configKey(admitted))).toBe(50_000);
+  });
+
+  it("holds pending scans after slow head preparation reaches its earlier deadline", async () => {
+    const args = input();
+    args.preparePendingConfigs = async (_budget, deadlineMs) => {
+      expect(deadlineMs).toBe((NOW + 6 * 60) * 1000);
+      vi.setSystemTime(deadlineMs);
+    };
+    const result = await runMintBurnConfigPhase(args);
+    expect(result.configBreakdown[1]).toMatchObject({ attempted: false, skippedReason: "runtime-budget-exhausted" });
+    expect(syncMintBurnConfigWithRetries).toHaveBeenCalledTimes(1);
+    expect(args.pendingCursorUpdates.get(configKey(admitted))).toBe(50_000);
     expect(result.criticalContractsUnsatisfied).toBe(0);
   });
 
