@@ -1,5 +1,27 @@
 {
   "id": "mxnb-juno",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA restrictions: MXNB deposits and trading prohibited",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken crypto asset statement: MXNB issued by Juno, a Bitso company, on Ethereum and Arbitrum",
+        "url": "https://assets-cms.kraken.com/files/51n36hrp/facade/465b2fa4de737e2a363a2acb33b4fd7205f6fd37.pdf"
+      },
+      {
+        "label": "ESMA EMT issuer register: no Juno, Nvio Pagos El Salvador, or Bitso entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "MXNB issuer transparency: MXNB smart contract 0xF197FFC28c23E0309B5559e7a166f2c6164C80aA",
+        "url": "https://mxnb.mx/en-US/transparency"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

@@ -1,5 +1,27 @@
 {
   "id": "qcad-stablecorp",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA restrictions: QCAD deposits and trading prohibited",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken QCAD asset page: Stablecorp Canadian dollar stablecoin identity",
+        "url": "https://www.kraken.com/prices/qcad"
+      },
+      {
+        "label": "ESMA EMT issuer register: no QCAD Digital Trust, Stablecorp or QCAD entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Stablecorp QCAD page: QCAD Digital Trust as prospectus issuer",
+        "url": "https://stablecorp.ca/"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

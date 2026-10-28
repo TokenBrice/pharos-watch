@@ -1,5 +1,27 @@
 {
   "id": "cash-phantom",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA restrictions: CASH deposits and trading prohibited",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken CASH asset page: Bridge and Phantom stablecoin identity",
+        "url": "https://www.kraken.com/prices/cash"
+      },
+      {
+        "label": "ESMA EMT issuer register: no Bridge Building Inc. or CASH entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "CASH issuer page: Bridge Building Inc. as issuer with EEA flows via Bridge EU subsidiaries",
+        "url": "https://www.usecash.xyz/"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
