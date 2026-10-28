@@ -12,9 +12,11 @@ entire sweep; do not combine worklists or dates from different producer cycles.
 The sweep is also automated: `.github/workflows/curation-expiry-sweep.yml` runs this
 procedure every Tuesday at 05:45 UTC (and on manual dispatch) with the deploy
 pipeline's Cloudflare credentials. It updates or creates the "Safety Score curation
-expiry sweep" issue with bounded live-withheld/expiry/Dependencies/Backing excerpts
-and registry counts. The full missing-data registry and expiry queue (even when
-partial) are retained as 30-day artifacts; other reports are not uploaded. Replay and each of the four
+expiry sweep" issue with registry counts, all five generator statuses and the full
+artifact link before live-withheld/expiry/Dependencies/Backing excerpts. Its complete
+body, including truncation marker and run footer, is capped at 60,000 UTF-8 bytes
+without splitting characters. All reports, logs, capture and replay (including partial
+outputs) are retained together in a 30-day run/attempt artifact. Replay and each of the four
 reports have separate timed workflow steps and status outputs. The live-withheld
 step has a 15-minute ceiling inside the unchanged 25-minute job budget, leaving
 time for issue/artifact publication when that report times out. Missing status
