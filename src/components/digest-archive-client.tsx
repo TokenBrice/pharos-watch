@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight, Search, X } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useDigestArchive } from "@/hooks/api-hooks";
+import { useDailyDigest, useDigestArchive } from "@/hooks/api-hooks";
 import { useUrlFilters } from "@/hooks/use-url-filters";
 import { DailyDigest } from "@/components/daily-digest";
 import { StaleDataBanner } from "@/components/stale-data-banner";
@@ -275,9 +275,25 @@ function TriggerRecordSection({ record }: { record: DigestTriggerRecord }) {
 }
 
 export function DigestArchiveClient({ initialLead }: { initialLead?: DigestContentEntry } = {}) {
-  const [lead] = useState(initialLead);
-  const leadSlug = lead?.date ?? null;
-  const leadDate = lead ? formatLongDate(new Date(lead.generatedAt * 1000), { utc: true }) : null;
+  const [seed] = useState(initialLead);
+  const archiveQuery = useDigestArchive();
+  const { data: dailyLead } = useDailyDigest();
+  const archiveLead = seed ? archiveQuery.data?.digests.find((entry) => entry.digestType !== "weekly") : null;
+  const liveLead = archiveLead && (!dailyLead?.digest || !dailyLead.generatedAt || archiveLead.generatedAt > dailyLead.generatedAt)
+    ? { ...archiveLead, digest: archiveLead.digestText }
+    : dailyLead;
+  const liveSlug = liveLead?.digest && liveLead.generatedAt ? tsToDateSlug(liveLead.generatedAt) : null;
+  const seedData = seed ? {
+    digest: seed.text, digestTitle: seed.title, digestExtended: seed.extended, generatedAt: seed.generatedAt,
+  } : null;
+  const lead = liveSlug && (!seed || liveSlug > seed.date) ? liveLead : seedData && liveSlug === seed?.date ? {
+    ...seedData,
+    riskSignal: liveLead?.riskSignal,
+    riskTape: liveLead?.riskTape,
+    nextTriggers: liveLead?.nextTriggers,
+  } : seedData;
+  const leadSlug = lead?.generatedAt ? tsToDateSlug(lead.generatedAt) : null;
+  const leadDate = lead?.generatedAt ? formatLongDate(new Date(lead.generatedAt * 1000), { utc: true }) : null;
 
   return (
     <div className="space-y-8">
@@ -285,18 +301,18 @@ export function DigestArchiveClient({ initialLead }: { initialLead?: DigestConte
         <section aria-label={leadDate} className="min-h-[58rem] space-y-4 sm:min-h-[34rem]">
           <WireSectionRule label={leadDate} />
           <DailyDigest
-            data={{ digest: lead.text, digestTitle: lead.title, digestExtended: lead.extended, generatedAt: lead.generatedAt }}
+            data={lead}
             detailHref={`/digest/${leadSlug}/`}
           />
         </section>
       ) : null}
-      <DigestArchive latestDailySlug={leadSlug} />
+      <DigestArchive latestDailySlug={leadSlug} query={archiveQuery} />
     </div>
   );
 }
 
-function DigestArchive({ latestDailySlug }: { latestDailySlug: string | null }) {
-  const { data, isLoading, dataUpdatedAt, error, refetch, meta } = useDigestArchive();
+function DigestArchive({ latestDailySlug, query }: { latestDailySlug: string | null; query: ReturnType<typeof useDigestArchive> }) {
+  const { data, isLoading, dataUpdatedAt, error, refetch, meta } = query;
   const { searchParams, setParam, replaceParams } = useUrlFilters();
 
   const setSearchQuery = (value: string): void => {

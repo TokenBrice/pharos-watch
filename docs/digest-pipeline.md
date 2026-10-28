@@ -442,7 +442,7 @@ Posted to both Twitter/X and Telegram. Twitter/X uses the distinct replay-safe l
 
 ### Archive lead preview
 
-`/digest/` renders validated build-time `LATEST_DAILY_DIGEST` through `DailyDigest` before archive loading/errors. Pin its edition and `generatedAt` for the session, never query-seeding or renewing freshness. Label its UTC date with `formatLongDate`. CTA/exclusion use its exact slug; newer live editions remain listed. No seed means no preview/exclusion. Preview the complete first extended paragraph (`text` fallback); full editions use dated routes.
+`/digest/` renders dated `LATEST_DAILY_DIGEST` immediately without query-seeding. Live archive/daily reads enrich the same slug with API-ranked `riskSignal`, `riskTape` and `nextTriggers`, or replace it with a newer edition/date. Failed initial reads keep the seed without risk content. Risk follows the complete first extended paragraph (`text` fallback) to preserve LCP. CTA/archive exclusion use the displayed slug; full editions use dated routes.
 
 Search-title trimming is word-boundary/70-character bounded including date and suffix; published headline, article heading and structured-data headline remain intact. `text` stays the short metadata/distribution summary.
 
