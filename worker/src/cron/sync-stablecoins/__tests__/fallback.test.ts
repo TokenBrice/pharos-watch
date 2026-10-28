@@ -8,10 +8,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getOnchainSupplyHoldReason, prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
+import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
+import { StablecoinListResponseSchema } from "@shared/types/market";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PreviousStablecoinsLoadResult } from "../shared";
+import { normalizeStablecoinsPayload } from "../shared";
+import * as structuredLog from "../../../lib/structured-log";
+import * as onchainSupply from "../supplemental-assets/onchain-supply";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type * as enrichment from "../enrich-prices";
@@ -65,7 +69,7 @@ const subPhaseMocks = vi.hoisted(() => ({
     providerDiagnostics: [],
   })),
   fillMissingSupplyHistory: vi.fn(async () => 0),
-  validateAndWriteStablecoinsCache: vi.fn(async ({ syncStartSec }: { syncStartSec: number }) => ({
+  validateAndWriteStablecoinsCache: vi.fn(async ({ syncStartSec }: { syncStartSec: number; assets: PeggedAsset[] }) => ({
     written: true,
     skippedBecauseNewer: false,
     cacheKey: "stablecoins",
@@ -103,7 +107,10 @@ vi.mock("../enrich-prices", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../enrich-prices")>()),
   enrichMissingPrices: subPhaseMocks.enrichMissingPrices,
 }));
-vi.mock("../supplemental-assets/onchain-supply", () => ({ fetchCuratedAggregateOnChainMcap: vi.fn(async () => null) }));
+vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../supplemental-assets/onchain-supply")>()),
+  fetchCuratedAggregateOnChainMcap: vi.fn(async () => null),
+}));
 vi.mock("../phase-helpers", async (importOriginal) => ({
   ...(await importOriginal<typeof import("../phase-helpers")>()),
   fillMissingSupplyHistory: subPhaseMocks.fillMissingSupplyHistory,
@@ -157,6 +164,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     for (const mock of Object.values(subPhaseMocks)) {
       mock.mockClear();
     }
+    vi.mocked(onchainSupply.fetchCuratedAggregateOnChainMcap).mockReset().mockResolvedValue(null);
   });
   afterEach(() => { fixtures.closeAll(); vi.unstubAllGlobals(); vi.restoreAllMocks(); });
 
@@ -171,8 +179,7 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       if (omittedIds.includes(coin.id) && coin.geckoId) delete cgData[coin.geckoId];
     }
     const expectedMissingIds = ACTIVE_STABLECOINS
-      .filter((coin) => !coin.geckoId || !cgData[coin.geckoId]
-        || (prefersOnChainSupplyMcap(coin) && !getOnchainSupplyHoldReason(coin.id)))
+      .filter((coin) => !coin.geckoId || !cgData[coin.geckoId])
       .map((coin) => coin.id).sort();
     const db = mockD1([]);
 
@@ -215,6 +222,74 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
     expect(subPhaseMocks.runSharedPriceCompletion).toHaveBeenCalledWith(
       expect.objectContaining({ priceCache: expect.any(Map), chainRpcs }), "fallback-",
     );
+  });
+
+  it.each(["native", "coingecko", "missing", "expired", "incomplete-roster"] as const)(
+    "keeps a preferred coin and fresh price after a failed native read with %s prior supply", async (prior) => {
+      const meta = ACTIVE_META_BY_ID.get("stac-securitize")!;
+      const cgData = buildRealCgData(Infinity);
+      cgData[meta.geckoId!] = { usd: 1.12, usd_market_cap: 900_000, last_updated_at: NOW_SEC };
+      const previous: PeggedAsset = {
+        id: meta.id, name: meta.name, symbol: meta.symbol, pegType: "peggedUSD",
+        price: 1.05, priceSource: "coingecko", priceObservedAt: NOW_SEC - 60,
+        supplySource: prior === "coingecko" ? "coingecko-fallback" : "onchain-total-supply",
+        supplyObservedAt: NOW_SEC - (prior === "expired" ? SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1 : 60),
+        circulating: { peggedUSD: 300 },
+        chainCirculating: prior === "incomplete-roster"
+          ? { Ethereum: { chainId: "ethereum", current: 300 } }
+          : { Ethereum: { chainId: "ethereum", current: 100 }, Solana: { chainId: "solana", current: 200 } },
+        chains: ["Ethereum", "Solana"],
+      };
+      subPhaseMocks.loadPreviousStablecoinsById.mockResolvedValueOnce({
+        previousAssetsById: new Map(prior === "missing" ? [] : [[meta.id, previous]]), cacheState: { state: "ok" },
+      });
+      const log = vi.spyOn(structuredLog, "logWorkerEvent");
+      const result = await syncViaCoingeckoFallback(mockD1([]), cgData, undefined, NOW_SEC);
+      const write = subPhaseMocks.validateAndWriteStablecoinsCache.mock.calls[0][0];
+      const payload = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: write.assets }, NOW_SEC));
+      const published = payload.peggedAssets.find((asset) => asset.id === meta.id);
+      expect(write.assets.find((asset) => asset.id === meta.id)?.navToken).toBe(true);
+      expect(published).toMatchObject({ id: meta.id, price: 1.12, priceObservedAt: NOW_SEC, pegType: "peggedUSD" });
+      expect(payload.peggedAssets.find((asset) => asset.id === "usdc-circle")?.circulating).toEqual({ peggedUSD: 5_000_000 });
+      expect(log).toHaveBeenCalledWith(expect.objectContaining({
+        event: "preferred-native-supply-unavailable",
+        metadata: expect.objectContaining({ stablecoinId: meta.id, reason: "preferred-native-supply-unavailable" }),
+      }));
+      expect(JSON.parse(JSON.stringify(published))).not.toHaveProperty("supplyUnavailableReason");
+      const diagnostic = JSON.parse(result.metadata!).quality.preferredNativeSupply;
+      expect(diagnostic.reason).toBe("preferred-native-supply-unavailable");
+      expect(diagnostic[prior === "native" ? "restoredIds" : "unavailableIds"].ids).toContain(meta.id);
+      if (prior === "native") {
+        expect(published).toMatchObject({ supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
+          supplyRestored: true, circulating: previous.circulating, chainCirculating: previous.chainCirculating });
+        expect(published?.supplyUnavailableReason).toBeUndefined();
+      } else {
+        expect(published).toMatchObject({ supplySource: "onchain-supply-withheld", circulating: {},
+          chainCirculating: { Ethereum: { current: null }, Solana: { current: null } } });
+        expect(getCirculatingRawOrNull(published)).toBeNull();
+        expect(getPrevDayRawOrNull(published!)).toBeNull();
+        expect(getPrevWeekRawOrNull(published!)).toBeNull();
+        expect(getPrevMonthRawOrNull(published!)).toBeNull();
+        expect(published?.supplyObservedAt).toBeUndefined();
+        expect(published?.supplyRestored).toBeUndefined();
+      }
+    },
+  );
+
+  it.each(["ustb-superstate", "gtusdcp-gauntlet"])("retains %s's fresh CoinGecko total instead of token stock", async (id) => {
+    const meta = ACTIVE_META_BY_ID.get(id)!;
+    const cgData = buildRealCgData(Infinity);
+    cgData[meta.geckoId!] = { usd: 1.12, usd_market_cap: 84_300_000, last_updated_at: NOW_SEC };
+    vi.mocked(onchainSupply.fetchCuratedAggregateOnChainMcap).mockImplementation(async (coin) => coin.id === id ? {
+      mcap: 68_100_000, supplySource: "onchain-total-supply", observedAt: NOW_SEC,
+      chainCirculating: { Ethereum: { chainId: "ethereum", current: 68_100_000 } },
+    } : null);
+    await syncViaCoingeckoFallback(mockD1([]), cgData, undefined, NOW_SEC);
+    const write = subPhaseMocks.validateAndWriteStablecoinsCache.mock.calls[0][0];
+    expect(write.assets.find((asset) => asset.id === id)).toMatchObject({
+      circulating: { peggedUSD: 84_300_000 }, supplySource: "coingecko-fallback", supplyObservedAt: NOW_SEC, chainCirculating: {},
+    });
+    expect(vi.mocked(onchainSupply.fetchCuratedAggregateOnChainMcap).mock.calls.some(([coin]) => coin.id === id)).toBe(false);
   });
 
   it("uses authenticated fallback enrichment but withholds an unreasonable candidate", async () => {

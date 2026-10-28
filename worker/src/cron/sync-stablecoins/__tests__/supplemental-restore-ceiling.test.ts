@@ -77,10 +77,11 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
           [asset({ id: meta.id, symbol: meta.symbol })], previousById, new Set(), NOW_SEC,
         );
         const tracked = restoreMissingTrackedAssets([], previousById, NOW_SEC);
+        const trackedAsset = tracked.assets.find((row) => row.id === meta.id)!;
         expect(supplemental.restoredCount).toBe(admitted ? 1 : 0);
         expect(tracked.restoredIds.includes(meta.id)).toBe(admitted);
         if (admitted) {
-          for (const restored of [supplemental.assets[0], tracked.assets[0]]) {
+          for (const restored of [supplemental.assets[0], trackedAsset]) {
             expect(restored.supplySource).toBe(source);
             expect(restored.circulating).toEqual(previous.circulating);
             expect(restored.chainCirculating).toEqual(previous.chainCirculating);
@@ -88,7 +89,12 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
           }
         } else {
           expect(supplemental.assets[0].circulating).toEqual({});
-          expect(tracked.droppedIds).toContain(meta.id);
+          expect(tracked.droppedIds).not.toContain(meta.id);
+          expect(trackedAsset).toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld" });
+          expect(trackedAsset.supplyUnavailableReason).toBeUndefined();
+          expect(getCirculatingRawOrNull(trackedAsset)).toBeNull();
+          expect(trackedAsset.supplyObservedAt).toBeUndefined();
+          expect(trackedAsset.supplyRestored).toBeUndefined();
         }
       }
     },
@@ -111,7 +117,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       const previousById = new Map([[id, previous]]);
       const restored = [
         mergeSupplementalLastKnownGood([asset({ id, symbol: id })], previousById, new Set(), NOW_SEC).assets[0],
-        restoreMissingTrackedAssets([], previousById, NOW_SEC).assets[0],
+        restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === id)!,
       ];
       for (const row of restored) {
         expect(row.circulating).toEqual(previous.circulating);
@@ -124,11 +130,12 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     previous.chainPartition = undefined;
     expect(restoreCuratedAggregateChainPartition(current, previous, NOW_SEC)).toBeNull();
     const restoredStock = restoreMissingTrackedAssets([], new Map([[id, previous]]), NOW_SEC);
+    const restoredAsset = restoredStock.assets.find((row) => row.id === id);
     if (id === "ustb-superstate") {
-      expect(restoredStock.assets[0].chainCirculating).toEqual(previous.chainCirculating);
-      expect(restoredStock.assets[0].supplySource).toBe("onchain-total-supply");
+      expect(restoredAsset?.chainCirculating).toEqual(previous.chainCirculating);
+      expect(restoredAsset?.supplySource).toBe("onchain-total-supply");
     } else {
-      expect(restoredStock.assets).toEqual([]);
+      expect(restoredAsset).toBeUndefined();
       expect(restoredStock.droppedIds).toContain(id);
       expect(mergeSupplementalLastKnownGood([asset({ id, symbol: id })], new Map([[id, previous]]), new Set(), NOW_SEC).restoredCount).toBe(0);
     }
@@ -159,7 +166,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     const supplemental = mergeSupplementalLastKnownGood(
       [asset({ id: previous.id, symbol: previous.symbol })], previousById, new Set(), NOW_SEC,
     ).assets[0];
-    const missing = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets[0];
+    const missing = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === previous.id)!;
     for (const restored of [supplemental, missing]) {
       expect(restored.circulating).toEqual(previous.circulating);
       expect(restored.supplyObservedAt).toBe(NOW_SEC - 60);
@@ -185,7 +192,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     const supplemental = mergeSupplementalLastKnownGood(
       [asset({ id, symbol: id })], previousById, new Set(), NOW_SEC,
     ).assets[0];
-    const missing = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets[0];
+    const missing = restoreMissingTrackedAssets([], previousById, NOW_SEC).assets.find((row) => row.id === id)!;
     for (const restored of [supplemental, missing]) {
       expect(restored.circulating).toEqual(previous.circulating);
       expect(restored.supplyObservedAt).toBe(NOW_SEC - 60);
@@ -208,7 +215,8 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       id: "usdc-circle", symbol: "USDC", price: 1, priceSource: source, priceObservedAt,
       supplyObservedAt: NOW_SEC - 60, circulating: { peggedUSD: 123_456 },
     });
-    const [restored] = restoreMissingTrackedAssets([], new Map([["usdc-circle", previous]]), NOW_SEC).assets;
+    const restored = restoreMissingTrackedAssets([], new Map([["usdc-circle", previous]]), NOW_SEC)
+      .assets.find((row) => row.id === previous.id)!;
     expect(restored.circulating).toEqual(previous.circulating);
     expect(restored.supplyRestored).toBe(true);
     expect(restored.price).toBeNull();

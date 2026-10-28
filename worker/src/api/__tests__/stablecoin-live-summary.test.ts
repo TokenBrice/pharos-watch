@@ -52,6 +52,25 @@ function detailResponse(detail: StablecoinDetailResponse, headers: Record<string
 }
 
 describe("site-only stablecoin live summary", () => {
+  it("distinguishes an explicit unavailable current overlay from provider-only history and observed zero", () => {
+    const detail = { price: 2, priceSource: "coingecko", tokens: history };
+    expect(projectStablecoinLiveSummary(detail)).toMatchObject({
+      circulating: { peggedUSD: 200 }, circulatingPrevDay: { peggedUSD: 199 },
+      circulatingPrevWeek: { peggedUSD: 193 }, circulatingPrevMonth: { peggedUSD: 170 },
+      supplyObservedAt: NOW, nativeSupply: { current: 100, prevWeek: 93, prevMonth: 70 },
+    });
+    const unavailable = projectStablecoinLiveSummary({ ...detail, currentCirculatingUSD: {} });
+    expect(unavailable.circulating).toEqual({});
+    expect(unavailable.circulatingPrevDay).toEqual({});
+    expect(unavailable.circulatingPrevWeek).toEqual({});
+    expect(unavailable.circulatingPrevMonth).toEqual({});
+    expect(unavailable).toMatchObject({
+      supplyObservedAt: null, nativeSupply: { current: null, prevWeek: null, prevMonth: null },
+    });
+    expect(projectStablecoinLiveSummary({ ...detail, currentCirculatingUSD: { peggedUSD: 0 }, currentSupplyObservedAt: NOW }))
+      .toMatchObject({ circulating: { peggedUSD: 0 }, supplyObservedAt: NOW, nativeSupply: { current: 0 } });
+  });
+
   it.each(fixtures)("matches the shared client projector for $name without history transport", async ({ detail }) => {
     const full = detailResponse(detail);
     full.headers.set("Content-Length", "190575");

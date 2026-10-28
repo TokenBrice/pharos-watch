@@ -6,8 +6,8 @@
     "effectiveAt": 1793145600,
     "summary": "Complete native stock replaces mismatched CoinGecko caps for ACRDX, sUSDai, MYRC, STAC and EURSPKCC after fresh reconciliation.",
     "impact": [
-      "Unreadable preferred legs fail closed. ONyc, thBILL and USD3 keep their existing supply policy. Headline totals and future daily observations can step up or down at adoption; historical rows are not rewritten, and current-only packets do not invent historical supply.",
-      "USTB book-entry shares and gtUSDCp's differing vault NAVs permanently exclude both assets from fresh or carried CoinGecko chain partitions. USTB retains its separate token-stock fallback; gtUSDCp loses the invalid single-price aggregate fallback.",
+      "Failed or skipped preferred reads restore eligible native supply within the seven-day ceiling or publish unavailable supply, preserving admitted price and peg metadata in both primary and outage paths. The machine-readable reason and asset IDs stay in structured logs and ops-only sync quality metadata; public supplyUnavailableReason is omitted. Contradictory CoinGecko caps cannot return through carry. ONyc, thBILL and USD3 keep their supply policy. Headline totals and future daily observations can step up or down at adoption; historical rows are not rewritten and current-only packets invent no history.",
+      "USTB book-entry shares and gtUSDCp's differing vault NAVs permanently exclude both assets from fresh or carried CoinGecko chain partitions. Fresh CoinGecko totals remain authoritative in outage overlays. USTB retains token-stock fallback only without a cap; gtUSDCp loses the invalid single-price aggregate fallback.",
       "CDP gains a reviewed Flare supply-at-latest route, without archive or log capability. USDFC's continuing price-gap review records fresh evidence without adding a price lane."
     ],
     "commits": [],

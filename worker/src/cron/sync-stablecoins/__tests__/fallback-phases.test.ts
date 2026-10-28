@@ -612,7 +612,7 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
   });
 
   it.each(ACTIVE_STABLECOINS.filter((meta) => meta.geckoId && prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(meta.id)))(
-    "removes $id's fresh CoinGecko intake when native supply cannot be admitted", async (meta) => {
+    "withholds $id's supply without dropping its row when native supply cannot be admitted", async (meta) => {
       for (const price of [1, undefined]) {
         onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockReset().mockResolvedValue(null);
         const assets = buildFallbackAssetsFromCoinGecko({
@@ -621,24 +621,20 @@ describe("overlayFallbackCuratedAggregateSupply", () => {
         });
         expect(assets).toHaveLength(1);
         await overlayFallbackCuratedAggregateSupply(assets);
-        expect(assets).toEqual([]);
+        expect(assets).toHaveLength(1);
+        expect(assets[0]).toMatchObject({ circulating: {}, supplySource: "onchain-supply-withheld" });
+        expect(assets[0].supplyUnavailableReason).toBeUndefined();
         expect(onchainSupplyMocks.fetchCuratedAggregateOnChainMcap).toHaveBeenCalledTimes(price == null ? 0 : 1);
       }
     },
   );
 
-  it("keeps a preferred native packet on read failure and replaces fresh CoinGecko supply on success", async () => {
+  it("replaces fresh CoinGecko supply and incompatible history on a successful preferred read", async () => {
     const native = makeAsset({
       id: "stac-securitize", supplySource: "onchain-total-supply", supplyObservedAt: NOW_SEC - 60,
       supplyRestored: true, circulating: { peggedUSD: 300 },
       chainCirculating: { Ethereum: { current: 100 }, Solana: { current: 200 } },
     });
-    onchainSupplyMocks.fetchCuratedAggregateOnChainMcap.mockResolvedValue(null);
-    const carried = [native];
-    await overlayFallbackCuratedAggregateSupply(carried);
-    expect(carried).toEqual([native]);
-    expect(native.supplyObservedAt).toBe(NOW_SEC - 60);
-    expect(native.circulating).toEqual({ peggedUSD: 300 });
     const fresh = [makeAsset({
       id: native.id, supplySource: "coingecko-fallback", supplyRestored: true,
       circulatingPrevDay: { peggedUSD: 1_000_000 }, circulatingPrevWeek: { peggedUSD: 900_000 },
