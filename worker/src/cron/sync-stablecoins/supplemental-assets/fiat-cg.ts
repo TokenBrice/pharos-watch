@@ -14,7 +14,7 @@ import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../
 import { buildPriceReasonablenessOptions, isReasonablePrice } from "../../../lib/price-validation";
 import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
 import { loadReserveNavSupplyPrice, reserveNavSupplyScopeReason } from "../../../lib/reserve-nav-price";
-import { restoreCuratedAggregateChainPartition, reviewedOnchainSupplyHoldFields } from "../shared";
+import { restoreCuratedAggregateChainPartition, restorePreferredNativeSupply, reviewedOnchainSupplyHoldFields } from "../shared";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap, fetchOnChainSupplyPartition, fetchPinnedNativeShares, prefersOnChainSupplyMcap, toPublicChainCirculating } from "./onchain-supply";
 import {
   fetchSupplementalPriceData,
@@ -271,6 +271,12 @@ export async function fetchFiatCoinGeckoTokens(
           supplySource = "onchain-total-supply";
           supplyObservedAt = nativeShares.observedAt;
           chainCirculating = { Ethereum: { chainId: nativeShares.chain, current: mcap } };
+        }
+
+        if (preferOnChainMcap && !mcap) {
+          return restorePreferredNativeSupply(buildSupplementalAsset({
+            meta, priceResolution, nowSec, mcap: null, supplySource: "onchain-supply-withheld",
+          }), previousAssetsById?.get(meta.id), nowSec);
         }
 
         if (priceForSupply == null && !mcap) {

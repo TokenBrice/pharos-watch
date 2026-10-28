@@ -8,6 +8,13 @@ import * as circuit from "../../../lib/circuit-breaker";
 import { CIRCUIT_SOURCE, MIN_VALID_ASSET_COUNT } from "../../../lib/constants";
 import { makePeggedAsset } from "./_fixtures";
 import * as shared from "../shared";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { getCirculatingRawOrNull } from "@shared/lib/supply";
+import { StablecoinDataSchema } from "@shared/types/market";
+import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../supplemental-assets/fiat-cg";
+import * as supplementalPrices from "../supplemental-assets/shared";
+import * as onchainSupply from "../supplemental-assets/onchain-supply";
+import * as structuredLog from "../../../lib/structured-log";
 
 const fixtures = createLatestSchemaFixtureTracker();
 const cgData = { "fixture-usd": { usd: 1, usd_market_cap: 100, last_updated_at: 1_777_000_000 } };
@@ -32,6 +39,111 @@ function upstream(body: unknown) {
 }
 
 describe("stablecoin intake admission", () => {
+  it.each(["onchain-total-supply", "coingecko-fallback"])(
+    "keeps preferred STAC with a fresh price after failed native reads and a cached %s row", async (supplySource) => {
+      const nowSec = 1_777_000_000;
+      vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+      const meta = ACTIVE_META_BY_ID.get("stac-securitize")!;
+      const previous = makePeggedAsset({
+        id: meta.id, name: meta.name, symbol: meta.symbol, geckoId: meta.geckoId,
+        pegMechanism: meta.flags.backing, price: 1.05, priceSource: "coingecko",
+        priceConfidence: "single-source", priceObservedAt: nowSec - 60, priceObservedAtMode: "upstream",
+        circulating: { peggedUSD: 300 }, supplySource, supplyObservedAt: nowSec - 120,
+        chainCirculating: { Ethereum: { chainId: "ethereum", current: 100 }, Solana: { chainId: "solana", current: 200 } },
+        chains: ["Ethereum", "Solana"],
+      });
+      const { db, sqlite } = fixtures.open();
+      sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run("stablecoins", JSON.stringify({ peggedAssets: [previous] }), nowSec - 60);
+      upstream({ peggedAssets: Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
+        id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
+      })) });
+      vi.mocked(supplemental.fetchCoinGeckoMarketData).mockResolvedValue({
+        [meta.geckoId!]: { usd: 1.14, usd_market_cap: 1_000_000, last_updated_at: nowSec },
+      });
+      vi.spyOn(supplementalPrices, "fetchSupplementalPriceData").mockResolvedValue({ coins: {} });
+      const nativeRead = vi.spyOn(onchainSupply, "fetchCuratedAggregateOnChainMcap").mockResolvedValue(null);
+      vi.spyOn(onchainSupply, "fetchOnChainMcap").mockResolvedValue(null);
+      const log = vi.spyOn(structuredLog, "logWorkerEvent");
+      vi.mocked(supplemental.fetchSupplementalTrackedTokens).mockImplementation(async (
+        data, signal, _key, chainRpcs, fxRates, inputDb, previousAssetsById, dwellirNative, report,
+      ) => ({ goldTokens: [], silverTokens: [], fiatCgTokens: await fetchFiatCoinGeckoTokens(
+        data, signal, chainRpcs, fxRates, inputDb, previousAssetsById, dwellirNative, report,
+      ) }));
+      const originalMetas = FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, meta);
+      try {
+        const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
+        if (result.kind !== "main") throw new Error("Expected main intake");
+        expect(nativeRead).toHaveBeenCalledOnce();
+        expect(result.assets.filter((asset) => asset.id.startsWith("intake-fixture-"))).toHaveLength(MIN_VALID_ASSET_COUNT);
+        const asset = result.assets.find((row) => row.id === meta.id);
+        expect(asset).toBeDefined();
+        const [published] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset!] }, nowSec).peggedAssets;
+        expect(published).toMatchObject({ id: meta.id, price: 1.14, priceObservedAt: nowSec, priceSource: "coingecko" });
+        expect(StablecoinDataSchema.safeParse(published).success).toBe(true);
+        expect(JSON.parse(JSON.stringify(published))).not.toHaveProperty("supplyUnavailableReason");
+        expect(result.trackedCoverage.droppedIds).not.toContain(meta.id);
+        if (supplySource === "onchain-total-supply") {
+          expect(published).toMatchObject({ circulating: previous.circulating, chainCirculating: previous.chainCirculating,
+            supplySource, supplyObservedAt: nowSec - 120, supplyRestored: true });
+          expect(getCirculatingRawOrNull(published)).toBe(300);
+        } else {
+          expect(published).toMatchObject({ circulating: {},
+            supplySource: "onchain-supply-withheld", chainCirculating: {
+              Ethereum: { chainId: "ethereum", current: null }, Solana: { chainId: "solana", current: null },
+            } });
+          expect(getCirculatingRawOrNull(published)).toBeNull();
+          expect(published.supplyObservedAt).toBeUndefined();
+          expect(published.supplyRestored).toBeUndefined();
+        }
+        expect(log).toHaveBeenCalledWith(expect.objectContaining({ metadata: expect.objectContaining({
+          stablecoinId: meta.id, reason: "preferred-native-supply-unavailable",
+        }) }));
+      } finally {
+        FIAT_CG_METAS.splice(0, FIAT_CG_METAS.length, ...originalMetas);
+      }
+    },
+  );
+
+  it("keeps a preferred coin omitted by a deadline-skipped supplemental batch with unavailable supply", async () => {
+    const nowSec = 1_777_000_000;
+    vi.spyOn(Date, "now").mockReturnValue(nowSec * 1000);
+    const meta = ACTIVE_META_BY_ID.get("myrc-blox")!;
+    const previous = makePeggedAsset({
+      id: meta.id, name: meta.name, symbol: meta.symbol, geckoId: meta.geckoId,
+      pegType: "peggedMYR", pegMechanism: meta.flags.backing,
+      price: 0.24, priceSource: "coingecko", priceConfidence: "single-source",
+      priceObservedAt: nowSec - 60, priceObservedAtMode: "upstream",
+      circulating: { peggedMYR: 5_000_000 }, supplySource: "coingecko-fallback", supplyObservedAt: nowSec - 60,
+      chainCirculating: {}, chains: [],
+    });
+    const { db, sqlite } = fixtures.open();
+    const log = vi.spyOn(structuredLog, "logWorkerEvent");
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("stablecoins", JSON.stringify({ peggedAssets: [previous] }), nowSec - 60);
+    upstream({ peggedAssets: Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({
+      id: `intake-fixture-${index}`, circulating: { peggedUSD: 100 },
+    })) });
+    // Exercise the intake omission boundary without cancelling the whole publication.
+    vi.mocked(supplemental.fetchSupplementalTrackedTokens).mockResolvedValue({ goldTokens: [], silverTokens: [], fiatCgTokens: [] });
+    const result = await loadStablecoinsIntake({ db, syncStartSec: nowSec, fallbackToCoingecko: async () => fallbackResult });
+    if (result.kind !== "main") throw new Error("Expected main intake");
+    const asset = result.assets.find((row) => row.id === meta.id);
+    expect(asset).toBeDefined();
+    const [published] = shared.normalizeStablecoinsPayload({ peggedAssets: [asset!] }, nowSec).peggedAssets;
+    expect(published).toMatchObject({ id: meta.id, price: 0.24, pegType: "peggedMYR",
+      circulating: {} });
+    expect(JSON.parse(JSON.stringify(published))).not.toHaveProperty("supplyUnavailableReason");
+    expect(getCirculatingRawOrNull(published)).toBeNull();
+    expect(StablecoinDataSchema.safeParse(published).success).toBe(true);
+    expect(result.trackedCoverage.droppedIds).not.toContain(meta.id);
+    expect(result.assets.filter((row) => row.id.startsWith("intake-fixture-"))).toHaveLength(MIN_VALID_ASSET_COUNT);
+    expect(log).not.toHaveBeenCalledWith(expect.objectContaining({ event: "tracked-assets-restored" }));
+    expect(log).toHaveBeenCalledWith(expect.objectContaining({ metadata: expect.objectContaining({
+      stablecoinId: meta.id, reason: "preferred-native-supply-unavailable", resolution: "unavailable",
+    }) }));
+  });
+
   it("publishes valid peers while quarantining a malformed row, preserving observed zero and upstream FX", async () => {
     const { db } = fixtures.open();
     const rows = Array.from({ length: MIN_VALID_ASSET_COUNT }, (_, index) => makePeggedAsset({

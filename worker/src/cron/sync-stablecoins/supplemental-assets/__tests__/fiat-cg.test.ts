@@ -233,8 +233,8 @@ describe("fetchFiatCoinGeckoTokens", () => {
       },
     });
 
-    expect(result).toHaveLength(1);
-    expect(result[0]).toMatchObject({
+    expect(result.map((asset) => asset.id)).toEqual(["ftusd-flying-tulip", "fiusd-sygnum"]);
+    expect(result.find((asset) => asset.id === "ftusd-flying-tulip")).toMatchObject({
       id: "ftusd-flying-tulip",
       supplySource: "coingecko-fallback",
       supplyObservedAt: nowSec,
@@ -267,9 +267,10 @@ describe("fetchFiatCoinGeckoTokens", () => {
       },
     });
 
-    expect(result).toHaveLength(1);
-    expect(result[0]?.chainCirculating?.Ethereum).not.toHaveProperty("circulatingPrevDay");
-    expect(result[0]).toMatchObject({
+    expect(result.map((asset) => asset.id)).toEqual(["ftusd-flying-tulip", "fiusd-sygnum"]);
+    const ftusd = result.find((asset) => asset.id === "ftusd-flying-tulip")!;
+    expect(ftusd.chainCirculating?.Ethereum).not.toHaveProperty("circulatingPrevDay");
+    expect(ftusd).toMatchObject({
       id: "ftusd-flying-tulip",
       supplySource: "onchain-total-supply",
       supplyObservedAt: expect.any(Number),
@@ -335,7 +336,15 @@ describe("fetchFiatCoinGeckoTokens", () => {
       },
     });
     if (arbitrumSupply === null) {
-      expect(result).toEqual([]);
+      expect(result).toEqual([expect.objectContaining({
+        id: "fiusd-sygnum", price: 12_048.93, priceObservedAt: nowSec,
+        circulating: {}, supplySource: "onchain-supply-withheld",
+        supplyUnavailableReason: undefined,
+        chainCirculating: {
+          zkSync: { current: null, chainId: "zksync" },
+          Arbitrum: { current: null, chainId: "arbitrum" },
+        },
+      })]);
     } else {
       expect(result).toEqual([expect.objectContaining({
         id: "fiusd-sygnum",
@@ -361,7 +370,10 @@ describe("fetchFiatCoinGeckoTokens", () => {
       susds: { usd_market_cap: 0 },
     });
 
-    expect(result).toEqual([]);
+    expect(result).toEqual([expect.objectContaining({
+      id: "fiusd-sygnum", price: null, circulating: {},
+      supplyUnavailableReason: undefined,
+    })]);
     const susdsProbeCalls = probeTrackedTokenSupplyMock.mock.calls.filter(
       ([probeMeta]) => probeMeta != null && typeof probeMeta === "object" && "id" in probeMeta && probeMeta.id === "susds-sky",
     );
@@ -450,7 +462,10 @@ describe("fetchFiatCoinGeckoTokens", () => {
       previousAssetsById,
     );
 
-    expect(result).toEqual([]);
+    expect(result).toEqual([expect.objectContaining({
+      id: "fiusd-sygnum", price: 12_048.93, circulating: {},
+      supplyUnavailableReason: undefined,
+    })]);
     expect(resolveVaultNavSupplyPriceMock.mock.calls.filter(([id]) => id === "susds-sky")).toHaveLength(1);
     expect(resolveVaultNavSupplyPriceMock.mock.calls.filter(([id]) => id === "aa-falconx-mev-capital")).toHaveLength(1);
   });

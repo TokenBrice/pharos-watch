@@ -1,6 +1,7 @@
 import { LEGACY_SOLOMON_USDV_ID, isSolomonPriceIdentityAllowed } from "../../lib/solomon-usdv-identity";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
+import { prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 import { admitSupplyBuckets } from "@shared/lib/supply";
 import { parseDetailSnapshotSourceClock } from "@shared/lib/detail-snapshot-inputs";
 import { addFreshnessHeaders } from "../../lib/api-freshness-headers";
@@ -80,11 +81,14 @@ export async function enrichMissingDetailPrice(
     // A canonical producer refusal must not be resurrected from provider history.
     const supplyUnavailableReason = coin?.supplyUnavailableReason
       ?? (coin?.supplyChainGuard?.status === "unavailable" ? coin.supplyChainGuard.reason : undefined);
+    const preferredSupplyUnavailable = coin != null && prefersOnChainSupplyMcap(coin) &&
+      coin.supplySource === "onchain-supply-withheld" && admitSupplyBuckets(coin.circulating).status !== "observed";
     const supplyUnavailable = coin != null && !coin.frozen && stablecoinId !== LEGACY_SOLOMON_USDV_ID &&
-      !hasCurrentSupply && supplyUnavailableReason != null;
+      !hasCurrentSupply && (supplyUnavailableReason != null || preferredSupplyUnavailable);
     if (supplyUnavailable) {
       detail.currentSupplyUnavailableReason = supplyUnavailableReason;
-      delete detail.currentCirculatingUSD;
+      if (supplyUnavailableReason == null) detail.currentCirculatingUSD = {};
+      else delete detail.currentCirculatingUSD;
       delete detail.currentCirculatingPrevDayUSD;
       delete detail.currentSupplyObservedAt;
       delete detail.currentSupplyRestored;
