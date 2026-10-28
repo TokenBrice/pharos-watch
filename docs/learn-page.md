@@ -20,6 +20,8 @@ Visible article metadata credits Pharos, links to `/about/#editorial-ai-policy`,
 
 `MECHANISM_ARCHETYPE_VALUES` (defined in `shared/types/stablecoin-taxonomy.ts`, re-exported through `shared/types/core.ts`) owns the exhaustive archetype roster and static-route order. `ARCHETYPE_CONTENT` in `src/lib/mechanism-explainers/index.ts` registers content using `ArchetypeContent`. Labels, descriptors and canonical paths derive from `shared/lib/classification.ts`, not route-local copies. The hub has no client-only state.
 
+The hub's static comparison matrix is headed `Types of stablecoins` (`#mechanism-matrix-heading`). Its mechanism count, caption, archetype roster and row labels stay owned by the matrix module and shared classification; the heading is the only authored vocabulary changed there.
+
 Tracked examples and lifecycle counts use `shared/lib/stablecoins/by-mechanism.ts`: active coins appear in canonical order with variants nested; commodity pegs participate only in their explicitly resolved `commodity-claim` family; unresolved effective archetypes are excluded. Hub counts and upcoming/frozen links use the same admission policy. Relevant case studies retain canonical study order.
 
 ### Diagram Scope

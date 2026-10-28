@@ -58,11 +58,11 @@ const GOVERNANCE_CONTENT: Record<
       `${count} CeFi-dependent stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare collateral design, peg stability, liquidity, and dependency risk in one static hub.`,
   },
   decentralized: {
-    hubTitle: "DeFi Stablecoins",
+    hubTitle: "Decentralized Stablecoins",
     intro:
-      "DeFi stablecoins rely more heavily on on-chain collateral, immutable code, or DAO governance than direct issuer discretion. This directory helps compare censorship resistance, collateral models, liquidation design, and peg resilience across the decentralized cohort.",
+      "This cohort uses Pharos's DeFi governance classification; it does not imply that every control, reserve, or redemption route is decentralized. This directory helps compare censorship resistance, collateral models, liquidation design, and peg resilience across the decentralized cohort.",
     description: (count) =>
-      `${count} decentralized stablecoin${count !== 1 ? "s" : ""} tracked by Pharos. Compare peg stability, liquidity, collateral models, and risk profiles for DeFi-native issuers.`,
+      `${count} stablecoin${count !== 1 ? "s" : ""} in Pharos's DeFi governance cohort. Compare peg stability, liquidity, collateral models, and risk profiles.`,
   },
 };
 

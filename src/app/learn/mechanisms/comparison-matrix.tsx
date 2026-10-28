@@ -158,7 +158,7 @@ export function MechanismComparisonMatrix() {
     <section aria-labelledby="mechanism-matrix-heading" className="space-y-3">
       <div className="flex items-baseline justify-between gap-4">
         <h2 id="mechanism-matrix-heading" className="pharos-label">
-          At a glance
+          Types of stablecoins
         </h2>
         <span className="pharos-numeric text-2xs text-muted-foreground">
           {MECHANISM_ARCHETYPE_VALUES.length} mechanisms

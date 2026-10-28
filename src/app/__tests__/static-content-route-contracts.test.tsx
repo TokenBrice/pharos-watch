@@ -33,6 +33,7 @@ import DigestPage, * as digestRoute from "@/app/digest/[date]/page";
 import DocPage, * as docsRoute from "@/app/docs/[slug]/page";
 import CaseStudyPage, * as caseStudyRoute from "@/app/learn/case-studies/[slug]/page";
 import MechanismPage, * as mechanismRoute from "@/app/learn/mechanisms/[archetype]/page";
+import { MechanismComparisonMatrix } from "@/app/learn/mechanisms/comparison-matrix";
 
 describe("static content route adapters", () => {
   it.each([
@@ -79,6 +80,19 @@ describe("static content route adapters", () => {
       expect(metadata.alternates?.canonical).toBe(route.canonical);
       expect(metadata.openGraph?.images).toEqual([image]);
       expect(metadata.twitter?.images).toEqual([image]);
+    }
+  });
+
+  it("heads the mechanism matrix for its query while keeping its rows and caption registry-owned", () => {
+    const html = renderToStaticMarkup(<MechanismComparisonMatrix />);
+
+    expect(html).toContain('id="mechanism-matrix-heading"');
+    expect(html).toContain("Types of stablecoins");
+    expect(html).not.toContain("At a glance");
+    expect(html).toContain(`${MECHANISM_ARCHETYPE_VALUES.length} mechanisms`);
+    expect(html).toContain("Stablecoin mechanism comparison matrix");
+    for (const archetype of MECHANISM_ARCHETYPE_VALUES) {
+      expect(html).toContain(`href="${getMechanismExplainerPath(archetype)}`);
     }
   });
 

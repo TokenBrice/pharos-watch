@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from "vitest";
 import { renderToStaticMarkup } from "react-dom/server";
+import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import * as backingRoute from "../backing/[backing]/page";
 import * as governanceRoute from "../governance/[governance]/page";
 import * as infrastructureRoute from "../infrastructure/[infrastructure]/page";
+import StablecoinsHubPage from "../page";
 import {
   BACKING_TAXONOMY_PAGES,
+  GOVERNANCE_TAXONOMY_PAGE_BY_SLUG,
   GOVERNANCE_TAXONOMY_PAGES,
   INFRASTRUCTURE_TAXONOMY_PAGES,
 } from "@/lib/stablecoin-taxonomy";
@@ -29,6 +32,41 @@ describe("stablecoin taxonomy hub pages", () => {
       title: missingTitle,
     });
     expect(renderToStaticMarkup(await Page(page.slug))).toContain(page.title);
+  });
+
+  it("names the tracked-profile directory as a stablecoin list, not an active ranking", () => {
+    const html = renderToStaticMarkup(<StablecoinsHubPage />);
+
+    expect(html).toContain('id="stablecoin-profile-directory-heading"');
+    expect(html).toContain("Stablecoin list");
+    expect(html).not.toContain("All Tracked Stablecoin Profiles");
+  });
+
+  it("scopes the decentralized governance cohort to Pharos's DeFi classification", async () => {
+    const decentralized = GOVERNANCE_TAXONOMY_PAGE_BY_SLUG.get("defi")!;
+
+    expect(decentralized.value).toBe("decentralized");
+    expect(decentralized.title).toBe(`Decentralized Stablecoins: ${decentralized.coins.length} Coins Ranked by Risk`);
+    expect(decentralized.title.length).toBeLessThanOrEqual(61);
+    expect(decentralized.description).toBe(
+      `${decentralized.coins.length} stablecoins in Pharos's DeFi governance cohort. Compare peg stability, liquidity, collateral models, and risk profiles.`,
+    );
+    expect(decentralized.intro).toContain("This cohort uses Pharos's DeFi governance classification");
+    expect(decentralized.filterTag).toBe("decentralized");
+    expect(decentralized.coins.map((coin) => coin.id)).toEqual(
+      ACTIVE_STABLECOINS.filter((coin) => coin.flags.governance === "decentralized").map((coin) => coin.id),
+    );
+
+    const html = renderToStaticMarkup(
+      await governanceRoute.default({ params: Promise.resolve({ governance: "defi" }) }),
+    );
+    // Decode the attribute-safe apostrophe React emits so copy assertions read as authored.
+    const visibleHtml = html.replaceAll("&#x27;", "'");
+    expect(html).toContain(decentralized.title);
+    expect(html).toContain("About DeFi stablecoins");
+    expect(visibleHtml).toContain(`<p class="pharos-page-deck max-w-3xl">${decentralized.description}</p>`);
+    expect(visibleHtml).toContain(`<p class="pharos-lead">${decentralized.intro}</p>`);
+    expect(html).not.toContain("DeFi Stablecoins");
   });
 
 });
