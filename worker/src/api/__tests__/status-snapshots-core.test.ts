@@ -7,6 +7,7 @@ import { registerUnauthorizedEndpointContract } from "../../test-helpers/__share
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { mintBurnConservationCacheKey } from "../../lib/mint-burn-conservation";
+import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
 import {
   handleStatus,
   STATUS_RAW_SNAPSHOT_CACHE_KEY,
@@ -42,6 +43,10 @@ function fixtureMockD1(
     { match: "SELECT key, value FROM cache WHERE key IN (", rows: [] },
     { match: "SELECT key, LENGTH(value) as bytes FROM cache", rows: [] },
     { match: "FROM mint_burn_hourly INDEXED BY idx_mbh_ts", rows: [] },
+    { match: "FROM mint_burn_admission", rows: [] },
+    { match: "FROM mint_burn_publication_policy", rows: [] },
+    { match: "FROM mint_burn_scan_coverage", rows: [] },
+    { match: "pharos:mint-burn-legacy-evidence", rows: [] },
     { match: "FROM (VALUES", rows: [] },
     { match: "SELECT MAX(snapshot_date) as latest FROM supply_history", rows: [], first: null },
     { match: "SELECT MAX(generated_at) as latest FROM daily_digest", rows: [], first: null },
@@ -393,7 +398,7 @@ describe("handleStatus", () => {
     expect(conservationReads.length).toBeGreaterThan(0);
     expect(conservationReads.flatMap((entry) => entry.binds))
       .toEqual([...new Set(MINT_BURN_CONFIGS
-        .filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId))
+        .filter((config) => WORKER_ACTIVE_IDS.has(config.stablecoinId) && isGrandfatheredMintBurnConfig(config))
         .map(mintBurnConservationCacheKey))]);
     const nonSupplementalBatchCacheReads = batchCacheReads.filter((entry) =>
       !entry.binds.every((bind) => typeof bind === "string" &&
