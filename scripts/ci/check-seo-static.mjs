@@ -1115,6 +1115,177 @@ function validateStablecoinProfileRender(pageRecords, errors) {
   }
 }
 
+// C3/C6 exported-artifact sentinels. The full expected deployment sets stay in
+// the registry-iterating Vitest suites; this guard proves the built HTML keeps
+// their text and destinations wired, without a second hand-authored inventory.
+const CONTRACT_FOLD_PROFILE_ROUTES = ["/stablecoin/usdt-tether/", "/stablecoin/usdc-circle/"];
+const CHAIN_CONTRACT_TABLE_PILOTS = [
+  { chain: "solana", chainName: "Solana" },
+  { chain: "base", chainName: "Base" },
+  { chain: "tron", chainName: "Tron" },
+];
+const CHAIN_CONTRACT_TABLE_ROW_LIMIT = 20;
+const COIN_DATA_DIR = path.resolve("shared/data/stablecoins/coins");
+const CONTRACT_DEPLOYMENT_ID_PREFIX = "contract-";
+
+const ATTRIBUTE_VALUE_PATTERNS = {
+  id: /\bid="([^"]*)"/g,
+  href: /\bhref="([^"]*)"/g,
+};
+
+function attributeValues(html, attribute) {
+  const pattern = ATTRIBUTE_VALUE_PATTERNS[attribute];
+  return [...html.matchAll(pattern)].map((match) => decodeHtml(match[1]));
+}
+
+function readCheckedInCoin(id) {
+  try {
+    return JSON.parse(fs.readFileSync(path.join(COIN_DATA_DIR, `${id}.json`), "utf8"));
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Element text for the whole document. `extractVisibleText` is `<main>`-scoped
+ * and skips `hidden` subtrees, but a prerendered profile's streamed dossier
+ * (which owns the Contracts card) is emitted after `</main>` inside a `hidden`
+ * segment that hydration reveals. Reading that raw element text with scripts
+ * and templates removed is the artifact check C3/C6 ask for; inline RSC JSON can
+ * never match because it lives in `<script>`.
+ */
+function extractDocumentText(html) {
+  return decodeHtml(
+    html
+      .replace(/<head\b[\s\S]*?<\/head>/i, " ")
+      .replace(/<!--[\s\S]*?-->/g, " ")
+      .replace(/<(script|style|template)\b[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<[^>]*>/g, " "),
+  )
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+/**
+ * C3: every profile keeps the complete recorded deployment set in the closed
+ * `Contract addresses` fold as exact address text with unique anchors.
+ * C6: the three pilot hubs keep their bounded table, report a truthful
+ * `shown/total`, and every table destination resolves to exactly one id on the
+ * target profile. The complete profile directory stays as the overflow path.
+ */
+function validateContractDeploymentSurfaces(pageRecords, errors, warnings) {
+  const htmlByRoute = new Map(
+    pageRecords
+      .filter((record) => record.filePath && fs.existsSync(record.filePath))
+      .map((record) => [record.route, fs.readFileSync(record.filePath, "utf8")]),
+  );
+
+  for (const route of CONTRACT_FOLD_PROFILE_ROUTES) {
+    const html = htmlByRoute.get(route);
+    if (!html) continue;
+    const coinId = route.split("/")[2];
+    const coin = readCheckedInCoin(coinId);
+    const contracts = coin?.contracts ?? [];
+    const lastDeployment = contracts.at(-1);
+    if (!lastDeployment) {
+      warnings.push(`${route}: no checked-in contract deployment for the contract-fold sentinel`);
+      continue;
+    }
+
+    const visibleText = extractDocumentText(html);
+    if (!visibleText.includes("Contract addresses")) {
+      errors.push(`${route}: contract address fold summary missing`);
+    }
+    if (!visibleText.includes(lastDeployment.address)) {
+      errors.push(`${route}: contract address fold omits the last recorded address ${lastDeployment.address}`);
+    }
+    const deploymentIds = attributeValues(html, "id").filter((value) => value.startsWith(CONTRACT_DEPLOYMENT_ID_PREFIX));
+    if (deploymentIds.length === 0) {
+      errors.push(`${route}: no contract deployment anchor ids`);
+    }
+    if (new Set(deploymentIds).size !== deploymentIds.length) {
+      errors.push(`${route}: duplicate contract deployment anchor ids`);
+    }
+    const previewChain = contracts[0]?.chain;
+    if (
+      previewChain
+      && !html.includes(`href="/chains/${previewChain}"`)
+      && !html.includes(`href="/chains/${previewChain}/"`)
+    ) {
+      errors.push(`${route}: preview chain destination /chains/${previewChain} lost`);
+    }
+  }
+
+  for (const { chain, chainName } of CHAIN_CONTRACT_TABLE_PILOTS) {
+    const route = `/chains/${chain}/`;
+    const html = htmlByRoute.get(route);
+    if (!html) continue;
+    const heading = `Recorded contract addresses on ${chainName}`;
+    const visibleText = extractDocumentText(html);
+    if (!visibleText.includes(heading)) {
+      errors.push(`${route}: "${heading}" missing`);
+      continue;
+    }
+
+    const sectionStart = html.indexOf('id="chain-contract-addresses"');
+    if (sectionStart < 0) {
+      errors.push(`${route}: #chain-contract-addresses section missing`);
+      continue;
+    }
+    const sectionEnd = html.indexOf("</section>", sectionStart);
+    const sectionHtml = html.slice(sectionStart, sectionEnd < 0 ? undefined : sectionEnd);
+    const columnHeaders = sectionHtml.match(/scope="col"/g)?.length ?? 0;
+    if (columnHeaders !== 4) {
+      errors.push(`${route}: contract table has ${columnHeaders} column headers, expected 4`);
+    }
+
+    const caption = visibleText.match(/Showing (\d+) of (\d+) recorded deployments/);
+    if (!caption) {
+      errors.push(`${route}: contract table caption missing`);
+    } else {
+      const shown = Number(caption[1]);
+      const total = Number(caption[2]);
+      if (shown > CHAIN_CONTRACT_TABLE_ROW_LIMIT || total < shown) {
+        errors.push(`${route}: contract table reports ${shown} of ${total} recorded deployments`);
+      } else if (shown !== Math.min(total, CHAIN_CONTRACT_TABLE_ROW_LIMIT)) {
+        errors.push(`${route}: contract table preview bound is not applied (${shown} of ${total})`);
+      }
+    }
+
+    const destinations = [...sectionHtml.matchAll(/href="(\/stablecoin\/[^"#]+)#([^"]+)"/g)];
+    if (destinations.length === 0) {
+      errors.push(`${route}: no contract table destinations to recorded profile rows`);
+    }
+    if (caption && destinations.length !== Number(caption[1])) {
+      errors.push(`${route}: contract table shows ${caption[1]} rows but links ${destinations.length} destinations`);
+    }
+
+    for (const [, href, fragment] of destinations) {
+      const targetRoute = `${href.replace(/\/+$/, "")}/`;
+      const targetHtml = htmlByRoute.get(targetRoute);
+      if (!targetHtml) {
+        errors.push(`${route}: contract table destination ${targetRoute} is not part of the export`);
+        continue;
+      }
+      let targetId;
+      try {
+        targetId = decodeURIComponent(fragment);
+      } catch {
+        errors.push(`${route}: malformed contract table fragment ${fragment}`);
+        continue;
+      }
+      const matches = attributeValues(targetHtml, "id").filter((value) => value === targetId).length;
+      if (matches !== 1) {
+        errors.push(`${route}: contract table fragment ${fragment} resolves to ${matches} ids on ${targetRoute}`);
+      }
+    }
+
+    if (html.indexOf('aria-labelledby="chain-deployment-anchors-heading"') < 0) {
+      errors.push(`${route}: complete profile directory missing, so contract table overflow has no destination`);
+    }
+  }
+}
+
 export function collectSeoStaticCheckResult({
   outDir = DEFAULT_OUT_DIR,
   enforceGooglePreviewDirectives = true,
@@ -1444,6 +1615,7 @@ export function collectSeoStaticCheckResult({
     );
   }
   validateStablecoinProfileRender(pageRecords, errors);
+  validateContractDeploymentSurfaces(pageRecords, errors, warnings);
 
   // Informational warning only: avoids failing CI for transient route count changes.
   warnings.push(`Checked ${pageRecords.length} HTML pages in out/`);

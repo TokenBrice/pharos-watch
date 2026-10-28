@@ -3,6 +3,9 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { buildContractDeploymentAnchor } from "../../src/lib/contract-deployment-summary";
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
   collectSeoStaticCheckResult,
   findPublishedArchiveContinuityErrors,
@@ -78,6 +81,7 @@ async function writePage(
     title = `${h1} | Pharos`,
     description = `${h1} description`,
     extraHead = "",
+    extraMain = "",
     quote = '"',
   }: {
     h1?: string;
@@ -91,6 +95,7 @@ async function writePage(
     title?: string;
     description?: string;
     extraHead?: string;
+    extraMain?: string;
     quote?: '"' | "'";
   } = {},
 ) {
@@ -124,6 +129,7 @@ async function writePage(
       <h1>${h1}</h1>
       ${linkTags}
       <p>${mainText}</p>
+      ${extraMain}
     </main>
   </body>
 </html>`,
@@ -668,4 +674,136 @@ describe("check-seo-static", () => {
     );
   });
 
+});
+
+const USDC = TRACKED_META_BY_ID.get("usdc-circle")!;
+const USDC_CONTRACTS = USDC.contracts ?? [];
+const USDC_LAST_DEPLOYMENT = USDC_CONTRACTS[USDC_CONTRACTS.length - 1];
+const USDC_PREVIEW_CHAIN = USDC_CONTRACTS[0].chain;
+
+/**
+ * The profile's closed `Contract addresses` fold, as the built export carries
+ * it: one exact-address row per recorded deployment and a preview chain link.
+ */
+async function writeContractProfilePage(
+  root: string,
+  { omitLastAddress = false, duplicateLastId = false } = {},
+) {
+  const deployments = omitLastAddress ? USDC_CONTRACTS.slice(0, -1) : USDC_CONTRACTS;
+  const rows = deployments.map((contract) => {
+    const chainName = CHAIN_META[contract.chain]?.name ?? contract.chain;
+    return `<li id="${buildContractDeploymentAnchor(contract)}">${chainName} ${contract.address}</li>`;
+  });
+  if (duplicateLastId && USDC_LAST_DEPLOYMENT) rows.push(rows[0]);
+
+  await writePage(root, "/stablecoin/usdc-circle/", {
+    h1: "USD Coin (USDC)",
+    mainText: Array.from({ length: 70 }, (_, index) => `word${index}`).join(" "),
+    extraMain:
+      `<details><summary>Contract addresses (${USDC_CONTRACTS.length})</summary><ul>${rows.join("")}</ul></details>`
+      + `<a href="/chains/${USDC_PREVIEW_CHAIN}/">Chain</a>`,
+  });
+}
+
+/** One pilot hub page: bounded table, counted caption, and complete directory. */
+async function writePilotChainPage(
+  root: string,
+  chain: "solana" | "base" | "tron",
+  {
+    omitHeading = false,
+    omitDirectory = false,
+    breakDestination = false,
+  } = {},
+) {
+  const chainName = CHAIN_META[chain].name;
+  const contract = USDC_CONTRACTS.find((candidate) => candidate.chain === chain)!;
+  const anchor = breakDestination
+    ? "contract-solana:0xmissing"
+    : buildContractDeploymentAnchor(contract);
+  const fragment = encodeURIComponent(anchor);
+  const directory = omitDirectory
+    ? ""
+    : '<nav aria-labelledby="chain-deployment-anchors-heading"><a href="/stablecoin/usdc-circle/">USD Coin</a></nav>';
+
+  await writePage(root, `/chains/${chain}/`, {
+    h1: `${chainName} Stablecoins`,
+    mainText: Array.from({ length: 45 }, (_, index) => `word${index}`).join(" "),
+    extraMain:
+      '<section id="chain-contract-addresses" aria-labelledby="chain-contract-addresses-heading" class="space-y-3">'
+      + (omitHeading ? "" : `<h2 id="chain-contract-addresses-heading">Recorded contract addresses on ${chainName}</h2>`)
+      + '<p class="text-sm text-muted-foreground">Showing 1 of 1 recorded deployments</p>'
+      + "<table><thead><tr>"
+      + '<th scope="col">Stablecoin</th><th scope="col">Contract address</th><th scope="col">Decimals</th><th scope="col">Explorer</th>'
+      + "</tr></thead><tbody><tr>"
+      + `<th scope="row"><a href="/stablecoin/usdc-circle/#${fragment}">USD Coin (USDC)</a></th>`
+      + `<td>${contract.address}</td><td>6</td><td><a href="https://example.test">Explorer</a></td>`
+      + "</tr></tbody></table></section>"
+      + directory,
+  });
+}
+
+async function writeContractSurfaces(root: string, profileOptions = {}, chainOptions: Record<string, object> = {}) {
+  const routes = ["/stablecoin/usdc-circle/", "/chains/solana/", "/chains/base/", "/chains/tron/"];
+  await writeBaselinePages(root, routes);
+  await writeSitemap(root, ["/", "/stability-index/", ...routes]);
+  await writeContractProfilePage(root, profileOptions);
+  for (const chain of ["solana", "base", "tron"] as const) {
+    await writePilotChainPage(root, chain, chainOptions[chain]);
+  }
+}
+
+describe("contract deployment surfaces", () => {
+  it("accepts the closed address fold and the three bounded chain tables", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root);
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("fails when the closed fold drops the last recorded deployment address", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, { omitLastAddress: true });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain(
+      `/stablecoin/usdc-circle/: contract address fold omits the last recorded address ${USDC_LAST_DEPLOYMENT.address}`,
+    );
+  });
+
+  it("fails when responsive mounts duplicate a contract deployment id", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, { duplicateLastId: true });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain("/stablecoin/usdc-circle/: duplicate contract deployment anchor ids");
+  });
+
+  it("fails when a chain table drops its heading", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, {}, { base: { omitHeading: true } });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain("/chains/base/: \"Recorded contract addresses on Base\" missing");
+  });
+
+  it("fails when a chain table fragment resolves to no profile row", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, {}, { tron: { breakDestination: true } });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain(
+      "/chains/tron/: contract table fragment contract-solana%3A0xmissing resolves to 0 ids on /stablecoin/usdc-circle/",
+    );
+  });
+
+  it("fails when the complete profile directory that carries overflow disappears", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, {}, { solana: { omitDirectory: true } });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain(
+      "/chains/solana/: complete profile directory missing, so contract table overflow has no destination",
+    );
+  });
 });

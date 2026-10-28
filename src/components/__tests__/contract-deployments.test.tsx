@@ -2,8 +2,12 @@
 
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
+import { renderToStaticMarkup } from "react-dom/server";
 
 import { ContractDeployments } from "@/components/stablecoin-detail/contract-deployments";
+import { revealAnchorId } from "@/lib/anchor-reveal";
+import { buildContractDeploymentAnchor } from "@/lib/contract-deployment-summary";
+import { CHAIN_META } from "@shared/types/chain-identity";
 import type { StablecoinMeta } from "@shared/types";
 
 vi.mock("next/image", () => ({
@@ -159,4 +163,115 @@ describe("ContractDeployments interactions", () => {
     expect(screen.getAllByRole("button", { name: "Show all 7 chains" }).length).toBe(1);
   });
 
+});
+
+const manyContracts = [
+  { chain: "ethereum", address: "0xa000000000000000000000000000000000000001", decimals: 18 },
+  { chain: "ethereum", address: "0xa000000000000000000000000000000000000002", decimals: 18 },
+  { chain: "ethereum", address: "0xa000000000000000000000000000000000000003", decimals: 18 },
+  { chain: "ethereum", address: "0xa000000000000000000000000000000000000004", decimals: 18 },
+  { chain: "ethereum", address: "0xa000000000000000000000000000000000000005", decimals: 6 },
+  { chain: "ethereum", address: "0xa000000000000000000000000000000000000006", decimals: 18 },
+  { chain: "base", address: "0xb000000000000000000000000000000000000001", decimals: 18 },
+  { chain: "base", address: "0xb000000000000000000000000000000000000002", decimals: 18 },
+  { chain: "base", address: "0xb000000000000000000000000000000000000003", decimals: 18 },
+  { chain: "base", address: "0xb000000000000000000000000000000000000004", decimals: 18 },
+  { chain: "solana", address: "So11111111111111111111111111111111111111112", decimals: 9 },
+  { chain: "injective", address: "factory/inj1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/inj1bb", decimals: null, kind: "native-denom" },
+] as unknown as NonNullable<StablecoinMeta["contracts"]>;
+
+function fullListRows(container: ParentNode) {
+  return [...container.querySelectorAll<HTMLElement>("li[id^='contract-']")];
+}
+
+describe("ContractDeployments complete address list", () => {
+  it("renders every recorded deployment as closed plain text, including the last row", () => {
+    const markup = renderToStaticMarkup(
+      <ContractDeployments coinId={meta.id} contracts={manyContracts} />,
+    );
+
+    expect(markup).toContain("Contract addresses");
+    expect(markup).toContain("(12)");
+    // Closed by default: the fold carries no `open` attribute until asked.
+    expect(markup).not.toMatch(/<details[^>]*\sopen(?:[=\s>])/);
+
+    for (const contract of manyContracts) {
+      const chainName = CHAIN_META[contract.chain]?.name ?? contract.chain;
+      expect(markup).toContain(`>${chainName} ${contract.address}<`);
+    }
+
+    const list = markup.slice(markup.indexOf("<ul"), markup.indexOf("</ul>") + "</ul>".length);
+    expect(list).toContain("Injective factory/inj1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/inj1bb");
+    // Compact static rows only: two interactive mounts for USDC's 88
+    // deployments measured ~1.26 MB, so one row stays a text line.
+    expect(list.length / manyContracts.length).toBeLessThan(150);
+    expect(list).not.toContain("<button");
+    expect(list).not.toContain("<svg");
+  });
+
+  it("gives every deployment exactly one id and one rail twin across both mounts", () => {
+    const { container } = render(
+      <>
+        <ContractDeployments coinId={meta.id} contracts={manyContracts} compact />
+        <ContractDeployments coinId={meta.id} contracts={manyContracts} />
+      </>,
+    );
+
+    const expected = manyContracts.map((contract) => buildContractDeploymentAnchor(contract));
+    expect(fullListRows(container).map((row) => row.id)).toEqual(expected);
+    expect(new Set(fullListRows(container).map((row) => row.id)).size).toBe(expected.length);
+    expect(
+      [...container.querySelectorAll<HTMLElement>("li[data-anchor-twin^='contract-']")]
+        .map((row) => row.getAttribute("data-anchor-twin")),
+    ).toEqual(expected);
+    // The card's own `#contracts` owner stays single across responsive mounts.
+    expect(container.querySelectorAll("#contracts")).toHaveLength(1);
+  });
+
+  it("keeps every row mounted while the disclosure opens and closes", () => {
+    const { container } = render(<ContractDeployments coinId={meta.id} contracts={manyContracts} />);
+    const disclosure = container.querySelector<HTMLDetailsElement>("details[data-module-fold]");
+    expect(disclosure).not.toBeNull();
+    expect(disclosure!.open).toBe(false);
+
+    disclosure!.open = true;
+    fireEvent(disclosure!, new Event("toggle"));
+    expect(fullListRows(container)).toHaveLength(manyContracts.length);
+
+    disclosure!.open = false;
+    fireEvent(disclosure!, new Event("toggle"));
+    expect(fullListRows(container)).toHaveLength(manyContracts.length);
+  });
+
+  it("reveals the last deployment in the rail twin and opens its fold", () => {
+    render(
+      <>
+        <ContractDeployments coinId={meta.id} contracts={manyContracts} compact />
+        <ContractDeployments coinId={meta.id} contracts={manyContracts} />
+      </>,
+    );
+    const anchor = buildContractDeploymentAnchor(manyContracts[manyContracts.length - 1]);
+
+    // jsdom has no layout, so the in-flow row reads as display-hidden and the
+    // shared helper must resolve the rail twin instead.
+    const target = revealAnchorId(anchor);
+    expect(target?.getAttribute("data-anchor-twin")).toBe(anchor);
+    expect(target?.textContent).toBe("Injective factory/inj1aaaaaaaaaaaaaaaaaaaaaaaaaaaaaa/inj1bb");
+    expect(target?.closest("details")?.open).toBe(true);
+  });
+
+  it("renders no card for an empty contract list", () => {
+    expect(renderToStaticMarkup(<ContractDeployments coinId={meta.id} contracts={[]} />)).toBe("");
+  });
+
+  it("still offers the full address fold for a single deployment", () => {
+    const single = [{ chain: "ethereum", address: "0xcccccccccccccccccccccccccccccccccccccccc", decimals: 18 }] as NonNullable<
+      StablecoinMeta["contracts"]
+    >;
+    const markup = renderToStaticMarkup(<ContractDeployments coinId={meta.id} contracts={single} />);
+
+    expect(markup).toContain("Contract addresses");
+    expect(markup).toContain("(1)");
+    expect(markup).toContain(">Ethereum 0xcccccccccccccccccccccccccccccccccccccccc<");
+  });
 });

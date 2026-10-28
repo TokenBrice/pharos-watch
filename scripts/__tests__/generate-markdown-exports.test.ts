@@ -2,6 +2,8 @@ import { describe, expect, it, beforeEach, afterEach, vi } from "vitest";
 import { existsSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
 import { buildMethodologyChangelogMarkdown, buildMethodologyIndexMarkdown } from "../lib/methodology-to-markdown";
 import {
   iterateStablecoinRoutes,
@@ -10,14 +12,19 @@ import {
 } from "../lib/markdown-renderers";
 import { writeMarkdownRoute } from "../maintenance/generate-markdown-exports";
 import { buildStablecoinFaqItems } from "../../src/components/stablecoin-detail/static-seo-content";
+import { ContractDeployments } from "../../src/components/stablecoin-detail/contract-deployments";
 import { getCurrentRedemptionConfig } from "../../src/lib/redemption-review-currency";
 import { changelogs } from "../../src/data/changelogs";
 import { CHANGELOG_MONTH_ARCHIVES, RECENT_CHANGELOGS } from "../../src/lib/changelog-history";
 import { METHODOLOGY_HISTORY_ARCHIVES } from "@shared/lib/methodology-versions/archives";
 
+import { CHAIN_META } from "@shared/types/chain-identity";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { StablecoinMeta } from "@shared/types";
 import { makeCoverageCoin as coin } from "./helpers/coverage-coin";
+
+// The parity check reads the profile fold's text rows, not its chain logos.
+vi.mock("next/image", () => ({ default: () => null }));
 
 // Pin the release grade and date so the byte fixture does not move with each data refresh.
 vi.mock("../../src/lib/datasets/public-dataset-current", async (importOriginal) => ({
@@ -47,6 +54,45 @@ function markdownSubsection(markdown: string, heading: string): string {
   const offset = start + heading.length;
   const next = markdown.slice(offset).search(/\n##{2,3} /);
   return markdown.slice(start, next < 0 ? undefined : offset + next);
+}
+
+/**
+ * The profile's closed `Contract addresses` fold and the Markdown `## Contracts`
+ * table must list the same `(chain, exact address)` set: Markdown already
+ * carries every deployment, and the HTML fold must not lag it.
+ */
+function expectContractParity(meta: StablecoinMeta) {
+  const contracts = meta.contracts ?? [];
+  const markdown = renderStablecoinDetail(meta.id, {});
+  const markdownRows = markdownSection(markdown, "## Contracts")
+    .split("\n")
+    .filter((line) => line.startsWith("| ") && !line.startsWith("| Chain") && !line.startsWith("| ---"));
+  const markdownPairs = new Set(
+    markdownRows.map((row) => {
+      const match = row.match(/^\| ([^|]+) \| `([^`]+)` \|/);
+      expect(match, row).not.toBeNull();
+      return `${match![1]}|${match![2]}`;
+    }),
+  );
+
+  const html = renderToStaticMarkup(
+    createElement(ContractDeployments, { coinId: meta.id, contracts }),
+  );
+  const list = html.slice(html.indexOf("<ul"), html.indexOf("</ul>") + "</ul>".length);
+  const htmlRows = [...list.matchAll(/<li\b[^>]*>([\s\S]*?)<\/li>/g)].map(([, text]) => text);
+  const htmlPairs = new Set(
+    htmlRows.map((text) => {
+      const contract = contracts.find(
+        (candidate) => text === `${CHAIN_META[candidate.chain]?.name ?? candidate.chain} ${candidate.address}`,
+      );
+      expect(contract, text).toBeDefined();
+      return `${contract!.chain}|${contract!.address}`;
+    }),
+  );
+
+  expect(htmlPairs.size).toBe(contracts.length);
+  expect(markdownPairs.size).toBe(contracts.length);
+  expect(htmlPairs).toEqual(markdownPairs);
 }
 
 
@@ -179,8 +225,26 @@ describe("stablecoin markdown", () => {
     }
   });
 
-  it("renders a deduplicated Sources module only when reviewed links exist", () => {
-    const fixture = coin({ id: "sources-fixture" });
+  it.each(["usdt-tether", "usdc-circle"] as const)(
+    "keeps the profile contract fold in parity with the Markdown Contracts table for %s",
+    (id) => {
+      expectContractParity(TRACKED_META_BY_ID.get(id)!);
+    },
+  );
+
+  it("keeps a same-chain pair and a native denomination in HTML/Markdown parity", () => {
+    const fixture = coin({ id: "contract-parity-fixture" });
+    fixture.contracts = [
+      { chain: "base", address: "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa", decimals: 18 },
+      { chain: "base", address: "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb", decimals: 6 },
+      { chain: "kava", address: "factory/inj1abc:denom/inj1def", decimals: null, kind: "native-denom" },
+    ] as NonNullable<StablecoinMeta["contracts"]>;
+    vi.spyOn(TRACKED_META_BY_ID, "get").mockReturnValue(fixture);
+
+    expectContractParity(fixture);
+  });
+
+  it("renders a deduplicated Sources module only when reviewed links exist", () => {    const fixture = coin({ id: "sources-fixture" });
     vi.spyOn(TRACKED_META_BY_ID, "get").mockReturnValue(fixture);
     const withoutSources = renderStablecoinDetail(fixture.id, {});
     expect(withoutSources).not.toContain("## Sources");

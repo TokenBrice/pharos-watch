@@ -15,6 +15,18 @@ export interface ContractDeploymentParts {
 }
 
 /**
+ * Stable anchor identity for one recorded deployment: chain and address are
+ * encoded independently, so a coin with two contracts on one chain keeps two
+ * distinct ids and native denominations keep their exact punctuation. The
+ * colon separator is not encoded here; a fragment is built as
+ * `#${encodeURIComponent(anchor)}` so the single decode on the detail page
+ * returns this exact DOM id.
+ */
+export function buildContractDeploymentAnchor(contract: ContractDeployment): string {
+  return `contract-${encodeURIComponent(contract.chain)}:${encodeURIComponent(contract.address)}`;
+}
+
+/**
  * Shared data parts for the "N deployments tracked across …" contract summary.
  * Callers keep their own rendering (plain string vs. linked chain list).
  */

@@ -5,6 +5,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
 import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -12,7 +13,7 @@ import {
   DETAIL_MODULE_TITLE_CLASS,
   SECTION_SCROLL_MT,
 } from "@/components/stablecoin-detail/section-title-class";
-import { buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
+import { buildContractDeploymentAnchor, buildContractDeploymentParts } from "@/lib/contract-deployment-summary";
 import { trackEvent } from "@/lib/analytics";
 import { copyText } from "@/lib/clipboard";
 import { cn } from "@/lib/utils";
@@ -141,6 +142,9 @@ export function ContractDeployments({
               onCopy={copyContractAddress}
             />
           ))}
+          <ModuleDisclosure label="Contract addresses" count={contracts.length}>
+            <ContractDeploymentAddressList contracts={contracts} twin />
+          </ModuleDisclosure>
         </div>
       </section>
     );
@@ -235,8 +239,44 @@ export function ContractDeployments({
           className="mt-3 sm:hidden"
         />
       ) : null}
+      {/* The complete recorded list stays in a closed native fold: every
+          address is crawlable and readable without JS, while the card keeps
+          its compact interactive preview. Full interactive rows for every
+          deployment were measured at ~1.26 MB of HTML on USDC (88
+          deployments), so this list is deliberately plain text with one
+          shared class. */}
+      <ModuleDisclosure label="Contract addresses" count={contracts.length} className="mt-3">
+        <ContractDeploymentAddressList contracts={contracts} />
+      </ModuleDisclosure>
       </div>
     </section>
+  );
+}
+
+/**
+ * One plain row per recorded deployment inside the `Contract addresses` fold:
+ * chain name, then the unmodified address in registry order. The in-flow card
+ * owns each row id; the rail copy carries the same value as `data-anchor-twin`
+ * so a hash jump resolves the visible rail row at `xl`.
+ */
+function ContractDeploymentAddressList({
+  contracts,
+  twin = false,
+}: {
+  contracts: ContractDeployment[];
+  twin?: boolean;
+}) {
+  return (
+    <ul className="mt-2 space-y-1 break-all font-mono text-xs text-muted-foreground">
+      {contracts.map((contract) => {
+        const anchor = buildContractDeploymentAnchor(contract);
+        return (
+          <li key={anchor} id={twin ? undefined : anchor} data-anchor-twin={twin ? anchor : undefined}>
+            {`${CHAIN_META[contract.chain]?.name ?? contract.chain} ${contract.address}`}
+          </li>
+        );
+      })}
+    </ul>
   );
 }
 
