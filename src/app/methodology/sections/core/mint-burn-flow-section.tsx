@@ -95,8 +95,9 @@ export function MintBurnFlowMethodologySection() {
             changelogClassName={METHODOLOGY_SECTION_ACCENT_CLASSES.mintBurnFlow.changelogHover}
           >
               <p>
-                Pharos tracks on-chain mint and burn events for major stablecoins via Alchemy JSON-RPC (Transfer mints/burns
-                plus USDT Issue/Redeem). These raw events are aggregated into hourly buckets and exposed as two separate
+                Pharos tracks on-chain mint and burn events for major stablecoins via JSON-RPC (Transfer mints/burns
+                plus USDT Issue/Redeem). EVM reads use admitted Dwellir with Alchemy fallback; Tron uses admitted Dwellir
+                with TronGrid JSON-RPC fallback. These raw events are aggregated into hourly buckets and exposed as two separate
                 signals: raw net flow for current direction, and a baseline-relative pressure score for context. Counted
                 flow excludes bridge transfers, review-required burns, atomic roundtrips, and individually reviewed
                 protocol-internal movements such as an issuer deploying reserves into its own loan book. Mints to
@@ -128,6 +129,16 @@ export function MintBurnFlowMethodologySection() {
                 sibling contract waits for independently attributable history. The frozen 137 pre-gate source identities are explicitly grandfathered for membership;
                 their ordinary historical coverage and freshness checks still apply. An admitted leg that
                 later stalls stays in scope, and a changed configuration must qualify again.
+              </p>
+              <p>
+                USDT Tron joins through that admission gate in the critical lane. Only Issue/Redeem count;
+                their paired zero-address Transfers would duplicate the same flow. Scans stop at a fresh
+                solidified head. Historical conservation remains unsupported because Tron cannot supply the
+                required historical state. Once admitted, Tron joins USDT&apos;s totals, pressure baseline and
+                tracked-chain gauge weight. The digest re-bins the published gauge and uses its coin nets;
+                DDR&apos;s mint-surge input includes all admitted chains. DEWS keeps Ethereum as USDT&apos;s
+                canonical chain. The 90-day admission baseline protects the published 90-day net from a
+                newly joined chain with shorter history.
               </p>
               <p>
                 Historical hours before the fixed October 20, 2026 noon UTC cutover may use explicitly labelled

@@ -80,6 +80,18 @@ describe("conservation compatibility schema", () => {
     expect(MintBurnConservationRecordSchema.safeParse(published).success).toBe(true);
   });
 
+  it("validates conservation address spelling against its chain without changing EVM admission", () => {
+    const address = "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t";
+    const tron = { ...conservationFixture(), chainId: "tron", address,
+      status: "unsupported", reason: "tron-historical-state-unavailable", fromBlock: null, toBlock: null };
+    expect(MintBurnConservationRecordSchema.parse(tron).address).toBe(address);
+    for (const patch of [
+      { address: address.toLowerCase() }, { address: `${address}1` }, { address: address.replace("7", "0") },
+      { address: "0xa614f803b6fd780986a42c78ec9c7f77e6ded13c" }, { chainId: "ethereum" },
+    ]) expect(MintBurnConservationRecordSchema.safeParse({ ...tron, ...patch }).success).toBe(false);
+    expect(MintBurnConservationRecordSchema.safeParse({ ...conservationFixture(), address: `0x${"A".repeat(40)}` }).success).toBe(true);
+  });
+
   it.each(["01", "-0", "+1", "1e3", "1.0", "", "9".repeat(101)])("rejects noncanonical raw integer %s", (raw) => {
     expect(MintBurnConservationRecordSchema.safeParse({ ...conservationFixture(), residualRaw: raw }).success).toBe(false);
   });
@@ -179,6 +191,33 @@ describe("getMintBurnReconciliation verified conservation", () => {
   it("rejects positive evidence for a currently unsupported rebasing config", async () => {
     expect((await reconcile({ id: "m-m0" })).rows[0].status).toBe("insufficient-source");
   });
+
+  it("publishes a schema-valid unsupported Tron reason even when stored evidence claims a conservation pass", async () => {
+    const result = await reconcile({ id: "usdt-tether" });
+    expect(result.rows[0].status).toBe("insufficient-source");
+    const tron = result.rows[0].conservation?.find((record) => record.chainId === "tron");
+    expect(tron).toMatchObject({
+      status: "unsupported", reason: "tron-historical-state-unavailable",
+      address: "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", fromBlock: null, toBlock: null,
+    });
+    expect(tron).not.toHaveProperty("residualRaw");
+    expect(MintBurnReconciliationSummarySchema.safeParse(result).success).toBe(true);
+  });
+
+  it.each(["Tr7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t", "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6u"])(
+    "rejects case-changed or bad-checksum Tron evidence %s before any positive verdict", async (address) => {
+      const eligibility = conservationModule.getMintBurnConservationEligibility;
+      vi.spyOn(conservationModule, "getMintBurnConservationEligibility").mockImplementation((config) =>
+        config.chain.chainId === "tron" ? { supported: true } : eligibility(config));
+      const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "usdt-tether");
+      const records = configs.map((config) => ({ ...conservationFixture(config),
+        ...(config.chain.chainId === "tron" ? { address } : {}) }));
+      const result = await reconcile({ id: "usdt-tether", records });
+      expect(result.rows[0].conservation?.find((record) => record.chainId === "tron")).toMatchObject({
+        status: "unavailable", reason: "Conservation evidence does not match the current contract configuration or clock.",
+      });
+    },
+  );
 
   it("does not cancel opposite residuals on separate contracts or intervals", async () => {
     const configs = MINT_BURN_CONFIGS.filter((config) => config.stablecoinId === "buidl-blackrock");

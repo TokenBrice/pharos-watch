@@ -5,6 +5,8 @@ import { recordOutcomeDecision, shouldAttemptFetch } from "../../../lib/circuit-
 import { fetchEvmBlockNumber, requestJsonRpcAtUrl } from "../../../lib/evm-rpc";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import type { RpcEndpoint } from "../../../lib/chain-registry";
+import { TronJsonRpcReader } from "../../../lib/tron-jsonrpc";
+import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 
 const mocks = vi.hoisted(() => ({
   syncMintBurn: vi.fn(),
@@ -191,6 +193,80 @@ describe("mint/burn slot lanes", () => {
     const rt = withProviders(runtime("halfHourlyMintBurnExtended", "18 * * * *"));
     await runHalfHourlyMintBurnExtendedSlot(rt);
     expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.ALCHEMY, "failure");
+  });
+
+  it.each([true, false])("attributes real Tron reader outcomes to their own circuits (healthy fallback: %s)", async (healthyFallback) => {
+    const timestamp = Math.floor(Date.now() / 1000);
+    const hash = `0x${"a".repeat(64)}`;
+    vi.stubGlobal("fetch", vi.fn(async (url: string, init: RequestInit) => {
+      if (url.includes("dwellir") || !healthyFallback) return new Response("unavailable", { status: 503 });
+      if (url.endsWith("/walletsolidity/getnowblock")) return Response.json({
+        blockID: hash.slice(2), block_header: { raw_data: { number: 100, timestamp: timestamp * 1000 } },
+      });
+      const body = JSON.parse(String(init.body));
+      return Response.json({ jsonrpc: "2.0", id: body.id, result: body.method === "eth_blockNumber"
+        ? "0x65" : { number: "0x64", hash, timestamp: `0x${timestamp.toString(16)}` } });
+    }));
+    const rt = runtime("halfHourlyMintBurnCritical", "4 * * * *");
+    rt.dwellirNative = createDwellirNativeCapability("test-key");
+    rt.env.TRONGRID_API_KEY = "test-grid-key";
+    mocks.syncMintBurn.mockImplementationOnce(async (_db, _key, options) => {
+      expect(options.dwellirNative).toBe(rt.dwellirNative);
+      expect(options.trongridApiKey).toBe(rt.env.TRONGRID_API_KEY);
+      const reader = new TronJsonRpcReader({ ...options,
+        budget: { count: 0, limit: 10 }, deadlineMs: Date.now() + 30_000, rateLimit: (fn) => fn(),
+      });
+      if (healthyFallback) expect((await reader.getSolidHead()).number).toBe(100);
+      else await expect(reader.getSolidHead()).rejects.toMatchObject({ reason: "tron-rpc-providers-unavailable" });
+      return { status: "ok" };
+    });
+    await runHalfHourlyMintBurnCriticalSlot(rt);
+    expect(recordOutcomeDecision).toHaveBeenCalledWith(rt.db, CIRCUIT_SOURCE.DWELLIR_EVM, "failure");
+    expect(recordOutcomeDecision).toHaveBeenCalledWith(rt.db, CIRCUIT_SOURCE.TRONGRID, healthyFallback ? "success" : "failure");
+    expect(vi.mocked(recordOutcomeDecision).mock.calls.some(([, source]) => source === CIRCUIT_SOURCE.ALCHEMY)).toBe(false);
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+    expect(JSON.parse(result?.metadata ?? "{}").providerOutcomes).toEqual([
+      expect.objectContaining({ provider: "dwellir", failures: 1, successes: 0,
+        reasons: { "tron-rpc-transport-error": 1 } }),
+      expect.objectContaining({ provider: "trongrid", failures: healthyFallback ? 0 : 1, successes: healthyFallback ? 3 : 0 }),
+    ]);
+  });
+
+  it.each([
+    { reason: "stale", decision: "failure", outcomeReason: "tron-rpc-stale-solid-head" },
+    { reason: "rate-limit", decision: "failure", outcomeReason: "rpc-rate-limited" },
+    { reason: "semantic", decision: "neutral", outcomeReason: "rpc-semantic-error-or-unavailable-result" },
+    { reason: "unavailable", decision: "neutral", outcomeReason: "tron-rpc-missing-result" },
+    { reason: "budget", decision: null, outcomeReason: null },
+    { reason: "disabled", decision: null, outcomeReason: null },
+  ])("keeps Tron $reason outcomes separate from Alchemy", async ({ reason, decision, outcomeReason }) => {
+    const timestamp = Math.floor(Date.now() / 1000) - 601;
+    vi.stubGlobal("fetch", vi.fn(async (_url: string, init: RequestInit) => {
+      if (reason === "stale") return Response.json({ blockID: "a".repeat(64),
+        block_header: { raw_data: { number: 100, timestamp: timestamp * 1000 } } });
+      const body = JSON.parse(String(init.body));
+      if (reason === "unavailable") return Response.json({ jsonrpc: "2.0", id: body.id, result: null });
+      return Response.json({ jsonrpc: "2.0", id: body.id, error: reason === "rate-limit"
+        ? { code: -32005, message: "Rate limit exceeded" } : { code: -32602, message: "Invalid params" } });
+    }));
+    const rt = runtime("halfHourlyMintBurnExtended", "18 * * * *");
+    mocks.syncMintBurn.mockImplementationOnce(async (_db, _key, options) => {
+      const reader = new TronJsonRpcReader({ signal: options.signal,
+        dwellirNative: reason === "disabled" ? undefined : createDwellirNativeCapability("test-key"),
+        trongridAllowed: false, budget: { count: 0, limit: reason === "budget" ? 0 : 10 },
+        deadlineMs: Date.now() + 30_000, rateLimit: (fn) => fn(),
+      });
+      if (reason === "stale") await expect(reader.getSolidHead()).rejects.toMatchObject({ reason: outcomeReason });
+      else await expect(reader.getBlock(100)).rejects.toThrow();
+      return { status: "degraded" };
+    });
+    await runHalfHourlyMintBurnExtendedSlot(rt);
+    if (decision == null) expect(recordOutcomeDecision).not.toHaveBeenCalled();
+    else expect(recordOutcomeDecision).toHaveBeenCalledExactlyOnceWith(rt.db, CIRCUIT_SOURCE.DWELLIR_EVM, decision);
+    const result = await vi.mocked(rt.runLeasedCron).mock.results[0].value;
+    expect(JSON.parse(result?.metadata ?? "{}").providerOutcomes).toEqual(decision == null ? [] : [
+      expect.objectContaining({ provider: "dwellir", reasons: { [outcomeReason!]: 1 } }),
+    ]);
   });
 
   it("keeps another provider usable when Alchemy's circuit is open", async () => {

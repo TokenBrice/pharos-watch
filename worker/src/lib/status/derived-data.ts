@@ -1,4 +1,5 @@
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { canonicalTronAddress } from "@shared/lib/tron-address";
 import { WORKER_ACTIVE_IDS } from "@shared/lib/stablecoins/worker-runtime-registry";
 import { MintBurnConservationRecordSchema, type MintBurnConservationRecord, type MintBurnReconciliationRow, type MintBurnReconciliationSummary, type StatusResponse } from "@shared/types/status";
 import { buildInClause } from "../db";
@@ -6,7 +7,7 @@ import { buildCoinCoverageMap, readMintBurnCronSnapshot, type MintBurnCronSnapsh
 import { readMintBurnSyncStateBatch } from "../mint-burn-pipeline/sync-state";
 import { MINT_BURN_PUBLIC_FRESHNESS_MAX_AGE_SEC } from "../mint-burn-health-config";
 import { MINT_BURN_CONFIGS, type MintBurnContractConfig } from "../mint-burn-contracts";
-import { mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
+import { conservationIdentityAddress, mintBurnConservationCacheKey, mintBurnConservationFingerprint, readMintBurnConservationRecords, getMintBurnConservationEligibility } from "../mint-burn-conservation";
 import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
 import { logWorkerEvent } from "../structured-log";
 import { readMintBurnScanCoverage, type MintBurnScanSegment } from "../mint-burn-pipeline/scan-coverage";
@@ -232,7 +233,8 @@ function validateConservationRecord(
   if (record.key !== mintBurnConservationCacheKey(config)
     || record.configFingerprint !== mintBurnConservationFingerprint(config)
     || record.stablecoinId !== config.stablecoinId || record.chainId !== config.chain.chainId
-    || record.address.toLowerCase() !== config.contractAddress.toLowerCase()
+    || conservationIdentityAddress(config.chain.chainId, record.address) !== conservationIdentityAddress(config.chain.chainId, config.contractAddress)
+    || (config.chain.chainId === "tron" && canonicalTronAddress(record.address) == null)
     || record.decimals !== config.decimals || record.checkedAt > now) {
     return unavailable("Conservation evidence does not match the current contract configuration or clock.");
   }

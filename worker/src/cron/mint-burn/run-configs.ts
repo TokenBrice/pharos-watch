@@ -11,6 +11,7 @@ import { deferConfig, loadActiveConfigDeferrals, shouldDeferConfig } from "./run
 import { createMintBurnConfigSummary, type MintBurnConfigSummary } from "./sync-config";
 import { mintBurnScanRequestFloor, MINT_BURN_RETRY_BOUNDARY_REQUESTS, syncMintBurnConfigWithRetries } from "./scan-with-retry";
 import type { MintBurnChainContext } from "./chain-context";
+import { TronRpcError } from "../../lib/tron-jsonrpc";
 import type { MintBurnCoverageRepairSummary } from "./repair-coverage";
 import {
   conservationOnlyEventDefsFor, fetchConservationBoundaries, getMintBurnConservationEligibility, MINT_BURN_CONSERVATION_PREPASS_MAX_MS,
@@ -46,8 +47,12 @@ function configScanRange(
     let affordable = fromBlock;
     while (affordable < scanTo) {
       const candidate = affordable + Math.ceil((scanTo - affordable) / 2);
-      if (mintBurnScanRequestFloor({ config, fromBlock, scanTo: candidate,
-        rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads }) <= requestBudgetLimit) {
+      const scanInput = { config, fromBlock, scanTo: candidate,
+        rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads };
+      // Cold event headers can exhaust a full-size Tron scan; fund its smaller retry too.
+      const retryReserve = config.chain.chainId === "tron" && candidate > fromBlock
+        ? mintBurnScanRequestFloor({ ...scanInput, scanTo: fromBlock + Math.floor((candidate - fromBlock) / 2) }) : 0;
+      if (mintBurnScanRequestFloor(scanInput) + retryReserve <= requestBudgetLimit) {
         affordable = candidate;
       } else scanTo = candidate - 1;
     }
@@ -265,8 +270,18 @@ export async function runMintBurnConfigPhase(input: {
       finalizeSummary();
       continue;
     }
+    if (chainContext?.tronReader && chainContext.chainHead != null) {
+      chainContext.tronReader = chainContext.tronReader.withBudget(input.budget, deadlineMs);
+      try {
+        chainContext.chainHead = (await chainContext.tronReader.getSolidHead()).number;
+      } catch (error) {
+        rethrowIfAborted(error, input.signal);
+        chainContext.chainHead = null;
+        chainContext.chainHeadFailureReason = error instanceof TronRpcError ? error.reason : "tron-rpc-read-failed";
+      }
+    }
     if (chainContext?.chainHead == null) {
-      summary.skippedReason = "finality-head-unavailable";
+      summary.skippedReason = chainContext?.chainHeadFailureReason ?? "finality-head-unavailable";
       summary.eventCoverage = config.events.map((eventDef) => ({
         eventDef: `${eventDef.signature}:${eventDef.direction}`,
         status: "finality-head-unavailable",
@@ -378,6 +393,7 @@ export async function runMintBurnConfigPhase(input: {
         chainHead: chainContext.chainHead,
         rpcEndpoints: chainContext.rpcEndpoints,
         endpointHeads: chainContext.endpointHeads,
+        tronReader: chainContext.tronReader,
         signal: input.signal,
         configBudgetLimit: configBudgetLimit - pendingBoundaryBudget.count,
         runTimestamp: input.runTimestamp,

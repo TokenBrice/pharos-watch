@@ -4,6 +4,7 @@ import type { ChainRpcConfig, RpcEndpoint } from "../chain-registry";
 import { throwIfAborted } from "../abort";
 import { budgetExhausted, type SubrequestBudget } from "../evm-logs";
 import { fetchEvmBlockHeader, type EvmBlockHeader } from "../evm-rpc";
+import { TronRpcError, type TronJsonRpcReader } from "../tron-jsonrpc";
 
 export function mintBurnAlchemyEndpoint(url: string): RpcEndpoint {
   return { url, operator: "alchemy", keyed: true, position: "registry", stateHistory: "archive", logsHistory: "full" };
@@ -12,6 +13,7 @@ export function mintBurnAlchemyEndpoint(url: string): RpcEndpoint {
 /** The supplied map must be the scheduled runtime's already-admitted map; never builds Dwellir. */
 export function mintBurnRpcEndpoints(chainId: string, apiKey: string,
   chainRpcs?: ReadonlyMap<string, ChainRpcConfig>): readonly RpcEndpoint[] {
+  if (chainId === "tron") return [];
   const url = buildAlchemyUrl(chainId, apiKey);
   if (!url) throw new Error(`Failed to build ${chainId} Alchemy URL`);
   const dwellir = chainRpcs?.get(chainId)?.endpoints.find((endpoint) => endpoint.operator === "dwellir"
@@ -26,7 +28,11 @@ export function mintBurnRpcEndpoints(chainId: string, apiKey: string,
 
 /** CHAIN owns tag capability admission and strict number/hash/timestamp validation. */
 export async function getMintBurnFinalizedHead(chainId: string, endpoints: readonly RpcEndpoint[],
-  budget: SubrequestBudget, signal?: AbortSignal): Promise<EvmBlockHeader | null> {
+  budget: SubrequestBudget, signal?: AbortSignal, tronReader?: TronJsonRpcReader): Promise<EvmBlockHeader | null> {
+  if (chainId === "tron") {
+    const block = await tronReader?.getSolidHead();
+    return block ? { ...block, hash: block.hash as `0x${string}` } : null;
+  }
   return fetchEvmBlockHeader(chainId, "finalized", {
     chainRpcs: new Map([[chainId, { chainId, chainName: chainId, type: "evm", endpoints, explorerUrl: "" }]]),
     signal,
@@ -55,7 +61,26 @@ function boundLogRange(result: AlchemyLogsFetchResult | null, fromBlock: number,
 /** Resume only at the proven contiguous frontier, discarding logs beyond an unproven gap. */
 export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contractAddress: string,
   topics: AlchemyTopicFilter[], fromBlock: number, toBlock: number, budget: SubrequestBudget,
-  signal?: AbortSignal, options?: { deadlineMs?: number; endpointHeads?: Map<string, number> }): Promise<AlchemyLogsFetchResult | null> {
+  signal?: AbortSignal, options?: { deadlineMs?: number; endpointHeads?: Map<string, number>; tronReader?: TronJsonRpcReader }): Promise<AlchemyLogsFetchResult | null> {
+  if (options?.tronReader) {
+    if (topics.length !== 1 || topics[0].index !== 0) throw new Error("Unsupported Tron mint/burn topic filter");
+    const before = budget.count;
+    const topic = topics[0].value;
+    let result;
+    try {
+      result = await options.tronReader.getLogs(contractAddress, typeof topic === "string" ? [topic] : [...topic], fromBlock, toBlock);
+    } catch (error) {
+      throwIfAborted(signal);
+      return { logs: [], complete: false, scannedToBlock: fromBlock - 1,
+        calls: budget.count - before, maxDepth: 0,
+        failureReason: error instanceof TronRpcError ? error.reason : "tron-rpc-read-failed" };
+    }
+    const hex = (value: number) => `0x${value.toString(16)}`;
+    return { logs: result.logs.map((log) => ({ ...log, blockNumber: hex(log.blockNumber),
+      transactionIndex: hex(log.transactionIndex), logIndex: hex(log.logIndex), removed: false })),
+      complete: result.complete && result.scannedToBlock >= toBlock, scannedToBlock: result.scannedToBlock,
+      calls: budget.count - before, maxDepth: result.maxSplitDepth, failureReason: result.reason ?? undefined };
+  }
   if (endpoints.length === 1) {
     return boundLogRange(await fetchAlchemyLogs(endpoints[0].url, contractAddress, topics, fromBlock, toBlock, budget, signal,
       options?.deadlineMs != null ? { deadlineMs: options.deadlineMs } : undefined), fromBlock, toBlock);
@@ -103,8 +128,23 @@ export async function fetchMintBurnLogs(endpoints: readonly RpcEndpoint[], contr
 }
 
 export async function resolveMintBurnBlockTimestamps(endpoints: readonly RpcEndpoint[], blocks: number[],
-  budget: SubrequestBudget, options?: ResolveBlockTimestampOptions): Promise<Map<number, number>> {
+  budget: SubrequestBudget, options?: ResolveBlockTimestampOptions & { tronReader?: TronJsonRpcReader }): Promise<Map<number, number>> {
   const resolved = new Map<number, number>();
+  if (options?.tronReader) {
+    for (const number of [...new Set(blocks)]) {
+      throwIfAborted(options.signal);
+      try {
+        const block = await options.tronReader.getBlock(number);
+        const expectedHash = options.blockHashes?.get(number);
+        if (expectedHash !== undefined && expectedHash.toLowerCase() !== block.hash) continue;
+        resolved.set(number, block.timestamp);
+      } catch {
+        throwIfAborted(options.signal);
+        if (budgetExhausted(budget) || (options.deadlineMs != null && Date.now() >= options.deadlineMs)) break;
+      }
+    }
+    return resolved;
+  }
   for (const endpoint of endpoints) {
     throwIfAborted(options?.signal);
     const pending = blocks.filter((block) => !resolved.has(block));

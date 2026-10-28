@@ -46,6 +46,9 @@ async function resolveBackfillConfig(
     if (!config) {
       return { ok: false, response: errorResponse(404, "Unknown mint/burn configKey") };
     }
+    if (config.chain.type !== "evm") {
+      return { ok: false, response: errorResponse(400, `mint-burn-operator-chain-unsupported: ${config.chain.chainId}`) };
+    }
     return {
       ok: true,
       config,
@@ -55,7 +58,7 @@ async function resolveBackfillConfig(
   }
 
   const eligibleConfigs = MINT_BURN_CONFIGS.filter(
-    (entry) => entry.enabled !== false && ACTIVE_IDS.has(entry.stablecoinId),
+    (entry) => entry.chain.type === "evm" && entry.enabled !== false && ACTIVE_IDS.has(entry.stablecoinId),
   );
   if (eligibleConfigs.length === 0) {
     return { ok: false, response: errorResponse(400, "No eligible mint/burn configs are enabled") };
@@ -109,11 +112,12 @@ export async function handleBackfillMintBurn({
   alchemyApiKey = null,
 }: BackfillMintBurnRouteContext): Promise<Response> {
   const executeBackfill = async (body: Record<string, unknown>): Promise<Response> => {
+    const configKeyParam = readAdminStringParam(body, url.searchParams, "configKey")?.toLowerCase() ?? null;
+    const explicitConfig = configKeyParam ? await resolveBackfillConfig(db, new Map(), configKeyParam) : null;
+    if (explicitConfig && !explicitConfig.ok) return explicitConfig.response;
     if (!alchemyApiKey) {
       return errorResponse(500, "ALCHEMY_API_KEY is not configured");
     }
-
-    const configKeyParam = readAdminStringParam(body, url.searchParams, "configKey")?.toLowerCase() ?? null;
 
     const chunkMax = ETHEREUM_CHUNK_SIZE;
     const defaultChunkSize = chunkMax;
@@ -146,7 +150,8 @@ export async function handleBackfillMintBurn({
 
     const budget = createBudget(BACKFILL_BUDGET_LIMIT);
     const chainHeads = new Map<string, number>();
-    for (const chainId of [...new Set(MINT_BURN_CONFIGS.map((config) => config.chain.chainId))]) {
+    for (const chainId of [...new Set(MINT_BURN_CONFIGS.filter((config) => config.chain.type === "evm")
+      .map((config) => config.chain.chainId))]) {
       const alchemyUrl = buildAlchemyUrl(chainId, alchemyApiKey);
       if (!alchemyUrl) {
         return errorResponse(400, `Alchemy URL is not configured for chain ${chainId}`);
@@ -158,7 +163,7 @@ export async function handleBackfillMintBurn({
       chainHeads.set(chainId, finalized.number);
     }
 
-    const selectedConfig = await resolveBackfillConfig(db, chainHeads, configKeyParam);
+    const selectedConfig = explicitConfig ?? await resolveBackfillConfig(db, chainHeads, null);
     if (!selectedConfig.ok) return selectedConfig.response;
 
     const { config, selectionMode, autoSelectedReason } = selectedConfig;

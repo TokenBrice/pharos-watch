@@ -5,6 +5,7 @@ import {
 } from "@shared/test-utils/mock-d1";
 import type { MintBurnContractConfig } from "../../lib/mint-burn-contracts-types";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
+import { isGrandfatheredMintBurnConfig } from "../../lib/mint-burn-publication";
 import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
 import type { MintBurnScanSegment } from "../../lib/mint-burn-pipeline/scan-coverage";
 
@@ -91,13 +92,14 @@ const DEFAULT_STABLECOINS_CACHE = JSON.stringify({
       id: "usdt-tether",
       symbol: "USDT",
       circulating: { peggedUSD: 100_000_000_000 },
+      chainCirculating: { Ethereum: { current: 100_000_000_000 } },
     },
   ],
 });
 
-/** Explicit synthetic proof for existing flow fixtures; override with [] for bootstrap/legacy cases. */
+/** New configs need explicit proof; defaults preserve the admitted legacy roster. */
 export function makeMintBurnScanSegments(
-  end: number, days = 90, configs: readonly MintBurnContractConfig[] = MINT_BURN_CONFIGS,
+  end: number, days = 90, configs: readonly MintBurnContractConfig[] = MINT_BURN_CONFIGS.filter(isGrandfatheredMintBurnConfig),
 ): Array<MintBurnScanSegment & Record<string, unknown>> {
   return configs.map((config) => ({
     config_key: mintBurnConfigKey(config), from_block: config.startBlock, to_block: config.startBlock + 1_000_000,

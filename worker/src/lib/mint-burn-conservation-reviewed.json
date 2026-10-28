@@ -13932,6 +13932,19 @@
       ],
       "reviewedAt": "2026-09-22",
       "reviewer": "SemA22"
+    },
+    {
+      "chainId": "tron",
+      "stablecoinId": "usdt-tether",
+      "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "tron-historical-state-unavailable",
+      "eventSet": "config-events",
+      "notes": "Dwellir Tron JSON-RPC live probes on 2026-10-28: numeric eth_call block tags for totalSupply() at blocks 85550939 and 85550940 return -32602 (QUANTITY not supported, only latest). Object blockNumber and blockHash pins at both boundaries instead return the identical latest supply, despite the intervening Issue of 1000000000000000 raw units. These responses do not establish historical state. No historical supply reads or conservation pass are admitted. Issue/Redeem are the only public flow events; sampled transactions emit same-amount zero-address Transfers that are excluded to avoid double counting. Evidence: agents/tron-part-c/probes.json w2c014-w2c020 and samples.json.",
+      "windows": [],
+      "reviewedAt": "2026-10-28",
+      "reviewer": "W2-tron live JSON-RPC capability review"
     }
   ]
 }

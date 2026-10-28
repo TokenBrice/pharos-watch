@@ -160,6 +160,7 @@ export async function repairMintBurnCoverage(
       const result = await syncMintBurnConfig({
         db: input.db, config, key, tier: config.tier ?? "critical", fromBlock, scanTo: toBlock,
         chainHead: context.chainHead, rpcEndpoints: context.rpcEndpoints, endpointHeads: context.endpointHeads,
+        tronReader: context.tronReader,
         signal: input.signal, configBudgetLimit: Math.max(0, limit - budget.count), runTimestamp: input.runTimestamp,
         priceContext: input.priceContext, chainTimestampCache: context.chainTimestampCache,
         txContextCache: context.txContextCache, affectedHours: input.affectedHours, deadlineMs,

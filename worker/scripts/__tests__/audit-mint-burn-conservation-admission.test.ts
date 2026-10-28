@@ -63,7 +63,8 @@ function installRpcFixture(failingSecondWindow = false) {
         result = { number: `0x${block.toString(16)}`, timestamp: `0x${(1000 + block).toString(16)}`, hash: word(block) };
       } else if (call.method === "eth_call") {
         const pin = call.params[1] as { blockHash: string };
-        result = word(failingSecondWindow && pin.blockHash === word(98) ? 101 : 100);
+        const data = (call.params[0] as { data: string }).data;
+        result = data === "0x0e136b19" ? word(0) : word(failingSecondWindow && pin.blockHash === word(98) ? 101 : 100);
       } else if (call.method === "eth_getLogs") {
         result = [];
       } else {
@@ -100,6 +101,51 @@ function draft(f: AdmissionFixture): ReviewedConservationEntry[] {
 }
 
 describe("conservation admission CLI journal and write boundary", () => {
+  it("reports reviewed unsupported identities without credentials, network, or a fabricated audited range", async () => {
+    const f = fixture();
+    const unsupported = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "a7a5-old-vector")!;
+    const network = vi.fn(() => { throw new Error("Unsupported audit reached network"); });
+    vi.stubGlobal("fetch", network);
+    vi.stubEnv("ALCHEMY_API_KEY", "");
+    const out = join(f.directory, "unsupported");
+    await expect(runAdmissionAuditCli(["--ids", unsupported.stablecoinId, "--out", out], f))
+      .rejects.toThrow("unsupported (rebasing-supply-without-events)");
+    expect(network).not.toHaveBeenCalled();
+    expect(process.loadEnvFile).not.toHaveBeenCalled();
+    const result = JSON.parse(readFileSync(join(out, `${unsupported.chain.chainId}-${unsupported.contractAddress}.json`), "utf8"));
+    expect(result.window).toBeNull();
+    expect(result.record).toMatchObject({ status: "unsupported", reason: "rebasing-supply-without-events" });
+    expect(result.record.fromBlock).toBeNull();
+    expect(result.record.toBlock).toBeNull();
+    expect(result.record).not.toHaveProperty("residualRaw");
+    expect(readFileSync(join(out, "journal.jsonl"), "utf8").trim().split("\n")).toHaveLength(1);
+  });
+
+  it("audits Ethereum USDT while reporting Tron unsupported without an Alchemy route or semantic file", async () => {
+    const f = fixture();
+    const ethereum = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "usdt-tether" && item.chain.chainId === "ethereum")!;
+    const tron = MINT_BURN_CONFIGS.find((item) => item.stablecoinId === "usdt-tether" && item.chain.chainId === "tron")!;
+    const review = reviewedSidecar.entries.find((item) => item.stablecoinId === "usdt-tether" && item.chainId === "ethereum")!;
+    writeFileSync(join(f.semanticDir, `usdt-tether__ethereum-${ethereum.contractAddress}.json`), JSON.stringify({
+      ...review, configDecimals: ethereum.decimals, semanticVerdict: "config-events",
+    }));
+    const network = installRpcFixture();
+    const out = join(f.directory, "usdt");
+    await expect(runAdmissionAuditCli([
+      "--ids", "usdt-tether", "--out", out, "--to-block", "102", "--window-blocks", "2",
+      "--semantic-dir", f.semanticDir,
+    ], f)).rejects.toThrow("unsupported (tron-historical-state-unavailable)");
+    expect(network).toHaveBeenCalled();
+    expect(network.mock.calls.every(([request]) => (request as Request).url.startsWith("https://eth-mainnet.g.alchemy.com/"))).toBe(true);
+    const ethereumResult = JSON.parse(readFileSync(join(out, `ethereum-${ethereum.contractAddress}.json`), "utf8"));
+    expect(ethereumResult.record.status).toBe("ok");
+    const tronResult = JSON.parse(readFileSync(join(out, `tron-${tron.contractAddress}.json`), "utf8"));
+    expect(tronResult.config.address).toBe(tron.contractAddress);
+    expect(tronResult.window).toBeNull();
+    expect(tronResult.record).toMatchObject({ status: "unsupported", reason: "tron-historical-state-unavailable", address: tron.contractAddress });
+    expect(tronResult.record).not.toHaveProperty("residualRaw");
+  });
+
   it("replays the original bytes and record without credentials, network, semantics, or implicit merge", async () => {
     const f = fixture();
     const journal = await seedJournal(f);

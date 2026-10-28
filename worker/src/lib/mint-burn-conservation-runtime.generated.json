@@ -1524,6 +1524,15 @@
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "tron",
+      "stablecoinId": "usdt-tether",
+      "address": "TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t",
+      "decimals": 6,
+      "disposition": "unsupported",
+      "unsupportedReason": "tron-historical-state-unavailable",
+      "eventSet": "config-events"
     }
   ]
 }

@@ -73,6 +73,23 @@ describe("handleMintBurnEvents", () => {
     expect(countQuery?.binds).toContain("arbitrum");
   });
 
+  it("filters USDT events to Tron and preserves its explorer URL", async () => {
+    const explorerTxUrl = `https://tronscan.org/#/transaction/${"a".repeat(64)}`;
+    const db = eventDb([
+      makeMintBurnRow({ id: "usdt-ethereum", chain_id: "ethereum" }),
+      makeMintBurnRow({ id: "usdt-tron", chain_id: "tron", explorer_tx_url: explorerTxUrl }),
+    ]);
+    const res = await handleMintBurnEvents(
+      db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&chain=tron"),
+    );
+
+    expect(res.status).toBe(200);
+    expect(await res.json()).toMatchObject({
+      total: 1,
+      events: [{ id: "usdt-tron", chainId: "tron", explorerTxUrl }],
+    });
+  });
+
   it("rejects invalid burnType with 400", async () => {
     const db = mockD1([]);
     const res = await handleMintBurnEvents(db, new URL("https://x/api/mint-burn-events?stablecoin=usdt-tether&burnType=foo"));
