@@ -340,7 +340,7 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     stablecoinId: "usdfc-secured-finance",
     owner: "ops",
     reason:
-      "Reviewed 2026-10-23 06:36 UTC: CoinGecko usdfc remains dated 2026-10-14 18:27:04 UTC ($0.950358, $4,568 daily volume) with zero tickers, beyond the unchanged freshness budget. DefiLlama list asset 248 has a null price and the coins API returns no quote for filecoin:0x80b98d3aa09ffff255c3ba4a241111ff1262f045. Exact-contract DexScreener returns no pairs. GeckoTerminal/CoinGecko Onchain report $105,709 total reserves but a null token price, so the address lane rejects it as missing-quote. The SushiSwap v3 USDFC/WFIL pool ($180,520 reserves) passes the $50K pool floor but shows zero 24h volume, and pricing it needs an exact-pool adapter plus a reviewed FIL/USD dependency that do not exist. Keep USDFC missing, preserve all admission gates, and have ops establish an admissible observed market or re-review within seven days. Trove redemption at $1 of oracle-valued FIL is not an observed price.",
+      "Continuing-gap review from fresh GETs on 2026-10-28 09:51 UTC: CoinGecko usdfc is still $0.950358 with $4,568.26 reported 24h volume, dated 2026-10-14 18:27:04 UTC and beyond the seven-day budget; tickers are empty. DefiLlama list asset 248 has a null price and its exact Filecoin coins query returns no quote. Exact-contract DexScreener returns no pairs. GeckoTerminal and CoinGecko Onchain token/price reads return null; tokens/multi reports $105,709.42 reserves and zero 24h volume, so the address lane rejects missing-quote. Both pool lists show SushiSwap v3 USDFC/WFIL at $1.0064191704 with $180,519.60 reserves and zero 24h trades/volume, but no upstream quote clock; no exact-pool adapter or reviewed FIL/USD dependency admits that mark. The largest axlUSDC pool has only $19,097.74 reserves, below the $50K floor. No admissible market was found. Keep USDFC missing and have ops establish an admitted observed market or re-review within seven days; preserve every admission gate. Trove redemption at $1 of oracle-valued FIL is not an observed price.",
     sources: [
       "https://api.coingecko.com/api/v3/simple/price?ids=usdfc&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
       "https://api.coingecko.com/api/v3/coins/usdfc/tickers",
@@ -349,9 +349,13 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
       "https://api.dexscreener.com/token-pairs/v1/filecoin/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
       "https://api.geckoterminal.com/api/v2/networks/filecoin/tokens/0x80b98d3aa09ffff255c3ba4a241111ff1262f045/pools",
       "https://api.geckoterminal.com/api/v2/networks/filecoin/tokens/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+      "https://api.geckoterminal.com/api/v2/simple/networks/filecoin/token_price/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+      "https://pro-api.coingecko.com/api/v3/onchain/networks/filecoin/tokens/multi/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+      "https://pro-api.coingecko.com/api/v3/onchain/simple/networks/filecoin/token_price/0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
+      "https://pro-api.coingecko.com/api/v3/onchain/networks/filecoin/tokens/0x80b98d3aa09ffff255c3ba4a241111ff1262f045/pools",
     ],
-    reviewedAt: Date.UTC(2026, 9, 23, 6, 36) / 1000,
-    expiresAt: Date.UTC(2026, 9, 30, 6, 36) / 1000,
+    reviewedAt: Date.UTC(2026, 9, 28, 9, 52) / 1000,
+    expiresAt: Date.UTC(2026, 10, 4, 9, 52) / 1000,
   },
   {
     stablecoinId: "idrt-rupiah-token",

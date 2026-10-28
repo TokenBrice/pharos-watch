@@ -48,10 +48,22 @@ beforeEach(() => {
 afterEach(() => vi.restoreAllMocks());
 
 describe("supply deployment failure reasons", () => {
-  it("keeps STAC's Ethereum-only CoinGecko cap as an owner-decision candidate", async () => {
-    const meta = TRACKED_META_BY_ID.get("stac-securitize")!;
-    expect(prefersOnChainSupplyMcap(meta)).toBe(false);
-    await expect(fetchCuratedAggregateOnChainMcap(meta, 1037.161063, buildChainRpcs())).resolves.toBeNull();
+  it.each([
+    "acrdx-anemoy-apollo", "susdai-usd-ai", "myrc-blox", "stac-securitize", "eurspkcc-spiko",
+  ])("prefers %s's reviewed complete native stock and withholds an unreadable leg", async (id) => {
+    const meta = TRACKED_META_BY_ID.get(id)!;
+    expect(prefersOnChainSupplyMcap(meta)).toBe(true);
+    probeTrackedTokenSupplyMock.mockResolvedValue(null);
+    fetchErc20TotalSupplyMock.mockResolvedValue(null);
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1.04, buildChainRpcs())).resolves.toBeNull();
+  });
+
+  it.each([
+    "onyc-onre", "thbill-theo", "ustb-superstate", "gtusdcp-gauntlet", "usd3-reserve-protocol",
+  ])("keeps %s outside preferred on-chain replacement", (id) => {
+    const meta = TRACKED_META_BY_ID.get(id);
+    expect(meta).toBeDefined();
+    expect(prefersOnChainSupplyMcap(meta!)).toBe(false);
   });
 
   it.each([false, true])("withholds sFRAX when the joined stock generation is unavailable (native-only roster: %s)", async (nativeOnly) => {
@@ -696,6 +708,7 @@ describe("curation-expanded complete supply rosters", () => {
     { id: "susn-noon", canonical: "ethereum", supplies: { ethereum: 100, zksync: 5, sophon: 5, starknet: 5, hyperevm: 5, base: 5, citrea: 5, berachain: 5, tac: 5 } },
     { id: "apyusd-apyx", canonical: "ethereum", supplies: { ethereum: 100, base: 10, bsc: 10, solana: 10 } },
     { id: "susdai-usd-ai", supplies: { arbitrum: 100, ethereum: 10, base: 20, plasma: 30, solana: 40, arc: 50 } },
+    { id: "stac-securitize", supplies: { ethereum: 100, solana: 170 } },
     { id: "jaaa-janus-henderson-anemoy", supplies: { ethereum: 100, base: 10, bsc: 20, avalanche: 30, monad: 40, arbitrum: 50, pharos: 0, xlayer: 0, arc: 0 } },
   ];
 

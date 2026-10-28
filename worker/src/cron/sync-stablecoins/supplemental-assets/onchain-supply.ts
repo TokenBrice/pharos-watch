@@ -20,6 +20,7 @@ import {
   USDY_SUI_COIN_TYPE,
   onchainSupplyProbeFamily,
   getOnchainSupplyHoldReason,
+  isOnchainSupplyPartitionExcluded,
   selectCuratedAggregateOnchainSupplyProbeContracts,
   selectSupplementalOnchainSupplyProbeContract,
   type OnchainSupplyProbeFamily,
@@ -54,16 +55,8 @@ import type { PeggedAsset } from "../enrich-prices";
 import { isSupplyObservationWithinRestoreCeiling, rescaleChainPartition } from "../shared";
 
 export { computeExcludedBalanceAdjustedSupplyRaw };
+export { prefersOnChainSupplyMcap } from "@shared/lib/onchain-supply-probe";
 
-const PREFER_ONCHAIN_SUPPLY_MCAP_IDS = new Set([
-  // Prefer the complete native Ethereum + Sui receipt aggregate over a
-  // CoinGecko row that historically covered only Sui.
-  "eearn-ember",
-  // Reviewed 2026-10-02: fresh CG cap values 3,997.66 FIUSD units, but the
-  // complete native zkSync + Arbitrum roster reads only 1,517.66 + 0 units.
-  // Never admit that contradictory cap, even when a native leg is unreadable.
-  "fiusd-sygnum",
-]);
 const EXCLUDED_BALANCE_READ_CONCURRENCY = 1;
 const MOVEMENT_USDCX_ID = "usdcx-movement";
 const MOVEMENT_XRESERVE = "0x8888888199b2Df864bf678259607d6D5EBb4e3Ce";
@@ -150,10 +143,6 @@ export async function fetchPinnedNativeShares(
     logWorkerEventArgs("handler", "warn", `[fiat-cg] JLTXX pinned native shares unavailable: ${String(error).slice(0, 200)}`);
     return null;
   }
-}
-
-export function prefersOnChainSupplyMcap(meta: StablecoinMeta): boolean {
-  return meta.id === SFRAX_STOCK_PERIMETER.assetId || PREFER_ONCHAIN_SUPPLY_MCAP_IDS.has(meta.id);
 }
 
 /** Convert an internal on-chain result into the stable public chain row shape. */
@@ -730,6 +719,8 @@ export async function fetchOnChainSupplyPartition(
   chainRpcs?: Map<string, ChainRpcConfig>,
   signal?: AbortSignal,
 ): Promise<Pick<PeggedAsset, "chainCirculating" | "chainPartition"> | { reason: PartitionReadFailure | "ratio-out-of-band"; ratio: number | null }> {
+  throwIfAborted(signal);
+  if (isOnchainSupplyPartitionExcluded(meta.id)) return { reason: "partition-invalid", ratio: null };
   let failure: PartitionReadFailure = "partition-invalid";
   const onFailure = (reason: PartitionReadFailure) => { failure = reason; };
   const observation = selectCuratedAggregateOnchainSupplyProbeContracts(meta)

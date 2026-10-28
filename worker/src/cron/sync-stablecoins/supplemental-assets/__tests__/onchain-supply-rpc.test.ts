@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
+import { PUBLIC_RPC_URLS, SUPPLY_RPC_DEFAULTS } from "@shared/lib/chain-rpc-registry";
 import type { StablecoinMeta } from "@shared/types/core";
 import { buildChainRpcs, type ChainRpcConfig } from "../../../../lib/chain-registry";
 import { fetchCuratedAggregateOnChainMcap, fetchOnChainMcap } from "../onchain-supply";
@@ -32,6 +33,30 @@ afterEach(() => {
 });
 
 describe("supplemental on-chain supply RPC routing", () => {
+  it("routes CDP through the reviewed latest-only Flare supply endpoint", async () => {
+    const fetchMock = vi.fn(async () => supplyResponse(100n));
+    vi.stubGlobal("fetch", fetchMock);
+
+    await expect(fetchCuratedAggregateOnChainMcap(TRACKED_META_BY_ID.get("cdp-enosys")!, 1.25, keyedChainRpcs()))
+      .resolves.toMatchObject({
+        mcap: 125,
+        supplySource: "onchain-total-supply",
+        chainCirculating: { Flare: { current: 125, chainId: "flare" } },
+      });
+    expect(SUPPLY_RPC_DEFAULTS).toHaveProperty("flare.rpcUrl", "https://flare-api.flare.network/ext/C/rpc");
+    expect(PUBLIC_RPC_URLS.flare).toBeUndefined();
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(fetchMock.mock.calls[0]).toEqual([
+      "https://flare-api.flare.network/ext/C/rpc",
+      expect.objectContaining({
+        body: JSON.stringify({
+          jsonrpc: "2.0", id: 1, method: "eth_call",
+          params: [{ to: "0x6cd3a5ba46fa254d4d2e3c2b37350ae337e94a0f", data: TOTAL_SUPPLY_SELECTOR }, "latest"],
+        }),
+      }),
+    ]);
+  });
+
   it("keeps every joined supply/exclusion RPC on one requireCanonical hash through inventory movement", async () => {
     const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
     const holders = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[meta.id].holderAddresses;

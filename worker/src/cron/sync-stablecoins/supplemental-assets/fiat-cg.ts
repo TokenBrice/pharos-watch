@@ -1,6 +1,6 @@
 import { logWorkerEvent, logWorkerEventArgs } from "../../../lib/structured-log";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { getOnchainSupplyHoldReason, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
+import { getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract } from "@shared/lib/onchain-supply-probe";
 import { createTimeoutSignal } from "@shared/lib/timeout-signal";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { ONCHAIN_PARTITION_DIVERGENCE_DETAIL_LIMIT, type OnchainPartitionSummary } from "@shared/types/status/cron";
@@ -117,6 +117,7 @@ export async function fetchFiatCoinGeckoTokens(
     }
 
     const partitionCandidates = FIAT_CG_METAS.filter((meta) => mcapMap[meta.id] != null
+      && !isOnchainSupplyPartitionExcluded(meta.id)
       && !prefersOnChainSupplyMcap(meta) && meta.liveReservesConfig?.adapter !== "jpmorgan-nav"
       && (selectCuratedAggregateOnchainSupplyProbeContracts(meta) || selectSupplementalOnchainSupplyProbeContract(meta)));
     partitionCandidateCount = partitionCandidates.length;

@@ -3,7 +3,7 @@ import { ChainPartitionProvenanceSchema, PriceDerivationSchema, StablecoinListRe
 import type { PriceSourceHealth } from "@shared/types/status";
 import { ACTIVE_META_BY_ID, ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { CHAIN_META } from "@shared/types/chain-identity";
-import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
+import { CURATED_AGGREGATE_ESCROW_RESIDUALS, getOnchainSupplyHoldReason, isOnchainSupplyPartitionExcluded, prefersOnChainSupplyMcap, selectCuratedAggregateOnchainSupplyProbeContracts, selectSupplementalOnchainSupplyProbeContract, SFRAX_STOCK_PERIMETER, isSfraxStockContractRoster } from "@shared/lib/onchain-supply-probe";
 import { deriveSfraxStockPerimeter } from "@shared/lib/sfrax-supply";
 import { SFRAX_STOCK_MAX_AGE_SEC } from "@shared/types/sfrax-supply";
 import {
@@ -350,7 +350,7 @@ function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset {
   const restored = cloneCachedAsset(asset);
   restored.supplyRestored = true;
   restored.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
-  if (asset.chainPartition) {
+  if (asset.chainPartition || (asset.supplySource === "coingecko-fallback" && isOnchainSupplyPartitionExcluded(String(asset.id)))) {
     const partition = restoreCuratedAggregateChainPartition({ ...restored, chainCirculating: {} }, asset, nowSec, true);
     restored.chainCirculating = partition && !partition.expired ? partition.asset.chainCirculating : {};
     if (partition && !partition.expired) restored.chainPartition = partition.asset.chainPartition;
@@ -433,6 +433,7 @@ export function isSupplyObservationWithinRestoreCeiling(observedAt: number, nowS
 }
 
 function isWithinRestoreCeiling(previous: PeggedAsset, nowSec: number): boolean {
+  if (previous.supplySource === "coingecko-fallback" && prefersOnChainSupplyMcap(previous)) return false;
   // Cached on-chain totals must still satisfy today's deployment roster. A
   // removed or expanded aggregate cannot re-enter through generic carry-forward.
   if (previous.supplySource === "onchain-total-supply") {
@@ -555,6 +556,7 @@ export function restoreCuratedAggregateChainPartition(
   nowSec: number,
   rescaleShares = false,
 ): { asset: PeggedAsset; expired: boolean } | null {
+  if (isOnchainSupplyPartitionExcluded(String(current.id))) return null;
   let expectedChainLabels = CURATED_AGGREGATE_SUPPLY_CHAIN_LABELS_BY_ID.get(String(current.id));
   if (rescaleShares && !expectedChainLabels) {
     const meta = ACTIVE_META_BY_ID.get(String(current.id));

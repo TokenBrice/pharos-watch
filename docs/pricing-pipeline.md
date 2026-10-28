@@ -6,7 +6,7 @@ Canonical reference for Pharos live-price selection, fallback enrichment, and so
 
 Supply fallback admits only reviewed, fail-closed, double-count-safe observations; price recovery cannot manufacture supply. The [supply contract](https://github.com/TokenBrice/pharos-watch/blob/main/docs/supply-snapshot.md#supply-pipeline) owns admission/clocks; the [integrity index](https://github.com/TokenBrice/pharos-watch/blob/main/docs/process/pricing-pipeline-appendix.md#data-integrity-guardrails) routes cross-domain protections.
 
-CoinGecko-detail supply may attach a banded on-chain share partition under that supply contract. CoinGecko retains the total, source, clock and historical aggregate buckets; `chainPartition` separately identifies fresh or bounded carried attribution. NAV/yield-bearing valuation still requires an admitted market/NAV price.
+Eligible CoinGecko-detail supply may attach a banded on-chain share partition while retaining its total, source, clock and history. USTB and gtUSDCp cannot receive or carry these partitions. Reviewed native-stock preferences instead replace mismatched caps, failing closed on unreadable legs; NAV valuation still needs an admitted market/NAV price. The [supply contract](supply-snapshot.md#supply-data-source) owns the reconciled perimeters.
 
 
 ---
@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.59`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.60`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
