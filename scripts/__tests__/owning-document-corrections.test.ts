@@ -18,8 +18,8 @@ describe("mint/burn owning document", () => {
   });
 
   it("describes admitted Dwellir-first routing everywhere and keeps the exclusions", () => {
-    expect(mintBurn).toContain("JSON-RPC (Alchemy alone, or enabled and admitted full-log Dwellir first with Alchemy second)");
-    expect(mintBurn).toContain("Enabled, admitted full-log Dwellir runs before Alchemy");
+    expect(mintBurn).toContain("EVM scans use admitted full-log Dwellir before Alchemy");
+    expect(mintBurn).toContain("Enabled, admitted Dwellir runs before the chain's incumbent fallback");
     expect(mintBurn).toContain("mint/burn also requires a supported Alchemy URL (`ALCHEMY_CHAINS` excludes Tempo), and registry support alone does not admit a chain.");
     for (const obsolete of ["Alchemy-first", "reviewed scheduled fallback", "allowlist includes only Ethereum/Arbitrum/Base"]) {
       expect(mintBurn).not.toContain(obsolete);
