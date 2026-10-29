@@ -9591,38 +9591,37 @@
       "rationale": "No maximum entire-cUSDO-position cash-realization horizon is disclosed across Solayer QLP/withdrawal terms and OpenEden redemption/user agreement. Normal two-business-day processing is conditional, measured from acceptance and not a full-position guarantee. The current issuer sunset notice additionally says post-Dec31 manual withdrawals take longer without bounding that delay. cUSDO-to-USDO conversion is not cash settlement."
     },
     {
-      "id": "uw-susd-solayer-3c1d9609c225e08e",
+      "id": "rs-040-susd-solayer-exit-cost-20261029",
       "assetId": "susd-solayer",
       "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
         "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:susd-solayer:stablecoin-redeem"
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:c75c4603-75cb-401c-b4c8-0443d02c0a37:redemption:susd-solayer:stablecoin-redeem",
+        "exposureId": null,
+        "requiredDatum": "cost"
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:01:38Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R27)",
+      "reviewedAt": "2026-10-29T19:13:00Z",
+      "reviewer": "SprintRS040 research sprint 2026-10-29 (RS-040)",
       "sourcesRefs": [
-        "source:243060aabcc8ab43f8ff5f72",
-        "source:718bda6cc58341375f82e162"
+        "source:b8cbf57f08fc701284af63bb",
+        "source:75915c1e533733d0c90289dc",
+        "source:495bb061c404e9343179fff4"
       ],
       "searchedSurfacesRefs": [
-        "surface:79bb6562f7b7c637c6d42e3b",
-        "surface:3621b5ecd6a4dd7ac6a87867",
         "surface:4c875f4388de59304f6bd2f5",
         "surface:db677e33b9839d3580c3c457",
-        "surface:874e1eb42757cfa3644c1616",
-        "surface:6cec0bd41c56a9f59d3b993c",
-        "surface:05aa2d2a455078d9c92ac211",
-        "surface:b039b271bbf46a2116615ed0",
-        "surface:0ca17e381407276ff5f45e32",
-        "surface:d932aa2a2a09efdb731ceca4",
-        "surface:9196b0dd979685e00e89ff3a"
+        "surface:e97fb0417d03d7623ba9c31f",
+        "surface:9e34e63ce22b1e2167d3bdd6",
+        "surface:1d0db2ff4d856e66779811ee",
+        "surface:02b61c83170956329c2d3c77",
+        "surface:b46fbdb061b2c33a1bb31b50",
+        "surface:79bb6562f7b7c637c6d42e3b",
+        "surface:3621b5ecd6a4dd7ac6a87867"
       ],
-      "rationale": "The exact direct sUSD-to-USDC route has no published numerical all-in protocol/QLP redemption fee schedule or upper bound. Withdrawal docs mention only network fees; the RFQ commission statement concerns subscription quotes. Issuer legal/product/FAQ/technical pages, public withdrawal CLI/IDL, audit and current sunset notice do not define applicable redemption pricing. Pool.Fee and collectFee do not establish a withdrawal-charge formula; upstream OpenEden fees are not proven pass-through."
+      "rationale": "The required cost datum is the all-in charge to redeem the same notional through the issuer-facilitated sUSD-to-USDC rail (protocol or QLP fee/commission/spread). The issuer corpus publishes no such figure: the withdrawal tutorial names only an sUSD burn and the associated network fee, the RFQ stakeholder page describes a depositor-set mint-order commission that is pooled to reward QLPs, the withdrawal FAQ describes the QLP payout with no fee, and the sUSD product page and legal terms state no redemption fee. Published cost is therefore limited to unspecified network/gas charges, which are not an issuer redemption fee. This classification binds the current route key only; the earlier cost classification uw-susd-solayer-3c1d9609c225e08e binds the superseded route key ending ef133b3f-...-afbec72172c6."
     },
     {
       "id": "uw-ousd-origin-protocol-c74c3e9309a235aa",
@@ -10878,40 +10877,29 @@
       ]
     },
     {
-      "id": "uw-gusdtq-galaxy-546c20416a03d72c",
+      "id": "rs-040-gusdtq-galaxy-reserve-liquidity-20261029",
       "assetId": "gusdtq-galaxy",
       "scope": {
-        "componentKey": "reserve-exposure",
-        "exposureId": "reserve:78fb8d1e362a1af2d0a958aa",
-        "factorKey": "liquidity",
         "pillar": "backing",
-        "requiredDatum": "liquidityHorizon",
-        "routeKey": null
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:78fb8d1e362a1af2d0a958aa",
+        "requiredDatum": "liquidityHorizon"
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-15T11:01:53Z",
-      "reviewer": "Rev_GusdtqGalaxy primary-source review",
+      "reviewedAt": "2026-10-29T19:13:00Z",
+      "reviewer": "SprintRS040 research sprint 2026-10-29 (RS-040)",
       "sourcesRefs": [
-        "source:dda71e95c984dfeb5e60826b",
-        "source:1d84a02c97ce4f3f7797a331",
-        "source:1301e7acd8add6a636247437",
-        "source:03862df6b74855bbe4afa10a"
+        "source:49f4fea953d1cee289a172c7",
+        "source:ee22509ff803f00db0262609"
       ],
       "searchedSurfacesRefs": [
-        "surface:089af78917bd593cf3abd227",
-        "surface:80954c22c24445ed99224882",
         "surface:6f89286f6c8eac7a9bd8df0f",
-        "surface:d21aa784d0011cced9127d77",
-        "surface:ffc9c48f192ef3fdf6f5f7b7",
-        "surface:22ca0481148a072c72c6b069",
-        "surface:02104660b92fdb0837bc2da7",
-        "surface:458b6b99b3ff39fbe3c44ef3",
-        "surface:512d9a6c34b8f113aa75d7b5",
-        "surface:c9128c7785379ca0ec429b76",
         "surface:ccf05beed7810236384f2608"
       ],
-      "rationale": "Reviewed exact USDT Quality disclosure, Galaxy Curation terms and Morpho mechanics publish no whole-sleeve calendar realization maximum. The exact vault page has no target-allocation publication, terms section 3.2 disclaims withdrawal timing and amount guarantees, Morpho withdrawals require market liquidity, and the in-kind fallback retains a direct lending position. This is researched nondisclosure of a scalar bound, not measured zero liquidity. The former USDC sibling citation has been replaced with the exact USDT page."
+      "rationale": "The required liquidityHorizon is a maximum calendar interval in which the whole USDT deposited into Galaxy-curated Morpho lending markets can be realised. The exact vault page now publishes dated target allocation weights (2026-10-16) but no realisation timeline, liquidation horizon or whole-position exit maximum, and Galaxy's Curation terms section 3.2 disclaim withdrawal timing and realised amount. Galaxy's public disclosure corpus for this vault is the Curation terms plus the per-vault page, neither of which publishes the scalar bound, so the datum remains researched nondisclosure of a bound rather than measured zero liquidity. This entry replaces uw-gusdtq-galaxy-546c20416a03d72c, whose supporting excerpt ('No allocation has been published for this vault yet.') no longer appears on the vault page; the scope is unchanged."
     },
     {
       "id": "uw-arcusdc-galaxy-b5b7835f16abacc2",
@@ -48113,6 +48101,72 @@
         "surface:9d603d34d7df3325f712168e"
       ],
       "rationale": "No dated independent reserve attestation or reserve-to-liability reconciliation is published. The issuer's reserve panel is an 'Updating Reserves in USD' placeholder, and the only reports linked under Trust and Transparency are Halborn (August 2024) and Hacken (December 2023) smart-contract audits, which speak to code and not to reserve holdings or token liabilities. The binding disclaimer states the issuer does not guarantee the accuracy, completeness or real-time availability of reserve disclosures and may rely on third-party reporting. HT Digital Assets' homepage, contact and disclaimer pages and the Hex Trust corporate site publish no reserve assurance engagement. This records a dated issuer nondisclosure over the existing 2026-08-08 typed review."
+    },
+    {
+      "id": "rs039-pathusd-treasury-liquidity-20261029",
+      "assetId": "pathusd-bridge",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:1c4dd3588a3d275a0d87b130",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T19:20:00Z",
+      "reviewer": "SprintRS039 research sprint 2026-10-29 (RS-039)",
+      "sourcesRefs": [
+        "source:e4f25992d507b89ec7cc9cf1",
+        "source:b10c7a3fa4318fa2aa7d4539",
+        "source:91d31d8d73051863bb82bea8",
+        "source:4af68d5ade0f5a4fee7013ea",
+        "source:6057c47248ee8e3aaa7ddfec"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:33abc92953d6909fce41f34b",
+        "surface:9864286f009f6ceb1df82db5",
+        "surface:09ac747381a8bdc2cccc04d8",
+        "surface:4f4871180a2137b6718a076f",
+        "surface:31ed585a6f263f967f807a4e",
+        "surface:0eac7142b371c5b2c3416b12",
+        "surface:7bc75a9864421b4627938a4a"
+      ],
+      "rationale": "The required liquidityHorizon is the maximum cash-realization interval of the 74.5% pathUSD Treasury claim bucket (reserve:1c4dd3588a3d275a0d87b130). Bridge publishes the bucket only as an aggregate dollar amount plus a duration footnote for the money-market/T-bill ladders it may contain, and publishes category-level redemption windows in its reserve-configuration documentation (traditional treasuries: US banking hours; tokenized treasuries: primarily US banking hours; treasuries redeemable within 1 business day). Those cells describe the program options a developer can select and are not bound to which instruments or custodians actually hold pathUSD's treasury balance, which the issuer does not identify; the binding stablecoin terms impose only an aggregate market-value floor at the New York close. No enforceable per-holding realization deadline for this pooled bucket is published, so no horizon value is authored and no one-day bound is inferred from a category menu."
+    },
+    {
+      "id": "rs039-pathusd-cash-liquidity-20261029",
+      "assetId": "pathusd-bridge",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-exposure",
+        "factorKey": "liquidity",
+        "routeKey": null,
+        "exposureId": "reserve:ad8f3089c8d58cf408e0be9a",
+        "requiredDatum": "liquidityHorizon"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T19:20:00Z",
+      "reviewer": "SprintRS039 research sprint 2026-10-29 (RS-039)",
+      "sourcesRefs": [
+        "source:e4f25992d507b89ec7cc9cf1",
+        "source:b10c7a3fa4318fa2aa7d4539",
+        "source:91d31d8d73051863bb82bea8",
+        "source:a6a6542bf9c299afe97a5809",
+        "source:6057c47248ee8e3aaa7ddfec"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:33abc92953d6909fce41f34b",
+        "surface:9864286f009f6ceb1df82db5",
+        "surface:09ac747381a8bdc2cccc04d8",
+        "surface:4f4871180a2137b6718a076f",
+        "surface:31ed585a6f263f967f807a4e",
+        "surface:0eac7142b371c5b2c3416b12",
+        "surface:7bc75a9864421b4627938a4a"
+      ],
+      "rationale": "The required liquidityHorizon is the maximum cash-realization interval of the 25.5% pathUSD Cash bucket (reserve:ad8f3089c8d58cf408e0be9a). The issuer reports the cash bucket only as an aggregate amount and describes cash reserve allocation as available for 'rapid redemptions' without a duration or cut-off, while its reserve-management table separates off-chain USD (instantly redeemable during US banking hours) from on-chain stablecoins (instantly redeemable 24/7) and never discloses which of the two the pathUSD cash balance holds. A conditional banking-hours statement therefore cannot be bound to this bucket, and the binding terms guarantee no realization interval at all. The conditional banking-hours discount is recorded here as a candidate only; no horizon value is authored."
     }
   ],
   "sourceObservations": [
@@ -73305,6 +73359,127 @@
         "excerpt": "we strive to provide accurate and up-to-date information regarding the reserves backing our assets but we do not guarantee the accuracy, completeness, or real-time availability of reserve disclosures, which may rely on third-party data or reporting mechanisms.",
         "assertion": "The issuer expressly disclaims guaranteeing reserve disclosure accuracy or completeness and links no independent assurance output."
       }
+    },
+    {
+      "id": "source:49f4fea953d1cee289a172c7",
+      "value": {
+        "url": "https://curation.galaxy.com/vaults/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+        "observedAt": "2026-10-29T19:08:00Z",
+        "datumAsOf": "2026-10-16",
+        "location": "Current optimal allocation (published 2026-10-16 17:00:23 UTC)",
+        "excerpt": "Current optimal allocation / Published 2026-10-16 17:00:23 UTC ... 90.00% Allocaton ... 5.35% ... 4.14% ... 0.51% ... No prior publication records.",
+        "assertion": "The exact USDT Quality vault page now publishes target allocation weights dated 2026-10-16, but publishes no cash-realization timeline, liquidity horizon or whole-position exit maximum; the earlier 'no allocation has been published' state no longer holds."
+      }
+    },
+    {
+      "id": "source:ee22509ff803f00db0262609",
+      "value": {
+        "url": "https://docs.curation.galaxy.com/legal/terms-of-use",
+        "observedAt": "2026-10-29T19:11:00Z",
+        "datumAsOf": null,
+        "location": "Section 3.2 Liquidity Constraints",
+        "excerpt": "We do not guarantee withdrawal timing or that transactions executed by a Covered Vault in connection with your assets will be executed at any particular price or amount.",
+        "assertion": "The curator terms expressly disclaim withdrawal timing and realization amount for the vault's supplied positions, so no enforceable calendar maximum exists in the contractual terms."
+      }
+    },
+    {
+      "id": "source:b8cbf57f08fc701284af63bb",
+      "value": {
+        "url": "https://docs.solayer.org/susd/tutorials/withdraw.md",
+        "observedAt": "2026-10-29T18:52:00Z",
+        "datumAsOf": null,
+        "location": "Step 5: Approve in Wallet; Summary",
+        "excerpt": "This includes sUSD burn and associated network fee. ... While the operation may take up to 2 business days (T+1), you can always monitor progress in real-time.",
+        "assertion": "The issuer's withdrawal tutorial names only an sUSD burn and the associated network fee; it publishes no protocol, partner or QLP redemption fee amount, rate, tier or upper bound."
+      }
+    },
+    {
+      "id": "source:75915c1e533733d0c90289dc",
+      "value": {
+        "url": "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders",
+        "observedAt": "2026-10-29T18:55:00Z",
+        "datumAsOf": null,
+        "location": "Users (Stablecoin Depositors) - Commission Allocation",
+        "excerpt": "The specified commission is pooled in the decentralized RFQ system to reward Qualified Liquidity Providers (QLPs) that fulfill orders.",
+        "assertion": "The only published commission is a depositor-set mint-order commission pooled to reward QLPs; no redemption-side fee schedule or spread bound is published for the QLP-filled USDC payout."
+      }
+    },
+    {
+      "id": "source:495bb061c404e9343179fff4",
+      "value": {
+        "url": "https://docs.solayer.org/susd/protocol-info/faqs",
+        "observedAt": "2026-10-29T18:57:00Z",
+        "datumAsOf": null,
+        "location": "FAQ 5: How does the withdrawal process work?",
+        "excerpt": "To withdraw, the user sends sUSD to initiate the process. The protocol calculates and sends the corresponding wrapped T-Bill to the qualified liquidity provider, who then fulfills the withdrawal by transferring the USDC back to the user.",
+        "assertion": "The withdrawal FAQ describes the QLP redemption path without any fee, spread, commission or cost bound."
+      }
+    },
+    {
+      "id": "source:e4f25992d507b89ec7cc9cf1",
+      "value": {
+        "url": "https://reserves.bridge.xyz/path_usd",
+        "observedAt": "2026-10-29T19:14:00Z",
+        "datumAsOf": "2026-10-29T19:10:00Z",
+        "location": "Reserve Assets and Investment Allocation (page last updated Oct 29, 2026, 7:10 PM UTC)",
+        "excerpt": "Reserve Assets and Investment Allocation $12,204,898 Cash 25.5% $35,659,883 Treasury** 74.5% ** Treasuries include money-market funds comprised of T-bill ladders with less than 3-month duration.",
+        "assertion": "The issuer's pathUSD reserve page publishes only two aggregated categories (cash 25.5%, Treasury 74.5%) plus a duration footnote for the treasury category; it publishes no instrument-level census, no split of the cash bucket between bank USD and on-chain stablecoins, and no cash-realization interval for either category."
+      }
+    },
+    {
+      "id": "source:b10c7a3fa4318fa2aa7d4539",
+      "value": {
+        "url": "https://transparency.bridge.xyz/v0/stablecoins/path_usd",
+        "observedAt": "2026-10-29T19:14:00Z",
+        "datumAsOf": "2026-10-29T19:00:47Z",
+        "location": "Public transparency payload, reserves array",
+        "excerpt": "{\"last_updated\":\"2026-10-29T19:00:47Z\",\"total_onchain_amount\":\"47864751.422684\",\"total_reserve_amount\":\"47864751.42\",\"reserves\":[{\"type\":\"cash\",\"amount\":\"12204897.69\"},{\"type\":\"treasury\",\"amount\":\"35659883.05\"}],\"collateralization_ratio\":\"1.0\"}",
+        "assertion": "The live transparency payload reports the categories as bare dollar amounts (cash 12,204,897.69; treasury 35,659,883.05) with no instrument, tenor, maturity, venue or realization attribute attached to either category."
+      }
+    },
+    {
+      "id": "source:91d31d8d73051863bb82bea8",
+      "value": {
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserve-management",
+        "observedAt": "2026-10-29T19:14:00Z",
+        "datumAsOf": null,
+        "location": "Choosing Your Reserve Allocation \u2014 reserve type / reward / redemption-window table",
+        "excerpt": "Reserve Type ... Redemption Window Treasuries ... Traditional treasuries: US banking hours Tokenized treasuries: Primarily US banking hours, with some availability outside of banking hours ... Off-chain USD (business hours liquidity) ... Instantly redeemable during US banking hours ... On-chain stablecoins* (off-hours liquidity) ... Instantly redeemable 24/7",
+        "assertion": "Bridge publishes a redemption-window cell per reserve type, but the page is a program-configuration menu for a custom stablecoin: it assigns no window to pathUSD's own balances and never states which reserve types its treasury or cash categories contain, so no single window binds the identified pathUSD exposures."
+      }
+    },
+    {
+      "id": "source:4af68d5ade0f5a4fee7013ea",
+      "value": {
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserves",
+        "observedAt": "2026-10-29T19:14:00Z",
+        "datumAsOf": null,
+        "location": "Cash vs Treasuries (archived reserves page)",
+        "excerpt": "Treasuries : Reserves allocated to treasuries earn maximum rewards, and can be redeemed within 1 business day.",
+        "assertion": "The one-business-day treasury statement describes the redeemability of the treasury reserve option in the program's configuration menu, not an instrument-level or pathUSD-specific deadline for the pooled treasury bucket, whose holdings and custodian allocation are undisclosed."
+      }
+    },
+    {
+      "id": "source:6057c47248ee8e3aaa7ddfec",
+      "value": {
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc",
+        "observedAt": "2026-10-29T19:14:00Z",
+        "datumAsOf": null,
+        "location": "02 Bridge Stablecoin Reserve",
+        "excerpt": "BBI maintains a reserve of high-quality, liquid assets ... having an aggregate market value expressed in U.S. dollars, as of 5:00 pm New York time on each day the Federal Reserve Bank of New York is open (a \u201cBusiness Day\u201d), at least equal to the number of then outstanding Bridge Stablecoins multiplied by one U.S. dollar.",
+        "assertion": "The binding reserve obligation is an aggregate market-value floor measured at the New York close of each Business Day; the terms impose no per-category realization deadline or liquidity bound on the assets held in the reserve."
+      }
+    },
+    {
+      "id": "source:a6a6542bf9c299afe97a5809",
+      "value": {
+        "url": "https://apidocs.bridge.xyz/platform/issuance/reserves",
+        "observedAt": "2026-10-29T19:14:00Z",
+        "datumAsOf": null,
+        "location": "Cash vs Treasuries (archived reserves page)",
+        "excerpt": "Cash : Reserves allocated to cash are available for rapid redemptions to all of Bridge's supported currencies, but we do not earn on funds held in cash.",
+        "assertion": "Cash is described by an unquantified 'rapid redemptions' phrase tied to supported-currency redemption; no duration, cut-off or maximum realization interval is attached to the cash bucket."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -86319,6 +86494,26 @@
     {
       "id": "surface:9d603d34d7df3325f712168e",
       "value": "https://www.hextrust.com/"
+    },
+    {
+      "id": "surface:e97fb0417d03d7623ba9c31f",
+      "value": "https://docs.solayer.org/susd/decentralized-rfq-protocol/process"
+    },
+    {
+      "id": "surface:9e34e63ce22b1e2167d3bdd6",
+      "value": "https://docs.solayer.org/susd/decentralized-rfq-protocol/stakeholders"
+    },
+    {
+      "id": "surface:1d0db2ff4d856e66779811ee",
+      "value": "https://docs.solayer.org/susd/protocol-info/faqs"
+    },
+    {
+      "id": "surface:02b61c83170956329c2d3c77",
+      "value": "https://docs.solayer.org/susd/protocol-info/litepaper"
+    },
+    {
+      "id": "surface:b46fbdb061b2c33a1bb31b50",
+      "value": "https://docs.solayer.org/susd/yield-bearing-stablecoin/susd-features"
     }
   ]
 }
