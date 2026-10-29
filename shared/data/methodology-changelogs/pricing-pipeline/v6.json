@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.62",
+    "title": "sUSN NAV pricing through its USN parent",
+    "date": "2026-10-29",
+    "effectiveAt": 1793232000,
+    "summary": "sUSN opts into the fresh replay-safe single-source USN parent, so it prices at on-chain convertToAssets times USN instead of a CoinGecko last trade.",
+    "impact": [
+      "`susn-noon` joins the reviewed ERC-4626 NAV routes that may inherit a fresh replay-safe single-source parent, multiplying the vault's `convertToAssets(1 share)` by the `usn-noon` quote. The published quote keeps that parent's `coingecko` source, `single-source` confidence and observation clock rather than upgrading it to hard protocol provenance.",
+      "Every other gate is unchanged: a stale, clockless, cached, low-confidence or non-replay-safe USN quote leaves sUSN on its ordinary market price, a failed live vault read still falls back to the bounded cached rate, and the chain read still rejects a missing, zero or out-of-range conversion.",
+      "`usn-noon`'s CoinGecko identity joins the NAV-parent-only intake set, so that same-run quote feeds NAV valuation without admitting CoinGecko supply or pricing USN itself."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.61",
     "title": "Native HBD supply, BOLD-vault NAV parents and M0 nominal references",
     "date": "2026-10-29",

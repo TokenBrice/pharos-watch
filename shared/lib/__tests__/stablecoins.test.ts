@@ -142,7 +142,6 @@ describe("tracked stablecoin metadata", () => {
       "btd-alpen",
       "jpy-megabank-consortium",
       "jpydf-deltaforesight",
-      "swanusd-swan",
       "dotusd-polkadot",
       "usdrf-realfi",
     ]);
@@ -1123,7 +1122,6 @@ describe("launched-awaiting-data review reasons", () => {
 
   it.each([
     ["usdf-flipcash", /DefiLlama returned a quote for the Solana mint without naming its source market.*not enough to admit the quote \(#1663\)/],
-    ["swanusd-swan", /DefiLlama returned a fresh contract quote on October 26, 2026, but its source is unverified and the quote has not been admitted/],
   ])("keeps %s awaiting data with an explicit admitted-price gap", (id, reason) => {
     const coin = TRACKED_META_BY_ID.get(id)!;
     expect(coin).toMatchObject({ status: "pre-launch", launchPhase: "launched" });

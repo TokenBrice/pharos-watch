@@ -60,10 +60,10 @@ import {
 import { RedemptionBackstopsResponseSchema } from "@shared/types/redemption";
 import {
   ReportCardsV9DependencyGraphSchema,
-  ReportCardsV9ResponseSchema,
   SafetyGradesResponseSchema,
   V9PublicationHealthSchema,
 } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9-current";
 import { SafetyScorePublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import {
   SafetyScoreHistoryResponseSchema,

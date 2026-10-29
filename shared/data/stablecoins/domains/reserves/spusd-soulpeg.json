@@ -19,8 +19,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
-    "reviewer": "W2R49 pinned direct-receipt composition review",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RenewComp3 pinned direct-receipt composition renewal",
     "confidence": "verified",
     "sources": [
       {
@@ -32,8 +32,8 @@
         "url": "https://sourcify.dev/server/v2/contract/56/0x40ff3dea2eec93a7b71879874dc4407918da77a6?fields=all"
       },
       {
-        "label": "Same-block direct receipt and liability census at BSC block 125575999",
-        "url": "https://bsc-dataseed.bnbchain.org"
+        "label": "Same-block direct receipt and liability census at BSC block 130522586 (2026-10-29T18:39:15Z)",
+        "url": "https://api-bsc-mainnet-full.n.dwellir.com"
       },
       {"label": "SoulPeg contract design and BSC 18-decimal USDC representation (accessed 2026-09-30)", "url": "https://docs.soulpeg.io/docs/protocol/contract-design"},
       {"label": "BSC RPC asset()/underlying() probes at block 124853997 and sUSDC probes at block 124854221 (2026-09-30)", "url": "https://bsc-rpc.publicnode.com"},
@@ -54,14 +54,14 @@
         "url": "https://bsc-rpc.publicnode.com"
       }
     ],
-    "rationale": "At BSC block 125575999, hash 0x327f084fa5a602e38c79502d4c76940648243aa5a8c3ed821ec96cdd1cbafaab, the exact wrapper's sUSDC() is 0xc603ef9cab5e4131c52f6b8bcf06cc0568c32a24 and spusd() is the cataloged SPUSD token. Same-block SPUSD totalSupply is 38442789346502623719581073 base units, while sUSDC.balanceOf(wrapper) is 56801435321189845501586244. Both nonproxy SPUSD and wrapper runtimes exactly match Sourcify's verified onchainBytecode. The wrapper's two mint paths transfer the same amount of the single immutable sUSDC receipt before minting SPUSD; its ordinary unwrap returns that receipt, not USDC. The 100% row therefore records the observed immediate receipt backing claim, without valuing excess receipts as additional collateral or treating cumulative USDC deposit counters as assets. Token role administrators can authorize additional minting; no immutable collateral-gating finding is made. All underlying strategy/treasury and BSC-USDC representation look-through remains an explicit 100% insufficient-evidence remainder. No native Circle USDC identity, Venus allocation percentage, current full underlying portfolio, or canonical escrow is asserted.",
-    "compositionBasis": "Current pinned immediate-receipt inventory: one immutable sUSDC claim per SPUSD, with measured wrapper receipt balance exceeding the entire observed SPUSD token-unit denominator; unresolved full look-through retained",
-    "compositionAsOf": "2026-10-03",
+    "rationale": "At BSC block 130522586, hash 0x12803ae00561efbe0d642761acf134cbde640d70cc1dc6f8a5bf4b8d1f9d5e02, timestamped 2026-10-29T18:39:15Z, the exact wrapper 0x0e8fb2e774b827711e0f86069931c1321113238e reports sUSDC() = 0xc603ef9cab5e4131c52f6b8bcf06cc0568c32a24 and spusd() = 0x40ff3dea2eec93a7b71879874dc4407918da77a6, the cataloged SPUSD token. Same-block SPUSD totalSupply is 51856398099092123719581073 base units at 18 decimals (51,856,398.099092123719581073 tokens), while sUSDC.balanceOf(wrapper) is 71322444284218345501586244 base units at 18 decimals (71,322,444.284218345501586244). Both nonproxy SPUSD and wrapper runtimes exactly match Sourcify's verified onchainBytecode as previously reviewed. The wrapper's two mint paths transfer the same amount of the single immutable sUSDC receipt before minting SPUSD; its ordinary unwrap returns that receipt, not USDC. The 100% row therefore records the observed immediate receipt backing claim, without valuing excess receipts as additional collateral or treating cumulative USDC deposit counters as assets. Token role administrators can authorize additional minting; no immutable collateral-gating finding is made. All underlying strategy/treasury and BSC-USDC representation look-through remains an explicit 100% insufficient-evidence remainder. No native Circle USDC identity, Venus allocation percentage, current full underlying portfolio, or canonical escrow is asserted.",
+    "compositionBasis": "Current pinned immediate-receipt inventory at BSC block 130522586: one immutable sUSDC claim per SPUSD, with measured wrapper receipt balance exceeding the entire observed SPUSD token-unit denominator; unresolved full look-through retained",
+    "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
     "knownUnknownExposure": "100% of SPUSD's identified immediate sUSDC receipt backing lacks a verified complete underlying strategy/treasury book and canonical BSC-USDC escrow correspondence. The entire receipt remains an explicit insufficient-evidence residual, not native USDC or a proved Venus allocation.",
     "knownUnknownExposurePct": 100,
     "nonLinkDispositions": [
-      {"reserveIndex": 0, "reserveName": "SoulPeg sUSDC receipt held by the SPUSD wrapper; underlying strategy book unresolved", "pct": 100, "disposition": "insufficient-evidence", "rationale": "The exact immediate receipt and whole token-unit denominator are verified at BSC block 125575999, but the complete sUSDC underlying book, strategy ownership and BSC representation escrow are not. Preserve all 100% as insufficient-evidence look-through; no tracked upstream id or underlying allocation is asserted."}
+      {"reserveIndex": 0, "reserveName": "SoulPeg sUSDC receipt held by the SPUSD wrapper; underlying strategy book unresolved", "pct": 100, "disposition": "insufficient-evidence", "rationale": "The exact immediate receipt and whole token-unit denominator are verified at BSC block 130522586, but the complete sUSDC underlying book, strategy ownership and BSC representation escrow are not. Preserve all 100% as insufficient-evidence look-through; no tracked upstream id or underlying allocation is asserted."}
     ]
   },
   "custodyProfile": {

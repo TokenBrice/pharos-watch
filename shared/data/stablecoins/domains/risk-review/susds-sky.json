@@ -432,10 +432,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "base:0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-12-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: controller runtime and, where the controller is a proxy, its EIP-1967 implementation runtime; this controller's ward record on the route token still returns 1. Upstream message/relay inventory was not re-read and keeps its recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -448,14 +448,14 @@
             }
           ],
           "pin": {
-            "position": "52048979",
-            "hash": "0x479c0f4ce93f90bb1094c8517978dda041236a644b9d8590ae0429989cab71c8",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "sha256:439adbffdc5aae69f96547eb4c92d7c96bffbb568ceccc9510feb997e042f5ae;implementation:0x289a37be5d6ccef7a8f2b90535b3bb6bd3905f72;sha256:042780661fa6054e70ef02a8d504d06e0c70cfe3bb6eb74bed9e4ef5624d31f2",
             "signerIdentity": "token.wards(0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7)=1;canonical counterpart caller constraint;all upstream message/upgrade/bypass paths unresolved"
           },
           "observedState": {
-            "position": "52048979",
-            "hash": "0x479c0f4ce93f90bb1094c8517978dda041236a644b9d8590ae0429989cab71c8",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "sha256:439adbffdc5aae69f96547eb4c92d7c96bffbb568ceccc9510feb997e042f5ae;implementation:0x289a37be5d6ccef7a8f2b90535b3bb6bd3905f72;sha256:042780661fa6054e70ef02a8d504d06e0c70cfe3bb6eb74bed9e4ef5624d31f2",
             "signerIdentity": "token.wards(0xee44cdb68d618d58f75d9fe0818b640bd7b8a7b7)=1;canonical counterpart caller constraint;all upstream message/upgrade/bypass paths unresolved"
           },
@@ -576,10 +576,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "base:0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-12-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: controller runtime and, where the controller is a proxy, its EIP-1967 implementation runtime; this controller's ward record on the route token still returns 1. Upstream message/relay inventory was not re-read and keeps its recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -592,14 +592,14 @@
             }
           ],
           "pin": {
-            "position": "52048979",
-            "hash": "0x479c0f4ce93f90bb1094c8517978dda041236a644b9d8590ae0429989cab71c8",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "sha256:e5a8e2ccfdeaed9043a16f7af733e5c6113d5ae96057952b1a52a679fe798427",
             "signerIdentity": "token.wards(0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255)=1;authenticated upstream relay;arbitrary delegatecall target inventory unresolved"
           },
           "observedState": {
-            "position": "52048979",
-            "hash": "0x479c0f4ce93f90bb1094c8517978dda041236a644b9d8590ae0429989cab71c8",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "sha256:e5a8e2ccfdeaed9043a16f7af733e5c6113d5ae96057952b1a52a679fe798427",
             "signerIdentity": "token.wards(0xdd0bcc201c9e47c6f6ee68e4db05b652bb6ac255)=1;authenticated upstream relay;arbitrary delegatecall target inventory unresolved"
           },
@@ -737,10 +737,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "optimism:0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-12-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: controller runtime and, where the controller is a proxy, its EIP-1967 implementation runtime; this controller's ward record on the route token still returns 1. Upstream message/relay inventory was not re-read and keeps its recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -753,14 +753,14 @@
             }
           ],
           "pin": {
-            "position": "157644264",
-            "hash": "0xb49d526fdf5b76bf224d18a88dc57663ce63cbdbb36754895f209fe73e930bfa",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "sha256:0d3ca547e05efcc71d13c633f320151f88c4990fbaf67d2be3ba0c7cc56bbec7;implementation:0xc2702c859016db756149716cc4d2b7d7a436cf04;sha256:d19fc6364c7f76ee7c949d0eb25658bff291f4b0aa436b35c2b78e604e8eaa85",
             "signerIdentity": "token.wards(0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6)=1;canonical counterpart caller constraint;all upstream message/upgrade/bypass paths unresolved"
           },
           "observedState": {
-            "position": "157644264",
-            "hash": "0xb49d526fdf5b76bf224d18a88dc57663ce63cbdbb36754895f209fe73e930bfa",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "sha256:0d3ca547e05efcc71d13c633f320151f88c4990fbaf67d2be3ba0c7cc56bbec7;implementation:0xc2702c859016db756149716cc4d2b7d7a436cf04;sha256:d19fc6364c7f76ee7c949d0eb25658bff291f4b0aa436b35c2b78e604e8eaa85",
             "signerIdentity": "token.wards(0x8f41dbf6b8498561ce1d73af16cd9c0d8ee20ba6)=1;canonical counterpart caller constraint;all upstream message/upgrade/bypass paths unresolved"
           },
@@ -890,10 +890,10 @@
         "observedBlock": 157644264,
         "executionScope": {
           "controllerDeployment": "optimism:0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-12-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: controller runtime and, where the controller is a proxy, its EIP-1967 implementation runtime; this controller's ward record on the route token still returns 1. Upstream message/relay inventory was not re-read and keeps its recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -906,14 +906,14 @@
             }
           ],
           "pin": {
-            "position": "157644264",
-            "hash": "0xb49d526fdf5b76bf224d18a88dc57663ce63cbdbb36754895f209fe73e930bfa",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "sha256:ce56ec9c173ed53bdb1716cd7baa082d7dc2c6366127702e99ef01aa8116c974",
             "signerIdentity": "token.wards(0x10e6593cdda8c58a1d0f14c5164b376352a55f2f)=1;authenticated upstream relay;arbitrary delegatecall target inventory unresolved"
           },
           "observedState": {
-            "position": "157644264",
-            "hash": "0xb49d526fdf5b76bf224d18a88dc57663ce63cbdbb36754895f209fe73e930bfa",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "sha256:ce56ec9c173ed53bdb1716cd7baa082d7dc2c6366127702e99ef01aa8116c974",
             "signerIdentity": "token.wards(0x10e6593cdda8c58a1d0f14c5164b376352a55f2f)=1;authenticated upstream relay;arbitrary delegatecall target inventory unresolved"
           },
@@ -1046,10 +1046,10 @@
         "observedBlock": 510773768,
         "executionScope": {
           "controllerDeployment": "arbitrum:0x10e6593cdda8c58a1d0f14c5164b376352a55f2f",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-12-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: controller runtime and, where the controller is a proxy, its EIP-1967 implementation runtime; this controller's ward record on the route token still returns 1. Upstream message/relay inventory was not re-read and keeps its recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -1062,14 +1062,14 @@
             }
           ],
           "pin": {
-            "position": "510773768",
-            "hash": "0xc4594ef3c56692d916b66ad5885ff490e86a02b9e9d38118fc643bb91df49351",
+            "position": "519430000",
+            "hash": "0x9fd1fc23ecaf7a66051d76aefb18d0350adc3a3e9a3906cd25c83669551fecdc",
             "runtimeIdentity": "sha256:ad4a51e7f3c2c9dec98e050f39b24bf12d95b6a75c1aac5cdc5716db9dcca5a4",
             "signerIdentity": "token.wards(0x10e6593cdda8c58a1d0f14c5164b376352a55f2f)=1;authenticated upstream relay;arbitrary delegatecall target inventory unresolved"
           },
           "observedState": {
-            "position": "510773768",
-            "hash": "0xc4594ef3c56692d916b66ad5885ff490e86a02b9e9d38118fc643bb91df49351",
+            "position": "519430000",
+            "hash": "0x9fd1fc23ecaf7a66051d76aefb18d0350adc3a3e9a3906cd25c83669551fecdc",
             "runtimeIdentity": "sha256:ad4a51e7f3c2c9dec98e050f39b24bf12d95b6a75c1aac5cdc5716db9dcca5a4",
             "signerIdentity": "token.wards(0x10e6593cdda8c58a1d0f14c5164b376352a55f2f)=1;authenticated upstream relay;arbitrary delegatecall target inventory unresolved"
           },
@@ -1206,10 +1206,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "arbitrum:0x13f7f24ca959359a4d710d32c715d4bce273c793",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-12-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataSky)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: controller runtime and, where the controller is a proxy, its EIP-1967 implementation runtime; this controller's ward record on the route token still returns 1. Upstream message/relay inventory was not re-read and keeps its recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -1222,14 +1222,14 @@
             }
           ],
           "pin": {
-            "position": "510773768",
-            "hash": "0xc4594ef3c56692d916b66ad5885ff490e86a02b9e9d38118fc643bb91df49351",
+            "position": "519430000",
+            "hash": "0x9fd1fc23ecaf7a66051d76aefb18d0350adc3a3e9a3906cd25c83669551fecdc",
             "runtimeIdentity": "sha256:0d3ca547e05efcc71d13c633f320151f88c4990fbaf67d2be3ba0c7cc56bbec7;implementation:0xd404ed36d6976bdcad8abbccc9f09ef07e33a9a8;sha256:38df79debea81fc309f482f3de8414e419326652cb91dc29353b5f9ebbeebd39",
             "signerIdentity": "token.wards(0x13f7f24ca959359a4d710d32c715d4bce273c793)=1;canonical counterpart caller constraint;all upstream message/upgrade/bypass paths unresolved"
           },
           "observedState": {
-            "position": "510773768",
-            "hash": "0xc4594ef3c56692d916b66ad5885ff490e86a02b9e9d38118fc643bb91df49351",
+            "position": "519430000",
+            "hash": "0x9fd1fc23ecaf7a66051d76aefb18d0350adc3a3e9a3906cd25c83669551fecdc",
             "runtimeIdentity": "sha256:0d3ca547e05efcc71d13c633f320151f88c4990fbaf67d2be3ba0c7cc56bbec7;implementation:0xd404ed36d6976bdcad8abbccc9f09ef07e33a9a8;sha256:38df79debea81fc309f482f3de8414e419326652cb91dc29353b5f9ebbeebd39",
             "signerIdentity": "token.wards(0x13f7f24ca959359a4d710d32c715d4bce273c793)=1;canonical counterpart caller constraint;all upstream message/upgrade/bypass paths unresolved"
           },

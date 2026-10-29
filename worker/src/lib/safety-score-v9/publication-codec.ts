@@ -3,11 +3,13 @@ import { stableJsonStringifyChunksV1, stableJsonStringifyV1 } from "@shared/lib/
 import {
   SafetyScoreV9CurrentCardSchema,
   type SafetyScoreV9CurrentCard,
+} from "@shared/types/safety-score-v9-public";
+import {
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9CurrentResponse,
   SafetyScoreV9PreviousResponseSchema,
   type SafetyScoreV9PreviousResponse,
-} from "@shared/types/safety-score-v9-public";
+} from "@shared/types/safety-score-v9-publication-response";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";

@@ -9245,11 +9245,15 @@
     {
       "assetId": "wbrl-ripio",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-29",
       "sources": [
         {
-          "label": "Independent public accountant certification of wBRL collateral as of 2026-03-31",
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf"
+          "label": "Independent public accountant's certification of wBRL collateral as of 2026-06-30, signed 2026-07-28 by Pablo Eduardo Soto (SLD y Asociados S.A., CPCECABA T.275 F.153); reconciles 2,586,148 wBRL against on-chain mint/burn reports on seven networks and R$ 2,594,240.11 held in a Brazilian bank account",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wBRL%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
+        },
+        {
+          "label": "Ripio wFIAT Attestations index (official publication surface; observed 2026-10-29 lists the June 2026 attestations for wARS, wBRL, wMXN, wCOP and wCLP, with no wPEN entry and no September 2026 entry)",
+          "url": "https://action.ripio.com/en/wfiat-attestations"
         },
         {
           "label": "Ripio wFIAT product page and 1:1 mint/redeem flow",
@@ -9260,7 +9264,7 @@
           "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
         }
       ],
-      "notes": "Reviewed 2026-08-08. The independent-accountant certification for 2026-03-31 reconciles 719,448 wBRL across six chains against R$809,597.28 held in a Brazilian bank account using bank statements. It expressly is neither an audit nor a review and gives no professional opinion. Together with Ripio's 1:1 deposit, mint, burn, and bank-payment description, it anchors the issuer claim but does not provide binding secondary-holder terms or legal segregation, so claimAndSegregation is limited. The Brazilian bank is unnamed and no allocation, anti-rehypothecation, insolvency, failure, replacement, or successor-custody arrangement is public, so custodyContinuity is unavailable. assuranceAndReconciliation is intentionally omitted: proofOfReserves.latestReport auto-resolves the agreed-upon-procedures assets-and-liabilities report to adequate. No runtime inheritance applies: the coin directly resolves to fiat-cash and variantOf is null.",
+      "notes": "Renewed 2026-10-29 from the wBRL certification for the 2026-06-30 period (signed 2026-07-28), linked from Ripio's official wFIAT Attestations index; it supersedes the 2026-03-31 report cited by the earlier review. The certification reconciles 2,586,148 wBRL reported issued against on-chain issuance and burn reports on Ethereum, World Chain, Base, Gnosis, Polygon, BNB Smart Chain and Celo, and R$ 2,594,240.11 held in a Brazilian bank account per the 2026-06-30 bank statements. It expressly is neither an audit nor a review and gives no professional opinion. Together with Ripio's 1:1 deposit, mint, burn, and bank-payment description, it anchors the issuer claim but does not provide binding secondary-holder terms or legal segregation, so claimAndSegregation remains limited. The Brazilian bank is unnamed and no allocation, anti-rehypothecation, insolvency, failure, replacement, or successor-custody arrangement is public, so custodyContinuity remains unavailable. assuranceAndReconciliation is intentionally omitted: proofOfReserves.latestReport already resolves the 2026-06-30 agreed-upon-procedures assets-and-liabilities report. This renewal re-bases the cited certification on the newer dated period and updates the reported amounts and chain list; every component grade is unchanged.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -9268,8 +9272,8 @@
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "The certification identifies only an unnamed Brazilian bank account, while Ripio's product and transparency pages publish no provider allocation, account-segregation instrument, insolvency treatment, anti-rehypothecation control, bank-failure response, replacement process, or successor-custody arrangement.",
-          "sourceUrl": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wBRL__Token-Certification.pdf"
+          "rationale": "The 2026-06-30 certification identifies only an unnamed Brazilian bank account, while Ripio's product, transparency and attestation pages publish no provider allocation, account-segregation instrument, insolvency treatment, anti-rehypothecation control, bank-failure response, replacement process, or successor-custody arrangement.",
+          "sourceUrl": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wBRL%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       }
     },
@@ -10512,29 +10516,33 @@
     {
       "assetId": "wcop-ripio",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-08-08",
+      "reviewedAt": "2026-10-29",
       "sources": [
         {
-          "label": "Ripio local-stablecoins page: first wCOP attestation completed and certified by local public accountants as of 2026-03-31 (104,898,654 wCOP vs COP 107,966,549.02 on deposit)",
+          "label": "Ripio wFIAT Attestations index (official publication surface; observed 2026-10-29 lists the June 2026 attestations for wARS, wBRL, wMXN, wCOP and wCLP, with no wPEN entry and no September 2026 entry)",
+          "url": "https://action.ripio.com/en/wfiat-attestations"
+        },
+        {
+          "label": "Ripio local-stablecoins page (wFIAT attestation section, observed 2026-10-29: still links only the 2026-03-31 wCOP certification)",
           "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
         },
         {
-          "label": "Independent public accountant certification for wCOP, period end 2026-03-31, signed 2026-04-23 by Pablo Eduardo Soto (CPA) - PDF linked from the official Ripio page; reconciles on-chain issuance/burn across six networks against a Colombian bank statement (assets-and-liabilities scope)",
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+          "label": "Independent public accountant certification for wCOP, period end 2026-06-30, signed 2026-07-28 by Pablo Eduardo Soto (CPA, SLD y Asociados S.A.) - reconciles 196,398,754 wCOP against on-chain mint/burn reports on seven networks and COP 212,085,195.86 in a Colombian bank account (assets-and-liabilities scope)",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       ],
-      "notes": "Assurance: a certification engagement under Argentine Technical Resolution No. 37 by an independent public accountant (Pablo Eduardo Soto, CPCECABA), period end 2026-03-31, reconciling 104,898,654 wCOP issued (on-chain mint/burn reports on Ethereum, World Chain, Base, Polygon, Gnosis and BSC, with transaction ID listings) against COP 107,966,549.02 deposited in a Colombian bank account per the bank statement - assets-and-liabilities scope with full liability reconciliation (~102.9% coverage); the document states it is not an audit or review, i.e. attestation-level, mapping to adequate. Segregation vehicle: NONE documented - the certification verifies the aggregate balance against an unnamed Colombian bank statement and establishes no trust, segregation, or bankruptcy remoteness. claimAndSegregation left uncurated: ordinary holders have no documented direct redemption right with the issuer (exits depend on secondary markets or Ripio ramps) and no segregated reserve structure is documented. custodyContinuity left uncurated: the Colombian financial institution is unnamed. NOT established: any holder legal claim, segregation/bankruptcy remoteness, rehypothecation terms, withdrawal liquidity, and assurance cadence beyond ad-hoc certifications by a single niche practitioner. 2026-08-08 completion pass: claimAndSegregation and custodyContinuity are explicit unavailable conclusions because the attestation establishes balances and circulation but not holder legal rights, segregation, bank identity, or continuity terms. Missing legal/custody disclosures are not converted to weak grades.\n\n2026-09-23 assurance expiry review: the live Ripio local-stablecoins disclosure page still links the first wCOP certification for 2026-03-31, signed 2026-04-23; no later certification within the 100-day assurance window is listed. Withdraw the assuranceAndReconciliation known-quality override while preserving latestReport and its historical reconciliation. The compiler owns the stale-evidence gap rather than an unsupported current adequate claim. Re-promote only when Ripio publishes a qualifying fresh certification. Other component dispositions retain their original evidence date.",
+      "notes": "Renewed 2026-10-29 from the wCOP certification for the 2026-06-30 period (signed 2026-07-28), linked from Ripio's official wFIAT Attestations index; it supersedes the 2026-03-31 report cited by the earlier review. It reconciles 196,398,754 wCOP issued against on-chain issuance and burn reports on Ethereum, World Chain, Base, Polygon, Gnosis, Binance Smart Chain and Celo, and COP 212,085,195.86 deposited in a Colombian bank account per the 2026-06-30 statements - assets-and-liabilities scope with full liability reconciliation. The document states it is not an audit or review and expresses no opinion, i.e. attestation-level. Segregation vehicle: NONE documented - the certification verifies an aggregate balance against an unnamed Colombian bank statement and establishes no trust, segregation, or bankruptcy remoteness; ordinary holders have no documented direct issuer redemption right and no segregated reserve structure, so claimAndSegregation remains unavailable. The Colombian financial institution is unnamed and no provider allocation, anti-rehypothecation control, failure or successor-custody arrangement is public, so custodyContinuity remains unavailable. The 2026-09-23 assurance withdrawal stands: at this review the 2026-06-30 period end is 121 days old, outside assuranceReportMaxAgeSec (8,640,000 s = 100 days), so no assuranceAndReconciliation override is re-promoted and the compiler-owned stale-evidence gap remains. This renewal re-bases the cited certification and updates the reported amounts and chain list; no component grade changed.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
           "applicability": "unavailable",
-          "rationale": "Ripio's current local-stablecoins page and March 2026 certification establish an aggregate Colombian bank balance but do not publish a holder redemption contract, trust, reserve segregation, bankruptcy-remoteness, or beneficial-ownership terms.",
+          "rationale": "Ripio's current local-stablecoins page, the official wFIAT Attestations index and the 2026-06-30 certification establish an aggregate Colombian bank balance but do not publish a holder redemption contract, trust, reserve segregation, bankruptcy-remoteness, or beneficial-ownership terms.",
           "sourceUrl": "https://www.ripio.com/en/cryptos/local-stablecoins"
         },
         "custodyContinuity": {
           "applicability": "unavailable",
-          "rationale": "The March 2026 wCOP certification describes a Colombian bank statement but does not name the bank, disclose provider shares, anti-rehypothecation controls, or failure and successor-custody arrangements.",
-          "sourceUrl": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wCOP__Token-Certification.pdf"
+          "rationale": "The 2026-06-30 wCOP certification describes a Colombian bank statement but does not name the bank, disclose provider shares, anti-rehypothecation controls, or failure and successor-custody arrangements.",
+          "sourceUrl": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wCOP%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
         }
       }
     },
@@ -13047,11 +13055,15 @@
     {
       "assetId": "wmxn-ripio",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-07-20",
+      "reviewedAt": "2026-10-29",
       "sources": [
         {
-          "label": "Independent Public Accountant's Certification regarding the collateral backing of wMXN tokens as of 2026-03-31 (Pablo Eduardo Soto, CPA, Professional Council of Economic Sciences of CABA)",
-          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/20260331__wMXN__Token-Certification.pdf"
+          "label": "Independent Public Accountant's Certification regarding the collateral backing of wMXN tokens as of 2026-06-30, signed 2026-07-28 (Pablo Eduardo Soto, CPA, Professional Council of Economic Sciences of CABA); reconciles 968,789 tokens against on-chain mint/burn reports on seven networks and MXN 2,086,193.01 in a Mexican bank account",
+          "url": "https://action.ripio.com/hubfs/2026/wFIAT/ATTESTATION/Aug%202026/Token%20wMXN%2006.30.2026%20Certification%20vf.pdf?hsLang=en"
+        },
+        {
+          "label": "Ripio wFIAT Attestations index (official publication surface; observed 2026-10-29 lists the June 2026 attestations for wARS, wBRL, wMXN, wCOP and wCLP, with no wPEN entry and no September 2026 entry)",
+          "url": "https://action.ripio.com/en/wfiat-attestations"
         },
         {
           "label": "Moonbird Mexico S.A. de C.V. (Ripio) platform terms and conditions (terms.ripio.com/mx/wallet)",
@@ -13062,7 +13074,7 @@
           "url": "https://www.ripio.com/en/cryptos/local-stablecoins"
         }
       ],
-      "notes": "The original 2026-07-20 claimAndSegregation weak grade is retained. The March 31, 2026 wMXN certification reconciled 518,689 tokens to MXN 937,364.13 in an unnamed Mexican bank account and expressly excluded audit/review/opinion assurance. Moonbird Mexico's wallet clauses describe customer platform custody and peso account funds, not the wMXN reserve book's custody-continuity arrangements. Source-scope correction verified 2026-10-20 withdraws only the custodyContinuity weak grade: the unnamed reserve bank and missing provider, failure/replacement, successor-custody and anti-rehypothecation disclosures establish uncertainty rather than a measured reserve-custody deficiency. Source-scoped correction. Original overlay/component review starts and sibling adverse facts are preserved, without renewal or favorable custody credit. Recurring assurance cadence, account segregation, trust and bankruptcy-remoteness safeguards remain unestablished; this correction does not override proofOfReserves.latestReport or its freshness admission.",
+      "notes": "The original 2026-07-20 claimAndSegregation weak grade is retained. Renewed 2026-10-29 from the wMXN certification for the 2026-06-30 period (signed 2026-07-28), linked from Ripio's official wFIAT Attestations index; it supersedes the 2026-03-31 report cited by the earlier review: it reconciles 968,789 wMXN reported issued against on-chain mint/burn reports on Ethereum, World Chain, Base, Polygon, Gnosis, Binance Smart Chain and Celo, and MXN 2,086,193.01 held in an unnamed Mexican bank account, and it expressly excludes audit, review and professional-opinion assurance. Moonbird Mexico's wallet clauses describe customer platform custody and peso account funds, not the wMXN reserve book's custody-continuity arrangements. The FD14 source-scope correction verified 2026-10-20 remains in force: custodyContinuity is unavailable rather than measured weak because the unnamed reserve bank and the missing provider, failure/replacement, successor-custody and anti-rehypothecation disclosures establish uncertainty, not a measured reserve-custody deficiency. Named reserve providers, account segregation, trust and bankruptcy-remoteness safeguards remain unestablished; this renewal re-bases the cited certification and updates the reported amounts and chain list without changing any component grade, and it does not override proofOfReserves.latestReport or its freshness admission.",
       "metrics": {},
       "components": {
         "claimAndSegregation": {
@@ -17794,42 +17806,46 @@
     {
       "assetId": "usn-noon",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-09-22",
+      "reviewedAt": "2026-10-27",
       "sources": [
         {
           "label": "Noon real-time proof-of-solvency dashboard operated by Accountable (live reserve, supply, deployment, custody-split, and insurance figures)",
           "url": "https://noon.accountable.capital/"
         },
         {
-          "label": "Accountable Noon dashboard API snapshot captured 2026-09-22T23:24Z (data timestamp 2026-09-22T20:31:03Z; signed liabilities/collateral snapshot attestation at 20:15:39Z, zero-knowledge proofs at 20:15:45Z, Merkle root at 20:34:00Z)",
+          "label": "Accountable Noon dashboard API payload pinned in our reserves sidecar (compositionAsOf 2026-10-27; data timestamp 2026-10-27T08:31:12.450Z; total reserves $38,826,141.09)",
           "url": "https://cache.accountable.capital/dashboard/noon"
         },
         {
-          "label": "Noon transparency documentation (Accountable verification engine deployed inside the Noon perimeter, ingesting directly from asset custodians and exchanges)",
-          "url": "https://docs.noon.capital/security/transparency"
+          "label": "Noon independent collateral verification documentation (Accountable engine pulls reserve data directly from custodians and exchanges; feeds bypass Noon)",
+          "url": "https://docs.noon.capital/5.-the-security-framework/independent-collateral-verification.md"
         },
         {
-          "label": "Noon liquidity documentation (non-binding: 100% of TVL liquid within T+5 calendar days; governance-voted waterfall 20% T+0 / 60% T+3 / 100% T+5; per-strategy liquidity profiles incl. Fasanara FTAC T+3-month redemption window; undisclosed multi-party PLMS facility)",
-          "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+          "label": "Noon liquidity documentation (100% of TVL within T+5 days via a 20% T+0 / 60% T+3 / 100% T+5 waterfall resting on unpublished PLMS agreements; private credit typically takes over 3 months to unwind)",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md"
         },
         {
-          "label": "Noon USN and sUSN documentation (1:1 backing claim, permissioned mint/redeem, sUSN 80% yield allocation)",
-          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"
+          "label": "Noon USN and sUSN documentation (USN backed by a USD reserve; sUSN staked USN, 80% of returns)",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
         },
         {
-          "label": "Noon minting and redemption documentation (whitelisted institutional mint/redeem, redemption settlement at 1:1)",
-          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption"
+          "label": "Noon mint and redeem documentation (permissioned institutional mint/redeem; 20% of TVL daily; T+0 settlement)",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/mint-and-redeem.md"
         },
         {
-          "label": "Noon binding USN Terms of Service (last updated 2026-07-31, reviewed 2026-09-22): §1 reserves segregated only from corporate operating funds and USN grants no claim on the Company; §6 redemptions processed within 5 Business Days, delay rights with written notice only after 15 Business Days, redemption requests constituting unsecured debt; §29 issuer redemption gating in its absolute and unfettered discretion; §7 fee right without a published fee schedule",
-          "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service.md"
+          "label": "Noon binding USN Terms of Service (last updated 2026-07-31, reviewed 2026-10-29): §1 reserves segregated only from corporate operating funds and USN grants no claim on the Company; §6 redemptions processed within 5 Business Days, delay rights with written notice only after 15 Business Days, redemption requests constituting unsecured debt; §29 issuer redemption gating in its absolute and unfettered discretion; §2/§6 allow applicable fees (including applicable swap fees), §7 fee changes need 14 days' publication notice",
+          "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md"
         },
         {
-          "label": "Noon custody documentation (bespoke custody by strategy: Alpaca Securities via Dinari for US Treasury bills, Fasanara fund custody for private credit, ForDefi MPC wallets for DeFi lending, Ceffu named for funding-rate arbitrage)",
-          "url": "https://docs.noon.capital/built-for-safety/1.-custody-you-can-trust"
+          "label": "Noon trusted custody documentation (custody by strategy: Alpaca Securities via Dinari for T-bills and JAAA CLOs, Fasanara custody for private credit, MPC/multi-sig wallets for DeFi reserves, Ceffu for funding-rate arbitrage)",
+          "url": "https://docs.noon.capital/5.-the-security-framework/trusted-custody.md"
+        },
+        {
+          "label": "Noon fees documentation (no protocol fee published for mint, redeem, buy, sell, stake or bridge)",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/fees.md"
         }
       ],
-      "notes": "Refreshed 2026-09-22 (Noon feedback verification: custody split and binding legal terms re-pinned). Measured 2026-09-22 from the Accountable-operated Noon dashboard API (cache.accountable.capital/dashboard/noon), fetched 2026-09-22T23:24Z: at data timestamp 2026-09-22T20:31:03.926Z the feed reported total reserves of $40,086,693.58 against USN supply of $38,754,018.61 (collateralization 1.034388), deployed as 61.92% Fasanara FTAC private credit ($24,821,598.61), 13.40% HYPE funding-rate arbitrage ($5,370,082.56), 9.88% US Treasury bills ($3,960,515.97), 5.44% Undeployed ($2,179,938.83), 4.49% JAAA CLOs ($1,799,287.72), 2.44% DeFi lending on Euler ($977,302.87), 2.44% DeFi lending on Morpho ($977,965.99), and a $1.02 BTC funding-rate balance, custodied at Fasanara (61.92%, $24,821,598.61), ForDefi (22.94%, $9,195,978.92), Alpaca (14.37%, $5,759,803.69), an on-chain Safe (0.77%, $309,311.33), and Ceffu ($1.02); the five venue amounts sum to total reserves within one cent. This materially re-weights the 2026-07-27 overlay's split (Fasanara 71.18%, Safe 15.26%, Alpaca 13.22%, ForDefi 0.35%). The 9.88% US Treasury Bills bucket is not direct T-bill ownership: on-chain at Ethereum head block 26036288 (2026-09-22T23:24Z) it is a permissioned, rebasing Dinari USD+ position (contract 0xc9e3df3d230980b45adc623c81c3df4a73a5350f, implementation unverified on Etherscan/Sourcify, FULFILLER-role-gated asynchronous requestRedeem queue, transfer-restrictor blacklist) held in a Noon EOA, whose wallet balance 3,960,515.973656 equals the Accountable T-bill figure at par. The two published collateral wallets (a 4-of-5 Safe v1.3.0 with no modules and no guard, and a plain EOA with nonce 582) held only $574,101.01 of USDC+USDT at that block, so the Undeployed bucket is not the published wallet balances; and the issuer custody page names Ceffu for funding-rate arbitrage while the verified feed places the entire $5.37M HYPE funding-rate book in the ForDefi bucket. Binding terms reviewed 2026-09-22 (USN Terms of Service, last updated 2026-07-31): §6 processes standard redemption requests within five (5) Business Days, permits delay in extraordinary circumstances with written notice only after fifteen (15) Business Days and no obligation to disclose grounds, and provides that any validly submitted redemption request 'shall constitute an unsecured debt owed by the Company'; §1 grants USN holders no claim, participation interest, or economic right in the Company or its Affiliates and segregates reserves only from the Company's corporate operating funds (no trust, SPV, or named custodian terms); §29 reserves the issuer's 'absolute and unfettered discretion' to delay or gate redemptions during market stress or when liquidation of reserve assets is not reasonably practicable; §7 reserves minting/redemption fees with no fee schedule published on the Website. The liquidity page's 20%/60%/100% T+0/T+3/T+5 waterfall is in calendar days, is governance-voted rather than binding, and rests on the undisclosed multi-party PLMS facility; 61.92% of the book is Fasanara FTAC with a documented T+3-month redemption window. Grade adjudication under docs/process/mechanism-overlay-evidence-standard.md: seniority, legalEnforceability, and maturityAndLiquidity are weak because the binding primary sources document the deficiencies themselves - an unsecured claim with no reserve-asset priority (§1, §6), issuer redemption gating at absolute and unfettered discretion (§29), and a 5-Business-Day settlement term with 15-Business-Day notice-delay rights over a majority-T+3-month book with a non-binding liquidity waterfall - rather than because evidence is missing. creditQuality is limited: composition is third-party-verified at category level by the independent feed, but FTAC borrower identities and loan terms, the Dinari USD+ wrapper terms, the Undeployed wallet composition, and DeFi position detail are undisclosed. valuationCadence is adequate: the independently operated Accountable engine (inside the Noon perimeter, ingesting custodian/exchange data without Noon visibility) carried signed snapshot, zero-knowledge-proof, and Merkle-root attestations re-observed at the 2026-09-22 capture (interval 'live', verifiability 100%). custody is limited: the feed publishes an itemized custodian-sourced venue split reconciling to total reserves within one cent and the on-chain Safe share is externally anchored, but custodian legal terms and insolvency treatment are undisclosed, the ToS provides only segregation from corporate operating funds, and the custody page misattributes the funding-rate book to Ceffu. recovery is limited: the feed reports $2,447,622.38 of insurance cover (6.32% of USN supply) as insurance NFTs 5350 and 5386 at 0xcafeaca76be547f14d0220482667b42d8e7bc3eb, up from $1,570,997.42 (4.63%) at the 2026-07-27 review, but cover terms and any recapitalization obligation are undisclosed. weightedAverageMaturityDays is unavailable: the full 2026-09-22 API payload (deployment buckets, custody split, 665-point timeline, attestation bundle), Noon's transparency and liquidity docs (per-strategy liquidity windows only, e.g. FTAC's T+3-month window), and the product docs publish no position-level maturities, maturity ladder, or portfolio WAM, and deriving one from liquidity windows would be prohibited extrapolation. valuationCadenceDays retains the pinned 2026-07-27 journal measurement (0.0105, consecutive signed attestation snapshots ~15 minutes apart): the 2026-09-22 capture is a single fetch whose attestation-bundle timestamps (snapshot 20:15:39.547Z, ZKP 20:15:45.617Z, Merkle root 20:34:00.277Z) do not expose consecutive feed refreshes, and re-deriving a cadence from bundle-internal timestamps would be extrapolation.",
+      "notes": "Refreshed 2026-10-27 by Claude Noon feedback re-review 2026-10-29 (DeepSeek lane A2): reserve mix, custody split and doc paths re-pinned, superseding the 2026-09-22 mix (61.92% Fasanara FTAC, 13.40% HYPE funding-rate arbitrage, 9.88% US Treasury bills, 5.44% Undeployed; custody ForDefi 22.94%, Alpaca 14.37%). Measured from the Accountable-operated Noon dashboard API (cache.accountable.capital/dashboard/noon) at data timestamp 2026-10-27T08:31:12.450Z: total reserves $38,826,141.09 against USN supply of $38,418,770.17 (collateralization 1.010603), deployed as 64.4% Fasanara FTAC private credit ($25,019,135.66), 22.8% Hyperliquid HYPE funding-rate arbitrage ($8,847,789.24), 4.6% JAAA CLOs ($1,796,979.80), 3.1% Undeployed ($1,198,348.14), 2.5% DeFi lending on Morpho ($980,065.83), 2.5% DeFi lending on Euler ($978,795.65), 0.01% US Treasury bills ($5,025.77) and a $1.00 BTC funding-rate balance, custodied at Fasanara (64.44%, $25,019,135.66), ForDefi (28.87%, $11,208,067.62), Alpaca (4.64%, $1,802,005.57), the on-chain Safe (0.48%, $186,911.85) and an Ethereum wallet row (1.57%, $610,019.38), with Ceffu ($1.00); the venue amounts sum to total reserves within one cent. The US Treasury Bills bucket has fallen from 9.88% to 0.01%: it is not direct T-bill ownership but the same permissioned, rebasing Dinari USD+ position (contract 0xc9e3df3d230980b45adc623c81c3df4a73a5350f, implementation unverified on Etherscan/Sourcify, FULFILLER-role-gated asynchronous requestRedeem queue, transfer-restrictor blacklist), whose 5,026.81 balance sits in the Noon Collateral 2 EOA 0x4fD04553468610e5a88a2cffA38E057C954312Da at Ethereum block 26,299,805 (2026-10-29). The published collateral wallets (the 4-of-5 Safe v1.3.0 with no modules and no guard, and that EOA) held $333,290.24 of USDC+USDT at that block, so the Undeployed bucket is still not the published wallet balances; and the issuer custody page names Ceffu for funding-rate arbitrage while the verified feed places the entire $8.85M HYPE funding-rate book in the ForDefi bucket. Binding terms reviewed 2026-10-29 (USN Terms of Service, last updated 2026-07-31): §6 processes standard redemption requests within five (5) Business Days, permits delay in extraordinary circumstances with written notice only after fifteen (15) Business Days and no obligation to disclose grounds, and provides that any validly submitted redemption request 'shall constitute an unsecured debt owed by the Company'; §1 grants USN holders no claim, participation interest, or economic right in the Company or its Affiliates and segregates reserves only from the Company's corporate operating funds (no trust, SPV, or named custodian terms); §29 reserves the issuer's 'absolute and unfettered discretion' to delay or gate redemptions during market stress or when liquidation of reserve assets is not reasonably practicable; §2/§6 allow 'applicable fees (including applicable swap fees)'; §7 fee changes need 14 days' notice; USN fees stay undisclosed-reviewed. The liquidity page's 20%/60%/100% T+0/T+3/T+5 waterfall rests on unpublished PLMS legal agreements with unnamed counterparties; 64.4% of the book is Fasanara F-TAC, whose positions that page says typically take over three months to unwind. Grade adjudication under docs/process/mechanism-overlay-evidence-standard.md: seniority, legalEnforceability, and maturityAndLiquidity are weak because the binding primary sources document the deficiencies themselves - an unsecured claim with no reserve-asset priority (§1, §6), issuer redemption gating at absolute and unfettered discretion (§29), and a 5-Business-Day settlement term with 15-Business-Day notice-delay rights over a majority-T+3-month book with a waterfall resting on unpublished PLMS agreements - rather than because evidence is missing. creditQuality is limited: composition is third-party-verified at category level by the independent feed, but FTAC borrower identities and loan terms, the Dinari USD+ wrapper terms, the Undeployed wallet composition, and DeFi position detail are undisclosed. valuationCadence is adequate: the independently operated Accountable engine ingests custodian and exchange data without Noon visibility, and the 2026-10-27 payload reports verifiability 100%. custody is limited: the feed publishes an itemized custodian-sourced venue split reconciling to total reserves within one cent and the on-chain Safe share is externally anchored, but custodian legal terms and insolvency treatment are undisclosed, the ToS provides only segregation from corporate operating funds, and the custody page misattributes the funding-rate book to Ceffu. recovery is limited on its own 2026-09-22 component review: that capture reported $2,447,622.38 of insurance cover (6.32% of USN supply then) as insurance NFTs 5350 and 5386 at 0xcafeaca76be547f14d0220482667b42d8e7bc3eb, but cover terms and any recapitalization obligation are undisclosed. weightedAverageMaturityDays is unavailable: the full 2026-10-27 payload (deployment buckets, custody split, attestation bundle), Noon's verification and liquidity docs (category waterfall only), and the product docs publish no position-level maturities, maturity ladder, or portfolio WAM, and deriving one from liquidity windows would be prohibited extrapolation. valuationCadenceDays retains the pinned 2026-07-27 journal measurement (0.0105, consecutive signed attestation snapshots ~15 minutes apart): the 2026-10-27 payload is a single fetch whose attestation-bundle timestamps do not expose consecutive feed refreshes, and re-deriving a cadence from bundle-internal timestamps would be extrapolation.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 0.0105
@@ -17837,7 +17853,7 @@
       "metricApplicability": {
         "weightedAverageMaturityDays": {
           "state": "unavailable",
-          "rationale": "The metric applies - 61.92% of reserves sit in the Fasanara FTAC private-credit fund with a documented T+3-month redemption window - but no measurable value is published. Searched the full Accountable dashboard API payload (deployment buckets, custody split, 665-point timeline, attestation bundle; no maturity fields), Noon's transparency documentation, liquidity documentation (per-strategy liquidity windows only), and the USN/sUSN and mint/redeem product docs. No position-level maturity dates, maturity ladder, or portfolio weighted-average maturity is disclosed; the disclosure should live in the Accountable dashboard's position-level reserve detail.",
+          "rationale": "The metric applies - 64.4% of reserves sit in the Fasanara FTAC private-credit fund, whose positions Noon's liquidity page says typically take over three months to unwind - but no measurable value is published. Searched the full Accountable dashboard API payload (deployment buckets, custody split, attestation bundle; no maturity fields), Noon's verification and liquidity documentation (category waterfall only), and the USN/sUSN and mint/redeem product docs. No position-level maturity dates, maturity ladder, or portfolio weighted-average maturity is disclosed; the disclosure should live in the Accountable dashboard's position-level reserve detail.",
           "sourceUrl": "https://noon.accountable.capital/"
         }
       },
@@ -17858,7 +17874,18 @@
           "quality": "limited"
         },
         "recovery": {
-          "quality": "limited"
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-09-22",
+            "reviewer": "Noon feedback verification 2026-09-22",
+            "rationale": "Insurance evidence pin kept at the 2026-09-22 capture: the 2026-10-27 reserve refresh did not re-read the cover, so this component does not inherit the overlay's newer clock and does not renew siblings, metrics or their 2026-10-27 pin. The feed then reported $2,447,622.38 of insurance cover (6.32% of USN supply then) as insurance NFTs 5350 and 5386 at 0xcafeaca76be547f14d0220482667b42d8e7bc3eb, which evidences some cover and keeps the component limited: cover terms, exclusions and any recapitalization obligation are undisclosed. Re-review on a fresh insurance reading.",
+            "sources": [
+              {
+                "label": "Accountable-operated Noon proof-of-solvency dashboard, insurance cover at the 2026-09-22 capture (insurance NFTs 5350 and 5386)",
+                "url": "https://noon.accountable.capital/"
+              }
+            ]
+          }
         },
         "legalEnforceability": {
           "quality": "weak"
@@ -17880,15 +17907,15 @@
         },
         {
           "label": "Noon USN and sUSN documentation",
-          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
         },
         {
-          "label": "Noon transparency documentation",
-          "url": "https://docs.noon.capital/built-for-safety/transparency"
+          "label": "Noon independent collateral verification documentation",
+          "url": "https://docs.noon.capital/5.-the-security-framework/independent-collateral-verification.md"
         },
         {
           "label": "Noon liquidity documentation",
-          "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md"
         },
         {
           "label": "Noon complete documentation index",
@@ -17900,7 +17927,7 @@
         },
         {
           "label": "Noon binding sUSN Staking Terms (last updated 2026-07-31; reviewed 2026-09-21): holder staking position, redemption entitlement, proportional reserve-loss allocation, BVI governing law and arbitration",
-          "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-susn-staking-terms.md"
+          "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-susn-staking-terms.md"
         }
       ],
       "notes": "Wrapper-local review refreshed 2026-09-21 by Claude curation campaign 2026-09-21 (Mech5). The Accountable API remained live and reported reserves $35,739,933.97, USN supply $35,288,620.46, and sUSN NAV 1.2134498759423485 at its 2026-08-08 snapshot, with most reserves still in Fasanara private credit. The score metrics retain the pinned 2026-07-27 journal values: weightedAverageMaturityDays is unavailable and valuationCadenceDays is 0.0105 from consecutive signed snapshots. Credit quality is limited because category-level exposure is verified but borrower and position detail is not. Seniority is limited because sUSN is a documented residual-yield wrapper without a published reserve-loss waterfall versus USN. Accountable supports adequate valuation cadence. The documented T+5 liquidity commitment, active custody split, and insurance balance support limited maturity/liquidity, custody, and recovery, but underlying agreements and cover terms are undisclosed. The binding sUSN Staking Terms, last updated 2026-07-31 and reviewed 2026-09-21, now establish a user agreement with Noon Holdco Ltd, identify sUSN as the holder's staked position and entitlement to protocol distributions upon redemption, allocate the exact proportional reserve loss to sUSN principal after a defined Suspension Event, and provide BVI governing law and arbitration. The verified Ethereum staking-vault source anchors the described wrapper on-chain. Legal enforceability is limited rather than adequate because the terms expressly disclaim a direct interest in any fund, entity, or underlying asset and create no fiduciary relationship or reserve-asset priority.",
@@ -17911,7 +17938,7 @@
       "metricApplicability": {
         "weightedAverageMaturityDays": {
           "state": "unavailable",
-          "rationale": "The metric applies to the inherited USN reserve pool, but the full Accountable API payload, Noon product documentation, transparency page, and liquidity page publish only category totals and liquidity windows, not position maturity dates, a maturity ladder, or portfolio weighted-average maturity.",
+          "rationale": "The metric applies to the inherited USN reserve pool, but the full Accountable API payload, Noon product documentation, verification page, and liquidity page publish only category totals and liquidity windows, not position maturity dates, a maturity ladder, or portfolio weighted-average maturity.",
           "sourceUrl": "https://noon.accountable.capital/"
         }
       },
@@ -25297,6 +25324,106 @@
           "applicability": "unavailable",
           "rationale": "No retrieved current exact-fund independent assurance or itemized reserve-to-liability report and no complete default-recovery waterfall; naming an annual auditor and publishing NAV/class assets does not supply this evidence.",
           "sourceUrl": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/S?site=JPMorganv3"
+        }
+      }
+    },
+    {
+      "assetId": "swanusd-swan",
+      "archetype": "cdp",
+      "reviewedAt": "2026-10-29T17:31:59Z",
+      "sources": [
+        {
+          "label": "swanUSD Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15 Sourcify exact-match verified source (adjust/liquidate/redeem/writeOff/sell/buy, immutable collateralFactor 8500, minDebt, stalenessThreshold, feed, psmAsset and psmVault)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15?fields=sources"
+        },
+        {
+          "label": "Ethereum block 26299913, hash 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, timestamp 2026-10-29T17:31:59Z; pinned state read by this review",
+          "url": "https://etherscan.io/block/26299913"
+        },
+        {
+          "label": "Keyless Ethereum JSON-RPC (dRPC) used to re-execute this review's pinned reads at block 26299913: wstETH.balanceOf(Lender) 203850825454123900563, getCollateralPrice() 2933735095033131387772 with reduceOnly false and allowLiquidations true, getFeedPrice() updatedAt 1793250227, totalPaidDebt 351326006993430199851968, totalFreeDebt 4561000000000000000000, freePsmAssets 64205193253000784236399, Lens.getSyncedTotalDebts 355887784189412364492545, Coin.totalSupply 420092200246430984088367, collateralFactor 8500, minDebt 1000000000000000000000, stalenessThreshold 108000, redeemFeeBps 175, immutabilityDeadline 1918828775, getBuyFeeBps 0, operator 0xf69f74148687ca4860544f865581f05ca3f9098c, manager 0x9d5df30f475cea915b1ed4c0cca59255c897b61b",
+          "url": "https://eth.drpc.org"
+        },
+        {
+          "label": "Monolith liquidations documentation (borrowing-power trigger, 25% chunking with a 10,000 Coin floor, 0-10% incentive, stale feed keeps liquidations enabled, write-off tail)",
+          "url": "https://docs.monolith.market/protocol/liquidations.md"
+        },
+        {
+          "label": "Monolith bad-debt socialization documentation (permissionless writeOff, debt greater than 100x collateral value, pro-rata debt redistribution to all borrowers, residual collateral to the caller)",
+          "url": "https://docs.monolith.market/protocol/bad-debt-socialization.md"
+        },
+        {
+          "label": "Monolith redemptions documentation (holder-chosen redeemable borrower only, oracle price less fee, paid debt untouched, free-debt election)",
+          "url": "https://docs.monolith.market/protocol/redemptions.md"
+        },
+        {
+          "label": "Monolith Peg Stability Module documentation (1:1 reference-asset sell, buy closes at the immutability deadline, buy fee ramp)",
+          "url": "https://docs.monolith.market/protocol/peg-stability-module.md"
+        },
+        {
+          "label": "Monolith immutability deadline documentation (which interest, free-debt-band, redemption-fee and PSM-buy controls lock at the deadline)",
+          "url": "https://docs.monolith.market/protocol/immutability-deadline.md"
+        },
+        {
+          "label": "Monolith risk disclosure (each instance is backed by a single collateral asset with no cross-collateralization; no grace period on permissionless liquidation; bad debt socialised across all borrowers)",
+          "url": "https://docs.monolith.market/security/risks.md"
+        },
+        {
+          "label": "Monolith Lender contract reference (collateralFactor capped at 8500 bps; getCollateralPrice reduceOnly versus allowLiquidations semantics; per-function tunable parameters)",
+          "url": "https://docs.monolith.market/reference/Lender.md"
+        },
+        {
+          "label": "Inverse Finance Risk Working Group, FiRM collateral risk assessment for sSwanUSD, 2026-10-29 (independent review: 24-hour feed cadence against a 30-hour staleness threshold then a 24-hour decay, 1.75% redemption fee, 4,561 swanUSD elective free debt, no redemption/liquidation/write-off executed, single Curve venue with the manager Safe holding all LP)",
+          "url": "https://github.com/InverseFinance/Risk-Assessments/blob/main/Monolith_sSwanUSD/FiRM_Risk_Assessment_sSwanUSD_Monolith.md"
+        },
+        {
+          "label": "Curve swanUSD/USDC pool 0xc1488f04027afea94fa68586b4ff245098a59432 (40,592.91 USDC and 40,131.08 swanUSD at the pin, 80,724 USD TVL, A 250, 0.01% fee, 100% of LP in the manager Safe)",
+          "url": "https://etherscan.io/address/0xc1488f04027afea94fa68586b4ff245098a59432"
+        },
+        {
+          "label": "Monolith security audits page (Electisec, ChainSecurity, Sherlock contest, Nemesis and Zellic reviews of the Factory, Lender, Vault, InterestModel and Coin; the SWAN DAO layer is not named)",
+          "url": "https://docs.monolith.market/security/audits.md"
+        },
+        {
+          "label": "Live Monolith Stablecoin Factory bug bounty (Sherlock, maximum 20,000 DOLA; the swanUSD Coin and sSwanUSD Vault are not eligible instances)",
+          "url": "https://audits.sherlock.xyz/bug-bounties/287"
+        }
+      ],
+      "notes": "Reviewed at Ethereum block 26299913 (hash 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, 2026-10-29T17:31:59Z) against the Sourcify exact-match Lender/Coin/Vault/Factory sources, the pinned batch reads at that block, Monolith's current protocol and risk documentation retrieved 2026-10-29, and the Inverse Finance Risk Working Group's independent 2026-10-29 sSwanUSD assessment. METRIC: collateralizationRatio 1.6804294706 = wstETH 203.850825454123900563 held by the Lender valued at the protocol's own getCollateralPrice() 2933.735095033131387772 USD per wstETH, i.e. 598,044.320786236460 USD, divided by Lender debt 355,887.784189412364 (totalPaidDebt 351,326.006993430200 + totalFreeDebt 4,561.000000000000 + 0.777195982165 pending interest reported by Lens.getSyncedTotalDebts). Numerator and denominator are the CDP book alone, following the DOLA/FiRM and ebUSD precedents: the 64,205.193253000784 USDS PSM reserve is not CDP collateral and the 64,205.193253000784 swanUSD that PSM buy() minted is not borrower debt, so neither leg enters this ratio. The R2 leg-only price (stEthPerToken times ETH/USD, without the stETH/ETH depeg leg, 3 bp higher) gives 1.680999, which is the 168.10% figure in the research packet; that packet's 186.14% is whole-system reserves over debt and 157.69% is reserves over supply. For transparency only, collateral plus freePsmAssets 662,249.514039237245 over supply 420,092.200246430984 is 1.576438 and over debt 1.860838: descriptive ratios across two different backing legs, not the CDP collateralization metric, and no surplus credit is claimed. Nothing was liquidated, written off or redeemed between deployment (block 26249209, 2026-10-22T15:59:35Z) and the pin; the complete Lender log history for that range contains no Liquidated, WrittenOff or Redeemed event, which the RWG review also reports. GRADES. collateralizationParameters limited: the parameters are verified on-chain and immutable (collateralFactor 8500 bps, the documented V2 maximum; minDebt 1000e18; stalenessThreshold 108,000 s; compounded WstETHPriceFeedCompounded with updatedAt equal to the minimum of the stETH/ETH and ETH/USD legs; psmAsset USDS and psmVault sUSDS constructor-fixed), and the 85% factor sets a 117.6% minimum collateral ratio, stricter than the 110% MCR (a 90.9% collateral-factor equivalent) the Liquity V2 forks in this registry run, so the ratio itself is a conservative setting; no independent attestation covers this exact deployment: the published Monolith audits name the core contracts but establish no exact-bytecode scope for this V2 instance, and the Coin and sSwanUSD Vault are not eligible bounty instances. Interest-rate, free-debt-band, redemption-fee and borrow-delta knobs stay with the 3-of-6-signer manager Safe until the 2030-10-21T15:59:35Z immutability deadline, setManager() carries no deadline so the manager itself can be replaced at any time, and the operator can still set a local reserve fee of up to 5,000 bps after the deadline, so the evidence class reaches limited, not adequate; the grade rests on those mutable knobs and the attestation gap, not on the collateral ratio; not weak because every parameter is measured in code and no shortfall or misconfiguration is observed. liquidationMechanics limited: liquidate() is permissionless and oracle-gated and repays any positive amount up to min(debt, max(debt/4, 10,000e18)) per call, so a 20,000 debt can lose up to half at once and a debt at or below 10,000 can be repaid whole, and the repayment is further capped by the borrower's remaining collateral value; it burns the liquidator's swanUSD and pays collateral at the oracle price plus a 0% to 10% incentive that reaches 10% only at 90% LTV. Funding is not the binding constraint: the repayment medium is swanUSD, which a liquidator can mint 1:1 from USDS through buy() with no nominal cap and a 0 bps fee at the pin (the fee ramps only from 2028-10-21 to at most 100 bps and the path closes at the 2030-10-21 deadline), so the 80,724 USD Curve swanUSD/USDC pool, whose LP the same manager Safe holds in full, is not the only venue and Curve depth alone does not limit liquidation, including for the largest borrower (160,361.65, 45.1% of debt). Two measured facts keep it below adequate: the incentive is exactly zero at the 85% trigger, so a liquidator has no profit until the position is already past the factor; and the oracle path that gates liquidation unwinds rather than pauses, because a composite updatedAt older than 30 hours sets reduceOnly and decays the price linearly to zero over a further 24 hours while allowLiquidations stays true, and the pin reading was already 12.47 hours old. No liquidation or stressed-liquidation test has occurred. backstop weak: the design has no stability pool, insurance fund, auction module or other committed capital that funds liquidation repayments, and no such contract exists in the Lender's immutable dependency set (coin, collateral, psmAsset, psmVault, feed, vault, interestModel, factory). A liquidation is funded entirely by an external liquidator that must supply swanUSD, which it can mint at par through the PSM buy() rail until 2030 but which no protocol balance provides, and residual loss has no cushion: writeOff() deletes the debt and re-adds it pro rata to totalFreeDebt and totalPaidDebt, raising every other borrower's debt. That is a pinned structural deficiency in loss absorption, not missing evidence, so it grades weak rather than bounded-unknown, matching the treatment of USDD and JPYm CDPs with no committed debt-offset pool; no bad debt had been realised at the pin. branchIsolation not-applicable: a Monolith instance is one Lender with one immutable collateral token and Monolith states that each instance is backed by a single collateral asset with no cross-collateralization, so there are no independent collateral branches inside this mechanism to isolate. The Factory does deploy each market as a separate Lender/Coin/Vault triplet that shares no debt with swanUSD, which is why no adverse isolation reading is warranted, but there is no branch structure to grade: structurally absent, not undisclosed. shutdownAndBadDebt limited: the deployed Lender has no shutdown, pause or wind-down state, so markets run until borrowers repay and the only terminal rails are the permissionless writeOff() (debt greater than 100x collateral value at the oracle price, which transfers the borrower's remaining collateral to the address the caller names and socialises the debt across both pools) and redemption against free debt. Loss allocation is deterministic and documented and no bad debt has been realised, but there is no cure: no recapitalisation facility, no bad-debt reserve, no governance control over the pool that could cure a deficit. A write-off creates no supply: it deletes the written-off debt and re-adds the same amount pro rata to the surviving borrowers, so the loss lands on their positions rather than on holders, unless the written-off borrower is the last one, when the debt is deleted with no one to absorb it and that supply is left unbacked. The audit page reports the April 2026 Nemesis HIGH on writeOff() as addressed, yet the deployed exact-match source still exposes the entrypoint to any caller, which the issuer also documents as callable by anyone. Limited mirrors the Liquity V1 treatment of a system with no shutdown or unconditional recapitalisation facility; weak is barred because no shortfall is measured. structuralRedemption limited: any holder can call redeem(borrower, amountIn, minAmountOut) and receive wstETH at the oracle price less the 1.75% fee, but only against a borrower that opted into free debt, one borrower per call, capped by that borrower's debt and free collateral. Free debt at the pin is 4,561.00 swanUSD across four borrowers, 1.09% of supply, so the right is real and permissionless but covers about one percent of the token while the paid-debt book (83.6% of supply) is expressly insulated. The separate par rail is PSM sell() at 1:1 USDS with no fee, capped by freePsmAssets 64,205.19 (15.28% of supply), with the buy side closing at the 2030-10-21T15:59:35Z deadline. Both rails pay at oracle or par value rather than at a market discount, and neither is a standing commitment because free debt is a borrower election revocable in one transaction. Adequate is unavailable at 1.09% of supply; failed is barred because no route has been refused or exhausted.",
+      "metrics": {
+        "collateralizationRatio": 1.6804294706,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Monolith commits no capital to liquidation repayment: liquidate() burns the caller's swanUSD and pays out collateral, and the deployed Lender holds no stability pool, insurance fund, auction module or other balance dedicated to debt offset. The only contractually committed buffer is the free debt that borrowers elected, and that is a redemption rail graded under structuralRedemption, not liquidation capacity. A ratio would have to be manufactured from unrelated balances, so no liquidation-capacity ratio exists.",
+          "sourceUrl": "https://docs.monolith.market/protocol/liquidations.md"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "quality": "limited"
+        },
+        "backstop": {
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "A Monolith instance is a single Lender bound to one immutable collateral token with no cross-collateralization, so this mechanism has no independent collateral branches whose isolation could be graded. Cross-market separation exists at the Factory level (each market is its own Lender/Coin/Vault triplet that shares no debt), which is why the absence is not adverse, but no branch structure exists to assess.",
+          "sourceUrl": "https://docs.monolith.market/security/risks.md"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
         }
       }
     }

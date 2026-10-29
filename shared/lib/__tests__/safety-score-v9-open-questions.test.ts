@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { countV9EvidenceObligations } from "../../types/safety-score-v9-public-evidence-facts";
-import { V9OpenEvidenceSchema } from "../../types/safety-score-v9-public";
+import { V9OpenEvidenceSchema } from "../../types/safety-score-v9-open-evidence";
 import type { V9EvidenceCauseScope } from "../../types/safety-score-v9-causes";
 import type { V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";

@@ -61,8 +61,6 @@ Verified worse facts score lower than unresolved ones: an opaque controller prov
 
 Rated cards are **Provisional** at **>50% unknown-constant scoring weight**. Optional `provisional: true` / `unknownPricedWeightShare` are absent otherwise and on older archives. Sum original pillar weights × effective C/U component/subfactor weights, including controlling paths and a priced missing third pillar; exclude measured adversity, excluded factors and verified pool-less supply. Label only: no score/grade/availability change or new ±1 boundary hold.
 
-Whole-liability attribution (WS04-A08) and independent ordinary bridge clocks (WS04-A09) remain deferred. Current supply denominators, aggregate fallback, bridge applicability, route clocks and mint scope stand; any later clock change must preserve admitted active incidents.
-
 XRPL liabilities bind the validated ledger hash/true close time. Pending proof is role-specific: escrow support grants no independent-liability eligibility. Missing/rejected reads prove no zero pending supply.
 
 Exit selects the best admissible singleton/independent pair. Same-resource alternatives remain selectable but gain no diversification and share at most their maximum executable capacity; stale/diagnostic rows reserve no resources.
@@ -89,7 +87,7 @@ Shared-chain maturity charges require a date-admitted authored failing gate. Pen
 
 Public U means “Unresolved”, including researched but inconclusive evidence; machine keys/scoring are unchanged.
 
-Documentation gaps are a policy determination, not a fourth cause. An open C/U question whose resolution cannot materially move a published score is documentation-classed at read time under six policy reasons: custody outside the scoring path (3a); mint reconciliation or supervision the Control pillar already withholds credit for (3c); diagnostic-only data (3b, vetoed when it is the sole cause of an excluded or null pillar); a DEX coverage label on an inventory that does have routes (3d, never a zero-route asset); a deployment whose reviewed share is strictly below 1% and already non-binding (3e, a reviewed upper bound may be used); and reserve exposure strictly below 0.01% of book with the per-root merged residual below 0.1% (3f, `missing` rows only). The class never changes `evidenceLevel`, `limitedEvidenceCauses`, `limitingCauseGapIds`, pricing, cause, responsibility, caps, binding or a mixed question's bucket. A limited pillar is annotated "limited · documentation gaps only" only when every id in its unchanged `limitingCauseGapIds` resolves — locally or through `foreignCauseGaps` — to a documentation gap; an empty witness list, an unresolved id or any non-documentation witness leaves the pillar plain limited and still counted in the Evidence: limited total. Lapsed custody questions are retained as stale documentation at their original `reviewedAt`, never re-dated or deleted. Counts are published once per question at its root asset; the missing-data registry's schema 3 documentation and issuer bands read the same classifier, and a supplement is dropped only when every obligation it carries is already a compiled task.
+Documentation gaps are a policy determination, not a fourth cause, and change no evidence level: a limited pillar reads "limited · documentation gaps only" only when every `limitingCauseGapIds` entry resolves to a documentation gap ([class](process/report-cards-appendix.md#documentation-class-v1037)).
 
 Headlines follow score-matching binding Control components/credited Exit routes. Humanized labels/rounded display preserve machine identity/precision. Active deployment-incident headlines need **≥0.5 directly attributed points**, unless compromised authority binds Control. Detailed losses remain; inherited risk uses parent limits. Unwired freshness is **not assessed**, never publication time.
 
@@ -113,15 +111,19 @@ Policy owns class qualities; strict `lender-collateral-classes-v1.json` owns tok
 
 For collateral quality `q`/LLTV fraction `l`, lender quality=`100 − l² × (100 − q)`. Allocation weights scale deployed parent Backing; idle retains it, blend≤parent. See [methodology history](#methodology-identity) for v10.19 calibration/acceptance.
 
+### Report schema v9
+
+Body 9 wraps publication 8 (`model: "v9"`); see the [report9 wire contract](api-reference.md#full-cards).
+
 ### Report schema v8
 
-API v8 (`model: "v9"`)/publication v7 retain exact exit identity. Exclusions/partial weights, pipeline-gap/null-grade and NR remain distinct. Cards reconcile `ratingStatus`, `partialEvidence`, `confidenceDimensions`, `completeness.pipelineGapCount/pipelineGapIds`; supply/shared-book semantics stand. Optional provisional fields reconcile to the breakdown and aggregation weights when present; historical cards without them remain valid and are not retroactively relabelled.
+Archive-only via explicit historical dispatch: report8 (API v8)/publication v7 retain exact exit identity. Exclusions/partial weights, pipeline-gap/null-grade and NR remain distinct. Cards reconcile `ratingStatus`, `partialEvidence`, `confidenceDimensions`, `completeness.pipelineGapCount/pipelineGapIds`; supply/shared-book semantics stand. Optional provisional fields reconcile to the breakdown and aggregation weights when present; historical cards without them remain valid and are not retroactively relabelled.
 
-Inherited-parent attribution must match referenced parents; mismatch fails schema validation at `cards`, including `safeParse`, never an escaped exception.
+Inherited-parent attribution must match referenced parents; mismatches fail `safeParse` at `cards`, never escaping.
 
-Lossless witness interning preserves evidence; obligation counts distinguish questions from repeated witnesses. Supply/dependency/common-mode projections preserve identities/clocks ([schema details](process/report-cards-appendix.md#report-schema-v8)).
+Witness interning stays lossless and separates questions from repeated witnesses ([schema details](process/report-cards-appendix.md#report-schema-v8)).
 
-Seed/verify both accepted private read models before strict readers. Preparation/pre-compile uses them, never full-publication fallback. Invalid baselines block compilation; unavailable lender sources use class fallback. Recovery: revert strict readers on current head, reseed an accepted cycle, reapply ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API/score-index schema 2 stay unchanged.
+Seed/verify both accepted private read models before strict readers; preparation/pre-compile uses them, never full-publication fallback. Invalid baselines block compilation; recovery reseeds then reverts strict readers ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API/score-index schema 2 stay unchanged.
 
 ## Local authority exposure display
 
@@ -172,7 +174,7 @@ Endpoint freshness uses 2x `compute-safety-score-v9` (7200 s), matching consumer
 
 The response carries V9 identity/source digests, methodology/policy identity, active-set completeness, current/held health, native three-pillar cards with nullable excluded diagnostics and status-aware breakdowns, per-card `backingFromLiveReserves`, the serial/basket dependency graph and accepted `updatedAt`.
 
-`/api/report-cards/v9` wraps publication 7 as body 8; reject public v6 rather than infer it current. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; NR/pipeline IDs are disjoint and sorted. Index 2/free-grades 1 retain compact status/partial metadata; graph/scenario 2 distinguish technical parent/model nulls from NR. Pillar freshness stays categorical, opt-in operands follow the compact-representation contract, and scores/legacy wire are unchanged. [Report schema v8](#report-schema-v8) owns cause-bearing fields and typed route identity.
+`/api/report-cards/v9` wraps publication 8 as body 9. Reject public v6 rather than infer it current. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; NR/pipeline IDs are disjoint and sorted. Index 2/free-grades 1 retain compact status/partial metadata; graph/scenario 2 distinguish technical parent/model nulls from NR. Pillar freshness stays categorical, opt-in operands follow the compact-representation contract, and scores/legacy wire are unchanged. [Report schema v9](#report-schema-v9) owns the current wire; archive-only [v8](#report-schema-v8) owns cause-bearing fields and typed route identity.
 
 See the [public API reference](https://pharos.watch/api/) for the wire contract.
 

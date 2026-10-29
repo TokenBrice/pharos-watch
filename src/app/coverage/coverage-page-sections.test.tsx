@@ -166,8 +166,8 @@ describe("CoverageSafetyScoreDataCard", () => {
         { responsibility: "mixed" as const, questions: 1, obligations: 1 },
       ],
       reasons: [
-        { code: "unresolved-control-identity" as const, bucket: "open" as const, questions: 3, obligations: 6 },
         { code: "missing-reserve-composition" as const, bucket: "issuer" as const, questions: 2, obligations: 3 },
+        { code: "unresolved-control-identity" as const, bucket: "open" as const, questions: 3, obligations: 6 },
       ],
       documentation: {
         questions: 1,
@@ -181,7 +181,15 @@ describe("CoverageSafetyScoreDataCard", () => {
         oldestReviewedAtSec: reviewedAt,
         newestReviewedAtSec: reviewedAt,
       },
-      byCard: [],
+      byCard: [
+        {
+          id: "asset-a",
+          openBucketQuestionsCarried: 3,
+          inheritedOpenBucketQuestionsCarried: 0,
+          openBucketObligationsCarried: 6,
+          documentationObligationsCarried: 256,
+        },
+      ],
     };
     const safetyScoreDataCoverage = buildDataCoverageModel(
       makeReportCardsV9Response({

@@ -25,8 +25,8 @@ import {
 import {
   SafetyScoreV9PreviousResponseSchema,
   SafetyScoreV9ResponseSchema,
-  type SafetyScoreV9Card,
-} from "@shared/types/safety-score-v9-public";
+} from "@shared/types/safety-score-v9-publication-response";
+import type { SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
 import { loadPerCoinStablecoinEntries, type StablecoinSourceEntry } from "../lib/stablecoin-catalog-sources";
 import {
   parseStrictCliArgs,

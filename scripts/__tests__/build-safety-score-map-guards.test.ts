@@ -12,6 +12,7 @@ import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-pub
 import {
   makeSafetyMapPsiPayload,
   makeSafetyMapRatedCard,
+  makeSafetyMapReportCardsNextResponse,
   makeSafetyMapReportCardsResponse,
   makeSafetyMapStablecoinsPayload,
   startSafetyMapFixtureServer,
@@ -25,6 +26,12 @@ describe("Safety map availability semantics", () => {
     const response = makeSafetyMapReportCardsResponse({ cards: [gap, partial], fixtureId: "availability", methodologyVersion: "10.01", defaultUpdatedAt: 1790972280, asOfSec: 1790972280 });
     const result = parseMapReportCards(response);
     expect(result.cards.map(card => ({ id: card.id, grade: card.grade, score: card.score }))).toEqual([{ id: "partial", grade: partial.grade, score: partial.score }]);
+
+    const next = parseMapReportCards(makeSafetyMapReportCardsNextResponse({
+      cards: [gap, partial], fixtureId: "availability-next", methodologyVersion: "10.01",
+      defaultUpdatedAt: 1790972280, asOfSec: 1790972280,
+    }));
+    expect(next.cards).toEqual(result.cards);
   });
 
   it("never renders a stale-header publication as current", () => {

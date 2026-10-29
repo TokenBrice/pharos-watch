@@ -7,7 +7,7 @@ import type { V9FactGapV3, V9FactStatusV2 } from "../../types/safety-score-v9-fa
 import {
   V9OpenEvidenceByCardSchema,
   type V9OpenEvidenceByCard,
-} from "../../types/safety-score-v9-public";
+} from "../../types/safety-score-v9-open-evidence";
 import { buildStablecoinSafetyScoreV9Presentation } from "@/lib/stablecoin-safety-score-v9-presentation";
 import { makeV9Card } from "@/test/fixtures/safety-score-v9";
 import {

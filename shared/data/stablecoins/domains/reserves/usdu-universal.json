@@ -18,13 +18,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Pharos batch64 review (Rev_UsduUniversal)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Pharos W0 renewal review 2026-10-29 (R-COMP-8)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Crowe August 2026 reserve examination",
-        "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf"
+        "label": "Crowe September 2026 USDU reasonable-assurance examination (11 and 30 September 2026 checkpoints; signed 27 October 2026)",
+        "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6ae352f067821aadfb307fb9_Final%20USDU%20Examination%20Report%20-%20SEP%2026%20SIGNED.pdf"
       },
       {
         "label": "USDU January 2026 whitepaper",
@@ -35,11 +35,11 @@
         "url": "https://www.adgm.com/public-registers/fsra/firms/financial-firms/universal-digital-intl-limited-250089"
       }
     ],
-    "rationale": "Crowe obtained direct bank confirmations and independently traced exact Ethereum liabilities; all reported reserves are U.S. dollar deposits.",
-    "compositionBasis": "Crowe ISAE 3000 reasonable-assurance examination: August 31, 2026 USD deposits of $30,651,543.81 / total reserves of $30,651,543.81 = 100%, matching the exact Ethereum token liabilities at both examined checkpoints. September 18 is the report signature date, used only as a publication stand-in. This historical report does not examine the subsequently announced Solana integration or current holdings.",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "Crowe obtained direct bank confirmations and independently traced Ethereum USDU liabilities to public blockchain records at both examined checkpoints. At 11 September 2026 11:59 PM GST USDU in circulation and reserve assets were both $30,651,543.81; at 30 September 2026 11:59 PM GST both were $30,759,928.73. The Reserve Assets Report states USD 30,759,928.73 held entirely as U.S. dollar deposits, equal to the tested liabilities, with no securities reported. Crowe's ISAE 3000 (Revised) reasonable-assurance conclusion is dated 27 October 2026 and covers the Ethereum contract 0xe4ca6596D2C28014C6f89964F57838e0bE9f369B only; management's notes still permit short-term USD UAE government securities in the future, which Crowe excludes from assurance. The examination does not extend to the subsequently announced Solana integration or to current holdings after the checkpoints.",
+    "compositionBasis": "Crowe ISAE 3000 reasonable-assurance examination: 30 September 2026 USD deposits of $30,759,928.73 / total reserves of $30,759,928.73 = 100%, matching the exact Ethereum token liabilities at both examined checkpoints; signed 27 October 2026",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The examined August 31, 2026 assets are fully classified as USD bank deposits. Management's accompanying notes also permit short-term USD UAE government securities in the future, if and when available; Crowe excludes those notes from assurance, and no securities were reported at either examined checkpoint. Bank-specific shares, contractual deposit maturities and independently established holder insolvency priority are undisclosed.",
+    "knownUnknownExposure": "The examined 30 September 2026 assets are fully classified as USD bank deposits. Management's accompanying notes also permit short-term USD UAE government securities in the future, if and when available; Crowe excludes those notes from assurance, and no securities were reported at either examined checkpoint. Bank-specific shares, contractual deposit maturities and independently established holder insolvency priority are undisclosed.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

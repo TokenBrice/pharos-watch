@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { V9OpenEvidenceSchema, type V9OpenEvidence } from "../../types/safety-score-v9-public";
+import { V9OpenEvidenceSchema, type V9OpenEvidence } from "../../types/safety-score-v9-open-evidence";
 import type { V9AssetFactsV3, V9DeploymentControlFactV2, V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
 import { V9_CANDIDATE_POLICY_V1 } from "../safety-score-v9/policy";
