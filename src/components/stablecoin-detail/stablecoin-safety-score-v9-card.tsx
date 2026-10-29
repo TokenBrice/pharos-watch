@@ -2,7 +2,7 @@
 
 import { IntentLink } from "@/components/intent-link";
 import { History, Table2 } from "lucide-react";
-import type { SafetyScoreV9CurrentCard, V9DocumentationOnlyPillar } from "@shared/types";
+import type { SafetyScoreV9CurrentCard, V9QualityPillar } from "@shared/types";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -97,7 +97,7 @@ export interface StablecoinSafetyScoreV9CardProps {
   /** Which pillar evidence boards the page renders; omitted, every pillar row links to its board. */
   evidenceAnchors?: PillarEvidenceAnchors;
   /** Server-computed `openEvidence.byCard[].documentationOnlyLimited`; omitted renders plain limited. */
-  documentationOnlyLimited?: readonly V9DocumentationOnlyPillar[];
+  documentationOnlyLimited?: readonly V9QualityPillar[];
 }
 
 export function StablecoinSafetyScoreV9Card({
