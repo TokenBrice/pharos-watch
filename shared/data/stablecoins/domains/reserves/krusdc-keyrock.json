@@ -2,9 +2,25 @@
   "id": "krusdc-keyrock",
   "reserves": [
     {
+      "sourceKey": "erc4626-single-asset:arc:0x3600000000000000000000000000000000000000",
+      "name": "Keyrock Prime USDC idle underlying",
+      "pct": 13.26616503749668,
+      "risk": "high",
+      "coinId": "usdc-circle",
+      "depType": "wrapper",
+      "assetClass": "stablecoin",
+      "issuerOrObligor": "Circle USDC",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
       "sourceKey": "erc4626-single-asset:arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123:deployed",
       "name": "Keyrock USDC deployed Morpho lending positions",
-      "pct": 100,
+      "pct": 86.73383496250332,
       "risk": "high",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -22,8 +38,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Sol batch64 review (Rev_KrusdcKeyrock)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sprint RS-004 pinned Arc accounting review",
     "confidence": "verified",
     "sources": [
       {
@@ -45,11 +61,15 @@
       {
         "label": "Arc block 26080279, 2026-10-15T10:44:09Z; full adapter and market census",
         "url": "https://rpc.mainnet.arc.io"
+      },
+      {
+        "label": "Arc block 28500000, 2026-10-29T15:49:46Z; pinned vault accounting, idle USDC balance and adapter market reads",
+        "url": "https://api-arc-mainnet.n.dwellir.com"
       }
     ],
-    "rationale": "At Arc block 26080279 (hash 0xd45fba23210a5662823d06f1e292ca0e0798748413f29663b523b30568b955cf; 2026-10-15T10:44:09Z), totalSupply=75022024133358070384877635 raw 18-decimal shares; totalAssets=accrueInterestView assets=75080951234671 raw 6-decimal USDC, with zero pending fee shares. Idle USDC=0. The complete one-adapter inventory at 0x6adc3de83e00c4a74fda9403043828b831d0f5c3 has one market, 0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d: expectedSupplyAssets=realAssets=75080951234671, supplyShares=75004112723053268694, borrowShares=0 and posted collateral=0. The market lends USDC against cirBTC at 86% LLTV. convertToAssets(1e18)=1000785 raw USDC. The 100% slice is the deployed USDC lender claim, not direct ownership of borrower collateral or Circle reserve assets.",
-    "compositionBasis": "Full fixed-block ERC-4626 vault, adapter and Morpho market inventory",
-    "compositionAsOf": "2026-10-15",
+    "rationale": "At Arc block 28500000 (hash 0xbd136b5f714efc6e2c89fd91992a289b5234c0f992ab4ab7572781097c5f41aa; 2026-10-29T15:49:46Z), vault 0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123 returns asset()=0x3600000000000000000000000000000000000000 (USDC), totalAssets()=75147661912822 raw 6-decimal USDC and totalSupply()=75022197361540051918998766 raw 18-decimal shares. USDC.balanceOf(vault)=9969212851175 raw, 13.266165% of totalAssets, and the sole adapter 0x6adc3de83e00c4a74fda9403043828b831d0f5c3 returns parentVault()=vault, marketIdsLength()=1, realAssets()=expectedSupplyAssets(0xc2db905f174e5defcce01d321b09f15f78856a36a21b90cc7e1abbc29225815d)=65178449061647 raw, 86.733835%; idle plus deployed reconciles exactly to totalAssets. The idle slice is USDC cash already held by the vault, so no strategy market has to repay before it is usable and the ERC-4626 redeem/withdraw path settles it from idle assets: its cash-realization horizon is immediate. The deployed slice remains the single cirBTC-secured Morpho lender claim whose cash realization depends on market liquidity, so its liquidityHorizon stays unknown. The retained 2026-10-15 census at block 26080279 (zero idle, 100% deployed, same single market, 86% LLTV, convertToAssets(1e18)=1000785 raw USDC) is historical and superseded by this split. Neither slice is ownership of borrower collateral or of Circle reserve assets.",
+    "compositionBasis": "Full fixed-block ERC-4626 vault, adapter and Morpho market inventory at Arc block 28500000, superseding the retained block 26080279 census",
+    "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
     "knownUnknownExposure": "Current strategy claims and parent asset are identified. Circle discloses custody of the native BTC backing borrower cirBTC collateral; exact-holder legal insolvency priority, future allocations and stressed realization remain uncertain.",
     "knownUnknownExposurePct": 0
