@@ -44,3 +44,6 @@ export const SAFETY_SCORE_V9_RESPONSIBILITY_ORDER: readonly string[] = [
 export const SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS: Readonly<Partial<Record<V9EvidenceLevel, string>>> = {
   limited: "Evidence: limited — the pillar score relies on undisclosed or unresolved inputs.",
 };
+
+/** Suffix on a limited pillar whose every limiting witness is a documentation gap. */
+export const SAFETY_SCORE_V9_DOCUMENTATION_ONLY_LIMITED_SUFFIX = "documentation gaps only";

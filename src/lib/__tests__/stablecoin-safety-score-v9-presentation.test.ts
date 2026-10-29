@@ -60,6 +60,43 @@ describe("stablecoin V9 safety presentation", () => {
     expect(buildStablecoinSafetyScoreV9Presentation(card).pillars[0].evidenceDescription).toBeNull();
   });
 
+  it("annotates a limited pillar the server lists as documentation-only", () => {
+    const card = makeV9Card();
+    card.pillars.backing.evidenceLevel = "limited";
+
+    const presentation = buildStablecoinSafetyScoreV9Presentation(card, ["backing"]);
+
+    expect(presentation.pillars[0].evidenceSummary).toBe(
+      "Evidence: limited · current · documentation gaps only",
+    );
+    expect(presentation.pillars[2].evidenceSummary).not.toContain("documentation gaps only");
+  });
+
+  it("keeps unlisted or absent documentation-only blocks as plain limited copy", () => {
+    const card = makeV9Card();
+    card.pillars.backing.evidenceLevel = "limited";
+
+    expect(buildStablecoinSafetyScoreV9Presentation(card, ["control"]).pillars[0].evidenceSummary)
+      .toBe("Evidence: limited · current");
+    expect(buildStablecoinSafetyScoreV9Presentation(card).pillars[0].evidenceSummary)
+      .toBe("Evidence: limited · current");
+  });
+
+  it("keeps the existing partial-DEX suffix beside the documentation annotation", () => {
+    const card = makeV9Card();
+    card.pillars.exit.evidenceLevel = "limited";
+    card.scoreTrace.evidenceResponsibility.summaries = card.scoreTrace.evidenceResponsibility.summaries.map(
+      (summary) => summary.responsibility === "unresearched"
+        ? { ...summary, reasonCodes: ["incomplete-dex-route-coverage"] }
+        : summary,
+    );
+
+    expect(buildStablecoinSafetyScoreV9Presentation(card).pillars[1].evidenceSummary)
+      .toBe("Evidence: limited (selected route) · current · partial DEX coverage");
+    expect(buildStablecoinSafetyScoreV9Presentation(card, ["exit"]).pillars[1].evidenceSummary)
+      .toBe("Evidence: limited (selected route) · current · partial DEX coverage · documentation gaps only");
+  });
+
   /**
    * Full three-pillar breakdown; tests override the pillar they exercise.
    * Published scores must equal the card's pillar scores (88 / 84 / 86) and
