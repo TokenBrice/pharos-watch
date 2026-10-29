@@ -82,7 +82,7 @@ const MECHANISM_ARCHETYPE_DESCRIPTORS = {
     oneLiner: "Regulated funds hold private credit, CLO tranches, or other non-Treasury debt; the token is a fund share whose NAV reflects credit losses and quarterly redemption gates.",
   },
   "commodity-claim": { label: "Allocated Commodity Claim", shortLabel: "Commodity Claim", ctaNoun: "commodity-backed",
-    oneLiner: "The token is a title claim on specific vaulted metal rather than on dollars; it tracks the commodity price and can usually be redeemed for physical delivery in whole-bar lots.",
+    oneLiner: "The token is a claim on specific vaulted metal rather than on dollars; it tracks the commodity price and can usually be redeemed for physical delivery in whole-bar lots.",
   },
   "ucits-trs-fund": { label: "UCITS Physical Securities and TRS Fund", shortLabel: "UCITS / TRS Fund", ctaNoun: "UCITS / TRS fund",
     oneLiner: "The token represents a proportional fund interest; physical securities and total-return swaps target the share class's return, with separate NAV, counterparty and recovery risks.",

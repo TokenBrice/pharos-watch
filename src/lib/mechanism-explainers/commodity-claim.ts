@@ -2,12 +2,12 @@ import type { ArchetypeContent } from "./types";
 
 export const content: ArchetypeContent = {
   archetype: "commodity-claim",
-  headline: "A title claim on specific vaulted metal",
+  headline: "A claim on specific vaulted metal",
   subtitle:
-    "The token is not a dollar claim. It is legal title to identified bars of gold or silver sitting in a named vault, usually redeemable for physical delivery in whole-bar lots.",
+    "The token references identified bars of gold or silver in a named vault rather than dollars, usually redeemable for physical delivery in whole-bar lots. Whether holders own those bars depends on the issuer's terms.",
   lead: [
     "A commodity-claim token inverts the usual stablecoin question. Its reference price is one troy ounce (or one gram) of metal rather than $1, so a token that tracks its reference perfectly will still move in dollar terms every day. Pharos tracks these assets because the token's own risk question is the same one every stablecoin faces: is there a real, enforceable, verified claim on the stated asset, and can a holder get out?",
-    "The design substitutes a vault for a bank. Buyers send funds, the issuer buys metal and allocates specific numbered bars, and the token is minted as title to that allocated metal. Because the reserve asset is a physical object rather than a bank balance, the risk moves from banking rails and reserve composition to four different questions: whether the holder actually owns identified metal or merely has an unsecured contractual claim on the issuer, who runs the vault and what happens if they fail, whether an independent party reconciles the bar list against token supply, and whether physical redemption is genuinely operable or a marketing line with an unreachable minimum.",
+    "The design substitutes a vault for a bank. Buyers send funds, the issuer buys metal and allocates specific numbered bars, and the token is minted against that allocated metal. Because the reserve asset is a physical object rather than a bank balance, the risk moves from banking rails and reserve composition to four different questions: whether the holder actually owns identified metal or merely has an unsecured contractual claim on the issuer, who runs the vault and what happens if they fail, whether an independent party reconciles the bar list against token supply, and whether physical redemption is genuinely operable or a marketing line with an unreachable minimum.",
   ],
   howItWorks: [
     {
@@ -18,11 +18,11 @@ export const content: ArchetypeContent = {
     {
       id: "allocated-metal-vault",
       title: "Metal is allocated in a named vault",
-      body: "The issuer takes delivery into a vault operated by a specialist custodian (Brink's, Loomis, an LBMA-accredited Swiss or Singapore facility, a DMCC vault in Dubai) and allocates specific bars, identified by serial number, refiner, and weight, to the token's reserve. 'Allocated' is the load-bearing word: allocated metal is identified property held for the holders' benefit, while unallocated metal is an unsecured claim on the issuer's own inventory.",
+      body: "The issuer takes delivery into a vault operated by a specialist custodian (Brink's, Loomis, an LBMA-accredited Swiss or Singapore facility, a DMCC vault in Dubai) and allocates specific bars, identified by serial number, refiner, and weight, to the token's reserve. 'Allocated' is the load-bearing word: allocated metal is identified and set aside for the reserve, while unallocated metal is an unsecured claim on the issuer's own inventory. Allocation alone does not make the bars the holders' property; the terms decide that.",
     },
     {
       id: "token-minted-as-metal-title",
-      title: "Token minted as title to that metal",
+      title: "Token minted against that metal",
       body: "Tokens are minted against the allocated weight, typically one token per troy ounce of gold or per ounce of silver, sometimes per gram. Holders can redeem for physical delivery under the issuer's terms, or sell into secondary liquidity. The published bar list, refreshed alongside a periodic inventory attestation, is what lets a holder tie a token to specific metal.",
     },
   ],
@@ -78,7 +78,7 @@ export const content: ArchetypeContent = {
     {
       id: "allocated-versus-unallocated",
       title: "Allocated versus unallocated",
-      body: "The sharpest split in the archetype. Allocated structures name specific bars and hold them for the holders' benefit; unallocated structures give a claim on a quantity of metal from the issuer's pool. Pharos treats the difference as a title question, not a disclosure question. The absence of segregation language is itself the finding.",
+      body: "The sharpest split in the archetype. Allocated structures name specific bars for the reserve; unallocated structures give a claim on a quantity of metal from the issuer's pool. Pharos treats the difference as a title question, not a disclosure question. The absence of segregation language is itself the finding.",
     },
     {
       id: "per-ounce-per-gram-silver",
