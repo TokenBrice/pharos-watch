@@ -293,26 +293,34 @@ export function listUnexpectedDolaAssets(payload: FirmMarketsResponse): string[]
   );
 }
 
-// Inverse's DOLA/USDS Peg Stability Module. Deployed 2025-08-10 and drained
-// since 2025-12-10 — lifetime usage is two test sells totalling ~$55 — so a
+// Inverse's DOLA/USDS Peg Stability Module. The original PSM
+// 0x4dfd662622d766304cb539e66f893c4defa19398 (deployed 2025-08-10, drained
+// 2025-12-10) is historical; this deployment is canonical since proposal 343
+// executed 2025-12-20 (block 24051640), and the PSM Fed
+// 0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc `psm()` points to it. At block
+// 26296822 it read supply() = 0, getTotalReserves() = 0 and sellFeeBps() = 20
+// while holding 200,000 DOLA of buy inventory; sell() reverts while supply()
+// is zero, so sell capacity arises only from prior USDS -> DOLA buys and a
 // same-run read is the only honest capacity source for this route.
-// https://etherscan.io/address/0x4dfd662622d766304cb539e66f893c4defa19398
-const INVERSE_PSM_ADDRESS = "0x4dfd662622d766304cb539e66f893c4defa19398";
+// https://etherscan.io/address/0x1d02f2841afa3cc20435a8c804c24deac5f30dfa
+const INVERSE_PSM_ADDRESS = "0x1d02f2841afa3cc20435a8c804c24deac5f30dfa";
 // Pinned identities the PSM's immutable/derived getters must still resolve to;
 // any mismatch means the pinned route no longer describes this contract.
 const INVERSE_PSM_VAULT_ADDRESS = "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"; // sUSDS
 const INVERSE_PSM_COLLATERAL_ADDRESS = "0xdc035d45d973e3ec169d2276ddab16f1e407384f"; // USDS
 const INVERSE_PSM_DOLA_ADDRESS = "0x865377367054516e17014ccded1e7d814edc9ce4"; // DOLA
+const INVERSE_PSM_FED_ADDRESS = "0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc"; // PSMFed
 const INVERSE_PSM_DECIMALS = 18;
 const INVERSE_PSM_BPS_DENOMINATOR = 10_000;
 const INVERSE_PSM_DOC_URL =
   "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module";
 
-// supply() / vault() / collateral() / DOLA() / sellFeeBps()
+// supply() / vault() / collateral() / DOLA() / fed() / sellFeeBps()
 const PSM_SUPPLY_SELECTOR = "0x047fc9aa";
 const PSM_VAULT_SELECTOR = "0xfbfa77cf";
 const PSM_COLLATERAL_SELECTOR = "0xd8dfeb45";
 const PSM_DOLA_SELECTOR = "0x92c592d0";
+const PSM_FED_SELECTOR = "0x53d06f94";
 const PSM_SELL_FEE_BPS_SELECTOR = "0x23cbe1f3";
 // ERC-4626 maxWithdraw(address) on the sUSDS vault
 const VAULT_MAX_WITHDRAW_SELECTOR = "0xce96cb77";
@@ -334,10 +342,11 @@ interface InversePsmProbe {
 async function probeInversePsm(signal: AbortSignal, ctx?: AdapterContext): Promise<InversePsmProbe | null> {
   const onchain = makeOnchainCallers({ chain: "ethereum" }, { signal, ctx });
   try {
-    const [vaultHex, collateralHex, dolaHex, supplyRaw, maxWithdrawRaw] = await Promise.all([
+    const [vaultHex, collateralHex, dolaHex, fedHex, supplyRaw, maxWithdrawRaw] = await Promise.all([
       onchain.raw(INVERSE_PSM_ADDRESS, PSM_VAULT_SELECTOR),
       onchain.raw(INVERSE_PSM_ADDRESS, PSM_COLLATERAL_SELECTOR),
       onchain.raw(INVERSE_PSM_ADDRESS, PSM_DOLA_SELECTOR),
+      onchain.raw(INVERSE_PSM_ADDRESS, PSM_FED_SELECTOR),
       onchain.uint256(INVERSE_PSM_ADDRESS, PSM_SUPPLY_SELECTOR),
       onchain.uint256(
         INVERSE_PSM_VAULT_ADDRESS,
@@ -348,9 +357,11 @@ async function probeInversePsm(signal: AbortSignal, ctx?: AdapterContext): Promi
     const vault = vaultHex ? decodeStrictAddressWord(vaultHex as `0x${string}`) : null;
     const collateral = collateralHex ? decodeStrictAddressWord(collateralHex as `0x${string}`) : null;
     const dola = dolaHex ? decodeStrictAddressWord(dolaHex as `0x${string}`) : null;
+    const fed = fedHex ? decodeStrictAddressWord(fedHex as `0x${string}`) : null;
     if (vault !== INVERSE_PSM_VAULT_ADDRESS) return null;
     if (collateral !== INVERSE_PSM_COLLATERAL_ADDRESS) return null;
     if (dola !== INVERSE_PSM_DOLA_ADDRESS) return null;
+    if (fed !== INVERSE_PSM_FED_ADDRESS) return null;
 
     if (supplyRaw == null || supplyRaw < 0n) return null;
     if (maxWithdrawRaw == null || maxWithdrawRaw < 0n) return null;
@@ -512,7 +523,7 @@ export async function fetchDolaInverseReserves(
     warnings.push(
       reserveInfoWarning(
         "dola-psm-unreadable",
-        `Inverse PSM ${INVERSE_PSM_ADDRESS} did not return a matching vault()/collateral()/DOLA()/supply() set this run; redemption telemetry withheld`,
+        `Inverse PSM ${INVERSE_PSM_ADDRESS} did not return a matching vault()/collateral()/DOLA()/fed()/supply() set this run; redemption telemetry withheld`,
       ),
     );
   }
