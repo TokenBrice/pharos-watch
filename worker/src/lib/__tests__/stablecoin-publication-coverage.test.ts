@@ -140,6 +140,31 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       });
     }
   });
+  it.each(["usdk-kast", "usdn-noble"])(
+    "counts %s's published M0 redemption par as a nominal reference, never as observed or missing",
+    (id) => {
+      const coverage = evaluateStablecoinActivePriceCoverage([{
+        id,
+        price: 1,
+        priceSource: "protocol-par",
+        priceObservedAtMode: "nominal_reference" as const,
+        nominalPriceReference: { price: 1, source: "protocol-par", mode: "nominal_reference" as const },
+        circulating: { peggedUSD: 24_000_000 },
+      }], [id], { priceGapReviews: [] });
+
+      expect(coverage).toMatchObject({
+        complete: true,
+        pricedActiveCount: 0,
+        pricedActiveIds: [],
+        missingPriceCount: 0,
+        missingActiveIds: [],
+        nominalReferenceCount: 1,
+        nominalReferenceIds: [id],
+        nominalReferenceMarketCapUsd: 24_000_000,
+        nominalReferenceReason: "reviewed-nominal-reference",
+      });
+    },
+  );
   it("reports missing prices independently from complete row coverage", () => {
     const coverage = evaluateStablecoinActivePriceCoverage([
       {

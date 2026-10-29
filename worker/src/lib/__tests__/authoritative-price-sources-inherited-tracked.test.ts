@@ -149,9 +149,19 @@ describe("inheritedTrackedPriceProvider", () => {
       ...freshParent("wm-m0", 0.999229, "coingecko-low-volume", { nowSec }),
       priceConfidence: "fallback" as const,
     };
-    await expect(inheritedTrackedPriceProvider.fetchLivePrice!(
+    const result = await inheritedTrackedPriceProvider.fetchLivePrice!(
       unpricedChild(id), { assetsById: new Map([[parent.id, parent]]) },
-    )).resolves.toBeNull();
+    );
+    // USDK's reviewed M0 redemption par may fill the gap; it never becomes the
+    // untrusted parent's observation.
+    if (id === "usdk-kast") {
+      expect(result).toEqual({
+        price: 1, source: "protocol-par", confidence: null, observedAt: null,
+        observedAtMode: "nominal_reference",
+      });
+      return;
+    }
+    expect(result).toBeNull();
   });
 
   it("replays the tracked parent's historical market observations and preserves unavailable history", async () => {

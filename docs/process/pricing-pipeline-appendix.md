@@ -177,8 +177,12 @@ coverage, from dragging PegScore away from the executable value of the tracked p
 
 Scoped nominal par references (v6.38, DEC-02 / CR-43) cover source-reviewed redemption routes without a trusted current market quote. `chfau-allunity`, `cadd-cad-digital`, and `jpym-mento` have no nominal route; without an admissible observed quote they publish missing, never par. SoFiUSD now also has no nominal override: its contract-verified CoinGecko/Kraken market consensus publishes under the ordinary source admission rules, without upgrading depeg authority. XOFm and ZARm remain nominal-only pending independently reviewed executable Broker integration. Par is a reviewed constant, not a runtime redemption read: `protocol-par.ts` returns `confidence: null`, `observedAt: null` and `observedAtMode: "nominal_reference"`. The registry source is not replay-safe or depeg-authoritative and does not establish observed peg stability.
 
+USDK and USDN were reviewed on 2026-10-29 as M0 extensions with a deterministic 1:1 exit: an extension wraps and unwraps `$M` 1:1, and [M0 Orchestration](https://docs.m0.org/build/accessing-liquidity) swaps a supported quote token (currently USDC) 1:1 against any M0 extension. USDK exits on Solana through that route; USDN redeems to wM through Noble's Portal and then uses the same 1:1 wM/USDC swap ([Noble Dollar](https://dollar.noble.xyz)), because Noble retired its own USDC↔USDN swap pool into maintenance mode on 2026-07-07 — USDN par therefore records the issuer route, never a liquid observed market. Neither token is a price-accreting index: KAST keeps the underlying yield, and Noble tracks each USDN holder's principal while accrued rewards are claimed separately. Both keep their tracked-parent routes, so a trusted `wm-m0` (USDK) or `m-m0` (USDN) quote still publishes the inherited observed price; par only fills the gap an unusable parent quote would otherwise leave missing.
+
 - `usbd-bima` at USD parity
 - `usdq-quill` at USD parity
+- `usdk-kast` at USD parity
+- `usdn-noble` at USD parity
 - `zarm-mento` at ZAR parity converted through the live ZAR/USD reference
 - `xofm-mento` at XOF parity converted through the live XOF/USD reference
 
@@ -188,7 +192,7 @@ Scoped nominal par references (v6.38, DEC-02 / CR-43) cover source-reviewed rede
 
 **Legacy replay rows.** Pre-6.38 `protocol-redeem` par rows in `price_cache` are never rewritten, because par is never staged; they remain in the table indefinitely and are not deleted. The cached-fallback lane admits a cached row only inside its source's registry budget measured from the row's write clock (`protocol-redeem`: 15 minutes), so such a row can be republished — labelled `cached` / `fallback`, and only for an asset that has no price and no nominal reference that run — for at most 15 minutes after its last pre-cutover write, and never afterwards. Other readers of `price_cache` apply their own age rules.
 
-**Replay.** Every configured route resolves historical replay to `protocol-par` with no series, so depeg backfill preserves existing event rows instead of synthesizing USD 1.0 history or replaying unadmitted market history.
+**Replay.** Every configured route resolves historical replay to `protocol-par` with no series, so depeg backfill preserves existing event rows instead of synthesizing USD 1.0 history or replaying unadmitted market history. `usdk-kast` and `usdn-noble` are the exception by configuration, not by par: their tracked-parent provider still replays the reviewed wM/M market series, so only their live missing-price gap resolves to par.
 
 These authoritative overrides are pre-applied before fallback enrichment and then applied again during final price completion. The early pass keeps known redeemable wrappers and extension assets out of unnecessary fallback-source work, while the final pass preserves the rule that fallback enrichment cannot overwrite a validated redemption price. Before that final application, the pipeline reruns only local/cache-backed authoritative providers against the post-fallback asset state. This lets a child such as `usdn-noble` see a same-run `m-m0` repair without repeating any RPC-backed vault or redemption calls.
 
