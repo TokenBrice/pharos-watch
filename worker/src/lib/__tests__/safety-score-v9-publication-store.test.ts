@@ -337,7 +337,7 @@ describe("Safety Score V9 publication store", () => {
       const publication = makeWorkerSafetyScoreV9Publication();
       if (scenario === "card") publication.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = -1;
       if (scenario === "legacy-schema") Object.assign(publication, { schemaVersion: 6 });
-      if (scenario === "unsupported-schema") Object.assign(publication, { schemaVersion: 8 });
+      if (scenario === "unsupported-schema") Object.assign(publication, { schemaVersion: 9 });
       if (scenario === "chronology") publication.asOfSec = publication.publishedAtSec + 1;
       if (scenario === "membership") publication.cards.push(structuredClone(publication.cards[0]!));
       if (scenario === "foreign-gap") publication.cards[0]!.foreignCauseGapRefs = [0];

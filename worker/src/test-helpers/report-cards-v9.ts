@@ -10,6 +10,7 @@ import type {
   SafetyScoreV9CurrentCard,
   SafetyScoreV9CurrentResponse,
   SafetyScoreV9ResolvedCurrentCard,
+  V9OpenEvidence,
 } from "@shared/types/safety-score-v9-public";
 
 const digest = (character: string) => character.repeat(64);
@@ -49,6 +50,17 @@ export function makeWorkerReportCardsV9Response(
 
 export const makeReportCardsV9Response = makeWorkerReportCardsV9Response;
 
+/** Empty but schema-valid block: fixture cohorts publish no counted questions. */
+export const emptyV9OpenEvidence: V9OpenEvidence = {
+  semantics: "open-question-v1",
+  totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 0 },
+  owners: [],
+  reasons: [],
+  documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+  issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+  byCard: [],
+};
+
 export function makeWorkerSafetyScoreV9Publication(
   overrides: Partial<SafetyScoreV9CurrentResponse> = {},
 ): SafetyScoreV9CurrentResponse {
@@ -57,7 +69,8 @@ export function makeWorkerSafetyScoreV9Publication(
   );
   return {
     model: "v9-critical-path",
-    schemaVersion: 7,
+    schemaVersion: 8,
+    openEvidence: emptyV9OpenEvidence,
     lifecycle: "active",
     candidateId: projected.source.candidateId,
     policyVersion: projected.methodology.version,

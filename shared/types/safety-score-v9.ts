@@ -542,16 +542,10 @@ export const V9DocumentationReasonSchema = z.enum([
 export type V9DocumentationReason = z.infer<typeof V9DocumentationReasonSchema>;
 
 /**
- * What becomes of a classified datum when its own review evidence expires.
- * `stale-documentation` keeps the datum with its original `reviewedAt` after the
- * scoped question lapses (gated by `retainExpiredScopedQuestions`);
- * `recompute-per-capture` carries no authored expiry and is re-derived from the
- * live predicate on every capture.
+ * Classification vocabulary for a documentation threshold: `documentation.ts`
+ * reports it and the evidence-gap queue carries it. It is not a policy key —
+ * the policy block declares only which percent key supplies the bar.
  */
-export const V9DocumentationRetentionSchema = z.enum(["stale-documentation", "recompute-per-capture"]);
-export type V9DocumentationRetention = z.infer<typeof V9DocumentationRetentionSchema>;
-
-/** The share vocabulary a documentation reason can be bounded by; `null` reasons need no bar. */
 export const V9DocumentationThresholdKindSchema = z.enum(["known-share-pct", "reserve-book-share"]);
 export type V9DocumentationThresholdKind = z.infer<typeof V9DocumentationThresholdKindSchema>;
 
@@ -562,38 +556,34 @@ export type V9DocumentationThresholdKind = z.infer<typeof V9DocumentationThresho
  */
 export const V9DocumentationThresholdSchema = z
   .object({
-    kind: V9DocumentationThresholdKindSchema,
     sharePctKey: z.enum(["documentationImmaterialSharePct", "reserveDustBookSharePct"]),
   })
-  .strict()
-  .superRefine((threshold, ctx) => {
-    const expectedKey = threshold.kind === "known-share-pct"
-      ? "documentationImmaterialSharePct"
-      : "reserveDustBookSharePct";
-    if (threshold.sharePctKey !== expectedKey) {
-      issue(ctx, ["sharePctKey"], `${threshold.kind} thresholds read ${expectedKey}`);
-    }
-  });
+  .strict();
 export type V9DocumentationThreshold = z.infer<typeof V9DocumentationThresholdSchema>;
 
 export const V9DocumentationReasonPolicySchema = z
   .object({
     reason: V9DocumentationReasonSchema,
     publicLabel: z.string().min(1),
-    retention: V9DocumentationRetentionSchema,
     threshold: V9DocumentationThresholdSchema.nullable(),
   })
   .strict();
 export type V9DocumentationReasonPolicy = z.infer<typeof V9DocumentationReasonPolicySchema>;
 
-/** The two reasons that are bounded by a declared share instead of a structural predicate. */
-const V9_DOCUMENTATION_THRESHOLD_REASONS: Readonly<Record<V9DocumentationReason, boolean>> = {
-  "no-scoring-path": false,
-  "unknown-scores-as-no-credit": false,
-  "unscored-diagnostic": false,
-  "coverage-label": false,
-  "immaterial-deployment": true,
-  "reserve-dust": true,
+/**
+ * The percent key each reason's bar comes from; `null` reasons are bounded by
+ * their structural predicate instead. Exhaustive over the vocabulary, so a new
+ * reason cannot be added without deciding its bar.
+ */
+const V9_DOCUMENTATION_THRESHOLD_SHARE_PCT_KEY: Readonly<
+  Record<V9DocumentationReason, "documentationImmaterialSharePct" | "reserveDustBookSharePct" | null>
+> = {
+  "no-scoring-path": null,
+  "unknown-scores-as-no-credit": null,
+  "unscored-diagnostic": null,
+  "coverage-label": null,
+  "immaterial-deployment": "documentationImmaterialSharePct",
+  "reserve-dust": "reserveDustBookSharePct",
 };
 
 export const V9DocumentationPolicySchema = z
@@ -609,7 +599,10 @@ export const V9DocumentationPolicySchema = z
     reserveDustBookSharePct: z.number().finite().positive().max(100),
     // A merged per-root dust residual stays documentation below this share of the book.
     reserveDustResidualMaxBookSharePct: z.number().finite().positive().max(100),
-    // Retains expired scoped questions as stale documentation instead of dropping them.
+    // Sole retention authority: an expired scoped question stays published as stale
+    // documentation (original `reviewedAt`, never re-dated). Custody (`no-scoring-path`)
+    // is the only reason backed by an expiring scoped question; every other reason is
+    // re-derived from its live predicate on each capture.
     retainExpiredScopedQuestions: z.boolean(),
   })
   .strict()
@@ -629,21 +622,14 @@ export const V9DocumentationPolicySchema = z
       issue(ctx, ["reasons"], "Documentation reasons must be listed in reasonOrder");
     }
     reasons.forEach((entry, index) => {
-      const thresholded = V9_DOCUMENTATION_THRESHOLD_REASONS[entry.reason];
-      if (thresholded !== (entry.threshold !== null)) {
+      const expectedKey = V9_DOCUMENTATION_THRESHOLD_SHARE_PCT_KEY[entry.reason];
+      if ((entry.threshold?.sharePctKey ?? null) !== expectedKey) {
         issue(
           ctx,
           ["reasons", index, "threshold"],
-          thresholded
-            ? `${entry.reason} requires a declared share threshold`
-            : `${entry.reason} is bounded by its predicate, not a share threshold`,
-        );
-      }
-      if (!documentation.retainExpiredScopedQuestions && entry.retention === "stale-documentation") {
-        issue(
-          ctx,
-          ["reasons", index, "retention"],
-          "Stale documentation retention requires retainExpiredScopedQuestions",
+          expectedKey === null
+            ? `${entry.reason} is bounded by its predicate, not a share threshold`
+            : `${entry.reason} requires the ${expectedKey} threshold`,
         );
       }
     });

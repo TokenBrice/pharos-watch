@@ -2,16 +2,30 @@ import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 import { z } from "zod";
 import mechanismReviewOverlays from "@shared/data/safety-score-v9/mechanism-review-overlays-v1.json";
-import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
+import {
+  buildV9EvidenceGapQueue,
+} from "@shared/lib/safety-score-v9/evidence-gap-queue";
+import { classifyV9DocumentationGap } from "@shared/lib/safety-score-v9/documentation";
+import {
+  questionKeyForGap,
+  residualQuestionKey,
+  v9QuestionRootAssetId,
+} from "@shared/lib/safety-score-v9/open-questions";
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { reviewAdmissionSec } from "@shared/types/date-primitives";
+import { V9DocumentationReasonSchema } from "@shared/types/safety-score-v9";
 import {
-  V9EvidenceGapQueueV2Schema,
-  type V9EvidenceGapQueueEntryV2,
+  V9EvidenceGapQueueV3Schema,
+  type V9EvidenceGapDocumentation,
+  type V9EvidenceGapQueueEntryV3,
 } from "@shared/types/safety-score-v9-evidence-queue";
-import { SafetyScoreV9ResponseSchema, type SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
+import {
+  SafetyScoreV9PreviousResponseSchema,
+  SafetyScoreV9ResponseSchema,
+  type SafetyScoreV9Card,
+} from "@shared/types/safety-score-v9-public";
 import { loadPerCoinStablecoinEntries, type StablecoinSourceEntry } from "../lib/stablecoin-catalog-sources";
 import {
   parseStrictCliArgs,
@@ -40,16 +54,183 @@ Options:
   --output <path>         Agent-oriented missing-data registry JSON (required)
   -h, --help              Show this help`;
 
-const ReplayArtifactSchema = z
+/**
+ * The evaluated reasons the score published. DEB-4's supplement dedupe joins a
+ * card projection back to its causal compiled task through `sourceGapId` /
+ * `causeGapIds`; the registry build now fails closed on a replay that cannot
+ * supply them (or on an evaluated asset missing from the candidate).
+ */
+const ReplayPillarReasonsSchema = z
   .object({
-    pipeline: z
+    reasons: z.array(
+      z
+        .object({
+          code: z.string().min(1),
+          cause: z.enum(["A", "B", "C", "U", "D"]).nullable().optional(),
+          causeGapIds: z.array(z.string().min(1)).optional(),
+          sourceGapId: z.string().min(1).optional(),
+        })
+        .passthrough(),
+    ),
+  })
+  .passthrough();
+
+const ReplayEvaluatedAssetSchema = z
+  .object({
+    assetId: z.string().min(1),
+    scoreInput: z
       .object({
-        candidate: SafetyScoreV9ResponseSchema,
-        compiledFacts: z.unknown(),
+        pillars: z
+          .object({
+            backing: ReplayPillarReasonsSchema,
+            exit: ReplayPillarReasonsSchema,
+            control: ReplayPillarReasonsSchema,
+          })
+          .passthrough(),
+      })
+      .passthrough(),
+    // The admitted Exit routes the documentation class's route-diagnostic veto reads.
+    exit: z
+      .object({
+        routes: z.array(
+          z
+            .object({
+              routeKey: z.string().min(1),
+              scoringDisposition: z.string().min(1),
+            })
+            .passthrough(),
+        ),
       })
       .passthrough(),
   })
   .passthrough();
+
+const ReplayArtifactSchema = z
+  .object({
+    pipeline: z
+      .object({
+        // A capture produced before the v7→v8 cutover stays readable: the
+        // registry only reads card fields both envelopes share.
+        candidate: z.union([SafetyScoreV9PreviousResponseSchema, SafetyScoreV9ResponseSchema]),
+        compiledFacts: z.unknown(),
+        evaluatedSet: z.object({ assets: z.array(ReplayEvaluatedAssetSchema) }).passthrough(),
+      })
+      .passthrough(),
+  })
+  .passthrough();
+
+/**
+ * Question identity comes from the single authority
+ * (`shared/lib/safety-score-v9/open-questions.ts`, PLAN §2.2 / ImplCounting §3.1).
+ * The registry only adds the dust-residual merge (PLAN §2.4, §10.5 U6) and the
+ * queue-row shape.
+ */
+export function documentationResidualQuestionKey(rootAssetId: string): string {
+  return residualQuestionKey(rootAssetId);
+}
+
+/** The queue columns the question identity reads. */
+export type DocumentationQuestionEntry = Pick<
+  V9EvidenceGapQueueEntryV3,
+  "queueKey" | "assetId" | "gapId" | "reasonCode" | "causeScope" | "documentation"
+>;
+
+export function questionKeyForEntry(entry: DocumentationQuestionEntry): string {
+  // One dust residual question per root replaces the per-datum dust questions.
+  if (entry.documentation?.reason === "reserve-dust") {
+    return residualQuestionKey(v9QuestionRootAssetId(entry.gapId) ?? entry.assetId);
+  }
+  return questionKeyForGap(
+    { gapId: entry.gapId, reasonCode: entry.reasonCode, causeScope: entry.causeScope ?? undefined },
+    entry.assetId,
+  );
+}
+
+export interface DocumentationResidual {
+  questionKey: string;
+  rootAssetId: string;
+  reason: "reserve-dust";
+  bucket: "documentation" | "open";
+  bookShare: number;
+  bookSharePct: number;
+  thresholdBookSharePct: number;
+  exposureKeys: string[];
+  datumGapIds: string[];
+  datumTaskIds: string[];
+  datumCount: number;
+}
+
+/**
+ * Merge a root's sub-dust exposure rows into the single visible residual
+ * question. The merged rows stay documentation only while their total stays
+ * under `reserveDustResidualMaxBookSharePct`; above the bar the residual is an
+ * open question (PLAN §2.4, §10.5 U6). The datum rows themselves never change.
+ */
+export function documentationResidualForRoot(
+  rootAssetId: string,
+  entries: readonly Pick<V9EvidenceGapQueueEntryV3, "gapId" | "path" | "materiality">[],
+  taskIdByGapId: ReadonlyMap<string, string>,
+  residualMaxBookSharePct: number,
+): DocumentationResidual {
+  let bookShare = 0;
+  const exposureKeys = new Set<string>();
+  const datumGapIds = new Set<string>();
+  const datumTaskIds = new Set<string>();
+  for (const entry of entries) {
+    bookShare += entry.materiality.fractionOfAsset ?? 0;
+    if (entry.path.kind === "collateral-exposure") exposureKeys.add(entry.path.exposureKey);
+    datumGapIds.add(entry.gapId);
+    const taskId = taskIdByGapId.get(entry.gapId);
+    if (taskId !== undefined) datumTaskIds.add(taskId);
+  }
+  return {
+    questionKey: documentationResidualQuestionKey(rootAssetId),
+    rootAssetId,
+    reason: "reserve-dust",
+    bucket: bookShare < residualMaxBookSharePct / 100 ? "documentation" : "open",
+    bookShare,
+    bookSharePct: bookShare * 100,
+    thresholdBookSharePct: residualMaxBookSharePct,
+    exposureKeys: [...exposureKeys].sort((left, right) => left.localeCompare(right)),
+    datumGapIds: [...datumGapIds].sort((left, right) => left.localeCompare(right)),
+    datumTaskIds: [...datumTaskIds].sort((left, right) => left.localeCompare(right)),
+    datumCount: entries.length,
+  };
+}
+
+/**
+ * Documentation-classed question keys per root asset. A question counts as
+ * documentation only when every obligation under it is documentation-classed
+ * (precedence documentation > issuer > open, PLAN §2.1); measured-adverse
+ * (cause D) rows never open a question (open-questions.ts). `openResidualKeys`
+ * names the 3f residuals whose merged dust total exceeds the bar: their datum
+ * rows are documentation, but the merged question stays open.
+ */
+export function documentationQuestionKeysByRoot(
+  entries: readonly (DocumentationQuestionEntry & Pick<V9EvidenceGapQueueEntryV3, "cause">)[],
+  documentationOf: (entry: DocumentationQuestionEntry) => V9EvidenceGapDocumentation | null,
+  openResidualKeys: Iterable<string> = [],
+): Map<string, ReadonlySet<string>> {
+  const byRoot = new Map<string, Map<string, boolean>>();
+  for (const entry of entries) {
+    if (entry.cause === "D") continue;
+    const root = v9QuestionRootAssetId(entry.gapId) ?? entry.assetId;
+    const questions = byRoot.get(root) ?? new Map<string, boolean>();
+    const key = questionKeyForEntry(entry);
+    questions.set(key, (questions.get(key) ?? true) && documentationOf(entry) !== null);
+    byRoot.set(root, questions);
+  }
+  const openResiduals = new Set(openResidualKeys);
+  const documented = new Map<string, ReadonlySet<string>>();
+  for (const [root, questions] of byRoot) {
+    for (const key of openResiduals) questions.set(key, false);
+    const keys = new Set(
+      [...questions].filter(([, everyObligationDocumented]) => everyObligationDocumented).map(([key]) => key),
+    );
+    if (keys.size > 0) documented.set(root, keys);
+  }
+  return documented;
+}
 
 export type V9MissingDataWorkType = WorkType;
 export type V9MissingDataResolutionMode = ResolutionMode;
@@ -75,7 +256,7 @@ const WORK_TYPE_DEFINITIONS: Record<V9MissingDataWorkType, WorkTypeDefinition> =
 ) as Record<V9MissingDataWorkType, WorkTypeDefinition>;
 
 export function classifyV9MissingDataWorkType(
-  entry: Pick<V9EvidenceGapQueueEntryV2, "reasonCode" | "path">,
+  entry: Pick<V9EvidenceGapQueueEntryV3, "reasonCode" | "path">,
 ): V9MissingDataWorkType {
   return workTypeForDescriptor(descriptorForReason(entry.reasonCode, entry.path));
 }
@@ -112,7 +293,7 @@ const DIRECT_CURATION_MECHANISM_ARCHETYPES: ReadonlySet<string> = new Set([
 ]);
 
 export function mechanismResolutionMode(
-  entry: Pick<V9EvidenceGapQueueEntryV2, "archetype" | "path">,
+  entry: Pick<V9EvidenceGapQueueEntryV3, "archetype" | "path">,
 ): V9MissingDataResolutionMode {
   // Wave-7 D3 ratified direct overlay curation for every fiat-cash and
   // T-bill mechanism component under the strict evidence standard. v9.14 adds
@@ -124,7 +305,7 @@ export function mechanismResolutionMode(
 
 function resolutionModeFor(
   workType: V9MissingDataWorkType,
-  entry: V9EvidenceGapQueueEntryV2,
+  entry: V9EvidenceGapQueueEntryV3,
   context: unknown,
 ): V9MissingDataResolutionMode {
   if (entry.cause === "A") return "producer-runtime";
@@ -140,7 +321,7 @@ function resolutionModeFor(
   return WORK_TYPES[workType].defaultResolutionMode;
 }
 
-const EVIDENCE_ACTION_BY_CAUSE: Record<V9EvidenceGapQueueEntryV2["cause"], string> = {
+const EVIDENCE_ACTION_BY_CAUSE: Record<V9EvidenceGapQueueEntryV3["cause"], string> = {
   A: "repair-or-refresh-producer",
   B: "curate-proven-public-datum",
   C: "obtain-issuer-or-onchain-disclosure",
@@ -150,7 +331,7 @@ const EVIDENCE_ACTION_BY_CAUSE: Record<V9EvidenceGapQueueEntryV2["cause"], strin
 
 export function scoreProjectionResolutionMode(
   workType: V9MissingDataWorkType,
-  archetype: V9EvidenceGapQueueEntryV2["archetype"],
+  archetype: V9EvidenceGapQueueEntryV3["archetype"],
 ): V9MissingDataResolutionMode {
   // See resolutionModeFor: mechanism review is the one archetype-dependent
   // resolution policy in this taxonomy.
@@ -313,8 +494,9 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   const replay = ReplayArtifactSchema.parse(input.replay).pipeline;
   const factSetRead = readCompiledV9FactSetForEvaluation(replay.compiledFacts);
   const facts = factSetRead.factSet;
-  const queue = V9EvidenceGapQueueV2Schema.parse(
-    buildV9EvidenceGapQueue({ factSet: replay.compiledFacts, policy: loadV9MethodologyPolicy(input.policy) }),
+  const policyEnvelope = loadV9MethodologyPolicy(input.policy);
+  const queue = V9EvidenceGapQueueV3Schema.parse(
+    buildV9EvidenceGapQueue({ factSet: replay.compiledFacts, policy: policyEnvelope }),
   );
   const candidate = replay.candidate;
   const candidateFactSetDigest = facts.v9FactSetDigest;
@@ -331,7 +513,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   // Wire cards intern witness text; tasks must carry the readable scope.
   const cardById = new Map(candidate.cards.map((card) => [card.id, resolveV9PublicWitnessTexts(card)]));
   const sourceById = new Map(input.catalogEntries.map((entry) => [entry.id, entry]));
-  const entriesById = new Map<string, V9EvidenceGapQueueEntryV2[]>();
+  const entriesById = new Map<string, V9EvidenceGapQueueEntryV3[]>();
   for (const entry of queue.entries) {
     const existing = entriesById.get(entry.assetId) ?? [];
     existing.push(entry);
@@ -344,6 +526,86 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
     claimGroupId: string;
     taskSource: "compiled-fact-gap" | "score-projection-gap";
   }> = [];
+  // Documentation band (PLAN §2.3–2.4): counting and routing only. The queue
+  // carries the classifier's copy; the registry never re-classifies — except the
+  // one rule that needs the evaluated set, below.
+  const documentation = policyEnvelope.policy.semantic.evidence.documentation;
+  const residualMaxBookSharePct = documentation?.reserveDustResidualMaxBookSharePct ?? null;
+  const taskIdByGapId = new Map(
+    queue.entries.map((entry) => [entry.gapId, `V9G-${entry.queueKey.slice(0, 16)}`]),
+  );
+  // The queue only sees compiled facts. DOC-1's route-diagnostic veto needs the
+  // Exit routes the evaluation actually admitted, so the registry re-runs the
+  // classifier for optional-exit diagnostics with those keys; a route that was
+  // never admitted stays open. No other reason reads the evaluated set.
+  const admittedExitRouteKeysByAsset = new Map(
+    replay.evaluatedSet.assets.map((evaluated) => [
+      evaluated.assetId,
+      new Set(
+        evaluated.exit.routes
+          .filter((route) => route.scoringDisposition === "included")
+          .map((route) => route.routeKey),
+      ),
+    ]),
+  );
+  const documentationByQueueKey = new Map<string, V9EvidenceGapDocumentation>();
+  for (const entry of queue.entries) {
+    if (entry.documentation !== null || entry.reviewState !== null) continue;
+    if (entry.path.kind !== "optional-exit") continue;
+    const asset = factById.get(entry.assetId);
+    const gap = asset?.gaps.find((candidate) => candidate.gapId === entry.gapId);
+    if (asset === undefined || gap === undefined) continue;
+    const classification = classifyV9DocumentationGap(
+      policyEnvelope,
+      { ...asset, admittedExitRouteKeys: admittedExitRouteKeysByAsset.get(asset.assetId) ?? new Set() },
+      gap,
+    );
+    if (classification === null) continue;
+    documentationByQueueKey.set(entry.queueKey, {
+      class: "documentation",
+      reason: classification.reason,
+      policyRef: classification.policyRef,
+      threshold: classification.threshold,
+    });
+  }
+  const documentationOf = (entry: DocumentationQuestionEntry): V9EvidenceGapDocumentation | null =>
+    documentationByQueueKey.get(entry.queueKey) ?? entry.documentation;
+  const entriesByRoot = new Map<string, V9EvidenceGapQueueEntryV3[]>();
+  for (const entry of queue.entries) {
+    const root = v9QuestionRootAssetId(entry.gapId) ?? entry.assetId;
+    const existing = entriesByRoot.get(root) ?? [];
+    existing.push(entry);
+    entriesByRoot.set(root, existing);
+  }
+  // One visible 3f residual per root; the datum task IDs stay addressable.
+  const documentationResidualsByRoot = new Map<string, DocumentationResidual>();
+  if (residualMaxBookSharePct !== null) {
+    const dustByRoot = new Map<string, V9EvidenceGapQueueEntryV3[]>();
+    for (const entry of queue.entries) {
+      if (documentationOf(entry)?.reason !== "reserve-dust") continue;
+      const root = v9QuestionRootAssetId(entry.gapId) ?? entry.assetId;
+      const existing = dustByRoot.get(root) ?? [];
+      existing.push(entry);
+      dustByRoot.set(root, existing);
+    }
+    for (const [root, dustEntries] of dustByRoot) {
+      documentationResidualsByRoot.set(
+        root,
+        documentationResidualForRoot(root, dustEntries, taskIdByGapId, residualMaxBookSharePct),
+      );
+    }
+  }
+  // A question is documentation only when every obligation under it is
+  // documentation-classed (precedence documentation > issuer > open, PLAN §2.1).
+  // A residual whose merged total exceeds the bar keeps its datum rows counted
+  // but its question open.
+  const documentationQuestionsByRoot = documentationQuestionKeysByRoot(
+    queue.entries,
+    documentationOf,
+    [...documentationResidualsByRoot.values()]
+      .filter((residual) => residual.bucket === "open")
+      .map((residual) => residual.questionKey),
+  );
   const stablecoins = facts.activeAssetIds.map((assetId) => {
     const asset = factById.get(assetId);
     const card = cardById.get(assetId);
@@ -413,6 +675,13 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         releaseSeverity: entry.releaseSeverity,
         treatment: entry.treatment,
         critical: entry.critical,
+        // Copied from the evidence-gap queue, plus the registry's
+        // evaluated-set classifier pass; the issuer recheck band and the
+        // root-scoped question key. A measured-adverse row is a finding, not
+        // open evidence: no question.
+        documentation: documentationOf(entry),
+        reviewState: entry.reviewState,
+        questionKey: entry.cause === "D" ? null : questionKeyForEntry(entry),
         likelyTouchpoints: likelyTouchpoints(workType, source, context),
         currentFactContextRef,
         existingEvidence,
@@ -487,6 +756,11 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
           releaseSeverity: null,
           treatment: "score-projection",
           critical: false,
+          // A score-projection row exposes no compiled gap, so it owns no
+          // documentation decision, issuer recheck band or question key.
+          documentation: null,
+          reviewState: null,
+          questionKey: null,
           likelyTouchpoints: likelyTouchpoints(workType, source, context),
           currentFactContextRef,
           existingEvidence,
@@ -530,6 +804,8 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
     });
     const claimGroups = new Set(items.map((item) => item.claimGroupId));
     const sourceFiles = [source.file, ...(source.sidecarFiles ?? [])];
+    const documentationItems = factItems.filter((item) => item.documentation !== null);
+    const residual = documentationResidualsByRoot.get(assetId);
     return {
       assetId,
       name: source.coin.name,
@@ -545,6 +821,14 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       currentFactContexts,
       missingDataSummary: {
         openItemCount: items.length,
+        // The band is counted, never closable by the default drain: every
+        // documentation datum keeps its item and its taskId.
+        documentationItemCount: documentationItems.length,
+        documentationDatumCount: documentationItems.filter((item) => item.taskSource === "compiled-fact-gap").length,
+        // Questions live at the root asset; the per-root view is attributed to
+        // the card that owns them, so the registry total partitions by root.
+        documentationQuestionCount: documentationQuestionsByRoot.get(assetId)?.size ?? 0,
+        researchedTerminalItemCount: factItems.filter((item) => item.reviewState !== null).length,
         claimGroupCount: claimGroups.size,
         criticalItemCount: items.filter((item) => item.critical).length,
         policyBindingReviewCount: items.filter((item) => item.policyBinding.coordinatorReviewRequired).length,
@@ -553,6 +837,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         resolutionModeCounts: countBy(items, (item) => item.resolutionMode),
         taskSourceCounts: countBy(items, (item) => item.taskSource),
       },
+      documentationResiduals: residual === undefined ? [] : [residual],
       scoreProjectionGaps,
       missingItems: items,
     };
@@ -567,12 +852,13 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
 
   const registryItems = stablecoins.flatMap((asset) => asset.missingItems);
   const projectionRows = stablecoins.flatMap((asset) => asset.scoreProjectionGaps);
+  const documentationResidualRows = stablecoins.flatMap((asset) => asset.documentationResiduals);
   const taskIds = registryItems.map((item) => item.taskId);
   if (new Set(taskIds).size !== taskIds.length) throw new Error("Generated missing-data task IDs are not unique");
   const claimGroupCount = new Set(allItems.map((item) => item.claimGroupId)).size;
   const warnings = mechanismOverlayAdmissionWarnings(candidate.asOfSec);
   return {
-    schemaVersion: 2,
+    schemaVersion: 3,
     title: "Safety Score v9 missing-data registry",
     purpose: "agent-checklist-for-full-evidence-scoring",
     snapshot: {
@@ -605,6 +891,12 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         "Compiled fact tasks identify whether evidence is measured adverse, issuer-undisclosed, integration-missing, producer-failed, or method-unsupported. Score-projection-only tasks carry null because they have no compiled fact-gap responsibility.",
       pointInTimeWarning:
         "This registry is bound to one immutable production replay. Regenerate it after coordinated data batches; resolved task IDs disappear and new gaps receive new IDs.",
+      documentationBand:
+        "Items whose documentation field is non-null are classified by policy semantic.evidence.documentation as unable to move a published score. They stay counted, listed and addressable; default sweeps and worklists skip them unless the worklist is run with --include-documentation. documentationQuestionCount dedupes root-scoped questionKey values, so it is smaller than documentationItemCount whenever several datums answer one question.",
+      documentationResiduals:
+        "documentationResiduals merges a root's sub-dust reserve exposures into one visible residual question. The datum rows keep their own taskIds; the residual counts as documentation only while the merged weight stays under reserveDustResidualMaxBookSharePct, otherwise it is an open question.",
+      researchedTerminalBand:
+        "An item with reviewState researched-terminal records an issuer that was researched and does not publish the datum. It leaves the default drain for a dated recheck at recheckAtSec; the original reviewedAt is preserved and never re-dated.",
       factContextBinding:
         "Resolve each task's currentFactContextRef in its stablecoin's currentFactContexts table. Distinct path-scoped contexts are stored once by content digest; task routing and claim groups do not change.",
     },
@@ -629,6 +921,19 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       openItemCount: registryItems.length,
       compiledFactItemCount: queue.entries.length,
       supplementalScoreItemCount: registryItems.filter((item) => item.taskSource === "score-projection-gap").length,
+      // Documentation band: counted once per datum and once per root question.
+      // `openItemCount` keeps every datum; the band never subtracts work.
+      documentationItemCount: registryItems.filter((item) => item.documentation !== null).length,
+      documentationDatumCount: queue.entries.filter((entry) => documentationOf(entry) !== null).length,
+      documentationQuestionCount: [...documentationQuestionsByRoot.values()].reduce((total, keys) => total + keys.size, 0),
+      documentationReasonCounts: V9DocumentationReasonSchema.options.map((reason) => ({
+        reason,
+        count: registryItems.filter((item) => item.documentation?.reason === reason).length,
+      })),
+      documentationResidualCount: documentationResidualRows.length,
+      documentationResidualDatumCount: documentationResidualRows.reduce((total, row) => total + row.datumCount, 0),
+      documentationOpenResidualCount: documentationResidualRows.filter((row) => row.bucket === "open").length,
+      researchedTerminalItemCount: registryItems.filter((item) => item.reviewState !== null).length,
       scoreProjectionReasonCount: projectionRows.length,
       scoreProjectionReasonNeedingSupplementCount: projectionRows.filter((row) => row.requiresSupplementalTask).length,
       claimGroupCount,

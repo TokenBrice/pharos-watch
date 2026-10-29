@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { ReportCardsV9CurrentResponseSchema, ReportCardsV9DependencyGraphSchema } from "./report-cards-v9";
-import { SafetyScoreV9CurrentCardBaseSchema, SafetyScoreV9ResolvedCurrentCardSchema } from "./safety-score-v9-public";
+import { SafetyScoreV9CurrentCardBaseSchema, SafetyScoreV9ResolvedCurrentCardSchema, V9DocumentationOnlyPillarSchema } from "./safety-score-v9-public";
 import type { ReportCardsV9CurrentResponse } from "./report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
 import { refineV9RatingStatusFields, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
@@ -85,6 +85,15 @@ export const ReportCardsV9DetailResponseSchema = z.object({
   dependencyGraph: ReportCardsV9DependencyGraphSchema,
   commonModeGroups: DependencyGraphResponseSchema.shape.commonModeGroups,
   pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
+  /** Pillars limited only by documentation gaps for the selected card; absent means plain limited. */
+  documentationOnlyLimited: z
+    .array(V9DocumentationOnlyPillarSchema)
+    .min(1)
+    .max(3)
+    .refine((pillars) => pillars.every((pillar, index) => index === 0 || pillars[index - 1]! < pillar), {
+      message: "Documentation-only limited pillars must be unique and sorted",
+    })
+    .optional(),
   // Global indices are preserved verbatim; no compact table can rebind a numeric gap reference.
   foreignCauseGaps: z.record(z.string().regex(/^(0|[1-9][0-9]*)$/u), z.string().min(1)),
   scope: z.object({

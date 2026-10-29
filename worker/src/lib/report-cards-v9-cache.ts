@@ -9,7 +9,8 @@ import {
   type V9PublicationHealth,
 } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
-import type { SafetyScoreV9CurrentCard, SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9AdmittedPublication } from "./safety-score-v9/publication-codec";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { loadSafetyScoreV9Publication } from "./safety-score-v9/publication-store";
 import { loadSafetyScoreV9PublicationHealth, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
@@ -26,7 +27,7 @@ export class ReportCardsV9SnapshotUnavailableError extends Error {
  * the full projection so identity-only consumers never materialize the cards.
  */
 export function buildSafetyScoreV9PublicationIdentity(
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
 ): SafetyScoreV9PublicationIdentity {
   return {
     model: "v9",
@@ -41,7 +42,7 @@ export function buildSafetyScoreV9PublicationIdentity(
 }
 
 function buildPublicProjection(
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
   publicationHealth: V9PublicationHealth,
   cards: SafetyScoreV9CurrentCard[],
 ) {
@@ -67,6 +68,10 @@ function buildPublicProjection(
     },
     cards,
     foreignCauseGaps: publication.foreignCauseGaps,
+    // A retained schema-7 generation carries no block: omit it so consumers
+    // render unavailable, never zero open questions.
+    ...(publication.schemaVersion !== 8 ? {} : { openEvidence: publication.openEvidence }),
+    ...(publication.documentationCauseGaps === undefined ? {} : { documentationCauseGaps: publication.documentationCauseGaps }),
     ...(publication.pillarFreshness === undefined ? {} : { pillarFreshness: publication.pillarFreshness }),
     ...(publication.commonModeGroups === undefined ? {} : { commonModeGroups: publication.commonModeGroups }),
     dependencyGraph: buildReportCardsV9DependencyGraph(
@@ -76,7 +81,7 @@ function buildPublicProjection(
 }
 
 export function projectSafetyScoreV9PublicationToPublicSnapshot(
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
   publicationHealth: V9PublicationHealth,
 ): ReportCardsV9CurrentResponse {
   const cards = publication.cards.map((card) => resolveV9PublicWitnessTexts(card));
@@ -89,7 +94,7 @@ export function projectSafetyScoreV9PublicationToPublicSnapshot(
  * The materializer admits/resolves/serializes each wire card independently.
  */
 export function projectSafetyScoreV9PublicationForMaterialization(
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
   publicationHealth: V9PublicationHealth,
 ) {
   const admitted = new WeakSet<object>(publication.cards);

@@ -9,6 +9,7 @@ import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import type { V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import * as depegSnapshot from "../../src/lib/depeg-event-snapshot";
 import { copyDatasetWorkspace, datasetBytes } from "./generate-public-datasets.test-support";
 import * as depegCapture from "../lib/depeg-ledger-capture";
@@ -87,9 +88,41 @@ function makeEnvelope(snapshotDate: string) {
   };
 }
 
+/**
+ * The publication schema-8 `openEvidence` block a frozen API-9 envelope carries:
+ * three disjoint buckets whose questions and datums reconcile.
+ */
+function makeOpenEvidence(cardId = "usdc-circle"): V9OpenEvidence {
+  return {
+    semantics: "open-question-v1",
+    totals: { questions: 3, open: 1, issuer: 1, documentation: 1, obligations: 6 },
+    owners: [{ responsibility: "unresearched", questions: 1, obligations: 2 }],
+    reasons: [
+      { code: "unresolved-control-identity", bucket: "open", questions: 1, obligations: 2 },
+      { code: "material-reserve-slice-unstructured", bucket: "issuer", questions: 1, obligations: 3 },
+      { code: "unresolved-control-identity", bucket: "documentation", questions: 1, obligations: 1 },
+    ],
+    documentation: {
+      questions: 1,
+      datums: 1,
+      facts: 1,
+      reasons: [{ reason: "no-scoring-path", datums: 1 }],
+    },
+    issuer: { questions: 1, assets: 1, oldestReviewedAtSec: 1_778_000_000, newestReviewedAtSec: 1_778_000_000 },
+    byCard: [{
+      id: cardId,
+      openQuestionsCarried: 3,
+      inheritedOpenQuestionsCarried: 1,
+      openObligationsCarried: 6,
+      documentationObligationsCarried: 1,
+    }],
+  };
+}
+
 function makeCurrentEnvelope(snapshotDate: string) {
   const response = makeReportCardsV9Response({
     cards: [makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" })],
+    openEvidence: makeOpenEvidence(),
   });
   return {
     ...makeEnvelope(snapshotDate),
@@ -475,7 +508,7 @@ describe("generate-public-datasets", () => {
     const spec = testExports.buildTopicSpecs(envelope, [], "2026-05-16").find((item) => item.topic === "scores-latest")!;
 
     expect(spec.displayProjection).toMatchObject({
-      version: 1,
+      version: 2,
       snapshotDate: "2026-05-16",
       capturedAtSec: envelope.generatedAt,
       sourceSnapshotPath: "/api/snapshots/2026-05-16.json",
@@ -488,6 +521,11 @@ describe("generate-public-datasets", () => {
         publicationHealth: envelope.reportCards.publicationHealth,
         completeness: envelope.reportCards.completeness,
       },
+      openEvidence: {
+        semantics: "open-question-v1",
+        totals: envelope.reportCards.openEvidence!.totals,
+      },
+      openEvidenceUnavailableReason: null,
     });
 
     const artifacts = testExports.buildTopicArtifacts(spec, "2026-05-16T10:00:00.000Z");
@@ -501,7 +539,7 @@ describe("generate-public-datasets", () => {
     // stay, because they are ordinary escaped fields.
     expect(artifacts.csv.split("\n").filter((line) => line.startsWith("#"))).toHaveLength(1);
     expect(artifacts.csv).not.toContain("Display projection");
-    expect(artifacts.csv).not.toContain('"version":1');
+    expect(artifacts.csv).not.toContain('"version":2');
     expect(artifacts.csv.split("\n").find((line) => !line.startsWith("#"))?.split(",")).toEqual(
       expect.arrayContaining([
         "ratingStatus",
@@ -641,12 +679,14 @@ describe("generate-public-datasets", () => {
     const spec = testExports.buildTopicSpecs(makeEnvelope("2026-05-16"), [], "2026-05-16")
       .find((item) => item.topic === "scores-latest")!;
     expect(spec.displayProjection).toEqual({
-      version: 1,
+      version: 2,
       snapshotDate: "2026-05-16",
       capturedAtSec: 1_779_000_000,
       sourceSnapshotPath: "/api/snapshots/2026-05-16.json",
       safety: null,
       safetyUnavailableReason: "legacy-source-metadata-unavailable",
+      openEvidence: null,
+      openEvidenceUnavailableReason: "safety-publication-unavailable",
     });
     expect((spec.rows[0] as Record<string, unknown>).ratingStatus).toBeNull();
     expect((spec.rows[0] as Record<string, unknown>).safetyDisplay).toBeNull();
@@ -662,6 +702,8 @@ describe("generate-public-datasets", () => {
     expect(spec.displayProjection).toMatchObject({
       safety: null,
       safetyUnavailableReason: "legacy-source-metadata-unavailable",
+      openEvidence: null,
+      openEvidenceUnavailableReason: "safety-publication-unavailable",
     });
     expect((spec.rows[0] as Record<string, unknown>).ratingStatus).toBeNull();
     expect((spec.rows[0] as Record<string, unknown>).safetyScore).toBe(88);
@@ -689,12 +731,14 @@ describe("generate-public-datasets", () => {
     });
 
     const projection = {
-      version: 1,
+      version: 2,
       snapshotDate: "2026-05-16",
       capturedAtSec: 1_779_000_000,
       sourceSnapshotPath: "/api/snapshots/2026-05-16.json",
       safety: null,
       safetyUnavailableReason: "legacy-source-metadata-unavailable",
+      openEvidence: null,
+      openEvidenceUnavailableReason: "safety-publication-unavailable",
     };
     await writeFile(
       path.join(topicDir, "2026-05-16.json"),
@@ -705,6 +749,76 @@ describe("generate-public-datasets", () => {
       ...projection,
       snapshotDate: "2026-05-15",
     }, "2026-05-16")).toEqual({ ok: false, reason: expect.stringContaining("expected 2026-05-16") });
+
+    // A pre-v2 projection and a block that claims counts without a source are
+    // integrity failures, not a silent return to the old contract.
+    expect(testExports.validateScoresLatestDisplayProjection({ ...projection, version: 1 }, "2026-05-16"))
+      .toEqual({ ok: false, reason: expect.stringContaining("displayProjection is missing or invalid") });
+    expect(testExports.validateScoresLatestDisplayProjection({
+      ...projection,
+      openEvidence: { semantics: "open-question-v1", totals: { questions: 4, open: 1, issuer: 1, documentation: 1, obligations: 6 } },
+    }, "2026-05-16")).toEqual({ ok: false, reason: expect.stringContaining("missing or invalid") });
+    expect(testExports.validateScoresLatestDisplayProjection({
+      ...projection,
+      openEvidenceUnavailableReason: "open-evidence-unavailable",
+    }, "2026-05-16")).toEqual({ ok: false, reason: expect.stringContaining("counts and their unavailable reason disagree") });
+  });
+
+  it("checks a generated v2 projection built from a schema-8 publication", async () => {
+    const base = makeEnvelope("2026-05-16");
+    const stablecoins = Array.from({ length: 493 }, (_, index) => ({
+      ...base.stablecoins[0]!,
+      id: `coin-${index}`,
+      symbol: `S${index}`,
+    }));
+    const publication = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "coin-0", score: 88, grade: "A+" })],
+      openEvidence: makeOpenEvidence("coin-0"),
+    });
+    const spec = testExports.buildTopicSpecs({
+      ...base,
+      version: 2,
+      stablecoins,
+      safetyScoreIdentity: publication.safetyScoreIdentity,
+      reportCards: publication,
+    }, [], "2026-05-16").find((item) => item.topic === "scores-latest")!;
+    const artifacts = testExports.buildTopicArtifacts(spec, "2026-05-16T10:00:00.000Z");
+
+    const root = await makeRoot();
+    const datasetsDir = path.join(root, "datasets");
+    const topicDir = path.join(datasetsDir, "scores-latest");
+    await mkdir(topicDir, { recursive: true });
+    const redirectsPath = await writeTopicRedirects(root, "scores-latest");
+    await writeFile(path.join(topicDir, "2026-05-16.csv"), artifacts.csv);
+    await writeFile(path.join(topicDir, "2026-05-16.ndjson"), artifacts.ndjson);
+    await writeFile(path.join(topicDir, "2026-05-16.json"), artifacts.json);
+
+    expect(testExports.checkTopic("scores-latest", artifactDirs(datasetsDir, redirectsPath))).toEqual({ ok: true });
+    const json = JSON.parse(artifacts.json);
+    const ndjsonMeta = JSON.parse(artifacts.ndjson.split("\n")[0]!);
+    expect(json._meta.displayProjection.openEvidence).toEqual({
+      semantics: "open-question-v1",
+      totals: { questions: 3, open: 1, issuer: 1, documentation: 1, obligations: 6 },
+    });
+    expect(json._meta.displayProjection.openEvidenceUnavailableReason).toBeNull();
+    expect(ndjsonMeta._meta.displayProjection).toEqual(json._meta.displayProjection);
+  });
+
+  it("keeps a current Safety publication without open evidence visible as unavailable", () => {
+    const envelope = makeCurrentEnvelope("2026-05-16");
+    const { openEvidence: _omitted, ...withoutEvidence } = envelope.reportCards;
+    void _omitted;
+    const spec = testExports.buildTopicSpecs({
+      ...envelope,
+      reportCards: withoutEvidence,
+    }, [], "2026-05-16").find((item) => item.topic === "scores-latest")!;
+
+    expect(spec.displayProjection).toMatchObject({
+      version: 2,
+      safety: expect.objectContaining({ asOfSec: envelope.reportCards.asOfSec }),
+      openEvidence: null,
+      openEvidenceUnavailableReason: "open-evidence-unavailable",
+    });
   });
 
   it("projects peg metadata and methodology versions from the snapshot envelope", () => {

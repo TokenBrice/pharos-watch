@@ -101,6 +101,8 @@ export const COVERAGE_GAP_OWNER_SWATCH_CLASSES = {
   "producer-failed": "bg-rose-500",
   "method-unsupported": "bg-muted-foreground",
   "published-evidence-expired": "bg-sky-500",
+  // Headline questions whose obligations have more than one owner.
+  mixed: "bg-violet-500",
 } as const;
 
 /** Yield change attribution callout: organic move, source switch, or both. */

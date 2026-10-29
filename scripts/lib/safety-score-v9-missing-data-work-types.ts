@@ -1,5 +1,5 @@
 import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
-import type { V9EvidenceGapQueueEntryV2 } from "@shared/types/safety-score-v9-evidence-queue";
+import type { V9EvidenceGapQueueEntryV3 } from "@shared/types/safety-score-v9-evidence-queue";
 import type { StablecoinSourceEntry } from "./stablecoin-catalog-sources";
 
 export type WorkType =
@@ -286,7 +286,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   EXIT_DEX_COVERAGE: {
     title: "Exact DEX route coverage", stream: "EXIT",
     instructions: "Make every retained material DEX pool carry a score-eligible exact route observation: supported pool math, explicit output valuation, request/capacity curve, settlement facts, resource identity, and failure domains. Unsupported pool archetypes require producer capability, not a hand-entered estimate.",
-    completionCriteria: "A fresh exact capture marks the retained DEX portfolio exact-complete and removes the incomplete-dex-route-coverage gapId.", recommendedSkill: null,
+    completionCriteria: "A fresh exact capture marks the retained DEX portfolio exact-complete and removes the incomplete-dex-route-coverage gapId. The coverage gap itself is a documentation-class disclosure label on a reviewed portfolio with viable routes: it is never a pillar witness, so completing it changes no score, and the `· partial DEX coverage` suffix is the disclosure.", recommendedSkill: null,
     likelyRepoAreas: ["worker/src/cron/dex-liquidity/", "worker/src/lib/dex-liquidity.ts", "worker/src/lib/safety-score-v9/extension.ts", "shared/lib/dex-liquidity-evidence.ts"], cautions: ["Do not substitute TVL, generic liquidity, or a manually estimated capacity curve for exact executable depth."],
     ownerDomain: "exit",
     defaultResolutionMode: "producer-runtime",
@@ -472,7 +472,7 @@ export const V9_MISSING_DATA_WORK_TYPES: Readonly<Record<WorkType, WorkTypeDescr
   },
 };
 
-type GapPath = V9EvidenceGapQueueEntryV2["path"];
+type GapPath = V9EvidenceGapQueueEntryV3["path"];
 
 function descriptorByReason(reason: string): WorkTypeDescriptor | undefined {
   return Object.values(V9_MISSING_DATA_WORK_TYPES).find((descriptor) => descriptor.reasonCodes.includes(reason));
