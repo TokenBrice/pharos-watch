@@ -977,6 +977,24 @@ export const V9DeploymentControlFactBaseSchema = z
     // Optional only for retained fact compatibility. Current compilers emit
     // the tracked native asset that owns a reused controller when reviewed.
     controllerAssetId: CanonicalTextSchema.nullable().optional(),
+    /**
+     * Authored bridge-control identity, independent of the compiler-chosen
+     * digest `controlKey`: the metadata `bridgeRouteRisk.controls[].id`, or
+     * `"*"` when one compiled lane fact merges several authored controls.
+     * Absent when no authored tuple exists (mint/meta records, pooled
+     * `bridge-group` rows, unmatched `bridge-supply` rows, the route fallback
+     * without a control, and native external-transfer rails); the digest key is
+     * then the only identity. Published question keys read this token; review
+     * matching stays keyed on `controlKey` until the review-key migration.
+     */
+    authoredControlId: CanonicalTextSchema.optional(),
+    /**
+     * Exact authored contributor ids behind an aggregate lane fact
+     * (`authoredControlId === "*"`), canonical sorted unique. Per-contributor
+     * incident coverage reads this set, so adding a control leaves an older
+     * review uncovered instead of silently inheriting it.
+     */
+    authoredControlIds: canonicalArrayBy(CanonicalTextSchema, (value) => value, 2).optional(),
     controlKind: V9ControlKindSchema,
     scope: V9ControlScopeSchema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (capability) => capability),
