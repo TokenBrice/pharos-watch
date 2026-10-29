@@ -61,6 +61,14 @@ const REVIEWED_WARNING_IDS = new Map<string, string>([
     "D-4 (2026-10-17): the DOLA leg is subject self exposure within undecomposed LP-secured debt surfaced by the invalid-feed debt repair, not an upstream token reserve.",
   ],
   [
+    "dola-inverse-finance::DOLA-FRAXBP LP-secured debt (undecomposed)::DOLA",
+    "Inverse follow-up (2026-10-29): the DOLA leg is subject self exposure within dust undecomposed LP-secured debt kept as a keyed zero-weight classification, not an upstream token reserve.",
+  ],
+  [
+    "dola-inverse-finance::DOLA-FraxPyUSD LP-secured debt (undecomposed)::DOLA",
+    "Inverse follow-up (2026-10-29): the DOLA leg is subject self exposure within dust undecomposed LP-secured debt kept as a keyed zero-weight classification, not an upstream token reserve.",
+  ],
+  [
     "susd1plus-lorenzo::Lorenzo USD1+ OTF mixed strategy portfolio (USD1, USDT, and USDC deposits; RWA, CeFi quant, and DeFi strategies)::USDC",
     "Lorenzo reports a mixed USD1/USDT/USDC and strategy portfolio without current constituent weights, so a USDC coinId would overstate the dependency.",
   ],

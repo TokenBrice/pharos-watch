@@ -1657,111 +1657,111 @@
     {
       "scopeKind": "whole-allocation",
       "assetId": "sdola-inverse-finance",
-      "reviewedAt": "2026-10-02",
-      "expiresAt": "2026-11-01",
-      "reviewer": "DataCWrapperLocal: exact verified source and pinned allocation census",
+      "reviewedAt": "2026-10-29",
+      "expiresAt": "2026-11-28",
+      "reviewer": "DOLA Inverse follow-up 2026-10-29: exact pinned allocation census at block 26296822",
       "custody": "fully-onchain-no-offchain-custodian",
       "localLeverage": "no-borrowing-surface",
       "capitalReuse": "none",
-      "rationale": "The immutable canonical Ethereum sDOLA holds all principal as its balanceOf claim in the immutable DolaSavings account, whose actual DOLA balance equals totalSupply and the wrapper stake exactly; the wrapper has zero idle DOLA. The exhaustive principal allocation roster is this one fixed savings account. Deposits and DBR-auction DOLA inflows stake there; withdrawals unstake; the account transfers principal only to the withdrawing stake owner. No strategy registry, external principal loan, borrowing function or arbitrary call exists. DBR rewards are minted then auctioned for additional DOLA, not financed by lending deposits. Governance/operator settings change reward budgets, auction K and role assignments. Savings governance may sweep only DOLA above totalSupply, independently confirmed by a simulated 1 DOLA sweep reverting CANNOT SWEEP USER DOLA. Wrapper governance can sweep non-DBR idle tokens (including donated idle DOLA); this power is retained, not described as legal segregation. Historical CCIP receipt liabilities and governance re-enable powers remain bridge/control risks; this review concerns the canonical principal book and does not clear them or claim remote supply is zero. Parent DOLA backing remains inherited.",
+      "rationale": "The immutable canonical Ethereum sDOLA holds all principal as its balanceOf claim in the immutable DolaSavings account, whose actual DOLA balance equals totalSupply and the wrapper stake exactly; the wrapper has zero idle DOLA. The exhaustive principal allocation roster is this one fixed savings account. Deposits and DBR-auction DOLA inflows stake there; withdrawals unstake; the account transfers principal only to the withdrawing stake owner. No strategy registry, external principal loan, borrowing function or arbitrary call exists. DBR rewards are minted then auctioned for additional DOLA, not financed by lending deposits. Governance/operator settings change reward budgets, auction K and role assignments. Savings governance may sweep only DOLA above totalSupply, independently confirmed by a simulated 1 DOLA sweep reverting CANNOT SWEEP USER DOLA. Wrapper governance can sweep non-DBR idle tokens (including donated idle DOLA); this power is retained, not described as legal segregation. Historical CCIP receipt liabilities and governance re-enable powers remain bridge/control risks; this review concerns the canonical principal book and does not clear them or claim remote supply is zero. Parent DOLA backing remains inherited. Renewed 2026-10-29 at block 26296822: every observation re-read, all roster identities unchanged, and the single-account allocation still holds exactly (savings totalSupply, wrapper stake and the account's actual DOLA balance all 19,494,065.893252 DOLA; wrapper totalAssets 19,472,324.145355 DOLA; wrapper idle DOLA zero).",
       "observations": [
         {
           "chain": "ethereum",
           "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
           "function": "asset()",
           "value": "0x000000000000000000000000865377367054516e17014ccded1e7d814edc9ce4",
-          "block": 26101009
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
           "function": "savings()",
           "value": "0x000000000000000000000000e5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
-          "block": 26101009
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
           "function": "dbr()",
           "value": "0x000000000000000000000000ad038eb671c44b853887a7e32528fab35dc5d710",
-          "block": 26101009
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
           "function": "gov()",
           "value": "0x000000000000000000000000926df14a23be491164dcf93f4c468a50ef659d5b",
-          "block": 26101009
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
           "function": "operator()",
           "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
-          "block": 26101009
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
           "function": "totalAssets()",
-          "value": "0x0000000000000000000000000000000000000000000e89c96766fd6bb88b5385",
-          "block": 26101009
+          "value": "0x000000000000000000000000000000000000000000101b6cce9d3dbb32f1f1bb",
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xb45ad160634c528cc3d2926d9807104fa3157305",
           "function": "totalSupply()",
-          "value": "0x0000000000000000000000000000000000000000000a3ceb9f1cf6584e0e97ae",
-          "block": 26101009
+          "value": "0x0000000000000000000000000000000000000000000b4b5b5a3a71b8b292818e",
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
           "function": "dola()",
           "value": "0x000000000000000000000000865377367054516e17014ccded1e7d814edc9ce4",
-          "block": 26101009
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
           "function": "gov()",
           "value": "0x000000000000000000000000926df14a23be491164dcf93f4c468a50ef659d5b",
-          "block": 26101009
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
           "function": "operator()",
           "value": "0x0000000000000000000000008f97cca30dbe80e7a8b462f1dd1a51c32accdfc8",
-          "block": 26101009
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
           "function": "totalSupply()",
-          "value": "0x0000000000000000000000000000000000000000000e8de59a550b0a11b9b367",
-          "block": 26101009
+          "value": "0x0000000000000000000000000000000000000000001020076dfa6512ba9e0491",
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
           "function": "balanceOf(address) args 000000000000000000000000b45ad160634c528cc3d2926d9807104fa3157305",
-          "value": "0x0000000000000000000000000000000000000000000e8de59a550b0a11b9b367",
-          "block": 26101009
+          "value": "0x0000000000000000000000000000000000000000001020076dfa6512ba9e0491",
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
           "function": "balanceOf(address) args 000000000000000000000000e5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4",
-          "value": "0x0000000000000000000000000000000000000000000e8de59a550b0a11b9b367",
-          "block": 26101009
+          "value": "0x0000000000000000000000000000000000000000001020076dfa6512ba9e0491",
+          "block": 26296822
         },
         {
           "chain": "ethereum",
           "address": "0x865377367054516e17014ccded1e7d814edc9ce4",
           "function": "balanceOf(address) args 000000000000000000000000b45ad160634c528cc3d2926d9807104fa3157305",
           "value": "0x0000000000000000000000000000000000000000000000000000000000000000",
-          "block": 26101009
+          "block": 26296822
         }
       ],
       "sources": [
@@ -1772,6 +1772,10 @@
         {
           "label": "ethereum:savings exact-match verified source",
           "url": "https://sourcify.dev/server/v2/contract/1/0xe5f24791e273cb96a1f8e5b67bc2397f0ad9b8b4?fields=compilation,sources,proxyResolution"
+        },
+        {
+          "label": "Ethereum pinned Dwellir reads at block 26296822 (2026-10-29T07:12:23Z)",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ]
     },

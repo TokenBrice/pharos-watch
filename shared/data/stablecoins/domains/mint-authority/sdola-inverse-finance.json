@@ -13,8 +13,8 @@
         "0xb45ad160634c528cc3d2926d9807104fa3157305"
       ],
       "canChangeMintLogic": false,
-      "observedAt": "2026-07-15",
-      "observedBlock": 25534205,
+      "observedAt": "2026-10-29",
+      "observedBlock": 26296822,
       "sources": [
         {
           "label": "Ethereum sDOLA verified source",
@@ -23,6 +23,10 @@
         {
           "label": "Inverse dola-savings source (pinned commit)",
           "url": "https://github.com/InverseFinance/dola-savings/blob/f9467b932c4cce460dc1267c6bc280327cf66a72/src/sDola.sol"
+        },
+        {
+          "label": "Ethereum Dwellir RPC: pinned reads at block 26296822 (2026-10-29T07:12:23Z)",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
         }
       ]
     },
