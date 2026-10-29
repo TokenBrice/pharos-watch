@@ -397,6 +397,32 @@ describe("chain dropout guard", () => {
       expect(asset.supplyChainGuard).not.toHaveProperty("partialCoverage");
       expect(result.unavailableAssetIds).toEqual(["usdg-paxos"]);
     });
+
+    it("withholds a carried baseline that has no usable observation clock", async () => {
+      const { now, state, asset } = setup(5_100_000, 900);
+      const pair = Object.values(state.pairs)[0]!;
+      pair.baselineObservedAt = 0;
+      const result = await guardChainDropouts({ assets: [asset], now, state });
+      expect(getCirculatingRawOrNull(asset)).toBeNull();
+      expect(asset.supplyObservedAt).toBeUndefined();
+      expect(asset.supplyChainGuard).toMatchObject({ status: "unavailable" });
+      expect(result.unavailableAssetIds).toEqual(["usdg-paxos"]);
+    });
+
+    it("never borrows another baseline's clock for an unclocked carried baseline", async () => {
+      const { now, quarantinedSince, state, asset } = setup(5_100_000, 900);
+      const clocked = Object.values(state.pairs)[0]!;
+      state.pairs[JSON.stringify(["usdg-paxos", "sonic"])] = {
+        assetId: "usdg-paxos", chainLabel: "Sonic", chainId: "sonic", baselineUsd: 5_000_000,
+        baselineObservedAt: 0, baselineSource: "state", quarantinedSince,
+      };
+      const result = await guardChainDropouts({ assets: [asset], now, state });
+      expect(getCirculatingRawOrNull(asset)).toBeNull();
+      expect(asset.supplyObservedAt).toBeUndefined();
+      expect(asset.supplyChainGuard).toMatchObject({ status: "unavailable" });
+      expect(result.unavailableAssetIds).toEqual(["usdg-paxos"]);
+      expect(clocked.baselineObservedAt).toBe(quarantinedSince - 5 * DAY);
+    });
   });
 
   it("recovers omitted material identities from the previous accepted publication even without a saved pair", async () => {
@@ -679,7 +705,7 @@ describe("chain dropout guard", () => {
     expect(result.state.pairs[JSON.stringify(["usdg-paxos", "solana"])]).toMatchObject({ heldTotalUsd: null, quarantinedSince: now - DAY });
   });
 
-  it.each([undefined, NOW - 900])("uses reviewed native onchain units with a local-read clock, preserving aggregate clock %s", async (listObservedAt) => {
+  it.each([undefined, NOW - 900])("stamps the aggregate clock from the native local-read repair (incoming %s)", async (listObservedAt) => {
     const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
     mocks.onchain.mockResolvedValue(1_409_030_000n * 10n ** BigInt(contract.decimals!));
     const asset = usdg();
@@ -688,10 +714,12 @@ describe("chain dropout guard", () => {
     await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
     expect(asset.chainCirculating!["X Layer"].current).toBe(1_409_030_000);
     expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ resolution: "onchain-total-supply", observedAt: NOW, observedAtKind: "local-read" });
-    expect(asset.supplyObservedAt).toBe(listObservedAt);
+    // Oldest component observation: the repair read (sync clock) and, when named, the list clock.
+    const aggregateClock = listObservedAt == null ? NOW : Math.min(NOW, listObservedAt);
+    expect(asset.supplyObservedAt).toBe(aggregateClock);
     const published = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0];
     expect(published.supplyChainGuard?.chains[0]).toMatchObject({ observedAt: NOW, observedAtKind: "local-read" });
-    expect(published.supplyObservedAt).toBe(listObservedAt);
+    expect(published.supplyObservedAt).toBe(aggregateClock);
     expect(mocks.onchain.mock.calls[0][1]).toBe(contract.address);
   });
 

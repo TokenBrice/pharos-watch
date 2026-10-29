@@ -16,6 +16,7 @@ import { logWorkerEvent } from "../../lib/structured-log";
 import { fetchErc20TotalSupply } from "../reserve-adapters/onchain";
 import { fetchSolanaTokenSupply } from "../reserve-adapters/token-supply";
 import { getPegReferencePriceUsd } from "./supply-gap-reconciliation";
+import { supplyObservationClock } from "./shared";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { CHAIN_DROPOUT_SEED, CHAIN_DROPOUT_SEED_OBSERVED_AT, CHAIN_DROPOUT_SEED_VALID_UNTIL } from "./chain-dropout-seed";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
@@ -578,27 +579,53 @@ export async function guardChainDropouts(input: {
     const partialCoverage = material && deficit > 0 && deficit <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (aggregate + deficit);
     if (material && !partialCoverage) {
       asset.supplyRestored = true;
-      asset.supplyObservedAt = Math.min(...unrepaired.map((candidate) => candidate.evidence.baselineObservedAt));
-      if (carryExpired || (ambiguous && heldTotal == null)) {
+      const carriedClocks = unrepaired
+        .map((candidate) => candidate.evidence.baselineObservedAt)
+        .filter((clock): clock is number => typeof clock === "number" && Number.isSafeInteger(clock) && clock > 0);
+      // R2: a carried baseline must name its own observation clock. When any carried baseline has none,
+      // the aggregate clock stays missing — never 0/NaN and never another baseline's clock — and the
+      // unclocked carry is withheld instead of being published under a synthesized observation time.
+      if (carriedClocks.length !== unrepaired.length) {
+        delete asset.supplyObservedAt;
         asset.circulating = {};
         status = "unavailable";
         result.unavailableAssetIds.push(String(asset.id));
       } else {
-        asset.circulating![pegKey] = ambiguous ? heldTotal! : (asset.circulating![pegKey] ?? 0) + deficit;
-        status = "quarantined";
-        for (const candidate of unrepaired) {
-          candidate.evidence.resolution = "carried-baseline";
-          candidate.evidence.observedAt = candidate.evidence.baselineObservedAt;
+        const carriedClockSec = Math.min(...carriedClocks);
+        asset.supplyObservedAt = carriedClockSec;
+        if (carryExpired || (ambiguous && heldTotal == null)) {
+          asset.circulating = {};
+          status = "unavailable";
+          result.unavailableAssetIds.push(String(asset.id));
+        } else {
+          asset.circulating![pegKey] = ambiguous ? heldTotal! : (asset.circulating![pegKey] ?? 0) + deficit;
+          status = "quarantined";
+          for (const candidate of unrepaired) {
+            candidate.evidence.resolution = "carried-baseline";
+            candidate.evidence.observedAt = candidate.evidence.baselineObservedAt;
+          }
         }
       }
     } else {
       if (repairs.length > 0) {
         asset.supplySource = "defillama-chain-repair";
-        // Native probes expose their local-read clock only in per-chain evidence, never as an
-        // aggregate upstream clock. Without a chart repair, retain the existing list clock (or absence).
-        const upstreamRepairs = repairs.filter((candidate) => candidate.evidence.observedAtKind === "upstream");
-        if (upstreamRepairs.length > 0) {
-          asset.supplyObservedAt = Math.min(...upstreamRepairs.map((candidate) => candidate.evidence.observedAt!));
+        // The aggregate clock is the oldest component observation: every admitted repair clock
+        // (native local reads included — the repair names when its own read observed the value)
+        // and, when the provider row names one, the incoming list clock. A repair without a usable
+        // clock leaves the aggregate clock missing; it never borrows another component's clock and
+        // is never synthesized as 0/NaN. A native-only repair therefore stamps the aggregate from
+        // its own read instead of publishing an unclocked partially current total.
+        const repairClocks = repairs
+          .map((candidate) => candidate.evidence.observedAt)
+          .filter((clock): clock is number => typeof clock === "number" && Number.isSafeInteger(clock) && clock > 0);
+        if (repairClocks.length === repairs.length) {
+          const incomingClock = supplyObservationClock(asset);
+          asset.supplyObservedAt = Math.min(
+            ...repairClocks,
+            ...(incomingClock == null ? [] : [incomingClock]),
+          );
+        } else {
+          delete asset.supplyObservedAt;
         }
       }
     }
