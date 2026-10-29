@@ -542,38 +542,32 @@ function documentationFixture(): V9DocumentationPolicy {
       {
         reason: "no-scoring-path",
         publicLabel: "Custody question outside the scoring path",
-        retention: "stale-documentation",
         threshold: null,
       },
       {
         reason: "unknown-scores-as-no-credit",
         publicLabel: "Mint control credit already withheld",
-        retention: "recompute-per-capture",
         threshold: null,
       },
       {
         reason: "unscored-diagnostic",
         publicLabel: "Diagnostic datum, not scored",
-        retention: "recompute-per-capture",
         threshold: null,
       },
       {
         reason: "coverage-label",
         publicLabel: "DEX coverage label only",
-        retention: "recompute-per-capture",
         threshold: null,
       },
       {
         reason: "immaterial-deployment",
         publicLabel: "Deployment share below the immaterial bar",
-        retention: "recompute-per-capture",
-        threshold: { kind: "known-share-pct", sharePctKey: "documentationImmaterialSharePct" },
+        threshold: { sharePctKey: "documentationImmaterialSharePct" },
       },
       {
         reason: "reserve-dust",
         publicLabel: "Reserve exposure below the dust bar",
-        retention: "recompute-per-capture",
-        threshold: { kind: "reserve-book-share", sharePctKey: "reserveDustBookSharePct" },
+        threshold: { sharePctKey: "reserveDustBookSharePct" },
       },
     ],
     documentationImmaterialSharePct: 1,
@@ -610,11 +604,7 @@ describe("documentation-class policy", () => {
       documentation.reasons.reverse();
     }],
     ["public label", (documentation: V9DocumentationPolicy) => { documentation.reasons[0]!.publicLabel = "Renamed"; }],
-    ["retention", (documentation: V9DocumentationPolicy) => { documentation.reasons[1]!.retention = "stale-documentation"; }],
-    ["retention switch", (documentation: V9DocumentationPolicy) => {
-      documentation.retainExpiredScopedQuestions = false;
-      documentation.reasons[0]!.retention = "recompute-per-capture";
-    }],
+    ["retention switch", (documentation: V9DocumentationPolicy) => { documentation.retainExpiredScopedQuestions = false; }],
     ["immaterial share bar", (documentation: V9DocumentationPolicy) => { documentation.documentationImmaterialSharePct = 0.5; }],
     ["attributable points", (documentation: V9DocumentationPolicy) => { documentation.maxAttributableScorePoints = 0.2; }],
     ["reserve dust share", (documentation: V9DocumentationPolicy) => { documentation.reserveDustBookSharePct = 0.005; }],
@@ -651,32 +641,35 @@ describe("documentation-class policy", () => {
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(misordered))).toThrow(/listed in reasonOrder/);
   });
 
-  it("fails closed on retention, threshold and bar incoherence", () => {
-    const orphanRetention = documentationFixture();
-    orphanRetention.retainExpiredScopedQuestions = false;
-    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(orphanRetention)))
-      .toThrow(/retainExpiredScopedQuestions/);
+  it("fails closed on removed keys, threshold and bar incoherence", () => {
+    const removedRetentionKey = {
+      ...documentationFixture(),
+      reasons: documentationFixture().reasons.map((entry) => ({ ...entry, retention: "stale-documentation" })),
+    };
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(removedRetentionKey))).toThrow();
+
+    const removedKindKey = {
+      ...documentationFixture(),
+      reasons: documentationFixture().reasons.map((entry, index) =>
+        index === 4 ? { ...entry, threshold: { kind: "known-share-pct", sharePctKey: "documentationImmaterialSharePct" } } : entry
+      ),
+    };
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(removedKindKey))).toThrow();
 
     const missingThreshold = documentationFixture();
     missingThreshold.reasons[4]!.threshold = null;
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(missingThreshold)))
-      .toThrow(/requires a declared share threshold/);
+      .toThrow(/requires the documentationImmaterialSharePct threshold/);
 
     const predicateThreshold = documentationFixture();
-    predicateThreshold.reasons[0]!.threshold = {
-      kind: "known-share-pct",
-      sharePctKey: "documentationImmaterialSharePct",
-    };
+    predicateThreshold.reasons[0]!.threshold = { sharePctKey: "documentationImmaterialSharePct" };
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(predicateThreshold)))
       .toThrow(/bounded by its predicate/);
 
     const mismatchedKey = documentationFixture();
-    mismatchedKey.reasons[5]!.threshold = {
-      kind: "known-share-pct",
-      sharePctKey: "reserveDustBookSharePct",
-    };
+    mismatchedKey.reasons[4]!.threshold = { sharePctKey: "reserveDustBookSharePct" };
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(mismatchedKey)))
-      .toThrow(/known-share-pct thresholds read documentationImmaterialSharePct/);
+      .toThrow(/requires the documentationImmaterialSharePct threshold/);
 
     const mergedBelowRow = documentationFixture();
     mergedBelowRow.reserveDustBookSharePct = documentationFixture().reserveDustResidualMaxBookSharePct;

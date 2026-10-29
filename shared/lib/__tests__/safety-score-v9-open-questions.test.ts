@@ -1,8 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { countV9EvidenceObligations } from "../../types/safety-score-v9-public-evidence-facts";
-import { V9OpenEvidenceSchema } from "../../types/safety-score-v9-public";
+import { V9OpenEvidenceSchema } from "../../types/safety-score-v9-open-evidence";
 import type { V9EvidenceCauseScope } from "../../types/safety-score-v9-causes";
-import type { V9DocumentationReason } from "../../types/safety-score-v9";
 import type { V9FactGapV3 } from "../../types/safety-score-v9-facts";
 import { createV9FactGapV3 } from "../safety-score-v9/reasons";
 import {
@@ -20,7 +19,6 @@ import {
 } from "../safety-score-v9/open-questions";
 
 const NEVER_DOCUMENTATION: V9DocumentationGapClassifier = () => null;
-const DAY = 86_400;
 
 function scope(overrides: Partial<V9EvidenceCauseScope> = {}): V9EvidenceCauseScope {
   return {
@@ -198,7 +196,7 @@ describe("countV9OpenEvidence", () => {
       facts, (row) => row.sourceGapId ?? null, (row) => row.causeGapIds ?? [], (row) => row.critical,
     ).factCount, 0);
     expect(block.totals.obligations).toBe(expectedObligations);
-    expect(block.byCard.map((row) => [row.id, row.openQuestionsCarried, row.openObligationsCarried])).toEqual([
+    expect(block.byCard.map((row) => [row.id, row.openBucketQuestionsCarried, row.openBucketObligationsCarried])).toEqual([
       ["alpha", 1, 1], ["beta", 0, 0],
     ]);
   });
@@ -215,8 +213,8 @@ describe("countV9OpenEvidence", () => {
     expect(withChild.totals).toEqual({ questions: 1, open: 0, issuer: 1, documentation: 0, obligations: 2 });
     expect(withChild.issuer.assets).toBe(1);
     expect(withChild.byCard).toEqual([
-      { id: "child", openQuestionsCarried: 0, inheritedOpenQuestionsCarried: 0, openObligationsCarried: 0, documentationObligationsCarried: 0 },
-      { id: "parent", openQuestionsCarried: 0, inheritedOpenQuestionsCarried: 0, openObligationsCarried: 0, documentationObligationsCarried: 0 },
+      { id: "child", openBucketQuestionsCarried: 0, inheritedOpenBucketQuestionsCarried: 0, openBucketObligationsCarried: 0, documentationObligationsCarried: 0 },
+      { id: "parent", openBucketQuestionsCarried: 0, inheritedOpenBucketQuestionsCarried: 0, openBucketObligationsCarried: 0, documentationObligationsCarried: 0 },
     ]);
 
     // Root dedupe is idempotent and order-independent.
@@ -232,7 +230,7 @@ describe("countV9OpenEvidence", () => {
       evaluated: [card("child", [carried])],
     }).block;
     expect(block.byCard).toEqual([{
-      id: "child", openQuestionsCarried: 1, inheritedOpenQuestionsCarried: 1, openObligationsCarried: 1, documentationObligationsCarried: 0,
+      id: "child", openBucketQuestionsCarried: 1, inheritedOpenBucketQuestionsCarried: 1, openBucketObligationsCarried: 1, documentationObligationsCarried: 0,
     }]);
     expect(block.owners).toEqual([{ responsibility: "unresearched", questions: 1, obligations: 1 }]);
   });
@@ -253,7 +251,7 @@ describe("countV9OpenEvidence", () => {
       { code: "missing-oracle-profile", bucket: "open", questions: 2, obligations: 2 },
     ]);
     // The gapless view keeps its own `path|<code>` question.
-    expect(block.byCard[0]).toMatchObject({ openQuestionsCarried: 2, inheritedOpenQuestionsCarried: 0 });
+    expect(block.byCard[0]).toMatchObject({ openBucketQuestionsCarried: 2, inheritedOpenBucketQuestionsCarried: 0 });
   });
 
   it("excludes measured-adverse facts from questions and from the obligation total", () => {
@@ -266,7 +264,7 @@ describe("countV9OpenEvidence", () => {
       ])],
     }).block;
     expect(block.totals).toEqual({ questions: 1, open: 1, issuer: 0, documentation: 0, obligations: 1 });
-    expect(block.byCard[0]!.openObligationsCarried).toBe(1);
+    expect(block.byCard[0]!.openBucketObligationsCarried).toBe(1);
   });
 
   it("prefers documentation over issuer and publishes the documentation split", () => {
@@ -305,7 +303,7 @@ describe("countV9OpenEvidence", () => {
     expect(block.documentation).toEqual({
       questions: 1, datums: 2, facts: 2, reasons: [{ reason: "reserve-dust", datums: 2 }],
     });
-    expect(block.byCard[0]).toMatchObject({ openQuestionsCarried: 1, openObligationsCarried: 1, documentationObligationsCarried: 2 });
+    expect(block.byCard[0]).toMatchObject({ openBucketQuestionsCarried: 1, openBucketObligationsCarried: 1, documentationObligationsCarried: 2 });
   });
 
   it("dates the issuer copy only from recorded review proofs", () => {

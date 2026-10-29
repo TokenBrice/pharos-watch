@@ -404,6 +404,20 @@ describe("Safety Score V9 publication codec", () => {
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toMatchObject({ code: "publication-schema-cutover-pending" });
   });
 
+  it("holds publishing until the retained schema-7 generation is re-published in the new shape", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const { openEvidence: _currentBlock, ...previous } = publication;
+    const stored = await authenticatedPayload(publication, () => ({ ...previous, schemaVersion: 7 }));
+    const admitted = await parseSafetyScoreV9Publication(stored);
+    expect(admitted.schemaVersion).toBe(7);
+    // The reader keeps serving the retained generation; the writer refuses to
+    // re-emit it, so the next publication is the one that completes the cutover.
+    await expect(serializeSafetyScoreV9Publication(
+      { ...previous, schemaVersion: 7 } as unknown as SafetyScoreV9CurrentResponse,
+    )).rejects.toThrow("must emit schema 8");
+    await expect(serializeSafetyScoreV9Publication(publication)).resolves.toContain("gzip");
+  });
+
   it("admits the retained schema-7 generation without inventing an open-evidence block", async () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const { openEvidence: _currentBlock, ...previous } = publication;

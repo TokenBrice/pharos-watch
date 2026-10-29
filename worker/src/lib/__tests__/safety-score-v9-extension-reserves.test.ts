@@ -162,7 +162,8 @@ describe("v10.01 named reserve reports", () => {
 
   it.each(["fresh", "stale", "absent"])("keeps USDY's reviewed Safety inputs identical with a %s display probe", (state) => {
     const meta = TRACKED_META_BY_ID.get("usdy-ondo-finance")!;
-    const clockSec = Date.parse("2026-10-25T12:00:00Z") / 1000;
+    // Noon on the day after USDY's current reserve review, so routine renewals keep the reviewed rows admissible.
+    const clockSec = Date.parse(`${meta.reserveReview!.reviewedAt}T12:00:00Z`) / 1000 + 86400;
     const record = state === "absent" ? null : reserveCompositionInput("usdy-display", {
       stablecoinId: meta.id, source: "ondo-usdy", adapterEvidenceClass: "weak-live-probe",
       fetchedAt: clockSec - (state === "stale" ? 3 * 86400 : 60),

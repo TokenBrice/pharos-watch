@@ -33,10 +33,8 @@ import { validateAiSummaryClaimTokens } from "@shared/lib/ai-summary-claims";
 import type { AiSummaryClaimToken } from "@shared/types";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import currentMethodologyVersion from "@shared/lib/methodology-versions/current-version.json";
-import {
-  ReportCardsV9CurrentResponseSchema,
-  type ReportCardsV9CurrentResponse,
-} from "@shared/types/report-cards-v9";
+import { type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import {
   PegSummaryResponseSchema,
@@ -270,7 +268,7 @@ export async function loadCurrent(): Promise<Map<string, Current>> {
 
   const cards = parseLiveContract(
     "report-cards/v9",
-    ReportCardsV9CurrentResponseSchema,
+    ReportCardsV9ReaderResponseSchema,
     cardsRaw,
   );
   const stress = parseLiveContract("stress-signals", StressSignalsAllResponseSchema, stressRaw);

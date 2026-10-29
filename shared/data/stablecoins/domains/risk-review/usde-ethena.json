@@ -1588,10 +1588,10 @@
         "evidence": "At Tempo block 42130562, the issuer-listed OFT token() identifies the authored TIP-20 and hasRole(OFT, ISSUER_ROLE) returns true. Complete RoleMembershipUpdated replay from creation block 14579720 resolves it as the sole issuer after the historical 0x5d3a1ff2... issuer was revoked at block 18728183. The published TIP-20 interface requires ISSUER_ROLE for mint and burn, and enforces supplyCap on mint. supplyCap() is 300000000000000 base units at six decimals; the OFT is not a token default admin. Block 42155679 independently re-confirms the token/endpoint, issuer role, supply cap and implementation identity. The scope names the TIP-20 selectors callable by this role, not a complete source-proven OFT ingress graph. No current LayerZero verification quorum or verified OFT implementation behavior is inferred.",
         "executionScope": {
           "controllerDeployment": "tempo:0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-12-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataEthena)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned Tempo block (pin/observedState, 2026-10-29T18:27:10Z): controller proxy and EIP-1967 implementation runtimes unchanged, the TIP-20 ISSUER_ROLE holder and supply cap unchanged, and the Safe proxy runtime, ProxyAdmin runtime, threshold, owner roster and empty module page unchanged as recorded.",
           "confidence": "partial",
           "sources": [
             {
@@ -1608,14 +1608,14 @@
             }
           ],
           "pin": {
-            "position": "42155679",
-            "hash": "0xee1b244a07695f7dfab2e192962716a039dede5a1f985e715bfc2af197265b23",
+            "position": "46487000",
+            "hash": "0x540f57fe6b3ef749635020c7d4697a2e8863e805abbe3e6a14c3f63481fcae56",
             "runtimeIdentity": "proxy-keccak256:0x9583e6c883b928697ac41b237d1749b9c9211da72e2646ec65f84b99a8c1100e;implementation:0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a;implementation-keccak256:0x34533f49675a000a0c460ab602e7a7eb1935353271602ed1b78d4918259fab62",
             "signerIdentity": "TIP20:0x20c0000000000000000000002f52d5cc21a3207b;ISSUER_ROLE:0x114e74f6ea3bd819998f78687bfcb11b140da08e9b7d222fa9c1f1ba1f2aa122;holder:0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f"
           },
           "observedState": {
-            "position": "42155679",
-            "hash": "0xee1b244a07695f7dfab2e192962716a039dede5a1f985e715bfc2af197265b23",
+            "position": "46487000",
+            "hash": "0x540f57fe6b3ef749635020c7d4697a2e8863e805abbe3e6a14c3f63481fcae56",
             "runtimeIdentity": "proxy-keccak256:0x9583e6c883b928697ac41b237d1749b9c9211da72e2646ec65f84b99a8c1100e;implementation:0xbd78bd7f1fd926b893f2f502c41deea7ea63ad8a;implementation-keccak256:0x34533f49675a000a0c460ab602e7a7eb1935353271602ed1b78d4918259fab62",
             "signerIdentity": "TIP20:0x20c0000000000000000000002f52d5cc21a3207b;ISSUER_ROLE:0x114e74f6ea3bd819998f78687bfcb11b140da08e9b7d222fa9c1f1ba1f2aa122;holder:0xf8b6aa0cee4e1ad87ee259dab5e556eb62297d7f"
           },
@@ -1705,8 +1705,8 @@
           "enabledModules": [],
           "guard": null,
           "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "observedBlock": 42155679,
-          "observedAt": "2026-10-01",
+          "observedBlock": 46487000,
+          "observedAt": "2026-10-29",
           "source": "onchain"
         },
         "capDescription": "The TIP-20 default admin can immediately raise the 300,000,000 USDe total supply cap and grant or revoke issuer roles; this is not an immutable economic bound.",
@@ -1729,10 +1729,10 @@
         "evidence": "Complete TIP-20 role replay and current hasRole(address,bytes32) reads at block 42130562 identify this Safe as sole token default admin, pauser, unpauser and blocked-balance burner. Current getRoleAdmin reads return DEFAULT_ADMIN_ROLE for all token roles. The documented TIP-20 interface permits its default admin to setSupplyCap and grant issuer roles immediately. getThreshold is 5, getOwners returns ten owners, getModulesPaginated returns no modules and next=0x1, and the Safe guard slot is zero. The OFT's DEFAULT_ADMIN_ROLE also belongs to this Safe. Fresh block 42155679 re-confirms token roles, threshold/ten owners, empty module page, implementation/admin slots and ProxyAdmin owner. Read-only eth_call from this Safe to ProxyAdmin 0x4371714e061d4b1e800cf93795d0ca3f62a70e36 with upgradeAndCall(current OFT,current implementation,empty bytes) succeeds; the identical unauthorized-account request reverts with OwnableUnauthorizedAccount. UPGRADE_INTERFACE_VERSION returns 5.0.0. Safe-origin setSupplyCap(300000001000000) and grantRole(ISSUER_ROLE,0x0000000000000000000000000000000000000002) simulations also succeed. No transaction was broadcast. Source correspondence, alternate upgrade/bypass paths, Safe fallback noninterference, all-destination messaging and economic-loss scope remain unclosed.",
         "executionScope": {
           "controllerDeployment": "tempo:0x8c0abe5527e0f3a0296ebacb26055b060ae9e51b",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-12-30",
-          "reviewer": "Sol curation pass 2026-10-01 (DataEthena)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned Tempo block (pin/observedState, 2026-10-29T18:27:10Z): controller proxy and EIP-1967 implementation runtimes unchanged, the TIP-20 ISSUER_ROLE holder and supply cap unchanged, and the Safe proxy runtime, ProxyAdmin runtime, threshold, owner roster and empty module page unchanged as recorded.",
           "confidence": "partial",
           "sources": [
             {
@@ -1745,14 +1745,14 @@
             }
           ],
           "pin": {
-            "position": "42155679",
-            "hash": "0xee1b244a07695f7dfab2e192962716a039dede5a1f985e715bfc2af197265b23",
+            "position": "46487000",
+            "hash": "0x540f57fe6b3ef749635020c7d4697a2e8863e805abbe3e6a14c3f63481fcae56",
             "runtimeIdentity": "safe-proxy-keccak256:0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c;proxyadmin:0x4371714e061d4b1e800cf93795d0ca3f62a70e36;proxyadmin-keccak256:0x245ef4e936127f651e6babd91f0a1c6f2075bb8402a13e5a4621315f37be3a43",
             "signerIdentity": "owners-abi-plus-threshold=5;sha256:6532836629fec331a3339300bdcd06cc20a03a52e1173db19a2bea68f9d80d47"
           },
           "observedState": {
-            "position": "42155679",
-            "hash": "0xee1b244a07695f7dfab2e192962716a039dede5a1f985e715bfc2af197265b23",
+            "position": "46487000",
+            "hash": "0x540f57fe6b3ef749635020c7d4697a2e8863e805abbe3e6a14c3f63481fcae56",
             "runtimeIdentity": "safe-proxy-keccak256:0xd7d408ebcd99b2b70be43e20253d6d92a8ea8fab29bd3be7f55b10032331fb4c;proxyadmin:0x4371714e061d4b1e800cf93795d0ca3f62a70e36;proxyadmin-keccak256:0x245ef4e936127f651e6babd91f0a1c6f2075bb8402a13e5a4621315f37be3a43",
             "signerIdentity": "owners-abi-plus-threshold=5;sha256:6532836629fec331a3339300bdcd06cc20a03a52e1173db19a2bea68f9d80d47"
           },

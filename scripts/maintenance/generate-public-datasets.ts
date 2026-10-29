@@ -53,14 +53,21 @@ import {
   type PublicSnapshotEnvelope,
   type PublicSnapshotEnvelopeV2,
 } from "@shared/types/public-snapshot";
-import { ReportCardsV9CurrentResponseSchema, V9PublicationHealthSchema } from "@shared/types/report-cards-v9";
+import {
+  HistoricalResolvedReportCardsV9ResponseSchema,
+  REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION,
+  V9PublicationHealthSchema,
+} from "@shared/types/report-cards-v9";
+import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9-current";
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import {
   SafetyScoreV9CompletenessSchema,
+} from "@shared/types/safety-score-v9-public";
+import {
   V9_OPEN_EVIDENCE_SEMANTICS,
   V9OpenEvidenceTotalsSchema,
   type V9OpenEvidenceTotals,
-} from "@shared/types/safety-score-v9-public";
+} from "@shared/types/safety-score-v9-open-evidence";
 import { z } from "zod";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
@@ -356,7 +363,11 @@ const SCORES_LATEST_COLUMNS: DatasetColumn<ScoreLatestRow>[] = [
 ];
 
 type CurrentSafetyPublication = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
-type CurrentSafetyCard = CurrentSafetyPublication["cards"][number];
+/** Archive-only report8 shape a dated capture was sealed under before report9. */
+type ArchivedSafetyPublication = z.infer<typeof HistoricalResolvedReportCardsV9ResponseSchema>;
+/** Live report9, or the report8 archive read only for historical dates. */
+type AcceptedSafetyPublication = CurrentSafetyPublication | ArchivedSafetyPublication;
+type AcceptedSafetyCard = AcceptedSafetyPublication["cards"][number];
 
 /**
  * The three server-computed question counts, copied from the publication's
@@ -461,15 +472,17 @@ function sameSafetyIdentity(left: unknown, right: unknown): boolean {
 }
 
 /**
- * Current v2 envelopes carry the accepted V9 publication. A declaration that
- * this is a V9 publication but does not satisfy the public contract is an
- * integrity failure for the current build; a historical regeneration falls
- * back to explicitly unavailable metadata instead of inventing dispositions.
+ * A current v2 envelope carries the accepted V9 publication. Live builds accept
+ * only report9; a dated regeneration also reads the report8 archive shape the
+ * capture was sealed under, so archived Safety facts are projected instead of
+ * silently dropped. A V9 declaration that fails its own contract is an
+ * integrity failure for a live build and stays explicitly unavailable (never
+ * zero) for a historical one.
  */
-function readCurrentSafetyPublication(
+function readSafetyPublication(
   envelope: SnapshotEnvelope,
   historical: boolean,
-): CurrentSafetyPublication | null {
+): AcceptedSafetyPublication | null {
   const raw = envelope.reportCards;
   const declaresV9 = isRecord(raw) && raw.model === "v9";
   if (!declaresV9) {
@@ -480,9 +493,24 @@ function readCurrentSafetyPublication(
     }
     return null;
   }
-  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(raw);
+  // A dated regeneration also reads the report8 archive shape the capture was
+  // sealed under; a live build accepts only report9, so an old Worker's bytes
+  // are never republished as a current dataset.
+  const archived = historical && isRecord(raw) &&
+    "schemaVersion" in raw && raw.schemaVersion === REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION;
+  const parsed = archived
+    ? HistoricalResolvedReportCardsV9ResponseSchema.safeParse(raw)
+    : ReportCardsV9CurrentResponseSchema.safeParse(raw);
   if (!parsed.success) {
-    if (historical) return null;
+    if (historical) {
+      if (archived) {
+        console.warn(
+          `[generate-public-datasets] archived report8 Safety publication for ${envelope.snapshotDate} is unreadable: `
+            + (parsed.error.issues[0]?.message ?? "unknown schema issue"),
+        );
+      }
+      return null;
+    }
     throw new Error(
       `Public snapshot ${envelope.snapshotDate} carries an invalid V9 Safety publication: `
         + (parsed.error.issues[0]?.message ?? "unknown schema issue"),
@@ -506,7 +534,7 @@ function readCurrentSafetyPublication(
   return publication;
 }
 
-function projectSafetyDisplay(card: CurrentSafetyCard): Readonly<Record<string, unknown>> {
+function projectSafetyDisplay(card: AcceptedSafetyCard): Readonly<Record<string, unknown>> {
   return {
     nrReasons: card.nrReasons,
     reasonCodes: card.reasonCodes,
@@ -581,7 +609,7 @@ function projectLegacyScoresLatest(envelope: SnapshotEnvelope): ScoreLatestRow[]
 
 function projectEnrichedScoresLatest(
   envelope: SnapshotEnvelope,
-  publication: CurrentSafetyPublication,
+  publication: AcceptedSafetyPublication,
 ): ScoreLatestRow[] {
   const dewsByCoin = new Map(envelope.dews.map((row) => [row.stablecoinId, row]));
   const liquidityByCoin = new Map(envelope.liquidity.map((row) => [row.stablecoinId, row]));
@@ -647,9 +675,13 @@ function projectEnrichedScoresLatest(
 
 function buildScoresDisplayProjection(
   envelope: SnapshotEnvelope,
-  publication: CurrentSafetyPublication | null,
+  publication: AcceptedSafetyPublication | null,
 ): ScoresLatestDisplayProjection {
-  const openEvidence = publication?.openEvidence ?? null;
+  // A report8 archive predates the counts: the key is absent, so its absence is
+  // the reason (the live report9 contract always carries the key).
+  const openEvidence = publication && "openEvidence" in publication
+    ? publication.openEvidence ?? null
+    : null;
   return {
     version: 2,
     snapshotDate: envelope.snapshotDate,
@@ -682,7 +714,7 @@ function projectScoresLatest(
   options: { historical?: boolean } = {},
 ): ScoresLatestProjection {
   if (!envelope) return { rows: [], displayProjection: null };
-  const publication = readCurrentSafetyPublication(envelope, options.historical ?? false);
+  const publication = readSafetyPublication(envelope, options.historical ?? false);
   const displayProjection = ScoresLatestDisplayProjectionSchema.parse(
     buildScoresDisplayProjection(envelope, publication),
   );

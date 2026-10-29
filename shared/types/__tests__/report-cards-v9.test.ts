@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   HistoricalResolvedReportCardsV9ResponseSchema,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+} from "../report-cards-v9";
+import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9Response,
-} from "../report-cards-v9";
+} from "../report-cards-v9-current";
 import { ReportCardsV9DetailResponseSchema } from "../report-cards-v9-projections";
 import { projectV9Detail } from "../../lib/report-cards-v9-projections";
 import type { V9OpenEvidence } from "../safety-score-v9-public";
@@ -47,9 +49,9 @@ const openEvidence: V9OpenEvidence = {
   issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
   byCard: [{
     id: "usdc-circle",
-    openQuestionsCarried: 1,
-    inheritedOpenQuestionsCarried: 0,
-    openObligationsCarried: 2,
+    openBucketQuestionsCarried: 1,
+    inheritedOpenBucketQuestionsCarried: 0,
+    openBucketObligationsCarried: 2,
     documentationObligationsCarried: 0,
   }],
 };
@@ -57,7 +59,8 @@ const openEvidence: V9OpenEvidence = {
 describe("report-cards v9 open-evidence envelope", () => {
   it("reads schema 9 live and keeps archived schema-8 rows out of the live reader", () => {
     expect(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION).toBe(9);
-    const archived = { ...base, schemaVersion: 8 };
+    const { openEvidence: _evidence, openEvidenceUnavailableReason: _reason, ...report8 } = base;
+    const archived = { ...report8, schemaVersion: 8 };
     expect(HistoricalResolvedReportCardsV9ResponseSchema.safeParse(archived).success).toBe(true);
     expect(ReportCardsV9CurrentResponseSchema.safeParse(archived).success).toBe(false);
   });
@@ -77,7 +80,7 @@ describe("report-cards v9 open-evidence envelope", () => {
     ).success).toBe(false);
 
     const overCounted = structuredClone(openEvidence);
-    overCounted.byCard[0]!.openObligationsCarried = -1;
+    overCounted.byCard[0]!.openBucketObligationsCarried = -1;
     expect(ReportCardsV9CurrentResponseSchema.safeParse(
       makeReportCardsV9Response(preset, makeReportCardsV9Card, { openEvidence: overCounted }),
     ).success).toBe(false);

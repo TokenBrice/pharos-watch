@@ -5,19 +5,211 @@
     "sources": [
       {
         "label": "swanUSD Coin verified source (Sourcify exact match)",
-        "url": "https://sourcify.dev/server/v2/contract/1/0x9BF2B2F57A2968A0E81546Ed50cBbbb7C9d6e05E?fields=abi"
+        "url": "https://sourcify.dev/server/v2/contract/1/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e?fields=sources"
       },
       {
-        "label": "Monolith contract addresses",
-        "url": "https://docs.monolith.market/developers/contract-addresses.md"
+        "label": "Monolith Lender verified source (Sourcify exact match)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15?fields=sources"
       },
       {
-        "label": "swanUSD website",
-        "url": "https://swanusd.com"
+        "label": "Pinned Ethereum block 26299913",
+        "url": "https://eth.blockscout.com/block/26299913"
+      },
+      {
+        "label": "USDS verified source and Sky ward control",
+        "url": "https://eth.blockscout.com/address/0xdc035d45d973e3ec169d2276ddab16f1e407384f"
+      },
+      {
+        "label": "sUSDS verified source and Sky ward control",
+        "url": "https://eth.blockscout.com/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
+      },
+      {
+        "label": "USDS implementation 0x1923dfee706a8e78157416c29cbccfde7cdf4102",
+        "url": "https://eth.blockscout.com/address/0x1923dfee706a8e78157416c29cbccfde7cdf4102"
+      },
+      {
+        "label": "sUSDS implementation 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0",
+        "url": "https://eth.blockscout.com/address/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0"
+      },
+      {
+        "label": "Monolith risks disclosure",
+        "url": "https://docs.monolith.market/security/risks"
       }
     ],
-    "evidence": "The verified Coin contract at 0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e exposes only ERC-20, permit, and mint and burn functions restricted to its minter, which returned the swanUSD Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15 at block 26268775 (October 25 2026). It has no owner, blacklist, freeze, seizure or pause function, and the EIP-1967 implementation slot is empty, so it is not an upgradeable proxy. The Lender's collateral is wstETH, which has no issuer freeze. The issuer site's sUSDS swap path has not been reviewed.",
-    "reviewer": "Claude pre-launch update 2026-10-25",
-    "reviewedAt": "2026-10-25"
+    "evidence": "swanUSD has a single deployment: Ethereum 0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e, which held the whole 420,092.200246430984088367 supply at block 26299913 (2026-10-29T17:31:59Z), so the deployment is material against the 10% threshold. Pinned reads returned minter() = Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15 and zero EIP-1967 implementation and admin slots. The verified Sourcify exact-match Coin is non-proxy and exposes only ERC-20, permit, mint and a self-only burn: mint is restricted to the immutable minter, burn affects only the caller's own balance, and there is no owner, blacklist, denylist, freeze, seizure, allowlist or transfer-pause function. No parent applies, and the sSwanUSD vault is the coin's own savings share, so it is excluded from both numerator and denominator rather than counted as external backing. Direct controls on the material deployment therefore do not establish Yes or Possible. Reserve test: the sole borrower market is collateralised by wstETH, whose DAO-only upgrades and staking mechanics fall under the FreezeWatch LST carve-out, so the debt-weighted qualifying fraction is 0%. The PSM reserve leg is the only reviewed exposure. The Lender holds USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f as sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd, equal to freePsmAssets() 64,205.193253000784236399 USDS at the pin, or 9.69% of the measured reserve base (wstETH plus PSM assets) and 15.28% of supply. Both tokens are EIP-1967 proxies: at the same block the implementation slots resolved to 0x1923dfee706a8e78157416c29cbccfde7cdf4102 for USDS and 0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0 for sUSDS, and wards(Sky Pause Proxy 0xbe8e3e3618f7474f8cb1d074a26affef007e98fb) returned 1 for each. A Sky-governed implementation change could therefore add holder-restricting logic, which is a Possible basis rather than a current holder-targeted control: the reviewed implementations expose ordinary transfers and no live blacklist or pause. Even counting the whole PSM leg categorically, qualifying exposure is 9.69% of reserves or 15.28% of supply, far below the strict >50% threshold, so the reserve leg does not change the verdict. The manager Safe 0x9d5df30f475cea915b1ed4c0cca59255c897b61b (Safe 1.3.0, 3-of-6, no guard and no modules: at the pin the hashed 1.3.0 guard slot 0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8 reads zero and getModulesPaginated(0x1,10) returns an empty list) can change the redemption fee, rate parameters and free-debt band before the 2030-10-21 immutability deadline and replace itself at any time, because setManager() carries no deadline, but its reachable code cannot target holder balances, and the Lender has no global pause. Governance metadata and upgradeability of the reserve asset alone establish neither a direct Yes control nor reserve-majority exposure. Verdict: No.",
+    "reviewer": "Claude swanUSD promotion 2026-10-29",
+    "reviewedAt": "2026-10-29"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "One wstETH/USD composite feed prices the Lender's collateral: Lido's stEthPerToken() multiplied by Chainlink stETH/ETH and ETH/USD, with updatedAt taken from the older Chainlink round. The feed is constructor-immutable with no owner, setter or alternate provider; the Lender forces reduce-only and unwinds the price after 108,000 seconds of staleness, and a reverting or non-positive answer disables liquidations and redemptions.",
+    "role": "collateral-pricing",
+    "branchModel": "multi-branch",
+    "branchApplicability": {
+      "disposition": "branches-required",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Claude swanUSD promotion 2026-10-29",
+      "rationale": "swanUSD runs a single borrower market whose wstETH collateral is valued by one composite feed inside a liquidation engine, so collateral pricing, liquidation, backstop and bad-debt behavior are reviewable branch evidence rather than a top-level quote. The market carried all 355,887.78 swanUSD of debt and 203.850825454123900563 wstETH of collateral at block 26299913.",
+      "sources": [
+        {
+          "label": "Monolith Lender verified source (Sourcify exact match)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15?fields=sources"
+        },
+        {
+          "label": "WstETHPriceFeedCompounded verified source (Sourcify exact match)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x6148b9e0246380a70f1404c78b66661f39f76c90?fields=sources"
+        },
+        {
+          "label": "Pinned Ethereum block 26299913",
+          "url": "https://eth.blockscout.com/block/26299913"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Claude swanUSD promotion 2026-10-29",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Monolith Lender verified source (Sourcify exact match)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15?fields=sources"
+      },
+      {
+        "label": "WstETHPriceFeedCompounded verified source (Sourcify exact match)",
+        "url": "https://sourcify.dev/server/v2/contract/1/0x6148b9e0246380a70f1404c78b66661f39f76c90?fields=sources"
+      },
+      {
+        "label": "Monolith liquidations",
+        "url": "https://docs.monolith.market/protocol/liquidations"
+      },
+      {
+        "label": "Monolith bad debt socialization",
+        "url": "https://docs.monolith.market/protocol/bad-debt-socialization"
+      },
+      {
+        "label": "Monolith immutability deadline",
+        "url": "https://docs.monolith.market/protocol/immutability-deadline"
+      },
+      {
+        "label": "Monolith risks disclosure",
+        "url": "https://docs.monolith.market/security/risks"
+      }
+    ],
+    "branches": [
+      {
+        "id": "wsteth",
+        "label": "wstETH Lender market",
+        "tier": "standard-external",
+        "summary": "The market's only collateral asset is wstETH, priced in USD by a three-leg composite: Lido's stEthPerToken(), Chainlink stETH/ETH and Chainlink ETH/USD. The two Chainlink legs are independent push feeds but the composite has no alternate provider, no last-good-price store and no branch shutdown; stale data degrades to reduce-only plus a 24-hour price unwind.",
+        "collateralAssets": [
+          "wstETH"
+        ],
+        "chains": [
+          "ethereum"
+        ],
+        "feeds": [
+          {
+            "provider": "Monolith WstETHPriceFeedCompounded",
+            "path": "wstETH stEthPerToken() * Chainlink stETH/ETH * Chainlink ETH/USD / 1e26; updatedAt and startedAt are the older of the two Chainlink rounds, and roundId identifies only the ETH/USD leg",
+            "address": "0x6148b9e0246380a70f1404c78b66661f39f76c90",
+            "chain": "ethereum",
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-10-29",
+            "observedBlock": 26299913,
+            "failureDomainKeys": [
+              "monolith:swanusd-wsteth-oracle",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Lido",
+            "path": "wstETH stEthPerToken() canonical exchange rate, leg 1 of the composite; it carries no timestamp and is not part of the staleness minimum",
+            "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+            "chain": "ethereum",
+            "observedAt": "2026-10-29",
+            "observedBlock": 26299913,
+            "failureDomainKeys": [
+              "lido:wsteth-rate",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Chainlink",
+            "path": "stETH / ETH push oracle, leg 2 of the composite; the 18-decimal answer read 0.99966114 and was last updated at 2026-10-29T05:03:36Z, 44,903 seconds before the pin",
+            "address": "0x86392dc19c0b719886221c78ab11eb8cf5c52812",
+            "chain": "ethereum",
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-10-29",
+            "observedBlock": 26299913,
+            "failureDomainKeys": [
+              "chainlink:ethereum:steth-eth",
+              "ethereum"
+            ]
+          },
+          {
+            "provider": "Chainlink",
+            "path": "ETH / USD push oracle, leg 3 of the composite; the 8-decimal answer read 2352.52475238 and was last updated at 2026-10-29T16:33:10Z, 3,529 seconds before the pin",
+            "address": "0x5f4ec3df9cbd43714fe2740f5e3616155c5b8419",
+            "chain": "ethereum",
+            "stalenessBoundSec": 108000,
+            "observedAt": "2026-10-29",
+            "observedBlock": 26299913,
+            "failureDomainKeys": [
+              "chainlink:ethereum:eth-usd",
+              "ethereum"
+            ]
+          }
+        ],
+        "fallbackBehavior": "There is no alternate provider. The composite has no owner, setter or freshness check of its own, so it returns stEthPerToken() * stETH/ETH * ETH/USD with the older Chainlink updatedAt. The Lender treats an answer older than 108,000 seconds as stale, forces reduce-only and linearly unwinds the reported price toward 1 wei over the following 24 hours, so new borrowing stops, positions become liquidatable against the falling price and redeemable debt shrinks toward zero. A reverting feed or a non-positive answer instead forces reduce-only and disables liquidations, redemptions and write-offs until the feed recovers. All constructor parameters that consume the feed, including the 8,500-bps collateral factor and the 108,000-second threshold, are immutable.",
+        "observedAt": "2026-10-29",
+        "observedBlock": 26299913,
+        "collateralParameters": [
+          {
+            "asset": "wstETH",
+            "maximumLtvPct": 85,
+            "minimumCollateralRatioPct": 117.65,
+            "note": "Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15 at block 26299913: collateralFactor() 8,500 bps (the constructor maximum), minimum collateral ratio 117.65%, minDebt() 1,000 swanUSD, liquidation incentive 0% at 85% LTV rising linearly to 10% at 90%, and min(debt, max(debt/4, 10,000)) of a borrower's debt per call, so the 10,000 swanUSD floor exceeds a quarter of any debt between 10,000 and 40,000 (the whole debt when it is below 10,000). A single market means the 100% debt share is measured, not assumed."
+          }
+        ],
+        "liquidationMechanism": "Anyone may call liquidate() once a borrower's debt exceeds 85% of collateral value. Each call repays any positive amount up to min(debt, max(debt/4, 10,000)), so a 20,000 swanUSD debt can lose up to half in one call and a debt at or below 10,000 can be repaid whole, and the repayment is further capped by the borrower's remaining collateral value; it seizes wstETH at the oracle price plus a 0 to 10% liquidation incentive that scales with the LTV, with the repaid swanUSD burned.",
+        "liquidationDelaySec": 0,
+        "backstop": "There is no funded Stability Pool, insurance fund or auction. Liquidators take the borrower's wstETH at a discount, and the incentive comes out of that borrower's own collateral. A residual shortfall has no dedicated backstop: writeOff() only fires when debt exceeds 100 times the remaining collateral value, deletes that borrower's debt and re-adds it pro rata to every other borrower's free and paid debt.",
+        "shutdownOrBadDebtBehavior": "No pause, shutdown or bad-debt auction exists. A reverting or non-positive composite answer disables liquidations, redemptions and write-offs; staleness beyond 108,000 seconds forces reduce-only and unwinds the price over 24 hours instead of shutting the market. Bad debt that reaches the 100x write-off test is socialised across borrowers, not holders: supply is unchanged and total debt is reallocated to the remaining positions. Paid debt stays non-redeemable throughout.",
+        "debtSharePct": 100,
+        "failureDomainKeys": [
+          "monolith:swanusd-wsteth-oracle",
+          "chainlink:ethereum:steth-eth",
+          "chainlink:ethereum:eth-usd",
+          "lido:wsteth-rate",
+          "monolith:swanusd-lender",
+          "ethereum"
+        ],
+        "sources": [
+          {
+            "label": "Monolith Lender verified source (Sourcify exact match)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15?fields=sources"
+          },
+          {
+            "label": "WstETHPriceFeedCompounded verified source (Sourcify exact match)",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x6148b9e0246380a70f1404c78b66661f39f76c90?fields=sources"
+          },
+          {
+            "label": "Monolith liquidations",
+            "url": "https://docs.monolith.market/protocol/liquidations"
+          },
+          {
+            "label": "Monolith bad debt socialization",
+            "url": "https://docs.monolith.market/protocol/bad-debt-socialization"
+          },
+          {
+            "label": "Monolith risks disclosure",
+            "url": "https://docs.monolith.market/security/risks"
+          },
+          {
+            "label": "Pinned Ethereum block 26299913",
+            "url": "https://eth.blockscout.com/block/26299913"
+          }
+        ]
+      }
+    ]
   }
 }

@@ -3,11 +3,13 @@ import { z } from "zod";
 import {
   buildReportCardsV9DependencyGraph,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+  type V9PublicationHealth,
+} from "@shared/types/report-cards-v9";
+import {
   ReportCardsV9CanonicalProjectionSchema,
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
-  type V9PublicationHealth,
-} from "@shared/types/report-cards-v9";
+} from "@shared/types/report-cards-v9-current";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import type { SafetyScoreV9AdmittedPublication } from "./safety-score-v9/publication-codec";
@@ -68,10 +70,14 @@ function buildPublicProjection(
     },
     cards,
     foreignCauseGaps: publication.foreignCauseGaps,
-    // A retained schema-7 generation carries no block: omit it so consumers
-    // render unavailable, never zero open questions.
-    ...(publication.schemaVersion !== 8 ? {} : { openEvidence: publication.openEvidence }),
-    ...(publication.documentationCauseGaps === undefined ? {} : { documentationCauseGaps: publication.documentationCauseGaps }),
+    // A retained schema-7 generation carries no block: publish the machine
+    // reason so consumers render unavailable, never zero open questions.
+    openEvidence: publication.schemaVersion === 8 ? publication.openEvidence : null,
+    openEvidenceUnavailableReason:
+      publication.schemaVersion === 8 ? null : "publication-predates-open-evidence",
+    ...(publication.schemaVersion === 8 && publication.documentationCauseGaps !== undefined
+      ? { documentationCauseGaps: publication.documentationCauseGaps }
+      : {}),
     ...(publication.pillarFreshness === undefined ? {} : { pillarFreshness: publication.pillarFreshness }),
     ...(publication.commonModeGroups === undefined ? {} : { commonModeGroups: publication.commonModeGroups }),
     dependencyGraph: buildReportCardsV9DependencyGraph(

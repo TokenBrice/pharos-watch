@@ -9,7 +9,12 @@
       "depType": "collateral",
       "assetClass": "protocol-position",
       "issuerOrObligor": "Sky Savings USDS ERC-4626 vault and USDS",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     },
     {
@@ -20,7 +25,12 @@
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Sky Ecosystem USDS held by the canonical xDAI bridge",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],
@@ -84,25 +94,25 @@
           "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
           "gnosis:0x481c034c6d9441db23ea48de68bcae812c5d39ba"
         ],
-        "reviewer": "DataBBMisc10",
+        "reviewer": "Pharos W0 renewal 2026-10-29 (R-RESB-1)",
         "confidence": "verified",
         "sources": [
           {
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com",
-            "accessedAtSec": 1790897048,
-            "sha256": "baefd292f3cdf16df609035929b1acba548ff3f01c33018120d77c11f4efd411"
+            "accessedAtSec": 1793299413,
+            "sha256": "8a2ee8045342d58a1fa33841fb838e93d2199dadfb81db339340d399fedf6d0e"
           },
           {
             "url": "https://api-gnosis-mainnet.n.dwellir.com",
-            "accessedAtSec": 1790897048,
-            "sha256": "c5de82c5b4b54a8fc9a54f595ca8a767862ab2e6d15978b3f17cd83434968788"
+            "accessedAtSec": 1793299413,
+            "sha256": "5a7b8679dd49b035c6e2ef58944f458bdf587395e7bd22b4e014429efc0b1d41"
           }
         ],
-        "reviewedAtSec": 1790897048,
-        "observedAtSec": 1790896335,
-        "expiresAtSec": 1790914328,
-        "sourceGeneration": "xdai-bridge:0x08e3850174c0b3a2e14cece9d50e5f4d2fc682867c91a3b67c34c288e2d90e4c:0x741d6f5b3cde3dadd615c871191ff22c65bbc6ef4587429c7f77d365a9d3b6f9",
-        "sourceSha256": "86584e1abc33e8400b74122d717870b4aefc793b40c84a0ed9048ff6e8eda96d",
+        "reviewedAtSec": 1793299413,
+        "observedAtSec": 1793296150,
+        "expiresAtSec": 1793316693,
+        "sourceGeneration": "xdai-bridge:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56:0x197e13f6f1c16776cb35c05488250a711e951256af029c5aa3a4940eae8f1662",
+        "sourceSha256": "1129a9c93932c3762aa6ff6ebbc9aa92d336df517073166d89b9b9e59cb98fc3",
         "completeness": "partial",
         "obligations": [
           {
@@ -139,16 +149,16 @@
         "blocks": [
           {
             "chain": "ethereum",
-            "number": 26100675,
-            "hash": "0x08e3850174c0b3a2e14cece9d50e5f4d2fc682867c91a3b67c34c288e2d90e4c",
-            "timestamp": 1790896343,
+            "number": 26300000,
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+            "timestamp": 1793296163,
             "finality": "safe"
           },
           {
             "chain": "gnosis",
-            "number": 48540798,
-            "hash": "0x741d6f5b3cde3dadd615c871191ff22c65bbc6ef4587429c7f77d365a9d3b6f9",
-            "timestamp": 1790896335,
+            "number": 49007102,
+            "hash": "0x197e13f6f1c16776cb35c05488250a711e951256af029c5aa3a4940eae8f1662",
+            "timestamp": 1793296150,
             "finality": "safe"
           }
         ],
@@ -157,55 +167,55 @@
             "key": "liquid-usds",
             "deploymentRef": "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
             "selector": "0x70a082310000000000000000000000004aa42145aa6ebf72e164c9bbc74fbd3788045016",
-            "rawAmount": "716258151048624022834949",
+            "rawAmount": "1014840952027210906199382",
             "decimals": 18
           },
           {
             "key": "susds-shares",
             "deploymentRef": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
             "selector": "0x70a082310000000000000000000000004aa42145aa6ebf72e164c9bbc74fbd3788045016",
-            "rawAmount": "48331262650941988724367273",
-            "decimals": 18
-          },
-          {
-            "key": "bridge-burnt",
-            "deploymentRef": "gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
-            "selector": "0x0e8162ba",
-            "rawAmount": "1283960294778949108864008118",
-            "decimals": 18
-          },
-          {
-            "key": "bridge-minted",
-            "deploymentRef": "gnosis:0x481c034c6d9441db23ea48de68bcae812c5d39ba",
-            "selector": "0xb4a523e80000000000000000000000007301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
-            "rawAmount": "1337971908556509039067400522",
+            "rawAmount": "43074061105150111565758139",
             "decimals": 18
           },
           {
             "key": "invested-principal",
             "deploymentRef": "ethereum:0x4aa42145aa6ebf72e164c9bbc74fbd3788045016",
             "selector": "0xcff77444000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f",
-            "rawAmount": "53708894264538729241901662",
+            "rawAmount": "47996817499964609102559951",
             "decimals": 18
           },
           {
             "key": "interest-getter",
             "deploymentRef": "ethereum:0x4aa42145aa6ebf72e164c9bbc74fbd3788045016",
             "selector": "0xc779c1c3000000000000000000000000dc035d45d973e3ec169d2276ddab16f1e407384f",
-            "rawAmount": "5899854345341887596378",
+            "rawAmount": "9788453412362887825300",
             "decimals": 18
           },
           {
             "key": "susds-assets",
             "deploymentRef": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
-            "selector": "0x07a2d13a00000000000000000000000000000000000000000027fa8aff8db38c90855fa9",
-            "rawAmount": "53714795118884071129498040",
+            "selector": "0x07a2d13a00000000000000000000000000000000000000000023a1498809c163700c3ebb",
+            "rawAmount": "48006606953376971990385251",
+            "decimals": 18
+          },
+          {
+            "key": "bridge-burnt",
+            "deploymentRef": "gnosis:0x7301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+            "selector": "0x0e8162ba",
+            "rawAmount": "1290385973167203568796217915",
+            "decimals": 18
+          },
+          {
+            "key": "bridge-minted",
+            "deploymentRef": "gnosis:0x481c034c6d9441db23ea48de68bcae812c5d39ba",
+            "selector": "0xb4a523e80000000000000000000000007301cfa0e1756b71869e93d4e4dca5c7d0eb0aa6",
+            "rawAmount": "1338986071011895307691050200",
             "decimals": 18
           }
         ],
         "ratio": {
-          "numerator": "54431053269932695152332989",
-          "denominator": "54011613777559930203392404",
+          "numerator": "49021447905404182896584633",
+          "denominator": "48600097844691738894832285",
           "unitBasis": "raw-18-decimal-bridge-token-units"
         }
       }

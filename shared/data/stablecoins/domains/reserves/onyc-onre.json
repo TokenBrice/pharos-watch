@@ -4,7 +4,7 @@
     {
       "sourceKey": "onre-holdings-csv:us-t-bills",
       "name": "Short-term U.S. Treasury bills",
-      "pct": 57.80377894398958,
+      "pct": 56.1609157865953,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -18,7 +18,7 @@
     {
       "sourceKey": "onre-holdings-csv:usdg",
       "name": "USDG",
-      "pct": 23.199465183252492,
+      "pct": 22.696728944048,
       "risk": "low",
       "coinId": "usdg-paxos",
       "depType": "collateral",
@@ -35,7 +35,7 @@
     {
       "sourceKey": "onre-holdings-csv:susds",
       "name": "sUSDS",
-      "pct": 6.310334219640427,
+      "pct": 6.130985813884,
       "risk": "low",
       "coinId": "susds-sky",
       "depType": "collateral",
@@ -52,7 +52,7 @@
     {
       "sourceKey": "onre-holdings-csv:syrup-usdc",
       "name": "syrupUSDC",
-      "pct": 3.869575660257487,
+      "pct": 3.763066336046,
       "risk": "medium",
       "coinId": "syrupusdc-maple",
       "depType": "collateral",
@@ -70,7 +70,7 @@
     {
       "sourceKey": "onre-holdings-csv:susde",
       "name": "sUSDe",
-      "pct": 2.0316338506687166,
+      "pct": 1.977034643037,
       "risk": "high",
       "coinId": "susde-ethena",
       "depType": "collateral",
@@ -89,7 +89,7 @@
     {
       "sourceKey": "onre-holdings-csv:uscc",
       "name": "USCC",
-      "pct": 1.7487056471721403,
+      "pct": 1.700559155903,
       "risk": "medium",
       "assetClass": "fund-share",
       "issuerOrObligor": "Bitwise Crypto Carry Fund (USCC), a Delaware statutory trust series; managed by Bitwise Investment Manager, LLC, with Superstate tokenization infrastructure",
@@ -106,7 +106,7 @@
     {
       "sourceKey": "onre-holdings-csv:usdg-kamino-lending",
       "name": "USDG (Kamino lending)",
-      "pct": 1.3050016676521414,
+      "pct": 1.269028394454,
       "risk": "medium",
       "coinId": "usdg-paxos",
       "depType": "collateral",
@@ -121,9 +121,43 @@
       "liquidityHorizon": "unknown"
     },
     {
+      "sourceKey": "onre-holdings-csv:usdg-kamino-fixed-rate-lending",
+      "name": "USDG (Kamino fixed-rate lending)",
+      "pct": 3.350398436312,
+      "risk": "medium",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Paxos-issued Global Dollar (USDG) supplied to Kamino fixed-rate lending markets on Solana",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "onre-holdings-csv:usdg-loopscale-lending",
+      "name": "USDG (Loopscale lending)",
+      "pct": 0.511796578554,
+      "risk": "medium",
+      "coinId": "usdg-paxos",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Paxos-issued Global Dollar (USDG) supplied to Loopscale lending on Solana",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "smart-contract",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
       "sourceKey": "onre-holdings-csv:usdc-kamino-lending",
       "name": "USDC (Kamino lending)",
-      "pct": 2.422361133890757,
+      "pct": 1.677558415522,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -140,7 +174,7 @@
     {
       "sourceKey": "onre-holdings-csv:usyc",
       "name": "USYC",
-      "pct": 0.1502903319697239,
+      "pct": 0.146018202905,
       "risk": "low",
       "coinId": "usyc-hashnote",
       "depType": "collateral",
@@ -159,7 +193,7 @@
     {
       "sourceKey": "onre-holdings-csv:usdc",
       "name": "USDC",
-      "pct": 0.7738471701339977,
+      "pct": 0.263798302321,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -175,7 +209,7 @@
     {
       "sourceKey": "onre-holdings-csv:usd-cash",
       "name": "USD cash",
-      "pct": 0.03930117355162189,
+      "pct": 0.015650216463,
       "risk": "very-low",
       "assetClass": "cash",
       "issuerOrObligor": "On Re SAC cash accounts; banking counterparties undisclosed",
@@ -189,7 +223,7 @@
     {
       "sourceKey": "onre-holdings-csv:usdv-solomon-v2",
       "name": "USDv (Solomon replacement mint)",
-      "pct": 0.3457050178209149,
+      "pct": 0.336460773956,
       "risk": "medium",
       "coinId": "usdv-solomon-v2",
       "depType": "collateral",
@@ -200,8 +234,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-20",
-    "reviewer": "C21 bottom-up refinement 2026-10-21",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "W0 R-COMP-5 renewal 2026-10-29",
     "confidence": "verified",
     "sources": [
       {
@@ -213,7 +247,7 @@
         "url": "https://app.onre.finance/earn/transparency"
       },
       {
-        "label": "OnRe live Schedule of Assets CSV (snapshot, statement and on-chain refresh date 2026-10-20; retrieved 2026-10-20)",
+        "label": "OnRe live Schedule of Assets CSV (snapshot, statement and on-chain refresh date 2026-10-27; retrieved 2026-10-29)",
         "url": "https://docs.google.com/spreadsheets/d/e/2PACX-1vT-bLCCxKNCB2GHgFV5Jo6_fbv4t3CT60dwPMbUDfwhHglt5GBoLp47jp1wcCOY8Ob1ZgjA6KXNczdq/pub?output=csv&gid=1591707661&single=true"
       },
       {
@@ -229,13 +263,13 @@
         "url": "https://solscan.io/account/EbzMwZPsJvgQ6juq7EJhkbmRwEkDBijXn9CWnYCiYxKR"
       },
       {
-        "label": "Apex ONyc August 31, 2026 AUP report (supplemental report reference; not evidence for September 28 composition)",
+        "label": "Apex ONyc August 31, 2026 AUP report (supplemental report reference; not evidence for the October 27 composition)",
         "url": "https://drive.google.com/file/d/14bVukKFAF98ZONT8uPdOPxPomOXaQHmA/view?usp=sharing"
       }
     ],
-    "rationale": "Retrieved 2026-10-20: the October 20 Schedule of Assets publishes thirteen asset rows totaling $289,827,019.67 and separately labelled AUM of $283,623,613.83. The thirteen amounts sum exactly in cents to the declared gross asset total; all twelve reviewed slices were refreshed together against that denominator, combining the two Treasury rows ($161,379,341.65 and $6,151,628.12). The $6,203,405.84 gross-assets/AUM difference is retained, not normalized away, and AUM is not circulating token liabilities. No whole-token collateralization ratio, independent assurance or funded redemption capacity is inferred. USDv contributes $1,001,946.55; its replacement-mint identity retains the September 30 finalized-slot-451897337 proof, not a new on-chain read. The dated schedule supplies categories but no Treasury maturity roster or binding maximum tenor. The August 31 Apex AUP was recovered in the public rendered viewer on October 20 and compares management-provided NAV/support, expressly without an assurance conclusion or direct third-party corroboration. It does not examine the October 20 holdings. Custody, posted reinsurance collateral and insurance obligations remain separately scoped; underlying USDG/USDv reserve gaps are not closed by this local category refresh.",
-    "compositionBasis": "OnRe Schedule of Assets dated 2026-10-20; all thirteen published asset amounts divided by the exactly reconciled $289,827,019.67 gross asset total; Treasury rows combined; original September 30 replacement-USDv identity proof retained",
-    "compositionAsOf": "2026-10-20",
+    "rationale": "Retrieved 2026-10-29: the October 27 Schedule of Assets publishes fifteen asset rows totaling $298,305,266.97 and separately labelled AUM of $287,977,821.61. The fifteen amounts sum exactly in cents to the declared gross asset total; all reviewed slices were refreshed together against that denominator, combining the two Treasury rows ($161,379,341.65 and $6,151,628.12). The $10,327,445.36 gross-assets/AUM difference is retained, not normalized away, and AUM is not circulating token liabilities. No whole-token collateralization ratio, independent assurance or funded redemption capacity is inferred. Three USDG lending rows are now itemized separately (Kamino lending $3,785,578.54, Kamino fixed-rate lending $9,994,415.00, Loopscale lending $1,526,716.15) alongside USDG spot of $67,705,537.87. USDv contributes $1,003,680.21; its replacement-mint identity retains the September 30 finalized-slot-451897337 proof, not a new on-chain read. The dated schedule supplies categories but no Treasury maturity roster or binding maximum tenor. The August 31 Apex AUP was recovered in the public rendered viewer on October 20 and compares management-provided NAV/support, expressly without an assurance conclusion or direct third-party corroboration; it does not examine the October 27 holdings. Custody, posted reinsurance collateral and insurance obligations remain separately scoped; underlying USDG/USDv reserve gaps are not closed by this local category refresh.",
+    "compositionBasis": "OnRe Schedule of Assets dated 2026-10-27; all fifteen published asset amounts divided by the exactly reconciled $298,305,266.97 gross asset total; Treasury rows combined; USDG lending venues itemized; original September 30 replacement-USDv identity proof retained",
+    "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "All current reserve asset categories and weights are classified. The sheet does not identify every final bank, broker, or custody-account allocation, and reinsurance claim obligations are a non-additive overlay rather than an unclassified reserve slice.",
     "knownUnknownExposurePct": 0,
@@ -243,21 +277,21 @@
       {
         "reserveIndex": 0,
         "reserveName": "Short-term U.S. Treasury bills",
-        "pct": 57.80377894398958,
+        "pct": 56.1609157865953,
         "disposition": "untracked-exogenous-asset",
         "rationale": "U.S. Treasury bills are external sovereign assets rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 5,
         "reserveName": "USCC",
-        "pct": 1.7487056471721403,
+        "pct": 1.700559155903,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Bitwise Crypto Carry Fund USCC is a tokenized fund share that is not in the tracked stablecoin registry."
       },
       {
-        "reserveIndex": 10,
+        "reserveIndex": 12,
         "reserveName": "USD cash",
-        "pct": 0.03930117355162189,
+        "pct": 0.015650216463,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Fiat cash is an external reserve asset rather than a tracked stablecoin dependency."
       }

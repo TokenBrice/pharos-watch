@@ -2680,15 +2680,15 @@
         "controlRef": "usdso-somnia-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "somnia block 439069606, 2026-10-15T10:43:10Z",
+            "label": "somnia block 451447173, 2026-10-29T18:39:09Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://api.infra.mainnet.somnia.network"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2697,15 +2697,15 @@
         "controlRef": "usdso-ethereum-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "ethereum block 26198151, 2026-10-15T13:15:59.000Z",
+            "label": "ethereum block 26300237, 2026-10-29T18:37:11Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://ethereum-rpc.publicnode.com"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2714,15 +2714,15 @@
         "controlRef": "usdso-fraxtal-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "fraxtal block 42629727, 2026-10-15T13:16:05.000Z",
+            "label": "fraxtal block 43244304, 2026-10-29T18:41:59Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://rpc.frax.com"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2731,15 +2731,15 @@
         "controlRef": "usdso-arbitrum-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "arbitrum block 515069602, 2026-10-15T13:16:04.000Z",
+            "label": "arbitrum block 519439129, 2026-10-29T18:38:46Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://arb1.arbitrum.io/rpc"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2748,15 +2748,15 @@
         "controlRef": "usdso-avalanche-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "avalanche block 97619420, 2026-10-15T13:16:04.000Z",
+            "label": "avalanche block 98886111, 2026-10-29T18:29:43Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://api.avax.network/ext/bc/C/rpc"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2765,15 +2765,15 @@
         "controlRef": "usdso-base-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "base block 52640409, 2026-10-15T13:16:05.000Z",
+            "label": "base block 53254885, 2026-10-29T18:38:37Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://mainnet.base.org"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2782,16 +2782,20 @@
         "controlRef": "usdso-bsc-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
+          {
+            "label": "bsc block 130521910, 2026-10-29T18:34:11Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
           {
             "label": "bsc block 127792956, 2026-10-15T13:16:06.000Z",
             "url": "https://bsc-dataseed.binance.org"
-          },
-          {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
-            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
       },
@@ -2799,15 +2803,15 @@
         "controlRef": "usdso-ink-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "ink block 58571755, 2026-10-15T13:16:06.000Z",
+            "label": "ink block 59800793, 2026-10-29T18:40:04Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://rpc-gel.inkonchain.com"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2816,15 +2820,15 @@
         "controlRef": "usdso-linea-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "linea block 32331593, 2026-10-15T13:16:03.000Z",
+            "label": "linea block 32465429, 2026-10-29T17:42:02Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://rpc.linea.build"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2833,15 +2837,15 @@
         "controlRef": "usdso-monad-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "monad block 113622662, 2026-10-15T13:16:07.000Z",
+            "label": "monad block 117670523, 2026-10-29T17:21:53Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://rpc.monad.xyz"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2850,15 +2854,15 @@
         "controlRef": "usdso-optimism-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "optimism block 158235695, 2026-10-15T13:16:07.000Z",
+            "label": "optimism block 158850193, 2026-10-29T18:39:23Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://mainnet.optimism.io"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2867,15 +2871,15 @@
         "controlRef": "usdso-plume-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "plume block 99559163, 2026-10-15T13:16:08.000Z",
+            "label": "plume block 102462060, 2026-10-29T18:36:21Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://rpc.plume.org"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2884,15 +2888,15 @@
         "controlRef": "usdso-polygon-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "polygon block 95576562, 2026-10-15T13:16:08.000Z",
+            "label": "polygon block 96395872, 2026-10-29T18:39:47Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://polygon-bor-rpc.publicnode.com"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2901,15 +2905,15 @@
         "controlRef": "usdso-scroll-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "scroll block 35384265, 2026-10-15T13:15:37.000Z",
+            "label": "scroll block 35539130, 2026-10-29T18:31:35Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://rpc.scroll.io"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2918,15 +2922,15 @@
         "controlRef": "usdso-sei-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "sei block 237738118, 2026-10-15T13:16:08.000Z",
+            "label": "sei block 240397484, 2026-10-29T18:41:29Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://evm-rpc.sei-apis.com"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2935,16 +2939,20 @@
         "controlRef": "usdso-sonic-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
+          {
+            "label": "sonic block 81374067, 2026-10-20T19:33:15Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
+            "url": "https://api-sonic-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
+            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+          },
           {
             "label": "sonic block 81070055, 2026-10-15T13:16:05.000Z",
             "url": "https://rpc.soniclabs.com"
-          },
-          {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
-            "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
       },
@@ -2952,15 +2960,15 @@
         "controlRef": "usdso-worldchain-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "worldchain block 36367273, 2026-10-15T13:16:25.000Z",
+            "label": "worldchain block 36981763, 2026-10-29T18:39:25Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://worldchain-mainnet.g.alchemy.com/public"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2969,15 +2977,15 @@
         "controlRef": "usdso-katana-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "katana block 45327356, 2026-10-15T13:16:07.000Z",
+            "label": "katana block 46556431, 2026-10-29T18:40:42Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://rpc.katana.network"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -2986,15 +2994,15 @@
         "controlRef": "usdso-mode-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "mode block 45951292, 2026-10-15T13:16:07.000Z",
+            "label": "mode block 46565831, 2026-10-29T18:40:45Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://mainnet.mode.network"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -3003,15 +3011,15 @@
         "controlRef": "usdso-stable-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "stable block 43144320, 2026-10-15T13:16:09.000Z",
+            "label": "stable block 44894273, 2026-10-29T18:39:09Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://api-stable-mainnet.n.dwellir.com"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]
@@ -3020,15 +3028,15 @@
         "controlRef": "usdso-unichain-router-administrator",
         "question": "Complete router and upstream RemoteHopV2/LayerZero controller, role-history, peer, validator/DVN, quorum, rate-limit, in-flight liability and loss-scope inventory is unresolved. Safe signer independence and operational key custody are also unestablished; local code and known-role reads do not close those paths.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "FixR2_UsdsoSomnia primary-source deployment review",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "unichain block 61321808, 2026-10-15T13:16:07Z",
+            "label": "unichain block 62550955, 2026-10-29T18:41:54Z: Safe getThreshold()=3 and getOwners() unchanged; beacon owner()=Safe and router DEFAULT_ADMIN_ROLE=True; re-read 2026-10-29T18:39Z",
             "url": "https://api-unichain-mainnet.n.dwellir.com"
           },
           {
-            "label": "Frax cross-chain router: parent-token bridge and destination deposit",
+            "label": "Frax CrossChainRouter doc accessed 2026-10-29: RELAYER_ROLE/non-deterministic router mapping and RemoteHopV2 admin paths published; no peer/validator/DVN/quorum/rate-limit inventory",
             "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
           }
         ]

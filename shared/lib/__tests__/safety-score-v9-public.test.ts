@@ -24,11 +24,11 @@ import type { V9ProductionScoreTrace } from "../safety-score-v9/score";
 import {
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9CurrentCardSchema,
-  SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9EvidenceSummarySchema,
   SafetyScoreV9HistoricalTypedCardSchema,
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
+import { SafetyScoreV9CurrentResponseSchema } from "../../types/safety-score-v9-publication-response";
 import { makeDeploymentControl, makeCompiledVotingControl, makeOperationalIssuanceProcess } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum } from "./safety-score-v9-control-scope.test-support";
 import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
@@ -1156,7 +1156,6 @@ describe("Safety Score v9 public projection", () => {
     expect(card.scoreTrace.providerRowExclusions![0]!.review).toMatchObject({
       belongsToAssetId: "frxusd-frax", providerChainLabel: "Fraxtal",
       contractAddress: "0xfc00000000000000000000000000000000000001",
-      provenance: { blockNumber: 43153493 },
     });
   });
   it("publishes effective weighted signatures without turning unknown key bypasses into quorum credit", () => {

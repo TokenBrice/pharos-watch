@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Native USDC held by pUSD BoringVaults on Ethereum and Plume",
-      "pct": 66.85392351,
+      "pct": 62.55434920,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -14,7 +14,7 @@
     },
     {
       "name": "Bridged USDC.e held by the pUSD BoringVault on Plume",
-      "pct": 33.14607649,
+      "pct": 37.44565080,
       "risk": "medium",
       "coinId": "usdc-circle",
       "depType": "wrapper",
@@ -33,8 +33,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-27",
-    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Claude evidence renewal 2026-10-29 (R-COMP-6)",
     "confidence": "verified",
     "sources": [
       {
@@ -54,11 +54,11 @@
         "url": "https://explorer.plume.org/block/101983754"
       }
     ],
-    "rationale": "Plume's current documentation identifies pUSD as a 1:1 USDC wrapper and lists native USDC plus legacy USDC.e on Plume. Same-run reads at Ethereum block 26282959 (2026-10-27T08:50:47Z) found 13,751.152236 pUSD and 309,231.248204 native USDC in the BoringVault. At Plume block 101983754 (2026-10-27T08:50:51Z), the vault held 1,063,756.201224 native USDC and 680,725.148774 USDC.e against 2,039,961.447615 pUSD. Across both deployments, 2,053,712.598202 USDC claims reconcile to 2,053,712.599851 pUSD (0.001649-token difference); the normalized mix is 66.85392351% native USDC and 33.14607649% bridged USDC.e. The bridged slice remains medium for the additional bridge contract path.",
-    "compositionBasis": "Issuer-documented USDC-only composition reconciled from pUSD totalSupply and BoringVault token balances at timestamp-aligned Ethereum and Plume blocks",
-    "compositionAsOf": "2026-10-27",
+    "rationale": "Plume's current documentation identifies pUSD as a 1:1 USDC wrapper and lists native USDC plus legacy USDC.e on Plume. Same-run reads at Ethereum block 26300200 (2026-10-29T18:29:47Z) found 13,786.516566 pUSD and 337,700.752390 native USDC in the BoringVault. At Plume block 102460000 (2026-10-29T18:21:26Z), the vault held 715,949.013836 native USDC and 630,725.148774 USDC.e against 1,670,618.400084 pUSD. Across both deployments, 1,684,374.915000 USDC claims against 1,684,404.916650 pUSD leave a 30.001650-token (0.0018%) shortfall that the two non-simultaneous reads do not resolve; the normalized mix of the measured claims is 62.55434920% native USDC and 37.44565080% bridged USDC.e. The bridged slice remains medium for the additional bridge contract path.",
+    "compositionBasis": "Issuer-documented USDC-only composition reconciled from pUSD totalSupply and BoringVault token balances at Ethereum block 26300200 (2026-10-29T18:29:47Z) and Plume block 102460000 (2026-10-29T18:21:26Z)",
+    "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The dated reconciled composition maps USDC-only backing through a serial wrapper claim: 66.85392351% native USDC and 33.14607649% legacy Plume USDC.e on the October 27 basis. The legacy slice retains additional bridge risk; verification identifies the representation and its documented USDC lineage, without asserting current escrow solvency. The aggregate live row and synthetic structural wrapper edge cannot express this partial bridge exposure with their single-intermediary field, so their intermediary remains null rather than implying 100% bridged backing. This is a provenance limitation, not unidentified reserve constituents. Current balances are remeasured by the live producer rather than fixed by the dated split.",
+    "knownUnknownExposure": "The dated reconciled composition maps USDC-only backing through a serial wrapper claim: 62.55434920% native USDC and 37.44565080% legacy Plume USDC.e on the October 29 basis. The legacy slice retains additional bridge risk; verification identifies the representation and its documented USDC lineage, without asserting current escrow solvency. The aggregate live row and synthetic structural wrapper edge cannot express this partial bridge exposure with their single-intermediary field, so their intermediary remains null rather than implying 100% bridged backing. This is a provenance limitation, not unidentified reserve constituents. Current balances are remeasured by the live producer rather than fixed by the dated split.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

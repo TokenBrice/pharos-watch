@@ -608,10 +608,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "executionScope": {
           "controllerDeployment": "plasma:0x31672de4726227feb22f2dfbcfa985c71bea86b2",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "D01 evidence renewal 2026-10-27",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29, pinned Plasma block 36355000 (hash 0xa8fdc7c9cbfcbe9e47bc49e4fa24974b0590e479ec78e5720307618add0003ec, 2026-10-29T17:56:55Z): owner()=getRateLimitAdmin()=0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae, getToken()=0xc8a8df9b210243c55d31c73090f06787ad0a1bf6, getRebalancer()=zero, getRouter()=0xcdca5d374e46a6dddab50bd2d9acb8c796ec35c3, eth_getCode sha256 80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c identical to block 36149633",
           "confidence": "partial",
           "sources": [
             {
@@ -624,14 +624,14 @@
             }
           ],
           "pin": {
-            "position": "36149633",
-            "hash": "0x0842228da297839819f8a4d5d4b67ba4928867073e6eb761989acaf8bb70bfae",
+            "position": "36355000",
+            "hash": "0xa8fdc7c9cbfcbe9e47bc49e4fa24974b0590e479ec78e5720307618add0003ec",
             "runtimeIdentity": "sha256-rpc-code-text:80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c",
             "signerIdentity": "owner=rateLimitAdmin=plasma:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae;eth_getCode=0x"
           },
           "observedState": {
-            "position": "36149633",
-            "hash": "0x0842228da297839819f8a4d5d4b67ba4928867073e6eb761989acaf8bb70bfae",
+            "position": "36355000",
+            "hash": "0xa8fdc7c9cbfcbe9e47bc49e4fa24974b0590e479ec78e5720307618add0003ec",
             "runtimeIdentity": "sha256-rpc-code-text:80f56dfb548e3a3d304a9e8aa234e20fa6dc3f1c98caed76378d3dce8ba9558c",
             "signerIdentity": "owner=rateLimitAdmin=plasma:0x4ea00dc0c2b3933b9b41c6cc372832fe844a89ae;eth_getCode=0x"
           },
@@ -719,8 +719,8 @@
         },
         "capDescription": "CCIP releases use configured per-route rate limits, but these are not immutable whole-escrow bounds: the owner can change the rate-limit administrator and router, or appoint a rebalancer whose withdrawLiquidity transfers escrowed syzUSD without consuming route limits. The pool does not mint independent native liabilities; exhaustive execution and affected-liability reach remain unresolved.",
         "canRaiseCap": true,
-        "observedAt": "2026-10-27",
-        "observedBlock": 36149633,
+        "observedAt": "2026-10-29",
+        "observedBlock": 36355000,
         "sources": [
           {
             "label": "Plasma syzUSD CCIP pool",

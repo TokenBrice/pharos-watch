@@ -13,7 +13,7 @@ import {
   type V9OpenEvidenceTotals,
   type V9OpenQuestionBucket,
   type V9QuestionKey,
-} from "../../types/safety-score-v9-public";
+} from "../../types/safety-score-v9-open-evidence";
 import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
 import { compareText } from "./primitives";
 
@@ -376,7 +376,6 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
     let openQuestions = 0;
     let issuerQuestions = 0;
     let documentationQuestions = 0;
-    let documentationDatums = 0;
     let issuerOldestReviewedAtSec: number | null = null;
     let issuerNewestReviewedAtSec: number | null = null;
     const issuerRoots = new Set<string>();
@@ -391,7 +390,6 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
       const bucket = buckets.get(questionKey)!;
       if (bucket === "documentation") {
         documentationQuestions++;
-        documentationDatums += question.documentationObligations;
         continue;
       }
       if (bucket === "issuer") {
@@ -443,18 +441,18 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
     for (const cardId of [...this.cardQuestions.keys()].sort(compareText)) {
       const cardQuestions = this.cardQuestions.get(cardId)!;
       let cardObligations = 0;
-      let openQuestionsCarried = 0;
-      let inheritedOpenQuestionsCarried = 0;
-      let openObligationsCarried = 0;
+      let openBucketQuestionsCarried = 0;
+      let inheritedOpenBucketQuestionsCarried = 0;
+      let openBucketObligationsCarried = 0;
       let documentationObligationsCarried = 0;
       let issuerNondisclosureReviewedAtSec: number | null = null;
       for (const [questionKey, counts] of cardQuestions) {
         cardObligations += counts.obligations;
         const bucket = buckets.get(questionKey)!;
         if (bucket === "open") {
-          openQuestionsCarried++;
-          openObligationsCarried += counts.obligations;
-          if (rootOfQuestionKey(questionKey) !== cardId) inheritedOpenQuestionsCarried++;
+          openBucketQuestionsCarried++;
+          openBucketObligationsCarried += counts.obligations;
+          if (rootOfQuestionKey(questionKey) !== cardId) inheritedOpenBucketQuestionsCarried++;
         } else if (bucket === "issuer" && counts.issuerReviewedAtSec !== null) {
           if (issuerNondisclosureReviewedAtSec === null || counts.issuerReviewedAtSec < issuerNondisclosureReviewedAtSec) {
             issuerNondisclosureReviewedAtSec = counts.issuerReviewedAtSec;
@@ -465,9 +463,9 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
       if (cardObligations === 0) continue;
       byCard.push({
         id: cardId,
-        openQuestionsCarried,
-        inheritedOpenQuestionsCarried,
-        openObligationsCarried,
+        openBucketQuestionsCarried,
+        inheritedOpenBucketQuestionsCarried,
+        openBucketObligationsCarried,
         documentationObligationsCarried,
         ...(issuerNondisclosureReviewedAtSec === null ? {} : { issuerNondisclosureReviewedAtSec }),
       });
@@ -488,7 +486,7 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
         .sort((left, right) => compareText(left.bucket, right.bucket) || compareText(left.code, right.code)),
       documentation: {
         questions: documentationQuestions,
-        datums: documentationDatums,
+        datums: [...this.documentationReasonDatums.values()].reduce((sum, datums) => sum + datums, 0),
         facts: this.documentationGapIds.size,
         reasons: [...this.documentationReasonDatums.entries()]
           .sort(([left], [right]) => compareText(left, right))

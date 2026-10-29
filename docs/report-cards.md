@@ -11,7 +11,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
 - **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.36`<!-- GENERATED-END: methodology-version-safety-score -->
-- Public breakdown/publication schema v7, API wrapper v8 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
+- Public breakdown/publication schema v8, API wrapper v9 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity; domain `safety-score-v9.evaluation-build.v2` hashes reviewed JSON data by its stable parsed value, so formatting/key-order-only edits do not, while executable sources stay byte-hashed. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
 - Implementation: `shared/lib/safety-score-v9/`
@@ -111,15 +111,19 @@ Policy owns class qualities; strict `lender-collateral-classes-v1.json` owns tok
 
 For collateral quality `q`/LLTV fraction `l`, lender quality=`100 − l² × (100 − q)`. Allocation weights scale deployed parent Backing; idle retains it, blend≤parent. See [methodology history](#methodology-identity) for v10.19 calibration/acceptance.
 
+### Report schema v9
+
+Body 9 wraps publication 8 (`model: "v9"`); see the [report9 wire contract](api-reference.md#full-cards).
+
 ### Report schema v8
 
-API v8 (`model: "v9"`)/publication v7 retain exact exit identity. Exclusions/partial weights, pipeline-gap/null-grade and NR remain distinct. Cards reconcile `ratingStatus`, `partialEvidence`, `confidenceDimensions`, `completeness.pipelineGapCount/pipelineGapIds`; supply/shared-book semantics stand. Optional provisional fields reconcile to the breakdown and aggregation weights when present; historical cards without them remain valid and are not retroactively relabelled.
+Archive-only via explicit historical dispatch: report8 (API v8)/publication v7 retain exact exit identity. Exclusions/partial weights, pipeline-gap/null-grade and NR remain distinct. Cards reconcile `ratingStatus`, `partialEvidence`, `confidenceDimensions`, `completeness.pipelineGapCount/pipelineGapIds`; supply/shared-book semantics stand. Optional provisional fields reconcile to the breakdown and aggregation weights when present; historical cards without them remain valid and are not retroactively relabelled.
 
-Inherited-parent attribution must match referenced parents; mismatch fails schema validation at `cards`, including `safeParse`, never an escaped exception.
+Inherited-parent attribution must match referenced parents; mismatches fail `safeParse` at `cards`, never escaping.
 
-Lossless witness interning preserves evidence; obligation counts distinguish questions from repeated witnesses. Supply/dependency/common-mode projections preserve identities/clocks ([schema details](process/report-cards-appendix.md#report-schema-v8)).
+Witness interning stays lossless and separates questions from repeated witnesses ([schema details](process/report-cards-appendix.md#report-schema-v8)).
 
-Seed/verify both accepted private read models before strict readers. Preparation/pre-compile uses them, never full-publication fallback. Invalid baselines block compilation; unavailable lender sources use class fallback. Recovery: revert strict readers on current head, reseed an accepted cycle, reapply ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API/score-index schema 2 stay unchanged.
+Seed/verify both accepted private read models before strict readers; preparation/pre-compile uses them, never full-publication fallback. Invalid baselines block compilation; recovery reseeds then reverts strict readers ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API/score-index schema 2 stay unchanged.
 
 ## Local authority exposure display
 
@@ -148,7 +152,7 @@ Archive tooling (`worker/scripts/export-safety-score-capture-archive.ts`) lists 
 
 ## Dated public preview
 
-The current `scores-latest` public dataset carries a versioned `_meta.displayProjection` object (also in the NDJSON preamble, never the CSV) with the accepted publication identity, `asOfSec`, `publishedAtSec`, `publicationHealth`, completeness and source generations. The generator appends `ratingStatus`, `safetyDisplay` (NR reasons/reason codes/partial evidence plus recorded grade hold or provisional labels), `dewsComputedAt`, `liquidityUpdatedAt`, `liquidityUnavailableReason` and `liquidityMethodologyVersion` to each row. Legacy envelopes emit the projection with `safety: null` and `safetyUnavailableReason: "legacy-source-metadata-unavailable"`; nothing is inferred from scores.
+The current `scores-latest` public dataset carries a versioned `_meta.displayProjection` object (also in the NDJSON preamble, never the CSV) with the accepted publication identity, `asOfSec`, `publishedAtSec`, `publicationHealth`, completeness and source generations. The generator appends `ratingStatus`, `safetyDisplay` (NR reasons/reason codes/partial evidence plus recorded grade hold or provisional labels), `dewsComputedAt`, `liquidityUpdatedAt`, `liquidityUnavailableReason` and `liquidityMethodologyVersion` to each row. Legacy envelopes emit the projection with `safety: null` and `safetyUnavailableReason: "legacy-source-metadata-unavailable"`; nothing is inferred from scores. The projection is version 2: every v1 field keeps its bytes and it adds `openEvidence` (`{ semantics: "open-question-v1", totals }` copied from the accepted publication) and `openEvidenceUnavailableReason` (`"safety-publication-unavailable"` or `"open-evidence-unavailable"`, null exactly when the counts are present). A publication without the block emits null counts with a named reason, never three zero counts.
 
 `/safety-scores/` uses this export as a build-time, bounded preview: the 20 highest published numeric Safety Scores among active rated registry assets, with a code-unit ID tie-break, canonical name/symbol/link and recorded grade/score/labels. The visible caption is `Grades as of <publication UTC date>` (matching the `<time>` clock, not the dataset's calendar date) linked to the dated JSON artifact, followed by `Top 20 of <eligibleRatedCount> rated active stablecoins by Safety Score` (the shown count replaces 20 when fewer are eligible). Counts come from the full admitted census, never the 20 rendered rows.
 
@@ -170,7 +174,7 @@ Endpoint freshness uses 2x `compute-safety-score-v9` (7200 s), matching consumer
 
 The response carries V9 identity/source digests, methodology/policy identity, active-set completeness, current/held health, native three-pillar cards with nullable excluded diagnostics and status-aware breakdowns, per-card `backingFromLiveReserves`, the serial/basket dependency graph and accepted `updatedAt`.
 
-`/api/report-cards/v9` wraps publication 7 as body 8; reject public v6 rather than infer it current. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; NR/pipeline IDs are disjoint and sorted. Index 2/free-grades 1 retain compact status/partial metadata; graph/scenario 2 distinguish technical parent/model nulls from NR. Pillar freshness stays categorical, opt-in operands follow the compact-representation contract, and scores/legacy wire are unchanged. [Report schema v8](#report-schema-v8) owns cause-bearing fields and typed route identity.
+`/api/report-cards/v9` wraps publication 8 as body 9. Reject public v6 rather than infer it current. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; NR/pipeline IDs are disjoint and sorted. Index 2/free-grades 1 retain compact status/partial metadata; graph/scenario 2 distinguish technical parent/model nulls from NR. Pillar freshness stays categorical, opt-in operands follow the compact-representation contract, and scores/legacy wire are unchanged. [Report schema v9](#report-schema-v9) owns the current wire; archive-only [v8](#report-schema-v8) owns cause-bearing fields and typed route identity.
 
 See the [public API reference](https://pharos.watch/api/) for the wire contract.
 

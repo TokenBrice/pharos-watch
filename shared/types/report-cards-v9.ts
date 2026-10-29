@@ -2,7 +2,6 @@ import { z } from "zod";
 import { SafetyScoreV9PublicationIdentitySchema } from "./safety-score-publication";
 import {
   SafetyScoreV9CompletenessSchema,
-  SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9ResolvedCurrentCardSchema,
   SafetyScoreV9HistoricalCardSchema,
   SafetyScoreV9HistoricalTypedCardSchema,
@@ -10,11 +9,11 @@ import {
   SafetyScoreV9DependencyProvenanceSchema,
   SafetyScoreV9CommonModeGroupsSchema,
   findSafetyScoreV9ParentAttributionIssues,
-  V9OpenEvidenceSchema,
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CardValidationInput,
-  type V9OpenEvidence,
 } from "./safety-score-v9-public";
+import type { V9OpenEvidence } from "./safety-score-v9-open-evidence";
+import type { ReportCardsV9CurrentResponse } from "./report-cards-v9-current";
 import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText, canonicalTextArray } from "./safety-score-v9-fact-primitives";
 import { Sha256Schema } from "./safety-schema-primitives";
@@ -28,6 +27,8 @@ import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
 
 export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 9;
+/** Archive-only report8 wire version: emitters stop at the report9 cutover. */
+export const REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION = 8;
 
 const V9PublicationSimpleHoldReasonSchema = z
   .object({
@@ -248,7 +249,7 @@ function isUniqueSorted(values: readonly string[]): boolean {
  * distinct from the retained evaluator envelope even while shadow history is
  * its storage source.
  */
-const ReportCardsV9ResponseShape = {
+export const ReportCardsV9ResponseShape = {
   model: z.literal("v9"),
   lifecycle: z.enum(["shadow", "active"]),
   safetyScoreIdentity: SafetyScoreV9PublicationIdentitySchema,
@@ -271,11 +272,9 @@ const ReportCardsV9ResponseShape = {
     .strict(),
   dependencyGraph: ReportCardsV9DependencyGraphSchema,
   commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
-  /** T2 carrier: the publication union of documentation-classified cause gaps. */
-  documentationCauseGaps: canonicalTextArray().optional(),
 } as const;
 
-function refineReportCardsV9Response(
+export function refineReportCardsV9Response(
   response: {
     safetyScoreIdentity: z.infer<typeof SafetyScoreV9PublicationIdentitySchema>;
     methodology: {
@@ -290,7 +289,9 @@ function refineReportCardsV9Response(
     schemaVersion?: number;
     commonModeGroups?: z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
     dependencyGraph: ReportCardsV9DependencyGraph;
-    openEvidence?: V9OpenEvidence;
+    documentationCauseGaps?: readonly string[];
+    openEvidence?: V9OpenEvidence | null;
+    openEvidenceUnavailableReason?: V9OpenEvidenceUnavailableReason | null;
   },
   ctx: z.RefinementCtx,
   historical = false,
@@ -360,20 +361,97 @@ function refineReportCardsV9Response(
       message: `${issue.cardId}: ${issue.message}`,
     });
   }
-  const publishedCardIds = new Set(cardIds);
-  response.openEvidence?.byCard.forEach((entry, index) => {
-    if (!publishedCardIds.has(entry.id)) {
+  if (response.openEvidence !== undefined) {
+    const unavailableReason = response.openEvidenceUnavailableReason ?? null;
+    if ((response.openEvidence === null) !== (unavailableReason !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidenceUnavailableReason"],
+        message: "A null open-evidence block requires its machine-readable reason, and a present block publishes none",
+      });
+    }
+  }
+  const openEvidence = response.openEvidence ?? null;
+  const documentationCauseGaps = response.documentationCauseGaps;
+  if (documentationCauseGaps !== undefined) {
+    const resolvable = new Set(response.foreignCauseGaps);
+    for (const card of response.cards) {
+      for (const gapId of card.localCauseGaps) resolvable.add(`${card.id}:gap:${gapId}`);
+    }
+    documentationCauseGaps.forEach((gapId, index) => {
+      if (!resolvable.has(gapId)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["documentationCauseGaps", index],
+          message: "Documentation cause gaps must resolve to a published card or foreign gap",
+        });
+      }
+    });
+  }
+  openEvidence?.byCard.forEach((entry, index) => {
+    const card = cardsById.get(entry.id);
+    if (card === undefined) {
       ctx.addIssue({
         code: "custom",
         path: ["openEvidence", "byCard", index, "id"],
         message: "Open-evidence counts must name a published card",
       });
+      return;
+    }
+    if (entry.issuerNondisclosureReviewedAtSec !== undefined && entry.issuerNondisclosureReviewedAtSec > response.updatedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidence", "byCard", index, "issuerNondisclosureReviewedAtSec"],
+        message: "Issuer review proofs cannot postdate the publication",
+      });
+    }
+    const annotated = entry.documentationOnlyLimited;
+    if (annotated !== undefined) {
+      for (let pillarIndex = 0; pillarIndex < annotated.length; pillarIndex++) {
+        const pillar = annotated[pillarIndex]!;
+        if (documentationCauseGaps === undefined) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["openEvidence", "byCard", index, "documentationOnlyLimited", pillarIndex],
+            message: "A documentation-only pillar annotation requires the documentation gap set",
+          });
+        }
+        const pillarRow = card.pillars[pillar];
+        if (pillarRow.evidenceLevel !== "limited" || (pillarRow.limitedEvidenceCauses?.length ?? 0) === 0) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["openEvidence", "byCard", index, "documentationOnlyLimited", pillarIndex],
+            message: "Only a limited pillar with witnesses can be documented as documentation-only limited",
+          });
+        }
+      }
     }
   });
+  if (openEvidence !== null) {
+    if (documentationCauseGaps === undefined && openEvidence.documentation.datums > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["documentationCauseGaps"],
+        message: "Documentation datums require the publication documentation gap set",
+      });
+    }
+    if (openEvidence.issuer.newestReviewedAtSec !== null && openEvidence.issuer.newestReviewedAtSec > response.updatedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidence", "issuer", "newestReviewedAtSec"],
+        message: "Issuer review proofs cannot postdate the publication",
+      });
+    }
+  }
 }
 
+/** Report9's machine-readable reason for a null open-evidence block. */
+export const V9_OPEN_EVIDENCE_UNAVAILABLE_REASONS = ["publication-predates-open-evidence"] as const;
+export const V9OpenEvidenceUnavailableReasonSchema = z.enum(V9_OPEN_EVIDENCE_UNAVAILABLE_REASONS);
+export type V9OpenEvidenceUnavailableReason = z.infer<typeof V9OpenEvidenceUnavailableReasonSchema>;
+
 /** Envelope fields shared by the live report and its archive-only predecessors. */
-const ReportCardsV9EnvelopeBaseShape = {
+export const ReportCardsV9EnvelopeBaseShape = {
   ...ReportCardsV9ResponseShape,
   lifecycle: z.literal("active"),
   publicationHealth: V9PublicationHealthSchema,
@@ -381,45 +459,92 @@ const ReportCardsV9EnvelopeBaseShape = {
   pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
 } as const;
 
-/**
- * Current report9 envelope. Live projections carry `openEvidence`; it stays
- * optional so a retained pre-cutover payload fails visible instead of reading
- * as zero open questions.
- */
-const ReportCardsV9CurrentEnvelopeShape = {
-  ...ReportCardsV9EnvelopeBaseShape,
-  schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
-  openEvidence: V9OpenEvidenceSchema.optional(),
-} as const;
+export type {
+  ReportCardsV9CurrentResponse,
+  ReportCardsV9Response,
+} from "./report-cards-v9-current";
 
 /** Archive-only report8 envelope: the shape live producers emitted before report9. */
 const HistoricalReport8EnvelopeShape = {
   ...ReportCardsV9EnvelopeBaseShape,
-  schemaVersion: z.literal(8),
+  schemaVersion: z.literal(REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION),
 } as const;
-export const ReportCardsV9CurrentResponseSchema = z.object({
-  ...ReportCardsV9CurrentEnvelopeShape,
-  cards: z.array(SafetyScoreV9ResolvedCurrentCardSchema),
-}).strict().superRefine((value, ctx) => {
-  refineReportCardsV9Response(value, ctx);
-  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
-});
-
-/** Trusted materializer input: canonical cards, with the same public refinements. */
-export const ReportCardsV9CanonicalProjectionSchema = z.object({
-  ...ReportCardsV9CurrentEnvelopeShape,
-  cards: z.array(SafetyScoreV9CurrentCardSchema),
-}).strict().superRefine((value, ctx) => {
-  refineReportCardsV9Response(value, ctx);
-  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
-});
-export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
 
 /**
- * Live V9 producers and consumers use only the current report contract.
+ * Browser admission for `ReportCardsV9BrowserResponseSchema` (the module browser
+ * readers import). Report8 validates as-is; report9 keeps its required-nullable
+ * pair with the block passed through. Both are admitted by the strict report8
+ * envelope — cards, graph, gaps and clocks included — so this module never pulls
+ * the report9/OpenEvidence validators into the client bundle. The coverage
+ * reader validates the block it renders with `V9OpenEvidenceSchema`
+ * (`src/lib/safety-score-data-coverage.ts`), so an unusable block renders as
+ * unavailable, never zero.
  */
-export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
-export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
+function rejectBrowserReport(message: string): z.ZodSafeParseResult<ReportCardsV9CurrentResponse> {
+  return z.never({ error: message }).safeParse(null);
+}
+
+function parseReportCardsV9BrowserResponse(input: unknown): z.ZodSafeParseResult<ReportCardsV9CurrentResponse> {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return rejectBrowserReport("Report cards payload must be an object");
+  }
+  const record = input as Record<string, unknown>;
+  if (record.schemaVersion !== REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION) {
+    const archived = HistoricalResolvedReportCardsV9ResponseSchema.safeParse(input);
+    return archived.success
+      ? { success: true, data: projectArchivedReport8ToReader(archived.data) }
+      : rejectBrowserReport(archived.error.issues[0]?.message ?? "Invalid report8 report-cards payload");
+  }
+  const openEvidence = record.openEvidence;
+  const unavailableReason = record.openEvidenceUnavailableReason;
+  if (openEvidence === undefined || unavailableReason === undefined) {
+    return rejectBrowserReport("Report9 requires openEvidence and openEvidenceUnavailableReason");
+  }
+  if (openEvidence !== null && (typeof openEvidence !== "object" || Array.isArray(openEvidence))) {
+    return rejectBrowserReport("Report9 openEvidence must be a block or null");
+  }
+  if (unavailableReason !== null && unavailableReason !== V9_OPEN_EVIDENCE_UNAVAILABLE_REASONS[0]) {
+    return rejectBrowserReport("Report9 openEvidenceUnavailableReason must name a published reason");
+  }
+  if ((openEvidence === null) !== (unavailableReason !== null)) {
+    return rejectBrowserReport(
+      "A null open-evidence block requires its machine-readable reason, and a present block publishes none",
+    );
+  }
+  const documentationCauseGaps = record.documentationCauseGaps;
+  if (documentationCauseGaps !== undefined &&
+      (!Array.isArray(documentationCauseGaps) || !documentationCauseGaps.every((id) => typeof id === "string"))) {
+    return rejectBrowserReport("Report9 documentationCauseGaps must be an array of gap ids");
+  }
+  const {
+    openEvidence: _block,
+    openEvidenceUnavailableReason: _reason,
+    documentationCauseGaps: _gaps,
+    ...report8
+  } = record;
+  const parsed = HistoricalResolvedReportCardsV9ResponseSchema.safeParse({
+    ...report8,
+    schemaVersion: REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION,
+  });
+  if (!parsed.success) {
+    return rejectBrowserReport(parsed.error.issues[0]?.message ?? "Invalid report9 report-cards payload");
+  }
+  return {
+    success: true,
+    data: {
+      ...parsed.data,
+      schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+      openEvidence: openEvidence as V9OpenEvidence | null,
+      openEvidenceUnavailableReason: unavailableReason as V9OpenEvidenceUnavailableReason | null,
+      ...(documentationCauseGaps === undefined
+        ? {}
+        : { documentationCauseGaps: documentationCauseGaps as string[] }),
+    },
+  };
+}
+export const ReportCardsV9BrowserResponseSchema = {
+  safeParse: parseReportCardsV9BrowserResponse,
+};
 
 /** Archive-only report7 validation; live producers remain report8-only. */
 const HistoricalReportCardsV9ResponseShape = {
@@ -458,6 +583,22 @@ export const HistoricalResolvedReportCardsV9ResponseSchema = z.object({
   refineReportCardsV9Response(value, ctx);
   refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
 });
+
+/**
+ * Read an archive-only report8 as the current report view. The block cannot
+ * exist in that wire version, so it publishes the machine reason instead of a
+ * zero count (R1).
+ */
+export function projectArchivedReport8ToReader(
+  response: z.infer<typeof HistoricalResolvedReportCardsV9ResponseSchema>,
+): ReportCardsV9CurrentResponse {
+  return {
+    ...response,
+    schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+    openEvidence: null,
+    openEvidenceUnavailableReason: "publication-predates-open-evidence",
+  };
+}
 
 /**
  * Free-lane projection of the current V9 publication: one grade per coin and

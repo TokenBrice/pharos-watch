@@ -160,6 +160,13 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
   adapterReview("megausd-custody", "worker/src/cron/reserve-adapters/custody-inventory.ts", "Maps the reviewed MegaUSD custodian inventory rows (USDC and USDtb) to their canonical tracked-stablecoin IDs and excludes self-held USDm as self-referential.", "2026-09-09"),
   adapterReview("krwq-custodian", "worker/src/cron/reserve-adapters/krwq-custodian.ts", "Maps the issuer custodian-assets legs to canonical tracked IDs (USDC custodian and Base treasury USDC to usdc-circle, frxUSD custodian to frxusd-frax) and keeps each reported value even when the on-chain balanceOf verification fails or diverges.", "2026-09-09"),
   adapterReview("moc-v3-buckets", "worker/src/cron/reserve-adapters/usdrif-rif.ts", "Maps only the on-chain DOC bucket's market-valued collateral slice to the fixed canonical DOC dependency while leaving the RIF bucket unlinked.", "2026-09-01"),
+  adapterReview(
+    "monolith-lender",
+    "worker/src/cron/reserve-adapters/monolith-lender.ts",
+    "Publishes exactly two keys from one block-pinned Multicall. monolith-lender:<chain>:<collateral> is the Lender's wstETH balance and stays unlinked because wstETH is an LST, not a tracked stablecoin; monolith-lender:<chain>:<psmVault> is the sUSDS PSM reserve valued at the Lender's own freePsmAssets() accounting and links to susds-sky with collateral depType. The immutable wiring is proven in-run first (coin(), collateral(), psmAsset(), psmVault(), psmVault.asset() and both decimals), so a drifted or substituted contract fails closed instead of publishing a dependency. The PSM leg is a Sky savings-vault claim, not USDC custody or a second count of upstream USDS, and the sell route's separate USDS output identity is redemption telemetry, never a reserve slice.",
+    "2026-10-29",
+    "Lane F monolith-lender adapter mapping review",
+  ),
   adapterReview("nest-vault-positions", "worker/src/cron/reserve-adapters/nest-vault-positions.ts", "Maps only exact reviewed Nest vault positions to canonical upstream IDs."),
   adapterReview("origin-vault-balances", "worker/src/cron/reserve-adapters/origin-vault-balances.ts", "Maps Origin vault balances through the reviewed asset-address roster."),
   adapterReview("parallelizer-balances", "worker/src/cron/reserve-adapters/parallelizer-balances.ts", "Maps dynamically enumerated Parallelizer balances through the reviewed token roster and leaves unconfigured residual collateral unlinked.", "2026-08-20"),

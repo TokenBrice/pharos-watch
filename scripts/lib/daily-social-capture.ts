@@ -5,7 +5,8 @@ import { isFreshnessWarningHeader } from "@shared/lib/api-freshness";
 import { StablecoinListResponseSchema, DexLiquidityMapSchema, DexLiquidityHistoryResponseSchema, DepegEventsResponseSchema,
   type StablecoinData, type DexLiquidityMap, type DexLiquidityHistoryPoint, type DepegEvent } from "@shared/types/market";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
-import { ReportCardsV9ResponseSchema, type ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { ReportCardGradeSchema } from "@shared/types/report-card-grade";
 import { buildMaintenanceApiRequest } from "./maintenance-api";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
@@ -189,7 +190,7 @@ export async function captureDailySocial(topic: DailySocialTopic, edition: Daily
     if (!snapshot.rows.some((row) => row.symbol != null)) return snapshot;
     try {
       const result = await get("/api/report-cards/v9");
-      return attachDailySocialGrades({ ...snapshot, asOf: Math.min(snapshot.asOf, result.asOf) }, ReportCardsV9ResponseSchema.parse(result.data));
+      return attachDailySocialGrades({ ...snapshot, asOf: Math.min(snapshot.asOf, result.asOf) }, ReportCardsV9ReaderResponseSchema.parse(result.data));
     } catch {
       return DailySocialSnapshotSchema.parse({ ...snapshot,
         highlights: [...snapshot.highlights, { label: "Safety grades", value: "Unavailable for this capture" }].slice(0, 4) });
@@ -202,7 +203,7 @@ export async function captureDailySocial(topic: DailySocialTopic, edition: Daily
   }
   if (topic === "safety") {
     const result = await get("/api/report-cards/v9");
-    return buildSafetySocial(ReportCardsV9ResponseSchema.parse(result.data), assets, { ...base, asOf: Math.min(base.asOf, result.asOf) });
+    return buildSafetySocial(ReportCardsV9ReaderResponseSchema.parse(result.data), assets, { ...base, asOf: Math.min(base.asOf, result.asOf) });
   }
   if (topic === "liquidity-growth") {
     const result = await get("/api/dex-liquidity");

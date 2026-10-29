@@ -2,11 +2,11 @@
   "id": "thusd-theo",
   "reserves": [
     {
-      "name": "Delta-neutral gold carry (leased physical gold hedged with CME gold futures)",
-      "pct": 77.74266272394208,
+      "name": "Gold lease book (physical gold leased to institutional borrowers)",
+      "pct": 46.60246859379906,
       "risk": "medium",
       "assetClass": "other",
-      "issuerOrObligor": "Theo-managed strategy; gold leased to precious-metals businesses including the MG999 fund (FundBridge Capital as manager, Libeara tokenization, Vistra administration) and other independent lessees; CME short futures margined at a US-regulated Fortune-500 FCM in CFTC-segregated customer funds",
+      "issuerOrObligor": "Theo credit desk gold leases to bullion banks, refiners, fabricators and miners; hedged with short CME COMEX gold futures",
       "riskFactors": [
         "credit",
         "counterparty",
@@ -19,8 +19,39 @@
       "blacklistabilityExposure": "possible"
     },
     {
+      "name": "Silver lease book (physical silver leased to institutional and industrial borrowers)",
+      "pct": 23.6944443227164,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Theo credit desk silver leases to institutional borrowers including refiners, fabricators and industrial users",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "market",
+        "liquidity",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Futures account (CME gold futures margin at an FCM)",
+      "pct": 18.786916488329872,
+      "risk": "medium",
+      "assetClass": "other",
+      "issuerOrObligor": "Unnamed US-regulated Fortune-500 FCM; CME gold futures margin in CFTC-segregated customer funds, cash portion held in T-bills",
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "basis",
+        "market",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
       "name": "Tokenized Treasury basket (thBILL)",
-      "pct": 21.99933454773512,
+      "pct": 6.828528549372762,
       "risk": "low",
       "coinId": "thbill-theo",
       "depType": "collateral",
@@ -39,8 +70,35 @@
       "blacklistabilityExposure": "upstream"
     },
     {
+      "name": "Secured credit book",
+      "pct": 3.701803176761159,
+      "risk": "high",
+      "assetClass": "private-credit",
+      "issuerOrObligor": "Theo secured credit book; obligors and collateral are not published",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "liquidity",
+        "legal",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Metals cash (USD held for metals-book liquidity)",
+      "pct": 0.21959353478204494,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "issuerOrObligor": "USD cash in Theo's metals cash account",
+      "riskFactors": [
+        "custody",
+        "legal"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
       "name": "USDC redemption liquidity",
-      "pct": 0.24301202604355693,
+      "pct": 0.151430714221644,
       "risk": "very-low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -50,7 +108,7 @@
     },
     {
       "name": "USDT redemption liquidity",
-      "pct": 0.014990702279248586,
+      "pct": 0.014814620017053163,
       "risk": "very-low",
       "coinId": "usdt-tether",
       "depType": "collateral",
@@ -60,48 +118,76 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W4C07Tether)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sol curation campaign 2026-10-29 (R-COMP-4)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Theo rendered transparency dashboard (October 1, 2026 composition, accessed 2026-10-01)",
-        "url": "https://app.theo.xyz/transparency"
+        "label": "Theo transparency metals-backing API, valuation_date 2026-10-29 at 13:00:00Z, published 2026-10-29T13:25:01.731320Z, revision 1, methodology 1.2; observed 2026-10-29",
+        "url": "https://theo-api.theo.xyz/v1/public/transparency/metals-backing"
       },
       {
-        "label": "Theo: How thUSD Turns Gold Market Carry Into Dollar-Denominated Yield (issuer claims, accessed 2026-09-30)",
-        "url": "https://theo.xyz/articles/how-thusd-works-gold-carry-trade-explained"
-      },
-      {
-        "label": "Theo thUSD documentation (accessed 2026-09-30)",
-        "url": "https://docs.theo.xyz/products/thusd.md"
-      },
-      {
-        "label": "Theo transparency dashboard, 2026-10-03: USDC and USDT liquidity reserve explicitly available for redemptions and instant liquidity; metadata review only, October 1 weights retained",
-        "url": "https://app.theo.xyz/transparency"
-      },
-      {
-        "label": "Theo rendered transparency dashboard dated 2026-10-09; composition accessed 2026-10-09T14:24:11Z",
-        "url": "https://app.theo.xyz/transparency"
-      },
-      {
-        "label": "Theo public historical API, October 9 row at timestamp 1791554418; partial on-chain book excludes Gold Carry",
+        "label": "Theo public thUSD historical API, latest row timestamp 1793296810 (2026-10-29T18:00:10Z); observed 2026-10-29",
         "url": "https://theo-api.theo.xyz/v1/public/thusd/historical/30"
+      },
+      {
+        "label": "Theo rendered transparency dashboard, last updated October 29, 2026; observed 2026-10-29",
+        "url": "https://app.theo.xyz/transparency"
+      },
+      {
+        "label": "Theo: How thUSD generates yield (gold lease and futures-margin mechanics, accessed 2026-10-29)",
+        "url": "https://docs.theo.xyz/products/thusd/how-thusd-generates-yield.md"
+      },
+      {
+        "label": "Theo: How thGOLD & thSLVR generate yield (metal leasing books, accessed 2026-10-29)",
+        "url": "https://docs.theo.xyz/products/thgold-and-thslvr/how-thgold-and-thslvr-generate-yield.md"
+      },
+      {
+        "label": "Theo rendered transparency dashboard dated 2026-10-09; composition accessed 2026-10-09T14:24:11Z (superseded review)",
+        "url": "https://app.theo.xyz/transparency"
       }
     ],
-    "rationale": "The October 9 rendered dashboard discloses $103,721,175 Gold Carry, $29,350,639 thBILL, $324,217 USDC and $20,000 USDT. Their sum is $133,416,031, consistent with the rounded $133.42M reserve headline. The displayed deployed subtotal of $133,071,813 differs by $1 from the sum of its rounded component amounts; percentages use the sum of all four displayed component amounts, without assigning the discrepancy to any holding. Full-reserve weights are 100 times each amount divided by $133,416,031, with no percentage rounding. The 77.94%/22.06% labels cover deployed positions only. The public historical API's October 9 row independently identifies thBILL, USDC and USDT but omits Gold Carry and reports only $29,694,855.74, so it is not a whole-book denominator or evidence of undercollateralization. The dashboard remains the composition authority. These are rounded issuer-reported values, not independent assurance; internal gold-lease, futures-margin and Treasury-collateral allocations remain undisclosed.",
-    "compositionBasis": "Theo rendered transparency dashboard dated 2026-10-09; total-reserve percentages calculated from all four displayed USD component amounts",
-    "compositionAsOf": "2026-10-09",
+    "rationale": "The October 29 metals-backing publication itemizes USD 62,914,159.850411 of gold lease, USD 31,987,920.440000 of silver lease, USD 25,362,670.749171 of futures account and USD 4,997,500.000000 of secured credit, plus USD 296,455.170000 of metals cash, totaling USD 125,558,706.209582; the gold and futures lines are flagged estimated and silver, secured credit and metals cash complete, with zero open breaks. The thUSD historical API's latest row, timestamped 2026-10-29T18:00:10Z, reports USD 204,434.152273 USDC, USD 20,000 USDT and USD 9,218,634.756088806 thBILL, totaling USD 9,443,068.908361806. The dashboard pairs those two clocks, so total reserves are USD 135,001,775.117943806 and every weight is 100 times its published amount divided by that total, with no percentage rounding. This review therefore replaces the single aggregate gold-carry line with the issuer's own four-way metals itemization: the October 9 book reported one USD 103,721,175 gold-carry position, whereas October 29 discloses a USD 125,558,706 metals and secured-credit book split into lease, margin and credit lines, and thBILL has fallen from USD 29,350,639 to USD 9,218,635. The two clocks are not simultaneous and the metals valuation is an issuer estimate for gold and futures margin; neither is an independent assurance. Internal lease-book allocation between MG999 and other lessees, the split of the futures account between T-bill collateral and cash margin, and the secured-credit obligors and collateral remain undisclosed, so those lines are unlinked exogenous exposures rather than dependencies.",
+    "compositionBasis": "Theo rendered transparency dashboard dated October 29, 2026, pairing the published metals-backing valuation with the latest thUSD historical composition row; full-reserve percentages computed from those published USD amounts",
+    "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The internal composition of the gold carry position (lease book versus CME futures margin versus T-bill collateral, and MG999 versus other lessees) is not published; the dashboard reports the position only as an aggregate. The reserve-side split of staked versus unstaked backing is likewise not published.",
+    "knownUnknownExposure": "The split of the futures account between T-bill collateral and cash margin, the allocation of the gold and silver lease books between MG999 and other lessees, and the secured-credit book's obligors, collateral and tenor are not published; each is reported only as an aggregate. The metals-backing gold and futures values are issuer estimates rather than completed valuations. The reserve-side split of staked versus unstaked backing is likewise not published.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Delta-neutral gold carry (leased physical gold hedged with CME gold futures)",
-        "pct": 77.74266272394208,
+        "reserveName": "Gold lease book (physical gold leased to institutional borrowers)",
+        "pct": 46.60246859379906,
         "disposition": "untracked-exogenous-asset",
-        "rationale": "The gold carry position is a managed strategy exposure across gold leases and exchange-traded futures, not a tracked stablecoin or tokenized-fund dependency with a linkable coin identity."
+        "rationale": "Leased physical gold is an off-chain metal-lease claim on institutional borrowers, not a tracked stablecoin or tokenized-fund dependency with a linkable coin identity."
+      },
+      {
+        "reserveIndex": 1,
+        "reserveName": "Silver lease book (physical silver leased to institutional and industrial borrowers)",
+        "pct": 23.6944443227164,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Leased physical silver is an off-chain metal-lease claim on institutional and industrial borrowers, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 2,
+        "reserveName": "Futures account (CME gold futures margin at an FCM)",
+        "pct": 18.786916488329872,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "Exchange-traded futures margin at an unnamed FCM is an off-chain broker claim, not a tracked stablecoin or tokenized-fund dependency."
+      },
+      {
+        "reserveIndex": 4,
+        "reserveName": "Secured credit book",
+        "pct": 3.701803176761159,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "A secured lending book against undisclosed obligors and collateral is an off-chain credit exposure, not a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 5,
+        "reserveName": "Metals cash (USD held for metals-book liquidity)",
+        "pct": 0.21959353478204494,
+        "disposition": "untracked-exogenous-asset",
+        "rationale": "USD cash held in the metals book is an off-chain fiat balance, not a tracked stablecoin dependency."
       }
     ]
   },

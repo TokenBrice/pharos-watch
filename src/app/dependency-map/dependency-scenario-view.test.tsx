@@ -52,7 +52,7 @@ describe("modeled dependency results", () => {
     const panel = screen.getByRole("region", { name: "Modeled Safety Score results" });
     expect(within(panel).getByText("B → Pipeline gap")).toBeTruthy();
     expect(within(panel).getByText("Pipeline gap → F")).toBeTruthy();
-    expect(within(panel).getByText(/Modeled Pipeline gap.*Backing and Exit excluded · pipeline gap/)).toBeTruthy();
+    expect(within(panel).getByText(/Modeled Pipeline gap.*Backing and Exit excluded · data pipeline unavailable/)).toBeTruthy();
     expect(within(panel).getByText(/Modeled F.*Exit excluded.*awaiting curation/)).toBeTruthy();
     expect(within(panel).queryByText(/Modeled NR|-60.00 points/)).toBeNull();
   });
