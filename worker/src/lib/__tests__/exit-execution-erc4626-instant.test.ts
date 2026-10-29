@@ -2,6 +2,7 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeAbiParameters, parseAbi, parseAbiParameters, toFunctionSelector } from "viem/utils";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { ExitExecutionCertificate, ExitExecutionModelReview } from "@shared/types/exit-route";
+import { ExitExecutionRequestPointSchema } from "@shared/types/exit-route";
 import { observeErc4626InstantExit } from "../exit-execution/erc4626-instant";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute, selectV9ExitStressRequest, resolveV9ExitCapacityAtRequest } from "@shared/lib/safety-score-v9/exit";
@@ -28,6 +29,7 @@ const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailu
 const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
   feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null as bigint | null,
   deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false,
+  totalSupply: 1_000_000_000_000_000n, totalSupplyReadFails: false,
   feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }));
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
@@ -66,7 +68,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
             return { success: succeeds, returnData: succeeds ? word(state.grossReturn ? executed : received) : "0x" as `0x${string}` };
           }
           if (innerSelector === toFunctionSelector("totalSupply()")) return {
-            success: true, returnData: word(1_000_000_000_000_000n + (redeemed ? state.feeShares + state.unexplainedSupplyDelta - (state.escrowOnly ? 0n : executed) : 0n)),
+            success: true, returnData: word(state.totalSupply + (redeemed ? state.feeShares + state.unexplainedSupplyDelta - (state.escrowOnly ? 0n : executed) : 0n)),
           };
           if (innerSelector === toFunctionSelector("balanceOf(address)")) {
             const owner = BigInt("0x" + entry.callData.slice(10, 74));
@@ -87,10 +89,11 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         continue;
       }
       const quotedMaximum = (state.optimisticMax || shares < state.liquidity ? shares : state.liquidity) * state.maxBps / 10_000n;
+      if (selector === toFunctionSelector("totalSupply()") && state.totalSupplyReadFails) { errors.push({ index }); results.push(undefined); continue; }
       const values: Record<string, bigint> = {
         [toFunctionSelector("asset()")]: state.identity ? 3n : 2n,
         [toFunctionSelector("decimals()")]: 6n,
-        [toFunctionSelector("totalSupply()")]: 1_000_000_000_000_000n,
+        [toFunctionSelector("totalSupply()")]: state.totalSupply,
         [toFunctionSelector("balanceOf(address)")]: tx.to === TOKEN ? state.idleLiquidity ?? state.liquidity : state.override === "ignored" ? 0n : shares,
         [toFunctionSelector("maxRedeem(address)")]: state.nonBinding ? 0n : quotedMaximum,
         [toFunctionSelector("maxWithdraw(address)")]: state.nonBinding ? 0n : quotedMaximum,
@@ -119,7 +122,8 @@ const outputReference = { ...inputReference, assetKey: "fixture-underlying", dep
 const args = { review, inputReference, outputReference, requests: [{ requestedNotionalUsd: 100_000, maxCostBps: 200 }] };
 beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
   deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false,
-  feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null, feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
+  feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null, feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n,
+  totalSupply: 1_000_000_000_000_000n, totalSupplyReadFails: false }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
 describe("reviewed synchronous ERC4626 exact execution", () => {
@@ -182,6 +186,82 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const point = (await observeErc4626InstantExit(args)).points[0]!;
     expect(point).toMatchObject({ executableUsd: 40_000, executedRawInput: "40000000000", certification: "exact-lower-bound", reason: "erc4626-liquidity-limited" });
     expect(point.executableUsd / point.requestedNotionalUsd).toBe(0.4);
+  });
+  it("clamps an ask larger than the issued supply to a measured lower bound of the stress ask", async () => {
+    state.totalSupply = 50_000_000_000n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({
+      requestedNotionalUsd: 100_000, requestedRawInput: "100000000000",
+      executedRawInput: "50000000000", executableUsd: 50_000,
+      certification: "exact-lower-bound", reason: "erc4626-request-clamped-to-issued-shares",
+      outputs: [{ rawUnits: "50000000000" }],
+      canonicalAttempt: {
+        outcome: "completed", requestedRawInput: "50000000000",
+        shareBalanceBefore: "50000000000", shareBalanceAfter: "0",
+        totalSupplyBefore: "50000000000", totalSupplyAfter: "0",
+      },
+    });
+    // The certificate carries the clamped request in units but never reports
+    // the clamped completion ratio as if the stress ask itself had executed.
+    expect(point.executableUsd).not.toBe(point.requestedNotionalUsd);
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
+  it("leaves a request at the issued supply unchanged and certifies it complete", async () => {
+    state.totalSupply = 100_000_000_000n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({
+      requestedRawInput: "100000000000", executedRawInput: "100000000000",
+      executableUsd: 100_000, certification: "exact-complete", reason: null,
+      canonicalAttempt: { outcome: "completed", requestedRawInput: "100000000000" },
+    });
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
+  it("names liquidity rather than the clamp when the vault serves less than its whole issuance", async () => {
+    state.totalSupply = 50_000_000_000n; state.liquidity = 20_000_000_000n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({
+      requestedRawInput: "100000000000", executedRawInput: "20000000000",
+      executableUsd: 20_000, certification: "exact-lower-bound", reason: "erc4626-liquidity-limited",
+      canonicalAttempt: { outcome: "reverted", requestedRawInput: "50000000000" },
+    });
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
+  it("keeps a vault with no issued shares fail-closed instead of certifying a clamped zero", async () => {
+    state.totalSupply = 0n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({
+      requestedNotionalUsd: 100_000, requestedRawInput: "100000000000",
+      executedRawInput: "0", executableUsd: 0, outputs: [],
+      certification: "diagnostic", reason: "erc4626-request-exceeds-issued-shares",
+    });
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
+  it("fails closed when the issued-supply read is unavailable", async () => {
+    state.totalSupplyReadFails = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-read-unavailable");
+  });
+  it("admits a clamped vault measurement as a sub-request lower bound at the stress notional", async () => {
+    const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
+    state.totalSupply = 50_000_000_000n;
+    const produced = await observeReviewedExitExecutionRoutes({
+      assetId: "fixture-vault", circulatingUsd: 1_000_000, clockSec: CLOCK,
+      reviews: [review], inputReference, outputReference, envelope,
+    });
+    expect(produced.failures).toEqual([]);
+    const observation = produced.observations[0]!;
+    expect(observation).toMatchObject({
+      scoreEligible: true, requestedNotionalUsd: 1_000_000, executableUsd: 50_000, completionRatio: 0.05,
+      executionCertificate: {
+        settlement: { maximumCompletionSec: 0 },
+        points: [{ certification: "exact-lower-bound", reason: "erc4626-request-clamped-to-issued-shares" }],
+      },
+    });
+    const request = selectV9ExitStressRequest(1_000_000, envelope)!;
+    expect(resolveV9ExitCapacityAtRequest(
+      observation.capacityCurve!.map(point => ({ ...point, executionCostBps: point.executionCostBps! })), request,
+    )).toMatchObject({ requestedNotionalUsd: 1_000_000, executableUsd: 50_000, completionRatio: 0.05 });
+    // The measured capacity is the issuance actually burned, not the stress ask.
+    expect(observation.executableUsd).toBeLessThan(observation.requestedNotionalUsd);
   });
   it("records paused or withdrawal-disabled zero completion with a machine reason", async () => {
     state.paused = true;
