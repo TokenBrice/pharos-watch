@@ -38,7 +38,6 @@ import {
   V9FactStatusV2Schema,
   V9ObservationStateSchema,
   canonicalArrayBy,
-  canonicalTextArray,
   canonicalV9ExecutionCostKey,
   type V9EvidenceResponsibility,
   type V9FactApplicability,
@@ -748,34 +747,62 @@ const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applica
 
 const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
 
+/** One contributor's evidence binding: the authored control id, or "*" for a control without authored ids. */
+export const V9IncidentCoverageCertificateRefSchema = z
+  .object({
+    controlId: CanonicalTextSchema,
+    certificateId: CanonicalKeySchema,
+  })
+  .strict();
+export type V9IncidentCoverageCertificateRef = z.output<typeof V9IncidentCoverageCertificateRefSchema>;
+
 /**
  * How a deployment control's negative `incidentState` was proved. Optional and
  * additive: absent keeps the compiler's previous behaviour byte-for-byte.
- * `provider+screening` requires exact-lane certificate references — a provider
- * review alone never closes a control — and may list the contributor control
- * ids a merged lane aggregate covers, so an added control inherits nothing.
- * The certificate freshness budget lives in policy
+ * `provider-screening` names all three witnesses — the provider review, the
+ * asset issuer-surface review and one exact-lane certificate per authored
+ * contributor — so provenance names what was read (R6) and a provider review
+ * alone never closes a control. The certificate freshness budget lives in policy
  * (`semantic.evidence.laneIncidentCertificateMaxAgeSec`), not in this shape.
  */
 export const V9IncidentCoverageSchema = z
   .object({
-    source: z.enum(["control", "deployment", "provider+screening"]),
-    controlIds: canonicalTextArray(1, "covered control id").optional(),
-    certificateRefs: canonicalArrayBy(CanonicalKeySchema, (ref) => ref, 1, "certificate reference").optional(),
+    source: z.enum(["control", "deployment", "provider-screening"]),
+    providerReviewId: CanonicalKeySchema.optional(),
+    issuerSurfaceReviewId: CanonicalKeySchema.optional(),
+    certificateRefs: canonicalArrayBy(
+      V9IncidentCoverageCertificateRefSchema,
+      (ref) => ref.controlId,
+      1,
+      "covered control",
+    ).optional(),
   })
   .strict()
   .superRefine((coverage, ctx) => {
-    if (coverage.source !== "provider+screening") {
-      if (coverage.controlIds !== undefined) {
-        issue(ctx, ["controlIds"], "Only provider+screening coverage names an aggregate contributor set");
-      }
-      if (coverage.certificateRefs !== undefined) {
-        issue(ctx, ["certificateRefs"], "Only provider+screening coverage references lane certificates");
+    if (coverage.source !== "provider-screening") {
+      for (const field of ["providerReviewId", "issuerSurfaceReviewId", "certificateRefs"] as const) {
+        if (coverage[field] !== undefined) {
+          issue(ctx, [field], "Only provider-screening coverage carries closure witnesses");
+        }
       }
       return;
     }
+    if (coverage.providerReviewId === undefined) {
+      issue(ctx, ["providerReviewId"], "Provider review coverage requires the covering provider review id");
+    }
+    if (coverage.issuerSurfaceReviewId === undefined) {
+      issue(ctx, ["issuerSurfaceReviewId"], "Provider review coverage requires the asset issuer-surface review id");
+    }
     if (coverage.certificateRefs === undefined) {
       issue(ctx, ["certificateRefs"], "Provider review coverage requires at least one exact-lane certificate reference");
+      return;
+    }
+    const wildcardBindings = coverage.certificateRefs.filter((ref) => ref.controlId === "*").length;
+    if (wildcardBindings > 1) {
+      issue(ctx, ["certificateRefs"], "A lane-level certificate binding is unique");
+    }
+    if (wildcardBindings > 0 && coverage.certificateRefs.length > 1) {
+      issue(ctx, ["certificateRefs"], "A lane-level binding cannot be mixed with per-contributor bindings");
     }
   });
 export type V9IncidentCoverage = z.output<typeof V9IncidentCoverageSchema>;
@@ -1030,7 +1057,7 @@ export const V9DeploymentControlFactBaseSchema = z
   })
   .strict();
 
-const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
+export const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   .extend({
     sourceGenerationId: CanonicalTextSchema,
     status: V9FactStatusV2Schema,
@@ -1038,6 +1065,30 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   })
   .strict()
   .superRefine((control, ctx) => {
+    const coverage = control.incidentCoverage;
+    if (coverage?.source === "provider-screening" && coverage.certificateRefs !== undefined) {
+      const expectedControlIds = control.authoredControlId === "*"
+        ? (control.authoredControlIds ?? [])
+        : control.authoredControlId === undefined ? [] : [control.authoredControlId];
+      const laneLevelBinding = coverage.certificateRefs.length === 1 && coverage.certificateRefs[0]!.controlId === "*";
+      if (expectedControlIds.length === 0) {
+        if (!laneLevelBinding) {
+          issue(ctx, ["incidentCoverage", "certificateRefs"], "A control without authored ids requires the lane-level certificate binding");
+        }
+      } else if (laneLevelBinding) {
+        issue(ctx, ["incidentCoverage", "certificateRefs"], "A fact with authored contributor ids requires per-contributor certificate bindings");
+      } else {
+        const bound = new Set(coverage.certificateRefs.map((ref) => ref.controlId));
+        for (const controlId of expectedControlIds) {
+          if (!bound.has(controlId)) {
+            issue(ctx, ["incidentCoverage", "certificateRefs"], `Coverage is missing contributor ${controlId}`);
+          }
+        }
+        if (bound.size !== expectedControlIds.length) {
+          issue(ctx, ["incidentCoverage", "certificateRefs"], "Coverage must bind exactly this fact's authored contributors");
+        }
+      }
+    }
     if (control.issuanceFactsRef !== undefined &&
         (control.controlKind === "bridge" || control.issuanceGovernance !== undefined ||
           control.issuanceProcess !== undefined || control.processDiagnostics !== undefined)) {

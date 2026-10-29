@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   V9DeploymentControlFactBaseSchema,
+  V9DeploymentControlFactV2Schema,
   V9IncidentCoverageSchema,
 } from "../safety-score-v9-facts";
 import {
@@ -8,18 +9,26 @@ import {
   V9IssuerSurfaceIncidentReviewSchema,
   V9NegativeIncidentReviewSchema,
   V9ProviderIncidentReviewSchema,
+  V9RetirableNegativeIncidentReviewSchema,
   V9LaneIncidentCertificateSchema,
   V9LaneIncidentScreeningResultSchema,
+  V9_INCIDENT_REVIEW_SURFACE_KIND_VALUES,
+  V9_LANE_ADMIN_EVENT_FAMILY_VALUES,
+  V9_LANE_SCREENING_EVIDENCE_CLASS,
 } from "../safety-score-v9-incidents";
 import { BridgeRouteRiskProfileSchema } from "../stablecoin-meta-control-schemas";
 
+const ASSET = "fixture-asset";
 const ROUTE_ETHEREUM = "ethereum:0x1111111111111111111111111111111111111111";
 const ROUTE_BASE = "base:0x2222222222222222222222222222222222222222";
 const CERTIFICATE_ID = "lane-cert:ethereum:0xabcdef:100-200:0123456789ab";
+const CERTIFICATE_ID_BASE = "lane-cert:base:0xabcdef:100-200:0123456789ab";
+const EMITTER_ADDRESS = "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa";
+const OTHER_EMITTER_ADDRESS = "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
 
 const REVIEW = {
   reviewId: "fixture-negative-review",
-  assetId: "fixture-asset",
+  assetId: ASSET,
   scope: { kind: "control", controlKey: "mint-meta:fixture-asset:controller" },
   reviewedAt: "2026-10-07T14:00:00Z",
   reviewer: "Fixture incident researcher",
@@ -39,55 +48,80 @@ const REVIEW = {
     excerpt: "Operational",
   }],
 } as const;
+const { assetId: _reviewAssetId, ...REVIEW_BODY } = REVIEW;
 
 const PROVIDER_REVIEW = {
-  ...REVIEW,
-  reviewId: "fixture-provider-lane-review",
+  ...REVIEW_BODY,
+  reviewId: "provider-review:layerzero:2026-10-07",
   scope: {
     kind: "provider",
     providerKey: "layerzero",
     surface: "dvn-set",
-    coveredRoutes: [ROUTE_BASE, ROUTE_ETHEREUM],
-    coveredControls: ["fixture-dvn-set"],
+    coveredRoutes: [
+      { assetId: ASSET, routeId: ROUTE_BASE },
+      { assetId: ASSET, routeId: ROUTE_ETHEREUM },
+    ],
+    coveredControls: [{ assetId: ASSET, controlId: "fixture-dvn-set" }],
   },
   laneScreeningRefs: [
-    { routeId: ROUTE_ETHEREUM, certificateId: CERTIFICATE_ID },
-    { routeId: ROUTE_BASE, certificateId: "lane-cert:base:0xabcdef:100-200:0123456789ab" },
+    { assetId: ASSET, routeId: ROUTE_BASE, certificateId: CERTIFICATE_ID_BASE },
+    { assetId: ASSET, routeId: ROUTE_ETHEREUM, certificateId: CERTIFICATE_ID },
   ],
+} as const;
+
+const EMITTER = {
+  address: EMITTER_ADDRESS,
+  expectedRuntimeCodeSha256: "d".repeat(64),
+  runtimeCodeSha256: "d".repeat(64),
+  families: ["ExecutorConfigSet", "UlnConfigSet"],
 } as const;
 
 const CERTIFICATE = {
   schemaVersion: 1,
   certificateId: CERTIFICATE_ID,
   evidenceClass: "explorer-events",
-  deploymentKey: "ethereum:0xabcdef",
-  codeHash: `0x${"a".repeat(64)}`,
+  subjectDeploymentKey: "ethereum:0xabcdef",
   fromBlock: 100,
   toBlock: 200,
+  toBlockHash: `0x${"1".repeat(64)}`,
   windowStartSec: 1_700_000_000,
   windowEndSec: 1_700_100_000,
   observedAtSec: 1_700_200_000,
   screeningPolicyDigest: "b".repeat(64),
   logDigest: "c".repeat(64),
+  emitters: [EMITTER],
   screenedTopics: [
-    { family: "ExecutorConfigSet", topic0: `0x${"e".repeat(64)}` },
-    { family: "UlnConfigSet", topic0: `0x${"d".repeat(64)}` },
+    { family: "ExecutorConfigSet", topic0: `0x${"e".repeat(64)}`, signature: "ExecutorConfigSet(address,uint32,address)" },
+    { family: "UlnConfigSet", topic0: `0x${"f".repeat(64)}`, signature: "UlnConfigSet(address,address,uint32,bytes)" },
   ],
-  eventCounts: { UlnConfigSet: 0 },
+  eventCounts: { ExecutorConfigSet: 0, UlnConfigSet: 0 },
   finding: "no-material-admin-event",
 } as const;
 
 const MATERIAL_CERTIFICATE = {
   ...CERTIFICATE,
   finding: "material-event",
-  eventCounts: { UlnConfigSet: 1 },
-  materialEvents: [{ family: "UlnConfigSet", transactionHash: `0x${"f".repeat(64)}`, blockNumber: 150, logIndex: 2 }],
+  eventCounts: { ExecutorConfigSet: 0, UlnConfigSet: 1 },
+  materialEvents: [{
+    address: EMITTER_ADDRESS,
+    family: "UlnConfigSet",
+    transactionHash: `0x${"a".repeat(64)}`,
+    blockNumber: 150,
+    logIndex: 2,
+  }],
+} as const;
+
+const STATUS = {
+  applicability: { state: "required", policyRuleId: "fixture.required", rationale: null, gapId: null },
+  observationState: "missing",
+  evidenceRefIds: [],
+  gapIds: ["control:fixture:incidentState"],
 } as const;
 
 const CONTROL_FACT = {
   controlKey: "control:fixture",
   deploymentKey: "deployment:ethereum",
-  controlKind: "upgrade",
+  controlKind: "bridge",
   scope: "global",
   capabilities: ["upgrade"],
   capSemantics: { kind: "raiseable", bound: { amount: 1, unit: "supply-fraction" } },
@@ -98,6 +132,13 @@ const CONTROL_FACT = {
   materialSupplyShare: 1,
   incidentState: "unknown",
   failureDomains: [{ kind: "upgrade-control", key: "safe:admin" }],
+} as const;
+const CONTROL_FACT_V2 = { ...CONTROL_FACT, sourceGenerationId: "fixture-generation", status: STATUS } as const;
+
+const CLOSURE_WITNESSES = {
+  source: "provider-screening",
+  providerReviewId: "provider-review:layerzero:2026-10-07",
+  issuerSurfaceReviewId: "issuer-surface:fixture-asset:2026-10-07",
 } as const;
 
 const PROFILE = {
@@ -123,8 +164,10 @@ describe("authored control review identity", () => {
     }).scope).toEqual({ kind: "control", routeId: ROUTE_ETHEREUM, controlIds: ["fixture-a", "fixture-z"] });
   });
 
-  it("keeps the admitted legacy review byte-identical", () => {
-    expect(V9NegativeIncidentReviewSchema.parse(REVIEW)).toEqual(REVIEW);
+  it("keeps the admitted legacy review byte-identical and retirement-free", () => {
+    const parsed = V9NegativeIncidentReviewSchema.parse(REVIEW);
+    expect(parsed).toEqual(REVIEW);
+    expect(parsed).not.toHaveProperty("retired");
   });
 
   it("rejects missing, mixed and incomplete authored identities", () => {
@@ -141,15 +184,32 @@ describe("authored control review identity", () => {
       expect(V9NegativeIncidentReviewSchema.safeParse({ ...REVIEW, scope }).success, JSON.stringify(scope)).toBe(false);
     }
   });
+});
 
-  it("retains retirement provenance but never before the review it retires", () => {
-    const retired = { reviewedAt: "2026-10-08", reviewer: "Fixture curator", reason: "Orphaned authored route after metadata re-authoring." };
-    expect(V9NegativeIncidentReviewSchema.safeParse({ ...REVIEW, retired }).success).toBe(true);
-    expect(V9AuthoredNegativeIncidentReviewSchema.safeParse({
-      ...REVIEW, scope: { kind: "control", routeId: ROUTE_ETHEREUM, controlId: "fixture-dvn-set" }, retired,
+describe("retirement admission (M-5)", () => {
+  const retired = { reviewedAt: "2026-10-08", reviewer: "Fixture curator", reason: "Orphaned authored route after metadata re-authoring." };
+
+  it("refuses retirement on the T1/T2 admitted legacy schema", () => {
+    expect(V9NegativeIncidentReviewSchema.safeParse({ ...REVIEW, retired }).success).toBe(false);
+  });
+
+  it("admits retirement only through the retirable and new-kind records", () => {
+    expect(V9RetirableNegativeIncidentReviewSchema.safeParse({ ...REVIEW, retired }).success).toBe(true);
+    const authored = { ...REVIEW, scope: { kind: "control", routeId: ROUTE_ETHEREUM, controlId: "fixture-dvn-set" } };
+    expect(V9AuthoredNegativeIncidentReviewSchema.safeParse({ ...authored, retired }).success).toBe(true);
+    expect(V9IssuerSurfaceIncidentReviewSchema.safeParse({
+      ...REVIEW, scope: { kind: "issuer-surface", coveredRoutes: [ROUTE_ETHEREUM] }, retired,
     }).success).toBe(true);
-    expect(V9NegativeIncidentReviewSchema.safeParse({ ...REVIEW, retired: { ...retired, reviewedAt: "2026-10-07T13:00:00Z" } }).success).toBe(false);
-    expect(V9NegativeIncidentReviewSchema.safeParse({ ...REVIEW, retired: { ...retired, controlKey: "mint-meta:fixture-asset:x" } }).success).toBe(false);
+    expect(V9ProviderIncidentReviewSchema.safeParse({ ...PROVIDER_REVIEW, retired }).success).toBe(true);
+  });
+
+  it("rejects retirement before the review or with extra fields", () => {
+    for (const malformed of [
+      { ...retired, reviewedAt: "2026-10-07T13:00:00Z" },
+      { ...retired, controlKey: "mint-meta:fixture-asset:x" },
+    ]) {
+      expect(V9RetirableNegativeIncidentReviewSchema.safeParse({ ...REVIEW, retired: malformed }).success).toBe(false);
+    }
   });
 });
 
@@ -169,11 +229,19 @@ describe("asset-wide issuer-surface review", () => {
   });
 });
 
-describe("provider-scoped incident review admission", () => {
-  it("admits a provider review that binds a certificate to every covered route", () => {
+describe("provider-wide incident review admission (M-6)", () => {
+  it("admits one provider record without an asset id that binds a certificate per covered lane", () => {
     const parsed = V9ProviderIncidentReviewSchema.parse(PROVIDER_REVIEW);
-    expect(parsed.scope.coveredRoutes).toEqual([ROUTE_BASE, ROUTE_ETHEREUM]);
+    expect(parsed.scope.coveredRoutes).toEqual([
+      { assetId: ASSET, routeId: ROUTE_BASE },
+      { assetId: ASSET, routeId: ROUTE_ETHEREUM },
+    ]);
     expect(parsed.laneScreeningRefs).toHaveLength(2);
+    expect(parsed).not.toHaveProperty("assetId");
+  });
+
+  it("rejects a per-asset assetId on the provider record", () => {
+    expect(V9ProviderIncidentReviewSchema.safeParse({ ...PROVIDER_REVIEW, assetId: ASSET }).success).toBe(false);
   });
 
   it("refuses provider coverage without a lane screening certificate", () => {
@@ -189,7 +257,7 @@ describe("provider-scoped incident review admission", () => {
     }).success).toBe(false);
     expect(V9ProviderIncidentReviewSchema.safeParse({
       ...PROVIDER_REVIEW,
-      laneScreeningRefs: [{ routeId: "arbitrum:0x3333333333333333333333333333333333333333", certificateId: CERTIFICATE_ID }],
+      laneScreeningRefs: [{ assetId: ASSET, routeId: "arbitrum:0x3333333333333333333333333333333333333333", certificateId: CERTIFICATE_ID }],
     }).success).toBe(false);
   });
 
@@ -198,41 +266,64 @@ describe("provider-scoped incident review admission", () => {
       { ...PROVIDER_REVIEW.scope, providerKey: "across" },
       { ...PROVIDER_REVIEW.scope, surface: "dvn" },
       { ...PROVIDER_REVIEW.scope, coveredRoutes: [] },
-      { ...PROVIDER_REVIEW.scope, coveredControls: ["Fixture-DVN"] },
+      { ...PROVIDER_REVIEW.scope, coveredRoutes: [PROVIDER_REVIEW.scope.coveredRoutes[1], PROVIDER_REVIEW.scope.coveredRoutes[1]] },
+      { ...PROVIDER_REVIEW.scope, coveredControls: [{ assetId: "another-asset", controlId: "fixture-dvn-set" }] },
+      { ...PROVIDER_REVIEW.scope, coveredControls: [{ assetId: ASSET, controlId: "Fixture-DVN" }] },
     ]) {
-      expect(V9ProviderIncidentReviewSchema.safeParse({ ...PROVIDER_REVIEW, scope }).success).toBe(false);
+      expect(V9ProviderIncidentReviewSchema.safeParse({ ...PROVIDER_REVIEW, scope }).success, JSON.stringify(scope)).toBe(false);
     }
   });
 });
 
-describe("lane incident certificate admission", () => {
+describe("lane incident certificate admission (M-7, S-11)", () => {
+  it("names emitted events, not setter functions, and derives the evidence class", () => {
+    expect(V9_INCIDENT_REVIEW_SURFACE_KIND_VALUES).toContain(V9_LANE_SCREENING_EVIDENCE_CLASS);
+    expect(V9_LANE_ADMIN_EVENT_FAMILY_VALUES).toEqual(expect.arrayContaining([
+      "PeerSet", "DelegateSet", "DynamicConfigSet", "RateLimitConfigured", "RateLimitsChanged",
+      "EnforcedOptionSet", "MsgInspectorSet", "PreCrimeSet", "UlnConfigSet", "ExecutorConfigSet",
+    ]));
+    for (const stale of ["SetPeer", "SetDelegate", "SetConfig", "SetRateLimit", "RateLimitChanged"]) {
+      expect(V9_LANE_ADMIN_EVENT_FAMILY_VALUES).not.toContain(stale);
+    }
+  });
+
   it("admits clean and material pinned-window certificates", () => {
     expect(V9LaneIncidentCertificateSchema.parse(CERTIFICATE)).toEqual(CERTIFICATE);
     expect(V9LaneIncidentCertificateSchema.safeParse(MATERIAL_CERTIFICATE).success).toBe(true);
   });
 
-  it("keeps findings, counts, event references and the pinned window consistent", () => {
+  it("keeps findings, counts, emitters, events and the pinned window consistent", () => {
     for (const malformed of [
       { ...CERTIFICATE, finding: "material-event" },
       { ...MATERIAL_CERTIFICATE, finding: "no-material-admin-event" },
-      { ...MATERIAL_CERTIFICATE, eventCounts: { UlnConfigSet: 0 } },
+      { ...MATERIAL_CERTIFICATE, eventCounts: { ExecutorConfigSet: 0, UlnConfigSet: 0 } },
       { ...MATERIAL_CERTIFICATE, materialEvents: [{ ...MATERIAL_CERTIFICATE.materialEvents[0], blockNumber: 201 }] },
-      { ...MATERIAL_CERTIFICATE, materialEvents: [{ ...MATERIAL_CERTIFICATE.materialEvents[0], family: "SetPeer" }] },
+      { ...MATERIAL_CERTIFICATE, materialEvents: [{ ...MATERIAL_CERTIFICATE.materialEvents[0], family: "PeerSet" }] },
+      { ...MATERIAL_CERTIFICATE, materialEvents: [{ ...MATERIAL_CERTIFICATE.materialEvents[0], address: OTHER_EMITTER_ADDRESS }] },
+      { ...CERTIFICATE, eventCounts: { ExecutorConfigSet: 0 } },
+      { ...CERTIFICATE, eventCounts: { ExecutorConfigSet: 0, UlnConfigSet: 0, PeerSet: 0 } },
+      { ...CERTIFICATE, emitters: [{ ...EMITTER, families: ["EnforcedOptionSet"] }] },
+      { ...CERTIFICATE, emitters: [{ ...EMITTER, runtimeCodeSha256: "e".repeat(64) }] },
+      { ...CERTIFICATE, emitters: [EMITTER, EMITTER] },
+      { ...CERTIFICATE, screenedTopics: [{ ...CERTIFICATE.screenedTopics[0], signature: "SomethingElse(address)" }] },
+      { ...CERTIFICATE, screenedTopics: [{ family: "UlnConfigSet", topic0: `0X${"f".repeat(64)}`, signature: "UlnConfigSet(address)" }] },
       { ...CERTIFICATE, toBlock: 99 },
       { ...CERTIFICATE, observedAtSec: 1_699_999_999 },
       { ...CERTIFICATE, windowEndSec: 1_699_999_999 },
-      { ...CERTIFICATE, eventCounts: { SetPeer: 0 } },
-      { ...CERTIFICATE, eventCounts: { UnknownEvent: 0 } },
-      { ...CERTIFICATE, screenedTopics: [{ family: "UlnConfigSet", topic0: `0X${"d".repeat(64)}` }] },
       { ...CERTIFICATE, logDigest: "C".repeat(64) },
     ]) {
       expect(V9LaneIncidentCertificateSchema.safeParse(malformed).success).toBe(false);
     }
+    const { toBlockHash: _hash, ...withoutBlockHash } = CERTIFICATE;
+    expect(V9LaneIncidentCertificateSchema.safeParse(withoutBlockHash).success).toBe(false);
   });
 
   it("reports a failed read as a reasoned result rather than a certificate", () => {
+    for (const failureReason of ["pruned-range", "malformed-read", "read-budget-exhausted"]) {
+      const failed = { outcome: "failed", deploymentKey: "ethereum:0xabcdef", failureReason, observedAtSec: 1_700_200_000 };
+      expect(V9LaneIncidentScreeningResultSchema.parse(failed)).toEqual(failed);
+    }
     const failed = { outcome: "failed", deploymentKey: "ethereum:0xabcdef", failureReason: "pruned-range", observedAtSec: 1_700_200_000 };
-    expect(V9LaneIncidentScreeningResultSchema.parse(failed)).toEqual(failed);
     expect(V9LaneIncidentScreeningResultSchema.safeParse({ ...failed, failureReason: "explorer-down" }).success).toBe(false);
     expect(V9LaneIncidentScreeningResultSchema.safeParse({ ...failed, certificate: CERTIFICATE }).success).toBe(false);
     expect(V9LaneIncidentScreeningResultSchema.safeParse({ outcome: "admitted", certificate: CERTIFICATE }).success).toBe(true);
@@ -262,35 +353,60 @@ describe("authored bridge provider identity", () => {
   });
 });
 
-describe("incident coverage on the shared control fact", () => {
-  it("is omitted when absent so current control facts stay byte-identical", () => {
+describe("incident coverage closure (M-8)", () => {
+  const refs = [{ controlId: "fixture-dvn-set", certificateId: CERTIFICATE_ID }];
+
+  it("requires all three witnesses for provider-screening", () => {
+    expect(V9IncidentCoverageSchema.safeParse({ ...CLOSURE_WITNESSES, certificateRefs: refs }).success).toBe(true);
+    for (const malformed of [
+      { source: "provider-screening", certificateRefs: refs },
+      { source: "provider-screening", providerReviewId: CLOSURE_WITNESSES.providerReviewId, certificateRefs: refs },
+      { source: "provider-screening", issuerSurfaceReviewId: CLOSURE_WITNESSES.issuerSurfaceReviewId, certificateRefs: refs },
+      { ...CLOSURE_WITNESSES },
+      { ...CLOSURE_WITNESSES, certificateRefs: [] },
+      { ...CLOSURE_WITNESSES, certificateRefs: [refs[0], refs[0]] },
+      { ...CLOSURE_WITNESSES, certificateRefs: [...refs, { controlId: "*", certificateId: CERTIFICATE_ID_BASE }] },
+    ]) {
+      expect(V9IncidentCoverageSchema.safeParse(malformed).success, JSON.stringify(malformed)).toBe(false);
+    }
+  });
+
+  it("rejects closure witnesses on control and deployment coverage", () => {
+    for (const coverage of [
+      { source: "control", certificateRefs: refs },
+      { source: "control", providerReviewId: CLOSURE_WITNESSES.providerReviewId },
+      { source: "deployment", issuerSurfaceReviewId: CLOSURE_WITNESSES.issuerSurfaceReviewId },
+      { source: "provider+screening" },
+    ]) {
+      expect(V9IncidentCoverageSchema.safeParse(coverage).success).toBe(false);
+    }
+    expect(V9IncidentCoverageSchema.parse({ source: "control" })).toEqual({ source: "control" });
+  });
+
+  it("keeps coverage omitted when absent so current control facts stay byte-identical", () => {
     const parsed = V9DeploymentControlFactBaseSchema.parse(CONTROL_FACT);
     expect(parsed).not.toHaveProperty("incidentCoverage");
     expect(JSON.stringify(parsed)).not.toContain("incidentCoverage");
   });
 
-  it("requires exact-lane certificates for provider+screening coverage", () => {
-    const coverage = {
-      source: "provider+screening",
-      controlIds: ["fixture-z", "fixture-a"],
-      certificateRefs: [CERTIFICATE_ID],
-    } as const;
-    expect(V9IncidentCoverageSchema.parse(coverage).controlIds).toEqual(["fixture-a", "fixture-z"]);
-    expect(V9DeploymentControlFactBaseSchema.safeParse({ ...CONTROL_FACT, incidentCoverage: coverage }).success).toBe(true);
-    expect(V9IncidentCoverageSchema.safeParse({ source: "provider+screening" }).success).toBe(false);
-    expect(V9IncidentCoverageSchema.safeParse({ source: "provider+screening", certificateRefs: [] }).success).toBe(false);
-  });
-
-  it("rejects certificate references on non-provider coverage", () => {
-    for (const coverage of [
-      { source: "control", certificateRefs: [CERTIFICATE_ID] },
-      { source: "control", controlIds: ["fixture-a"] },
-      { source: "deployment", certificateRefs: [CERTIFICATE_ID] },
-      { source: "provider-review" },
-      { source: "provider+screening", certificateRefs: [CERTIFICATE_ID, CERTIFICATE_ID] },
-    ]) {
-      expect(V9IncidentCoverageSchema.safeParse(coverage).success).toBe(false);
-    }
-    expect(V9IncidentCoverageSchema.parse({ source: "control" })).toEqual({ source: "control" });
+  it("binds exactly the fact's authored contributors", () => {
+    const valid = (authored: Record<string, unknown>, certificateRefs: readonly { controlId: string; certificateId: string }[]) =>
+      V9DeploymentControlFactV2Schema.safeParse({
+        ...CONTROL_FACT_V2, ...authored, incidentCoverage: { ...CLOSURE_WITNESSES, certificateRefs },
+      }).success;
+    const single = { authoredControlId: "fixture-one" };
+    expect(valid(single, [{ controlId: "fixture-one", certificateId: CERTIFICATE_ID }])).toBe(true);
+    expect(valid(single, [{ ...refs[0]! }])).toBe(false);
+    const aggregate = { authoredControlId: "*", authoredControlIds: ["fixture-a", "fixture-b"] };
+    const both = [
+      { controlId: "fixture-a", certificateId: CERTIFICATE_ID },
+      { controlId: "fixture-b", certificateId: CERTIFICATE_ID_BASE },
+    ];
+    expect(valid(aggregate, both)).toBe(true);
+    expect(valid(aggregate, both.slice(0, 1))).toBe(false);
+    expect(valid(aggregate, [{ controlId: "*", certificateId: CERTIFICATE_ID }])).toBe(false);
+    expect(valid({}, [{ controlId: "*", certificateId: CERTIFICATE_ID }])).toBe(true);
+    expect(valid({}, refs)).toBe(false);
+    expect(V9DeploymentControlFactV2Schema.safeParse({ ...CONTROL_FACT_V2, incidentCoverage: { ...CLOSURE_WITNESSES, certificateRefs: refs } }).success).toBe(false);
   });
 });
