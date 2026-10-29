@@ -54,6 +54,9 @@ import * as xautObserver from "../safety-score-v9/xaut-supply-observer";
 import * as economicObserver from "../safety-score-v9/economic-supply-observer";
 import * as centrifugeObserver from "../safety-score-v9/centrifuge-supply-observer";
 import type { SupplyAttributionAttemptDiagnostic } from "@shared/types/safety-score-v9-supply-attribution";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { appendSupplyAttributionJournalV1 } from "../safety-score-v9/supply-attribution-journal-store";
+import * as attributionJournalStore from "../safety-score-v9/supply-attribution-journal-store";
 
 const SOURCE_CLOCK_SEC = v9TestClockSec();
 const SOURCE_AGGREGATE_USD = 2_480_000_000;
@@ -410,6 +413,73 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
     ).toEqual(generation);
     expect(generation.expectedAssetIds).toEqual(["xaut-tether"]);
     expect(generation.observedAssetIds).toEqual(["xaut-tether"]);
+  });
+
+  it.each(["retained", "missing-journal", "different-source"] as const)("defers without RPC and preserves original accepted evidence only with exact provenance (%s)", async kind => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    vi.useFakeTimers();
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("unexpected RPC"));
+    try {
+      const fixture = fixtures.acceptedFixture;
+      const record = createSupplyAttributionJournalV1(fixture.journalPayload);
+      if (kind !== "missing-journal") await appendSupplyAttributionJournalV1(db, [record], fixture.completedAtSec);
+      const nowSec = fixture.fixedInput.clockSec + 37 * 60;
+      vi.setSystemTime(nowSec * 1_000);
+      const source = kind === "different-source"
+        ? { ...fixture.fixedInput, sourceGeneration: "different-source" } : fixture.fixedInput;
+      const capture = await captureSafetyScoreV9SupplyAttribution(source, new Map(), undefined, {
+        clockMode: "wall", db, priorGeneration: fixtures.acceptedGeneration, deferredAssetIds: ["xaut-tether"],
+      });
+      const generation = createSafetyScoreV9SupplyAttributionGeneration({ fixedInput: source, capture, capturedAtSec: nowSec });
+      expect(fetchSpy).not.toHaveBeenCalled();
+      expect(capture.performanceById).toEqual({});
+      if (kind === "retained") {
+        expect(capture.journalRecords).toEqual([record]);
+        expect(generation.attributionById).toEqual(fixtures.acceptedGeneration.attributionById);
+        expect(generation.outcomesById).toEqual(fixtures.acceptedGeneration.outcomesById);
+        expect(generation.captureClockSec).toBe(fixtures.acceptedGeneration.captureClockSec);
+        expect(generation.attributionById["xaut-tether"].observedAtSec).toBe(fixture.attribution.observedAtSec);
+      } else {
+        expect(generation.acceptedAssetIds).toEqual([]);
+        expect(generation.outcomesById["xaut-tether"]).toMatchObject({
+          status: "rejected", rejectionCode: kind === "missing-journal" ? "deployment-state-unavailable" : "observation-stale",
+          failedRouteId: kind === "missing-journal" ? "supply-attribution-retained-journal-unavailable"
+            : "supply-attribution-input-stale-for-reference",
+        });
+      }
+    } finally { fetchSpy.mockRestore(); vi.useRealTimers(); sqlite.close(); }
+  });
+
+  it.each(["D1 read failed", "Malformed stored supply attribution journal JSON"])("isolates retention failure and still captures wM: %s", async message => {
+    vi.useFakeTimers();
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const load = vi.spyOn(attributionJournalStore, "loadSupplyAttributionJournalByIdV1").mockRejectedValue(new Error(message));
+    const wm = vi.spyOn(wmObserver, "observeWmReviewedDeploymentUnitPartitionAttempt")
+      .mockResolvedValue({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null });
+    try {
+      const source = withWmAggregate(fixtures.acceptedFixture.fixedInput, WM_SOURCE_AGGREGATE_USD);
+      vi.setSystemTime((source.clockSec + 37 * 60) * 1_000);
+      const capture = await captureSafetyScoreV9SupplyAttribution(source, new Map([["ethereum", {
+        chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
+      }]]), undefined, { clockMode: "wall", db, priorGeneration: fixtures.coTenantGeneration, deferredAssetIds: ["xaut-tether"] });
+      expect(load).toHaveBeenCalledOnce();
+      expect(wm).toHaveBeenCalledOnce();
+      expect(capture.journalRecords.find(row => row.assetId === "xaut-tether")).toMatchObject({
+        rejectionCode: "deployment-state-unavailable", failedRouteId: "supply-attribution-retained-journal-unavailable",
+      });
+    } finally { load.mockRestore(); wm.mockRestore(); vi.useRealTimers(); sqlite.close(); }
+  });
+
+  it("requires a newer wM capture than the preceding :38 generation for the next :16 input", () => {
+    const prior = fixtures.coTenantGeneration;
+    const consumerClockSec = prior.captureClockSec + 38 * 60;
+    const target = {
+      ...fixtures.coTenantAtWmBoundary, clockSec: consumerClockSec,
+    };
+    expect(diagnoseSafetyScoreV9SupplyAttributionGenerationCompatibility(target, prior)).toBeNull();
+    expect(applySafetyScoreV9SupplyAttributionGeneration(target, prior)).toMatchObject({
+      status: "applied", invalidAssetIds: ["wm-m0"], acceptedAssetIds: ["xaut-tether"],
+    });
   });
 
   it("rejects malformed serialized generation cache values", () => {

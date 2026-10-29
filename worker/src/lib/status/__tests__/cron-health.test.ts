@@ -66,6 +66,45 @@ function makeDb(_now: number, rows: Record<string, unknown>[]) {
 
 describe("loadCronHealth optional reads", () => {
   it.each([
+    ["ok", 55 * 60, true, false, false],
+    ["ok", 61 * 60, false, false, false],
+    ["degraded", 55 * 60, true, true, false],
+    ["error", 55 * 60, false, false, true],
+  ] as const)("inherits the required attribution run through consecutive reference deferrals (%s, %ss)", async (status, ageSec, healthy, degraded, error) => {
+    const now = 1_775_890_000;
+    const job = "sync-v9-supply-attribution";
+    const rows = seedWithOverrides(now, [
+      { job, status: "skipped_neutral", ageSec: 60 },
+      { job, status: "skipped_neutral", ageSec: 16 * 60 },
+      { job, status: "skipped_neutral", ageSec: 31 * 60 },
+      { job, status, ageSec },
+    ]);
+    for (const row of rows.filter(row => row.job === job && row.status === "skipped_neutral")) {
+      row.metadata = JSON.stringify({ reason: "supply-attribution-input-stale-for-reference" });
+    }
+    if (status === "degraded") {
+      rows.find(row => row.job === job && row.status === status)!.metadata = JSON.stringify({ outputPublishedAt: now - ageSec });
+    }
+    const snapshot = await loadCronHealth(makeDb(now, rows), now);
+    expect(snapshot.crons[job].healthy).toBe(healthy);
+    expect(snapshot.crons[job].bootstrap).toBeUndefined();
+    expect(snapshot.cronFindingJobs.degraded.includes(job)).toBe(degraded);
+    expect(snapshot.cronFindingJobs.watchErrors.includes(job)).toBe(error);
+  });
+
+  it("does not let repeated attribution deferrals bootstrap without any required run", async () => {
+    const now = 1_775_890_000;
+    const job = "sync-v9-supply-attribution";
+    const rows = seedWithOverrides(now, [
+      { job, status: "skipped_neutral", ageSec: 60 },
+      { job, status: "skipped_neutral", ageSec: 16 * 60 },
+    ]);
+    const snapshot = await loadCronHealth(makeDb(now, rows), now);
+    expect(snapshot.crons[job].healthy).toBe(false);
+    expect(snapshot.crons[job].bootstrap).toBeUndefined();
+  });
+
+  it.each([
     ["FROM cron_leases", "cron_leases_unavailable", "cron_leases"],
     ["FROM cron_run_progress", "cron_run_progress_unavailable", "cron_run_progress"],
     ["FROM cache", "cron_slot_events_unavailable", "cache"],

@@ -230,7 +230,8 @@ const SupplyAttributionJournalV1PayloadDomainSchema = z
         : REVIEWED_DEPLOYMENT_REJECTION_CODES;
     if (
       record.rejectionCode !== undefined &&
-      !allowedRejectionCodes.has(record.rejectionCode)
+      !allowedRejectionCodes.has(record.rejectionCode) &&
+      !(record.sourceId === candidatePolicy.semantic.supplyAttribution.journalSourceId && record.rejectionCode === "observation-stale")
     ) {
       issue(ctx, ["rejectionCode"], `Supply attribution source ${record.sourceId} cannot emit ` +
                 `${record.rejectionCode}`);
