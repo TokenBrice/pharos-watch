@@ -6,7 +6,7 @@ import {
   LiveReservesConfigSchema,
 } from "@shared/lib/live-reserve-adapters";
 import { CHAIN_META } from "../../types/chain-identity";
-import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { ACTIVE_STABLECOINS, TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import type { LiabilityScope } from "@shared/types/live-reserve-adapter-declarations";
 
 const COIN_SOURCE_DIR = join(process.cwd(), "shared/data/stablecoins/coins");
@@ -85,7 +85,10 @@ describe("live reserve catalog integrity", () => {
   it("withholds the wrong-identity bnUSD producer and every v2-derived legacy fallback claim", () => {
     const config = getCoinSources().get("bnusd-balanced")?.liveReservesConfig;
     expect(config?.suspended).toBeDefined();
-    const coin = ACTIVE_STABLECOINS.find(({ id }) => id === "bnusd-balanced");
+    // Frozen on 2026-10-29: the archive row keeps the suspended binding but never runs.
+    expect(ACTIVE_STABLECOINS.some(({ id }) => id === "bnusd-balanced")).toBe(false);
+    const coin = TRACKED_META_BY_ID.get("bnusd-balanced");
+    expect(coin?.status).toBe("frozen");
     expect(coin?.liveReservesConfig).toBeUndefined();
     expect(coin?.reserveReview).toMatchObject({
       scope: "classification-only", knownUnknownExposurePct: 100,
