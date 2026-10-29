@@ -7,6 +7,7 @@ import {
   SYNC_ORDERED_CONFIGURED_COINS,
   orderConfiguredCoinsForSync,
   type ConfiguredCoin,
+  type LiveReserveCohortGrading,
 } from "../sync-live-reserves-shared";
 import { LIVE_RESERVE_CONTINUATION_BUDGETS, resolveLiveReserveSyncBudgetConfig } from "../sync-live-reserves-config";
 import {
@@ -147,14 +148,18 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
 
   it.each([
     ["one failure of two", { synced: 1, failed: 1, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 2 }, false, "degraded"],
-    ["two failures of twenty", { synced: 18, failed: 2, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "degraded"],
+    ["two failures of twenty", { synced: 18, failed: 2, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "ok"],
+    ["at the failure budget", { synced: 15, failed: 5, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "ok"],
+    ["above the failure budget", { synced: 14, failed: 6, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "degraded"],
+    ["a continuation within budget", { synced: 15, failed: 5, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 80, attemptedCoins: 20 }, true, "ok"],
+    ["a continuation above budget", { synced: 14, failed: 6, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 80, attemptedCoins: 20 }, true, "degraded"],
     ["one circuit-held member of a hundred", { synced: 99, failed: 0, skipped: 1, deferredSkipped: 0, circuitSkipped: 1, deferredCoins: 0, attemptedCoins: 99 }, false, "degraded"],
     ["every member failed", { synced: 0, failed: 20, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "error"],
     ["a clean run", { synced: 20, failed: 0, skipped: 0, deferredSkipped: 0, circuitSkipped: 0, deferredCoins: 0, attemptedCoins: 20 }, false, "ok"],
     ["a clean checkpoint-owned continuation", { synced: 10, failed: 0, skipped: 0, deferredSkipped: 10, circuitSkipped: 0, deferredCoins: 10, attemptedCoins: 10 }, true, "ok"],
-  ] as const)("reports %s without a percentage tolerance", async (_name, counts, checkpointOwned, status) => {
+  ] as const)("grades %s against the attempted-feed budget", async (_name, counts, checkpointOwned, status) => {
     const { resolveReserveSyncRunStatus } = await import("../sync-live-reserves-finalize");
-    expect(resolveReserveSyncRunStatus({ counts, total: 20, checkpointOwned })).toBe(status);
+    expect(resolveReserveSyncRunStatus({ counts: { ...counts, persistenceFailed: 0 }, total: 100, checkpointOwned })).toBe(status);
   });
 
   it("classifies any productive deferred tail as degraded even below the ratio threshold", async () => {
@@ -164,6 +169,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       counts: {
         synced: 99,
         failed: 0,
+        persistenceFailed: 0,
         skipped: 1,
         deferredSkipped: 1,
         circuitSkipped: 0,
@@ -229,7 +235,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
 
     expect(itemStarts).toHaveLength(CONFIGURED_COIN_COUNT);
     expect(boundaryWrites).toHaveLength(1);
-    expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 1);
+    expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 2);
     expect(domainAttemptBegins).toHaveLength(CONFIGURED_COIN_COUNT);
     const cost = JSON.parse(result.metadata!).d1Cost;
     expect(cost.batchCalls).toBeGreaterThanOrEqual(2 * CONFIGURED_COIN_COUNT);
@@ -252,13 +258,14 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     const { syncLiveReserves } = await import("../sync-live-reserves");
     const sliceSize = Math.ceil(SYNC_ORDERED_CONFIGURED_COINS.length / 3);
     let frontier = 0;
+    let cohortGrading: LiveReserveCohortGrading | undefined;
     for (let slice = 0; slice < 3; slice++) {
       // One checkpoint root/attempt; the normal handoff only replaces its owner.
       const identity = checkpointIdentity(1, `slice-${slice}`);
       const db = mockD1([checkpointTable({
         attemptNo: 1, invocationId: identity.invocationId,
         nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[frontier]?.id ?? null,
-        itemsDone: frontier, state: slice === 0 ? "running" : "recovering",
+        itemsDone: frontier, state: slice === 0 ? "running" : "recovering", cohortGrading,
       })]);
       const result = await syncLiveReserves(db, new AbortController().signal, {}, undefined,
         { ...TIGHT_BUDGET, maxCoinsPerSlice: sliceSize }, identity);
@@ -270,6 +277,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
         childDisposition: slice < 2 ? "continuation_pending" : "completed",
         maintenanceDeferredToCohortEnd: slice < 2,
       });
+      cohortGrading = JSON.parse(result.metadata!).cohortGrading;
+      expect(cohortGrading).toMatchObject({ itemsDone: expectedDone, complete: true, attemptedCoins: expectedDone });
       // Count lifecycle admission, not adapter calls (source-invariant
       // adapters legitimately share one fetch across multiple coin lifecycles).
       for (const entry of db.getHistory()) {
@@ -306,6 +315,8 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
     const db = mockD1([checkpointTable({
       attemptNo: 1, invocationId: identity.invocationId, state: "recovering",
       nextItemKey: SYNC_ORDERED_CONFIGURED_COINS[frontier]!.id, itemsDone: frontier,
+      cohortGrading: { itemsDone: frontier, complete: true, synced: frontier, failed: 0,
+        persistenceFailed: 0, circuitSkipped: 0, attemptedCoins: frontier },
     })]);
     let attempted = 0;
     const startedMs = nowMs;
@@ -397,7 +408,10 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
       identity,
     );
 
-    expect(result.status).toBe("ok");
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      cohortGrading: null, cohortGradingUnavailableReason: "checkpoint-grading-frontier-unavailable",
+    });
     expect(result.itemCount).toBe(CONFIGURED_COIN_COUNT - 1);
     expect(visited[0]).toBe(suffixCoin.id);
     expect(visited).not.toContain(crashedCoin.id);
@@ -417,7 +431,7 @@ describe("syncLiveReserves orchestrator run-budget behavior", () => {
 
     expect(itemStarts).toHaveLength(CONFIGURED_COIN_COUNT - 1);
     expect(boundaryWrites).toHaveLength(2);
-    expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 1);
+    expect(checkpointUpdates).toHaveLength(CONFIGURED_COIN_COUNT + 2);
     expect(authoritativeAdvance).toBeDefined();
     expect(authoritativeAdvance?.binds[3]).toBe(Math.floor(nowMs / 1000) + 15 * 60);
     expect(terminalAdvance).toBeDefined();
