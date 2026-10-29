@@ -559,11 +559,34 @@ describe("authoritative-price-sources", () => {
       }),
     ]) {
       const overrides = await fetchLiveOverrides([child, parent]);
-      expect(overrides.has("usdk-kast")).toBe(false);
+      // The unusable parent is never inherited; the reviewed M0 redemption par
+      // takes its place as an explicit nominal reference.
+      expect(overrides.get("usdk-kast")).toEqual({
+        price: 1,
+        source: "protocol-par",
+        confidence: null,
+        observedAt: null,
+        observedAtMode: "nominal_reference",
+      });
     }
 
     warnSpy.mockRestore();
   });
+
+  it.each(["usdk-kast", "usdn-noble"])(
+    "publishes reviewed M0 redemption par for %s while its tracked parent has no usable quote",
+    async (id) => {
+      const overrides = await fetchLiveOverrides([asset(id, { circulating: { peggedUSD: 4_000_000 } })]);
+
+      expect(overrides.get(id)).toEqual({
+        price: 1,
+        source: "protocol-par",
+        confidence: null,
+        observedAt: null,
+        observedAtMode: "nominal_reference",
+      });
+    },
+  );
 
   it("allows inherited tracked-price overrides from a fresh protocol-authoritative parent", async () => {
     const nowSec = Math.floor(Date.now() / 1000);

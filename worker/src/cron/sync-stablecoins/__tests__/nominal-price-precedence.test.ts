@@ -23,6 +23,8 @@ const REFERENCES: PriceValidationReferences = {
 const NOMINAL_ROUTES = [
   ["usbd-bima", "peggedUSD", 1],
   ["usdq-quill", "peggedUSD", 1],
+  ["usdk-kast", "peggedUSD", 1],
+  ["usdn-noble", "peggedUSD", 1],
   ["zarm-mento", "peggedZAR", 0.0608],
   ["xofm-mento", "peggedXOF", 0.00172],
 ] as const;
