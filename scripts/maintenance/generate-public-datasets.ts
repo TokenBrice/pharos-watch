@@ -54,6 +54,7 @@ import {
   type PublicSnapshotEnvelopeV2,
 } from "@shared/types/public-snapshot";
 import { ReportCardsV9CurrentResponseSchema, V9PublicationHealthSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import { SafetyScoreV9CompletenessSchema } from "@shared/types/safety-score-v9-public";
 import { z } from "zod";
@@ -427,7 +428,7 @@ function readCurrentSafetyPublication(
     }
     return null;
   }
-  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(raw);
+  const parsed = ReportCardsV9ReaderResponseSchema.safeParse(raw);
   if (!parsed.success) {
     if (historical) return null;
     throw new Error(

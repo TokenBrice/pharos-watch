@@ -246,7 +246,7 @@ function isUniqueSorted(values: readonly string[]): boolean {
  * distinct from the retained evaluator envelope even while shadow history is
  * its storage source.
  */
-const ReportCardsV9ResponseShape = {
+export const ReportCardsV9ResponseShape = {
   model: z.literal("v9"),
   lifecycle: z.enum(["shadow", "active"]),
   safetyScoreIdentity: SafetyScoreV9PublicationIdentitySchema,
@@ -271,7 +271,7 @@ const ReportCardsV9ResponseShape = {
   commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
 } as const;
 
-function refineReportCardsV9Response(
+export function refineReportCardsV9Response(
   response: {
     safetyScoreIdentity: z.infer<typeof SafetyScoreV9PublicationIdentitySchema>;
     methodology: {
@@ -389,6 +389,46 @@ export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentRe
  */
 export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
 export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
+
+/**
+ * Expand-step admission for browser readers. Report8 validates as-is; a
+ * report9 payload must carry its required pair, then its three report9-only
+ * carriers are deleted and the rest is validated as report8. Kept in this
+ * shared module (not a per-route client helper) so the browser ships one copy
+ * and never imports a report9/OpenEvidence schema.
+ */
+function parseReportCardsV9BrowserResponse(input: unknown) {
+  if (input === null || typeof input !== "object" || Array.isArray(input)) {
+    return ReportCardsV9CurrentResponseSchema.safeParse(input);
+  }
+  const record = input as Record<string, unknown>;
+  if (record.schemaVersion !== 9) {
+    return ReportCardsV9CurrentResponseSchema.safeParse(input);
+  }
+  if (!("openEvidence" in record) || !("openEvidenceUnavailableReason" in record)) {
+    return ReportCardsV9CurrentResponseSchema.safeParse(input);
+  }
+  const {
+    openEvidence: _openEvidence,
+    openEvidenceUnavailableReason: _openEvidenceUnavailableReason,
+    documentationCauseGaps: _documentationCauseGaps,
+    ...report8
+  } = record;
+  return ReportCardsV9CurrentResponseSchema.safeParse({
+    ...report8,
+    schemaVersion: REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+  });
+}
+export const ReportCardsV9BrowserResponseSchema = {
+  safeParse: parseReportCardsV9BrowserResponse,
+};
+
+/**
+ * Report9's schema version. The report9 response schema lives in
+ * `report-cards-v9-next.ts` so this report8 module (imported by browser
+ * readers) never pulls the OpenEvidence validators into the client chunk.
+ */
+export const REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION = 9;
 
 /** Archive-only report7 validation; live producers remain report8-only. */
 const HistoricalReportCardsV9ResponseShape = {
