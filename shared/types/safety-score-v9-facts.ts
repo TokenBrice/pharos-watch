@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { issue } from "./safety-schema-primitives";
+import { issue, CanonicalKeySchema } from "./safety-schema-primitives";
 import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
@@ -38,6 +38,7 @@ import {
   V9FactStatusV2Schema,
   V9ObservationStateSchema,
   canonicalArrayBy,
+  canonicalTextArray,
   canonicalV9ExecutionCostKey,
   type V9EvidenceResponsibility,
   type V9FactApplicability,
@@ -747,6 +748,38 @@ const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applica
 
 const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
 
+/**
+ * How a deployment control's negative `incidentState` was proved. Optional and
+ * additive: absent keeps the compiler's previous behaviour byte-for-byte.
+ * `provider+screening` requires exact-lane certificate references — a provider
+ * review alone never closes a control — and may list the contributor control
+ * ids a merged lane aggregate covers, so an added control inherits nothing.
+ * The certificate freshness budget lives in policy
+ * (`semantic.evidence.laneIncidentCertificateMaxAgeSec`), not in this shape.
+ */
+export const V9IncidentCoverageSchema = z
+  .object({
+    source: z.enum(["control", "deployment", "provider+screening"]),
+    controlIds: canonicalTextArray(1, "covered control id").optional(),
+    certificateRefs: canonicalArrayBy(CanonicalKeySchema, (ref) => ref, 1, "certificate reference").optional(),
+  })
+  .strict()
+  .superRefine((coverage, ctx) => {
+    if (coverage.source !== "provider+screening") {
+      if (coverage.controlIds !== undefined) {
+        issue(ctx, ["controlIds"], "Only provider+screening coverage names an aggregate contributor set");
+      }
+      if (coverage.certificateRefs !== undefined) {
+        issue(ctx, ["certificateRefs"], "Only provider+screening coverage references lane certificates");
+      }
+      return;
+    }
+    if (coverage.certificateRefs === undefined) {
+      issue(ctx, ["certificateRefs"], "Provider review coverage requires at least one exact-lane certificate reference");
+    }
+  });
+export type V9IncidentCoverage = z.output<typeof V9IncidentCoverageSchema>;
+
 const V1005ProcessReasonSchema = z.enum([
   "process-certificate-unavailable", "authority-census-incomplete", "execution-scope-unreviewed",
   "runtime-unmatched", "implementation-unmatched", "instance-state-unmatched", "authority-state-changed", "authority-state-mismatch",
@@ -974,6 +1007,7 @@ export const V9DeploymentControlFactBaseSchema = z
     issuanceProcess: V1005IssuanceProcessSchema.optional(),
     processDiagnostics: z.array(V1005ProcessDiagnosticSchema).optional(),
     incidentState: V9IncidentStateSchema,
+    incidentCoverage: V9IncidentCoverageSchema.optional(),
     failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict();

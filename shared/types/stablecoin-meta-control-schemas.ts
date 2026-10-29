@@ -262,6 +262,33 @@ export const OracleRiskProfileSchema = /* @__PURE__ */ (() => z
     }
   }))();
 
+/**
+ * Canonical bridge-provider identity (R5, one authority). Authored `protocol` and
+ * `slug` prose stays display-only; provider reviews, lane certificates and the
+ * bridge compiler match on this enum instead. Extending the list is a reviewed
+ * schema change, never an authoring shortcut.
+ */
+export const BRIDGE_ROUTE_PROVIDER_KEY_VALUES = [
+  "layerzero",
+  "chainlink-ccip",
+  "wormhole",
+  "hyperlane",
+  "axelar",
+  "circle-cctp",
+] as const;
+export type BridgeRouteProviderKey = (typeof BRIDGE_ROUTE_PROVIDER_KEY_VALUES)[number];
+
+/** Provider-owned verification surfaces a provider review or lane certificate may address. */
+export const BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES = [
+  "dvn-set",
+  "guardian-set",
+  "rmn-set",
+  "ism-validator-set",
+  "endpoint",
+  "attestation-set",
+] as const;
+export type BridgeRouteProviderSurface = (typeof BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES)[number];
+
 const BridgeRouteProtocolEvidenceSchema = /* @__PURE__ */ (() => z
   .object({
     source: z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUES),
@@ -270,6 +297,17 @@ const BridgeRouteProtocolEvidenceSchema = /* @__PURE__ */ (() => z
     url: HttpUrlSchema.optional(),
     bridgeTypes: z.array(z.string().min(1)).min(1).optional(),
     note: z.string().min(1).optional(),
+    // Optional so every existing authored profile keeps its exact bytes and
+    // meaning; absent provider identity stays unresolved (fail-closed) instead
+    // of being inferred from the prose slug.
+    providerKey: z.enum(BRIDGE_ROUTE_PROVIDER_KEY_VALUES).optional(),
+    providerSurfaces: z
+      .array(z.enum(BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES))
+      .min(1)
+      .refine((surfaces) => new Set(surfaces).size === surfaces.length, {
+        message: "provider surfaces must be unique",
+      })
+      .optional(),
   })
   .strict())();
 

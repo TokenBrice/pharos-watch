@@ -3,12 +3,13 @@ import { issue } from "./safety-schema-primitives";
 import { scoreToGrade } from "./safety-score-v9-grade";
 import { V9DependencyEconomicRoleSchema, DependencyTypeSchema } from "./dependency-types";
 import {
+  V9DocumentationReasonSchema,
   V9EvidenceLevelSchema,
   V9GradeSchema,
   V9QualityPillarSchema,
   V9ReasonCodeSchema,
 } from "./safety-score-v9";
-import { V9FailureDomainRefSchema } from "./safety-score-v9-fact-primitives";
+import { V9EvidenceResponsibilitySchema, V9FailureDomainRefSchema } from "./safety-score-v9-fact-primitives";
 import {
   BaseInputGenerationIdSchema,
   isUniqueSorted,
@@ -519,6 +520,190 @@ export const SafetyScoreV9CompletenessSchema = z
     }
   });
 
+/** Published open-evidence counting semantics; a definition change renames this literal. */
+export const V9_OPEN_EVIDENCE_SEMANTICS = "open-question-v1" as const;
+
+/** The three disjoint published question buckets; they sum to `totals.questions`. */
+export const V9_OPEN_QUESTION_BUCKETS = ["documentation", "issuer", "open"] as const;
+export const V9OpenQuestionBucketSchema = z.enum(V9_OPEN_QUESTION_BUCKETS);
+export type V9OpenQuestionBucket = z.infer<typeof V9OpenQuestionBucketSchema>;
+
+/** Scope kinds a question key dispatches on. */
+export const V9_OPEN_QUESTION_SCOPE_KINDS = [
+  "route", "control", "reserve-exposure", "component", "peg", "dependency", "path",
+] as const;
+export const V9OpenQuestionScopeKindSchema = z.enum(V9_OPEN_QUESTION_SCOPE_KINDS);
+export type V9OpenQuestionScopeKind = z.infer<typeof V9OpenQuestionScopeKindSchema>;
+
+/**
+ * Open-question identity `<rootAssetId>|<scopeKind>|<scopeIdentity>`, derived at
+ * publication build time and never stored. Route identities keep their own
+ * `<lane>|<tail>` separator, so only the first two separators are structural.
+ */
+export const V9QuestionKeySchema = z.string().superRefine((value, ctx) => {
+  const rootEnd = value.indexOf("|");
+  const kindEnd = rootEnd < 0 ? -1 : value.indexOf("|", rootEnd + 1);
+  if (value.trim() !== value || rootEnd <= 0 || kindEnd <= rootEnd + 1 || kindEnd === value.length - 1) {
+    issue(ctx, undefined, "Open-question keys must be <rootAssetId>|<scopeKind>|<scopeIdentity>");
+    return;
+  }
+  if (!V9OpenQuestionScopeKindSchema.safeParse(value.slice(rootEnd + 1, kindEnd)).success) {
+    issue(ctx, undefined, "Open-question keys must name a supported scope kind");
+  }
+});
+export type V9QuestionKey = z.infer<typeof V9QuestionKeySchema>;
+
+/** Pillars a documentation-only limited witness list may annotate (fail-closed rule). */
+export const V9_DOCUMENTATION_ONLY_PILLARS = ["backing", "control", "exit"] as const;
+export const V9DocumentationOnlyPillarSchema = z.enum(V9_DOCUMENTATION_ONLY_PILLARS);
+export type V9DocumentationOnlyPillar = z.infer<typeof V9DocumentationOnlyPillarSchema>;
+
+const V9OpenEvidenceCountSchema = z.number().int().nonnegative();
+
+export const V9OpenEvidenceTotalsSchema = z
+  .object({
+    questions: V9OpenEvidenceCountSchema,
+    open: V9OpenEvidenceCountSchema,
+    issuer: V9OpenEvidenceCountSchema,
+    documentation: V9OpenEvidenceCountSchema,
+    obligations: V9OpenEvidenceCountSchema,
+  })
+  .strict()
+  .superRefine((totals, ctx) => {
+    if (totals.questions !== totals.open + totals.issuer + totals.documentation) {
+      issue(ctx, undefined, "Open-evidence buckets must sum to the question total");
+    }
+  });
+export type V9OpenEvidenceTotals = z.infer<typeof V9OpenEvidenceTotalsSchema>;
+
+/** Headline owner of a question; `mixed` is the multi-owner remainder, not a responsibility. */
+export const V9_OPEN_EVIDENCE_MIXED_OWNER = "mixed" as const;
+
+const V9OpenEvidenceOwnerSchema = z
+  .object({
+    responsibility: z.union([V9EvidenceResponsibilitySchema, z.literal(V9_OPEN_EVIDENCE_MIXED_OWNER)]),
+    questions: V9OpenEvidenceCountSchema,
+    obligations: V9OpenEvidenceCountSchema,
+  })
+  .strict();
+
+const V9OpenEvidenceReasonSchema = z
+  .object({
+    code: V9ReasonCodeSchema,
+    bucket: V9OpenQuestionBucketSchema,
+    questions: V9OpenEvidenceCountSchema,
+    obligations: V9OpenEvidenceCountSchema,
+  })
+  .strict();
+
+const V9OpenEvidenceDocumentationSchema = z
+  .object({
+    questions: V9OpenEvidenceCountSchema,
+    datums: V9OpenEvidenceCountSchema,
+    facts: V9OpenEvidenceCountSchema,
+    reasons: z
+      .array(
+        z
+          .object({
+            reason: V9DocumentationReasonSchema,
+            datums: V9OpenEvidenceCountSchema,
+          })
+          .strict(),
+      ),
+  })
+  .strict()
+  .superRefine((documentation, ctx) => {
+    if (documentation.facts > documentation.datums) {
+      issue(ctx, ["facts"], "Documentation facts cannot exceed its datum count");
+    }
+    const reasons = documentation.reasons.map((row) => row.reason);
+    if (new Set(reasons).size !== reasons.length) {
+      issue(ctx, ["reasons"], "Documentation reason rows must be unique");
+    }
+  });
+
+const V9OpenEvidenceIssuerSchema = z
+  .object({
+    questions: V9OpenEvidenceCountSchema,
+    assets: V9OpenEvidenceCountSchema,
+    oldestReviewedAtSec: V9OpenEvidenceCountSchema.nullable(),
+    newestReviewedAtSec: V9OpenEvidenceCountSchema.nullable(),
+  })
+  .strict()
+  .superRefine((issuer, ctx) => {
+    if (issuer.assets > issuer.questions) {
+      issue(ctx, ["assets"], "Issuer-reviewed assets cannot outnumber issuer questions");
+    }
+    if ((issuer.oldestReviewedAtSec === null) !== (issuer.newestReviewedAtSec === null)) {
+      issue(ctx, ["oldestReviewedAtSec"], "Issuer review dates publish together or not at all");
+    } else if (
+      issuer.oldestReviewedAtSec !== null &&
+      issuer.newestReviewedAtSec !== null &&
+      issuer.oldestReviewedAtSec > issuer.newestReviewedAtSec
+    ) {
+      issue(ctx, ["oldestReviewedAtSec"], "Issuer review windows cannot start after they end");
+    }
+  });
+
+export const V9OpenEvidenceByCardSchema = z
+  .object({
+    id: z.string().min(1),
+    openQuestionsCarried: V9OpenEvidenceCountSchema,
+    inheritedOpenQuestionsCarried: V9OpenEvidenceCountSchema,
+    openObligationsCarried: V9OpenEvidenceCountSchema,
+    documentationObligationsCarried: V9OpenEvidenceCountSchema,
+    /** Annotated only when a limited pillar has non-empty, all-documentation witnesses. */
+    documentationOnlyLimited: canonicalTextArray(1).pipe(z.array(V9DocumentationOnlyPillarSchema).max(3)).optional(),
+    /** Earliest recorded issuer review behind this card's C questions; absent when nobody is dated. */
+    issuerNondisclosureReviewedAtSec: V9OpenEvidenceCountSchema.optional(),
+  })
+  .strict()
+  .superRefine((card, ctx) => {
+    if (card.inheritedOpenQuestionsCarried > card.openQuestionsCarried) {
+      issue(ctx, ["inheritedOpenQuestionsCarried"], "Inherited open questions cannot exceed open questions carried");
+    }
+  });
+export type V9OpenEvidenceByCard = z.infer<typeof V9OpenEvidenceByCardSchema>;
+
+/** Server-computed three-number block; `open-questions.ts` is its only authority. */
+export const V9OpenEvidenceSchema = z
+  .object({
+    semantics: z.literal(V9_OPEN_EVIDENCE_SEMANTICS),
+    totals: V9OpenEvidenceTotalsSchema,
+    owners: z.array(V9OpenEvidenceOwnerSchema),
+    reasons: z.array(V9OpenEvidenceReasonSchema),
+    documentation: V9OpenEvidenceDocumentationSchema,
+    issuer: V9OpenEvidenceIssuerSchema,
+    byCard: z.array(V9OpenEvidenceByCardSchema),
+  })
+  .strict()
+  .superRefine((evidence, ctx) => {
+    if (evidence.documentation.questions !== evidence.totals.documentation) {
+      issue(ctx, ["documentation", "questions"], "Documentation detail must match its bucket");
+    }
+    if (evidence.documentation.datums > evidence.totals.obligations) {
+      issue(ctx, ["documentation", "datums"], "Documentation datums cannot exceed published obligations");
+    }
+    const owners = evidence.owners.map((owner) => owner.responsibility);
+    if (new Set(owners).size !== owners.length) {
+      issue(ctx, ["owners"], "Owner rows must be unique");
+    }
+    if (evidence.owners.reduce((sum, owner) => sum + owner.questions, 0) !== evidence.totals.open) {
+      issue(ctx, ["owners"], "Headline owner counts must partition the open bucket");
+    }
+    const reasonIdentities = evidence.reasons.map((row) => `${row.bucket}\u0000${row.code}`);
+    if (new Set(reasonIdentities).size !== reasonIdentities.length) {
+      issue(ctx, ["reasons"], "Reason rows must be unique per bucket and code");
+    }
+    if (!isUniqueSorted(evidence.byCard.map((card) => card.id))) {
+      issue(ctx, ["byCard"], "Open-evidence card IDs must be unique and sorted");
+    }
+    if (evidence.totals.questions > 0 && evidence.byCard.length === 0) {
+      issue(ctx, ["byCard"], "Published questions require a carrying card");
+    }
+  });
+export type V9OpenEvidence = z.infer<typeof V9OpenEvidenceSchema>;
+
 const SafetyScoreV9ResponseShape = {
   model: z.literal("v9-critical-path"),
   lifecycle: z.literal("active"),
@@ -535,6 +720,8 @@ const SafetyScoreV9ResponseShape = {
   publishedAtSec: z.number().int().nonnegative(),
   completeness: SafetyScoreV9CompletenessSchema,
   foreignCauseGaps: canonicalTextArray(),
+  /** T2 carrier: the publication union of documentation-classified cause gaps. */
+  documentationCauseGaps: canonicalTextArray().optional(),
   commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
   pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
 } as const;
@@ -547,6 +734,7 @@ function refineResponse(
     foreignCauseGaps: readonly string[];
     sourceGenerations: Readonly<Record<string, string>>;
     pillarFreshness?: z.infer<typeof SafetyScoreV9PillarFreshnessSchema>;
+    openEvidence?: V9OpenEvidence;
   },
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
 ): void {
@@ -574,13 +762,31 @@ function refineResponse(
   for (const finding of findSafetyScoreV9ParentAttributionIssues(response)) {
     issue(ctx, ["cards"], `${finding.cardId}: ${finding.message}`);
   }
+  const cardIds = new Set(ids);
+  response.openEvidence?.byCard.forEach((entry, index) => {
+    if (!cardIds.has(entry.id)) {
+      issue(ctx, ["openEvidence", "byCard", index, "id"], "Open-evidence counts must name a published card");
+    }
+  });
 }
 
-/** Current schema-7 envelope: proof-derived availability and exact typed exit-route identity. */
-export const SafetyScoreV9CurrentResponseSchema = z
+/** Previous schema-7 envelope: admitted by the publication codec only during the v7→v8 cutover. */
+export const SafetyScoreV9PreviousResponseSchema = z
   .object({
     ...SafetyScoreV9ResponseShape,
     schemaVersion: z.literal(7),
+    cards: z.array(SafetyScoreV9CurrentCardSchema),
+  })
+  .strict()
+  .superRefine((response, ctx) => refineResponse(response, ctx));
+export type SafetyScoreV9PreviousResponse = z.infer<typeof SafetyScoreV9PreviousResponseSchema>;
+
+/** Current schema-8 envelope: every live publication carries the open-evidence block. */
+export const SafetyScoreV9CurrentResponseSchema = z
+  .object({
+    ...SafetyScoreV9ResponseShape,
+    schemaVersion: z.literal(8),
+    openEvidence: V9OpenEvidenceSchema,
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })
   .strict()
