@@ -46,6 +46,14 @@ describe("resolveMintAuthorityStatusKind", () => {
       expect(resolveMintAuthorityStatusKind(summary({
         controls: [{ authorityType, directMintAbility: "none" }],
       }))).toBe("governed-mint");
+      expect(resolveMintAuthorityStatusKind(summary({
+        mintPath: "user-collateralized-governed",
+        controls: [{ authorityType, directMintAbility: "parameter-only" }],
+      }))).toBe("governed-mint");
+      expect(resolveMintAuthorityStatusKind(summary({
+        mintPath: "user-collateralized-governed",
+        controls: [{ authorityType, directMintAbility: "parameter-only", canRaiseCap: true }],
+      }))).toBe("multisig-mint");
     }
     for (const mintPath of ["issuer-direct-mint", "offchain-attested-minter"] as const) {
       expect(resolveMintAuthorityStatusKind(summary({ mintPath }))).toBe("issuer-or-backend-mint");

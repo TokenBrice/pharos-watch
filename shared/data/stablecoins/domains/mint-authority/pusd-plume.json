@@ -59,8 +59,8 @@
           "The same Safe owns RolesAuthority and can change enter permissions immediately on both native deployments.",
           "The Safe owns ProxyAdmin 0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da on both chains and can replace NestVaultOFT's native-deposit mint logic without a timelock."
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 26096009,
+        "observedAt": "2026-10-29",
+        "observedBlock": 26300200,
         "failureDomainKeys": [
           "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
           "plume:0xa08a0dc480bd60d1d56c8eec6c722125eafea982"
@@ -82,17 +82,21 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x017062a1de2fe6b99be3d9d37841fed19f573804",
           "version": "GnosisSafeL2 (masterCopy=0xfb1bffc9d739b8d520daf37df666da4c687191ea)",
-          "observedBlock": 26096009,
+          "observedBlock": 26300200,
           "source": "onchain"
         },
         "executionScope": {
           "controllerDeployment": "ethereum:0xa08a0dc480bd60d1d56c8eec6c722125eafea982",
-          "reviewedAt": "2026-10-07",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol unknown-resolver wave 2026-10-07 (MINT_CTRL_4)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "verified",
           "sources": [
+            {
+              "label": "Ethereum RPC re-read 2026-10-29 at block 26300200 (hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z): threshold 3, the same six owner addresses, empty module pagination ending at sentinel 0x1, zero guard slot, fallback handler 0x017062a1de2fe6b99be3d9d37841fed19f573804, singleton 0xfb1bffc9d739b8d520daf37df666da4c687191ea and VERSION 1.3.0",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
             {
               "label": "pUSD BoringVault on Etherscan",
               "url": "https://etherscan.io/address/0xdddd73f5df1f0dc31373357beac77545dc5a6f3f"
@@ -115,14 +119,14 @@
             }
           ],
           "pin": {
-            "position": "26096009",
-            "hash": "0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29",
+            "position": "26300200",
+            "hash": "0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09",
             "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
             "signerIdentity": "threshold=3;owners=0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f,0x98be74d3d5604904d0686eef9b4267f681f9520a,0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6,0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572,0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9,0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           },
           "observedState": {
-            "position": "26096009",
-            "hash": "0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29",
+            "position": "26300200",
+            "hash": "0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09",
             "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
             "signerIdentity": "threshold=3;owners=0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f,0x98be74d3d5604904d0686eef9b4267f681f9520a,0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6,0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572,0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9,0x6d303f4e0e3406c397855551a006c8b33d4f3240"
           },
@@ -185,8 +189,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "26096009",
-                  "hash": "0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29",
+                  "position": "26300200",
+                  "hash": "0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09",
                   "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
                   "signerIdentity": "threshold=3;owners=0x66a0c12a7bf3dd40dda33cd43beb553d2d7fbf7f,0x98be74d3d5604904d0686eef9b4267f681f9520a,0xcef3d04f13a6c1a7614657641ab574c2d29d4cc6,0x4e1d7121544a586b0a1c35d7e196b0dd9ba7f572,0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9,0x6d303f4e0e3406c397855551a006c8b33d4f3240"
                 },
@@ -215,7 +219,7 @@
             ]
           }
         },
-        "evidence": "Reverified by CurM16cNGN on 2026-10-01 at pinned Ethereum block 26096009 and Plume block 96626677: BoringVault and RolesAuthority owners remain Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Both Safes are 3-of-6 with the listed signer set, no enabled modules, zero guard storage, fallback handler 0x017062a1de2fe6b99be3d9d37841fed19f573804 and masterCopy 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The previous signer 0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a is absent; current signer 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9 is present. The vault implementation, admin and beacon EIP-1967 slots remain zero and authority() remains 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 on both chains. No signer key-custody claim is made. Independent October 7 review re-read Ethereum block 26096009/hash 0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29 (2026-10-01T07:35:11Z) through the keyless Dwellir endpoint: all six owners and threshold 3 match; empty module pagination terminates at sentinel 0x1; guard is zero; the singleton and CompatibilityFallbackHandler bytecodes exactly match verified explorer source. GnosisSafe.execTransaction and Executor.execute admit arbitrary target/value/calldata CALL and DELEGATECALL with no executor delay. The handler's signature validation retains Safe authorization and simulate uses simulateAndRevert, so it grants no persistent unsigned bypass. This certificate closes the conservative adverse maximal execution envelope, including self-authorized mutation of modules/guard/handler and delegated storage; it does not claim a downstream target allowlist, custody independence, or that all reachable contracts implement every capability. Plume and the remaining native deposit controller scopes are not promoted by this Ethereum-only certificate.",
+        "evidence": "Reverified by CurM16cNGN on 2026-10-01 at pinned Ethereum block 26096009 and Plume block 96626677: BoringVault and RolesAuthority owners remain Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Both Safes are 3-of-6 with the listed signer set, no enabled modules, zero guard storage, fallback handler 0x017062a1de2fe6b99be3d9d37841fed19f573804 and masterCopy 0xfb1bffc9d739b8d520daf37df666da4c687191ea. The previous signer 0x315e376ca228d8e1376cccad2abb0b4aa8a77f3a is absent; current signer 0x0fcabe7b2410d31d9516ac27d2992f040a1b29a9 is present. The vault implementation, admin and beacon EIP-1967 slots remain zero and authority() remains 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 on both chains. No signer key-custody claim is made. Independent October 7 review re-read Ethereum block 26096009/hash 0x306169c923cfb804fae6da57fc4fdd42ac620570b6ba07a29fb8200f8e1bba29 (2026-10-01T07:35:11Z) through the keyless Dwellir endpoint: all six owners and threshold 3 match; empty module pagination terminates at sentinel 0x1; guard is zero; the singleton and CompatibilityFallbackHandler bytecodes exactly match verified explorer source. GnosisSafe.execTransaction and Executor.execute admit arbitrary target/value/calldata CALL and DELEGATECALL with no executor delay. The handler's signature validation retains Safe authorization and simulate uses simulateAndRevert, so it grants no persistent unsigned bypass. This certificate closes the conservative adverse maximal execution envelope, including self-authorized mutation of modules/guard/handler and delegated storage; it does not claim a downstream target allowlist, custody independence, or that all reachable contracts implement every capability. Plume and the remaining native deposit controller scopes are not promoted by this Ethereum-only certificate. Renewal re-read 2026-10-29 at Ethereum block 26300200 (hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z, keyless Dwellir endpoint): getThreshold returns 3, getOwners returns the same six recorded owner addresses, getModulesPaginated(0x1,100) returns no module with next=0x1, the guard slot is zero, the fallback slot is 0x017062a1de2fe6b99be3d9d37841fed19f573804, proxy slot0 is 0xfb1bffc9d739b8d520daf37df666da4c687191ea and VERSION is 1.3.0. This renewal re-pins the certificate; it adds or removes no path.",
         "sources": [
           {
             "label": "pUSD BoringVault on Etherscan",
@@ -240,19 +244,23 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
         "capDescription": "Native deposits require positive collateral, an enabled deposit asset and accountant.getRateInQuoteSafe before vault.enter transfers collateral and mints rate-derived shares. The predicate proxy is an authorized deposit caller, not the direct enter caller. LayerZero zero-asset credit is a separate bridge capability.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 96703539,
+        "observedAt": "2026-10-29",
+        "observedBlock": 102403550,
         "failureDomainKeys": [
           "contract:plume:0x16424edf021697e34b800e1d98857536b0f2287b"
         ],
         "executionScope": {
           "controllerDeployment": "plume:0x16424edf021697e34b800e1d98857536b0f2287b",
-          "reviewedAt": "2026-10-09",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "partial",
           "sources": [
+            {
+              "label": "Plume RPC re-read 2026-10-29 at block 102403550 (hash 0xc5ed10b376d7fa401ada672072e166f24a2c39ef3ad73e7d8b49851851b618f2, timestamp 2026-10-29T11:22:25Z): Teller vault() = pUSD 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f and RolesAuthority 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 canCall(Teller,vault,enter 0x39d6ba32) = true",
+              "url": "https://rpc.plume.org"
+            },
             {
               "label": "Verified Plume collateral-deposit Teller",
               "url": "https://explorer.plume.org/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
@@ -267,14 +275,14 @@
             }
           ],
           "pin": {
-            "position": "96703539",
-            "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
+            "position": "102403550",
+            "hash": "0xc5ed10b376d7fa401ada672072e166f24a2c39ef3ad73e7d8b49851851b618f2",
             "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified MultiChainLayerZeroTellerWithMultiAssetSupport source)",
             "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
           "observedState": {
-            "position": "96703539",
-            "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
+            "position": "102403550",
+            "hash": "0xc5ed10b376d7fa401ada672072e166f24a2c39ef3ad73e7d8b49851851b618f2",
             "runtimeIdentity": "plume:0x16424edf021697e34b800e1d98857536b0f2287b (verified MultiChainLayerZeroTellerWithMultiAssetSupport source)",
             "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
@@ -323,7 +331,7 @@
             }
           ]
         },
-        "evidence": "At Plume block 96703539, vault() returns pUSD 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f and RolesAuthority.canCall(Teller,vault,enter) is true. The deployment-to-pin UserRoleUpdated census identifies this Teller and NestVaultOFT as the two current non-owner enter callers. canCall(predicate,Teller,deposit) is true; deposit is not public. Verified source binds native shares to transferred collateral and the accountant rate.",
+        "evidence": "At Plume block 96703539, vault() returns pUSD 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f and RolesAuthority.canCall(Teller,vault,enter) is true. The deployment-to-pin UserRoleUpdated census identifies this Teller and NestVaultOFT as the two current non-owner enter callers. canCall(predicate,Teller,deposit) is true; deposit is not public. Verified source binds native shares to transferred collateral and the accountant rate. Renewal re-read 2026-10-29 at Plume block 102403550 (hash 0xc5ed10b376d7fa401ada672072e166f24a2c39ef3ad73e7d8b49851851b618f2, timestamp 2026-10-29T11:22:25Z, rpc.plume.org): vault() returns pUSD 0xdddd73f5df1f0dc31373357beac77545dc5a6f3f and RolesAuthority 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 canCall(Teller,vault,enter 0x39d6ba32) is true. The inventory stays partial and no closure flag is promoted.",
         "sources": [
           {
             "label": "Verified Plume collateral-deposit Teller",
@@ -344,19 +352,23 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
         "capDescription": "Native deposits require positive collateral, an enabled deposit asset and accountant.getRateInQuoteSafe before vault.enter transfers collateral and mints rate-derived shares. LayerZero zero-asset credit is a separate bridge capability.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26098751,
+        "observedAt": "2026-10-29",
+        "observedBlock": 26300200,
         "failureDomainKeys": [
           "contract:ethereum:0x16424edf021697e34b800e1d98857536b0f2287b"
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x16424edf021697e34b800e1d98857536b0f2287b",
-          "reviewedAt": "2026-10-09",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "partial",
           "sources": [
+            {
+              "label": "Ethereum RPC re-read 2026-10-29 at block 26300200 (hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z): Teller vault() = pUSD and RolesAuthority 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 canCall(Teller,vault,enter 0x39d6ba32) = true",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
             {
               "label": "Verified Ethereum collateral-deposit Teller",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x16424edf021697e34b800e1d98857536b0f2287b"
@@ -367,14 +379,14 @@
             }
           ],
           "pin": {
-            "position": "26098751",
-            "hash": "0xe02bf8d9e16ba054fcfdc429cc18f32c4a2a4201b41d8e0dc5d9619be81e4686",
+            "position": "26300200",
+            "hash": "0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09",
             "runtimeIdentity": "sha256-rpc-code-text:7b7fe75d9b6c4c96dbf1d2d5c991621718b14767990437f726af7e82fa2d584d",
             "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
           "observedState": {
-            "position": "26098751",
-            "hash": "0xe02bf8d9e16ba054fcfdc429cc18f32c4a2a4201b41d8e0dc5d9619be81e4686",
+            "position": "26300200",
+            "hash": "0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09",
             "runtimeIdentity": "sha256-rpc-code-text:7b7fe75d9b6c4c96dbf1d2d5c991621718b14767990437f726af7e82fa2d584d",
             "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0x16424edf021697e34b800e1d98857536b0f2287b for vault.enter selector 0x39d6ba32"
           },
@@ -423,7 +435,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26098751, vault() returns the Ethereum pUSD BoringVault and canCall(Teller,vault,enter) is true. The deployment-to-pin UserRoleUpdated census identifies this Teller and NestVaultOFT as the two current non-owner enter callers. canCall(predicate,Teller,deposit) is true; deposit is not public. Verified Ethereum source enforces collateral transfer and rate-derived native minting.",
+        "evidence": "At Ethereum block 26098751, vault() returns the Ethereum pUSD BoringVault and canCall(Teller,vault,enter) is true. The deployment-to-pin UserRoleUpdated census identifies this Teller and NestVaultOFT as the two current non-owner enter callers. canCall(predicate,Teller,deposit) is true; deposit is not public. Verified Ethereum source enforces collateral transfer and rate-derived native minting. Renewal re-read 2026-10-29 at Ethereum block 26300200 (hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z, keyless Dwellir endpoint): vault() returns the Ethereum pUSD BoringVault and RolesAuthority 0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 canCall(Teller,vault,enter 0x39d6ba32) is true. The inventory stays partial and no closure flag is promoted.",
         "sources": [
           {
             "label": "Verified Ethereum collateral-deposit Teller",
@@ -444,19 +456,23 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
         "capDescription": "Native ERC-4626 deposits validate amounts and the accountant rate, transfer the configured asset from the caller and pass net assets to shareToken.safeEnter. Native limits are replaceable through the Safe-owned transparent proxy; LayerZero zero-asset credit is reviewed separately.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 96703539,
+        "observedAt": "2026-10-29",
+        "observedBlock": 102403550,
         "failureDomainKeys": [
           "contract:plume:0xf6aada00bc2a206f06bce86ddd8348b70daa1059"
         ],
         "executionScope": {
           "controllerDeployment": "plume:0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
-          "reviewedAt": "2026-10-09",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "partial",
           "sources": [
+            {
+              "label": "Plume RPC re-read 2026-10-29 at block 102403550 (hash 0xc5ed10b376d7fa401ada672072e166f24a2c39ef3ad73e7d8b49851851b618f2, timestamp 2026-10-29T11:22:25Z): share() = pUSD, asset() = native USDC 0x222365ef19f7947e5484218551b56bb3965aa7af, EIP-1967 implementation 0x5766a40abfb8802303235a2f5f12a71ed84d4700, authority() 0xbe4c092a785b5c929fb1d2eda63b41ccc497601f and canCall(NestVaultOFT,vault,enter 0x39d6ba32) = true",
+              "url": "https://rpc.plume.org"
+            },
             {
               "label": "Verified Plume NestVaultOFT",
               "url": "https://explorer.plume.org/api/v2/smart-contracts/0x5766a40abfb8802303235a2f5f12a71ed84d4700"
@@ -471,16 +487,16 @@
             }
           ],
           "pin": {
-            "position": "96703539",
-            "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
+            "position": "102403550",
+            "hash": "0xc5ed10b376d7fa401ada672072e166f24a2c39ef3ad73e7d8b49851851b618f2",
             "runtimeIdentity": "plume:0x5766a40abfb8802303235a2f5f12a71ed84d4700 (verified NestVaultOFT implementation)",
-            "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
+            "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32; NestVaultOFT.authority() is the Solmate RolesAuthority plume:0xbe4c092a785b5c929fb1d2eda63b41ccc497601f (owner = Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, getUserRoles(NestVaultOFT) = 0x8)"
           },
           "observedState": {
-            "position": "96703539",
-            "hash": "0x2f94f6c1261c268bf831f31a351f5841f4b345cb6bb8619ead0755a493557b9c",
+            "position": "102403550",
+            "hash": "0xc5ed10b376d7fa401ada672072e166f24a2c39ef3ad73e7d8b49851851b618f2",
             "runtimeIdentity": "plume:0x5766a40abfb8802303235a2f5f12a71ed84d4700 (verified NestVaultOFT implementation)",
-            "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
+            "signerIdentity": "RolesAuthority plume:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32; NestVaultOFT.authority() is the Solmate RolesAuthority plume:0xbe4c092a785b5c929fb1d2eda63b41ccc497601f (owner = Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, getUserRoles(NestVaultOFT) = 0x8)"
           },
           "inventory": "partial",
           "closure": {
@@ -527,7 +543,7 @@
             }
           ]
         },
-        "evidence": "At Plume block 96703539, share() returns the pUSD BoringVault, asset() returns native USDC 0x222365ef19f7947e5484218551b56bb3965aa7af and canCall(NestVaultOFT,vault,enter) is true. Implementation is verified NestVaultOFT 0x5766a40abfb8802303235a2f5f12a71ed84d4700; ProxyAdmin and Nest owner are controlled by Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982.",
+        "evidence": "At Plume block 96703539, share() returns the pUSD BoringVault, asset() returns native USDC 0x222365ef19f7947e5484218551b56bb3965aa7af and canCall(NestVaultOFT,vault,enter) is true. Implementation is verified NestVaultOFT 0x5766a40abfb8802303235a2f5f12a71ed84d4700; ProxyAdmin and Nest owner are controlled by Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Renewal re-read 2026-10-29 at Plume block 102403550 (hash 0xc5ed10b376d7fa401ada672072e166f24a2c39ef3ad73e7d8b49851851b618f2, timestamp 2026-10-29T11:22:25Z, rpc.plume.org): share() returns pUSD, asset() returns native USDC 0x222365ef19f7947e5484218551b56bb3965aa7af, the EIP-1967 implementation slot still resolves to 0x5766a40abfb8802303235a2f5f12a71ed84d4700, NestVaultOFT.authority() is the Solmate RolesAuthority 0xbe4c092a785b5c929fb1d2eda63b41ccc497601f whose owner is the same Safe and whose getUserRoles(NestVaultOFT) is 0x8, and canCall(NestVaultOFT,vault,enter 0x39d6ba32) is true. The inventory stays partial and no closure flag is promoted.",
         "sources": [
           {
             "label": "Verified Plume NestVaultOFT",
@@ -548,19 +564,23 @@
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "present",
         "capDescription": "Native ERC-4626 deposits validate amounts and the accountant rate, transfer USDC from the caller and pass net assets to shareToken.safeEnter. Native limits are replaceable through the Safe-owned transparent proxy; LayerZero zero-asset credit is reviewed separately.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26098751,
+        "observedAt": "2026-10-29",
+        "observedBlock": 26300200,
         "failureDomainKeys": [
           "contract:ethereum:0xf6aada00bc2a206f06bce86ddd8348b70daa1059"
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xf6aada00bc2a206f06bce86ddd8348b70daa1059",
-          "reviewedAt": "2026-10-09",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "partial",
           "sources": [
+            {
+              "label": "Ethereum RPC re-read 2026-10-29 at block 26300200 (hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z): share() = pUSD, EIP-1967 implementation 0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2, authority() 0xbe4c092a785b5c929fb1d2eda63b41ccc497601f and canCall(NestVaultOFT,vault,enter 0x39d6ba32) = true",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            },
             {
               "label": "Verified Ethereum NestVaultOFT",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2"
@@ -575,16 +595,16 @@
             }
           ],
           "pin": {
-            "position": "26098751",
-            "hash": "0xe02bf8d9e16ba054fcfdc429cc18f32c4a2a4201b41d8e0dc5d9619be81e4686",
+            "position": "26300200",
+            "hash": "0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09",
             "runtimeIdentity": "proxy-sha256-rpc-code-text:0b5804c60332b4afebd7f3ea9227f96d5c86d712b31dfc5ef28587239bc01239;implementation:0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2;implementation-sha256-rpc-code-text:660afe3af24ac0f382e1628c3adeb0165d1d1dd3771067207a84220c92eae390",
-            "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
+            "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32; NestVaultOFT.authority() is the Solmate RolesAuthority ethereum:0xbe4c092a785b5c929fb1d2eda63b41ccc497601f (owner = Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, getUserRoles(NestVaultOFT) = 0x8)"
           },
           "observedState": {
-            "position": "26098751",
-            "hash": "0xe02bf8d9e16ba054fcfdc429cc18f32c4a2a4201b41d8e0dc5d9619be81e4686",
+            "position": "26300200",
+            "hash": "0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09",
             "runtimeIdentity": "proxy-sha256-rpc-code-text:0b5804c60332b4afebd7f3ea9227f96d5c86d712b31dfc5ef28587239bc01239;implementation:0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2;implementation-sha256-rpc-code-text:660afe3af24ac0f382e1628c3adeb0165d1d1dd3771067207a84220c92eae390",
-            "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32"
+            "signerIdentity": "RolesAuthority ethereum:0x97bc6151fc501e6e2ec2acba3d4261d4bc7a6f90 admits 0xf6aada00bc2a206f06bce86ddd8348b70daa1059 for vault.enter selector 0x39d6ba32; NestVaultOFT.authority() is the Solmate RolesAuthority ethereum:0xbe4c092a785b5c929fb1d2eda63b41ccc497601f (owner = Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, getUserRoles(NestVaultOFT) = 0x8)"
           },
           "inventory": "partial",
           "closure": {
@@ -631,7 +651,7 @@
             }
           ]
         },
-        "evidence": "At Ethereum block 26098751, share() returns the pUSD BoringVault, asset() returns USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and canCall(NestVaultOFT,vault,enter) is true. Implementation is verified NestVaultOFT 0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2; ProxyAdmin and Nest owner are controlled by Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982.",
+        "evidence": "At Ethereum block 26098751, share() returns the pUSD BoringVault, asset() returns USDC 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48 and canCall(NestVaultOFT,vault,enter) is true. Implementation is verified NestVaultOFT 0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2; ProxyAdmin and Nest owner are controlled by Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982. Renewal re-read 2026-10-29 at Ethereum block 26300200 (hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z, keyless Dwellir endpoint): share() returns pUSD, the EIP-1967 implementation slot still resolves to 0xd282fb66e56cf2873a75fbb2e15d785c5901c0b2, NestVaultOFT.authority() is the Solmate RolesAuthority 0xbe4c092a785b5c929fb1d2eda63b41ccc497601f whose owner is the same Safe and whose getUserRoles(NestVaultOFT) is 0x8, and canCall(NestVaultOFT,vault,enter 0x39d6ba32) is true, with ProxyAdmin 0xcd36e49aaaea5af1683a122b44dd1f2f4c6e65da still owned by that Safe. The inventory stays partial and no closure flag is promoted.",
         "sources": [
           {
             "label": "Verified Ethereum NestVaultOFT",

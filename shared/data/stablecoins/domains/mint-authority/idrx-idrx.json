@@ -518,10 +518,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "executionScope": {
           "controllerDeployment": "bsc:0xf80fdf246928b7862b23e094b3a14c4e36ee117e",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "D01 evidence renewal 2026-10-27",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "R-MINT-6 renewal 2026-10-29",
           "confidence": "partial",
           "sources": [
             {
@@ -534,16 +534,16 @@
             }
           ],
           "pin": {
-            "position": "130060505",
-            "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
-            "runtimeIdentity": "eth_getCode=0x; nonce=0; fixed SafeProxy singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e",
-            "signerIdentity": "fixed initializer: 2-of-3; e51b67864a38f42126231d30ed8f3e72ec7f32f4,b4fca8725a9e65b4cd1ef27d71e7c7537148061b,0f9f4cbbec64524deb0d743f9caf34be81bd1576"
+            "position": "130515000",
+            "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
+            "runtimeIdentity": "eth_getCode=0x; nonce=0; MINTER_ROLE=true; DEFAULT_ADMIN_ROLE=false; fixed SafeProxy singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+            "signerIdentity": "counterfactual fixed initialized 2-of-3; not a live deployed Safe: e51b67864a38f42126231d30ed8f3e72ec7f32f4,b4fca8725a9e65b4cd1ef27d71e7c7537148061b,0f9f4cbbec64524deb0d743f9caf34be81bd1576"
           },
           "observedState": {
-            "position": "130060505",
-            "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
-            "runtimeIdentity": "eth_getCode=0x; nonce=0; MINTER_ROLE=true; DEFAULT_ADMIN_ROLE=false",
-            "signerIdentity": "counterfactual fixed initialized 2-of-3; not a live deployed Safe"
+            "position": "130515000",
+            "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
+            "runtimeIdentity": "eth_getCode=0x; nonce=0; MINTER_ROLE=true; DEFAULT_ADMIN_ROLE=false; fixed SafeProxy singleton 0x3e5c63644e683549055b9be8653de26e0b4cd36e",
+            "signerIdentity": "counterfactual fixed initialized 2-of-3; not a live deployed Safe: e51b67864a38f42126231d30ed8f3e72ec7f32f4,b4fca8725a9e65b4cd1ef27d71e7c7537148061b,0f9f4cbbec64524deb0d743f9caf34be81bd1576"
           },
           "inventory": "partial",
           "closure": {
@@ -605,9 +605,9 @@
                 "modules": [],
                 "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
                 "accountStatePin": {
-                  "position": "130060505",
-                  "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
-                  "runtimeIdentity": "eth_getCode=0x; eth_getTransactionCount=0x0",
+                  "position": "130515000",
+                  "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
+                  "runtimeIdentity": "eth_getCode=0x; eth_getTransactionCount=0x0; MINTER_ROLE=true; DEFAULT_ADMIN_ROLE=false",
                   "signerIdentity": "undeployed; fixed initialization owners and threshold, not live signer state"
                 }
               }
@@ -637,8 +637,8 @@
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "observedAt": "2026-10-27",
-        "observedBlock": 130060505
+        "observedAt": "2026-10-29",
+        "observedBlock": 130515000
       },
       {
         "chain": "bsc",
@@ -653,10 +653,10 @@
         "canRaiseCap": true,
         "executionScope": {
           "controllerDeployment": "bsc:0x5515be1db2a513888f5cf375bf5c7956ee93c779",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "D01 evidence renewal 2026-10-27",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "R-MINT-6 renewal 2026-10-29",
           "confidence": "partial",
           "sources": [
             {
@@ -665,15 +665,15 @@
             }
           ],
           "pin": {
-            "position": "130060505",
-            "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
-            "runtimeIdentity": "eth_getCode=0x; nonce=0x17",
+            "position": "130515000",
+            "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
+            "runtimeIdentity": "eth_getCode=0x; nonce=0x17; DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false; grantRole(MINTER_ROLE,dead) eth_call succeeds",
             "signerIdentity": "single-key address; key custody unknown"
           },
           "observedState": {
-            "position": "130060505",
-            "hash": "0xa04a3ee08a5191484c24dfe6bab158658560e01f966b77452bd64c9eca5af474",
-            "runtimeIdentity": "DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false; grantRole(MINTER_ROLE,dead) eth_call succeeds",
+            "position": "130515000",
+            "hash": "0x164a1ecc0227c3a074a50d5af746d92062a9366f115a2bbd86982be0728fa18d",
+            "runtimeIdentity": "eth_getCode=0x; nonce=0x17; DEFAULT_ADMIN_ROLE=true; MINTER_ROLE=false; grantRole(MINTER_ROLE,dead) eth_call succeeds",
             "signerIdentity": "single-key address; key custody unknown"
           },
           "inventory": "partial",
@@ -741,8 +741,8 @@
             "url": "https://api-bsc-mainnet-full.n.dwellir.com"
           }
         ],
-        "observedAt": "2026-10-27",
-        "observedBlock": 130060505
+        "observedAt": "2026-10-29",
+        "observedBlock": 130515000
       },
       {
         "chain": "bsc",

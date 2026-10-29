@@ -137,16 +137,16 @@
           "guard": "0x0000000000000000000000000000000000000000",
           "fallbackHandler": "0x2f55e8b20d0b9fefa187aa7d00b6cbe563605bf5",
           "version": "1.4.1",
-          "observedBlock": 26282972,
+          "observedBlock": 26300242,
           "source": "onchain",
-          "observedAt": "2026-10-27"
+          "observedAt": "2026-10-29"
         },
         "executionScope": {
           "controllerDeployment": "ethereum:0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "D01 evidence renewal 2026-10-27",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "R-MINT-6 renewal 2026-10-29",
           "confidence": "partial",
           "sources": [
             {
@@ -191,16 +191,16 @@
             }
           ],
           "pin": {
-            "position": "26282972",
-            "hash": "0xdef03506e753852cf624d4103305513a8f7e0a6f48b38a35113755b329c84625",
+            "position": "26300242",
+            "hash": "0x6ce5e1d1acccb5baa2342eef615cb1c22db85f723189415aa955d76657eae44b",
             "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
-            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26282972"
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26300242"
           },
           "observedState": {
-            "position": "26282972",
-            "hash": "0xdef03506e753852cf624d4103305513a8f7e0a6f48b38a35113755b329c84625",
+            "position": "26300242",
+            "hash": "0x6ce5e1d1acccb5baa2342eef615cb1c22db85f723189415aa955d76657eae44b",
             "runtimeIdentity": "sha256-rpc-code-text:c7404fa90f9417f24a7f3e1ee736d3f7843f419188a98921fa385dac0e8a693b",
-            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26282972"
+            "signerIdentity": "getOwners/getThreshold:8-owners:2-signatures:block-26300242"
           },
           "inventory": "partial",
           "closure": {
@@ -291,8 +291,8 @@
             "url": "https://eth.blockscout.com/address/0x4ff1b9d9ba8558f5eafcec096318ea0d8b541971"
           }
         ],
-        "observedAt": "2026-10-27",
-        "observedBlock": 26282972
+        "observedAt": "2026-10-29",
+        "observedBlock": 26300242
       }
     ],
     "economicCapSemantics": "unbounded",

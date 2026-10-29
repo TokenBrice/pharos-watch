@@ -54,26 +54,59 @@
       "reviewedAt": "2026-10-03",
       "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
       "rationale": "Agant defines GBP 1 face-value redemption. Verified AgantTokenUpgradeable.mint accepts a nominal amount under its minter map, with no oracle, borrower health check or liquidation branch. Tempo TIP-20 similarly issues nominal token quantities with a supply-cap check; secondary-market quotes are not issuer conversion inputs.",
-      "sources": [{"label": "Agant fixed-par GBPA token design", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"}, {"label": "Exact current Ethereum implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"}, {"label": "Tempo nominal issuance specification", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"}]
+      "sources": [
+        {
+          "label": "Agant fixed-par GBPA token design",
+          "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+        },
+        {
+          "label": "Exact current Ethereum implementation",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+        },
+        {
+          "label": "Tempo nominal issuance specification",
+          "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+        }
+      ]
     },
     "reviewedAt": "2026-10-03",
     "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
     "confidence": "verified",
-    "sources": [{"label": "Agant fixed-par token design", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"}, {"label": "Exact Ethereum implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"}],
-    "paths": [{
-      "id": "gbpa-ethereum-par",
-      "chain": "ethereum",
-      "address": "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
-      "pricingAuthority": "none",
-      "applicability": {
-        "disposition": "not-applicable",
-        "reviewedAt": "2026-10-03",
-        "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
-        "confidence": "verified",
-        "rationale": "The exact implementation mints a requested nominal quantity under the authorized minter map, and the holder claim remains fixed GBP par rather than NAV. No borrower or liquidation-price branch exists.",
-        "sources": [{"label": "Exact Ethereum native mint implementation", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"}, {"label": "GBP face-value issuer claim", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"}]
+    "sources": [
+      {
+        "label": "Agant fixed-par token design",
+        "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+      },
+      {
+        "label": "Exact Ethereum implementation",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
       }
-    }]
+    ],
+    "paths": [
+      {
+        "id": "gbpa-ethereum-par",
+        "chain": "ethereum",
+        "address": "0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos refinement 2026-10-03 (Refine01)",
+          "confidence": "verified",
+          "rationale": "The exact implementation mints a requested nominal quantity under the authorized minter map, and the holder claim remains fixed GBP par rather than NAV. No borrower or liquidation-price branch exists.",
+          "sources": [
+            {
+              "label": "Exact Ethereum native mint implementation",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4b55cc51901ef212a6cb4fa5e5daa6575afdd3f0"
+            },
+            {
+              "label": "GBP face-value issuer claim",
+              "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+            }
+          ]
+        }
+      }
+    ]
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
@@ -289,9 +322,18 @@
       ],
       "rationale": "The current issuer mainnet registry, September whole-supply report and independently resolved CoinGecko deployment map identify exactly these five native GBPA liabilities. October 15 pinned state independently verifies each token identity, six decimals and positive supply. This is a deployment/liability-identity census, not a complete authority or executable transfer census.",
       "sources": [
-        {"label": "Agant complete official mainnet registry", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"},
-        {"label": "Nephos September whole-supply reserve report", "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"},
-        {"label": "CoinGecko exact Ethereum-contract identity and deployment map", "url": "https://pro-api.coingecko.com/api/v3/coins/ethereum/contract/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"}
+        {
+          "label": "Agant complete official mainnet registry",
+          "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+        },
+        {
+          "label": "Nephos September whole-supply reserve report",
+          "url": "https://security.agant.io/doc/trust?rid=6abea083a941a8650c35ebf8&r=lz53fv2d0lk02myddnbz7&download=true"
+        },
+        {
+          "label": "CoinGecko exact Ethereum-contract identity and deployment map",
+          "url": "https://pro-api.coingecko.com/api/v3/coins/ethereum/contract/0xbbe6aab0ed76e90aea0d1cd978ec231c8adcdf8b"
+        }
       ]
     },
     "nativeExternalTransferReviews": [
@@ -309,8 +351,14 @@
         "reviewer": "Batch-64 review (Rev_GbpaAgant)",
         "rationale": "Agant explicitly documents LayerZero OFT source burns and destination minting after external message verification on all five native deployments. This separately declared transfer rail prevents native liability identity from being mistaken for absence of bridge validation exposure. Current four-EVM-chain configuration is pinned; Solana validation and exact Tempo executable authorization remain open under their existing controls.",
         "sources": [
-          {"label": "Agant exact GBPA cross-chain and contract design", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"},
-          {"label": "Agant exact token and OFT deployment identities", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"}
+          {
+            "label": "Agant exact GBPA cross-chain and contract design",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/gbp-stablecoin-gbpa.md"
+          },
+          {
+            "label": "Agant exact token and OFT deployment identities",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          }
         ]
       }
     ],
@@ -318,14 +366,32 @@
       {
         "id": "gbpa-tempo-token-bound-transfer-proxy",
         "label": "GBPA Tempo token-bound LayerZero transfer proxy",
-        "routeRefs": ["tempo:0x20c0000000000000000000000a6da882d075a4c3"],
-        "capabilities": ["bridge-mint", "bridge-burn"],
+        "routeRefs": [
+          "tempo:0x20c0000000000000000000000a6da882d075a4c3"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn"
+        ],
         "controllerChain": "tempo",
         "controllerAddress": "0x5575151bf6076129d0729c0f40d967d41df34a63",
         "authorityType": "contract",
         "observedAt": "2026-10-15",
         "observedBlock": 44247678,
-        "sources": [{"label": "Pinned Tempo controller state at block 43332359, hash 0x5283b9729048ede4e7c25125d03e1d297c83ba0132c16d620e12211f5ea01aeb, 2026-10-09T11:51:03Z; observed 2026-10-09T11:51:23Z", "url": "https://api-tempo-mainnet.n.dwellir.com"}, {"label": "Pinned Tempo token-bound controller observation", "url": "https://explorer.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"}, {"label": "TIP-20 mint/burn role semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"}],
+        "sources": [
+          {
+            "label": "Pinned Tempo controller state at block 43332359, hash 0x5283b9729048ede4e7c25125d03e1d297c83ba0132c16d620e12211f5ea01aeb, 2026-10-09T11:51:03Z; observed 2026-10-09T11:51:23Z",
+            "url": "https://api-tempo-mainnet.n.dwellir.com"
+          },
+          {
+            "label": "Pinned Tempo token-bound controller observation",
+            "url": "https://explorer.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"
+          },
+          {
+            "label": "TIP-20 mint/burn role semantics",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          }
+        ],
         "evidence": "At Tempo block 44247678, hasRole confirms this proxy retains ISSUER_ROLE and token() resolves to GBPA. owner() and ProxyAdmin.owner() retain 0xbecf04e2348d00885c62d97d9629c99e581fe00f; endpoint() is 0x20bb7c2e2f4e5ca2b4c57060d1ae2615245dcc9c and approvalRequired() is true. EIP-1967 implementation/admin slots retain 0x57d51739b3c73bc38819556835a9a6e14474e782 and 0x1703d87af0893964c1effef756ee20424b75530e. The 10727-byte implementation runtime SHA-256 remains a1dd9b368b81b963b744a12bf32e0200d00c846b0822115da8967df6feaf178c. All four peer/library/configuration lanes and four one-signature DVNs are now independently refreshed. Exact metadata remains inaccessible through Sourcify and multiple IPFS gateways; executable mint authorization, replacement/bypass reach and conservation remain unverified."
       },
       {
@@ -428,24 +494,46 @@
           "tempo:0x20c0000000000000000000000a6da882d075a4c3",
           "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
         ],
-        "capabilities": ["bridge-mint", "bridge-burn", "validator"],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "validator"
+        ],
         "authorityType": "unknown",
         "canRaiseCap": "unknown",
-        "failureDomainKeys": ["protocol:layerzero"],
+        "failureDomainKeys": [
+          "protocol:layerzero"
+        ],
         "observedAt": "2026-10-15",
         "sources": [
-          {"label": "Agant complete native deployment registry", "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"},
-          {"label": "Exact Solana OFT Store", "url": "https://explorer.solana.com/address/2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4"},
-          {"label": "Exact Tempo transfer adapter", "url": "https://explore.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"},
-          {"label": "Exact Solana OFT program executable verification status", "url": "https://verify.osec.io/status/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"}
+          {
+            "label": "Agant complete native deployment registry",
+            "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
+          },
+          {
+            "label": "Exact Solana OFT Store",
+            "url": "https://explorer.solana.com/address/2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4"
+          },
+          {
+            "label": "Exact Tempo transfer adapter",
+            "url": "https://explore.tempo.xyz/address/0x5575151bf6076129d0729c0f40d967d41df34a63"
+          },
+          {
+            "label": "Exact Solana OFT program executable verification status",
+            "url": "https://verify.osec.io/status/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"
+          }
         ],
         "evidence": "Tempo block 44247678 independently refreshes all four peers, send/receive libraries and four required DVNs, each quorum one with one signer. Exact proxy implementation/admin/owner/runtime are unchanged, but source remains unavailable, so executable authorization and replacement closure remain open. Solana exact Account Archive slot 457210287 binds mint, multisig, Store, program, programData and upgrade wallet at one finalized state. The deployed programData ELF remains 636736 bytes with SHA-256 838d4306aa77c07906c0190e0b319426bb6bd3e161bf4f55394fa5f1c40e34e6. OSEC still reports is_verified=false with no repository or commit. Solana Store-specific receive-library/DVN configuration and executable correspondence remain unresolved. Successful account archival access closes the previous helper-availability claim, not the validation/executable gap."
       },
       {
         "id": "gbpa-solana-oft-program-upgrade",
         "label": "GBPA Solana OFT program upgrade wallet",
-        "routeRefs": ["solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"],
-        "capabilities": ["upgrade"],
+        "routeRefs": [
+          "solana:DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ"
+        ],
+        "capabilities": [
+          "upgrade"
+        ],
         "controllerChain": "solana",
         "controllerAddress": "BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X",
         "authorityType": "eoa",
@@ -453,10 +541,22 @@
         "observedAt": "2026-10-15",
         "observedBlock": 457210287,
         "sources": [
-          {"label": "GBPA OFT program", "url": "https://explorer.solana.com/address/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"},
-          {"label": "Exact programData and upgrade authority", "url": "https://explorer.solana.com/address/4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD"},
-          {"label": "Solana program replacement semantics", "url": "https://solana.com/docs/programs/deploying"},
-          {"label": "OFT Store mint-signing architecture", "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"}
+          {
+            "label": "GBPA OFT program",
+            "url": "https://explorer.solana.com/address/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"
+          },
+          {
+            "label": "Exact programData and upgrade authority",
+            "url": "https://explorer.solana.com/address/4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD"
+          },
+          {
+            "label": "Solana program replacement semantics",
+            "url": "https://solana.com/docs/programs/deploying"
+          },
+          {
+            "label": "OFT Store mint-signing architecture",
+            "url": "https://docs.layerzero.network/v2/developers/solana/oft/overview"
+          }
         ],
         "evidence": "Exact finalized Alchemy Account Archive reads at slot 457210287 (2026-10-15T10:50:17Z) bind GBPA mint DYoCmA91VE8REbWNw3kM736PN7vv97qc2jr5wmUbuNtZ to 1-of-2 Token-2022 mint multisig B97UNTZsqZfmK8shTRvhCZ43t8JizkTYSBokiQr6Xz2c. Store 2Z1jwnD78v1q4Nt6suH5YkgskqRgNySdbPbdYWcYxug4 remains one signer and is owned by program Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM. Its loader account still points to programData 4KDWCMGSUx3EykHeReXhZ9JwyTj3zujguUHvRSoNDxYD, with upgrade authority Some(BRi183SZJLrCVAqFQ69Zi95UdrumSpazdeuM4nLKQz2X). This is the same wallet as the token mint's freeze authority, so one on-chain wallet can both freeze holders and replace Store mint-signing logic. That authority remains a non-executable zero-data System Program wallet; its off-chain signing custody remains unproven. The deployed ELF hash is unchanged. Program replacement is not a protective transfer bound or certified complete execution scope."
       }
@@ -466,11 +566,15 @@
         "controlRef": "gbpa-solana-tempo-message-validation",
         "question": "What are the Solana Store-specific receive-library/DVN and peer configurations with deployed-executable correspondence, and complete Tempo adapter replacement/authorization and route-limit closure? October 15 Tempo block 44247678 refreshes proxy slots, adapter/admin owners, exact runtime and all four peer/library/DVN lanes, but exact metadata remains inaccessible. Solana Account Archive slot 457210287 successfully refreshes the six-account controller census and unchanged deployed ELF; OSEC still reports unverified without repository/commit. Account-state availability is now resolved; executable and validation closure is not.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "Batch-64 review (Rev_GbpaAgant)",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "Agant official mainnet deployment registry",
+            "label": "OSEC Solana program verification status fetched 2026-10-29: is_verified=false with empty executable/repo hash",
+            "url": "https://verify.osec.io/status/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"
+          },
+          {
+            "label": "Agant official mainnet deployment registry accessed 2026-10-29: Ethereum/Base/Solana/Tempo/Arc addresses unchanged; no receive-library/DVN/peer or upgrade-policy disclosure",
             "url": "https://docs.agant.io/XDREhsGKwMiuddKPr5Rt/tokens/networks.md"
           },
           {
@@ -480,10 +584,6 @@
           {
             "label": "Exact Tempo pinned proxy/admin/runtime state, block 43332359, 2026-10-09T11:51:03Z",
             "url": "https://api-tempo-mainnet.n.dwellir.com"
-          },
-          {
-            "label": "Current exact Solana program verification response; no verified repository or commit",
-            "url": "https://verify.osec.io/status/Cxb1kfkcNVWEBhxC6R76He8orpfYyCE2j1pps3t6FVuM"
           }
         ]
       }
