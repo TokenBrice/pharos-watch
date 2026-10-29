@@ -34,7 +34,7 @@ describe("coverage reserve resolution from the client registry", () => {
     expect(kinds.get("curated") ?? 0).toBeLessThan(CLIENT_ACTIVE_STABLECOINS.length / 2);
   });
 
-  it.each(["bnusd-balanced", "inalpha-nest", "tgbp-tokenised", "usdxl-last"])(
+  it.each(["inalpha-nest", "tgbp-tokenised", "usdxl-last"])(
     "resolves %s through the fallback rather than its suspended reader",
     (id) => {
       const coin = CLIENT_ACTIVE_STABLECOINS.find((entry) => entry.id === id);

@@ -234,26 +234,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 25, 23, 45) / 1000,
   },
   {
-    stablecoinId: "bnusd-balanced",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-21 14:13 UTC: this identity tracks ICON Balanced v1 bnUSD(old), not the distinct Sonic successor. DefiLlama list/detail 204 price is null and the coins API has no balanced-dollars quote. CoinGecko remains dated 2026-06-26 20:26:20 UTC ($0.96769) with zero tickers; exact ICON/Base/Arbitrum/BSC DexScreener reads return no pairs. Official Balanced migration instructions still describe 1:1 old/new migration on ICON, Stellar and Sui, with other legacy chains requiring bridging first. That advertised migration is not an observed market price or an executed claim valuation. No independently reviewed sICX/USD dependency and native pool adapter exists. Ops must review an identity-safe observed market or executable migration-claim route, or make a freeze decision by October 28 14:13 UTC; preserve the missing price and all source admission guards. Do not apply the successor's price to bnUSD(old) or infer an unsupported migration termination date.",
-    sources: [
-      "https://docs.balanced.network/migrate-assets",
-      "https://github.com/icon-project/sodax-sdks/blob/main/packages/sdk/docs/MIGRATION.md",
-      "https://stablecoins.llama.fi/stablecoin/204",
-      "https://coins.llama.fi/prices/current/coingecko:balanced-dollars",
-      "https://api.coingecko.com/api/v3/simple/price?ids=balanced-dollars&vs_currencies=usd&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/balanced-dollars/tickers",
-      "https://api.dexscreener.com/token-pairs/v1/icon/cx88fd7df7ddff82f7cc735c871dc519838cb235bb",
-      "https://api.dexscreener.com/token-pairs/v1/base/0x78b7cd9308287deb724527d8703c889e2d6c3708",
-      "https://api.dexscreener.com/token-pairs/v1/arbitrum/0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
-      "https://api.dexscreener.com/token-pairs/v1/bsc/0xc65132325bd4fcf2ec5f3a9375487163b6999206",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
-    expiresAt: Date.UTC(2026, 9, 28, 14, 13) / 1000,
-  },
-  {
     stablecoinId: "cadm-mento",
     weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
     owner: "ops",

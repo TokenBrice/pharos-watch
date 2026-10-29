@@ -202,7 +202,9 @@ export function applyTrackedAssetOverrides(assets: PeggedAsset[]): void {
     const meta = ACTIVE_META_BY_ID.get(String(asset.id));
 
     if (asset.id === LEGACY_SOLOMON_USDV_ID) {
-      asset.name = meta?.name ?? asset.name;
+      // `usdv-solomon` froze on 2026-10-29: `meta` is active-only, so read the curated
+      // name from the tracked catalog and keep the archived row's identity.
+      asset.name = TRACKED_META_BY_ID.get(String(asset.id))?.name ?? asset.name;
       delete asset.geckoId;
       delete asset.gecko_id;
       asset.price = null; // On-chain supplemental supply since 2026-09-27 (no llamaId); every DefiLlama price lane — list row 261 and the supplemental solana:Ex5Da… contract quote — aliases the replacement mint, so the price must come from an identity-safe source (jupiter-exact).
