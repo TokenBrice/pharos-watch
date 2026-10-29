@@ -1,4 +1,3 @@
-import { formatLongDate } from "@shared/lib/format";
 import type { MechanismArchetype, RedemptionBackstopEntry, StablecoinMeta } from "@shared/types";
 import { BLACKLIST_STABLECOINS } from "@shared/types/market";
 import type { BlacklistStatus } from "@shared/lib/report-card-blacklist-matchers";
@@ -29,7 +28,6 @@ export interface HeroPassportItemViewModel {
     | "mechanism"
     | "attestor"
     | "jurisdiction"
-    | "issued"
     | "mica"
     | "genius"
     | "redeemability"
@@ -41,7 +39,6 @@ export interface HeroPassportItemViewModel {
     | "Mechanism"
     | "Attestor"
     | "Jurisdiction"
-    | "Issued"
     | "MiCA"
     | "GENIUS"
     | "Redeemability"
@@ -73,19 +70,6 @@ export interface PassportMintAuthorityInput {
 export interface PassportPegRecordInput {
   eventCount: number;
   depegEventCoverageLimited?: boolean;
-}
-
-/**
- * Loose-validates the curated ISO `launchDate` (a population sweep is filling
- * it coin-by-coin, so absence is normal) and formats it as a long-form UTC
- * date, e.g. "September 26, 2018". Returns null for absent or malformed
- * values.
- */
-function formatLaunchDate(launchDate: string | undefined): string | null {
-  if (!launchDate || !/^\d{4}-\d{2}-\d{2}$/.test(launchDate)) return null;
-  const parsed = new Date(`${launchDate}T00:00:00Z`);
-  if (Number.isNaN(parsed.getTime())) return null;
-  return formatLongDate(parsed, { utc: true });
 }
 
 // Same data-driven freeze tones as the retired identity FreezablePill — amber
@@ -176,9 +160,10 @@ function buildFreezePassportItem(
  * The hero "passport" row: the verification facts as document-style anchor
  * entries, scanned in two clusters — how the token works (mechanism,
  * redeemability, minting, freeze powers, peg track record, chain count), then
- * who stands behind it (jurisdiction, MiCA/GENIUS regulatory visas, attestor,
- * launch date). Entries whose dedicated proof block does not render fall
- * back to `#info`; the attestor entry is omitted entirely for decentralized
+ * who stands behind it (jurisdiction, MiCA/GENIUS regulatory visas,
+ * attestor). The launch date is not repeated here: the hero header already
+ * shows it. Entries whose dedicated proof block does not render fall back to
+ * `#info`; the attestor entry is omitted entirely for decentralized
  * coins (they publish no reserve attestation), and every other
  * conditional entry is omitted when its dataset has no record for the coin —
  * honest emptiness over faked fields.
@@ -353,21 +338,6 @@ export function buildHeroPassportItems({
         ? `Reserve report: ${reportLabel}; ${tierStyle.label} — jump to Proof of Reserves`
         : `Reserve report: ${reportLabel} — jump to Proof of Reserves`,
     });
-  }
-
-  // Date of issue: year only protects the strip's one-line width budget; the
-  // full date lives in the aria-label.
-  if (coin.launchDate) {
-    const launchDateLong = formatLaunchDate(coin.launchDate);
-    if (launchDateLong) {
-      items.push({
-        key: "issued",
-        category: "Issued",
-        value: coin.launchDate.slice(0, 4),
-        href: "#info",
-        ariaLabel: `Issued: launched ${launchDateLong} — jump to the coin overview`,
-      });
-    }
   }
 
   return items;

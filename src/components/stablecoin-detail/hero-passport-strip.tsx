@@ -92,7 +92,7 @@ export function HeroPassportStrip({
   const resolvedByKey = new Map(items.map((item) => [item.key, item]));
   const orderedKeys: HeroPassportItemViewModel["key"][] = [
     "mechanism", "redeemability", "minting", "freeze", "record", "chains",
-    "jurisdiction", "mica", "genius", "attestor", "issued",
+    "jurisdiction", "mica", "genius", "attestor",
   ];
   const slotKeys = orderedKeys.filter((key) => resolvedByKey.has(key) || key === "redeemability" || key === "minting" || key === "record");
   const slots = compactDesktop ? slotKeys.map((key) => ({ key, item: resolvedByKey.get(key) })) : items.map((item) => ({ key: item.key, item }));

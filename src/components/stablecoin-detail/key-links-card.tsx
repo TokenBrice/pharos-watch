@@ -16,8 +16,8 @@ const LINK_CLASS =
  * the attestor line beside it to mean anything.
  *
  * This is what survived the Key Information card: every other fact it carried
- * is rendered by the hero passport strip (jurisdiction, MiCA, attestor tier,
- * launch date), the rail review modules (regulatory standing, custody,
+ * is rendered by the hero (launch date in the header; jurisdiction, MiCA and
+ * attestor tier in the passport strip), the rail review modules (regulatory standing, custody,
  * collateralization), or Peg Stability (collateral and peg-mechanism prose).
  *
  * Mounted twice like every rail module — the `xl+` rail after News, and an
