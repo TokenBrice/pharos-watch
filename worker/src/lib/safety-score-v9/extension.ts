@@ -33,6 +33,7 @@ import type {
   MintAuthorityControl,
   MintAuthorityEconomicCapSemantics,
   MintAuthorityProfile,
+  MintAuthorityScopedQuestion,
 } from "@shared/types/core";
 import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl } from "@shared/types/safety-score-v9-facts";
 import { V1005VotingControllerSchema, createV9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
@@ -1007,6 +1008,7 @@ function adaptMintControl(
   projection: V9ReviewedControlProjection,
   issuanceFactsRef: string | undefined,
   scopedQuestionIsCustodyOnly: boolean,
+  retainedExpiredCustodyQuestion: { reviewedAtSec: number } | null,
 ): ControlOverlay[] {
   const controlKind = mintControlKind(control);
   const coarseCapabilities = mintCapabilities(control, upgradeCapable);
@@ -1104,6 +1106,9 @@ function adaptMintControl(
       .map(normalizeDeploymentId)
       .sort(compareText),
   }).slice(0, 20)}`;
+  // Subject without `scopedQuestionFresh` marks a retained lapsed question:
+  // the datum remains documented, but it no longer softens the control.
+  const custodyQuestionSubject = scopedQuestionIsCustodyOnly || retainedExpiredCustodyQuestion !== null;
   const globalControl: ControlOverlay = {
     controlKey,
     deploymentKey: `asset:${assetId}`,
@@ -1117,7 +1122,7 @@ function adaptMintControl(
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
-    ...(scopedQuestionIsCustodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
+    ...(custodyQuestionSubject ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
     keyCustody,
     ...(control.keyCustodyAttestation?.kind === "hardware-wallet" && keyCustody === "unknown"
       ? { keyCustodyReviewUnavailable: true } : {}),
@@ -1990,6 +1995,22 @@ export function hasPublishedReserveReconciliationEvidence(
   return cadence != null && cadence !== "none" && cadence !== "undisclosed";
 }
 
+/**
+ * Durable lapse for documentation-class scoped questions (PLAN §4.2, contract
+ * C1). A lapsed custody-only question stays a `stale` factor gap with its
+ * original review date instead of silently disappearing at 90 days.
+ *
+ * Both the policy activation switch and the reason's declared retention are
+ * required, mirroring the policy schema's own cross-field check, so a captured
+ * overlay cannot be retained after the policy is rolled back.
+ */
+const RETAIN_EXPIRED_SCOPED_QUESTIONS = (() => {
+  const documentation = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation;
+  return documentation?.retainExpiredScopedQuestions === true &&
+    documentation.reasons.some((entry) =>
+      entry.reason === "no-scoring-path" && entry.retention === "stale-documentation");
+})();
+
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
@@ -2040,11 +2061,31 @@ function adaptMintReview(
   const upgradeability = profile.upgradeability;
   // A scoped question softens only the one control it names, and only while
   // its review date sits inside the freshness window.
-  const freshScopedQuestions = (profile.review.scopedQuestions ?? []).filter((question) =>
-    clockSec - parseBoundedDateSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`) <= V9_SCOPED_QUESTION_MAX_AGE_SEC);
-  const freshScopedQuestionRefs = new Set(freshScopedQuestions.map((question) => question.controlRef.toLowerCase()));
-  const semanticQuestionRefs = new Set(freshScopedQuestions.filter((question) =>
-    question.subject !== "key-custody-independence").map((question) => question.controlRef.toLowerCase()));
+  const scopedQuestions = (profile.review.scopedQuestions ?? []).map((question) => ({
+    question,
+    reviewedAtSec: parseBoundedDateSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`),
+  }));
+  const freshScopedQuestions = scopedQuestions.filter(({ reviewedAtSec }) =>
+    clockSec - reviewedAtSec <= V9_SCOPED_QUESTION_MAX_AGE_SEC);
+  const freshScopedQuestionRefs = new Set(freshScopedQuestions.map(({ question }) => question.controlRef.toLowerCase()));
+  const semanticQuestionRefs = new Set(freshScopedQuestions.filter(({ question }) =>
+    question.subject !== "key-custody-independence").map(({ question }) => question.controlRef.toLowerCase()));
+  // A lapsed custody-only question remains documentation: retain the authored
+  // review date as stale evidence instead of silently dropping the datum.
+  const expiredScopedQuestions = RETAIN_EXPIRED_SCOPED_QUESTIONS
+    ? scopedQuestions.filter(({ question, reviewedAtSec }) =>
+        question.subject === "key-custody-independence" && clockSec - reviewedAtSec > V9_SCOPED_QUESTION_MAX_AGE_SEC)
+    : [];
+  const expiredCustodyQuestionByRef = new Map<string, { question: MintAuthorityScopedQuestion; reviewedAtSec: number }>();
+  for (const entry of expiredScopedQuestions) {
+    const ref = entry.question.controlRef.toLowerCase();
+    const existing = expiredCustodyQuestionByRef.get(ref);
+    // Never re-date: a duplicated ref keeps its most recent authored review.
+    if (existing === undefined || entry.reviewedAtSec > existing.reviewedAtSec) expiredCustodyQuestionByRef.set(ref, entry);
+  }
+  const expiredCustodyQuestionFor = (control: MintAuthorityControl) =>
+    (control.address != null ? expiredCustodyQuestionByRef.get(`${control.chain ?? ""}:${control.address.toLowerCase()}`) : undefined)
+    ?? expiredCustodyQuestionByRef.get(control.label.toLowerCase()) ?? null;
   const authoredControls = profile.controls ?? [];
   const controlProjections = compileReviewedMintControlScopes(profile, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC).map((projection) =>
     resolvedBook.diagnostics.length === 0 ? projection : { ...projection, processDiagnostics: sortV1005ProcessDiagnostics([...projection.processDiagnostics ?? [], ...resolvedBook.diagnostics]) });
@@ -2063,8 +2104,9 @@ function adaptMintReview(
   // An unresolved aggregate inventory does not erase controls that were
   // individually identified. Retain those controls in a partial review while
   // the unresolved deployment surfaces remain bounded and fail closed.
-  const controls = authoredControls.flatMap((control, index, allControls) =>
-    adaptMintControl(
+  const controls = authoredControls.flatMap((control, index, allControls) => {
+    const retainedExpiredCustodyQuestion = expiredCustodyQuestionFor(control);
+    const rows = adaptMintControl(
       meta.id,
       control,
       profile.mintIncidents,
@@ -2088,8 +2130,23 @@ function adaptMintReview(
         semanticQuestionRefs.has(control.label.toLowerCase())) &&
         ((control.address != null && freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
           freshScopedQuestionRefs.has(control.label.toLowerCase())),
-    ),
-  ).map((control) => resolvedBook.diagnostics.length === 0 ? control : { ...control, executionScopeComplete: false,
+      retainedExpiredCustodyQuestion,
+    );
+    if (retainedExpiredCustodyQuestion !== null) {
+      // The question's own review is the evidence: its observation stays the
+      // authored date, so the retained factor gap is never re-dated.
+      evidence.add({
+        componentKeys: rows.map((row) => `control:${row.controlKey}:keyCustody`),
+        sourceId: "stablecoin-meta.mint-authority.scoped-question",
+        reviewedAtSec: retainedExpiredCustodyQuestion.reviewedAtSec,
+        publishedBy: "unknown",
+        confidence: "manual-review",
+        payload: retainedExpiredCustodyQuestion.question,
+        maxAgeSec: V9_SCOPED_QUESTION_MAX_AGE_SEC,
+      });
+    }
+    return rows;
+  }).map((control) => resolvedBook.diagnostics.length === 0 ? control : { ...control, executionScopeComplete: false,
     scopeDiagnostics: [...new Set([...control.scopeDiagnostics ?? [], ...resolvedBook.diagnostics.map((row) => row.code)])].sort() });
   const directMintControl =
     controls.find((control) => control.controlKind !== "bridge" && control.capabilities.includes("mint")) ?? null;
