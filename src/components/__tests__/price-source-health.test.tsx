@@ -1,4 +1,5 @@
 // @vitest-environment jsdom
+import { getPriceSourceHealthMissingCounts } from "@shared/lib/pricing-sources";
 import { render, screen, within } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 import { PriceSourceHealthSchema } from "@shared/types/pricing-source-health";
@@ -9,6 +10,9 @@ import { makeHealthyStatusResponse } from "@/test-utils/status-fixtures";
 const legacy = { totalAssets: 567, lastSync: 100,
   confidenceDistribution: { high: 115, "single-source": 325, low: 20, fallback: 1 },
   sourceDistribution: { missing: 106 } };
+it.each([[-5, 0, 7], [99, 7, 0], [3, 3, 4]])("bounds closure count %s by the remaining missing rows", (input, scheduledClosure, unacknowledged) => {
+  expect(getPriceSourceHealthMissingCounts(9, 2, input)).toEqual({ acknowledged: 2, scheduledClosure, unacknowledged });
+});
 describe("price source health scope", () => {
   it("labels old payloads as cache-wide instead of claiming active scope", () => {
     render(<PriceSourceHealthCard health={PriceSourceHealthSchema.parse(legacy)} nowSeconds={100} />);
@@ -80,6 +84,17 @@ describe("price confidence severity calibration", () => {
     expect(screen.getByText("115").className).toContain("text-muted-foreground");
   });
 
+  it("keeps scheduled closures distinct from acknowledgements", () => {
+    const health = PriceSourceHealthSchema.parse({ ...liveShape, active: {
+      ...liveShape.active, sourceDistribution: { missing: 7 }, acknowledgedMissingCount: 2,
+      scheduledClosureMissingCount: 5,
+    } });
+    render(<PriceSourceHealthCard health={health} nowSeconds={100} />);
+    const tile = screen.getByText("Missing").parentElement!;
+    expect(within(tile).getByText("0").className).toContain("text-muted-foreground");
+    expect(within(tile).getByText(/2 acknowledged · 5 market closed/)).toBeTruthy();
+  });
+
   it("drives the Missing tile from unacknowledged gaps only", () => {
     const health = PriceSourceHealthSchema.parse({
       ...liveShape,
@@ -94,14 +109,15 @@ describe("price confidence severity calibration", () => {
 
 describe("Markets and Missing tile review parity", () => {
   it.each([
-    ["all acknowledged", 4, 4, true, 0, "healthy"],
-    ["partially acknowledged", 4, 2, true, 2, "watch"],
-    ["expired review producer count", 4, 0, true, 4, "critical"],
-    ["legacy full-cache fallback", 4, undefined, false, 4, "critical"],
-  ] as const)("uses unacknowledged counts for %s", (_label, missing, acknowledgedMissingCount, active, expectedCount, severity) => {
+    ["all acknowledged", 4, 4, true, 0, "healthy", undefined],
+    ["partially acknowledged", 4, 2, true, 2, "watch", undefined],
+    ["expired review producer count", 4, 0, true, 4, "critical", undefined],
+    ["legacy full-cache fallback", 4, undefined, false, 4, "critical", undefined],
+    ["calendar closed", 5, 0, true, 0, "healthy", 5],
+  ] as const)("uses unacknowledged counts for %s", (_label, missing, acknowledgedMissingCount, active, expectedCount, severity, scheduledClosureMissingCount) => {
     const distribution = {
       totalAssets: 10, confidenceDistribution: { high: 6, "single-source": 0, low: 0, fallback: 0 },
-      sourceDistribution: { missing }, acknowledgedMissingCount,
+      sourceDistribution: { missing }, acknowledgedMissingCount, scheduledClosureMissingCount,
     };
     const health = PriceSourceHealthSchema.parse({
       ...distribution, lastSync: 100, ...(active ? { active: distribution } : {}),

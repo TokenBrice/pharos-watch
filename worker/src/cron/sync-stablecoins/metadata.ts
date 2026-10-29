@@ -33,6 +33,7 @@ import {
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
   resolveStablecoinPriceGapReviews,
+  resolveStablecoinScheduledPriceClosures,
   type PreviousStablecoinActivePriceCoverage,
   type StablecoinPriceCoverageAsset,
   type StablecoinPublicationCoverage,
@@ -525,16 +526,20 @@ export function buildStablecoinsSyncResult(input: {
   activeHealth.sourceDistribution.missing += absentActiveCount;
   // Acknowledged price gaps stay in the raw missing count but stop driving the
   // admin Missing tile: only valid, unexpired reviews count, so an expired
-  // review automatically re-alerts on the next sync. Absent catalog rows are
+  // review automatically re-alerts on the next sync. Scheduled closures are
+  // counted separately; they are never acknowledgements. Absent catalog rows are
   // missing prices too and acknowledge the same way.
   const resolvedGapReviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
+  const scheduledClosures = resolveStablecoinScheduledPriceClosures([...ACTIVE_IDS], nowSec);
   const missingActiveIds = new Set(activeAssets.filter(hasMissingPrice).map((asset) => asset.id));
   for (const id of ACTIVE_IDS) {
     if (!presentActiveIds.has(id)) missingActiveIds.add(id);
   }
   let acknowledgedMissingCount = 0;
+  let scheduledClosureMissingCount = 0;
   for (const id of missingActiveIds) {
-    if (resolvedGapReviews.activeById.has(id)) acknowledgedMissingCount++;
+    if (scheduledClosures.has(id)) scheduledClosureMissingCount++;
+    else if (resolvedGapReviews.activeById.has(id)) acknowledgedMissingCount++;
   }
   priceSourceHealth.active = {
     sourceDistribution: activeHealth.sourceDistribution,
@@ -543,6 +548,7 @@ export function buildStablecoinsSyncResult(input: {
     pricedMarketCapUsd: activeHealth.pricedMarketCapUsd,
     supplyCoverage: activeHealth.supplyCoverage,
     acknowledgedMissingCount,
+    scheduledClosureMissingCount,
     totalAssets: ACTIVE_IDS.size,
   };
   const pricingSourceAuditReport = buildPricingSourceAuditReport(input.assets, input.providerDiagnostics ?? []);
@@ -553,6 +559,7 @@ export function buildStablecoinsSyncResult(input: {
   const publicationGap = classifyStablecoinPublicationGap(publicationCoverage);
   const activePriceCoverage = input.activePriceCoverage
     ?? evaluateStablecoinActivePriceCoverage(input.assets, undefined, {
+      nowSec,
       previousCoverage: input.previousActivePriceCoverage,
       previousAcceptedAssetsById: input.previousAcceptedAssetsById,
     });

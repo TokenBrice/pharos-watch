@@ -9,9 +9,11 @@ import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, hasActivePriceGapMarketCapEvi
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageGapAcknowledgement,
+  ActivePriceCoverageScheduledClosure,
   ActivePriceCoverageHealth,
 } from "@shared/types/status";
 import { parseJsonObject } from "./json-parse";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
 
@@ -58,8 +60,7 @@ export type MissingActivePriceDetail = ActivePriceCoverageGap;
 /** A dated, owned, expiring review that acknowledges one active stablecoin's
  * missing live price. The gap stays listed as missing in every coverage
  * payload; it stops being alert-eligible only while the review applies, before
- * `expiresAt`. Renewal requires a fresh review; expiry or leaving its weekly
- * window re-arms the alert. */
+ * `expiresAt`. Renewal requires a fresh review; expiry re-arms the alert. */
 export interface StablecoinPriceGapReview {
   stablecoinId: string;
   owner: string;
@@ -70,8 +71,6 @@ export interface StablecoinPriceGapReview {
   reviewedAt: number;
   /** Unix seconds; policy caps acknowledgement at roughly 30 days per review. */
   expiresAt: number;
-  /** UTC week seconds since Sunday 00:00; start inclusive, end exclusive. */
-  weeklyUtcWindow?: { start: number; end: number };
 }
 
 /** The writer has measured current counts; only prior-generation continuity
@@ -254,89 +253,6 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 28, 14, 13) / 1000,
   },
   {
-    stablecoinId: "cadm-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-18 23:45 UTC: Mento's recurring weekend FX closure empties the CADm Broker route for Celo token 0xff4ab19391af240c311c54200a492233052b6325 and sortedOracles feed 0x20869cf54ead821c45dfb2ab0c23d2e10fbb65a4. At canonical block 80462413 (2026-10-18 22:39:31 UTC), Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad through manager 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901 reverted 'no valid median'; the median stopped Friday 2026-10-16 20:57:15 UTC and isOldestReportExpired was true. Rechecked after Sunday reopen at canonical block 80466200 (23:42:38 UTC, matching opening/closing hash): median 23:41:09 UTC, expired false, executable quote 0.70685260828 USDm per CADm. CoinGecko celo-canadian-dollar remains dated 2026-09-30 20:37:20 UTC with no tickers, so no alternate weekend market is assumed. Acknowledge only Friday 21:00 to Sunday 23:00 UTC; weekday failures and expiry must alert, with no oracle freshness or price-floor changes.",
-    sources: [
-      "https://forno.celo.org",
-      "https://celoscan.io/block/80462413",
-      "https://celoscan.io/block/80466200",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/BiPoolManager.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/celo-canadian-dollar",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 18, 23, 45) / 1000,
-    expiresAt: Date.UTC(2026, 10, 1, 22) / 1000,
-  },
-  {
-    stablecoinId: "audm-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-18 23:45 UTC: Mento's recurring weekend FX closure empties the AUDm Broker route for Celo token 0x7175504c455076f15c04a2f90a8e352281f492f9 and sortedOracles feed 0x646bd504c3864ea5b8a6b6d25743721f61864a07. At canonical block 80462413 (2026-10-18 22:39:31 UTC), Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad through manager 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901 reverted 'no valid median'; the median stopped Friday 2026-10-16 20:58:15 UTC and isOldestReportExpired was true. Rechecked after Sunday reopen at canonical block 80466200 (23:42:38 UTC, matching opening/closing hash): median 23:42:07 UTC, expired false, executable quote 0.6957548 USDm per AUDm. CoinGecko celo-australian-dollar remains dated 2026-09-25 18:54:50 UTC with no tickers, so no alternate weekend market is assumed. Acknowledge only Friday 21:00 to Sunday 23:00 UTC; weekday failures and expiry must alert, with no oracle freshness or price-floor changes.",
-    sources: [
-      "https://forno.celo.org",
-      "https://celoscan.io/block/80462413",
-      "https://celoscan.io/block/80466200",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/BiPoolManager.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/celo-australian-dollar",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 18, 23, 45) / 1000,
-    expiresAt: Date.UTC(2026, 10, 1, 22) / 1000,
-  },
-  {
-    stablecoinId: "chfm-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Mento's v3 FX oracle gate closes the only executable CHFm venue every weekend: the CHFm/USDm FPMM 0xdc81135f…3e8b8 prices getAmountOut through OracleAdapter 0xa472fbbf…4383a getFXRateIfValid, which reverts FXMarketClosed (selector 0xa407143a) from Friday 21:00 UTC until Sunday 23:00 UTC (MarketHoursBreaker weekend rules), and the Chainlink-backed sortedOracles reports stop with the Friday close (last reports 2026-09-25 20:56-20:59 UTC, ~92ks stale by Saturday evening). The mento-fpmm lane therefore returns empty every weekend and re-prices automatically at the Sunday 23:00 UTC reopen (quote verified live again 2026-09-20 23:30 UTC). No admissible alternative lane exists: CoinGecko cchf is stale since 2026-07-29, DefiLlama publishes no list price, and DexScreener lists no CHFm pair. Renew while Mento keeps the weekly FX closure; a weekday gap is a different cause.",
-    sources: [
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/breakers/MarketHoursBreaker.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/FPMM.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/cchf",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 27) / 1000,
-    expiresAt: Date.UTC(2026, 9, 25) / 1000,
-  },
-  {
-    stablecoinId: "copm-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Mento's weekend FX closure also empties the only executable COPm lane: Broker 0x777a8255…b4cad getAmountOut on the COPm/USDm BiPoolManager exchange reverts 'no valid median' because sortedOracles reports for feed 0x0196d1f4…39f1 stop at the Friday close (last report 2026-09-25 20:58 UTC, isOldestReportExpired true, median ~92ks stale by Saturday evening) and resume only at the Sunday 23:00 UTC reopen (fresh median verified 2026-09-20 23:30 UTC). The mento-broker lane re-prices COPm automatically after the reopen. No admissible alternative lane exists: CoinGecko ccop is stale since 2026-08-16 and DexScreener's COPm pools hold at most $373 liquidity against the $50K address-provider floor. Renew while Mento keeps the weekly FX closure; a weekday gap is a different cause.",
-    sources: [
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/BiPoolManager.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/ccop",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 27) / 1000,
-    expiresAt: Date.UTC(2026, 9, 25) / 1000,
-  },
-  {
-    stablecoinId: "jpym-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Mento's weekend FX closure empties the only executable JPYm lane (pricing 6.39 moved JPYm off nominal par onto mento-fpmm): the JPYm/USDm FPMM 0x9861f6d2…2b2b41 getAmountOut reverts FXMarketClosed (selector 0xa407143a) through the same OracleAdapter gate as CHFm, verified at 2026-09-26 12:00 UTC (block 78523242) and 2026-09-27 12:00 UTC, and quotes again on weekdays (0.00635164772 USDm per JPYm at 2026-09-28 12:00 UTC). The mento-fpmm lane re-prices JPYm automatically after the Sunday 23:00 UTC reopen. No admissible alternative lane exists: CoinGecko celo-japanese-yen is stale since 2026-08-19 and has no other tracked venue. Renew while Mento keeps the weekly FX closure; a weekday gap is a real lane failure.",
-    sources: [
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/breakers/MarketHoursBreaker.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/FPMM.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/celo-japanese-yen",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 28) / 1000,
-    expiresAt: Date.UTC(2026, 9, 25) / 1000,
-  },
-  {
     stablecoinId: "usdfc-secured-finance",
     owner: "ops",
     reason:
@@ -374,6 +290,131 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     expiresAt: Date.UTC(2026, 9, 30, 13, 57) / 1000,
   },
 ];
+
+/** Standing source-calendar review, separate from temporary gap acknowledgements.
+ * The calendar suppresses operator escalation only; missing counts and streaks remain. */
+export const STABLECOIN_MARKET_HOURS_CALENDARS = [{
+  calendarId: "mento-fx",
+  owner: "ops",
+  reviewReason: "Owner-reviewed 2026-10-29: Mento FX oracle market hours close the only admitted routes for these five assets. Keep missing prices unavailable during scheduled closures; off-calendar gaps alert normally.",
+  sources: [
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/oracles/breakers/MarketHoursBreaker.sol",
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/oracles/OracleAdapter.sol",
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/oracles/BreakerBox.sol",
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/swap/BiPoolManager.sol",
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/swap/FPMM.sol",
+  ],
+  reviewedAt: Date.UTC(2026, 9, 29, 10, 35) / 1000,
+  reviewDeadline: Date.UTC(2027, 9, 29, 10, 35) / 1000,
+  assets: [
+    { stablecoinId: "cadm-mento", lane: "mento-broker" },
+    { stablecoinId: "audm-mento", lane: "mento-broker" },
+    { stablecoinId: "chfm-mento", lane: "mento-fpmm" },
+    { stablecoinId: "copm-mento", lane: "mento-broker" },
+    { stablecoinId: "jpym-mento", lane: "mento-fpmm" },
+  ],
+}] as const;
+
+/** Exact UTC rules verified at the registry's pinned MarketHoursBreaker commit. */
+function isMentoMarketClosed(nowSec: number): boolean {
+  const clock = new Date(nowSec * 1000);
+  const day = clock.getUTCDay();
+  const hour = clock.getUTCHours();
+  const month = clock.getUTCMonth();
+  const date = clock.getUTCDate();
+  return (day === 5 && hour >= 21) || day === 6 || (day === 0 && hour < 23)
+    || (month === 11 && ((date === 24 || date === 31) && hour >= 22 || date === 25))
+    || (month === 0 && date === 1);
+}
+
+function mostRecentMentoClosureEnd(nowSec: number): number {
+  const clock = new Date(nowSec * 1000);
+  const year = clock.getUTCFullYear();
+  const midnight = Date.UTC(year, clock.getUTCMonth(), clock.getUTCDate()) / 1000;
+  let sundayReopen = midnight - clock.getUTCDay() * 86_400 + 23 * 3600;
+  if (sundayReopen > nowSec) sundayReopen -= 7 * 86_400;
+  // Reject nominal ends still inside another closure (for example Christmas on Sunday).
+  return Math.max(...[
+    sundayReopen,
+    Date.UTC(year, 11, 26) / 1000,
+    Date.UTC(year, 0, 2) / 1000,
+    Date.UTC(year - 1, 11, 26) / 1000,
+  ].filter((end) => end <= nowSec && isMentoMarketClosed(end - 1) && !isMentoMarketClosed(end)));
+}
+
+type StablecoinMarketHoursCalendar = {
+  calendarId: string;
+  owner: string;
+  reviewReason: string;
+  sources: readonly string[];
+  reviewedAt: number;
+  reviewDeadline: number;
+  assets: readonly { stablecoinId: string; lane: string }[];
+};
+
+export function resolveStablecoinMarketHours(
+  expectedActiveIds: readonly string[],
+  nowSec: number,
+  calendars: readonly StablecoinMarketHoursCalendar[] = STABLECOIN_MARKET_HOURS_CALENDARS,
+): {
+  closedById: ReadonlyMap<string, ActivePriceCoverageScheduledClosure>;
+  alertSuppressedIds: ReadonlySet<string>;
+  expiredCalendarIds: string[];
+  invalidCalendarIds: string[];
+} {
+  const closedById = new Map<string, ActivePriceCoverageScheduledClosure>();
+  const alertSuppressedIds = new Set<string>();
+  const expiredCalendarIds = new Set<string>();
+  const invalidCalendarIds = new Set<string>();
+  const activeIds = new Set(expectedActiveIds);
+  const closed = validReviewSeconds(nowSec) && isMentoMarketClosed(nowSec);
+  // Compact history has no per-generation clocks. Require the equivalent number
+  // of open-market cadence periods without changing the measured missing streak.
+  const reopeningGate = validReviewSeconds(nowSec)
+    && nowSec - mostRecentMentoClosureEnd(nowSec)
+      < ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS * CRON_INTERVALS["sync-stablecoins"];
+  for (const calendar of calendars) {
+    if (!calendar.assets.some((asset) => activeIds.has(asset.stablecoinId))) continue;
+    if (!validReviewSeconds(nowSec) || calendar.calendarId !== "mento-fx"
+      || !isNonEmpty(calendar.owner) || !isNonEmpty(calendar.reviewReason)
+      || !calendar.sources.length || !calendar.sources.every(isHttpsSource)
+      || !validReviewSeconds(calendar.reviewedAt) || !validReviewSeconds(calendar.reviewDeadline)
+      || calendar.reviewedAt > nowSec || calendar.reviewDeadline <= calendar.reviewedAt
+      || calendar.assets.some((asset) => !isNonEmpty(asset.lane))) {
+      invalidCalendarIds.add(calendar.calendarId);
+      continue;
+    }
+    if (calendar.reviewDeadline <= nowSec) {
+      expiredCalendarIds.add(calendar.calendarId);
+      continue;
+    }
+    for (const asset of calendar.assets) {
+      if (!activeIds.has(asset.stablecoinId)) continue;
+      if (closed || reopeningGate) alertSuppressedIds.add(asset.stablecoinId);
+      if (!closed) continue;
+      closedById.set(asset.stablecoinId, {
+        calendarId: calendar.calendarId,
+        reason: "market-closed",
+        lane: asset.lane,
+        owner: calendar.owner,
+        reviewReason: calendar.reviewReason,
+        sources: [...calendar.sources],
+        reviewedAt: calendar.reviewedAt,
+        reviewDeadline: calendar.reviewDeadline,
+      });
+    }
+  }
+  return { closedById, alertSuppressedIds,
+    expiredCalendarIds: [...expiredCalendarIds].sort(), invalidCalendarIds: [...invalidCalendarIds].sort() };
+}
+
+export function resolveStablecoinScheduledPriceClosures(
+  expectedActiveIds: readonly string[],
+  nowSec: number,
+  calendars: readonly StablecoinMarketHoursCalendar[] = STABLECOIN_MARKET_HOURS_CALENDARS,
+): ReadonlyMap<string, ActivePriceCoverageScheduledClosure> {
+  return resolveStablecoinMarketHours(expectedActiveIds, nowSec, calendars).closedById;
+}
 
 export interface ResolvedStablecoinPriceGapReviews {
   activeById: ReadonlyMap<string, StablecoinPriceGapReview>;
@@ -416,11 +457,6 @@ export function resolveStablecoinPriceGapReviews(
       || !validReviewSeconds(review.expiresAt)
       || review.expiresAt <= review.reviewedAt
       || review.reviewedAt > nowSec
-      || (review.weeklyUtcWindow != null && (!Number.isInteger(review.weeklyUtcWindow.start)
-        || !Number.isInteger(review.weeklyUtcWindow.end)
-        || review.weeklyUtcWindow.start < 0 || review.weeklyUtcWindow.start >= 7 * 86_400
-        || review.weeklyUtcWindow.end < 0 || review.weeklyUtcWindow.end >= 7 * 86_400
-        || review.weeklyUtcWindow.start === review.weeklyUtcWindow.end))
     ) {
       invalidGapReviewIds.add(review.stablecoinId);
       continue;
@@ -428,13 +464,6 @@ export function resolveStablecoinPriceGapReviews(
     if (review.expiresAt <= nowSec) {
       expiredGapReviewIds.add(review.stablecoinId);
       continue;
-    }
-    if (review.weeklyUtcWindow) {
-      const clock = new Date(nowSec * 1000);
-      const weekSecond = clock.getUTCDay() * 86_400 + clock.getUTCHours() * 3600
-        + clock.getUTCMinutes() * 60 + clock.getUTCSeconds();
-      const { start, end } = review.weeklyUtcWindow;
-      if (!(start < end ? weekSecond >= start && weekSecond < end : weekSecond >= start || weekSecond < end)) continue;
     }
     activeById.set(review.stablecoinId, review);
   }
@@ -626,6 +655,9 @@ export function parseMissingActivePriceDetail(
     : options.reviewsById
       ? options.reviewsById.get(entry.stablecoinId) ?? null
       : activePriceGapReviewForId(entry.stablecoinId, options.nowSec ?? Math.floor(Date.now() / 1000));
+  const marketHours = resolveStablecoinMarketHours([entry.stablecoinId], options.nowSec ?? Math.floor(Date.now() / 1000));
+  const scheduledClosure = positiveFiniteNumberOrNull(entry.currentPrice) != null ? null
+    : marketHours.closedById.get(entry.stablecoinId) ?? null;
   return {
     stablecoinId: entry.stablecoinId,
     symbol: stringOrNull(entry.symbol) ?? entry.stablecoinId,
@@ -647,10 +679,11 @@ export function parseMissingActivePriceDetail(
     lastAcceptedSource: stringOrNull(entry.lastAcceptedSource),
     lastAcceptedObservedAt: dateSecondsOrNull(entry.lastAcceptedObservedAt),
     rejectionReason: stringOrNull(entry.rejectionReason) ?? "no-accepted-price",
-    alertEligible: review == null
+    scheduledClosure,
+    alertEligible: review == null && !marketHours.alertSuppressedIds.has(entry.stablecoinId)
       && (consecutiveMissingGenerations == null
         || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS),
-    acknowledgedGap: review == null ? null : acknowledgementFromReview(review),
+    acknowledgedGap: review == null || scheduledClosure != null ? null : acknowledgementFromReview(review),
   };
 }
 
@@ -860,6 +893,7 @@ export function evaluateStablecoinActivePriceCoverage(
   const missingActiveAssets: MissingActivePriceDetail[] = [];
   const alertEligibleIds: string[] = [];
   const acknowledgedGapIds: string[] = [];
+  const scheduledClosureGapIds: string[] = [];
   const previousMissingIds = new Set(options.previousCoverage?.missingActiveIds ?? []);
   const previousMissingDetailsById = new Map(
     (options.previousCoverage?.missingActiveAssets ?? []).map((detail) => [detail.stablecoinId, detail] as const),
@@ -870,6 +904,7 @@ export function evaluateStablecoinActivePriceCoverage(
     nowSec,
     options.priceGapReviews,
   );
+  const marketHours = resolveStablecoinMarketHours(expectedActiveIds, nowSec);
   let presentActiveCount = 0;
   let affectedMarketCapUsd: number | null = 0;
   let nominalReferenceMarketCapUsd: number | null = 0;
@@ -919,9 +954,11 @@ export function evaluateStablecoinActivePriceCoverage(
     const lastAcceptedPrice = previousAccepted?.price ?? previousDetail?.lastAcceptedPrice ?? null;
     const lastAcceptedSource = previousAccepted?.source ?? previousDetail?.lastAcceptedSource ?? null;
     const lastAcceptedObservedAt = previousAccepted?.observedAt ?? previousDetail?.lastAcceptedObservedAt ?? null;
-    const acknowledgedReview = resolvedReviews.activeById.get(stablecoinId) ?? null;
+    const scheduledClosure = marketHours.closedById.get(stablecoinId) ?? null;
+    if (scheduledClosure) scheduledClosureGapIds.push(stablecoinId);
+    const acknowledgedReview = scheduledClosure ? null : resolvedReviews.activeById.get(stablecoinId) ?? null;
     if (acknowledgedReview) acknowledgedGapIds.push(stablecoinId);
-    const alertEligible = acknowledgedReview == null
+    const alertEligible = acknowledgedReview == null && !marketHours.alertSuppressedIds.has(stablecoinId)
       && (consecutiveMissingGenerations == null || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS);
     if (alertEligible) alertEligibleIds.push(stablecoinId);
     maxConsecutiveMissingGenerations = maxConsecutiveMissingGenerations == null || consecutiveMissingGenerations == null
@@ -949,6 +986,7 @@ export function evaluateStablecoinActivePriceCoverage(
       lastAcceptedObservedAt,
       rejectionReason: priceRejectionReason(asset),
       alertEligible,
+      scheduledClosure,
       acknowledgedGap: acknowledgedReview == null ? null : acknowledgementFromReview(acknowledgedReview),
     });
   }
@@ -969,8 +1007,11 @@ export function evaluateStablecoinActivePriceCoverage(
     missingActiveAssets,
     alertEligibleCount: alertEligibleIds.length,
     alertEligibleIds,
+    scheduledClosureGapIds,
     acknowledgedGapIds,
     acknowledgedGapCount: acknowledgedGapIds.length,
+    expiredMarketHoursCalendarIds: marketHours.expiredCalendarIds,
+    invalidMarketHoursCalendarIds: marketHours.invalidCalendarIds,
     expiredGapReviewIds: resolvedReviews.expiredGapReviewIds,
     invalidGapReviewIds: resolvedReviews.invalidGapReviewIds,
     maxConsecutiveMissingGenerations,

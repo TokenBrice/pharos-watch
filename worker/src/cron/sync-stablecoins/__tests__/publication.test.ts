@@ -13,6 +13,7 @@ import * as post from "../post-enrichment";
 import * as notices from "../telegram-tracked-additions";
 import * as circuit from "../../../lib/circuit-breaker";
 import { getCache, getPriceCache } from "../../../lib/db-cache";
+import * as coverage from "../../../lib/stablecoin-publication-coverage";
 import { evaluateStablecoinActivePriceCoverage } from "../../../lib/stablecoin-publication-coverage";
 import { createEmptyGtProbeStats } from "../../../lib/geckoterminal-price-probe-stats";
 import {
@@ -41,7 +42,7 @@ function publicationInput(path: "main" | "fallback", db: D1Database, assets: Peg
 
 describe("publication path authority", () => {
   it.each(["main", "fallback"] as const)("preserves %s operational labels, terminal metadata and circuit bookkeeping", async (path) => {
-    vi.spyOn(Date, "now").mockReturnValue(1_800_000_000_000);
+    vi.spyOn(Date, "now").mockReturnValue(1_800_000_900_000);
     const { db } = fixtures.open();
     const assets = [makePeggedAsset({
       id: "fixture-usd", price: 1, pegMechanism: "fiat-backed",
@@ -60,11 +61,13 @@ describe("publication path authority", () => {
       depegErrorCount: 0, depegErrors: [], providerDiagnostics: [], depegObservation: census,
     });
     const record = vi.spyOn(circuit, "recordOutcome");
+    const evaluated = vi.spyOn(coverage, "evaluateStablecoinActivePriceCoverage");
     const stages: string[] = [];
     const result = await runStablecoinsPostIntakePublication({
       ...publicationInput(path, db, assets),
       reportProgress: async (update) => { stages.push(update.stage!); },
     });
+    expect(evaluated).toHaveBeenCalledWith(assets, undefined, expect.objectContaining({ nowSec: 1_800_000_000 }));
     expect(stages).toEqual(path === "main"
       ? ["staleness-check", "cache-validation", "cache-write", "depeg-pipeline", "complete"]
       : ["fallback-staleness-check", "fallback-cache-validation", "fallback-cache-write", "fallback-depeg-pipeline", "complete"]);

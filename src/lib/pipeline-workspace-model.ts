@@ -131,7 +131,7 @@ export function buildPipelineModeSummaries(data: StatusResponse): PipelineModeSu
         marketStates.push("unknown");
         marketCount += 1;
       } else {
-        const { unacknowledged } = getPriceSourceHealthMissingCounts(missing, priceHealth.acknowledgedMissingCount);
+        const { unacknowledged } = getPriceSourceHealthMissingCounts(missing, priceHealth.acknowledgedMissingCount, priceHealth.scheduledClosureMissingCount);
         const severity = getMissingPriceTileSeverity(unacknowledged);
         marketStates.push(severity === "red" ? "critical" : severity === "amber" ? "watch" : severity === "green" ? "healthy" : "unknown");
         marketCount += severity === "neutral" ? 1 : unacknowledged;
