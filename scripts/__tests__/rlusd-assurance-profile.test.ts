@@ -13,14 +13,14 @@ const popplerAvailable = spawnSync("pdftotext", ["-v"]).status === 0 && spawnSyn
 describe("RLUSD reviewed offline compiler", () => {
   it("rejects a reversed examined-column header rather than blending periods", () => {
     const check = PROFILE.requiredText.find((entry) => entry.label === "month-end column order")!;
-    expect(check.pattern.test("August 31, 2026 August 17, 2026")).toBe(false);
+    expect(check.pattern.test("September 30, 2026 September 21, 2026")).toBe(false);
   });
 
   describe.skipIf(!popplerAvailable)("PDF extraction (requires optional Poppler pdftotext and pdfinfo)", () => {
     let artifact: Parameters<typeof prepareAssuranceExtractionText>[1];
 
     beforeAll(() => {
-      const pdf = fileURLToPath(new URL("./fixtures/rlusd-august-2026.pdf", import.meta.url));
+      const pdf = fileURLToPath(new URL("./fixtures/rlusd-september-2026.pdf", import.meta.url));
       const bytes = readFileSync(pdf);
       const text = execFileSync("pdftotext", ["-layout", pdf, "-"], { encoding: "utf8" });
       const pageCount = Number(execFileSync("pdfinfo", [pdf], { encoding: "utf8" }).match(/^Pages:\s+(\d+)/m)?.[1]);
