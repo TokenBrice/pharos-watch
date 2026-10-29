@@ -76,6 +76,18 @@ jobs:
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: npm run test:pr -- --base=$PR_BASE_SHA --plan-out=.tmp/pr-test-plan.json
+      - name: Check new-asset evidence packet
+        # One invocation on the prepared workspace, never per validation shard:
+        # the receipt is bound to the post-addition registry fingerprint, so the
+        # gate needs the bootstrapped coins.generated.json plus the fetched base.
+        # The owner label bypasses only the open-question count.
+        env:
+          PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          NEW_ASSET_GATE_OVERRIDE: ${{ contains(github.event.pull_request.labels.*.name, 'new-asset-gate-override') }}
+        run: |
+          args=()
+          if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then args+=(--override); fi
+          npm run check:new-asset-evidence-packet -- "${args[@]}"
       - name: Generate validation matrix
         id: matrix
         env:
