@@ -699,12 +699,27 @@ const DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS = new WeakMap<
   SupplyReview,
   readonly V9DeploymentSupplyCensusDiagnosticV1[]
 >();
+// A rejected packet has no review object to hang its reasons on, and the asset
+// is exactly where a null review is diagnosed, so every admission is also kept
+// by asset id. Each build overwrites its own entry (including with an empty
+// list), the map is bounded by the active asset set, and only a run that built
+// this asset can read it.
+const DEPLOYMENT_SUPPLY_CENSUS_ASSET_DIAGNOSTICS = new Map<
+  string,
+  readonly V9DeploymentSupplyCensusDiagnosticV1[]
+>();
 
-/** Census outcomes for a review built this run; empty when none were recorded. */
+/**
+ * Census outcomes for a review built this run; empty when none were recorded.
+ * A null review reads the asset's own outcome, because a rejected packet never
+ * produces a review to carry it.
+ */
 export function deploymentSupplyCensusDiagnostics(
   review: SupplyReview | null | undefined,
+  assetId?: string,
 ): readonly V9DeploymentSupplyCensusDiagnosticV1[] {
-  return review == null ? [] : DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS.get(review) ?? [];
+  if (review != null) return DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS.get(review) ?? [];
+  return assetId === undefined ? [] : DEPLOYMENT_SUPPLY_CENSUS_ASSET_DIAGNOSTICS.get(assetId) ?? [];
 }
 
 /**
@@ -766,12 +781,18 @@ function admitDeploymentSupplyCensus(
     reject("conservation-breach");
     return rejected();
   }
+  // R4: the reason names the exact failed read. No usable aggregate
+  // denominator on this asset is an unavailable read, not a conservation
+  // mismatch: the packet's own conservation was checked above.
+  if (aggregateUsd === null || aggregateUsd <= 0) {
+    reject("read-unavailable");
+    return rejected();
+  }
   // The producer bounded each share against its own aggregate. Shares are only
   // comparable to this review's rows when both name the same denominator.
   const toleranceUsd = packet.conservation.absoluteToleranceUsd +
-    packet.conservation.relativeTolerance * Math.max(packet.conservation.aggregateSupplyUsd, aggregateUsd ?? 0);
-  if (aggregateUsd === null || aggregateUsd <= 0 ||
-    Math.abs(packet.conservation.aggregateSupplyUsd - aggregateUsd) > toleranceUsd) {
+    packet.conservation.relativeTolerance * Math.max(packet.conservation.aggregateSupplyUsd, aggregateUsd);
+  if (Math.abs(packet.conservation.aggregateSupplyUsd - aggregateUsd) > toleranceUsd) {
     reject("conservation-breach");
     return rejected();
   }
@@ -835,8 +856,11 @@ export function buildSafetyScoreV9SupplyReview(
     fixedInput,
     assetId,
     profile,
-    getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {}),
+    getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
   );
+  // Recorded before the review is built: an asset whose review is null still
+  // reports the packet's own rejection reasons through its asset id.
+  DEPLOYMENT_SUPPLY_CENSUS_ASSET_DIAGNOSTICS.set(assetId, census.diagnostics);
   const review = buildSupplyReview(fixedInput, assetId, profile, options, census);
   if (review !== null && census.diagnostics.length > 0) {
     DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS.set(review, census.diagnostics);
@@ -907,7 +931,7 @@ function buildSupplyReview(
   // rejected dedicated census must not certify its original positive subtotal.
   // An admitted deployment census is itself exhaustive (conserved, complete
   // roster, same aggregate), so it supplies its own denominator.
-  const aggregateUsd = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {});
+  const aggregateUsd = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
   const censusAdmitted = census.byChain.size > 0;
   const totalUsd = censusAdmitted || requiresExhaustiveProviderSupply
     ? aggregateUsd

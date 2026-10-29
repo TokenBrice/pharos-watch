@@ -876,6 +876,7 @@ function buildBridgeJoinDiagnostics(
   profileRoutes: readonly BridgeRouteDeployment[],
   chainRows: BridgeJoinChainRows | undefined,
   supplyReview: ExtensionAsset["supplyReview"],
+  assetId: string,
   bridgeClaimControls: readonly ControlOverlay[],
   applicabilityBranch: V9BridgeJoinDiagnosticsV1["applicabilityBranch"],
   unprovenRouteJoins: readonly V9BridgeSupplyRouteJoinV1[] = [],
@@ -941,7 +942,7 @@ function buildBridgeJoinDiagnostics(
     // Optional on the wire: only a run that actually admitted or rejected a
     // census packet records the band (byte-identical absence otherwise).
     ...(() => {
-      const censusDiagnostics = deploymentSupplyCensusDiagnostics(supplyReview);
+      const censusDiagnostics = deploymentSupplyCensusDiagnostics(supplyReview, assetId);
       return censusDiagnostics.length === 0 ? {} : { deploymentSupplyCensus: [...censusDiagnostics] };
     })(),
   };
@@ -1007,6 +1008,7 @@ export function adaptBridgeReview(
           profileRoutes,
           chainRows,
           supplyReview,
+          meta.id,
           [],
           "applicable",
         ),
@@ -1352,6 +1354,7 @@ export function adaptBridgeReview(
           profileRoutes,
           chainRows,
           supplyReview,
+          meta.id,
           bridgeClaimControls,
           // The evaluator never runs the sub-threshold join proof on a
           // not-applicable bridge review, so recording unproven rows here would
@@ -1374,6 +1377,7 @@ export function adaptBridgeReview(
         profileRoutes,
         chainRows,
         supplyReview,
+        meta.id,
         bridgeClaimControls,
         "applicable",
         buildUnprovenRouteJoins(meta.id, supplyReview, controls),

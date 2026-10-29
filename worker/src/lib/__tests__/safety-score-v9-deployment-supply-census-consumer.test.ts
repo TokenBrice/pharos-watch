@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import type { SafetyScoreV9DeploymentSupplyCensus } from "@shared/types/safety-score-v9-deployment-supply-census";
+import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
+import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
+import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 import {
   buildSafetyScoreV9SupplyReview,
   deploymentSupplyCensusDiagnostics,
@@ -23,6 +26,9 @@ const CENSUS_GENERATION_ID = `safety-score-v9-deployment-supply-census:v1:${"7".
 
 function profile(): BridgeRouteRiskProfile {
   return {
+    reviewedAt: new Date(CLOCK_SEC * 1000).toISOString().slice(0, 10),
+    confidence: "verified",
+    sources: [],
     routes: [
       { id: ETH_ROUTE, reviewDisposition: "reviewed", issuanceModel: "bridge-representation" },
       { id: ETH_SECOND_ROUTE, reviewDisposition: "reviewed", issuanceModel: "bridge-representation" },
@@ -281,5 +287,60 @@ describe("deployment supply census admission", () => {
       deploymentRouteKey: ETH_ROUTE,
       code: "census-rejected:observation-stale",
     });
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["zero", { circulating: { peggedUSD: 0 }, observedAtSec: CLOCK_SEC - 60 }],
+  ] as const)("names an unavailable denominator read, never a breach, when the aggregate is %s", (_label, aggregate) => {
+    const base = fixedInput(packet());
+    const input = {
+      ...base,
+      aggregateCirculatingById: aggregate === undefined ? {} : { [ASSET_ID]: aggregate },
+    } as SafetyScoreV9CompilerInput;
+    const result = buildSafetyScoreV9SupplyReview(input, ASSET_ID, profile())!;
+    expect(result.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(deploymentSupplyCensusDiagnostics(result)).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:read-unavailable" },
+    ]);
+  });
+
+  it("keeps conservation-breach for a packet bounded against another denominator", () => {
+    const result = review(packet({
+      conservation: { ...packet().conservation, aggregateSupplyUsd: AGGREGATE_USD * 2 },
+    }))!;
+    expect(result.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(deploymentSupplyCensusDiagnostics(result)).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:conservation-breach" },
+    ]);
+  });
+
+  it("publishes recorded rejections for an asset whose supply review is null", () => {
+    const meta = { id: ASSET_ID, bridgeRouteRisk: profile() } as unknown as V9ExtensionRegistryMeta;
+    const bound = fixedInput(packet());
+    // No per-chain rows, so no supply review exists to carry the diagnostics.
+    const input = {
+      ...bound,
+      chainCirculatingById: {},
+      safetyScoreV9DeploymentSupplyCensusBinding: {
+        ...bound.safetyScoreV9DeploymentSupplyCensusBinding!,
+        registryFingerprint: "0".repeat(64),
+      },
+    } as SafetyScoreV9CompilerInput;
+    expect(buildSafetyScoreV9SupplyReview(input, ASSET_ID, profile())).toBeNull();
+    const bridge = adaptBridgeReview(meta, null, 0, new ReviewEvidenceBuilder(ASSET_ID, CLOCK_SEC), CLOCK_SEC);
+    expect(bridge.review.diagnostics?.deploymentSupplyCensus).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:generation-mismatch" },
+    ]);
+
+    // The next build for the same asset has no packet, so nothing is carried over.
+    const cleared = {
+      ...fixedInput(undefined),
+      chainCirculatingById: {},
+      aggregateCirculatingById: {},
+    } as SafetyScoreV9CompilerInput;
+    expect(buildSafetyScoreV9SupplyReview(cleared, ASSET_ID, profile())).toBeNull();
+    const noBand = adaptBridgeReview(meta, null, 0, new ReviewEvidenceBuilder(ASSET_ID, CLOCK_SEC), CLOCK_SEC);
+    expect(noBand.review.diagnostics?.deploymentSupplyCensus).toBeUndefined();
   });
 });
