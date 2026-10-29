@@ -66,18 +66,19 @@
         "address": "0x239d4a24efa36a8987b86184c080ace26b3a8968",
         "executionScope": {
           "controllerDeployment": "base:0x239d4a24efa36a8987b86184c080ace26b3a8968",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "verified",
           "sources": [
             { "label": "Exact BRLV implementation and inherited access/UUPS source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
             { "label": "Underlying BRLY implementation; native token holds mint and burn roles", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
-            { "label": "Base RPC role census and state at block 52199500", "url": "https://mainnet.base.org" }
+            { "label": "Base RPC role census and state at block 52199500", "url": "https://mainnet.base.org" },
+            { "label": "Base RPC re-read 2026-10-29 at block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z): hasRole(DEFAULT_ADMIN_ROLE, 0x239d4a) true, getRoleAdmin(UPGRADE_ROLE) DEFAULT_ADMIN_ROLE, eth_getCode 0x", "url": "https://mainnet.base.org" }
           ],
-          "pin": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0x", "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968" },
-          "observedState": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0x", "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968" },
+          "pin": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0x", "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968" },
+          "observedState": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0x", "signerIdentity": "0x239d4a24efa36a8987b86184c080ace26b3a8968" },
           "inventory": "complete",
           "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
@@ -156,9 +157,9 @@
         "canRaiseCap": true,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-27",
-        "observedBlock": 53163625,
-        "evidence": "At Base block 48678900, hasRole(DEFAULT_ADMIN_ROLE, 0x239d4a24efa36a8987b86184c080ace26b3a8968) returned true on 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 and eth_getCode returned 0x. getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE. Verified token implementation source makes _authorizeUpgrade require UPGRADE_ROLE, so this zero-delay EOA can grant that role and authorize a token implementation change as well as manage minters. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(DEFAULT_ADMIN_ROLE, 0x239d4a) is still true, getRoleAdmin(UPGRADE_ROLE) is DEFAULT_ADMIN_ROLE and eth_getCode is 0x. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged.",
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254880,
+        "evidence": "At Base block 48678900, hasRole(DEFAULT_ADMIN_ROLE, 0x239d4a24efa36a8987b86184c080ace26b3a8968) returned true on 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 and eth_getCode returned 0x. getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE. Verified token implementation source makes _authorizeUpgrade require UPGRADE_ROLE, so this zero-delay EOA can grant that role and authorize a token implementation change as well as manage minters. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(DEFAULT_ADMIN_ROLE, 0x239d4a) is still true, getRoleAdmin(UPGRADE_ROLE) is DEFAULT_ADMIN_ROLE and eth_getCode is 0x. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged. Renewal re-read 2026-10-29 at Base block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z, mainnet.base.org): the EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, all three admin slots are still zero, and the runtime keccak hashes are unchanged: BRLV 0x8c6ffe80b35aca0f3a6dd7bc44dab4a8ade3b0acf848a8ce3e29f5022edd0b49, BRLVRewards 0x67df5769668c45155573599cc0d6ac73080c8ec9b2bcf1e4acd465892ab68d60, BRLY 0x6684fa7d09dc5d44af21ce24c58f134ad56c983b4b3c38be437a9d8abe39fd2b and UniversalGaslessDelegate 0x5bac0e79111f492e9fc5d109addc52da3937f20d2119bc0829c6e55dce7d8b15. A topic-filtered log scan of the three proxies over blocks 53163625-53254880 returned no RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged event, so this range shows no role, admin or implementation change.",
         "sources": [
           {
             "label": "BRLV Base token",
@@ -175,19 +176,20 @@
         "address": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
         "executionScope": {
           "controllerDeployment": "base:0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "verified",
           "sources": [
             { "label": "BRLV exact native mint and inherited source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
             { "label": "UniversalGaslessDelegate runtime-corresponding source; EOA signature and self-call authorization", "url": "https://sourcify.dev/server/v2/contract/8453/0x0000fb7702036ff9f76044a501ac1aa74cbab16b?fields=all" },
             { "label": "Underlying BRLY mint authorization", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
-            { "label": "Base RPC state and complete role histories at block 52199500", "url": "https://mainnet.base.org" }
+            { "label": "Base RPC state and complete role histories at block 52199500", "url": "https://mainnet.base.org" },
+            { "label": "Base RPC re-read 2026-10-29 at block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z): hasRole(MINTER_ROLE, 0x8e7e9b) true and code still the EIP-7702 designation 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "url": "https://mainnet.base.org" }
           ],
-          "pin": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea" },
-          "observedState": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea" },
+          "pin": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea" },
+          "observedState": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea" },
           "inventory": "complete",
           "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
@@ -244,9 +246,9 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-27",
-        "observedBlock": 53163625,
-        "evidence": "At Base block 48679023, hasRole(MINTER_ROLE, 0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea) returned true. Its EIP-7702 designation code is 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b, so the signer remains an EOA account delegated to UniversalGaslessDelegate rather than an independently governed contract. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(MINTER_ROLE, 0x8e7e9b) is still true and its code is still the EIP-7702 designation 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged.",
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254880,
+        "evidence": "At Base block 48679023, hasRole(MINTER_ROLE, 0x8e7e9b5f0a5fab0be8adc71dad483dff45d719ea) returned true. Its EIP-7702 designation code is 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b, so the signer remains an EOA account delegated to UniversalGaslessDelegate rather than an independently governed contract. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(MINTER_ROLE, 0x8e7e9b) is still true and its code is still the EIP-7702 designation 0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged. Renewal re-read 2026-10-29 at Base block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z, mainnet.base.org): the EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, all three admin slots are still zero, and the runtime keccak hashes are unchanged: BRLV 0x8c6ffe80b35aca0f3a6dd7bc44dab4a8ade3b0acf848a8ce3e29f5022edd0b49, BRLVRewards 0x67df5769668c45155573599cc0d6ac73080c8ec9b2bcf1e4acd465892ab68d60, BRLY 0x6684fa7d09dc5d44af21ce24c58f134ad56c983b4b3c38be437a9d8abe39fd2b and UniversalGaslessDelegate 0x5bac0e79111f492e9fc5d109addc52da3937f20d2119bc0829c6e55dce7d8b15. A topic-filtered log scan of the three proxies over blocks 53163625-53254880 returned no RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged event, so this range shows no role, admin or implementation change.",
         "sources": [
           {
             "label": "BRLV Base token",
@@ -284,18 +286,19 @@
         "address": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
         "executionScope": {
           "controllerDeployment": "base:0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "verified",
           "sources": [
             { "label": "Exact BRLV and UUPS upgrade authorization source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
             { "label": "Underlying BRLY source and token-authorized collateral mint/burn", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
-            { "label": "Base RPC role census, EOA code and proxy slots at block 52199500", "url": "https://mainnet.base.org" }
+            { "label": "Base RPC role census, EOA code and proxy slots at block 52199500", "url": "https://mainnet.base.org" },
+            { "label": "Base RPC re-read 2026-10-29 at block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z): hasRole(UPGRADE_ROLE, 0xcdfc72) true, eth_getCode 0x and EIP-1967 implementation slots unchanged", "url": "https://mainnet.base.org" }
           ],
-          "pin": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0x", "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a" },
-          "observedState": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0x", "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a" },
+          "pin": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0x", "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a" },
+          "observedState": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0x", "signerIdentity": "0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a" },
           "inventory": "complete",
           "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
@@ -331,8 +334,8 @@
         "directMintAbility": "upgrade-only",
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-27",
-        "observedBlock": 53163625,
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254880,
         "sources": [
           {
             "label": "BRLV Base token verified implementation",
@@ -343,25 +346,26 @@
             "url": "https://basescan.org/address/0xd2047ebdb205ee6862b69ae9fb3501652cc97d36#code"
           }
         ],
-        "evidence": "At Base block 48678900, hasRole(UPGRADE_ROLE, 0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a) returned true and eth_getCode returned 0x. The zero-admin-slot proxy resolves to implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, whose verified _authorizeUpgrade requires UPGRADE_ROLE, giving this EOA an immediate Base token upgrade path. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(UPGRADE_ROLE, 0xcdfc72) is still true and eth_getCode is 0x. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged."
+        "evidence": "At Base block 48678900, hasRole(UPGRADE_ROLE, 0xcdfc7264f7eda78c1e4368a5f291e6a16738cb5a) returned true and eth_getCode returned 0x. The zero-admin-slot proxy resolves to implementation 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, whose verified _authorizeUpgrade requires UPGRADE_ROLE, giving this EOA an immediate Base token upgrade path. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(UPGRADE_ROLE, 0xcdfc72) is still true and eth_getCode is 0x. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged. Renewal re-read 2026-10-29 at Base block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z, mainnet.base.org): the EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, all three admin slots are still zero, and the runtime keccak hashes are unchanged: BRLV 0x8c6ffe80b35aca0f3a6dd7bc44dab4a8ade3b0acf848a8ce3e29f5022edd0b49, BRLVRewards 0x67df5769668c45155573599cc0d6ac73080c8ec9b2bcf1e4acd465892ab68d60, BRLY 0x6684fa7d09dc5d44af21ce24c58f134ad56c983b4b3c38be437a9d8abe39fd2b and UniversalGaslessDelegate 0x5bac0e79111f492e9fc5d109addc52da3937f20d2119bc0829c6e55dce7d8b15. A topic-filtered log scan of the three proxies over blocks 53163625-53254880 returned no RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged event, so this range shows no role, admin or implementation change."
       },
       {
         "chain": "base",
         "address": "0x548634f237eae194f5e20982c9819d917fe17f04",
         "executionScope": {
           "controllerDeployment": "base:0x548634f237eae194f5e20982c9819d917fe17f04",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "verified",
           "sources": [
             { "label": "Exact BRLVRewards and UUPS upgrade authorization source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x6818b4b2c3cc572726aed81a836b5e069519ad0a" },
             { "label": "Exact BRLV source; rewards holds both MINTER_ROLE and BURNER_ROLE", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
-            { "label": "Base RPC role census, EOA code and proxy slots at block 52199500", "url": "https://mainnet.base.org" }
+            { "label": "Base RPC role census, EOA code and proxy slots at block 52199500", "url": "https://mainnet.base.org" },
+            { "label": "Base RPC re-read 2026-10-29 at block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z): BRLVRewards hasRole(UPGRADE_ROLE, 0x548634) true and eth_getCode 0x", "url": "https://mainnet.base.org" }
           ],
-          "pin": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0x", "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04" },
-          "observedState": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0x", "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04" },
+          "pin": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0x", "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04" },
+          "observedState": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0x", "signerIdentity": "0x548634f237eae194f5e20982c9819d917fe17f04" },
           "inventory": "complete",
           "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
@@ -397,8 +401,8 @@
         "directMintAbility": "upgrade-only",
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-27",
-        "observedBlock": 53163625,
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254880,
         "sources": [
           {
             "label": "BRLVRewards Base",
@@ -409,7 +413,7 @@
             "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
           }
         ],
-        "evidence": "At Base block 48678900, hasRole(UPGRADE_ROLE, 0x548634f237eae194f5e20982c9819d917fe17f04) returned true and eth_getCode returned 0x. The zero-admin-slot rewards proxy resolves to implementation 0x6818b4b2c3cc572726aed81a836b5e069519ad0a, whose verified _authorizeUpgrade requires UPGRADE_ROLE, giving this EOA an immediate upgrade path over the canonical reward minter; any remote-domain bridgedSharesMint change is separately scored under Bridge Risk. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(UPGRADE_ROLE, 0x548634) on BRLVRewards is still true and eth_getCode is 0x. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged."
+        "evidence": "At Base block 48678900, hasRole(UPGRADE_ROLE, 0x548634f237eae194f5e20982c9819d917fe17f04) returned true and eth_getCode returned 0x. The zero-admin-slot rewards proxy resolves to implementation 0x6818b4b2c3cc572726aed81a836b5e069519ad0a, whose verified _authorizeUpgrade requires UPGRADE_ROLE, giving this EOA an immediate upgrade path over the canonical reward minter; any remote-domain bridgedSharesMint change is separately scored under Bridge Risk. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(UPGRADE_ROLE, 0x548634) on BRLVRewards is still true and eth_getCode is 0x. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged. Renewal re-read 2026-10-29 at Base block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z, mainnet.base.org): the EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, all three admin slots are still zero, and the runtime keccak hashes are unchanged: BRLV 0x8c6ffe80b35aca0f3a6dd7bc44dab4a8ade3b0acf848a8ce3e29f5022edd0b49, BRLVRewards 0x67df5769668c45155573599cc0d6ac73080c8ec9b2bcf1e4acd465892ab68d60, BRLY 0x6684fa7d09dc5d44af21ce24c58f134ad56c983b4b3c38be437a9d8abe39fd2b and UniversalGaslessDelegate 0x5bac0e79111f492e9fc5d109addc52da3937f20d2119bc0829c6e55dce7d8b15. A topic-filtered log scan of the three proxies over blocks 53163625-53254880 returned no RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged event, so this range shows no role, admin or implementation change."
       },
       {
         "chain": "base",
@@ -424,30 +428,31 @@
         "canRaiseCap": false,
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-27",
-        "observedBlock": 53163625,
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254880,
         "sources": [
           { "label": "Exact BRLV arbitrary-from burn, collateral burn and share burn implementation", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
           { "label": "Underlying BRLY source; native BRLV proxy holds BURNER_ROLE", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
           { "label": "UniversalGaslessDelegate runtime-corresponding execution authorization", "url": "https://sourcify.dev/server/v2/contract/8453/0x0000fb7702036ff9f76044a501ac1aa74cbab16b?fields=all" },
           { "label": "Base pin 52199500 role, code and creation-to-pin grant census", "url": "https://mainnet.base.org" }
         ],
-        "evidence": "At Base block 52199500/hash 0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67, hasRole(BURNER_ROLE) is true for this EOA and MINTER_ROLE/UPGRADE_ROLE/PAUSE_ROLE are false. The complete native token RoleGranted/RoleRevoked census records its grant by DEFAULT_ADMIN 0x239d4a in transaction 0x6743b5e85bd2e65ade33cc19ee86139c87422710daeb0e7836914885e9ddc749; the role admin is DEFAULT_ADMIN. Its runtime is the EIP-7702 designation to UniversalGaslessDelegate. Verified BRLV burn(address,uint256) and burnShares(address,uint256) destroy arbitrary holders' shares without their approval; burnAssets(uint256) destroys the root vault's BRLY collateral without retiring BRLV shares. The native BRLV proxy's parent BURNER_ROLE makes that collateral call executable. Amounts are balance-limited, not bounded to the operator's holdings or to a fixed loss ceiling: all holder claims and root collateral are reachable. The delegate requires this EOA's signature or a self-call; direct signer transactions bypass delegate-only KillSwitch restrictions. This is unbounded native claim impairment and zero-delay destructive authority, not mint ability or a bridge-only burn exemption. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(BURNER_ROLE, 0x09dd89) is still true, MINTER_ROLE/UPGRADE_ROLE/PAUSE_ROLE are false, its code is still the UniversalGaslessDelegate designation, and the BRLV proxy still holds BRLY MINTER_ROLE and BURNER_ROLE. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged.",
+        "evidence": "At Base block 52199500/hash 0x7f20bc54788ebd038c690e34e78405673180c5042c482148002307b825899a67, hasRole(BURNER_ROLE) is true for this EOA and MINTER_ROLE/UPGRADE_ROLE/PAUSE_ROLE are false. The complete native token RoleGranted/RoleRevoked census records its grant by DEFAULT_ADMIN 0x239d4a in transaction 0x6743b5e85bd2e65ade33cc19ee86139c87422710daeb0e7836914885e9ddc749; the role admin is DEFAULT_ADMIN. Its runtime is the EIP-7702 designation to UniversalGaslessDelegate. Verified BRLV burn(address,uint256) and burnShares(address,uint256) destroy arbitrary holders' shares without their approval; burnAssets(uint256) destroys the root vault's BRLY collateral without retiring BRLV shares. The native BRLV proxy's parent BURNER_ROLE makes that collateral call executable. Amounts are balance-limited, not bounded to the operator's holdings or to a fixed loss ceiling: all holder claims and root collateral are reachable. The delegate requires this EOA's signature or a self-call; direct signer transactions bypass delegate-only KillSwitch restrictions. This is unbounded native claim impairment and zero-delay destructive authority, not mint ability or a bridge-only burn exemption. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(BURNER_ROLE, 0x09dd89) is still true, MINTER_ROLE/UPGRADE_ROLE/PAUSE_ROLE are false, its code is still the UniversalGaslessDelegate designation, and the BRLV proxy still holds BRLY MINTER_ROLE and BURNER_ROLE. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged. Renewal re-read 2026-10-29 at Base block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z, mainnet.base.org): the EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, all three admin slots are still zero, and the runtime keccak hashes are unchanged: BRLV 0x8c6ffe80b35aca0f3a6dd7bc44dab4a8ade3b0acf848a8ce3e29f5022edd0b49, BRLVRewards 0x67df5769668c45155573599cc0d6ac73080c8ec9b2bcf1e4acd465892ab68d60, BRLY 0x6684fa7d09dc5d44af21ce24c58f134ad56c983b4b3c38be437a9d8abe39fd2b and UniversalGaslessDelegate 0x5bac0e79111f492e9fc5d109addc52da3937f20d2119bc0829c6e55dce7d8b15. A topic-filtered log scan of the three proxies over blocks 53163625-53254880 returned no RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged event, so this range shows no role, admin or implementation change.",
         "executionScope": {
           "controllerDeployment": "base:0x09dd8946662a9d60dbba9538d211cf45f819faba",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "verified",
           "sources": [
             { "label": "Exact BRLV arbitrary-from and underlying collateral burn source", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
             { "label": "Underlying BRLY burn authorization and root liability reach", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5" },
             { "label": "Verified UniversalGaslessDelegate source and pinned designation", "url": "https://sourcify.dev/server/v2/contract/8453/0x0000fb7702036ff9f76044a501ac1aa74cbab16b?fields=all" },
-            { "label": "Pinned Base role and controller-runtime reads", "url": "https://mainnet.base.org" }
+            { "label": "Pinned Base role and controller-runtime reads", "url": "https://mainnet.base.org" },
+            { "label": "Base RPC re-read 2026-10-29 at block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z): hasRole(BURNER_ROLE, 0x09dd89) true with MINTER_ROLE/UPGRADE_ROLE/PAUSE_ROLE false, code still the UniversalGaslessDelegate designation, and the BRLV proxy still holds BRLY MINTER_ROLE and BURNER_ROLE", "url": "https://mainnet.base.org" }
           ],
-          "pin": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x09dd8946662a9d60dbba9538d211cf45f819faba" },
-          "observedState": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x09dd8946662a9d60dbba9538d211cf45f819faba" },
+          "pin": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x09dd8946662a9d60dbba9538d211cf45f819faba" },
+          "observedState": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0xef01000000fb7702036ff9f76044a501ac1aa74cbab16b", "signerIdentity": "0x09dd8946662a9d60dbba9538d211cf45f819faba" },
           "inventory": "complete",
           "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
@@ -501,18 +506,19 @@
         "address": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
         "executionScope": {
           "controllerDeployment": "base:0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "OMP W0 renewal 2026-10-29 (R-MINT-4)",
           "confidence": "verified",
           "sources": [
             { "label": "Exact rewards role administration and arbitrary implementation replacement", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x6818b4b2c3cc572726aed81a836b5e069519ad0a" },
             { "label": "Exact BRLV mint/burn calls available to a replacement rewards implementation", "url": "https://base.blockscout.com/api/v2/smart-contracts/0x1750731729b27cfd00ea55bc61e9dcfade2273f3" },
-            { "label": "Base RPC creation-to-pin role histories and EOA code at block 52199500", "url": "https://mainnet.base.org" }
+            { "label": "Base RPC creation-to-pin role histories and EOA code at block 52199500", "url": "https://mainnet.base.org" },
+            { "label": "Base RPC re-read 2026-10-29 at block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z): BRLVRewards hasRole(DEFAULT_ADMIN_ROLE, 0x7ecf4c) true, getRoleAdmin(UPGRADE_ROLE) DEFAULT_ADMIN_ROLE and eth_getCode 0x", "url": "https://mainnet.base.org" }
           ],
-          "pin": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0x", "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f" },
-          "observedState": { "position": "0x32b3669", "hash": "0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35", "runtimeIdentity": "0x", "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f" },
+          "pin": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0x", "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f" },
+          "observedState": { "position": "0x32c9ae0", "hash": "0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976", "runtimeIdentity": "0x", "signerIdentity": "0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f" },
           "inventory": "complete",
           "closure": { "entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true },
           "paths": [
@@ -611,8 +617,8 @@
         "directMintAbility": "upgrade-only",
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-27",
-        "observedBlock": 53163625,
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254880,
         "sources": [
           {
             "label": "BRLVRewards Base",
@@ -623,7 +629,7 @@
             "url": "https://base.blockscout.com/address/0x6818b4b2c3cc572726aed81a836b5e069519ad0a"
           }
         ],
-        "evidence": "At Base block 48678900, hasRole(DEFAULT_ADMIN_ROLE, 0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f) returned true and eth_getCode returned 0x. getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE; therefore this zero-delay EOA can grant or revoke the rewards implementation's UPGRADE_ROLE, independently of the current 0x548634 holder. Its remote-domain upgrade surface is separately scored under Bridge Risk. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(DEFAULT_ADMIN_ROLE, 0x7ecf4c) on BRLVRewards is still true, getRoleAdmin(UPGRADE_ROLE) is DEFAULT_ADMIN_ROLE and eth_getCode is 0x. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged."
+        "evidence": "At Base block 48678900, hasRole(DEFAULT_ADMIN_ROLE, 0x7ecf4c03e7115a66c86ac9745cf0a8b903e3411f) returned true and eth_getCode returned 0x. getRoleAdmin(UPGRADE_ROLE) returned DEFAULT_ADMIN_ROLE; therefore this zero-delay EOA can grant or revoke the rewards implementation's UPGRADE_ROLE, independently of the current 0x548634 holder. Its remote-domain upgrade surface is separately scored under Bridge Risk. Re-read 2026-10-27 at Base block 53163625 (hash 0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35, timestamp 2026-10-27T15:56:37Z, mainnet.base.org; event census via base-rpc.publicnode.com): hasRole(DEFAULT_ADMIN_ROLE, 0x7ecf4c) on BRLVRewards is still true, getRoleAdmin(UPGRADE_ROLE) is DEFAULT_ADMIN_ROLE and eth_getCode is 0x. EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, with zero admin slots; proxy and implementation runtime keccak hashes (BRLV 0x8c6ffe80..., BRLVRewards 0x67df5769..., BRLY 0x6684fa7d..., UniversalGaslessDelegate 0x5bac0e79...) equal those at block 52199500. No RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged log was emitted by the three proxies in blocks 52199500-53163625, so the creation-to-pin role census carries forward unchanged. Renewal re-read 2026-10-29 at Base block 53254880 (hash 0x2d4012109ba1c460f1c671a1337f1667cce94ba5720459c541cb848b84f2d976, timestamp 2026-10-29T18:38:27Z, mainnet.base.org): the EIP-1967 implementation slots still resolve token proxy 0xd2047ebdb205ee6862b69ae9fb3501652cc97d36 to 0x1750731729b27cfd00ea55bc61e9dcfade2273f3, BRLVRewards proxy 0x5315c03f8cf027d1b67dac72ef9eec8988d80f88 to 0x6818b4b2c3cc572726aed81a836b5e069519ad0a and BRLY 0x57323db6d883811c17877d075e05ad9e2ed41519 to 0x9d03c6fd8b1ed1e170d1e2fcc2a4a2429d2bd4f5, all three admin slots are still zero, and the runtime keccak hashes are unchanged: BRLV 0x8c6ffe80b35aca0f3a6dd7bc44dab4a8ade3b0acf848a8ce3e29f5022edd0b49, BRLVRewards 0x67df5769668c45155573599cc0d6ac73080c8ec9b2bcf1e4acd465892ab68d60, BRLY 0x6684fa7d09dc5d44af21ce24c58f134ad56c983b4b3c38be437a9d8abe39fd2b and UniversalGaslessDelegate 0x5bac0e79111f492e9fc5d109addc52da3937f20d2119bc0829c6e55dce7d8b15. A topic-filtered log scan of the three proxies over blocks 53163625-53254880 returned no RoleGranted, RoleRevoked, RoleAdminChanged, Upgraded or AdminChanged event, so this range shows no role, admin or implementation change."
       }
     ],
     "economicCapSemantics": "unbounded",
