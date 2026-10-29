@@ -525,6 +525,54 @@ describe("CI workflow scope", () => {
     });
   });
 
+  it("keeps the curation expiry sweep process-only with sentinel verdicts and by-week renewal views", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/curation-expiry-sweep.yml")) as {
+      permissions?: Record<string, string>;
+      jobs: Record<string, {
+        permissions?: Record<string, string>;
+        steps: Array<{
+          id?: string; name?: string; run?: string; uses?: string;
+          with?: Record<string, unknown>; env?: Record<string, string>; "timeout-minutes"?: number;
+        }>;
+      }>;
+    };
+    const job = workflow.jobs.sweep;
+    const steps = job.steps;
+    const sentinels = steps.find((step) => step.id === "sentinels")!;
+    const renewals = steps.find((step) => step.id === "renewals")!;
+    const calendar = steps.find((step) => step.id === "calendar")!;
+    const issue = steps.find((step) => step.run?.includes("gh issue edit"))!;
+    const commands = steps.map((step) => step.run ?? "").join("\n");
+
+    // Process-only: the sweep may maintain its own issue, never the repository or the ledger.
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    expect(job.permissions).toEqual({ contents: "read", issues: "write" });
+    expect(commands).not.toMatch(/\bgit push\b/);
+    expect(commands).not.toMatch(/\bgh pr (create|merge|edit|close)\b/);
+    expect(commands).not.toContain("ledger-append");
+    expect(issue.run).toContain("gh issue edit");
+
+    // The sentinel verdicts read the same ledger the applier writes and the registry this sweep regenerates.
+    expect(sentinels.run).toContain("worker/scripts/check-safety-score-v9-ledger-sentinels.ts");
+    expect(sentinels.run).toContain("--registry agents/sweep/missing-data-registry.json");
+    expect(sentinels.run).toContain("--ledger .github/artifacts/safety-score-missing-data-reviewed-ledger.json");
+    expect(sentinels.run).toContain("--replay agents/sweep/replay.json");
+    expect(sentinels.run).toContain("--markdown agents/sweep/sentinel-resolutions.md");
+    expect(steps.indexOf(steps.find((step) => step.id === "registry")!)).toBeLessThan(steps.indexOf(sentinels));
+
+    // By-week views: the 14-day renewal section and the program-horizon calendar artifact.
+    expect(renewals.run).toContain("--days 14 --by-week");
+    expect(calendar.run).toContain('--horizon "$RENEWAL_HORIZON" --by-week');
+    expect(calendar.env?.RENEWAL_HORIZON).toBe("2027-01-19");
+    expect(steps.indexOf(sentinels)).toBeLessThan(steps.indexOf(renewals));
+    expect(steps.indexOf(renewals)).toBeLessThan(steps.indexOf(calendar));
+
+    // Each new read is deadline-bounded inside the 40-minute job and rides the 30-day artifact.
+    for (const step of [sentinels, renewals, calendar]) expect(step["timeout-minutes"]).toBe(10);
+    const upload = steps.find((step) => step.id === "snapshots")!;
+    expect(upload.with?.path).toBe("agents/sweep/");
+  });
+
 });
 
 it("snapshots trusted base code and policy before PR checkout and scans both modes afterward", () => {
