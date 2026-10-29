@@ -1,17 +1,24 @@
 import {
   V9EvidenceGapQueueCoreV1Schema,
   V9EvidenceGapQueueCoreV2Schema,
+  V9EvidenceGapQueueCoreV3Schema,
   V9EvidenceGapQueueV1Schema,
   V9EvidenceGapQueueV2Schema,
+  V9EvidenceGapQueueV3Schema,
   type V9EvidenceGapAction,
+  type V9EvidenceGapDocumentation,
   type V9EvidenceGapMaterialityV1,
   type V9EvidenceGapPolicyBindingIssue,
   type V9EvidenceGapQueueCoreV1,
   type V9EvidenceGapQueueCoreV2,
+  type V9EvidenceGapQueueCoreV3,
   type V9EvidenceGapBridgeJoinV1,
   type V9EvidenceGapQueueEntryV2,
+  type V9EvidenceGapQueueEntryV3,
   type V9EvidenceGapQueue,
   type V9EvidenceGapQueueV2,
+  type V9EvidenceGapQueueV3,
+  type V9EvidenceGapReviewState,
   type V9EvidenceGapSupplyWeightV1,
 } from "../../types/safety-score-v9-evidence-queue";
 import {
@@ -22,17 +29,20 @@ import {
   type V9FactApplicability,
 } from "../../types/safety-score-v9-facts";
 import { V9EvidenceResponsibilitySchema } from "../../types/safety-score-v9-fact-primitives";
-import type { V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
+import { V9DocumentationReasonSchema, type V9ValidatedPolicyEnvelope } from "../../types/safety-score-v9";
 import { sha256Hex } from "../sha256";
 import { stableJsonStringifyV1 } from "../stable-json";
 import { readCompiledV9FactSetForEvaluation } from "./facts";
 import { assertV9ValidatedPolicyEnvelope, resolveV9ReasonTreatment } from "./policy";
 import { evaluateV9SubthresholdUnresolvedBridgeJoins } from "./control-bridge-join";
 import { compareText } from "./primitives";
+import { classifyV9DocumentationGap } from "./documentation";
 import { deepFreeze } from "../../types/safety-score-v9-immutable";
+import { parseIsoDateOrUtcInstantSec } from "../../types/date-primitives";
 
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V1 = "safety-score-v9.evidence-gap-queue.v1";
 const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V3 = "safety-score-v9.evidence-gap-queue.v3";
+const V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V4 = "safety-score-v9.evidence-gap-queue.v4";
 const V9_EVIDENCE_GAP_QUEUE_KEY_DOMAIN_V3 = "safety-score-v9.evidence-gap-key.v3";
 
 function gapApplicability(
@@ -171,6 +181,62 @@ function bridgeJoinForAsset(
   };
 }
 
+/**
+ * The documentation band, copied from the shared classifier. The class never
+ * changes a score, a cause, a binding or a gap identity.
+ */
+function documentationForGap(
+  policy: V9ValidatedPolicyEnvelope,
+  asset: V9AssetFactsV3,
+  gap: V9FactGapV3,
+): V9EvidenceGapDocumentation | null {
+  const classification = classifyV9DocumentationGap(policy, asset, gap);
+  if (classification === null) return null;
+  return {
+    class: "documentation",
+    reason: classification.reason,
+    policyRef: classification.policyRef,
+    threshold: classification.threshold,
+  };
+}
+
+/**
+ * The issuer researched-terminal band (PLAN §4.3). A cause-C proof records that
+ * the issuer was researched and does not publish the datum, so the item leaves
+ * the default drain for a dated recheck one research horizon later. No ledger is
+ * read: the band is regenerated from the proof on every build.
+ */
+export function v9ResearchedTerminalReviewState(
+  proof: V9FactGapV3["causeProof"],
+  reviewedResearchMaxAgeSec: number,
+): V9EvidenceGapReviewState | null {
+  if (proof.cause !== "C" || proof.assertion !== "researched-nondisclosure") return null;
+  const reviewedAtSec = Math.floor(parseIsoDateOrUtcInstantSec(proof.reviewedAt));
+  if (!Number.isFinite(reviewedAtSec)) {
+    throw new Error("A researched-nondisclosure proof must carry a parseable review date");
+  }
+  return {
+    state: "researched-terminal",
+    reviewedAtSec,
+    recheckAtSec: reviewedAtSec + reviewedResearchMaxAgeSec,
+    trigger: "cause-proof-expiry",
+  };
+}
+
+function reviewStateForGap(
+  gap: V9FactGapV3,
+  policy: V9ValidatedPolicyEnvelope,
+  documentation: V9EvidenceGapDocumentation | null,
+): V9EvidenceGapReviewState | null {
+  // Precedence documentation > issuer: a documentation datum never joins the
+  // issuer band, so the two bands partition the queue.
+  if (documentation !== null) return null;
+  return v9ResearchedTerminalReviewState(
+    gap.causeProof,
+    policy.policy.semantic.evidence.evidenceExpiry.reviewedResearchMaxAgeSec,
+  );
+}
+
 function queueKey(asset: V9AssetFactsV3, gap: V9FactGapV3): string {
   return sha256Hex(
     stableJsonStringifyV1({
@@ -229,6 +295,11 @@ function computeV9EvidenceGapQueueV2Digest(core: V9EvidenceGapQueueCoreV2): stri
   return sha256Hex(stableJsonStringifyV1({ domain: V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V3, queue: parsed }));
 }
 
+function computeV9EvidenceGapQueueV3Digest(core: V9EvidenceGapQueueCoreV3): string {
+  const parsed = V9EvidenceGapQueueCoreV3Schema.parse(core);
+  return sha256Hex(stableJsonStringifyV1({ domain: V9_EVIDENCE_GAP_QUEUE_DIGEST_DOMAIN_V4, queue: parsed }));
+}
+
 function assertQueueDigest(queueDigest: string, expected: string): void {
   if (queueDigest !== expected) {
     throw new Error(`Safety Score v9 evidence-gap queue digest ${queueDigest} does not match ${expected}`);
@@ -250,14 +321,34 @@ export function parseV9EvidenceGapQueue(input: unknown): V9EvidenceGapQueue {
     assertQueueDigest(queueDigest, computeV9EvidenceGapQueueV2Digest(core));
     return parsed;
   }
+  if (schemaVersion === 4) {
+    const parsed = V9EvidenceGapQueueV3Schema.parse(input);
+    const { queueDigest, ...core } = parsed;
+    assertQueueDigest(queueDigest, computeV9EvidenceGapQueueV3Digest(core));
+    return parsed;
+  }
   throw new Error(`Unsupported Safety Score v9 evidence-gap queue schema version: ${String(schemaVersion)}`);
+}
+
+/**
+ * The default worklists and sweeps skip documentation work unless they opt in
+ * (`--include-documentation`). The band is counted, never closable by the
+ * default drain, and no entry is ever dropped from the queue.
+ */
+export function isV9DocumentationGapEntry(entry: V9EvidenceGapQueueEntryV3): boolean {
+  return entry.documentation !== null;
+}
+
+/** The issuer researched-terminal band: dated rechecks, not open work. */
+export function isV9ResearchedTerminalEntry(entry: V9EvidenceGapQueueEntryV3): boolean {
+  return entry.reviewState !== null;
 }
 
 /** Build a proof-aware policy-backed work queue from schema-4 facts. */
 export function buildV9EvidenceGapQueue(args: {
   factSet: unknown;
   policy: V9ValidatedPolicyEnvelope;
-}): Readonly<V9EvidenceGapQueueV2> {
+}): Readonly<V9EvidenceGapQueueV3> {
   const factSetRead = readCompiledV9FactSetForEvaluation(args.factSet);
   const factSet = factSetRead.factSet;
   assertV9ValidatedPolicyEnvelope(args.policy);
@@ -308,6 +399,7 @@ export function buildV9EvidenceGapQueue(args: {
       policyBindingIssues.sort(compareText);
       const applicability = gapApplicability(applicabilityByGap, gap);
       const materiality = materialityForGap(asset, gap);
+      const documentation = documentationForGap(args.policy, asset, gap);
       const entry = {
         queueKey: queueKey(asset, gap),
         assetId: asset.assetId,
@@ -337,7 +429,9 @@ export function buildV9EvidenceGapQueue(args: {
         causeScope: gap.causeScope ?? null,
         causeGapIds: [gap.gapId],
         bridgeJoin: gapIsBridgeScoped(asset, gap) ? bridgeJoin() : null,
-      } satisfies Omit<V9EvidenceGapQueueEntryV2, "priority">;
+        documentation,
+        reviewState: reviewStateForGap(gap, args.policy, documentation),
+      } satisfies Omit<V9EvidenceGapQueueEntryV3, "priority">;
       return entry;
     });
   });
@@ -356,8 +450,12 @@ export function buildV9EvidenceGapQueue(args: {
       responsibility,
       count: entries.filter((entry) => entry.responsibility === responsibility).length,
     }));
-  const core = V9EvidenceGapQueueCoreV2Schema.parse({
-    schemaVersion: 3,
+  const documentationReasonCounts = V9DocumentationReasonSchema.options.map((reason) => ({
+    reason,
+    count: entries.filter((entry) => entry.documentation?.reason === reason).length,
+  }));
+  const core = V9EvidenceGapQueueCoreV3Schema.parse({
+    schemaVersion: 4,
     purpose: "evidence-work-queue-not-release-gate",
     status: entries.length === 0 ? "clear" : "work-required",
     facts: {
@@ -383,10 +481,13 @@ export function buildV9EvidenceGapQueue(args: {
       domainCounts,
       actionCounts,
       responsibilityCounts,
+      documentationGapCount: entries.filter(isV9DocumentationGapEntry).length,
+      researchedTerminalGapCount: entries.filter(isV9ResearchedTerminalEntry).length,
+      documentationReasonCounts,
     },
     entries,
   });
   return deepFreeze(
-    V9EvidenceGapQueueV2Schema.parse({ ...core, queueDigest: computeV9EvidenceGapQueueV2Digest(core) }),
+    V9EvidenceGapQueueV3Schema.parse({ ...core, queueDigest: computeV9EvidenceGapQueueV3Digest(core) }),
   );
 }
