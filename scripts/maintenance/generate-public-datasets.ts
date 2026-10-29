@@ -55,7 +55,12 @@ import {
 } from "@shared/types/public-snapshot";
 import { ReportCardsV9CurrentResponseSchema, V9PublicationHealthSchema } from "@shared/types/report-cards-v9";
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
-import { SafetyScoreV9CompletenessSchema } from "@shared/types/safety-score-v9-public";
+import {
+  SafetyScoreV9CompletenessSchema,
+  V9_OPEN_EVIDENCE_SEMANTICS,
+  V9OpenEvidenceTotalsSchema,
+  type V9OpenEvidenceTotals,
+} from "@shared/types/safety-score-v9-public";
 import { z } from "zod";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
@@ -353,8 +358,18 @@ const SCORES_LATEST_COLUMNS: DatasetColumn<ScoreLatestRow>[] = [
 type CurrentSafetyPublication = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
 type CurrentSafetyCard = CurrentSafetyPublication["cards"][number];
 
+/**
+ * The three server-computed question counts, copied from the publication's
+ * `openEvidence` block. `semantics` travels with the counts so a definition
+ * change never reads as a moved series, and the dataset never recomputes them.
+ */
+interface ScoresLatestOpenEvidenceProjection {
+  semantics: typeof V9_OPEN_EVIDENCE_SEMANTICS;
+  totals: V9OpenEvidenceTotals;
+}
+
 interface ScoresLatestDisplayProjection {
-  version: 1;
+  version: 2;
   snapshotDate: string;
   capturedAtSec: number;
   sourceSnapshotPath: string;
@@ -367,11 +382,30 @@ interface ScoresLatestDisplayProjection {
     completeness: unknown;
   } | null;
   safetyUnavailableReason: "legacy-source-metadata-unavailable" | null;
+  openEvidence: ScoresLatestOpenEvidenceProjection | null;
+  /** Names why the counts are absent; a missing block never reads as zero questions. */
+  openEvidenceUnavailableReason: ScoresLatestOpenEvidenceUnavailableReason | null;
 }
+
+type ScoresLatestOpenEvidenceUnavailableReason =
+  | "safety-publication-unavailable"
+  | "open-evidence-unavailable";
+
+const SCORES_LATEST_OPEN_EVIDENCE_UNAVAILABLE_REASONS = [
+  "safety-publication-unavailable",
+  "open-evidence-unavailable",
+] as const satisfies readonly ScoresLatestOpenEvidenceUnavailableReason[];
+
+const ScoresLatestOpenEvidenceProjectionSchema = z
+  .object({
+    semantics: z.literal(V9_OPEN_EVIDENCE_SEMANTICS),
+    totals: V9OpenEvidenceTotalsSchema,
+  })
+  .strict();
 
 const ScoresLatestDisplayProjectionSchema = z
   .object({
-    version: z.literal(1),
+    version: z.literal(2),
     snapshotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
     capturedAtSec: z.number().int().nonnegative(),
     sourceSnapshotPath: z.string().min(1),
@@ -387,8 +421,27 @@ const ScoresLatestDisplayProjectionSchema = z
       .strict()
       .nullable(),
     safetyUnavailableReason: z.literal("legacy-source-metadata-unavailable").nullable(),
+    openEvidence: ScoresLatestOpenEvidenceProjectionSchema.nullable(),
+    openEvidenceUnavailableReason: z
+      .enum(SCORES_LATEST_OPEN_EVIDENCE_UNAVAILABLE_REASONS)
+      .nullable(),
   })
-  .strict();
+  .strict()
+  .superRefine((projection, ctx) => {
+    // Presence and reason move together, and an absent Safety publication cannot
+    // carry counts: the pair is the artifact's own statement that it has none.
+    const expectedReason: ScoresLatestOpenEvidenceUnavailableReason | null = projection.openEvidence
+      ? null
+      : projection.safety === null
+        ? "safety-publication-unavailable"
+        : "open-evidence-unavailable";
+    if (projection.openEvidenceUnavailableReason === expectedReason) return;
+    ctx.addIssue({
+      code: "custom",
+      path: ["openEvidenceUnavailableReason"],
+      message: "scores-latest open-evidence counts and their unavailable reason disagree",
+    });
+  });
 
 interface ScoresLatestProjection {
   rows: ScoreLatestRow[];
@@ -596,8 +649,9 @@ function buildScoresDisplayProjection(
   envelope: SnapshotEnvelope,
   publication: CurrentSafetyPublication | null,
 ): ScoresLatestDisplayProjection {
+  const openEvidence = publication?.openEvidence ?? null;
   return {
-    version: 1,
+    version: 2,
     snapshotDate: envelope.snapshotDate,
     capturedAtSec: envelope.generatedAt,
     sourceSnapshotPath: `/api/snapshots/${envelope.snapshotDate}.json`,
@@ -612,6 +666,14 @@ function buildScoresDisplayProjection(
         }
       : null,
     safetyUnavailableReason: publication ? null : "legacy-source-metadata-unavailable",
+    openEvidence: openEvidence
+      ? { semantics: openEvidence.semantics, totals: openEvidence.totals }
+      : null,
+    openEvidenceUnavailableReason: openEvidence
+      ? null
+      : publication
+        ? "open-evidence-unavailable"
+        : "safety-publication-unavailable",
   };
 }
 
