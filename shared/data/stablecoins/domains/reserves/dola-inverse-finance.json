@@ -198,6 +198,26 @@
       "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
       "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:lp:dola-fraxbp",
+      "name": "DOLA-FRAXBP LP-secured debt (undecomposed)",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
+      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "dola-inverse:lp:dola-fraxpyusd",
+      "name": "DOLA-FraxPyUSD LP-secured debt (undecomposed)",
+      "pct": 0,
+      "risk": "high",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Inverse Finance FiRM LP-secured lending markets",
+      "riskFactors": ["market", "liquidity", "smart-contract", "counterparty", "concentration"],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {

@@ -1198,6 +1198,167 @@
           }
         ]
       }
+    },
+    {
+      "incidentId": "i37dolab-dola-inverse-finance-bf2ca152af8adc16b4b7-multichain-20261029",
+      "assetId": "dola-inverse-finance",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2023-07-06",
+      "resolvedAt": null,
+      "status": "active",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:dola-inverse-finance:bf2ca152af8adc16b4b7"
+      },
+      "reviewedAt": "2026-10-29",
+      "reviewer": "DOLA Inverse follow-up 2026-10-29 (M5/V7 legacy-bridge incident review)",
+      "primarySources": [
+        {
+          "label": "Inverse Multichain-DOLA Exploit FAQ published July 15 2023: anyDOLA IOUs (Q2), paused bridge exits (Q3/Q4), avoidance guidance (Q11), no approved compensation (Q13)",
+          "url": "https://docs.google.com/document/d/1Q5ew52Z8VwxcgkTapHNsBHoCtKqkyqYWRhwzjwRj40M/export?format=txt",
+          "publishedAt": "2023-07-15"
+        },
+        {
+          "label": "BSC block 130434507 pin (2026-10-29T07:38:12Z): sole enabled minter of DOLA receipt 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 is Anyswap/Multichain router 0x58892974758a4013377a45fad698d2ff1f08d98e; router mpc() 0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964 with no deployed code",
+          "url": "https://bscscan.com/block/130434507",
+          "publishedAt": "2026-10-29"
+        }
+      ],
+      "finding": "incident / active supply-integrity-failure: legacy Multichain/Anyswap BSC representation of DOLA stranded with blocked exits after the July 2023 Multichain bridge collapse. The Multichain-DOLA Exploit FAQ (published 2023-07-15) records that following Multichain's 2023-07-06 unusual-activity announcement all bridge transfers were paused and anyDOLA holders on BNB, Avalanche and Fantom cannot bridge back (Q3/Q4), advises avoiding Multichain-bridged DOLA while unresolved (Q11), and records that no DAO compensation had been approved at publication (Q13). At BSC block 130434507 (hash 0xb0bcdffd86b692e6463ac682588b49d39793be61588accaa3abbcce0e1219309) the sole enabled minter of token 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 is Anyswap/Multichain router 0x58892974758a4013377a45fad698d2ff1f08d98e whose mpc() is 0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964 (eth_getCode 0x); outstanding receipts total 1793864.391064841026826353, about 1.5867% of provider-counted supply (2.0519% combined across the three legacy chains). Inverse confirmed on 2026-10-28 that only canonical Ethereum DOLA is issuer supply and that this representation is an unsupported bridge IOU with no Inverse backing or DAO redemption guarantee. No DOLA-specific MPC-key compromise or theft of DOLA backing is asserted; current human custody of the MPC is unverifiable. No historical exposureShare is established or authored. This does not fan the event to sibling DOLA controls or the root claim. Reviewed at 2026-10-29T07:38:24Z.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-10-29",
+        "summary": "No Multichain service restoration, legacy bridge redemption or lane reopening is evidenced: the FAQ's blocked-exit and avoidance guidance still stands, the issuer restated on 2026-10-28 that the representation is unsupported, and the BSC block 130434507 pin still shows the Multichain router as sole enabled minter with no DAO compensation approved at FAQ publication and no later compensation vote evidenced. The July 2023 FAQ remains the latest dated public remediation statement.",
+        "sources": [
+          {
+            "label": "Inverse Multichain-DOLA Exploit FAQ published July 15 2023: anyDOLA IOUs (Q2), paused bridge exits (Q3/Q4), avoidance guidance (Q11), no approved compensation (Q13)",
+            "url": "https://docs.google.com/document/d/1Q5ew52Z8VwxcgkTapHNsBHoCtKqkyqYWRhwzjwRj40M/export?format=txt",
+            "publishedAt": "2023-07-15"
+          },
+          {
+            "label": "BSC block 130434507 pin (2026-10-29T07:38:12Z): sole enabled minter of DOLA receipt 0x2f29bc0ffaf9bff337b31cbe6cb5fb3bf12e5840 is Anyswap/Multichain router 0x58892974758a4013377a45fad698d2ff1f08d98e; router mpc() 0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964 with no deployed code",
+            "url": "https://bscscan.com/block/130434507",
+            "publishedAt": "2026-10-29"
+          }
+        ]
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "active"
+      }
+    },
+    {
+      "incidentId": "i37dolab-dola-inverse-finance-424f5ffaf576193ac12c-multichain-20261029",
+      "assetId": "dola-inverse-finance",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2023-07-06",
+      "resolvedAt": null,
+      "status": "active",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:dola-inverse-finance:424f5ffaf576193ac12c"
+      },
+      "reviewedAt": "2026-10-29",
+      "reviewer": "DOLA Inverse follow-up 2026-10-29 (M5/V7 legacy-bridge incident review)",
+      "primarySources": [
+        {
+          "label": "Inverse Multichain-DOLA Exploit FAQ published July 15 2023: anyDOLA IOUs (Q2), paused bridge exits (Q3/Q4), avoidance guidance (Q11), no approved compensation (Q13)",
+          "url": "https://docs.google.com/document/d/1Q5ew52Z8VwxcgkTapHNsBHoCtKqkyqYWRhwzjwRj40M/export?format=txt",
+          "publishedAt": "2023-07-15"
+        },
+        {
+          "label": "Fantom block 123871772 pin (2026-10-29T07:29:40Z): vault, owner and sole enabled minter of DOLA receipt 0x3129662808bec728a27ab6a6b9afd3cbaca8a43c is 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe with no deployed code",
+          "url": "https://ftmscan.com/block/123871772",
+          "publishedAt": "2026-10-29"
+        },
+        {
+          "label": "Ethereum block 26296822 common pin (2026-10-29T07:12:23Z): 465779.919424981030734007 canonical DOLA held at the Fantom-labelled bridge custody 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe",
+          "url": "https://etherscan.io/block/26296822",
+          "publishedAt": "2026-10-29"
+        }
+      ],
+      "finding": "incident / active supply-integrity-failure: legacy Multichain/Anyswap Fantom representation of DOLA stranded with blocked exits after the July 2023 Multichain bridge collapse. The Multichain-DOLA Exploit FAQ (published 2023-07-15) records that following Multichain's 2023-07-06 unusual-activity announcement all bridge transfers were paused and anyDOLA holders on BNB, Avalanche and Fantom cannot bridge back (Q3/Q4), advises avoiding Multichain-bridged DOLA while unresolved (Q11), and records that no DAO compensation had been approved at publication (Q13). At Fantom block 123871772 (hash 0x00057257000019e389da25a1a1fa7c9d4f192e2e809bdfbee61f9aed499200d3) the vault, owner and sole enabled minter of token 0x3129662808bec728a27ab6a6b9afd3cbaca8a43c is 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe (eth_getCode 0x; DELAY() reverts, so no delay bound is claimed); outstanding receipts total 463779.427823982489795324, about 0.4102% of provider-counted supply (2.0519% combined across the three legacy chains). At the common Ethereum pin block 26296822 that same address holds 465779.919424981030734007 canonical DOLA; this identifies custody location only and is not proof of recoverable, claim-specific or par-redeemable backing. Inverse confirmed on 2026-10-28 that only canonical Ethereum DOLA is issuer supply and that this representation is an unsupported bridge IOU with no Inverse backing or DAO redemption guarantee. No DOLA-specific MPC-key compromise or theft of DOLA backing is asserted; current custody of the minter key is unverifiable. No historical exposureShare is established or authored. This does not fan the event to sibling DOLA controls or the root claim. Reviewed at 2026-10-29T07:44:49Z.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-10-29",
+        "summary": "No Multichain service restoration, legacy bridge redemption or lane reopening is evidenced: the FAQ's blocked-exit and avoidance guidance still stands, the issuer restated on 2026-10-28 that the representation is unsupported, and the Fantom block 123871772 pin still shows the code-empty bridge vault as sole enabled minter with no DAO compensation approved at FAQ publication and no later compensation vote evidenced. The July 2023 FAQ remains the latest dated public remediation statement.",
+        "sources": [
+          {
+            "label": "Inverse Multichain-DOLA Exploit FAQ published July 15 2023: anyDOLA IOUs (Q2), paused bridge exits (Q3/Q4), avoidance guidance (Q11), no approved compensation (Q13)",
+            "url": "https://docs.google.com/document/d/1Q5ew52Z8VwxcgkTapHNsBHoCtKqkyqYWRhwzjwRj40M/export?format=txt",
+            "publishedAt": "2023-07-15"
+          },
+          {
+            "label": "Fantom block 123871772 pin (2026-10-29T07:29:40Z): vault, owner and sole enabled minter of DOLA receipt 0x3129662808bec728a27ab6a6b9afd3cbaca8a43c is 0xc564ee9f21ed8a2d8e7e76c085740d5e4c5fafbe with no deployed code",
+            "url": "https://ftmscan.com/block/123871772",
+            "publishedAt": "2026-10-29"
+          }
+        ]
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "active"
+      }
+    },
+    {
+      "incidentId": "i37dolab-dola-inverse-finance-f5781deaca8ba13824b3-multichain-20261029",
+      "assetId": "dola-inverse-finance",
+      "domain": "control",
+      "kind": "supply-integrity-failure",
+      "occurredAt": "2023-07-06",
+      "resolvedAt": null,
+      "status": "active",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:dola-inverse-finance:f5781deaca8ba13824b3"
+      },
+      "reviewedAt": "2026-10-29",
+      "reviewer": "DOLA Inverse follow-up 2026-10-29 (M5/V7 legacy-bridge incident review)",
+      "primarySources": [
+        {
+          "label": "Inverse Multichain-DOLA Exploit FAQ published July 15 2023: anyDOLA IOUs (Q2), paused bridge exits (Q3/Q4), avoidance guidance (Q11), no approved compensation (Q13)",
+          "url": "https://docs.google.com/document/d/1Q5ew52Z8VwxcgkTapHNsBHoCtKqkyqYWRhwzjwRj40M/export?format=txt",
+          "publishedAt": "2023-07-15"
+        },
+        {
+          "label": "Avalanche block 98845745 pin (2026-10-29T07:35:07Z): sole enabled minter of DOLA receipt 0x221743dc9e954be4f86844649bf19b43d6f8366d is AnyswapV6 router 0xd86eee98e7d6726a1701f004f747e5ce3e48e87c; router mpc() 0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964 with no deployed code",
+          "url": "https://snowtrace.io/block/98845745",
+          "publishedAt": "2026-10-29"
+        }
+      ],
+      "finding": "incident / active supply-integrity-failure: legacy Multichain/Anyswap Avalanche representation of DOLA stranded with blocked exits after the July 2023 Multichain bridge collapse. The Multichain-DOLA Exploit FAQ (published 2023-07-15) records that following Multichain's 2023-07-06 unusual-activity announcement all bridge transfers were paused and anyDOLA holders on BNB, Avalanche and Fantom cannot bridge back (Q3/Q4), advises avoiding Multichain-bridged DOLA while unresolved (Q11), and records that no DAO compensation had been approved at publication (Q13). At Avalanche block 98845745 (hash 0xa9266778ffa7b9441a5245711efa69d75ed325e133fdac20780d92c9f581fe41) the sole enabled minter of token 0x221743dc9e954be4f86844649bf19b43d6f8366d is AnyswapV6 router 0xd86eee98e7d6726a1701f004f747e5ce3e48e87c whose mpc() is 0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964 (eth_getCode 0x; explorer-verified AnyswapV6ERC20/AnyswapV6Router sources); outstanding receipts total 62151.849195458360689521, about 0.0550% of provider-counted supply (2.0519% combined across the three legacy chains). Inverse confirmed on 2026-10-28 that only canonical Ethereum DOLA is issuer supply and that this representation is an unsupported bridge IOU with no Inverse backing or DAO redemption guarantee. No DOLA-specific MPC-key compromise or theft of DOLA backing is asserted; current human custody of the MPC is unverifiable. No historical exposureShare is established or authored. This does not fan the event to sibling DOLA controls or the root claim. Reviewed at 2026-10-29T07:37:40Z.",
+      "remediation": {
+        "state": "in-progress",
+        "lastVerifiedAt": "2026-10-29",
+        "summary": "No Multichain service restoration, legacy bridge redemption or lane reopening is evidenced: the FAQ's blocked-exit and avoidance guidance still stands, the issuer restated on 2026-10-28 that the representation is unsupported, and the Avalanche block 98845745 pin still shows the Multichain router as sole enabled minter with no DAO compensation approved at FAQ publication and no later compensation vote evidenced. The July 2023 FAQ remains the latest dated public remediation statement.",
+        "sources": [
+          {
+            "label": "Inverse Multichain-DOLA Exploit FAQ published July 15 2023: anyDOLA IOUs (Q2), paused bridge exits (Q3/Q4), avoidance guidance (Q11), no approved compensation (Q13)",
+            "url": "https://docs.google.com/document/d/1Q5ew52Z8VwxcgkTapHNsBHoCtKqkyqYWRhwzjwRj40M/export?format=txt",
+            "publishedAt": "2023-07-15"
+          },
+          {
+            "label": "Avalanche block 98845745 pin (2026-10-29T07:35:07Z): sole enabled minter of DOLA receipt 0x221743dc9e954be4f86844649bf19b43d6f8366d is AnyswapV6 router 0xd86eee98e7d6726a1701f004f747e5ce3e48e87c; router mpc() 0xd7adbfc92d0250f9b1a08e0a32a84137b68a9964 with no deployed code",
+            "url": "https://snowtrace.io/block/98845745",
+            "publishedAt": "2026-10-29"
+          }
+        ]
+      },
+      "posture": {
+        "component": "mint",
+        "controlKinds": [
+          "bridge"
+        ],
+        "incidentState": "active"
+      }
     }
   ],
   "negativeReviews": [
@@ -21445,6 +21606,106 @@
         "source:fc35bbfb7ade12ab6863555d",
         "source:8a40f4fe548803296e380d49",
         "source:a3b35a31dc17aa5e729290b6"
+      ]
+    },
+    {
+      "reviewId": "ccip-sdola-inverse-finance-60737d141c39b86ed4cc-negative-2026-10-29",
+      "assetId": "sdola-inverse-finance",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:sdola-inverse-finance:60737d141c39b86ed4cc"
+      },
+      "reviewedAt": "2026-10-29T09:03:45.674Z",
+      "reviewer": "DOLA Inverse follow-up 2026-10-29 (A2 sDOLA CCIP lane incident review)",
+      "windowStartSec": 1707350400,
+      "windowEndSec": 1793264625,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:04902a0871b8be4a768350a1",
+        "surface:6979c5c8e889ec74d6f93a00",
+        "surface:50eb3821ac48c67ff355e8b2"
+      ],
+      "sourcesRefs": [
+        "source:9fd6d8734f32b3902a590e99",
+        "source:f0449c7d691cc3bdec9d74bc",
+        "source:e54d4aeb8c9e7f48c3f848cf",
+        "source:0fa24d99085a668d93cc17e3",
+        "source:ec69ccec44ba5c89eccf09f1"
+      ]
+    },
+    {
+      "reviewId": "ccip-sdola-inverse-finance-5e5ff61200ec94740d40-negative-2026-10-29",
+      "assetId": "sdola-inverse-finance",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:sdola-inverse-finance:5e5ff61200ec94740d40"
+      },
+      "reviewedAt": "2026-10-29T09:03:45.674Z",
+      "reviewer": "DOLA Inverse follow-up 2026-10-29 (A2 sDOLA CCIP lane incident review)",
+      "windowStartSec": 1707350400,
+      "windowEndSec": 1793264625,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:04902a0871b8be4a768350a1",
+        "surface:6979c5c8e889ec74d6f93a00",
+        "surface:c42795a8800722111e8b630d"
+      ],
+      "sourcesRefs": [
+        "source:9fd6d8734f32b3902a590e99",
+        "source:f0449c7d691cc3bdec9d74bc",
+        "source:e54d4aeb8c9e7f48c3f848cf",
+        "source:43b22f2de132a54d50bd608b",
+        "source:ec69ccec44ba5c89eccf09f1"
+      ]
+    },
+    {
+      "reviewId": "ccip-sdola-inverse-finance-7a4043acab5a55aab38e-negative-2026-10-29",
+      "assetId": "sdola-inverse-finance",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:sdola-inverse-finance:7a4043acab5a55aab38e"
+      },
+      "reviewedAt": "2026-10-29T09:03:45.674Z",
+      "reviewer": "DOLA Inverse follow-up 2026-10-29 (A2 sDOLA CCIP lane incident review)",
+      "windowStartSec": 1707350400,
+      "windowEndSec": 1793264625,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:04902a0871b8be4a768350a1",
+        "surface:6979c5c8e889ec74d6f93a00",
+        "surface:df8ce8f8b5ac907c45061031"
+      ],
+      "sourcesRefs": [
+        "source:9fd6d8734f32b3902a590e99",
+        "source:f0449c7d691cc3bdec9d74bc",
+        "source:e54d4aeb8c9e7f48c3f848cf",
+        "source:5f2e705e2ef004ef37365c62",
+        "source:ec69ccec44ba5c89eccf09f1"
+      ]
+    },
+    {
+      "reviewId": "ccip-sdola-inverse-finance-e5e2f5983ea49d50ccd0-negative-2026-10-29",
+      "assetId": "sdola-inverse-finance",
+      "scope": {
+        "kind": "control",
+        "controlKey": "bridge-meta:sdola-inverse-finance:e5e2f5983ea49d50ccd0"
+      },
+      "reviewedAt": "2026-10-29T09:03:45.674Z",
+      "reviewer": "DOLA Inverse follow-up 2026-10-29 (A2 sDOLA CCIP lane incident review)",
+      "windowStartSec": 1707350400,
+      "windowEndSec": 1793264625,
+      "conclusion": "no-known-incident",
+      "searchedSurfacesRefs": [
+        "surface:04902a0871b8be4a768350a1",
+        "surface:6979c5c8e889ec74d6f93a00",
+        "surface:9f03d75fbd30568a89680d78"
+      ],
+      "sourcesRefs": [
+        "source:9fd6d8734f32b3902a590e99",
+        "source:f0449c7d691cc3bdec9d74bc",
+        "source:e54d4aeb8c9e7f48c3f848cf",
+        "source:70051f833990b079134785f7",
+        "source:ec69ccec44ba5c89eccf09f1"
       ]
     }
   ],
@@ -58228,6 +58489,76 @@
         "location": "Search result title and summary",
         "excerpt": "Reports a USD292 million bridge exploit on a LayerZero-powered route and Chainlink CCIP adoption afterwards. It names neither OpenEden nor a USDO token/pool control; not fanned to this control."
       }
+    },
+    {
+      "id": "source:9fd6d8734f32b3902a590e99",
+      "value": {
+        "label": "Complete 1328-row DefiLlama hacks search for sDOLA CCIP lanes",
+        "url": "https://api.llama.fi/hacks",
+        "observedAt": "2026-10-29T09:03:45.674Z",
+        "location": "Full dataset retained at agents/dola-followup-2026-10-29/raw/a2-sdola-tracker-search-2026-10-29.json; case-insensitive scan for sDOLA, Inverse, CCIP, Chainlink and Berachain across names, chains and serialized rows",
+        "excerpt": "Inverse Finance Frontier"
+      }
+    },
+    {
+      "id": "source:f0449c7d691cc3bdec9d74bc",
+      "value": {
+        "label": "Inverse DOLA cross-chain guide capture naming the mill 396 sDOLA lane shutdown",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide.md",
+        "observedAt": "2026-10-29T07:42:02Z",
+        "location": "Raw capture agents/dola-followup-2026-10-29/raw/v7-cross-chain-guide.md; CCIP lanes and Bridge Security Considerations sections",
+        "excerpt": "mill 396, executed 2026-08-11, removed every sDOLA CCIP lane in both directions across the mainnet pool and the L2 pools on Base, Optimism, Arbitrum, and Berachain, and revoked L2 minter permissions"
+      }
+    },
+    {
+      "id": "source:e54d4aeb8c9e7f48c3f848cf",
+      "value": {
+        "label": "Issuer sDOLA Cross-Chain Availability listing all five lanes closed",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola.md",
+        "observedAt": "2026-10-09T10:35:59Z",
+        "location": "Cross-Chain Availability section observed by the sDOLA risk-review lane review; all five closed lanes named with a transfers-will-not-complete warning",
+        "excerpt": "Transfers initiated against the shut-down lanes will not complete"
+      }
+    },
+    {
+      "id": "source:0fa24d99085a668d93cc17e3",
+      "value": {
+        "label": "Pinned Base lane state from the sDOLA risk-review control review",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com",
+        "observedAt": "2026-10-09T11:39:37.313Z",
+        "location": "Governance proxy 0x1c064265e053d23d120c518fdbb542e6537f82d1 pinned at Base block 52378281 (2026-10-09T11:38:29.000Z, header 0xa263b45847acc0e5d8301a8a1a346910b2f155d182a68d948a69192659fc82c3); former CCIP pool 0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab pinned at block 52048981 (2026-10-01) with empty supported-chain list and rejected former-pool mint; owner setMinter reactivation simulation succeeds; receipt totalSupply remains nonzero",
+        "excerpt": "0xa263b45847acc0e5d8301a8a1a346910b2f155d182a68d948a69192659fc82c3"
+      }
+    },
+    {
+      "id": "source:43b22f2de132a54d50bd608b",
+      "value": {
+        "label": "Pinned Optimism lane state from the sDOLA risk-review control review",
+        "url": "https://api-optimism-mainnet-archive.n.dwellir.com",
+        "observedAt": "2026-10-09T11:40:53.131Z",
+        "location": "Governance proxy 0xaf956837af704d825c1fcbe2651d5c3c37ad5289 pinned at Optimism block 157973602 (2026-10-09T11:39:41.000Z, header 0x4065dc28cc03718c02fda93661e5f4dd5598fe5288d2a1e5acd1dbf800f8c4cc); former CCIP pool 0x8404024d8f74ad2d20e82c184816b64d4184a018 pinned at block 157644266 (2026-10-01) with empty supported-chain list and rejected former-pool mint; owner setMinter reactivation simulation succeeds; receipt totalSupply remains nonzero",
+        "excerpt": "0x4065dc28cc03718c02fda93661e5f4dd5598fe5288d2a1e5acd1dbf800f8c4cc"
+      }
+    },
+    {
+      "id": "source:5f2e705e2ef004ef37365c62",
+      "value": {
+        "label": "Pinned Arbitrum lane state from the sDOLA risk-review control review",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com",
+        "observedAt": "2026-10-09T11:40:53.419Z",
+        "location": "Governance proxy 0x607bcd974bb69c78ecdbf0b68748b791bba24d94 pinned at Arbitrum block 513185222 (2026-10-09T11:40:10.000Z, header 0x3fa5a5018ff95619c157a3f3b15ddf564a4d3ec87bf25654877f1201f51160c4); former CCIP pool 0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e pinned at block 510773779 (2026-10-01) with empty supported-chain list and rejected former-pool mint; owner setMinter reactivation simulation succeeds; receipt totalSupply remains nonzero",
+        "excerpt": "0x3fa5a5018ff95619c157a3f3b15ddf564a4d3ec87bf25654877f1201f51160c4"
+      }
+    },
+    {
+      "id": "source:70051f833990b079134785f7",
+      "value": {
+        "label": "Pinned Berachain lane state from the sDOLA risk-review control review",
+        "url": "https://api-berachain-mainnet.n.dwellir.com",
+        "observedAt": "2026-10-09T11:42:02.104Z",
+        "location": "Governance proxy 0x1992af61fbf8ee38741bcc57d636caa22a1a7702 pinned at Berachain block 27265667 (2026-10-09T11:40:50.000Z, header 0xf708f973bf29b443db75478eaa2b4b1161d13bddc1515b3924cd124d3c480959); former CCIP pool 0x8bbd036d018657e454f679e7c4726f7a8ece2773 pinned at block 26936295 (2026-10-01) with empty supported-chain list and rejected former-pool mint; owner reactivation path recorded; receipt totalSupply remains nonzero",
+        "excerpt": "0xf708f973bf29b443db75478eaa2b4b1161d13bddc1515b3924cd124d3c480959"
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -72445,6 +72776,54 @@
         "kind": "incident-tracker",
         "url": "https://github.com/smartcontractkit/chainlink-ccip/security",
         "finding": "Chainlink CCIP repository shows no published security advisories. Bounded disclosed surface."
+      }
+    },
+    {
+      "id": "surface:04902a0871b8be4a768350a1",
+      "value": {
+        "kind": "issuer-announcements",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/dola-cross-chain-guide.md",
+        "finding": "Issuer cross-chain guide names governance mill 396 (executed 2026-08-11) as having removed every sDOLA CCIP lane in both directions across the mainnet pool and the Base, Optimism, Arbitrum and Berachain pools, revoked L2 minter permissions, and warns that transfers against the shut-down lanes will not complete and that reopening requires a new governance proposal. The issuer sDOLA docs Cross-Chain Availability section (observed 2026-10-09T10:35:59Z) still lists all five lanes closed. No issuer incident, exploit or loss disclosure exists for these lane controls; the lane history is a governance migration, not an incident response."
+      }
+    },
+    {
+      "id": "surface:6979c5c8e889ec74d6f93a00",
+      "value": {
+        "kind": "incident-tracker",
+        "url": "https://api.llama.fi/hacks",
+        "finding": "Full 1328-row dataset fetched 2026-10-29T09:03:45Z and searched case-insensitively for sDOLA, Inverse, CCIP, Chainlink and Berachain. Zero sDOLA, CCIP, Chainlink or Berachain matches. The only Inverse rows are the 2022 Frontier oracle manipulations on Ethereum, already recorded in the DOLA annotation timeline and unrelated to the sDOLA CCIP lane controls. Tracker silence is not lifetime absence."
+      }
+    },
+    {
+      "id": "surface:50eb3821ac48c67ff355e8b2",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-base-mainnet-archive.n.dwellir.com",
+        "finding": "Pinned Base lane reads recorded in the sDOLA risk-review bridgeRouteRisk controls: former CCIP pool 0xd84e1b7e1a7a8d49167884855c3985ef4bca45ab at block 52048981 (2026-10-01) returned an empty supported-chain list and rejected a former-pool mint; governance proxy 0x1c064265e053d23d120c518fdbb542e6537f82d1 at block 52378281 (2026-10-09) re-confirmed the empty list with a successful owner setMinter reactivation simulation and nonzero receipt totalSupply. Dormant reactivatable governance permission, not an active failure; no incident, pause or emergency evidence on the lane."
+      }
+    },
+    {
+      "id": "surface:c42795a8800722111e8b630d",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-optimism-mainnet-archive.n.dwellir.com",
+        "finding": "Pinned Optimism lane reads recorded in the sDOLA risk-review bridgeRouteRisk controls: former CCIP pool 0x8404024d8f74ad2d20e82c184816b64d4184a018 at block 157644266 (2026-10-01) returned an empty supported-chain list and rejected a former-pool mint; governance proxy 0xaf956837af704d825c1fcbe2651d5c3c37ad5289 at block 157973602 (2026-10-09) re-confirmed the empty list with a successful owner setMinter reactivation simulation and nonzero receipt totalSupply. Dormant reactivatable governance permission, not an active failure; no incident, pause or emergency evidence on the lane."
+      }
+    },
+    {
+      "id": "surface:df8ce8f8b5ac907c45061031",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com",
+        "finding": "Pinned Arbitrum lane reads recorded in the sDOLA risk-review bridgeRouteRisk controls: former CCIP pool 0xbbc28db61df26b76d5f7d5eed17ed4d6c278460e at block 510773779 (2026-10-01) returned an empty supported-chain list and rejected a former-pool mint; governance proxy 0x607bcd974bb69c78ecdbf0b68748b791bba24d94 at block 513185222 (2026-10-09) re-confirmed the empty list with a successful owner setMinter reactivation simulation and nonzero receipt totalSupply. Dormant reactivatable governance permission, not an active failure; no incident, pause or emergency evidence on the lane."
+      }
+    },
+    {
+      "id": "surface:9f03d75fbd30568a89680d78",
+      "value": {
+        "kind": "explorer-events",
+        "url": "https://api-berachain-mainnet.n.dwellir.com",
+        "finding": "Pinned Berachain lane reads recorded in the sDOLA risk-review bridgeRouteRisk controls: former CCIP pool 0x8bbd036d018657e454f679e7c4726f7a8ece2773 at block 26936295 (2026-10-01) returned an empty supported-chain list and rejected a former-pool mint; governance proxy 0x1992af61fbf8ee38741bcc57d636caa22a1a7702 at block 27265667 (2026-10-09) re-confirmed the dormant posture with the owner reactivation path recorded and nonzero receipt totalSupply. Dormant reactivatable governance permission, not an active failure; no incident, pause or emergency evidence on the lane."
       }
     }
   ]
