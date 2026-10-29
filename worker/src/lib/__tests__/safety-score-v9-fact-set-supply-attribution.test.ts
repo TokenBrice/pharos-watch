@@ -14,7 +14,9 @@ import {
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "../safety-score-v9/supply-attribution-contract";
-import { CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC } from "../safety-score-v9/supply-attribution";
+import { SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID } from "../safety-score-v9/supply-attribution";
+import { V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID } from "@shared/types/safety-score-v9";
+import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import {
   deriveXautRepresentationGroupSupplyAttribution,
   XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
@@ -41,6 +43,18 @@ import {
 // The fixture consumes October destination reviews directly from the sidecar,
 // independently of the generated registry's older review clock.
 const XAUT_FACT_SET_CLOCK_SEC = Date.parse("2026-10-05T12:00:00Z") / 1_000;
+
+// v10.38 per-source ceilings are authored in policy; the fact set must age the
+// chain-supply evidence against them, not against a worker interval literal.
+const SUPPLY_MAX_AGE_BY_SOURCE = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution
+  .chainSupplyMaxAgeBySource;
+const PROVIDER_CHAIN_SUPPLY_CEILING_SEC =
+  SUPPLY_MAX_AGE_BY_SOURCE.maxAgeSecBySource[V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID]!;
+const DEFAULT_CHAIN_SUPPLY_CEILING_SEC =
+  SUPPLY_MAX_AGE_BY_SOURCE.defaultMaxAgeSec + SUPPLY_MAX_AGE_BY_SOURCE.carryForwardExtraSec;
+const REVIEWED_DEPLOYMENT_CHAIN_SUPPLY_CEILING_SEC =
+  SUPPLY_MAX_AGE_BY_SOURCE.maxAgeSecBySource[SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID] ??
+  DEFAULT_CHAIN_SUPPLY_CEILING_SEC;
 
 afterEach(() => vi.restoreAllMocks());
 
@@ -233,7 +247,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
 
   it("compiles exact wM route shares without bridge-materiality uncertainty", () => {
     const fixed = withWmReviewedDeploymentAttribution(wmFixedInput());
-    const { baseline, compiled, wm } = compileWm(fixed);
+    const { compiled, wm } = compileWm(fixed);
 
     expect(wm.supply.status.observationState).toBe("known");
     expect(wm.supply.selectedBridgeRoutes).toHaveLength(5);
@@ -246,9 +260,9 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(
       wm.evidence.find((evidence) => evidence.evidenceId === "wm-m0:chain-supply"),
     ).toMatchObject({
-      sourceId: "safety-score-v9-reviewed-deployment-attribution",
+      sourceId: SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID,
       freshness: {
-        maxAgeSec: baseline.sources.chainSupply.maxAgeSec,
+        maxAgeSec: REVIEWED_DEPLOYMENT_CHAIN_SUPPLY_CEILING_SEC,
       },
     });
 
@@ -262,11 +276,11 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     const fixed = withWmReviewedDeploymentAttribution(wmFixedInput(), {
       observationAgeSec: 45 * 60, carriedForwardFromGenerationId: "gen-prior",
     });
-    const { baseline, compiled, wm } = compileWm(fixed);
+    const { compiled, wm } = compileWm(fixed);
     expect(wm.supply.status.observationState).toBe("known");
     expect(wm.gaps.map((gap) => gap.reasonCode)).not.toContain("runtime-bridge-materiality-unavailable");
     expect(wm.evidence.find((evidence) => evidence.evidenceId === "wm-m0:chain-supply")).toMatchObject({
-      freshness: { state: "current", maxAgeSec: baseline.sources.chainSupply.maxAgeSec! + 30 * 60 },
+      freshness: { state: "current", maxAgeSec: REVIEWED_DEPLOYMENT_CHAIN_SUPPLY_CEILING_SEC },
     });
     const evaluated = evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!;
     expect(evaluated.scoreInput.pillars.control.reasons.map((reason) => reason.code)).not.toContain(
@@ -632,7 +646,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
         name: "stale-review",
         extension: {
           bridge: "required" as const,
-          chainSupplyObservedAtSec: AS_OF_SEC - extension().sources.chainSupply.maxAgeSec! - CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC - 1,
+          chainSupplyObservedAtSec: AS_OF_SEC - PROVIDER_CHAIN_SUPPLY_CEILING_SEC - 1,
         },
         responsibility: "unresearched" as const,
         observationState: "stale" as const,
@@ -795,8 +809,7 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
     expect(evidence.freshness.state).toBe("current");
     expect(alpha.supply.status.observationState).toBe("known");
   });
-  it("carries a retained per-asset chain-supply observation through its bounded window and names the widened budget (10.27)", () => {
-    const baseMaxAgeSec = extension().sources.chainSupply.maxAgeSec!;
+  it("ages a retained per-asset chain-supply observation against the per-source ceiling and names its budget (v10.38)", () => {
     const chainSupplyByChain = {
       Ethereum: { current: 4_000_000, circulatingPrevDay: 4_000_000,
         circulatingPrevWeek: 4_000_000, circulatingPrevMonth: 4_000_000 },
@@ -808,29 +821,33 @@ describe("Safety Score v9 exact base fact-set adapter — supply attribution", {
       });
       return compileSafetyScoreV9FactSetFromFixedInput(fixed, extension({ clockSec })).assets[0]!;
     };
-    const evidenceOf = (asset: ReturnType<typeof compile>) =>
+    const evidenceOf = (asset: V9AssetFactsV3) =>
       asset.evidence.find((entry) => entry.evidenceId === "alpha:chain-supply")!;
 
-    const fresh = evidenceOf(compile(baseMaxAgeSec));
-    expect(fresh.freshness).toMatchObject({ state: "current", maxAgeSec: baseMaxAgeSec });
-
-    const carried = compile(baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC);
-    expect(evidenceOf(carried).observedAtSec).toBe(AS_OF_SEC);
-    expect(evidenceOf(carried).freshness).toMatchObject({
-      state: "current",
-      ageSec: baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC,
-      maxAgeSec: baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC,
+    // The provider source is listed in policy, so its evidence budget no longer
+    // moves with age: one 5,400 s ceiling at every observation.
+    const fresh = evidenceOf(compile(extension().sources.chainSupply.maxAgeSec!));
+    expect(fresh.freshness).toMatchObject({
+      state: "current", maxAgeSec: PROVIDER_CHAIN_SUPPLY_CEILING_SEC,
     });
-    expect(carried.supply.status.observationState).toBe("known");
-    expect(evaluateV9ExitAssetFacts(carried, V9_CANDIDATE_POLICY_V1).stressRequest).not.toBeNull();
 
-    const expired = compile(baseMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC + 1);
+    const atCeiling = compile(PROVIDER_CHAIN_SUPPLY_CEILING_SEC);
+    expect(evidenceOf(atCeiling).observedAtSec).toBe(AS_OF_SEC);
+    expect(evidenceOf(atCeiling).freshness).toMatchObject({
+      state: "current",
+      ageSec: PROVIDER_CHAIN_SUPPLY_CEILING_SEC,
+      maxAgeSec: PROVIDER_CHAIN_SUPPLY_CEILING_SEC,
+    });
+    expect(atCeiling.supply.status.observationState).toBe("known");
+    expect(evaluateV9ExitAssetFacts(atCeiling, V9_CANDIDATE_POLICY_V1).stressRequest).not.toBeNull();
+
+    const expired = compile(PROVIDER_CHAIN_SUPPLY_CEILING_SEC + 1);
     expect(evidenceOf(expired).freshness.state).toBe("stale");
     expect(evaluateV9ExitAssetFacts(expired, V9_CANDIDATE_POLICY_V1).stressRequest?.requestedNotionalUsd).toBe(25_000_000);
   });
 
   it.each(["chain", "aggregate"] as const)("attributes stale %s supply to A without refreshing or zero-filling it", (name) => {
-    const ageSec = name === "chain" ? extension().sources.chainSupply.maxAgeSec! + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC + 1
+    const ageSec = name === "chain" ? PROVIDER_CHAIN_SUPPLY_CEILING_SEC + 1
       : 7 * 86400 + 1;
     const clockSec = AS_OF_SEC + ageSec;
     const observedAtSec = AS_OF_SEC;

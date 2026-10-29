@@ -16,7 +16,7 @@ const CENSUS = SUPPLY.deploymentSupplyCensus;
 
 function evmRow(overrides: Partial<V9DeploymentSupplyCensusRow> = {}): V9DeploymentSupplyCensusRow {
   return {
-    deploymentRouteKey: "ethereum:0x0000000000000000000000000000000000000001",
+    routeId: "ethereum:0x0000000000000000000000000000000000000001",
     chainId: "ethereum",
     tokenAddress: "0x0000000000000000000000000000000000000001",
     readKind: "evm-total-supply",
@@ -38,22 +38,29 @@ function evmRow(overrides: Partial<V9DeploymentSupplyCensusRow> = {}): V9Deploym
   };
 }
 
-function packet(overrides: Partial<SafetyScoreV9DeploymentSupplyCensus> = {}): SafetyScoreV9DeploymentSupplyCensus {
+type PacketOverrides = Omit<Partial<SafetyScoreV9DeploymentSupplyCensus>, "conservation"> & {
+  conservation?: Partial<SafetyScoreV9DeploymentSupplyCensus["conservation"]>;
+};
+
+function packet(overrides: PacketOverrides = {}): SafetyScoreV9DeploymentSupplyCensus {
+  const deployments = overrides.deployments ?? [evmRow()];
+  const measuredSupplyUsd = deployments.reduce((sum, row) => sum + row.supplyUsdUpper, 0);
+  const measuredShareSum = deployments.reduce((sum, row) => sum + row.shareUpper, 0);
   return {
     model: SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MODEL,
     observedAtSec: CLOCK_SEC,
-    deployments: [evmRow()],
+    deployments,
     conservation: {
       aggregateSupplyUsd: 1_000_000,
-      measuredSupplyUsd: 1_000,
-      measuredShareSum: 0.001,
+      measuredSupplyUsd,
+      measuredShareSum,
       relativeTolerance: SUPPLY.conservationRelativeTolerance,
       absoluteToleranceUsd: SUPPLY.conservationAbsoluteToleranceUsd,
       rosterComplete: true,
-      conserved: true,
+      conserved: measuredShareSum <= 1,
+      ...overrides.conservation,
     },
-    rejected: [],
-    ...overrides,
+    rejected: overrides.rejected ?? [],
   };
 }
 
@@ -70,36 +77,76 @@ describe("deployment supply census packet", () => {
     const parsed = accept(packet());
     expect(parsed.deployments[0]!.evidenceKind).toBe("upper-bound");
     expect(parsed.model).toBe("deployment-supply-census-v1");
+    expect(parsed.conservation.conserved).toBe(true);
   });
 
   it("rejects the 65th deployment but accepts the configured maximum", () => {
     const deployments = Array.from({ length: CENSUS.maxDeploymentsPerAsset }, (_, index) =>
       evmRow({
-        deploymentRouteKey: `ethereum:0x${(index + 1).toString(16).padStart(40, "0")}`,
+        routeId: `ethereum:0x${(index + 1).toString(16).padStart(40, "0")}`,
         tokenAddress: `0x${(index + 1).toString(16).padStart(40, "0")}`,
       }),
     );
     expect(accept(packet({ deployments })).deployments).toHaveLength(CENSUS.maxDeploymentsPerAsset);
     reject(packet({
-      deployments: [...deployments, evmRow({ deploymentRouteKey: "ethereum:0xdead", tokenAddress: "0xdead" })],
+      deployments: [...deployments, evmRow({ routeId: "ethereum:0xdead", tokenAddress: "0xdead" })],
     }));
   });
 
-  it("represents a conservation breach but refuses a conserved packet above the ceiling", () => {
+  it("recomputes conservation from the deployment rows instead of trusting declared totals", () => {
+    const overCount = evmRow({ supplyUsdUpper: 1_000, shareUpper: 1.5 });
+    reject(packet({
+      deployments: [overCount],
+      conservation: {
+        aggregateSupplyUsd: 1_000,
+        measuredSupplyUsd: 900,
+        measuredShareSum: 0.9,
+        conserved: true,
+      },
+    }));
+  });
+
+  it("ties each row to its raw-units times price product and to its aggregate share", () => {
+    reject(packet({ deployments: [evmRow({ supplyUsdUpper: 1_200, shareUpper: 0.002 })] }));
+    reject(packet({
+      deployments: [
+        evmRow({
+          totalSupplyRaw: "2000000000000000000000",
+          supplyUsdUpper: 2_000,
+          shareUpper: 0.001,
+        }),
+      ],
+    }));
+  });
+
+  it("represents a conservation breach but never as conserved", () => {
     const breach = packet({
+      deployments: [
+        evmRow({
+          totalSupplyRaw: "100400000000000000000",
+          supplyUsdUpper: 100.4,
+          shareUpper: 1.004,
+        }),
+      ],
       conservation: {
         aggregateSupplyUsd: 100,
         measuredSupplyUsd: 100.4,
         measuredShareSum: 1.004,
-        relativeTolerance: SUPPLY.conservationRelativeTolerance,
-        absoluteToleranceUsd: SUPPLY.conservationAbsoluteToleranceUsd,
-        rosterComplete: true,
         conserved: false,
       },
-      rejected: [{ deploymentRouteKey: null, code: "census-rejected:conservation-breach" }],
+      rejected: [{ routeId: null, code: "census-rejected:conservation-breach" }],
     });
     expect(accept(breach).conservation.conserved).toBe(false);
     reject({ ...breach, rejected: [], conservation: { ...breach.conservation, conserved: true } });
+  });
+
+  it("never claims conservation after an asset-level rejection", () => {
+    const rejected = packet({
+      rejected: [{ routeId: null, code: "census-rejected:roster-incomplete" }],
+    });
+    reject(rejected);
+    expect(accept({ ...rejected, conservation: { ...rejected.conservation, conserved: false } })
+      .conservation.conserved).toBe(false);
   });
 
   it("rejects an incomplete roster that claims conservation", () => {
@@ -107,35 +154,35 @@ describe("deployment supply census packet", () => {
     reject({ ...value, conservation: { ...value.conservation, rosterComplete: false } });
   });
 
-  it("bounds pin age and cross-chain skew at the policy boundary", () => {
+  it("bounds pin age and cross-chain skew at the supply-attribution boundary", () => {
     const atMaxAge = packet({
       deployments: [evmRow({
-        pin: { ...evmRow().pin, blockTimeSec: CLOCK_SEC - CENSUS.observationMaxAgeSec },
+        pin: { ...evmRow().pin, blockTimeSec: CLOCK_SEC - SUPPLY.observationMaxAgeSec },
       } as Partial<V9DeploymentSupplyCensusRow>)],
     });
     accept(atMaxAge);
     reject({
       ...atMaxAge,
       deployments: [evmRow({
-        pin: { ...evmRow().pin, blockTimeSec: CLOCK_SEC - CENSUS.observationMaxAgeSec - 1 },
+        pin: { ...evmRow().pin, blockTimeSec: CLOCK_SEC - SUPPLY.observationMaxAgeSec - 1 },
       } as Partial<V9DeploymentSupplyCensusRow>)],
     });
 
     const secondChain = evmRow({
-      deploymentRouteKey: "base:0x0000000000000000000000000000000000000002",
+      routeId: "base:0x0000000000000000000000000000000000000002",
       chainId: "base",
       tokenAddress: "0x0000000000000000000000000000000000000002",
       pin: {
         kind: "evm-header",
         blockNumber: 1,
         blockHash: `0x${"c".repeat(64)}`,
-        blockTimeSec: CLOCK_SEC - 60 - CENSUS.observationMaxSkewSec,
+        blockTimeSec: CLOCK_SEC - 60 - SUPPLY.observationMaxSkewSec,
         runtimeCodeSha256: "d".repeat(64),
       },
     });
     accept(packet({ deployments: [evmRow(), secondChain] }));
     reject(packet({
-      deployments: [evmRow(), { ...secondChain, pin: { ...secondChain.pin, blockTimeSec: CLOCK_SEC - 60 - CENSUS.observationMaxSkewSec - 1 } }],
+      deployments: [evmRow(), { ...secondChain, pin: { ...secondChain.pin, blockTimeSec: CLOCK_SEC - 60 - SUPPLY.observationMaxSkewSec - 1 } }],
     }));
   });
 
@@ -150,17 +197,39 @@ describe("deployment supply census packet", () => {
     reject(packet({ deployments: [{ ...row, pin: { ...row.pin, blockTimeSec: CLOCK_SEC + 1 } }] }));
 
     const reminted = evmRow({
-      deploymentRouteKey: "ethereum:0x0000000000000000000000000000000000000003",
+      routeId: "ethereum:0x0000000000000000000000000000000000000003",
       tokenAddress: "0x0000000000000000000000000000000000000003",
       pin: { ...row.pin, blockHash: `0x${"e".repeat(64)}` },
     });
     reject(packet({ deployments: [row, reminted] }));
   });
 
+  it("shares one header across same-chain deployments with distinct code hashes", () => {
+    const first = evmRow();
+    const second = evmRow({
+      routeId: "ethereum:0x0000000000000000000000000000000000000002",
+      tokenAddress: "0x0000000000000000000000000000000000000002",
+      pin: {
+        kind: "evm-header",
+        blockNumber: 26_000_000,
+        blockHash: `0x${"a".repeat(64)}`,
+        blockTimeSec: CLOCK_SEC - 60,
+        runtimeCodeSha256: "f".repeat(64),
+      },
+    });
+    expect(accept(packet({ deployments: [first, second] })).deployments).toHaveLength(2);
+    reject(packet({
+      deployments: [
+        first,
+        { ...second, pin: { ...second.pin, blockNumber: 26_000_001 } },
+      ],
+    }));
+  });
+
   it("rejects a stale reference price and a read kind that disagrees with its pin", () => {
     reject(packet({
       deployments: [evmRow({
-        referencePriceObservedAtSec: CLOCK_SEC - CENSUS.observationMaxAgeSec - 1,
+        referencePriceObservedAtSec: CLOCK_SEC - SUPPLY.observationMaxAgeSec - 1,
       })],
     }));
     reject(packet({
@@ -179,9 +248,9 @@ describe("deployment supply census packet", () => {
     expect(deploymentSupplyCensusRejectionCode("conservation-breach")).toBe("census-rejected:conservation-breach");
     expect(V9DeploymentSupplyCensusRejectionCodeSchema.safeParse("census-rejected:conservation-breach").success).toBe(true);
     expect(V9DeploymentSupplyCensusRejectionCodeSchema.safeParse("conservation-breach").success).toBe(false);
-    reject(packet({ rejected: [{ deploymentRouteKey: null, code: "conservation-breach" }] }));
+    reject(packet({ rejected: [{ routeId: null, code: "conservation-breach" }] }));
     reject(packet({
-      rejected: [{ deploymentRouteKey: evmRow().deploymentRouteKey, code: "census-rejected:missing-code-hash" }],
+      rejected: [{ routeId: evmRow().routeId, code: "census-rejected:missing-code-hash" }],
     }));
   });
 

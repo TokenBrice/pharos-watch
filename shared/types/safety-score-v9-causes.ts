@@ -127,6 +127,16 @@ export type V9TypedReviewGapClassification = z.infer<typeof V9TypedReviewGapClas
 const ResearchDexRouteKey = /^(dex):dex-liquidity-[0-9]+:(.+)$/u;
 const ResearchRedemptionRouteKey = /^(redemption):(?:redemption:(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9]+:[a-z0-9]{0,8})|redemption-backstops-unavailable):(.+)$/u;
 
+/**
+ * Route identity of one open question: the research binding drops the producer
+ * generation UUID and keeps `<lane>|<tail>`, so one lane keeps one question
+ * across producer generations. Unrecognized route shapes stay exact.
+ */
+export function v9RouteQuestionIdentity(routeKey: string): string {
+  const match = ResearchDexRouteKey.exec(routeKey) ?? ResearchRedemptionRouteKey.exec(routeKey);
+  return match === null ? routeKey : `${match[1]!}|${match[2]!}`;
+}
+
 /** Exact identity by default; research binds the same lane/route across producer generations. */
 export function v9EvidenceCauseScopeKey(
   assetId: string,

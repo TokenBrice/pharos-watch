@@ -5,7 +5,10 @@ import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitive
 import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
 import { issue, ScoreSchema } from "./safety-schema-primitives";
 import { V9SupplyAttributionPolicySchema } from "./safety-score-v9-supply-attribution";
-import { V9DeploymentSupplyCensusPolicySchema } from "./safety-score-v9-deployment-supply-census";
+import {
+  SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MODEL,
+  V9DeploymentSupplyCensusPolicySchema,
+} from "./safety-score-v9-deployment-supply-census";
 import { ExitExecutionModelPolicySchema } from "./exit-route";
 
 import { V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
@@ -539,16 +542,10 @@ export const V9DocumentationReasonSchema = z.enum([
 export type V9DocumentationReason = z.infer<typeof V9DocumentationReasonSchema>;
 
 /**
- * What becomes of a classified datum when its own review evidence expires.
- * `stale-documentation` keeps the datum with its original `reviewedAt` after the
- * scoped question lapses (gated by `retainExpiredScopedQuestions`);
- * `recompute-per-capture` carries no authored expiry and is re-derived from the
- * live predicate on every capture.
+ * Classification vocabulary for a documentation threshold: `documentation.ts`
+ * reports it and the evidence-gap queue carries it. It is not a policy key —
+ * the policy block declares only which percent key supplies the bar.
  */
-export const V9DocumentationRetentionSchema = z.enum(["stale-documentation", "recompute-per-capture"]);
-export type V9DocumentationRetention = z.infer<typeof V9DocumentationRetentionSchema>;
-
-/** The share vocabulary a documentation reason can be bounded by; `null` reasons need no bar. */
 export const V9DocumentationThresholdKindSchema = z.enum(["known-share-pct", "reserve-book-share"]);
 export type V9DocumentationThresholdKind = z.infer<typeof V9DocumentationThresholdKindSchema>;
 
@@ -559,38 +556,34 @@ export type V9DocumentationThresholdKind = z.infer<typeof V9DocumentationThresho
  */
 export const V9DocumentationThresholdSchema = z
   .object({
-    kind: V9DocumentationThresholdKindSchema,
     sharePctKey: z.enum(["documentationImmaterialSharePct", "reserveDustBookSharePct"]),
   })
-  .strict()
-  .superRefine((threshold, ctx) => {
-    const expectedKey = threshold.kind === "known-share-pct"
-      ? "documentationImmaterialSharePct"
-      : "reserveDustBookSharePct";
-    if (threshold.sharePctKey !== expectedKey) {
-      issue(ctx, ["sharePctKey"], `${threshold.kind} thresholds read ${expectedKey}`);
-    }
-  });
+  .strict();
 export type V9DocumentationThreshold = z.infer<typeof V9DocumentationThresholdSchema>;
 
 export const V9DocumentationReasonPolicySchema = z
   .object({
     reason: V9DocumentationReasonSchema,
     publicLabel: z.string().min(1),
-    retention: V9DocumentationRetentionSchema,
     threshold: V9DocumentationThresholdSchema.nullable(),
   })
   .strict();
 export type V9DocumentationReasonPolicy = z.infer<typeof V9DocumentationReasonPolicySchema>;
 
-/** The two reasons that are bounded by a declared share instead of a structural predicate. */
-const V9_DOCUMENTATION_THRESHOLD_REASONS: Readonly<Record<V9DocumentationReason, boolean>> = {
-  "no-scoring-path": false,
-  "unknown-scores-as-no-credit": false,
-  "unscored-diagnostic": false,
-  "coverage-label": false,
-  "immaterial-deployment": true,
-  "reserve-dust": true,
+/**
+ * The percent key each reason's bar comes from; `null` reasons are bounded by
+ * their structural predicate instead. Exhaustive over the vocabulary, so a new
+ * reason cannot be added without deciding its bar.
+ */
+const V9_DOCUMENTATION_THRESHOLD_SHARE_PCT_KEY: Readonly<
+  Record<V9DocumentationReason, "documentationImmaterialSharePct" | "reserveDustBookSharePct" | null>
+> = {
+  "no-scoring-path": null,
+  "unknown-scores-as-no-credit": null,
+  "unscored-diagnostic": null,
+  "coverage-label": null,
+  "immaterial-deployment": "documentationImmaterialSharePct",
+  "reserve-dust": "reserveDustBookSharePct",
 };
 
 export const V9DocumentationPolicySchema = z
@@ -606,7 +599,10 @@ export const V9DocumentationPolicySchema = z
     reserveDustBookSharePct: z.number().finite().positive().max(100),
     // A merged per-root dust residual stays documentation below this share of the book.
     reserveDustResidualMaxBookSharePct: z.number().finite().positive().max(100),
-    // Retains expired scoped questions as stale documentation instead of dropping them.
+    // Sole retention authority: an expired scoped question stays published as stale
+    // documentation (original `reviewedAt`, never re-dated). Custody (`no-scoring-path`)
+    // is the only reason backed by an expiring scoped question; every other reason is
+    // re-derived from its live predicate on each capture.
     retainExpiredScopedQuestions: z.boolean(),
   })
   .strict()
@@ -626,21 +622,14 @@ export const V9DocumentationPolicySchema = z
       issue(ctx, ["reasons"], "Documentation reasons must be listed in reasonOrder");
     }
     reasons.forEach((entry, index) => {
-      const thresholded = V9_DOCUMENTATION_THRESHOLD_REASONS[entry.reason];
-      if (thresholded !== (entry.threshold !== null)) {
+      const expectedKey = V9_DOCUMENTATION_THRESHOLD_SHARE_PCT_KEY[entry.reason];
+      if ((entry.threshold?.sharePctKey ?? null) !== expectedKey) {
         issue(
           ctx,
           ["reasons", index, "threshold"],
-          thresholded
-            ? `${entry.reason} requires a declared share threshold`
-            : `${entry.reason} is bounded by its predicate, not a share threshold`,
-        );
-      }
-      if (!documentation.retainExpiredScopedQuestions && entry.retention === "stale-documentation") {
-        issue(
-          ctx,
-          ["reasons", index, "retention"],
-          "Stale documentation retention requires retainExpiredScopedQuestions",
+          expectedKey === null
+            ? `${entry.reason} is bounded by its predicate, not a share threshold`
+            : `${entry.reason} requires the ${expectedKey} threshold`,
         );
       }
     });
@@ -690,15 +679,14 @@ const V9EvidencePolicySchema = z
   })
   .strict();
 
-/** Source id of provider chain-circulating rows; its ceiling may never widen past 5,400 s. */
+/** Source id of provider chain-circulating rows; its ceiling may never widen past the default plus carry window. */
 export const V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID = "report-cards-chain-circulating" as const;
-/** Provider rows keep the pre-v10.38 effective ceiling (1,800 s base + 3,600 s carry). */
-export const V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC = 5400;
 
 /**
  * v10.38 per-source chain-supply ceiling (PF-B3). The pre-v10.38 window is the
  * two-part default; a listed source replaces it with one ceiling. Provider rows
- * stay at 5,400 s, and no lane may raise that provider ceiling.
+ * and census bounds stay at the documented default-plus-carry ceiling, and no
+ * lane may raise it (S-13, S-14).
  */
 export const V9ChainSupplyMaxAgeBySourcePolicySchema = z
   .strictObject({
@@ -708,19 +696,22 @@ export const V9ChainSupplyMaxAgeBySourcePolicySchema = z
   })
   .strict()
   .superRefine((policy, ctx) => {
-    const providerMaxAgeSec = policy.maxAgeSecBySource[V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID];
-    if (providerMaxAgeSec === undefined) {
-      issue(
-        ctx,
-        ["maxAgeSecBySource", V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID],
-        "Provider chain-circulating rows must declare their ceiling",
-      );
-    } else if (providerMaxAgeSec > V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC) {
-      issue(
-        ctx,
-        ["maxAgeSecBySource", V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID],
-        `Provider chain-circulating ceiling cannot exceed ${V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC} s`,
-      );
+    const documentedWindowSec = policy.defaultMaxAgeSec + policy.carryForwardExtraSec;
+    const cappedSources = [
+      V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID,
+      SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MODEL,
+    ] as const;
+    for (const sourceId of cappedSources) {
+      const maxAgeSec = policy.maxAgeSecBySource[sourceId];
+      if (maxAgeSec === undefined) {
+        issue(ctx, ["maxAgeSecBySource", sourceId], `${sourceId} rows must declare their ceiling`);
+      } else if (maxAgeSec > documentedWindowSec) {
+        issue(
+          ctx,
+          ["maxAgeSecBySource", sourceId],
+          `${sourceId} ceiling cannot exceed the default plus carry window`,
+        );
+      }
     }
   });
 export type V9ChainSupplyMaxAgeBySourcePolicy = z.output<
@@ -1465,19 +1456,6 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
       ["semantic", "evidence", "documentation", "documentationImmaterialSharePct"],
       "Documentation immaterial share must stay strictly below the deployment materiality threshold",
     );
-  }
-  // The census restates the supply-attribution age/skew gates for its own wire
-  // validation; two divergent values would let a captured packet admit a bound
-  // the scorer then rejects (or vice versa).
-  const censusPolicy = policy.semantic.supplyAttribution.deploymentSupplyCensus;
-  for (const field of ["observationMaxAgeSec", "observationMaxSkewSec"] as const) {
-    if (censusPolicy[field] !== policy.semantic.supplyAttribution[field]) {
-      issue(
-        ctx,
-        ["semantic", "supplyAttribution", "deploymentSupplyCensus", field],
-        "Census observation gates must equal the supply-attribution authority",
-      );
-    }
   }
 
   const reasonCodes = policy.reasonRegistry.map((entry) => entry.code);

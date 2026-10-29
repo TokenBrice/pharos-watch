@@ -21,8 +21,14 @@ import type { V9AssetFactsV3 } from "@shared/types/safety-score-v9-facts";
 import {
   generateV9MissingDataRegistry,
   classifyV9ScoreProjectionWorkType,
+  documentationQuestionKeysByRoot,
+  documentationResidualForRoot,
+  documentationResidualQuestionKey,
   mechanismOverlayAdmissionWarnings,
+  questionKeyForEntry,
+  type DocumentationQuestionEntry,
 } from "../maintenance/generate-safety-score-v9-missing-data-registry";
+import type { V9EvidenceGapDocumentation } from "@shared/types/safety-score-v9-evidence-queue";
 import {
   descriptorForReason,
   workTypeForDescriptor,
@@ -48,7 +54,7 @@ it("warns only before each mechanism review's admission instant", () => {
 
 function generateExitProjectionFixture(
   reasonCodes: readonly ("unproven-settlement-bound" | "unsupported-same-notional-route")[],
-  options: { intern?: boolean; gapCount?: number; contextKeys?: readonly string[] } = {},
+  options: { intern?: boolean; gapCount?: number; contextKeys?: readonly string[]; schemaVersion?: 7 | 8 } = {},
 ) {
   const assetId = "exit-fixture";
   const core = coreFixture();
@@ -98,7 +104,7 @@ function generateExitProjectionFixture(
         compiledFacts,
         candidate: {
           model: "v9-critical-path",
-          schemaVersion: 7,
+          schemaVersion: options.schemaVersion ?? 7,
           lifecycle: "active",
           candidateId: "safety-score-v9:fixture",
           policyVersion: policy.policy.releaseVersion,
@@ -124,6 +130,26 @@ function generateExitProjectionFixture(
           },
           foreignCauseGaps: [],
           cards: [card],
+          ...(options.schemaVersion === 8 ? {
+            openEvidence: {
+              semantics: "open-question-v1",
+              totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 0 },
+              owners: [],
+              reasons: [],
+              documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+              issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+              byCard: [],
+            },
+          } : {}),
+        },
+        evaluatedSet: {
+          assets: [{
+            assetId,
+            scoreInput: {
+              pillars: { backing: { reasons: [] }, exit: { reasons: [] }, control: { reasons: [] } },
+            },
+            exit: { routes: [] },
+          }],
         },
       },
     },
@@ -188,14 +214,22 @@ describe("Safety Score v9 missing-data work routing", () => {
         resultDigest: "b".repeat(64), policy: { id: policy.policy.policyId, semanticDigest: policy.semanticDigest },
         evaluationBuildDigest: "c".repeat(64), sourceGenerations: { fixture: "fixture:g1" },
         asOfSec: compiledFacts.asOfSec, publishedAtSec: compiledFacts.asOfSec, completeness, foreignCauseGaps: [], cards,
-      } } },
+      },
+        evaluatedSet: {
+          assets: ids.map(id => ({
+            assetId: id,
+            scoreInput: { pillars: { backing: { reasons: [] }, exit: { reasons: [] }, control: { reasons: [] } } },
+            exit: { routes: [] },
+          })),
+        },
+      } },
       policy: policyAsset,
       catalogEntries: ids.map(id => ({ id, file: `shared/data/stablecoins/coins/${id}.json`, coin: makeCoin(id) })),
     });
     expect(registry.summary).toMatchObject({
       stablecoinCount: completeness.expectedCount, rateableStablecoinCount: completeness.ratedCount,
       notRatedStablecoinCount: completeness.notRatedCount, pipelineGapStablecoinCount: completeness.pipelineGapCount,
-      // Registry v2 publishes deterministic key/count rows, not the former keyed object.
+      // Registry v3 publishes deterministic key/count rows, not the former keyed object.
       ratingStatusCounts: gapOnly ? [{ key: "pipeline-gap", count: 1 }]
         : [{ key: "not-rated", count: 1 }, { key: "pipeline-gap", count: 1 }, { key: "rated", count: 1 }],
     });
@@ -206,7 +240,7 @@ describe("Safety Score v9 missing-data work routing", () => {
   it("stores shared contexts once without changing compiled or supplemental task context", () => {
     const registry = generateExitProjectionFixture(["unsupported-same-notional-route", "unproven-settlement-bound"]);
     const stablecoin = registry.stablecoins[0]!;
-    expect(registry.schemaVersion).toBe(2);
+    expect(registry.schemaVersion).toBe(3);
     expect(stablecoin.missingItems.map(item => item.taskSource))
       .toEqual(["compiled-fact-gap", "score-projection-gap"]);
     const refs = stablecoin.missingItems.map(item => item.currentFactContextRef);
@@ -286,5 +320,206 @@ describe("Safety Score v9 missing-data work routing", () => {
     expect(() => classifyV9ScoreProjectionWorkType("unregistered-projection-reason")).toThrow(
       /Missing agent work-type definition/,
     );
+  });
+});
+
+const DOCUMENTATION: V9EvidenceGapDocumentation = {
+  class: "documentation",
+  reason: "no-scoring-path",
+  policyRef: "semantic.evidence.documentation.reasons.no-scoring-path",
+  threshold: null,
+};
+const RESERVE_DUST: V9EvidenceGapDocumentation = {
+  class: "documentation",
+  reason: "reserve-dust",
+  policyRef: "semantic.evidence.documentation.reasons.reserve-dust",
+  threshold: { kind: "reserve-book-share", value: 0.0001 },
+};
+
+type QuestionEntry = DocumentationQuestionEntry & { cause: "A" | "B" | "C" | "U" | "D" };
+
+function controlQuestionEntry(args: {
+  gapId: string;
+  cause: QuestionEntry["cause"];
+  factorKey: string;
+  documentation: V9EvidenceGapDocumentation | null;
+  assetId?: string;
+}): QuestionEntry {
+  return {
+    assetId: args.assetId ?? "root",
+    gapId: args.gapId,
+    reasonCode: "missing-mint-authority",
+    cause: args.cause,
+    documentation: args.documentation,
+    causeScope: {
+      pillar: "control",
+      componentKey: "control:issuer:demo",
+      factorKey: args.factorKey,
+      routeKey: null,
+      exposureId: null,
+      requiredDatum: "datum",
+    },
+  };
+}
+
+describe("Safety Score v9 documentation band", () => {
+  it("keeps a mixed question out of the documentation band", () => {
+    const documented = controlQuestionEntry({
+      gapId: "root:gap:custody", cause: "U", factorKey: "keyCustody", documentation: DOCUMENTATION,
+    });
+    expect(questionKeyForEntry(documented)).toBe("root|control|control:issuer:demo");
+
+    // One documentation obligation plus an issuer (C) obligation: the question
+    // is issuer-owned, never documentation.
+    const mixedIssuer = documentationQuestionKeysByRoot(
+      [documented, controlQuestionEntry({
+        gapId: "root:gap:mint", cause: "C", factorKey: "reconciliation", documentation: null,
+      })],
+      (entry) => entry.documentation,
+    );
+    expect(mixedIssuer.get("root")).toBeUndefined();
+
+    // Same with an open (U) obligation.
+    const mixedOpen = documentationQuestionKeysByRoot(
+      [documented, controlQuestionEntry({
+        gapId: "root:gap:mint", cause: "U", factorKey: "supervision", documentation: null,
+      })],
+      (entry) => entry.documentation,
+    );
+    expect(mixedOpen.get("root")).toBeUndefined();
+
+    // Every obligation documentation-classed: exactly one question, however
+    // many datums (and however many factor keys) answer it.
+    const documentedOnly = documentationQuestionKeysByRoot(
+      [
+        documented,
+        controlQuestionEntry({
+          gapId: "root:gap:mint", cause: "U", factorKey: "reconciliation", documentation: DOCUMENTATION,
+        }),
+      ],
+      (entry) => entry.documentation,
+    );
+    expect([...(documentedOnly.get("root") ?? [])]).toEqual(["root|control|control:issuer:demo"]);
+  });
+
+  it("drops measured-adverse rows from the question set", () => {
+    const keys = documentationQuestionKeysByRoot(
+      [controlQuestionEntry({ gapId: "root:gap:adverse", cause: "D", factorKey: "reconciliation", documentation: null })],
+      (entry) => entry.documentation,
+    );
+    expect(keys.size).toBe(0);
+  });
+
+  it("collapses reserve dust into one residual question per root", () => {
+    const dust = (gapId: string, exposureKey: string): QuestionEntry => ({
+      assetId: "root",
+      gapId,
+      reasonCode: "material-reserve-slice-unstructured",
+      cause: "U",
+      documentation: RESERVE_DUST,
+      causeScope: {
+        pillar: "backing",
+        componentKey: "reserve-exposure",
+        factorKey: null,
+        routeKey: null,
+        exposureId: exposureKey,
+        requiredDatum: "datum",
+      },
+    });
+    const entries = [dust("root:gap:dust-a", "reserve:a"), dust("root:gap:dust-b", "reserve:b")];
+    const residualKey = documentationResidualQuestionKey("root");
+    expect(residualKey).toBe("root|reserve-exposure|reserve-residual:sub-0.01pct");
+    for (const entry of entries) expect(questionKeyForEntry(entry)).toBe(residualKey);
+
+    const documented = documentationQuestionKeysByRoot(entries, (entry) => entry.documentation);
+    expect([...(documented.get("root") ?? [])]).toEqual([residualKey]);
+
+    // Above the residual bar the merged question stays open even though every
+    // datum under it is documentation-classed.
+    const openResidual = documentationQuestionKeysByRoot(entries, (entry) => entry.documentation, [residualKey]);
+    expect(openResidual.get("root")).toBeUndefined();
+  });
+
+  it("merges one residual per root and applies the 0.1% bar", () => {
+    const dust = (gapId: string, exposureKey: string, weight: number) => ({
+      gapId,
+      path: { kind: "collateral-exposure" as const, exposureKey },
+      materiality: { basis: "collateral-exposure" as const, fractionOfAsset: weight },
+    });
+    const taskIds = new Map([
+      ["root:gap:dust-a", "V9G-aaaa"],
+      ["root:gap:dust-b", "V9G-bbbb"],
+    ]);
+
+    const underBar = documentationResidualForRoot(
+      "root",
+      [dust("root:gap:dust-b", "reserve:b", 0.00005), dust("root:gap:dust-a", "reserve:a", 0.00005)],
+      taskIds,
+      0.1,
+    );
+    expect(underBar).toMatchObject({
+      questionKey: "root|reserve-exposure|reserve-residual:sub-0.01pct",
+      rootAssetId: "root",
+      reason: "reserve-dust",
+      bucket: "documentation",
+      thresholdBookSharePct: 0.1,
+      exposureKeys: ["reserve:a", "reserve:b"],
+      datumGapIds: ["root:gap:dust-a", "root:gap:dust-b"],
+      datumTaskIds: ["V9G-aaaa", "V9G-bbbb"],
+      datumCount: 2,
+    });
+    expect(underBar.bookSharePct).toBeCloseTo(0.01, 12);
+
+    const rows = Array.from({ length: 11 }, (_, index) =>
+      dust(`root:gap:dust-${index}`, `reserve:${index}`, 0.0000999));
+    const overBar = documentationResidualForRoot("root", rows, taskIds, 0.1);
+    expect(overBar.bucket).toBe("open");
+    expect(overBar.datumCount).toBe(11);
+  });
+
+  it("reads both the schema-7 cutover envelope and the schema-8 publication", () => {
+    const previous = generateExitProjectionFixture(["unsupported-same-notional-route"]);
+    const current = generateExitProjectionFixture(["unsupported-same-notional-route"], { schemaVersion: 8 });
+    expect(current.schemaVersion).toBe(3);
+    expect(current.stablecoins[0]!.missingItems.map((item) => item.taskId))
+      .toEqual(previous.stablecoins[0]!.missingItems.map((item) => item.taskId));
+    expect(current.summary.openItemCount).toBe(previous.summary.openItemCount);
+  });
+
+  it("publishes the v3 documentation shape on a replay with no documentation datum", () => {
+    const registry = generateExitProjectionFixture(["unsupported-same-notional-route"]);
+    const stablecoin = registry.stablecoins[0]!;
+    expect(stablecoin.documentationResiduals).toEqual([]);
+    expect(stablecoin.missingDataSummary).toMatchObject({
+      documentationItemCount: 0,
+      documentationDatumCount: 0,
+      documentationQuestionCount: 0,
+      researchedTerminalItemCount: 0,
+    });
+    for (const item of stablecoin.missingItems) {
+      expect(item.documentation).toBeNull();
+      expect(item.reviewState).toBeNull();
+      // A zero-route inventory keeps the coverage label open (never documentation);
+      // a gap without a cause scope keeps the gapless `path|<code>` identity.
+      expect(item.questionKey).toBe("exit-fixture|path|incomplete-dex-route-coverage");
+    }
+    expect(registry.summary).toMatchObject({
+      documentationItemCount: 0,
+      documentationDatumCount: 0,
+      documentationQuestionCount: 0,
+      documentationResidualCount: 0,
+      documentationResidualDatumCount: 0,
+      documentationOpenResidualCount: 0,
+      researchedTerminalItemCount: 0,
+    });
+    expect(registry.summary.documentationReasonCounts.map((row) => row.reason)).toEqual([
+      "no-scoring-path",
+      "unknown-scores-as-no-credit",
+      "unscored-diagnostic",
+      "coverage-label",
+      "immaterial-deployment",
+      "reserve-dust",
+    ]);
+    expect(registry.interpretation.documentationBand).toContain("--include-documentation");
   });
 });

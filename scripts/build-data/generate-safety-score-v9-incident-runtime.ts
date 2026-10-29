@@ -4,7 +4,14 @@ import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { V9AuthoredIncidentRegistryEnvelopeSchema, V9ReviewedIncidentRegistryEnvelopeSchema, V9ReviewedIncidentSchema } from "../../shared/types/safety-score-v9-incidents";
 import { projectNegativeIncidentReview } from "../lib/safety-score-v9-incident-runtime";
-import { canonicalizeReviewedRegistryDigest, expandReviewedRegistryReferences, reviewedRegistryDigestKey, reviewedRegistryEnvelopeDigest } from "../../shared/lib/safety-score-v9/reviewed-registry";
+import {
+  canonicalizeReviewedRegistryDigest,
+  expandReviewedRegistryReferences,
+  reviewedRegistryDigestKey,
+  reviewedRegistryEnvelopeDigest,
+  reviewedRegistryTextKey,
+  reviewedRegistryTupleKey,
+} from "../../shared/lib/safety-score-v9/reviewed-registry";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { parseStrictCliArgs } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -21,10 +28,16 @@ export function buildIncidentRuntime(value: unknown) {
     incidents: reviewedRegistryDigestKey("incidentId"),
     "incidents.*.primarySources": reviewedRegistryDigestKey("url"),
     "incidents.*.remediation.sources": reviewedRegistryDigestKey("url"),
-    "incidents.*.posture.controlKinds": (row) => typeof row === "string" ? row : "",
+    "incidents.*.posture.controlKinds": reviewedRegistryTextKey,
     negativeReviews: reviewedRegistryDigestKey("reviewId"),
     "negativeReviews.*.sources": reviewedRegistryDigestKey("url"),
-    "negativeReviews.*.scope.controlKinds": (row) => typeof row === "string" ? row : "",
+    "negativeReviews.*.scope.controlKinds": reviewedRegistryTextKey,
+    // Authored identity arrays are canonical sets, not ordered prose: their
+    // authored order must not become part of the build identity.
+    "negativeReviews.*.scope.controlIds": reviewedRegistryTextKey,
+    "negativeReviews.*.scope.coveredRoutes": reviewedRegistryTextKey,
+    "negativeReviews.*.scope.coveredControls": reviewedRegistryTextKey,
+    "negativeReviews.*.laneScreeningRefs": reviewedRegistryTupleKey("routeId", "certificateId"),
   });
   return { schemaVersion: 1, digest: reviewedRegistryEnvelopeDigest("safety-score-v9.incident-reviews.v1", "payload", canonical),
     incidents: envelope.incidents.map((row) => V9ReviewedIncidentSchema.parse(row)),

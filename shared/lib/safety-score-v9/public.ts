@@ -39,6 +39,7 @@ import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 import { v9BridgeMintControlKey, v9ControlChainLabel } from "./control-component-keys";
 import { readableV9PublicText, readableV9PublicWitnesses } from "./public-witness-texts";
 import { assertV9PublicCardProjections } from "../report-cards-v9-projections";
+import type { V9OpenEvidence } from "../../types/safety-score-v9-public";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -88,6 +89,8 @@ export interface V9PublicCardProjectionInput {
 
 export interface BuildSafetyScoreV9ResponseArgs {
   candidateId: string;
+  /** Server-computed open-evidence block; `open-questions.ts` is its only authority. */
+  openEvidence: V9OpenEvidence;
   policyVersion: string;
   publicationGenerationId: string;
   publishedAtSec: number;
@@ -1487,7 +1490,8 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       });
       return responseSchema.parse({
         model: "v9-critical-path",
-        schemaVersion: 7,
+        schemaVersion: 8,
+        openEvidence: args.openEvidence,
         lifecycle: "active",
         candidateId: args.candidateId,
         policyVersion: args.policyVersion,

@@ -542,38 +542,32 @@ function documentationFixture(): V9DocumentationPolicy {
       {
         reason: "no-scoring-path",
         publicLabel: "Custody question outside the scoring path",
-        retention: "stale-documentation",
         threshold: null,
       },
       {
         reason: "unknown-scores-as-no-credit",
         publicLabel: "Mint control credit already withheld",
-        retention: "recompute-per-capture",
         threshold: null,
       },
       {
         reason: "unscored-diagnostic",
         publicLabel: "Diagnostic datum, not scored",
-        retention: "recompute-per-capture",
         threshold: null,
       },
       {
         reason: "coverage-label",
         publicLabel: "DEX coverage label only",
-        retention: "recompute-per-capture",
         threshold: null,
       },
       {
         reason: "immaterial-deployment",
         publicLabel: "Deployment share below the immaterial bar",
-        retention: "recompute-per-capture",
-        threshold: { kind: "known-share-pct", sharePctKey: "documentationImmaterialSharePct" },
+        threshold: { sharePctKey: "documentationImmaterialSharePct" },
       },
       {
         reason: "reserve-dust",
         publicLabel: "Reserve exposure below the dust bar",
-        retention: "recompute-per-capture",
-        threshold: { kind: "reserve-book-share", sharePctKey: "reserveDustBookSharePct" },
+        threshold: { sharePctKey: "reserveDustBookSharePct" },
       },
     ],
     documentationImmaterialSharePct: 1,
@@ -618,11 +612,7 @@ describe("documentation-class policy", () => {
       documentation.reasons.reverse();
     }],
     ["public label", (documentation: V9DocumentationPolicy) => { documentation.reasons[0]!.publicLabel = "Renamed"; }],
-    ["retention", (documentation: V9DocumentationPolicy) => { documentation.reasons[1]!.retention = "stale-documentation"; }],
-    ["retention switch", (documentation: V9DocumentationPolicy) => {
-      documentation.retainExpiredScopedQuestions = false;
-      documentation.reasons[0]!.retention = "recompute-per-capture";
-    }],
+    ["retention switch", (documentation: V9DocumentationPolicy) => { documentation.retainExpiredScopedQuestions = false; }],
     ["immaterial share bar", (documentation: V9DocumentationPolicy) => { documentation.documentationImmaterialSharePct = 0.5; }],
     ["attributable points", (documentation: V9DocumentationPolicy) => { documentation.maxAttributableScorePoints = 0.2; }],
     ["reserve dust share", (documentation: V9DocumentationPolicy) => { documentation.reserveDustBookSharePct = 0.005; }],
@@ -659,32 +649,35 @@ describe("documentation-class policy", () => {
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(misordered))).toThrow(/listed in reasonOrder/);
   });
 
-  it("fails closed on retention, threshold and bar incoherence", () => {
-    const orphanRetention = documentationFixture();
-    orphanRetention.retainExpiredScopedQuestions = false;
-    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(orphanRetention)))
-      .toThrow(/retainExpiredScopedQuestions/);
+  it("fails closed on removed keys, threshold and bar incoherence", () => {
+    const removedRetentionKey = {
+      ...documentationFixture(),
+      reasons: documentationFixture().reasons.map((entry) => ({ ...entry, retention: "stale-documentation" })),
+    };
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(removedRetentionKey))).toThrow();
+
+    const removedKindKey = {
+      ...documentationFixture(),
+      reasons: documentationFixture().reasons.map((entry, index) =>
+        index === 4 ? { ...entry, threshold: { kind: "known-share-pct", sharePctKey: "documentationImmaterialSharePct" } } : entry
+      ),
+    };
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(removedKindKey))).toThrow();
 
     const missingThreshold = documentationFixture();
     missingThreshold.reasons[4]!.threshold = null;
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(missingThreshold)))
-      .toThrow(/requires a declared share threshold/);
+      .toThrow(/requires the documentationImmaterialSharePct threshold/);
 
     const predicateThreshold = documentationFixture();
-    predicateThreshold.reasons[0]!.threshold = {
-      kind: "known-share-pct",
-      sharePctKey: "documentationImmaterialSharePct",
-    };
+    predicateThreshold.reasons[0]!.threshold = { sharePctKey: "documentationImmaterialSharePct" };
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(predicateThreshold)))
       .toThrow(/bounded by its predicate/);
 
     const mismatchedKey = documentationFixture();
-    mismatchedKey.reasons[5]!.threshold = {
-      kind: "known-share-pct",
-      sharePctKey: "reserveDustBookSharePct",
-    };
+    mismatchedKey.reasons[4]!.threshold = { sharePctKey: "reserveDustBookSharePct" };
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(mismatchedKey)))
-      .toThrow(/known-share-pct thresholds read documentationImmaterialSharePct/);
+      .toThrow(/requires the documentationImmaterialSharePct threshold/);
 
     const mergedBelowRow = documentationFixture();
     mergedBelowRow.reserveDustBookSharePct = documentationFixture().reserveDustResidualMaxBookSharePct;
@@ -745,7 +738,10 @@ describe("v10.38 producer admission keys", () => {
     expect(semantic.supplyAttribution.chainSupplyMaxAgeBySource).toEqual({
       defaultMaxAgeSec: 1800,
       carryForwardExtraSec: 3600,
-      maxAgeSecBySource: { "report-cards-chain-circulating": 5400 },
+      maxAgeSecBySource: {
+        "report-cards-chain-circulating": 5400,
+        "deployment-supply-census-v1": 5400,
+      },
     });
     expect(semantic.supplyAttribution.deploymentSupplyCensus).toMatchObject({
       model: "deployment-supply-census-v1",
@@ -754,9 +750,9 @@ describe("v10.38 producer admission keys", () => {
       evmMulticallMaxBatchSize: 64,
       solanaCommitment: "finalized",
       maxDeploymentsPerAsset: 64,
-      observationMaxAgeSec: semantic.supplyAttribution.observationMaxAgeSec,
-      observationMaxSkewSec: semantic.supplyAttribution.observationMaxSkewSec,
     });
+    expect(semantic.supplyAttribution.deploymentSupplyCensus).not.toHaveProperty("observationMaxAgeSec");
+    expect(semantic.supplyAttribution.deploymentSupplyCensus).not.toHaveProperty("observationMaxSkewSec");
     expect(semantic.evidence.laneIncidentCertificateMaxAgeSec).toBe(2_592_000);
   });
 
@@ -772,18 +768,24 @@ describe("v10.38 producer admission keys", () => {
     }
   });
 
-  it("caps the provider chain-supply ceiling and requires the provider entry", () => {
+  it("caps the provider and census sources at the default plus carry window", () => {
     const widened = candidateClone();
     widened.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
       "report-cards-chain-circulating"
     ] = 5_401;
-    expect(() => loadV9MethodologyPolicy(widened)).toThrow(/cannot exceed 5400 s/);
+    expect(() => loadV9MethodologyPolicy(widened)).toThrow(/cannot exceed the default plus carry window/);
 
     const missing = candidateClone();
     delete missing.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
       "report-cards-chain-circulating"
     ];
     expect(() => loadV9MethodologyPolicy(missing)).toThrow(/must declare their ceiling/);
+
+    const missingCensus = candidateClone();
+    delete missingCensus.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
+      "deployment-supply-census-v1"
+    ];
+    expect(() => loadV9MethodologyPolicy(missingCensus)).toThrow(/must declare their ceiling/);
 
     const atCeiling = candidateClone();
     atCeiling.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
@@ -793,14 +795,14 @@ describe("v10.38 producer admission keys", () => {
       .maxAgeSecBySource["report-cards-chain-circulating"]).toBe(5_400);
   });
 
-  it("keeps the census observation gates equal to the supply-attribution authority", () => {
-    const ageDrift = candidateClone();
-    ageDrift.semantic.supplyAttribution.deploymentSupplyCensus.observationMaxAgeSec += 1;
-    expect(() => loadV9MethodologyPolicy(ageDrift)).toThrow(/must equal the supply-attribution authority/);
-
-    const skewDrift = candidateClone();
-    skewDrift.semantic.supplyAttribution.deploymentSupplyCensus.observationMaxSkewSec = 121;
-    expect(() => loadV9MethodologyPolicy(skewDrift)).toThrow(/must equal the supply-attribution authority/);
+  it("derives the documented window from the authored default plus carry", () => {
+    const widened = candidateClone();
+    widened.semantic.supplyAttribution.chainSupplyMaxAgeBySource.defaultMaxAgeSec = 1_900;
+    widened.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
+      "report-cards-chain-circulating"
+    ] = 5_401;
+    expect(loadV9MethodologyPolicy(widened).policy.semantic.supplyAttribution.chainSupplyMaxAgeBySource
+      .maxAgeSecBySource["report-cards-chain-circulating"]).toBe(5_401);
   });
 
   it("bounds census batches and the per-asset deployment cap at 64", () => {

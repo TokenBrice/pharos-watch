@@ -1,13 +1,13 @@
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { supplyAttributionPinMaxAgeSec, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import { V9_EVIDENCE_PRODUCER_INTERVAL_SEC } from "@shared/lib/cron-cadences";
+import { V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID } from "@shared/types/safety-score-v9";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { XAUT_ASSET_ID, XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC } from "./xaut-supply-attribution-contract";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import type { SupplyAttributionJournalV1 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS } from "@shared/lib/safety-score-v9-supply-attribution-journal";
-import { CENTRIFUGE_BURN_MINT_ASSET_IDS, REVIEWED_ECONOMIC_SUPPLY_PLANS, SUPPLY_ATTRIBUTION_CARRY_FORWARD_EXTRA_AGE_SEC, hasCompleteEligibleProviderSupply } from "./supply-attribution-contract";
+import { CENTRIFUGE_BURN_MINT_ASSET_IDS, REVIEWED_ECONOMIC_SUPPLY_PLANS, hasCompleteEligibleProviderSupply } from "./supply-attribution-contract";
 import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-source";
 
 // Replay reads only the captured partition; observers live in supply-attribution-capture.ts.
@@ -81,15 +81,54 @@ export function safetyScoreV9ChainSupplyObservedAtSec(
   );
 }
 
+/** Evidence source ids of the non-provider chain-supply lanes. */
+export const SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID = "safety-score-v9-lock-mint-attribution";
+export const SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID = "safety-score-v9-reviewed-deployment-attribution";
+
 /**
- * When a sync-stablecoins run does not re-observe an asset, the producer keeps
- * its last observed supply with the original supplyObservedAt. That retained
- * per-asset observation stays usable for four more producer intervals beyond
- * the chain-supply budget (1800s to 5400s): the next scheduled sync, up to two
- * missed provider observations, and one retry. A fresh observation always
- * replaces it, so the window cannot mask a supply move the provider reports.
+ * Single authority for the evidence source id that owns an asset's chain-supply
+ * rows. The published chain-supply evidence and the per-source ceiling both
+ * resolve through it, so a new attribution model cannot inherit another lane's
+ * ceiling by accident.
  */
-export const CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC = V9_EVIDENCE_PRODUCER_INTERVAL_SEC["sync-stablecoins"] * 4;
+export function safetyScoreV9ChainSupplySourceId(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+): string {
+  const attribution = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
+  switch (attribution?.model) {
+    case undefined:
+      return V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID;
+    case "reviewed-economic-deployment-partition-v1":
+      return V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId;
+    case "canonical-lock-mint-partition-v1":
+    case "canonical-lock-mint-group-partition-v2":
+      return SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID;
+    case "reviewed-deployment-unit-partition-v1":
+      return SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID;
+  }
+}
+
+/**
+ * v10.38 per-source chain-supply ceiling
+ * (`semantic.supplyAttribution.chainSupplyMaxAgeBySource`). A listed source has
+ * one ceiling; an unlisted source fails closed to the policy default window
+ * (base plus carry). `declaredMaxAgeSec` is the source clock's own published
+ * window and may only tighten that default, never raise it.
+ */
+export function safetyScoreV9ChainSupplyMaxAgeSecForSource(
+  sourceId: string,
+  declaredMaxAgeSec: number | null = null,
+): number {
+  const { defaultMaxAgeSec, carryForwardExtraSec, maxAgeSecBySource } =
+    V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.chainSupplyMaxAgeBySource;
+  const listedMaxAgeSec = maxAgeSecBySource[sourceId];
+  if (listedMaxAgeSec !== undefined) return listedMaxAgeSec;
+  const baseMaxAgeSec = declaredMaxAgeSec === null
+    ? defaultMaxAgeSec
+    : Math.min(declaredMaxAgeSec, defaultMaxAgeSec);
+  return baseMaxAgeSec + carryForwardExtraSec;
+}
 
 export function safetyScoreV9ChainSupplyMaxAgeSec(
   fixedInput: Readonly<SafetyScoreV9CompilerInput>,
@@ -98,10 +137,9 @@ export function safetyScoreV9ChainSupplyMaxAgeSec(
 ): number | null {
   const attribution =
     fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
-  // XAUT's finalized Ethereum observation has an explicit one-hour window.
-  // Preserve that same bound when the accepted packet becomes fact evidence;
-  // otherwise the generic chain-supply window would immediately contradict
-  // the per-asset admission contract.
+  // Per-asset lane admission contracts keep their reviewed windows; they are
+  // narrower than the generic source ceiling and must never contradict the
+  // capture-time gate that admitted the packet.
   if (attribution?.model === "reviewed-economic-deployment-partition-v1") {
     return supplyAttributionPinMaxAgeSec(attribution.deployments.map((row) => row.chainId));
   }
@@ -110,20 +148,10 @@ export function safetyScoreV9ChainSupplyMaxAgeSec(
       ? XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC
       : XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC;
   }
-  // A carried-forward packet keeps its original observation clock; its
-  // evidence stays current only through the bounded carry window.
-  if (attribution?.model === "reviewed-deployment-unit-partition-v1" &&
-      attribution.carriedForwardFromGenerationId !== undefined && fallbackMaxAgeSec !== null) {
-    return fallbackMaxAgeSec + SUPPLY_ATTRIBUTION_CARRY_FORWARD_EXTRA_AGE_SEC;
-  }
-  // Only a per-asset observation the producer retained past the chain-supply
-  // budget is carried; the evidence names the widened budget and its age.
-  const aggregateObservedAtSec = fixedInput.aggregateCirculatingById[assetId]?.observedAtSec;
-  if (!attribution && fallbackMaxAgeSec !== null && aggregateObservedAtSec != null &&
-      fixedInput.clockSec - aggregateObservedAtSec > fallbackMaxAgeSec) {
-    return fallbackMaxAgeSec + CHAIN_SUPPLY_CARRY_FORWARD_EXTRA_AGE_SEC;
-  }
-  return fallbackMaxAgeSec;
+  return safetyScoreV9ChainSupplyMaxAgeSecForSource(
+    safetyScoreV9ChainSupplySourceId(fixedInput, assetId),
+    fallbackMaxAgeSec,
+  );
 }
 
 export function safetyScoreV9ChainSupplySourcePayload(fixedInput: Readonly<SafetyScoreV9CompilerInput>) {

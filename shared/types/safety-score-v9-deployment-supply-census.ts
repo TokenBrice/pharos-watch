@@ -7,6 +7,7 @@ import {
   Sha256Schema,
   UnixSecondsSchema,
 } from "./safety-schema-primitives";
+import { DeploymentIdSchema } from "./stablecoin-meta-primitives";
 
 /**
  * v10.38 deployment supply census (`deployment-supply-census-v1`, WS6 / 4a).
@@ -25,6 +26,9 @@ const censusPolicy = candidatePolicy.semantic.supplyAttribution.deploymentSupply
 // Tolerance is a policy constant, never the packet's own claim: a captured
 // packet must restate the admitted values exactly.
 const supplyPolicy = candidatePolicy.semantic.supplyAttribution;
+// Float-conversion floor for the raw-units x reference-price identity; the
+// policy relative tolerance still governs conservation sums.
+const CENSUS_ARITHMETIC_RELATIVE_TOLERANCE = 1e-9;
 
 /** Machine reason for one rejected deployment (or the whole asset when the key is null). */
 export const V9DeploymentSupplyCensusRejectionReasonSchema = z.enum([
@@ -52,8 +56,6 @@ export const V9DeploymentSupplyCensusRejectionReasonSchema = z.enum([
   "deployment-over-cap",
   // The route's amount basis is not a fixed-token-unit basis.
   "unresolved-amount-basis",
-  // A measured share >= 1% needs a reviewed escrow rule or an exact read.
-  "share-requires-reviewed-escrow",
 ]);
 export type V9DeploymentSupplyCensusRejectionReason = z.infer<
   typeof V9DeploymentSupplyCensusRejectionReasonSchema
@@ -120,7 +122,7 @@ const READ_KIND_PIN: Readonly<Record<(typeof READ_KINDS)[number], V9DeploymentSu
 /** One measured deployment. `shareUpper` is a proof of immateriality below the bar, never an exact share. */
 export const V9DeploymentSupplyCensusRowSchema = z
   .strictObject({
-    deploymentRouteKey: CanonicalTextSchema,
+    routeId: DeploymentIdSchema,
     chainId: CanonicalChainIdSchema,
     tokenAddress: CensusTokenAddressSchema,
     readKind: z.enum(READ_KINDS),
@@ -186,7 +188,7 @@ export type V9DeploymentSupplyCensusConservation = z.output<
 
 /** One rejected deployment (or `null` for an asset-level rejection), always machine-reasoned. */
 export const V9DeploymentSupplyCensusRejectionSchema = z.strictObject({
-  deploymentRouteKey: CanonicalTextSchema.nullable(),
+  routeId: DeploymentIdSchema.nullable(),
   code: V9DeploymentSupplyCensusRejectionCodeSchema,
 });
 export type V9DeploymentSupplyCensusRejection = z.output<
@@ -196,7 +198,10 @@ export type V9DeploymentSupplyCensusRejection = z.output<
 function pinIdentity(pin: V9DeploymentSupplyCensusPin): string {
   switch (pin.kind) {
     case "evm-header":
-      return `${pin.kind}:${pin.blockNumber}:${pin.blockHash}:${pin.runtimeCodeSha256}:${pin.blockTimeSec}`;
+      // The header pins the chain, not the token: two deployments on one chain
+      // share blockNumber/blockHash/blockTimeSec and may carry different
+      // runtime code hashes (each row still requires its own).
+      return `${pin.kind}:${pin.blockNumber}:${pin.blockHash}:${pin.blockTimeSec}`;
     case "solana-finalized-slot":
       return `${pin.kind}:${pin.slot}:${pin.blockHash}:${pin.blockTimeSec}`;
     case "move-ledger-version":
@@ -204,7 +209,11 @@ function pinIdentity(pin: V9DeploymentSupplyCensusPin): string {
   }
 }
 
-/** One asset's admitted census partition; the fixed-input projection carries only this packet. */
+/**
+ * One asset's admitted census partition; the fixed-input projection carries only this packet.
+ * Conservation is recomputed from this packet's own rows (M-9): declared totals or a
+ * `conserved` flag can never outweigh an over-counting row set.
+ */
 export const SafetyScoreV9DeploymentSupplyCensusSchema = z
   .strictObject({
     model: z.literal(SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MODEL),
@@ -218,14 +227,34 @@ export const SafetyScoreV9DeploymentSupplyCensusSchema = z
       .max(censusPolicy.maxDeploymentsPerAsset),
   })
   .superRefine((packet, ctx) => {
-    const routeKeys = new Set<string>();
+    const routeIds = new Set<string>();
     const pinByChain = new Map<string, string>();
     const pinTimes: number[] = [];
+    const conservation = packet.conservation;
+    const rowsSupplyUsd = packet.deployments.reduce((sum, row) => sum + row.supplyUsdUpper, 0);
+    const rowsShare = packet.deployments.reduce((sum, row) => sum + row.shareUpper, 0);
+    const usdTolerance = conservation.absoluteToleranceUsd +
+      conservation.relativeTolerance * Math.max(rowsSupplyUsd, conservation.measuredSupplyUsd);
+    const shareTolerance = conservation.relativeTolerance * Math.max(1, Math.abs(rowsShare));
+    if (Math.abs(conservation.measuredSupplyUsd - rowsSupplyUsd) > usdTolerance) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["conservation", "measuredSupplyUsd"],
+        message: "Declared measured supply must equal the deployment rows",
+      });
+    }
+    if (Math.abs(conservation.measuredShareSum - rowsShare) > shareTolerance) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["conservation", "measuredShareSum"],
+        message: "Declared measured share must equal the deployment rows",
+      });
+    }
     packet.deployments.forEach((row, index) => {
-      if (routeKeys.has(row.deploymentRouteKey)) {
-        ctx.addIssue({ code: "custom", path: ["deployments", index, "deploymentRouteKey"], message: "Duplicate deployment row" });
+      if (routeIds.has(row.routeId)) {
+        ctx.addIssue({ code: "custom", path: ["deployments", index, "routeId"], message: "Duplicate deployment row" });
       }
-      routeKeys.add(row.deploymentRouteKey);
+      routeIds.add(row.routeId);
       const identity = pinIdentity(row.pin);
       const chainPin = pinByChain.get(row.chainId);
       if (chainPin !== undefined && chainPin !== identity) {
@@ -236,27 +265,54 @@ export const SafetyScoreV9DeploymentSupplyCensusSchema = z
       const pinAgeSec = packet.observedAtSec - row.pin.blockTimeSec;
       if (pinAgeSec < 0) {
         ctx.addIssue({ code: "custom", path: ["deployments", index, "pin", "blockTimeSec"], message: "Pin cannot postdate the census clock" });
-      } else if (pinAgeSec > censusPolicy.observationMaxAgeSec) {
+      } else if (pinAgeSec > supplyPolicy.observationMaxAgeSec) {
         ctx.addIssue({ code: "custom", path: ["deployments", index, "pin", "blockTimeSec"], message: "Pin is older than the census observation window" });
       }
       const priceAgeSec = packet.observedAtSec - row.referencePriceObservedAtSec;
       if (priceAgeSec < 0) {
         ctx.addIssue({ code: "custom", path: ["deployments", index, "referencePriceObservedAtSec"], message: "Reference price cannot postdate the census clock" });
-      } else if (priceAgeSec > censusPolicy.observationMaxAgeSec) {
+      } else if (priceAgeSec > supplyPolicy.observationMaxAgeSec) {
         ctx.addIssue({ code: "custom", path: ["deployments", index, "referencePriceObservedAtSec"], message: "Reference price is older than the census observation window" });
+      }
+      if (conservation.aggregateSupplyUsd > 0 &&
+          row.shareUpper + shareTolerance < row.supplyUsdUpper / conservation.aggregateSupplyUsd) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["deployments", index, "shareUpper"],
+          message: "shareUpper must bound the row's share of aggregate supply",
+        });
+      }
+      const expectedSupplyUsd = Number(row.totalSupplyRaw) / 10 ** row.decimals * row.referencePriceUsd;
+      const productTolerance = Math.max(
+        conservation.absoluteToleranceUsd,
+        expectedSupplyUsd * Math.max(conservation.relativeTolerance, CENSUS_ARITHMETIC_RELATIVE_TOLERANCE),
+      );
+      if (Math.abs(row.supplyUsdUpper - expectedSupplyUsd) > productTolerance) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["deployments", index, "supplyUsdUpper"],
+          message: "supplyUsdUpper must equal raw units times the reference price",
+        });
       }
     });
     if (pinTimes.length > 1) {
       const skewSec = Math.max(...pinTimes) - Math.min(...pinTimes);
-      if (skewSec > censusPolicy.observationMaxSkewSec) {
+      if (skewSec > supplyPolicy.observationMaxSkewSec) {
         ctx.addIssue({ code: "custom", path: ["deployments"], message: "Cross-chain pin skew exceeds the census allowance" });
       }
     }
+    if (conservation.conserved && packet.rejected.some((rejection) => rejection.routeId === null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["conservation", "conserved"],
+        message: "An asset-level rejection cannot claim conservation",
+      });
+    }
     packet.rejected.forEach((rejection, index) => {
-      if (rejection.deploymentRouteKey !== null && routeKeys.has(rejection.deploymentRouteKey)) {
+      if (rejection.routeId !== null && routeIds.has(rejection.routeId)) {
         ctx.addIssue({
           code: "custom",
-          path: ["rejected", index, "deploymentRouteKey"],
+          path: ["rejected", index, "routeId"],
           message: "A rejected deployment cannot also be admitted",
         });
       }
@@ -276,9 +332,10 @@ export type SafetyScoreV9DeploymentSupplyCensusById = z.output<
 >;
 
 /**
- * Policy block at `semantic.supplyAttribution.deploymentSupplyCensus`. The
- * age/skew gates restate the supply-attribution authorities; the policy schema
- * rejects any drift between the two copies.
+ * Policy block at `semantic.supplyAttribution.deploymentSupplyCensus`. Pin age
+ * and cross-chain skew are the supply-attribution authorities
+ * (`observationMaxAgeSec` / `observationMaxSkewSec`), read directly by the wire
+ * schema instead of restated here (S-12).
  */
 export const V9DeploymentSupplyCensusPolicySchema = z
   .strictObject({
@@ -294,8 +351,6 @@ export const V9DeploymentSupplyCensusPolicySchema = z
     solanaMaxAccountsPerRequest: z.number().int().positive().max(100),
     movePin: z.literal("ledger-version"),
     maxDeploymentsPerAsset: z.number().int().positive().max(64),
-    observationMaxAgeSec: z.number().int().positive(),
-    observationMaxSkewSec: z.number().int().nonnegative(),
   })
   .strict();
 export type V9DeploymentSupplyCensusPolicy = z.output<

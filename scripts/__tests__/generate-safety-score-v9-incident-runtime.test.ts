@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
 import source from "../../shared/data/safety-score-v9/incident-reviews-v1.json";
-import { projectNegativeIncidentReview } from "../lib/safety-score-v9-incident-runtime";
+import { projectNegativeIncidentReview, V9AdmittedNegativeIncidentReviewSchema } from "../lib/safety-score-v9-incident-runtime";
 import { readFileSync } from "node:fs";
 import { buildIncidentRuntime } from "../build-data/generate-safety-score-v9-incident-runtime";
 import { expandReviewedRegistryReferences } from "../../shared/lib/safety-score-v9/reviewed-registry";
-import { V9ReviewedIncidentRegistrySchema } from "../../shared/types/safety-score-v9-incidents";
+import { V9ReviewedIncidentRegistryEnvelopeSchema, V9ReviewedIncidentRegistrySchema } from "../../shared/types/safety-score-v9-incidents";
+import { sha256Hex } from "../../shared/lib/sha256";
+import { stableJsonStringifyV1 } from "../../shared/lib/stable-json";
 
 const expanded = expandReviewedRegistryReferences(source, "negativeReviews", {
   sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
@@ -49,6 +51,67 @@ function authoredIncidents(incidents: unknown[]) {
     negativeReviews: [],
     sourceObservations: [],
     searchedSurfaceObservations: [],
+  };
+}
+
+const REVIEWED_AT = "2026-10-07T14:00:00Z";
+const WINDOW_END_SEC = Date.parse(REVIEWED_AT) / 1_000;
+const ROUTE_ETH = "ethereum:0x1111111111111111111111111111111111111111";
+const ROUTE_BASE = "base:0x2222222222222222222222222222222222222222";
+const SURFACE_IDS = ["surface:issuer", "surface:events", "surface:tracker"] as const;
+
+function reviewSurfaces() {
+  return [
+    { kind: "issuer-status", url: "https://example.com/status", finding: "Issuer status and announcements searched." },
+    { kind: "explorer-events", url: "https://example.com/events", finding: "Exact lane logs and emergency state searched." },
+    { kind: "incident-tracker", url: "https://example.com/tracker", finding: "Incident trackers searched." },
+  ];
+}
+
+function reviewSources() {
+  return [{ label: "Primary status", url: "https://example.com/status", observedAt: REVIEWED_AT,
+    location: "Status archive", excerpt: "Operational" }];
+}
+
+function negativeReview(scope: unknown, extra: Record<string, unknown> = {}) {
+  return { reviewId: "authored:fixture", assetId: "fixture-vault", scope, reviewedAt: REVIEWED_AT,
+    reviewer: "Fixture reviewer", windowStartSec: WINDOW_END_SEC - 86_400, windowEndSec: WINDOW_END_SEC,
+    conclusion: "no-known-incident", ...extra };
+}
+
+function withEvidence(row: Record<string, unknown>) {
+  return { ...row, searchedSurfaces: reviewSurfaces(), sources: reviewSources() };
+}
+
+function providerRow(overrides: { scope?: Record<string, unknown>; extra?: Record<string, unknown> } = {}) {
+  return negativeReview({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+    coveredRoutes: [ROUTE_ETH, ROUTE_BASE], coveredControls: ["z-dvn-set", "a-dvn-set"], ...overrides.scope },
+  { reviewId: "provider:layerzero:fixture",
+    laneScreeningRefs: [
+      { routeId: ROUTE_ETH, certificateId: "cert:eth" },
+      { routeId: ROUTE_BASE, certificateId: "cert:base" },
+    ],
+    ...overrides.extra });
+}
+
+function authoredRow(overrides: { scope?: Record<string, unknown>; extra?: Record<string, unknown> } = {}) {
+  return negativeReview({ kind: "control", routeId: ROUTE_ETH, controlIds: ["z-admin", "a-upgrade"], ...overrides.scope },
+    { reviewId: "bridge:fixture-vault:lane", ...overrides.extra });
+}
+
+function issuerRow(overrides: { scope?: Record<string, unknown>; extra?: Record<string, unknown> } = {}) {
+  return negativeReview({ kind: "issuer-surface", coveredRoutes: [ROUTE_ETH, ROUTE_BASE], ...overrides.scope },
+    { reviewId: "issuer:fixture-vault", ...overrides.extra });
+}
+
+/** The authored envelope replaces inline observations with file-local references. */
+function referencedEnvelope(rows: readonly Record<string, unknown>[]) {
+  return {
+    schemaVersion: 1,
+    incidents: [],
+    negativeReviews: rows.map((row) => ({ ...row, sourcesRefs: ["source:status"], searchedSurfacesRefs: [...SURFACE_IDS] })),
+    sourceObservations: [{ id: "source:status", value: reviewSources()[0]! }],
+    searchedSurfaceObservations: SURFACE_IDS.map((id, index) => ({ id, value: reviewSurfaces()[index]! })),
   };
 }
 
@@ -117,5 +180,94 @@ describe("incident runtime projection", () => {
       "entries", { sources: "sourceObservations" })).toThrow(/Duplicate observation reference: unused/);
     expect(() => buildIncidentRuntime({ ...source, sourceObservations: [...source.sourceObservations, ...duplicates] }))
       .toThrow(/Duplicate observation reference: unused/);
+  });
+
+  it("carries authored identity, retirement and lane certificate references through the projection", () => {
+    const legacy = projectNegativeIncidentReview(reviews[0]);
+    expect(legacy).not.toHaveProperty("retired");
+    expect(legacy).not.toHaveProperty("laneScreeningRefs");
+    expect(legacy.scope).toEqual(reviews[0]!.scope);
+
+    const provider = projectNegativeIncidentReview(withEvidence(providerRow()));
+    expect(provider.scope).toEqual({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+      coveredRoutes: [ROUTE_BASE, ROUTE_ETH], coveredControls: ["a-dvn-set", "z-dvn-set"] });
+    expect(provider.laneScreeningRefs).toEqual([
+      { routeId: ROUTE_BASE, certificateId: "cert:base" },
+      { routeId: ROUTE_ETH, certificateId: "cert:eth" },
+    ]);
+    expect(provider).not.toHaveProperty("retired");
+
+    const authored = projectNegativeIncidentReview(withEvidence(authoredRow()));
+    expect(authored.scope).toEqual({ kind: "control", routeId: ROUTE_ETH, controlIds: ["a-upgrade", "z-admin"] });
+    expect(authored).not.toHaveProperty("laneScreeningRefs");
+
+    const issuer = projectNegativeIncidentReview(withEvidence(issuerRow()));
+    expect(issuer.scope).toEqual({ kind: "issuer-surface", coveredRoutes: [ROUTE_BASE, ROUTE_ETH] });
+
+    const retired = projectNegativeIncidentReview(withEvidence(authoredRow({
+      scope: { controlIds: undefined, controlId: "*" },
+      extra: { retired: { reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Lane re-authored" } },
+    })));
+    expect(retired.retired).toEqual({ reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Lane re-authored" });
+  });
+
+  it("fails closed on provider coverage it cannot witness", () => {
+    const withoutRefs: Record<string, unknown> = withEvidence(providerRow());
+    delete withoutRefs.laneScreeningRefs;
+    expect(() => projectNegativeIncidentReview(withoutRefs)).toThrow();
+
+    expect(() => projectNegativeIncidentReview(withEvidence({
+      ...providerRow(), laneScreeningRefs: [{ routeId: ROUTE_ETH, certificateId: "cert:eth" }],
+    }))).toThrow(/lane screening certificate reference/);
+    expect(() => projectNegativeIncidentReview(withEvidence({
+      ...providerRow(), laneScreeningRefs: [
+        { routeId: ROUTE_ETH, certificateId: "cert:eth" },
+        { routeId: ROUTE_BASE, certificateId: "cert:base" },
+        { routeId: "polygon:0x3333333333333333333333333333333333333333", certificateId: "cert:extra" },
+      ],
+    }))).toThrow(/only name covered routes/);
+  });
+
+  it("rejects a digest-stored or incomplete authored control identity", () => {
+    expect(() => projectNegativeIncidentReview(withEvidence(negativeReview({ kind: "control", routeId: ROUTE_ETH }))))
+      .toThrow(/requires controlId or controlIds/);
+    expect(() => projectNegativeIncidentReview(withEvidence(negativeReview(
+      { kind: "control", routeId: ROUTE_ETH, controlId: "*", controlKey: "mint-meta:fixture-vault:54" })))).toThrow();
+    expect(() => projectNegativeIncidentReview(withEvidence(providerRow({ scope: { providerKey: "stargate" } }))))
+      .toThrow();
+  });
+
+  it("keeps the build identity independent of authored identity-array order", () => {
+    const ordered = referencedEnvelope([providerRow(), authoredRow(), issuerRow()]);
+    const shuffled = referencedEnvelope([
+      providerRow({ scope: { coveredRoutes: [ROUTE_BASE, ROUTE_ETH], coveredControls: ["a-dvn-set", "z-dvn-set"] },
+        extra: { laneScreeningRefs: [
+          { routeId: ROUTE_BASE, certificateId: "cert:base" },
+          { routeId: ROUTE_ETH, certificateId: "cert:eth" },
+        ] } }),
+      authoredRow({ scope: { controlIds: ["a-upgrade", "z-admin"] } }),
+      issuerRow({ scope: { coveredRoutes: [ROUTE_BASE, ROUTE_ETH] } }),
+    ]);
+    const runtime = buildIncidentRuntime(ordered);
+    expect(buildIncidentRuntime(shuffled).digest).toBe(runtime.digest);
+    expect(buildIncidentRuntime(shuffled).negativeReviews).toEqual(runtime.negativeReviews);
+    expect(buildIncidentRuntime(referencedEnvelope([providerRow({ scope: { coveredControls: ["a-dvn-set"] } })]))
+      .digest).not.toBe(buildIncidentRuntime(referencedEnvelope([providerRow()])).digest);
+  });
+
+  it("reproduces the build identity from the admitted schemas for every record kind", () => {
+    const envelope = referencedEnvelope([providerRow(), authoredRow(), issuerRow()]);
+    const expandedRows = V9ReviewedIncidentRegistryEnvelopeSchema.parse(expandReviewedRegistryReferences(envelope, "negativeReviews", {
+      sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
+    })).negativeReviews!;
+    const expected = {
+      schemaVersion: 1,
+      incidents: [],
+      negativeReviews: expandedRows
+        .map((row) => V9AdmittedNegativeIncidentReviewSchema.parse(row))
+        .sort((left, right) => left.reviewId < right.reviewId ? -1 : left.reviewId > right.reviewId ? 1 : 0),
+    };
+    expect(buildIncidentRuntime(envelope).digest)
+      .toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.incident-reviews.v1", payload: expected })));
   });
 });
