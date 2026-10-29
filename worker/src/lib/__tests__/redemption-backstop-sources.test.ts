@@ -524,7 +524,6 @@ describe("buildRedemptionBackstopEntry", () => {
   it.each([
     ["usdv-solomon-v2", "defer", "issuer-terms-missing"],
     ["iusd-initia", "needs-research", "documentation-insufficient"],
-    ["bnusd-balanced", "defer", "route-status-unverified"],
   ])("withholds %s's opaque composite path even with positive supply", async (id, disposition, reasonCode) => {
     const asset = makeAsset({ id, circulating: { peggedUSD: 100_000_000 } });
     expect(await resolveRedemptionBackstopEntry(mockD1Strict([]), asset, null, Date.UTC(2026, 9, 12) / 1_000))

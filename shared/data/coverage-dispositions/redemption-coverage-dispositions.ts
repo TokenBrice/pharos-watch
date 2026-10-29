@@ -74,22 +74,6 @@ export const REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS: readonly ReviewedRedempt
     allowedRouteFamilyIfProven: "offchain-issuer",
   }),
   {
-    id: "bnusd-balanced",
-    disposition: "defer",
-    reasonCode: "route-status-unverified",
-    blocker: "The documented ICON legacy-bnUSD to Sonic successor migration has no reviewed end-to-end execution, capacity, complete cost bound or maximum completion time for the tracked legacy token.",
-    rationale: "G56USDV's October 11 source review identifies canonical ICON bnUSD(old) cx88fd7df7ddff82f7cc735c871dc519838cb235bb and distinct Sonic successor 0xe801ca34e19abcbfea12025378d19c4fbe250131. The displayed 1:1 migration rate does not prove zero fees, USDC payout or tracked-old-token executable capacity. The opaque cross-chain path does not establish an atomic stablecoin redemption or an identified withdrawal queue. The December 1 v1 retirement is a future deadline, not a current suspension.",
-    evidenceNeeded: "Source-corresponding current migration execution and guard proof, exact successor identity and valuation, capacity, all-in fees and completed-settlement terms; re-review by November 24, 2026 or earlier on a migration-status notice.",
-    evidenceUrls: [
-      "https://docs.balanced.network/",
-      "https://docs.balanced.network/migrate-assets",
-      "https://raw.githubusercontent.com/icon-project/sodax-sdks/main/packages/sdk/docs/MIGRATION.md",
-    ],
-    reviewer: "Sol curation campaign 2026-10-11 (G56USDV)",
-    reviewedDate: "2026-10-11",
-    allowedRouteFamilyIfProven: "stablecoin-redeem",
-  },
-  {
     id: "iusd-initia",
     disposition: "needs-research",
     reasonCode: "documentation-insufficient",
