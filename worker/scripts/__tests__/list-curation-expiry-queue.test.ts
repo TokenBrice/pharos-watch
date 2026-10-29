@@ -1,5 +1,10 @@
 import { describe, expect, it } from "vitest";
 
+import { spawnSync } from "node:child_process";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join, resolve } from "node:path";
+
 import executionReviewRegistry from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { compileReviewedControlScope, v1005ReviewIsCurrent, weightedReviewIsCurrent } from "@shared/lib/safety-score-v9/control-scope";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -15,8 +20,11 @@ import {
   buildCurationExpiryReport,
   defaultCurationExpirySources,
   enumerateEvidenceFamilyBoundaries,
+  groupRenewalCalendar,
+  parseCurationExpiryHorizon,
   renderCurationExpiryQueue,
   renderCurationExpiryReport,
+  utcWeekStartDate,
   type CurationExpirySources,
 } from "../list-curation-expiry-queue";
 
@@ -431,4 +439,150 @@ describe("evidence family boundary parity with production resolvers (canonical r
     }
     expect(rows.length).toBeGreaterThan(0);
   });
+});
+
+// ---------------------------------------------------------------------------
+// Renewal calendar (--by-week) and absolute horizon (--horizon)
+// ---------------------------------------------------------------------------
+
+function certifiedReview(assetId: string, boundarySec: number) {
+  const review = executionReview(assetId, isoSec(CLOCK_SEC - 20 * DAY), isoSec(boundarySec));
+  return {
+    review,
+    compiled: {
+      assetId,
+      exitRoutes: [{
+        routeKey: `redemption:${assetId}`,
+        scoreEligible: true,
+        executionCertificate: { reviewDigest: exitExecutionReviewDigest(review) },
+      }],
+    },
+  };
+}
+
+describe("renewal calendar and absolute horizon", () => {
+  const HORIZON = parseCurationExpiryHorizon("2027-01-19")!;
+
+  it("parses --horizon as the exclusive UTC start of a real calendar date", () => {
+    expect(HORIZON).toEqual({ date: "2027-01-19", startSec: Date.parse("2027-01-19T00:00:00Z") / 1_000 });
+    // Engines roll 2027-02-30 forward; the UTC round trip rejects it.
+    expect(parseCurationExpiryHorizon("2027-02-30")).toBeNull();
+    expect(parseCurationExpiryHorizon("2027-1-19")).toBeNull();
+    expect(parseCurationExpiryHorizon("19/01/2027")).toBeNull();
+  });
+
+  it("starts every UTC week on Monday and rolls over at Monday 00:00:00Z", () => {
+    const at = (iso: string) => Date.parse(iso) / 1_000;
+    expect(utcWeekStartDate(at("2026-11-23T00:00:00Z"))).toBe("2026-11-23");
+    expect(utcWeekStartDate(at("2026-11-23T00:00:01Z"))).toBe("2026-11-23");
+    expect(utcWeekStartDate(at("2026-11-29T23:59:59Z"))).toBe("2026-11-23");
+    expect(utcWeekStartDate(at("2026-11-30T00:00:00Z"))).toBe("2026-11-30");
+    // ISO-week year boundary: Friday 2027-01-01 belongs to the week of 2026-12-28.
+    expect(utcWeekStartDate(at("2027-01-01T12:00:00Z"))).toBe("2026-12-28");
+  });
+
+  it("groups upcoming rows by the UTC Monday of their effective boundary", () => {
+    const sunday = certifiedReview("expires-sunday", Date.parse("2026-11-29T23:59:59Z") / 1_000);
+    const monday = certifiedReview("expires-monday", Date.parse("2026-11-30T00:00:00Z") / 1_000);
+    const report = buildCurationExpiryReport(
+      familyReplay({ compiledAssets: [sunday.compiled, monday.compiled] }),
+      200,
+      emptySources({ executionReviews: [sunday.review, monday.review] }),
+    );
+    expect(groupRenewalCalendar(report.upcoming).map((week) => [week.weekStart, week.rows.map((row) => row.assetId)]))
+      .toEqual([["2026-11-23", ["expires-sunday"]], ["2026-11-30", ["expires-monday"]]]);
+    const markdown = renderCurationExpiryReport(report, { byWeek: true });
+    expect(markdown).toContain("## Renewal calendar by UTC week (Monday start)");
+    expect(markdown).toContain("| 2026-11-23 | 2026-11-29 | 2026-11-15 | execution-review | execution-review | expires-sunday |");
+    expect(markdown).toContain("| 2026-11-30 | 2026-11-30 | 2026-11-16 | execution-review | execution-review | expires-monday |");
+  });
+
+  it("adds the calendar only on request, leaving the default report byte-identical", () => {
+    const row = certifiedReview("default-window", CLOCK_SEC + 5 * DAY);
+    const report = buildCurationExpiryReport(
+      familyReplay({ compiledAssets: [row.compiled] }),
+      10,
+      emptySources({ executionReviews: [row.review] }),
+      CLOCK_SEC,
+    );
+    expect(report.horizon).toBeNull();
+    const plain = renderCurationExpiryReport(report);
+    expect(plain.startsWith("# Safety Score evidence pre-expiry queue (lookahead 10d)\n")).toBe(true);
+    expect(plain).not.toContain("Renewal calendar");
+    expect(plain).not.toContain("horizon");
+    const withCalendar = renderCurationExpiryReport(report, { byWeek: true });
+    const censusAt = plain.indexOf("## Family census");
+    expect(withCalendar.slice(0, withCalendar.indexOf("## Renewal calendar"))).toBe(plain.slice(0, censusAt));
+    expect(withCalendar.slice(withCalendar.indexOf("## Family census"))).toBe(plain.slice(censusAt));
+    expect(withCalendar).toContain("| 2026-08-24 | 2026-08-25 | 2026-08-11 | execution-review | execution-review | default-window |");
+  });
+
+  it("ends the window at the exclusive UTC start of --horizon, excluding the named date itself", () => {
+    const inside = certifiedReview("expires-inside", HORIZON.startSec - 1);
+    const atHorizon = certifiedReview("expires-at-horizon", HORIZON.startSec);
+    const report = buildCurationExpiryReport(
+      familyReplay({ compiledAssets: [inside.compiled, atHorizon.compiled] }),
+      10,
+      emptySources({ executionReviews: [inside.review, atHorizon.review] }),
+      CLOCK_SEC,
+      HORIZON,
+    );
+    expect(report.lookaheadDays).toBeNull();
+    expect(report.horizon).toEqual(HORIZON);
+    expect(report.upcoming.map((row) => [row.assetId, row.lastAdmittedSec]))
+      .toEqual([["expires-inside", HORIZON.startSec - 1]]);
+    expect(report.census.find((row) => row.family === "execution-review")).toMatchObject({ upcoming: 1, later: 1 });
+    const markdown = renderCurationExpiryReport(report);
+    expect(markdown.startsWith("# Safety Score evidence pre-expiry queue (horizon 2027-01-19, exclusive UTC start)\n")).toBe(true);
+    expect(markdown).toContain("## Curated reserve pre-expiry queue (horizon 2027-01-19, exclusive UTC start)");
+  });
+
+  it("applies the absolute horizon to the curated composition queue", () => {
+    // The 30-day-old composition stops being admitted on its 38th day (2026-08-28).
+    const metaById = new Map([["composition-due", curatedMeta("composition-due", isoDaysAgo(30))]]);
+    const beforeBoundary = buildCurationExpiryQueue(replayFixture(), 10, metaById, undefined, parseCurationExpiryHorizon("2026-08-27"));
+    const afterBoundary = buildCurationExpiryQueue(replayFixture(), 10, metaById, undefined, parseCurationExpiryHorizon("2026-08-29"));
+    expect(beforeBoundary).toEqual([]);
+    expect(afterBoundary.map((row) => row.assetId)).toEqual(["composition-due"]);
+  });
+
+  it("rejects --horizon usage errors at the CLI boundary", () => {
+    const root = resolve(import.meta.dirname, "../../..");
+    const dir = mkdtempSync(join(tmpdir(), "expiry-queue-flags-"));
+    try {
+      const replayPath = join(dir, "replay.json");
+      const outputPath = join(dir, "queue.md");
+      writeFileSync(replayPath, JSON.stringify({
+        pipeline: {
+          fixedInput: { clockSec: Date.parse("2026-10-01T00:00:00Z") / 1_000, liveReserveMap: {}, liveToFallbackCoins: [] },
+          compiledFacts: { assets: [] },
+          extension: { assets: [] },
+          evaluatedSet: { assets: [] },
+        },
+      }));
+      const run = (...args: string[]) => spawnSync(process.execPath,
+        ["--import", "tsx", "worker/scripts/list-curation-expiry-queue.ts", "--replay", replayPath, ...args],
+        { cwd: root, encoding: "utf8" });
+
+      const ok = run("--horizon", "2027-01-19", "--by-week", "--output", outputPath);
+      expect(ok.status).toBe(0);
+      const markdown = readFileSync(outputPath, "utf8");
+      expect(markdown.startsWith("# Safety Score evidence pre-expiry queue (horizon 2027-01-19, exclusive UTC start)")).toBe(true);
+      expect(markdown).toContain("## Renewal calendar by UTC week (Monday start)");
+
+      const conflicting = run("--days", "10", "--horizon", "2027-01-19");
+      expect(conflicting.status).toBe(2);
+      expect(conflicting.stderr).toContain("--days and --horizon cannot be used together");
+
+      const invalid = run("--horizon", "2027-02-30");
+      expect(invalid.status).toBe(2);
+      expect(invalid.stderr).toContain("--horizon must be a UTC calendar date in YYYY-MM-DD form");
+
+      const past = run("--horizon", "2026-09-01");
+      expect(past.status).toBe(2);
+      expect(past.stderr).toContain("is not after the capture clock");
+    } finally {
+      rmSync(dir, { recursive: true, force: true });
+    }
+  }, 120_000);
 });
