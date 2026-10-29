@@ -1,11 +1,14 @@
 import {
   buildReportCardsV9DependencyGraph,
+  REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+  ReportCardsV9NextResponseSchema,
+  type ReportCardsV9NextResponse,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
 import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { scoreToGrade, V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
-import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard, V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
 type V9PillarKey = keyof SafetyScoreV9CurrentCard["pillars"];
@@ -22,6 +25,15 @@ export interface ReportCardsV9ResponseFixturePreset {
 export type ReportCardsV9ResponseFixtureOverrides = Omit<Partial<ReportCardsV9Response>, "cards"> & {
   cards?: SafetyScoreV9CurrentCard[];
 };
+
+/** Report9 adds the required-nullable open-evidence pair to the same fixture data. */
+export type ReportCardsV9NextResponseFixtureOverrides =
+  Omit<ReportCardsV9ResponseFixtureOverrides, "cards" | "schemaVersion"> & {
+    cards?: SafetyScoreV9CurrentCard[];
+    /** Absent/null publishes the retained pre-cutover pair, never a silent zero. */
+    openEvidence?: V9OpenEvidence | null;
+    documentationCauseGaps?: string[];
+  };
 
 /**
  * One default card shape for every V9 consumer. The worker and frontend suites
@@ -431,4 +443,26 @@ export function makeReportCardsV9Response(
     ...overrides,
     cards,
   };
+}
+
+/**
+ * Report9 fixture built from the same resolved cards as the report8 fixture, so
+ * a reader test can prove it admits both wire versions with identical data.
+ * T1's fixture semantics: no supplied block means the retained pre-cutover
+ * shape, so it carries the required null + machine reason, never a silent zero.
+ */
+export function makeReportCardsV9NextResponse(
+  preset: ReportCardsV9ResponseFixturePreset,
+  makeCard: () => SafetyScoreV9CurrentCard,
+  overrides: ReportCardsV9NextResponseFixtureOverrides = {},
+): ReportCardsV9NextResponse {
+  const { openEvidence, documentationCauseGaps, ...baseOverrides } = overrides;
+  const base = makeReportCardsV9Response(preset, makeCard, baseOverrides);
+  return ReportCardsV9NextResponseSchema.parse({
+    ...base,
+    schemaVersion: REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION,
+    openEvidence: openEvidence ?? null,
+    openEvidenceUnavailableReason: openEvidence == null ? "publication-predates-open-evidence" : null,
+    ...(documentationCauseGaps === undefined ? {} : { documentationCauseGaps }),
+  });
 }

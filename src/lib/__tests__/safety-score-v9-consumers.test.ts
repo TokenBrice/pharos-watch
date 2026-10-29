@@ -14,6 +14,7 @@ import {
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import {
+  makeReportCardsV9NextResponse,
   makeReportCardsV9Response,
   makeV9Card,
 } from "@/test/fixtures/safety-score-v9";
@@ -209,6 +210,23 @@ describe("V9 safety consumer projections", () => {
       status: "unavailable",
       reason: "invalid-v9-response",
     });
+  });
+
+  it("admits a report9 table projection", () => {
+    const response = makeReportCardsV9Response();
+    const table = projectV9Table(response);
+    const result = buildV9SafetyTableMap({ ...table, schemaVersion: 9 }, response.safetyScoreIdentity);
+    expect(result.status).toBe("available");
+  });
+
+  it("admits report9 with the same identity and ignores its open-evidence carriers", () => {
+    const next = makeReportCardsV9NextResponse();
+    const result = resolveV9ConsumerResponse(next, next.safetyScoreIdentity);
+    expect(result.status).toBe("available");
+    if (result.status !== "available") throw new Error(result.reason);
+    expect(result.value.schemaVersion).toBe(8);
+    expect(result.value).not.toHaveProperty("openEvidence");
+    expect(result.value.cards).toEqual(next.cards);
   });
 
   it("uses explicit V9 grade classes and three-pillar table rows", () => {

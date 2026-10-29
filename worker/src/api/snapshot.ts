@@ -27,11 +27,11 @@ import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-
 import { isRecord } from "@shared/lib/type-guards";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import {
-  ReportCardsV9ResponseSchema,
   HistoricalReportCardsV9ResponseSchema,
   WitnessHistoricalReportCardsV9ResponseSchema,
   HistoricalTypedReportCardsV9ResponseSchema,
 } from "@shared/types/report-cards-v9";
+import { ReportCardsV9AcceptedResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import {
   PublicSnapshotEnvelopeSchema,
   type PublicSnapshotEnvelope,
@@ -215,7 +215,7 @@ function validateV9ReportCards(
     ? minor < 10 ? WitnessHistoricalReportCardsV9ResponseSchema : HistoricalReportCardsV9ResponseSchema
     : reportCards.schemaVersion === 8 && minor !== null && minor >= 11 && minor <= 28
       ? HistoricalTypedReportCardsV9ResponseSchema
-      : ReportCardsV9ResponseSchema;
+      : ReportCardsV9AcceptedResponseSchema;
   const parsed = historicalSchema.safeParse(validationInput);
   if (!parsed.success) {
     return "safety-score-publication-invalid";

@@ -10,8 +10,10 @@ import {
   SafetyScoreV9DependencyProvenanceSchema,
   SafetyScoreV9CommonModeGroupsSchema,
   findSafetyScoreV9ParentAttributionIssues,
+  V9OpenEvidenceSchema,
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CardValidationInput,
+  type V9OpenEvidence,
 } from "./safety-score-v9-public";
 import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText, canonicalTextArray } from "./safety-score-v9-fact-primitives";
@@ -286,6 +288,9 @@ function refineReportCardsV9Response(
     schemaVersion?: number;
     commonModeGroups?: z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
     dependencyGraph: ReportCardsV9DependencyGraph;
+    documentationCauseGaps?: readonly string[];
+    openEvidence?: V9OpenEvidence | null;
+    openEvidenceUnavailableReason?: V9OpenEvidenceUnavailableReason | null;
   },
   ctx: z.RefinementCtx,
   historical = false,
@@ -355,6 +360,88 @@ function refineReportCardsV9Response(
       message: `${issue.cardId}: ${issue.message}`,
     });
   }
+  if (response.openEvidence !== undefined) {
+    const unavailableReason = response.openEvidenceUnavailableReason ?? null;
+    if ((response.openEvidence === null) !== (unavailableReason !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidenceUnavailableReason"],
+        message: "A null open-evidence block requires its machine-readable reason, and a present block publishes none",
+      });
+    }
+  }
+  const openEvidence = response.openEvidence ?? null;
+  const documentationCauseGaps = response.documentationCauseGaps;
+  if (documentationCauseGaps !== undefined) {
+    const resolvable = new Set(response.foreignCauseGaps);
+    for (const card of response.cards) {
+      for (const gapId of card.localCauseGaps) resolvable.add(`${card.id}:gap:${gapId}`);
+    }
+    documentationCauseGaps.forEach((gapId, index) => {
+      if (!resolvable.has(gapId)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["documentationCauseGaps", index],
+          message: "Documentation cause gaps must resolve to a published card or foreign gap",
+        });
+      }
+    });
+  }
+  openEvidence?.byCard.forEach((entry, index) => {
+    const card = cardsById.get(entry.id);
+    if (card === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidence", "byCard", index, "id"],
+        message: "Open-evidence counts must name a published card",
+      });
+      return;
+    }
+    if (entry.issuerNondisclosureReviewedAtSec !== undefined && entry.issuerNondisclosureReviewedAtSec > response.updatedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidence", "byCard", index, "issuerNondisclosureReviewedAtSec"],
+        message: "Issuer review proofs cannot postdate the publication",
+      });
+    }
+    const annotated = entry.documentationOnlyLimited;
+    if (annotated !== undefined) {
+      for (let pillarIndex = 0; pillarIndex < annotated.length; pillarIndex++) {
+        const pillar = annotated[pillarIndex]!;
+        if (documentationCauseGaps === undefined) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["openEvidence", "byCard", index, "documentationOnlyLimited", pillarIndex],
+            message: "A documentation-only pillar annotation requires the documentation gap set",
+          });
+        }
+        const pillarRow = card.pillars[pillar];
+        if (pillarRow.evidenceLevel !== "limited" || (pillarRow.limitedEvidenceCauses?.length ?? 0) === 0) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["openEvidence", "byCard", index, "documentationOnlyLimited", pillarIndex],
+            message: "Only a limited pillar with witnesses can be documented as documentation-only limited",
+          });
+        }
+      }
+    }
+  });
+  if (openEvidence !== null) {
+    if (documentationCauseGaps === undefined && openEvidence.documentation.datums > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["documentationCauseGaps"],
+        message: "Documentation datums require the publication documentation gap set",
+      });
+    }
+    if (openEvidence.issuer.newestReviewedAtSec !== null && openEvidence.issuer.newestReviewedAtSec > response.updatedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidence", "issuer", "newestReviewedAtSec"],
+        message: "Issuer review proofs cannot postdate the publication",
+      });
+    }
+  }
 }
 
 /** Report8 carries exact typed exit identity; old envelopes require explicit historical dispatch. */
@@ -389,6 +476,45 @@ export type ReportCardsV9CurrentResponse = z.infer<typeof ReportCardsV9CurrentRe
  */
 export const ReportCardsV9ResponseSchema = ReportCardsV9CurrentResponseSchema;
 export type ReportCardsV9Response = ReportCardsV9CurrentResponse;
+
+/**
+ * Report9's next-contract response shape, copied verbatim from the T1 train
+ * (`ReportCardsV9CurrentResponseSchema` there). It is kept beside, not in place
+ * of, the report8 contract this branch still emits, so readers can admit both
+ * during the expand step while the Worker keeps emitting report8.
+ */
+export const REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION = 9;
+
+/** Report9's machine-readable reason for a null open-evidence block. */
+export const V9_OPEN_EVIDENCE_UNAVAILABLE_REASONS = ["publication-predates-open-evidence"] as const;
+export const V9OpenEvidenceUnavailableReasonSchema = z.enum(V9_OPEN_EVIDENCE_UNAVAILABLE_REASONS);
+export type V9OpenEvidenceUnavailableReason = z.infer<typeof V9OpenEvidenceUnavailableReasonSchema>;
+
+/**
+ * Next report9 envelope: `openEvidence` is a required, nullable key. `null`
+ * plus `openEvidenceUnavailableReason` means the source generation predates
+ * the block; it never stands for zero open questions.
+ */
+const ReportCardsV9NextEnvelopeShape = {
+  ...ReportCardsV9ResponseShape,
+  lifecycle: z.literal("active"),
+  schemaVersion: z.literal(REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION),
+  publicationHealth: V9PublicationHealthSchema,
+  foreignCauseGaps: canonicalTextArray(),
+  pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
+  openEvidence: V9OpenEvidenceSchema.nullable(),
+  openEvidenceUnavailableReason: V9OpenEvidenceUnavailableReasonSchema.nullable(),
+  /** T2 carrier: the publication union of documentation-classified cause gaps. */
+  documentationCauseGaps: canonicalTextArray().optional(),
+} as const;
+export const ReportCardsV9NextResponseSchema = z.object({
+  ...ReportCardsV9NextEnvelopeShape,
+  cards: z.array(SafetyScoreV9ResolvedCurrentCardSchema),
+}).strict().superRefine((value, ctx) => {
+  refineReportCardsV9Response(value, ctx);
+  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
+});
+export type ReportCardsV9NextResponse = z.infer<typeof ReportCardsV9NextResponseSchema>;
 
 /** Archive-only report7 validation; live producers remain report8-only. */
 const HistoricalReportCardsV9ResponseShape = {

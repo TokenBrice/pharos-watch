@@ -33,6 +33,7 @@ import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import {
   buildMarketCapMapFromStablecoins,
   formatUsd,
@@ -421,7 +422,7 @@ function reportCardsEnvelope(payload: unknown): unknown {
 }
 
 function parseReportCardInput(payload: unknown): ParsedReportCardInput {
-  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(reportCardsEnvelope(payload));
+  const parsed = ReportCardsV9ReaderResponseSchema.safeParse(reportCardsEnvelope(payload));
   if (!parsed.success) {
     const issue = parsed.error.issues[0];
     malformedReportCard(issue?.path.join(".") || "root", issue?.message ?? "expected the current V9 report contract");

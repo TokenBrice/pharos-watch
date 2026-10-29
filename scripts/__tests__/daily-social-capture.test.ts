@@ -3,7 +3,7 @@ import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import type { DexLiquidityMap, DexLiquidityHistoryPoint, DepegEvent } from "@shared/types/market";
 import type { YieldRankingsResponse } from "@shared/types/yield";
 import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
-import { makeSafetyMapReportCardsResponse } from "./build-safety-score-map.test-support";
+import { makeSafetyMapReportCardsNextResponse, makeSafetyMapReportCardsResponse } from "./build-safety-score-map.test-support";
 import { attachDailySocialGrades, buildSafetySocial, buildMarketSocial, buildLiquiditySocial, buildStabilitySocial, buildYieldSocial, captureDailySocial } from "../lib/daily-social-capture";
 
 const now = Date.parse("2026-09-10T12:00:00Z") / 1000;
@@ -36,6 +36,13 @@ describe("daily social source arithmetic", () => {
     expect(result.safetyAsOf).toBe(now - 100);
     expect(result.asOf).toBe(now - 100);
     expect(result.safetyPublicationId).toBe(publication.safetyScoreIdentity.publicationGenerationId);
+
+    const nextPublication = makeSafetyMapReportCardsNextResponse({
+      cards: [makeReportCardsV9Card({ id: "a", score: 73, grade: "B" }), makeReportCardsV9Card({ id: "other-id", score: 85, grade: "A" })],
+      fixtureId: "current-publication", methodologyVersion: "10.01", defaultUpdatedAt: now - 100, asOfSec: now - 100,
+    });
+    expect(attachDailySocialGrades(snapshot, nextPublication).rows[0]?.safetyGrade).toBe("B");
+
     expect(() => attachDailySocialGrades(snapshot, { ...publication, asOfSec: now - 7201 })).toThrow();
     expect(() => attachDailySocialGrades(snapshot, { ...publication, publicationHealth: { ...publication.publicationHealth, status: "held" } })).toThrow();
   });

@@ -12,6 +12,7 @@ export * from "./depeg-resolver-review";
 export * from "./pricing-source-health";
 export * from "./report-card-grade";
 export * from "./report-cards-v9";
+export * from "./report-cards-v9-accepted";
 export * from "./safety-score-history";
 export * from "./safety-score-publication";
 export * from "./safety-score-v9-public";
