@@ -4,8 +4,14 @@ import type {
 } from "@shared/types/report-cards-v9";
 import type { V9ReasonCode } from "@shared/types";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
+import {
+  V9_OPEN_EVIDENCE_MIXED_OWNER,
+  type V9OpenEvidence,
+  type V9OpenQuestionBucket,
+} from "@shared/types/safety-score-v9-public";
 import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
-import { formatProseList } from "@shared/lib/format";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { formatProseList, formatShortDate } from "@shared/lib/format";
 
 /**
  * Plain-English labels for the public V9 reason codes. The enum values are
@@ -115,6 +121,19 @@ export function formatV9ReasonCodeLabel(code: string): string {
 }
 
 /**
+ * Documentation-reason labels are policy-owned (`semantic.evidence.documentation`
+ * `reasons[].publicLabel`) so the classification and its public wording ship
+ * together. The block is absent on a T1 tree and on a pre-T2 policy, so the
+ * lookup stays nullable and the inventory degrades visibly instead of dropping
+ * rows.
+ */
+const DOCUMENTATION_REASON_LABELS: Readonly<Record<string, string>> | null = (() => {
+  const block = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation;
+  if (!block) return null;
+  return Object.fromEntries(block.reasons.map((entry) => [entry.reason, entry.publicLabel]));
+})();
+
+/**
  * Reader-facing owner of a gap. `measured-adverse` is excluded from the module:
  * it records a measured negative finding, not an absence of data.
  */
@@ -160,19 +179,54 @@ const GAP_OWNERS = [
   detail: string;
 }>;
 
+const GAP_OWNER_BY_RESPONSIBILITY = new Map<string, (typeof GAP_OWNERS)[number]>(
+  GAP_OWNERS.map((owner) => [owner.responsibility, owner]),
+);
+
+/** Multi-owner remainder of the headline bucket; it is not a responsibility. */
+const MIXED_OWNER = {
+  responsibility: V9_OPEN_EVIDENCE_MIXED_OWNER,
+  label: "Several owners",
+  detail: "The inputs behind this question have different owners, so no single cause applies.",
+} as const;
+
 export interface DataCoverageGapOwner {
-  responsibility: V9EvidenceResponsibility;
+  responsibility: V9EvidenceResponsibility | typeof V9_OPEN_EVIDENCE_MIXED_OWNER;
   label: string;
   detail: string;
-  count: number;
+  /** Headline questions owned here; the owner rows partition the open bucket. */
+  questions: number;
+  obligations: number;
+  /** Share of the open bucket, not of every published obligation. */
   share: number;
 }
 
-export interface DataCoverageGapType {
-  code: V9ReasonCode;
+export interface DataCoverageReasonGap {
+  code: string;
+  bucket: V9OpenQuestionBucket;
   label: string;
-  /** Distinct assets carrying the code under a missing-data owner. */
-  assetCount: number;
+  /** Questions carrying the reason; null for documentation rows (datums only). */
+  questions: number | null;
+  /** Datums (documentation) or questions (open/issuer) behind the row. */
+  count: number;
+  countUnit: "questions" | "datums";
+}
+
+/**
+ * The server-computed three-number block, formatted for display. Every count is
+ * copied from `openEvidence`; this module never re-derives one (R5).
+ */
+export interface DataCoverageOpenEvidence {
+  semantics: V9OpenEvidence["semantics"];
+  questions: number;
+  open: number;
+  issuer: number;
+  documentation: number;
+  obligations: number;
+  documentationDatums: number;
+  documentationFacts: number;
+  /** Recorded review window behind the issuer bucket; null when nobody is dated. */
+  issuerReview: { oldestReviewedAtSec: number; newestReviewedAtSec: number } | null;
 }
 
 export interface DataCoverageHold {
@@ -191,10 +245,14 @@ export interface DataCoverageModel {
   inputsByPillar: Array<{ key: "backing" | "exit" | "control"; label: string; count: number }>;
   backingKnownCount: number;
   backingObservedCount: number;
-  openGapCount: number;
   criticalGapCount: number;
+  /**
+   * Null when the payload predates schema 8 or a cached response omits the
+   * block. Unavailable is not zero: the module says so instead of rendering 0.
+   */
+  openEvidence: DataCoverageOpenEvidence | null;
   gapOwners: DataCoverageGapOwner[];
-  gapTypes: DataCoverageGapType[];
+  reasons: DataCoverageReasonGap[];
   hold: DataCoverageHold | null;
 }
 
@@ -256,6 +314,106 @@ const PILLAR_LABELS = [
   ["control", "Econ. control"],
 ] as const;
 
+/** Keeps the reason inventory grouped by bucket, headline first, then by size. */
+const REASON_BUCKET_ORDER: Record<V9OpenQuestionBucket, number> = {
+  open: 0,
+  issuer: 1,
+  documentation: 2,
+};
+
+function buildOwners(evidence: V9OpenEvidence): DataCoverageGapOwner[] {
+  const openTotal = evidence.totals.open;
+  return evidence.owners
+    .filter((owner) => owner.questions > 0)
+    .map((owner) => {
+      const descriptor = owner.responsibility === V9_OPEN_EVIDENCE_MIXED_OWNER
+        ? MIXED_OWNER
+        : GAP_OWNER_BY_RESPONSIBILITY.get(owner.responsibility);
+      return {
+        responsibility: owner.responsibility,
+        label: descriptor?.label ?? "Owner not identified",
+        detail: descriptor?.detail ?? "The publication did not name the owner of these inputs.",
+        questions: owner.questions,
+        obligations: owner.obligations,
+        share: openTotal === 0 ? 0 : owner.questions / openTotal,
+      };
+    })
+    .sort(
+      (left, right) =>
+        right.questions - left.questions ||
+        left.responsibility.localeCompare(right.responsibility),
+    );
+}
+
+function buildReasons(evidence: V9OpenEvidence): DataCoverageReasonGap[] {
+  const rows: DataCoverageReasonGap[] = [
+    ...evidence.reasons.map((row) => ({
+      code: row.code,
+      bucket: row.bucket,
+      label: formatV9ReasonCodeLabel(row.code),
+      questions: row.questions,
+      count: row.questions,
+      countUnit: "questions" as const,
+    })),
+    ...evidence.documentation.reasons.map((row) => {
+      // Fallback only for a bundle older than the policy block that supplied the label.
+      const words = row.reason.replace(/-/g, " ");
+      return {
+        code: row.reason,
+        bucket: "documentation" as const,
+        label: DOCUMENTATION_REASON_LABELS?.[row.reason]
+          ?? `${words.charAt(0).toUpperCase()}${words.slice(1)}`,
+        questions: null,
+        count: row.datums,
+        countUnit: "datums" as const,
+      };
+    }),
+  ];
+  return rows
+    .filter((row) => row.count > 0)
+    .sort(
+      (left, right) =>
+        REASON_BUCKET_ORDER[left.bucket] - REASON_BUCKET_ORDER[right.bucket] ||
+        right.count - left.count ||
+        left.code.localeCompare(right.code),
+    );
+}
+
+function buildOpenEvidence(evidence: V9OpenEvidence): DataCoverageOpenEvidence {
+  const issuerReview =
+    evidence.issuer.oldestReviewedAtSec !== null && evidence.issuer.newestReviewedAtSec !== null
+      ? {
+          oldestReviewedAtSec: evidence.issuer.oldestReviewedAtSec,
+          newestReviewedAtSec: evidence.issuer.newestReviewedAtSec,
+        }
+      : null;
+  return {
+    semantics: evidence.semantics,
+    questions: evidence.totals.questions,
+    open: evidence.totals.open,
+    issuer: evidence.totals.issuer,
+    documentation: evidence.totals.documentation,
+    obligations: evidence.totals.obligations,
+    documentationDatums: evidence.documentation.datums,
+    documentationFacts: evidence.documentation.facts,
+    issuerReview,
+  };
+}
+
+/**
+ * Dated, terminal issuer copy. Only recorded review dates are published, and an
+ * undated bucket keeps the non-disclosure statement without a date (R2: a
+ * failed or absent read never becomes a positive claim).
+ */
+export function describeIssuerReview(
+  review: NonNullable<DataCoverageOpenEvidence["issuerReview"]>,
+): string {
+  const oldest = formatShortDate(new Date(review.oldestReviewedAtSec * 1000), { utc: true });
+  const newest = formatShortDate(new Date(review.newestReviewedAtSec * 1000), { utc: true });
+  const window = oldest === newest ? oldest : `${oldest} – ${newest}`;
+  return `Reviewed ${window}; the issuer does not publish this datum.`;
+}
+
 export function buildDataCoverageModel(
   response: ReportCardsV9CurrentResponse | null | undefined,
 ): DataCoverageModel | null {
@@ -264,39 +422,12 @@ export function buildDataCoverageModel(
   const inputsByPillar = { backing: 0, exit: 0, control: 0 };
   let backingKnownCount = 0;
   let backingObservedCount = 0;
-  let openGapCount = 0;
   let criticalGapCount = 0;
-  const gapCountByOwner = new Map<V9EvidenceResponsibility, number>();
-  const assetCountByCode = new Map<V9ReasonCode, number>();
 
-  // The headline counts MISSING data: only the five gap-owner classes shown
-  // in the module's own attribution bar. Measured classifications (adverse or
-  // structural findings) are facts we hold, not absences, so they stay out of
-  // the count, out of the bar, and out of the reason-code inventory the bar
-  // expands into — `peg-price-unavailable-adverse-history` is a measured peg
-  // finding and would otherwise read as a missing input.
-  const missingResponsibilities = new Set<V9EvidenceResponsibility>(
-    GAP_OWNERS.map((owner) => owner.responsibility),
-  );
   for (const card of response.cards) {
     const responsibility = card.scoreTrace.evidenceResponsibility;
-    // Deduplicated per card: one reason code can now be raised twice for the
-    // same asset under two different owners (v9.04 splits the DEX exit and
-    // dependency codes between producer-failed and method-unsupported), and the
-    // inventory reports assets, not gaps.
-    const missingCodesForAsset = new Set<V9ReasonCode>();
     for (const summary of responsibility.summaries) {
       criticalGapCount += summary.criticalFactCount ?? 0;
-      gapCountByOwner.set(
-        summary.responsibility,
-        (gapCountByOwner.get(summary.responsibility) ?? 0) + (summary.factCount ?? 0),
-      );
-      if (!missingResponsibilities.has(summary.responsibility)) continue;
-      openGapCount += summary.factCount ?? 0;
-      for (const code of summary.reasonCodes ?? []) missingCodesForAsset.add(code);
-    }
-    for (const code of missingCodesForAsset) {
-      assetCountByCode.set(code, (assetCountByCode.get(code) ?? 0) + 1);
     }
 
     if (card.breakdowns === null) continue;
@@ -309,11 +440,7 @@ export function buildDataCoverageModel(
     }
   }
 
-  const ownerTotal = GAP_OWNERS.reduce(
-    (sum, owner) =>
-      sum + (gapCountByOwner.get(owner.responsibility) ?? 0),
-    0,
-  );
+  const openEvidence = response.openEvidence ? buildOpenEvidence(response.openEvidence) : null;
 
   return {
     assetCount: response.completeness.expectedCount,
@@ -325,17 +452,10 @@ export function buildDataCoverageModel(
     inputsByPillar: PILLAR_LABELS.map(([key, label]) => ({ key, label, count: inputsByPillar[key] })),
     backingKnownCount,
     backingObservedCount,
-    openGapCount,
     criticalGapCount,
-    gapOwners: GAP_OWNERS.map((owner) => {
-      const count = gapCountByOwner.get(owner.responsibility) ?? 0;
-      return { ...owner, count, share: ownerTotal === 0 ? 0 : count / ownerTotal };
-    })
-      .filter((owner) => owner.count > 0)
-      .sort((left, right) => right.count - left.count),
-    gapTypes: [...assetCountByCode.entries()]
-      .map(([code, assetCount]) => ({ code, label: REASON_CODE_LABELS[code], assetCount }))
-      .sort((left, right) => right.assetCount - left.assetCount || left.code.localeCompare(right.code)),
+    openEvidence,
+    gapOwners: response.openEvidence ? buildOwners(response.openEvidence) : [],
+    reasons: response.openEvidence ? buildReasons(response.openEvidence) : [],
     hold:
       response.publicationHealth.status === "held"
         ? {
