@@ -38,7 +38,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "08c2bcfb298ae704e0e9ce87f8936526f7eeb37becb64102341bd96d1c0b7aae"
+      "sha256": "2ec8c3eab5e46ec1478196b9eb0cbb9968d99db02c79fd5698c3ecdbfd9aa54f"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -58,7 +58,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/transfer-review-overlays-v1.json",
-      "sha256": "06c7ecd93652716559e17efe3dbd41e2758e2b2714acb9e09d9011eb40509de8"
+      "sha256": "5df03ef28c80011d50c675544779a298f5080758ddc0dc40aa06aac736abae56"
     },
     {
       "path": "shared/data/safety-score-v9/wrapper-allocation-reviews-v1.json",
@@ -70,15 +70,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "94d769c0134a0d830c5d55914aa86990dc87c927b615c74efdfdd28bde721568"
+      "sha256": "36ff5d79d067dd31ee5e759228747b886c120357bacfa14632e9dc27338f6f24"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "68e04954e6054742d8b03f705c6a9f38c85503ef023f31b99da348991a4c143f"
+      "sha256": "61c63d82e0db5fae529f31cf02d289ac220c03711a8af0c11239516063b714d5"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "8380a470700e4fd11150b9be6e3cf9bbaa9783e4794f9ff45722169155ed6dca"
+      "sha256": "f7664409d8bc286494c7277ca7f209770e50b9c9fcb913bb9e2aa9c4a0ff1abc"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -378,7 +378,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/configs.ts",
-      "sha256": "3b89559e75a121963ee967c85ea108071ffeeace17fe9aa74bc45ae36e4651b2"
+      "sha256": "f2ea3508fdf1dbd141ad2cfdda7a5d1feeb3d4af4a60c038c1b6541b668aa11e"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/stablecoin-redeem/discovery-wave.ts",
@@ -1335,7 +1335,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-28-block-26290416-shock-coverage.json.gz"
     }
   ],
-  "digest": "310d4c619c68be2880422d5c2d283a1676eac35060bd2bb765a429e46c02d29e"
+  "digest": "b1226e0cc137e4699df6958dfad4ce0a7b3bcead226ffdb013e60606a5d5bd3c"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

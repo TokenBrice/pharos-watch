@@ -17794,42 +17794,46 @@
     {
       "assetId": "usn-noon",
       "archetype": "rwa-credit-fund",
-      "reviewedAt": "2026-09-22",
+      "reviewedAt": "2026-10-27",
       "sources": [
         {
           "label": "Noon real-time proof-of-solvency dashboard operated by Accountable (live reserve, supply, deployment, custody-split, and insurance figures)",
           "url": "https://noon.accountable.capital/"
         },
         {
-          "label": "Accountable Noon dashboard API snapshot captured 2026-09-22T23:24Z (data timestamp 2026-09-22T20:31:03Z; signed liabilities/collateral snapshot attestation at 20:15:39Z, zero-knowledge proofs at 20:15:45Z, Merkle root at 20:34:00Z)",
+          "label": "Accountable Noon dashboard API payload pinned in our reserves sidecar (compositionAsOf 2026-10-27; data timestamp 2026-10-27T08:31:12.450Z; total reserves $38,826,141.09)",
           "url": "https://cache.accountable.capital/dashboard/noon"
         },
         {
-          "label": "Noon transparency documentation (Accountable verification engine deployed inside the Noon perimeter, ingesting directly from asset custodians and exchanges)",
-          "url": "https://docs.noon.capital/security/transparency"
+          "label": "Noon independent collateral verification documentation (Accountable engine pulls reserve data directly from custodians and exchanges; feeds bypass Noon)",
+          "url": "https://docs.noon.capital/5.-the-security-framework/independent-collateral-verification.md"
         },
         {
-          "label": "Noon liquidity documentation (non-binding: 100% of TVL liquid within T+5 calendar days; governance-voted waterfall 20% T+0 / 60% T+3 / 100% T+5; per-strategy liquidity profiles incl. Fasanara FTAC T+3-month redemption window; undisclosed multi-party PLMS facility)",
-          "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+          "label": "Noon liquidity documentation (100% of TVL within T+5 days via a 20% T+0 / 60% T+3 / 100% T+5 waterfall resting on unpublished PLMS agreements; private credit typically takes over 3 months to unwind)",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md"
         },
         {
-          "label": "Noon USN and sUSN documentation (1:1 backing claim, permissioned mint/redeem, sUSN 80% yield allocation)",
-          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"
+          "label": "Noon USN and sUSN documentation (USN backed by a USD reserve; sUSN staked USN, 80% of returns)",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
         },
         {
-          "label": "Noon minting and redemption documentation (whitelisted institutional mint/redeem, redemption settlement at 1:1)",
-          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption"
+          "label": "Noon mint and redeem documentation (permissioned institutional mint/redeem; 20% of TVL daily; T+0 settlement)",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/mint-and-redeem.md"
         },
         {
-          "label": "Noon binding USN Terms of Service (last updated 2026-07-31, reviewed 2026-09-22): §1 reserves segregated only from corporate operating funds and USN grants no claim on the Company; §6 redemptions processed within 5 Business Days, delay rights with written notice only after 15 Business Days, redemption requests constituting unsecured debt; §29 issuer redemption gating in its absolute and unfettered discretion; §7 fee right without a published fee schedule",
-          "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-usn-terms-of-service.md"
+          "label": "Noon binding USN Terms of Service (last updated 2026-07-31, reviewed 2026-10-29): §1 reserves segregated only from corporate operating funds and USN grants no claim on the Company; §6 redemptions processed within 5 Business Days, delay rights with written notice only after 15 Business Days, redemption requests constituting unsecured debt; §29 issuer redemption gating in its absolute and unfettered discretion; §2/§6 allow applicable fees (including applicable swap fees), §7 fee changes need 14 days' publication notice",
+          "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md"
         },
         {
-          "label": "Noon custody documentation (bespoke custody by strategy: Alpaca Securities via Dinari for US Treasury bills, Fasanara fund custody for private credit, ForDefi MPC wallets for DeFi lending, Ceffu named for funding-rate arbitrage)",
-          "url": "https://docs.noon.capital/built-for-safety/1.-custody-you-can-trust"
+          "label": "Noon trusted custody documentation (custody by strategy: Alpaca Securities via Dinari for T-bills and JAAA CLOs, Fasanara custody for private credit, MPC/multi-sig wallets for DeFi reserves, Ceffu for funding-rate arbitrage)",
+          "url": "https://docs.noon.capital/5.-the-security-framework/trusted-custody.md"
+        },
+        {
+          "label": "Noon fees documentation (no protocol fee published for mint, redeem, buy, sell, stake or bridge)",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/fees.md"
         }
       ],
-      "notes": "Refreshed 2026-09-22 (Noon feedback verification: custody split and binding legal terms re-pinned). Measured 2026-09-22 from the Accountable-operated Noon dashboard API (cache.accountable.capital/dashboard/noon), fetched 2026-09-22T23:24Z: at data timestamp 2026-09-22T20:31:03.926Z the feed reported total reserves of $40,086,693.58 against USN supply of $38,754,018.61 (collateralization 1.034388), deployed as 61.92% Fasanara FTAC private credit ($24,821,598.61), 13.40% HYPE funding-rate arbitrage ($5,370,082.56), 9.88% US Treasury bills ($3,960,515.97), 5.44% Undeployed ($2,179,938.83), 4.49% JAAA CLOs ($1,799,287.72), 2.44% DeFi lending on Euler ($977,302.87), 2.44% DeFi lending on Morpho ($977,965.99), and a $1.02 BTC funding-rate balance, custodied at Fasanara (61.92%, $24,821,598.61), ForDefi (22.94%, $9,195,978.92), Alpaca (14.37%, $5,759,803.69), an on-chain Safe (0.77%, $309,311.33), and Ceffu ($1.02); the five venue amounts sum to total reserves within one cent. This materially re-weights the 2026-07-27 overlay's split (Fasanara 71.18%, Safe 15.26%, Alpaca 13.22%, ForDefi 0.35%). The 9.88% US Treasury Bills bucket is not direct T-bill ownership: on-chain at Ethereum head block 26036288 (2026-09-22T23:24Z) it is a permissioned, rebasing Dinari USD+ position (contract 0xc9e3df3d230980b45adc623c81c3df4a73a5350f, implementation unverified on Etherscan/Sourcify, FULFILLER-role-gated asynchronous requestRedeem queue, transfer-restrictor blacklist) held in a Noon EOA, whose wallet balance 3,960,515.973656 equals the Accountable T-bill figure at par. The two published collateral wallets (a 4-of-5 Safe v1.3.0 with no modules and no guard, and a plain EOA with nonce 582) held only $574,101.01 of USDC+USDT at that block, so the Undeployed bucket is not the published wallet balances; and the issuer custody page names Ceffu for funding-rate arbitrage while the verified feed places the entire $5.37M HYPE funding-rate book in the ForDefi bucket. Binding terms reviewed 2026-09-22 (USN Terms of Service, last updated 2026-07-31): §6 processes standard redemption requests within five (5) Business Days, permits delay in extraordinary circumstances with written notice only after fifteen (15) Business Days and no obligation to disclose grounds, and provides that any validly submitted redemption request 'shall constitute an unsecured debt owed by the Company'; §1 grants USN holders no claim, participation interest, or economic right in the Company or its Affiliates and segregates reserves only from the Company's corporate operating funds (no trust, SPV, or named custodian terms); §29 reserves the issuer's 'absolute and unfettered discretion' to delay or gate redemptions during market stress or when liquidation of reserve assets is not reasonably practicable; §7 reserves minting/redemption fees with no fee schedule published on the Website. The liquidity page's 20%/60%/100% T+0/T+3/T+5 waterfall is in calendar days, is governance-voted rather than binding, and rests on the undisclosed multi-party PLMS facility; 61.92% of the book is Fasanara FTAC with a documented T+3-month redemption window. Grade adjudication under docs/process/mechanism-overlay-evidence-standard.md: seniority, legalEnforceability, and maturityAndLiquidity are weak because the binding primary sources document the deficiencies themselves - an unsecured claim with no reserve-asset priority (§1, §6), issuer redemption gating at absolute and unfettered discretion (§29), and a 5-Business-Day settlement term with 15-Business-Day notice-delay rights over a majority-T+3-month book with a non-binding liquidity waterfall - rather than because evidence is missing. creditQuality is limited: composition is third-party-verified at category level by the independent feed, but FTAC borrower identities and loan terms, the Dinari USD+ wrapper terms, the Undeployed wallet composition, and DeFi position detail are undisclosed. valuationCadence is adequate: the independently operated Accountable engine (inside the Noon perimeter, ingesting custodian/exchange data without Noon visibility) carried signed snapshot, zero-knowledge-proof, and Merkle-root attestations re-observed at the 2026-09-22 capture (interval 'live', verifiability 100%). custody is limited: the feed publishes an itemized custodian-sourced venue split reconciling to total reserves within one cent and the on-chain Safe share is externally anchored, but custodian legal terms and insolvency treatment are undisclosed, the ToS provides only segregation from corporate operating funds, and the custody page misattributes the funding-rate book to Ceffu. recovery is limited: the feed reports $2,447,622.38 of insurance cover (6.32% of USN supply) as insurance NFTs 5350 and 5386 at 0xcafeaca76be547f14d0220482667b42d8e7bc3eb, up from $1,570,997.42 (4.63%) at the 2026-07-27 review, but cover terms and any recapitalization obligation are undisclosed. weightedAverageMaturityDays is unavailable: the full 2026-09-22 API payload (deployment buckets, custody split, 665-point timeline, attestation bundle), Noon's transparency and liquidity docs (per-strategy liquidity windows only, e.g. FTAC's T+3-month window), and the product docs publish no position-level maturities, maturity ladder, or portfolio WAM, and deriving one from liquidity windows would be prohibited extrapolation. valuationCadenceDays retains the pinned 2026-07-27 journal measurement (0.0105, consecutive signed attestation snapshots ~15 minutes apart): the 2026-09-22 capture is a single fetch whose attestation-bundle timestamps (snapshot 20:15:39.547Z, ZKP 20:15:45.617Z, Merkle root 20:34:00.277Z) do not expose consecutive feed refreshes, and re-deriving a cadence from bundle-internal timestamps would be extrapolation.",
+      "notes": "Refreshed 2026-10-27 by Claude Noon feedback re-review 2026-10-29 (DeepSeek lane A2): reserve mix, custody split and doc paths re-pinned, superseding the 2026-09-22 mix (61.92% Fasanara FTAC, 13.40% HYPE funding-rate arbitrage, 9.88% US Treasury bills, 5.44% Undeployed; custody ForDefi 22.94%, Alpaca 14.37%). Measured from the Accountable-operated Noon dashboard API (cache.accountable.capital/dashboard/noon) at data timestamp 2026-10-27T08:31:12.450Z: total reserves $38,826,141.09 against USN supply of $38,418,770.17 (collateralization 1.010603), deployed as 64.4% Fasanara FTAC private credit ($25,019,135.66), 22.8% Hyperliquid HYPE funding-rate arbitrage ($8,847,789.24), 4.6% JAAA CLOs ($1,796,979.80), 3.1% Undeployed ($1,198,348.14), 2.5% DeFi lending on Morpho ($980,065.83), 2.5% DeFi lending on Euler ($978,795.65), 0.01% US Treasury bills ($5,025.77) and a $1.00 BTC funding-rate balance, custodied at Fasanara (64.44%, $25,019,135.66), ForDefi (28.87%, $11,208,067.62), Alpaca (4.64%, $1,802,005.57), the on-chain Safe (0.48%, $186,911.85) and an Ethereum wallet row (1.57%, $610,019.38), with Ceffu ($1.00); the venue amounts sum to total reserves within one cent. The US Treasury Bills bucket has fallen from 9.88% to 0.01%: it is not direct T-bill ownership but the same permissioned, rebasing Dinari USD+ position (contract 0xc9e3df3d230980b45adc623c81c3df4a73a5350f, implementation unverified on Etherscan/Sourcify, FULFILLER-role-gated asynchronous requestRedeem queue, transfer-restrictor blacklist), whose 5,026.81 balance sits in the Noon Collateral 2 EOA 0x4fD04553468610e5a88a2cffA38E057C954312Da at Ethereum block 26,299,805 (2026-10-29). The published collateral wallets (the 4-of-5 Safe v1.3.0 with no modules and no guard, and that EOA) held $333,290.24 of USDC+USDT at that block, so the Undeployed bucket is still not the published wallet balances; and the issuer custody page names Ceffu for funding-rate arbitrage while the verified feed places the entire $8.85M HYPE funding-rate book in the ForDefi bucket. Binding terms reviewed 2026-10-29 (USN Terms of Service, last updated 2026-07-31): §6 processes standard redemption requests within five (5) Business Days, permits delay in extraordinary circumstances with written notice only after fifteen (15) Business Days and no obligation to disclose grounds, and provides that any validly submitted redemption request 'shall constitute an unsecured debt owed by the Company'; §1 grants USN holders no claim, participation interest, or economic right in the Company or its Affiliates and segregates reserves only from the Company's corporate operating funds (no trust, SPV, or named custodian terms); §29 reserves the issuer's 'absolute and unfettered discretion' to delay or gate redemptions during market stress or when liquidation of reserve assets is not reasonably practicable; §2/§6 allow 'applicable fees (including applicable swap fees)'; §7 fee changes need 14 days' notice; USN fees stay undisclosed-reviewed. The liquidity page's 20%/60%/100% T+0/T+3/T+5 waterfall rests on unpublished PLMS legal agreements with unnamed counterparties; 64.4% of the book is Fasanara F-TAC, whose positions that page says typically take over three months to unwind. Grade adjudication under docs/process/mechanism-overlay-evidence-standard.md: seniority, legalEnforceability, and maturityAndLiquidity are weak because the binding primary sources document the deficiencies themselves - an unsecured claim with no reserve-asset priority (§1, §6), issuer redemption gating at absolute and unfettered discretion (§29), and a 5-Business-Day settlement term with 15-Business-Day notice-delay rights over a majority-T+3-month book with a waterfall resting on unpublished PLMS agreements - rather than because evidence is missing. creditQuality is limited: composition is third-party-verified at category level by the independent feed, but FTAC borrower identities and loan terms, the Dinari USD+ wrapper terms, the Undeployed wallet composition, and DeFi position detail are undisclosed. valuationCadence is adequate: the independently operated Accountable engine ingests custodian and exchange data without Noon visibility, and the 2026-10-27 payload reports verifiability 100%. custody is limited: the feed publishes an itemized custodian-sourced venue split reconciling to total reserves within one cent and the on-chain Safe share is externally anchored, but custodian legal terms and insolvency treatment are undisclosed, the ToS provides only segregation from corporate operating funds, and the custody page misattributes the funding-rate book to Ceffu. recovery is limited on its own 2026-09-22 component review: that capture reported $2,447,622.38 of insurance cover (6.32% of USN supply then) as insurance NFTs 5350 and 5386 at 0xcafeaca76be547f14d0220482667b42d8e7bc3eb, but cover terms and any recapitalization obligation are undisclosed. weightedAverageMaturityDays is unavailable: the full 2026-10-27 payload (deployment buckets, custody split, attestation bundle), Noon's verification and liquidity docs (category waterfall only), and the product docs publish no position-level maturities, maturity ladder, or portfolio WAM, and deriving one from liquidity windows would be prohibited extrapolation. valuationCadenceDays retains the pinned 2026-07-27 journal measurement (0.0105, consecutive signed attestation snapshots ~15 minutes apart): the 2026-10-27 payload is a single fetch whose attestation-bundle timestamps do not expose consecutive feed refreshes, and re-deriving a cadence from bundle-internal timestamps would be extrapolation.",
       "metrics": {
         "weightedAverageMaturityDays": null,
         "valuationCadenceDays": 0.0105
@@ -17837,7 +17841,7 @@
       "metricApplicability": {
         "weightedAverageMaturityDays": {
           "state": "unavailable",
-          "rationale": "The metric applies - 61.92% of reserves sit in the Fasanara FTAC private-credit fund with a documented T+3-month redemption window - but no measurable value is published. Searched the full Accountable dashboard API payload (deployment buckets, custody split, 665-point timeline, attestation bundle; no maturity fields), Noon's transparency documentation, liquidity documentation (per-strategy liquidity windows only), and the USN/sUSN and mint/redeem product docs. No position-level maturity dates, maturity ladder, or portfolio weighted-average maturity is disclosed; the disclosure should live in the Accountable dashboard's position-level reserve detail.",
+          "rationale": "The metric applies - 64.4% of reserves sit in the Fasanara FTAC private-credit fund, whose positions Noon's liquidity page says typically take over three months to unwind - but no measurable value is published. Searched the full Accountable dashboard API payload (deployment buckets, custody split, attestation bundle; no maturity fields), Noon's verification and liquidity documentation (category waterfall only), and the USN/sUSN and mint/redeem product docs. No position-level maturity dates, maturity ladder, or portfolio weighted-average maturity is disclosed; the disclosure should live in the Accountable dashboard's position-level reserve detail.",
           "sourceUrl": "https://noon.accountable.capital/"
         }
       },
@@ -17858,7 +17862,18 @@
           "quality": "limited"
         },
         "recovery": {
-          "quality": "limited"
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-09-22",
+            "reviewer": "Noon feedback verification 2026-09-22",
+            "rationale": "Insurance evidence pin kept at the 2026-09-22 capture: the 2026-10-27 reserve refresh did not re-read the cover, so this component does not inherit the overlay's newer clock and does not renew siblings, metrics or their 2026-10-27 pin. The feed then reported $2,447,622.38 of insurance cover (6.32% of USN supply then) as insurance NFTs 5350 and 5386 at 0xcafeaca76be547f14d0220482667b42d8e7bc3eb, which evidences some cover and keeps the component limited: cover terms, exclusions and any recapitalization obligation are undisclosed. Re-review on a fresh insurance reading.",
+            "sources": [
+              {
+                "label": "Accountable-operated Noon proof-of-solvency dashboard, insurance cover at the 2026-09-22 capture (insurance NFTs 5350 and 5386)",
+                "url": "https://noon.accountable.capital/"
+              }
+            ]
+          }
         },
         "legalEnforceability": {
           "quality": "weak"
@@ -17880,15 +17895,15 @@
         },
         {
           "label": "Noon USN and sUSN documentation",
-          "url": "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
         },
         {
-          "label": "Noon transparency documentation",
-          "url": "https://docs.noon.capital/built-for-safety/transparency"
+          "label": "Noon independent collateral verification documentation",
+          "url": "https://docs.noon.capital/5.-the-security-framework/independent-collateral-verification.md"
         },
         {
           "label": "Noon liquidity documentation",
-          "url": "https://docs.noon.capital/noon-the-basics/liquidity"
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md"
         },
         {
           "label": "Noon complete documentation index",
@@ -17900,7 +17915,7 @@
         },
         {
           "label": "Noon binding sUSN Staking Terms (last updated 2026-07-31; reviewed 2026-09-21): holder staking position, redemption entitlement, proportional reserve-loss allocation, BVI governing law and arbitration",
-          "url": "https://docs.noon.capital/additional-resources/terms-and-policies/asset-terms-susn-staking-terms.md"
+          "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-susn-staking-terms.md"
         }
       ],
       "notes": "Wrapper-local review refreshed 2026-09-21 by Claude curation campaign 2026-09-21 (Mech5). The Accountable API remained live and reported reserves $35,739,933.97, USN supply $35,288,620.46, and sUSN NAV 1.2134498759423485 at its 2026-08-08 snapshot, with most reserves still in Fasanara private credit. The score metrics retain the pinned 2026-07-27 journal values: weightedAverageMaturityDays is unavailable and valuationCadenceDays is 0.0105 from consecutive signed snapshots. Credit quality is limited because category-level exposure is verified but borrower and position detail is not. Seniority is limited because sUSN is a documented residual-yield wrapper without a published reserve-loss waterfall versus USN. Accountable supports adequate valuation cadence. The documented T+5 liquidity commitment, active custody split, and insurance balance support limited maturity/liquidity, custody, and recovery, but underlying agreements and cover terms are undisclosed. The binding sUSN Staking Terms, last updated 2026-07-31 and reviewed 2026-09-21, now establish a user agreement with Noon Holdco Ltd, identify sUSN as the holder's staked position and entitlement to protocol distributions upon redemption, allocate the exact proportional reserve loss to sUSN principal after a defined Suspension Event, and provide BVI governing law and arbitration. The verified Ethereum staking-vault source anchors the described wrapper on-chain. Legal enforceability is limited rather than adequate because the terms expressly disclaim a direct interest in any fund, entity, or underlying asset and create no fiduciary relationship or reserve-asset priority.",
@@ -17911,7 +17926,7 @@
       "metricApplicability": {
         "weightedAverageMaturityDays": {
           "state": "unavailable",
-          "rationale": "The metric applies to the inherited USN reserve pool, but the full Accountable API payload, Noon product documentation, transparency page, and liquidity page publish only category totals and liquidity windows, not position maturity dates, a maturity ladder, or portfolio weighted-average maturity.",
+          "rationale": "The metric applies to the inherited USN reserve pool, but the full Accountable API payload, Noon product documentation, verification page, and liquidity page publish only category totals and liquidity windows, not position maturity dates, a maturity ladder, or portfolio weighted-average maturity.",
           "sourceUrl": "https://noon.accountable.capital/"
         }
       },
