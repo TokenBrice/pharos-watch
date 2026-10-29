@@ -12,6 +12,7 @@ import {
   routeSafetyScoreV9NegativeIncidentReviews,
   addSafetyScoreV9NegativeIncidentEvidence,
   getSafetyScoreV9NegativeIncidentReviews,
+  NegativeIncidentRuntimeSchema,
 } from "../safety-score-v9/extension-incidents";
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
@@ -201,6 +202,160 @@ describe("Safety Score v9 independent negative incident routing", () => {
       addSafetyScoreV9NegativeIncidentEvidence(rebuilt, runtime);
       expect(rebuilt.finish()).toEqual(original.finish());
     }
+  });
+});
+
+describe("Safety Score v9 authored incident-review identity", () => {
+  const ROUTE_A = "ethereum:0x1111111111111111111111111111111111111111";
+  const ROUTE_B = "base:0x2222222222222222222222222222222222222222";
+
+  function runtimeReview(
+    scope: unknown,
+    overrides: {
+      retired?: { reviewedAt: string; reviewer: string; reason: string };
+      laneScreeningRefs?: { routeId: string; certificateId: string }[];
+    } = {},
+  ) {
+    return NegativeIncidentRuntimeSchema.parse({
+      reviewId: "fixture-authored",
+      assetId: "fixture",
+      scope,
+      reviewedAt: "2026-10-07T14:00:00Z",
+      windowStartSec: Date.parse("2024-01-01T00:00:00Z") / 1_000,
+      windowEndSec: NEGATIVE_CLOCK_SEC,
+      sources: [["a".repeat(64), "https://example.com/status"]],
+      ...overrides,
+    });
+  }
+
+  function bridgeRow(routeId: string, controlKey: string): ControlOverlay {
+    return {
+      ...control(controlKey),
+      controlKind: "bridge",
+      scope: "deployment",
+      deploymentKey: routeId,
+      incidentState: "unknown",
+    };
+  }
+
+  function withAuthoredIdentity(
+    row: ControlOverlay,
+    identity: { id?: string; ids?: readonly string[] },
+  ): ControlOverlay {
+    // IR-0 (T1) adds these optional fields to the shared control fact base.
+    return {
+      ...row,
+      ...(identity.id === undefined ? {} : { authoredControlId: identity.id }),
+      ...(identity.ids === undefined ? {} : { authoredControlIds: identity.ids }),
+    } as unknown as ControlOverlay;
+  }
+
+  it("resolves authored control identity across compiled digest churn", () => {
+    const review = runtimeReview({ kind: "control", routeId: ROUTE_A, controlIds: ["lane-route"] });
+    const first = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:digest-one"), { id: "lane-route" });
+    expect(routeSafetyScoreV9NegativeIncidentReviews([first], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("none");
+    // The digest is derived at compile time; recompiling it changes no identity.
+    const rechurned = { ...first, controlKey: "bridge-meta:fixture:digest-two" };
+    expect(routeSafetyScoreV9NegativeIncidentReviews([rechurned], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("none");
+    // Same authored id on another route is another lane.
+    const otherRoute = withAuthoredIdentity(bridgeRow(ROUTE_B, "bridge-meta:fixture:digest-three"), { id: "lane-route" });
+    expect(routeSafetyScoreV9NegativeIncidentReviews([otherRoute], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("unknown");
+  });
+
+  it("does not let an added control inherit a merged-lane review", () => {
+    const review = runtimeReview({ kind: "control", routeId: ROUTE_A, controlIds: ["alpha", "beta"] });
+    const merged = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:merged"), { id: "*", ids: ["alpha", "beta"] });
+    expect(routeSafetyScoreV9NegativeIncidentReviews([merged], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("none");
+    const grown = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:merged"), { id: "*", ids: ["alpha", "beta", "gamma"] });
+    expect(routeSafetyScoreV9NegativeIncidentReviews([grown], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("unknown");
+    // Contributor order is identity, not sequence.
+    const unsorted = { ...review, scope: { kind: "control" as const, routeId: ROUTE_A, controlIds: ["beta", "alpha"] } };
+    expect(routeSafetyScoreV9NegativeIncidentReviews([merged], "fixture", NEGATIVE_CLOCK_SEC, [unsorted], [])[0]!.incidentState).toBe("none");
+  });
+
+  it("keeps a lane-wide review on the fallback fact and off a merged lane or another form", () => {
+    const review = runtimeReview({ kind: "control", routeId: ROUTE_A, controlId: "*" });
+    const fallback = bridgeRow(ROUTE_A, "bridge-meta:fixture:fallback");
+    expect(routeSafetyScoreV9NegativeIncidentReviews([fallback], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("none");
+    const merged = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:fallback"), { id: "*", ids: ["alpha", "beta"] });
+    expect(routeSafetyScoreV9NegativeIncidentReviews([merged], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("unknown");
+    const group = bridgeRow(ROUTE_A, "bridge-group:fixture:group");
+    expect(routeSafetyScoreV9NegativeIncidentReviews([group], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("unknown");
+    const elsewhere = bridgeRow(ROUTE_B, "bridge-meta:fixture:fallback");
+    expect(routeSafetyScoreV9NegativeIncidentReviews([elsewhere], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("unknown");
+  });
+
+  it("resolves a colliding legacy digest only by the authored tuple", () => {
+    const review = runtimeReview({ kind: "control", routeId: ROUTE_A, controlId: "alpha" });
+    // Two facts whose stored digests collide must not both inherit one review.
+    const rows = [
+      withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:colliding"), { id: "alpha" }),
+      withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:colliding"), { id: "beta" }),
+    ];
+    expect(routeSafetyScoreV9NegativeIncidentReviews(rows, "fixture", NEGATIVE_CLOCK_SEC, [review], [])
+      .map((row) => row.incidentState)).toEqual(["none", "unknown"]);
+    expect(routeSafetyScoreV9NegativeIncidentReviews([...rows].reverse(), "fixture", NEGATIVE_CLOCK_SEC, [review], [])
+      .map((row) => row.incidentState)).toEqual(["unknown", "none"]);
+  });
+
+  it("leaves an unresolvable authored review inert instead of reattaching by digest", () => {
+    const review = runtimeReview({ kind: "control", routeId: ROUTE_A, controlId: "retired-lane" });
+    const noIdentity = bridgeRow(ROUTE_A, "bridge-meta:fixture:legacy");
+    expect(routeSafetyScoreV9NegativeIncidentReviews([noIdentity], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]).toBe(noIdentity);
+    const otherIdentity = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:legacy"), { id: "different-lane" });
+    expect(routeSafetyScoreV9NegativeIncidentReviews([otherIdentity], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]).toBe(otherIdentity);
+  });
+
+  it("excludes retired reviews from routing and evidence while retaining the row", () => {
+    const retired = runtimeReview(
+      { kind: "control", controlKey: "mint-meta:fixture:controller" },
+      { retired: { reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Orphaned by route re-authoring" } },
+    );
+    expect(retired.retired?.reason).toBe("Orphaned by route re-authoring");
+    const target = { ...control("mint-meta:fixture:controller"), incidentState: "unknown" as const };
+    expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [retired], [])[0]).toBe(target);
+    const builder = new ReviewEvidenceBuilder("fixture", NEGATIVE_CLOCK_SEC);
+    addSafetyScoreV9NegativeIncidentEvidence(builder, [retired]);
+    expect(builder.finish().researchEvidence).toEqual([]);
+    expect(() => runtimeReview(
+      { kind: "control", controlKey: "mint-meta:fixture:controller" },
+      { retired: { reviewedAt: "2026-10-06", reviewer: "Fixture reviewer", reason: "Predates its review" } },
+    )).toThrow();
+  });
+
+  it("admits provider and issuer-surface witnesses without closing a control", () => {
+    const provider = runtimeReview(
+      { kind: "provider", providerKey: "layerzero", surface: "dvn-set", coveredRoutes: [ROUTE_A] },
+      { laneScreeningRefs: [{ routeId: ROUTE_A, certificateId: "lane-cert" }] },
+    );
+    const issuer = runtimeReview({ kind: "issuer-surface", coveredRoutes: [ROUTE_A] });
+    const target = bridgeRow(ROUTE_A, "bridge-meta:fixture:provider-owned");
+    expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer], [])[0]).toBe(target);
+    expect(() => runtimeReview({ kind: "provider", providerKey: "layerzero", surface: "dvn-set", coveredRoutes: [ROUTE_A] })).toThrow();
+    expect(() => runtimeReview(
+      { kind: "issuer-surface", coveredRoutes: [ROUTE_A] },
+      { laneScreeningRefs: [{ routeId: ROUTE_A, certificateId: "lane-cert" }] },
+    )).toThrow();
+    expect(() => runtimeReview(
+      { kind: "provider", providerKey: "layerzero", surface: "dvn-set", coveredRoutes: [ROUTE_A] },
+      { laneScreeningRefs: [{ routeId: ROUTE_B, certificateId: "lane-cert" }] },
+    )).toThrow();
+  });
+
+  it("resolves asset-local mint identity only when the fact carries it", () => {
+    const review = runtimeReview({ kind: "control", controlId: "Lido EarnUSD ShareManager" });
+    const labeled = withAuthoredIdentity(
+      { ...control("mint-meta:fixture:labeled"), incidentState: "unknown" as const },
+      { id: "Lido EarnUSD ShareManager" },
+    );
+    expect(routeSafetyScoreV9NegativeIncidentReviews([labeled], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]!.incidentState).toBe("none");
+    const unlabeled = { ...control("mint-meta:fixture:labeled"), incidentState: "unknown" as const };
+    expect(routeSafetyScoreV9NegativeIncidentReviews([unlabeled], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]).toBe(unlabeled);
+    const anotherAsset = withAuthoredIdentity(
+      { ...control("mint-meta:other:labeled"), deploymentKey: "asset:other", incidentState: "unknown" as const },
+      { id: "Lido EarnUSD ShareManager" },
+    );
+    expect(routeSafetyScoreV9NegativeIncidentReviews([anotherAsset], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]).toBe(anotherAsset);
   });
 });
 
