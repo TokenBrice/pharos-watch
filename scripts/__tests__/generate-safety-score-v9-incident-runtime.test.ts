@@ -1,17 +1,21 @@
 import { describe, expect, it } from "vitest";
 import source from "../../shared/data/safety-score-v9/incident-reviews-v1.json";
-import { projectNegativeIncidentReview, V9AdmittedNegativeIncidentReviewSchema } from "../lib/safety-score-v9-incident-runtime";
+import {
+  isProviderReview,
+  projectIncidentReviews,
+  projectNegativeIncidentReview,
+  projectProviderIncidentReview,
+  V9AttributedNegativeIncidentReviewSchema,
+} from "../lib/safety-score-v9-incident-runtime";
 import { readFileSync } from "node:fs";
 import { buildIncidentRuntime } from "../build-data/generate-safety-score-v9-incident-runtime";
 import { expandReviewedRegistryReferences } from "../../shared/lib/safety-score-v9/reviewed-registry";
-import { V9ReviewedIncidentRegistryEnvelopeSchema, V9ReviewedIncidentRegistrySchema } from "../../shared/types/safety-score-v9-incidents";
+import {
+  V9ProviderIncidentReviewSchema,
+  V9RetirableNegativeIncidentReviewSchema,
+} from "../../shared/types/safety-score-v9-incidents";
 import { sha256Hex } from "../../shared/lib/sha256";
 import { stableJsonStringifyV1 } from "../../shared/lib/stable-json";
-
-const expanded = expandReviewedRegistryReferences(source, "negativeReviews", {
-  sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-});
-const reviews = V9ReviewedIncidentRegistrySchema.parse(expanded).negativeReviews!;
 
 function holderExitIncident() {
   return {
@@ -83,15 +87,34 @@ function withEvidence(row: Record<string, unknown>) {
   return { ...row, searchedSurfaces: reviewSurfaces(), sources: reviewSources() };
 }
 
-function providerRow(overrides: { scope?: Record<string, unknown>; extra?: Record<string, unknown> } = {}) {
-  return negativeReview({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
-    coveredRoutes: [ROUTE_ETH, ROUTE_BASE], coveredControls: ["z-dvn-set", "a-dvn-set"], ...overrides.scope },
-  { reviewId: "provider:layerzero:fixture",
-    laneScreeningRefs: [
-      { routeId: ROUTE_ETH, certificateId: "cert:eth" },
-      { routeId: ROUTE_BASE, certificateId: "cert:base" },
+const ASSET_A = "fixture-vault";
+const ASSET_B = "fixture-other";
+
+function providerScope(overrides: Record<string, unknown> = {}) {
+  return { kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+    coveredRoutes: [
+      { assetId: ASSET_B, routeId: ROUTE_BASE },
+      { assetId: ASSET_A, routeId: ROUTE_ETH },
     ],
-    ...overrides.extra });
+    coveredControls: [
+      { assetId: ASSET_B, controlId: "z-dvn-set" },
+      { assetId: ASSET_A, controlId: "a-dvn-set" },
+    ],
+    ...overrides };
+}
+
+/** Provider-wide review: no top-level asset; one record speaks to several assets. */
+function providerRow(overrides: Record<string, unknown> = {}) {
+  return { reviewId: "provider:layerzero:fixture",
+    scope: providerScope(),
+    reviewedAt: REVIEWED_AT, reviewer: "Fixture reviewer",
+    windowStartSec: WINDOW_END_SEC - 86_400, windowEndSec: WINDOW_END_SEC,
+    conclusion: "no-known-incident",
+    laneScreeningRefs: [
+      { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
+      { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
+    ],
+    ...overrides };
 }
 
 function authoredRow(overrides: { scope?: Record<string, unknown>; extra?: Record<string, unknown> } = {}) {
@@ -103,6 +126,10 @@ function issuerRow(overrides: { scope?: Record<string, unknown>; extra?: Record<
   return negativeReview({ kind: "issuer-surface", coveredRoutes: [ROUTE_ETH, ROUTE_BASE], ...overrides.scope },
     { reviewId: "issuer:fixture-vault", ...overrides.extra });
 }
+
+/** The v10.38 legacy arm: a digest-keyed row that may be retired instead of deleted. */
+const LEGACY_REVIEW = V9RetirableNegativeIncidentReviewSchema.parse(withEvidence(negativeReview(
+  { kind: "control", controlKey: "mint-meta:fixture-vault:54ae2376eb1fab2ff54" })));
 
 /** The authored envelope replaces inline observations with file-local references. */
 function referencedEnvelope(rows: readonly Record<string, unknown>[]) {
@@ -117,8 +144,8 @@ function referencedEnvelope(rows: readonly Record<string, unknown>[]) {
 
 describe("incident runtime projection", () => {
   it("fails closed on missing research surfaces and future observations", () => {
-    expect(() => projectNegativeIncidentReview({ ...reviews[0], searchedSurfaces: [] })).toThrow();
-    expect(() => projectNegativeIncidentReview({ ...reviews[0], windowEndSec: Number.MAX_SAFE_INTEGER })).toThrow();
+    expect(() => projectNegativeIncidentReview({ ...LEGACY_REVIEW, searchedSurfaces: [] })).toThrow();
+    expect(() => projectNegativeIncidentReview({ ...LEGACY_REVIEW, windowEndSec: Number.MAX_SAFE_INTEGER })).toThrow();
   });
 
   it("reproduces the generated runtime bytes from the admitted authored registry", () => {
@@ -182,20 +209,15 @@ describe("incident runtime projection", () => {
       .toThrow(/Duplicate observation reference: unused/);
   });
 
-  it("carries authored identity, retirement and lane certificate references through the projection", () => {
-    const legacy = projectNegativeIncidentReview(reviews[0]);
+  it("carries authored identity and retirement through the projection", () => {
+    const legacy = projectNegativeIncidentReview(LEGACY_REVIEW);
     expect(legacy).not.toHaveProperty("retired");
     expect(legacy).not.toHaveProperty("laneScreeningRefs");
-    expect(legacy.scope).toEqual(reviews[0]!.scope);
+    expect(legacy.scope).toEqual(LEGACY_REVIEW.scope);
 
-    const provider = projectNegativeIncidentReview(withEvidence(providerRow()));
-    expect(provider.scope).toEqual({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
-      coveredRoutes: [ROUTE_BASE, ROUTE_ETH], coveredControls: ["a-dvn-set", "z-dvn-set"] });
-    expect(provider.laneScreeningRefs).toEqual([
-      { routeId: ROUTE_BASE, certificateId: "cert:base" },
-      { routeId: ROUTE_ETH, certificateId: "cert:eth" },
-    ]);
-    expect(provider).not.toHaveProperty("retired");
+    const retiredLegacy = projectNegativeIncidentReview({ ...LEGACY_REVIEW,
+      retired: { reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Lane re-authored" } });
+    expect(retiredLegacy.retired).toEqual({ reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Lane re-authored" });
 
     const authored = projectNegativeIncidentReview(withEvidence(authoredRow()));
     expect(authored.scope).toEqual({ kind: "control", routeId: ROUTE_ETH, controlIds: ["a-upgrade", "z-admin"] });
@@ -211,21 +233,47 @@ describe("incident runtime projection", () => {
     expect(retired.retired).toEqual({ reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Lane re-authored" });
   });
 
+  it("fans a provider-wide review out to one row per covered asset", () => {
+    const rows = projectProviderIncidentReview(withEvidence(providerRow()));
+    expect(rows.map((row) => row.assetId)).toEqual([ASSET_B, ASSET_A]);
+    expect(rows.map((row) => row.reviewId)).toEqual(["provider:layerzero:fixture", "provider:layerzero:fixture"]);
+    expect(rows[0]!.scope).toEqual({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+      coveredRoutes: [{ assetId: ASSET_B, routeId: ROUTE_BASE }],
+      coveredControls: [{ assetId: ASSET_B, controlId: "z-dvn-set" }] });
+    expect(rows[1]!.scope).toEqual({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+      coveredRoutes: [{ assetId: ASSET_A, routeId: ROUTE_ETH }],
+      coveredControls: [{ assetId: ASSET_A, controlId: "a-dvn-set" }] });
+    expect(rows[0]!.laneScreeningRefs).toEqual([
+      { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
+    ]);
+    expect(rows[1]!.laneScreeningRefs).toEqual([
+      { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
+    ]);
+    expect(rows[0]).not.toHaveProperty("retired");
+
+    expect(projectIncidentReviews(withEvidence(providerRow()))).toHaveLength(2);
+    // A provider-wide row is not an attributed row; it never projects as one.
+    expect(() => projectNegativeIncidentReview(withEvidence(providerRow()))).toThrow();
+  });
+
   it("fails closed on provider coverage it cannot witness", () => {
     const withoutRefs: Record<string, unknown> = withEvidence(providerRow());
     delete withoutRefs.laneScreeningRefs;
-    expect(() => projectNegativeIncidentReview(withoutRefs)).toThrow();
+    expect(() => projectProviderIncidentReview(withoutRefs)).toThrow();
 
-    expect(() => projectNegativeIncidentReview(withEvidence({
-      ...providerRow(), laneScreeningRefs: [{ routeId: ROUTE_ETH, certificateId: "cert:eth" }],
-    }))).toThrow(/lane screening certificate reference/);
-    expect(() => projectNegativeIncidentReview(withEvidence({
-      ...providerRow(), laneScreeningRefs: [
-        { routeId: ROUTE_ETH, certificateId: "cert:eth" },
-        { routeId: ROUTE_BASE, certificateId: "cert:base" },
-        { routeId: "polygon:0x3333333333333333333333333333333333333333", certificateId: "cert:extra" },
+    expect(() => projectProviderIncidentReview(withEvidence(providerRow({
+      laneScreeningRefs: [{ assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" }],
+    })))).toThrow(/requires a lane screening certificate reference/);
+    expect(() => projectProviderIncidentReview(withEvidence(providerRow({
+      laneScreeningRefs: [
+        { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
+        { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
+        { assetId: ASSET_A, routeId: "polygon:0x3333333333333333333333333333333333333333", certificateId: "cert:extra" },
       ],
-    }))).toThrow(/only name covered routes/);
+    })))).toThrow(/only name covered routes/);
+    expect(() => projectProviderIncidentReview(withEvidence(providerRow({
+      scope: providerScope({ coveredControls: [{ assetId: "fixture-third", controlId: "x-dvn" }] }),
+    })))).toThrow(/must belong to a covered asset/);
   });
 
   it("rejects a digest-stored or incomplete authored control identity", () => {
@@ -233,38 +281,53 @@ describe("incident runtime projection", () => {
       .toThrow(/requires controlId or controlIds/);
     expect(() => projectNegativeIncidentReview(withEvidence(negativeReview(
       { kind: "control", routeId: ROUTE_ETH, controlId: "*", controlKey: "mint-meta:fixture-vault:54" })))).toThrow();
-    expect(() => projectNegativeIncidentReview(withEvidence(providerRow({ scope: { providerKey: "stargate" } }))))
-      .toThrow();
+    expect(() => projectProviderIncidentReview(withEvidence(providerRow({
+      scope: providerScope({ providerKey: "stargate" }),
+    })))).toThrow();
   });
 
   it("keeps the build identity independent of authored identity-array order", () => {
     const ordered = referencedEnvelope([providerRow(), authoredRow(), issuerRow()]);
     const shuffled = referencedEnvelope([
-      providerRow({ scope: { coveredRoutes: [ROUTE_BASE, ROUTE_ETH], coveredControls: ["a-dvn-set", "z-dvn-set"] },
-        extra: { laneScreeningRefs: [
-          { routeId: ROUTE_BASE, certificateId: "cert:base" },
-          { routeId: ROUTE_ETH, certificateId: "cert:eth" },
-        ] } }),
+      providerRow({
+        scope: providerScope({
+          coveredRoutes: [
+            { assetId: ASSET_A, routeId: ROUTE_ETH },
+            { assetId: ASSET_B, routeId: ROUTE_BASE },
+          ],
+          coveredControls: [
+            { assetId: ASSET_A, controlId: "a-dvn-set" },
+            { assetId: ASSET_B, controlId: "z-dvn-set" },
+          ],
+        }),
+        laneScreeningRefs: [
+          { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
+          { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
+        ],
+      }),
       authoredRow({ scope: { controlIds: ["a-upgrade", "z-admin"] } }),
       issuerRow({ scope: { coveredRoutes: [ROUTE_BASE, ROUTE_ETH] } }),
     ]);
     const runtime = buildIncidentRuntime(ordered);
     expect(buildIncidentRuntime(shuffled).digest).toBe(runtime.digest);
     expect(buildIncidentRuntime(shuffled).negativeReviews).toEqual(runtime.negativeReviews);
-    expect(buildIncidentRuntime(referencedEnvelope([providerRow({ scope: { coveredControls: ["a-dvn-set"] } })]))
-      .digest).not.toBe(buildIncidentRuntime(referencedEnvelope([providerRow()])).digest);
+    expect(buildIncidentRuntime(referencedEnvelope([
+      providerRow({ scope: providerScope({ coveredControls: [{ assetId: ASSET_A, controlId: "a-dvn-set" }] }) }),
+    ])).digest).not.toBe(buildIncidentRuntime(referencedEnvelope([providerRow()])).digest);
   });
 
   it("reproduces the build identity from the admitted schemas for every record kind", () => {
     const envelope = referencedEnvelope([providerRow(), authoredRow(), issuerRow()]);
-    const expandedRows = V9ReviewedIncidentRegistryEnvelopeSchema.parse(expandReviewedRegistryReferences(envelope, "negativeReviews", {
+    const expandedRows = expandReviewedRegistryReferences(envelope, "negativeReviews", {
       sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-    })).negativeReviews!;
+    }, isProviderReview).negativeReviews as Record<string, unknown>[];
     const expected = {
       schemaVersion: 1,
       incidents: [],
       negativeReviews: expandedRows
-        .map((row) => V9AdmittedNegativeIncidentReviewSchema.parse(row))
+        .map((row) => isProviderReview(row)
+          ? V9ProviderIncidentReviewSchema.parse(row)
+          : V9AttributedNegativeIncidentReviewSchema.parse(row))
         .sort((left, right) => left.reviewId < right.reviewId ? -1 : left.reviewId > right.reviewId ? 1 : 0),
     };
     expect(buildIncidentRuntime(envelope).digest)
