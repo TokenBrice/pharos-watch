@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { BridgeRouteRiskProfile } from "@shared/types/core";
 import {
+  deploymentSupplyCensusMaxAgeSec,
   SafetyScoreV9DeploymentSupplyCensusSchema,
   type SafetyScoreV9DeploymentSupplyCensus,
   type V9DeploymentSupplyCensusRow,
@@ -116,18 +117,47 @@ function fixedInput(options: {
   chains: Record<string, number>;
   packet?: SafetyScoreV9DeploymentSupplyCensus;
 }) {
+  const base = makeV9FixedInput({
+    assetId: options.assetId,
+    clockSec: options.clockSec,
+    aggregateCirculating: { peggedUSD: options.aggregateUsd },
+    chainSupplyByChain: Object.fromEntries(
+      Object.entries(options.chains).map(([chain, current]) => [chain, chainSupply(current)]),
+    ),
+  });
   return {
-    ...makeV9FixedInput({
-      assetId: options.assetId,
-      clockSec: options.clockSec,
-      aggregateCirculating: { peggedUSD: options.aggregateUsd },
-      chainSupplyByChain: Object.fromEntries(
-        Object.entries(options.chains).map(([chain, current]) => [chain, chainSupply(current)]),
-      ),
-    }),
+    ...base,
     ...(options.packet === undefined
       ? {}
-      : { safetyScoreV9DeploymentSupplyCensusById: { [options.assetId]: options.packet } }),
+      : {
+          safetyScoreV9DeploymentSupplyCensusById: { [options.assetId]: options.packet },
+          safetyScoreV9DeploymentSupplyCensusBinding: {
+            generationId: `safety-score-v9-deployment-supply-census:v1:${"1".repeat(64)}`,
+            registryFingerprint: base.registryFingerprint,
+            sourceBaseInputGenerationId: base.baseInputGenerationId,
+          },
+        }),
+  };
+}
+
+interface BoundCaptureBase {
+  readonly registryFingerprint: string;
+  readonly baseInputGenerationId: string;
+  readonly [field: string]: unknown;
+}
+
+function bindCensus(
+  capture: BoundCaptureBase,
+  packet: SafetyScoreV9DeploymentSupplyCensus,
+) {
+  return {
+    ...capture,
+    safetyScoreV9DeploymentSupplyCensusById: { [USDC_ASSET]: packet },
+    safetyScoreV9DeploymentSupplyCensusBinding: {
+      generationId: `safety-score-v9-deployment-supply-census:v1:${"2".repeat(64)}`,
+      registryFingerprint: capture.registryFingerprint,
+      sourceBaseInputGenerationId: capture.baseInputGenerationId,
+    },
   };
 }
 
@@ -347,7 +377,7 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
   });
 
   it("returns every deployment datum to required when the recorded bound is expired", () => {
-    const expiredClock = RECORDED_CLOCK_SEC + SUPPLY_POLICY.observationMaxAgeSec + 1;
+    const expiredClock = RECORDED_CLOCK_SEC + deploymentSupplyCensusMaxAgeSec() + 1;
     const expiredInput = fixedInput({
       assetId: USDC_ASSET,
       clockSec: expiredClock,
@@ -453,7 +483,7 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
       aggregateUsd: recordedGeneration.aggregateSupplyUsd,
       chains: recordedGeneration.chainSupplyUsdByChainId,
     });
-    const enriched = { ...capture, safetyScoreV9DeploymentSupplyCensusById: { [USDC_ASSET]: recordedPacket } };
+    const enriched = bindCensus(capture, recordedPacket);
     expect(normalizeSafetyScoreV9CompilerInput(capture).safetyScoreV9DeploymentSupplyCensusById).toBeUndefined();
     expect(normalizeSafetyScoreV9CompilerInput(enriched).safetyScoreV9DeploymentSupplyCensusById)
       .toEqual({ [USDC_ASSET]: recordedPacket });
@@ -469,7 +499,7 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
       aggregateUsd: recordedGeneration.aggregateSupplyUsd,
       chains: recordedGeneration.chainSupplyUsdByChainId,
     });
-    const enriched = { ...capture, safetyScoreV9DeploymentSupplyCensusById: { [USDC_ASSET]: recordedPacket } };
+    const enriched = bindCensus(capture, recordedPacket);
     const artifactOf = (value: unknown) => buildSafetyScoreV9ReplayArtifact({
       fixedInput: value,
       publishedAtSec: RECORDED_CLOCK_SEC + 10,

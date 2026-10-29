@@ -17,6 +17,9 @@ const ETH_SECOND_ROUTE = `ethereum:0x${"b".repeat(40)}`;
 const BASE_ROUTE = `base:0x${"c".repeat(40)}`;
 const BLOCK_HASH = `0x${"d".repeat(64)}`;
 const CODE_HASH = "e".repeat(64);
+const REGISTRY_FINGERPRINT = "9".repeat(64);
+const BASE_INPUT_GENERATION_ID = `report-cards-input:v1:${"8".repeat(64)}`;
+const CENSUS_GENERATION_ID = `safety-score-v9-deployment-supply-census:v1:${"7".repeat(64)}`;
 
 function profile(): BridgeRouteRiskProfile {
   return {
@@ -28,7 +31,7 @@ function profile(): BridgeRouteRiskProfile {
   } as unknown as BridgeRouteRiskProfile;
 }
 
-function row(routeId: string, shareUpper: number) {
+function row(routeId: string, shareUpper: number, pinAtSec = CLOCK_SEC - 60) {
   const chainId = routeId.slice(0, routeId.indexOf(":"));
   const tokenAddress = routeId.slice(routeId.indexOf(":") + 1);
   return {
@@ -40,13 +43,13 @@ function row(routeId: string, shareUpper: number) {
       kind: "evm-header" as const,
       blockNumber: 21_000_000,
       blockHash: BLOCK_HASH,
-      blockTimeSec: CLOCK_SEC - 60,
+      blockTimeSec: pinAtSec,
       runtimeCodeSha256: CODE_HASH,
     },
     decimals: 18,
     totalSupplyRaw: "1000000",
     referencePriceUsd: 1,
-    referencePriceObservedAtSec: CLOCK_SEC - 60,
+    referencePriceObservedAtSec: pinAtSec,
     supplyUsdUpper: shareUpper * AGGREGATE_USD,
     shareUpper,
     evidenceKind: "upper-bound" as const,
@@ -75,12 +78,21 @@ function packet(overrides: Partial<SafetyScoreV9DeploymentSupplyCensus> = {}): S
 function fixedInput(census: SafetyScoreV9DeploymentSupplyCensus | undefined): SafetyScoreV9CompilerInput {
   return {
     clockSec: CLOCK_SEC,
+    registryFingerprint: REGISTRY_FINGERPRINT,
+    baseInputGenerationId: BASE_INPUT_GENERATION_ID,
     aggregateCirculatingById: {
       [ASSET_ID]: { circulating: { peggedUSD: AGGREGATE_USD }, observedAtSec: CLOCK_SEC - 60 },
     },
     chainCirculatingById: { [ASSET_ID]: { ethereum: { current: 80 }, base: { current: 20 } } },
     safetyScoreV9SupplyAttributionById: {},
-    ...(census === undefined ? {} : { safetyScoreV9DeploymentSupplyCensusById: { [ASSET_ID]: census } }),
+    ...(census === undefined ? {} : {
+      safetyScoreV9DeploymentSupplyCensusById: { [ASSET_ID]: census },
+      safetyScoreV9DeploymentSupplyCensusBinding: {
+        generationId: CENSUS_GENERATION_ID,
+        registryFingerprint: REGISTRY_FINGERPRINT,
+        sourceBaseInputGenerationId: BASE_INPUT_GENERATION_ID,
+      },
+    }),
   } as unknown as SafetyScoreV9CompilerInput;
 }
 
@@ -161,8 +173,63 @@ describe("deployment supply census admission", () => {
     expect(safetyScoreV9RouteSupplyShare(result, ETH_SECOND_ROUTE)).toBeNull();
   });
 
+  it("serves the one declared per-source census window, not the capture window", () => {
+    const observedAtSec = CLOCK_SEC - 5_399;
+    const within = buildSafetyScoreV9SupplyReview(fixedInput(packet({
+      observedAtSec,
+      deployments: [row(ETH_ROUTE, 0.005, observedAtSec - 60)],
+    })), ASSET_ID, profile())!;
+    expect(within.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(true);
+    expect(deploymentSupplyCensusDiagnostics(within)).not.toContainEqual({
+      deploymentRouteKey: null,
+      code: "census-rejected:observation-stale",
+    });
+
+    const beyond = buildSafetyScoreV9SupplyReview(fixedInput(packet({
+      observedAtSec: CLOCK_SEC - 5_401,
+      deployments: [row(ETH_ROUTE, 0.005, CLOCK_SEC - 5_401 - 60)],
+    })), ASSET_ID, profile())!;
+    expect(beyond.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(deploymentSupplyCensusDiagnostics(beyond)).toContainEqual({
+      deploymentRouteKey: null,
+      code: "census-rejected:observation-stale",
+    });
+  });
+
+  it("rejects an unbound census map and one built for another generation", () => {
+    const bound = fixedInput(packet());
+    const unbound = { ...bound, safetyScoreV9DeploymentSupplyCensusBinding: undefined };
+    const unboundReview = buildSafetyScoreV9SupplyReview(unbound, ASSET_ID, profile())!;
+    expect(unboundReview.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(deploymentSupplyCensusDiagnostics(unboundReview)).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:generation-unbound" },
+    ]);
+
+    for (const binding of [
+      { ...bound.safetyScoreV9DeploymentSupplyCensusBinding!, registryFingerprint: "0".repeat(64) },
+      {
+        ...bound.safetyScoreV9DeploymentSupplyCensusBinding!,
+        sourceBaseInputGenerationId: `report-cards-input:v1:${"0".repeat(64)}`,
+      },
+    ]) {
+      const mismatched = buildSafetyScoreV9SupplyReview(
+        { ...bound, safetyScoreV9DeploymentSupplyCensusBinding: binding },
+        ASSET_ID,
+        profile(),
+      )!;
+      expect(mismatched.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+      expect(deploymentSupplyCensusDiagnostics(mismatched)).toEqual([
+        { deploymentRouteKey: null, code: "census-rejected:generation-mismatch" },
+      ]);
+    }
+  });
+
   it("returns an expired bound to required with a named rejection", () => {
-    const result = review(packet({ observedAtSec: CLOCK_SEC - 1_801 }))!;
+    const result = review(packet({
+      observedAtSec: CLOCK_SEC - 5_401,
+      deployments: [row(ETH_ROUTE, 0.005, CLOCK_SEC - 5_461), row(ETH_SECOND_ROUTE, 0.37, CLOCK_SEC - 5_461),
+        row(BASE_ROUTE, 0.001, CLOCK_SEC - 5_461)],
+    }))!;
     expect(result.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
     expect(deploymentSupplyCensusDiagnostics(result)).toContainEqual({
       deploymentRouteKey: null,

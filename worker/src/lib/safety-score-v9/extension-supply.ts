@@ -734,6 +734,19 @@ function admitDeploymentSupplyCensus(
     byChain: new Map(),
     diagnostics: sortDeploymentSupplyCensusDiagnostics(diagnostics),
   });
+  // F2: a packet is only evidence for the generation it was built against. An
+  // unbound map and a map captured under another registry or compiler base
+  // generation are rejected by name; neither may bound a row under this roster.
+  const binding = fixedInput.safetyScoreV9DeploymentSupplyCensusBinding;
+  if (binding === undefined) {
+    reject("generation-unbound");
+    return rejected();
+  }
+  if (binding.registryFingerprint !== fixedInput.registryFingerprint ||
+    binding.sourceBaseInputGenerationId !== fixedInput.baseInputGenerationId) {
+    reject("generation-mismatch");
+    return rejected();
+  }
   // R3: a bound carries its own clock. There is no carry-forward and no
   // re-dating, so a packet past the census observation window returns every
   // deployment to required on the next capture.

@@ -1,6 +1,7 @@
 import { z } from "zod";
 import candidatePolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import {
+  BaseInputGenerationIdSchema,
   CanonicalChainIdSchema,
   CanonicalTextSchema,
   NonNegativeFiniteSchema,
@@ -56,6 +57,10 @@ export const V9DeploymentSupplyCensusRejectionReasonSchema = z.enum([
   "deployment-over-cap",
   // The route's amount basis is not a fixed-token-unit basis.
   "unresolved-amount-basis",
+  // The served census map carries no generation binding to the compute input.
+  "generation-unbound",
+  // The served census was built for another registry or base input generation.
+  "generation-mismatch",
 ]);
 export type V9DeploymentSupplyCensusRejectionReason = z.infer<
   typeof V9DeploymentSupplyCensusRejectionReasonSchema
@@ -74,6 +79,18 @@ export function deploymentSupplyCensusRejectionCode(
   reason: V9DeploymentSupplyCensusRejectionReason,
 ): V9DeploymentSupplyCensusRejectionCode {
   return `${V9_DEPLOYMENT_SUPPLY_CENSUS_REJECTION_PREFIX}${reason}`;
+}
+
+/**
+ * The one census serving/evaluation window (v10.38): the declared per-source
+ * chain-supply ceiling for `deployment-supply-census-v1`. Capture freshness
+ * (`observationMaxAgeSec`, 1,800 s) governs a packet's own pin and price age;
+ * this ceiling governs how long a captured packet may be served and admitted,
+ * and the store and the consumer both read it here instead of restating it.
+ */
+export function deploymentSupplyCensusMaxAgeSec(): number {
+  return supplyPolicy.chainSupplyMaxAgeBySource.maxAgeSecBySource[
+    SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MODEL];
 }
 
 const CensusTokenAddressSchema = z.string().min(1).max(128);
@@ -329,6 +346,21 @@ export const SafetyScoreV9DeploymentSupplyCensusByIdSchema = z.record(
 );
 export type SafetyScoreV9DeploymentSupplyCensusById = z.output<
   typeof SafetyScoreV9DeploymentSupplyCensusByIdSchema
+>;
+
+/**
+ * The generation identity that must travel beside the fixed-input projection.
+ * A packet map without it is unbound (`census-rejected:generation-unbound`);
+ * one whose binding names another registry or compiler base generation is
+ * `census-rejected:generation-mismatch`. Neither ever becomes an empty census.
+ */
+export const SafetyScoreV9DeploymentSupplyCensusBindingSchema = z.strictObject({
+  generationId: z.string().min(1).max(256),
+  registryFingerprint: Sha256Schema,
+  sourceBaseInputGenerationId: BaseInputGenerationIdSchema,
+});
+export type SafetyScoreV9DeploymentSupplyCensusBinding = z.output<
+  typeof SafetyScoreV9DeploymentSupplyCensusBindingSchema
 >;
 
 /**
