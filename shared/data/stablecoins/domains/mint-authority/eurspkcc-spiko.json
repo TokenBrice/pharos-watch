@@ -748,13 +748,21 @@
         {
           "controlRef": "EURSPKCC newly inventoried native-register operators",
           "subject": "authority-semantics",
-          "question": "Complete the exact current Etherlink native operator and Solana mint/config/admin/upgrade census, including mutable targets, bypasses, liability reach and independent key-custody mapping. Exact share identities are verified; a generic shared issuer architecture and explorer authority label do not certify complete control reach.",
-          "reviewedAt": "2026-10-20",
-          "reviewer": "FD41 bottom-up refinement 2026-10-21",
+          "question": "Complete the exact current Etherlink native operator and Solana mint/config/admin/upgrade census, including mutable targets, bypasses, liability reach and independent key-custody mapping. Exact share identities are verified; a generic shared issuer architecture and explorer authority label do not certify complete control reach. Fresh re-read 2026-10-29: the issuer register list still exposes one eurSPKCC Solana register H99pu9fKt15asYk3Mcs8rajaRX3aYx3kDwXy6pY3n6My, which at Solana finalized slot 462980000, blockhash Ak76tk9d9XAHXTvU19AdsrCd9ib7cNWed7EMpm6KZWVR, blockTime 2026-10-29T18:21:26Z still names MinterConfig BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ as its mint authority under the osec-verified issuer minter program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw; the Etherlink register and the key-custody mapping were not re-read in this pass, so the operator, upgrade and independent-custody census remains open.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Exact issuer EURSPKCC share registers",
+              "label": "Issuer share-class register list, fetched 2026-10-29",
+              "url": "https://public-api.spiko.io/share-classes"
+            },
+            {
+              "label": "Exact issuer eurSPKCC share registers",
               "url": "https://public-api.spiko.io/share-classes/eurSPKCC"
+            },
+            {
+              "label": "Finalized eurSPKCC Solana mint account read; Solana finalized slot 462980000, blockhash Ak76tk9d9XAHXTvU19AdsrCd9ib7cNWed7EMpm6KZWVR, blockTime 2026-10-29T18:21:26Z",
+              "url": "https://solana-mainnet.g.alchemy.com/v2/"
             },
             {
               "label": "Issuer immutable shared Solana minter inventory, not a complete current execution certificate",
