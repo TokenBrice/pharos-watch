@@ -157,6 +157,28 @@ describe("deployment supply census packet", () => {
     reject(packet({ deployments: [row, reminted] }));
   });
 
+  it("shares one header across same-chain deployments with distinct code hashes", () => {
+    const first = evmRow();
+    const second = evmRow({
+      deploymentRouteKey: "ethereum:0x0000000000000000000000000000000000000002",
+      tokenAddress: "0x0000000000000000000000000000000000000002",
+      pin: {
+        kind: "evm-header",
+        blockNumber: 26_000_000,
+        blockHash: `0x${"a".repeat(64)}`,
+        blockTimeSec: CLOCK_SEC - 60,
+        runtimeCodeSha256: "f".repeat(64),
+      },
+    });
+    expect(accept(packet({ deployments: [first, second] })).deployments).toHaveLength(2);
+    reject(packet({
+      deployments: [
+        first,
+        { ...second, pin: { ...second.pin, blockNumber: 26_000_001 } },
+      ],
+    }));
+  });
+
   it("rejects a stale reference price and a read kind that disagrees with its pin", () => {
     reject(packet({
       deployments: [evmRow({

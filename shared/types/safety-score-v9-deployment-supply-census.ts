@@ -196,7 +196,10 @@ export type V9DeploymentSupplyCensusRejection = z.output<
 function pinIdentity(pin: V9DeploymentSupplyCensusPin): string {
   switch (pin.kind) {
     case "evm-header":
-      return `${pin.kind}:${pin.blockNumber}:${pin.blockHash}:${pin.runtimeCodeSha256}:${pin.blockTimeSec}`;
+      // The header pins the chain, not the token: two deployments on one chain
+      // share blockNumber/blockHash/blockTimeSec and may carry different
+      // runtime code hashes (each row still requires its own).
+      return `${pin.kind}:${pin.blockNumber}:${pin.blockHash}:${pin.blockTimeSec}`;
     case "solana-finalized-slot":
       return `${pin.kind}:${pin.slot}:${pin.blockHash}:${pin.blockTimeSec}`;
     case "move-ledger-version":
