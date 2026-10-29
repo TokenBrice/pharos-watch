@@ -18,6 +18,7 @@ import {
   restoreCuratedAggregateChainPartition,
   restoreMissingTrackedAssets,
   reviewedOnchainSupplyHoldFields,
+  withholdUnclockedCarriedSupply,
 } from "../shared";
 
 const NOW_SEC = 1_780_000_000;
@@ -520,7 +521,7 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
     expect(getCirculatingRawOrNull(byId.get("xaut-tether"))).toBe(0);
   });
 
-  it("restores rows without provenance exactly as before", () => {
+  it("refuses a prior value that names no observation clock instead of re-dating it", () => {
     const current = asset({ id: "paxg-paxos", symbol: "PAXG", circulating: {} });
     const previous = asset({
       id: "paxg-paxos",
@@ -535,8 +536,63 @@ describe("mergeSupplementalLastKnownGood carry-forward ceiling", () => {
       NOW_SEC,
     );
 
-    expect(result.restoredCount).toBe(1);
-    expect(result.expiredRestoreIds).toEqual([]);
-    expect(result.assets[0]).toMatchObject({ supplyRestored: true });
+    expect(result.restoredCount).toBe(0);
+    expect(result.unclockedRestoreIds).toEqual(["paxg-paxos"]);
+    expect(result.assets[0]).toBe(current);
+    expect(getCirculatingRawOrNull(result.assets[0])).toBeNull();
+    expect(result.assets[0]?.supplyObservedAt).toBeUndefined();
+    expect(result.assets[0]?.supplyRestored).toBeUndefined();
+  });
+
+  it("does not re-date a carried row from the cache write clock", async () => {
+    const carried = asset({
+      id: "usdc-circle", symbol: "USDC", supplySource: "coingecko-fallback",
+      circulating: { peggedUSD: 100 }, supplyRestored: true,
+    });
+    const observed = asset({
+      id: "usdt-tether", symbol: "USDT", supplySource: "defillama",
+      circulating: { peggedUSD: 100 },
+    });
+    const db = mockD1([
+      { match: "FROM cache", rows: [{ updated_at: NOW_SEC, value: JSON.stringify({ peggedAssets: [carried, observed] }) }] },
+    ]);
+
+    const { previousAssetsById } = await loadPreviousStablecoinsById(db);
+
+    // The payload clock is the observation clock of a row this publication read…
+    expect(previousAssetsById.get("usdt-tether")?.supplyObservedAt).toBe(NOW_SEC);
+    // …but never of a row it merely republished.
+    expect(previousAssetsById.get("usdc-circle")?.supplyObservedAt).toBeUndefined();
+    const restored = restoreMissingTrackedAssets([], previousAssetsById, NOW_SEC);
+    expect(restored.restoredIds).not.toContain("usdc-circle");
+  });
+
+  it("withholds a carried supply value that names no clock and leaves current rows alone", () => {
+    const unclockedCarry = asset({
+      id: "isc-international-stable-currency", symbol: "ISC", supplySource: "coingecko-fallback",
+      circulating: { peggedVAR: 2_352_730 }, supplyRestored: true,
+      chainCirculating: { Solana: { chainId: "solana", current: 2_352_730 } },
+      chains: ["Solana"],
+    });
+    const clockedCarry = asset({
+      id: "savusd-avant", symbol: "avUSD", supplySource: "coingecko-fallback",
+      circulating: { peggedUSD: 97_425_260 }, supplyRestored: true, supplyObservedAt: NOW_SEC - 300,
+    });
+    const currentObservation = asset({
+      id: "usdc-circle", symbol: "USDC", supplySource: "defillama", circulating: { peggedUSD: 1_000 },
+    });
+
+    const withheld = withholdUnclockedCarriedSupply([unclockedCarry, clockedCarry, currentObservation]);
+
+    expect(withheld).toEqual(["isc-international-stable-currency"]);
+    expect(getCirculatingRawOrNull(unclockedCarry)).toBeNull();
+    expect(unclockedCarry.circulatingPrevDay).toBeNull();
+    expect(unclockedCarry.chainCirculating).toEqual({ Solana: { chainId: "solana", current: null } });
+    expect(unclockedCarry.supplyRestored).toBeUndefined();
+    expect(unclockedCarry.supplyObservedAt).toBeUndefined();
+    expect(clockedCarry.circulating).toEqual({ peggedUSD: 97_425_260 });
+    expect(clockedCarry.supplyObservedAt).toBe(NOW_SEC - 300);
+    expect(clockedCarry.supplyRestored).toBe(true);
+    expect(currentObservation.circulating).toEqual({ peggedUSD: 1_000 });
   });
 });
