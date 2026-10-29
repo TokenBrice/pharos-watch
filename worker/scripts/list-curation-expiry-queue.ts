@@ -18,8 +18,13 @@
 //
 // Usage:
 //   npm run safety-score-v9:expiry-queue -- \
-//     --replay <replay-v9.json> [--days <lookahead, default 10>] \
-//     [--output <markdown path, default stdout>]
+//     --replay <replay-v9.json> [--days <lookahead, default 10> | --horizon <YYYY-MM-DD>] \
+//     [--by-week] [--output <markdown path, default stdout>]
+// `--horizon` is an absolute cut-off: the window ends at that date's exclusive
+// UTC start, so every row expiring before that instant is in scope.
+// `--by-week` adds a renewal calendar grouping the upcoming rows by the UTC
+// Monday-start week containing their effective boundary; the default report is
+// byte-identical without it.
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -60,7 +65,7 @@ import {
   writeCliHelpIfRequested,
 } from "../../scripts/lib/cli-args.mjs";
 
-const USAGE = `Usage: npm run safety-score-v9:expiry-queue -- --replay <path> [--days <n>] [--output <path>]`;
+const USAGE = `Usage: npm run safety-score-v9:expiry-queue -- --replay <path> [--days <n> | --horizon <YYYY-MM-DD>] [--by-week] [--output <path>]`;
 
 const ReplaySchema = z
   .object({
@@ -131,11 +136,34 @@ interface QueueRow {
   adapterState: "none" | "silent-this-cycle";
 }
 
+/**
+ * Absolute date cut-off (`--horizon`). The report window is half-open:
+ * `[capture clock, startSec)` — a row whose last admitted second is `startSec`
+ * or later is outside the window, so the named date itself is excluded.
+ */
+export interface CurationExpiryHorizon {
+  /** UTC date (YYYY-MM-DD) named by the operator. */
+  date: string;
+  /** Exclusive window end: the UTC start of `date`. */
+  startSec: number;
+}
+
+/** Parse `--horizon`; `null` for anything that is not a real UTC calendar date. */
+export function parseCurationExpiryHorizon(date: string): CurationExpiryHorizon | null {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return null;
+  const startSec = Date.parse(`${date}T00:00:00Z`) / 1_000;
+  // Round-trip rejects out-of-range dates (for example 2027-02-30) that some
+  // engines would otherwise roll forward.
+  if (!Number.isFinite(startSec) || isoSec(startSec).slice(0, 10) !== date) return null;
+  return { date, startSec };
+}
+
 export function buildCurationExpiryQueue(
   replay: z.infer<typeof ReplaySchema>,
   lookaheadDays: number,
   metaById: ReadonlyMap<string, Meta> = ACTIVE_META_BY_ID,
   diagnostics?: CensusDiagnostic[],
+  horizon: CurationExpiryHorizon | null = null,
 ): QueueRow[] {
   const { fixedInput, evaluatedSet } = replay.pipeline;
   const supplyByAssetId = new Map(
@@ -144,7 +172,7 @@ export function buildCurationExpiryQueue(
       asset.stressState?.exitPortfolio?.circulatingUsd ?? null,
     ]),
   );
-  const futureClockSec = fixedInput.clockSec + lookaheadDays * 86_400;
+  const futureClockSec = horizon === null ? fixedInput.clockSec + lookaheadDays * 86_400 : horizon.startSec;
   const rows: QueueRow[] = [];
   for (const [assetId, meta] of metaById) {
     const liveRows = fixedInput.liveReserveMap[assetId];
@@ -200,14 +228,21 @@ export function buildCurationExpiryQueue(
   });
 }
 
-export function renderCurationExpiryQueue(rows: readonly QueueRow[], lookaheadDays: number): string {
+export function renderCurationExpiryQueue(
+  rows: readonly QueueRow[],
+  lookaheadDays: number | null,
+  horizon: CurationExpiryHorizon | null = null,
+): string {
+  const windowLabel = horizon === null ? `lookahead ${lookaheadDays}d` : `horizon ${horizon.date}, exclusive UTC start`;
   const lines = [
-    `# Curated reserve pre-expiry queue (lookahead ${lookaheadDays}d)`,
+    `# Curated reserve pre-expiry queue (${windowLabel})`,
     "",
     `Queue supply: ${rows.filter((row) => row.supplyUsd !== null).length} known, ${rows.filter((row) => row.supplyUsd === null).length} unavailable; known-supply subtotal USD ${rows.reduce((sum, row) => sum + (row.supplyUsd ?? 0), 0).toLocaleString("en-US")} (not a full-cohort total).`,
     "",
     rows.length === 0
-      ? "No admitted curated composition expires within the lookahead window."
+      ? horizon === null
+        ? "No admitted curated composition expires within the lookahead window."
+        : `No admitted curated composition stops being admitted before ${horizon.date}T00:00:00Z.`
       : `| Asset | Supply (USD) | Supply availability | compositionAsOf | Age (d) | Dependency links | Adapter |`,
   ];
   if (rows.length > 0) {
@@ -349,7 +384,10 @@ export function defaultCurationExpirySources(): CurationExpirySources {
 }
 
 export interface CurationExpiryReport {
-  lookaheadDays: number;
+  /** Relative lookahead days; null when an absolute `horizon` sets the window. */
+  lookaheadDays: number | null;
+  /** Absolute cut-off when `--horizon` was used; null for a relative lookahead. */
+  horizon: CurationExpiryHorizon | null;
   capture: { clockSec: number; baseInputGenerationId: string | null; sourceGeneration: string | null };
   extractedAtSec: number;
   status: "complete" | "partial";
@@ -916,12 +954,13 @@ export function buildCurationExpiryReport(
   lookaheadDays: number,
   sources: CurationExpirySources = defaultCurationExpirySources(),
   extractedAtSec: number = Math.floor(Date.now() / 1_000),
+  horizon: CurationExpiryHorizon | null = null,
 ): CurationExpiryReport {
   const { fixedInput, evaluatedSet } = replay.pipeline;
   const clockSec = fixedInput.clockSec;
-  const horizonSec = clockSec + lookaheadDays * DAY_SEC;
+  const windowEndSec = horizon === null ? clockSec + lookaheadDays * DAY_SEC : horizon.startSec;
   const diagnostics: CensusDiagnostic[] = [];
-  const reserveRows = buildCurationExpiryQueue(replay, lookaheadDays, sources.metaById, diagnostics);
+  const reserveRows = buildCurationExpiryQueue(replay, lookaheadDays, sources.metaById, diagnostics, horizon);
   const joins: ReplayJoins = {
     compiled: indexAssets("pipeline.compiledFacts.assets", replay.pipeline.compiledFacts?.assets, CompiledAssetSchema, diagnostics),
     extension: indexAssets("pipeline.extension.assets", replay.pipeline.extension?.assets, ExtensionAssetSchema, diagnostics),
@@ -960,7 +999,7 @@ export function buildCurationExpiryReport(
     }
     const term = controllingTerm(projection.terms);
     const lastAdmittedSec = lastAdmitted(term);
-    const bucket = lastAdmittedSec < clockSec ? "lapsed" : lastAdmittedSec < horizonSec ? "upcoming" : "later";
+    const bucket = lastAdmittedSec < clockSec ? "lapsed" : lastAdmittedSec < windowEndSec ? "upcoming" : "later";
     if (bucket === "later") {
       counts.later += 1;
       continue;
@@ -1006,7 +1045,8 @@ export function buildCurationExpiryReport(
     (bucket === "lapsed" ? lapsed : upcoming).push(row);
   }
   return {
-    lookaheadDays,
+    lookaheadDays: horizon === null ? lookaheadDays : null,
+    horizon,
     capture: { clockSec, baseInputGenerationId: fixedInput.baseInputGenerationId ?? null, sourceGeneration: fixedInput.sourceGeneration ?? null },
     extractedAtSec,
     status: diagnostics.length > 0 ? "partial" : "complete",
@@ -1016,12 +1056,94 @@ export function buildCurationExpiryReport(
     lapsed: lapsed.sort(compareFamilyRows),
     census: [...census.values()],
     producerRefreshed,
-    inactiveHistory: inactiveHistoryCensus(sources, clockSec, horizonSec),
+    inactiveHistory: inactiveHistoryCensus(sources, clockSec, windowEndSec),
   };
 }
 
 function cell(value: string): string {
   return value.replace(/\|/g, "\\|").replace(/\n/g, " ");
+}
+
+/** Documented renewal lead time before an effective boundary (ImplDurability §3.2). */
+export const RENEWAL_LEAD_TIME_DAYS = 14;
+
+export type RenewalLeadTimeClass = "execution-review" | "scoped-question" | "supply-attribution";
+
+/**
+ * Renewal lead-time class per evidence family. Curated reserve compositions are
+ * in the `composition` class with the same 14-day lead, but stay in the reserve
+ * queue: their exact boundary belongs to the production admission resolver and
+ * is not re-derived here.
+ */
+export const RENEWAL_LEAD_TIME_CLASS_BY_FAMILY: Readonly<Partial<Record<EvidenceFamily, RenewalLeadTimeClass>>> = Object.freeze({
+  "execution-review": "execution-review",
+  "scoped-control-question": "scoped-question",
+  "supply-plan": "supply-attribution",
+  "supply-partition": "supply-attribution",
+  "supply-row-exclusion": "supply-attribution",
+  "supply-native-single-route": "supply-attribution",
+});
+
+export interface RenewalCalendarWeek {
+  /** UTC Monday (YYYY-MM-DD) that starts the week. */
+  weekStart: string;
+  rows: EvidenceFamilyRow[];
+}
+
+/** UTC Monday-start date of the ISO week containing `sec`. */
+export function utcWeekStartDate(sec: number): string {
+  const dayStartSec = Math.floor(sec / DAY_SEC) * DAY_SEC;
+  const weekday = new Date(dayStartSec * 1_000).getUTCDay();
+  return isoSec(dayStartSec - ((weekday + 6) % 7) * DAY_SEC).slice(0, 10);
+}
+
+/** Group upcoming rows by the UTC Monday-start week containing their effective boundary. */
+export function groupRenewalCalendar(rows: readonly EvidenceFamilyRow[]): RenewalCalendarWeek[] {
+  const byWeek = new Map<string, EvidenceFamilyRow[]>();
+  for (const row of rows) {
+    const weekStart = utcWeekStartDate(row.boundarySec);
+    const week = byWeek.get(weekStart);
+    if (week === undefined) byWeek.set(weekStart, [row]);
+    else week.push(row);
+  }
+  return [...byWeek.entries()]
+    .sort(([left], [right]) => left.localeCompare(right))
+    .map(([weekStart, weekRows]) => ({
+      weekStart,
+      rows: weekRows.sort((left, right) =>
+        left.boundarySec - right.boundarySec ||
+        left.family.localeCompare(right.family) ||
+        left.assetId.localeCompare(right.assetId) ||
+        left.scope.localeCompare(right.scope)),
+    }));
+}
+
+function supplyCell(row: { supplyUsd: number | null; supplyUnavailableReason: string | null }): string {
+  return row.supplyUsd === null
+    ? `unavailable${row.supplyUnavailableReason ? ` (${row.supplyUnavailableReason})` : ""}`
+    : Math.round(row.supplyUsd).toLocaleString("en-US");
+}
+
+function renewalCalendarTable(weeks: readonly RenewalCalendarWeek[]): string[] {
+  const lines = [
+    "| Week (Mon) | Boundary (UTC date) | Renew by | Lead-time class | Family | Asset | Scope | Supply (USD) | Disposition |",
+    "|---|---|---|---|---|---|---|---|---|",
+  ];
+  for (const week of weeks) {
+    for (const row of week.rows) {
+      const leadClass = RENEWAL_LEAD_TIME_CLASS_BY_FAMILY[row.family];
+      const renewBy = leadClass === undefined
+        ? "—"
+        : isoSec(row.boundarySec - RENEWAL_LEAD_TIME_DAYS * DAY_SEC).slice(0, 10);
+      lines.push(`| ${week.weekStart} | ${isoSec(row.boundarySec).slice(0, 10)} | ${renewBy} | ${leadClass ?? "—"} | ${row.family} | ${row.assetId} | ${cell(row.scope)} | ${supplyCell(row)} | ${row.disposition} |`);
+    }
+  }
+  return lines;
+}
+
+export interface RenderCurationExpiryReportOptions {
+  /** Add the UTC-week renewal calendar (`--by-week`); the default report is unchanged. */
+  byWeek?: boolean;
 }
 
 function familyTable(rows: readonly EvidenceFamilyRow[]): string[] {
@@ -1030,15 +1152,21 @@ function familyTable(rows: readonly EvidenceFamilyRow[]): string[] {
     "|---|---|---|---|---|---|---|---|---|",
   ];
   for (const row of rows) {
-    lines.push(`| ${row.family} | ${row.assetId} | ${cell(row.scope)} | ${row.supplyUsd === null ? `unavailable${row.supplyUnavailableReason ? ` (${row.supplyUnavailableReason})` : ""}` : Math.round(row.supplyUsd).toLocaleString("en-US")} | ${cell(row.clocks)} | ${cell(row.controllingBudget)} | ${isoSec(row.boundarySec)} (${row.boundarySemantics}) | ${row.disposition} | ${cell(row.reason ?? "")} |`);
+    lines.push(`| ${row.family} | ${row.assetId} | ${cell(row.scope)} | ${supplyCell(row)} | ${cell(row.clocks)} | ${cell(row.controllingBudget)} | ${isoSec(row.boundarySec)} (${row.boundarySemantics}) | ${row.disposition} | ${cell(row.reason ?? "")} |`);
   }
   return lines;
 }
 
-export function renderCurationExpiryReport(report: CurationExpiryReport): string {
+export function renderCurationExpiryReport(
+  report: CurationExpiryReport,
+  options: RenderCurationExpiryReportOptions = {},
+): string {
   const supply = summarizeDistinctAssetSupply([...report.reserveRows, ...report.upcoming]);
+  const windowLabel = report.horizon === null
+    ? `lookahead ${report.lookaheadDays}d`
+    : `horizon ${report.horizon.date}, exclusive UTC start`;
   const lines = [
-    `# Safety Score evidence pre-expiry queue (lookahead ${report.lookaheadDays}d)`,
+    `# Safety Score evidence pre-expiry queue (${windowLabel})`,
     "",
     `Report status: **${report.status}**${report.status === "partial" ? ` (${report.diagnostics.length} census diagnostic(s); this is not a complete assessment)` : ""}.`,
     `Capture clock ${isoSec(report.capture.clockSec)} (${report.capture.clockSec}); base input generation ${report.capture.baseInputGenerationId ?? "unavailable"}; source generation ${report.capture.sourceGeneration ?? "unavailable"}; extracted ${isoSec(report.extractedAtSec)}.`,
@@ -1053,9 +1181,18 @@ export function renderCurationExpiryReport(report: CurationExpiryReport): string
     }
     lines.push("");
   }
-  lines.push(renderCurationExpiryQueue(report.reserveRows, report.lookaheadDays).replace(/^# /, "## "));
+  lines.push(renderCurationExpiryQueue(report.reserveRows, report.lookaheadDays, report.horizon).replace(/^# /, "## "));
   lines.push(`## Upcoming active evidence deadlines (${report.upcoming.length})`, "");
-  lines.push(...(report.upcoming.length === 0 ? ["No enrolled family record reaches its effective boundary within the lookahead."] : familyTable(report.upcoming)), "");
+  const noUpcoming = report.horizon === null
+    ? "No enrolled family record reaches its effective boundary within the lookahead."
+    : `No enrolled family record reaches its effective boundary before ${report.horizon.date}T00:00:00Z.`;
+  lines.push(...(report.upcoming.length === 0 ? [noUpcoming] : familyTable(report.upcoming)), "");
+  if (options.byWeek === true) {
+    const weeks = groupRenewalCalendar(report.upcoming);
+    lines.push("## Renewal calendar by UTC week (Monday start)", "");
+    lines.push(`Weeks start on the UTC Monday containing each effective boundary; \`Renew by\` counts back the documented ${RENEWAL_LEAD_TIME_DAYS}-day renewal lead time. \`—\` marks a family whose lead time is not documented, and curated reserve compositions stay in the reserve queue above because their exact boundary is owned by the production admission resolver.`, "");
+    lines.push(...(weeks.length === 0 ? ["No upcoming rows to group."] : renewalCalendarTable(weeks)), "");
+  }
   lines.push("## Family census", "");
   lines.push("| Family | Records | Upcoming | Lapsed | Later | Inactive | Admitted | Rejected | Unknown |", "|---|---|---|---|---|---|---|---|---|");
   for (const row of report.census) {
@@ -1064,7 +1201,8 @@ export function renderCurationExpiryReport(report: CurationExpiryReport): string
   for (const row of report.producerRefreshed) lines.push(`- ${row.family}: ${row.records} producer-refreshed captured record(s) not enrolled — ${row.note}.`);
   lines.push("", "## Inactive / history census (never renewals)", "");
   for (const row of report.inactiveHistory) {
-    lines.push(`- ${row.registry} [${row.disposition}]: ${row.records ?? "absent"} record(s), ${row.datedRecords} dated, ${row.datesPassed} past, ${row.datesWithinLookahead} within lookahead — ${row.note}.`);
+    const windowNoun = report.horizon === null ? "lookahead" : "horizon";
+    lines.push(`- ${row.registry} [${row.disposition}]: ${row.records ?? "absent"} record(s), ${row.datedRecords} dated, ${row.datesPassed} past, ${row.datesWithinLookahead} within ${windowNoun} — ${row.note}.`);
   }
   lines.push("", `## Already lapsed at capture (${report.lapsed.length})`, "");
   lines.push(...(report.lapsed.length === 0 ? ["None."] : familyTable(report.lapsed)), "");
@@ -1073,19 +1211,38 @@ export function renderCurationExpiryReport(report: CurationExpiryReport): string
 
 async function main(): Promise<void> {
   const { values } = parseStrictCliArgs(process.argv.slice(2), {
+    conflicts: [["days", "horizon"]],
     options: {
       replay: { type: "string" },
       days: { type: "string" },
+      horizon: { type: "string" },
+      "by-week": { type: "boolean" },
       output: { type: "string" },
     },
   });
   if (writeCliHelpIfRequested(values, USAGE)) return;
   assertCliUsage(typeof values.replay === "string", "--replay is required");
+  const horizon = values.horizon === undefined ? null : parseCurationExpiryHorizon(String(values.horizon));
+  assertCliUsage(
+    values.horizon === undefined || horizon !== null,
+    "--horizon must be a UTC calendar date in YYYY-MM-DD form",
+  );
   const lookaheadDays =
     values.days === undefined ? 10 : parseCliInteger(String(values.days), { name: "--days", min: 1 });
   const replay = ReplaySchema.parse(JSON.parse(readFileSync(String(values.replay), "utf8")));
-  const report = buildCurationExpiryReport(replay, lookaheadDays);
-  const markdown = renderCurationExpiryReport(report);
+  const clockSec = replay.pipeline.fixedInput.clockSec;
+  assertCliUsage(
+    horizon === null || horizon.startSec > clockSec,
+    `--horizon ${horizon?.date ?? ""} is not after the capture clock ${isoSec(clockSec)}`,
+  );
+  const report = buildCurationExpiryReport(
+    replay,
+    lookaheadDays,
+    defaultCurationExpirySources(),
+    Math.floor(Date.now() / 1_000),
+    horizon,
+  );
+  const markdown = renderCurationExpiryReport(report, { byWeek: values["by-week"] === true });
   // A partial report is still written (and uploaded) before the nonzero exit,
   // so workflow failure accounting stays honest without discarding the census.
   if (typeof values.output === "string") {
@@ -1093,7 +1250,8 @@ async function main(): Promise<void> {
   } else {
     process.stdout.write(markdown);
   }
-  console.error(`curation-expiry-queue: ${report.reserveRows.length} admitted composition(s) and ${report.upcoming.length} family record(s) reaching their boundary within ${lookaheadDays}d; ${report.lapsed.length} already lapsed; status ${report.status}`);
+  const windowLabel = horizon === null ? `within ${lookaheadDays}d` : `before ${horizon.date}`;
+  console.error(`curation-expiry-queue: ${report.reserveRows.length} admitted composition(s) and ${report.upcoming.length} family record(s) reaching their boundary ${windowLabel}; ${report.lapsed.length} already lapsed; status ${report.status}`);
   if (report.status === "partial") {
     for (const diagnostic of report.diagnostics) {
       console.error(`curation-expiry-queue: census diagnostic ${diagnostic.family} ${diagnostic.assetId ?? "-"} ${diagnostic.scope}: ${diagnostic.message}`);
