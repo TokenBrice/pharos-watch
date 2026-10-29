@@ -597,11 +597,19 @@ function policyWithDocumentation(documentation: unknown): unknown {
 }
 
 describe("documentation-class policy", () => {
-  it("stays optional for the counting train and binds an authored block into the digest", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation).toBeUndefined();
+  it("authors the block while the schema keeps it optional for earlier policies", () => {
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation).toEqual(documentationFixture());
     const loaded = loadV9MethodologyPolicy(policyWithDocumentation(documentationFixture()));
     expect(loaded.policy.semantic.evidence.documentation).toEqual(documentationFixture());
-    expect(loaded.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    expect(loaded.semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+
+    const withoutBlock = structuredClone(candidatePolicyAsset) as {
+      semantic: { evidence: Record<string, unknown> };
+    };
+    Reflect.deleteProperty(withoutBlock.semantic.evidence, "documentation");
+    const counting = loadV9MethodologyPolicy(withoutBlock);
+    expect(counting.policy.semantic.evidence.documentation).toBeUndefined();
+    expect(counting.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
 
   it.each([
@@ -724,5 +732,115 @@ describe("documentation-class policy", () => {
 
     const smuggledScoringKey = { ...documentationFixture(), scoringThreshold: 1 };
     expect(() => loadV9MethodologyPolicy(policyWithDocumentation(smuggledScoringKey))).toThrow();
+  });
+});
+
+describe("v10.38 producer admission keys", () => {
+  it("authors the A2 margin, B3 source ceilings, census gates and U4 certificate window", () => {
+    const semantic = V9_CANDIDATE_POLICY_V1.policy.semantic;
+    expect(semantic.exit.executionModels["erc4626-instant"]).toMatchObject({
+      evaluationLagSec: 7200,
+      priceMaxAgeSec: 18000,
+    });
+    expect(semantic.supplyAttribution.chainSupplyMaxAgeBySource).toEqual({
+      defaultMaxAgeSec: 1800,
+      carryForwardExtraSec: 3600,
+      maxAgeSecBySource: { "report-cards-chain-circulating": 5400 },
+    });
+    expect(semantic.supplyAttribution.deploymentSupplyCensus).toMatchObject({
+      model: "deployment-supply-census-v1",
+      tier1Read: "total-supply",
+      pinnedHeaderPerChain: true,
+      evmMulticallMaxBatchSize: 64,
+      solanaCommitment: "finalized",
+      maxDeploymentsPerAsset: 64,
+      observationMaxAgeSec: semantic.supplyAttribution.observationMaxAgeSec,
+      observationMaxSkewSec: semantic.supplyAttribution.observationMaxSkewSec,
+    });
+    expect(semantic.evidence.laneIncidentCertificateMaxAgeSec).toBe(2_592_000);
+  });
+
+  it("keeps the evaluation-lag margin inside the price window and refuses fractions or negatives", () => {
+    const inside = candidateClone();
+    inside.semantic.exit.executionModels["erc4626-instant"]!.evaluationLagSec = 17_999;
+    expect(loadV9MethodologyPolicy(inside).policy.semantic.exit.executionModels["erc4626-instant"]!.evaluationLagSec)
+      .toBe(17_999);
+    for (const invalid of [18_000, 18_001, -1, 1.5]) {
+      const margin = candidateClone();
+      margin.semantic.exit.executionModels["erc4626-instant"]!.evaluationLagSec = invalid;
+      expect(() => loadV9MethodologyPolicy(margin)).toThrow();
+    }
+  });
+
+  it("caps the provider chain-supply ceiling and requires the provider entry", () => {
+    const widened = candidateClone();
+    widened.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
+      "report-cards-chain-circulating"
+    ] = 5_401;
+    expect(() => loadV9MethodologyPolicy(widened)).toThrow(/cannot exceed 5400 s/);
+
+    const missing = candidateClone();
+    delete missing.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
+      "report-cards-chain-circulating"
+    ];
+    expect(() => loadV9MethodologyPolicy(missing)).toThrow(/must declare their ceiling/);
+
+    const atCeiling = candidateClone();
+    atCeiling.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
+      "report-cards-chain-circulating"
+    ] = 5_400;
+    expect(loadV9MethodologyPolicy(atCeiling).policy.semantic.supplyAttribution.chainSupplyMaxAgeBySource
+      .maxAgeSecBySource["report-cards-chain-circulating"]).toBe(5_400);
+  });
+
+  it("keeps the census observation gates equal to the supply-attribution authority", () => {
+    const ageDrift = candidateClone();
+    ageDrift.semantic.supplyAttribution.deploymentSupplyCensus.observationMaxAgeSec += 1;
+    expect(() => loadV9MethodologyPolicy(ageDrift)).toThrow(/must equal the supply-attribution authority/);
+
+    const skewDrift = candidateClone();
+    skewDrift.semantic.supplyAttribution.deploymentSupplyCensus.observationMaxSkewSec = 121;
+    expect(() => loadV9MethodologyPolicy(skewDrift)).toThrow(/must equal the supply-attribution authority/);
+  });
+
+  it("bounds census batches and the per-asset deployment cap at 64", () => {
+    const cases: [string, (census: V9MethodologyPolicy["semantic"]["supplyAttribution"]["deploymentSupplyCensus"]) => void][] = [
+      ["evm multicall batch", (census) => { census.evmMulticallMaxBatchSize = 65; }],
+      ["per-asset deployments", (census) => { census.maxDeploymentsPerAsset = 65; }],
+      ["solana accounts", (census) => { census.solanaMaxAccountsPerRequest = 101; }],
+    ];
+    for (const [, mutate] of cases) {
+      const census = candidateClone();
+      mutate(census.semantic.supplyAttribution.deploymentSupplyCensus);
+      expect(() => loadV9MethodologyPolicy(census)).toThrow();
+    }
+  });
+
+  it("requires a positive lane certificate window", () => {
+    const missing = candidateClone() as unknown as {
+      semantic: { evidence: Record<string, unknown> };
+    };
+    Reflect.deleteProperty(missing.semantic.evidence, "laneIncidentCertificateMaxAgeSec");
+    expect(() => loadV9MethodologyPolicy(missing)).toThrow();
+
+    for (const invalid of [0, -1, 1.5]) {
+      const certificate = candidateClone();
+      certificate.semantic.evidence.laneIncidentCertificateMaxAgeSec = invalid;
+      expect(() => loadV9MethodologyPolicy(certificate)).toThrow();
+    }
+  });
+
+  it("binds every v10.38 key into the semantic digest", () => {
+    const mutations = [
+      (policy: V9MethodologyPolicy) => { policy.semantic.exit.executionModels["erc4626-instant"]!.evaluationLagSec = 7_201; },
+      (policy: V9MethodologyPolicy) => { policy.semantic.supplyAttribution.chainSupplyMaxAgeBySource.defaultMaxAgeSec = 1_801; },
+      (policy: V9MethodologyPolicy) => { policy.semantic.supplyAttribution.deploymentSupplyCensus.maxDeploymentsPerAsset = 63; },
+      (policy: V9MethodologyPolicy) => { policy.semantic.evidence.laneIncidentCertificateMaxAgeSec = 2_592_001; },
+    ];
+    for (const mutate of mutations) {
+      const changed = candidateClone();
+      mutate(changed);
+      expect(loadV9MethodologyPolicy(changed).semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    }
   });
 });
