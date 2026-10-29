@@ -12,5 +12,73 @@
         "url": "https://docs.yo.xyz/protocol/contract-addresses.md"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "yoUSD at 0x0000000f2eb9f69274678c76222b35eec7588a65 represents a non-rebasing yield-vault share backed by deployed assets. YO identifies USDC as its deposit asset on Base, Ethereum and Arbitrum. The vault-token documentation describes a variable underlying-asset exchange rate, and the withdrawal policy expressly states the exchange rate is not 1:1. These mechanics establish a strategy share rather than an issuer obligation to redeem the share for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "YO vault tokens: variable exchange rate and yield exposure",
+          "url": "https://docs.yo.xyz/protocol/yovault-tokens.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "YO contract addresses: exact yoUSD token and USDC underlying",
+          "url": "https://docs.yo.xyz/protocol/contract-addresses.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "YO withdrawal policy: non-unit exchange rate and strategy liquidity",
+          "url": "https://docs.yo.xyz/user-guides/how-to-withdraw-from-yo.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "redemptionPolicyPresent": true,
+    "notes": "Assessment applies to the yoUSD vault token separately from its underlying assets, following the existing bbqusdc-steakhouse yield-vault precedent. The contract address matches the tracked token on all three listed EVM deposit chains. Assets are invested in yield-generating pools and withdrawals may require positions to be divested; this is variable share-to-asset redemption rather than a fixed-dollar issuer promise. The opened legal route did not expose usable governing terms, so no legal payment-stablecoin issuer or domicile is assigned. Underlying USDC authorizations, reserves and attestations are not yoUSD-level findings. No securities classification or GENIUS authorization is asserted.",
+    "references": [
+      {
+        "label": "YO vault tokens: variable exchange rate and yield exposure",
+        "url": "https://docs.yo.xyz/protocol/yovault-tokens.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "YO contract addresses: exact yoUSD token and USDC underlying",
+        "url": "https://docs.yo.xyz/protocol/contract-addresses.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "YO withdrawal policy: non-unit exchange rate and strategy liquidity",
+        "url": "https://docs.yo.xyz/user-guides/how-to-withdraw-from-yo.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

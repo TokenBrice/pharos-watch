@@ -16,5 +16,88 @@
         "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "ONyc is a non-rebasing reinsurance exposure whose value follows the NAV of a Bermuda segregated account. OnRe expressly states that ONyc is not a stablecoin and does not maintain a fixed $1 peg. Premiums, claims, reserving and collateral yield change NAV, and redemption returns USDC or USDG subject to windows and liquidity. This is a variable-value investment position rather than a fixed-monetary-value payment stablecoin under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "OnRe ONyc product structure",
+          "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OnRe FAQ: NAV-based token without a fixed dollar peg",
+          "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OnRe issuer identification in Elemental announcement",
+          "url": "https://www.onre.finance/blog/the-elemental-edge",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-02-11",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OnRe platform terms: Bermuda entity and licenses",
+          "url": "https://docs.onre.finance/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "On Re SAC Ltd.",
+    "issuerDomicile": "Bermuda",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The issuer announcement identifies On Re SAC Ltd. as ONyc issuer. The fetched platform terms identify the same Bermuda company, registration 55347, and describe its Class F and Class IIGB licenses. These are issuer disclosures, not independently confirmed regulatory authorizations. The product documentation describes a proportional segregated-account interest with variable NAV, and the FAQ expressly rejects a fixed dollar peg. This supports the corpus non-payment-token treatment of variable-value investment positions. No U.S. securities classification is asserted. Underlying stablecoins and Bermuda insurance or digital-asset licensing do not establish payment-stablecoin authorization for ONyc. Payment-stablecoin reserve-disclosure and attestation flags are omitted.",
+    "references": [
+      {
+        "label": "OnRe ONyc product structure",
+        "url": "https://docs.onre.finance/introduction/onre-tokenized-reinsurance-onyc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OnRe FAQ: NAV-based token without a fixed dollar peg",
+        "url": "https://docs.onre.finance/technical-resources/frequently-asked-questions.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OnRe issuer identification in Elemental announcement",
+        "url": "https://www.onre.finance/blog/the-elemental-edge",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-02-11",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OnRe platform terms: Bermuda entity and licenses",
+        "url": "https://docs.onre.finance/legal/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

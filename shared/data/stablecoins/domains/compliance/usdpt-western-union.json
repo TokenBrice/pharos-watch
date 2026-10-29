@@ -1,5 +1,31 @@
 {
   "id": "usdpt-western-union",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA restrictions: USDPT deposits and trading prohibited",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken USDPT identity: Western Union token issued by Anchorage Digital Bank on Solana",
+        "url": "https://www.kraken.com/prices/usdpt"
+      },
+      {
+        "label": "ESMA EMT issuer register: no Anchorage Digital Bank or USDPT entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Western Union USDPT page: Anchorage Digital Bank issuer and official Solana contract",
+        "url": "https://www.westernunion.com/global/en/digital-assets-stablecoin.html"
+      },
+      {
+        "label": "Anchorage covered stablecoin terms: sole issuer of every series, no EEA exclusion",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

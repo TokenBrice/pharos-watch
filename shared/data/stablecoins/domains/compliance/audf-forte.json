@@ -1,5 +1,34 @@
 {
   "id": "audf-forte",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "AUDF currently linked issuer whitepaper: Australia-only intended use, page 7",
+        "url": "https://www.forteaud.com/api/documents/view/whitepaper"
+      },
+      {
+        "label": "Forte issuer PDS dated June 30, 2026: Australian distribution and issuer identity",
+        "url": "https://www.forteaud.com/api/documents/view/product-disclosure-statement"
+      },
+      {
+        "label": "Forte Tech Solutions notice: no EU or EEA crypto-asset services or marketing",
+        "url": "https://www.forte-sol.com/legal/important-information/"
+      },
+      {
+        "label": "AUDF terms: Forte Securities issuer and Forte Tech Solutions account and conversion appointment",
+        "url": "https://www.forteaud.com/api/documents/view/terms-of-use"
+      },
+      {
+        "label": "AUDF target-market determination dated June 30, 2026: Australian residents and other permitted jurisdictions",
+        "url": "https://www.forteaud.com/api/documents/view/target-market-determination"
+      },
+      {
+        "label": "MiCA Article 2: Union issuance, offering and trading scope",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -29,7 +58,7 @@
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://www.forteaud.com/transparency",
     "redemptionPolicyPresent": true,
-    "notes": "Reviewed on 2026-10-07. AUDF is an AUD payment token with a conditional contractual right for eligible Forte account holders to redeem 1 AUDF for 1 AUD. The issuer is Forte Securities Australia Pty Limited, confirmed by the AUDF terms, issuer footer and ASIC named-stablecoin instrument; Forte Tech Solutions is the separate account and conversion provider. ASIC AFSL 492490 is Australian licensing context, not GENIUS authorization. No qualifying public U.S. GENIUS approval, official application, issuer-announced GENIUS plan or registered foreign exception was located in the named public sources. Pathway and foreign-exception status remain unknown. The PDS describes monthly independent audits of reserve balances but expressly excludes verification of AUDF tokens in circulation. The August 2026 report, signed on 2026-09-07, audits a reserve bank-account balance only. MonthlyAttestationPresent is omitted rather than treating that assets-only audit as a GENIUS monthly reserve attestation. Reserve and redemption disclosure indicators describe publicly present documents, not compliance with GENIUS reserve requirements. DASP restrictions are prospective under Treasury's opened August proposal. The ABN record corroborates entity identity; its extraction date is 2026-10-08 and it is not used to establish a new authorization on the review date.",
+    "notes": "Reviewed on 2026-10-29; the authorization negative-evidence searches were last run on 2026-10-07. AUDF is an AUD payment token with a conditional contractual right for eligible Forte account holders to redeem 1 AUDF for 1 AUD. The issuer is Forte Securities Australia Pty Limited, confirmed by the AUDF terms, issuer footer and ASIC named-stablecoin instrument; Forte Tech Solutions is the separate account and conversion provider. ASIC AFSL 492490 is Australian licensing context, not GENIUS authorization. No qualifying public U.S. GENIUS approval, official application, issuer-announced GENIUS plan or registered foreign exception was located in the named public sources. Pathway and foreign-exception status remain unknown. The PDS describes monthly independent audits of reserve balances but expressly excludes verification of AUDF tokens in circulation. The September 2026 report's independent Horizon Nexus assurance, dated 2026-10-14, covers the reserve bank-account balance as at 2026-09-30 only. MonthlyAttestationPresent is omitted rather than treating that assets-only audit as a GENIUS monthly reserve attestation. Reserve and redemption disclosure indicators describe publicly present documents, not compliance with GENIUS reserve requirements. The ABN record corroborates entity identity; its extraction date is 2026-10-08 and it is not used to establish a new authorization on the review date.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS Act proposed rule",
@@ -96,18 +125,18 @@
         "sourceDate": "2026-09-30"
       },
       {
-        "label": "Forte AUDF Terms of Use, December 2024",
-        "url": "https://static1.squarespace.com/static/6545f5553cf9c3606f20f252/t/675fbb6d8867cf4f44974abb/1734327151022/Forte%2BAUD%2BTerms%2Bof%2BUse%2BDecember%2B2024.pdf",
+        "label": "AUDF Terms of Use dated 15 January 2025 (Version 4.0), the issuer's currently published terms",
+        "url": "https://www.forteaud.com/api/documents/view/terms-of-use",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2024-12-05"
+        "accessedAt": "2026-10-29",
+        "sourceDate": "2025-01-15"
       },
       {
-        "label": "AUDF August 2026 reserve-bank-account audit",
-        "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026",
+        "label": "AUDF September 2026 reserves report with Horizon Nexus assurance on the reserve bank-account balance",
+        "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-september-2026",
         "sourceKind": "auditor-report",
-        "accessedAt": "2026-10-07",
-        "sourceDate": "2026-09-07"
+        "accessedAt": "2026-10-29",
+        "sourceDate": "2026-10-14"
       },
       {
         "label": "ASIC Stablecoin Distribution Exemption Instrument",
@@ -214,7 +243,7 @@
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07",
+    "reviewedAt": "2026-10-29",
     "daspOfferSaleStatus": "not-yet-restricted"
   }
 }

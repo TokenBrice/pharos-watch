@@ -20,10 +20,10 @@
         },
         {
           "label": "Flying Tulip public English terms disclosure",
-          "url": "https://flyingtulip.com/messages/en-4bf67e43.json",
+          "url": "https://flyingtulip.com/terms-of-use/",
           "sourceKind": "issuer-disclosure",
           "sourceDate": "2025-12-01",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-29"
         }
       ]
     },
@@ -34,7 +34,7 @@
     "daspOfferSaleStatus": "not-yet-restricted",
     "reserveDisclosurePresent": true,
     "reserveDisclosureUrl": "https://api.flyingtulip.com/status/ftusd/dashboard?days=30&include_series=false&include_events=false",
-    "notes": "Reviewed on 2026-10-07. ftUSD is the non-yielding payment and settlement base, distinct from the sftUSD and ssftUSD savings receipts. The product documentation provides conversion into supported collateral at a prevailing rate, not a confirmed contractual 1:1 national-currency redemption obligation. Applicability therefore remains unclear. The official English terms identify Flying Tulip Ltd only as interface provider and disclaim involvement in underlying protocol transactions; issuerEntity is omitted because those terms do not identify the legal ftUSD issuer. The collateral API discloses token supply, collateral balances and withdrawal parameters, so reserveDisclosurePresent records first-party disclosure rather than independent assurance. No fixed-value redemption-policy or monthly-attestation boolean is asserted. No qualifying public GENIUS authorization was found in the named public sources; this does not resolve an unidentified issuer's confidential or unindexed filings. The GENIUS DASP restrictions remain prospective under the opened Treasury proposal.",
+    "notes": "Reviewed on 2026-10-07; terms disclosure re-verified on 2026-10-29 after the previously cited terms payload stopped resolving. ftUSD is the non-yielding payment and settlement base, distinct from the sftUSD and ssftUSD savings receipts. The product documentation provides conversion into supported collateral at a prevailing rate, not a confirmed contractual 1:1 national-currency redemption obligation. Applicability therefore remains unclear. The current English terms, last updated 2025-12-01, identify Flying Tulip Inc only as interface provider and disclaim involvement in underlying protocol transactions; issuerEntity is omitted because those terms do not identify the legal ftUSD issuer. The collateral API discloses token supply, collateral balances and withdrawal parameters, so reserveDisclosurePresent records first-party disclosure rather than independent assurance. No fixed-value redemption-policy or monthly-attestation boolean is asserted. No qualifying public GENIUS authorization was found in the named public sources; this does not resolve an unidentified issuer's confidential or unindexed filings.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -104,10 +104,10 @@
       },
       {
         "label": "Flying Tulip public English terms disclosure",
-        "url": "https://flyingtulip.com/messages/en-4bf67e43.json",
+        "url": "https://flyingtulip.com/terms-of-use/",
         "sourceKind": "issuer-disclosure",
         "sourceDate": "2025-12-01",
-        "accessedAt": "2026-10-07"
+        "accessedAt": "2026-10-29"
       },
       {
         "label": "Flying Tulip ftUSD collateral dashboard API",
@@ -196,6 +196,6 @@
       ]
     },
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-10-29"
   }
 }

@@ -16,5 +16,85 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sparkUSDTbc is the Ethereum ERC-4626 Morpho VaultV2 lending-vault share at 0xb0c424116172b55cbb6dd3136f5989f7959e5b91. Morpho identifies SparkDAO as curator and USDT as the vault asset. Interest, fees and loss realization change the USDT amount redeemable per share, while ordinary withdrawals use idle assets and the configured liquidity adapter. These materials document a variable-value lending strategy rather than a payment or settlement instrument with a fixed monetary-value issuer redemption obligation under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho: exact Spark Blue Chip USDT Vault product and curator",
+          "url": "https://app.morpho.org/ethereum/vault/0xb0c424116172B55CbB6dD3136F5989F7959e5B91/spark-blue-chip-usdt-vault",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Blockscout: Spark Blue Chip USDT Vault VaultV2 source",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho: Vault V2 share accounting, roles and liquidity",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment as of 2026-10-28 concerns the vault share separately from underlying USDT and from Spark Savings shares. VaultV2 previewRedeem uses accrued totalAssets and totalSupply, and loss realization can reduce share value. Ordinary redemptions depend on idle USDT and liquidity available through the configured adapter. maxWithdraw and maxRedeem return zero as conservative interface underestimates; those return values do not measure actual exit capacity. The Sky governance post identifies this exact deployment as a Spark USDT Morpho V2 vault in the Spark Liquidity Layer, distinct from the older 0xc7CDcFDEfC64631ED6799C95e3b110cd42F2bD22 deployment. Morpho identifies SparkDAO as curator. The reviewed materials document curator, allocator and governance roles but do not identify a separate legal entity promising fixed monetary-value redemption of this share. issuerEntity and issuerDomicile are therefore omitted. This is not a claim that no legal person is involved in the protocol. Underlying USDT classifications do not transfer to the share. No GENIUS authorization or issuer pathway is asserted.",
+    "references": [
+      {
+        "label": "Morpho: exact Spark Blue Chip USDT Vault product and curator",
+        "url": "https://app.morpho.org/ethereum/vault/0xb0c424116172B55CbB6dD3136F5989F7959e5B91/spark-blue-chip-usdt-vault",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Blockscout: Spark Blue Chip USDT Vault VaultV2 source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Morpho: Vault V2 share accounting, roles and liquidity",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Sky governance: Spark USDT Morpho V2 vault allocator update",
+        "url": "https://forum.skyeco.com/t/june-19-2026-spark-usdt-morpho-v2-vault-allocator-updates/27978",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-06-19"
+      },
+      {
+        "label": "Spark documentation: Spark Liquidity Layer",
+        "url": "https://docs.spark.finance/products/spark-liquidity-layer",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

@@ -1,5 +1,31 @@
 {
   "id": "usdgo-osl",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA restrictions: USDGO deposits and trading prohibited",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken USDGO identity: OSL Group token issued by Anchorage Digital Bank N.A.",
+        "url": "https://www.kraken.com/prices/usdgo"
+      },
+      {
+        "label": "ESMA EMT issuer register: no Anchorage Digital Bank or USDGO entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Anchorage issuer announcement: federally regulated issuer for OSL-branded USDGO",
+        "url": "https://www.anchorage.com/insights/anchorage-digital-serve-issuer-osls-new-us-regulated-stablecoin-usdgo"
+      },
+      {
+        "label": "Anchorage covered stablecoin terms: sole issuer of every series, no EEA exclusion",
+        "url": "https://www.anchorage.com/anchorage-digital-bank-n-a-covered-stablecoin-terms"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -33,7 +59,7 @@
     "reserveDisclosureUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "Anchorage Digital Bank, N.A. remains the USDGO issuerEntity, consistent with USAT, USDtb and USDPT sidecars. Its covered-stablecoin terms identify the bank as sole issuer/obligor, describe payment/settlement use and provide dollar par-value redemption to onboarded Clients; Non-Clients lack a contractual redemption right until becoming Clients. The bank's May 1, 2026 disclosure expressly expects to become a PPSI once GENIUS is effective, supporting issuer-announced-intent and the federal-qualified-nonbank pathway. The ordinary OCC national trust charter does not establish GENIUS approval. No public named PPSI approval or official pending application was located; no assertion is made about nonpublic submissions. The August 31 reserve examination, signed September 28, supports monthlyAttestationPresent but expressly provides no opinion on legal compliance. Federal issuer frameworks remain proposed; Treasury expects January 18, 2027 effectiveness and July 18, 2028 for the general DASP offer-sale prohibition.",
+    "notes": "Anchorage Digital Bank, N.A. remains the USDGO issuerEntity, consistent with USAT, USDtb and USDPT sidecars. Its covered-stablecoin terms identify the bank as sole issuer/obligor, describe payment/settlement use and provide dollar par-value redemption to onboarded Clients; Non-Clients lack a contractual redemption right until becoming Clients. The bank's May 1, 2026 disclosure expressly expects to become a PPSI once GENIUS is effective, supporting issuer-announced-intent and the federal-qualified-nonbank pathway. The ordinary OCC national trust charter does not establish GENIUS approval. No public named PPSI approval or official pending application was located; no assertion is made about nonpublic submissions. The August 31 reserve examination, signed September 28, supports monthlyAttestationPresent but expressly provides no opinion on legal compliance. Treasury expects January 18, 2027 effectiveness and July 18, 2028 for the general DASP offer-sale prohibition.",
     "references": [
       {
         "label": "OCC: Anchorage national trust bank charter",

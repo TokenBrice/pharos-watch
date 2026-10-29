@@ -20,5 +20,84 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "bbqUSDC is the Steakhouse High Yield USDC Morpho Vault V2 share at ethereum:0xbeeff2c5bf38f90e3482a8b19f12e5a6d2fca757. The exact product listing identifies a lending vault; Morpho documentation describes variable yield, interest accrual, receipt tokens and adapter asset reporting. Share value follows the lending strategy rather than a fixed monetary-value redemption obligation. Withdrawals use available underlying digital assets, with separate in-kind exit mechanisms described by the framework. The governing terms identify a curator and service operator rather than an obligor promising fixed national-currency redemption. These rights support non-payment-token under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Steakhouse High Yield Instant: exact USDC Ethereum Morpho V2 vault",
+          "url": "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho: exact Steakhouse High Yield USDC V2 vault and lending strategy",
+          "url": "https://app.morpho.org/ethereum/vault/0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757/steakhouse-high-yield-usdc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2: lending strategy receipt tokens and asset reporting",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Steakhouse DeFi Vaults: operator identity and governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed on 2026-10-28 for the exact V2 lending-vault receipt, separately from underlying USDC and the older Smokehouse USDC V1 vault. The current product listing and exact Morpho vault page both identify the tracked address. Carniceria Tropical SA, Panama, is the disclosed service operator and vault curator, wholly owned by Steakhouse Financial Ltd. The governing terms disclaim being a party to underlying protocol transactions and disclaim an obligation to deliver cryptoassets; they do not establish a separate legal payment-stablecoin issuer or fixed monetary redemption obligor for this share. issuerEntity is omitted. Ordinary withdrawal liquidity is distinct from the framework's in-kind exits and can be constrained by lending positions or gates. Circle permissions and USDC reserve reports are not attributed to the vault share. This assessment concerns the GENIUS payment-stablecoin authorization model and does not determine securities classification or the regulatory status of all related services.",
+    "references": [
+      {
+        "label": "Steakhouse High Yield Instant: exact USDC Ethereum Morpho V2 vault",
+        "url": "https://www.steakhouse.financial/docs/products/vault-products/current/high-yield-instant",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Morpho: exact Steakhouse High Yield USDC V2 vault and lending strategy",
+        "url": "https://app.morpho.org/ethereum/vault/0xbeeff2C5bF38f90e3482a8b19F12E5a6D2FCa757/steakhouse-high-yield-usdc",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Morpho Vault V2: lending strategy receipt tokens and asset reporting",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Steakhouse DeFi Vaults: operator identity and governing terms",
+        "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

@@ -37,7 +37,7 @@
     "foreignExceptionStatus": "unknown",
     "enforcementStatus": "no-public-action-found",
     "daspOfferSaleStatus": "not-yet-restricted",
-    "notes": "Reviewed 2026-10-07. Official materials identify Curve DAO governance of minting infrastructure, markets and debt ceilings; no named legal payment-stablecoin issuer or legal currency-redemption obligor was established. Do not equate DAO control with Liquity-style immutability or automatically infer full decentralization. No GENIUS approval, state-qualified status, official application or registered foreign exception was found in the checked sources. No issuerEntity is supplied because Curve DAO branding is not an evidenced exact legal entity. Prudential implementation remains proposed; the September 30 SCRC rule is procedural. This finding does not assert GENIUS non-compliance or prohibit DASP offers before the applicable statutory timelines.",
+    "notes": "Reviewed 2026-10-07. Official materials identify Curve DAO governance of minting infrastructure, markets and debt ceilings; no named legal payment-stablecoin issuer or legal currency-redemption obligor was established. Do not equate DAO control with Liquity-style immutability or automatically infer full decentralization. No GENIUS approval, state-qualified status, official application or registered foreign exception was found in the checked sources. No issuerEntity is supplied because Curve DAO branding is not an evidenced exact legal entity. This finding does not assert GENIUS non-compliance or prohibit DASP offers before the applicable statutory timelines.",
     "references": [
       {
         "label": "GENIUS Act: payment stablecoin definition and issuer limitation",

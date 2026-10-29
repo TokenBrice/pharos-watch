@@ -1,0 +1,208 @@
+{
+  "id": "vgbp-vnx",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "VNX Global Ltd issues VGBP for payment and settlement with a one-to-one GBP value reference and eligible-institution fiat redemption at par. GBP is national-currency monetary value under GENIUS definitions; a non-USD peg is not a payment-token exclusion. Redemption remains subject to customer eligibility and the operative delay and in-kind terms.",
+      "references": [
+        {
+          "label": "VNX VGBP product: GBP funding and fiat redemption",
+          "url": "https://vnx.io/british-pound",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "VNX Global operative stablecoin issuance and redemption terms",
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "VNX institutional VGBP minting and redemption eligibility",
+          "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act sections 2(17), 2(19) and 2(22): monetary value and payment stablecoins",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "VNX Global Ltd",
+    "issuerDomicile": "Bermuda",
+    "licensingRegulator": "Bermuda Monetary Authority; Class M digital asset business licence, registration 202605548",
+    "foreignExceptionStatus": "unknown",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://vnx.gitbook.io/vnx-global/transparency/audits",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": true,
+    "notes": "The current issuer is VNX Global Ltd in Bermuda, not VNX Commodities AG, the Liechtenstein generator of VNXAU. A live exact-name BMA directory search confirms Class M registration 202605548, effective April 13, 2026 and expiring April 12, 2027. That foreign digital asset business licence is not U.S. GENIUS permission or a registered foreign-issuer exception. The bounded U.S. regulator, Federal Register and issuer checks below located no VGBP-specific approval, official application, foreign registration or issuer-announced U.S. GENIUS path. Issuer pathway and foreign exception therefore remain unknown. Institutional documentation requires verified organizations and a GBP 100,000 minimum; fiat redemption is described as at par with about one business day for settlement, while operative terms preserve reserve-related delay and in-kind redemption. The public audits index links July, August and September 2026 Apex reports covering VGBP. The September report reconciles GBP 126,595.48 of covered VGBP to GBP 126,596.33 of cash in the designated VNX Global account at Bermuda Commercial Bank on its two testing dates. Public disclosure and assurance do not establish regulatory authorization. No issuer-specific enforcement conclusion is asserted.",
+    "references": [
+      {
+        "label": "VNX Global current legal issuer identity",
+        "url": "https://vnx.gitbook.io/vnx-global/vnx-global-ltd.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "VNX current platform: payment and settlement stablecoins",
+        "url": "https://vnx.io/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "VNX Global operative stablecoin issuance and redemption terms",
+        "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "VNX institutional VGBP minting and redemption eligibility",
+        "url": "https://vnx.gitbook.io/vnx-global/institutional/products/minting-and-redemption",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "BMA regulated entities: VNX Global Ltd Class M registration 202605548",
+        "url": "https://www.bma.bm/regulated-entities",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "VNX monthly reserve attestation index: July through September 2026",
+        "url": "https://vnx.gitbook.io/vnx-global/transparency/audits",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Apex VNX Global September 30, 2026 reserve attestation",
+        "url": "https://vnx.io/reports/vnx-attestation-report-2026-09-30.pdf",
+        "sourceKind": "auditor-report",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-10-07"
+      },
+      {
+        "label": "GENIUS Act sections 2(17), 2(19) and 2(22): monetary value and payment stablecoins",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC newsroom exact VNX search: no results",
+        "url": "https://www.occ.gov/news-events/newsroom/?q=VNX",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC pending digital asset bank licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register full-text VNX search: only unrelated historical results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22VNX%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register full-text VGBP search: zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22VGBP%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve 2026 press release index",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC current press release index",
+        "url": "https://www.fdic.gov/news/press-releases",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC current GENIUS implementing rule bulletin: general rules, not an issuer approval",
+        "url": "https://occ.gov/news-issuances/bulletins/2026/bulletin-2026-50.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-10-21"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC newsroom exact VNX query, rendered in a browser: no results. The static reader omitted the dynamic result, so the rendered result was inspected and preserved in scratch/ComplianceResearchMax-4/occ-vnx-search.txt.",
+        "OCC current Digital Assets Licensing Applications table: no VNX or VGBP entry. This is a pending bank-charter application table, not an exhaustive GENIUS issuer register.",
+        "Federal Register API full-text searches for quoted VNX and VGBP: VNX returned three unrelated historical transport or defense notices; VGBP returned zero documents.",
+        "Federal Reserve 2026 press release index and FDIC current press release index: no VNX or VGBP issuer approval or application entry in the fetched listings. Exact-name official-domain searches also covered OCC, Federal Reserve, FDIC, NCUA and Treasury.",
+        "BMA live VNX directory search: VNX Global Ltd Class M digital asset business licence only. No U.S. state licensing pathway was identified from issuer materials; a state regulator is not assigned by speculation.",
+        "VNX Global operative terms, current legal identity and regulatory framework, VGBP product page, institutional minting and redemption page, and audits hub: no issuer-announced U.S. GENIUS route or token-specific U.S. authorization evidence."
+      ],
+      "summary": "As of October 28, 2026, these bounded checks located no public GENIUS PPSI approval, state-qualified approval, official application, registered foreign-issuer exception or issuer-announced U.S. GENIUS route for VNX Global Ltd or VGBP. The Bermuda licence establishes foreign home-regulator context only. Search absence is recorded as a dated negative finding, not proof that no unpublished application or relationship exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC newsroom exact VNX search: no results",
+          "url": "https://www.occ.gov/news-events/newsroom/?q=VNX",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC pending digital asset bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register full-text VNX search: only unrelated historical results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22VNX%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register full-text VGBP search: zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22VGBP%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve 2026 press release index",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC current press release index",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "VNX Global operative stablecoin issuance and redemption terms",
+          "url": "https://prod-global-terms.s3.sa-east-1.amazonaws.com/VNX-Global-Terms.pdf",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "BMA regulated entities: VNX Global Ltd Class M registration 202605548",
+          "url": "https://www.bma.bm/regulated-entities",
+          "sourceKind": "foreign-regulator",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

@@ -16,5 +16,86 @@
         "url": "https://armitage.wintermute.com/terms-of-use"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "pendleUSDC is the share of the exact Ethereum Morpho Vault V2 deployment 0x55c1b6e461a6334b567baf0feb5d728715446f05, which lends USDC to Pendle principal-token collateral markets. Shares accrue interest, realize lending losses and redeem according to variable asset/share accounting and available liquidity. The product is a strategy position rather than a fixed-monetary-value payment token or an issuer obligation to redeem at a fixed amount under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Armitage exact Pendle Ecosystem USDC vault and lending mandate",
+          "url": "https://armitage.wintermute.com/docs/vaults/ecosystem",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Armitage terms: vault shares, variable returns and liquidity constraints",
+          "url": "https://armitage.wintermute.com/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-05-19",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2: lending strategy shares and liquidity mechanisms",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho VaultV2 source: interest accrual, realized losses and variable share price",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(17) and 2(22): monetary value and payment stablecoin definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the vault share separately from underlying USDC. Armitage terms identify Corto Industries Limited in the Cayman Islands as curator and technical-service provider, not a legal issuer promising fixed-value payment redemption for this share. issuerEntity is omitted consistently with the Morpho vault family. The exact lower-yield Pendle Ecosystem USDC deployment was distinguished from the separate Pendle Ecosystem High Yield USDC vault. Underlying USDC licenses, reserves and attestations are not share-level authorization or attestations. This classification does not determine whether securities or other laws apply.",
+    "references": [
+      {
+        "label": "Armitage exact Pendle Ecosystem USDC vault and lending mandate",
+        "url": "https://armitage.wintermute.com/docs/vaults/ecosystem",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Armitage terms: vault shares, variable returns and liquidity constraints",
+        "url": "https://armitage.wintermute.com/terms-of-use",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-19",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Morpho Vault V2: lending strategy shares and liquidity mechanisms",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Morpho VaultV2 source: interest accrual, realized losses and variable share price",
+        "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(17) and 2(22): monetary value and payment stablecoin definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

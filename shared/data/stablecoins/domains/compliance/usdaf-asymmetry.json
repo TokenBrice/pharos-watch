@@ -1,0 +1,24 @@
+{
+  "id": "usdaf-asymmetry",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Asymmetry USDaf immutable and permissionless protocol",
+        "url": "https://docs.asymmetry.finance/usdaf-stablecoin/what-is-usdaf.md"
+      },
+      {
+        "label": "Asymmetry USDaf collateral redemptions",
+        "url": "https://docs.asymmetry.finance/usdaf-stablecoin/redemptions.md"
+      },
+      {
+        "label": "Asymmetry current USDaf deployment and legacy distinction",
+        "url": "https://docs.asymmetry.finance/developers/contracts.md"
+      },
+      {
+        "label": "ESMA interpretation of crypto-assets with no identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  }
+}

@@ -20,5 +20,45 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "krUSDC represents a yield-accruing USDC lending-vault position. The official Morpho page maps the exact Arc contract to Keyrock Prime USDC and Vault V2. The framework uses ERC-4626 share accounting with variable assets per share, interest and loss recognition, and liquidity-dependent exits. The reviewed instrument is a strategy receipt, not a fixed-value payment or settlement instrument or a promise by an issuer to redeem for fixed monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho: exact Keyrock Prime USDC vault on Arc",
+          "url": "https://app.morpho.org/arc/vault/0x5bEfAb92a5A3D60F578Cb51EEb4e4FD50a1e3123/keyrock-prime-usdc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 lending and exit mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho VaultV2 primary source: variable share price and loss recognition",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2: payment stablecoin and monetary value definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "The assessment applies to the Arc vault share at 0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123, separately from underlying USDC. The official product page identifies Keyrock as curator. A curator brand does not establish a separate legal payment-stablecoin issuance obligor, so issuerEntity and issuerDomicile are omitted. Vault shares accrue lending returns and can lose value; exits depend on strategy liquidity and may retain underlying lending-position exposure. Underlying USDC authorizations, reserves, and attestations are not vault-share authorizations, reserves, or attestations. No finding on securities status or other financial-services requirements is made.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

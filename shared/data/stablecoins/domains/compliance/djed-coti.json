@@ -1,0 +1,140 @@
+{
+  "id": "djed-coti",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "DJED is a transferable dollar-targeted crypto-collateralized token that COTI markets for payments and transaction fees. Its operative terms describe collateralized borrowing and redemption for $1 worth of protocol assets at then-market prices, while disclaiming interface-provider control and claims against that provider except for breach or fraud. COTI also describes its role as issuer and interface operator. Payment-oriented use is documented, but no legal issuer obligation to deliver national currency or a national-currency bank deposit is established. Those documented features support unclear applicability rather than a categorical exclusion based only on the collateralized mechanism.",
+      "references": [
+        {
+          "label": "Djed terms: protocol assets, redemption, and interface-provider obligations",
+          "url": "https://djed.xyz/terms",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "COTI Djed issuer role and payment-design announcement",
+          "url": "https://medium.com/cotinetwork/why-being-the-issuer-of-djed-cardanos-official-stablecoin-is-a-game-changer-for-coti-f4945494fc40",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2021-09-26",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "COTI Djed mainnet launch and payment use",
+          "url": "https://medium.com/cotinetwork/a-new-era-for-stablecoins-begins-djed-is-live-on-mainnet-55971971f2a8",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2023-01-31",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act sections 2(17) and 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://djed.xyz/",
+    "redemptionPolicyPresent": true,
+    "notes": "Decentralized Solutions Limited is named in the operative terms as the British Virgin Islands website and interface provider, not as a verified legal payment-stablecoin issuer. COTI uses issuer terminology for its operational and interface role without identifying a token-specific legal cash-redemption obligor. issuerEntity and issuerDomicile are therefore omitted. The terms restrict U.S. users and distinguish protocol interaction from dealings with a natural person or entity. The published redemption policy concerns protocol crypto-assets at market prices, not payment of one U.S. dollar by a legal issuer. The current application publicly displays ADA reserves, the reserve ratio, and a last-updated timestamp; that issuer-operated footprint supports disclosure presence, not independent reserve assurance. No monthly-attestation, enforcement, or DASP posture is asserted. The bounded regulator and issuer review found no qualifying public GENIUS approval, state qualification, official application, or registered foreign exception for DJED. This does not rule out unpublished or unindexed filings.",
+    "references": [
+      {
+        "label": "GENIUS Act payment-stablecoin and monetary-value definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Djed operative platform terms",
+        "url": "https://djed.xyz/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Djed public ADA reserve and redemption dashboard",
+        "url": "https://djed.xyz/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "COTI Djed issuer and interface role",
+        "url": "https://medium.com/cotinetwork/why-being-the-issuer-of-djed-cardanos-official-stablecoin-is-a-game-changer-for-coti-f4945494fc40",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2021-09-26",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "COTI Djed mainnet launch",
+        "url": "https://medium.com/cotinetwork/a-new-era-for-stablecoins-begins-djed-is-live-on-mainnet-55971971f2a8",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2023-01-31",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22Djed%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-28",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22COTI%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-28",
+        "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22Decentralized+Solutions%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-28",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/press-releases/2025/fdic-approves-proposal-establish-genius-act-application-procedures-fdic",
+        "https://djed.xyz/",
+        "https://djed.xyz/terms",
+        "https://medium.com/cotinetwork/why-being-the-issuer-of-djed-cardanos-official-stablecoin-is-a-game-changer-for-coti-f4945494fc40",
+        "https://medium.com/cotinetwork/a-new-era-for-stablecoins-begins-djed-is-live-on-mainnet-55971971f2a8",
+        "Indexed official-domain searches on 2026-10-28 for DJED, Djed, Decentralized Solutions Limited, and COTI with GENIUS and application terms across OCC, Federal Reserve, and FDIC sources found no qualifying token-specific candidate."
+      ],
+      "summary": "As of 2026-10-28, the opened OCC issuer/application information, pending digital-asset application table, NYDFS regulated entities and issuance Greenlist, Federal Reserve and FDIC implementation releases, exact-name Federal Register searches, and Djed/COTI disclosures did not identify a public GENIUS approval, state-qualified designation, official application, or registered foreign-issuer exception for DJED. Each exact Federal Register search for Djed, COTI, and Decentralized Solutions returned zero records. General bank and virtual-currency licensing information is not token authorization. This is a bounded public-evidence review and cannot exclude confidential or unindexed filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer and application information",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC pending digital-asset licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual-currency entities and issuance Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact Djed search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22Djed%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-28",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact COTI search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22COTI%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-28",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact operator-name search through review date",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?per_page=100&conditions%5Bterm%5D=%22Decentralized+Solutions%22&conditions%5Bpublication_date%5D%5Blte%5D=2026-10-28",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

@@ -20,5 +20,103 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDx is an ERC-4626 rewards-vault share over USDx, not a fixed-value payment unit. The canonical V2 documentation identifies the tracked token as the vault's own share token; each share represents a variable amount of USDx as funded discretionary rewards vest. Exiting burns shares and reserves the corresponding USDx for an asynchronous cooldown, operator servicing and claim process. These share rights support a non-payment-token savings-wrapper assessment separately from the underlying USDx and do not establish an issuer obligation to repay a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Axis canonical V2 sUSDx vault accounting",
+          "url": "https://docs.axis.to/reference/staking-contracts.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Axis sUSDx staking and asynchronous redemption",
+          "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Axis discretionary sUSDx reward funding",
+          "url": "https://docs.axis.to/susdx-the-rewards-vault/reward-distribution.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Axis sUSDx rewards-vault product and variable USDx claim",
+          "url": "https://docs.axis.to/susdx-the-rewards-vault/susdx.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22) payment-stablecoin definition",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment as of 2026-10-28 applies to canonical Ethereum V2 StakedUSDx at 0xEB892628D1E58BC475A6dCB7F5dBC4F591632AA4, which matches the tracked sUSDx contract. The share's USDx exchange rate is driven by active principal and vested rewards; unvested rewards and reserved redemption liabilities are excluded. Reward funding is discretionary, not a mechanical pass-through of reserve performance. The variable share claim and rewards-vault purpose support this editorial scope assessment; neither crypto backing nor the issuer's U.S.-person restrictions is used as an automatic statutory exclusion. Axis terms identify Coordinate Labs Pte. Ltd. as the Singapore platform operator and Coordinate Origin Limited as the BVI issuance/redemption entity where applicable. They describe sUSDx as a staking receipt but do not separately identify a legal payment-stablecoin issuer for the vault share, so issuerEntity and issuerDomicile are omitted rather than inferred from the parent. No security-law classification, official GENIUS determination, issuer approval or foreign registration is asserted. Parent USDx remains separately assessed in its existing row. Parent reserve dashboards, attestations and authorizations are not inherited by this share; reserve, redemption-disclosure, attestation and enforcement flags are omitted because they are not needed for this share-scope finding.",
+    "references": [
+      {
+        "label": "Axis canonical Ethereum V2 contract addresses",
+        "url": "https://docs.axis.to/reference/contract-addresses.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Axis platform and issuance terms",
+        "url": "https://www.axis.to/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-26",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Axis product disclaimers and U.S.-person restrictions",
+        "url": "https://docs.axis.to/resources-and-legal/compliance.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Axis canonical V2 sUSDx vault accounting",
+        "url": "https://docs.axis.to/reference/staking-contracts.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Axis sUSDx staking and asynchronous redemption",
+        "url": "https://docs.axis.to/susdx-the-rewards-vault/stake-and-unstake.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Axis discretionary sUSDx reward funding",
+        "url": "https://docs.axis.to/susdx-the-rewards-vault/reward-distribution.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Axis sUSDx rewards-vault product and variable USDx claim",
+        "url": "https://docs.axis.to/susdx-the-rewards-vault/susdx.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22) payment-stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

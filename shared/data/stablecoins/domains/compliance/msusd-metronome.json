@@ -1,0 +1,110 @@
+{
+  "id": "msusd-metronome",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "msUSD is a crypto-collateralized synthetic debt unit used for DeFi trading and leverage farming. Official documentation shows msUSD minted against collateral and swapped on a DEX to acquire more yield-bearing collateral. The reviewed product and legal materials do not offer msUSD as a general payment instrument or establish an issuer obligation to redeem it for national currency or a national-currency deposit. This assessment follows the documented leverage and yield use, not an automatic exclusion of every CDP stablecoin.",
+      "references": [
+        {
+          "label": "Metronome synthetic asset creation and uses",
+          "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Metronome supported collateral and msUSD synthetic assets",
+          "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Metronome msUSD leverage and yield farming example",
+          "url": "https://docs.metronome.io/smart-farming/how-does-it-work.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Metronome interface terms and protocol disclaimers",
+          "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-legal/master/terms-and-conditions.md",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2023-01-10",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Metronome recovery and closed synth swap disclosure",
+          "url": "https://paragraph.com/@metronomedao/metronome-recovery-update.md",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-16",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act payment stablecoin and monetary value definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Metronome official msUSD contract addresses",
+          "url": "https://docs.metronome.io/metronome-synth/contracts.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Autonomous Software is named as the interface provider in the terms linked by the project website, not as a legal msUSD redemption obligor. No issuerEntity or domicile is inferred. The terms describe users creating synthetic assets with crypto collateral and disclaim ownership and operation of the open-source protocol. The September 16, 2026 recovery update describes treasury buybacks and collateralized debt, and states that the synth swap remains closed indefinitely. Earlier zero-slippage swap documentation is not treated as a current fixed-value monetary redemption undertaking. Reserve, redemption-policy and monthly-attestation flags are omitted because no separate high-confidence finding on those disclosure fields is proposed. This is a classification within the tracker payment-stablecoin authorization model, not a determination that msUSD is exempt from every financial law.",
+    "references": [
+      {
+        "label": "Metronome synthetic asset creation and uses",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Metronome supported collateral and msUSD synthetic assets",
+        "url": "https://docs.metronome.io/metronome-synth/metronome-synth-protocol/supported-assets.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Metronome msUSD leverage and yield farming example",
+        "url": "https://docs.metronome.io/smart-farming/how-does-it-work.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Metronome interface terms and protocol disclaimers",
+        "url": "https://raw.githubusercontent.com/autonomoussoftware/metronome-synth-legal/master/terms-and-conditions.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2023-01-10",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Metronome recovery and closed synth swap disclosure",
+        "url": "https://paragraph.com/@metronomedao/metronome-recovery-update.md",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-16",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act payment stablecoin and monetary value definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Metronome official msUSD contract addresses",
+        "url": "https://docs.metronome.io/metronome-synth/contracts.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

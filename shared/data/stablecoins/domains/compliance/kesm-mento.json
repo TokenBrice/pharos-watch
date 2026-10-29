@@ -1,0 +1,246 @@
+{
+  "id": "kesm-mento",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "KESm is marketed for remittances and mobile payments and is explicitly classified as reserve-backed in the protocol configuration. MGP-18 identifies its legacy USDm/KESm Broker pool and describes holder exit into USDm, rather than fiat redemption by a named legal issuer. GENIUS sections 2(17) and 2(22) require an issuer obligation to convert, redeem or repurchase for a fixed amount of national currency or a national-currency deposit. A digital asset denominated in a fixed amount of monetary value does not satisfy that redemption limb. The reviewed materials do not establish a person with that statutory conversion, redemption or repurchase obligation. Payment use plus the documented USDm exit makes applicability genuinely ambiguous rather than categorically excluded.",
+      "references": [
+        {
+          "label": "Mento stablecoin payment use directory",
+          "url": "https://www.mento.org/stablecoins",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Mento pinned token backing configuration",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "MGP-18 reserve-backed KESm Broker exit",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-17",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act monetary value and payment stablecoin definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://reserve.mento.org/",
+    "notes": "KESm remains a legacy shared-reserve FX token, not a USDm-collateralized borrower CDP. MGP-18 explicitly lists KESm among the ten retained V2 FX assets and describes the Broker exit into USDm. Mento Protocol identifies the protocol family, not an established legal issuer or fixed-monetary-value redemption obligor. Mento Labs GmbH is described as an operating and infrastructure provider; Mento Protocol Foundation and AP Reserve Foundation have governance or stewardship roles in MGP-19. Those roles do not establish this token's legal issuer, domicile or GENIUS route, so issuerEntity and issuerDomicile are omitted. MGP-19 is a proposal, not proof of executed control transfers. The public dashboard is reserve or collateral disclosure only. Separate fiat-redemption-policy and monthly-attestation flags are omitted because the reviewed record does not support those findings at high confidence. No U.S. authorization, pending application or registered foreign exception was located in the bounded sources checked. This is not a determination of illegality or an exhaustive review of confidential filings or all state registers.",
+    "references": [
+      {
+        "label": "Mento stablecoin payment use directory",
+        "url": "https://www.mento.org/stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Mento pinned token backing configuration",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "MGP-18 reserve-backed KESm Broker exit",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-17",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act monetary value and payment stablecoin definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Mento deployed token address mapping",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Mento StableToken issuance documentation",
+        "url": "https://docs.mento.org/mento-v3/build/smart-contracts/stabletoken.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Mento governance update and oracle controls",
+        "url": "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Mento counsel 2024 issuer analysis",
+        "url": "https://www.mento.org/blog/highlights-from-the-micar-workshop",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2024-11-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "MGP-19 proposed issuance and stewardship roles",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-21",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Mento public reserve dashboard",
+        "url": "https://reserve.mento.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC GENIUS application and waiver information",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC digital asset bank licensing applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC GENIUS final rule bulletin",
+        "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-50.html",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-10-21",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search for Mento",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search for token and operator names",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22CHFm%22%20OR%20%22KESm%22%20OR%20%22COPm%22%20OR%20%22AP%20Reserve%20Foundation%22%20OR%20%22Mento%20Labs%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register search for foundations and token aliases",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%20Protocol%20Foundation%22%20OR%20%22COPmt%22%20OR%20%22cCHF%22%20OR%20%22cKES%22%20OR%20%22cCOP%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve 2026 press release index",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC recent press release index",
+        "url": "https://www.fdic.gov/news/press-releases",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS regulated virtual currency entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-50.html",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%22&per_page=20",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22CHFm%22%20OR%20%22KESm%22%20OR%20%22COPm%22%20OR%20%22AP%20Reserve%20Foundation%22%20OR%20%22Mento%20Labs%22&per_page=20",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%20Protocol%20Foundation%22%20OR%20%22COPmt%22%20OR%20%22cCHF%22%20OR%20%22cKES%22%20OR%20%22cCOP%22&per_page=20",
+        "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "https://www.fdic.gov/news/press-releases",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.mento.org/stablecoins",
+        "https://www.mento.org/blog/highlights-from-the-micar-workshop",
+        "https://docs.mento.org/mento-v3/dive-deeper/governance-and-mento/understanding-mento-governance.md",
+        "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
+        "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts",
+        "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "Public official-domain web search on 2026-10-28 for Mento, CHFm, KESm, COPm and AP Reserve Foundation with GENIUS, stablecoin or application across OCC, Federal Reserve, FDIC, Federal Register and NYDFS domains."
+      ],
+      "summary": "As of 2026-10-28, the opened OCC program page and bank-application table, Federal Reserve 2026 and FDIC recent news listings, NYDFS entity directory and Greenlist, official Federal Register name searches and Mento disclosures did not identify KESm as having a public GENIUS permitted issuer approval, state qualification, official pending application or registered foreign exception. Searches included Mento Labs, Mento Protocol Foundation, AP Reserve Foundation and current or legacy token symbols. The Mento Federal Register search returned only unrelated historical notices; the two token and foundation alias searches returned zero results. The bank and state directories are not comprehensive GENIUS registers, the FDIC review is limited to its returned recent listing, and the legal issuer remains unresolved. This is a bounded dated public-evidence finding, not proof that no confidential or differently named filing exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS application and waiver information",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC digital asset bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC GENIUS final rule bulletin",
+          "url": "https://www.occ.gov/news-issuances/bulletins/2026/bulletin-2026-50.html",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-10-21",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register search for Mento",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register search for token and operator names",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22CHFm%22%20OR%20%22KESm%22%20OR%20%22COPm%22%20OR%20%22AP%20Reserve%20Foundation%22%20OR%20%22Mento%20Labs%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register search for foundations and token aliases",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%20Protocol%20Foundation%22%20OR%20%22COPmt%22%20OR%20%22cCHF%22%20OR%20%22cKES%22%20OR%20%22cCOP%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve 2026 press release index",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC recent press release index",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS regulated virtual currency entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

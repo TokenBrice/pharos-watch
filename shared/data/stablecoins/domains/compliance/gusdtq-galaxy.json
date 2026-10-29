@@ -28,5 +28,65 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "gUSDTq is a USDT-denominated Morpho V2 lending-vault share on Ethereum, offered as a yield strategy. Assets per share change with lending interest, fees and losses; withdrawals depend on strategy liquidity. Galaxy's governing terms describe vault shares and variable rewards, disclaim a guaranteed withdrawal amount or timing, and identify Galaxy as a strategy publisher. The opened materials establish a lending position rather than a payment or settlement instrument with an issuer obligation to redeem each share for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Galaxy USDT Quality: exact Morpho vault identity and strategy",
+          "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Galaxy deployed vaults: exact Ethereum contract mapping",
+          "url": "https://docs.curation.galaxy.com/products/deployed-vaults.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Galaxy Quality strategy and native Morpho receipt token",
+          "url": "https://docs.curation.galaxy.com/products/morpho-quality-vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Galaxy Curation terms: vault shares, variable rewards and liquidity-constrained redemption",
+          "url": "https://docs.curation.galaxy.com/legal/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2: curated lending and receipt-token exit mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho VaultV2 source: variable share accounting and loss realization",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment as of 2026-10-28 applies to gUSDTq separately from underlying USDT. Galaxy Curation LLC is identified by the governing terms as the curator and strategy publisher, not a fixed-value redemption obligor. The receipt token is issued through the vault smart contract; the opened materials do not establish a separate legal payment-stablecoin issuer for this share, so issuerEntity and issuerDomicile are omitted consistently with the Morpho vault family precedent. No GENIUS issuer approval, registration or announced issuer pathway is asserted. Underlying stablecoin authorizations and reserve attestations are not vault-share authorizations or attestations. Disclosure flags and enforcementStatus are omitted rather than inferring stablecoin reserve reporting or a dated enforcement finding from lending-vault disclosures. This payment-stablecoin scope assessment does not decide securities-law treatment or authorize distribution of the yield product.",
+    "references": [
+      {
+        "label": "GENIUS Act: section 2(22) payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

@@ -16,5 +16,61 @@
         "url": "https://docs.avantprotocol.com/overview/core-tokens"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "savUSD is a yield-bearing senior-tranche position obtained by staking avUSD. Its exchange rate to avUSD increases with strategy yield, and unstaking returns a variable quantity of avUSD after a 24-hour cooldown. These product mechanics establish a savings and strategy share rather than a fixed-value payment instrument or an issuer promise to redeem each savUSD for a fixed amount of national currency or bank-deposit monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Avant core tokens and savUSD senior-tranche accounting",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Avant staking and increasing savUSD value",
+          "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/staking-for-savassets.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Avant savUSD unstaking into avUSD",
+          "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/unstaking-savassets.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2 payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "redemptionPolicyPresent": true,
+    "notes": "This assessment applies only to savUSD and does not classify the underlying avUSD. Avant terms identify Avant Protocol Foundation and affiliates as the parties making the protocol available and describe protocol-generated assets as programmatic claims against reserve-holding smart contracts. The terms name avUSD as an example but do not separately identify a legal issuer for the savUSD senior-tranche share, so issuerEntity and issuerDomicile are omitted. Unstaking is into avUSD, not a fixed-dollar payment by a savUSD issuer. This is a payment-stablecoin scope assessment, not a securities-law determination or an authorization claim. Reserve and attestation flags are omitted because the fetched product and terms pages do not establish a savUSD-specific independent attestation series.",
+    "references": [
+      {
+        "label": "Avant terms and protocol counterparty",
+        "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2 payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

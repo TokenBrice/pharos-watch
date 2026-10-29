@@ -1,5 +1,27 @@
 {
   "id": "mxnb-juno",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA restrictions: MXNB deposits and trading prohibited",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken crypto asset statement: MXNB issued by Juno, a Bitso company, on Ethereum and Arbitrum",
+        "url": "https://assets-cms.kraken.com/files/51n36hrp/facade/465b2fa4de737e2a363a2acb33b4fd7205f6fd37.pdf"
+      },
+      {
+        "label": "ESMA EMT issuer register: no Juno, Nvio Pagos El Salvador, or Bitso entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "MXNB issuer transparency: MXNB smart contract 0xF197FFC28c23E0309B5559e7a166f2c6164C80aA",
+        "url": "https://mxnb.mx/en-US/transparency"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -31,7 +53,7 @@
     "reserveDisclosureUrl": "https://mxnb.mx/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "CNAD's public register lists Nvío Pagos El Salvador, S.A. de C.V. as stablecoin issuer EME-0005 and lists MXNB as eligible for trading. That foreign authorization is not a U.S. GENIUS approval or foreign-issuer exception registration. No token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found; foreign-exception status remains unknown. GENIUS substantive implementation remains in proposed rulemaking; Treasury identifies January 18, 2027 as the expected Act effective date and July 18, 2028 as the later general DASP offer/sale restriction date. The September 30 SCRC interim rule concerns procedures and states certifications are not yet accepted pending Paperwork Reduction Act approval. Neither local licensing nor reserve disclosure establishes U.S. GENIUS authorization. The public reporting cadence is quarterly, not monthly. The opened Q2 BDO report is a financial valuation engagement and expressly does not confirm reserve accounts with banks; it is not an independent reserve assurance opinion. Its EM EX EN CI addressee does not justify changing the current issuerEntity corroborated by CNAD.",
+    "notes": "CNAD's public register lists Nvío Pagos El Salvador, S.A. de C.V. as stablecoin issuer EME-0005 and lists MXNB as eligible for trading. That foreign authorization is not a U.S. GENIUS approval or foreign-issuer exception registration. No token-specific U.S. GENIUS permitted-issuer approval, state-qualified approval, official application, or registered foreign-issuer exception was found; foreign-exception status remains unknown. Treasury identifies January 18, 2027 as the expected Act effective date and July 18, 2028 as the later general DASP offer/sale restriction date. The September 30 SCRC interim rule concerns procedures and states certifications are not yet accepted pending Paperwork Reduction Act approval. Neither local licensing nor reserve disclosure establishes U.S. GENIUS authorization. The public reporting cadence is quarterly, not monthly. The opened Q2 BDO report is a financial valuation engagement and expressly does not confirm reserve accounts with banks; it is not an independent reserve assurance opinion. Its EM EX EN CI addressee does not justify changing the current issuerEntity corroborated by CNAD.",
     "references": [
       {
         "label": "OCC GENIUS Act regulations proposed rule",

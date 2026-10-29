@@ -1,0 +1,178 @@
+{
+  "id": "jpyt-dephaser",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "JPYT is explicitly marketed for payments, goods and services, everyday purchases and cross-border remittances, which satisfies the payment design limb of the section 2(22) definition. The operative terms and redemption documentation describe returning JPYT for USDT on Optimism or USDC on Base at a pooled average Lock-In Exchange Rate, a variable quantity of digital assets, and section 2(22)(A)(ii)(I) expressly excludes digital assets denominated in monetary value from the fixed amount redemption limb. No reviewed disclosure names a legal person obligated to convert, redeem or repurchase JPYT for a fixed amount of monetary value, and yen qualifies as national currency under section 2(19)(C), so applicability remains genuinely ambiguous rather than conclusively in or out of scope.",
+      "references": [
+        {
+          "label": "Public Law 119-27, approved July 18, 2025; section 2 definitions of monetary value, national currency and payment stablecoin",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "DePhaser documentation: what is JPYT; yen peg with payment and remittance marketing and USDT or USDC collateral routed to Aave",
+          "url": "https://docs.dephaser.com/concept/what-is-jpyt.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "DePhaser terms of service effective September 12, 2024; brand level terms with pooled average redemption rate and no named legal issuer",
+          "url": "https://docs.dephaser.com/policy/terms-of-service.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "DePhaser redemption documentation; JPYT returned for USDT on Optimism or USDC on Base",
+          "url": "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "DePhaser stablecoin mechanics; dynamic pooled Lock-In Exchange Rate and variable redemption quantities",
+          "url": "https://docs.dephaser.com/how-it-works/reliable-yen-stablecoin.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-28. Token identity is tied to the official Optimism and Base contract 0xc47da4CB96CE65a96844A01Bfae509F9d5454534 shown on the DePhaser site, which matches the tracked asset on both chains; the generic JPYT ticker alone was not relied on. The terms of service effective September 12, 2024 and the disclaimer identify only the DePhaser brand, so issuerEntity, issuerDomicile and licensingRegulator are omitted rather than guessed. Payment marketing prevents a non-payment-token shortcut. Redemption documentation describes a variable quantity of USDT or USDC at the pooled average Lock-In Exchange Rate; this collateral conversion workflow is not a fixed monetary-value redemption policy by a named issuer, hence redemptionPolicyPresent is false under the tracker definition. No reserve disclosure page or attestation series was located. Aave custody of collateral is safekeeping, not issuer authorization. Authorization, pathway, foreign exception and enforcement findings are bounded public evidence negatives as of 2026-10-28; the NYDFS directory returned HTTP 403 on both fetch attempts and could not be inspected, the OCC licensing table is not an exhaustive issuer register, and absence of public records does not exclude unpublished filings. Applicability unclear follows the jpym-mento family precedent for a yen payment marketed CDP stablecoin whose redemption returns digital assets. DASP posture reflects the pre-effective regime state and is not permission.",
+    "references": [
+      {
+        "label": "Public Law 119-27, approved July 18, 2025; section 2 definitions of monetary value, national currency and payment stablecoin",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC GENIUS Act implementation page; program information with no named DePhaser or JPYT approval, application or foreign registration",
+        "url": "https://occ.treas.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC digital-assets licensing applications table; no DePhaser or JPYT applicant listed",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register exact-term search for DePhaser; zero documents",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22DePhaser%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register exact-term search for JPYT; zero documents",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22JPYT%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FinCEN enforcement actions index; no DePhaser or JPYT entry",
+        "url": "https://www.fincen.gov/news/enforcement-actions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "DePhaser official site; JPYT contract 0xc47da4CB96CE65a96844A01Bfae509F9d5454534 on Optimism and Base with payment and gas wallet marketing",
+        "url": "https://dephaser.com/en",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "DePhaser documentation: what is JPYT; yen peg with payment and remittance marketing and USDT or USDC collateral routed to Aave",
+        "url": "https://docs.dephaser.com/concept/what-is-jpyt.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "DePhaser terms of service effective September 12, 2024; brand level terms with pooled average redemption rate, suspension powers and no named legal issuer",
+        "url": "https://docs.dephaser.com/policy/terms-of-service.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "DePhaser disclaimer; no custody, no refunds, best-effort support and assumption of risk",
+        "url": "https://docs.dephaser.com/policy/disclaimer.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "DePhaser redemption documentation; JPYT returned for USDT on Optimism or USDC on Base",
+        "url": "https://docs.dephaser.com/operation/redeem-usdt-usdc.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "DePhaser money flow documentation; automated mint and burn with collateral held in Aave smart contracts",
+        "url": "https://docs.dephaser.com/how-it-works/money-flow.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "DePhaser stablecoin mechanics; dynamic pooled Lock-In Exchange Rate and variable redemption quantities",
+        "url": "https://docs.dephaser.com/how-it-works/reliable-yen-stablecoin.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS Act landing page reopened 2026-10-28; program and licensing information only, with no named DePhaser or JPYT permitted issuer, application or foreign payment stablecoin issuer registration.",
+        "OCC digital-assets licensing applications table reopened 2026-10-28; no DePhaser or JPYT applicant in the bank charter inventory, which is not an exhaustive GENIUS issuer register.",
+        "Federal Register API exact-term searches on 2026-10-28 for \"DePhaser\" and \"JPYT\"; each returned zero documents.",
+        "FinCEN enforcement actions index reopened 2026-10-28; no entry naming DePhaser, JPYT or the DePhaser platform.",
+        "NYDFS virtual currency businesses directory attempted 2026-10-28; returned HTTP 403 on both fetch attempts and could not be inspected.",
+        "Issuer materials reopened 2026-10-28 (dephaser.com, what is JPYT, terms of service, disclaimer, redemption, money flow and stablecoin mechanics pages); no GENIUS application, approval, state qualification, foreign registration or issuer intent statement found, and no legal entity is named anywhere."
+      ],
+      "summary": "As of 2026-10-28, the reopened OCC materials, Federal Register exact-term searches, FinCEN enforcement index and complete issuer documentation set disclosed no public GENIUS permitted payment stablecoin issuer approval, state qualification, official application, registered foreign exception or token-specific enforcement action naming DePhaser or JPYT. No U.S. nexus for the unidentified issuer was established. This is a dated bounded public-evidence finding, not proof that no confidential filing exists; generic program pages and the bank-charter table are not issuer registers.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS Act implementation page; no named DePhaser or JPYT approval, application or foreign registration",
+          "url": "https://occ.treas.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC digital-assets licensing applications table; no DePhaser or JPYT applicant listed",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact-term search for DePhaser; zero documents",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22DePhaser%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact-term search for JPYT; zero documents",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22JPYT%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FinCEN enforcement actions index; no DePhaser or JPYT entry",
+          "url": "https://www.fincen.gov/news/enforcement-actions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

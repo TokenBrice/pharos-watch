@@ -1,5 +1,27 @@
 {
   "id": "qcad-stablecorp",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA restrictions: QCAD deposits and trading prohibited",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "Kraken QCAD asset page: Stablecorp Canadian dollar stablecoin identity",
+        "url": "https://www.kraken.com/prices/qcad"
+      },
+      {
+        "label": "ESMA EMT issuer register: no QCAD Digital Trust, Stablecorp or QCAD entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Stablecorp QCAD page: QCAD Digital Trust as prospectus issuer",
+        "url": "https://stablecorp.ca/"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -38,7 +60,7 @@
     "reserveDisclosureUrl": "https://stablecorp.ca/transparency",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": true,
-    "notes": "QCAD Digital Trust is the Ontario special-purpose issuer; Stablecorp Digital Currencies Inc. is its administrator/servicer and holds the MSB registration. The Canadian prospectus/VRCA characterization is not a U.S. securities determination or GENIUS authorization. Qualified holders have issuer redemption rights; other end users do not. Legacy QCAD issued before November 20, 2025 is expressly excluded from this trust framework and has separate reserves and redemption arrangements. The monthly-attestation finding concerns trust-scope reports, including the opened archived May report, not all legacy or bridge deployments. No qualifying public U.S. approval, pending application or foreign registration was located. GENIUS issuer implementation remains proposed; U.S. customer eligibility is not established.",
+    "notes": "QCAD Digital Trust is the Ontario special-purpose issuer; Stablecorp Digital Currencies Inc. is its administrator/servicer and holds the MSB registration. The Canadian prospectus/VRCA characterization is not a U.S. securities determination or GENIUS authorization. Qualified holders have issuer redemption rights; other end users do not. Legacy QCAD issued before November 20, 2025 is expressly excluded from this trust framework and has separate reserves and redemption arrangements. The monthly-attestation finding concerns trust-scope reports, including the opened archived May report, not all legacy or bridge deployments. No qualifying public U.S. approval, pending application or foreign registration was located. U.S. customer eligibility is not established.",
     "references": [
       {
         "label": "OCC GENIUS Act proposed rule",

@@ -3,14 +3,14 @@
   "name": "CAD Coin",
   "symbol": "CADC",
   "brand": "Loon",
-  "oneLiner": "CADC is Loon's centralized Canadian dollar stablecoin, redeemable 1:1 against CAD held in trust at a FINTRAC-regulated Canadian institution.",
+  "oneLiner": "CADC is a Canadian dollar stablecoin issued by CADC Reserve Trust, serviced by Loon Payments, and redeemable 1:1 for CAD held at ATB Financial.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "CAD",
     "governance": "centralized"
   },
   "collateral": "Canadian-dollar cash held 1:1 in segregated accounts at ATB Financial, in trust for CADC holders",
-  "pegMechanism": "Direct 1:1 redemption for CAD through Loon (FINTRAC-registered MSB, formerly issued by PayTrie); CADC is burned on redemption and minted on deposit",
+  "pegMechanism": "Direct 1:1 redemption for CAD; CADC is issued by CADC Reserve Trust under a final prospectus receipted by the Ontario Securities Commission on 2026-10-22, with servicer Loon Payments minting and burning through Authorized Participants such as Paytrie; tokens are minted only after CAD reaches the ATB Financial reserve account and burned on redemption",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "145",
   "detailProvider": "defillama",
@@ -53,8 +53,8 @@
   ],
   "jurisdiction": {
     "country": "Canada",
-    "regulator": "FINTRAC",
-    "license": "FINTRAC MSB registration C10001420 (Loon Payments Inc.; registration, not a licence)"
+    "regulator": "Ontario Securities Commission (principal regulator); FINTRAC (AML registration of service entities Loon Payments and PayTrie AB Inc.)",
+    "license": "OSC receipt for the CADC Reserve Trust final prospectus dated 2026-10-22, qualifying continuous distribution of CADC in every Canadian jurisdiction; the issuer trust holds no FINTRAC MSB registration, and servicer Loon Payments Inc. holds C10001420"
   },
   "contracts": [
     {
@@ -111,5 +111,12 @@
       "risk": "very-low"
     }
   },
-  "launchDate": "2021-01-14"
+  "launchDate": "2021-01-14",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Legacy contract migration closes November 26, 2026",
+      "message": "Issuer CADC Reserve Trust distributes CADC on new Ethereum, Base, Polygon and Solana contracts and labels the tracked Ethereum, Base, Polygon and Solana addresses as legacy. Legacy CADC can be exchanged 1:1 at migrate.loon.finance or redeemed for CAD through Paytrie until the migration window closes on November 26, 2026. Arbitrum support is paused, the migration guidance does not address Linea, and Pharos supply still reads the legacy contracts."
+    }
+  ]
 }

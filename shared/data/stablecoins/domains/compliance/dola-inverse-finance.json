@@ -1,0 +1,103 @@
+{
+  "id": "dola-inverse-finance",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "DOLA is a transferable stablecoin marketed as pegged 1:1 to the US dollar and used across DeFi venues and for contributor payroll, but reviewed issuer documentation describes supply created only through overcollateralized FiRM borrowing and one-to-one USDS swaps in the Peg Stability Module. No reviewed source identifies a legal person obligated to redeem DOLA for a fixed amount of national currency or bank-deposit monetary value, and conversion into another digital asset does not satisfy that element of the GENIUS Act section 2(22) payment stablecoin definition. General payment use alongside the absence of an issuer redemption undertaking leaves applicability genuinely ambiguous rather than categorically excluded.",
+      "references": [
+        {
+          "label": "DOLA token page: Fed issuance and PSM mechanics",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Getting DOLA: borrowing, DEX, and PSM acquisition routes",
+          "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/getting-dola.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2 definitions, Public Law 119-27",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.inverse.finance/transparency",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-28. Applicability is unclear because issuer materials both market DOLA as a 1:1 US dollar stablecoin and describe supply created only through collateralized borrowing and digital asset swaps, with no identified legal person bearing a fixed monetary value redemption obligation. This matches the corpus treatment of the comparable decentralized CDP stablecoins DAI and LUSD. issuerEntity is omitted because the Inverse Finance Foundation is disclosed only as a DAO operating entity and no source designates any person as the DOLA issuer. reserveDisclosurePresent records the issuer-operated transparency portal and its published DOLA backing sources; the portal renders as an application shell to a static fetch and balances were not verified, so the flag records disclosure presence only. redemptionPolicyPresent is false because the PSM converts DOLA to USDS, another digital asset, with a fee, and no holder fiat redemption policy was found. monthlyAttestationPresent is false because no independent attestation series was found. Enforcement and DASP entries are dated negative reviews of public sources, not determinations.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27 section 2 definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "DOLA token documentation",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Getting DOLA",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/getting-dola.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Inverse Finance transparency portal description",
+        "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/about/transparency.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Inverse Finance Foundation funding proposal",
+        "url": "https://forum.inverse.finance/t/inverse-finance-foundation-funding-proposal/664",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-05-25",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register full-text API search for Inverse Finance returned zero documents (fetched 2026-10-28).",
+        "Federal Register full-text API search for DOLA returned only unrelated CDSOA distribution and OFAC designation notices, no stablecoin records (fetched 2026-10-28).",
+        "OCC domain search for Inverse Finance and a DOLA stablecoin found no news release, bulletin, or charter decision naming the DAO or the token (searched 2026-10-28).",
+        "Federal Reserve and FDIC domain searches for Inverse Finance returned only generic leveraged and inverse finance terminology (searched 2026-10-28).",
+        "Issuer documentation at docs.inverse.finance describes DAO governance, governance-authorized Fed minting, and PSM swaps with no GENIUS pathway, application, or fiat redemption undertaking (fetched 2026-10-28).",
+        "Inverse Finance governance forum Foundation proposals 605 and 664 describe an operating entity, not a token issuer designation or GENIUS filing (fetched 2026-10-28)."
+      ],
+      "summary": "Searched the Federal Register and OCC, Federal Reserve, and FDIC materials for any approval, application, registration, or enforcement record naming Inverse Finance or DOLA, and reviewed issuer documentation and governance forum posts for a GENIUS-era issuance pathway. No qualifying public approval, application, or registration was found, and the reviewed materials also identify no legal issuer obligated to redeem DOLA for monetary value.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "Federal Register search: Inverse Finance",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Inverse%20Finance%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register search: DOLA",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22DOLA%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

@@ -24,5 +24,60 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "armUSDCs is the ERC-4626 share of Wintermute USDC Select at Ethereum address 0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd. It represents a yield-accruing lending strategy with variable assets per share, exposure to strategy losses and liquidity-dependent withdrawals. The product, curator terms and exact VaultV2 source establish a lending-vault position rather than a fixed-value payment or settlement instrument or an issuer obligation to redeem for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Armitage exact Wintermute USDC Select product",
+          "url": "https://armitage.wintermute.com/vaults/ethereum/usdc-select",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Armitage Select vault identity and Morpho Vault V2 infrastructure",
+          "url": "https://armitage.wintermute.com/docs/vaults/select",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Armitage curator terms and variable-value vault shares",
+          "url": "https://armitage.wintermute.com/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-05-19",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Exact VaultV2 source: interest, loss realization and asset/share conversion",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2eaad0d586cf9fd73bb2c09cf6a7e3e187d68cd",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 strategy and liquidity mechanics",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment applies to the vault share separately from underlying USDC. Terms identify Corto Industries Limited, registered in the Cayman Islands, as the Armitage curator and strategy-parameter provider. They do not establish that curator, Wintermute or Circle as a separate legal payment-stablecoin issuer for armUSDCs, so issuerEntity is omitted. Depositors receive vault shares and bear variable returns, losses and delayed or unavailable withdrawals. Exact contract share accounting accrues interest and realizes losses, so there is no fixed-dollar redemption promise for each share. No U.S. authorization or issuer pathway is asserted, and underlying USDC authorizations or reserve attestations are not attributed to this vault. This classification does not determine securities-law treatment.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

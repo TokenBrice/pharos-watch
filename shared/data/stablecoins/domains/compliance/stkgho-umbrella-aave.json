@@ -1,5 +1,22 @@
 {
   "id": "stkgho-umbrella-aave",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Aave Umbrella: slashable ERC-4626 staking shares and variable GHO redemption",
+        "url": "https://www.aave.com/docs/aave-v3/umbrella"
+      },
+      {
+        "label": "Umbrella stkGHO.v1: exact Ethereum token and deployed implementation",
+        "url": "https://etherscan.io/address/0x4f827a63755855cdf3e8f3bcd20265c833f15033"
+      },
+      {
+        "label": "MiCA Article 3: stable-value EMT and ART definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

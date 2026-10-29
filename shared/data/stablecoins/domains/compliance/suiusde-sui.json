@@ -1,0 +1,64 @@
+{
+  "id": "suiusde-sui",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "suiUSDe is marketed for collateral, margin and settlement, while its Terms of Service identify a dollar target rather than a guaranteed fixed-dollar redemption obligation. Only approved Mint Users can redeem with suiUSDe Ltd; Holding Users have no direct redemption right. The Mint User Agreement commits to supported-asset redemption based on the pro rata reserve notional value, and the Terms disclaim guaranteed reserve coverage and redemption rate. GENIUS section 2(22) separately requires an issuer obligation to redeem for fixed monetary value and excludes a digital asset denominated in fixed monetary value from that obligation. The combination of settlement use and qualified, reserve-dependent digital-asset redemption leaves the statutory category genuinely ambiguous, rather than supporting an automatic synthetic-token exclusion.",
+      "references": [
+        {
+          "label": "eSui Dollar settlement use",
+          "url": "https://www.esuidollar.io/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "suiUSDe issuer and holder redemption terms",
+          "url": "https://www.esuidollar.io/legal/terms-of-service",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "suiUSDe qualified-user reserve-dependent redemption agreement",
+          "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act statutory payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "issuerEntity": "suiUSDe Ltd",
+    "redemptionPolicyPresent": true,
+    "notes": "The token's operative terms name suiUSDe Ltd, not Ethena BVI Limited, SUI Group Holdings or Sui Foundation, as issuer. BVI governing law is not treated as independent proof of the issuer's domicile, so issuerDomicile is omitted. SUI Group's SEC-filed annual report expressly warns that suiUSDe may not meet GENIUS criteria and that changes may be required; this risk disclosure is not a named issuance route, application or authorization intent. Public authorization posture remains unresolved. This row does not assert no-public-authorization-found or an exhaustive negative-evidence review. No underlying USDe, USDC or USDtb authorization is inherited. RedemptionPolicyPresent records published contractual terms, not guaranteed liquidity or fiat redemption. Reserve, monthly-attestation, enforcement, foreign-registration and DASP findings are omitted because this review does not establish them.",
+    "references": [
+      {
+        "label": "suiUSDe issuer terms",
+        "url": "https://www.esuidollar.io/legal/terms-of-service",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "suiUSDe Mint User Agreement",
+        "url": "https://www.esuidollar.io/legal/mint-user-agreement",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "SUI Group annual report token-specific GENIUS risk disclosure",
+        "url": "https://www.sec.gov/Archives/edgar/data/1425355/000165495426001672/suig_10k.htm",
+        "sourceKind": "issuer-filing",
+        "sourceDate": "2026-02-27",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

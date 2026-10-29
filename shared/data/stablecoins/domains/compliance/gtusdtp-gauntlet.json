@@ -24,5 +24,60 @@
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "gtUSDTp represents proportional shares in the Gauntlet USDT Prime V2 lending vault at Ethereum 0xf3557ad5e984211ac8a0874a670344f2c3376471. Gauntlet identifies this exact V2 deployment, and Morpho describes vault shares as proportional positions whose asset value changes as yield accrues. Deposits and redemptions use ERC-4626 asset/share conversion rather than an issuer promise to maintain or redeem each share for a fixed amount of national-currency monetary value. This is a yield-bearing lending position, not the underlying USDT payment token.",
+      "references": [
+        {
+          "label": "Gauntlet VaultBook: exact USDT Prime V2 deployment",
+          "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho: exact Gauntlet USDT Prime V2 vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xf3557AD5E984211ac8A0874A670344f2C3376471/gauntlet-usdt-prime",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho: proportional shares and ERC-4626 conversion mechanics",
+          "url": "https://docs.morpho.org/developers/earn/concepts/vault-mechanics/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2: monetary value and payment-stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment concerns the vault share separately from underlying USDT. Gauntlet Networks, Inc. is identified as the Products provider in Gauntlet's general terms, and Gauntlet is identified as curator of the exact deployment. Those roles are not treated as a separate legal payment-stablecoin issuer, so issuerEntity and issuerDomicile are omitted. Morpho documents a curated lending framework, yield-linked proportional shares, and withdrawals from idle assets and configured adapters. No fixed national-currency redemption obligation is established for the receipt share. Underlying USDT authorizations, reserves and reports are not attributed to the vault. No independent reserve-attestation, enforcement or securities-classification conclusion is asserted.",
+    "references": [
+      {
+        "label": "Morpho V2: curated lending strategies and asset reporting",
+        "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Gauntlet general terms: Products provider identity",
+        "url": "https://www.gauntlet.xyz/tos",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2023-11-08",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

@@ -30,7 +30,7 @@
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "XGZ references physical gold, not national-currency monetary value. The 15 October 2026 issuer notice announces GoldZip Company Limited (British Virgin Islands company 2056034) replacing GoldZip Pte Limited (Singapore UEN 202119587H), with execution dated 15 October subject to lawful implementation. These issuer fields record the announced successor, not independent proof that every novation or release is complete. The Ethereum contract is unchanged and no token swap is required. The notice preserves accrued claims and says the Singapore issuer is not released without the required consent or legal basis. Separate ordinary terms name GoldZip Digital Pte Ltd (UEN 202119588Z) as administrator/redemption counterparty. Ordinary terms deny proprietary bar interests; the additional special exit permits whole-balance USDT redemption after timely election by 5 November 2026 at 23:59 UTC, with issuer-determined pricing and conditional settlement within 14 Business Days after that deadline. The notice waives a cited ordinary 0.25% fee, which differs from the Rules' per-bar schedule; ordinary fee precedence is unresolved. No exact GoldZip match was found in MinLaw's dealer list as at 2026-10-12; registration is not asserted and its AML/CFT/CPF remit is not prudential supervision. No GENIUS authorization is asserted. MiCA remains independently unassessed because an exact EU offering/authorization posture is not established.",
+    "notes": "XGZ references physical gold, not national-currency monetary value. The 15 October 2026 issuer notice announces GoldZip Company Limited (British Virgin Islands company 2056034) replacing GoldZip Pte Limited (Singapore UEN 202119587H), with execution dated 15 October subject to lawful implementation. These issuer fields record the announced successor, not independent proof that every novation or release is complete. The Ethereum contract is unchanged and no token swap is required. The notice preserves accrued claims and says the Singapore issuer is not released without the required consent or legal basis. Separate ordinary terms, re-read 29 October 2026, define GoldZip Company Limited (BVI company 2056034) as Issuer and, until the Issuer appoints another person, default Operator administering the platform and redemption (clauses 1.1 and 10.2A); no Singapore administrator is named. Ordinary terms deny proprietary bar interests; the additional special exit permits whole-balance USDT redemption after timely election by 5 November 2026 at 23:59 UTC, with issuer-determined pricing and conditional settlement within 14 Business Days after that deadline. The notice waives a cited ordinary 0.25% fee, which differs from the Rules' per-bar schedule; ordinary fee precedence is unresolved. No exact GoldZip match was found in MinLaw's dealer list as at 2026-10-12; registration is not asserted and its AML/CFT/CPF remit is not prudential supervision. No GENIUS authorization is asserted. MiCA remains independently unassessed because an exact EU offering/authorization posture is not established.",
     "references": [
       {
         "label": "Exact token product claim",
@@ -59,16 +59,16 @@
         "accessedAt": "2026-10-15"
       },
       {
-        "label": "GoldZip terms: Singapore administrator and physical redemption",
+        "label": "GoldZip terms: BVI issuer as default Operator and physical redemption",
         "url": "https://goldzip.info/terms-conditions/",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-15"
+        "accessedAt": "2026-10-29"
       },
       {
-        "label": "GoldZip primary terms component: Singapore administrator and clauses 4.1-4.2 physical redemption",
-        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js",
+        "label": "GoldZip terms document component: BVI issuer as default Operator and clauses 4.1-4.4 physical redemption",
+        "url": "https://goldzip.info/_next/static/chunks/7dfbe8943ba12d7c.js",
         "sourceKind": "issuer-disclosure",
-        "accessedAt": "2026-10-15"
+        "accessedAt": "2026-10-29"
       },
       {
         "label": "HKGX identifies GoldZip Pte. Ltd. as the Singapore token issuer",
@@ -98,8 +98,8 @@
         "sourceDate": "2026-10-15"
       }
     ],
-    "reviewer": "Rev_XgzGoldzip",
-    "reviewedAt": "2026-10-15",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-29",
     "issuerEntity": "GoldZip Company Limited",
     "issuerDomicile": "British Virgin Islands"
   }

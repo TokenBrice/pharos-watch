@@ -1,5 +1,23 @@
 {
   "id": "usat-tether",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Kraken current EEA restrictions: USAT deposits and trading prohibited",
+        "url": "https://support.kraken.com/articles/where-is-kraken-licensed-or-regulated"
+      },
+      {
+        "label": "ESMA EMT issuer register: no Anchorage Digital Bank or USAT entry",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "Anchorage USAT policies: sole issuer and fixed-dollar redemption for eligible clients",
+        "url": "https://www.anchorage.com/usat-policies-disclosures"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {

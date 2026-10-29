@@ -1,0 +1,149 @@
+{
+  "id": "yzusd-yuzu",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "Yuzu describes yzUSD as a non-yielding synthetic dollar and senior tranche, with open secondary stablecoin trading and eligible-investor minting and redemption for USDT0. Its terms identify YUZU FINTECH LLC but disclaim a put right, a guaranteed par conversion and an unconditional redemption obligation. The documented stablecoin use contrasts with discretionary cryptoasset redemption rather than an identified obligation to pay a fixed amount of national currency or bank-deposit monetary value. This supports an unclear payment-stablecoin assessment, not a categorical non-payment exclusion.",
+      "references": [
+        {
+          "label": "Yuzu yzUSD design and investor eligibility",
+          "url": "https://app.yuzu.money/docs",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Yuzu issuer identity and discretionary redemption terms",
+          "url": "https://app.yuzu.money/terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-04-15",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act payment stablecoin and monetary value definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "YUZU FINTECH LLC",
+    "issuerDomicile": "Georgia",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://yuzu.accountable.capital/",
+    "redemptionPolicyPresent": true,
+    "notes": "The platform terms expressly cover issuance and management of yzUSD and identify YUZU FINTECH LLC as the contracting operator. Their Georgian FEZ VASP licensing statement is an issuer claim and is not treated as a U.S. or EU authorization. The base yzUSD token is distinct from the syzUSD yield wrapper and yzPP first-loss tranche. Published redemption rules concern eligible-investor USDT0 conversion subject to liquidity, risk controls and issuer discretion. The reserve dashboard is a public disclosure footprint, not a finding that a monthly accountant attestation series exists. No issuer GENIUS pathway or qualifying public authorization was found in the bounded review.",
+    "references": [
+      {
+        "label": "Yuzu yzUSD design and investor eligibility",
+        "url": "https://app.yuzu.money/docs",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Yuzu issuer identity and discretionary redemption terms",
+        "url": "https://app.yuzu.money/terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-04-15",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act payment stablecoin and monetary value definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Yuzu public reserve dashboard",
+        "url": "https://yuzu.accountable.capital/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC digital asset licensing application directory",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve stablecoin framework notice",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-09-24",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC 2026 press releases",
+        "url": "https://www.fdic.gov/news/press-releases/2026",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register exact yzUSD search",
+        "url": "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22yzUSD%22",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register exact YUZU FINTECH search",
+        "url": "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22YUZU%20FINTECH%22",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.occ.gov/news-events/newsroom/?q=&nr=NewsRelease,Bulletin&topic=82&dte=0",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "https://www.fdic.gov/news/press-releases/2026",
+        "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22yzUSD%22",
+        "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22YUZU%20FINTECH%22",
+        "https://app.yuzu.money/docs",
+        "https://app.yuzu.money/terms",
+        "Official-domain searches on 2026-10-28 for Yuzu, YUZU FINTECH and yzUSD with GENIUS or stablecoin across OCC, FDIC, Federal Reserve, Federal Register, NYDFS and Treasury domains."
+      ],
+      "summary": "The OCC application directory, FDIC press-release index, Federal Reserve notice, issuer disclosures and exact Federal Register searches did not identify a yzUSD or YUZU FINTECH LLC GENIUS approval, state qualification, official application or registered foreign exception. The two Federal Register searches displayed zero documents in a browser. The OCC newsroom static response exposed no release results and was not counted as a complete news search. This is a bounded public-evidence finding and does not establish the absence of unpublished filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC digital asset licensing application directory",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve stablecoin framework notice",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC 2026 press releases",
+          "url": "https://www.fdic.gov/news/press-releases/2026",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact yzUSD search",
+          "url": "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22yzUSD%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact YUZU FINTECH search",
+          "url": "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22YUZU%20FINTECH%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

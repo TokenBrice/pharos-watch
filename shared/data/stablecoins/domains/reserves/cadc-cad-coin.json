@@ -43,7 +43,7 @@
     "compositionBasis": "ATB Financial September 30 bank confirmation for PayTrie AB Inc, retrieved through Loon's issuer API, plus the issuer's 100% ATB cash-deposit reserve disclosure",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "No disclosed reserve asset class is unclassified. The September bank confirmation does not state CADC liabilities, reconcile all-chain circulation, establish account legal safeguards or identify the operative trust indenture. PayTrie AB Inc is the bank client while Loon Payments Inc is the issuer in current terms. No reserve-coverage ratio, enforceable holder insolvency protection or bank-payout settlement bound is inferred.",
+    "knownUnknownExposure": "No disclosed reserve asset class is unclassified. The September bank confirmation does not state CADC liabilities, reconcile all-chain circulation, establish account legal safeguards or identify the operative trust indenture. PayTrie AB Inc is the bank client named on the September confirmation; Paytrie terms amended October 14, 2026 name CADC Reserve Trust as issuer, with Loon Payments Inc as servicer. No reserve-coverage ratio, enforceable holder insolvency protection or bank-payout settlement bound is inferred.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

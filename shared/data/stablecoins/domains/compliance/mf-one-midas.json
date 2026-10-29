@@ -12,5 +12,116 @@
         "url": "https://blog.midas.app/midas-in-september-2026-recap/"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "mF-ONE is a tokenized investment certificate tracking Fasanara private-credit and digital-asset strategies. Midas describes the exact token as performance-linked with NAV pricing. The participating structurer identifies Midas Software GmbH as token issuer and describes redemption by reference to published NAV. Midas describes its liquid yield tokens as floating-value instruments with no fixed redemption price and underlying-linked redemption amounts. This supports non-payment-token under GENIUS Act section 2(22)(A), rather than a fixed monetary-value payment stablecoin. No U.S. securities-law exclusion is inferred.",
+      "references": [
+        {
+          "label": "Midas exact mF-ONE launch disclosure and NAV pricing",
+          "url": "https://www.linkedin.com/posts/midasrwa_introducing-mf-one-a-tokenised-certificate-activity-7344356073312514050-pPoD",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Steakhouse participating structurer: mF-ONE issuer and NAV-linked redemption",
+          "url": "https://kitchen.steakhouse.financial/p/midas-fasanara-mf-one-in-morpho-onchain",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2025-06-27",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Midas liquid yield tokens: floating value and no fixed redemption price",
+          "url": "https://midas-docs.gitbook.io/midas-docs/liquid-yield-token.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Midas issuance and underlying-linked redemption amounts",
+          "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Midas Software GmbH 2026 base prospectus: issuer legal identity and domicile",
+          "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-07-17",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Midas September 2026 recap: continuing mF-ONE investment product",
+          "url": "https://blog.midas.app/midas-in-september-2026-recap/",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-10-02",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Midas Software GmbH",
+    "issuerDomicile": "Germany",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed on 2026-10-28. The issuer launch disclosure identifies the exact mF-ONE investment certificate and Fasanara strategy. Steakhouse describes its direct product-structuring involvement and expressly identifies Midas Software GmbH as the token issuer. The July 17, 2026 base prospectus independently establishes that entity's German incorporation and Berlin address; it is not used to assert mF-ONE inclusion in that programme. The October 2, 2026 issuer recap confirms continued mF-ONE investment-product use and USDC exits. DeFi collateral eligibility and USDC liquidity do not establish fixed monetary-value redemption. The original product page returned HTTP 403 and remained at Cloudflare verification in managed Chromium. Current legal-product documentation was also not recovered. No current displayed investment price, product-specific final terms, programme inclusion, U.S. securities-law determination, GENIUS approval, application or foreign registration is asserted. The classification follows the existing Midas mTBILL non-payment-token precedent. Reserve, redemption-policy, monthly-attestation and enforcement fields are omitted rather than inferred from platform-wide disclosures.",
+    "references": [
+      {
+        "label": "Midas exact mF-ONE launch disclosure and NAV pricing",
+        "url": "https://www.linkedin.com/posts/midasrwa_introducing-mf-one-a-tokenised-certificate-activity-7344356073312514050-pPoD",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Steakhouse participating structurer: mF-ONE issuer and NAV-linked redemption",
+        "url": "https://kitchen.steakhouse.financial/p/midas-fasanara-mf-one-in-morpho-onchain",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2025-06-27",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Midas liquid yield tokens: floating value and no fixed redemption price",
+        "url": "https://midas-docs.gitbook.io/midas-docs/liquid-yield-token.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Midas issuance and underlying-linked redemption amounts",
+        "url": "https://midas-docs.gitbook.io/midas-docs/how-does-it-work/issuance-and-redemption.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Midas Software GmbH 2026 base prospectus: issuer legal identity and domicile",
+        "url": "https://3475141875-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FMndxFHqGeA4nzBBeKDTV%2Fuploads%2FkVT2uAi2AipgeMIyZAJe%2FMidas%20Software%20GmbH%20Base%20Prospectus%202026.pdf?alt=media&token=d80ceabb-07a6-4dc4-9020-70ec86b4f42f",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-07-17",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Midas September 2026 recap: continuing mF-ONE investment product",
+        "url": "https://blog.midas.app/midas-in-september-2026-recap/",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-10-02",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

@@ -16,5 +16,72 @@
         "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVault.sol"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDC is Spark Savings V1, an ERC-4626 savings share whose assets per share accrue the Sky Savings Rate. Official documentation identifies it separately from V2 spUSDC. The published V1 contract converts shares through sUSDS, redeems through the Sky PSM subject to its liquidity and fees, and permits an exit into an equal number of sUSDS shares. These variable-value savings rights support a non-payment-token assessment rather than a fixed monetary-value issuer redemption obligation under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Spark Savings: legacy sUSDC V1 yield-accruing vault shares",
+          "url": "https://docs.spark.finance/products/spark-savings",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Spark UsdcVault: variable share conversion and redemption mechanics",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVault.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Spark Ethereum registry: separate V1 sUSDC and V2 spUSDC deployments",
+          "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed on 2026-10-28 for the legacy sUSDC savings share, not underlying USDC or USDS and not V2 spUSDC or Spark-branded Morpho vaults. The official Ethereum registry maps V1 sUSDC to 0xBc65ad17c5C0a2A4D159fa5a503f4992c7B545FE and its implementation to 0xf943Cb8D5f06f2bBF352878ebEF3Ec5C537A20bA. Spark is identified as the product operator; the reviewed sources do not identify a separate legal issuer promising fixed national-currency redemption for this share, so issuerEntity is omitted. USDC and USDS issuer permissions or reserve attestations are not attributed to sUSDC. This assessment addresses the GENIUS payment-stablecoin authorization model and does not decide securities classification or the regulatory status of every service involving the share.",
+    "references": [
+      {
+        "label": "Spark Savings: legacy sUSDC V1 yield-accruing vault shares",
+        "url": "https://docs.spark.finance/products/spark-savings",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Spark UsdcVault: variable share conversion and redemption mechanics",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-vaults/master/src/UsdcVault.sol",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Spark Ethereum registry: separate V1 sUSDC and V2 spUSDC deployments",
+        "url": "https://raw.githubusercontent.com/sparkdotfi/spark-address-registry/master/src/Ethereum.sol",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

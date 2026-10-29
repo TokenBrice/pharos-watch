@@ -1,0 +1,186 @@
+{
+  "id": "cjpy-yamato",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Yamato CJPY identity and permissionless issuance",
+        "url": "https://docs.yamato.fi/en/readme/cjpy-convertible-jpy-token.md"
+      },
+      {
+        "label": "Yamato disclaimer: no specific entity controls or warrants the protocol",
+        "url": "https://docs.yamato.fi/en/readme/disclaimer.md"
+      },
+      {
+        "label": "ESMA interpretation of crypto-assets without an identifiable issuer",
+        "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
+      }
+    ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "CJPY is a transferable yen-targeted stablecoin minted against ETH through a permissionless CDP. The protocol describes exchange for yen-valued ETH collateral, while its disclaimer denies control or warranty by a specific person or entity. A legal issuer obligation to redeem for national currency or bank-deposit monetary value is not established. These affirmative disclosures leave payment-stablecoin applicability ambiguous rather than supporting a categorical non-payment exclusion.",
+      "references": [
+        {
+          "label": "Yamato CJPY token identity and permissionless minting",
+          "url": "https://docs.yamato.fi/en/readme/cjpy-convertible-jpy-token.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Yamato ETH collateral and yen soft peg",
+          "url": "https://docs.yamato.fi/en/readme.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Yamato disclaimer: no entity control or warranty",
+          "url": "https://docs.yamato.fi/en/readme/disclaimer.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Yamato CJPY redemption for ETH collateral",
+          "url": "https://docs.yamato.fi/en/features/redemption-by-user-or-protocol.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "redemptionPolicyPresent": true,
+    "notes": "Assessment follows the LUSD no-identifiable-issuer family precedent: unclear applicability rather than a categorical non-payment-token finding. DeFiGeek Community Japan is disclosed as the software developer; it is not recorded as issuerEntity. CJPY redemption means exchange for ETH from eligible pledges, not a contractual promise by a legal issuer to pay Japanese yen. The generic OCC and NYDFS directories are limited negative-review inputs, not token authorization registries or evidence of a particular issuer domicile. No GENIUS authorization, application, foreign exception, enforcement conclusion or DASP restriction finding is asserted beyond the bounded public-authorization review.",
+    "references": [
+      {
+        "label": "Yamato CJPY token identity and permissionless minting",
+        "url": "https://docs.yamato.fi/en/readme/cjpy-convertible-jpy-token.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Yamato ETH collateral and yen soft peg",
+        "url": "https://docs.yamato.fi/en/readme.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Yamato disclaimer: no entity control or warranty",
+        "url": "https://docs.yamato.fi/en/readme/disclaimer.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Yamato CJPY redemption for ETH collateral",
+        "url": "https://docs.yamato.fi/en/features/redemption-by-user-or-protocol.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC GENIUS application information",
+        "url": "https://occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC digital asset licensing applications",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve GENIUS responsibilities proposal",
+        "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0033-01/details",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC GENIUS application procedures proposal",
+        "url": "https://www.fdic.gov/news/press-releases/2025/fdic-approves-proposal-establish-genius-act-application-procedures-fdic",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-12-16"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and Greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.federalreserve.gov/apps/proposals/FR-2026-0033-01/details",
+        "https://www.fdic.gov/news/press-releases/2025/fdic-approves-proposal-establish-genius-act-application-procedures-fdic",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://docs.yamato.fi/en/readme.md",
+        "https://docs.yamato.fi/en/readme/cjpy-convertible-jpy-token.md",
+        "https://docs.yamato.fi/en/readme/disclaimer.md",
+        "https://docs.yamato.fi/en/features/redemption-by-user-or-protocol.md",
+        "Official-domain web search performed on 2026-10-28: (site:occ.gov OR site:federalreserve.gov OR site:fdic.gov OR site:federalregister.gov OR site:dfs.ny.gov) (CJPY OR Yamato OR DeFiGeek) (GENIUS OR stablecoin OR application). Results did not identify a token-specific authorization or application."
+      ],
+      "summary": "The independently reopened issuer documentation, OCC application information, OCC licensing table, Federal Reserve and FDIC implementation pages, NYDFS entity and coin tables, and exact-name official-domain search did not identify a public CJPY, Yamato or DeFiGeek Community Japan GENIUS approval, qualification, application or foreign registration. Generic licensing directories are not GENIUS approval registers. This bounded review does not resolve legal applicability or unpublished filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS application information",
+          "url": "https://occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC digital asset licensing applications",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve GENIUS responsibilities proposal",
+          "url": "https://www.federalreserve.gov/apps/proposals/FR-2026-0033-01/details",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC GENIUS application procedures proposal",
+          "url": "https://www.fdic.gov/news/press-releases/2025/fdic-approves-proposal-establish-genius-act-application-procedures-fdic",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-12-16"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Yamato disclaimer: no entity control or warranty",
+          "url": "https://docs.yamato.fi/en/readme/disclaimer.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

@@ -1,0 +1,161 @@
+{
+  "id": "axcnh-anchorx",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "AxCNH is marketed for payment and settlement, with a 1:1 offshore Chinese yuan reference and advertised 1:1 CNH redemption. The June 2026 combined report identifies AnchorX Global Limited as issuer of the circulating Conflux and Ethereum AxCNH and separately reports zero circulating tokens for AnchorX.KZ Limited. A non-USD national-currency reference does not itself exclude a payment stablecoin under GENIUS Act section 2. This is a product-level assessment, not a finding of U.S. distribution.",
+      "references": [
+        {
+          "label": "AnchorX AxCNH product and redemption representation",
+          "url": "https://www.anchorx.org/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Kreston June 2026 combined AxCNH agreed-upon procedures report",
+          "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA?e=9k7D0I",
+          "sourceKind": "auditor-report",
+          "sourceDate": "2026-07-15",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2 definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "AnchorX Global Limited",
+    "foreignExceptionStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://anchorx.org/transparency",
+    "notes": "The issuer-operated transparency page expressly aggregates issuance versions of AnchorX Global Limited and AnchorX.KZ Limited. The combined report dated July 15, 2026 attributes 39,128,445 circulating AxCNH, including 38,128,445 on Conflux and 1,000,000 on Ethereum, to AnchorX Global Limited as at June 30, 2026; AnchorX.KZ Limited has zero circulating AxCNH in that report. The AFSA licence belongs to AnchorX.KZ Limited and is not transferred to AnchorX Global Limited or treated as U.S. authorization. The report is agreed-upon procedures without an assurance opinion and establishes historical figures only. The holding company AnchorX Group Limited is distinguished from both issuing subsidiaries. No separate domicile or licensing claim is made for AnchorX Global Limited. Public product copy promises 1:1 CNH redemption, but the generic service terms identify AnchorX Group and do not publish detailed holder redemption procedures for each issuing version. Redemption-policy and monthly-attestation flags are omitted because operative issuer-specific terms and a current continuous monthly report series were not established. The dated public-source review found no token-specific U.S. approval, pending application, issuer-announced GENIUS path or registered foreign exception. Unknown pathway and foreign exception do not imply ineligibility or U.S. distribution.",
+    "references": [
+      {
+        "label": "AnchorX AxCNH product page",
+        "url": "https://www.anchorx.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "AnchorX service terms",
+        "url": "https://www.anchorx.org/terms",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "AnchorX combined circulation and reserve disclosure",
+        "url": "https://anchorx.org/transparency",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Kreston June 2026 combined AxCNH agreed-upon procedures report",
+        "url": "https://anchorx-my.sharepoint.com/:b:/g/personal/sophiepu_anchorx_org/IQCIICwRyIxqTYlcEFCq_xhaARpGXEQU5c1pBNN5NowZ0HA?e=9k7D0I",
+        "sourceKind": "auditor-report",
+        "sourceDate": "2026-07-15",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "AFSA licence record for AnchorX.KZ Limited only",
+        "url": "https://publicreg.myafsa.com/licence_details/AFSA-A-LA-2025-0013/",
+        "sourceKind": "foreign-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC pending digital asset bank applications",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve 2026 press release index",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC recent press releases",
+        "url": "https://www.fdic.gov/news/press-releases",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS virtual currency licensed entities and greenlisted coins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register exact-name AnchorX search with zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22AnchorX%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register exact-name AxCNH search with zero results",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22AxCNH%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "Federal Register API exact-name searches for AnchorX and AxCNH, both returning zero documents on 2026-10-28.",
+        "OCC pending digital-asset bank licensing applications table and OCC newsroom landing page. The newsroom landing page contained no release list in the static reader. The applications table is not an exhaustive PPSI register.",
+        "Federal Reserve 2026 press release index and FDIC recent press release listing, including the visible October 2026 entries.",
+        "NYDFS regulated virtual currency entities table and greenlisted coins. This is a bounded New York licensing check, not an all-state authorization search.",
+        "Current AnchorX product page, service terms, transparency page, public reserve-report links and the combined June 2026 report.",
+        "Exact token and issuer web searches bounded to OCC, Federal Reserve, FDIC, Treasury and NYDFS domains. No matching regulator result surfaced.",
+        "AFSA exact company and licence records, used only to distinguish the Kazakhstan subsidiary licence from U.S. authorization."
+      ],
+      "summary": "As of 2026-10-28, the opened issuer disclosures, federal and state public listings, Federal Register exact-name searches and bounded regulator-domain searches did not identify a GENIUS permitted issuer approval, state-qualified status, official pending application or registered foreign exception for AxCNH, AnchorX Global Limited, AnchorX.KZ Limited or AnchorX Group Limited. This is a dated negative public-evidence conclusion within the stated search coverage, not a certification that no unpublished filing or authorization exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC pending digital asset bank applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve 2026 press release index",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC recent press releases",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual currency licensed entities and greenlisted coins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact-name AnchorX search with zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22AnchorX%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact-name AxCNH search with zero results",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22AxCNH%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

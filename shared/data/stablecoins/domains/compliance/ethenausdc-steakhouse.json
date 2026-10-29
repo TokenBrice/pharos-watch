@@ -24,5 +24,47 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "ethenaUSDC is the Morpho Vault V2 share at base:0xbeeff0be997cca5b1c13a7433c2004637975739e. The exact Morpho product disclosure identifies USDC as its underlying asset, Steakhouse Financial as curator and Ethena balance-sheet allocation as its purpose. Morpho's ERC-4626 documentation describes proportional vault shares whose assets-per-share value changes with yield. Redemption delivers underlying digital assets at the share-conversion rate, rather than a fixed monetary-value issuer payment claim under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho exact Ethena x Steakhouse USDC vault",
+          "url": "https://app.morpho.org/base/vault/0xBeEfF0be997Cca5B1c13A7433c2004637975739e/ethena-x-steakhouse-usdc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 proportional shares and asset conversion",
+          "url": "https://docs.morpho.org/developers/earn/concepts/vault-mechanics.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Steakhouse DeFi vault governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed as the Base vault share separately from USDC, USDe and other Ethena assets. Steakhouse terms identify Carniceria Tropical SA, incorporated in Panama and wholly owned by Steakhouse Financial Ltd, as the service operator and vault curator. The terms disclaim being a party to protocol transactions and disclaim obligations to deliver cryptoassets. They do not establish Carniceria Tropical SA, Steakhouse Financial Ltd, Ethena or Circle as a separate legal payment-stablecoin issuer for this share, so issuerEntity is omitted. USDC reserve reports and any underlying-token authorizations are not vault-level attestations or authorizations. This assessment does not determine securities classification or authorize distribution of vault services.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27 section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

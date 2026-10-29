@@ -1,0 +1,116 @@
+{
+  "id": "kgst-kyrgyz-som",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "KGST is a privately issued Kyrgyz-som payment stablecoin. The issuer describes a 1:1 KGS peg, bank reserves, remittance and settlement use, and a controlled fiat issuance/redemption cycle with token burning. The Kyrgyz financial regulator names the company behind KGST's public offering; it is not the sovereign digital som.",
+      "references": [
+        {
+          "label": "KGST issuer: som peg, payment purpose, reserves and issuer identity",
+          "url": "https://www.kgstoken.kg/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Kyrgyz financial regulator: KGST public-offering registration and issuing company",
+          "url": "https://fsa.gov.kg/2025/07/08/%D0%B3%D0%BE%D1%81-%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%BE%D0%B2-%D1%86%D0%B5%D0%BD%D0%BD%D1%8B%D1%85-%D0%B1%D1%83%D0%BC%D0%B0/",
+          "sourceKind": "foreign-regulator",
+          "sourceDate": "2025-07-08",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "KGSToken founder: fiat issuance, redemption and token burning",
+          "url": "https://www.binance.com/vi/blog/adoption/7365732778117156576",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "KGSToken LLC (ОсОО «КейДжиЭсТокен»)",
+    "issuerDomicile": "Kyrgyzstan",
+    "licensingRegulator": "State Service for Regulation and Supervision of the Financial Market of the Kyrgyz Republic",
+    "foreignExceptionStatus": "unknown",
+    "notes": "The Kyrgyz regulator's July 8, 2025 notice records the first public offering of KGST by ОсОО «КейДжиЭсТокен» during June 23 to 27, 2025. The issuer website uses the English name KGSToken LLC, and a founder-authored disclosure identifies it as the private-sector firm issuing KGST. This domestic registration is not U.S. GENIUS authorization or a registered foreign exception. The founder describes controlled issuance/redemption through licensed virtual-asset providers, not an unconditional direct redemption right for every holder. No operative holder redemption policy, published monthly attestation series, or independently verified reserve report was established, so disclosure-presence flags are omitted. The negative authorization finding is bounded to the listed public sources and exact-name searches; it does not assert that confidential filings cannot exist.",
+    "references": [
+      {
+        "label": "KGST issuer: som peg, payment purpose, reserves and issuer identity",
+        "url": "https://www.kgstoken.kg/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Kyrgyz financial regulator: KGST public-offering registration and issuing company",
+        "url": "https://fsa.gov.kg/2025/07/08/%D0%B3%D0%BE%D1%81-%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%BE%D0%B2-%D1%86%D0%B5%D0%BD%D0%BD%D1%8B%D1%85-%D0%B1%D1%83%D0%BC%D0%B0/",
+        "sourceKind": "foreign-regulator",
+        "sourceDate": "2025-07-08",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "KGSToken founder: fiat issuance, redemption and token burning",
+        "url": "https://www.binance.com/vi/blog/adoption/7365732778117156576",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22KGSToken%22%20OR%20%22KGST%22&per_page=20",
+        "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "https://www.fdic.gov/news/press-releases",
+        "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "https://www.govinfo.gov/content/pkg/FR-2026-10-23/html/2026-21706.htm",
+        "Exact-name KGST and KGSToken government-domain searches of OCC, Federal Reserve, FDIC, Treasury and NYDFS on 2026-10-28",
+        "https://www.kgstoken.kg/",
+        "https://fsa.gov.kg/2025/07/08/%D0%B3%D0%BE%D1%81-%D1%80%D0%B5%D0%B3%D0%B8%D1%81%D1%82%D1%80%D0%B0%D1%86%D0%B8%D0%B8-%D0%B2%D1%8B%D0%BF%D1%83%D1%81%D0%BA%D0%BE%D0%B2-%D1%86%D0%B5%D0%BD%D0%BD%D1%8B%D1%85-%D0%B1%D1%83%D0%BC%D0%B0/",
+        "https://www.binance.com/vi/blog/adoption/7365732778117156576"
+      ],
+      "summary": "The reviewed OCC issuer portal, pending bank-charter list, Federal Reserve and FDIC release pages, NYDFS directory, issuer disclosures and bounded government-domain searches did not identify a KGST/KGSToken GENIUS permitted-issuer approval, state qualification, official application, or registered foreign exception. The Federal Register exact-name search returned zero documents. Kyrgyz public-offering registration supports domestic issuer identity only. These public checks are not an exhaustive search of confidential applications or every state record.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer and application portal",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC pending digital-asset bank licensing applications",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact KGST and KGSToken search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22KGSToken%22%20OR%20%22KGST%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve 2026 press-release archive",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC current press releases",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual-currency regulated-entity directory",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

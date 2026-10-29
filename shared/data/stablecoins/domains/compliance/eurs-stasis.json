@@ -1,5 +1,31 @@
 {
   "id": "eurs-stasis",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "EMT",
+    "references": [
+      {
+        "label": "Telcoin Europe MiCAR notice: EURS trading restricted from March 31, 2025",
+        "url": "https://www.telcoin.co.jp/en/support-center/digital-assets/micar-stablecoins-compliance"
+      },
+      {
+        "label": "YouHodler MiCA notice: EURS restricted for some EU services",
+        "url": "https://help.youhodler.com/en/articles/9540317-important-mica-update"
+      },
+      {
+        "label": "ESMA EMT issuer register: no STSS or EURS entry in the fetched register",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      },
+      {
+        "label": "MFSA issuer search: STSS (MALTA) LIMITED legacy whitepaper deregistered",
+        "url": "https://fsr.mfsa.mt/Licences/searchLicencesByLicenceHolder?filter=STSS"
+      },
+      {
+        "label": "STASIS terms: STSS (Malta) Limited and EURS euro redemption",
+        "url": "https://stasis.net/terms"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "applicabilityBasis": {
@@ -25,7 +51,7 @@
     "reserveDisclosureUrl": "https://stasis.net/transparency/",
     "redemptionPolicyPresent": true,
     "monthlyAttestationPresent": false,
-    "notes": "EURS is a foreign, euro-referenced payment stablecoin. STASIS describes EU use and U.S. legal opinions; no token-specific U.S. PPSI approval, state-qualified approval, official application or registered foreign-issuer exception was located as of 2026-10-07. The foreign pathway remains unknown. The MFSA public register identifies the exact issuer with a deregistered legacy whitepaper and no other authorisations; that is foreign licensing context, not U.S. GENIUS enforcement. STASIS publishes daily reserve information and describes quarterly verification and annual audits, not a publicly located monthly attestation. The FAQ licensing-update statement referring to later 2023 is stale and does not evidence a pending current application. Federal issuer implementation rules remain proposed; the September SCRC procedural rule does not qualify an issuer or bring the Act into force. Expected Act effective date remains January 18, 2027.",
+    "notes": "EURS is a foreign, euro-referenced payment stablecoin. STASIS describes EU use and U.S. legal opinions; no token-specific U.S. PPSI approval, state-qualified approval, official application or registered foreign-issuer exception was located as of 2026-10-07. The foreign pathway remains unknown. The MFSA public register identifies the exact issuer with a deregistered legacy whitepaper and no other authorisations; that is foreign licensing context, not U.S. GENIUS enforcement. STASIS publishes daily reserve information and describes quarterly verification and annual audits, not a publicly located monthly attestation. The FAQ licensing-update statement referring to later 2023 is stale and does not evidence a pending current application. Expected Act effective date remains January 18, 2027.",
     "reviewer": "Pharos compliance research",
     "reviewedAt": "2026-10-07",
     "references": [

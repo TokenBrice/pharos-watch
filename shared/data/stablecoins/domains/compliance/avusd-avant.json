@@ -1,0 +1,64 @@
+{
+  "id": "avusd-avant",
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "avUSD is disclosed as a non-yielding liquid receipt for deposited USDC and an entry point to Avant yield strategies. Its redemption route returns the underlying digital asset, USDC, and the operative terms describe programmatic claims against protocol smart contracts. The reviewed product does not promise issuer conversion into national currency or a bank deposit. GENIUS Act section 2(22)(A)(ii)(I) distinguishes fixed monetary-value repayment from repayment in a digital asset denominated in that value. This receipt is assessed separately from both underlying USDC and the yield-bearing savUSD token.",
+      "references": [
+        {
+          "label": "Avant: avUSD is a non-yielding liquid USDC receipt",
+          "url": "https://docs.avantprotocol.com/overview/core-tokens",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Avant: base-token redemption returns underlying digital assets",
+          "url": "https://docs.avantprotocol.com/overview/using-avant-protocol/redeeming-avassets",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Avant: protocol claims and Foundation counterparty terms",
+          "url": "https://docs.avantprotocol.com/legal-and-risk/terms-of-use",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act: payment stablecoin and monetary value definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "redemptionPolicyPresent": true,
+    "notes": "Reviewed 2026-10-28. The current terms identify Avant Protocol Foundation and affiliates as the service provider and identify the Foundation as exchange counterparty and beneficial owner of deposited reserves. They do not establish a separate legal payment-stablecoin issuer for the receipt, so issuerEntity is omitted. BVI governing law alone is not recorded as issuer domicile. avUSD itself receives no yield; staking creates the separate savUSD senior-tranche token. Capital backing unstaked avUSD is deployed in strategies, so the USDC mint/redemption rail is not asserted to be the full reserve composition. The assessment follows the disclosed USDC receipt and redemption rights, not the presence or absence of a GENIUS approval. No underlying USDC authorization, reserve attestation or foreign exception is inherited by avUSD.",
+    "references": [
+      {
+        "label": "Avant: exact avUSD deployment addresses",
+        "url": "https://docs.avantprotocol.com/security/contract-addresses",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Avant: capital backing unstaked avUSD is deployed in strategies",
+        "url": "https://docs.avantprotocol.com/security/reserve-fund",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Avant: product positioning and base-token distinction",
+        "url": "https://app.avantprotocol.com/products/avusd",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

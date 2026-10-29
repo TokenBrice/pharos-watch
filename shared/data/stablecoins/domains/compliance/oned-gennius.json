@@ -1,0 +1,168 @@
+{
+  "id": "oned-gennius",
+  "genius": {
+    "applicability": "apparent-payment-stablecoin",
+    "applicabilityBasis": {
+      "summary": "ONED is a dollar-referenced Coinbase Custom Stablecoin promoted for spending, transfers and programmable commerce. Coinbase lists ONED on Base, discloses 1:1 USDC custody backing and permits 1:1 USDC conversion for eligible accounts. Native ONED holder terms incorporate the Coinbase agreement. These payment and fixed-value characteristics support apparent payment-stablecoin applicability, without treating USDC conversion as an unconditional direct-dollar redemption promise.",
+      "references": [
+        {
+          "label": "ONED product payment and spending uses",
+          "url": "https://www.oned.global/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Coinbase Custom Stablecoins backing, conversion and restrictions",
+          "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "ONED native holder terms incorporating Coinbase terms",
+          "url": "https://oned.global/end-user-terms-and-conditions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Coinbase US agreement and Appendix 4 section 13",
+          "url": "https://www.coinbase.com/legal/user_agreement/united_states",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-10-21",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Coinbase, Inc.",
+    "issuerDomicile": "United States",
+    "licensingRegulator": "NYDFS virtual currency and money transmitter licenses",
+    "foreignExceptionStatus": "not-applicable",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+    "redemptionPolicyPresent": true,
+    "notes": "Assessment concerns native ONED on Base, not GMIX tokenized rewards or wrapped and bridged ONED. Coinbase Inc. is the legal issuer mapping supported by the incorporated US agreement and the distribution partner disclosure assigning Coinbase Inc. sole minting, redemption and reserve responsibilities. Gennius XYZ is the brand and program manager. This follows the Coinbase Inc. issuer identity used for sibling USDF. Coinbase Custom Stablecoins represent transferable ownership interests in custodied USDC under Appendix 4 section 13.1; ONED is nevertheless marketed for payment use rather than as a floating-NAV investment share. Eligibility and geographic restrictions apply to account conversion. The reserve dashboard is an issuer disclosure, not independent financial assurance. NYDFS ordinary licenses and the separate proposed Coinbase National Trust Company charter are not ONED GENIUS authorization. Corporate Decision 1370 expressly states that the proposed bank does not propose to issue stablecoins.",
+    "references": [
+      {
+        "label": "Coinbase Custom Stablecoins backing, conversion and restrictions",
+        "url": "https://help.coinbase.com/en/coinbase/getting-started/crypto-education/cb-custom-stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "ONED native holder terms incorporating Coinbase terms",
+        "url": "https://oned.global/end-user-terms-and-conditions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Coinbase US agreement and Appendix 4 section 13",
+        "url": "https://www.coinbase.com/legal/user_agreement/united_states",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-10-21",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Utoppia legal disclosure identifying Coinbase Inc. ONED responsibilities",
+        "url": "https://www.utoppia.com/faqs-categories/stablecoin-payouts",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "ONED product payment and spending uses",
+        "url": "https://www.oned.global/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Coinbase ONED proof of reserves",
+        "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entity directory",
+        "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC Corporate Decision 1370 for a separate proposed Coinbase trust bank",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1370.pdf",
+        "sourceKind": "federal-regulator",
+        "sourceDate": "2026-04-02",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC GENIUS application page and digital asset licensing directory, checked for ONED and Coinbase Inc. issuer authorization or applications.",
+        "OCC Corporate Decision 1370, checked to distinguish the separate proposed custody bank from Coinbase Inc. as ONED issuer.",
+        "Federal Register exact ONED search, opened successfully in a browser after the static request was blocked; no documents were returned.",
+        "Federal Register Coinbase and GENIUS search, opened in a browser; three displayed results concerned crypto-asset securities interpretation, CFTC markets rulemaking and SEC custody proposals, not ONED issuer authorization.",
+        "NYDFS regulated entity directory: Coinbase Inc. ordinary virtual currency and money transmitter licenses, separately from Coinbase Custody Trust Company LLC; no ONED GENIUS qualification was identified.",
+        "Federal Reserve September 24 issuer/application proposal and FDIC April 7 issuer requirements proposal; neither source names ONED or grants Coinbase Inc. a token-specific approval.",
+        "Targeted official-domain web searches across OCC, Federal Reserve, FDIC, Federal Register and NYDFS for ONED, Coinbase, GENIUS, approvals and applications.",
+        "ONED native terms, product site, Coinbase Custom Stablecoins help, Coinbase US agreement, ONED reserve dashboard and Utoppia distribution disclosure."
+      ],
+      "summary": "As of 2026-10-28, the checked public regulator, directory, search and issuer sources did not identify a GENIUS PPSI approval, state qualification or official pending GENIUS application for Coinbase Inc. as issuer of ONED. The separate proposed Coinbase National Trust Company custody charter does not establish such an approval. Ordinary licenses and published reserve or conversion disclosures do not establish payment-stablecoin issuer authorization. This is a bounded public-evidence finding and does not exclude nonpublic filings.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS application and waiver page",
+          "url": "https://occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC digital asset licensing application directory",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC Corporate Decision 1370 for a separate proposed Coinbase trust bank",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/interpretations-and-decisions/2026/cd1370.pdf",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-02",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entity directory",
+          "url": "https://www.dfs.ny.gov/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register exact ONED document search",
+          "url": "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22ONED%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register Coinbase and GENIUS document search",
+          "url": "https://www.federalregister.gov/documents/search?conditions%5Bterm%5D=%22Coinbase%22+%22GENIUS%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve issuer and application framework proposal",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-09-24",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC issuer requirements proposal",
+          "url": "https://www.fdic.gov/news/financial-institution-letters/2026/notice-proposed-rulemaking-establish-genius-act",
+          "sourceKind": "federal-regulator",
+          "sourceDate": "2026-04-07",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

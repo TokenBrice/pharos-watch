@@ -1,0 +1,131 @@
+{
+  "id": "usbd-bima",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "USBD is a dollar-targeted stablecoin minted by borrowing against digital-asset collateral. Bima terms describe autonomous, non-custodial contracts, while the published TroveManager implementation burns debt tokens and transfers collateral to the redeemer less fees. The named interface counterparty does not promise USBD holders redemption for currency or bank-deposit monetary value in the reviewed terms. Its transferable stablecoin design and collateral-based redemption leave GENIUS payment-stablecoin applicability unclear.",
+      "references": [
+        {
+          "label": "GENIUS Act section 2: payment stablecoin and monetary value definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "Bima terms: collateralized USBD minting and named interface counterparty",
+          "url": "https://docs.bima.money/terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2024-12-12"
+        },
+        {
+          "label": "Bima mainnet announcement: Bitcoin-derivative collateral and USBD borrowing",
+          "url": "https://www.globenewswire.com/news-release/2025/04/09/3058514/0/en/bima-launches-mainnet-for-bitcoin-backed-yield-generation.html",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-04-09"
+        },
+        {
+          "label": "Bima implementation: debt-token redemption for collateral less fees",
+          "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/TroveManager.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "notes": "Reviewed 2026-10-28. The live Terms of Use identify BIMA PROTOCOL LIMITED as the website and services counterparty, not expressly as a legal issuer owing holders fiat redemption. Its name is therefore not populated as issuerEntity. The terms select British Virgin Islands law, while the 2025 mainnet announcement describes Bima as U.S.-based; neither establishes the exact token issuer domicile. No domicile or theoretical GENIUS pathway is assigned. Current homepage and documentation describe a separate collateral collar-loan product using USDC, while the live terms still describe USBD minting. This product change is not treated as evidence that USBD is discontinued. Classification follows the LUSD and BOLD corpus treatment of genuinely ambiguous dollar-targeted CDP units, rather than assuming that crypto collateral alone excludes a payment stablecoin. No reserve, monthly-attestation, enforcement or DASP finding is added by this bounded review.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2: payment stablecoin and monetary value definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Bima terms: collateralized USBD minting and named interface counterparty",
+        "url": "https://docs.bima.money/terms-of-use.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2024-12-12"
+      },
+      {
+        "label": "Bima mainnet announcement: Bitcoin-derivative collateral and USBD borrowing",
+        "url": "https://www.globenewswire.com/news-release/2025/04/09/3058514/0/en/bima-launches-mainnet-for-bitcoin-backed-yield-generation.html",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-04-09"
+      },
+      {
+        "label": "Bima implementation: debt-token redemption for collateral less fees",
+        "url": "https://raw.githubusercontent.com/Bima-Labs/bima-v1-core/mainnet-v2/contracts/core/TroveManager.sol",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register exact-name and token search",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Bima%20Protocol%22%20OR%20%22Bima%20Labs%22%20OR%20%22USBD%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC pending digital-asset licensing applications directory",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS virtual currency regulated entities and approved stablecoins directory",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Bima%20Protocol%22%20OR%20%22Bima%20Labs%22%20OR%20%22USBD%22&per_page=20",
+        "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://docs.bima.money/terms-of-use.md",
+        "https://www.globenewswire.com/news-release/2025/04/09/3058514/0/en/bima-launches-mainnet-for-bitcoin-backed-yield-generation.html",
+        "Official-domain web searches on 2026-10-28 for Bima, BIMA PROTOCOL LIMITED, Bima Labs and USBD with GENIUS, stablecoin, authorization and application across OCC, Federal Reserve, FDIC, NCUA, NYDFS and Treasury domains; no relevant named approval or application surfaced.",
+        "Federal Register exact-term searches for Bima Protocol, Bima Labs and USBD, including the opened API query with count 0."
+      ],
+      "summary": "As of 2026-10-28, the opened Federal Register search returned zero documents for the specified exact names and token. The reviewed OCC pending digital-asset applications directory, NYDFS entity and stablecoin directories, Bima disclosures and official-domain searches did not identify a public GENIUS PPSI approval, state qualification, official GENIUS application or announced issuance pathway for USBD. Directory coverage and indexed searches are bounded; this does not establish that no unpublished application exists or turn an ordinary bank charter or virtual-currency license into GENIUS authorization.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "Federal Register exact-name and token search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Bima%20Protocol%22%20OR%20%22Bima%20Labs%22%20OR%20%22USBD%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC pending digital-asset licensing applications directory",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual currency regulated entities and approved stablecoins directory",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Bima terms: collateralized USBD minting and named interface counterparty",
+          "url": "https://docs.bima.money/terms-of-use.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2024-12-12"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

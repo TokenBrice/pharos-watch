@@ -2,7 +2,7 @@
   "id": "usdnr-nerona",
   "name": "Nerona USD",
   "symbol": "USDnr",
-  "oneLiner": "USDnr is Nerona's permissioned 1:1 wrapper of M0's M token backed by short-term U.S. T-bills; T-bill yield accrues to M0 and Nerona, not USDnr holders.",
+  "oneLiner": "USDnr is Nerona's 1:1 wrapper of M0's M token backed by short-term U.S. T-bills; T-bill yield accrues to M0 and Nerona, not USDnr holders.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -15,7 +15,7 @@
     "m0"
   ],
   "collateral": "M token held by the USDnr extension, with indirect exposure to M0's short-duration U.S. Treasury collateral. The reviewed reserve composition identifies the immediate M wrapper claim; no separately measured Stability Reserve buffer is established.",
-  "pegMechanism": "Permissioned 1:1 wrapper around M0's $M token: USDnr is minted by Nerona Labs by depositing/wrapping $M (sourced from MXON, the legal Minter on the M0 network) and burned 1:1 against $M on redemption. T-bill yield earned by the underlying $M accrues to the M0 reserve and Nerona. USDnr holders receive no rebase or NAV growth. The yield-bearing variant sUSDnr (Upshift ERC-4626 vault) routes that yield to stakers. Mint/redeem is gated to permissioned, KYC-onboarded clients of Nerona's private wealth platform",
+  "pegMechanism": "Non-rebasing 1:1 M0 M-extension: USDnr is minted through the M0 SwapFacility by depositing M or an allowed asset, with the USDC deposit path open to any address (no protocol-level KYC, under an admin-set asset cap) and M-path wrap and unwrap restricted to M-swapper-role addresses, all subject to extension pause and freeze controls. Issuer documentation labels the backing wM, but the extension escrows M directly and holds no wM. Holder redemption, per issuer documentation, converts USDnr 1:1 into M0's T-bill token and sells it for USDC through the wM/USDC Uniswap V3 pool on Ethereum at the 0.01% fee tier, a secondary-market exit rather than issuer fiat redemption. Yield on the escrowed M accrues to a single issuer-configured yield recipient; USDnr holders receive no rebase or NAV growth. The yield-bearing variant sUSDnr (Upshift ERC-4626 vault on Fluent) earns curated DeFi strategy yield, exited via a 4-day standard unwind or a 1% instant fee.",
   "mechanismArchetype": "tbill",
   "llamaId": "377",
   "detailProvider": "defillama",

@@ -20,5 +20,45 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "hyperUSDCa is the ERC-4626 receipt share of Hyperithm USDC Apex on Monad, a Morpho Vault V2 holding USDC lending positions. The exact product page identifies a yield strategy, and Morpho's implementation accrues interest and realizes losses through variable assets per share. Withdrawals depend on available strategy liquidity, with separate in-kind exit routes. This is a strategy position rather than an issuer obligation to redeem for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho exact Hyperithm USDC Apex vault on Monad",
+          "url": "https://app.morpho.org/monad/vault/0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371/hyperithm-usdc-apex",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 lending and liquidity mechanisms",
+          "url": "https://docs.morpho.org/learn/concepts/vault-v2/",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 interest and loss share accounting",
+          "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22) payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "This assessment covers only the native Monad share at 0x78999cc96d2Ba0341588C60CcB0E91c6C33CF371, separately from underlying USDC and other Hyperithm vaults. Hyperithm is identified as curator, not asserted as a legal payment-stablecoin issuer. The share price can rise with interest or fall with losses. Circle's underlying USDC authorizations and reserve disclosures are not authorizations or attestations for this vault share. No securities classification, issuer approval, or enforcement finding is asserted. Disclosure flags are omitted because this review does not establish payment-stablecoin reserve, redemption, or attestation obligations.",
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

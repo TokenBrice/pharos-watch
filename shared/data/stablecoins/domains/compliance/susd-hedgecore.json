@@ -3,19 +3,43 @@
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {
-      "summary": "HedgeCore sUSD is a wallet-bound receipt for a USDC-funded Venus lending/hedging position, with transfer restrictions while locked. Protocol-controlled reward minting distributes 93% of lending yield to the position, and operator-controlled early redemption returns underlying USDC; no fixed fiat monetary-value redemption undertaking is established.",
+      "summary": "The tracked contract 0xBe1922750760C4CAE69edB6FE79a22ae9b62a23d is sUSD (SUDC), a transferable ERC-20 wrapper. The issuer's sUSD page lists this address as the sUSD token and markets it as transferable liquidity tradable against USDC at an indicative 1:1 rate on PancakeSwap, and the official contract repository implements SUDC as a tradeable wrapper minted one-way from hedge-locked hUSDC, the transfer-restricted staking position. Unwrapping is disabled with no holder redemption function, the wrapper operator can burn balances and sweep the wrapped hUSDC, and yield comes from Venus lending distributed by operator-triggered reward mints. The token is a yield wrapper with no fixed fiat monetary-value redemption undertaking, not an offered payment instrument.",
       "references": [
         {
-          "label": "HedgeCore: wallet-bound sUSD position",
-          "url": "https://docs.hedgecore.io/docs/about/what-is-hedgecore",
+          "label": "HedgeCore sUSD page: sUSD token registry and transferable-liquidity marketing",
+          "url": "https://hedgecore.io/susd",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-29"
         },
         {
-          "label": "HedgeCore protocol architecture: Venus vault and operator control",
+          "label": "HedgeCore contracts: SUDC tradeable wrapper for hedge-locked hUSDC",
+          "url": "https://raw.githubusercontent.com/hedgecore-org/hedgecore-contracts/main/contracts/SUDC.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-29"
+        },
+        {
+          "label": "HedgeCore contracts: HUSDC hedge-locked staking token 1:1 to USDC",
+          "url": "https://raw.githubusercontent.com/hedgecore-org/hedgecore-contracts/main/contracts/HUSDC.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-29"
+        },
+        {
+          "label": "HedgeCore contracts: HUSDCWrapper one-way wrap with no unwrap and operator sweeps",
+          "url": "https://raw.githubusercontent.com/hedgecore-org/hedgecore-contracts/main/contracts/HUSDCWrapper.sol",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-29"
+        },
+        {
+          "label": "HedgeCore architecture: soul-bound staking layer and operator-authorized early redemption",
           "url": "https://docs.hedgecore.io/docs/whitepaper/protocol-architecture",
           "sourceKind": "issuer-disclosure",
-          "accessedAt": "2026-10-07"
+          "accessedAt": "2026-10-29"
+        },
+        {
+          "label": "HedgeCore introduction: docs describe sUSD as soul-bound and hUSDC as tradeable",
+          "url": "https://docs.hedgecore.io/docs/about/what-is-hedgecore",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-29"
         }
       ]
     },
@@ -23,7 +47,7 @@
     "issuerPathway": "not-applicable",
     "foreignExceptionStatus": "not-applicable",
     "daspOfferSaleStatus": "not-applicable",
-    "notes": "sUSD is a non-payment protocol position, not ordinary transferable USDC and not a Circle-issued token. Yield and USDC exit depend on protocol/operator mechanics. Exact legal issuer entity and domicile were not established from the protocol disclosures, so neither is invented. No GENIUS payment-stablecoin authorization is asserted.",
+    "notes": "The tracked contract is the transferable sUSD (SUDC) wrapper minted one-way from hedge-locked hUSDC staking receipts, not the transfer-restricted staking token itself and not a Circle-issued token. Issuer materials conflict on labels: the introductory documentation describes sUSD as soul-bound and hUSDC as tradeable, while the sUSD product page and official contract repository list the tracked address as the transferable token traded against USDC on PancakeSwap. Unwrapping is disabled by design; exit relies on PancakeSwap liquidity or operator-controlled burns, and the wrapper operator can sweep the wrapped hUSDC backing. Exact legal issuer entity and domicile were not established from the protocol disclosures, so neither is invented. No GENIUS payment-stablecoin authorization is asserted.",
     "references": [
       {
         "label": "OCC Bulletin 2026-3 GENIUS proposed rule",
@@ -41,6 +65,6 @@
       }
     ],
     "reviewer": "Pharos compliance research",
-    "reviewedAt": "2026-10-07"
+    "reviewedAt": "2026-10-29"
   }
 }

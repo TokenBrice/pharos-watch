@@ -24,5 +24,68 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sUSDat represents ERC-4626 shares in Saturn's managed investment vault. Its USDat-denominated share value can rise or fall with STRCon exposure, dividends, losses and surplus distributions; deposits do not mint shares at a fixed 1:1 rate. Withdrawals depend on share valuation, user limits, fees and available liquidity before a processed USDat amount can be claimed. Saturn's documentation explicitly states that sUSDat is not a stablecoin or a promise of fixed return. This variable-value investment position does not meet the fixed-monetary-value payment-stablecoin conditions in GENIUS Act section 2(22)(A).",
+      "references": [
+        {
+          "label": "Saturn sUSDat investment-vault shares and variable value",
+          "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Saturn terms: variable sUSDat exchange rate and returns",
+          "url": "https://saturn.credit/legal/terms-conditions",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-31",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2(22): payment-stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment reviewed on 2026-10-28 applies to sUSDat vault shares, separately from the USDat payment token and Ondo STRCon notes held by the vault. The current V2 runbook identifies the native vault proxy as 0xD166337499E176bbC38a1FBd113Ab144e5bd2Df7 and describes STRCon migration, variable NAV and share-price-based withdrawal limits. Terms identify Saturn Global Capital Investments Ltd., a BVI company, as the interface and services counterparty, but do not conclusively establish it as the legal token issuer. issuerEntity and issuerDomicile are therefore omitted. The exclusion is supported by affirmative variable-value vault-share mechanics, not merely by missing issuer information or U.S. access restrictions. No GENIUS issuer authorization or pathway is asserted. No excluded-security finding is made without sUSDat-specific securities classification evidence. Underlying-token disclosures and vault NAV accounting are not attributed as payment-stablecoin reserve attestations for sUSDat.",
+    "references": [
+      {
+        "label": "Saturn sUSDat investment-vault shares and variable value",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/solution/susdat-overview.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Saturn V2 deployment: exact vault, STRCon exposure and withdrawal limits",
+        "url": "https://raw.githubusercontent.com/saturn-organization/saturn-yield-dollar/main/docs/v2-deployment-runbook.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Saturn terms: services counterparty and variable sUSDat value",
+        "url": "https://saturn.credit/legal/terms-conditions",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-31",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2(22): payment-stablecoin definition",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

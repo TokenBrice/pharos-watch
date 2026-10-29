@@ -1,5 +1,24 @@
 {
   "id": "usdm-moneta",
+  "mica": {
+    "status": "pending",
+    "tokenType": "EMT",
+    "competentAuthority": "Finanstilsynet",
+    "references": [
+      {
+        "label": "NBX-issued EEA USDM only: H1 2026 report records filing and registration still in process, page 4",
+        "url": "https://cdn.prod.website-files.com/6152e479f73e5bb094d54490/6aad4bfd1fac600edb0d52a3_NBX%20H1Report%202026.pdf"
+      },
+      {
+        "label": "NBX USDM September 24, 2026 white paper: notification history, EEA-only issuer scope and Cardano asset identity",
+        "url": "https://cdn.prod.website-files.com/6152dfaed2ce58d94ef37b88/6ab4e90ceb46558d48fc093a_USDM%20White%20Paper%20-%20Modified%20version%202026-09-24.pdf"
+      },
+      {
+        "label": "Finanstilsynet NBX register: institutional EMI and CASP licences, not completed USDM registration",
+        "url": "https://www.finanstilsynet.no/en/finanstilsynets-registry/details/?id=201280"
+      }
+    ]
+  },
   "genius": {
     "applicability": "apparent-payment-stablecoin",
     "authorizationStatus": "issuer-announced-intent",

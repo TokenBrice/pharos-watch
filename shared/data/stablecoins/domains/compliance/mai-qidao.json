@@ -1,0 +1,172 @@
+{
+  "id": "mai-qidao",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "QiDao documents MAI as a USD targeted transferable stablecoin minted through overcollateralized debt positions and also mintable and redeemable against approved stablecoins through a pooled peg stability module with a three day withdrawal queue and a redemption fee. The protocol is community governed by Qi holders and no reviewed disclosure identifies a legal issuer obligated to convert, redeem or repurchase MAI for a fixed amount of national currency or deposit monetary value as sections 2(17) and 2(22) of the GENIUS Act require, while redemption into other stablecoins is redemption into digital assets rather than monetary value. General dollar stablecoin use with an unresolved issuer obligation makes applicability unclear rather than categorically excluded.",
+      "references": [
+        {
+          "label": "QiDao general introduction",
+          "url": "https://docs.mai.finance/docs",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "QiDao stablecoin economics",
+          "url": "https://docs.mai.finance/docs/stablecoin-economics",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "QiDao peg stability module",
+          "url": "https://docs.mai.finance/docs/peg-stability-module",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act definitions, sections 2(17) and 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "no-public-action-found",
+    "daspOfferSaleStatus": "not-yet-restricted",
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-28. Official docs describe community governance by Qi holders, non-custodial vaults and DAO set loan fees; as in the corpus crvUSD and GHO assessments, DAO control is not treated as Liquity style immutability, and no issuerEntity is invented from protocol branding. The general introduction says MAI can only be minted through overcollateralized debt positions while the peg stability module page documents pooled 1:1 stablecoin minting and redemption, so both published mechanisms inform the classification and no CDP only exclusion is asserted. No exact token public GENIUS approval, application, state qualification, foreign registration or enforcement action was found in the checked sources, and GENIUS remains pre-effective in the reviewed primary sources.",
+    "references": [
+      {
+        "label": "QiDao general introduction",
+        "url": "https://docs.mai.finance/docs",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "QiDao stablecoin economics",
+        "url": "https://docs.mai.finance/docs/stablecoin-economics",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "QiDao peg stability module",
+        "url": "https://docs.mai.finance/docs/peg-stability-module",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "QiDao security documentation",
+        "url": "https://docs.mai.finance/docs/risks/security",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "QiDao website",
+        "url": "https://www.mai.finance/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act definitions, sections 2(17) and 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC digital asset licensing applications index",
+        "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register document search for QiDao",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=QiDao&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Register document search for Mai Finance",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mai%20Finance%22&per_page=20",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve Board 2026 press release index",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "FDIC press releases",
+        "url": "https://www.fdic.gov/news/press-releases",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS virtual currency business licensing, regulated entities and greenlist",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "state-regulator",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "OCC pending digital asset licensing application table",
+        "Federal Register full text search for QiDao and for Mai Finance",
+        "Federal Reserve Board 2026 press release index",
+        "FDIC press release listing",
+        "NYDFS virtual currency regulated entity and greenlisted coin tables",
+        "QiDao documentation and website"
+      ],
+      "summary": "On 2026-10-28 the OCC digital asset licensing table listed unrelated bank and trust applicants, Federal Register searches for QiDao and for Mai Finance returned zero documents, and the Federal Reserve 2026 press index, the FDIC press listing and the NYDFS regulated entity and greenlist tables contained no MAI, QiDao or Mai Finance entry. No public qualifying GENIUS approval, application, state qualification or registered foreign exception naming this token or its issuer was found. The exact legal issuer is unresolved, so this is a bounded public evidence finding, not proof that no unpublished filing exists.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC digital asset licensing applications index",
+          "url": "https://www.occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register document search for QiDao",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=QiDao&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register document search for Mai Finance",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mai%20Finance%22&per_page=20",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve Board 2026 press release index",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC press releases",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS virtual currency business licensing, regulated entities and greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

@@ -20,5 +20,53 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "steakcUSDC is the Morpho Vault V2 share at ethereum:0xbeef00a59b577423653a1526c7009bde103f542b. Morpho identifies the product as a USDC lending vault curated by Steakhouse Financial. Its ERC-4626 documentation describes shares representing a proportional vault position and increasing assets per share as yield accrues. Zama separately identifies the public ERC-4626 share and its confidential wrapper. The reviewed rights are variable USDC share redemption, not an issuer obligation to redeem each share for a fixed amount of monetary value under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho exact Steakhouse Confidential Prime USDC vault",
+          "url": "https://app.morpho.org/ethereum/vault/0xbEEF00A59B577423653A1526c7009bdE103F542B/steakhouse-confidential-prime-usdc",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Morpho Vault V2 proportional shares and asset conversion",
+          "url": "https://docs.morpho.org/developers/earn/concepts/vault-mechanics.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Zama public vault and confidential wrapper addresses",
+          "url": "https://docs.zama.org/protocol/confidential-vault/reference/addresses.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Steakhouse DeFi vault governing terms",
+          "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Reviewed separately from underlying USDC and Zama cShare 0x66bf74e96900d1a19c7070d939d124f2f565c458. Current Steakhouse terms identify Carniceria Tropical SA, incorporated in Panama and wholly owned by Steakhouse Financial Ltd, as the service operator and vault curator. The terms disclaim being a party to protocol transactions and disclaim an obligation to deliver cryptoassets. They do not establish a separate legal payment-stablecoin issuer or fixed monetary redemption obligor for this public share, so issuerEntity is omitted. Underlying USDC authorizations and reserve reports are not attributed to the vault share. No securities-law classification or general exemption for vault-related services is asserted.",
+    "references": [
+      {
+        "label": "GENIUS Act Public Law 119-27 section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/pdf/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

@@ -12,5 +12,144 @@
         "url": "https://www.esma.europa.eu/publications-data/questions-answers/2552"
       }
     ]
+  },
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "HCHF is a transferable Swiss-franc-targeted stablecoin minted by users against HBAR in collateralized debt positions. Holders redeem for franc-valued HBAR less fees, while Swisscoast AG disclaims protocol operation, control and any holder claim against a person or entity. Stablecoin transferability and the absence of an identified issuer obligation to redeem for national currency or bank deposits leave payment-stablecoin applicability ambiguous.",
+      "references": [
+        {
+          "label": "HLiquity repository: HCHF borrowing, collateral redemption and developer disclaimer",
+          "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "HLiquity: HCHF redemption for HBAR collateral",
+          "url": "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "HLiquity: HCHF token 0.0.6070123",
+          "url": "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2: payment stablecoin and monetary value definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "notes": "Swisscoast AG is identified as the software developer, not recorded as HCHF issuerEntity. Its official site says the protocol operates independently after deployment, and the repository expressly disclaims a holder claim against any person or entity. HCHF collateral redemption is an on-chain HBAR exchange, not a Swiss-franc payment undertaking. This follows the Liquity V1 family precedent of documented ambiguous applicability rather than treating every CDP token as categorically excluded. The negative authorization finding is limited to the public sources checked; general bank-charter and virtual-currency directories are not GENIUS approvals. No issuer domicile, enforcement finding, DASP restriction finding or reserve-attestation claim is inferred.",
+    "references": [
+      {
+        "label": "HLiquity repository: HCHF borrowing, collateral redemption and developer disclaimer",
+        "url": "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "HLiquity: HCHF redemption for HBAR collateral",
+        "url": "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "HLiquity: HCHF token 0.0.6070123",
+        "url": "https://docs.hliquity.org/fundamentals/token-ids-pools-contracts.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Swisscoast: developer role and independent post-launch protocol",
+        "url": "https://www.swisscoast.ch/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2: payment stablecoin and monetary value definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "OCC: digital asset licensing applications directory",
+        "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+        "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+        "https://www.fdic.gov/news/press-releases",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22HLiquity%22",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Swisscoast%22",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22HCHF%22",
+        "https://raw.githubusercontent.com/SwisscoastAG/HLiquity/main/README.md",
+        "https://docs.hliquity.org/deep-dive/redemptions-and-hchf-price-stability.md",
+        "https://www.swisscoast.ch/"
+      ],
+      "summary": "On 2026-10-28, exact HLiquity, Swisscoast and HCHF searches in the Federal Register API each returned zero documents. The OCC pending digital-asset licensing table, Federal Reserve 2026 release listing, FDIC recent release listing and NYDFS regulated-entity and Greenlist tables did not identify a token-specific GENIUS approval, state qualification, official application or foreign registration for HCHF. Opened developer and protocol disclosures identified no GENIUS issuance plan. These are bounded public checks, not proof that no unpublished filing exists or that the named developer is a legal issuer.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC: digital asset licensing applications directory",
+          "url": "https://occ.gov/topics/charters-and-licensing/digital-assets-licensing-applications/index-digital-assets-licensing-applications.html",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve: 2026 press-release listing",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/2026-press.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "FDIC: recent press-release listing",
+          "url": "https://www.fdic.gov/news/press-releases",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS: virtual currency regulated entities and Greenlist",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "state-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register API: exact HLiquity search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22HLiquity%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register API: exact Swisscoast search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Swisscoast%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Register API: exact HCHF search",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22HCHF%22",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

@@ -1,5 +1,35 @@
 {
   "id": "paxg-paxos",
+  "mica": {
+    "status": "non-compliant",
+    "tokenType": "ART",
+    "references": [
+      {
+        "label": "Coinbase EEA MiCA restrictions expressly naming PAXG",
+        "url": "https://help.coinbase.com/en/coinbase/other-topics/other/mica-restricted-stablecoins"
+      },
+      {
+        "label": "Bit2Me MiCA purchase and service restrictions naming PAXG",
+        "url": "https://blog.bit2me.com/es/actualizacion-sobre-stablecoins-y-mica/"
+      },
+      {
+        "label": "Paxos PAX Gold terms: exact issuer and one-ounce allocated-gold claim",
+        "url": "https://www.paxos.com/terms-and-conditions/pax-gold-terms-conditions"
+      },
+      {
+        "label": "ESMA MiCA Article 3: ART and EMT definitions",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
+      },
+      {
+        "label": "ESMA authorized ART issuer register reviewed 28 October 2026",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/ARTZZ.csv"
+      },
+      {
+        "label": "ESMA EMT register: distinct Paxos Issuance Europe Oy entries",
+        "url": "https://www.esma.europa.eu/sites/default/files/2024-12/EMTWP.csv"
+      }
+    ]
+  },
   "genius": {
     "applicability": "non-payment-token",
     "applicabilityBasis": {

@@ -1,0 +1,213 @@
+{
+  "id": "xofm-mento",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "XOFm targets the West African CFA franc and is marketed for regional trade and FX activity. MGP-18 identifies its legacy reserve-backed USDm/XOFm Broker pool and describes exits into USDm, a digital asset, rather than an issuer payment of national currency or a bank deposit. The reviewed materials do not establish a person obligated to redeem holders for a fixed amount of monetary value under GENIUS section 2(22). Payment-related use and the documented USDm exit therefore leave scope genuinely ambiguous rather than establish either a conclusive exclusion or an apparent qualifying payment stablecoin.",
+      "references": [
+        {
+          "label": "GENIUS Act section 2 definitions",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        },
+        {
+          "label": "Mento proposal identifying legacy FX pools and USDm exits",
+          "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-08-17"
+        },
+        {
+          "label": "Mento published per-token reserve and CDP backing configuration",
+          "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Celo proxy-vote proposal describing Mento issuance ownership and upgrade rights",
+          "url": "https://raw.githubusercontent.com/celo-org/governance/main/CGPs/cgp-0253.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-08-24"
+        },
+        {
+          "label": "Mento public XOFm currency and use-case description",
+          "url": "https://www.mento.org/stablecoins",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Mento deployed StableToken addresses matching the tracked Celo contracts",
+          "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "no-public-authorization-found",
+    "issuerPathway": "unknown",
+    "issuerEntity": "Mento Protocol",
+    "foreignExceptionStatus": "unknown",
+    "enforcementStatus": "unknown",
+    "daspOfferSaleStatus": "unknown",
+    "reserveDisclosurePresent": true,
+    "reserveDisclosureUrl": "https://reserve.mento.org/",
+    "redemptionPolicyPresent": false,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-28. Mento Protocol is a protocol-family descriptor, not an identified legal issuer or a statutory redemption obligor. Mento Labs GmbH is described as a technical and operations provider; foundation stewardship and governance roles do not establish that any particular entity owes XOFm holders a fixed-fiat payment. MGP-18 and the explicit token configuration support legacy shared-reserve backing for XOFm; the general V3 CDP description must not be substituted for its exact pool. Public protocol exits into USDm are documented. redemptionPolicyPresent is false for an identified issuer's fixed-fiat redemption policy, not a claim that protocol exit documentation is absent. The reserve dashboard is self-published disclosure, not evidence of GENIUS-compliant collateral or independent assurance. No independent monthly attestation series was located in the reviewed materials. No qualifying public authorization, filed application, registered foreign exception or token-specific announced GENIUS route was located in the bounded source review. Legal issuer, domicile, foreign pathway, enforcement and DASP posture remain unresolved. MGP-19 and CGP-253 are proposals and are not treated as evidence of completed control transfers. High confidence attaches to the documented scope ambiguity and dated negative search, not a legal conclusion that GENIUS applies or does not apply. The official deployment table identifies the tracked Celo contract 0x73f93dcc49cb8a239e2032663e9475dd5ef29a08 as the corresponding StableToken. This confirms token identity, not a legal issuer or redemption obligation.",
+    "references": [
+      {
+        "label": "GENIUS Act section 2 definitions",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      },
+      {
+        "label": "Mento proposal identifying legacy FX pools and USDm exits",
+        "url": "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-08-17"
+      },
+      {
+        "label": "Mento published per-token reserve and CDP backing configuration",
+        "url": "https://raw.githubusercontent.com/mento-protocol/mento-analytics-api/53bfb26749fd99fc3bbd3c251064b5eaaa77717d/src/api/v2/config/stablecoin-backing.config.ts",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Mento proposal describing issuance governance and operating roles",
+        "url": "https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-08-21"
+      },
+      {
+        "label": "Celo proxy-vote proposal describing Mento issuance ownership and upgrade rights",
+        "url": "https://raw.githubusercontent.com/celo-org/governance/main/CGPs/cgp-0253.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-08-24"
+      },
+      {
+        "label": "Mento public reserve and supply dashboard",
+        "url": "https://reserve.mento.org/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC GENIUS issuer application page checked for Mento",
+        "url": "https://occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "OCC final implementing rule checked for Mento references",
+        "url": "https://www.govinfo.gov/content/pkg/FR-2026-10-23/html/2026-21706.htm",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-10-23"
+      },
+      {
+        "label": "Federal Register search for Mento stablecoin",
+        "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%22%20stablecoin&per_page=20&order=relevance&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=abstract&fields%5B%5D=html_url",
+        "sourceKind": "federal-register",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "NYDFS regulated entities and greenlisted stablecoins",
+        "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+        "sourceKind": "regulator-directory",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Federal Reserve issuer and application announcement checked for Mento",
+        "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-09-24"
+      },
+      {
+        "label": "FDIC stablecoin announcement checked for Mento",
+        "url": "https://www.fdic.gov/news/press-releases/2026/fdic-board-approves-proposal-address-bank-secrecy-act-and-sanctions",
+        "sourceKind": "federal-regulator",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2026-05-22"
+      },
+      {
+        "label": "Mento public XOFm currency and use-case description",
+        "url": "https://www.mento.org/stablecoins",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Mento deployed StableToken addresses matching the tracked Celo contracts",
+        "url": "https://docs.mento.org/mento-v3/build/deployments/addresses.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "negativeEvidenceReview": {
+      "sourcesChecked": [
+        "https://occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html: Checked for token-specific permitted-issuer approvals, pending applications or foreign registrations naming Mento, GHSm, AUDm or XOFm.",
+        "https://www.govinfo.gov/content/pkg/FR-2026-10-23/html/2026-21706.htm: Fetched final-rule text and searched for Mento; no match.",
+        "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%22%20stablecoin&per_page=20&order=relevance&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=abstract&fields%5B%5D=html_url: API query for quoted Mento plus stablecoin returned count zero.",
+        "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses: Checked listed regulated entities and greenlisted stablecoins; no Mento or assigned-token entry.",
+        "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm: Checked public issuer/application announcement for Mento or assigned-token action.",
+        "https://www.fdic.gov/news/press-releases/2026/fdic-board-approves-proposal-address-bank-secrecy-act-and-sanctions: Checked public stablecoin proposal announcement for Mento or assigned-token action.",
+        "https://www.mento.org/stablecoins: Checked token marketing for a GENIUS-specific authorization or intended issuer route.",
+        "https://forum.mento.org/t/mgp-18-mento-v2-deprecation/137; https://forum.mento.org/t/mgp-19-bringing-stable-asset-issuance-home-to-celo-governance/139; https://raw.githubusercontent.com/celo-org/governance/main/CGPs/cgp-0253.md: Checked protocol issuance, governance and operating roles; no GENIUS-specific route established.",
+        "2026-10-28 web search: Mento (GENIUS OR GHSm OR AUDm OR XOFm OR stablecoin) (site:occ.gov OR site:federalreserve.gov OR site:fdic.gov OR site:dfs.ny.gov). No relevant Mento-specific record was returned; this is a bounded indexed-source search."
+      ],
+      "summary": "As of 2026-10-28, the sources checked did not identify XOFm or an established legal issuer of XOFm as a GENIUS permitted issuer, state-qualified issuer, public pending applicant or registered foreign issuer. No token-specific issuer-announced GENIUS route was located. This is a bounded public-source finding; the legal issuer remains unresolved and confidential filings, unindexed notices and all other state registers were not exhaustively reviewed.",
+      "reviewer": "Pharos compliance research",
+      "reviewedAt": "2026-10-28",
+      "references": [
+        {
+          "label": "OCC GENIUS issuer application page checked for Mento",
+          "url": "https://occ.gov/topics/charters-and-licensing/genius-act/index-genius-act.html",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "OCC final implementing rule checked for Mento references",
+          "url": "https://www.govinfo.gov/content/pkg/FR-2026-10-23/html/2026-21706.htm",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-10-23"
+        },
+        {
+          "label": "Federal Register search for Mento stablecoin",
+          "url": "https://www.federalregister.gov/api/v1/documents.json?conditions%5Bterm%5D=%22Mento%22%20stablecoin&per_page=20&order=relevance&fields%5B%5D=title&fields%5B%5D=document_number&fields%5B%5D=publication_date&fields%5B%5D=abstract&fields%5B%5D=html_url",
+          "sourceKind": "federal-register",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "NYDFS regulated entities and greenlisted stablecoins",
+          "url": "https://www.dfs.ny.gov/apps_and_licensing/virtual_currency_businesses",
+          "sourceKind": "regulator-directory",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Federal Reserve issuer and application announcement checked for Mento",
+          "url": "https://www.federalreserve.gov/newsevents/pressreleases/bcreg20260924a.htm",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-09-24"
+        },
+        {
+          "label": "FDIC stablecoin announcement checked for Mento",
+          "url": "https://www.fdic.gov/news/press-releases/2026/fdic-board-approves-proposal-address-bank-secrecy-act-and-sanctions",
+          "sourceKind": "federal-regulator",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2026-05-22"
+        }
+      ]
+    },
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}

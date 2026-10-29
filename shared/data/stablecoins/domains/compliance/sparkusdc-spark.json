@@ -16,5 +16,72 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "sparkUSDC is the Base ERC-4626 MetaMorpho V1.1 lending-vault share at 0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a. Morpho identifies SparkDAO as curator and USDC as the vault asset. The deployed source converts shares to USDC using accrued totalAssets and totalSupply, with withdrawals limited by market liquidity. These materials document a yield-accruing lending position rather than a payment or settlement instrument with a fixed monetary-value issuer redemption obligation under GENIUS Act section 2(22).",
+      "references": [
+        {
+          "label": "Morpho: exact Spark USDC Vault product and curator",
+          "url": "https://app.morpho.org/base/vault/0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A/spark-usdc-vault",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Blockscout: verified Spark USDC Vault MetaMorpho V1.1 source",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "accessedAt": "2026-10-28",
+          "sourceDate": "2025-07-18"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "Assessment as of 2026-10-28 concerns the vault share separately from underlying USDC and from Spark Savings shares. Lending interest and fees affect the USDC amount redeemable per share. MetaMorpho V1.1 lostAssets accounting can preserve the reported share price after market bad debt while leaving the last withdrawing holders exposed to a shortfall. Available Morpho liquidity constrains withdrawals. Morpho identifies SparkDAO as curator; Spark describes the Spark Liquidity Layer as a governance-controlled allocator supporting Spark-curated Morpho vaults. The reviewed materials identify protocol roles but do not identify a separate legal entity promising fixed monetary-value redemption of this share. issuerEntity and issuerDomicile are therefore omitted. This is not a claim that no legal person is involved in the protocol. Underlying USDC authorizations and reserve attestations do not transfer to the vault share. No GENIUS authorization or issuer pathway is asserted.",
+    "references": [
+      {
+        "label": "Morpho: exact Spark USDC Vault product and curator",
+        "url": "https://app.morpho.org/base/vault/0x7BfA7C4f149E7415b73bdeDfe609237e29CBF34A/spark-usdc-vault",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Blockscout: verified Spark USDC Vault MetaMorpho V1.1 source",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Morpho: Vault V1.1 bad debt and last-withdrawer exposure",
+        "url": "https://docs.morpho.org/curate/tutorials-v1/bad-debt/",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Spark documentation: Spark Liquidity Layer",
+        "url": "https://docs.spark.finance/products/spark-liquidity-layer",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act payment stablecoin definition, section 2(22)",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "accessedAt": "2026-10-28",
+        "sourceDate": "2025-07-18"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

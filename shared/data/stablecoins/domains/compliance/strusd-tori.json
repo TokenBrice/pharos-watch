@@ -16,5 +16,64 @@
         "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-3-definitions"
       }
     ]
+  },
+  "genius": {
+    "applicability": "non-payment-token",
+    "applicabilityBasis": {
+      "summary": "strUSD is a reward-accruing ERC-4626 vault receipt for staked trUSD: the trUSD-per-share exchange rate rises as protocol strategy rewards accrue, unstaking returns trUSD rather than currency after a 7-day cooldown, and the trUSD Terms disclaim any guaranteed reward while stating that acquisition of strUSD is not offered to persons in the European Union, the European Economic Area, or the United States. This row records Pharos' editorial non-payment-token assessment of that savings-receipt structure, not a token-specific regulatory determination under GENIUS section 2(22).",
+      "references": [
+        {
+          "label": "Tori strUSD product documentation: ERC-4626 vault share, exchange-rate rewards, 7-day cooldown",
+          "url": "https://docs.tori.finance/products/strusd.md",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Tori trUSD Terms and Conditions Section 3: strUSD staking, discretionary rewards, EU/EEA/US acquisition exclusion",
+          "url": "https://docs.tori.finance/legal/trusd-terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-08-08",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act: Public Law 119-27",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "not-applicable",
+    "issuerPathway": "not-applicable",
+    "issuerEntity": "Tori Foundation",
+    "issuerDomicile": "Cayman Islands",
+    "foreignExceptionStatus": "not-applicable",
+    "daspOfferSaleStatus": "not-applicable",
+    "notes": "strUSD is minted by the ERC-4626 staking vault; the trUSD Terms state that the staking contract, including management and transfer of trUSD rewards, is maintained by Tori Foundation and its designated affiliates, so issuerEntity records that foundation while underlying trUSD is issued by Tori (BVI) Limited. Rewards are discretionary and the exchange rate is computed by the vault contract as totalAssets over totalShares; unstaking returns trUSD after a 7-day cooldown rather than currency. Acquisition of strUSD is expressly not offered in the EU, EEA, or U.S., so the token is not offered as a U.S. payment instrument. Exclusion statuses pair with not-applicable authorization per docs/genius-tracker.md, following the susde-ethena staked-receipt row.",
+    "references": [
+      {
+        "label": "Tori strUSD product documentation: ERC-4626 vault share, exchange-rate rewards, 7-day cooldown",
+        "url": "https://docs.tori.finance/products/strusd.md",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Tori trUSD Terms and Conditions Section 3: strUSD staking, discretionary rewards, EU/EEA/US acquisition exclusion",
+        "url": "https://docs.tori.finance/legal/trusd-terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-08-08",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act: Public Law 119-27",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
   }
 }

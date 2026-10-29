@@ -1,5 +1,22 @@
 {
   "id": "ylds-figure",
+  "mica": {
+    "status": "out-of-scope",
+    "references": [
+      {
+        "label": "Figure Certificate Company prospectus dated April 24, 2026, with August 6, 2026 supplement: transferable interest-bearing debt securities",
+        "url": "https://cdn.figure.com/docs/markets/fcc-prospectus.pdf"
+      },
+      {
+        "label": "YLDS issuer disclosure: registered fixed-income debt security issued by Figure Certificate Company",
+        "url": "https://www.ylds.com/"
+      },
+      {
+        "label": "MiCA Article 2(4)(a): financial-instrument exclusion",
+        "url": "https://www.esma.europa.eu/publications-and-data/interactive-single-rulebook/mica/article-2-scope"
+      }
+    ]
+  },
   "genius": {
     "applicability": "excluded-security",
     "applicabilityBasis": {

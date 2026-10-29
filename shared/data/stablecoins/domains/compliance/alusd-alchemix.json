@@ -1,0 +1,84 @@
+{
+  "id": "alusd-alchemix",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "alUSD is a dollar-targeted synthetic debt token minted against MYT collateral. Alchemix describes alAssets as borrowing units and fixed-term redemption instruments, while also permitting their use for purchases and working capital. Transmuter redemption delivers an equivalent value of MYT from borrower collateral, normally unwrapped to USDC, with pro-rata reductions for bad debt and possible liquidity-dependent delays. The interface terms disclaim Alchemix acting as transaction counterparty. GENIUS section 2(22) requires both payment or settlement design and an issuer obligation to redeem for fixed monetary value, excluding a digital asset denominated in monetary value from that obligation. The disclosed payment uses, synthetic debt structure, and digital-asset settlement leave payment-stablecoin applicability genuinely ambiguous; they do not establish a categorical non-payment-token exclusion.",
+      "references": [
+        {
+          "label": "Alchemix alAssets: synthetic debt, redemption, and external uses",
+          "url": "https://docs.alchemix.fi/user/concepts/alAssets",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Alchemix self-repaying loan mechanics and purchase uses",
+          "url": "https://docs.alchemix.fi/user/concepts/self-repaying-loans",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Alchemix Transmuter: MYT settlement and bad-debt adjustments",
+          "url": "https://docs.alchemix.fi/user/concepts/transmuter",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "Alchemix interface terms and protocol counterparties",
+          "url": "https://app.alchemix.fi/terms",
+          "sourceKind": "issuer-disclosure",
+          "sourceDate": "2026-09-14",
+          "accessedAt": "2026-10-28"
+        },
+        {
+          "label": "GENIUS Act section 2: monetary value and payment stablecoin definitions",
+          "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-28"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "foreignExceptionStatus": "unknown",
+    "redemptionPolicyPresent": true,
+    "notes": "Reviewed 2026-10-28. This assessment concerns alUSD, separately from MYT vault shares, ALCX, underlying USDC, and the Base alUSDb market. alUSD itself is not an appreciating vault share. The current terms identify Alchemix as an unincorporated DAO with contributors and disclose administrative, governance, and upgrade controls. The Swiss Alchemix Association is described as a software licensor and beneficiary of disclaimers that does not operate or control the interface or protocol; it is not recorded as issuerEntity. No token-specific legal issuer or national-currency redemption obligation is established by the reviewed sources. The applicability ambiguity is documented by the combination of purchase-use language and synthetic debt settlement. This conservative classification is consistent with the existing LUSD corpus row rather than extending the exclusion used for variable-value savings shares. Authorization status and issuer pathway remain unknown because this review did not establish token-specific regulatory public posture. No approval, application, negative authorization finding, foreign registration, or enforcement conclusion is asserted. Published Transmuter mechanics support redemptionPolicyPresent; reserve-disclosure and monthly-attestation flags are omitted.",
+    "references": [
+      {
+        "label": "Alchemix alAssets: synthetic debt, redemption, and external uses",
+        "url": "https://docs.alchemix.fi/user/concepts/alAssets",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Alchemix self-repaying loan mechanics and purchase uses",
+        "url": "https://docs.alchemix.fi/user/concepts/self-repaying-loans",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Alchemix Transmuter: MYT settlement and bad-debt adjustments",
+        "url": "https://docs.alchemix.fi/user/concepts/transmuter",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "Alchemix interface terms and protocol counterparties",
+        "url": "https://app.alchemix.fi/terms",
+        "sourceKind": "issuer-disclosure",
+        "sourceDate": "2026-09-14",
+        "accessedAt": "2026-10-28"
+      },
+      {
+        "label": "GENIUS Act section 2: monetary value and payment stablecoin definitions",
+        "url": "https://www.congress.gov/119/plaws/publ27/PLAW-119publ27.pdf",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-28"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-28"
+  }
+}
