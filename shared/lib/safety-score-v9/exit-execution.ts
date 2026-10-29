@@ -59,6 +59,18 @@ export type ExitExecutionAdmission =
   | { state: "observed" | "adverse"; point: ExitExecutionRequestPoint; certificate: ExitExecutionCertificate }
   | { state: "unavailable"; responsibility: "method-unsupported" | "producer-failed" | "issuer-undisclosed"; reason: string };
 
+/**
+ * The exact request is sized in raw input units; a clamped or otherwise bounded
+ * simulation measures fewer of them. That is a lower-bound receipt of the exact
+ * request, not a different request: only `exact-complete` claims it served every
+ * requested unit, so only `exact-complete` must match the expected units exactly.
+ */
+function admitsRequestedInputUnits(point: ExitExecutionRequestPoint, inputReference: ExitExecutionCertificate["inputReference"]): boolean {
+  const requested = BigInt(point.requestedRawInput);
+  const expected = requestedExitRawInput(point.requestedNotionalUsd, inputReference.unitValueUsd, inputReference.decimals);
+  return point.certification === "exact-complete" ? requested === expected : requested > 0n && requested <= expected;
+}
+
 export function admitExitExecutionCertificate(args: {
   certificate: unknown;
   envelope: V9ValidatedPolicyEnvelope;
@@ -90,7 +102,7 @@ export function admitExitExecutionCertificate(args: {
   }
   if (certificate.inputReference.assetKey !== args.assetId ||
       certificate.inputReference.deployment !== certificate.identity.deployment ||
-      BigInt(point.requestedRawInput) !== requestedExitRawInput(point.requestedNotionalUsd, certificate.inputReference.unitValueUsd, certificate.inputReference.decimals)) {
+      !admitsRequestedInputUnits(point, certificate.inputReference)) {
     return unavailable("execution-input-units-mismatch");
   }
   if (point.executableUsd > 0) {
