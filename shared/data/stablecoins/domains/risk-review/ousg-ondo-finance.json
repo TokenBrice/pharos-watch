@@ -7,7 +7,7 @@
     "summary": "The issuer prices OUSG itself: fund NAV is computed from the underlying holdings and the OUSG Price Oracle is updated on-chain at a manual end-of-day cadence, with the issuer's published OndoOracle address described as the unified interface for token price data required by Ondo contracts. Primary mint and redemption convert stablecoin at that NAV with no independent market feed and no borrower liquidation branch.",
     "reviewedAt": "2026-10-29",
     "reviewer": "SprintRS052 research sprint 2026-10-29 (RS-052)",
-    "confidence": "verified",
+    "confidence": "probable",
     "sources": [
       {
         "label": "Ondo OUSG overview: NAV update at each Business Day close and on-chain OUSG Price Oracle update; instant mint/redeem divided by NAV; retrieved 2026-10-29",
