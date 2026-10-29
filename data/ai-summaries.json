@@ -1552,17 +1552,17 @@
   },
   "usn-noon": {
     "title": "Noon's Private-Credit Dollar",
-    "text": "Noon's USN is a dollar token issued over an institutional credit book. Accountable's September 22, 2026 reserve snapshot puts 62% in Fasanara's FTAC private-credit fund, 13.4% in Hyperliquid HYPE funding-rate arbitrage and 9.9% in tokenized Treasury bills through Dinari's permissioned USD+, with the rest in stablecoins, JAAA CLOs and lending markets. Yield accrues to sUSN; base USN is the settlement token. Fasanara both deploys and custodies the majority position, no trust or special-purpose vehicle is named behind the reserve, and the undeployed stablecoin bucket did not reconcile with Noon's two published collateral wallets. Those gaps make backing the weakest pillar on the {{grade}} card. Minting and {{term:redemption}}redemption{{/term}} are issuer-processed for KYC-verified users. The liquidity page advertises same-day redemption up to 20% of TVL, but the terms set a five-business-day period, allow discretionary delays and gates, and make a submitted claim unsecured debt of the issuer. Noon's documentation says its private-credit positions typically take more than three months to unwind, and that unpublished agreements with unnamed counterparties let it exit within five days. A five-day promise over mostly three-month credit therefore rests on agreements holders cannot read.",
-    "updatedAt": "2026-10-19",
+    "text": "Noon's USN is a dollar token issued over an institutional credit book. Accountable's October 27, 2026 snapshot puts 64.4% in Fasanara's FTAC private-credit fund, 22.8% in Hyperliquid HYPE funding-rate arbitrage and 0.01% in tokenized Treasury bills through Dinari's permissioned USD+, with the rest in JAAA CLOs, undeployed stablecoins and Morpho and Euler lending. Yield accrues to sUSN; base USN is the settlement token. Fasanara both deploys and custodies the majority position, no trust or special-purpose vehicle is named behind the reserve, and the undeployed bucket is still larger than the USDC and USDT in Noon's two published collateral wallets. That credit book caps the {{grade}} card. Minting and {{term:redemption}}redemption{{/term}} are issuer-processed for KYC-verified users. The liquidity page advertises same-day redemption up to 20% of TVL, but the terms set a five-business-day period, allow discretionary delays and gates, and make a submitted claim unsecured debt of the issuer. Noon's documentation says its private-credit positions typically take more than three months to unwind, and that unpublished agreements with unnamed counterparties let it exit within five days. A five-day promise over mostly three-month credit therefore rests on agreements holders cannot read.",
+    "updatedAt": "2026-10-29",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "model": "deepseek-flash",
+    "factsAsOf": "2026-10-29",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-10-29"
       }
     ]
   },
@@ -4818,17 +4818,17 @@
   },
   "susn-noon": {
     "title": "Yield Receipt, Seven-Day Exit",
-    "text": "sUSN is the staked form of Noon USN: deposits mint appreciating shares, and Pharos's pinned reads show the vault holding its backing entirely as idle USN. Exits run a holder-initiated request and claim rail with no operator step. A withdrawal locks USN in a non-upgradeable WithdrawalHandler, and claimWithdrawal pays once the handler's seven-day period has passed. That period is enforced on-chain but admin-owned: changes pass a 48-hour timelock, yet the value has no bounds and a change applies retroactively to requests already waiting. Wrapper upgrades now carry the same 48-hour notice, after an expiry-free upgrade scheduled in June 2026 left the vault logic replaceable without warning for four months until its cancellation on October 12. The 3-of-6 Noon Safe that owns the vault can still pause new unstake requests, replace the withdrawal handler or grant itself blacklist powers instantly. Nearly a fifth of supply sits on Base, where the deployment's own Safe holds an active blacklist role. Those instant admin powers make control the weakest of the three pillars on the {{grade}} report card. Backing inherits the parent's private-credit-led mix, so the exit queue and Noon's credit book set the constraint together.",
-    "updatedAt": "2026-10-19",
+    "text": "sUSN is the staked form of Noon USN: deposits mint appreciating shares, and Pharos's pinned reads show the vault holding its backing entirely as idle USN. Exits run a holder-initiated request and claim rail with no operator step. A withdrawal locks USN in a non-upgradeable WithdrawalHandler, and claimWithdrawal pays once the handler's seven-day period has passed. That period is enforced on-chain but admin-owned: changes pass a 48-hour timelock, yet the value has no bounds and a change applies retroactively to requests already waiting. Wrapper upgrades now carry the same 48-hour notice, after an expiry-free upgrade scheduled in June 2026 left the vault logic replaceable without warning for four months until its cancellation on October 12. The 3-of-5 Noon Safe that owns the vault can still pause new unstake requests, replace the withdrawal handler or grant itself blacklist powers instantly. Nearly a fifth of supply sits on Base, where the deployment's own Safe holds an active blacklist role. Those instant admin powers make control the weakest of the three pillars on the {{grade}} report card. Backing inherits the parent's private-credit-led mix, so the exit queue and Noon's credit book set the constraint together.",
+    "updatedAt": "2026-10-29",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-19",
+    "model": "deepseek-flash",
+    "factsAsOf": "2026-10-29",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-19"
+        "factsAsOf": "2026-10-29"
       }
     ]
   },

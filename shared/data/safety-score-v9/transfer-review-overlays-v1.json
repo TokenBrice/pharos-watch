@@ -1564,7 +1564,7 @@
           "contractOrTokenId": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 26036288 on 2026-09-22, Noon's official registry address 0xda67b4284609d2d48e5d10cfac411572727dc1ed remained the canonical USN ERC-1967 proxy, resolving to verified USNUpgradeableHyperlane implementation 0x961e78b26f6984a2ddac42e4ce5b8014a311608e (the 2026-07-20 review's 0x6bdc8104... was superseded by the timelocked 2026-08-04 upgrade). Current permissionless() is true, but the implementation's _update is guarded by whenNotPaused and rejects blacklisted senders and recipients, and its nonzero owner, the Noon 3-of-6 admin Safe, can pause all transfers or blacklist accounts instantly with no timelock; the 48-hour timelock covers only proxy upgrades through ProxyAdmin 0x55f39512cb43111a13e8440ee3e3602e72628239, whose owner is also nonzero. Holder transfers are therefore selectively restrictable rather than permissionless.",
+          "evidence": "At Ethereum block 26036288 on 2026-09-22, Noon's official registry address 0xda67b4284609d2d48e5d10cfac411572727dc1ed remained the canonical USN ERC-1967 proxy, resolving to verified USNUpgradeableHyperlane implementation 0x961e78b26f6984a2ddac42e4ce5b8014a311608e (the 2026-07-20 review's 0x6bdc8104... was superseded by the timelocked 2026-08-04 upgrade). Current permissionless() is true, but the implementation's _update is guarded by whenNotPaused and rejects blacklisted senders and recipients, and its nonzero owner, the Noon 3-of-5 admin Safe, can pause all transfers or blacklist accounts instantly with no timelock; the 48-hour timelock covers only proxy upgrades through ProxyAdmin 0x55f39512cb43111a13e8440ee3e3602e72628239, whose owner is also nonzero. Holder transfers are therefore selectively restrictable rather than permissionless.",
           "sources": [
             {
               "label": "Sourcify exact-matched Ethereum USN proxy",
@@ -1576,11 +1576,15 @@
             },
             {
               "label": "Noon official USN deployment registry",
-              "url": "https://docs.noon.capital/built-for-safety/2.-audited-and-secured-infrastructure/contracts-and-addresses"
+              "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
             },
             {
               "label": "Ethereum public RPC observation",
               "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Noon admin Safe RemovedOwner log, block 26246910 (2026-10-22)",
+              "url": "https://eth.blockscout.com/address/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f?tab=logs"
             }
           ]
         }
