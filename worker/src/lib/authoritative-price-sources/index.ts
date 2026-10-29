@@ -21,6 +21,7 @@ import { usdafUniswapV4Provider } from "./usdaf-uniswap-v4";
 import { usduUniswapV3Provider } from "./usdu-uniswap-v3";
 import { bdAerodromeProvider } from "./bd-aerodrome";
 import { azndCurvePoolProvider } from "./aznd-curve-pool";
+import { swanusdCurvePoolProvider } from "./swanusd-curve-pool";
 import { mentoFpmmProvider } from "./mento-fpmm";
 import { mentoBrokerProvider } from "./mento-broker";
 import { capCusdProvider } from "./cap-cusd";
@@ -61,6 +62,7 @@ const AUTHORITATIVE_PRICE_PROVIDERS: PriceSourceProvider[] = [
   inheritedTrackedPriceProvider,
   protocolParProvider,
   azndCurvePoolProvider,
+  swanusdCurvePoolProvider,
   bdAerodromeProvider,
   usdvJupiterProvider,
   susdSolayerNavProvider,
