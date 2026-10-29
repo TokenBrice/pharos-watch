@@ -2091,6 +2091,9 @@ function adaptMintReview(
   const expiredCustodyQuestionFor = (control: MintAuthorityControl) =>
     (control.address != null ? expiredCustodyQuestionByRef.get(`${control.chain ?? ""}:${control.address.toLowerCase()}`) : undefined)
     ?? expiredCustodyQuestionByRef.get(control.label.toLowerCase()) ?? null;
+  const hasFreshScopedQuestion = (control: MintAuthorityControl) =>
+    (control.address != null && freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
+    freshScopedQuestionRefs.has(control.label.toLowerCase());
   const authoredControls = profile.controls ?? [];
   const controlProjections = compileReviewedMintControlScopes(profile, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC).map((projection) =>
     resolvedBook.diagnostics.length === 0 ? projection : { ...projection, processDiagnostics: sortV1005ProcessDiagnostics([...projection.processDiagnostics ?? [], ...resolvedBook.diagnostics]) });
@@ -2110,7 +2113,11 @@ function adaptMintReview(
   // individually identified. Retain those controls in a partial review while
   // the unresolved deployment surfaces remain bounded and fail closed.
   const controls = authoredControls.flatMap((control, index, allControls) => {
-    const retainedExpiredCustodyQuestion = expiredCustodyQuestionFor(control);
+    const controlHasFreshQuestion = hasFreshScopedQuestion(control);
+    // A lapse is documentation only while no fresh question of any subject
+    // names this control: a live obligation is never relabelled as custody by
+    // an older overdue question, and its dated evidence row is not duplicated.
+    const retainedExpiredCustodyQuestion = controlHasFreshQuestion ? null : expiredCustodyQuestionFor(control);
     const rows = adaptMintControl(
       meta.id,
       control,
@@ -2124,17 +2131,14 @@ function adaptMintReview(
             candidateIndex !== index && candidate.chain === control.chain && candidate.canRaiseCap === true,
         ),
       profile.economicCapSemantics,
-      (control.address != null &&
-        freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
-        freshScopedQuestionRefs.has(control.label.toLowerCase()),
+      controlHasFreshQuestion,
       supplyReview,
       clockSec,
       controlProjections[index]!,
       issuanceFacts?.ref,
       !((control.address != null && semanticQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
         semanticQuestionRefs.has(control.label.toLowerCase())) &&
-        ((control.address != null && freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
-          freshScopedQuestionRefs.has(control.label.toLowerCase())),
+        controlHasFreshQuestion,
       retainedExpiredCustodyQuestion,
     );
     if (retainedExpiredCustodyQuestion !== null) {

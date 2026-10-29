@@ -10,6 +10,7 @@ import {
   createV9FactStatus,
   requiredV9Applicability,
   minimalAsset,
+  fullAsset,
 } from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
 import { CompiledV9FactSetV3Schema } from "@shared/types/safety-score-v9-facts";
 import { resolveV9EvidenceCause } from "@shared/lib/safety-score-v9/evidence";
@@ -331,6 +332,98 @@ function generateCertifiedProjectionFixture() {
     }],
   });
   return { registry, gapId, reviewedAtSec: Date.parse(reviewedAt) / 1_000 };
+}
+
+/**
+ * One optional-exit output datum on an issuer-redemption route, paired with the
+ * evaluated route the publication admitted (`included`). A null-cause route
+ * also reports `scoringDisposition: "included"`, so the registry's
+ * route-diagnostic veto must read the admission flag, never the disposition.
+ */
+function generateOptionalExitOutputFixture(route: { included: boolean; scoringDisposition: string }) {
+  const assetId = "exit-fixture";
+  const source = fullAsset(false);
+  const routeFact = structuredClone(
+    source.exitRoutes.find((candidate) => candidate.routeFamily === "issuer-redemption")!,
+  );
+  const asset = minimalAsset(assetId);
+  asset.exitRoutes = [routeFact] as unknown as typeof asset.exitRoutes;
+  asset.exitStatus = createV9FactStatus({
+    applicability: requiredV9Applicability("exit.route.current"),
+    observationState: "known",
+    evidenceRefIds: ["evidence:route"],
+  });
+  asset.evidence = [...asset.evidence, ...source.evidence.filter((row) => row.evidenceId === "evidence:route")];
+  const gapId = `${assetId}:gap:${routeFact.routeKey}:output`;
+  // The gap is carried by the route's output status, the same reference the
+  // producer writes when the route output cannot be valued.
+  routeFact.output = {
+    status: createV9FactStatus({
+      applicability: requiredV9Applicability("exit.output.valuation"),
+      observationState: "missing",
+      gapIds: [gapId],
+    }),
+    kind: "unknown",
+    assetKeys: [],
+    basketWeights: [],
+    valuation: null,
+  } as unknown as typeof routeFact.output;
+  asset.gaps.push(createV9FactGap({
+    gapId,
+    reasonCode: "unresolved-exit-output",
+    ownerDomain: "exit",
+    policyRuleId: "v9.exit.route-output",
+    observationState: "missing",
+    path: { kind: "optional-exit", routeKey: routeFact.routeKey },
+    message: "The route output does not have an explicit same-notional USD valuation.",
+  }));
+  const compiledFacts = compileNativeV3FactSet({
+    ...coreFixture(), activeAssetIds: [assetId], assets: [asset],
+  });
+  const policy = loadV9MethodologyPolicy(policyAsset);
+  const registry = generateV9MissingDataRegistry({
+    replay: {
+      pipeline: {
+        compiledFacts,
+        candidate: {
+          model: "v9-critical-path",
+          schemaVersion: 7,
+          lifecycle: "active",
+          candidateId: "safety-score-v9:fixture",
+          policyVersion: policy.policy.releaseVersion,
+          publicationGenerationId: "report-cards:v9:fixture",
+          baseInputGenerationId: compiledFacts.baseInputGenerationId,
+          factSetDigest: compiledFacts.v9FactSetDigest,
+          resultDigest: "b".repeat(64),
+          policy: { id: policy.policy.policyId, semanticDigest: policy.semanticDigest },
+          evaluationBuildDigest: "c".repeat(64),
+          sourceGenerations: { fixture: "fixture:g1" },
+          asOfSec: compiledFacts.asOfSec,
+          publishedAtSec: compiledFacts.asOfSec,
+          completeness: {
+            expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [],
+            pipelineGapCount: 0, pipelineGapIds: [],
+          },
+          foreignCauseGaps: [],
+          cards: [makeReportCardsV9Card({ id: assetId })],
+        },
+        evaluatedSet: {
+          assets: [{
+            assetId,
+            scoreInput: { pillars: { backing: { reasons: [] }, exit: { reasons: [] }, control: { reasons: [] } } },
+            exit: { routes: [{ routeKey: routeFact.routeKey, ...route }] },
+          }],
+        },
+      },
+    },
+    policy: policyAsset,
+    catalogEntries: [{
+      id: assetId,
+      file: `shared/data/stablecoins/coins/${assetId}.json`,
+      coin: makeCoin(assetId),
+    }],
+  });
+  return { registry, gapId };
 }
 
 describe("Safety Score v9 missing-data work routing", () => {
@@ -792,5 +885,34 @@ describe("Safety Score v9 documentation band", () => {
       "reserve-dust",
     ]);
     expect(registry.interpretation.documentationBand).toContain("--include-documentation");
+  });
+
+  it("keeps a route-diagnostic gap open when the evaluator excluded the route, whatever its cause disposition", () => {
+    // A null-cause route reports `scoringDisposition: "included"` while the
+    // publication excluded it (`included: false`); the veto must follow the
+    // admission flag, so this datum stays a scorable obligation.
+    const excluded = generateOptionalExitOutputFixture({ included: false, scoringDisposition: "included" });
+    expect(excluded.registry.stablecoins[0]!.missingItems).toHaveLength(1);
+    expect(excluded.registry.stablecoins[0]!.missingItems[0]).toMatchObject({
+      gapId: excluded.gapId,
+      documentation: null,
+    });
+    expect(excluded.registry.summary).toMatchObject({
+      openItemCount: 1,
+      documentationItemCount: 0,
+      documentationQuestionCount: 0,
+    });
+
+    // The same datum on an admitted route is a policy diagnostic: documentation.
+    const admitted = generateOptionalExitOutputFixture({ included: true, scoringDisposition: "included" });
+    expect(admitted.registry.stablecoins[0]!.missingItems[0]).toMatchObject({
+      gapId: admitted.gapId,
+      documentation: { class: "documentation", reason: "unscored-diagnostic" },
+    });
+    expect(admitted.registry.summary).toMatchObject({
+      openItemCount: 1,
+      documentationItemCount: 1,
+      documentationQuestionCount: 1,
+    });
   });
 });

@@ -17,19 +17,24 @@ const LAPSED_REVIEWED_AT = "2026-10-01";
 const LAPSED_REVIEWED_AT_SEC = Date.parse(`${LAPSED_REVIEWED_AT}T00:00:00.000Z`) / 1_000;
 const FRESH_REVIEWED_AT = "2027-01-20";
 
-function compileWithQuestion(reviewedAt: string | null) {
+function compileWithQuestions(
+  scopedQuestions: readonly {
+    subject: "execution-scope" | "key-custody-independence";
+    reviewedAt: string;
+  }[],
+) {
   const fixed = makeV9FixedInput({ clockSec: CLOCK_SEC });
   const metadata = cappedMinterMeta();
   // The whole-profile review stays current; only the scoped question lapses.
   metadata.mintAuthority!.review.reviewedAt = "2027-01-25";
-  if (reviewedAt !== null) {
-    metadata.mintAuthority!.review.scopedQuestions = [{
+  if (scopedQuestions.length > 0) {
+    metadata.mintAuthority!.review.scopedQuestions = scopedQuestions.map(({ subject, reviewedAt }) => ({
       controlRef: SCOPE_CONTROLLER,
-      subject: "key-custody-independence",
+      subject,
       question: "Which entity protects this exact signer key and its independent approval policy?",
       reviewedAt,
       reviewer: "Fixture reviewer",
-    }];
+    }));
   }
   metadata.mintAuthority = MintAuthorityProfileSchema.parse(metadata.mintAuthority);
   const extension = buildSafetyScoreV9BaselineExtension(fixed, { metaById: metaMap(metadata) });
@@ -37,6 +42,12 @@ function compileWithQuestion(reviewedAt: string | null) {
   const asset = compiled.assets[0]!;
   const control = asset.controls.find((row) => row.authority?.authorityKey === SCOPE_CONTROLLER)!;
   return { evaluated: evaluateV9FactSet(compiled, V9_CANDIDATE_POLICY_V1).assets[0]!, asset, control };
+}
+
+function compileWithQuestion(reviewedAt: string | null) {
+  return compileWithQuestions(
+    reviewedAt === null ? [] : [{ subject: "key-custody-independence", reviewedAt }],
+  );
 }
 
 describe("Safety Score v9 durable custody lapse (documentation class)", { timeout: V9_EVALUATION_TEST_TIMEOUT_MS }, () => {
@@ -68,6 +79,34 @@ describe("Safety Score v9 durable custody lapse (documentation class)", { timeou
     const { control } = compileWithQuestion(FRESH_REVIEWED_AT);
     expect(control.scopedQuestionFresh).toBe(true);
     expect(control.factorStatuses?.keyCustody?.observationState).toBe("missing");
+  });
+
+  it("never relabels a fresh semantic question as custody when an older custody question lapses", () => {
+    const semantic = { subject: "execution-scope" as const, reviewedAt: FRESH_REVIEWED_AT };
+    const fresh = compileWithQuestions([semantic]);
+    // The custody question lapsed on the same control while the semantic one
+    // stays inside its window: it must be dropped, not retained as a custody
+    // subject, so the fresh obligation keeps softening and no stale custody
+    // datum (or duplicate evidence row) appears.
+    const mixed = compileWithQuestions([
+      semantic,
+      { subject: "key-custody-independence", reviewedAt: LAPSED_REVIEWED_AT },
+    ]);
+    expect(mixed.control.scopedQuestionFresh).toBe(true);
+    expect(mixed.control.scopedQuestionSubject).toBeUndefined();
+    expect(mixed.control.factorStatuses).toEqual(fresh.control.factorStatuses);
+    expect(mixed.evaluated.control.score).toBe(fresh.evaluated.control.score);
+    for (const pillar of ["backing", "exit", "control"] as const) {
+      expect(mixed.evaluated.scoreInput.pillars[pillar].limitingCauseGapIds)
+        .toEqual(fresh.evaluated.scoreInput.pillars[pillar].limitingCauseGapIds);
+      expect(mixed.evaluated.scoreInput.pillars[pillar].evidenceLevel)
+        .toBe(fresh.evaluated.scoreInput.pillars[pillar].evidenceLevel);
+    }
+    expect(mixed.evaluated.trace.finalScore).toBe(fresh.evaluated.trace.finalScore);
+    expect(mixed.evaluated.trace.finalGrade).toBe(fresh.evaluated.trace.finalGrade);
+    expect(mixed.asset.gaps.some((gap) => gap.causeScope?.factorKey === "keyCustody")).toBe(false);
+    expect(mixed.asset.evidence.some((row) => row.sourceId === "stablecoin-meta.mint-authority.scoped-question"))
+      .toBe(false);
   });
 
   it("changes no control score, evidence level or final grade versus no question and a fresh question", () => {
