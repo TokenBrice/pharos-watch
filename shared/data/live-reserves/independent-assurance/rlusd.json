@@ -3,13 +3,13 @@
   "product": "RLUSD",
   "profile": "rlusd-v1",
   "officialIndexUrl": "https://ripple.com/products/stablecoin/transparency/",
-  "reportUrl": "https://cdn.sanity.io/files/ior4a5y3/production/4981331c98a2bb203c0c9ab2584e8b2a0da80938.pdf/RLUSD%20Attestation%20Report%20(Aug)_Final%20Signed.pdf",
-  "reportSha256": "a3d1ec0687bacf92016c3ffa3eff6de8ccb64f529aa17635521fba59615fab7f",
-  "reportByteLength": 558025,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T21:00:00Z",
+  "reportUrl": "https://cdn.sanity.io/files/ior4a5y3/production/850ed07e8f0556b3b1c1d43eb2a0fc4ef6538ce1.pdf/RLUSD%20Attestation%20Report%20(Sep)_Final%20Signed.pdf",
+  "reportSha256": "6b48bedc97423ed9bf9e5330a783ef4f7a386dd9571bd6648a2e01ce2e931db6",
+  "reportByteLength": 421946,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T21:00:00Z",
   "reportTimeZone": "America/New_York (5:00pm Eastern Time; EDT, UTC-04:00)",
-  "reportIssuedAt": "2026-09-29T00:00:00Z",
+  "reportIssuedAt": "2026-10-26T00:00:00Z",
   "attestor": "Deloitte & Touche LLP",
   "engagement": "AICPA attestation standards examination providing reasonable assurance over management’s RLUSD Reserve Report assertion, including reserve market value by asset class and outstanding stablecoin units",
   "conclusion": "unmodified",
@@ -18,33 +18,33 @@
     {
       "code": "treasury-bills",
       "label": "U.S. Treasury bills",
-      "amount": "1557070479"
+      "amount": "1693595956"
     },
     {
       "code": "government-mmf",
       "label": "Government money-market funds",
-      "amount": "467625232"
+      "amount": "451826457"
     },
     {
       "code": "cash",
       "label": "Cash and deposit accounts",
-      "amount": "421617153"
+      "amount": "378585861"
     }
   ],
   "liabilities": [
     {
       "code": "outstanding-rlusd",
       "label": "Outstanding RLUSD across NYDFS-approved XRPL, Ethereum, Base, Unichain, Optimism, Ink and XRPL EVM Sidechain networks",
-      "amount": "2325969308"
+      "amount": "2399995528"
     }
   ],
-  "reportedAssetTotal": "2446312864",
-  "computedAssetTotal": "2446312864",
-  "reportedLiabilityTotal": "2325969308",
+  "reportedAssetTotal": "2524008274",
+  "computedAssetTotal": "2524008274",
+  "reportedLiabilityTotal": "2399995528",
   "extraction": {
-    "tool": "Poppler pdftotext -layout; page 5 embedded table visually transcribed from rendered PDF",
+    "tool": "Poppler pdftotext -layout; page 5 embedded image table read with Tesseract (eng) at 300% and reconciled to the printed text-layer totals",
     "parserVersion": "26.08.0",
-    "normalizedTextSha256": "2714f0f61135fa671313c727c74d89c82168d8e361a1879b2227288e805d0178",
+    "normalizedTextSha256": "6555f57f22fabaf88be74f33f80f308e13d0b8b75a8321d9f1f6d1826d9000e4",
     "pageCount": 5
   },
   "assuranceTier": "independent-assurance"

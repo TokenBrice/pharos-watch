@@ -226,7 +226,7 @@ function assuranceFenceCases() {
       product: "RLUSD",
       html: indexFixture("rlusd-independent-assurance.html"),
       newerHtml: indexFixture("rlusd-independent-assurance.html") +
-        '<a href="https://ripple.com/RLUSD_Reserve_Report_September_2026.pdf">September</a>',
+        '<a href="https://ripple.com/RLUSD_Reserve_Report_October_2026.pdf">October</a>',
     },
     {
       adapter: "sbc-independent-assurance",
