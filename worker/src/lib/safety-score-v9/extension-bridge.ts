@@ -33,6 +33,8 @@ import {
 } from "./extension-shared";
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
+  deploymentSupplyCensusDiagnostics,
+  DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE,
   safetyScoreV9RouteSupplyShare,
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
   V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
@@ -45,6 +47,34 @@ type BridgeSupplyRow = NonNullable<
 >["selectedBridgeRoutes"][number];
 
 type BridgeSupplyRowClassification = "accepted-bounded" | "control-required";
+
+/**
+ * The census lane may only hand over rows proven below the documentation bar
+ * (`shareUpper < documentationImmaterialSharePct`, PLAN §4.6). A bound at or
+ * above the bar is not proof of immateriality: the share datum must stay
+ * required, so a row that would otherwise travel as evidence of a sub-material
+ * deployment fails the asset here instead. Uniform row kinds are asserted too:
+ * a bound is always a reviewed row, never an unmatched or unresolved one.
+ */
+function assertDeploymentSupplyCensusBoundRows(
+  assetId: string,
+  supplyReview: ExtensionAsset["supplyReview"],
+): void {
+  for (const row of supplyReview?.selectedBridgeRoutes ?? []) {
+    if (row.evidenceKind !== "upper-bound") continue;
+    if (row.reviewState !== "selected-reviewed") {
+      throw new Error(
+        `Safety Score v9 census bound for ${assetId}:${row.deploymentRouteKey} is not a selected-reviewed row`,
+      );
+    }
+    if (!(row.supplyShare < DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE)) {
+      throw new Error(
+        `Safety Score v9 census bound for ${assetId}:${row.deploymentRouteKey} is ${row.supplyShare}, ` +
+        `not below the ${DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE} documentation bar`,
+      );
+    }
+  }
+}
 
 function classifyBridgeSupplyRow(row: BridgeSupplyRow): BridgeSupplyRowClassification {
   if (row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) {
@@ -908,6 +938,12 @@ function buildBridgeJoinDiagnostics(
     bridgeClaimControls: [...new Set(bridgeClaimControls.map((control) => control.controlKey))].sort(compareText),
     applicabilityBranch,
     unprovenRouteJoins: [...unprovenRouteJoins],
+    // Optional on the wire: only a run that actually admitted or rejected a
+    // census packet records the band (byte-identical absence otherwise).
+    ...(() => {
+      const censusDiagnostics = deploymentSupplyCensusDiagnostics(supplyReview);
+      return censusDiagnostics.length === 0 ? {} : { deploymentSupplyCensus: [...censusDiagnostics] };
+    })(),
   };
 }
 
@@ -923,6 +959,7 @@ export function adaptBridgeReview(
   controls: ControlOverlay[];
 } {
   const profile: BridgeRouteRiskProfile | undefined = meta.bridgeRouteRisk;
+  assertDeploymentSupplyCensusBoundRows(meta.id, supplyReview);
   if (!profile) {
     if (deployedChainCount <= 1) {
       return {

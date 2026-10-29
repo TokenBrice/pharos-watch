@@ -273,13 +273,15 @@ const SafetyScoreV9EvidenceResponsibilityItemSchema = z
 
 /**
  * Additive T2 documentation-class carrier. Optional so T1 payloads and archived
- * traces parse unchanged; facts keep their published tuple.
+ * traces parse unchanged; facts keep their published tuple. A card's
+ * documentation gaps are reconstructed from its gap table intersected with the
+ * publication-level `documentationCauseGaps`; this block never republishes ids.
  */
 const SafetyScoreV9DocumentationEvidenceSchema = z
   .object({
     semantics: z.literal("documentation-class-v1"),
     totalFactCount: z.number().int().nonnegative(),
-    criticalFactCount: z.number().int().nonnegative(),
+    criticalFactCount: z.literal(0),
     summaries: z.array(
       z
         .object({
@@ -288,13 +290,9 @@ const SafetyScoreV9DocumentationEvidenceSchema = z
         })
         .strict(),
     ),
-    gapIds: canonicalTextArray(),
   })
   .strict()
   .superRefine((documentation, ctx) => {
-    if (documentation.criticalFactCount !== 0) {
-      issue(ctx, ["criticalFactCount"], "Documentation-classed facts are never critical");
-    }
     if (documentation.summaries.reduce((sum, row) => sum + row.factCount, 0) > documentation.totalFactCount) {
       issue(ctx, ["summaries"], "Documentation reason counts cannot exceed its fact total");
     }

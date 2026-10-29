@@ -428,7 +428,14 @@ export function makeReportCardsV9Response(
     foreignCauseGaps: [],
     dependencyGraph: buildReportCardsV9DependencyGraph(cards),
     commonModeGroups: [],
+    // A fixture with no supplied block is the retained pre-cutover shape: say so
+    // instead of publishing a silent zero. Callers that pass a block get a null reason.
+    openEvidence: null,
+    openEvidenceUnavailableReason: "publication-predates-open-evidence",
     ...overrides,
+    ...(overrides.openEvidence != null && overrides.openEvidenceUnavailableReason === undefined
+      ? { openEvidenceUnavailableReason: null }
+      : {}),
     cards,
   };
 }

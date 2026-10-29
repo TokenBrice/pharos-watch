@@ -90,31 +90,28 @@ function makeEnvelope(snapshotDate: string) {
 
 /**
  * The publication schema-8 `openEvidence` block a frozen API-9 envelope carries:
- * three disjoint buckets whose questions and datums reconcile.
+ * three disjoint buckets whose questions reconcile. Documentation stays empty
+ * because a non-zero datum would also require `documentationCauseGaps` to
+ * resolve through this fixture's gap tables.
  */
 function makeOpenEvidence(cardId = "usdc-circle"): V9OpenEvidence {
   return {
     semantics: "open-question-v1",
-    totals: { questions: 3, open: 1, issuer: 1, documentation: 1, obligations: 6 },
+    totals: { questions: 3, open: 1, issuer: 2, documentation: 0, obligations: 6 },
     owners: [{ responsibility: "unresearched", questions: 1, obligations: 2 }],
+    // Rows are canonical: unique and sorted by bucket, then code.
     reasons: [
+      { code: "material-reserve-slice-unstructured", bucket: "issuer", questions: 2, obligations: 4 },
       { code: "unresolved-control-identity", bucket: "open", questions: 1, obligations: 2 },
-      { code: "material-reserve-slice-unstructured", bucket: "issuer", questions: 1, obligations: 3 },
-      { code: "unresolved-control-identity", bucket: "documentation", questions: 1, obligations: 1 },
     ],
-    documentation: {
-      questions: 1,
-      datums: 1,
-      facts: 1,
-      reasons: [{ reason: "no-scoring-path", datums: 1 }],
-    },
-    issuer: { questions: 1, assets: 1, oldestReviewedAtSec: 1_778_000_000, newestReviewedAtSec: 1_778_000_000 },
+    documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+    issuer: { questions: 2, assets: 1, oldestReviewedAtSec: 1_752_000_000, newestReviewedAtSec: 1_752_500_000 },
     byCard: [{
       id: cardId,
-      openQuestionsCarried: 3,
-      inheritedOpenQuestionsCarried: 1,
-      openObligationsCarried: 6,
-      documentationObligationsCarried: 1,
+      openBucketQuestionsCarried: 1,
+      inheritedOpenBucketQuestionsCarried: 0,
+      openBucketObligationsCarried: 2,
+      documentationObligationsCarried: 0,
     }],
   };
 }
@@ -709,6 +706,54 @@ describe("generate-public-datasets", () => {
     expect((spec.rows[0] as Record<string, unknown>).safetyScore).toBe(88);
   });
 
+  it("reads archived report8 Safety publications for dated rows instead of dropping them", () => {
+    const envelope = makeCurrentEnvelope("2026-05-16");
+    const {
+      openEvidence: _openEvidence,
+      openEvidenceUnavailableReason: _unavailableReason,
+      ...archived
+    } = envelope.reportCards;
+    void _openEvidence;
+    void _unavailableReason;
+    const archivedEnvelope = {
+      ...envelope,
+      reportCards: { ...archived, schemaVersion: 8 },
+    };
+    const spec = testExports.buildTopicSpecs(
+      archivedEnvelope,
+      [],
+      "2026-05-16",
+      { historical: true },
+    ).find((item) => item.topic === "scores-latest")!;
+
+    expect(spec.displayProjection).toMatchObject({
+      version: 2,
+      safety: {
+        asOfSec: envelope.reportCards.asOfSec,
+        publishedAtSec: envelope.reportCards.updatedAt,
+        completeness: envelope.reportCards.completeness,
+      },
+      safetyUnavailableReason: null,
+      // A report8 archive predates the counts; it never renders as zero.
+      openEvidence: null,
+      openEvidenceUnavailableReason: "open-evidence-unavailable",
+    });
+    // Archived card facts are projected, not replaced by the legacy null columns.
+    expect(spec.rows[0]).toMatchObject({
+      stablecoinId: "usdc-circle",
+      symbol: "USDC",
+      safetyScore: 88,
+      safetyGrade: "A+",
+      ratingStatus: "rated",
+      dewsScore: 4,
+      safetyDisplay: { nrReasons: [], reasonCodes: [], partialEvidence: null },
+    });
+
+    // The archive shape is historical-only: a live build still refuses report8.
+    expect(() => testExports.projectScoresLatest(archivedEnvelope, { historical: false }))
+      .toThrow("invalid V9 Safety publication");
+  });
+
   it("admits old dated score artifacts but requires the projection on the current alias target", async () => {
     const root = await makeRoot();
     const datasetsDir = path.join(root, "datasets");
@@ -798,19 +843,21 @@ describe("generate-public-datasets", () => {
     const ndjsonMeta = JSON.parse(artifacts.ndjson.split("\n")[0]!);
     expect(json._meta.displayProjection.openEvidence).toEqual({
       semantics: "open-question-v1",
-      totals: { questions: 3, open: 1, issuer: 1, documentation: 1, obligations: 6 },
+      totals: { questions: 3, open: 1, issuer: 2, documentation: 0, obligations: 6 },
     });
     expect(json._meta.displayProjection.openEvidenceUnavailableReason).toBeNull();
     expect(ndjsonMeta._meta.displayProjection).toEqual(json._meta.displayProjection);
   });
 
-  it("keeps a current Safety publication without open evidence visible as unavailable", () => {
+  it("keeps a report9 publication without open-evidence counts visible as unavailable", () => {
     const envelope = makeCurrentEnvelope("2026-05-16");
-    const { openEvidence: _omitted, ...withoutEvidence } = envelope.reportCards;
-    void _omitted;
     const spec = testExports.buildTopicSpecs({
       ...envelope,
-      reportCards: withoutEvidence,
+      reportCards: {
+        ...envelope.reportCards,
+        openEvidence: null,
+        openEvidenceUnavailableReason: "publication-predates-open-evidence",
+      },
     }, [], "2026-05-16").find((item) => item.topic === "scores-latest")!;
 
     expect(spec.displayProjection).toMatchObject({

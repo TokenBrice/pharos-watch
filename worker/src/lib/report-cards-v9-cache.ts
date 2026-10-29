@@ -68,10 +68,14 @@ function buildPublicProjection(
     },
     cards,
     foreignCauseGaps: publication.foreignCauseGaps,
-    // A retained schema-7 generation carries no block: omit it so consumers
-    // render unavailable, never zero open questions.
-    ...(publication.schemaVersion !== 8 ? {} : { openEvidence: publication.openEvidence }),
-    ...(publication.documentationCauseGaps === undefined ? {} : { documentationCauseGaps: publication.documentationCauseGaps }),
+    // A retained schema-7 generation carries no block: publish the machine
+    // reason so consumers render unavailable, never zero open questions.
+    openEvidence: publication.schemaVersion === 8 ? publication.openEvidence : null,
+    openEvidenceUnavailableReason:
+      publication.schemaVersion === 8 ? null : "publication-predates-open-evidence",
+    ...(publication.schemaVersion === 8 && publication.documentationCauseGaps !== undefined
+      ? { documentationCauseGaps: publication.documentationCauseGaps }
+      : {}),
     ...(publication.pillarFreshness === undefined ? {} : { pillarFreshness: publication.pillarFreshness }),
     ...(publication.commonModeGroups === undefined ? {} : { commonModeGroups: publication.commonModeGroups }),
     dependencyGraph: buildReportCardsV9DependencyGraph(

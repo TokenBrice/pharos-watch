@@ -40,6 +40,12 @@ Source-depth tiles/filters share observed `sourceCount` with row detail. Market-
 
 Score-input coverage calls the complete mixed-status cohort assets assessed, not assets scored. Its expanded breakdown separately reconciles rated (including partial), not-rated and pipeline-gap counts; held-publication context still takes precedence.
 
+### Open-evidence counting
+
+The score-input headline is not re-derived from card summaries: `openEvidence` from the published report-card response is the only source, computed once by `shared/lib/safety-score-v9/open-questions.ts` in the publication build, and `src/lib/safety-score-data-coverage.ts` only formats it. Questions count once at their root asset, not once per card, and the three published buckets — Open questions, Not disclosed by issuers, Documentation gaps, with labels owned by `shared/lib/classification.ts` — partition every question under documentation > issuer > open precedence, so they sum to the published question total. The owner rail partitions the open bucket only (`Σ owners.questions = totals.open`; `mixed` is the multi-owner remainder), each reason row carries its server-assigned bucket, and `totals.obligations` stays the per-card evidence-obligation total with `documentation.datums` shown as an "of which documentation" split. Measured-adverse (cause D) facts open no question and are excluded from that obligation total.
+
+A null `openEvidence` (a report9 envelope sourced from a pre-cutover schema-7 publication) renders "Open-question counts are unavailable for this publication" and an unavailable obligation row. It never renders three zeros and never reconstructs counts from `summaries[].factCount`. The technical rating tile says "unrated pipeline gap(s)", distinct from cause-A copy, which reads "data pipeline unavailable" and never describes an unrated pipeline gap.
+
 ### Unavailable versus uncovered
 
 Data n/a is neither covered nor uncovered: exclude it from feature count/cap denominators and ordinary gap filters, except intentionally inclusive No Dependency (Gap or Data n/a, not no upstream dependencies). All-unavailable features have null reach and cannot win insight tiles.

@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { V9AuthoredIncidentRegistryEnvelopeSchema, V9ReviewedIncidentRegistryEnvelopeSchema, V9ReviewedIncidentSchema } from "../../shared/types/safety-score-v9-incidents";
-import { projectNegativeIncidentReview } from "../lib/safety-score-v9-incident-runtime";
+import { isProviderReview, projectIncidentReviews } from "../lib/safety-score-v9-incident-runtime";
 import {
   canonicalizeReviewedRegistryDigest,
   expandReviewedRegistryReferences,
@@ -12,19 +12,38 @@ import {
   reviewedRegistryTextKey,
   reviewedRegistryTupleKey,
 } from "../../shared/lib/safety-score-v9/reviewed-registry";
+import { isRecord } from "../../shared/lib/type-guards";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { parseStrictCliArgs } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
+const REVIEW_TABLES = { sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations" } as const;
 
+// Provider-wide reviews carry their asset attribution inside `scope`, so they
+// miss the attributed-row envelope check and are validated by their own schema.
+const providerLaneKey = reviewedRegistryTupleKey("assetId", "routeId");
+const providerControlKey = reviewedRegistryTupleKey("assetId", "controlId");
 
 export function buildIncidentRuntime(value: unknown) {
-  const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(value);
-  const envelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(expandReviewedRegistryReferences(authored, "negativeReviews", {
-    sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-  }));
-  const canonical = canonicalizeReviewedRegistryDigest(envelope, {
+  const authoredRows = isRecord(value) && Array.isArray(value.negativeReviews) ? value.negativeReviews : null;
+  if (authoredRows === null) {
+    // Let the authored envelope own the malformed-envelope error.
+    V9AuthoredIncidentRegistryEnvelopeSchema.parse(value);
+    throw new Error("Incident registry envelope requires a negativeReviews array");
+  }
+  const providerRows = authoredRows.filter(isProviderReview);
+  const attributed = V9AuthoredIncidentRegistryEnvelopeSchema.parse({
+    ...(value as Record<string, unknown>),
+    negativeReviews: authoredRows.filter((row) => !isProviderReview(row)),
+  });
+  const envelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(expandReviewedRegistryReferences(
+    attributed, "negativeReviews", REVIEW_TABLES));
+  const expandedProviderRows = providerRows.length === 0 ? [] : expandReviewedRegistryReferences(
+    { ...(value as Record<string, unknown>), negativeReviews: providerRows }, "negativeReviews", REVIEW_TABLES, isProviderReview,
+  ).negativeReviews as unknown[];
+  const reviews = [...(envelope.negativeReviews ?? []), ...expandedProviderRows];
+  const canonical = canonicalizeReviewedRegistryDigest({ ...envelope, negativeReviews: reviews }, {
     incidents: reviewedRegistryDigestKey("incidentId"),
     "incidents.*.primarySources": reviewedRegistryDigestKey("url"),
     "incidents.*.remediation.sources": reviewedRegistryDigestKey("url"),
@@ -35,13 +54,14 @@ export function buildIncidentRuntime(value: unknown) {
     // Authored identity arrays are canonical sets, not ordered prose: their
     // authored order must not become part of the build identity.
     "negativeReviews.*.scope.controlIds": reviewedRegistryTextKey,
-    "negativeReviews.*.scope.coveredRoutes": reviewedRegistryTextKey,
-    "negativeReviews.*.scope.coveredControls": reviewedRegistryTextKey,
-    "negativeReviews.*.laneScreeningRefs": reviewedRegistryTupleKey("routeId", "certificateId"),
+    // Issuer-surface routes are plain ids; provider lanes are authored refs.
+    "negativeReviews.*.scope.coveredRoutes": (row: unknown) => typeof row === "string" ? row : providerLaneKey(row),
+    "negativeReviews.*.scope.coveredControls": (row: unknown) => typeof row === "string" ? row : providerControlKey(row),
+    "negativeReviews.*.laneScreeningRefs": reviewedRegistryTupleKey("assetId", "routeId", "certificateId"),
   });
   return { schemaVersion: 1, digest: reviewedRegistryEnvelopeDigest("safety-score-v9.incident-reviews.v1", "payload", canonical),
     incidents: envelope.incidents.map((row) => V9ReviewedIncidentSchema.parse(row)),
-    negativeReviews: (envelope.negativeReviews ?? []).map(projectNegativeIncidentReview) };
+    negativeReviews: reviews.flatMap(projectIncidentReviews) };
 }
 
 export function runCli(argv = process.argv.slice(2)): void {

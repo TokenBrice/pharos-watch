@@ -11,6 +11,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { ReportCardEvidenceJournalByIdV1Schema } from "@shared/lib/report-card-evidence-journal";
 import { SupplyAttributionJournalByIdV1Schema } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import { ReviewedDeploymentUnitPartitionSchema, ReviewedEconomicDeploymentPartitionSchema, XautRepresentationGroupSupplyAttributionV2Schema } from "@shared/types/safety-score-v9-supply-attribution";
+import { SafetyScoreV9DeploymentSupplyCensusSchema } from "@shared/types/safety-score-v9-deployment-supply-census";
 import {
   projectSafetyScoreV9PegScoreResult,
   SafetyScoreV9PegProvenanceSummarySchema,
@@ -130,6 +131,12 @@ export function createFixedInputPayloadFields<
     safetyScoreV9SupplyAttributionById: z
       .record(z.string(), SafetyScoreV9SupplyAttributionSchema)
       .default({}),
+    // v10.38 deployment supply census projection (PLAN §4.6). Optional, never
+    // defaulted: absent means no bounds were captured at this clock, so every
+    // deployment datum stays required and no digest moves (OP-R0 S-18).
+    safetyScoreV9DeploymentSupplyCensusById: z
+      .record(z.string(), SafetyScoreV9DeploymentSupplyCensusSchema)
+      .optional(),
     // Both journals are retained accepted enrichment, excluded from the base digest.
     // Reserve evidence supplies captured failure/gap causes (fact-set-context);
     // supply attribution supplies cause/responsibility/rejection metadata (extension-supply).

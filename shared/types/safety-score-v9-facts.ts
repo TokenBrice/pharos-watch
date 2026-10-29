@@ -1278,6 +1278,20 @@ const V9BridgeSupplyRouteJoinV1Schema = z
   .strict();
 export type V9BridgeSupplyRouteJoinV1 = z.infer<typeof V9BridgeSupplyRouteJoinV1Schema>;
 
+/**
+ * One v10.38 deployment supply census outcome (PLAN §4.6 Interfaces). A packet
+ * rejection carries C4's `census-rejected:<reason>`; a share the consumer
+ * refused to set carries `deployment-supply-share-requires-reviewed-escrow`
+ * (OP-R0 S-15: the datum stays required, the bound is not itself a rejection).
+ */
+const V9DeploymentSupplyCensusDiagnosticV1Schema = z
+  .object({
+    /** The deployment the outcome names; null for an asset-level outcome. */
+    deploymentRouteKey: CanonicalTextSchema.nullable(),
+    code: CanonicalTextSchema,
+  })
+  .strict();
+
 export const V9BridgeJoinDiagnosticsV1Schema = z
   .object({
     profileRouteCount: z.number().int().nonnegative(),
@@ -1299,9 +1313,19 @@ export const V9BridgeJoinDiagnosticsV1Schema = z
       V9BridgeSupplyRouteJoinV1Schema,
       (row) => row.deploymentRouteKey,
     ).default([]),
+    // v10.38 census admission band. Optional, never defaulted: retained
+    // diagnostics that never recorded a census must keep their exact bytes and
+    // digests (OP-R0 S-18). Absent = not recorded, not "no rejections".
+    deploymentSupplyCensus: canonicalArrayBy(
+      V9DeploymentSupplyCensusDiagnosticV1Schema,
+      (row) => `${row.deploymentRouteKey ?? "*"}:${row.code}`,
+    ).optional(),
   })
   .strict();
 export type V9BridgeJoinDiagnosticsV1 = z.infer<typeof V9BridgeJoinDiagnosticsV1Schema>;
+export type V9DeploymentSupplyCensusDiagnosticV1 = z.infer<
+  typeof V9DeploymentSupplyCensusDiagnosticV1Schema
+>;
 
 const V9BridgeControlReviewV2Schema = z
   .object({

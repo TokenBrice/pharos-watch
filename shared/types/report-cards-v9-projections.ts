@@ -1,12 +1,13 @@
 import { z } from "zod";
 import { ReportCardsV9CurrentResponseSchema, ReportCardsV9DependencyGraphSchema } from "./report-cards-v9";
-import { SafetyScoreV9CurrentCardBaseSchema, SafetyScoreV9ResolvedCurrentCardSchema, V9DocumentationOnlyPillarSchema } from "./safety-score-v9-public";
+import { SafetyScoreV9CurrentCardBaseSchema, SafetyScoreV9ResolvedCurrentCardSchema } from "./safety-score-v9-public";
 import type { ReportCardsV9CurrentResponse } from "./report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
 import { refineV9RatingStatusFields, V9CompactPartialEvidenceSchema } from "./safety-score-v9-causes";
 import { DependencyGraphResponseSchema } from "./dependency-graph";
 import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
 import { V9EvidencePillarsSchema } from "./safety-score-v9-causes";
+import { V9QualityPillarSchema } from "./safety-score-v9";
 
 export type ReportCardsV9ProjectionSource = Omit<ReportCardsV9CurrentResponse, "cards"> & { cards: SafetyScoreV9CurrentCard[] };
 
@@ -87,7 +88,7 @@ export const ReportCardsV9DetailResponseSchema = z.object({
   pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
   /** Pillars limited only by documentation gaps for the selected card; absent means plain limited. */
   documentationOnlyLimited: z
-    .array(V9DocumentationOnlyPillarSchema)
+    .array(V9QualityPillarSchema)
     .min(1)
     .max(3)
     .refine((pillars) => pillars.every((pillar, index) => index === 0 || pillars[index - 1]! < pillar), {

@@ -48,6 +48,10 @@ USD uses accepted-publication `circulatingUsdAtEvaluation`, never current-cap fa
 
 Offline modeled scenarios remain distinct from lookup/history: one root per selection, production evaluator including role dependencies, publication-bound ranking/supply and shared books counted once. The [Dependency Map](./dependency-map.md) owns modeled shock admission. Public copy states artifact generation/age and freshness budget, labels earlier-generation results, withholds stale/unavailable numbers and preserves NR. Models are not forecasts and never change canonical cards, journals, identity or policy. Historical examples are study links, not runnable historical presets.
 
+### Open-evidence counting
+
+`/coverage/` and the published methodology share one counting authority: `shared/lib/safety-score-v9/open-questions.ts`, evaluated once in the publication build. Questions count once at their root asset; the three public buckets (Open questions, Not disclosed by issuers, Documentation gaps) partition them under documentation > issuer > open precedence and sum to the question total. The evidence-obligation total remains per card and is not a question count; measured-adverse (cause D) facts are excluded from both. `src/lib/methodology-content.ts` owns the current-rule paragraph and `shared/lib/classification.ts` owns the bucket and cause labels; keep them in step with the payload contract ([report cards](./report-cards.md#api)), and never restate a bucket as a score input. A null `openEvidence` (report9 sourced from a schema-7 publication) is unavailable, never zero. Cause A copy is "data pipeline unavailable", distinct from the technical unrated pipeline-gap status.
+
 ## Update Rules
 
 Follow all four [ADR-3](./architecture.md#adr-3) targets for behavior/version changes: runtime version, owning methodology explanation, structured changelog and public methodology copy/examples. Versions increase numerically with at most two decimal places. Unchanged-behavior prose cleanup needs no methodology bump.
