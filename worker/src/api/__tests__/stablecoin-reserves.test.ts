@@ -17,7 +17,7 @@ import { getLiveReserveAdapterDefinition, computeLiveReserveConfigFingerprint } 
 import { RESERVE_FEED_REVIEWS } from "../../lib/reserve-feed-reviews";
 import { adaptOndoUsdyPortfolio } from "../../cron/reserve-adapters/ondo-usdy";
 
-const acknowledgedReview = RESERVE_FEED_REVIEWS.find((review) => review.stablecoinId === "mtbill-midas")!;
+const acknowledgedReview = RESERVE_FEED_REVIEWS.find((review) => review.stablecoinId === "yzusd-yuzu")!;
 
 function reviewedSyncRow(now: number, overrides: Parameters<typeof reserveSyncRow>[1] = {}) {
   return {
@@ -159,7 +159,7 @@ describe("handleStablecoinReserves", () => {
   });
 
   it("publishes matched acknowledgement without admitting missing evidence", async () => {
-    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
+    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
     vi.useFakeTimers();
     vi.setSystemTime((review.reviewedAt + 1) * 1000);
     try {

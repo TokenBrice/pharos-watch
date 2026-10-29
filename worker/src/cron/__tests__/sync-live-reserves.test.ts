@@ -1629,11 +1629,11 @@ describe("syncLiveReserves", () => {
     { name: "unreadable circuit history", circuit: true, unreadable: true, expected: "degraded" },
     { name: "budget exhausted before matching", budget: true, expected: "degraded" },
   ])("keeps raw attempts while accounting for $name", async (scenario) => {
-    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
+    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
     const now = scenario.expired ? review.expiresAt : review.reviewedAt + 1;
     vi.spyOn(Date, "now").mockReturnValue(now * 1000);
     const failure: ReserveSyncStateRecord = {
-      stablecoinId: review.stablecoinId, adapterKey: review.adapterKey, breakerKey: "live-reserves:midas-mtbill",
+      stablecoinId: review.stablecoinId, adapterKey: review.adapterKey, breakerKey: "live-reserves:yzusd-yuzu",
       lastStatus: scenario.circuit ? "skipped" : "error", lastAttemptedAt: now, lastSuccessAt: now - 86400,
       lastAttemptId: "current-attempt", lastSuccessAttemptId: "retained-success", warningCount: 0, warnings: [],
       lastError: scenario.circuit ? null : `${review.errorPrefix}${scenario.changed ? ": new cause" : ""}`,
