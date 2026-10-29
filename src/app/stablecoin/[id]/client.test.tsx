@@ -159,6 +159,83 @@ describe("StablecoinDetailClient", () => {
     longformScrollspyNavMock.mockClear();
   });
 
+  it("keeps the retained History preview through loading and list-error, then hands it to the ready dossier", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const preview = <div data-testid="depeg-history-preview">Latest 6 of 248 archived incidents</div>;
+    const content = () => (
+      <StablecoinDetailClient
+        id={coin.id}
+        coin={coin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+        depegHistoryPreview={preview}
+      />
+    );
+
+    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading", handleRetryAll: vi.fn() });
+    const { container, rerender } = render(content());
+    expect(screen.getAllByTestId("depeg-history-preview")).toHaveLength(1);
+    expect(container.querySelectorAll("#depeg-history")).toHaveLength(1);
+    // The preview is not waiting behind the removed outer History lazy gate.
+    expect(container.querySelector("#depeg-history")?.closest("[data-lazy-section]")).toBeNull();
+
+    useStablecoinDetailViewModelMock.mockReturnValue({
+      status: "list-error",
+      listError: new Error("offline"),
+      handleRetryAll: vi.fn(),
+    });
+    rerender(content());
+    expect(screen.getAllByTestId("depeg-history-preview")).toHaveLength(1);
+    expect(container.querySelectorAll("#depeg-history")).toHaveLength(1);
+
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+    rerender(content());
+    expect(screen.getAllByTestId("depeg-history-preview")).toHaveLength(1);
+    expect(container.querySelectorAll("#depeg-history")).toHaveLength(1);
+    expect(container.querySelector("#depeg-history")?.closest("[data-lazy-section]")).toBeNull();
+  });
+
+  it("keeps the History shell outside the viewport gate while unrelated sections stay lazy", () => {
+    useNearViewportMock.mockImplementation(() => ({ ref: () => {}, near: false }));
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const preview = <div data-testid="depeg-history-preview">Latest 6 of 248 archived incidents</div>;
+    const { container } = render(
+      <StablecoinDetailClient
+        id={coin.id}
+        coin={coin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+        depegHistoryPreview={preview}
+      />,
+    );
+
+    expect(screen.getByTestId("depeg-history-preview")).toBeTruthy();
+    expect(container.querySelector("#depeg-history")?.closest("[data-lazy-section]")).toBeNull();
+    // The other distant modules still reserve and defer on their own gates.
+    expect(container.querySelectorAll("[data-lazy-section]").length).toBeGreaterThan(0);
+    expect(screen.queryByTestId("dews-detail")).toBeNull();
+  });
+
+  it("keeps a non-pilot profile on the pre-wave lazy History placeholder", () => {
+    useNearViewportMock.mockImplementation(() => ({ ref: () => {}, near: false }));
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const { container } = render(
+      <StablecoinDetailClient
+        id={coin.id}
+        coin={coin}
+        summary={null}
+        staticCoin={buildStablecoinStaticMeta(coin)}
+      />,
+    );
+
+    // No preview: the shell and its tab markup stay behind the 390px reserve.
+    expect(container.querySelector("#depeg-history")).toBeNull();
+    expect(screen.queryByTestId("history-tabs")).toBeNull();
+    const historyPlaceholder = [...container.querySelectorAll<HTMLElement>("[data-lazy-section]")]
+      .find((node) => node.style.minHeight === "390px");
+    expect(historyPlaceholder).toBeTruthy();
+  });
+
   it("shows a health notice only once detail evidence is past the stale band", () => {
     const now = Date.now();
     const coin = TRACKED_META_BY_ID.get("usds-sky")!;
@@ -271,6 +348,62 @@ describe("StablecoinDetailClient", () => {
     const headings = container.querySelectorAll("h1");
     expect(headings).toHaveLength(1);
     expect(headings[0]?.textContent).toBe(`${coin.name} (${coin.symbol})`);
+  });
+
+  it("keeps the canonical mechanism destination in a loading dossier", () => {
+    const exploreNextContent = <section id="explore-next"><h2 id="explore-next-heading">Explore cards</h2></section>;
+    const renderLoading = (coinId: string) => {
+      const coin = TRACKED_META_BY_ID.get(coinId)!;
+      useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading", handleRetryAll: vi.fn() });
+      return render(
+        <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)}
+          exploreNextContent={exploreNextContent} />,
+      );
+    };
+
+    const cases = [
+      // History-gap profiles keep their canonical fiat-backed explainer.
+      ...["brz-transfero", "jpyc-jpyc", "kgst-kyrgyz-som", "idrx-idrx", "cngn-compliant-naira", "brl1-brl1", "wcop-ripio"]
+        .map((id) => ({ id, label: "Learn how fiat-backed stablecoins work", href: "/learn/mechanisms/fiat-cash/" })),
+      // Inherited variant: susn-noon has no own archetype, so the parent's applies.
+      { id: "susn-noon", label: "Learn how credit-fund stablecoins work", href: "/learn/mechanisms/rwa-credit-fund/" },
+      // Explicit override: the wrapper keeps its own archetype over the parent's.
+      { id: "skymoneyusdtsavings-sky", label: "Learn how protocol-position stablecoins work", href: "/learn/mechanisms/protocol-position/" },
+    ];
+    for (const { id, label, href } of cases) {
+      const { container, unmount } = renderLoading(id);
+      const link = screen.getByRole("link", { name: label });
+      expect(link.getAttribute("href")).toBe(href);
+      // The destination sits immediately before the retained Explore node.
+      expect(link.parentElement?.nextElementSibling).toBe(container.querySelector("#explore-next"));
+      expect(screen.getByText("Explore cards")).toBeTruthy();
+      unmount();
+    }
+
+    // An unresolved custom design emits no fabricated destination.
+    const { container } = renderLoading("usdr-ring");
+    expect(screen.queryByRole("link", { name: /Learn how .* stablecoins work/ })).toBeNull();
+    expect(container.querySelector('a[href^="/learn/mechanisms/"]')).toBeNull();
+    expect(screen.getByText("Explore cards")).toBeTruthy();
+  });
+
+  it("drops the loading mechanism CTA when the ready dossier replaces the shell", () => {
+    const coin = TRACKED_META_BY_ID.get("usds-sky")!;
+    const content = () => (
+      <StablecoinDetailClient id={coin.id} coin={coin} summary={null} staticCoin={buildStablecoinStaticMeta(coin)}
+        exploreNextContent={<section id="explore-next"><h2 id="explore-next-heading">Explore cards</h2></section>} />
+    );
+    useStablecoinDetailViewModelMock.mockReturnValue({ status: "loading", handleRetryAll: vi.fn() });
+    const { rerender } = render(content());
+    expect(screen.getAllByRole("link", { name: "Learn how CDP stablecoins work" })).toHaveLength(1);
+
+    useStablecoinDetailViewModelMock.mockReturnValue(makeReadyViewModel());
+    rerender(content());
+    // One ready explainer remains; the loading-only link is gone.
+    const explainers = screen.getAllByRole("link", { name: "Learn how CDP stablecoins work" });
+    expect(explainers).toHaveLength(1);
+    expect(explainers[0]!.getAttribute("href")).toBe("/learn/mechanisms/cdp/");
+    expect(screen.getAllByText("Explore cards")).toHaveLength(1);
   });
 
   it("reserves distant reference islands and keeps one Explore alias set before and after mounting", () => {

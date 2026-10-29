@@ -103,7 +103,7 @@ export default function StablecoinsHubPage() {
         <section className="space-y-3" aria-labelledby="stablecoin-profile-directory-heading">
           <div className="space-y-1.5">
             <h2 id="stablecoin-profile-directory-heading" className="pharos-label">
-              All Tracked Stablecoin Profiles
+              Stablecoin list
             </h2>
             <p className="text-sm text-muted-foreground">
               Open any tracked profile for its static identity, risk research, peg history, liquidity, and dependencies.

@@ -15,7 +15,11 @@ import { mapPegMetadata, PEG_METADATA } from "./pegs";
 // Combined label+class style maps (for detail page pill badges)
 // ---------------------------------------------------------------------------
 
-type ProofOfReservesType = NonNullable<StablecoinMeta["proofOfReserves"]>["type"];
+type ProofOfReserves = NonNullable<StablecoinMeta["proofOfReserves"]>;
+type ProofOfReservesType = ProofOfReserves["type"];
+type ProofAssuranceMethod = NonNullable<ProofOfReserves["latestReport"]>["assuranceMethod"];
+type ProofAssuranceScope = NonNullable<ProofOfReserves["latestReport"]>["scope"];
+type LiabilityReconciliation = NonNullable<ProofOfReserves["latestReport"]>["liabilityReconciliation"];
 
 /** Governance badge styles for the detail page. */
 export const GOVERNANCE_BADGE_STYLES: Record<GovernanceType, BadgeStyle> = projectDescriptors(
@@ -32,17 +36,37 @@ export const BACKING_BADGE_STYLES: Record<BackingType, BadgeStyle> = projectDesc
 /** Peg currency badge styles for the detail page. */
 export const PEG_BADGE_STYLES = mapPegMetadata((metadata) => metadata.badge);
 
-/** Proof-of-reserves badge styles for the detail page. */
+/** Independent engagement with a reviewed assurance opinion: the audit-blue tone. */
+const POR_INDEPENDENT_ENGAGEMENT_CLS = "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20";
+/** A third-party engagement that expresses no assurance opinion: neutral, never audit-blue. */
+const POR_NEUTRAL_ENGAGEMENT_CLS = "bg-muted/40 text-muted-foreground border-border/60";
+
+/**
+ * Neutral engagement label for a proof-of-reserves record whose reviewed
+ * method establishes no audit-grade opinion. Consumers that render a record
+ * without a resolved style share this label instead of repeating the string.
+ */
+export const POR_NEUTRAL_REPORT_LABEL = "Independent Report";
+
+/**
+ * Storage-level fallback for the proof-of-reserves engagement. The
+ * `independent-audit` storage type covers examinations, audits and unresolved
+ * methods alike (26 examinations among 47 records were not audits), so the
+ * raw label may not assert audit-grade assurance. `getProofOfReservesStyle`
+ * names the reviewed `assuranceMethod` when it establishes one.
+ */
 export const POR_BADGE_STYLES: Record<ProofOfReservesType, BadgeStyle> = {
+  // Never audit-blue by default: only a reviewed audit or examination method
+  // earns the engagement tone in `getProofOfReservesStyle`.
   "independent-audit": {
-    label: "Independent Audit",
-    cls: "bg-blue-500/10 text-blue-700 dark:text-blue-400 border-blue-500/20",
+    label: POR_NEUTRAL_REPORT_LABEL,
+    cls: POR_NEUTRAL_ENGAGEMENT_CLS,
   },
   // A third-party engagement that expresses no assurance opinion: neutral
   // tone, never audit-blue.
   "agreed-upon-procedures": {
     label: "Agreed-Upon Procedures",
-    cls: "bg-muted/40 text-muted-foreground border-border/60",
+    cls: POR_NEUTRAL_ENGAGEMENT_CLS,
   },
   // Independent verification-agent report: below audit-grade assurance.
   attestation: {
@@ -57,6 +81,64 @@ export const POR_BADGE_STYLES: Record<ProofOfReservesType, BadgeStyle> = {
     label: "Self-Reported PoR",
     cls: "bg-amber-500/10 text-amber-700 dark:text-amber-400 border-amber-500/20",
   },
+};
+
+/** Reviewed assurance methods that establish an opinion-graded engagement. */
+const POR_ASSURANCE_METHOD_LABELS: Partial<Record<ProofAssuranceMethod, string>> = {
+  audit: "Audit",
+  examination: "Examination",
+};
+
+/**
+ * Presentation resolver shared by every proof-of-reserves surface. The
+ * storage type alone cannot distinguish an examination from an audit, so an
+ * `independent-audit` record is named by its reviewed `assuranceMethod`; an
+ * unknown, absent or non-opinion method stays a neutral "Independent Report".
+ * Absent proof returns `null`, leaving the caller's existing absence copy.
+ * Presentation only: the proof object is never modified and the scoring
+ * eligibility read of the same method is untouched.
+ */
+export function getProofOfReservesStyle(
+  proof: StablecoinMeta["proofOfReserves"] | null,
+): BadgeStyle | null {
+  if (!proof) return null;
+  const style = POR_BADGE_STYLES[proof.type];
+  if (proof.type !== "independent-audit") return style;
+  const methodLabel = proof.latestReport ? POR_ASSURANCE_METHOD_LABELS[proof.latestReport.assuranceMethod] : undefined;
+  return methodLabel ? { label: methodLabel, cls: POR_INDEPENDENT_ENGAGEMENT_CLS } : style;
+}
+
+/**
+ * Reviewed report-method vocabulary for structured scope rows. This projects
+ * the recorded `latestReport.assuranceMethod` field itself; it is not a
+ * substitute engagement label. `getProofOfReservesStyle` deliberately keeps
+ * non-opinion methods neutral (`Independent Report`), while a scope row must
+ * name the recorded method so an attestation is never silently promoted.
+ */
+export const PROOF_ASSURANCE_METHOD_LABELS: Record<ProofAssuranceMethod, string> = {
+  audit: "Audit",
+  examination: "Examination",
+  review: "Review",
+  "agreed-upon-procedures": "Agreed-upon procedures",
+  attestation: "Attestation",
+  "onchain-proof": "Onchain proof",
+  "self-verification": "Self-verification",
+  unknown: "Method not established",
+};
+
+/** Report-scope phrases for compact evidence rows. */
+export const PROOF_ASSURANCE_SCOPE_LABELS: Record<ProofAssuranceScope, string> = {
+  "assets-only": "assets only",
+  "assets-and-liabilities": "assets and liabilities",
+  unknown: "scope unknown",
+};
+
+/** Liability-reconciliation phrases for compact evidence rows. */
+export const LIABILITY_RECONCILIATION_LABELS: Record<LiabilityReconciliation, string> = {
+  full: "full liability reconciliation",
+  partial: "partial liability reconciliation",
+  none: "no liability reconciliation",
+  unknown: "liability reconciliation unknown",
 };
 
 /**

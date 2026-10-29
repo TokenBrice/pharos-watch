@@ -19,6 +19,7 @@ import { FeaturePageShell } from "@/components/feature-page-shell";
 import { ShareButton } from "@/components/share-button";
 import { JsonLdScript } from "@/components/json-ld-script";
 import { ChainProfileClient } from "./client";
+import { ChainContractTable } from "./chain-contract-table";
 import {
   CHAIN_STABLECOIN_FEATURE_LINKS,
   getRelatedChainTaxonomyLinks,
@@ -27,6 +28,13 @@ import {
   type ChainTaxonomyLink,
   type ChainTrackedDeployment,
 } from "../static-chain-content";
+
+/**
+ * Explicit three-route presentation allowlist for the bounded contract table.
+ * Not a second chain registry: every other chain profile keeps its existing
+ * presentation.
+ */
+const CHAIN_CONTRACT_TABLE_CHAIN_IDS = new Set(["solana", "base", "tron"]);
 
 export function generateStaticParams() {
   return getActiveChainIds().map((chain) => ({ chain }));
@@ -344,6 +352,9 @@ export default async function ChainProfilePage({ params }: { params: Promise<{ c
       }
     >
       <ChainProfileClient chainId={chain} />
+      {CHAIN_CONTRACT_TABLE_CHAIN_IDS.has(chain) ? (
+        <ChainContractTable chainName={meta.name} deployments={deployments} />
+      ) : null}
       <ChainDeploymentAnchors chainName={meta.name} deployments={deployments} />
       <ChainRouteCta chainName={meta.name} deployments={deployments} />
       <ChainRelatedHubs chainId={chain} taxonomyLinks={taxonomyLinks} />

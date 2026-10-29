@@ -86,6 +86,8 @@ export interface GeniusComplianceRow extends BaseComplianceRow {
   redemptionPolicyPresent: boolean;
   monthlyAttestationPresent: boolean;
   reserveReportNote?: string;
+  /** Summary review date from the eager compliance projection; the sole date owner for the closed fold. */
+  reviewedAt?: string;
 }
 
 export type ComplianceRow = MicaComplianceRow | GeniusComplianceRow;
@@ -255,6 +257,7 @@ function buildGeniusRow(
     redemptionPolicyPresent: genius.redemptionPolicyPresent ?? false,
     monthlyAttestationPresent: genius.monthlyAttestationPresent ?? false,
     reserveReportNote,
+    reviewedAt: genius.reviewedAt,
   };
 }
 

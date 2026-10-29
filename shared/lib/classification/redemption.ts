@@ -1,6 +1,7 @@
 import type {
   RedemptionAccessModel,
   RedemptionOutputAssetType,
+  RedemptionHolderEligibility,
   RedemptionSettlementModel,
   RedemptionDocsProvenance,
   RedemptionModelConfidence,
@@ -45,6 +46,16 @@ export const REDEMPTION_SETTLEMENT_LABELS: Record<RedemptionSettlementModel, str
   "same-day": "Same day",
   days: "Multi-day",
   queued: "Queued",
+};
+
+/** Reviewed holder-eligibility phrases for compact redemption evidence rows. */
+export const REDEMPTION_HOLDER_ELIGIBILITY_LABELS: Record<RedemptionHolderEligibility, string> = {
+  "any-holder": "Any holder",
+  "verified-customer": "Verified customers",
+  "whitelisted-primary": "Whitelisted primary-market participants",
+  "pre-incident-holder": "Pre-incident holders",
+  "issuer-discretionary": "Issuer discretion",
+  unknown: "Eligibility not established",
 };
 
 export const REDEMPTION_OUTPUT_ASSET_LABELS: Record<RedemptionOutputAssetType, string> = {

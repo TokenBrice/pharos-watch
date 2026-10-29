@@ -43,8 +43,8 @@ export function cleanupFrontendTest(): void {
 export async function createNextLinkMock() {
   const React = await import("react");
   return {
-    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode }>(
-      function MockLink({ href, children, ...rest }, ref) {
+    default: React.forwardRef<HTMLAnchorElement, { href: string; children: React.ReactNode; prefetch?: boolean }>(
+      function MockLink({ href, children, prefetch: _prefetch, ...rest }, ref) {
         return React.createElement("a", { ref, href, ...rest }, children);
       },
     ),

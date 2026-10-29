@@ -4,7 +4,7 @@ import { ExternalLink, Globe } from "lucide-react";
 import { RailCard } from "@/components/stablecoin-detail/rail-card";
 import { SECTION_SCROLL_MT } from "@/components/stablecoin-detail/section-title-class";
 import { cn } from "@/lib/utils";
-import { POR_BADGE_STYLES } from "@shared/lib/classification";
+import { getProofOfReservesStyle, POR_NEUTRAL_REPORT_LABEL } from "@shared/lib/classification";
 import type { StablecoinMeta } from "@shared/types";
 
 const LINK_CLASS =
@@ -60,7 +60,7 @@ export function KeyLinksCard({ meta, anchors = false }: { meta: StablecoinMeta; 
           >
             <p className="pharos-label">Proof of Reserves</p>
             <p className="text-xs leading-relaxed text-muted-foreground">
-              {POR_BADGE_STYLES[proofOfReserves.type].label}
+              {getProofOfReservesStyle(proofOfReserves)?.label ?? POR_NEUTRAL_REPORT_LABEL}
               {proofOfReserves.provider ? ` by ${proofOfReserves.provider}` : ""}
             </p>
             <a href={proofOfReserves.url} target="_blank" rel="noopener noreferrer" className={LINK_CLASS}>

@@ -30,6 +30,8 @@ export interface ChainTrackedDeployment {
   backingLabel: string;
   governanceLabel: string;
   contractCount: number;
+  /** This coin's recorded deployments on the chain, in registry order. */
+  contracts: NonNullable<StablecoinMeta["contracts"]>;
   /** NAV token or variant of another tracked coin (e.g. sUSDe, spUSDT): ranked after base coins in titles. */
   isNavOrVariant: boolean;
 }
@@ -71,14 +73,16 @@ export const CHAIN_STABLECOIN_FEATURE_LINKS: readonly ChainFeatureLink[] = [
   },
 ];
 
-function getContractCountOnChain(stablecoin: StablecoinMeta, chainId: string): number {
-  return (stablecoin.contracts ?? []).filter((contract) => contract.chain === chainId).length;
-}
-
+/**
+ * One entry per tracked coin with at least one recorded deployment on the
+ * chain. The filtered contract records travel with the entry so consumers can
+ * render address rows without a second registry scan; the coin stays the unit
+ * of the directory, metadata and JSON-LD lists.
+ */
 export function getTrackedDeploymentsForChain(chainId: string): ChainTrackedDeployment[] {
   return ACTIVE_STABLECOINS.flatMap((stablecoin) => {
-    const contractCount = getContractCountOnChain(stablecoin, chainId);
-    if (contractCount === 0) {
+    const contracts = (stablecoin.contracts ?? []).filter((contract) => contract.chain === chainId);
+    if (contracts.length === 0) {
       return [];
     }
 
@@ -90,7 +94,8 @@ export function getTrackedDeploymentsForChain(chainId: string): ChainTrackedDepl
       pegLabel: PEG_LABELS_SHORT[stablecoin.flags.pegCurrency] ?? stablecoin.flags.pegCurrency,
       backingLabel: BACKING_LABELS_SHORT[stablecoin.flags.backing] ?? stablecoin.flags.backing,
       governanceLabel: GOVERNANCE_LABELS_SHORT[stablecoin.flags.governance] ?? stablecoin.flags.governance,
-      contractCount,
+      contractCount: contracts.length,
+      contracts,
       isNavOrVariant: stablecoin.flags.navToken || stablecoin.variantOf != null,
     };
   });

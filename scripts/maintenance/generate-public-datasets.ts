@@ -34,7 +34,7 @@
  */
 
 import { existsSync, mkdirSync, readdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { PUBLIC_DATASET_TOPICS, type PublicDatasetTopic } from "@shared/lib/api-endpoints/datasets";
 import type { DepegEvent, SupplyObservationProvenance } from "@shared/types/market";
@@ -44,7 +44,7 @@ import { DEPEG_DEWS_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-ve
 import { LIQUIDITY_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
 import { SITE_ORIGIN } from "@shared/lib/runtime-origins";
 import { SAFETY_SCORE_METHODOLOGY_VERSION_LABEL } from "@shared/lib/methodology-versions/constants";
-import { TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { TRACKED_META_BY_ID, TRACKED_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { projectEnvelopeSupplyProvenance } from "@shared/lib/supply-provenance";
 import { MECHANISM_ARCHETYPE_VALUES } from "@shared/types/stablecoin-taxonomy";
@@ -53,6 +53,10 @@ import {
   type PublicSnapshotEnvelope,
   type PublicSnapshotEnvelopeV2,
 } from "@shared/types/public-snapshot";
+import { ReportCardsV9CurrentResponseSchema, V9PublicationHealthSchema } from "@shared/types/report-cards-v9";
+import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
+import { SafetyScoreV9CompletenessSchema } from "@shared/types/safety-score-v9-public";
+import { z } from "zod";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
 import { buildPublicDatasetArtifacts, type DatasetColumn } from "../lib/public-dataset-artifacts";
@@ -89,17 +93,30 @@ const ROW_FLOORS: Readonly<Record<PublicDatasetTopic, number>> = {
 };
 
 type SnapshotEnvelope = Pick<PublicSnapshotEnvelopeV2, "snapshotDate" | "generatedAt" | "stablecoins"> & {
+  version?: number;
+  safetyScoreIdentity?: unknown;
   methodologyVersions?: Record<string, string>;
-  reportCards: {
-    scores?: Record<string, ReportCardScore>;
-    cards?: Array<{
-      id: string;
-      score: number | null;
-      grade: string;
-    }>;
-  } | null;
-  dews: Array<{ stablecoinId: string; score: number; band: string }>;
-  liquidity: Array<{ stablecoinId: string; liquidityScore: number | null; coverageClass: string | null }>;
+  reportCards:
+    | {
+        model?: string;
+        scores?: Record<string, ReportCardScore>;
+        cards?: Array<{
+          id: string;
+          score: number | null;
+          grade: string;
+        }>;
+      }
+    | Record<string, unknown>
+    | null;
+  dews: Array<{ stablecoinId: string; computedAt?: number; score: number; band: string }>;
+  liquidity: Array<{
+    stablecoinId: string;
+    liquidityScore: number | null;
+    coverageClass: string | null;
+    updatedAt?: number;
+    unavailableReason?: "invalid-coverage-evidence" | null;
+    methodologyVersion?: string | null;
+  }>;
 };
 
 /**
@@ -307,6 +324,12 @@ interface ScoreLatestRow {
   dewsBand: string | null;
   liquidityScore: number | null;
   coverageClass: string | null;
+  ratingStatus: "rated" | "not-rated" | "pipeline-gap" | null;
+  safetyDisplay: Readonly<Record<string, unknown>> | null;
+  dewsComputedAt: number | null;
+  liquidityUpdatedAt: number | null;
+  liquidityUnavailableReason: string | null;
+  liquidityMethodologyVersion: string | null;
 }
 
 const SCORES_LATEST_COLUMNS: DatasetColumn<ScoreLatestRow>[] = [
@@ -319,22 +342,158 @@ const SCORES_LATEST_COLUMNS: DatasetColumn<ScoreLatestRow>[] = [
   { header: "dewsBand", accessor: (r) => r.dewsBand },
   { header: "liquidityScore", accessor: (r) => r.liquidityScore },
   { header: "coverageClass", accessor: (r) => r.coverageClass },
+  { header: "ratingStatus", accessor: (r) => r.ratingStatus },
+  { header: "safetyDisplay", accessor: (r) => r.safetyDisplay },
+  { header: "dewsComputedAt", accessor: (r) => r.dewsComputedAt },
+  { header: "liquidityUpdatedAt", accessor: (r) => r.liquidityUpdatedAt },
+  { header: "liquidityUnavailableReason", accessor: (r) => r.liquidityUnavailableReason },
+  { header: "liquidityMethodologyVersion", accessor: (r) => r.liquidityMethodologyVersion },
 ];
 
-function projectScoresLatest(envelope: SnapshotEnvelope | null): ScoreLatestRow[] {
-  if (!envelope) return [];
+type CurrentSafetyPublication = z.infer<typeof ReportCardsV9CurrentResponseSchema>;
+type CurrentSafetyCard = CurrentSafetyPublication["cards"][number];
+
+interface ScoresLatestDisplayProjection {
+  version: 1;
+  snapshotDate: string;
+  capturedAtSec: number;
+  sourceSnapshotPath: string;
+  safety: {
+    identity: unknown;
+    asOfSec: number;
+    publishedAtSec: number;
+    sourceGenerations: Record<string, string>;
+    publicationHealth: unknown;
+    completeness: unknown;
+  } | null;
+  safetyUnavailableReason: "legacy-source-metadata-unavailable" | null;
+}
+
+const ScoresLatestDisplayProjectionSchema = z
+  .object({
+    version: z.literal(1),
+    snapshotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+    capturedAtSec: z.number().int().nonnegative(),
+    sourceSnapshotPath: z.string().min(1),
+    safety: z
+      .object({
+        identity: SafetyScoreV9PublicationIdentitySchema,
+        asOfSec: z.number().int().nonnegative(),
+        publishedAtSec: z.number().int().nonnegative(),
+        sourceGenerations: z.record(z.string().min(1), z.string().min(1)),
+        publicationHealth: V9PublicationHealthSchema,
+        completeness: SafetyScoreV9CompletenessSchema,
+      })
+      .strict()
+      .nullable(),
+    safetyUnavailableReason: z.literal("legacy-source-metadata-unavailable").nullable(),
+  })
+  .strict();
+
+interface ScoresLatestProjection {
+  rows: ScoreLatestRow[];
+  displayProjection: ScoresLatestDisplayProjection | null;
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function sameSafetyIdentity(left: unknown, right: unknown): boolean {
+  const parsedLeft = SafetyScoreV9PublicationIdentitySchema.safeParse(left);
+  const parsedRight = SafetyScoreV9PublicationIdentitySchema.safeParse(right);
+  return parsedLeft.success
+    && parsedRight.success
+    && JSON.stringify(parsedLeft.data) === JSON.stringify(parsedRight.data);
+}
+
+/**
+ * Current v2 envelopes carry the accepted V9 publication. A declaration that
+ * this is a V9 publication but does not satisfy the public contract is an
+ * integrity failure for the current build; a historical regeneration falls
+ * back to explicitly unavailable metadata instead of inventing dispositions.
+ */
+function readCurrentSafetyPublication(
+  envelope: SnapshotEnvelope,
+  historical: boolean,
+): CurrentSafetyPublication | null {
+  const raw = envelope.reportCards;
+  const declaresV9 = isRecord(raw) && raw.model === "v9";
+  if (!declaresV9) {
+    if (envelope.version === 2 && !historical) {
+      throw new Error(
+        `Public snapshot ${envelope.snapshotDate} is a v2 envelope without an accepted V9 Safety publication`,
+      );
+    }
+    return null;
+  }
+  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(raw);
+  if (!parsed.success) {
+    if (historical) return null;
+    throw new Error(
+      `Public snapshot ${envelope.snapshotDate} carries an invalid V9 Safety publication: `
+        + (parsed.error.issues[0]?.message ?? "unknown schema issue"),
+    );
+  }
+  const publication = parsed.data;
+  if (!sameSafetyIdentity(publication.safetyScoreIdentity, envelope.safetyScoreIdentity)) {
+    if (historical) return null;
+    throw new Error(
+      `Public snapshot ${envelope.snapshotDate} Safety publication identity does not match the envelope identity`,
+    );
+  }
+  if (envelope.generatedAt <= 0
+    || publication.asOfSec > envelope.generatedAt
+    || publication.updatedAt > envelope.generatedAt) {
+    if (historical) return null;
+    throw new Error(
+      `Public snapshot ${envelope.snapshotDate} Safety publication clocks do not precede the snapshot collection clock`,
+    );
+  }
+  return publication;
+}
+
+function projectSafetyDisplay(card: CurrentSafetyCard): Readonly<Record<string, unknown>> {
+  return {
+    nrReasons: card.nrReasons,
+    reasonCodes: card.reasonCodes,
+    partialEvidence: card.partialEvidence,
+    ...(card.gradeHold
+      ? {
+          gradeHold: {
+            rawGrade: card.gradeHold.rawGrade,
+            heldFromGenerationId: card.gradeHold.heldFromGenerationId,
+          },
+        }
+      : {}),
+    ...(card.provisional === true ? { provisional: true } : {}),
+  };
+}
+
+function liquidityUnavailableReason(
+  row: SnapshotEnvelope["liquidity"][number] | null,
+): string | null {
+  if (!row) return "source-row-missing";
+  if (row.unavailableReason) return row.unavailableReason;
+  // Snapshots written before the rejection reason was recorded still expose a
+  // quarantined row as null coverage and null score; never claim it was valid.
+  return row.coverageClass === null && row.liquidityScore === null ? "invalid-coverage-evidence" : null;
+}
+
+function projectLegacyScoresLatest(envelope: SnapshotEnvelope): ScoreLatestRow[] {
   const reportCardScores: Record<string, ReportCardScore> =
-    envelope.reportCards?.scores ??
+    (envelope.reportCards as { scores?: Record<string, ReportCardScore> })?.scores ??
     Object.fromEntries(
-      (envelope.reportCards?.cards ?? []).map((card) => [
-        card.id,
-        {
-          safetyScore: card.score ?? undefined,
-          score: card.score ?? undefined,
-          safetyGrade: card.grade,
-          grade: card.grade,
-        },
-      ]),
+      ((envelope.reportCards as { cards?: Array<{ id: string; score: number | null; grade: string }> })?.cards ?? [])
+        .map((card) => [
+          card.id,
+          {
+            safetyScore: card.score ?? undefined,
+            score: card.score ?? undefined,
+            safetyGrade: card.grade,
+            grade: card.grade,
+          },
+        ]),
     );
   const dewsByCoin = new Map(envelope.dews.map((row) => [row.stablecoinId, row]));
   const liquidityByCoin = new Map(envelope.liquidity.map((row) => [row.stablecoinId, row]));
@@ -354,9 +513,123 @@ function projectScoresLatest(envelope: SnapshotEnvelope | null): ScoreLatestRow[
         dewsBand: dews?.band ?? null,
         liquidityScore: liquidity?.liquidityScore ?? null,
         coverageClass: liquidity?.coverageClass ?? null,
+        // Legacy inputs retain their existing columns; the new Safety contract
+        // is explicitly unavailable rather than reconstructed.
+        ratingStatus: null,
+        safetyDisplay: null,
+        dewsComputedAt: null,
+        liquidityUpdatedAt: null,
+        liquidityUnavailableReason: null,
+        liquidityMethodologyVersion: null,
       };
     })
     .sort((a, b) => (b.safetyScore ?? -1) - (a.safetyScore ?? -1));
+}
+
+function projectEnrichedScoresLatest(
+  envelope: SnapshotEnvelope,
+  publication: CurrentSafetyPublication,
+): ScoreLatestRow[] {
+  const dewsByCoin = new Map(envelope.dews.map((row) => [row.stablecoinId, row]));
+  const liquidityByCoin = new Map(envelope.liquidity.map((row) => [row.stablecoinId, row]));
+  const cardsById = new Map(publication.cards.map((card) => [card.id, card]));
+  const marketById = new Map(envelope.stablecoins.map((coin) => [coin.id, coin]));
+
+  // A published rated asset can be absent from the market feed; keep it in the
+  // census through its tracked registry identity. Unknown card IDs are an
+  // integrity mismatch rather than a silently dropped rating.
+  const roster = envelope.stablecoins.map((coin) => coin.id);
+  for (const card of publication.cards) {
+    if (marketById.has(card.id)) continue;
+    if (!TRACKED_META_BY_ID.has(card.id)) {
+      throw new Error(
+        `Accepted Safety card ${card.id} has neither a market row nor a tracked registry identity`,
+      );
+    }
+    roster.push(card.id);
+  }
+  const cardRowCounts = new Map<string, number>();
+  for (const id of roster) {
+    if (!cardsById.has(id)) continue;
+    cardRowCounts.set(id, (cardRowCounts.get(id) ?? 0) + 1);
+  }
+  for (const card of publication.cards) {
+    if (cardRowCounts.get(card.id) !== 1) {
+      throw new Error(
+        `Accepted Safety card ${card.id} must map to exactly one scores-latest row`,
+      );
+    }
+  }
+
+  return roster
+    .map((id) => {
+      const coin = marketById.get(id);
+      const card = cardsById.get(id);
+      const dews = dewsByCoin.get(id) ?? null;
+      const liquidity = liquidityByCoin.get(id) ?? null;
+      const symbol = coin?.symbol ?? TRACKED_META_BY_ID.get(id)?.symbol;
+      if (!symbol) {
+        throw new Error(`Scores-latest row ${id} has no canonical symbol`);
+      }
+      return {
+        stablecoinId: id,
+        symbol,
+        pegScore: null,
+        safetyScore: card?.score ?? null,
+        safetyGrade: card?.grade ?? null,
+        dewsScore: dews?.score ?? null,
+        dewsBand: dews?.band ?? null,
+        liquidityScore: liquidity?.liquidityScore ?? null,
+        coverageClass: liquidity?.coverageClass ?? null,
+        ratingStatus: card?.ratingStatus ?? null,
+        safetyDisplay: card ? projectSafetyDisplay(card) : null,
+        dewsComputedAt: dews?.computedAt ?? null,
+        liquidityUpdatedAt: liquidity?.updatedAt ?? null,
+        liquidityUnavailableReason: liquidityUnavailableReason(liquidity),
+        liquidityMethodologyVersion: liquidity?.methodologyVersion ?? null,
+      };
+    })
+    .sort((a, b) => (b.safetyScore ?? -1) - (a.safetyScore ?? -1));
+}
+
+function buildScoresDisplayProjection(
+  envelope: SnapshotEnvelope,
+  publication: CurrentSafetyPublication | null,
+): ScoresLatestDisplayProjection {
+  return {
+    version: 1,
+    snapshotDate: envelope.snapshotDate,
+    capturedAtSec: envelope.generatedAt,
+    sourceSnapshotPath: `/api/snapshots/${envelope.snapshotDate}.json`,
+    safety: publication
+      ? {
+          identity: publication.safetyScoreIdentity,
+          asOfSec: publication.asOfSec,
+          publishedAtSec: publication.updatedAt,
+          sourceGenerations: publication.source.sourceGenerations,
+          publicationHealth: publication.publicationHealth,
+          completeness: publication.completeness,
+        }
+      : null,
+    safetyUnavailableReason: publication ? null : "legacy-source-metadata-unavailable",
+  };
+}
+
+function projectScoresLatest(
+  envelope: SnapshotEnvelope | null,
+  options: { historical?: boolean } = {},
+): ScoresLatestProjection {
+  if (!envelope) return { rows: [], displayProjection: null };
+  const publication = readCurrentSafetyPublication(envelope, options.historical ?? false);
+  const displayProjection = ScoresLatestDisplayProjectionSchema.parse(
+    buildScoresDisplayProjection(envelope, publication),
+  );
+  return {
+    rows: publication
+      ? projectEnrichedScoresLatest(envelope, publication)
+      : projectLegacyScoresLatest(envelope),
+    displayProjection,
+  };
 }
 
 interface PegMechanismDistributionRow {
@@ -479,6 +752,7 @@ interface TopicSpec<T> {
   metadataStatus?: "approximated";
   metadataNote?: string;
   depegCapture?: DepegLedgerCapture;
+  displayProjection?: Readonly<Record<string, unknown>>;
 }
 
 function ensureDir(path: string): void {
@@ -586,6 +860,7 @@ function buildTopicArtifacts<T>(spec: TopicSpec<T>, asOfISO: string) {
       methodologyLabel: spec.methodologyLabel,
       metadataStatus: spec.metadataStatus,
       metadataNote: spec.metadataNote,
+      displayProjection: spec.displayProjection,
       ...(spec.depegCapture ? {
         freshnessContract: "retrospective windowed event history; event state observed during the ledger capture, not at the market snapshot clock",
         sourceGeneration: spec.depegCapture.captureId,
@@ -645,22 +920,55 @@ function readRedirectRules(path: string): Map<string, { destination: string; sta
 interface JsonArtifactMetadata {
   rowCount: number;
   actualRowCount: number;
+  displayProjection: unknown;
 }
 
 function readJsonArtifactMetadata(path: string, topic: PublicDatasetTopic): JsonArtifactMetadata | null {
   try {
     const parsed = JSON.parse(readFileSync(path, "utf8")) as {
-      _meta?: { endpoint?: string; rowCount?: unknown };
+      _meta?: { endpoint?: string; rowCount?: unknown; displayProjection?: unknown };
       rows?: unknown;
     };
     if (parsed._meta?.endpoint !== topic || typeof parsed._meta.rowCount !== "number") return null;
     return {
       rowCount: parsed._meta.rowCount,
       actualRowCount: Array.isArray(parsed.rows) ? parsed.rows.length : -1,
+      displayProjection: parsed._meta.displayProjection,
     };
   } catch {
     return null;
   }
+}
+
+/**
+ * The current scores-latest artifact must carry the versioned display
+ * projection. Older dated files remain readable under their old contract, but
+ * the alias target is what the app imports, so a missing or corrupt object is
+ * an integrity failure rather than a silent preview withdrawal.
+ */
+function validateScoresLatestDisplayProjection(
+  projection: unknown,
+  snapshotDate: string,
+): { ok: true } | { ok: false; reason: string } {
+  const parsed = ScoresLatestDisplayProjectionSchema.safeParse(projection);
+  if (!parsed.success) {
+    return {
+      ok: false,
+      reason: `scores-latest _meta.displayProjection is missing or invalid (${parsed.error.issues[0]?.message ?? "unknown schema issue"})`,
+    };
+  }
+  if (parsed.data.snapshotDate !== snapshotDate) {
+    return {
+      ok: false,
+      reason: `scores-latest _meta.displayProjection dates ${parsed.data.snapshotDate}, expected ${snapshotDate}`,
+    };
+  }
+  if (parsed.data.safety
+    && (parsed.data.safety.asOfSec > parsed.data.safety.publishedAtSec
+      || parsed.data.safety.publishedAtSec > parsed.data.capturedAtSec)) {
+    return { ok: false, reason: "scores-latest _meta.displayProjection Safety clocks are out of order" };
+  }
+  return { ok: true };
 }
 
 function validateTopicRowFloor(topic: PublicDatasetTopic, rows: readonly unknown[]): void {
@@ -721,6 +1029,11 @@ function checkTopic(
   }
   if (jsonMetadata.rowCount < floor) {
     return { ok: false, reason: `${topic} rowCount ${jsonMetadata.rowCount} below required floor ${floor}` };
+  }
+  if (topic === "scores-latest") {
+    const artifactDate = /^(\d{4}-\d{2}-\d{2})\.json$/.exec(basename(jsonPath))?.[1] ?? "";
+    const projection = validateScoresLatestDisplayProjection(jsonMetadata.displayProjection, artifactDate);
+    if (!projection.ok) return projection;
   }
   return { ok: true };
 }
@@ -853,6 +1166,7 @@ function buildTopicSpecs(
   const historical = options.historical ?? isHistoricalSnapshotDate(snapshotDate);
   const envelopeSnapshotDate = envelope?.snapshotDate || snapshotDate;
   const pegMechanismProjection = projectPegMechanismDistribution(envelope, historical);
+  const scoresProjection = projectScoresLatest(envelope, { historical });
   const methodologyVersion = (
     keys: readonly string[],
     fallback: string,
@@ -881,8 +1195,9 @@ function buildTopicSpecs(
     } as TopicSpec<DepegHistoryRow> as TopicSpec<unknown>,
     {
       topic: "scores-latest",
-      rows: projectScoresLatest(envelope),
+      rows: scoresProjection.rows,
       columns: SCORES_LATEST_COLUMNS,
+      displayProjection: scoresProjection.displayProjection ?? undefined,
       methodologyLabel:
         `safety-score ${methodologyVersion(["reportCard", "pegScore"], SAFETY_SCORE_METHODOLOGY_VERSION_LABEL)} `
         + `| dews ${methodologyVersion(["dews"], DEPEG_DEWS_METHODOLOGY_VERSION_LABEL)} `
@@ -915,9 +1230,11 @@ export const testExports = {
   isHistoricalSnapshotDate,
   projectDepegHistory,
   projectPegMechanismDistribution,
+  projectScoresLatest,
   snapshotEndSecForDate,
   validateDepegHistoryCoverage,
   validateDepegHistorySourceShard,
+  validateScoresLatestDisplayProjection,
   validateTopicRowFloor,
 };
 

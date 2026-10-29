@@ -101,4 +101,4 @@ Please do not report vulnerabilities in public issues. Use the private vulnerabi
 
 ## License
 
-Pharos is open source under the [MIT License](./LICENSE).
+Pharos code, data and data exports are [MIT-licensed](./LICENSE). Editorial content, including profile prose, methodology and case studies, is licensed under [CC BY 4.0](https://creativecommons.org/licenses/by/4.0/), including when included in a Markdown export. Third-party material retains its original terms.

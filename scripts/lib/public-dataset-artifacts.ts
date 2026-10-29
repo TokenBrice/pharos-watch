@@ -21,6 +21,12 @@ export interface PublicDatasetMetadata {
   windowSnapshotAsOfISO?: string;
   metadataStatus?: "approximated";
   metadataNote?: string;
+  /**
+   * Optional versioned display projection; JSON in `_meta` and the NDJSON
+   * preamble only. The CSV keeps its pre-wave single `#` preamble so Sheets
+   * `IMPORTDATA` users still read a table, not a comment block.
+   */
+  displayProjection?: Readonly<Record<string, unknown>>;
 }
 
 const FRESHNESS_CONTRACT = "point-in-time sample; not guaranteed to track production freshness";
@@ -36,6 +42,7 @@ function metadataFields(metadata: PublicDatasetMetadata, variant: DatasetVariant
     ...(metadata.sourceObservationStartedAtISO ? { sourceObservationStartedAtISO: metadata.sourceObservationStartedAtISO } : {}),
     ...(metadata.windowSnapshotAsOfISO ? { windowSnapshotAsOfISO: metadata.windowSnapshotAsOfISO } : {}),
     ...(metadata.metadataStatus ? { metadataStatus: metadata.metadataStatus, metadataNote: metadata.metadataNote } : {}),
+    ...(metadata.displayProjection ? { displayProjection: metadata.displayProjection } : {}),
   };
 }
 

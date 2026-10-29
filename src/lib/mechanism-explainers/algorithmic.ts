@@ -6,7 +6,7 @@ export const content: ArchetypeContent = {
   subtitle:
     "Protocol-level supply rules and arbitrage defend the peg; current designs can hold real collateral, unlike historical pure mint/burn systems.",
   lead: [
-    "This mechanism family uses programmatic issuance, redemption, or market operations to defend a target value. Collateral is design-specific: FPI holds FRAX reserves and uses AMOs, USDD 2.0 combines collateralized vaults with Peg Stability Modules, and ZSD enforces a reserve-ratio floor against ZEPH collateral. An algorithmic mechanism does not itself mean an unbacked token. The current collateralized variants are described below.",
+    "This mechanism family uses programmatic issuance, redemption, or market operations to defend a target value. Collateral is design-specific: FPI's documented design uses legacy-FRAX-linked balances and AMO positions, USDD 2.0 combines collateralized vaults with Peg Stability Modules, and ZSD enforces a reserve-ratio floor against ZEPH collateral. An algorithmic mechanism does not itself mean an unbacked token. The current collateralized variants are described below.",
     "Pharos taxonomy no longer treats algorithmic as a tracked backing bucket; that historical backing label remains for off-catalog PSI assets. The walkthrough below covers the historical pure mint/burn variant, exemplified by UST/LUNA, not the reserve mechanics of FPI, USDD 2.0, or ZSD. Pure uncollateralized algorithmic stablecoins are not a live design pattern at scale in 2026.",
   ],
   howItWorks: [
@@ -51,7 +51,7 @@ export const content: ArchetypeContent = {
     },
     {
       coinId: "fpi-frax",
-      note: "Frax's CPI-pegged unit-of-account. Backed 100% by FRAX with AMOs deployed for yield; when AMO yield falls below the prevailing CPI rate, the protocol sells newly minted FPIS via a time-weighted AMM (TWAMM) to top up the treasury. Pegged to U.S. CPI rather than a fixed dollar (Pharos tracks it as a variable-peg NAV token), so peg deviation is measured against CPI growth rather than $1.",
+      note: "Frax's CPI-referenced unit of account. Its documented design targets a 100% collateral ratio using legacy-FRAX-linked balances and AMO positions, with FPIS sales as a shortfall backstop. The target does not establish a 100% liquid FRAX reserve composition. Pharos tracks FPI as a variable-peg NAV token. FIP-448 proposes freezing the CPI reference price and disabling new minting; the proposal alone does not establish completed execution.",
     },
     {
       coinId: "hbd-hive",
@@ -76,7 +76,7 @@ export const content: ArchetypeContent = {
     {
       id: "cdp-psm-hybrids",
       title: "CDP-plus-PSM hybrids retained under the label",
-      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module, close to the CDP archetype in mechanism, but it is classified as algorithmic because of its depeg history and privileged mint path. FPI is a 100%-collateralized CPI tracker with seigniorage-token dilution as its algorithmic backstop. The bucket is broader than its name suggests.",
+      body: "USDD 2.0 is structurally a CDP with a Peg Stability Module, close to the CDP archetype in mechanism, but it is classified as algorithmic because of its depeg history and privileged mint path. FPI's documented design targets a 100% collateral ratio and includes FPIS sales as a backstop; the target does not establish its observed reserve composition. The bucket is broader than its name suggests.",
     },
   ],
   whatToWatch: [
@@ -85,7 +85,7 @@ export const content: ArchetypeContent = {
     "Mint Authority review. Most coins under this archetype retain privileged mint authority; sudden mint bursts and admin-key activity are supply-control risk rather than holder-freeze events.",
     "PegScore and the 7-day deviation chart on each coin page. The composite peg score caps lower for chronic deviators, and the chart shows whether a depeg actually closed or just went stale at a discount.",
     "PSI Top Contributors table. Chronic depegs decay through the PSI factor floor (0.25 after roughly 120 days), so a long-running algorithmic depeg is downweighted in the system-wide stability index rather than amplified.",
-    "Live Reserve view where available. USDD exposes a 4-hourly collateral mix (TRX, sTRX, Smart Allocator, USDT PSM); FPI exposes its FRAX reserve and FPIS-sale state. Quarterly snapshots are too coarse for this design family.",
+    "Live Reserve view where available. USDD exposes a 4-hourly collateral mix (TRX, sTRX, Smart Allocator, USDT PSM); FPI's composition should be read from the dated reserve evidence, separately from its collateral-ratio target. Quarterly snapshots are too coarse for this design family.",
   ],
   crossLinks: [
     {

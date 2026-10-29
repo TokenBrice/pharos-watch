@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Check, Copy, ExternalLink, Maximize2, Minimize2 } from "lucide-react";
-import { ShowAllToggle } from "@/components/stablecoin-detail/disclosure-toggles";
+import { ModuleDisclosure } from "@/components/stablecoin-detail/module-disclosure";
 import {
   DETAIL_MODULE_BODY_CLASS,
   DETAIL_MODULE_HEADER_CLASS,
@@ -20,6 +20,7 @@ import { resolveCompactLogoSrc } from "@/lib/logo-variants";
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { buildExplorerUrl } from "@shared/lib/explorer";
 import { formatAddress } from "@shared/lib/format";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
 import type { StablecoinMeta } from "@shared/types";
 
 type ContractDeployment = NonNullable<StablecoinMeta["contracts"]>[number];
@@ -45,9 +46,8 @@ export function ContractDeployments({
   compact?: boolean;
 }) {
   const [openContractKey, setOpenContractKey] = useState<string | null>(null);
-  // One expansion state serves the sm:hidden chip grid and the sm+ list —
-  // previously two independent booleans left the two responsive renderings of
-  // this single instance out of sync.
+  // The rail's show-all toggle. The in-flow card replaced its toggle with the
+  // closed "Contract addresses (N)" fold, which is what crawlers read.
   const [showAllContracts, setShowAllContracts] = useState(false);
   // Keyed by chain+address: some coins deploy twice on one chain, and a
   // chain-only key would flash the copied check on both rows.
@@ -63,15 +63,17 @@ export function ContractDeployments({
 
   if (contracts.length === 0) return null;
 
+  // This card keeps its literal H2s instead of `StablecoinModuleTitle` (it
+  // shows no logo/ticker), so the heading takes the tracked symbol itself.
+  // An id outside the tracked registry keeps the plain `Contracts` heading.
+  const coinSymbol = CLIENT_TRACKED_META_BY_ID.get(coinId)?.symbol ?? null;
   const contractSummary = buildContractDeploymentSummary(contracts);
   const mobileContractsPreview = contracts.slice(0, 6);
-  const visibleMobileContracts = showAllContracts ? contracts : mobileContractsPreview;
-  const hiddenMobileContractCount = Math.max(contracts.length - mobileContractsPreview.length, 0);
   // Desktop shows labeled rows (chain name + address + actions), not an
   // icon-only wall -- recognition fails past the top-10 chain logos. Preview 9
-  // keeps the card compact for coins with dozens of deployments.
+  // keeps the card compact for coins with dozens of deployments; the in-flow
+  // card's closed fold carries the complete recorded list.
   const desktopContractsPreview = contracts.slice(0, compact ? 4 : 9);
-  const visibleDesktopContracts = showAllContracts ? contracts : desktopContractsPreview;
   const hiddenDesktopContractCount = Math.max(contracts.length - desktopContractsPreview.length, 0);
 
   const openContract = contracts.find((contract) => getContractKey(contract) === openContractKey) ?? null;
@@ -88,6 +90,7 @@ export function ContractDeployments({
 
   if (compact) {
     const ToggleIcon = showAllContracts ? Minimize2 : Maximize2;
+    const visibleDesktopContracts = showAllContracts ? contracts : desktopContractsPreview;
     return (
       <section
         // The in-flow instance owns `#contracts` but is xl:hidden;
@@ -98,7 +101,14 @@ export function ContractDeployments({
       >
         <div className="flex items-center justify-between gap-3 border-b border-border/50 px-4 py-3.5">
           <div className="flex items-center gap-2">
-            <h2 className={DETAIL_MODULE_TITLE_CLASS}>Contracts</h2>
+            <h2 className={DETAIL_MODULE_TITLE_CLASS}>
+              {coinSymbol ? (
+                <>
+                  <span className="sr-only">{coinSymbol}</span>{" "}
+                </>
+              ) : null}
+              Contracts
+            </h2>
             <span className="text-muted-foreground/50" aria-hidden="true">
               ·
             </span>
@@ -142,7 +152,14 @@ export function ContractDeployments({
     >
       <div className={DETAIL_MODULE_HEADER_CLASS}>
         <div className="flex items-center gap-2">
-          <h2 className={DETAIL_MODULE_TITLE_CLASS}>Contracts</h2>
+          <h2 className={DETAIL_MODULE_TITLE_CLASS}>
+            {coinSymbol ? (
+              <>
+                <span className="sr-only">{coinSymbol}</span>{" "}
+              </>
+            ) : null}
+            Contracts
+          </h2>
           <span className="text-muted-foreground/50" aria-hidden="true">
             ·
           </span>
@@ -160,7 +177,7 @@ export function ContractDeployments({
         />
       ) : null}
       <div className="grid grid-cols-5 gap-1.5 min-[360px]:grid-cols-6 sm:hidden">
-        {visibleMobileContracts.map((c) => {
+        {mobileContractsPreview.map((c) => {
           const contractKey = getContractKey(c);
           return (
             <ContractChainButton
@@ -174,12 +191,8 @@ export function ContractDeployments({
         })}
       </div>
       <div className="hidden sm:block">
-        <div
-          className={`grid gap-1.5 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3 ${
-            showAllContracts ? "max-h-96 overflow-y-auto pr-1" : ""
-          }`}
-        >
-          {visibleDesktopContracts.map((c) => (
+        <div className="grid gap-1.5 grid-cols-1 md:grid-cols-2 2xl:grid-cols-3">
+          {desktopContractsPreview.map((c) => (
             <ContractLabeledRow
               key={`${c.chain}-${c.address}`}
               contract={c}
@@ -188,36 +201,36 @@ export function ContractDeployments({
             />
           ))}
         </div>
-        {hiddenDesktopContractCount > 0 && (
-          <ShowAllToggle
-            open={showAllContracts}
-            onToggle={() => setShowAllContracts((current) => !current)}
-            total={contracts.length}
-            noun="chains"
-            className="mt-2"
-          />
-        )}
       </div>
-      {hiddenMobileContractCount > 0 ? (
-        <ShowAllToggle
-          open={showAllContracts}
-          onToggle={() => {
-            if (
-              showAllContracts &&
-              openContractKey &&
-              !mobileContractsPreview.some((contract) => getContractKey(contract) === openContractKey)
-            ) {
-              setOpenContractKey(null);
-            }
-            setShowAllContracts((current) => !current);
-          }}
-          total={contracts.length}
-          noun="chains"
-          className="mt-3 sm:hidden"
-        />
-      ) : null}
+      {/* The complete recorded list is a closed native fold that replaces the
+          old show-all toggle: every address is crawlable and readable without
+          JS, while the card keeps its compact interactive preview. Full
+          interactive rows for every deployment were measured at ~1.26 MB of
+          HTML on USDC (88 deployments), so this list is deliberately plain
+          text with one shared class. */}
+      <ModuleDisclosure label="Contract addresses" count={contracts.length} className="mt-3">
+        <ContractDeploymentAddressList contracts={contracts} />
+      </ModuleDisclosure>
       </div>
     </section>
+  );
+}
+
+/**
+ * One plain row per recorded deployment inside the in-flow card's `Contract
+ * addresses` fold: chain name, then the unmodified address in registry order.
+ * The rail card has no fold (its show-all toggle keeps the byte budget), so
+ * rows carry no id and no anchor twin; chain-hub links target `#contracts`.
+ */
+function ContractDeploymentAddressList({ contracts }: { contracts: ContractDeployment[] }) {
+  return (
+    <ul className="mt-2 space-y-1 break-all font-mono text-xs text-muted-foreground">
+      {contracts.map((contract) => (
+        <li key={`${contract.chain}:${contract.address}`}>
+          {`${CHAIN_META[contract.chain]?.name ?? contract.chain} ${contract.address}`}
+        </li>
+      ))}
+    </ul>
   );
 }
 

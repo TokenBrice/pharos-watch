@@ -63,8 +63,18 @@ const coreDataLinks = [
     absolute("/safety-scores/"),
     "Safety Score V10 three-pillar Backing / Exit / Economic Control model with evidence-backed grades from A+ to F.",
   ],
+  [
+    "Safety Scores dataset (JSON)",
+    absolute("/datasets/scores-latest/latest.json"),
+    "Dated release snapshot of grades and score fields; source dates and scope are recorded in the file.",
+  ],
   ["Pharos Stability Index", absolute("/stability-index/"), "Aggregate market-stability gauge with history chart."],
   ["DEWS (Depeg Early Warning System)", absolute("/depeg/"), "Active depegs, watch-list, and historical DEWS bands."],
+  [
+    "Depeg history dataset (JSON)",
+    absolute("/datasets/depeg-history/latest.json"),
+    "Retrospective depeg-event snapshot with source dates and historical coverage; current depegs are shown on the Depeg Tracker.",
+  ],
   ["Liquidity", absolute("/liquidity/"), "DEX liquidity scores, pool counts, TVL depth."],
   ["Yield", absolute("/yield/"), "Yield-bearing stablecoin intelligence."],
   [
@@ -77,6 +87,11 @@ const coreDataLinks = [
   ["FreezeWatch", absolute("/freezewatch/"), "Issuer freeze events and exposure."],
   ["Dependency Map", absolute("/dependency-map/"), "Inter-stablecoin dependency graph."],
   ["Coverage", absolute("/coverage/"), "What Pharos tracks and what it does not."],
+  [
+    "Compliance",
+    absolute("/compliance/"),
+    "MiCA and GENIUS Act status, applicability, pathway and disclosure evidence from reviewed records.",
+  ],
   ["Cemetery", absolute("/cemetery/"), `${CEMETERY_ENTRIES.length} defunct stablecoins and their causes of death.`],
   [
     "Stablecoin Cemetery dataset (JSON)",

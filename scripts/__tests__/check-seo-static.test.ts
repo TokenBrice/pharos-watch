@@ -3,7 +3,11 @@ import os from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { CHAIN_META } from "@shared/types/chain-identity";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
+  buildCompliancePanelExpectation,
+  buildSafetyScoresPreviewExpectation,
   collectSeoStaticCheckResult,
   findPublishedArchiveContinuityErrors,
 } from "../ci/check-seo-static.mjs";
@@ -78,6 +82,7 @@ async function writePage(
     title = `${h1} | Pharos`,
     description = `${h1} description`,
     extraHead = "",
+    extraMain = "",
     quote = '"',
   }: {
     h1?: string;
@@ -91,6 +96,7 @@ async function writePage(
     title?: string;
     description?: string;
     extraHead?: string;
+    extraMain?: string;
     quote?: '"' | "'";
   } = {},
 ) {
@@ -124,6 +130,7 @@ async function writePage(
       <h1>${h1}</h1>
       ${linkTags}
       <p>${mainText}</p>
+      ${extraMain}
     </main>
   </body>
 </html>`,
@@ -138,12 +145,19 @@ async function writeSitemap(root: string, routes: string[]) {
   );
 }
 
-function collectFixtureSeoResult(root: string) {
+function collectFixtureSeoResult(
+  root: string,
+  options: {
+    safetyScoresPreviewExpectation?: unknown;
+    compliancePanelExpectation?: unknown;
+  } = {},
+) {
   return collectSeoStaticCheckResult({
     outDir: root,
     enforceGooglePreviewDirectives: false,
     enforceSnippetQuality: false,
     enforceStructuredDataMatrix: false,
+    ...options,
   });
 }
 
@@ -478,6 +492,53 @@ describe("check-seo-static", () => {
     }
   });
 
+  it("enforces the retained depeg History preview in pilot profile HTML", async () => {
+    // React streaming inserts hydration comment separators between text nodes.
+    const streamedCaption = "Latest <!-- -->6<!-- --> of <!-- -->248 archived incidents · as of <!-- -->2026-10-17<!-- --> UTC. Recorded history; coverage may be incomplete.";
+    const preview = ({ rows = 6, anchors = 1, withCaption = true }: { rows?: number; anchors?: number; withCaption?: boolean } = {}) => {
+      const anchor = '<div id="depeg-history" data-history-tab="depeg" hidden><div data-testid="depeg-history-preview"><table>'
+        + `${withCaption ? `<caption>${streamedCaption}</caption>` : ""}<tbody>`
+        + Array.from({ length: rows }, (_, index) => `<tr><td>2024-01-0${index + 1}</td><td>+1${index} bps</td><td>1h</td><td>Recovered</td><td>Historical backfill</td></tr>`).join("")
+        + "</tbody></table></div></div>";
+      return `<div data-history-tab="grade" hidden></div>${Array.from({ length: anchors }, () => anchor).join("")}`;
+    };
+    const collect = async (route: string, mainText: string) => {
+      const root = await makeOutDir();
+      await writeBaselinePages(root, [route]);
+      await writePage(root, route, { h1: "Pilot profile", mainText: `${"Useful stablecoin detail text ".repeat(20)}${mainText}` });
+      await writeSitemap(root, ["/", "/stability-index/", route]);
+      return collectFixtureSeoResult(root).errors.filter((error: string) => error.includes("History preview") || error.includes("NAV profile"));
+    };
+
+    expect(await collect("/stablecoin/usdt-tether/", preview())).toEqual([]);
+    expect(await collect("/stablecoin/usdt-tether/", preview({ anchors: 2 }))).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("History preview must own exactly one #depeg-history (found 2)"),
+        expect.stringContaining("History preview must render exactly once (found 2)"),
+      ]),
+    );
+    expect(await collect("/stablecoin/usdt-tether/", preview({ rows: 7 }))).toEqual([
+      expect.stringContaining("History preview renders 7 incident rows (maximum 6)"),
+    ]);
+    expect(await collect("/stablecoin/usdt-tether/", preview({ rows: 0 }))).toEqual([
+      expect.stringContaining("History preview renders no incident rows"),
+    ]);
+    expect(await collect("/stablecoin/usdt-tether/", preview({ withCaption: false }))).toEqual([
+      expect.stringContaining("History preview is missing its capture date or coverage caption"),
+    ]);
+    expect(await collect("/stablecoin/usdt-tether/", `<div data-history-tab="depeg" hidden><script>{"text":"Latest 6 of 248 archived incidents · as of 2026-10-17 UTC. Recorded history; coverage may be incomplete."}</script></div>`)).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("History preview must render exactly once (found 0)"),
+      ]),
+    );
+    expect(await collect("/stablecoin/aa-falconx-mev-capital/", preview())).toEqual(
+      expect.arrayContaining([
+        expect.stringContaining("NAV profile renders a depeg history preview"),
+        expect.stringContaining("NAV profile renders a #depeg-history panel"),
+      ]),
+    );
+  });
+
   it("requires one visible <h1> inside <main> on former loading-boundary route families", async () => {
     const root = await makeOutDir();
     await writeBaselinePages(root, ["/depeg/", "/compare/", "/flows/"]);
@@ -621,4 +682,560 @@ describe("check-seo-static", () => {
     );
   });
 
+});
+
+const USDC = TRACKED_META_BY_ID.get("usdc-circle")!;
+const USDC_CONTRACTS = USDC.contracts ?? [];
+const USDC_LAST_DEPLOYMENT = USDC_CONTRACTS[USDC_CONTRACTS.length - 1];
+const USDC_PREVIEW_CHAIN = USDC_CONTRACTS[0].chain;
+
+/**
+ * The profile's closed `Contract addresses` fold, as the built export carries
+ * it: one plain exact-address row per recorded deployment inside the
+ * `#contracts` module, plus a preview chain link.
+ */
+async function writeContractProfilePage(
+  root: string,
+  { omitLastAddress = false, omitFold = false, omitModuleAnchor = false } = {},
+) {
+  const deployments = omitLastAddress ? USDC_CONTRACTS.slice(0, -1) : USDC_CONTRACTS;
+  const rows = deployments.map((contract) => {
+    const chainName = CHAIN_META[contract.chain]?.name ?? contract.chain;
+    return `<li>${chainName} ${contract.address}</li>`;
+  });
+
+  await writePage(root, "/stablecoin/usdc-circle/", {
+    h1: "USD Coin (USDC)",
+    mainText: Array.from({ length: 70 }, (_, index) => `word${index}`).join(" "),
+    extraMain:
+      `<section${omitModuleAnchor ? "" : ' id="contracts"'} aria-label="Contracts, ${USDC_CONTRACTS.length} deployments">`
+      + (omitFold
+        ? ""
+        : `<details data-module-fold=""><summary>Contract addresses (${USDC_CONTRACTS.length})</summary><ul>${rows.join("")}</ul></details>`)
+      + `<a href="/chains/${USDC_PREVIEW_CHAIN}/">Chain</a>`
+      + "</section>",
+  });
+}
+
+/** One pilot hub page: bounded table, counted caption, and complete directory. */
+async function writePilotChainPage(
+  root: string,
+  chain: "solana" | "base" | "tron",
+  {
+    omitHeading = false,
+    omitDirectory = false,
+    wrongFragment = false,
+  } = {},
+) {
+  const chainName = CHAIN_META[chain].name;
+  const contract = USDC_CONTRACTS.find((candidate) => candidate.chain === chain)!;
+  const fragment = wrongFragment ? "contract-solana%3A0xmissing" : "contracts";
+  const directory = omitDirectory
+    ? ""
+    : '<nav aria-labelledby="chain-deployment-anchors-heading"><a href="/stablecoin/usdc-circle/">USD Coin</a></nav>';
+
+  await writePage(root, `/chains/${chain}/`, {
+    h1: `${chainName} Stablecoins`,
+    mainText: Array.from({ length: 45 }, (_, index) => `word${index}`).join(" "),
+    extraMain:
+      '<section id="chain-contract-addresses" aria-labelledby="chain-contract-addresses-heading" class="space-y-3">'
+      + (omitHeading ? "" : `<h2 id="chain-contract-addresses-heading">Recorded contract addresses on ${chainName}</h2>`)
+      + '<p class="text-sm text-muted-foreground">Showing 1 of 1 recorded deployments</p>'
+      + "<table><thead><tr>"
+      + '<th scope="col">Stablecoin</th><th scope="col">Contract address</th><th scope="col">Decimals</th><th scope="col">Explorer</th>'
+      + "</tr></thead><tbody><tr>"
+      + `<th scope="row"><a href="/stablecoin/usdc-circle/#${fragment}">USD Coin (USDC)</a></th>`
+      + `<td>${contract.address}</td><td>6</td><td><a href="https://example.test">Explorer</a></td>`
+      + "</tr></tbody></table></section>"
+      + directory,
+  });
+}
+
+async function writeContractSurfaces(root: string, profileOptions = {}, chainOptions: Record<string, object> = {}) {
+  const routes = ["/stablecoin/usdc-circle/", "/chains/solana/", "/chains/base/", "/chains/tron/"];
+  await writeBaselinePages(root, routes);
+  await writeSitemap(root, ["/", "/stability-index/", ...routes]);
+  await writeContractProfilePage(root, profileOptions);
+  for (const chain of ["solana", "base", "tron"] as const) {
+    await writePilotChainPage(root, chain, chainOptions[chain]);
+  }
+}
+
+describe("contract deployment surfaces", () => {
+  it("accepts the closed address fold and the three bounded chain tables", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root);
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toEqual([]);
+  });
+
+  it("fails when the closed fold drops the last recorded deployment address", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, { omitLastAddress: true });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain(
+      `/stablecoin/usdc-circle/: contract address fold omits 1 of ${USDC_CONTRACTS.length} recorded addresses (${USDC_LAST_DEPLOYMENT.address})`,
+    );
+  });
+
+  it("fails when the profile drops the contract address fold", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, { omitFold: true });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain("/stablecoin/usdc-circle/: contract address fold summary missing");
+  });
+
+  it("fails when a chain table drops its heading", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, {}, { base: { omitHeading: true } });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain("/chains/base/: \"Recorded contract addresses on Base\" missing");
+  });
+
+  it("fails when a chain table row omits the #contracts module target", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, {}, { tron: { wrongFragment: true } });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain(
+      "/chains/tron/: contract table destination /stablecoin/usdc-circle/#contract-solana%3A0xmissing does not target #contracts",
+    );
+  });
+
+  it("fails when a chain table destination has no #contracts module to land on", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, { omitModuleAnchor: true });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain(
+      "/chains/solana/: contract table destination /stablecoin/usdc-circle/#contracts resolves to 0 ids",
+    );
+  });
+
+  it("fails when the complete profile directory that carries overflow disappears", async () => {
+    const root = await makeOutDir();
+    await writeContractSurfaces(root, {}, { solana: { omitDirectory: true } });
+
+    const result = collectFixtureSeoResult(root);
+    expect(result.errors).toContain(
+      "/chains/solana/: complete profile directory missing, so contract table overflow has no destination",
+    );
+  });
+});
+
+type SafetyPreviewExpectation = {
+  status: "ok";
+  preview: {
+    snapshotDate: string;
+    publishedAtSec: number;
+    publishedAtIso: string;
+    publishedDate: string;
+    eligibleRatedCount: number;
+    rows: { id: string; href: string; grade: string; score: number }[];
+  };
+};
+
+const SAFETY_EXPECTATION = buildSafetyScoresPreviewExpectation() as SafetyPreviewExpectation;
+const SAFETY_PREVIEW = SAFETY_EXPECTATION.preview;
+
+/** One preview card, as the exported markup carries it. */
+function safetyPreviewCard(row: SafetyPreviewExpectation["preview"]["rows"][number]) {
+  return `<a href="${row.href}" title="${row.id}"><div class="pharos-card-shell"><div>`
+    + `<div><span class="truncate">${row.id} Stablecoin</span><span>SYM</span></div>`
+    + `<span data-slot="badge" aria-label="Safety grade ${row.grade}">${row.grade}</span>`
+    + `<div><span class="pharos-numeric">${row.score}<!-- -->/100</span></div>`
+    + "</div></div></a>";
+}
+
+/** The dated results region; React separators/scripts stay in the fixture on purpose. */
+function safetyPreviewRegion({
+  rows = SAFETY_PREVIEW.rows,
+  caption = `Top <!-- -->${SAFETY_PREVIEW.rows.length}<!-- --> of <!-- -->${SAFETY_PREVIEW.eligibleRatedCount}<!-- --> rated active stablecoins by Safety Score`,
+  datetime = SAFETY_PREVIEW.publishedAtIso,
+  dateText = SAFETY_PREVIEW.publishedDate,
+  omitTime = false,
+  extraCards = "",
+  extraHtml = "",
+  regionCount = 1,
+}: {
+  rows?: SafetyPreviewExpectation["preview"]["rows"];
+  caption?: string;
+  datetime?: string;
+  dateText?: string;
+  omitTime?: boolean;
+  extraCards?: string;
+  extraHtml?: string;
+  regionCount?: number;
+} = {}) {
+  const region = `<section id="data" aria-label="Safety score cards" tabindex="-1">`
+    + '<div class="mb-3 flex flex-wrap">'
+    + (omitTime
+      ? ""
+      : `<a href="/datasets/scores-latest/${SAFETY_PREVIEW.snapshotDate}.json"><time datetime="${datetime}">Grades as of <!-- -->${dateText}</time></a>`)
+    + `<span>${caption}</span></div>`
+    + `<div class="grid">${rows.map(safetyPreviewCard).join("")}${extraCards}</div>${extraHtml}</section>`;
+  return `${region}${Array.from({ length: regionCount - 1 }, () => region).join("")}`;
+}
+
+async function writeSafetyScoresPage(root: string, extraMain: string) {
+  await writeBaselinePages(root, ["/safety-scores/"]);
+  await writePage(root, "/safety-scores/", { h1: "Safety Scores", extraMain });
+  await writeSitemap(root, ["/", "/stability-index/", "/safety-scores/"]);
+}
+
+describe("safety scores dated preview", () => {
+  it("projects the expected preview from the committed dataset instead of an inventory", () => {
+    expect(SAFETY_EXPECTATION.status).toBe("ok");
+    expect(SAFETY_PREVIEW.rows.length).toBeGreaterThan(0);
+    expect(SAFETY_PREVIEW.rows.length).toBeLessThanOrEqual(20);
+    expect(SAFETY_PREVIEW.eligibleRatedCount).toBeGreaterThanOrEqual(SAFETY_PREVIEW.rows.length);
+    expect(SAFETY_PREVIEW.publishedAtIso).toBe(new Date(SAFETY_PREVIEW.publishedAtSec * 1000).toISOString());
+    expect(SAFETY_PREVIEW.rows.every((row) => row.href === `/stablecoin/${row.id}/`)).toBe(true);
+    const scores = SAFETY_PREVIEW.rows.map((row) => row.score);
+    expect(scores).toEqual([...scores].sort((left, right) => right - left));
+  });
+
+  it("accepts exactly one dated results region with the projected facts", async () => {
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(root, safetyPreviewRegion());
+
+    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+    expect(result.errors).toEqual([]);
+  });
+
+  it("accepts the preview when only Next's streamed segment carries it", async () => {
+    const root = await makeOutDir();
+    // The route-level fallback is the neutral skeleton; the client's pending
+    // render lands in the hidden segment that hydration reveals.
+    await writeSafetyScoresPage(root, `<div hidden id="S:0">${safetyPreviewRegion()}</div>`);
+
+    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+    expect(result.errors).toEqual([]);
+  });
+
+  it("rejects a second results region inside Next's streamed segment", async () => {
+    const root = await makeOutDir();
+    const region = safetyPreviewRegion();
+    // A fallback that also renders the preview duplicates every fact: the
+    // exported document carries two result sets for the same grades.
+    await writeSafetyScoresPage(root, `${region}<div hidden id="S:0">${region}</div>`);
+
+    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 2'),
+    );
+  });
+
+  it("dates the caption with the publication clock rather than the dataset date", async () => {
+    const publishedAtSec = SAFETY_PREVIEW.publishedAtSec + 86_400;
+    const expectation = {
+      ...SAFETY_EXPECTATION,
+      preview: {
+        ...SAFETY_PREVIEW,
+        publishedAtSec,
+        publishedAtIso: new Date(publishedAtSec * 1000).toISOString(),
+        publishedDate: new Date(publishedAtSec * 1000).toISOString().slice(0, 10),
+      },
+    } satisfies SafetyPreviewExpectation;
+    expect(expectation.preview.publishedDate).not.toBe(SAFETY_PREVIEW.snapshotDate);
+
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(
+      root,
+      `<div hidden id="S:0">${safetyPreviewRegion({
+        datetime: expectation.preview.publishedAtIso,
+        dateText: expectation.preview.publishedDate,
+      })}</div>`,
+    );
+    expect(collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: expectation }).errors).toEqual([]);
+
+    // A publication that slips past UTC midnight is no longer the dataset's
+    // calendar date, and the check names the publication date it expects.
+    const staleDate = await makeOutDir();
+    await writeSafetyScoresPage(
+      staleDate,
+      safetyPreviewRegion({ datetime: expectation.preview.publishedAtIso }),
+    );
+    expect(
+      collectFixtureSeoResult(staleDate, { safetyScoresPreviewExpectation: expectation }).errors,
+    ).toContainEqual(
+      expect.stringContaining(`preview <time> does not carry "Grades as of ${expectation.preview.publishedDate}"`),
+    );
+  });
+
+  it("rejects duplicate results regions, a missing grade date and a slice caption", async () => {
+    const cases: Array<[string, string, string]> = [
+      [
+        "duplicate",
+        safetyPreviewRegion({ regionCount: 2 }),
+        'expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 2',
+      ],
+      ["time", safetyPreviewRegion({ omitTime: true }), "must carry exactly one <time> grade date (found 0)"],
+      ["datetime", safetyPreviewRegion({ datetime: "2026-01-01T00:00:00.000Z" }), "is not the publication clock"],
+      ["datetext", safetyPreviewRegion({ dateText: "2026-10-01" }), `preview <time> does not carry "Grades as of ${SAFETY_PREVIEW.publishedDate}"`],
+      [
+        "caption",
+        safetyPreviewRegion({ caption: `Top ${SAFETY_PREVIEW.rows.length} of ${SAFETY_PREVIEW.rows.length} rated active stablecoins by Safety Score` }),
+        "preview caption reports Top",
+      ],
+    ];
+    for (const [name, extraMain, expected] of cases) {
+      const root = await makeOutDir();
+      await writeSafetyScoresPage(root, extraMain);
+      const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+      expect(result.errors, `${name}: ${result.errors.join(" | ")}`).toContainEqual(expect.stringContaining(expected));
+    }
+  });
+
+  it("reports the exact grade, score and href mismatches", async () => {
+    const [first] = SAFETY_PREVIEW.rows;
+    const cases: Array<[string, string, string]> = [
+      [
+        "grade",
+        safetyPreviewRegion().replace(`aria-label="Safety grade ${first.grade}"`, 'aria-label="Safety grade B-"'),
+        `preview card ${first.href} carries "B-" grade label, expected the projected "${first.grade}"`,
+      ],
+      [
+        "score",
+        safetyPreviewRegion().replace(`${first.score}<!-- -->/100`, `${first.score + 1}<!-- -->/100`),
+        `preview card ${first.href} does not carry the projected ${first.score}/100 score`,
+      ],
+      ["missing", safetyPreviewRegion({ rows: SAFETY_PREVIEW.rows.slice(1) }), `preview omits projected profile links: ${first.href}`],
+      [
+        "unexpected",
+        safetyPreviewRegion({ extraCards: safetyPreviewCard({ id: "not-projected", href: "/stablecoin/not-projected/", grade: "C", score: 51 }) }),
+        "preview renders profile links outside the projected top rows: /stablecoin/not-projected/",
+      ],
+    ];
+    for (const [name, html, expected] of cases) {
+      const root = await makeOutDir();
+      await writeSafetyScoresPage(root, html);
+      const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+      expect(result.errors, name).toContainEqual(expect.stringContaining(expected));
+    }
+  });
+
+  it("fails when the preview facts exist only inside RSC script strings", async () => {
+    const root = await makeOutDir();
+    const flight = JSON.stringify({
+      caption: `Top ${SAFETY_PREVIEW.rows.length} of ${SAFETY_PREVIEW.eligibleRatedCount} rated active stablecoins by Safety Score`,
+      rows: SAFETY_PREVIEW.rows.map((row) => `${row.href} ${row.grade} ${row.score}/100`),
+    });
+    await writeSafetyScoresPage(
+      root,
+      `<script>self.__next_f.push(${flight})</script><script type="application/ld+json">{"@type":"Dataset"}</script>`,
+    );
+
+    const result = collectFixtureSeoResult(root, { safetyScoresPreviewExpectation: SAFETY_EXPECTATION });
+    expect(result.errors).toContainEqual(
+      expect.stringContaining('expected exactly one Safety Scores results region (aria-label "Safety score cards"), found 0'),
+    );
+  });
+
+  it("rejects a preview the build cannot prove from an admissible projection", async () => {
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(root, safetyPreviewRegion());
+
+    const result = collectFixtureSeoResult(root, {
+      safetyScoresPreviewExpectation: { status: "unavailable", reason: "display-projection-missing" },
+    });
+    expect(result.errors).toContainEqual(
+      expect.stringContaining("Safety Scores preview rendered without an admissible dated projection (display-projection-missing)"),
+    );
+  });
+
+  it("accepts the neutral skeleton and names the reason when no projection is admissible", async () => {
+    const root = await makeOutDir();
+    await writeSafetyScoresPage(root, "<div class=\"pharos-card-shell\"></div>");
+
+    const result = collectFixtureSeoResult(root, {
+      safetyScoresPreviewExpectation: { status: "unavailable", reason: "display-projection-missing" },
+    });
+    expect(result.errors).toEqual([]);
+    expect(result.warnings).toContainEqual(
+      expect.stringContaining("Safety Scores dated preview unavailable (display-projection-missing)"),
+    );
+  });
+
+  it("withholds the expectation when the committed projection is inconsistent", async () => {
+    const root = await mkdtemp(path.join(os.tmpdir(), "pharos-preview-source-"));
+    roots.push(root);
+    const datasetDir = path.join(root, "datasets");
+    const coinDir = path.join(root, "coins");
+    await mkdir(path.join(datasetDir, "scores-latest"), { recursive: true });
+    await mkdir(coinDir, { recursive: true });
+    await writeFile(path.join(coinDir, "coin-a.json"), JSON.stringify({ id: "coin-a", status: "active" }));
+    await writeFile(
+      path.join(root, "current.ts"),
+      'export const PUBLIC_DATASET_CURRENT_DATE = "2026-10-28";\n',
+    );
+
+    const row = (id: string, overrides: Record<string, unknown> = {}) => ({
+      stablecoinId: id,
+      ratingStatus: "rated",
+      safetyScore: 80,
+      safetyGrade: "A-",
+      ...overrides,
+    });
+    const dataset = (rows: unknown[], overrides: Record<string, unknown> = {}) => ({
+      _meta: {
+        methodologyLabel: "safety-score v10.36 | dews v6.38 | liquidity v6.98",
+        displayProjection: {
+          version: 1,
+          snapshotDate: "2026-10-28",
+          capturedAtSec: 1793174453,
+          sourceSnapshotPath: "/api/snapshots/2026-10-28.json",
+          safety: {
+            identity: { methodologyVersion: "10.36" },
+            asOfSec: 1793171906,
+            publishedAtSec: 1793171906,
+            completeness: { expectedCount: 3, ratedCount: 1, notRatedCount: 0, pipelineGapCount: 0 },
+            ...overrides,
+          },
+        },
+      },
+      rows,
+    });
+    const buildExpectation = async (payload: unknown) => {
+      await writeFile(path.join(datasetDir, "scores-latest", "2026-10-28.json"), JSON.stringify(payload));
+      return buildSafetyScoresPreviewExpectation({
+        currentModulePath: path.join(root, "current.ts"),
+        datasetsDir: datasetDir,
+        coinDataDir: coinDir,
+        gradePolicyPath: "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+      });
+    };
+
+    expect(await buildExpectation(dataset([row("coin-a"), row("coin-a")])))
+      .toEqual({ status: "unavailable", reason: "duplicate-dataset-row:coin-a" });
+    expect(await buildExpectation(dataset([row("coin-a")], { completeness: { expectedCount: 2, ratedCount: 2, notRatedCount: 0, pipelineGapCount: 0 } })))
+      .toEqual({ status: "unavailable", reason: "completeness-mismatch" });
+    expect(await buildExpectation(dataset([row("coin-a", { safetyGrade: "B+" })])))
+      .toEqual({ status: "unavailable", reason: "no-eligible-rated-rows" });
+    // A dataset smaller than the row bound yields a smaller expectation.
+    const notRated = row("coin-b", { ratingStatus: "not-rated", safetyScore: null, safetyGrade: "NR" });
+    const small = await buildExpectation(dataset([row("coin-a"), notRated], {
+      completeness: { expectedCount: 2, ratedCount: 1, notRatedCount: 1, pipelineGapCount: 0 },
+    }));
+    expect(small).toMatchObject({
+      status: "ok",
+      preview: { rows: [{ id: "coin-a", href: "/stablecoin/coin-a/", grade: "A-", score: 80 }], eligibleRatedCount: 1 },
+    });
+  });
+});
+
+type CompliancePanelExpectation =
+  | { status: "ok"; mica: { id: string; href: string } | null; genius: { id: string; href: string; reviewedAt: string | null } | null }
+  | { status: "unavailable"; reason: string };
+
+const COMPLIANCE_EXPECTATION = buildCompliancePanelExpectation() as CompliancePanelExpectation;
+const MICA_ROW = COMPLIANCE_EXPECTATION.status === "ok" && COMPLIANCE_EXPECTATION.mica
+  ? COMPLIANCE_EXPECTATION.mica
+  : { id: "mica-fixture", href: "/stablecoin/mica-fixture/" };
+const GENIUS_ROW = COMPLIANCE_EXPECTATION.status === "ok" && COMPLIANCE_EXPECTATION.genius
+  ? COMPLIANCE_EXPECTATION.genius
+  : { id: "genius-fixture", href: "/stablecoin/genius-fixture/", reviewedAt: "2026-10-07" };
+
+/** The three mounted regime panels, as the exported markup carries them. */
+function compliancePanels({
+  micaHidden = true,
+  geniusHidden = true,
+  micaRowIn = "mica",
+  geniusRowIn = "genius",
+  includeMicaHeading = true,
+  includeWatch = true,
+}: {
+  micaHidden?: boolean;
+  geniusHidden?: boolean;
+  micaRowIn?: "mica" | "genius" | "none";
+  geniusRowIn?: "mica" | "genius" | "none";
+  includeMicaHeading?: boolean;
+  includeWatch?: boolean;
+} = {}) {
+  const micaRow = `<tr><th scope="row"><a href="${MICA_ROW.href}">MT</a></th><td>Authorized</td></tr>`;
+  const geniusRow = `<tr><th scope="row"><a href="${GENIUS_ROW.href}">GT</a></th><td>Issuer Intent</td></tr>`;
+  return '<div role="tablist" aria-label="Compliance view">'
+    + '<button id="compliance-tab-all" role="tab">Overview</button>'
+    + '<button id="compliance-tab-mica" role="tab">MiCA</button>'
+    + '<button id="compliance-tab-genius" role="tab">GENIUS</button></div>'
+    + '<div id="compliance-overview-panel" role="tabpanel" aria-labelledby="compliance-tab-all" tabindex="0">'
+    + '<p class="pharos-label">Stablecoin directory</p>'
+    + '<div data-table-id="compliance-overview"><table><tbody><tr><td><a href="/stablecoin/overview-coin/">OC</a></td><td>MiCA</td><td>GENIUS</td></tr></tbody></table></div>'
+    + "</div>"
+    + `<div id="compliance-mica-panel" role="tabpanel" aria-labelledby="compliance-tab-mica" tabindex="0"${micaHidden ? " hidden" : ""}>`
+    + (includeMicaHeading
+      ? '<h2 id="mica" class="pharos-label"><a href="/compliance/?regime=mica#mica">MiCA authorization</a></h2>'
+      : "")
+    + `<div data-table-id="compliance-mica-authorization"><table><tbody>${micaRowIn === "mica" ? micaRow : ""}${geniusRowIn === "mica" ? geniusRow : ""}</tbody></table>`
+    + '<div><p class="pharos-label">Sources</p><a href="https://example.test/mica-source">Source</a></div></div>'
+    + "</div>"
+    + `<div id="compliance-genius-panel" role="tabpanel" aria-labelledby="compliance-tab-genius" tabindex="0"${geniusHidden ? " hidden" : ""}>`
+    + '<h2 id="genius" class="pharos-label"><a href="/compliance/?regime=genius#genius">GENIUS Act status</a></h2>'
+    + '<div data-table-id="compliance-genius-authorization"><table><tbody></tbody></table></div>'
+    + (includeWatch
+      ? '<div id="implementation-watch"><p class="pharos-label">GENIUS implementation watch</p>'
+        + `<div data-table-id="compliance-genius-watch"><table><tbody>${geniusRowIn === "genius" ? geniusRow : ""}${micaRowIn === "genius" ? micaRow : ""}</tbody></table></div>`
+        + (GENIUS_ROW.reviewedAt ? `<p class="text-xs">Reviewed <!-- -->${GENIUS_ROW.reviewedAt}</p>` : "")
+        + "</div>"
+      : "")
+    + "</div>";
+}
+
+async function writeCompliancePage(root: string, extraMain: string) {
+  await writeBaselinePages(root, ["/compliance/"]);
+  await writePage(root, "/compliance/", { h1: "Compliance Tracker", extraMain });
+  await writeSitemap(root, ["/", "/stability-index/", "/compliance/"]);
+}
+
+describe("compliance regime panels", () => {
+  it("accepts the three mounted panels with regime-scoped rows", async () => {
+    const root = await makeOutDir();
+    await writeCompliancePage(root, compliancePanels());
+
+    const result = collectFixtureSeoResult(root, { compliancePanelExpectation: COMPLIANCE_EXPECTATION });
+    expect(result.errors).toEqual([]);
+  });
+
+  it("rejects duplicate, visible-inactive and mislabelled panels", async () => {
+    const cases: Array<[string, string, string]> = [
+      ["visible", compliancePanels({ micaHidden: false }), "#compliance-mica-panel must stay hidden until its tab is selected"],
+      ["overview-hidden", compliancePanels().replace('aria-labelledby="compliance-tab-all" tabindex="0"', 'aria-labelledby="compliance-tab-all" tabindex="0" hidden'), "#compliance-overview-panel must not be hidden; it is the initial panel"],
+      ["duplicate", `${compliancePanels()}<div id="compliance-mica-panel"></div>`, "expected exactly one #compliance-mica-panel panel, found 2"],
+      ["heading", compliancePanels({ includeMicaHeading: false }), "expected exactly one #mica regime heading, found 0"],
+      ["watch", compliancePanels({ includeWatch: false }), "expected exactly one #implementation-watch block, found 0"],
+    ];
+    for (const [name, body, expected] of cases) {
+      const root = await makeOutDir();
+      await writeCompliancePage(root, body);
+      const result = collectFixtureSeoResult(root, { compliancePanelExpectation: COMPLIANCE_EXPECTATION });
+      expect(result.errors, `${name}: ${result.errors.join(" | ")}`).toContainEqual(expect.stringContaining(expected));
+    }
+  });
+
+  it("rejects regime rows mounted in the wrong panel", async () => {
+    const root = await makeOutDir();
+    await writeCompliancePage(root, compliancePanels({ micaRowIn: "genius", geniusRowIn: "mica" }));
+
+    const result = collectFixtureSeoResult(root, { compliancePanelExpectation: COMPLIANCE_EXPECTATION });
+    expect(result.errors).toContainEqual(expect.stringContaining(`MiCA row ${MICA_ROW.href} leaked into the GENIUS panel`));
+    expect(result.errors).toContainEqual(expect.stringContaining(`GENIUS row ${GENIUS_ROW.href} leaked into the MiCA panel`));
+  });
+
+  it("fails when the panel evidence exists only inside script strings", async () => {
+    const root = await makeOutDir();
+    const flight = JSON.stringify({
+      panels: ["compliance-overview-panel", "compliance-mica-panel", "compliance-genius-panel"],
+      headings: ["MiCA authorization", "GENIUS Act status"],
+      rows: [MICA_ROW.href, GENIUS_ROW.href],
+    });
+    await writeCompliancePage(root, `<script>self.__next_f.push(${flight})</script>`);
+
+    const result = collectFixtureSeoResult(root, { compliancePanelExpectation: COMPLIANCE_EXPECTATION });
+    expect(result.errors).toContainEqual(expect.stringContaining("expected exactly one #compliance-overview-panel panel, found 0"));
+    expect(result.errors).toContainEqual(expect.stringContaining("expected exactly one #mica regime heading, found 0"));
+  });
 });

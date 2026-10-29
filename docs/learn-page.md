@@ -20,6 +20,10 @@ Visible article metadata credits Pharos, links to `/about/#editorial-ai-policy`,
 
 `MECHANISM_ARCHETYPE_VALUES` (defined in `shared/types/stablecoin-taxonomy.ts`, re-exported through `shared/types/core.ts`) owns the exhaustive archetype roster and static-route order. `ARCHETYPE_CONTENT` in `src/lib/mechanism-explainers/index.ts` registers content using `ArchetypeContent`. Labels, descriptors and canonical paths derive from `shared/lib/classification.ts`, not route-local copies. The hub has no client-only state.
 
+The hub's static comparison matrix is headed `Types of stablecoins` (`#mechanism-matrix-heading`). Its mechanism count, caption, archetype roster and row labels stay owned by the matrix module and shared classification; the heading is the only authored vocabulary changed there.
+
+FPI copy keeps its documented 100% collateral-ratio target distinct from dated observed reserve composition, including when the target depends on legacy-FRAX-linked balances and AMO positions. FIP-448 remains a proposal until a separately authorized evidence refresh verifies execution. A design target is never rendered as observed coverage or a completed wind-down.
+
 Tracked examples and lifecycle counts use `shared/lib/stablecoins/by-mechanism.ts`: active coins appear in canonical order with variants nested; commodity pegs participate only in their explicitly resolved `commodity-claim` family; unresolved effective archetypes are excluded. Hub counts and upcoming/frozen links use the same admission policy. Relevant case studies retain canonical study order.
 
 ### Diagram Scope

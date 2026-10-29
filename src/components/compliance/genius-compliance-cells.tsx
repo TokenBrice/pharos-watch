@@ -90,12 +90,7 @@ export function GeniusReviewDetails({ evidence: row }: { evidence: GeniusComplia
   return (
     <div className="min-w-0 space-y-2 text-xs text-muted-foreground">
       <p className="pharos-label">Review details</p>
-      {row.reviewedAt || row.reviewer ? (
-        <p>
-          Reviewed{row.reviewedAt ? ` ${row.reviewedAt}` : ""}
-          {row.reviewer ? ` by ${row.reviewer}` : ""}
-        </p>
-      ) : null}
+      {row.reviewer ? <p>Reviewed by {row.reviewer}</p> : null}
       {row.applicabilitySummary ? <p>{row.applicabilitySummary}</p> : null}
       {row.foreignExceptionSummary ? <p>{row.foreignExceptionSummary}</p> : null}
       {row.negativeEvidenceSummary ? <p>{row.negativeEvidenceSummary}</p> : null}

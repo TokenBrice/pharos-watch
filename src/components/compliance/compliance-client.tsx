@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { FilterSearchInput } from "@/components/filter-search-input";
 import { ControlPillToggle } from "@/components/control-pill-toggle";
 import { logosById } from "@/lib/logos";
@@ -32,6 +32,7 @@ import {
   normalizeMicaTokenTypeFilter,
   type ComplianceRegimeFilter,
   type ComplianceStatusFilter,
+  type ComplianceViewModel,
 } from "@/lib/compliance-model";
 import { ComplianceTable } from "./compliance-table";
 import { OverviewDirectory } from "./overview-directory";
@@ -79,6 +80,23 @@ const COMPLIANCE_URL_SCHEMA: UrlStateSchema<ComplianceUrlState> = {
   },
 };
 
+const COMPLIANCE_TAB_IDS: Record<ComplianceRegimeFilter, string> = {
+  all: "compliance-tab-all",
+  mica: "compliance-tab-mica",
+  genius: "compliance-tab-genius",
+};
+
+const COMPLIANCE_PANEL_IDS: Record<ComplianceRegimeFilter, string> = {
+  all: "compliance-overview-panel",
+  mica: "compliance-mica-panel",
+  genius: "compliance-genius-panel",
+};
+
+const COMPLIANCE_REGIME_HEADINGS: Record<"mica" | "genius", string> = {
+  mica: "MiCA authorization",
+  genius: "GENIUS Act status",
+};
+
 function ComplianceViewTabs({
   value,
   onChange,
@@ -86,19 +104,44 @@ function ComplianceViewTabs({
   value: ComplianceRegimeFilter;
   onChange: (value: ComplianceRegimeFilter) => void;
 }) {
+  const tabRefs = useRef<Partial<Record<ComplianceRegimeFilter, HTMLButtonElement | null>>>({});
+
   return (
     <div role="tablist" aria-label="Compliance view" className="flex border-b border-border/60">
-      {COMPLIANCE_REGIME_FILTER_OPTIONS.map((option) => {
+      {COMPLIANCE_REGIME_FILTER_OPTIONS.map((option, index) => {
         const isActive = option.value === value;
         const label = option.value === "all" ? "Overview" : option.label;
         return (
           <button
             key={option.value}
+            ref={(node) => {
+              tabRefs.current[option.value] = node;
+            }}
+            id={COMPLIANCE_TAB_IDS[option.value]}
             type="button"
             role="tab"
             aria-selected={isActive}
-            aria-controls="compliance-view-panel"
+            aria-controls={COMPLIANCE_PANEL_IDS[option.value]}
+            tabIndex={isActive ? 0 : -1}
             onClick={() => onChange(option.value)}
+            onKeyDown={(event) => {
+              const lastIndex = COMPLIANCE_REGIME_FILTER_OPTIONS.length - 1;
+              const nextIndex =
+                event.key === "ArrowRight"
+                  ? (index + 1) % COMPLIANCE_REGIME_FILTER_OPTIONS.length
+                  : event.key === "ArrowLeft"
+                    ? (index + COMPLIANCE_REGIME_FILTER_OPTIONS.length - 1) % COMPLIANCE_REGIME_FILTER_OPTIONS.length
+                    : event.key === "Home"
+                      ? 0
+                      : event.key === "End"
+                        ? lastIndex
+                        : null;
+              if (nextIndex === null) return;
+              event.preventDefault();
+              const next = COMPLIANCE_REGIME_FILTER_OPTIONS[nextIndex];
+              onChange(next.value);
+              tabRefs.current[next.value]?.focus();
+            }}
             className={cn(
               "pharos-focus-ring min-h-11 border-b-2 px-4 text-sm font-medium transition-colors",
               isActive
@@ -130,9 +173,98 @@ function inferRegimeFromFilters({
   return normalizedRegime;
 }
 
+function ComplianceRegimePanel({
+  regime,
+  model,
+  logos,
+  forceCollapsedBandsOpen,
+}: {
+  regime: "mica" | "genius";
+  model: ComplianceViewModel;
+  logos: Record<string, string> | undefined;
+  forceCollapsedBandsOpen: boolean;
+}) {
+  const { rows, watchRows, isGeniusEffective } = model;
+  const regimeLabel = regime === "mica" ? "MiCA" : "GENIUS";
+
+  return (
+    <div className="space-y-5">
+      <div className="space-y-2">
+        <div className="flex flex-wrap items-end justify-between gap-2">
+          <div>
+            <h2 id={regime} className="pharos-label scroll-mt-24">
+              <a
+                href={`/compliance/?regime=${regime}#${regime}`}
+                className="pharos-focus-ring rounded-sm hover:text-foreground"
+              >
+                {COMPLIANCE_REGIME_HEADINGS[regime]}
+              </a>
+            </h2>
+            <p className="text-xs text-muted-foreground">
+              Active, assessed stablecoins only. Frozen and pre-launch assets are excluded from the main table.
+            </p>
+          </div>
+          <span className="pharos-numeric text-xs text-muted-foreground">
+            {rows.length.toLocaleString()} rows
+          </span>
+        </div>
+        {rows.length === 0 ? (
+          <div className="pharos-empty-note px-4 py-3 text-center text-sm text-muted-foreground">
+            {regime === "genius" && !isGeniusEffective
+              ? "GENIUS rows remain in implementation watch until the regime is effective."
+              : "No stablecoins match these filters."}
+          </div>
+        ) : (
+          <ComplianceTable
+            rows={rows}
+            regime={regime}
+            logos={logos}
+            tableId={`compliance-${regime}-authorization`}
+            testId={`compliance-${regime}-authorization-table`}
+            ariaLabel={`${regimeLabel} compliance authorization table`}
+            forceCollapsedBandsOpen={forceCollapsedBandsOpen}
+          />
+        )}
+      </div>
+
+      {watchRows.length > 0 || regime === "genius" ? (
+        <div id="implementation-watch" className="space-y-2">
+          <div className="flex flex-wrap items-end justify-between gap-2">
+            <div>
+              <p className="pharos-label">GENIUS implementation watch</p>
+              <p className="text-xs text-muted-foreground">
+                Source-backed signals before the Act is generally effective, plus pre-launch assets even
+                after effectiveness. These rows are not compliance determinations.
+              </p>
+            </div>
+            <span className="pharos-numeric text-xs text-muted-foreground">
+              {watchRows.length.toLocaleString()} rows
+            </span>
+          </div>
+          {watchRows.length === 0 ? (
+            <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
+              No GENIUS implementation-watch rows match these filters.
+            </div>
+          ) : (
+            <ComplianceTable
+              rows={watchRows}
+              regime="genius"
+              logos={logos}
+              tableId="compliance-genius-watch"
+              testId="compliance-genius-watch-table"
+              ariaLabel="GENIUS implementation watch table"
+              forceCollapsedBandsOpen={forceCollapsedBandsOpen}
+            />
+          )}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
 export function ComplianceClient() {
   const logos = logosById;
-  const { getParam, setParam } = useUrlFilters();
+  const { getParam, setParam, isReady: isUrlReady } = useUrlFilters();
   const { state: urlState, patchState: writeUrlState, searchParams } = useUrlState(COMPLIANCE_URL_SCHEMA);
 
   const rawRegime = searchParams.get("regime") ?? "";
@@ -175,26 +307,57 @@ export function ComplianceClient() {
     { getParam, setParam },
   );
 
-  const { rows, watchRows, totalTracked, isGeniusEffective } = useMemo(
+  // Each regime keeps its own model so every panel is mounted independently.
+  // Status and MiCA token type only narrow the selected regime; the inactive
+  // regime stays unfiltered and GENIUS never takes a token type.
+  const mica = useMemo(
     () =>
       buildComplianceViewModel({
-        regime: regimeFilter,
-        status: statusFilter,
-        tokenType: tokenTypeFilter,
+        regime: "mica",
+        status: regimeFilter === "mica" ? statusFilter : "all",
+        tokenType: regimeFilter === "mica" ? tokenTypeFilter : "all",
         peg: pegFilter,
         search: deferredSearch,
       }),
     [regimeFilter, statusFilter, tokenTypeFilter, pegFilter, deferredSearch],
+  );
+  const genius = useMemo(
+    () =>
+      buildComplianceViewModel({
+        regime: "genius",
+        status: regimeFilter === "genius" ? statusFilter : "all",
+        tokenType: "all",
+        peg: pegFilter,
+        search: deferredSearch,
+      }),
+    [regimeFilter, statusFilter, pegFilter, deferredSearch],
   );
   const overview = useMemo(
     () => buildComplianceOverviewModel({ peg: pegFilter, search: deferredSearch }),
     [pegFilter, deferredSearch],
   );
 
+  const activeModel = regimeFilter === "mica" ? mica : regimeFilter === "genius" ? genius : null;
   const statusOptions = regimeFilter === "genius" ? GENIUS_STATUS_FILTER_OPTIONS : MICA_STATUS_FILTER_OPTIONS;
-  const matchingCount = regimeFilter === "all" ? overview.rows.length : rows.length + watchRows.length;
-  const totalCount = regimeFilter === "all" ? overview.totalCoins : totalTracked;
-  const forceCollapsedBandsOpen = statusFilter !== "all" || deferredSearch.trim().length > 0;
+  const matchingCount = activeModel ? activeModel.rows.length + activeModel.watchRows.length : overview.rows.length;
+  const totalCount = activeModel ? activeModel.totalTracked : overview.totalCoins;
+  // A shared search exposes matches in both panels; a regime status filter only
+  // opens the selected regime's bands, so an inactive panel stays collapsed.
+  const searchForcesBandsOpen = deferredSearch.trim().length > 0;
+  const micaForceBandsOpen = searchForcesBandsOpen || (regimeFilter === "mica" && statusFilter !== "all");
+  const geniusForceBandsOpen = searchForcesBandsOpen || (regimeFilter === "genius" && statusFilter !== "all");
+
+  // A heading permalink only aligns an already-visible panel; the explicit
+  // `regime` query stays the single regime-state authority.
+  const handledPermalinkHash = useRef<string | null>(null);
+  useEffect(() => {
+    if (!isUrlReady) return;
+    const hash = window.location.hash;
+    const target = hash === "#mica" ? "mica" : hash === "#genius" ? "genius" : null;
+    if (!target || regimeFilter !== target || handledPermalinkHash.current === hash) return;
+    handledPermalinkHash.current = hash;
+    document.getElementById(target)?.scrollIntoView?.({ block: "start" });
+  }, [isUrlReady, regimeFilter]);
 
   return (
     <div className="space-y-6">
@@ -259,80 +422,47 @@ export function ComplianceClient() {
           </div>
         </div>
 
-        <div id="compliance-view-panel" role="tabpanel">
-          {regimeFilter === "all" ? (
-            <OverviewDirectory
-              rows={overview.rows}
-              logos={logos}
-              onStatusClick={openOverviewStatus}
-              filterKey={`${pegFilter}:${searchInput}`}
-            />
-          ) : (
-            <div className="space-y-5">
-              <div className="space-y-2">
-                <div className="flex flex-wrap items-end justify-between gap-2">
-                  <div>
-                    <p className="pharos-label">Authorization table</p>
-                    <p className="text-xs text-muted-foreground">
-                      Active, assessed stablecoins only. Frozen and pre-launch assets are excluded from the main table.
-                    </p>
-                  </div>
-                  <span className="pharos-numeric text-xs text-muted-foreground">
-                    {rows.length.toLocaleString()} rows
-                  </span>
-                </div>
-                {rows.length === 0 ? (
-                  <div className="pharos-empty-note px-4 py-3 text-center text-sm text-muted-foreground">
-                    {regimeFilter === "genius" && !isGeniusEffective
-                      ? "GENIUS rows remain in implementation watch until the regime is effective."
-                      : "No stablecoins match these filters."}
-                  </div>
-                ) : (
-                  <ComplianceTable
-                    rows={rows}
-                    regime={regimeFilter}
-                    logos={logos}
-                    tableId="compliance-authorization"
-                    testId="compliance-authorization-table"
-                    ariaLabel="Compliance authorization table"
-                    forceCollapsedBandsOpen={forceCollapsedBandsOpen}
-                  />
-                )}
-              </div>
-
-              {watchRows.length > 0 || regimeFilter === "genius" ? (
-                <div id="implementation-watch" className="space-y-2">
-                  <div className="flex flex-wrap items-end justify-between gap-2">
-                    <div>
-                      <p className="pharos-label">GENIUS implementation watch</p>
-                      <p className="text-xs text-muted-foreground">
-                        Source-backed signals before the Act is generally effective, plus pre-launch assets even
-                        after effectiveness. These rows are not compliance determinations.
-                      </p>
-                    </div>
-                    <span className="pharos-numeric text-xs text-muted-foreground">
-                      {watchRows.length.toLocaleString()} rows
-                    </span>
-                  </div>
-                  {watchRows.length === 0 ? (
-                    <div className="pharos-empty-note px-4 py-10 text-center text-sm text-muted-foreground">
-                      No GENIUS implementation-watch rows match these filters.
-                    </div>
-                  ) : (
-                    <ComplianceTable
-                      rows={watchRows}
-                      regime="genius"
-                      logos={logos}
-                      tableId="compliance-genius-watch"
-                      testId="compliance-genius-watch-table"
-                      ariaLabel="GENIUS implementation watch table"
-                      forceCollapsedBandsOpen={forceCollapsedBandsOpen}
-                    />
-                  )}
-                </div>
-              ) : null}
-            </div>
-          )}
+        <div
+          id={COMPLIANCE_PANEL_IDS.all}
+          role="tabpanel"
+          aria-labelledby={COMPLIANCE_TAB_IDS.all}
+          tabIndex={0}
+          hidden={regimeFilter !== "all"}
+        >
+          <OverviewDirectory
+            rows={overview.rows}
+            logos={logos}
+            onStatusClick={openOverviewStatus}
+            filterKey={`${pegFilter}:${searchInput}`}
+          />
+        </div>
+        <div
+          id={COMPLIANCE_PANEL_IDS.mica}
+          role="tabpanel"
+          aria-labelledby={COMPLIANCE_TAB_IDS.mica}
+          tabIndex={0}
+          hidden={regimeFilter !== "mica"}
+        >
+          <ComplianceRegimePanel
+            regime="mica"
+            model={mica}
+            logos={logos}
+            forceCollapsedBandsOpen={micaForceBandsOpen}
+          />
+        </div>
+        <div
+          id={COMPLIANCE_PANEL_IDS.genius}
+          role="tabpanel"
+          aria-labelledby={COMPLIANCE_TAB_IDS.genius}
+          tabIndex={0}
+          hidden={regimeFilter !== "genius"}
+        >
+          <ComplianceRegimePanel
+            regime="genius"
+            model={genius}
+            logos={logos}
+            forceCollapsedBandsOpen={geniusForceBandsOpen}
+          />
         </div>
       </section>
     </div>

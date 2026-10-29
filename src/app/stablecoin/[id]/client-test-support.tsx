@@ -1,7 +1,8 @@
 import type { ReactNode } from "react";
 import { vi } from "vitest";
 import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
-import type { StablecoinMeta, StablecoinObituary } from "@shared/types";
+import { getMechanismArchetypeCtaNoun, getMechanismExplainerPath } from "@shared/lib/classification";
+import type { MechanismArchetype, StablecoinMeta, StablecoinObituary } from "@shared/types";
 import type { StablecoinSafetyScoreV9CardProps } from "@/components/stablecoin-detail/stablecoin-safety-score-v9-card";
 
 export async function createNextLinkMock() {
@@ -34,6 +35,21 @@ function DetailSectionPlaceholder() {
   return <div data-testid="dynamic-detail-section" />;
 }
 
+/** C1 wiring probe: the History shell keeps its single anchor and preview slot. */
+function HistoryTabsProbe({
+  depegHistoryPreview,
+  isNavToken,
+}: {
+  depegHistoryPreview?: ReactNode;
+  isNavToken: boolean;
+}) {
+  return (
+    <div data-testid="history-tabs" id="depeg-history">
+      {!isNavToken ? depegHistoryPreview : null}
+    </div>
+  );
+}
+
 /** Stubs every lazily-loaded detail section by export name (the Safety Score card
  *  renders for real), so section wiring is asserted without coupling to
  *  `dynamic()` call order or loader source text. The card is imported when the
@@ -45,7 +61,6 @@ export const createDetailLazySectionsMock = async () => {
       "FeedbackModal",
       "McapChart",
       "MarketDataSection",
-      "HistoryTabs",
       "YieldDetailSection",
       "DexLiquidityCard",
       "DistributionSection",
@@ -55,9 +70,25 @@ export const createDetailLazySectionsMock = async () => {
 
   return {
     ...placeholders,
+    // The lazy placeholder and the synchronous pilot shell share the probe.
+    HistoryTabs: HistoryTabsProbe,
+    HistoryTabsShell: HistoryTabsProbe,
     // Wiring probe: the Mechanism card owns `#mechanism-review` when it receives a review.
-    PegStabilityCard: ({ mechanismReview }: { mechanismReview?: unknown }) => (
-      <div data-testid="dynamic-detail-section">{mechanismReview ? <details id="mechanism-review" /> : null}</div>
+    PegStabilityCard: ({
+      mechanismReview,
+      resolvedMechanismArchetype,
+    }: {
+      mechanismReview?: unknown;
+      resolvedMechanismArchetype?: MechanismArchetype | null;
+    }) => (
+      <div data-testid="dynamic-detail-section">
+        {mechanismReview ? <details id="mechanism-review" /> : null}
+        {resolvedMechanismArchetype ? (
+          <a href={getMechanismExplainerPath(resolvedMechanismArchetype)}>
+            Learn how {getMechanismArchetypeCtaNoun(resolvedMechanismArchetype)} stablecoins work
+          </a>
+        ) : null}
+      </div>
     ),
     ReservesSection: ({
       reserves,

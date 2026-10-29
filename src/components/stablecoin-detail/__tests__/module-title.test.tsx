@@ -1,5 +1,8 @@
+// @vitest-environment jsdom
+
 import { renderToStaticMarkup } from "react-dom/server";
 import { describe, expect, it } from "vitest";
+import { render, screen } from "@testing-library/react";
 import {
   DetailModuleCard,
   StablecoinDetailIdentityProvider,
@@ -13,17 +16,59 @@ import {
   DETAIL_MODULE_SHELL_CLASS, DETAIL_MODULE_TITLE_CLASS,
 } from "../section-title-class";
 
+/** The visible ticker spans, i.e. the copies a reader sees rather than the sr-only heading text. */
+function visibleTickerSpans(symbol: string): Element[] {
+  return [...document.querySelectorAll("span")].filter(
+    (span) => span.textContent === symbol && !span.classList.contains("sr-only"),
+  );
+}
+
 describe("StablecoinModuleTitle", () => {
-  it("adds the detail-page coin identity so a screenshotted module names its subject", () => {
-    const html = renderToStaticMarkup(
+  it("names the coin inside the heading while the visible ticker stays a single visual occurrence", () => {
+    render(
       <StablecoinDetailIdentityProvider symbol="BD" logoSrc={undefined}>
         <StablecoinModuleTitle>Reserve quality</StablecoinModuleTitle>
       </StablecoinDetailIdentityProvider>,
     );
 
-    expect(html).toContain('aria-label="BD logo"');
-    expect(html).toContain(">BD<");
-    expect(html).toContain("Reserve quality");
+    const heading = screen.getByRole("heading", { level: 2, name: "BD Reserve quality" });
+    expect(heading.textContent).toBe("BD Reserve quality");
+    expect(heading.querySelector(".sr-only")?.textContent).toBe("BD");
+    expect(visibleTickerSpans("BD")).toHaveLength(1);
+    expect(screen.getByRole("img", { name: "BD logo" })).toBeTruthy();
+  });
+
+  it("lets an explicit symbol override the provider identity", () => {
+    render(
+      <StablecoinDetailIdentityProvider symbol="BD" logoSrc={undefined}>
+        <StablecoinModuleTitle symbol="USDC">Reserves</StablecoinModuleTitle>
+      </StablecoinDetailIdentityProvider>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 2, name: "USDC Reserves" });
+    expect(heading.textContent).toBe("USDC Reserves");
+    expect(visibleTickerSpans("USDC")).toHaveLength(1);
+    expect(visibleTickerSpans("BD")).toHaveLength(0);
+  });
+
+  it("keeps the generic label when no coin identity resolves", () => {
+    const { container } = render(<StablecoinModuleTitle>Reserves</StablecoinModuleTitle>);
+
+    expect(screen.getByRole("heading", { level: 2, name: "Reserves" })).toBeTruthy();
+    expect(container.querySelector(".sr-only")).toBeNull();
+    expect(container.querySelector('[role="img"]')).toBeNull();
+  });
+
+  it("keeps the requested heading level and id", () => {
+    render(
+      <StablecoinDetailIdentityProvider symbol="BD" logoSrc={undefined}>
+        <StablecoinModuleTitle as="h3" id="custody-title">Custody</StablecoinModuleTitle>
+      </StablecoinDetailIdentityProvider>,
+    );
+
+    const heading = screen.getByRole("heading", { level: 3, name: "BD Custody" });
+    expect(heading.id).toBe("custody-title");
+    expect(document.querySelector("h2")).toBeNull();
   });
 });
 

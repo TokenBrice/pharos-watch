@@ -352,7 +352,11 @@ describe("stablecoin detail hero view-model builder", () => {
     });
     expect(byKey.get("minting")).toMatchObject({ value: "Permissioned", href: "#mint-authority" });
     // Passport-short attestor tier (Figma coin template); the aria-label keeps the full label.
-    expect(byKey.get("attestor")).toMatchObject({ value: "Big-4", href: "#attestation" });
+    expect(byKey.get("attestor")).toMatchObject({
+      value: "Big-4",
+      href: "#attestation",
+      ariaLabel: "Reserve report: Independent Report; Big-4 attestor — jump to Proof of Reserves",
+    });
     // No curated MiCA/GENIUS profile on this fixture, so jurisdiction has no
     // Regulatory standing module to target.
     expect(byKey.get("jurisdiction")).toMatchObject({ value: "Switzerland", href: "#info" });
@@ -443,7 +447,7 @@ describe("stablecoin detail hero view-model builder", () => {
       input: { coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier: "none" } } },
       expected: {
         value: "None", valueClass: "text-red-700 dark:text-red-400",
-        ariaLabel: "Reserve attestation: No attestation — jump to Proof of Reserves",
+        ariaLabel: "Reserve report: Self-Reported PoR; No attestation — jump to Proof of Reserves",
       },
     },
     {
@@ -451,7 +455,72 @@ describe("stablecoin detail hero view-model builder", () => {
       input: { coin: { proofOfReserves: { type: "self-reported", url: "https://example.com", attestorTier: "undisclosed" } } },
       expected: {
         value: "Not disclosed", valueClass: "text-muted-foreground",
-        ariaLabel: "Reserve attestation: Not disclosed — jump to Proof of Reserves",
+        ariaLabel: "Reserve report: Self-Reported PoR; Not disclosed — jump to Proof of Reserves",
+      },
+    },
+    {
+      name: "names the reviewed examination beside the tier in the accessible name", key: "attestor",
+      input: {
+        coin: {
+          proofOfReserves: {
+            type: "independent-audit", url: "https://example.com", provider: "Example CPA", attestorTier: "regional",
+            latestReport: {
+              periodEnd: "2026-09-30", assuranceMethod: "examination", scope: "assets-and-liabilities",
+              liabilityReconciliation: "full", reviewer: "test", confidence: "verified",
+              sources: [{ label: "Report", url: "https://example.com/report" }],
+            },
+          },
+        },
+      },
+      expected: {
+        value: "Regional CPA", valueClass: "text-blue-700 dark:text-blue-400",
+        ariaLabel: "Reserve report: Examination; Regional CPA — jump to Proof of Reserves",
+      },
+    },
+    {
+      name: "names a reviewed audit engagement", key: "attestor",
+      input: {
+        coin: {
+          proofOfReserves: {
+            type: "independent-audit", url: "https://example.com", attestorTier: "big4",
+            latestReport: {
+              periodEnd: "2026-09-30", assuranceMethod: "audit", scope: "assets-and-liabilities",
+              liabilityReconciliation: "full", reviewer: "test", confidence: "verified",
+              sources: [{ label: "Report", url: "https://example.com/report" }],
+            },
+          },
+        },
+      },
+      expected: {
+        value: "Big-4", valueClass: "text-emerald-700 dark:text-emerald-400",
+        ariaLabel: "Reserve report: Audit; Big-4 attestor — jump to Proof of Reserves",
+      },
+    },
+    {
+      name: "uses the resolved engagement as the value without a tier", key: "attestor",
+      input: {
+        coin: {
+          proofOfReserves: {
+            type: "independent-audit", url: "https://example.com",
+            latestReport: {
+              periodEnd: "2026-09-30", assuranceMethod: "examination", scope: "assets-and-liabilities",
+              liabilityReconciliation: "full", reviewer: "test", confidence: "verified",
+              sources: [{ label: "Report", url: "https://example.com/report" }],
+            },
+          },
+        },
+      },
+      expected: {
+        value: "Examination",
+        ariaLabel: "Reserve report: Examination — jump to Proof of Reserves",
+      },
+    },
+    {
+      name: "does not assert an audit for an unresolved method without a tier", key: "attestor",
+      input: { coin: { proofOfReserves: { type: "independent-audit", url: "https://example.com" } } },
+      expected: {
+        value: "Independent Report",
+        ariaLabel: "Reserve report: Independent Report — jump to Proof of Reserves",
       },
     },
     {

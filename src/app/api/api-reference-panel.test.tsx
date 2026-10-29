@@ -1,8 +1,14 @@
 // @vitest-environment jsdom
 
 import type { ReactNode } from "react";
-import { render, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
+import {
+  buildPublicDatasetCitation,
+  PHAROS_DATA_LICENSE_URL,
+  PUBLIC_DATASET_JSON_LD_DESCRIPTORS,
+} from "@/lib/analytics-dataset-json-ld";
+import { PUBLIC_DATASET_CURRENT_DATE } from "@/lib/datasets/public-dataset-current";
 import { ApiReferencePanel } from "./api-reference-panel";
 
 // Scrollspy behavior is independent of the server-rendered auth guidance.
@@ -31,5 +37,101 @@ describe("API reference authentication guidance", () => {
     };
     const structuredAnswer = faq.mainEntity.find((item) => item.name === question.querySelector("summary")?.textContent);
     expect(structuredAnswer?.acceptedAnswer.text).toBe(question.querySelector("p")?.textContent);
+  });
+});
+
+describe("API reference dataset cards", () => {
+  it("states license, snapshot clock and methodology while preserving download links", async () => {
+    render(await ApiReferencePanel());
+
+    for (const descriptor of PUBLIC_DATASET_JSON_LD_DESCRIPTORS) {
+      const card = document.getElementById(`dataset-${descriptor.slug}`);
+      expect(card, descriptor.slug).not.toBeNull();
+      const meta = descriptor.export._meta;
+      const metadata = card!.textContent ?? "";
+
+      expect(metadata).toContain(
+        `MIT · As of ${meta.asOfISO?.slice(0, 10)} · Methodology ${meta.methodologyLabel?.split(" | ").join(", ")}`,
+      );
+      expect(within(card as HTMLElement).getByRole("link", { name: "MIT" }).getAttribute("href")).toBe(
+        PHAROS_DATA_LICENSE_URL,
+      );
+      expect(card!.querySelector("time")?.getAttribute("datetime")).toBe(meta.asOfISO);
+      expect(card!.querySelector("time")?.textContent).toBe(meta.asOfISO?.slice(0, 10));
+
+      for (const format of ["json", "csv", "ndjson"]) {
+        expect(
+          within(card as HTMLElement)
+            .getByRole("link", { name: format.toUpperCase() })
+            .getAttribute("href"),
+        ).toBe(`/datasets/${descriptor.slug}/latest.${format}`);
+      }
+      expect(within(card as HTMLElement).getByRole("link", { name: "Sheets CSV" }).getAttribute("href")).toBe(
+        `/sheets/${descriptor.slug}.csv`,
+      );
+    }
+  });
+
+  it("scopes every copy citation control to its dataset card", async () => {
+    render(await ApiReferencePanel());
+
+    const names = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.map((descriptor) => {
+      const card = document.getElementById(`dataset-${descriptor.slug}`) as HTMLElement;
+      const button = within(card).getByRole("button", { name: `Copy citation for ${descriptor.name}` });
+      return button.getAttribute("aria-label");
+    });
+
+    expect(names).toHaveLength(PUBLIC_DATASET_JSON_LD_DESCRIPTORS.length);
+    expect(new Set(names).size).toBe(PUBLIC_DATASET_JSON_LD_DESCRIPTORS.length);
+  });
+
+  it("copies the canonical dated citation once and announces success politely", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    render(await ApiReferencePanel());
+
+    const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "depeg-history");
+    if (!descriptor) throw new Error("Missing depeg-history descriptor");
+    const card = document.getElementById(`dataset-${descriptor.slug}`) as HTMLElement;
+    const button = within(card).getByRole("button", { name: `Copy citation for ${descriptor.name}` });
+
+    await act(async () => {
+      fireEvent.click(button);
+    });
+
+    const citation = buildPublicDatasetCitation(descriptor);
+    expect(writeText).toHaveBeenCalledTimes(1);
+    expect(writeText).toHaveBeenCalledWith(citation);
+    expect(writeText.mock.calls[0][0]).toContain(
+      `Pharos, "Pharos Depeg History Dataset," snapshot edition ${PUBLIC_DATASET_CURRENT_DATE}`,
+    );
+    expect(citation).toContain(`/datasets/depeg-history/${PUBLIC_DATASET_CURRENT_DATE}.json`);
+    expect(citation).toContain("Data: https://pharos.watch/datasets/depeg-history/");
+    expect(within(card).getByRole("status").textContent).toBe("Citation copied.");
+  });
+
+  it("does not announce success when the clipboard write fails", async () => {
+    const writeText = vi.fn().mockRejectedValue(new Error("Permission denied"));
+    Object.defineProperty(navigator, "clipboard", { configurable: true, value: { writeText } });
+    const previousExecCommand = document.execCommand;
+    Object.defineProperty(document, "execCommand", { configurable: true, value: vi.fn().mockReturnValue(false) });
+
+    try {
+      render(await ApiReferencePanel());
+      const descriptor = PUBLIC_DATASET_JSON_LD_DESCRIPTORS.find((candidate) => candidate.slug === "scores-latest");
+      if (!descriptor) throw new Error("Missing scores-latest descriptor");
+      const card = document.getElementById(`dataset-${descriptor.slug}`) as HTMLElement;
+      const button = within(card).getByRole("button", { name: `Copy citation for ${descriptor.name}` });
+
+      await act(async () => {
+        fireEvent.click(button);
+      });
+
+      expect(writeText).toHaveBeenCalledTimes(1);
+      expect(within(card).getByRole("status").textContent).toBe("");
+      expect(card.textContent).not.toContain("Citation copied.");
+    } finally {
+      Object.defineProperty(document, "execCommand", { configurable: true, value: previousExecCommand });
+    }
   });
 });

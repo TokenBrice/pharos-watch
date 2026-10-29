@@ -4,9 +4,10 @@ import type { ReactNode } from "react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { QueryErrorNotice } from "@/components/query-error-notice";
+import { IntentLink } from "@/components/intent-link";
 import { StablecoinDetailLoadingShell } from "@/components/stablecoin-detail/loading-shell";
 import { StablecoinDetailIdentityProvider } from "@/components/stablecoin-detail/module-title";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -33,18 +34,32 @@ import {
 import type { StablecoinLiveSummary } from "@shared/types/stablecoin-live-summary";
 import { hasDataBootstrap } from "@/lib/data-bootstrap";
 import { DetailEvidenceProvider } from "@/lib/detail-evidence";
+import {
+  getMechanismArchetypeCtaNoun,
+  getMechanismExplainerPath,
+  resolveMechanismArchetype,
+} from "@shared/lib/classification";
+import { CLIENT_TRACKED_META_BY_ID } from "@shared/lib/stablecoins/client-registry";
+import type { MechanismArchetype } from "@shared/types";
 import { DetailContent } from "./detail-content";
+import { HistoryTabsShell } from "./detail-lazy-sections";
 
 function DetailLoadingShell({
+  id,
   coin,
   logoSrc,
   heading,
+  mechanismArchetype,
   exploreNextContent,
+  depegHistoryPreview,
 }: {
+  id: string;
   coin: StablecoinStaticMeta;
   logoSrc?: string;
   heading?: string;
+  mechanismArchetype?: MechanismArchetype | null;
   exploreNextContent: ReactNode;
+  depegHistoryPreview?: ReactNode;
 }) {
   return (
     <div className="space-y-6">
@@ -74,6 +89,31 @@ function DetailLoadingShell({
         <Skeleton className="h-[200px] rounded-xl" />
       </div>
       <Skeleton className="mt-12 h-[420px] rounded-xl" />
+      {/* Static recorded facts outlive the loading read: the History shell owns
+          the retained-ledger preview here, exactly as the ready dossier does.
+          Depeg is the selected view because Grade has no source to read yet. */}
+      {depegHistoryPreview ? (
+        <div className="mt-12">
+          <HistoryTabsShell
+            stablecoinId={id}
+            isNavToken={coin.flags.navToken === true}
+            historyActive={false}
+            initialTab="depeg"
+            depegHistoryPreview={depegHistoryPreview}
+          />
+        </div>
+      ) : null}
+      {mechanismArchetype ? (
+        <div className="mt-8">
+          <IntentLink
+            href={getMechanismExplainerPath(mechanismArchetype)}
+            className="pharos-focus-ring inline-flex min-h-11 items-center gap-1 rounded-sm py-2 text-xs font-medium text-brand-accent-text underline-offset-4 hover:underline sm:min-h-0 sm:py-0"
+          >
+            Learn how {getMechanismArchetypeCtaNoun(mechanismArchetype)} stablecoins work
+            <ArrowUpRight className="h-3 w-3" aria-hidden="true" />
+          </IntentLink>
+        </div>
+      ) : null}
       {/* Explore's links need no live data, so the loading state keeps them. */}
       {exploreNextContent}
     </div>
@@ -99,6 +139,8 @@ interface StablecoinDetailClientProps {
   /** The coin's publishable failure scenario (a marked draft in development), or null. */
   failureScenario?: FailureScenarioSelection | null;
   exploreNextContent?: ReactNode;
+  /** C1: server-rendered retained-ledger preview for the History panel (pilot profiles only). */
+  depegHistoryPreview?: ReactNode;
   snapshot?: StablecoinDetailSnapshot | null;
   /** Frozen coins only: archived list row used when the live detail row is unavailable. */
   archivedLiveSummary?: StablecoinLiveSummary | null;
@@ -164,6 +206,7 @@ function StablecoinDetailClientContent({
   transferReview = null,
   failureScenario = null,
   exploreNextContent = null,
+  depegHistoryPreview = null,
   heading,
   snapshot = null,
   archivedLiveSummary = null,
@@ -201,8 +244,17 @@ function StablecoinDetailClientContent({
   });
 
   if (viewModel.status === "loading") {
+    const mechanismArchetype = resolveMechanismArchetype(coin, CLIENT_TRACKED_META_BY_ID);
     return (
-      <DetailLoadingShell coin={staticCoin} logoSrc={logoSrc} heading={heading} exploreNextContent={exploreNextContent} />
+      <DetailLoadingShell
+        id={id}
+        coin={staticCoin}
+        logoSrc={logoSrc}
+        heading={heading}
+        mechanismArchetype={mechanismArchetype}
+        exploreNextContent={exploreNextContent}
+        depegHistoryPreview={depegHistoryPreview}
+      />
     );
   }
   if (viewModel.status === "list-error") {
@@ -212,6 +264,20 @@ function StablecoinDetailClientContent({
           <Link href="/"><ArrowLeft className="mr-2 h-4 w-4" />Back to Dashboard</Link>
         </Button>
         <QueryErrorNotice error={viewModel.listError} hasData={false} onRetry={viewModel.handleRetryAll} />
+        {/* The list read failed, but the recorded depeg ledger is static: keep
+            its dated facts at the History module's lower-page position, with
+            Depeg selected because the Grade tab cannot resolve here. */}
+        {depegHistoryPreview ? (
+          <div className="mt-8">
+            <HistoryTabsShell
+              stablecoinId={id}
+              isNavToken={coin.flags.navToken === true}
+              historyActive={false}
+              initialTab="depeg"
+              depegHistoryPreview={depegHistoryPreview}
+            />
+          </div>
+        ) : null}
       </div>
     );
   }
@@ -221,10 +287,12 @@ function StablecoinDetailClientContent({
       <DetailContent
         activeBannerId={activeBannerId}
         activityGateRef={activityGateRef}
+        depegHistoryPreview={depegHistoryPreview}
         exploreNextContent={exploreNextContent}
         feedbackOpen={feedbackOpen}
         heading={heading}
         heroRef={heroRef}
+        historyActive={historyActive}
         historyGateRef={historyGateRef}
         onActiveBannerChange={setActiveBannerId}
         mechanismBacking={mechanismBacking}

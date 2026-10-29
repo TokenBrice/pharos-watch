@@ -13,6 +13,7 @@ import {
 import { isRequestSourceAttributionDisabled, recordSiteDataRequest } from "../lib/request-attribution";
 import { rejectIfNotSiteDataUiOrigin } from "../lib/site-data-origin";
 import { resolveSiteApiOrigin, validatePagesSiteDataProxyEnv, type SiteDataProxyEnv } from "../lib/site-api-env";
+import { withNoindex } from "../lib/noindex";
 import {
   createProxyRequest,
   rejectInvalidProxyEnvironment,
@@ -104,6 +105,10 @@ async function queueSiteDataTelemetry(
 export const onRequest = async (context: SiteDataProxyContext): Promise<Response> =>
   runPagesProxy(context, {
     logPrefix: "site-data-proxy",
+    // Every response on this website-data lane, including early rejections,
+    // transport errors and conditional 304s, is a machine read rather than a
+    // search result. The policy stays local to this Function.
+    finalizeResponse: (_context, response) => withNoindex(response),
     rejectRequest: ({ request, env }) => {
       const rejected = rejectIfNotSiteDataUiOrigin(request, env, () => jsonError(404, "Not found"));
       if (rejected) {

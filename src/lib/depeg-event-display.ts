@@ -2,6 +2,7 @@ import type { DepegEvent } from "@shared/types/market";
 import { formatDeviationBps, formatIsoDate, formatLongDate } from "@shared/lib/format";
 import { formatApproxDurationSeconds } from "@shared/lib/relative-time";
 import { classifyDepegClosure } from "@shared/lib/depeg-closure";
+import { DEPEG_CLOSURE_LABELS } from "@shared/lib/classification";
 
 export const DEPEG_COLLISION_CONTENT_REVISED_AT_SECONDS = Date.parse("2026-07-18T00:00:00Z") / 1000;
 
@@ -72,16 +73,6 @@ export function buildDepegEventTitle(event: DepegEventDisplayInput, includeTime:
   if (!includeTime || `${title} | Pharos`.length <= 70) return title;
   return `${base}: ${direction}`;
 }
-
-const DEPEG_CLOSURE_LABELS = {
-  open: "Ongoing",
-  recovered: "Recovered",
-  legacy_recovered: "Recovered",
-  coverage_lost: "Tracking closed: coverage lost",
-  superseded: "Tracking closed: direction superseded",
-  orphan: "Tracking closed: asset removed",
-  unknown_closed: "Tracking closed: recovery unconfirmed",
-};
 
 export function getDepegEventClosurePresentation(event: DepegEventDisplayInput) {
   const closure = classifyDepegClosure(event);

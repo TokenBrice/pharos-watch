@@ -36,6 +36,11 @@ export const HistoryTabs = dynamic(
   () => import("@/components/stablecoin-detail/history-tabs").then((mod) => mod.HistoryTabs),
   { loading: () => <Skeleton className="h-[360px] w-full rounded-xl" /> },
 );
+// C1: pilot profiles mount the synchronous shell so its retained-ledger
+// preview is part of the initial HTML. Non-pilot profiles keep the lazy
+// placeholder above; the shell's live modules are dynamic imports behind the
+// viewport and active-tab gates either way.
+export { HistoryTabs as HistoryTabsShell } from "@/components/stablecoin-detail/history-tabs";
 export const FlowsSection = dynamic(
   () => import("@/components/stablecoin-detail/flows-section").then((mod) => mod.FlowsSection),
   { loading: () => <Skeleton className="h-[320px] w-full rounded-xl" /> },

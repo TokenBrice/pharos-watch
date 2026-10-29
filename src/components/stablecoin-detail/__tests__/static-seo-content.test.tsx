@@ -130,7 +130,7 @@ describe("StablecoinDetailSeoContent", () => {
     expect(screen.getByText("Cash, Treasury bills, and overnight repos.")).toBeTruthy();
     expect(screen.getByText("Primary market mint and redeem arbitrage plus secondary market liquidity.")).toBeTruthy();
     expect(screen.getByText("United States / NYDFS / Limited Purpose Trust")).toBeTruthy();
-    expect(screen.getByText(/Independent Audit by Example Auditor/)).toBeTruthy();
+    expect(screen.getByText(/Independent Report by Example Auditor/)).toBeTruthy();
     expect(screen.getByRole("link", { name: "Reserve source" }).getAttribute("href")).toBe(
       "https://example.com/reserves",
     );
@@ -220,7 +220,7 @@ describe("StablecoinDetailSeoContent", () => {
       expect(answer).toContain("upper band, which does not rule out losses.");
       // The second sentence is coin-specific: without freeze or redemption
       // evidence it falls back to the backing classification.
-      expect(answer).toContain("Pharos classifies its backing as Real-World Asset Backed, with Independent Audit from Example Auditor.");
+      expect(answer).toContain("Pharos classifies its backing as Real-World Asset Backed, with Independent Report from Example Auditor.");
       expect(answer).not.toMatch(/scores-latest|Static metadata/);
 
       mockGetSnapshotSafetyAssessment.mockReturnValue({ grade: "C+", score: 55, bucket: "neutral" });
@@ -349,9 +349,56 @@ describe("StablecoinDetailSeoContent", () => {
 
     expect(buildStablecoinFaqItems(backed)[2].answer).toBe(
       "Pharos records TSTD's reserves as of Aug 31, 2026 as 60% Overnight reverse repo, 30% Treasury bills, 7% Bank deposits, and 1 smaller holding. " +
-      "Reserve evidence: Independent Audit by Example Auditor, latest period ending Aug 31, 2026. " +
+      "Reserve evidence: Independent Report by Example Auditor, latest period ending Aug 31, 2026. " +
       "Pharos classifies the backing as Real-World Asset Backed.",
     );
+  });
+
+  it("keeps the provider and reserve-source link when no assurance report exists", () => {
+    const noProof = { ...coin, proofOfReserves: undefined };
+    const { container } = render(<StablecoinDetailSeoContent coin={noProof} />);
+    expect(container.textContent).toContain("No proof-of-reserves entry in the static profile.");
+    expect(buildStablecoinFaqItems(noProof)[2].answer).toContain(
+      "Reserve evidence: no linked reserve proof in the static profile.",
+    );
+    expect(buildStablecoinFaqItems(noProof)[2].answer).not.toMatch(/Audit|Examination/);
+  });
+
+  it.each([
+    ["examination", "Examination"],
+    ["audit", "Audit"],
+    ["unknown", "Independent Report"],
+    [null, "Independent Report"],
+  ] as const)("names the reviewed reserve engagement (%s) across visible and FAQ text", (method, label) => {
+    const latestReport: NonNullable<NonNullable<StablecoinMeta["proofOfReserves"]>["latestReport"]> | undefined = method
+      ? {
+          periodEnd: "2026-08-31",
+          publishedAt: "2026-09-05",
+          assuranceMethod: method,
+          scope: "assets-and-liabilities",
+          liabilityReconciliation: "full",
+          reviewer: "test",
+          confidence: "verified",
+          sources: [{ label: "Report", url: "https://example.com/report" }],
+        }
+      : undefined;
+    const stated: StablecoinMeta = {
+      ...coin,
+      proofOfReserves: { ...coin.proofOfReserves!, ...(latestReport ? { latestReport } : {}) },
+    };
+    const { container } = render(<StablecoinDetailSeoContent coin={stated} />);
+    expect(container.textContent).toContain(`${label} by Example Auditor`);
+    expect(screen.getByRole("link", { name: "Reserve source" }).getAttribute("href")).toBe(
+      "https://example.com/reserves",
+    );
+    const items = buildStablecoinFaqItems(stated);
+    expect(items[2].answer).toContain(`Reserve evidence: ${label} by Example Auditor`);
+    if (label === "Independent Report") expect(items[2].answer).not.toContain("Independent Audit");
+    // The visible FAQ and its FAQPage answer carry the same corrected label.
+    const faq = render(<FaqSection items={items} includeJsonLd collapsed />);
+    expect(screen.getByText(items[2].answer)).toBeTruthy();
+    const faqJsonLd = faq.container.querySelector('script[type="application/ld+json"]');
+    expect(faqJsonLd?.textContent).toContain(items[2].answer);
   });
 
   it("renders the ISIN fact row only for coins with an authored ISIN", () => {
@@ -392,5 +439,34 @@ describe("same-ticker disambiguation", () => {
     const { SameTickerStablecoins } = await import("../same-ticker-stablecoins");
     const { container } = render(<SameTickerStablecoins coin={{ ...coin, symbol: "ZZUNIQUEZZ" }} />);
     expect(container.innerHTML).toBe("");
+  });
+});
+
+describe("variant relationship labels", () => {
+  it("names the parent and sibling entities in their existing links", async () => {
+    const { TRACKED_META_BY_ID } = await import("@shared/lib/stablecoins/registry");
+
+    // USN and its savings wrapper stay distinct records: the parent link names
+    // the full entity and the block adds no duplicate sibling entry for it.
+    const usnSavings = TRACKED_META_BY_ID.get("susn-noon")!;
+    const usn = render(<StablecoinDetailSeoContent coin={usnSavings} />);
+    expect(screen.getAllByRole("link", { name: "View Noon USN (USN) parent asset" })).toHaveLength(1);
+    expect(screen.getByRole("link", { name: "View Noon USN (USN) parent asset" }).textContent).toBe("Noon USN (USN)");
+    expect(usn.container.querySelectorAll('a[href="/stablecoin/usn-noon/"]')).toHaveLength(1);
+    usn.unmount();
+
+    // A USDS variant lists the other USDS wrappers by full recorded name.
+    const usdsVariant = TRACKED_META_BY_ID.get("stusds-sky")!;
+    const usds = render(<StablecoinDetailSeoContent coin={usdsVariant} />);
+    expect(screen.getByRole("link", { name: "View Sky Dollar (USDS) parent asset" }).textContent).toBe("Sky Dollar (USDS)");
+    expect(screen.getByRole("link", { name: "View related Sky Savings USDS (sUSDS) variant" }).textContent).toBe(
+      "Sky Savings USDS (sUSDS)",
+    );
+    expect(screen.getByRole("link", { name: "View related sky.money USDS Flagship (skyMoneyUsdsFlagship) variant" }).textContent).toBe(
+      "sky.money USDS Flagship (skyMoneyUsdsFlagship)",
+    );
+    const siblingHrefs = screen.getAllByRole("link", { name: /variant$/ }).map((link) => link.getAttribute("href"));
+    expect(new Set(siblingHrefs).size).toBe(siblingHrefs.length);
+    usds.unmount();
   });
 });

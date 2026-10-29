@@ -36,3 +36,37 @@ describe("About structured-data documentation links", () => {
     ]));
   });
 });
+
+describe("About disclosure and reuse copy", () => {
+  const POLARIS_SENTENCE =
+    "TokenBrice also works on Polaris, and Polaris-related coverage, like everything else on Pharos, remains purely data-driven.";
+
+  it("discloses the owner's Polaris work once inside the team section", () => {
+    const html = renderToStaticMarkup(<AboutPageContent />);
+    const teamStart = html.indexOf("Who Is Building Pharos?");
+    const mediaStart = html.indexOf("Pharos in the media");
+    expect(teamStart).toBeGreaterThan(-1);
+    expect(mediaStart).toBeGreaterThan(teamStart);
+    const teamHtml = html.slice(teamStart, mediaStart);
+    expect(teamHtml.split(POLARIS_SENTENCE)).toHaveLength(2);
+  });
+
+  it("states the content-type reuse scope with license links and keeps existing contact links", () => {
+    const html = renderToStaticMarkup(<AboutPageContent />);
+    expect(html).toMatch(
+      /are <a [^>]*href="https:\/\/github\.com\/TokenBrice\/pharos-watch\/blob\/main\/LICENSE"[^>]*>MIT-licensed<\/a> and reproducible\./,
+    );
+    expect(html).toMatch(
+      /licensed under <a [^>]*href="https:\/\/creativecommons\.org\/licenses\/by\/4\.0\/"[^>]*>CC BY 4\.0<\/a>\./,
+    );
+    expect(html).toContain("Third-party material retains its original terms.");
+    expect(html).not.toContain("Pharos code, data and data exports are MIT-licensed.");
+    expect(html).toContain("Pharos code and data are MIT-licensed.");
+    expect(html).toContain('href="mailto:me@tokenbrice.com"');
+    expect(html).toContain("Press and research enquiries:");
+    expect(html).toContain(">me@tokenbrice.com</a>");
+    expect(html).toContain('href="https://github.com/TokenBrice/pharos-watch"');
+    expect(html).toContain('href="https://x.com/PharosWatch"');
+    expect(html).toContain('href="https://tokenbrice.xyz/"');
+  });
+});
