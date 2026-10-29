@@ -830,9 +830,9 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     ],
     notes: [
       "Direct mint and redemption are issuer-processed off-chain through the Company's designated interface for KYC-verified users only: ToS Section 6 commits to 1:1 redemption less applicable fees within five Business Days while reserving the right to delay redemptions, Section 29 reserves absolute and unfettered discretion to gate redemptions, and a submitted redemption request is unsecured debt owed by the Company",
-      "The reviewed reserve mix is majority Fasanara FTAC private credit with a three-month redemption window (61.9% of the 2026-09-22 Accountable attestation), with delta-neutral funding-rate arbitrage a listed ToS Section 5 reserve category but a 13.40% minority slice ($5.37M HYPE book). The 15% capacity ratio remains a historical heuristic estimate, not an observed immediate buffer or an issuer-guaranteed floor.",
+      "The reviewed reserve mix is majority Fasanara FTAC private credit with a three-month redemption window (64.4% of the 2026-10-27 Accountable attestation), with delta-neutral funding-rate arbitrage a listed ToS Section 5 reserve category and the second-largest slice at 22.8% ($8.85M Hyperliquid book). The 15% capacity ratio remains a historical heuristic estimate, not an observed immediate buffer or an issuer-guaranteed floor.",
       "Noon's published liquidity waterfall (20% of TVL same-day, 60% at T+3, 100% at T+5) is non-binding: it is stated in calendar days against the ToS Business-Day SLA and rests on an undisclosed multi-party PLMS facility, so it is not credited as settlement or capacity evidence",
-      "The published collateral wallets are not read as live capacity: their balances are transient ($3.05M of USDC/USDT at the cited 2026-09-14 block fell to $0.57M by 2026-09-22), one listed wallet is a plain EOA ops account, and they do not reconcile with Accountable's Undeployed bucket",
+      "The published collateral wallets are not read as live capacity: their balances are transient ($3.05M of USDC/USDT at the cited 2026-09-14 block fell to about $0.33M at Ethereum block 26,299,805 (2026-10-29)), one listed wallet is a plain EOA ops account, and they do not reconcile with Accountable's Undeployed bucket",
       "The recovered operational mint/redeem documentation states a TVL-relative redemption quota, not a fixed USD amount. No same-run protocol TVL measurement or equivalence to circulating USN supply is established, so dailyLimitUsd remains unconfigured; the exact published percentage is recorded in the redemption-backstops documentation. Operational same-day settlement does not supersede the binding five-Business-Day terms and extraordinary gating.",
     ],
   }),
@@ -1393,17 +1393,16 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
     settlementModel: "days",
     totalScoreCap: 65,
     feeDescription:
-      "Noon docs state Noon does not charge fees or other dApp charges; sUSN unstaking exits to USN through the withdrawal-handler request/claim rail with no protocol fee (gas only).",
+      "Noon docs state no direct fee for buying, staking, or other $USN or $sUSN interactions; sUSN unstaking exits to USN through the withdrawal-handler request/claim rail with no protocol fee (gas only).",
     docs: [
-      sourceRefFull("Noon USN and sUSN", "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn"),
       sourceRef(
         "Noon minting and redemption",
-        "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption",
+        "https://docs.noon.capital/2.-usdusn-and-usdsusn/mint-and-redeem.md",
         ["route", "access", "settlement"],
       ),
       sourceRef(
         "Noon fees and other charges",
-        "https://docs.noon.capital/built-for-high-yields/fees-and-other-charges",
+        "https://docs.noon.capital/2.-usdusn-and-usdsusn/fees.md",
         ["fees"],
       ),
       sourceRef(

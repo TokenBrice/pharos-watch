@@ -2,6 +2,10 @@
 
 The [architectural decisions](../architecture.md#adr-28) remain the authority for R1–R8. This appendix retains domain applications and implementation references; it grants no exceptions to those decisions.
 
+## ADR-3 applications
+
+A policy-semantic change takes a numeric version even when it is provably score-neutral, because the policy semantic digest rotates and replay/publication identity must name it (the v10.37 documentation class is the precedent); score-neutrality is proven by capture gates, never assumed, and is not a reason to skip the version. A counting- or presentation-only change that leaves the policy digest, scored bytes and evidence fields unchanged takes no version and is recorded in structured history and the weekly changelog instead.
+
 ## ADR-28 applications
 
 - [DEX](../dex-liquidity.md#pool-quality-formula) preserves unavailable measured-balance and organic TVL weights across normalization, schemas, snapshots and views; ratios cannot supply aggregation weights, and observed zero remains distinct. [Status](../status-dashboard.md#overall-status) schema-admits coverage, retaining zero/false/nullable baselines; malformed telemetry is unavailable, never synthetic coverage.

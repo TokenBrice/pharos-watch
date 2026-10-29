@@ -13,7 +13,7 @@ import {
   type V9OpenEvidenceTotals,
   type V9OpenQuestionBucket,
   type V9QuestionKey,
-} from "../../types/safety-score-v9-public";
+} from "../../types/safety-score-v9-open-evidence";
 import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
 import { compareText } from "./primitives";
 

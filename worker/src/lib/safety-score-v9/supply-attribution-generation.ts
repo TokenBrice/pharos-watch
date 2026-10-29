@@ -11,6 +11,12 @@ import {
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { BaseInputGenerationIdSchema, Sha256Schema, UnixSecondsSchema } from "@shared/types/safety-schema-primitives";
 import { SupplyAttributionAttemptDiagnosticsSchema, SupplyAttributionCaptureFailureReasonSchema } from "@shared/types/safety-score-v9-supply-attribution";
+import {
+  SafetyScoreV9DeploymentSupplyCensusBindingSchema,
+  SafetyScoreV9DeploymentSupplyCensusByIdSchema,
+  type SafetyScoreV9DeploymentSupplyCensusBinding,
+  type SafetyScoreV9DeploymentSupplyCensusById,
+} from "@shared/types/safety-score-v9-deployment-supply-census";
 import { z } from "zod";
 import { createCanonicalGenerationCodec } from "../canonical-generation-codec";
 import { SafetyScoreV9SupplyAttributionSchema } from "../report-cards-fixed-input";
@@ -97,6 +103,14 @@ const SupplyAttributionGenerationPayloadSchema = z
       AssetIdSchema,
       SupplyAttributionGenerationOutcomeSchema,
     ),
+    // v10.38 deployment supply census projection carried beside the
+    // attribution it was captured with (SA-4 / RV-SA §6). Optional and never
+    // defaulted: a generation captured without census packets keeps the exact
+    // pre-v10.38 payload bytes and generation id.
+    deploymentSupplyCensusById: SafetyScoreV9DeploymentSupplyCensusByIdSchema.optional(),
+    // The store read's generation identity. Never split from the map: the map
+    // alone is rejected `generation-unbound` by the consumer (SA-FIX F2).
+    deploymentSupplyCensusBinding: SafetyScoreV9DeploymentSupplyCensusBindingSchema.optional(),
   })
   .strict()
   .superRefine((generation, ctx) => {
@@ -199,6 +213,41 @@ const SupplyAttributionGenerationPayloadSchema = z
           code: "custom",
           path: ["outcomesById", assetId],
           message: "Rejected supply attribution requires an exact rejection outcome",
+        });
+      }
+    }
+    const censusById = generation.deploymentSupplyCensusById;
+    const censusBinding = generation.deploymentSupplyCensusBinding;
+    if ((censusById === undefined) !== (censusBinding === undefined)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["deploymentSupplyCensusBinding"],
+        message:
+          "Deployment supply census packets and their generation binding travel together",
+      });
+    } else if (censusById !== undefined && censusBinding !== undefined) {
+      // Unavailable is not empty (R1): a captured census with no packet must
+      // omit the key, never carry `{}`.
+      if (Object.keys(censusById).length === 0) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["deploymentSupplyCensusById"],
+          message: "A carried deployment supply census must contain at least one packet",
+        });
+      }
+      // The store read names the registry and base generation it was built
+      // for; a generation carrying another pair would be rejected
+      // `generation-mismatch` at every consumer, so refuse it at capture.
+      if (
+        censusBinding.registryFingerprint !== generation.registryFingerprint ||
+        censusBinding.sourceBaseInputGenerationId !==
+          generation.sourceBaseInputGenerationId
+      ) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["deploymentSupplyCensusBinding"],
+          message:
+            "Deployment supply census binding must name this generation's registry and base input",
         });
       }
     }
@@ -386,6 +435,15 @@ export function createSafetyScoreV9SupplyAttributionGeneration(input: {
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>;
   capture: SafetyScoreV9SupplyAttributionCapture;
   capturedAtSec: number;
+  /**
+   * The census generation the producer's store read served for this capture
+   * (SA-1/SA-4). Both fields come from that one read; pass nothing when the
+   * store served no admitted packets (absent, never `{}`).
+   */
+  deploymentSupplyCensus?: {
+    byId: SafetyScoreV9DeploymentSupplyCensusById;
+    binding: SafetyScoreV9DeploymentSupplyCensusBinding;
+  };
 }): SafetyScoreV9SupplyAttributionGeneration {
   const recordsByAsset = journalRecordsByAsset(input.capture.journalRecords);
   assertCaptureBindings({ ...input, recordsByAsset });
@@ -437,6 +495,12 @@ export function createSafetyScoreV9SupplyAttributionGeneration(input: {
     rejectedAssetIds,
     attributionById: input.capture.attributionById,
     outcomesById,
+    ...(input.deploymentSupplyCensus
+      ? {
+          deploymentSupplyCensusById: input.deploymentSupplyCensus.byId,
+          deploymentSupplyCensusBinding: input.deploymentSupplyCensus.binding,
+        }
+      : {}),
   });
   return supplyAttributionGenerationCodec.create(payload);
 }
@@ -674,10 +738,27 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     | null,
   lastAdmitted?: SafetyScoreV9SupplyAttributionLastAdmitted | null,
 ): SafetyScoreV9SupplyAttributionGenerationApplication {
+  const censusById = generation?.deploymentSupplyCensusById;
+  const censusBinding = generation?.deploymentSupplyCensusBinding;
+  // The generation carries the projection and its binding as one unit (the
+  // payload schema refuses either alone), so the consumer can never admit a
+  // packet against the wrong registry/base generation. An absent census stays
+  // absent: never `{}`, which would claim a measured-empty census.
+  const censusFields =
+    censusById === undefined || censusBinding === undefined
+      ? {}
+      : {
+          safetyScoreV9DeploymentSupplyCensusById: censusById,
+          safetyScoreV9DeploymentSupplyCensusBinding: censusBinding,
+        };
   const withCarry = (applied: SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"]) => {
     const carried = carryForwardSupplyAttribution(fixedInput, lastAdmitted, applied);
     return {
-      fixedInput: { ...fixedInput, safetyScoreV9SupplyAttributionById: { ...applied, ...carried.attributionById } },
+      fixedInput: {
+        ...fixedInput,
+        ...censusFields,
+        safetyScoreV9SupplyAttributionById: { ...applied, ...carried.attributionById },
+      },
       carriedForwardAssetIds: carried.assetIds,
     };
   };
@@ -685,7 +766,7 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     return {
       status: "unavailable",
       generationId: null,
-      ...(lastAdmitted ? withCarry({}) : { fixedInput: withoutSupplyAttribution(fixedInput), carriedForwardAssetIds: [] }),
+      ...(lastAdmitted ? withCarry({}) : { fixedInput: { ...withoutSupplyAttribution(fixedInput), ...censusFields }, carriedForwardAssetIds: [] }),
       reason: "generation-missing",
     };
   }
@@ -698,7 +779,7 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     return {
       status: "incompatible",
       generationId: generation.generationId,
-      ...(lastAdmitted ? withCarry({}) : { fixedInput: withoutSupplyAttribution(fixedInput), carriedForwardAssetIds: [] }),
+      ...(lastAdmitted ? withCarry({}) : { fixedInput: { ...withoutSupplyAttribution(fixedInput), ...censusFields }, carriedForwardAssetIds: [] }),
       reason: compatibilityReason,
     };
   }

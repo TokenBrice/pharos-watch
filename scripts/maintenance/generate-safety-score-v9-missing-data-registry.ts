@@ -13,6 +13,7 @@ import {
 } from "@shared/lib/safety-score-v9/open-questions";
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { resolveCauseGapId } from "@shared/types/safety-score-v9-public-cause-gaps";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { reviewAdmissionSec } from "@shared/types/date-primitives";
 import { V9DocumentationReasonSchema } from "@shared/types/safety-score-v9";
@@ -24,8 +25,8 @@ import {
 import {
   SafetyScoreV9PreviousResponseSchema,
   SafetyScoreV9ResponseSchema,
-  type SafetyScoreV9Card,
-} from "@shared/types/safety-score-v9-public";
+} from "@shared/types/safety-score-v9-publication-response";
+import type { SafetyScoreV9Card } from "@shared/types/safety-score-v9-public";
 import { loadPerCoinStablecoinEntries, type StablecoinSourceEntry } from "../lib/stablecoin-catalog-sources";
 import {
   parseStrictCliArgs,
@@ -60,19 +61,21 @@ Options:
  * `causeGapIds`; the registry build now fails closed on a replay that cannot
  * supply them (or on an evaluated asset missing from the candidate).
  */
-const ReplayPillarReasonsSchema = z
+const ReplayPillarReasonSchema = z
   .object({
-    reasons: z.array(
-      z
-        .object({
-          code: z.string().min(1),
-          cause: z.enum(["A", "B", "C", "U", "D"]).nullable().optional(),
-          causeGapIds: z.array(z.string().min(1)).optional(),
-          sourceGapId: z.string().min(1).optional(),
-        })
-        .passthrough(),
-    ),
+    code: z.string().min(1),
+    // The causal path is the public join key: the card path replaces only the
+    // `:cause:` suffix with a table reference.
+    path: z.string().optional(),
+    cause: z.enum(["A", "B", "C", "U", "D"]).nullable().optional(),
+    causeGapIds: z.array(z.string().min(1)).optional(),
+    sourceGapId: z.string().min(1).optional(),
   })
+  .passthrough();
+type ReplayPillarReason = z.infer<typeof ReplayPillarReasonSchema>;
+
+const ReplayPillarReasonsSchema = z
+  .object({ reasons: z.array(ReplayPillarReasonSchema) })
   .passthrough();
 
 const ReplayEvaluatedAssetSchema = z
@@ -367,6 +370,8 @@ interface ScoreProjectionReason {
   path: string | null;
   source: string;
   workType: V9MissingDataWorkType;
+  /** The public card's interned `:cause:N` references for this reason. */
+  causeGapRefs: number[];
 }
 
 function scoreProjectionReasons(card: SafetyScoreV9Card): ScoreProjectionReason[] {
@@ -374,7 +379,12 @@ function scoreProjectionReasons(card: SafetyScoreV9Card): ScoreProjectionReason[
   for (const pillar of ["backing", "exit", "control"] as const) {
     for (const reason of card.pillars[pillar].reasons) {
       const workType = classifyV9ScoreProjectionWorkType(reason.code);
-      if (workType) reasons.push({ ...reason, reasonCode: reason.code, source: `pillar:${pillar}`, workType });
+      if (workType) {
+        reasons.push({
+          ...reason, reasonCode: reason.code, source: `pillar:${pillar}`, workType,
+          causeGapRefs: [...(reason.causeGapRefs ?? [])],
+        });
+      }
     }
   }
   for (const reason of card.nrReasons) {
@@ -386,6 +396,7 @@ function scoreProjectionReasons(card: SafetyScoreV9Card): ScoreProjectionReason[
         path: reason.field,
         source: "nr-reason",
         workType,
+        causeGapRefs: [...(reason.causeGapRefs ?? [])],
       });
     }
   }
@@ -400,6 +411,7 @@ function scoreProjectionReasons(card: SafetyScoreV9Card): ScoreProjectionReason[
       path: null,
       source: "card-aggregate",
       workType,
+      causeGapRefs: [],
     });
   }
   const seen = new Set<string>();
@@ -409,6 +421,58 @@ function scoreProjectionReasons(card: SafetyScoreV9Card): ScoreProjectionReason[
     seen.add(key);
     return true;
   });
+}
+
+/** The causal path without its `:cause:<gap-or-ref>` suffix. */
+function causalPathBase(path: string): string {
+  const index = path.lastIndexOf(":cause:");
+  return index < 0 ? path : path.slice(0, index);
+}
+
+type EvaluatedPillarReasons = {
+  readonly backing: readonly ReplayPillarReason[];
+  readonly exit: readonly ReplayPillarReason[];
+  readonly control: readonly ReplayPillarReason[];
+};
+
+/**
+ * PLAN §4.3 DEB-4: the compiled gaps a score projection's obligation resolves
+ * to, by causal gap identity. The evaluated set is authoritative (same replay,
+ * un-interned ids); the public card's interned `:cause:N` table is the fallback
+ * for rows that never reached a pillar reason. An empty result means the row
+ * exposes no causal gap identity, so coverage falls back to the exact work type
+ * rather than assuming the work is covered.
+ */
+export function scoreProjectionCauseGapIds(args: {
+  reason: ScoreProjectionReason;
+  card: Pick<SafetyScoreV9Card, "id" | "localCauseGaps" | "foreignCauseGapRefs">;
+  evaluated: EvaluatedPillarReasons | undefined;
+  foreignCauseGaps: readonly string[];
+}): string[] {
+  const { reason } = args;
+  const pillar = reason.source.startsWith("pillar:")
+    ? (reason.source.slice("pillar:".length) as keyof EvaluatedPillarReasons)
+    : null;
+  if (pillar !== null) {
+    const base = causalPathBase(reason.path ?? "");
+    const evaluatedIds = (args.evaluated?.[pillar] ?? [])
+      .filter((candidate) => candidate.code === reason.reasonCode &&
+        causalPathBase(candidate.path ?? "") === base)
+      .flatMap((candidate) => [
+        ...(candidate.causeGapIds ?? []),
+        ...(candidate.sourceGapId === undefined ? [] : [candidate.sourceGapId]),
+      ]);
+    if (evaluatedIds.length > 0) {
+      return [...new Set(evaluatedIds)].sort((left, right) => left.localeCompare(right));
+    }
+  }
+  const refs = [...reason.causeGapRefs];
+  const suffix = reason.path === null ? null : /:cause:(\d+)$/u.exec(reason.path);
+  if (suffix !== null) refs.push(Number(suffix[1]));
+  if (refs.length === 0) return [];
+  return [...new Set(refs.map((ref) =>
+    resolveCauseGapId({ foreignCauseGaps: args.foreignCauseGaps }, args.card, ref)))
+  ].sort((left, right) => left.localeCompare(right));
 }
 
 function scoreProjectionObservationState(reasonCode: string): string {
@@ -534,6 +598,20 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
   const taskIdByGapId = new Map(
     queue.entries.map((entry) => [entry.gapId, `V9G-${entry.queueKey.slice(0, 16)}`]),
   );
+  // Supplement dedupe (PLAN §4.3 DEB-4): a card reason joins its evaluated
+  // pillar reason by code and causal path base, then every obligation it
+  // carries resolves through the compiled `gapId -> taskId` table.
+  const evaluatedReasonsByAsset = new Map<string, EvaluatedPillarReasons>(
+    replay.evaluatedSet.assets.map((evaluated) => [
+      evaluated.assetId,
+      {
+        backing: evaluated.scoreInput.pillars.backing.reasons,
+        exit: evaluated.scoreInput.pillars.exit.reasons,
+        control: evaluated.scoreInput.pillars.control.reasons,
+      },
+    ]),
+  );
+  const foreignCauseGaps = candidate.foreignCauseGaps;
   // The queue only sees compiled facts. DOC-1's route-diagnostic veto needs the
   // Exit routes the evaluation actually admitted, so the registry re-runs the
   // classifier for optional-exit diagnostics with those keys; a route that was
@@ -606,6 +684,12 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       .filter((residual) => residual.bucket === "open")
       .map((residual) => residual.questionKey),
   );
+  const projectionDedupe = {
+    workTypeFallback: 0,
+    coveredByGapIdentity: 0,
+    keptForUncoveredObligation: 0,
+    supplementsRemoved: 0,
+  };
   const stablecoins = facts.activeAssetIds.map((assetId) => {
     const asset = factById.get(assetId);
     const card = cardById.get(assetId);
@@ -700,9 +784,37 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
     });
     const projections = scoreProjectionReasons(card);
     const compiledWorkTypes = new Set(factItems.map((item) => item.workType));
+    // PLAN §4.3 DEB-4 all-obligations rule: a projection needs a supplemental
+    // task only when at least one obligation it carries has no compiled task.
+    // A cross-work-type compiled task that carries the same gap satisfies it;
+    // no compiled task is ever credited by reason code alone. A row whose
+    // causal identity cannot be resolved falls back to exact-work-type
+    // coverage, never to an assumption of coverage.
+    const projectionGapIds = projections.map((reason) => scoreProjectionCauseGapIds({
+      reason,
+      card,
+      evaluated: evaluatedReasonsByAsset.get(assetId),
+      foreignCauseGaps,
+    }));
+    const supplementTaskIdByProjection = new Map<number, string>();
     const supplementalItems = projections
-      .filter((reason) => !compiledWorkTypes.has(reason.workType))
-      .map((reason) => {
+      .flatMap((reason, index) => {
+        const gapIds = projectionGapIds[index]!;
+        const uncoveredCauseGapIds = gapIds.filter((gapId) => !taskIdByGapId.has(gapId));
+        const needsSupplement = gapIds.length === 0
+          ? !compiledWorkTypes.has(reason.workType)
+          : uncoveredCauseGapIds.length > 0;
+        if (gapIds.length === 0) {
+          projectionDedupe.workTypeFallback += 1;
+        } else if (uncoveredCauseGapIds.length === 0) {
+          projectionDedupe.coveredByGapIdentity += 1;
+        } else {
+          projectionDedupe.keptForUncoveredObligation += 1;
+        }
+        if (!compiledWorkTypes.has(reason.workType) && !needsSupplement) {
+          projectionDedupe.supplementsRemoved += 1;
+        }
+        if (!needsSupplement) return [];
         const workType = reason.workType;
         const descriptor = WORK_TYPES[workType];
         const { context, ref: currentFactContextRef } = contextForTask(
@@ -715,6 +827,8 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         const componentIdentityUnavailable = reason.source === "card-aggregate" && reason.path === null;
         const claimGroupId = `${workType}:${assetId}`;
         const digest = scoreProjectionTaskDigest(assetId, reason);
+        const taskId = `V9S-${digest.slice(0, 16)}`;
+        supplementTaskIdByProjection.set(index, taskId);
         const evidenceRefIds = [...collectEvidenceRefIds(context)].sort((left, right) => left.localeCompare(right));
         const existingEvidence = evidenceRefIds.map(
           (evidenceRefId) =>
@@ -724,9 +838,9 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
             },
         );
         allItems.push({ workType, resolutionMode, claimGroupId, taskSource: "score-projection-gap" });
-        return {
+        return [{
           taskSource: "score-projection-gap" as const,
-          taskId: `V9S-${digest.slice(0, 16)}`,
+          taskId,
           claimGroupId,
           status: "open",
           globalPriority: null,
@@ -774,18 +888,26 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
           },
           doneWhenGapIdAbsent: null,
           doneWhenScoreReasonAbsent: { reasonCode: reason.reasonCode, path: reason.path },
-        };
+        }];
       });
     const items = [...factItems, ...supplementalItems];
-    const scoreProjectionGaps = projections.map((reason) => {
-      const stream = WORK_TYPES[reason.workType].stream;
-      // Coverage is exact-work-type: two projections may share a stream (for
-      // example EXIT_DEX_COVERAGE and EXIT_SETTLEMENT_BOUND are both EXIT), and
-      // crediting one work type's task to the other would misreport
-      // requiresSupplementalTask and downstream producer fan-out.
-      const coveredByTaskIds = items
-        .filter((item) => item.workType === reason.workType)
-        .map((item) => item.taskId);
+    const scoreProjectionGaps = projections.map((reason, index) => {
+      const gapIds = projectionGapIds[index]!;
+      const uncoveredCauseGapIds = gapIds.filter((gapId) => !taskIdByGapId.has(gapId));
+      const supplementalTaskId = supplementTaskIdByProjection.get(index) ?? null;
+      // Coverage is gap identity, not work type: a compiled task of another
+      // work type that carries the same causal gap covers the projection. Only
+      // a row without a resolvable identity falls back to the exact work type,
+      // so a mixed obligation set keeps its supplemental task.
+      const coveredByTaskIds = gapIds.length === 0
+        ? items.filter((item) => item.workType === reason.workType).map((item) => item.taskId)
+        : [...new Set([
+          ...gapIds.flatMap((gapId) => {
+            const taskId = taskIdByGapId.get(gapId);
+            return taskId === undefined ? [] : [taskId];
+          }),
+          ...(supplementalTaskId === null ? [] : [supplementalTaskId]),
+        ])].sort((left, right) => left.localeCompare(right));
       if (coveredByTaskIds.length === 0) {
         throw new Error(`Score projection ${assetId}:${reason.reasonCode}:${reason.path ?? ""} has no agent task`);
       }
@@ -797,9 +919,13 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
         message: reason.message,
         path: reason.path,
         workType: reason.workType,
-        stream,
+        stream: WORK_TYPES[reason.workType].stream,
+        causalGapIds: gapIds,
+        uncoveredCauseGapIds,
+        coverageBasis: gapIds.length === 0 ? "work-type" as const : "causal-gaps" as const,
         coveredByTaskIds,
-        requiresSupplementalTask: coveredByTaskIds.some((taskId) => taskId.startsWith("V9S-")),
+        supplementalTaskId,
+        requiresSupplementalTask: supplementalTaskId !== null,
       };
     });
     const claimGroups = new Set(items.map((item) => item.claimGroupId));
@@ -884,7 +1010,9 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       knownRiskWarning:
         "Known centralization, weak controls, poor exit capacity, reserve risk, dependencies, short history, and peg behavior continue to reduce the score after missing data is filled.",
       taskCompleteness:
-        "Every compiled fact gap is represented exactly once. Every score-visible missing or bounded reason is listed under scoreProjectionGaps; a supplemental task is added when no compiled fact task covers its work type.",
+        "Every compiled fact gap is represented exactly once. Every score-visible missing or bounded reason is listed under scoreProjectionGaps with the causal gap ids it carries; a supplemental task is added only when at least one of those obligations has no compiled task, or, for a reason that exposes no causal gap identity, when no compiled fact task of its exact work type exists.",
+      supplementDedupe:
+        "coverageBasis causal-gaps means every obligation under the projection resolves to a compiled task, possibly of another work type; work-type is the fail-closed fallback for a reason with no resolvable causal gap identity. uncoveredCauseGapIds lists the obligations that forced a supplemental task, so a deduplicated row never hides independent work. A mixed cause set always keeps its supplemental task.",
       policyBindingWarning:
         "Policy-binding issues are queue-contract defects, not substitutes for evidence work. Each affected item preserves the defect and supplies a separate evidence action.",
       responsibilityWarning:
@@ -936,6 +1064,13 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       researchedTerminalItemCount: registryItems.filter((item) => item.reviewState !== null).length,
       scoreProjectionReasonCount: projectionRows.length,
       scoreProjectionReasonNeedingSupplementCount: projectionRows.filter((row) => row.requiresSupplementalTask).length,
+      // Supplement dedupe (PLAN §4.3 DEB-4): rows covered by causal gap
+      // identity, the fail-closed work-type fallback, and the two ways a
+      // supplement survives.
+      scoreProjectionCauseGapCount: projectionDedupe.coveredByGapIdentity,
+      scoreProjectionWorkTypeFallbackCount: projectionDedupe.workTypeFallback,
+      scoreProjectionSupplementRemovedCount: projectionDedupe.supplementsRemoved,
+      scoreProjectionSupplementKeptForUncoveredCount: projectionDedupe.keptForUncoveredObligation,
       claimGroupCount,
       criticalItemCount: queue.entries.filter((entry) => entry.critical).length,
       policyBindingReviewCount: registryItems.filter((item) => item.policyBinding.coordinatorReviewRequired).length,

@@ -55,16 +55,19 @@ import {
 } from "@shared/types/public-snapshot";
 import {
   HistoricalResolvedReportCardsV9ResponseSchema,
-  ReportCardsV9CurrentResponseSchema,
+  REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION,
   V9PublicationHealthSchema,
 } from "@shared/types/report-cards-v9";
+import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9-current";
 import { SafetyScoreV9PublicationIdentitySchema } from "@shared/types/safety-score-publication";
 import {
   SafetyScoreV9CompletenessSchema,
+} from "@shared/types/safety-score-v9-public";
+import {
   V9_OPEN_EVIDENCE_SEMANTICS,
   V9OpenEvidenceTotalsSchema,
   type V9OpenEvidenceTotals,
-} from "@shared/types/safety-score-v9-public";
+} from "@shared/types/safety-score-v9-open-evidence";
 import { z } from "zod";
 import { DEPEG_EVENT_DATA_DIR, readDepegEventSnapshot } from "../../src/lib/depeg-event-snapshot";
 import { isDirectRun, parseCheckMode } from "../lib/smoke-runtime.mjs";
@@ -490,7 +493,11 @@ function readSafetyPublication(
     }
     return null;
   }
-  const archived = historical && isRecord(raw) && "schemaVersion" in raw && raw.schemaVersion === 8;
+  // A dated regeneration also reads the report8 archive shape the capture was
+  // sealed under; a live build accepts only report9, so an old Worker's bytes
+  // are never republished as a current dataset.
+  const archived = historical && isRecord(raw) &&
+    "schemaVersion" in raw && raw.schemaVersion === REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION;
   const parsed = archived
     ? HistoricalResolvedReportCardsV9ResponseSchema.safeParse(raw)
     : ReportCardsV9CurrentResponseSchema.safeParse(raw);

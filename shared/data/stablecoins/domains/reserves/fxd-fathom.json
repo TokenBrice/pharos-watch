@@ -49,20 +49,20 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-27",
-    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RenewComp7 renewal 2026-10-29 (W0 R-COMP-7)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Pinned XDC block 108767954, observed 2026-10-27T08:52:54Z",
-        "url": "https://xdcscan.com/block/108767954"
+        "label": "Pinned XDC block 108850925, observed 2026-10-29T18:39:13Z",
+        "url": "https://xdcscan.com/block/108850925"
       },
       {
-        "label": "XDC Network public RPC used for same-block collateral and oracle reads",
+        "label": "XDC Network public RPC used for the same-block three-adapter and oracle reads",
         "url": "https://erpc.xinfin.network"
       },
       {
-        "label": "Fathom XDC deployment registry (CGO collateral pool; accessed 2026-10-27)",
+        "label": "Fathom XDC deployment registry (CollateralPoolConfig, CollateralTokenAdapters, price oracles; accessed 2026-10-29)",
         "url": "https://docs.fathom.fi/fxd-stablecoin/deployments/xdc-network"
       },
       {
@@ -70,11 +70,11 @@
         "url": "https://github.com/Fathom-Fi/fathom-stablecoin-smart-contracts/blob/59b41c447903497c0d74985bd18f7ec77e3b5e5e/contracts/main/stablecoin-core/config/CollateralPoolConfig.sol"
       }
     ],
-    "rationale": "Same-block reads at XDC block 108767954 (2026-10-27T08:52:54Z) measured 25,407,276.931021 psXDC, 7,471,325.302965 WXDC, and 0.068541 CGO in the three CollateralTokenAdapters (pool ids psXDC, XDC, and CGO resolved through CollateralPoolConfig.getAdapter); the balances equal those measured at block 107486464 on 2026-09-21. The protocol's FathomPriceOracle returned $0.0336463 for XDC and $128.38 for CGO at the same block. Applying Fathom's one-for-one psXDC-as-XDC valuation produced collateral values of $854,860.86, $251,382.45, and $8.80, or 77.275%, 22.724%, and 0.001% after rounding. A log scan of CollateralPoolConfig from block 107486465 through 108767954 returned no events, so no pool was initialized after the earlier exhaustive follow-up and the three enumerated pools remain the full composition.",
-    "compositionBasis": "Same-block on-chain CollateralTokenAdapter balances and protocol oracle prices at XDC block 108767954",
-    "compositionAsOf": "2026-10-27",
+    "rationale": "Same-block reads at XDC block 108850925 (hash 0x23b3d757b619dc71c717407c74dc85d0c68d95c1c5d85e1e22f6947e2c788080, 2026-10-29T18:39:13Z) measured 25,407,276.931021211688722203 psXDC, 7,471,325.302964620943948893 WXDC, and 0.06854102440070889 CGO in the three CollateralTokenAdapters returned by CollateralPoolConfig.getAdapter for pool ids psXDC, XDC and CGO; the psXDC and WXDC balances are unchanged from those measured at block 108767954 on 2026-10-27. The protocol's FathomPriceOracle returned $0.0330416 for XDC (updated 2026-10-29T18:36:40Z) and $128.713 for CGO (updated 2026-10-29T18:35:25Z) at the same block, and the psXDC pool has no separate psXDC/XDC rate, so it remains protocol-priced one-for-one as XDC. Applying that valuation produced collateral values of $839,497.08, $246,864.54 and $8.82, or 77.275%, 22.724% and 0.001% of $1,086,370.45 gross collateral after rounding. The lower XDC price reduces absolute collateral value but not the measured shares. The earlier exhaustive LogInitCollateralPoolId scan remains the pool-inventory evidence; this read resolves the same three pools.",
+    "compositionBasis": "Same-block on-chain CollateralTokenAdapter balances and protocol oracle prices at XDC block 108850925",
+    "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "Pool identities, balances, and protocol valuation weights are measured at XDC block 108767954. Weights can change after that block, and psXDC retains Fathom's one-for-one XDC valuation because the protocol has no separate psXDC exchange-rate feed.",
+    "knownUnknownExposure": "Pool identities, balances, and protocol valuation weights are measured at XDC block 108850925. Weights can change after that block, and psXDC retains Fathom's one-for-one XDC valuation because the protocol has no separate psXDC exchange-rate feed.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

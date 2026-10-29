@@ -106,6 +106,7 @@ describe("resolveVaultNavSupplyPrice", () => {
     expect(getFreshSingleSourceNavParentId("senpathusd-sentora")).toBe("pathusd-bridge");
     expect(getFreshSingleSourceNavParentId("sbold-k3-capital")).toBe("bold-liquity");
     expect(getFreshSingleSourceNavParentId("ybold-yearn")).toBe("bold-liquity");
+    expect(getFreshSingleSourceNavParentId("susn-noon")).toBe("usn-noon");
     expect(getFreshSingleSourceNavParentId("eearn-ember")).toBeNull();
     expect(getFreshSingleSourceNavParentId("sgho-aave")).toBeNull();
     expect(getFreshSingleSourceNavParentId("not-a-vault-token")).toBeNull();
@@ -178,6 +179,48 @@ describe("resolveVaultNavSupplyPrice", () => {
 
     it("withholds supply NAV without a BOLD parent", async () => {
       expect(await resolveVaultNavSupplyPrice(id, new Map())).toBeNull();
+      expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    });
+  });
+
+  describe("susn-noon USN parent admission", () => {
+    function usnParent(ageSec: number, overrides: Partial<PeggedAsset> = {}): ReadonlyMap<string, PeggedAsset> {
+      const nowSec = Math.floor(Date.now() / 1000);
+      return new Map([["usn-noon", {
+        ...sameRunParent(nowSec, ageSec).get("yzusd-yuzu")!,
+        id: "usn-noon", name: "Noon USN", symbol: "USN", ...overrides,
+      }]]);
+    }
+
+    it("values sUSN supply from a fresh replay-safe single-source USN quote", async () => {
+      // 1.232847915 USN per sUSN, the reviewed 2026-10-29 convertToAssets read.
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_232_847_915n * 10n ** 9n).toString(16).padStart(64, "0")}`);
+      const nowSec = Math.floor(Date.now() / 1000);
+      const override = await resolveVaultNavSupplyPrice("susn-noon", usnParent(60));
+      expect(override).toMatchObject({
+        source: "coingecko", confidence: "single-source", observedAt: nowSec - 60,
+        metadata: {
+          inheritedFrom: "usn-noon", parentSource: "coingecko", parentReplaySafe: true, navMethod: "convertToAssets",
+        },
+      });
+      expect(override?.price).toBeCloseTo(1.232847915, 8);
+      expect(fetchEvmCallHexAtBlockMock.mock.calls[0]).toEqual(expect.arrayContaining([
+        "ethereum", "0xe24a3dc889621612422a64e6388927901608b91d",
+      ]));
+    });
+
+    it.each<[string, Partial<PeggedAsset>]>([
+      ["stale", { priceObservedAt: Math.floor(Date.now() / 1000) - 901 }],
+      ["fallback", { priceConfidence: "fallback" }],
+      ["low-volume", { priceSource: "coingecko-low-volume", priceConfidence: "fallback" }],
+      ["cached", { priceSource: "coingecko+cached" }],
+    ])("withholds sUSN supply NAV for a %s USN parent", async (_label, overrides) => {
+      expect(await resolveVaultNavSupplyPrice("susn-noon", usnParent(60, overrides))).toBeNull();
+      expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    });
+
+    it("withholds sUSN supply NAV without a USN parent", async () => {
+      expect(await resolveVaultNavSupplyPrice("susn-noon", new Map())).toBeNull();
       expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
     });
   });

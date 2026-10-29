@@ -55,7 +55,7 @@ describe("mint/burn durable publication admission", () => {
     const { publication } = await readMintBurnWindowContext(db, end, MINT_BURN_CONFIGS);
     const compact = compactMintBurnPublication(publication);
     expect(compact).toMatchObject({ legsScope: "non-admitted", legCount: MINT_BURN_CONFIGS.length,
-      admittedCount: 137, pendingAdmissionCount: 1, disabledCount: 0 });
+      admittedCount: 137, pendingAdmissionCount: 2, disabledCount: 0 });
     expect(compact.legs).toEqual(publication.legs.filter((leg) => leg.status !== "admitted"));
     expect(new Set(compact.admittedPairs!.map((pair) => JSON.stringify(pair)))).toEqual(new Set(publication.legs
       .filter((leg) => leg.status === "admitted").map((leg) => JSON.stringify([leg.stablecoinId, leg.chainId]))));

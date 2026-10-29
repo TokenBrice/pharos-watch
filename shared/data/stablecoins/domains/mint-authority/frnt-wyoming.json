@@ -1157,28 +1157,308 @@
         "Finalized transaction 4D3VgoF9YjFh6LXkuvPu5aK5aL3yuxUMiSuwHqRBHJvgGKAW7gnjDQ6gHkvBBxNVHbDFYMaw1V952fDX7u5F3atg at slot 424090107, June 3 2026 19:29:21 UTC, transfers only scaledUiAmount authority from DLP5sGaLm596Fa8PCNPYNofFK1cZxzME7csK3xBsABCT to 3FL7iZaerXVygpPAFtXyxoCGdoUt11eiSBYkko6mMD8x; it has no mint, burn or mint-authority-change instruction. The provider calls this the disputed authorization; the Commission CISO does not identify the affected key or transaction in its September 14 disclosure. Does the Commission's separate critical-private-key allegation refer to this same display authority or another production control, and what exact incident/resolution evidence applies? This receipt is not a resolved mint incident or incident-free aggregate review."
       ],
       "scopedQuestions": [
-        {"controlRef": "FRNT ethereum native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT ethereum role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT ethereum UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT avalanche native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT avalanche role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT avalanche UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT base native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT base role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT base UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT polygon native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT polygon role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT polygon UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT arbitrum native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT arbitrum role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT arbitrum UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT optimism native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT optimism role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT optimism UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?", "subject": "key-custody-independence", "reviewedAt": "2026-10-03", "reviewer": "Pharos calibration v2 2026-10-03", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT hedera native minter", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.", "subject": "key-custody-independence", "reviewedAt": "2026-10-15", "reviewer": "Pharos batch-64 review", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT hedera role administrator", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.", "subject": "key-custody-independence", "reviewedAt": "2026-10-15", "reviewer": "Pharos batch-64 review", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT hedera UUPS upgrader", "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.", "subject": "key-custody-independence", "reviewedAt": "2026-10-15", "reviewer": "Pharos batch-64 review", "sources": [{"label": "Commission Fireblocks HSM disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}]},
-        {"controlRef": "FRNT Solana Token-2022 mint authority", "question": "Unresolved: native Token-2022 signing quorum remains one of two at exact archived finalized slot 457210029. What independently evidenced operator independence and key-recovery policy governs those signer keys? Separately, does the Commission's September 14, 2026 allegation concern this native mint control, the distinct scaled-UI authority transferred on June 3, or another production key? Identify the affected chain, address, authority type, exposure period and issuer-confirmed remediation before attributing a mint incident. The provider's display-authority explanation does not close that attribution gap.", "subject": "execution-scope", "reviewedAt": "2026-10-15", "reviewer": "Pharos batch-64 review", "sources": [{"label": "Exact Solana FRNT mint", "url": "https://solscan.io/token/FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"}, {"label": "Commission current custody disclosure", "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"}, {"label": "Exact archived mint and authority accounts at one finalized slot", "url": "https://solana-mainnet.g.alchemy.com/v2/"}, {"label": "Commission CISO production-key disclosure, September 14, 2026", "url": "https://www.linkedin.com/pulse/why-wyoming-stable-token-commission-migrated-frnt-from-keith-lawhorn-jcdpe"}, {"label": "LayerZero CEO disputed-key response, September 14, 2026", "url": "https://x.com/PrimordialAA/status/2099556388708270081"}]}
+        {
+          "controlRef": "FRNT ethereum native minter",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT ethereum role administrator",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT ethereum UUPS upgrader",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT avalanche native minter",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT avalanche role administrator",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT avalanche UUPS upgrader",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT base native minter",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT base role administrator",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT base UUPS upgrader",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT polygon native minter",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT polygon role administrator",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT polygon UUPS upgrader",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT arbitrum native minter",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT arbitrum role administrator",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT arbitrum UUPS upgrader",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT optimism native minter",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT optimism role administrator",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT optimism UUPS upgrader",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader?",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-03",
+          "reviewer": "Pharos calibration v2 2026-10-03",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT hedera native minter",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified native minter? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT hedera role administrator",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified role administrator? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT hedera UUPS upgrader",
+          "question": "What independently evidenced HSM signing quorum, operator independence and key-recovery policy governs this identified mint-logic upgrader? The current full token-role census is closed; executable transfer-pool and mutable router reach remain separate questions.",
+          "subject": "key-custody-independence",
+          "reviewedAt": "2026-10-15",
+          "reviewer": "Pharos batch-64 review",
+          "sources": [
+            {
+              "label": "Commission Fireblocks HSM disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            }
+          ]
+        },
+        {
+          "controlRef": "FRNT Solana Token-2022 mint authority",
+          "question": "Unresolved: native Token-2022 signing quorum remains one of two. Re-read at Solana finalized slot 462980000, blockhash Ak76tk9d9XAHXTvU19AdsrCd9ib7cNWed7EMpm6KZWVR, blockTime 2026-10-29T18:21:26Z: the FRNT mint FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog still names the initialized native multisig DsRa7mCpCfcTxdNJvaTzbRe73FuBbrs8U8NEAxFunWnr with m=1, n=2 and the same two signer keys 7VhCbqKQEz3RNLSuAuiRmBVEVWdgcFqGHMiVPPo2KjHy and G15NrcKeqQoPG5ERcTLN1SNWZWv7BqbjvnnyQ1vJyAKf, and freeze authority remains CBxsYp2sByWC5AgrEjze7Z8QTdDX56JJRgSEX7BUWady. What independently evidenced operator independence and key-recovery policy governs those signer keys? Separately, does the Commission's September 14, 2026 allegation concern this native mint control, the distinct scaled-UI authority transferred on June 3, or another production key? Identify the affected chain, address, authority type, exposure period and issuer-confirmed remediation before attributing a mint incident. The provider's display-authority explanation does not close that attribution gap.",
+          "subject": "execution-scope",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
+          "sources": [
+            {
+              "label": "Exact Solana FRNT mint, native multisig and freeze authority read; Solana finalized slot 462980000, blockhash Ak76tk9d9XAHXTvU19AdsrCd9ib7cNWed7EMpm6KZWVR, blockTime 2026-10-29T18:21:26Z",
+              "url": "https://solana-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Exact Solana FRNT mint",
+              "url": "https://solscan.io/token/FRNTPi9V3Sw9b9U8d5Q3WY7tNANT6Q394d7dYtv7Jdog"
+            },
+            {
+              "label": "Commission current custody disclosure",
+              "url": "https://stabletoken.wyo.gov/assets/TechPage-qpUGd_J7.js"
+            },
+            {
+              "label": "Commission CISO production-key disclosure, September 14, 2026",
+              "url": "https://www.linkedin.com/pulse/why-wyoming-stable-token-commission-migrated-frnt-from-keith-lawhorn-jcdpe"
+            },
+            {
+              "label": "LayerZero CEO disputed-key response, September 14, 2026",
+              "url": "https://x.com/PrimordialAA/status/2099556388708270081"
+            }
+          ]
+        }
       ]
     }
   }

@@ -3,11 +3,13 @@ import { z } from "zod";
 import {
   buildReportCardsV9DependencyGraph,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+  type V9PublicationHealth,
+} from "@shared/types/report-cards-v9";
+import {
   ReportCardsV9CanonicalProjectionSchema,
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9CurrentResponse,
-  type V9PublicationHealth,
-} from "@shared/types/report-cards-v9";
+} from "@shared/types/report-cards-v9-current";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import type { SafetyScoreV9AdmittedPublication } from "./safety-score-v9/publication-codec";

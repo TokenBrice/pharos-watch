@@ -27,12 +27,12 @@ import { safetyScorePublicationIdentitiesMatch } from "@shared/lib/safety-score-
 import { isRecord } from "@shared/lib/type-guards";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
 import {
-  ReportCardsV9ResponseSchema,
   HistoricalReportCardsV9ResponseSchema,
   WitnessHistoricalReportCardsV9ResponseSchema,
   HistoricalTypedReportCardsV9ResponseSchema,
   HistoricalResolvedReportCardsV9ResponseSchema,
 } from "@shared/types/report-cards-v9";
+import { ReportCardsV9AcceptedResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import {
   PublicSnapshotEnvelopeSchema,
   type PublicSnapshotEnvelope,
@@ -220,11 +220,13 @@ function validateV9ReportCards(
     : reportCards.schemaVersion === 8 && minor !== null && minor >= 11 && minor <= 28
       ? HistoricalTypedReportCardsV9ResponseSchema
       // From 10.29 on, report8 rows carry resolved cards regardless of the
-      // methodology version, so every archived row resolves through the
-      // historical schema instead of failing the live report9 contract.
+      // methodology version, so every archived report8 row resolves through the
+      // historical schema instead of the live report9 contract. Anything else —
+      // the live report9 emission and a retained pre-cutover report8 cache — is
+      // admitted by the accepted 8|9 union, so a rollback Worker still serves.
       : reportCards.schemaVersion === 8 && minor !== null && minor >= 29
         ? HistoricalResolvedReportCardsV9ResponseSchema
-        : ReportCardsV9ResponseSchema;
+        : ReportCardsV9AcceptedResponseSchema;
   const parsed = historicalSchema.safeParse(validationInput);
   if (!parsed.success) {
     return "safety-score-publication-invalid";

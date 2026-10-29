@@ -1,7 +1,9 @@
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Pillars,
+  makeReportCardsV9ArchivedResponse as makeSharedReportCardsV9ArchivedResponse,
   makeReportCardsV9Response as makeSharedReportCardsV9Response,
+  type ReportCardsV9ArchivedResponse,
   type ReportCardsV9ResponseFixturePreset,
   type ReportCardsV9ResponseFixtureOverrides,
 } from "@shared/test-utils/report-cards-v9";
@@ -46,6 +48,13 @@ export function makeWorkerReportCardsV9Response(
   overrides: ReportCardsV9ResponseFixtureOverrides = {},
 ): ReportCardsV9Response {
   return makeSharedReportCardsV9Response(V9_RESPONSE_PRESET, makeWorkerV9Card, overrides);
+}
+
+/** Archive-only report8 publication: the pre-cutover Worker bytes, block absent. */
+export function makeWorkerReportCardsV9ArchivedResponse(
+  overrides: ReportCardsV9ResponseFixtureOverrides = {},
+): ReportCardsV9ArchivedResponse {
+  return makeSharedReportCardsV9ArchivedResponse(V9_RESPONSE_PRESET, makeWorkerV9Card, overrides);
 }
 
 export const makeReportCardsV9Response = makeWorkerReportCardsV9Response;

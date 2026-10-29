@@ -29,7 +29,11 @@ import { fileURLToPath } from "node:url";
 import { normalizeDeploymentId } from "../../shared/types/deployment-id";
 import { compareText, domainDigest } from "../../shared/lib/safety-score-v9/primitives";
 import { CanonicalKeySchema } from "../../shared/types/safety-schema-primitives";
-import { V9AuthoredIncidentRegistryEnvelopeSchema } from "../../shared/types/safety-score-v9-incidents";
+import {
+  V9AuthoredIncidentRegistryEnvelopeSchema,
+  type V9AuthoredNegativeIncidentReviewScope,
+  type V9NegativeIncidentReviewScope,
+} from "../../shared/types/safety-score-v9-incidents";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { parseStrictCliArgs } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -101,6 +105,23 @@ export interface IncidentReviewKeyMigrationArtifact {
   };
   readonly rows: readonly IncidentReviewKeyMigrationRow[];
 }
+
+/**
+ * The authored envelope admits reviews before reference expansion, so its rows
+ * are intentionally loose: `scope` is a `.passthrough()` object and every other
+ * field is `unknown`. The migration reads only the pre-expansion row fields and
+ * the admitted scope shapes — the legacy digest, the authored control tuple and
+ * the unchanged deployment scope — so it narrows the parsed rows to that view
+ * instead of re-validating them (the expansion admits the strict schemas).
+ */
+type IncidentReviewMigrationScope = V9NegativeIncidentReviewScope | V9AuthoredNegativeIncidentReviewScope;
+
+type IncidentReviewMigrationSourceRow = {
+  readonly reviewId: string;
+  readonly assetId: string;
+  readonly windowEndSec: number;
+  readonly scope: IncidentReviewMigrationScope;
+};
 
 interface BridgeRouteMetadata {
   readonly id: string;
@@ -394,9 +415,13 @@ export function buildIncidentReviewKeyMigration(
   reviewsValue: unknown = readJson(resolve(root, INCIDENT_REVIEWS_PATH)),
 ): IncidentReviewKeyMigrationArtifact {
   const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(reviewsValue);
+  // The envelope's rows are pre-expansion (`scope` is a passthrough object and
+  // the rest is unknown); the migration reads only the fields and admitted
+  // scope shapes above, which the strict schemas admit after expansion.
+  const negativeReviews = authored.negativeReviews as readonly unknown[] as readonly IncidentReviewMigrationSourceRow[];
   const metadata = loadAssetControlMetadata(root);
   const rows: IncidentReviewKeyMigrationRow[] = [];
-  for (const review of authored.negativeReviews) {
+  for (const review of negativeReviews) {
     const assetId = review.assetId;
     const stableReviewId = (resolution: IncidentReviewMigrationResolution, authoredValue: IncidentReviewAuthoredIdentity | null) =>
       stableReviewIdFor(review.reviewId, assetId, review.windowEndSec, { resolution, authored: authoredValue });
@@ -481,7 +506,6 @@ export function buildIncidentReviewKeyMigration(
       );
     }
     const identity = authoredIdentity(assetId, candidate);
-    const mintBlocked = false;
     rows.push({
       reviewId: review.reviewId,
       assetId,
@@ -521,9 +545,9 @@ export function buildIncidentReviewKeyMigration(
     legacyBlocked: appliedCount("legacy-blocked"),
     digestKeysRemaining: appliedCount("legacy-blocked") + countOf("retired"),
   };
-  if (counts.total !== authored.negativeReviews.length) {
+  if (counts.total !== negativeReviews.length) {
     throw new Error(
-      `Incident review migration rows ${counts.total} do not cover ${authored.negativeReviews.length} reviews`,
+      `Incident review migration rows ${counts.total} do not cover ${negativeReviews.length} reviews`,
     );
   }
   return {

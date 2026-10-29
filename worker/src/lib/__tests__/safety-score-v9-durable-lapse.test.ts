@@ -10,7 +10,7 @@ import {
   makeV9FixedInput,
 } from "../../test-helpers/v9-fixed-input";
 import { cappedMinterMeta, metaMap } from "./safety-score-v9-fact-set.test-support";
-import candidatePolicyAsset from "../../../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
+import candidatePolicyAsset from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 
 const CLOCK_SEC = Date.parse("2027-02-01T00:00:00.000Z") / 1_000;
 const LAPSED_REVIEWED_AT = "2026-10-01";

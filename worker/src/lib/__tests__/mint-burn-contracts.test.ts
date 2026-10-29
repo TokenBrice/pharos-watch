@@ -97,6 +97,26 @@ describe("mint-burn-contracts Base Dollar config", () => {
   });
 });
 
+describe("mint-burn-contracts swanUSD config", () => {
+  it("tracks canonical swanUSD zero-address Transfers from the Monolith creation block", () => {
+    const configs = getMintBurnConfigsForStablecoin("swanusd-swan");
+    expect(configs).toHaveLength(1);
+    expect(configs[0]).toMatchObject({
+      chain: { chainId: "ethereum" },
+      symbol: "swanUSD",
+      contractAddress: "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+      decimals: 18,
+      dustThreshold: 500,
+      startBlock: 26_249_209,
+      tier: "extended",
+      adapterKind: "transfer-zero-address",
+      startBlockSource: "ethereum-creation-receipt-0xfc70d106fba81de4179012dbc0497cb77301b8e5bfdf6217e0bcce6bae05274b-reviewed-2026-10-29",
+      startBlockConfidence: "high",
+    });
+    expect(configs[0]!.events).toEqual(EXPECTED_TRANSFER_EVENTS);
+  });
+});
+
 describe("mint-burn-contracts removals", () => {
   it("does not track explicitly removed no-signal tokens", () => {
     for (const removedId of REMOVED_STABLECOIN_IDS) {

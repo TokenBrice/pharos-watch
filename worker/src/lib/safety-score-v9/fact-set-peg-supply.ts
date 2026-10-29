@@ -26,6 +26,7 @@ import {
   safetyScoreV9ChainRows,
   safetyScoreV9ChainSupplyMaxAgeSec,
   safetyScoreV9ChainSupplyObservedAtSec,
+  safetyScoreV9ChainSupplySourceId,
 } from "./supply-attribution";
 import { REVIEWED_ECONOMIC_SUPPLY_PLANS } from "./supply-attribution-contract";
 import {
@@ -615,15 +616,7 @@ export function buildSupply(context: AssetBuildContext): V9AssetFactsV2["supply"
     createV9EvidenceReference(
       {
         evidenceId: `${context.asset.assetId}:chain-supply`,
-        sourceId:
-          v9Attribution === undefined
-            ? "report-cards-chain-circulating"
-            : v9Attribution.model === "reviewed-economic-deployment-partition-v1"
-              ? V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId
-              : v9Attribution.model === "canonical-lock-mint-partition-v1" ||
-                  v9Attribution.model === "canonical-lock-mint-group-partition-v2"
-                ? "safety-score-v9-lock-mint-attribution"
-                : "safety-score-v9-reviewed-deployment-attribution",
+        sourceId: safetyScoreV9ChainSupplySourceId(context.fixedInput, context.asset.assetId),
         sourceGenerationId: source.generationId,
         disposition: "observed",
         observedAtSec: safetyScoreV9ChainSupplyObservedAtSec(

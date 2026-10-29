@@ -40,6 +40,7 @@ const SOURCE_PATHS: Record<string, SourcePathFixture> = {
   "gho-aave": { source: "GhoToken.sol:49-60 / ERC20.sol:174-184 burn(uint256)", selector: "0x42966c68" },
   "pht-pht": { source: "Dai.sol:100-109 burn(address,uint256)", selector: "0x9dc29fac", accountArgument: true },
   "pusd-plume": { source: "BoringVault.sol:117-134 exit / Exit shares (not assets)", eventTopic: "0xe0c82280a1164680e0cf43be7db4c4c9f985423623ad7a544fb76c772bdc6043", accountTopic: 3 },
+  "swanusd-swan": { source: "Coin.sol:19-21 burn(uint256) / solmate ERC20.sol:195-205 _burn", selector: "0x42966c68" },
   "syrupusdc-maple": { source: "MaplePool.sol:1118-1132 _burn / Withdraw shares", eventTopic: "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db", accountTopic: 3 },
   "syrupusdt-maple": { source: "MaplePool.sol:1118-1132 _burn / Withdraw shares", eventTopic: "0xfbde797d201c681b91056529119e0b02407c7bb96a4a2c75c01fc9667232c8db", accountTopic: 3 },
   "usdd-tron-dao-reserve": { source: "src/dss/usdd.sol:92-101 burn(address,uint256)", selector: "0x9dc29fac", accountArgument: true },

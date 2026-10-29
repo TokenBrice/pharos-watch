@@ -1,6 +1,8 @@
 import { describe, expect, it } from "vitest";
 import type { SafetyScoreV9CurrentCard, V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
+import { COVERAGE_GAP_OWNER_SWATCH_CLASSES } from "@shared/lib/classification";
+import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "@shared/types/safety-score-v9-vocabulary";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import {
   buildDataCoverageModel,
@@ -27,7 +29,15 @@ function makeOpenEvidence(overrides: Partial<V9OpenEvidence> = {}): V9OpenEviden
       oldestReviewedAtSec: REVIEWED_AT_SEC,
       newestReviewedAtSec: REVIEWED_AT_SEC,
     },
-    byCard: [],
+    byCard: [
+      {
+        id: "aaa-one",
+        openBucketQuestionsCarried: 3,
+        inheritedOpenBucketQuestionsCarried: 0,
+        openBucketObligationsCarried: 6,
+        documentationObligationsCarried: 0,
+      },
+    ],
     ...overrides,
   };
 }
@@ -155,8 +165,8 @@ describe("buildDataCoverageModel", () => {
       openEvidence: makeOpenEvidence({
         totals: { questions: 6, open: 6, issuer: 0, documentation: 0, obligations: 12 },
         owners: [
-          { responsibility: "mixed", questions: 2, obligations: 4 },
           { responsibility: "producer-failed", questions: 4, obligations: 8 },
+          { responsibility: "mixed", questions: 2, obligations: 4 },
         ],
         reasons: [{ code: "missing-runtime-route-evidence", bucket: "open", questions: 6, obligations: 12 }],
         issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
@@ -180,11 +190,13 @@ describe("buildDataCoverageModel", () => {
       cards: [makeV9Card({ id: "aaa-one" })],
       openEvidence: makeOpenEvidence({
         totals: { questions: 5, open: 5, issuer: 0, documentation: 0, obligations: 9 },
-        owners: [
+        owners: ([
           { responsibility: "published-evidence-expired", questions: 2, obligations: 4 },
           { responsibility: "public-data-uncurated", questions: 1, obligations: 2 },
           { responsibility: "integration-missing", questions: 2, obligations: 3 },
-        ],
+        ] satisfies V9OpenEvidence["owners"]).sort((left, right) =>
+          V9_PUBLIC_EVIDENCE_RESPONSIBILITIES.indexOf(left.responsibility) -
+          V9_PUBLIC_EVIDENCE_RESPONSIBILITIES.indexOf(right.responsibility)),
         reasons: [],
         issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
       }),
@@ -199,6 +211,25 @@ describe("buildDataCoverageModel", () => {
       "published-evidence-expired": "Published evidence is out of date",
       "public-data-uncurated": "Awaiting curation",
     });
+  });
+
+  it("gives every owner bucket a distinct static swatch", () => {
+    const responsibilities = [
+      "issuer-undisclosed",
+      "integration-missing",
+      "producer-failed",
+      "method-unsupported",
+      "published-evidence-expired",
+      "unresearched",
+      "public-data-uncurated",
+      "mixed",
+    ] as const;
+    const swatches = responsibilities.map(
+      (responsibility) => COVERAGE_GAP_OWNER_SWATCH_CLASSES[responsibility],
+    );
+
+    expect(swatches.every(Boolean)).toBe(true);
+    expect(new Set(swatches).size).toBe(responsibilities.length);
   });
 
   it("labels reasons in plain English and groups them by server bucket", () => {
@@ -229,6 +260,15 @@ describe("buildDataCoverageModel", () => {
           reasons: [{ reason: "no-scoring-path", datums: 256 }],
         },
         reasons: [{ code: "unresolved-control-identity", bucket: "open", questions: 3, obligations: 6 }],
+        byCard: [
+          {
+            id: "aaa-one",
+            openBucketQuestionsCarried: 3,
+            inheritedOpenBucketQuestionsCarried: 0,
+            openBucketObligationsCarried: 6,
+            documentationObligationsCarried: 256,
+          },
+        ],
         issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
       }),
     });

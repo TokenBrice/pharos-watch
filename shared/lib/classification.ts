@@ -1,7 +1,7 @@
 import type { BridgeRouteRiskTier, CollateralQuality, CustodyModel, DependencyType, GovernanceType, MechanismArchetype, PegCurrency, ResearchReviewConfidence } from "../types";
 import type { V9DependencyEconomicRole } from "../types/dependency-types";
 import type { V9FailureDomainRef } from "../types/safety-score-v9-fact-primitives";
-import type { V9OpenQuestionBucket } from "../types/safety-score-v9-public";
+import type { V9OpenQuestionBucket } from "../types/safety-score-v9-open-evidence";
 import type { ContagionShock } from "../types/contagion";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
