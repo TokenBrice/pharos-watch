@@ -13,19 +13,18 @@
         "implementationIdentity": "sha256:497ee1cee69287f0e20bc2325f94142f6259ef1cba3b7c854f763b38e7cd12f0"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:00.429Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:a88c4af6ed0e48aac8b07023d6aa75bd422295d88faba772a3624e1da03cf406",
-        "pinned-identity:ethereum:26300179:0x7659bb6f18405883c313bc7d152f01e0a44c0931dc35bfd4469f45c7d1014dd9",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
         "https://app.morpho.org/ethereum/vault/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
         "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://docs.morpho.org/learn/concepts/vault-v2/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -61,18 +60,17 @@
         "implementationIdentity": "sha256:35ef106f5c2ac4def31f4593e8589e5bebad41a0b0f125c32550a38f5df111c9"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:19.469Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e0f41b73a5b2edff71c7afd5f7dc459997010b577e17508c851a124eba171fd6",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x4e7991e5c547ce825bdeb665ee14a3274f9f61e0",
         "https://developers.sky.money/core-protocol/susds/",
-        "https://developers.sky.money/quick-start/protocol-token-routes/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://developers.sky.money/quick-start/protocol-token-routes/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -109,13 +107,13 @@
         "implementationIdentity": "sha256:cfcf9dd2608be58c3ebef42c5a0612faf4b5027176714591e9c02df904b60dae"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:a88c4af6ed0e48aac8b07023d6aa75bd422295d88faba772a3624e1da03cf406",
-        "pinned-identity:ethereum:26300100:0x7e6e4b1cb967babf22a83bc3878b3eb111cbdbbf7438f5b124240fafd6236a25",
+        "pinned-identity:ethereum:26286461:0xbf18900cf61a782734913aacd400a77c484716c84424415d519c1447fdb5594d",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c",
-        "pinned-ordinary-holder-simulation:ethereum:26300100:0x2bf5d9a2326ad3c5ef8208f91af79c3ca1f0f67c:redeem(1000000000000000000)"
+        "pinned-ordinary-holder-simulation:ethereum:26197000:0x2bf5d9a2326ad3c5ef8208f91af79c3ca1f0f67c:redeem(1000000000000000000)"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
@@ -158,19 +156,18 @@
         "implementationIdentity": "sha256:1315f3b10efb23de1289f02d5e4f06b3de12f8293d3abaa84370e49b228c87e7"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:51f4d4d78c58017363b70c28ba0472548be62d69faa51704a5f96785e39fbb05",
-        "pinned-identity:base:53254000:0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
+        "pinned-identity:base:53163625:0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845",
         "https://app.morpho.org/base/vault/0xbeeff2490feffa212fac2f6553682c219e6a8845",
         "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://api-base-mainnet-archive.n.dwellir.com"
+        "https://docs.morpho.org/learn/concepts/vault-v2/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -206,18 +203,17 @@
         "implementationIdentity": "sha256:16ff458a71b245775d2a6489ccc03a587a9c6d12fe92593de5ca5cb8b58dc441"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:23.457Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:01303da28845362a9f754c3a430050d7e4fefc431379f948ce5931155d174099",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000009"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x1b992302652a92611dcd5090d1cb388c6377f455",
         "https://docs.spark.fi/",
-        "https://spark.fi/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://spark.fi/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -254,11 +250,11 @@
         "implementationIdentity": "sha256:a34cf4259b9e10526b646300a1c25735074b8de1e1e3361a5607d60e91c3d971"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:49.217Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:85c5ead991a90ea877ad7b7856fb261a9bbe051f3bd3135101d7cd51456f5d8c",
-        "pinned-identity:ethereum:26300173:0x329df54c5293720568ce1e912fa70ee097d3450bca5cbbded0100b186129cb21",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -302,18 +298,17 @@
         "implementationIdentity": "sha256:6738e7faaf07a698718176bd0a8fb95825b0ab0288e58ecfc3cb4d5416cccb57"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:39a761322cbc9885ec8e0cbca1523bd69c2582b72aed913ff2dec4e4d7ac1212",
-        "pinned-identity:base:53254000:0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
+        "pinned-identity:base:53163625:0xb7390e1a3cb400ad835ec5aeeaef54c49da241a740527059d6f8e8fbb7d4db35",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000000"
       ],
       "sourceUrls": [
         "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
         "https://app.morpho.org/base/vault/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
-        "https://docs.morpho.org/curate/tutorials-v1/vault-creation/",
-        "https://api-base-mainnet-archive.n.dwellir.com"
+        "https://docs.morpho.org/curate/tutorials-v1/vault-creation/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -345,11 +340,11 @@
         "implementationIdentity": "sha256:16ff458a71b245775d2a6489ccc03a587a9c6d12fe92593de5ca5cb8b58dc441"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-05T08:16:17.264Z",
+      "expiresAt": "2026-11-04T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:01303da28845362a9f754c3a430050d7e4fefc431379f948ce5931155d174099",
-        "pinned-identity:ethereum:26300258:0x06eb7b64fd8f69b070a3b53dd20b3518cad44461fe8d77f1e18b74bb48969fdc",
+        "pinned-identity:ethereum:26124913:0x5890875780baab06ea4c7d7e93a0eaf51485484d56d7e48004d925efe60ef386",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000009"
       ],
       "sourceUrls": [
@@ -392,11 +387,11 @@
         "implementationIdentity": "sha256:cfcf9dd2608be58c3ebef42c5a0612faf4b5027176714591e9c02df904b60dae"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:24.514Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:b06f31064270ac46092e4c641fb1214e47400295a778f402610b53882fcd1af1",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26286461:0xbf18900cf61a782734913aacd400a77c484716c84424415d519c1447fdb5594d",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -441,11 +436,11 @@
         "implementationIdentity": "sha256:a34cf4259b9e10526b646300a1c25735074b8de1e1e3361a5607d60e91c3d971"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:53.133Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e1ca61d45152c191cd01e076271d83e705009119b1ab760af413f59e697a5766",
-        "pinned-identity:ethereum:26300173:0x329df54c5293720568ce1e912fa70ee097d3450bca5cbbded0100b186129cb21",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -489,18 +484,17 @@
         "implementationIdentity": "sha256:92486e3e113d3614ae5dab32e5d782322ce6b4766e00dab5bea8639e8cda4908"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:21.521Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:b37b2d73dedcc7399702fa9d3a53eb771249767585eae8bd42367c862d5037c6",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000001"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xc5d6a7b61d18afa11435a889557b068bb9f29930",
         "https://docs.usdd.io/susdd-mechanism",
-        "https://docs.usdd.io/user-guide/usdd-savings",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://docs.usdd.io/user-guide/usdd-savings"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -532,11 +526,11 @@
         "implementationIdentity": "sha256:a833b8144318dab00a3114f6eafa885c6af13ed51c5f05714f7269070b7f4035"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:45.178Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e4de9bb0126d00b4e79f32d8fcfe45325bd897eefb44949d62a769ce5e3eb302",
-        "pinned-identity:ethereum:26300173:0x329df54c5293720568ce1e912fa70ee097d3450bca5cbbded0100b186129cb21",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000001"
       ],
       "sourceUrls": [
@@ -575,16 +569,16 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:28.456Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:18e84ae554fe2e9b15443add2d907b295a651f8a9399d83cf419e42dfd7f6442",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
-        "https://docs.morpho.org/curation/",
+        "https://docs.morpho.org/curation/overview",
         "https://app.morpho.org/ethereum/vault/0x8c106eedad96553e64287a5a6839c3cc78afa3d0/gauntlet-usdc-prime",
         "https://api-ethereum-mainnet.n.dwellir.com"
       ],
@@ -622,18 +616,17 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:39:59.364Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:ee3b0fba1b87158bd1c93f481c4aa2983b2c8f60a9644744820cde3c5eb72c4f",
-        "pinned-identity:ethereum:26300179:0x7659bb6f18405883c313bc7d152f01e0a44c0931dc35bfd4469f45c7d1014dd9",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef088055857739c12cd3765f20b7679def0f51",
         "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
-        "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -669,11 +662,11 @@
         "implementationIdentity": "sha256:a34cf4259b9e10526b646300a1c25735074b8de1e1e3361a5607d60e91c3d971"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:55.061Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:51f4d4d78c58017363b70c28ba0472548be62d69faa51704a5f96785e39fbb05",
-        "pinned-identity:ethereum:26300173:0x329df54c5293720568ce1e912fa70ee097d3450bca5cbbded0100b186129cb21",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -717,11 +710,11 @@
         "implementationIdentity": "sha256:9cf2c94e12a0fc1e18ebc29127ade6970fd0bd054f8c6f76e9aad8b0ecfad187"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:55.969Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:278358398157130e3a90fc28bdc7a82caefaa6b13d7dd1787b9c4a5a23842c36",
-        "pinned-identity:ethereum:26300100:0x7e6e4b1cb967babf22a83bc3878b3eb111cbdbbf7438f5b124240fafd6236a25",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000003"
       ],
       "sourceUrls": [
@@ -760,18 +753,17 @@
         "implementationIdentity": "sha256:1662550638e3d6644c3e6f1edef9f137e6570c2a3968988413668b68d18440f0"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:39:57.236Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:85c5ead991a90ea877ad7b7856fb261a9bbe051f3bd3135101d7cd51456f5d8c",
-        "pinned-identity:ethereum:26300179:0x7659bb6f18405883c313bc7d152f01e0a44c0931dc35bfd4469f45c7d1014dd9",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9",
         "https://www.steakhouse.financial/docs/products/vault-products/current/prime-instant",
-        "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://legacy.docs.morpho.org/morpho-vaults/tutorials/integrate-vaults/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -807,19 +799,18 @@
         "implementationIdentity": "sha256:1662550638e3d6644c3e6f1edef9f137e6570c2a3968988413668b68d18440f0"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:a88c4af6ed0e48aac8b07023d6aa75bd422295d88faba772a3624e1da03cf406",
-        "pinned-identity:ethereum:26300100:0x7e6e4b1cb967babf22a83bc3878b3eb111cbdbbf7438f5b124240fafd6236a25",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
         "https://app.morpho.org/ethereum/vault/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
         "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://docs.morpho.org/learn/concepts/vault-v2/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -855,11 +846,11 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:42.552Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:385369304c413b34e7c7e68b2be10cd75435678b28d93e6709ffe8d042a9b6ba",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -903,11 +894,11 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:24.101Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:47121ee7f3bc40191b8fdf83277a30b06249462c7c4bd7a5bacf6dcdabe45c96",
-        "pinned-identity:ethereum:26300258:0x06eb7b64fd8f69b070a3b53dd20b3518cad44461fe8d77f1e18b74bb48969fdc",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -951,19 +942,18 @@
         "implementationIdentity": "sha256:1662550638e3d6644c3e6f1edef9f137e6570c2a3968988413668b68d18440f0"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e1ca61d45152c191cd01e076271d83e705009119b1ab760af413f59e697a5766",
-        "pinned-identity:ethereum:26300100:0x7e6e4b1cb967babf22a83bc3878b3eb111cbdbbf7438f5b124240fafd6236a25",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
         "https://app.morpho.org/ethereum/vault/0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
         "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://docs.morpho.org/learn/concepts/vault-v2/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -999,11 +989,11 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:20.700Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e1ca61d45152c191cd01e076271d83e705009119b1ab760af413f59e697a5766",
-        "pinned-identity:ethereum:26300258:0x06eb7b64fd8f69b070a3b53dd20b3518cad44461fe8d77f1e18b74bb48969fdc",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1047,19 +1037,18 @@
         "implementationIdentity": "sha256:641aa8555a6e0734cd1d291db4c64e89f726c2920db8110c50092a90a5d41be8"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:18e84ae554fe2e9b15443add2d907b295a651f8a9399d83cf419e42dfd7f6442",
-        "pinned-identity:ethereum:26300100:0x7e6e4b1cb967babf22a83bc3878b3eb111cbdbbf7438f5b124240fafd6236a25",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0",
         "https://app.morpho.org/ethereum/vault/0xe15fcc81118895b67b6647bbd393182df44e11e0",
         "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://docs.morpho.org/learn/concepts/vault-v2/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -1095,19 +1084,18 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:39:58.339Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e1ca61d45152c191cd01e076271d83e705009119b1ab760af413f59e697a5766",
-        "pinned-identity:ethereum:26300179:0x7659bb6f18405883c313bc7d152f01e0a44c0931dc35bfd4469f45c7d1014dd9",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b",
         "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b",
         "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol",
-        "https://docs.morpho.org/learn/concepts/vault-v2/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://docs.morpho.org/learn/concepts/vault-v2/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -1143,11 +1131,11 @@
         "implementationIdentity": "sha256:1315f3b10efb23de1289f02d5e4f06b3de12f8293d3abaa84370e49b228c87e7"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:25.405Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:743d8d8de0d6a1a15c30981dc9d48337da4dd8701dc0bd0d1077315f4266abff",
-        "pinned-identity:base:53254987:0xbd61dc0d8f67272827801d04d4c18621b445d944d299184e5ca59e8892efbf0a",
+        "pinned-identity:base:53111209:0xf9b2088ad57faaf6fad0d40cf0e826bb8e7321578ca28b835c0350526a3453f2",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1191,11 +1179,11 @@
         "implementationIdentity": "sha256:1315f3b10efb23de1289f02d5e4f06b3de12f8293d3abaa84370e49b228c87e7"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-15T11:05:25.008Z",
+      "expiresAt": "2026-11-14T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e1ca61d45152c191cd01e076271d83e705009119b1ab760af413f59e697a5766",
-        "pinned-identity:base:53254987:0xbd61dc0d8f67272827801d04d4c18621b445d944d299184e5ca59e8892efbf0a",
+        "pinned-identity:base:52635700:0x575c2e96d5013319df33994db190f388c2bdc65841a234652bc2c6ac8dc96aff",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1238,11 +1226,11 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:38.622Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:79317e787f976986d82c352ae8b5010bf9a69dfa8a80c2c46f515e2dcf329cd9",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1286,18 +1274,17 @@
         "implementationIdentity": "sha256:8083ee33b2ffebb03840723b825870bddd813d51fb8d9f3c83e0e37c37d74e85"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:2ebd446666aad9ca49a92da8977fb0639c95e439c08d776e09718e4dfb7529b8",
-        "pinned-identity:ethereum:26300100:0x7e6e4b1cb967babf22a83bc3878b3eb111cbdbbf7438f5b124240fafd6236a25",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000003"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35",
         "https://docs.resupply.finance/resupply-protocol/savings-reusd.md",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -1329,11 +1316,11 @@
         "implementationIdentity": "sha256:a34cf4259b9e10526b646300a1c25735074b8de1e1e3361a5607d60e91c3d971"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:51.220Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:c6db76819dffe54198ceaed5f26b9a24eee5ae7b54a91a1e12041d11cde17e87",
-        "pinned-identity:ethereum:26300173:0x329df54c5293720568ce1e912fa70ee097d3450bca5cbbded0100b186129cb21",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1377,16 +1364,16 @@
         "implementationIdentity": "sha256:6512285a139249293422c70bd453fc04eae937e6776e75b2dd07eb132807ffe0"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:27.476Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:2a4d1f589f5e3d4c5e76f328095d77518a65b428586a913238cfbd68e1e0b6d1",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000000"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xdd0f28e19c1780eb6396170735d45153d261490d",
-        "https://docs.morpho.org/curation/",
+        "https://docs.morpho.org/curation/overview",
         "https://app.morpho.org/ethereum/vault/0xdd0f28e19c1780eb6396170735d45153d261490d/gauntlet-usdc-core",
         "https://api-ethereum-mainnet.n.dwellir.com"
       ],
@@ -1420,11 +1407,11 @@
         "implementationIdentity": "sha256:ac58fbbb418d987d5efc1ccb66982bef698d208af63712183be9014ae209378c"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:46.078Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:91cff42566226e1e4c97580286b21e1bf193f2f89834349e66b499a930083beb",
-        "pinned-identity:ethereum:26300173:0x329df54c5293720568ce1e912fa70ee097d3450bca5cbbded0100b186129cb21",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000003"
       ],
       "sourceUrls": [
@@ -1463,11 +1450,11 @@
         "implementationIdentity": "sha256:6f808a83ab34e740b2d86d1e2fd0346e6ba1ace01d71ed2339d2253e184c751e"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:23.056Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:2a4d1f589f5e3d4c5e76f328095d77518a65b428586a913238cfbd68e1e0b6d1",
-        "pinned-identity:ethereum:26300258:0x06eb7b64fd8f69b070a3b53dd20b3518cad44461fe8d77f1e18b74bb48969fdc",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000000"
       ],
       "sourceUrls": [
@@ -1507,11 +1494,11 @@
         "implementationIdentity": "sha256:1662550638e3d6644c3e6f1edef9f137e6570c2a3968988413668b68d18440f0"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:32.960Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:49e98822ff1ea2252114d5bcb3cdb1bf2017f8dda0fa285fc021999bdc85f82a",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1555,11 +1542,11 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:31.083Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:49e98822ff1ea2252114d5bcb3cdb1bf2017f8dda0fa285fc021999bdc85f82a",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1603,11 +1590,11 @@
         "implementationIdentity": "sha256:80c0341311dfa6073a7bdc893ddb6ec33e85b860beeefc6b267bd329b5ebe7d3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:40.309Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:18e84ae554fe2e9b15443add2d907b295a651f8a9399d83cf419e42dfd7f6442",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1651,11 +1638,11 @@
         "implementationIdentity": "sha256:852a283489380230d4b5fefc71e2bf2eb8886f4d1e9e7996b1121dfa837f9d64"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:43.287Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:7b22f4e60ee59acddcd1678d8a0c358ae7f1278af6707051366148972248f51f",
-        "pinned-identity:ethereum:26300173:0x329df54c5293720568ce1e912fa70ee097d3450bca5cbbded0100b186129cb21",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000000"
       ],
       "sourceUrls": [
@@ -1695,11 +1682,11 @@
         "implementationIdentity": "sha256:1662550638e3d6644c3e6f1edef9f137e6570c2a3968988413668b68d18440f0"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:30.157Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e1ca61d45152c191cd01e076271d83e705009119b1ab760af413f59e697a5766",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -1743,18 +1730,17 @@
         "implementationIdentity": "sha256:32dd3d97bb8edaeead53dcf7c1d7a7aba4bbaa594782353b7beb2b9acd2c8b6b"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:39:54.911Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:2c7c6c7543e0b70886dca7e602c110ad16e5ffd4ee3b90425e6284164e25be74",
-        "pinned-identity:ethereum:26300179:0x7659bb6f18405883c313bc7d152f01e0a44c0931dc35bfd4469f45c7d1014dd9",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x7a61b7adcfd493f7cf0f86dfcecb94b72c227f22",
         "https://developers.skyeco.com/protocol/tokens/stusds/",
-        "https://developers.sky.money/quick-start/protocol-token-routes/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://developers.sky.money/quick-start/protocol-token-routes/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -1791,11 +1777,11 @@
         "implementationIdentity": "sha256:8e8e4a66ff7012a0b467b7f87ab9fef46c01aa29b67eb76e24651c1dd331f82a"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:26.373Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:e6cba51a86033685dffbfa57a8ec23dfbdd69a305321eaa067c7c73f13de1eb4",
-        "pinned-identity:ethereum:26300258:0x06eb7b64fd8f69b070a3b53dd20b3518cad44461fe8d77f1e18b74bb48969fdc",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000033"
       ],
       "sourceUrls": [
@@ -1841,11 +1827,11 @@
         "implementationIdentity": "sha256:ccaff188f029d5de8c6914ae45dac07048f4dfd38e69295c613c933a20479ee3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:44.216Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:ed081bf1b1dad10ef25d3e92a5f6f7d8fe92139438869affa2a720b5255c2e22",
-        "pinned-identity:ethereum:26300173:0x329df54c5293720568ce1e912fa70ee097d3450bca5cbbded0100b186129cb21",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:slot-account:0x0000000000000000000000000000000000000000000000000000000000000012"
       ],
       "sourceUrls": [
@@ -1888,18 +1874,17 @@
         "implementationIdentity": "sha256:2dfcd422d2e76c55deae6867048945dad8838e12845550605b8f07f62894429b"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:20.595Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:8642e4bd8c39f4dc86a85becfe873e059f880492a2bf238f915b2b358d188a52",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:slot-account:0x0000000000000000000000000000000000000000000000000000000000000011"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x1ab62413e0cf2ebeb73da7d40c70e7202ae14467",
         "https://yearn.fi/v3/1/0xbe53a109b494e5c9f97b9cd39fe969be68bf6204",
-        "https://docs.yearn.fi/",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://docs.yearn.fi/"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -1935,19 +1920,18 @@
         "implementationIdentity": "sha256:ccaff188f029d5de8c6914ae45dac07048f4dfd38e69295c613c933a20479ee3"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:18.325Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:ed081bf1b1dad10ef25d3e92a5f6f7d8fe92139438869affa2a720b5255c2e22",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:slot-account:0x0000000000000000000000000000000000000000000000000000000000000012"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xd8063123bba3b480569244ae66bfe72b6c84b00d",
         "https://yearn.fi/v3/1/0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
         "https://docs.yearn.fi/getting-started/products/yvaults/yBold",
-        "https://ydaemon.yearn.fi/1/vaults/0x9f4330700a36b29952869fac9b33f45eedd8a3d8",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://ydaemon.yearn.fi/1/vaults/0x9f4330700a36b29952869fac9b33f45eedd8a3d8"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -1983,18 +1967,17 @@
         "implementationIdentity": "sha256:e57688ab30d96aec117ce1b2c0e536f907fc89f2c50d005b7e9fba5f3144f206"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:1dd4832c0c0beac408f0b7fc8240ccb1b4d4987eacbc222eced642353eb1fab5",
-        "pinned-identity:ethereum:26300100:0x7e6e4b1cb967babf22a83bc3878b3eb111cbdbbf7438f5b124240fafd6236a25",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0xff229a0bbb614a284de8ae0e41e5974878fd7c04",
         "https://aave.com/docs/aave-v3/guides/sgho",
-        "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://governance.aave.com/t/arfc-sgho-launch-configuration/24346"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -2032,19 +2015,18 @@
         "implementationIdentity": "sha256:9fc989911de4b4b53caad1ef9a83a92cda40d2e7570991a3bb7d49b267b385d9"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:41:08.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:16:23.965Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:46791a9bd7ffdc475c04729587e8dc0e64c60e232d193b2c344c1f8ee194f0a5",
-        "pinned-identity:ethereum:26300100:0x7e6e4b1cb967babf22a83bc3878b3eb111cbdbbf7438f5b124240fafd6236a25",
+        "pinned-identity:ethereum:26285088:0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534",
         "balance-layout:account-slot:0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31",
         "https://docs.cap.app/protocol-overview/stcusd-mechanics",
         "https://docs.cap.app/protocol-overview/cusd-mechanics",
-        "https://docs.cap.app/concepts/vault",
-        "https://api-ethereum-mainnet.n.dwellir.com"
+        "https://docs.cap.app/concepts/vault"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -2081,11 +2063,11 @@
         "implementationIdentity": "sha256:0b7932e26ae1ea01c4b855d5e040281f2eb409750fc79a5fc327dc78442c7cae"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-05T08:22:11.098Z",
+      "expiresAt": "2026-11-04T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:a029eb4dfdefeb45b76b2b8ec08425a7e868ce5b6b9169a38e308addfe3c8153",
-        "pinned-identity:ethereum:26300258:0x06eb7b64fd8f69b070a3b53dd20b3518cad44461fe8d77f1e18b74bb48969fdc",
+        "pinned-identity:ethereum:26124913:0x5890875780baab06ea4c7d7e93a0eaf51485484d56d7e48004d925efe60ef386",
         "balance-layout:account-slot:0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00"
       ],
       "sourceUrls": [
@@ -2127,13 +2109,13 @@
         "implementationIdentity": "sha256:ffb94e3df66a7db054cca5efee7d0c87c262f71464a03e1163b01856d0601cbf"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:02.972Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:49.644Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:027839cf5246abd67db755454109a751fa0683aac70f49056d271068b79201f6",
         "compiler-declared-masks:ce9e5ee919e4e1491af5a04f895f2d70944aa3cf4f5aa36637297f4040c004d4",
         "functional-runtime-correspondence:a109d4f2c38adcedb0b28de82ef859781e0fe57dfcaa579387164019d2b7d82e",
-        "pinned-identity:robinhood:101116841:0xbf67e6f63d8e9598405c863eefef0d23df32a90ba424d47ec0a27b7eb58d712d",
+        "pinned-identity:robinhood:99367757:0x69b12b585ad956e484af9a45dd33821168e982570348d6bc25b639e37ecff8fc",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -2145,8 +2127,7 @@
         "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md",
         "https://www.steakhouse.financial/docs/documents/disclaimers/vaults",
         "https://etherscan.io/block/26110706",
-        "https://eth.blockscout.com/api/v2/smart-contracts/0x4d7bd498bb24098ca281c05519629c605407f71d",
-        "https://api-robinhood-mainnet-archive.n.dwellir.com"
+        "https://eth.blockscout.com/api/v2/smart-contracts/0x4d7bd498bb24098ca281c05519629c605407f71d"
       ],
       "producer": {
         "kind": "erc4626-instant",
@@ -2182,13 +2163,13 @@
         "implementationIdentity": "sha256:785aabab2906e799636c4b424bb35c04fd2d74bf35b5dff761b492b3f0afb274"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:41.510Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:027839cf5246abd67db755454109a751fa0683aac70f49056d271068b79201f6",
         "compiler-declared-masks:ce9e5ee919e4e1491af5a04f895f2d70944aa3cf4f5aa36637297f4040c004d4",
         "functional-runtime-correspondence:a109d4f2c38adcedb0b28de82ef859781e0fe57dfcaa579387164019d2b7d82e",
-        "pinned-identity:arc:28520167:0x4131c8b5beb9fee9abccc15cd543d6275e5a3f7a870f87302862ea101f648069",
+        "pinned-identity:arc:28162444:0xf9731b18ec3a9cd81ea9c85b8ca5f3ed8114d2ac0d1a0921f02931954b41443e",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -2240,13 +2221,13 @@
         "implementationIdentity": "sha256:785aabab2906e799636c4b424bb35c04fd2d74bf35b5dff761b492b3f0afb274"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:19.457Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:027839cf5246abd67db755454109a751fa0683aac70f49056d271068b79201f6",
         "compiler-declared-masks:ce9e5ee919e4e1491af5a04f895f2d70944aa3cf4f5aa36637297f4040c004d4",
         "functional-runtime-correspondence:a109d4f2c38adcedb0b28de82ef859781e0fe57dfcaa579387164019d2b7d82e",
-        "pinned-identity:arc:28520393:0xd338b85c6fda0b8228413509b24e11525b3cd1b2d7a5a4ba69f61d820a13c75e",
+        "pinned-identity:arc:28162399:0xc7d4ab8ae30e936ace846ce8aabc2af3007a7400a2ad25ff1f223fffda97ff29",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -2297,13 +2278,13 @@
         "implementationIdentity": "sha256:6d6294470e99853dfd539aaadcf8d1b5802ec587012318c81b45e70e5a51d96d"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:37.417Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:027839cf5246abd67db755454109a751fa0683aac70f49056d271068b79201f6",
         "compiler-declared-masks:ce9e5ee919e4e1491af5a04f895f2d70944aa3cf4f5aa36637297f4040c004d4",
         "functional-runtime-correspondence:a109d4f2c38adcedb0b28de82ef859781e0fe57dfcaa579387164019d2b7d82e",
-        "pinned-identity:monad:117686125:0x9c84f1b69ed905c78f16c76aa9d6c39d89b5931d454d527c6c80fe766c29be6b",
+        "pinned-identity:monad:117086492:0x15b4637359e9af8236ac72cc7c70c7d2a6afc7aae27ada57a8f1e9e856e527a8",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -2356,13 +2337,13 @@
         "implementationIdentity": "sha256:2e2728ea912affb87f5a1d288f09607245793220e8a0015421c77f73b6a2f8c1"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:48.143Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:027839cf5246abd67db755454109a751fa0683aac70f49056d271068b79201f6",
         "compiler-declared-masks:ce9e5ee919e4e1491af5a04f895f2d70944aa3cf4f5aa36637297f4040c004d4",
         "functional-runtime-correspondence:a109d4f2c38adcedb0b28de82ef859781e0fe57dfcaa579387164019d2b7d82e",
-        "pinned-identity:tempo:46488442:0x4a17121f8c3a2e7289ab4452b1f95db2536460186ccfe46181fc6eeb5eff48e3",
+        "pinned-identity:tempo:46160336:0x3ad44395bcb995ce2944abda79b1caa98106baa878242e7c9c40c220a45a3358",
         "balance-layout:account-slot:0x000000000000000000000000000000000000000000000000000000000000000c"
       ],
       "sourceUrls": [
@@ -2419,11 +2400,11 @@
         "implementationIdentity": "sha256:3a090cb03bc4708c50986acd44093c4b5220646139a0229bad1e12fb2aabecef"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:41.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:070312ba4115d4f21b8ec57ce745d3ef53d23f234b0e3dce864787bb04c87df8",
-        "pinned-identity:gnosis:49007668:0x9eb4ae6409ddb1f8a61b1e691711f9bfd45994058cfe8d6171a54f92ffb47d95",
+        "pinned-identity:gnosis:48975248:0x156a2723c8368590ee34a2053f0f48011e952f9217f273a53673797110ea955b",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000000"
       ],
       "sourceUrls": [
@@ -2462,11 +2443,11 @@
         "implementationIdentity": "sha256:3dba684fe7b28d98c64b1395dd67b8e4e9b50eaa19b37b41ddf3c40ab47da320"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:44:22.100Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T16:17:21.966Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:687eeb9ba093e7440539b7ba7e10253adcab5a4c8794f2dce87d325ea34e9279",
-        "pinned-identity:ethereum:26300258:0x06eb7b64fd8f69b070a3b53dd20b3518cad44461fe8d77f1e18b74bb48969fdc",
+        "pinned-identity:ethereum:26285120:0x94c371b1e15518479700c5f7edcb2a04382bb1028fb2c47f8eac318334ef94bc",
         "balance-layout:account-slot:0x17264fbcd79a365fd3ccff89407ad487986f8b37b9035d6bc8b51cacd5832200"
       ],
       "sourceUrls": [
@@ -2510,11 +2491,11 @@
         "implementationIdentity": "sha256:af776564ec38c02b2f33ee399b3143662c83da1a2c6343b191eedb79a7281323"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:39:56.191Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:4516170552d6e5f5650ae4bcecf62e39b96dc6b6aba829ff3f5699c89f436d79",
-        "pinned-identity:ethereum:26300179:0x7659bb6f18405883c313bc7d152f01e0a44c0931dc35bfd4469f45c7d1014dd9",
+        "pinned-identity:ethereum:26286461:0xbf18900cf61a782734913aacd400a77c484716c84424415d519c1447fdb5594d",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
       ],
       "sourceUrls": [
@@ -2557,11 +2538,11 @@
         "implementationIdentity": "sha256:07a2322940d8cc0470097e309bce5eb0a5f4df4b64411468925f35ff85f57b43"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:39:52.424Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "official-legacy-l2-source:arbitrum:0xdc8df20be448e41fde88e2478d6bc4d3c9a092d6",
-        "pinned-identity:arbitrum:519438992:0x2499e2bd7080d1d70409b0ac9c90995051a2223e6441389d9a155d40ac85adbc",
+        "pinned-identity:arbitrum:518843406:0xc826bc4feed97552f98becddb72317780623e2a237aa150257cd22df4ecdb00c",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
       ],
       "sourceUrls": [
@@ -2605,11 +2586,11 @@
         "implementationIdentity": "sha256:635c368c462e8af0fea9abfa239765cadf05bf8a6c8a06db779f14fe51de014b"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:39:53.469Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:48:38.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "official-legacy-l2-source:base:0x6acc02ddd82206a44ff4ec13977e63d1a29c7723",
-        "pinned-identity:base:53254784:0x052917b6bddfb06fcb6a98e17f6c892746c37f8dd7b2c0200a861824253c9ac1",
+        "pinned-identity:base:53171700:0x8c2984e97c09e10df014f286cd4a3350b2b9cc9e6ad6f74e10a99410281ffda6",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
       ],
       "sourceUrls": [
@@ -2653,11 +2634,11 @@
         "implementationIdentity": "sha256:409c668b9fa54496b2355e7bbdadc05331032b5841f0bd3e8c9f4bcf9f217845"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:01.530Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "official-legacy-l2-source:optimism:0x3a1d3a9b0ed182d7b17aa61393d46a4f4ee0cea5",
-        "pinned-identity:optimism:158850070:0x9695a549509e5e75aa7510c6016ed4f58a77fe5be32de0b5b801c62958d93bd4",
+        "pinned-identity:optimism:158767105:0x9b7c108b57080f50b0255d77e1bca0b29f82f246ec2df1ee7c02d8a420755c82",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
       ],
       "sourceUrls": [
@@ -2701,11 +2682,11 @@
         "implementationIdentity": "sha256:5fce49a41e8695c38ccbc89136fdec38cd83f6a4bf20cf27ee958193259cbeeb"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:27.062Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "official-legacy-l2-source:unichain:0x1fcc6bdfb541580d39e57d0531ab0f68d0914c79",
-        "pinned-identity:unichain:62548832:0xb88f5e881364f2102b962973faaf641aef2a3af78cbf50d9ac7ce86b6f08187d",
+        "pinned-identity:unichain:62384188:0xc80c8ae54b36ef8b07a4129fe0bee072c41d500b4940ae0a075105298ee27992",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000002"
       ],
       "sourceUrls": [
@@ -2749,12 +2730,12 @@
         "implementationIdentity": "sha256:b6a9e0c5b0dda3784aab28c6d6ce90b90e1493ead65a5854e2a87058ddd853ea"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:42:02.000Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53Z",
+      "expiresAt": "2026-11-26T00:00:00Z",
       "evidenceIds": [
         "verified-source:FrxUSDCustodianUsdc:0.2.8",
         "verified-source:FrxUSD3:erc20-balances-account-slot-0",
-        "pinned-identity:ethereum:26300192:0x93e75e983bc4a26140e047380f77827d3b0afcd5bb3bb12a329ee614dc757bb1"
+        "pinned-identity:ethereum:26286461:0xbf18900cf61a782734913aacd400a77c484716c84424415d519c1447fdb5594d"
       ],
       "sourceUrls": [
         "https://eth.blockscout.com/api/v2/smart-contracts/0x0a2d27a86a2ea07bcc34e457c65aeca7631c0f10",
@@ -2808,11 +2789,11 @@
         "implementationIdentity": "sha256:26240ce4ecc5bc7462ddd4f9869e04ee6a983ec725079d8ef127a7044305d5d0"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:17.288Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:b80bae70efe3395821b6993ada8361716b7929d53ffa09ed8ce9621e4b9a52c5",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26286461:0xbf18900cf61a782734913aacd400a77c484716c84424415d519c1447fdb5594d",
         "balance-layout:account-slot:0xd2841a5d2692465040bd5e06a6f3b37483952c866e0f304dc0e03f76a1f8a0b4"
       ],
       "sourceUrls": [
@@ -2863,11 +2844,11 @@
         "implementationIdentity": "sha256:f3a20fd9d28a7e3d927ac98a24ae767f971cdf1f4a476e1ec3c7f0e4c8ba20f5"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:22.435Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:05c009cb6d3babf3d932f4eb658ac88b793d426d8a03d3c2fb796c2fca583d1c",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26286461:0xbf18900cf61a782734913aacd400a77c484716c84424415d519c1447fdb5594d",
         "balance-layout:account-slot:0x0000000000000000000000000000000000000000000000000000000000000001"
       ],
       "sourceUrls": [
@@ -2905,11 +2886,11 @@
         "implementationIdentity": "sha256:eb8c8393f417b29c7e4c58c7007ba2900a49c236cc886e66cb6d5e4947637b03"
       },
       "holder": "any-holder",
-      "reviewedAt": "2026-10-29T18:40:25.549Z",
-      "expiresAt": "2026-11-28T00:00:00.000Z",
+      "reviewedAt": "2026-10-27T20:47:53.000Z",
+      "expiresAt": "2026-11-26T00:00:00.000Z",
       "evidenceIds": [
         "verified-source:cad812d7efed5238754a1bb0b2164ef5598300df79b099e96cd71b68e363feca",
-        "pinned-identity:ethereum:26300000:0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+        "pinned-identity:ethereum:26286461:0xbf18900cf61a782734913aacd400a77c484716c84424415d519c1447fdb5594d",
         "balance-layout:account-slot:0x52c63247e1f47db19d5ce0460030c497f067ca4cebf71ba98eeadabe20bace00"
       ],
       "sourceUrls": [
@@ -2937,9 +2918,9 @@
           "keyOrder": "account-slot"
         },
         "maxFunctions": "binding",
-        "previewRedeem": "gross-before-fee",
         "unrestrictedGateSelectors": [],
-        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd"
+        "multicallCodeSha256": "0fb6a9dbcc4e17098c35d4b821bfc8cc404ab2dbd195d75bee6ce914979ddbfd",
+        "previewRedeem": "gross-before-fee"
       }
     },
     {
