@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockFetch, mockFetchStrict } from "@shared/test-utils/mock-fetch";
 
 import { loadPublicDatasetLiveInputs, testExports } from "../maintenance/generate-public-datasets";
-import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
+import { makeReportCardsV9NextResponse, makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
 import * as depegSnapshot from "../../src/lib/depeg-event-snapshot";
 import { copyDatasetWorkspace, datasetBytes } from "./generate-public-datasets.test-support";
@@ -665,6 +665,20 @@ describe("generate-public-datasets", () => {
     });
     expect((spec.rows[0] as Record<string, unknown>).ratingStatus).toBeNull();
     expect((spec.rows[0] as Record<string, unknown>).safetyScore).toBe(88);
+  });
+
+  it("reads a report9 publication with the same scores-latest projection", () => {
+    const envelope = makeCurrentEnvelope("2026-05-16");
+    const reportCards = makeReportCardsV9NextResponse({
+      cards: [makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" })],
+    });
+    const spec = testExports.buildTopicSpecs({
+      ...envelope,
+      safetyScoreIdentity: reportCards.safetyScoreIdentity,
+      reportCards,
+    }, [], "2026-05-16").find((item) => item.topic === "scores-latest")!;
+    expect(spec.rows[0]).toMatchObject({ stablecoinId: "usdc-circle", safetyScore: 88, safetyGrade: "A+" });
+    expect(spec.displayProjection).toMatchObject({ version: 1 });
   });
 
   it("admits old dated score artifacts but requires the projection on the current alias target", async () => {

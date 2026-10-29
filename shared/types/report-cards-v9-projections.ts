@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { ReportCardsV9CurrentResponseSchema, ReportCardsV9DependencyGraphSchema } from "./report-cards-v9";
+import {
+  REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION,
+  REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+  ReportCardsV9CurrentResponseSchema,
+  ReportCardsV9DependencyGraphSchema,
+} from "./report-cards-v9";
 import { SafetyScoreV9CurrentCardBaseSchema, SafetyScoreV9ResolvedCurrentCardSchema } from "./safety-score-v9-public";
 import type { ReportCardsV9CurrentResponse } from "./report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "./safety-score-v9-public";
@@ -15,7 +20,12 @@ const card = SafetyScoreV9CurrentCardBaseSchema.shape;
 const envelope = ReportCardsV9CurrentResponseSchema.shape;
 const common = {
   projectionVersion: z.literal(V9_SITE_PROJECTION_VERSION),
-  model: envelope.model, lifecycle: envelope.lifecycle, schemaVersion: envelope.schemaVersion,
+  model: envelope.model, lifecycle: envelope.lifecycle,
+  // Projections inherit the report schema version; admit both during the expand step.
+  schemaVersion: z.union([
+    z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
+    z.literal(REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION),
+  ]),
   safetyScoreIdentity: envelope.safetyScoreIdentity, methodology: envelope.methodology,
   asOfSec: envelope.asOfSec, updatedAt: envelope.updatedAt, source: envelope.source,
   completeness: envelope.completeness, publicationHealth: envelope.publicationHealth,
