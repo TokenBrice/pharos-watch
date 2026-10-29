@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { SafetyScoreV9CurrentCard, V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
+import { COVERAGE_GAP_OWNER_SWATCH_CLASSES } from "@shared/lib/classification";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import {
   buildDataCoverageModel,
@@ -199,6 +200,25 @@ describe("buildDataCoverageModel", () => {
       "published-evidence-expired": "Published evidence is out of date",
       "public-data-uncurated": "Awaiting curation",
     });
+  });
+
+  it("gives every owner bucket a distinct static swatch", () => {
+    const responsibilities = [
+      "issuer-undisclosed",
+      "integration-missing",
+      "producer-failed",
+      "method-unsupported",
+      "published-evidence-expired",
+      "unresearched",
+      "public-data-uncurated",
+      "mixed",
+    ] as const;
+    const swatches = responsibilities.map(
+      (responsibility) => COVERAGE_GAP_OWNER_SWATCH_CLASSES[responsibility],
+    );
+
+    expect(swatches.every(Boolean)).toBe(true);
+    expect(new Set(swatches).size).toBe(responsibilities.length);
   });
 
   it("labels reasons in plain English and groups them by server bucket", () => {
