@@ -148,6 +148,7 @@ async function assertReaderParity(stored: string, label: string) {
       ftq: await computeDigestMintBurnFtqFlows(db, assets.map((asset, index) => ({
         id: asset.id, knownNetUsd: index % 2 === 0 ? 100_000_000 : -100_000_000,
         valuation: { mintCompleteness: "complete", burnCompleteness: "complete" },
+        window24hComplete: true,
       }))),
       context, delivery: await checkDigestSafetyContextForDelivery(db, context),
       history, historyRows: sqlite.prepare("SELECT * FROM safety_score_history_v2 ORDER BY stablecoin_id").all(),

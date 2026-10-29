@@ -470,6 +470,36 @@ describe("status dashboard model", () => {
     else expect(notice?.detail).not.toContain("Public /api/health differs from /api/status");
   });
 
+  it("keeps reviewed nominal price references out of the dashboard issues and watch count", () => {
+    const nominal: StatusCause = {
+      code: "active_price_coverage_nominal_reference",
+      layer: "data-quality",
+      severity: "info",
+      message: "Reviewed nominal references, not observed market prices, cover: sBOLD. These are not missing-price gaps.",
+      metric: "nominalReferenceCount",
+      value: 1,
+    };
+    const watch: StatusCause = {
+      code: "mint_burn_public_degraded",
+      layer: "availability",
+      severity: "info",
+      message: "Fresh healthy lane; execution notice.",
+    };
+    const data: StatusResponse = {
+      ...BASE_STATUS,
+      causes: { overall: [nominal, watch], availability: [watch], dataQuality: [nominal] },
+    };
+
+    const issues = normalizeStatusIssues(data.causes);
+    expect(issues.map((issue) => issue.code)).toEqual(["mint_burn_public_degraded"]);
+
+    const model = buildModel(data);
+    expect(model.issueGroups.watches.map((issue) => issue.code)).toEqual(["mint_burn_public_degraded"]);
+    expect(model.decision.summary).toContain("1 informational watch remains");
+    // The by-design cause stays in the status payload it was read from.
+    expect(data.causes.dataQuality).toEqual([nominal]);
+  });
+
   it("surfaces missing Comms telemetry as Unavailable attention", () => {
     const data = { ...makeHealthyStatusResponse(), telegramBot: null };
     const model = buildModel(data);
