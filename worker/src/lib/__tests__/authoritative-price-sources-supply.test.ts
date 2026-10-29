@@ -104,6 +104,8 @@ describe("resolveVaultNavSupplyPrice", () => {
   it("exposes only configured fresh single-source NAV parents", () => {
     expect(getFreshSingleSourceNavParentId("syzusd-yuzu")).toBe("yzusd-yuzu");
     expect(getFreshSingleSourceNavParentId("senpathusd-sentora")).toBe("pathusd-bridge");
+    expect(getFreshSingleSourceNavParentId("sbold-k3-capital")).toBe("bold-liquity");
+    expect(getFreshSingleSourceNavParentId("ybold-yearn")).toBe("bold-liquity");
     expect(getFreshSingleSourceNavParentId("eearn-ember")).toBeNull();
     expect(getFreshSingleSourceNavParentId("sgho-aave")).toBeNull();
     expect(getFreshSingleSourceNavParentId("not-a-vault-token")).toBeNull();
@@ -139,6 +141,45 @@ describe("resolveVaultNavSupplyPrice", () => {
     const nowSec = Math.floor(Date.now() / 1000);
     expect(await resolveVaultNavSupplyPrice("syzusd-yuzu", sameRunParent(nowSec, 60, overrides))).toBeNull();
     expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+  });
+
+  describe.each(["sbold-k3-capital", "ybold-yearn"])("%s BOLD parent admission", (id) => {
+    function boldParent(ageSec: number, overrides: Partial<PeggedAsset> = {}): ReadonlyMap<string, PeggedAsset> {
+      const nowSec = Math.floor(Date.now() / 1000);
+      return new Map([["bold-liquity", {
+        ...sameRunParent(nowSec, ageSec).get("yzusd-yuzu")!,
+        id: "bold-liquity", name: "Liquity BOLD", symbol: "BOLD", ...overrides,
+      }]]);
+    }
+
+    it.each([60, 900])("values supply from a %ss-old same-run direct CoinGecko BOLD quote", async (ageSec) => {
+      fetchEvmCallHexAtBlockMock.mockResolvedValueOnce(`0x${(1_087n * 10n ** 15n).toString(16).padStart(64, "0")}`);
+      const nowSec = Math.floor(Date.now() / 1000);
+      const override = await resolveVaultNavSupplyPrice(id, boldParent(ageSec));
+      expect(override).toMatchObject({
+        price: 1.087, source: "coingecko", confidence: "single-source", observedAt: nowSec - ageSec,
+        metadata: { inheritedFrom: "bold-liquity", parentSource: "coingecko", parentReplaySafe: true },
+      });
+    });
+
+    it.each<[string, Partial<PeggedAsset>]>([
+      ["stale", { priceObservedAt: Math.floor(Date.now() / 1000) - 901 }],
+      ["future", { priceObservedAt: Math.floor(Date.now() / 1000) + 3600 }],
+      ["clockless", { priceObservedAt: undefined }],
+      ["non-positive", { price: 0 }],
+      ["fallback", { priceConfidence: "fallback" }],
+      ["low-volume", { priceSource: "coingecko-low-volume", priceConfidence: "fallback" }],
+      ["non-replay-safe single-source", { priceSource: "coingecko-onchain" }],
+      ["cached", { priceSource: "coingecko+cached", priceConfidence: "high" }],
+    ])("withholds supply NAV for a %s BOLD parent", async (_label, overrides) => {
+      expect(await resolveVaultNavSupplyPrice(id, boldParent(60, overrides))).toBeNull();
+      expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    });
+
+    it("withholds supply NAV without a BOLD parent", async () => {
+      expect(await resolveVaultNavSupplyPrice(id, new Map())).toBeNull();
+      expect(fetchEvmCallHexAtBlockMock).not.toHaveBeenCalled();
+    });
   });
 
   it("fails closed without a parent row, a trusted parent, or a vault config", async () => {

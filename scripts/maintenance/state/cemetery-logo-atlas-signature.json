@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "6e54974a1b7fb0fe7cdf7dff799b405cad387e12f61ccce50bb67e9696a3dd98",
+  "inputSha256": "61db206a428a61b272ee2ebcf41d39baed8c633ca4d96feaf983225c0ce5a872",
   "image": {
-    "sha256": "58b2e6ecff2eba59eddefa7723ec01c29733faa472c70e78c82327f866f3b898",
-    "bytes": 136016,
+    "sha256": "fd170fc93b99f9e841bbc41e41be651c3261fb28b616645797ddaa8498d0a88f",
+    "bytes": 138810,
     "width": 798,
     "height": 698
   },
@@ -49,6 +49,11 @@
     {
       "logo": "/logos/cemetery/bean.png",
       "sha256": "dbf71a6694605e9496f163e7433a1ecc133ebe84ac7f80de4cd165adf7531765",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/204-bnusd.png",
+      "sha256": "5022b80b09937e9745b5e7336a7367e29e15d56e8ecabd2dbd34c0138e441327",
       "kernel": "lanczos3"
     },
     {
@@ -442,6 +447,11 @@
       "kernel": "lanczos3"
     },
     {
+      "logo": "/logos/cg-solomon-usdv.png",
+      "sha256": "b0ae6322f45c9a4559bfed4a064890f8e6d61e8f4e3a8fe4589af933a5b116cf",
+      "kernel": "lanczos3"
+    },
+    {
       "logo": "/logos/cemetery/usdv.png",
       "sha256": "b3e50587dcafd56d3bd2c9ae93b78f5ef16d55d448867763dc3477e3daff8c7a",
       "kernel": "lanczos3"
@@ -585,6 +595,10 @@
     {
       "id": "bean-beanstalk-v1-2022-04",
       "logo": "/logos/cemetery/bean.png"
+    },
+    {
+      "id": "bnusd-balanced",
+      "logo": "/logos/204-bnusd.png"
     },
     {
       "id": "bob-zkbob-bob-2024-10",
@@ -913,6 +927,10 @@
     {
       "id": "usds-spiceusd-2022-09",
       "logo": "/logos/cemetery/usds-spiceusd.png"
+    },
+    {
+      "id": "usdv-solomon",
+      "logo": "/logos/cg-solomon-usdv.png"
     },
     {
       "id": "usdv-verified-usd-2024-12",

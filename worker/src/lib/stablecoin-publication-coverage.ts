@@ -9,9 +9,11 @@ import { STATUS_LAST_KNOWN_MARKET_CAP_MAX_AGE_SEC, hasActivePriceGapMarketCapEvi
 import type {
   ActivePriceCoverageGap,
   ActivePriceCoverageGapAcknowledgement,
+  ActivePriceCoverageScheduledClosure,
   ActivePriceCoverageHealth,
 } from "@shared/types/status";
 import { parseJsonObject } from "./json-parse";
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 
 export const ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS = 2;
 
@@ -58,8 +60,7 @@ export type MissingActivePriceDetail = ActivePriceCoverageGap;
 /** A dated, owned, expiring review that acknowledges one active stablecoin's
  * missing live price. The gap stays listed as missing in every coverage
  * payload; it stops being alert-eligible only while the review applies, before
- * `expiresAt`. Renewal requires a fresh review; expiry or leaving its weekly
- * window re-arms the alert. */
+ * `expiresAt`. Renewal requires a fresh review; expiry re-arms the alert. */
 export interface StablecoinPriceGapReview {
   stablecoinId: string;
   owner: string;
@@ -70,8 +71,6 @@ export interface StablecoinPriceGapReview {
   reviewedAt: number;
   /** Unix seconds; policy caps acknowledgement at roughly 30 days per review. */
   expiresAt: number;
-  /** UTC week seconds since Sunday 00:00; start inclusive, end exclusive. */
-  weeklyUtcWindow?: { start: number; end: number };
 }
 
 /** The writer has measured current counts; only prior-generation continuity
@@ -145,196 +144,49 @@ export const STABLECOIN_PUBLICATION_WAIVERS: readonly StablecoinPublicationWaive
  * (and reported) so their gaps alert again until renewed or resolved. */
 export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] = [
   {
-    stablecoinId: "usdn-noble",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-19 02:35 UTC: USDN inherits M, which inherits Wrapped M. CoinGecko wrappedm-by-m0 remains at 2026-10-19 00:39:33 UTC ($97.71 daily volume), beyond the unchanged 15-minute primary budget; its DefiLlama proxies repeat that clock. DefiLlama list assets 213 and 282 have no price, Noble USDN's own CoinGecko quote is dated 2026-05-09, and exact-contract DexScreener reads for M and USDN return no pairs. GeckoTerminal's M Ethereum pools have at most $5,069.62 liquidity and zero daily volume. wM's Solana Raydium pool has $250K-$258K liquidity and about $98 daily volume: it passes the $50K pool floor, but a lone DEX family lacks the independent corroborator required for primary promotion and is below the $1M aggregate TVL floor. Low volume is not itself a DexScreener/GeckoTerminal rejection rule. Production's M contract quote and wM Jupiter/low-volume marks remain fallback evidence; inheritance rejects fallback-confidence parents. Keep USDN missing, preserve all source admission gates, and have ops establish an admissible independent observed market or re-review within seven days. M0 parity and reserve NAV are not observed prices.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=wrappedm-by-m0,noble-dollar-usdn&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/wrappedm-by-m0/tickers",
-      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
-      "https://coins.llama.fi/prices/current/coingecko:wrappedm-by-m0,coingecko:noble-dollar-usdn,ethereum:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-      "https://api.dexscreener.com/token-pairs/v1/ethereum/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
-      "https://api.dexscreener.com/token-pairs/v1/noble/uusdn",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b/pools",
-      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp/pools",
-      "https://api.jup.ag/price/v3?ids=mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp,mzerokyEX9TNDoK4o2YZQBDmMzjokAeN6M2g2S3pLJo",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 19, 2, 35, 17) / 1000,
-    expiresAt: Date.UTC(2026, 9, 26, 2, 35, 17) / 1000,
-  },
-  {
-    stablecoinId: "usdk-kast",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-19 02:35 UTC: USDK inherits Wrapped M, whose CoinGecko wrappedm-by-m0 observation remains at 2026-10-19 00:39:33 UTC ($97.71 daily volume), beyond the unchanged 15-minute primary budget; DefiLlama's wM proxies repeat that clock. Exact Solana USDK DexScreener returns no pairs, GeckoTerminal returns no exact-token market (404), and Jupiter returns no USDK quote. M/USDN DefiLlama list prices are null. The only substantial exact wM pool is Solana Raydium CsMzKUUJNoAoU7N4zh3hAS6qcByU81TcQMPJqCdmmcEF, with $250K-$258K liquidity and about $98 daily volume: it passes the $50K pool floor, but lacks another DEX family or hard-source corroborator for primary promotion and is below the $1M aggregate TVL floor. Low volume is not itself a DexScreener/GeckoTerminal rejection rule; reviewed EVM pools are below the liquidity floor. wM's Jupiter and low-volume CoinGecko marks are fallback evidence, and inheritance rejects fallback-confidence parents. Keep USDK missing, preserve all source admission gates, and have ops establish an admissible independent observed market or re-review within seven days. M0 parity and reserve NAV are not observed prices.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=wrappedm-by-m0&vs_currencies=usd&include_24hr_vol=true&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/wrappedm-by-m0/tickers",
-      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
-      "https://coins.llama.fi/prices/current/coingecko:wrappedm-by-m0,ethereum:0x437cc33344a0b27a429f795ff6b469c72698b291",
-      "https://api.dexscreener.com/token-pairs/v1/solana/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX",
-      "https://api.dexscreener.com/token-pairs/v1/solana/mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
-      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX/pools",
-      "https://api.geckoterminal.com/api/v2/networks/solana/tokens/mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp/pools",
-      "https://api.jup.ag/price/v3?ids=usdkbee86pkLyRmxfFCdkyySpxRb5ndCxVsK2BkRXwX,mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 19, 2, 35, 17) / 1000,
-    expiresAt: Date.UTC(2026, 9, 26, 2, 35, 17) / 1000,
-  },
-  {
     stablecoinId: "wusd-worldwide",
     owner: "ops",
     reason:
-      "Reviewed 2026-10-21 14:13 UTC: CoinGecko worldwide-usd remains dated 2026-08-21 22:51:40 UTC with zero tickers; DefiLlama list price is null and its coins API supplies no WUSD quote. Exact current-contract Ethereum/Polygon/Viction DexScreener reads are empty. GeckoTerminal's largest returned pools hold only $313.26/$1,132.36/$451.76 respectively, below the unchanged $50K per-pool floor. The documented wallet.wspn.io still resolves to an NXDOMAIN load-balancer target; no operational issuer quote or bank settlement was observed. WSPN's completed 2024 contract migration does not establish current redemption or termination. Ops retains the October 23 lifecycle/route decision deadline; this new five-day source review only acknowledges the unresolved price gap until October 26 14:13 UTC and does not extend or satisfy that lifecycle decision. Require an exact-token operational issuer route or qualifying market, retaining active missing-price monitoring and all admission gates.",
+      "Re-reviewed 2026-10-29 11:00 UTC with fresh GETs: CoinGecko worldwide-usd still reports $1.17 dated 2026-08-21 22:51:40 UTC with zero tickers, so the only published mark is about 69 days old and not an observed market. DefiLlama detail 234 publishes no price; its daily circulating value has been $599,283.6509 since 2026-09-30 and the latest point reports minted 0. The exact current contracts on Etherscan (max total supply 541,238.05, 653 holders) and PolygonScan (58,045.60, 101,749 holders) sum to that DefiLlama figure. Exact-contract DexScreener reads for 0x7cd017ca5ddb86861fa983a34b5f495c6f898c41 on Ethereum and Polygon are empty. GeckoTerminal returns only sub-floor pools with zero 24h volume: the largest Ethereum pool holds $235.20, the largest Polygon pool $1,135.07 and the largest Viction pool $399.12, with scattered $0.06-$1.53 marks, all below the unchanged $50K per-pool floor. The documented wallet.wspn.io still resolves only to an NXDOMAIN load-balancer CNAME. Coins.ph ended convert-sell on 2026-08-04 while allowing withdrawals; a venue delisting is not an issuer termination. Issuer channels show no end-of-life signal: wspn.io/solutions still markets WUSD's 1:1 corporate conversion and multi-chain presence, and the reviewed developer docs still describe the 1:1 reserve model. Owner decision 2026-10-29: keep active pending a primary discontinuation source; freeze if one appears. Keep the price missing; all admission gates preserved. The predecessor's October 23 lifecycle/redemption-route decision stays open with owner ops and is neither satisfied nor extended by this source review, which expires 2026-11-27 11:00 UTC.",
     sources: [
-      "https://www.mexc.com/announcements/article/mexc-completes-the-wspn-wusd-contract-swap-17827791520755",
       "https://support.coins.ph/hc/en-us/articles/60655699647641-WUSD-Delisting-on-August-4-2026",
       "https://stablecoins.llama.fi/stablecoin/234",
       "https://api.coingecko.com/api/v3/simple/price?ids=worldwide-usd&vs_currencies=usd&include_last_updated_at=true",
-      "https://coins.llama.fi/prices/current/coingecko:worldwide-usd",
+      "https://coins.llama.fi/prices/current/coingecko:worldwide-usd,ethereum:0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
       "https://api.coingecko.com/api/v3/coins/worldwide-usd/tickers",
       "https://api.dexscreener.com/token-pairs/v1/ethereum/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
       "https://api.dexscreener.com/token-pairs/v1/polygon/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
       "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41/pools",
       "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41/pools",
       "https://api.geckoterminal.com/api/v2/networks/tomochain/tokens/0xba73e59f11597c1c13b0d9114688efb6a6d430f6/pools",
+      "https://etherscan.io/token/0x7Cd017ca5ddb86861FA983a34b5F495C6F898c41",
+      "https://polygonscan.com/token/0x7cd017ca5ddb86861fa983a34b5f495c6f898c41",
       "https://developer.wspn.io/5768563m0.md",
-      "https://developer.wspn.io/5778215m0.md",
-      "https://developer.wspn.io/248520713e0.md",
-      "https://developer.wspn.io/6223538m0.md",
+      "https://wspn.io/solutions/",
       "https://dns.google/resolve?name=wallet.wspn.io&type=A",
     ],
-    reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
-    expiresAt: Date.UTC(2026, 9, 26, 14, 13) / 1000,
+    reviewedAt: Date.UTC(2026, 9, 29, 11) / 1000,
+    expiresAt: Date.UTC(2026, 10, 27, 11) / 1000,
   },
   {
     stablecoinId: "pht-pht",
     owner: "ops",
     reason:
-      "Re-reviewed 2026-10-19 07:21 UTC using the October 19 source captures: CoinGecko pht-stablecoin remains dated 2026-08-14 17:36:40 UTC with no tickers. Exact APACX Polygon DexScreener now returns QuickSwap V3 PHT/USDC 0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08 ($46,409.29 liquidity, $5.63/24h) and Balancer PHT/USDC 0x9d4d778575160653e331f1597138a71c7c9a2595 ($9,753.36, $5.62/24h). Both fail the unchanged $50K per-pool liquidity floor; sparse turnover is not an extra DexScreener volume floor. Ethereum/Tron exact reads remain empty and the Ethereum GT pool holds only $25.15. APACX own-CDP repayment and MoneyBees OTC marketing establish no verified ordinary-holder PHP cash-out quote; an undated FX index is not a PHT price. Keep active, permit the existing exact-DEX lane to recover only on qualifying identity-safe evidence with PHP/FX context, and decide the remaining source/holder-exit questions by October 25 23:45 UTC without a deadline extension or nominal parity substitute.",
+      "Re-reviewed 2026-10-29 11:01 UTC: CoinGecko pht-stablecoin remains $0.01607427 dated 2026-08-14 17:36:40 UTC with zero tickers, 76 days beyond the unchanged seven-day budget. Exact Polygon DexScreener is de-indexed (empty). GeckoTerminal's Polygon read returns only QuickSwap V3 PHT/USDC 0xbfb7ac32af23b8b5d892ef4c6e366dd47484da08 ($45,272.89 reserves, $0.0156482 mark, zero 24h trades and volume) and an empty PHT/WPOL pool; $45,272.89 stays below the unchanged $50K per-pool liquidity floor, and Balancer PHT/USDC 0x9d4d778575160653e331f1597138a71c7c9a2595 now answers HTTP 404. Ethereum and Tron exact DexScreener reads are empty; the only Ethereum GeckoTerminal pool holds $25.15. MEXC PHTUSDT has no 24h ticker (HTTP 404). APACX's on-ramp/off-ramp page still advertises redeeming PHT through MoneyBees OTC for PHP, but documents no observed acceptance, rate, depth or limit, and that advertised route is not an observed PHT market. Open holder-exit question: whether an ordinary holder can in fact convert PHT to PHP at a verifiable rate and depth; owner ops must resolve it by 2026-11-10 11:01 UTC, this review's expiry. Keep PHT active and the price missing; all admission gates preserved; sparse turnover is not an extra volume floor and an undated FX index is not a PHT price.",
     sources: [
       "https://api.coingecko.com/api/v3/simple/price?ids=pht-stablecoin&vs_currencies=usd&include_last_updated_at=true",
       "https://api.coingecko.com/api/v3/coins/pht-stablecoin/tickers",
-      "https://stablecoins.llama.fi/stablecoins?includePrices=true",
-      "https://coins.llama.fi/prices/current/coingecko:pht-stablecoin",
       "https://api.dexscreener.com/token-pairs/v1/ethereum/0xbe370ad45d44eb45174c4ec60b88839fef32c077",
       "https://api.dexscreener.com/token-pairs/v1/polygon/0xe75220cb014dfb2d354bb59be26d7458bb8d0706",
       "https://api.dexscreener.com/token-pairs/v1/tron/TXdN5fvFjCdqjWJRvWmBzSRLBN7JLYmmrs",
       "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0xbe370ad45d44eb45174c4ec60b88839fef32c077/pools",
       "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0xe75220cb014dfb2d354bb59be26d7458bb8d0706/pools",
+      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/pools/0x9d4d778575160653e331f1597138a71c7c9a2595",
       "https://api.mexc.com/api/v3/ticker/24hr?symbol=PHTUSDT",
-      "https://docs.apacx.io/what-is-pht/pht-overview.md",
-      "https://docs.apacx.io/technical-references/contract-addresses.md",
-      "https://docs.apacx.io/user-guides/mint-redeem-and-bridge-pht.md",
       "https://docs.apacx.io/user-guides/pht-onramp-and-offramp.md",
-      "https://www.moneybees.ph/terms/",
     ],
-    reviewedAt: Date.UTC(2026, 9, 19, 7, 21, 45) / 1000,
-    expiresAt: Date.UTC(2026, 9, 25, 23, 45) / 1000,
-  },
-  {
-    stablecoinId: "bnusd-balanced",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-21 14:13 UTC: this identity tracks ICON Balanced v1 bnUSD(old), not the distinct Sonic successor. DefiLlama list/detail 204 price is null and the coins API has no balanced-dollars quote. CoinGecko remains dated 2026-06-26 20:26:20 UTC ($0.96769) with zero tickers; exact ICON/Base/Arbitrum/BSC DexScreener reads return no pairs. Official Balanced migration instructions still describe 1:1 old/new migration on ICON, Stellar and Sui, with other legacy chains requiring bridging first. That advertised migration is not an observed market price or an executed claim valuation. No independently reviewed sICX/USD dependency and native pool adapter exists. Ops must review an identity-safe observed market or executable migration-claim route, or make a freeze decision by October 28 14:13 UTC; preserve the missing price and all source admission guards. Do not apply the successor's price to bnUSD(old) or infer an unsupported migration termination date.",
-    sources: [
-      "https://docs.balanced.network/migrate-assets",
-      "https://github.com/icon-project/sodax-sdks/blob/main/packages/sdk/docs/MIGRATION.md",
-      "https://stablecoins.llama.fi/stablecoin/204",
-      "https://coins.llama.fi/prices/current/coingecko:balanced-dollars",
-      "https://api.coingecko.com/api/v3/simple/price?ids=balanced-dollars&vs_currencies=usd&include_last_updated_at=true",
-      "https://api.coingecko.com/api/v3/coins/balanced-dollars/tickers",
-      "https://api.dexscreener.com/token-pairs/v1/icon/cx88fd7df7ddff82f7cc735c871dc519838cb235bb",
-      "https://api.dexscreener.com/token-pairs/v1/base/0x78b7cd9308287deb724527d8703c889e2d6c3708",
-      "https://api.dexscreener.com/token-pairs/v1/arbitrum/0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
-      "https://api.dexscreener.com/token-pairs/v1/bsc/0xc65132325bd4fcf2ec5f3a9375487163b6999206",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 21, 14, 13) / 1000,
-    expiresAt: Date.UTC(2026, 9, 28, 14, 13) / 1000,
-  },
-  {
-    stablecoinId: "cadm-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-18 23:45 UTC: Mento's recurring weekend FX closure empties the CADm Broker route for Celo token 0xff4ab19391af240c311c54200a492233052b6325 and sortedOracles feed 0x20869cf54ead821c45dfb2ab0c23d2e10fbb65a4. At canonical block 80462413 (2026-10-18 22:39:31 UTC), Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad through manager 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901 reverted 'no valid median'; the median stopped Friday 2026-10-16 20:57:15 UTC and isOldestReportExpired was true. Rechecked after Sunday reopen at canonical block 80466200 (23:42:38 UTC, matching opening/closing hash): median 23:41:09 UTC, expired false, executable quote 0.70685260828 USDm per CADm. CoinGecko celo-canadian-dollar remains dated 2026-09-30 20:37:20 UTC with no tickers, so no alternate weekend market is assumed. Acknowledge only Friday 21:00 to Sunday 23:00 UTC; weekday failures and expiry must alert, with no oracle freshness or price-floor changes.",
-    sources: [
-      "https://forno.celo.org",
-      "https://celoscan.io/block/80462413",
-      "https://celoscan.io/block/80466200",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/BiPoolManager.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/celo-canadian-dollar",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 18, 23, 45) / 1000,
-    expiresAt: Date.UTC(2026, 10, 1, 22) / 1000,
-  },
-  {
-    stablecoinId: "audm-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-18 23:45 UTC: Mento's recurring weekend FX closure empties the AUDm Broker route for Celo token 0x7175504c455076f15c04a2f90a8e352281f492f9 and sortedOracles feed 0x646bd504c3864ea5b8a6b6d25743721f61864a07. At canonical block 80462413 (2026-10-18 22:39:31 UTC), Broker 0x777a8255ca72412f0d706dc03c9d1987306b4cad through manager 0x22d9db95e6ae61c104a7b6f6c78d7993b94ec901 reverted 'no valid median'; the median stopped Friday 2026-10-16 20:58:15 UTC and isOldestReportExpired was true. Rechecked after Sunday reopen at canonical block 80466200 (23:42:38 UTC, matching opening/closing hash): median 23:42:07 UTC, expired false, executable quote 0.6957548 USDm per AUDm. CoinGecko celo-australian-dollar remains dated 2026-09-25 18:54:50 UTC with no tickers, so no alternate weekend market is assumed. Acknowledge only Friday 21:00 to Sunday 23:00 UTC; weekday failures and expiry must alert, with no oracle freshness or price-floor changes.",
-    sources: [
-      "https://forno.celo.org",
-      "https://celoscan.io/block/80462413",
-      "https://celoscan.io/block/80466200",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/BiPoolManager.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/celo-australian-dollar",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 18, 23, 45) / 1000,
-    expiresAt: Date.UTC(2026, 10, 1, 22) / 1000,
-  },
-  {
-    stablecoinId: "chfm-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Mento's v3 FX oracle gate closes the only executable CHFm venue every weekend: the CHFm/USDm FPMM 0xdc81135f…3e8b8 prices getAmountOut through OracleAdapter 0xa472fbbf…4383a getFXRateIfValid, which reverts FXMarketClosed (selector 0xa407143a) from Friday 21:00 UTC until Sunday 23:00 UTC (MarketHoursBreaker weekend rules), and the Chainlink-backed sortedOracles reports stop with the Friday close (last reports 2026-09-25 20:56-20:59 UTC, ~92ks stale by Saturday evening). The mento-fpmm lane therefore returns empty every weekend and re-prices automatically at the Sunday 23:00 UTC reopen (quote verified live again 2026-09-20 23:30 UTC). No admissible alternative lane exists: CoinGecko cchf is stale since 2026-07-29, DefiLlama publishes no list price, and DexScreener lists no CHFm pair. Renew while Mento keeps the weekly FX closure; a weekday gap is a different cause.",
-    sources: [
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/breakers/MarketHoursBreaker.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/FPMM.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/cchf",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 27) / 1000,
-    expiresAt: Date.UTC(2026, 9, 25) / 1000,
-  },
-  {
-    stablecoinId: "copm-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Mento's weekend FX closure also empties the only executable COPm lane: Broker 0x777a8255…b4cad getAmountOut on the COPm/USDm BiPoolManager exchange reverts 'no valid median' because sortedOracles reports for feed 0x0196d1f4…39f1 stop at the Friday close (last report 2026-09-25 20:58 UTC, isOldestReportExpired true, median ~92ks stale by Saturday evening) and resume only at the Sunday 23:00 UTC reopen (fresh median verified 2026-09-20 23:30 UTC). The mento-broker lane re-prices COPm automatically after the reopen. No admissible alternative lane exists: CoinGecko ccop is stale since 2026-08-16 and DexScreener's COPm pools hold at most $373 liquidity against the $50K address-provider floor. Renew while Mento keeps the weekly FX closure; a weekday gap is a different cause.",
-    sources: [
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/BiPoolManager.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/ccop",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 27) / 1000,
-    expiresAt: Date.UTC(2026, 9, 25) / 1000,
-  },
-  {
-    stablecoinId: "jpym-mento",
-    weeklyUtcWindow: { start: 5 * 86_400 + 21 * 3600, end: 23 * 3600 },
-    owner: "ops",
-    reason:
-      "Mento's weekend FX closure empties the only executable JPYm lane (pricing 6.39 moved JPYm off nominal par onto mento-fpmm): the JPYm/USDm FPMM 0x9861f6d2…2b2b41 getAmountOut reverts FXMarketClosed (selector 0xa407143a) through the same OracleAdapter gate as CHFm, verified at 2026-09-26 12:00 UTC (block 78523242) and 2026-09-27 12:00 UTC, and quotes again on weekdays (0.00635164772 USDm per JPYm at 2026-09-28 12:00 UTC). The mento-fpmm lane re-prices JPYm automatically after the Sunday 23:00 UTC reopen. No admissible alternative lane exists: CoinGecko celo-japanese-yen is stale since 2026-08-19 and has no other tracked venue. Renew while Mento keeps the weekly FX closure; a weekday gap is a real lane failure.",
-    sources: [
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/breakers/MarketHoursBreaker.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/oracles/OracleAdapter.sol",
-      "https://github.com/mento-protocol/mento-core/blob/main/contracts/swap/FPMM.sol",
-      "https://docs.mento.org/mento-v3/build/deployments/addresses",
-      "https://www.coingecko.com/en/coins/celo-japanese-yen",
-    ],
-    reviewedAt: Date.UTC(2026, 8, 28) / 1000,
-    expiresAt: Date.UTC(2026, 9, 25) / 1000,
+    reviewedAt: Date.UTC(2026, 9, 29, 11, 1) / 1000,
+    expiresAt: Date.UTC(2026, 10, 10, 11, 1) / 1000,
   },
   {
     stablecoinId: "usdfc-secured-finance",
@@ -357,23 +209,132 @@ export const STABLECOIN_PRICE_GAP_REVIEWS: readonly StablecoinPriceGapReview[] =
     reviewedAt: Date.UTC(2026, 9, 28, 9, 52) / 1000,
     expiresAt: Date.UTC(2026, 10, 4, 9, 52) / 1000,
   },
-  {
-    stablecoinId: "idrt-rupiah-token",
-    owner: "ops",
-    reason:
-      "Reviewed 2026-10-23 13:57 UTC: CoinGecko rupiah-token ($0.00005421) is dated 2026-10-16 13:09:29 UTC, so it crossed the seven-day freshness budget at about 13:50 UTC today; no live quote has been published since. DefiLlama coins API returns nothing for the Ethereum, BSC or Polygon contracts or coingecko:rupiah-token. Every IDRT DEX pool is thin: GeckoTerminal/DexScreener show the largest Ethereum pool (IDRT/USDC) at about $731 reserves, BSC under $900 and Polygon under $1,900, all far below the $50K per-pool floor, with prices scattered between $0.00003 and $0.00007. Keep IDRT missing, preserve all admission gates, and have ops re-review within seven days or once CoinGecko refreshes.",
-    sources: [
-      "https://api.coingecko.com/api/v3/simple/price?ids=rupiah-token&vs_currencies=usd&include_last_updated_at=true",
-      "https://coins.llama.fi/prices/current/coingecko:rupiah-token,ethereum:0x998ffe1e43facffb941dc337dd0468d52ba5b48a,bsc:0x66207e39bb77e6b99aab56795c7c340c08520d83,polygon:0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b",
-      "https://api.geckoterminal.com/api/v2/networks/eth/tokens/0x998ffe1e43facffb941dc337dd0468d52ba5b48a/pools",
-      "https://api.geckoterminal.com/api/v2/networks/bsc/tokens/0x66207e39bb77e6b99aab56795c7c340c08520d83/pools",
-      "https://api.geckoterminal.com/api/v2/networks/polygon_pos/tokens/0x554cd6bdd03214b10aafa3e0d4d42de0c5d2937b/pools",
-      "https://api.dexscreener.com/latest/dex/search?q=IDRT",
-    ],
-    reviewedAt: Date.UTC(2026, 9, 23, 13, 57) / 1000,
-    expiresAt: Date.UTC(2026, 9, 30, 13, 57) / 1000,
-  },
 ];
+
+/** Standing source-calendar review, separate from temporary gap acknowledgements.
+ * The calendar suppresses operator escalation only; missing counts and streaks remain. */
+export const STABLECOIN_MARKET_HOURS_CALENDARS = [{
+  calendarId: "mento-fx",
+  owner: "ops",
+  reviewReason: "Owner-reviewed 2026-10-29: Mento FX oracle market hours close the only admitted routes for these five assets. Keep missing prices unavailable during scheduled closures; off-calendar gaps alert normally.",
+  sources: [
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/oracles/breakers/MarketHoursBreaker.sol",
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/oracles/OracleAdapter.sol",
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/oracles/BreakerBox.sol",
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/swap/BiPoolManager.sol",
+    "https://github.com/mento-protocol/mento-core/blob/4048a6c392790527d7ab3133af6f3336efc0cc97/contracts/swap/FPMM.sol",
+  ],
+  reviewedAt: Date.UTC(2026, 9, 29, 10, 35) / 1000,
+  reviewDeadline: Date.UTC(2027, 9, 29, 10, 35) / 1000,
+  assets: [
+    { stablecoinId: "cadm-mento", lane: "mento-broker" },
+    { stablecoinId: "audm-mento", lane: "mento-broker" },
+    { stablecoinId: "chfm-mento", lane: "mento-fpmm" },
+    { stablecoinId: "copm-mento", lane: "mento-broker" },
+    { stablecoinId: "jpym-mento", lane: "mento-fpmm" },
+  ],
+}] as const;
+
+/** Exact UTC rules verified at the registry's pinned MarketHoursBreaker commit. */
+function isMentoMarketClosed(nowSec: number): boolean {
+  const clock = new Date(nowSec * 1000);
+  const day = clock.getUTCDay();
+  const hour = clock.getUTCHours();
+  const month = clock.getUTCMonth();
+  const date = clock.getUTCDate();
+  return (day === 5 && hour >= 21) || day === 6 || (day === 0 && hour < 23)
+    || (month === 11 && ((date === 24 || date === 31) && hour >= 22 || date === 25))
+    || (month === 0 && date === 1);
+}
+
+function mostRecentMentoClosureEnd(nowSec: number): number {
+  const clock = new Date(nowSec * 1000);
+  const year = clock.getUTCFullYear();
+  const midnight = Date.UTC(year, clock.getUTCMonth(), clock.getUTCDate()) / 1000;
+  let sundayReopen = midnight - clock.getUTCDay() * 86_400 + 23 * 3600;
+  if (sundayReopen > nowSec) sundayReopen -= 7 * 86_400;
+  // Reject nominal ends still inside another closure (for example Christmas on Sunday).
+  return Math.max(...[
+    sundayReopen,
+    Date.UTC(year, 11, 26) / 1000,
+    Date.UTC(year, 0, 2) / 1000,
+    Date.UTC(year - 1, 11, 26) / 1000,
+  ].filter((end) => end <= nowSec && isMentoMarketClosed(end - 1) && !isMentoMarketClosed(end)));
+}
+
+type StablecoinMarketHoursCalendar = {
+  calendarId: string;
+  owner: string;
+  reviewReason: string;
+  sources: readonly string[];
+  reviewedAt: number;
+  reviewDeadline: number;
+  assets: readonly { stablecoinId: string; lane: string }[];
+};
+
+export function resolveStablecoinMarketHours(
+  expectedActiveIds: readonly string[],
+  nowSec: number,
+  calendars: readonly StablecoinMarketHoursCalendar[] = STABLECOIN_MARKET_HOURS_CALENDARS,
+): {
+  closedById: ReadonlyMap<string, ActivePriceCoverageScheduledClosure>;
+  alertSuppressedIds: ReadonlySet<string>;
+  expiredCalendarIds: string[];
+  invalidCalendarIds: string[];
+} {
+  const closedById = new Map<string, ActivePriceCoverageScheduledClosure>();
+  const alertSuppressedIds = new Set<string>();
+  const expiredCalendarIds = new Set<string>();
+  const invalidCalendarIds = new Set<string>();
+  const activeIds = new Set(expectedActiveIds);
+  const closed = validReviewSeconds(nowSec) && isMentoMarketClosed(nowSec);
+  // Compact history has no per-generation clocks. Require the equivalent number
+  // of open-market cadence periods without changing the measured missing streak.
+  const reopeningGate = validReviewSeconds(nowSec)
+    && nowSec - mostRecentMentoClosureEnd(nowSec)
+      < ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS * CRON_INTERVALS["sync-stablecoins"];
+  for (const calendar of calendars) {
+    if (!calendar.assets.some((asset) => activeIds.has(asset.stablecoinId))) continue;
+    if (!validReviewSeconds(nowSec) || calendar.calendarId !== "mento-fx"
+      || !isNonEmpty(calendar.owner) || !isNonEmpty(calendar.reviewReason)
+      || !calendar.sources.length || !calendar.sources.every(isHttpsSource)
+      || !validReviewSeconds(calendar.reviewedAt) || !validReviewSeconds(calendar.reviewDeadline)
+      || calendar.reviewedAt > nowSec || calendar.reviewDeadline <= calendar.reviewedAt
+      || calendar.assets.some((asset) => !isNonEmpty(asset.lane))) {
+      invalidCalendarIds.add(calendar.calendarId);
+      continue;
+    }
+    if (calendar.reviewDeadline <= nowSec) {
+      expiredCalendarIds.add(calendar.calendarId);
+      continue;
+    }
+    for (const asset of calendar.assets) {
+      if (!activeIds.has(asset.stablecoinId)) continue;
+      if (closed || reopeningGate) alertSuppressedIds.add(asset.stablecoinId);
+      if (!closed) continue;
+      closedById.set(asset.stablecoinId, {
+        calendarId: calendar.calendarId,
+        reason: "market-closed",
+        lane: asset.lane,
+        owner: calendar.owner,
+        reviewReason: calendar.reviewReason,
+        sources: [...calendar.sources],
+        reviewedAt: calendar.reviewedAt,
+        reviewDeadline: calendar.reviewDeadline,
+      });
+    }
+  }
+  return { closedById, alertSuppressedIds,
+    expiredCalendarIds: [...expiredCalendarIds].sort(), invalidCalendarIds: [...invalidCalendarIds].sort() };
+}
+
+export function resolveStablecoinScheduledPriceClosures(
+  expectedActiveIds: readonly string[],
+  nowSec: number,
+  calendars: readonly StablecoinMarketHoursCalendar[] = STABLECOIN_MARKET_HOURS_CALENDARS,
+): ReadonlyMap<string, ActivePriceCoverageScheduledClosure> {
+  return resolveStablecoinMarketHours(expectedActiveIds, nowSec, calendars).closedById;
+}
 
 export interface ResolvedStablecoinPriceGapReviews {
   activeById: ReadonlyMap<string, StablecoinPriceGapReview>;
@@ -416,11 +377,6 @@ export function resolveStablecoinPriceGapReviews(
       || !validReviewSeconds(review.expiresAt)
       || review.expiresAt <= review.reviewedAt
       || review.reviewedAt > nowSec
-      || (review.weeklyUtcWindow != null && (!Number.isInteger(review.weeklyUtcWindow.start)
-        || !Number.isInteger(review.weeklyUtcWindow.end)
-        || review.weeklyUtcWindow.start < 0 || review.weeklyUtcWindow.start >= 7 * 86_400
-        || review.weeklyUtcWindow.end < 0 || review.weeklyUtcWindow.end >= 7 * 86_400
-        || review.weeklyUtcWindow.start === review.weeklyUtcWindow.end))
     ) {
       invalidGapReviewIds.add(review.stablecoinId);
       continue;
@@ -428,13 +384,6 @@ export function resolveStablecoinPriceGapReviews(
     if (review.expiresAt <= nowSec) {
       expiredGapReviewIds.add(review.stablecoinId);
       continue;
-    }
-    if (review.weeklyUtcWindow) {
-      const clock = new Date(nowSec * 1000);
-      const weekSecond = clock.getUTCDay() * 86_400 + clock.getUTCHours() * 3600
-        + clock.getUTCMinutes() * 60 + clock.getUTCSeconds();
-      const { start, end } = review.weeklyUtcWindow;
-      if (!(start < end ? weekSecond >= start && weekSecond < end : weekSecond >= start || weekSecond < end)) continue;
     }
     activeById.set(review.stablecoinId, review);
   }
@@ -626,6 +575,9 @@ export function parseMissingActivePriceDetail(
     : options.reviewsById
       ? options.reviewsById.get(entry.stablecoinId) ?? null
       : activePriceGapReviewForId(entry.stablecoinId, options.nowSec ?? Math.floor(Date.now() / 1000));
+  const marketHours = resolveStablecoinMarketHours([entry.stablecoinId], options.nowSec ?? Math.floor(Date.now() / 1000));
+  const scheduledClosure = positiveFiniteNumberOrNull(entry.currentPrice) != null ? null
+    : marketHours.closedById.get(entry.stablecoinId) ?? null;
   return {
     stablecoinId: entry.stablecoinId,
     symbol: stringOrNull(entry.symbol) ?? entry.stablecoinId,
@@ -647,10 +599,11 @@ export function parseMissingActivePriceDetail(
     lastAcceptedSource: stringOrNull(entry.lastAcceptedSource),
     lastAcceptedObservedAt: dateSecondsOrNull(entry.lastAcceptedObservedAt),
     rejectionReason: stringOrNull(entry.rejectionReason) ?? "no-accepted-price",
-    alertEligible: review == null
+    scheduledClosure,
+    alertEligible: review == null && !marketHours.alertSuppressedIds.has(entry.stablecoinId)
       && (consecutiveMissingGenerations == null
         || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS),
-    acknowledgedGap: review == null ? null : acknowledgementFromReview(review),
+    acknowledgedGap: review == null || scheduledClosure != null ? null : acknowledgementFromReview(review),
   };
 }
 
@@ -860,6 +813,7 @@ export function evaluateStablecoinActivePriceCoverage(
   const missingActiveAssets: MissingActivePriceDetail[] = [];
   const alertEligibleIds: string[] = [];
   const acknowledgedGapIds: string[] = [];
+  const scheduledClosureGapIds: string[] = [];
   const previousMissingIds = new Set(options.previousCoverage?.missingActiveIds ?? []);
   const previousMissingDetailsById = new Map(
     (options.previousCoverage?.missingActiveAssets ?? []).map((detail) => [detail.stablecoinId, detail] as const),
@@ -870,6 +824,7 @@ export function evaluateStablecoinActivePriceCoverage(
     nowSec,
     options.priceGapReviews,
   );
+  const marketHours = resolveStablecoinMarketHours(expectedActiveIds, nowSec);
   let presentActiveCount = 0;
   let affectedMarketCapUsd: number | null = 0;
   let nominalReferenceMarketCapUsd: number | null = 0;
@@ -919,9 +874,11 @@ export function evaluateStablecoinActivePriceCoverage(
     const lastAcceptedPrice = previousAccepted?.price ?? previousDetail?.lastAcceptedPrice ?? null;
     const lastAcceptedSource = previousAccepted?.source ?? previousDetail?.lastAcceptedSource ?? null;
     const lastAcceptedObservedAt = previousAccepted?.observedAt ?? previousDetail?.lastAcceptedObservedAt ?? null;
-    const acknowledgedReview = resolvedReviews.activeById.get(stablecoinId) ?? null;
+    const scheduledClosure = marketHours.closedById.get(stablecoinId) ?? null;
+    if (scheduledClosure) scheduledClosureGapIds.push(stablecoinId);
+    const acknowledgedReview = scheduledClosure ? null : resolvedReviews.activeById.get(stablecoinId) ?? null;
     if (acknowledgedReview) acknowledgedGapIds.push(stablecoinId);
-    const alertEligible = acknowledgedReview == null
+    const alertEligible = acknowledgedReview == null && !marketHours.alertSuppressedIds.has(stablecoinId)
       && (consecutiveMissingGenerations == null || consecutiveMissingGenerations >= ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS);
     if (alertEligible) alertEligibleIds.push(stablecoinId);
     maxConsecutiveMissingGenerations = maxConsecutiveMissingGenerations == null || consecutiveMissingGenerations == null
@@ -949,6 +906,7 @@ export function evaluateStablecoinActivePriceCoverage(
       lastAcceptedObservedAt,
       rejectionReason: priceRejectionReason(asset),
       alertEligible,
+      scheduledClosure,
       acknowledgedGap: acknowledgedReview == null ? null : acknowledgementFromReview(acknowledgedReview),
     });
   }
@@ -969,8 +927,11 @@ export function evaluateStablecoinActivePriceCoverage(
     missingActiveAssets,
     alertEligibleCount: alertEligibleIds.length,
     alertEligibleIds,
+    scheduledClosureGapIds,
     acknowledgedGapIds,
     acknowledgedGapCount: acknowledgedGapIds.length,
+    expiredMarketHoursCalendarIds: marketHours.expiredCalendarIds,
+    invalidMarketHoursCalendarIds: marketHours.invalidCalendarIds,
     expiredGapReviewIds: resolvedReviews.expiredGapReviewIds,
     invalidGapReviewIds: resolvedReviews.invalidGapReviewIds,
     maxConsecutiveMissingGenerations,

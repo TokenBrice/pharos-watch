@@ -301,6 +301,7 @@ export async function runStablecoinsPostIntakePublication(
     });
   }
   const activePriceCoverage = evaluateStablecoinActivePriceCoverage(input.assets, undefined, {
+    nowSec: input.syncStartSec,
     previousCoverage: input.previousActivePriceCoverage,
     previousAcceptedAssetsById: previousPriceEvidence,
   });

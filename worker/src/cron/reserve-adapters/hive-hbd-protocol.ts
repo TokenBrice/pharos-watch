@@ -458,10 +458,6 @@ function adaptHiveHbdProtocolSnapshots(
   snapshots: readonly [HiveNodeSnapshot, HiveNodeSnapshot],
 ): AdapterResult {
   const [primary, fallback] = snapshots;
-  const mismatches = materialMismatches(primary, fallback);
-  if (mismatches.length > 0) {
-    throw new HiveSnapshotCoherenceError(`${ADAPTER_KEY}: primary and fallback nodes disagree on material Hive state; ${mismatches.join("; ")}`);
-  }
 
   const ratio = primary.ratio;
   const warnings = thresholdWarnings(ratio.ratioBps);
@@ -521,12 +517,11 @@ function adaptHiveHbdProtocolSnapshots(
   };
 }
 
-export async function fetchHiveHbdProtocolReserves(
-  _coin: ReserveAdapterCoin,
+async function fetchHiveHbdProtocolState(
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
-): Promise<AdapterResult> {
+): Promise<readonly [HiveNodeSnapshot, HiveNodeSnapshot]> {
   const primary = config.inputs.primary;
   if (primary.kind !== "http-json") {
     throw new Error(`${ADAPTER_KEY} adapter requires an http-json primary input`);
@@ -573,7 +568,11 @@ export async function fetchHiveHbdProtocolReserves(
       const [primarySnapshot, fallbackSnapshot] = retained;
       if (primarySnapshot && fallbackSnapshot) {
         try {
-          return adaptHiveHbdProtocolSnapshots([primarySnapshot, fallbackSnapshot]);
+          const mismatches = materialMismatches(primarySnapshot, fallbackSnapshot);
+          if (mismatches.length > 0) {
+            throw new HiveSnapshotCoherenceError(`${ADAPTER_KEY}: primary and fallback nodes disagree on material Hive state; ${mismatches.join("; ")}`);
+          }
+          return [primarySnapshot, fallbackSnapshot];
         } catch (error) {
           if (!(error instanceof HiveSnapshotCoherenceError)) throw error;
           lastCoherenceError = error;
@@ -592,4 +591,25 @@ export async function fetchHiveHbdProtocolReserves(
   } finally {
     attempt.dispose();
   }
+}
+
+export async function fetchHiveHbdProtocolSupply(
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+): Promise<{ supply: number; observedAt: number }> {
+  const [primary] = await fetchHiveHbdProtocolState(config, signal);
+  const milliunits = Number(primary.ratio.adjustedHbdSupply);
+  if (!Number.isSafeInteger(milliunits) || milliunits < 0) {
+    throw new Error(`${ADAPTER_KEY}: non-treasury HBD supply is outside the safe integer range`);
+  }
+  return { supply: milliunits / 1_000, observedAt: primary.dgp.headTimestamp };
+}
+
+export async function fetchHiveHbdProtocolReserves(
+  _coin: ReserveAdapterCoin,
+  config: LiveReservesConfig,
+  signal: AbortSignal,
+  ctx?: AdapterContext,
+): Promise<AdapterResult> {
+  return adaptHiveHbdProtocolSnapshots(await fetchHiveHbdProtocolState(config, signal, ctx));
 }

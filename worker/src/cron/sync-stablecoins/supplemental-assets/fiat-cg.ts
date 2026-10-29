@@ -10,6 +10,7 @@ import type { DwellirNativeCapability } from "../../../lib/dwellir-native";
 import { mapWithConcurrency } from "../../../lib/concurrency";
 import type { PeggedAsset } from "../enrich-prices";
 import { buildZephyrProtocolPeggedAsset, fetchZephyrProtocolStats, isZephyrScannerAssetId } from "../zephyr-zsd";
+import { fetchHiveHbdProtocolSupply } from "../../reserve-adapters/hive-hbd-protocol";
 import { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources";
 import { buildPriceReasonablenessOptions, isReasonablePrice } from "../../../lib/price-validation";
 import { validatePricingSourceFreshness } from "../../../lib/pricing-source-freshness";
@@ -100,6 +101,24 @@ export async function fetchFiatCoinGeckoTokens(
   let deadlineSkippedCount = 0;
 
   try {
+    let hiveSupply: Awaited<ReturnType<typeof fetchHiveHbdProtocolSupply>> | null = null;
+    const hbd = FIAT_CG_METAS.find((meta) => meta.id === "hbd-hive");
+    if (hbd) {
+      try {
+        if (hbd.liveReservesConfig?.adapter !== "hive-hbd-protocol") {
+          throw new Error("HBD native supply requires the reviewed Hive protocol configuration");
+        }
+        // Drain the two-node proof before other supplemental fetches; peak remains unchanged.
+        hiveSupply = await fetchHiveHbdProtocolSupply(hbd.liveReservesConfig, signal ?? new AbortController().signal);
+      } catch (error) {
+        throwIfAborted(signal);
+        logWorkerEvent({
+          scope: "handler", job: "sync-stablecoins", level: "warn", event: "supplemental-supply-withheld",
+          message: "[fiat-cg] HBD native supply unavailable",
+          metadata: { stablecoinId: hbd.id, reason: "hive-native-supply-unavailable", detail: String(error), rule: "R4" },
+        });
+      }
+    }
     const hasZephyrScannerAsset = FIAT_CG_METAS.some((meta) => isZephyrScannerAssetId(meta.id));
     const [priceData, zephyrProtocolStats] = await Promise.all([
       fetchSupplementalPriceData(FIAT_CG_METAS, "fiat-cg", signal, db),
@@ -108,6 +127,7 @@ export async function fetchFiatCoinGeckoTokens(
 
     const mcapMap: Record<string, number> = {};
     for (const token of FIAT_CG_METAS) {
+      if (token.id === "hbd-hive") continue;
       const mcap = resolveSupplementalCoinGeckoMcap(cgData, token.geckoId);
       if (mcap != null) mcapMap[token.id] = mcap;
     }
@@ -158,6 +178,19 @@ export async function fetchFiatCoinGeckoTokens(
           priceResolution = resolveLowVolumeCoinGeckoPrice(cgData, meta.geckoId);
         }
         const pegReferencePrice = toPositiveFiniteNumber(fxFallbackRates?.[pKey]);
+        if (meta.id === "hbd-hive") {
+          if (!hiveSupply) return null;
+          const hbdPriceResolution = priceResolution && isReasonablePrice(priceResolution.price, pKey, fxFallbackRates)
+            ? priceResolution : null;
+          // HBD savings pay interest in HBD units; the token is not an accumulating NAV share.
+          const valuationPrice = hbdPriceResolution?.price ?? pegReferencePrice ?? 1.0;
+          const mcap = hiveSupply.supply * valuationPrice;
+          if (!Number.isFinite(mcap) || mcap < 0) return null;
+          return buildSupplementalAsset({
+            meta, priceResolution: hbdPriceResolution, nowSec, mcap, supplySource: "onchain-circulating-supply",
+            supplyObservedAt: hiveSupply.observedAt,
+          });
+        }
         // USD is the base currency; fxFallbackRates omits peggedUSD. Default to 1.0 for
         // plain USD-pegged coins with no CG/DL price source so the on-chain fallback can compute mcap.
         // NAV/yield-bearing assets need an observed market price; do not par-value them or use an FX reference.

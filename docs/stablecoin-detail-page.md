@@ -225,7 +225,7 @@ NAV presentation does not consume the asset's peg-score, active-depeg, deviation
 - Chains counts unique curated contract chains, not live chain coverage.
 - Freeze prefers reviewed power, then supported tracker usage, then the tracker filter; reviewed power and observed usage are different claims.
 - MiCA on frozen records is explicitly historical. GENIUS states a pathway against `GENIUS_REGIME_STATE.effectiveDate`, never a present-day license, and omits unknown/not-applicable states.
-- Jurisdiction/attestor facts use curated regime/PoR evidence; unavailable facts do not invent destinations. Issued requires a valid launch date and exposes the full UTC date. The Attestor value keeps the short tier when one exists, and its accessible name always carries the resolved report engagement beside the tier (`Reserve report: Examination; Regional CPA`), so a compact tier cannot hide an examination or imply an audit.
+- Jurisdiction/attestor facts use curated regime/PoR evidence; unavailable facts do not invent destinations. The launch date is shown once, in the hero header, not in the strip. The Attestor value keeps the short tier when one exists, and its accessible name always carries the resolved report engagement beside the tier (`Reserve report: Examination; Regional CPA`), so a compact tier cannot hide an examination or imply an audit.
 
 Short authored values are not CSS-truncated. Visible-twin/hash rules above apply to every in-page passport destination; facts without a usable target use their source-defined fallback.
 

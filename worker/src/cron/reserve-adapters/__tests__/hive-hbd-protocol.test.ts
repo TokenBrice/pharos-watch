@@ -8,6 +8,8 @@ import {
   type AdapterNetworkSpec,
 } from "./reserve-adapter.test-support";
 import type { AdapterContext } from "../types";
+import { fetchHiveHbdProtocolSupply } from "../hive-hbd-protocol";
+import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 
 const NOW_SEC = 1_800_000_000;
 const PRIMARY_URL = "https://api.hive.blog";
@@ -136,6 +138,18 @@ describe("hive-hbd-protocol adapter", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("reads native circulating supply as total HBD minus liquid treasury, retaining treasury savings", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1_000);
+    const account = { ...baseAccount(), savings_hbd_balance: "1000000.000 HBD" };
+    const network = installAdapterNetwork(hiveNetwork({ primary: { account }, fallback: { account } }));
+    const supply = await fetchHiveHbdProtocolSupply(
+      ACTIVE_META_BY_ID.get("hbd-hive")!.liveReservesConfig!, new AbortController().signal,
+    );
+    expect(supply).toEqual({ supply: 9_075_557.616, observedAt: NOW_SEC - 30 });
+    expect(network.requests).toHaveLength(6);
   });
 
   it("accepts a bracketed two-node agreement and emits the reviewed protocol slice", async () => {

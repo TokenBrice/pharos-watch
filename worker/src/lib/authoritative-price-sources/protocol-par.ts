@@ -20,6 +20,8 @@ const USBD_BIMA_ID = "usbd-bima";
 const USDQ_QUILL_ID = "usdq-quill";
 const ZARM_MENTO_ID = "zarm-mento";
 const XOFM_MENTO_ID = "xofm-mento";
+const USDK_KAST_ID = "usdk-kast";
+const USDN_NOBLE_ID = "usdn-noble";
 
 interface ProtocolParConfig {
   id: string;
@@ -29,6 +31,15 @@ interface ProtocolParConfig {
 const PROTOCOL_PAR_PRICE_CONFIGS: readonly ProtocolParConfig[] = [
   { id: USBD_BIMA_ID, pegType: "peggedUSD" },
   { id: USDQ_QUILL_ID, pegType: "peggedUSD" },
+  // M0 extensions reviewed 2026-10-29: an extension wraps/unwraps $M 1:1 and M0's
+  // Orchestration swaps a supported quote token (currently USDC) 1:1 against any
+  // M0 extension (https://docs.m0.org/build/accessing-liquidity). USDK exits on
+  // Solana through that route; USDN redeems through Noble's Portal to wM and then
+  // M0's 1:1 wM/USDC swap (https://dollar.noble.xyz). Noble retired its own
+  // USDC/USDN swap pool into maintenance mode (2026-07-07), so USDN par records
+  // the issuer redemption route, never an observed liquid market.
+  { id: USDK_KAST_ID, pegType: "peggedUSD" },
+  { id: USDN_NOBLE_ID, pegType: "peggedUSD" },
   { id: ZARM_MENTO_ID, pegType: "peggedZAR" },
   { id: XOFM_MENTO_ID, pegType: "peggedXOF" },
 ];

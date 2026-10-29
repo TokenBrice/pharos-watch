@@ -448,6 +448,35 @@ describe("market and risk collectors", () => {
     expect(result.value).toMatchObject({ gaugeScore: PUBLISHED_GAUGE_SCORE, gaugeBand: "HEALTHY", classificationSource: "safety-score-v9-publication", topChains: [{ chainId: "ethereum", netUsd: 150e6 }, { chainId: "arbitrum", netUsd: -3e6 }] });
     expect(result.value?.topPressure.map(({ symbol }) => symbol)).toEqual(["USDT", "USDC"]); expect(buildUserPrompt({ ...BASE_DIGEST_INPUT, mintBurnFlows: result.value! })).toContain("Top chains by net flow"); expect(db.getHistory().some(({ sql }) => sql.includes("mint_burn_hourly"))).toBe(false);
   });
+  it("separates a withheld net's unavailable 24h window from its missing valuation", async () => {
+    const coins = publishedGaugePayload().coins as Record<string, unknown>[];
+    const coverage = (window24hComplete: boolean) => ({
+      startBlock: 0, lastSyncedBlock: null, lagBlocks: null, historyStartAt: null,
+      has24hWindow: window24hComplete, has30dWindow: true, has90dWindow: true, isPartial: !window24hComplete,
+      status: window24hComplete ? "full" : "bootstrapping",
+      windows: {
+        window24h: { complete: window24hComplete, unavailableReason: window24hComplete ? null : "scan-coverage-incomplete" },
+        window7d: { complete: true, unavailableReason: null },
+        window30d: { complete: true, unavailableReason: null },
+        window90d: { complete: true, unavailableReason: null },
+      },
+    });
+    const partialValuation = {
+      ...(coins[2].valuation as Record<string, unknown>),
+      window24h: { completeness: "partial", mintCompleteness: "partial", burnCompleteness: "complete", unpricedMintEventCount: 1, unpricedBurnEventCount: 0 },
+    };
+    const withheld = (coin: Record<string, unknown>) => collectMintBurnFlows(ctxFor([publishedGaugeTable({
+      value: JSON.stringify(publishedGaugePayload({ coins: [coins[0], coins[1], coin] })),
+    })]));
+    // PAXG is risky: an unpriced risky net could still reach the threshold, so a
+    // complete 24h window keeps this a named valuation quality finding.
+    const valued = await withheld({ ...coins[2], netFlow24hUsd: null, valuation: partialValuation, coverage: coverage(true) });
+    expect(valued.degradedReasons).toEqual([]);
+    expect(valued.qualityReasons).toContain("mint-burn-ftq-valuation-incomplete");
+    // The same withheld net without a complete 24h window means the flow evidence itself is missing.
+    const unscanned = await withheld({ ...coins[2], netFlow24hUsd: null, valuation: partialValuation, coverage: coverage(false) });
+    expect(unscanned.degradedReasons).toEqual(["mint-burn-ftq:flow-window-unavailable"]);
+  });
   it.each([
     ["USG idle inventory burn", 3_860_000, 3_860_000, false],
     ["confirmed redemption", 40_710_000, 3_860_000, true],

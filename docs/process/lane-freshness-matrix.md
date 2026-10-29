@@ -38,7 +38,7 @@
 | `sync-yield-supplemental` | 4h | 8h C | watch | Per-family partial refresh allowed with family age/coverage; no relabeling fallback as fresh acquisition. |
 | `snapshot-supply` | 1d | 2d C | watch | Same-day proven artifact readback allowed; no zero supply for missing inputs or duplicate day. |
 | `snapshot-chain-supply` | 1d | 2d C | watch | Same-day proven readback allowed; absent chain evidence remains absent rather than zero. |
-| `sync-v9-supply-attribution` | 30m | 1h C | watch | Bounded attribution-pending allowed only for exact unexpired source request; never admit a future packet. |
+| `sync-v9-supply-attribution` | 30m | 1h C | watch | Scheduling-expired economic references defer at asset start with `supply-attribution-input-stale-for-reference`; retain exact-source evidence/clocks while wM/XAUT capture. Already-stale-at-build references and unreadable retained journals remain blocking; journal failures isolate per asset. Fully scheduling-deferred runs skip neutrally and inherit required-run health; no output renewal. Exact unexpired requests alone permit attribution-pending; future packets reject. |
 | `compute-safety-score-v9` | 1h | 2h C | watch | Safety publishes hourly at :22; :46 preparation is conditional recovery. Keep :22/:52 publication lead. Held publication keeps prior clock and is publicly visible, not a fresh successful generation. |
 | `prepare-safety-score-v9-input` | 1h | 2h C | watch | Exact-input pending/deferred state allowed; no incomplete/future compiler input treated as ready. |
 | `compute-depeg-resolver` | 15m | 30m C | watch | Bounded repair backlog allowed with event identities; corpus rollup must preserve verdict equivalence. |

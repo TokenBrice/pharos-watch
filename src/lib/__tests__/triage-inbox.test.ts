@@ -81,6 +81,17 @@ describe("buildTriageInbox", () => {
     expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE).verdict).toBe("watch");
   });
 
+  it("does not queue a reviewed nominal-reference notice as a watch item", () => {
+    const data = withCauses([
+      { code: "active_price_coverage_nominal_reference", layer: "data-quality", severity: "info", message: "Reviewed nominal references, not observed market prices. These are not missing-price gaps." },
+    ]);
+    const inbox = buildTriageInbox(normalizeStatusIssues(data.causes), data);
+    expect(inbox.items).toHaveLength(0);
+    expect(inbox.watch).toHaveLength(0);
+    expect(inbox.informational).toHaveLength(0);
+    expect(buildTriageHeadline(inbox, CURRENT_EVIDENCE)).toEqual({ verdict: "ok", text: "Nothing needs action." });
+  });
+
   it.each(["stablecoin_publication_unknown", "stablecoin_publication_incomplete", "mint_burn_public_stale", "db_unhealthy"])(
     "keeps genuine %s service impact actionable", (code) => {
       const data = withCauses([{ code, layer: "availability", severity: "warning", message: "Service impact." }]);

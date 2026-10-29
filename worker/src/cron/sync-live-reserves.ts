@@ -119,6 +119,7 @@ async function runReserveCoinQueue(args: {
   const counts: LiveReserveQueueCounts = {
     synced: 0,
     failed: 0,
+    persistenceFailed: 0,
     skipped: 0,
     circuitSkipped: 0,
     deferredSkipped: 0,
@@ -307,6 +308,14 @@ async function runReserveCoinQueue(args: {
       counts.circuitSkipped++;
     } else {
       counts.failed++;
+      // Only confirmed feed failures qualify for the share budget; uncertain
+      // writes and operational budget failures retain their execution grading.
+      const failure = result.persistedFailure;
+      if (!failure || failure.metadata.uncertainWrite === true
+        || failure.metadata.failureCategory === "storage-write"
+        || failure.metadata.failureCategory === "run-budget-exhausted") {
+        counts.persistenceFailed++;
+      }
       coinsWithErrors.push(coin.id);
       if (result.attemptFailureSummaries) {
         attemptFailureSummaries.push({
@@ -501,6 +510,8 @@ export async function syncLiveReserves(
       ...queueResult.phaseTimings,
     },
     cohortItemsDoneBeforeRun: Math.max(0, startIndex),
+    cohortGradingBeforeRun: checkpoint?.cohortGrading,
+    checkpointIdentity,
     checkpointOwned: checkpointIdentity != null,
     adapterLatency: telemetry.finalize(),
     adapterTelemetryProgress: telemetry.progress(),

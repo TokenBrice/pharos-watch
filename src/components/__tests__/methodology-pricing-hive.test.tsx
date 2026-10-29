@@ -21,7 +21,7 @@ describe("native Hive public methodology", () => {
     expect(summary).toContain("one CoinGecko-dependent soft observation");
     expect(summary).toContain("not two independent votes");
     expect(PRICING_PIPELINE_METHODOLOGY_CHANGELOG.find(({ version }) => version === "6.53")?.effectiveAt).toBe(1792368000);
-    expect(summary).toContain("no supply changes or historical backfill");
+    expect(summary).toContain("HBD supply is the protocol's own debt perimeter");
   });
 
   it("retains durable source, supply and clock caveats in the shared technical content", () => {

@@ -1,7 +1,7 @@
 import { vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS } from "@shared/lib/live-reserve-adapters";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
-import { LIVE_RESERVE_QUEUE_HASH } from "../sync-live-reserves-shared";
+import { LIVE_RESERVE_QUEUE_HASH, type LiveReserveCohortGrading } from "../sync-live-reserves-shared";
 import {
   mockD1 as createMockD1,
   type MockD1Database,
@@ -50,6 +50,7 @@ export interface LiveReserveCheckpointTableOptions {
   currentDomainAttemptId?: string | null;
   recoveryOwner?: string | null;
   recoveryLeaseUntil?: number | null;
+  cohortGrading?: LiveReserveCohortGrading;
 }
 
 export function checkpointTable(input: LiveReserveCheckpointTableOptions): MockTableConfig {
@@ -72,7 +73,8 @@ export function checkpointTable(input: LiveReserveCheckpointTableOptions): MockT
       current_domain_attempt_id: input.currentDomainAttemptId ?? null,
       items_done: input.itemsDone,
       items_total: input.itemsTotal ?? configuredCoinCount,
-      child_dispositions_json: JSON.stringify({ "sync-live-reserves": "not_started" }),
+      child_dispositions_json: JSON.stringify({ "sync-live-reserves": "not_started",
+        ...(input.cohortGrading ? { _reserveSyncGrading: input.cohortGrading } : {}) }),
       recovery_owner: input.recoveryOwner ?? input.invocationId,
       recovery_lease_until: input.recoveryLeaseUntil ?? 2_000,
       source_attempt_no: input.sourceAttemptNo === undefined

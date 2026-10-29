@@ -134,7 +134,7 @@ describe("live-reserves-store", () => {
     },
   );
   it("conserves raw evidence and removes each acknowledged feed's actual authoritative contribution", async () => {
-    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
+    const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
     const now = review.reviewedAt + 1;
     const composition = reserveCompositionRow({
       stablecoin_id: review.stablecoinId, source: review.adapterKey, fetched_at: now - 100,

@@ -376,14 +376,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "Require publisher clarification/repair of the reserve accounting clock, exact fund-share prices/ownership and matched liabilities. Do not assert every current value was measured in April; request_id, HTTP/UI time or a newer separate bundle sidecar cannot repair the API's accounting clock.",
   },
-  "usdv-solomon": {
-    sourceUrl: "https://data.solomonlabs.io/api/solomon-protocol/protocol-data",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "legacy executable retired 2026-10-08; new mint-specific reserve source required",
-    freshnessEvidence: "Reviewed 2026-10-07: API headline TVL describes the replacement product; the tracked legacy mint has a distinct program/reserve perimeter.",
-    scoreGradePlausible: false,
-    note: "Require dated legacy-mint-specific reconciled reserves and liabilities. Do not bind replacement TVL to Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C, or treat futures custody notional as reserve NAV. Product migration prose does not establish an automatic conversion.",
-  },
   "iusd-indigo-protocol": {
     sourceUrl: "https://analytics.indigoprotocol.io/api/cdps",
     sourceQuality: "weak-proof",

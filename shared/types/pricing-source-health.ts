@@ -101,6 +101,8 @@ const PriceSourceHealthDistributionSchema = z.object({
   }).optional(),
   /** Missing-price rows covered by a valid, unexpired price-gap acknowledgement review. Absent on legacy snapshots. */
   acknowledgedMissingCount: z.number().optional(),
+  /** Missing rows inside a reviewed source-market closure; separate from acknowledgements. */
+  scheduledClosureMissingCount: z.number().int().nonnegative().optional(),
 });
 
 export const PriceSourceHealthSchema = PriceSourceHealthDistributionSchema.extend({

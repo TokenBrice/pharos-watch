@@ -11,6 +11,7 @@ import type { CronResult } from "./shared";
 import { buildSyncMetadata, restorePreferredNativeSupply } from "./shared";
 import { reportStablecoinsStage } from "./runtime";
 import type { PeggedAsset } from "./enrich-prices";
+import { NAV_PARENT_ONLY_GECKO_IDS } from "./supplemental-assets";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 import { buildSupplementalAsset, pegTypeKey, toPositiveFiniteNumber, type CoinGeckoMcapData } from "./supplemental-assets/shared";
 
@@ -71,7 +72,8 @@ export function buildFallbackAssetsFromCoinGecko(
   const assets: PeggedAsset[] = [];
 
   for (const meta of stablecoins) {
-    if (!meta.geckoId) continue;
+    // Parent-only price quotes and native Hive supply cannot admit CoinGecko supply.
+    if (!meta.geckoId || NAV_PARENT_ONLY_GECKO_IDS.has(meta.geckoId) || meta.id === "hbd-hive") continue;
     const entry = resolveFreshCoinGeckoFallbackEntry(input.cgData[meta.geckoId], input.syncStartSec);
     if (!entry) continue;
 

@@ -111,10 +111,22 @@ export interface LiveReserveQueueCounts {
   synced: number;
   latestPublishedAt?: number;
   failed: number;
+  persistenceFailed: number;
   skipped: number;
   circuitSkipped: number;
   deferredSkipped: number;
   deferredCoins: number;
+  attemptedCoins: number;
+}
+
+/** Private checkpoint evidence; counts exclude matched feed acknowledgements. */
+export interface LiveReserveCohortGrading {
+  itemsDone: number;
+  complete: boolean;
+  synced: number;
+  failed: number;
+  persistenceFailed: number;
+  circuitSkipped: number;
   attemptedCoins: number;
 }
 

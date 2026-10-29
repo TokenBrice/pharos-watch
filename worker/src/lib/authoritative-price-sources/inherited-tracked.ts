@@ -17,6 +17,7 @@ import {
   type LivePriceContext,
   type PriceSourceProvider,
 } from "./helpers";
+import { protocolParProvider } from "./protocol-par";
 
 const USDAI_USD_AI_ID = "usdai-usd-ai";
 const PYUSD_PAYPAL_ID = "pyusd-paypal";
@@ -50,6 +51,9 @@ const INHERITED_TRACKED_PRICE_CONFIGS = {
     allowFreshReplaySafeSingleSourceParent: true,
     requireReportedSingleSourceConfidence: true,
   },
+  // USDK and USDN also carry a reviewed M0 redemption par in `protocol-par.ts`.
+  // The tracked parent quote wins while it is trusted; par only fills the gap
+  // that an unusable wM/M quote would otherwise leave as missing.
   [USDK_KAST_ID]: {
     parentId: WM_M0_ID,
     allowFreshNonReplaySafeParent: true,
@@ -158,7 +162,13 @@ export const inheritedTrackedPriceProvider: PriceSourceProvider = {
         requireReportedSingleSourceConfidence: config.requireReportedSingleSourceConfidence,
       },
     );
-    if (!parent) return null;
+    if (!parent) {
+      // A child with a reviewed 1:1 issuer redemption route still has an honest
+      // value when its tracked parent has no trusted quote: publish that par as
+      // a nominal reference (protocol-par.ts), never as the parent's observation.
+      const par = await protocolParProvider.fetchLivePrice?.(asset, context);
+      return par && !("kind" in par) ? par : null;
+    }
 
     return buildParentDerivedLiveOverride(parent, config.multiplier ?? 1);
   },

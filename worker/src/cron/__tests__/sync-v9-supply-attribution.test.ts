@@ -21,6 +21,11 @@ import type * as SupplyAttributionCaptureModule from "../../lib/safety-score-v9/
 import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
 import { buildSafetyScoreV9CaptureControl, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY } from "../../lib/safety-score-v9/capture-control";
 import { ECONOMIC_SUPPLY_BODY_CAPS } from "../../lib/safety-score-v9/economic-supply-observer";
+import { supplyAttributionCaptureAdmission } from "../../lib/safety-score-v9/supply-attribution-capture";
+import { SUPPLY_ATTRIBUTION_CAPTURE_BUDGET } from "@shared/lib/safety-score-v9-supply-attribution-journal";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import * as economicObserver from "../../lib/safety-score-v9/economic-supply-observer";
+import * as xautObserver from "../../lib/safety-score-v9/xaut-supply-observer";
 
 const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
@@ -83,6 +88,18 @@ function insertSourceInput(
     );
 }
 
+function economicSourceFixture(): SafetyScoreV9SupplyAttributionSource {
+  const clockSec = Date.parse("2026-10-29T09:16:00Z") / 1_000;
+  const activeAssetIds = ["witry-brix", "xgld-unitas"];
+  return {
+    ...xautSourceFixture(), clockSec, activeAssetIds, chainCirculatingById: {},
+    aggregateCirculatingById: Object.fromEntries(activeAssetIds.map(id =>
+      [id, { circulating: { peggedUSD: 1_000_000 }, observedAtSec: clockSec }])),
+    navPriceById: Object.fromEntries(activeAssetIds.map(id =>
+      [id, { priceUsd: 1, sourceId: "coingecko", confidence: "high" as const, observedAtSec: clockSec }])),
+  };
+}
+
 describe("syncSafetyScoreV9SupplyAttribution", () => {
   beforeEach(() => {
     mocks.capture.mockReset();
@@ -91,6 +108,141 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it.each([
+    ["2026-10-29T09:38:00Z", []],
+    ["2026-10-29T09:53:00Z", ["witry-brix", "xgld-unitas"]],
+    ["2026-10-29T10:08:00Z", ["witry-brix", "xgld-unitas"]],
+  ])("admits input references with the child capture margin at %s", (time, deferredAssetIds) => {
+    expect(supplyAttributionCaptureAdmission(economicSourceFixture(), Date.parse(time as string) / 1_000))
+      .toMatchObject({ deferredAssetIds, captureMarginSec: SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs / 1_000,
+        referencePriceMaxAgeSec: V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.referencePriceMaxAgeSec });
+  });
+
+  it("uses the actual reference clock and admits the exact reference-age boundary", () => {
+    const source = economicSourceFixture();
+    const marginSec = SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs / 1_000;
+    const maxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.referencePriceMaxAgeSec;
+    const boundary = source.clockSec + maxAgeSec - marginSec;
+    expect(supplyAttributionCaptureAdmission(source, boundary).deferredAssetIds).toEqual([]);
+    expect(supplyAttributionCaptureAdmission(source, boundary + 1).deferredAssetIds).toEqual(source.activeAssetIds);
+    source.navPriceById["witry-brix"].observedAtSec -= 1;
+    expect(supplyAttributionCaptureAdmission(source, boundary).deferredAssetIds).toEqual(["witry-brix"]);
+  });
+
+  it.each(["09:09:00", "09:10:00", "09:11:00"])("admits a pre-build reference from %s at the :38 asset start", time => {
+    const source = economicSourceFixture();
+    for (const price of Object.values(source.navPriceById)) price.observedAtSec = Date.parse(`2026-10-29T${time}Z`) / 1_000;
+    const start = Date.parse("2026-10-29T09:38:00Z") / 1_000;
+    expect(supplyAttributionCaptureAdmission(source, start, start * 1_000 + 30_000).deferredAssetIds).toEqual([]);
+  });
+
+  it("keeps already-stale upstream references blocking across repeated runs without RPC", async () => {
+    const { sqlite, db } = openDb();
+    const observer = vi.spyOn(economicObserver, "observeReviewedEconomicDeploymentPartitionAttempt");
+    try {
+      const source = economicSourceFixture();
+      for (const price of Object.values(source.navPriceById)) price.observedAtSec = source.clockSec - 30 * 60;
+      insertSourceInput(sqlite, source);
+      const actual = await vi.importActual<typeof SupplyAttributionCaptureModule>("../../lib/safety-score-v9/supply-attribution-capture");
+      mocks.capture.mockImplementation(actual.captureSafetyScoreV9SupplyAttribution);
+      for (const time of ["09:38:00", "09:53:00", "10:08:00"]) {
+        vi.setSystemTime(Date.parse(`2026-10-29T${time}Z`));
+        const result = await syncSafetyScoreV9SupplyAttribution(db, new Map());
+        expect(result.status, result.metadata).toBe("degraded");
+        expect(JSON.parse(result.metadata ?? "{}").blockingRejectedAssetIds).toEqual(source.activeAssetIds);
+      }
+      expect(observer).not.toHaveBeenCalled();
+    } finally { observer.mockRestore(); sqlite.close(); }
+  });
+
+  it.each(["2026-10-29T09:53:00Z", "2026-10-29T10:08:00Z"])("skips stale-reference-only runs before capture at %s and preserves the generation", async time => {
+    const { sqlite, db } = openDb();
+    try {
+      const source = economicSourceFixture();
+      insertSourceInput(sqlite, source);
+      // Admission must not overwrite even a malformed prior cache while idle.
+      const retained = "retained-generation-bytes";
+      sqlite.prepare("INSERT INTO cache(key,value,updated_at) VALUES (?,?,?)")
+        .run(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY, retained, source.clockSec);
+      vi.setSystemTime(Date.parse(time));
+      const result = await syncSafetyScoreV9SupplyAttribution(db, new Map());
+      expect(result.status).toBe("skipped_neutral");
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        stage: "capture-admission", reason: "supply-attribution-input-stale-for-reference",
+        deferredAssetIds: source.activeAssetIds, sourceClockSec: source.clockSec,
+      });
+      expect(mocks.capture).not.toHaveBeenCalled();
+      expect(sqlite.prepare("SELECT value FROM cache WHERE key=?")
+        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY)?.value).toBe(retained);
+      expect(sqlite.prepare("SELECT COUNT(*) AS count FROM safety_score_v9_supply_attribution_journal").get())
+        .toEqual({ count: 0 });
+    } finally { sqlite.close(); }
+  });
+
+  it("captures co-tenants while deferring stale economic inputs before their observers run", async () => {
+    const { sqlite, db } = openDb();
+    const economicSpy = vi.spyOn(economicObserver, "observeReviewedEconomicDeploymentPartitionAttempt");
+    const xautSpy = vi.spyOn(xautObserver, "observeXautRepresentationGroupSupplyAttributionAttempt")
+      .mockResolvedValue({ status: "rejected", rejectionCode: "transparency-stale", failedRouteId: null,
+        rejectedSourceObservedAtSec: economicSourceFixture().clockSec - 3 * 24 * 60 * 60 });
+    try {
+      const source = economicSourceFixture();
+      source.activeAssetIds.push("xaut-tether");
+      source.aggregateCirculatingById["xaut-tether"] = xautSourceFixture().aggregateCirculatingById["xaut-tether"];
+      insertSourceInput(sqlite, source);
+      vi.setSystemTime(Date.parse("2026-10-29T09:53:00Z"));
+      const actual = await vi.importActual<typeof SupplyAttributionCaptureModule>("../../lib/safety-score-v9/supply-attribution-capture");
+      mocks.capture.mockImplementation(actual.captureSafetyScoreV9SupplyAttribution);
+      const result = await syncSafetyScoreV9SupplyAttribution(db, new Map([["ethereum", {
+        chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
+      }]]));
+      expect(result.status, result.metadata).toBe("ok");
+      expect(economicSpy).not.toHaveBeenCalled();
+      expect(xautSpy).toHaveBeenCalledOnce();
+      expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+        blockingRejectedAssetIds: [],
+        quality: { reason: "supply-attribution-input-stale-for-reference" },
+        captureAdmission: { deferredAssetIds: ["witry-brix", "xgld-unitas"] },
+      });
+      const cached = sqlite.prepare("SELECT value FROM cache WHERE key=?")
+        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as { value: string };
+      const generation = parseSafetyScoreV9SupplyAttributionGeneration(cached.value);
+      expect(generation.outcomesById["witry-brix"]).toMatchObject({
+        status: "rejected", rejectionCode: "observation-stale",
+        failedRouteId: "supply-attribution-input-stale-for-reference",
+      });
+    } finally { economicSpy.mockRestore(); xautSpy.mockRestore(); sqlite.close(); }
+  });
+
+  it.each([["09:09:00", 2], ["09:08:30", 0]] as const)("rechecks a %s reference after earlier co-tenant work", async (referenceTime, calls) => {
+    const { sqlite, db } = openDb();
+    const economicSpy = vi.spyOn(economicObserver, "observeReviewedEconomicDeploymentPartitionAttempt")
+      .mockResolvedValue({ status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null });
+    const xautSpy = vi.spyOn(xautObserver, "observeXautRepresentationGroupSupplyAttributionAttempt").mockImplementation(async () => {
+      vi.setSystemTime(Date.now() + 20_000);
+      return { status: "rejected", rejectionCode: "transparency-stale", failedRouteId: null, rejectedSourceObservedAtSec: 0 };
+    });
+    try {
+      const source = economicSourceFixture();
+      for (const price of Object.values(source.navPriceById)) price.observedAtSec = Date.parse(`2026-10-29T${referenceTime}Z`) / 1_000;
+      source.activeAssetIds.push("xaut-tether");
+      source.aggregateCirculatingById["xaut-tether"] = xautSourceFixture().aggregateCirculatingById["xaut-tether"];
+      insertSourceInput(sqlite, source);
+      vi.setSystemTime(Date.parse("2026-10-29T09:38:00Z"));
+      expect(supplyAttributionCaptureAdmission(source, Date.now() / 1_000).deferredAssetIds).toEqual([]);
+      const actual = await vi.importActual<typeof SupplyAttributionCaptureModule>("../../lib/safety-score-v9/supply-attribution-capture");
+      mocks.capture.mockImplementation(actual.captureSafetyScoreV9SupplyAttribution);
+      const result = await syncSafetyScoreV9SupplyAttribution(db, new Map([["ethereum", {
+        chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "",
+      }]]));
+      expect(economicSpy).toHaveBeenCalledTimes(calls);
+      if (calls === 0) {
+        expect(JSON.parse(result.metadata ?? "{}").captureAdmission.assets["witry-brix"])
+          .toMatchObject({ admissionClockSec: Date.parse("2026-10-29T09:38:20Z") / 1_000, captureMarginSec: 30 });
+      }
+    } finally { economicSpy.mockRestore(); xautSpy.mockRestore(); sqlite.close(); }
   });
 
   it("publishes one exact diagnostic rejected generation as healthy and retries only after the producer cooldown", async () => {

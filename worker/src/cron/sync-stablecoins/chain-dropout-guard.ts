@@ -14,6 +14,7 @@ import { DEFILLAMA_BASE, USER_AGENT } from "../../lib/constants";
 import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { fetchErc20TotalSupply } from "../reserve-adapters/onchain";
+import { fetchSolanaTokenSupply } from "../reserve-adapters/token-supply";
 import { getPegReferencePriceUsd } from "./supply-gap-reconciliation";
 import type { PeggedAsset } from "./enrich-prices-shared";
 import { CHAIN_DROPOUT_SEED, CHAIN_DROPOUT_SEED_OBSERVED_AT, CHAIN_DROPOUT_SEED_VALID_UNTIL } from "./chain-dropout-seed";
@@ -30,12 +31,15 @@ export const CHAIN_DROPOUT_POLICY = {
   chartMaxAgeSec: 48 * 3600,
   chartRefetchSec: 3600,
   maxHistoryFetches: 8,
+  solanaReadTimeoutMs: 20_000,
 } as const;
 
-// Reviewed issuer-native Paxos deployments, not bridge representations. Contracts/decimals are catalog-owned.
+// Reviewed issuer-native deployments, not bridge representations. Contracts/decimals are catalog-owned.
 export const CHAIN_DROPOUT_ONCHAIN_ROSTER = [
   { assetId: "usdg-paxos", chainId: "xlayer" },
   { assetId: "usdg-paxos", chainId: "ink" },
+  // Issuer confirms native Solana XUSD and the catalog mint: https://www.straitsx.com/blog-post/xsgd-and-xusd-live-on-solana
+  { assetId: "xusd-straitsx", chainId: "solana" },
 ] as const;
 const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
   assetId: string; chainId: string; reviewedAt: number; evidenceUrl: string;
@@ -54,6 +58,13 @@ const REVIEWED_CHAIN_SUPPLY_COLLAPSES: readonly {
     assetId: "eurs-stasis", chainId: "polygon",
     reviewedAt: Date.parse("2026-10-16T06:18:46Z") / 1000,
     evidenceUrl: "https://polygonscan.com/token/0xe111178a87a3bff0c8d18decba5798827539ae99",
+  },
+  // 2026-10-29 10:50 UTC: finalized Polygon block 96377093 confirms
+  // 365,027.867025281274675608 SBC, matching the list's lower 365,027 stock.
+  {
+    assetId: "sbc-brale", chainId: "polygon",
+    reviewedAt: Date.parse("2026-10-29T10:50:19Z") / 1000,
+    evidenceUrl: "https://polygonscan.com/token/0xfdcc3dd6671eab0709a4c0f3f53de9a333d80798",
   },
 ];
 
@@ -169,7 +180,14 @@ async function readOnchain(candidate: Candidate, chainRpcs: Map<string, ChainRpc
   const contract = contracts[0];
   if (contract.kind === "native-denom" || contract.decimals == null) return null;
   try {
-    const raw = await fetchErc20TotalSupply({ kind: "onchain-evm", chain: chainId, rpcMode: "public-rpc" }, contract.address, signal ?? new AbortController().signal, undefined, urls[0], urls[1]);
+    const parentSignal = signal ?? new AbortController().signal;
+    const readSignal = chainId === "solana"
+      ? AbortSignal.any([parentSignal, AbortSignal.timeout(CHAIN_DROPOUT_POLICY.solanaReadTimeoutMs)])
+      : parentSignal;
+    const raw = chainId === "solana"
+      ? await fetchSolanaTokenSupply(contract.address, readSignal, undefined, urls[0], urls[1])
+      : await fetchErc20TotalSupply({ kind: "onchain-evm", chain: chainId, rpcMode: "public-rpc" }, contract.address, readSignal, undefined, urls[0], urls[1]);
+    throwIfAborted(readSignal);
     if (raw == null) return null;
     const usd = Number(raw) / 10 ** contract.decimals * priceUsd;
     return Number.isFinite(usd) && usd >= 0 ? usd : null;
@@ -429,7 +447,6 @@ export async function guardChainDropouts(input: {
       candidate.state.baselineSource = "state";
       candidate.state.quarantinedSince = null;
       candidate.state.releasedAt = now;
-      warn("supply-chain-guard-collapse-corroborated", "Independent native supply corroborates real collapse; publishing native amount and releasing quarantine", { assetId: candidate.state.assetId, chainId: candidate.state.chainId, onchainUsd: onchain, listCurrentUsd: candidate.evidence.listCurrentUsd });
     }
   }
   candidates.sort((a, b) => (b.evidence.baselineUsd - (b.evidence.listCurrentUsd ?? 0)) - (a.evidence.baselineUsd - (a.evidence.listCurrentUsd ?? 0)));
@@ -455,14 +472,20 @@ export async function guardChainDropouts(input: {
     // Attribution ambiguity: any same-run gain on this asset's healthy chains may be the dropped supply
     // reattributed by the provider (e.g. a bridge representation moved back to its source chain), and a
     // concurrent mint cannot be told apart from that move. A gain of any size bounds how much of a repair
-    // or carry could double count, so without reviewed bridge-aware accounting every additive repair and
-    // carry is withheld (observed amounts stay in logs, never scaled or clamped), the dropped chains
+    // or carry could double count, so without reviewed bridge-aware accounting every unconfirmed additive
+    // repair and carry is withheld (observed amounts stay in logs, never scaled or clamped), the dropped chains
     // publish unavailable, and a material drop holds the vetted whole-asset total from before the gain.
     const { gains, vettedTotal, vettedComplete } = conservation.get(asset)!;
-    // A native confirmation at or below the list value is non-additive: it cannot double count, so it
-    // stands (an independently confirmed redemption) and leaves the unresolved deficit.
+    // Native confirmations at/below an observed list value are non-additive. For an omitted chain,
+    // a native-confirmed collapse also stands: its issuer-native stock replaces the disproven baseline.
     const confirmations = affected.filter((candidate) =>
-      candidate.evidence.repairedCurrentUsd != null && candidate.evidence.repairedCurrentUsd <= (candidate.evidence.listCurrentUsd ?? 0));
+      candidate.evidence.resolution === "onchain-total-supply" && candidate.evidence.repairedCurrentUsd != null
+      && candidate.evidence.repairedCurrentUsd <= (candidate.evidence.listCurrentUsd
+        ?? CHAIN_DROPOUT_POLICY.collapseRatio * candidate.evidence.baselineUsd));
+    for (const candidate of confirmations) {
+      delete candidate.state.ambiguousSince;
+      delete candidate.state.heldTotalUsd;
+    }
     const unresolved = affected.filter((candidate) => !confirmations.includes(candidate));
     const dropped = unresolved.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - (candidate.evidence.listCurrentUsd ?? 0), 0);
     const ambiguousNow = dropped > 0 && gains > 0;
@@ -485,6 +508,7 @@ export async function guardChainDropouts(input: {
         candidate.state.ambiguousSince ??= now;
         candidate.state.heldTotalUsd = heldTotal;
         if (candidate.evidence.repairedCurrentUsd == null) continue;
+        result.repaired--;
         asset.circulating![pegKey] = (asset.circulating![pegKey] ?? 0) - (candidate.evidence.repairedCurrentUsd - (candidate.evidence.listCurrentUsd ?? 0));
         warn("supply-chain-guard-repair-withheld", "Concurrent healthy-chain gain makes chain attribution ambiguous; repair withheld", {
           assetId: candidate.state.assetId, chainLabel: candidate.state.chainLabel, repairedCurrentUsd: candidate.evidence.repairedCurrentUsd, concurrentGainUsd: gains,
@@ -507,6 +531,10 @@ export async function guardChainDropouts(input: {
       unrepaired = unresolved;
     }
     const repairs = affected.filter((candidate) => candidate.evidence.repairedCurrentUsd != null);
+    for (const candidate of repairs) {
+      if (candidate.evidence.resolution !== "onchain-total-supply" || candidate.state.releasedAt !== now || candidate.state.quarantinedSince != null) continue;
+      warn("supply-chain-guard-collapse-corroborated", "Independent native supply corroborates real collapse; publishing native amount and releasing quarantine", { assetId: candidate.state.assetId, chainId: candidate.state.chainId, onchainUsd: candidate.evidence.repairedCurrentUsd, listCurrentUsd: candidate.evidence.listCurrentUsd });
+    }
     const deficit = unrepaired.reduce((sum, candidate) => sum + candidate.evidence.baselineUsd - (candidate.evidence.listCurrentUsd ?? 0), 0);
     const aggregate = getCirculatingRawOrNull(asset)!;
     const material = deficit > 0 && deficit >= CHAIN_DROPOUT_POLICY.quarantineDeficitRatio * (aggregate + deficit);

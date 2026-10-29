@@ -4,39 +4,15 @@ import { getLiveReserveAdapterDefinition } from "@shared/lib/live-reserve-adapte
 import { getConfiguredLiveReserveCoins, type ReserveSyncStateRecord } from "./live-reserves/store-shared";
 import { loadLatestNonSkippedReserveAttempt, type ReserveSyncAttemptTimelineEntry } from "./live-reserves/store-history-read";
 
-const reviewedAt = Date.UTC(2026, 9, 7, 14, 19, 23) / 1000;
-const expiresAt = reviewedAt + RESERVE_FEED_REVIEW_MAX_AGE_SEC;
-
 /** Dated operational acknowledgements: no snapshot, scoring, or freshness authority. */
 export const RESERVE_FEED_REVIEWS: readonly ReserveFeedReview[] = [
   {
-    stablecoinId: "gusd-gemini", adapterKey: "gemini-independent-assurance", failureCategory: "unknown",
-    warningCodes: [], errorPrefix: "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index",
-    owner: "ops", reason: "2026-10-07 official Contentful index still leads with the July 31 report, marked draft as of October 2, newer than the pinned May report. The same unreviewed-report failure persists; this acknowledges pending report review without admitting the draft or changing freshness.",
-    sources: [
-      { url: "https://www.gemini.com/dollar", evidenceDate: "2026-10-07" },
-      { url: "https://assets.ctfassets.net/jg6lo9a2ukvr/1fSg98ekn9sHoyC1SnjceC/eca615fb0dfcaf8f3cd1541fc4c1c0bd/Gemini-GUSD_Reserves_Report_-July_2026.pdf", evidenceDate: "2026-10-02" },
-    ], reviewedAt, expiresAt,
-  },
-  {
-    stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", failureCategory: "unknown",
-    warningCodes: [], errorPrefix: "primary:onchain-evm: midas-mtbill:save-rounded-totals-mismatch",
-    owner: "ops", reason: "2026-10-19 SAVE registry checkpoint at 10:00 UTC and its historical issuer book agree on $78,625,877.4271, but the historical display total is $78,627,000: a $1,122.5729 mismatch beyond the unchanged $1,000 bound. The current failure is upstream report inconsistency, not the separately stale September 18 latest endpoint. Keep the snapshot quarantined pending issuer correction; no freshness, reconciliation, or scoring exception is granted.",
-    sources: [
-      { url: "https://etherscan.io/address/0x2d6e9f608807436de5d9603b00abe3fed1bc809d", evidenceDate: "2026-10-19" },
-      { url: "https://gateway.pinata.cloud/ipfs/QmR98wvJxfE6Sj6EsgQs2ZzaVomRccmDrLcBXoFCYHn8ok", evidenceDate: "2026-10-19" },
-      { url: "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-10-19T10%3A00", evidenceDate: "2026-10-19" },
-    ],
-    reviewedAt: Date.UTC(2026, 9, 19, 18, 48, 40) / 1000,
-    expiresAt: Date.UTC(2026, 9, 26, 18, 48, 40) / 1000,
-  },
-  {
-    stablecoinId: "yzusd-yuzu", adapterKey: "accountable", failureCategory: "corroboration-mismatch",
-    warningCodes: [], errorPrefix: "primary:http-json: Accountable exposure_split bucket total 61782004.86065776 does not match total_reserves 63645930.21",
-    owner: "ops", reason: "GET observed 2026-10-28T09:51:19Z: the October 24 07:29:10 UTC exposure split totals $61,782,004.86065776 across all 24 buckets, including Rest_of_Assets. The October 23 23:46:39.331 UTC bracket is $63,645,930.21 (shortfall $1,863,925.34934224); the October 24 23:46:09.079 UTC bracket is $63,746,796.97 (shortfall $1,964,792.10934224). Neither reconciles within the unchanged 1% bound; today's $63,393,348.10 headline is not the split's reconciliation anchor. No source-supported omitted allocation was identified. Keep the snapshot rejected and original clocks unchanged pending issuer correction.",
-    sources: [{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-10-28" }],
-    reviewedAt: Date.UTC(2026, 9, 28, 9, 51, 19) / 1000,
-    expiresAt: Date.UTC(2026, 10, 4, 9, 51, 19) / 1000,
+    stablecoinId: "yzusd-yuzu", adapterKey: "accountable", failureCategory: "unknown",
+    warningCodes: [], errorPrefix: "primary:http-json: Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation",
+    owner: "ops", reason: "GET observed 2026-10-29 11:02 UTC (dashboard envelope ts 2026-10-29T09:31:06.327Z): the October 29 08:17:01 UTC exposure_split advances, but the dated `reserves.timeline` rows stamped 2026-10-26, 10-27 and 10-28 still repeat ts 2026-10-25T23:47:36.638Z with reserves $63,780,754.42, and the 2026-10-29 row carries only the live envelope clock the adapter never uses as an anchor. The nearest non-live bracket is therefore 289,765 seconds (3.35 days) older than exposure_split_ts, beyond the unchanged 24-hour bracket window, so the split has no contemporaneous reserve total to reconcile against and the attempt fails closed. The split itself still totals $63,882,663.77 across 25 buckets against a $63,651,564.07 total_reserves (+$231,099.70, 0.36%) and would reconcile inside the unchanged 1% bound once the issuer refreshes the timeline; no reconciliation, freshness or scoring exception is granted here. Keep the snapshot quarantined and original clocks unchanged pending issuer-side timeline repair; this acknowledgement spans only this stale-timeline category and error text, and a bucket-total, invalid-value or transport failure is a different cause.",
+    sources: [{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-10-29" }],
+    reviewedAt: Date.UTC(2026, 9, 29, 11, 2) / 1000,
+    expiresAt: Date.UTC(2026, 10, 5, 11, 2) / 1000,
   },
 ];
 

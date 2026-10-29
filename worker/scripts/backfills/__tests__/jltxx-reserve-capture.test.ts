@@ -71,7 +71,7 @@ describe("staged JLTXX canonical reserve writer", () => {
       const telemetry = createAdapterLatencyCollector();
       const result = await finalizeReserveSyncRun({
         db, total: CONFIGURED_COINS.length, runStartedAt: now + elapsedSec, runStartedMs: Date.now(),
-        counts: { synced: 0, failed: 0, skipped: 0, circuitSkipped: 0, deferredSkipped: 0, deferredCoins: 0, attemptedCoins: 0 },
+        counts: { synced: 0, failed: 0, persistenceFailed: 0, skipped: 0, circuitSkipped: 0, deferredSkipped: 0, deferredCoins: 0, attemptedCoins: 0 },
         warningMessages: [], coinsWithErrors: [], coinsWithWarnings: [],
         breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
         deferredTail: {

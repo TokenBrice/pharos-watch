@@ -59,12 +59,18 @@ describe("normalizeCronMetadataWithLease", () => {
     };
     const reason = "reserve-adapter-or-persistence-failed";
     const reasons = [reason, "reserve-run-budget-deferred", "reserve-circuit-open"];
+    const adapterFailureBudget = { maxFailureRatio: 0.25, attemptedFeeds: 100, failedFeeds: 1 };
+    const cohortGrading = { itemsDone: 100, complete: true, attemptedCoins: 100, synced: 99,
+      failed: 1, persistenceFailed: 0, circuitSkipped: 0 };
     const normalized = normalizeCronMetadataWithLease(
       {
         status: "degraded",
         metadata: JSON.stringify({
           adapterLatency,
           reason, reasons,
+          adapterFailureBudget, cohortGrading,
+          failed: 1, unacknowledgedFailed: 1, persistenceFailed: 0,
+          quality: { reasons: [reason] },
           warnings: Array.from({ length: 2_000 }, (_, index) => `warning-${index}-${"x".repeat(80)}`),
           attemptFailureSummaries: Array.from(
             { length: 500 },
@@ -88,6 +94,9 @@ describe("normalizeCronMetadataWithLease", () => {
     expect(parsed.reasons).toEqual(reasons);
     const persisted = compactCronMetadataForPersistence(normalized);
     expect(persisted.persistedBytes).toBeLessThanOrEqual(DEFAULT_CRON_METADATA_BUDGET_BYTES);
-    expect(JSON.parse(persisted.metadata!)).toMatchObject({ reason, reasons, leaseOwner: "job:scheduled:test" });
+    expect(JSON.parse(persisted.metadata!)).toMatchObject({
+      reason, reasons, leaseOwner: "job:scheduled:test", adapterFailureBudget, cohortGrading,
+      failed: 1, unacknowledgedFailed: 1, persistenceFailed: 0, quality: { reasons: [reason] },
+    });
   });
 });

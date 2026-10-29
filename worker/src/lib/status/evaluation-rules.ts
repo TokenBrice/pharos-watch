@@ -859,18 +859,21 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
       }
       if (coverage.status === "incomplete") {
         const acknowledgedIds = new Set(coverage.acknowledgedGapIds ?? []);
-        const alertIds = coverage.alertEligibleIds.filter((id) => !acknowledgedIds.has(id));
+        const scheduledIds = new Set(coverage.scheduledClosureGapIds ?? []);
+        const alertIds = coverage.alertEligibleIds.filter((id) => !acknowledgedIds.has(id) && !scheduledIds.has(id));
         const reviewed = coverage.missingActiveAssets.flatMap((asset) => asset.acknowledgedGap
           ? [`${asset.stablecoinId} until ${new Date(asset.acknowledgedGap.expiresAt * 1000).toISOString().slice(0, 10)}`]
           : []);
         const acknowledgement = reviewed.length > 0
           ? ` ${reviewed.length} acknowledged gap(s) under review: ${reviewed.join("; ")}.`
           : "";
-        const baseMessage = `Live prices are missing for ${coverage.missingPriceCount ?? "an unknown number of"} active asset(s).${acknowledgement}`;
+        const closureMessage = scheduledIds.size > 0
+          ? ` ${scheduledIds.size} scheduled market closure gap(s) (market-closed): ${[...scheduledIds].join(", ")}.` : "";
+        const baseMessage = `Live prices are missing for ${coverage.missingPriceCount ?? "an unknown number of"} active asset(s).${acknowledgement}${closureMessage}`;
         const publicationMissingIds = input.dataQuality.stablecoinPublication?.missingActiveIds ?? [];
         const breadthDegraded = getActivePriceCoverageBreadthStatus(coverage, publicationMissingIds) !== "healthy";
-        const notAlerting = reviewed.length > 0
-          ? " Every missing gap is either acknowledged under review or below the alert-eligible persistence threshold"
+        const notAlerting = reviewed.length > 0 || scheduledIds.size > 0
+          ? " Every missing gap is under review, within a scheduled market closure, or below the alert-eligible persistence threshold"
           : " No gap has reached the alert-eligible persistence threshold";
         causes.push(makeCause(
           "data-quality",
@@ -892,10 +895,10 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           // admin and public price-coverage notices name.
           const recentCount = coverage.missingPriceCount == null
             ? null
-            : coverage.missingPriceCount - alertIds.length - reviewed.length;
+            : coverage.missingPriceCount - alertIds.length - reviewed.length - scheduledIds.size;
           const breakdown = recentCount == null || recentCount < 0
             ? ""
-            : ` (${alertIds.length} persistent, ${reviewed.length} under review, ${recentCount} recent)`;
+            : ` (${alertIds.length} persistent, ${reviewed.length} under review, ${scheduledIds.size > 0 ? `${scheduledIds.size} market-closed, ` : ""}${recentCount} recent)`;
           causes.push(makeCause(
             "data-quality",
             "active_price_coverage_breadth_degraded",
@@ -917,6 +920,16 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           "info",
           `Ignored ${kind} price-gap review(s): ${ids.join(", ")}. Re-review before renewal; these entries cannot acknowledge a missing price.`,
           { metric: `${kind}GapReviews`, value: ids.length, threshold: 1 },
+        ));
+      }
+      for (const [kind, ids] of [
+        ["expired", coverage.expiredMarketHoursCalendarIds ?? []],
+        ["invalid", coverage.invalidMarketHoursCalendarIds ?? []],
+      ] as const) {
+        if (ids.length > 0) causes.push(makeCause(
+          "data-quality", `price_market_hours_calendars_${kind}`, "info",
+          `Ignored ${kind} market-hours calendar review(s): ${ids.join(", ")}. Revalidate source and lane evidence; these calendars suppress no alerts.`,
+          { metric: `${kind}MarketHoursCalendars`, value: ids.length, threshold: 1 },
         ));
       }
       const expiring = expiringReviews(coverage.missingActiveAssets.flatMap((asset) => asset.acknowledgedGap
@@ -1072,6 +1085,8 @@ const RUNBOOK_BY_CODE: Record<string, string> = {
   price_gap_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
   price_gap_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,
   price_gap_reviews_invalid: `${RUNBOOK_BASE}/review-renewal.md`,
+  price_market_hours_calendars_invalid: `${RUNBOOK_BASE}/review-renewal.md`,
+  price_market_hours_calendars_expired: `${RUNBOOK_BASE}/review-renewal.md`,
   reserve_feed_reviews_expiring: `${RUNBOOK_BASE}/review-renewal.md`,
   reserve_feed_reviews_expired: `${RUNBOOK_BASE}/review-renewal.md`,
   reserve_feed_reviews_invalid: `${RUNBOOK_BASE}/review-renewal.md`,

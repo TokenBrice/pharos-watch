@@ -1625,5 +1625,202 @@
         }
       ]
     }
+  },
+  {
+    "id": "bnusd-balanced",
+    "capturedAt": "2026-10-29T10:51:17.102Z",
+    "peggedAssetRow": {
+      "id": "bnusd-balanced",
+      "name": "Balanced Dollars",
+      "symbol": "BNUSD",
+      "geckoId": "balanced-dollars",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "priceConfidence": null,
+      "priceUpdatedAt": null,
+      "priceObservedAt": null,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": null,
+      "consensusSources": [],
+      "agreeSources": [],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 938236.4048849028
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 938236.4048849028
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 938236.4048849028
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 938236.4048849028
+      },
+      "chainCirculating": {
+        "OP Mainnet": {
+          "current": 0.970086090497336,
+          "circulatingPrevDay": 0.970086090497336,
+          "circulatingPrevWeek": 0.970086090497336,
+          "circulatingPrevMonth": 0.970086090497336
+        },
+        "BSC": {
+          "current": 6.252229301405636,
+          "circulatingPrevDay": 6.252229301405636,
+          "circulatingPrevWeek": 6.252229301405636,
+          "circulatingPrevMonth": 6.252229301405636
+        },
+        "Archway": {
+          "current": 17585.002513912263,
+          "circulatingPrevDay": 17585.002513912263,
+          "circulatingPrevWeek": 17585.002513912263,
+          "circulatingPrevMonth": 17585.002513912263
+        },
+        "Icon": {
+          "current": 910083.6664455147,
+          "circulatingPrevDay": 910083.6664455147,
+          "circulatingPrevWeek": 910083.6664455147,
+          "circulatingPrevMonth": 910083.6664455147
+        },
+        "Injective": {
+          "current": 103.03807935524466,
+          "circulatingPrevDay": 103.03807935524466,
+          "circulatingPrevWeek": 103.03807935524466,
+          "circulatingPrevMonth": 103.03807935524466
+        },
+        "Avalanche": {
+          "current": 217.74384549354264,
+          "circulatingPrevDay": 217.74384549354264,
+          "circulatingPrevWeek": 217.74384549354264,
+          "circulatingPrevMonth": 217.74384549354264
+        },
+        "Arbitrum": {
+          "current": 170.8737133931732,
+          "circulatingPrevDay": 170.8737133931732,
+          "circulatingPrevWeek": 170.8737133931732,
+          "circulatingPrevMonth": 170.8737133931732
+        },
+        "Base": {
+          "current": 10064.395016446442,
+          "circulatingPrevDay": 10064.395016446442,
+          "circulatingPrevWeek": 10064.395016446442,
+          "circulatingPrevMonth": 10064.395016446442
+        },
+        "Havah": {
+          "current": 4.462955395495858,
+          "circulatingPrevDay": 4.462955395495858,
+          "circulatingPrevWeek": 4.462955395495858,
+          "circulatingPrevMonth": 4.462955395495858
+        }
+      },
+      "chains": [
+        "Icon",
+        "Archway",
+        "Base",
+        "Avalanche",
+        "Arbitrum",
+        "Injective",
+        "BSC",
+        "OP Mainnet",
+        "Havah"
+      ],
+      "contracts": [
+        {
+          "chain": "icon",
+          "address": "cx88fd7df7ddff82f7cc735c871dc519838cb235bb",
+          "decimals": 18
+        },
+        {
+          "chain": "archway",
+          "address": "archway1l3m84nf7xagkdrcced2y0g367xphnea5uqc3mww3f83eh6h38nqqxnsxz7",
+          "decimals": 18
+        },
+        {
+          "chain": "havah",
+          "address": "cx4b40466250f9ccf04cc92da1b6633968ba3ec7cc",
+          "decimals": 18
+        },
+        {
+          "chain": "base",
+          "address": "0x78b7cd9308287deb724527d8703c889e2d6c3708",
+          "decimals": 18
+        },
+        {
+          "chain": "avalanche",
+          "address": "0xdbdd50997361522495ecfe57ebb6850da0e4c699",
+          "decimals": 18
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xa67f4b09eed22f8201ee0637cbe9d654e63f946e",
+          "decimals": 18
+        },
+        {
+          "chain": "bsc",
+          "address": "0xc65132325bd4fcf2ec5f3a9375487163b6999206",
+          "decimals": 18
+        },
+        {
+          "chain": "injective",
+          "address": "factory/inj14ejqjyq8um4p3xfqj74yld5waqljf88f9eneuk/inj1qspaxnztkkzahvp6scq6xfpgafejmj2td83r9j",
+          "decimals": 18
+        },
+        {
+          "chain": "optimism",
+          "address": "0xdccd213951d8214fbaca720728474e2cef9d247b",
+          "decimals": 18
+        }
+      ]
+    }
+  },
+  {
+    "id": "usdv-solomon",
+    "capturedAt": "2026-10-29T10:51:18.032Z",
+    "peggedAssetRow": {
+      "id": "usdv-solomon",
+      "name": "Solomon USDv (Legacy)",
+      "symbol": "USDV",
+      "geckoId": null,
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.9986322795000001,
+      "priceSource": "jupiter-exact",
+      "priceConfidence": "fallback",
+      "priceUpdatedAt": 1793270728,
+      "priceObservedAt": 1793270728,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1793270718,
+      "consensusSources": [
+        "jupiter-exact"
+      ],
+      "agreeSources": [
+        "jupiter-exact"
+      ],
+      "supplySource": "onchain-total-supply",
+      "supplyObservedAt": 1793270756,
+      "circulating": {
+        "peggedUSD": 1514736.24083242
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {
+        "Solana": {
+          "chainId": "solana",
+          "current": 1514736.24083242
+        }
+      },
+      "chains": [
+        "Solana"
+      ],
+      "contracts": [
+        {
+          "chain": "solana",
+          "address": "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+          "decimals": 9
+        }
+      ]
+    }
   }
 ]

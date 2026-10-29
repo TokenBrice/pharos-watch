@@ -1412,6 +1412,38 @@ describe("review expiry reminders", () => {
 
   }
 
+  it("reports calendar closures separately without price-review watches and retains public breadth accounting", () => {
+    const now = Date.UTC(2026, 9, 31, 12) / 1000;
+    const ids = ["chfm-mento", "jpym-mento", "copm-mento", "cadm-mento", "audm-mento"];
+    const assets = ids.map((id) => ({ id, price: null }));
+    const first = evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec: now, priceGapReviews: [] });
+    const coverage = evaluateStablecoinActivePriceCoverage(assets, ids, { nowSec: now, priceGapReviews: [], previousCoverage: first });
+    const input = makeDataQualityEvaluationInput({ nowSec: now, activePriceCoverage: {
+      ...coverage, status: "incomplete", expectedActiveCount: 396, observedAt: now,
+    } });
+    const result = evaluateDataQualityStatus(input);
+    const cause = result.causes.find((entry) => entry.code === "active_price_coverage_incomplete");
+    expect(cause).toMatchObject({ severity: "info" });
+    expect(cause?.message).toContain("5 scheduled market closure gap(s) (market-closed)");
+    expect(result.causes.some((entry) => entry.code.startsWith("price_gap_reviews_"))).toBe(false);
+    expect(result.status).toBe("healthy");
+    // Calendars do not waive service-wide breadth: five unavailable prices exceed 5% of 20.
+    input.activePriceCoverage.expectedActiveCount = 20;
+    expect(evaluateDataQualityStatus(input).causes).toContainEqual(expect.objectContaining({
+      code: "active_price_coverage_breadth_degraded", severity: "warning",
+    }));
+  });
+
+  it.each(["invalid", "expired"] as const)("reports %s calendar reviews separately from gap acknowledgements", (kind) => {
+    const input = priceInput([]);
+    input.activePriceCoverage = { ...input.activePriceCoverage,
+      ...(kind === "invalid" ? { invalidMarketHoursCalendarIds: ["mento-fx"] } : { expiredMarketHoursCalendarIds: ["mento-fx"] }),
+    };
+    expect(evaluateDataQualityStatus(input).causes).toContainEqual(expect.objectContaining({
+      code: `price_market_hours_calendars_${kind}`, severity: "info", runbookUrl,
+    }));
+  });
+
   it("reports expired price reviews without a reminder", () => {
     const input = priceInput([priceReview("coin-a", 0)]);
     expect(input.activePriceCoverage.missingActiveAssets[0].acknowledgedGap).toBeNull();
@@ -1430,16 +1462,6 @@ describe("review expiry reminders", () => {
     const input = priceInput([priceReview("coin-a", 3600)], nowSec, 1);
     expect(input.activePriceCoverage.missingActiveAssets).toEqual([]);
     expect(evaluateDataQualityStatus(input).causes.some((cause) => cause.code === "price_gap_reviews_expiring")).toBe(false);
-  });
-
-  it("reminds about a weekly-window price review only while acknowledging the gap", () => {
-    // The fixed evaluation clock falls on Tuesday, 22:13 UTC.
-    const weekSec = 2 * 86400 + 22 * 3600 + 13 * 60 + 20;
-    const review = priceReview("coin-a", 3600);
-    review.weeklyUtcWindow = { start: weekSec, end: weekSec + 7200 };
-    expect(evaluateDataQualityStatus(priceInput([review])).causes.some((cause) => cause.code === "price_gap_reviews_expiring")).toBe(true);
-    review.weeklyUtcWindow = { start: weekSec + 1, end: weekSec + 7200 };
-    expect(evaluateDataQualityStatus(priceInput([review])).causes.some((cause) => cause.code === "price_gap_reviews_expiring")).toBe(false);
   });
 
   it("keeps independent reserve degradation gating alongside an informational reminder", () => {

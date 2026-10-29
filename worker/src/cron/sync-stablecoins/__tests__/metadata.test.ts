@@ -504,6 +504,24 @@ describe("stablecoins pricing metadata", () => {
     });
     expect(active.sourceDistribution.missing).toBe(1);
   });
+  it("keeps calendar-closed prices missing and separates them from review acknowledgements in operator tiles", () => {
+    const ids = new Set(["cadm-mento", "audm-mento", "chfm-mento", "copm-mento", "jpym-mento"]);
+    const assets: PeggedAsset[] = ACTIVE_STABLECOINS.map((asset) => ({
+      id: asset.id, name: asset.name, symbol: asset.symbol,
+      price: ids.has(asset.id) ? null : 1, priceSource: ids.has(asset.id) ? "missing" : "coingecko",
+    }));
+    for (const [syncStartSec, expected] of [
+      [Date.UTC(2026, 9, 30, 21) / 1000, 5],
+      [Date.UTC(2026, 10, 1, 23) / 1000, 0],
+    ]) {
+      const metadata = JSON.parse(buildStablecoinsSyncResult({ ...syncInput(assets), syncStartSec }).metadata!);
+      expect(metadata.priceSourceHealth.active).toMatchObject({
+        sourceDistribution: { missing: 5 }, acknowledgedMissingCount: 0, scheduledClosureMissingCount: expected,
+      });
+      expect(metadata.activePriceCoverage.scheduledClosureGapIds).toHaveLength(expected);
+    }
+  });
+
   it("publishes known exposure subtotal with unavailable-member coverage, keeping observed zero", () => {
     const assets = ACTIVE_STABLECOINS.map((asset): PeggedAsset => {
       const circulating: Record<string, number> =

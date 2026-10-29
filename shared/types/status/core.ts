@@ -246,6 +246,19 @@ const ActivePriceCoverageGapAcknowledgementSchema = z.object({
 });
 export type ActivePriceCoverageGapAcknowledgement = z.output<typeof ActivePriceCoverageGapAcknowledgementSchema>;
 
+/** Source-calendar evidence suppresses escalation, never missing-price accounting. */
+const ActivePriceCoverageScheduledClosureSchema = z.object({
+  calendarId: z.string(),
+  reason: z.literal("market-closed"),
+  lane: z.string(),
+  owner: z.string(),
+  reviewReason: z.string(),
+  sources: z.array(z.string()),
+  reviewedAt: z.number(),
+  reviewDeadline: z.number(),
+});
+export type ActivePriceCoverageScheduledClosure = z.output<typeof ActivePriceCoverageScheduledClosureSchema>;
+
 const ActivePriceCoverageGapSchema = z.object({
   stablecoinId: z.string(),
   symbol: z.string(),
@@ -266,6 +279,7 @@ const ActivePriceCoverageGapSchema = z.object({
   rejectionReason: z.string(),
   alertEligible: z.boolean(),
   acknowledgedGap: ActivePriceCoverageGapAcknowledgementSchema.nullable().optional(),
+  scheduledClosure: ActivePriceCoverageScheduledClosureSchema.nullable().optional(),
 }).refine((gap) => gap.consecutiveMissingGenerations != null || gap.streakUnavailableReason != null, {
   path: ["streakUnavailableReason"], message: "Unknown continuity requires a reason",
 });
@@ -289,6 +303,9 @@ export const ActivePriceCoverageHealthSchema = z.object({
   missingActiveAssets: z.array(ActivePriceCoverageGapSchema),
   alertEligibleCount: z.number().int().nonnegative().nullable(),
   alertEligibleIds: z.array(z.string()),
+  scheduledClosureGapIds: z.array(z.string()).optional(),
+  expiredMarketHoursCalendarIds: z.array(z.string()).optional(),
+  invalidMarketHoursCalendarIds: z.array(z.string()).optional(),
   acknowledgedGapIds: z.array(z.string()).optional(),
   acknowledgedGapCount: z.number().int().nonnegative().nullable().optional(),
   expiredGapReviewIds: z.array(z.string()).optional(),

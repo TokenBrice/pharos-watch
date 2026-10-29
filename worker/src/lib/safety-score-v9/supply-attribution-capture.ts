@@ -24,7 +24,7 @@ import {
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   buildReviewedDeploymentRouteInventory,
 } from "./supply-attribution-contract";
-import { REVIEWED_ECONOMIC_SUPPLY_PLANS, buildReviewedEconomicDeploymentInventory } from "./supply-attribution-contract";
+import { REVIEWED_ECONOMIC_SUPPLY_PLANS, buildReviewedEconomicDeploymentInventory, economicSupplyInputReferencePrice } from "./supply-attribution-contract";
 import { observeReviewedEconomicDeploymentPartitionAttempt } from "./economic-supply-observer";
 import type { BodyReadObserver } from "../response-body";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -45,6 +45,7 @@ import type { SafetyScoreV9SupplyAttributionInput } from "./supply-attribution-s
 import { runBudgetedSupplyAttributionAssets } from "./supply-attribution-capture-budget";
 import type { SafetyScoreV9SupplyAttributionGeneration } from "./supply-attribution-generation";
 import { createSupplyAttributionPerformance, type SupplyAttributionPhase, type SupplyAttributionPerformance } from "./supply-attribution-diagnostics";
+import { loadSupplyAttributionJournalByIdV1 } from "./supply-attribution-journal-store";
 import {
   aggregateSupplyUsd,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
@@ -52,6 +53,31 @@ import {
 } from "./supply-attribution";
 
 type V9SupplyAttributionById = SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"];
+
+export const SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON = "supply-attribution-input-stale-for-reference";
+
+export function supplyAttributionCaptureAdmission(
+  fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
+  admissionClockSec: number,
+  assetDeadlineMs = admissionClockSec * 1_000 + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs,
+) {
+  // Admission runs at the child's start; its deadline covers journal reads too.
+  const captureMarginSec = Math.max(0, Math.ceil(assetDeadlineMs / 1_000 - admissionClockSec));
+  const referencePriceMaxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.referencePriceMaxAgeSec;
+  const referenceObservedAtSecById: Record<string, number> = {};
+  const sourceStaleAssetIds: string[] = [];
+  const deferredAssetIds = safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput).filter(assetId => {
+    const plan = REVIEWED_ECONOMIC_SUPPLY_PLANS.get(assetId);
+    if (!plan || plan.referencePriceSource !== null) return false;
+    const reference = economicSupplyInputReferencePrice(fixedInput, assetId);
+    if (reference === null || admissionClockSec + captureMarginSec - reference.observedAtSec <= referencePriceMaxAgeSec) return false;
+    referenceObservedAtSecById[assetId] = reference.observedAtSec;
+    if (fixedInput.clockSec + captureMarginSec - reference.observedAtSec > referencePriceMaxAgeSec) sourceStaleAssetIds.push(assetId);
+    return true;
+  }).sort();
+  return { deferredAssetIds, sourceStaleAssetIds: sourceStaleAssetIds.sort(), sourceClockSec: fixedInput.clockSec, admissionClockSec,
+    captureMarginSec, referencePriceMaxAgeSec, referenceObservedAtSecById };
+}
 
 export interface SafetyScoreV9SupplyAttributionCapture {
   attributionById: V9SupplyAttributionById;
@@ -61,6 +87,7 @@ export interface SafetyScoreV9SupplyAttributionCapture {
   diagnosticsById?: Record<string, SupplyAttributionAttemptDiagnostic[]>;
   failureReasonById?: Record<string, SupplyAttributionCaptureFailureReason>;
   performanceById?: Record<string, SupplyAttributionPerformance>;
+  admissionById?: Record<string, ReturnType<typeof supplyAttributionCaptureAdmission>>;
 }
 
 export interface SafetyScoreV9SupplyAttributionCaptureOptions {
@@ -70,7 +97,8 @@ export interface SafetyScoreV9SupplyAttributionCaptureOptions {
   db?: D1Database;
   dwellirNative?: DwellirNativeCapability;
   onBodyRead?: BodyReadObserver;
-  priorGeneration?: Pick<SafetyScoreV9SupplyAttributionGeneration, "outcomesById"> | null;
+  priorGeneration?: SafetyScoreV9SupplyAttributionGeneration | null;
+  deferredAssetIds?: readonly string[];
 }
 
 type SupplyAttributionValue = Exclude<
@@ -245,6 +273,8 @@ async function runSupplyAttributionAssetCapture(input: {
   attributionById: V9SupplyAttributionById;
   journalRecords: SupplyAttributionJournalV1[];
   rejectionCode?: SupplyAttributionRejectionCode;
+  failedRouteId?: string;
+  rejectedSourceObservedAtSec?: number;
   onDiagnostic?: (diagnostic: SupplyAttributionAttemptDiagnostic) => void;
   onBodyRead?: BodyReadObserver;
   onPhase?: (phase: SupplyAttributionPhase) => void;
@@ -260,7 +290,8 @@ async function runSupplyAttributionAssetCapture(input: {
     const supplyUsd = aggregateSupplyUsd(input.fixedInput, input.descriptor.assetId);
     outcome =
       input.rejectionCode || supplyUsd === null
-        ? { status: "rejected", rejectionCode: input.rejectionCode ?? "packet-reconciliation-failed", failedRouteId: null }
+        ? { status: "rejected", rejectionCode: input.rejectionCode ?? "packet-reconciliation-failed", failedRouteId: input.failedRouteId ?? null,
+            rejectedSourceObservedAtSec: input.rejectedSourceObservedAtSec }
         : input.chainRpcs && input.chainRpcs.size > 0
         ? await input.descriptor.observe({
             fixedInput: input.fixedInput,
@@ -395,6 +426,12 @@ export async function captureSafetyScoreV9SupplyAttribution(
     }
   };
 
+  const deferred = new Set(options.deferredAssetIds);
+  const admissionById: NonNullable<SafetyScoreV9SupplyAttributionCapture["admissionById"]> = {};
+  const prior = options.priorGeneration;
+  const sameSource = prior && prior.sourceBaseInputGenerationId === fixedInput.baseInputGenerationId &&
+    prior.sourceGeneration === fixedInput.sourceGeneration && prior.sourceClockSec === fixedInput.clockSec &&
+    prior.registryFingerprint === fixedInput.registryFingerprint;
   const descriptors = supplyAttributionAssetDescriptors().filter(
     descriptor => expectedAssetIdSet.has(descriptor.assetId),
   );
@@ -422,6 +459,45 @@ export async function captureSafetyScoreV9SupplyAttribution(
     async (descriptor, assetSignal, assetDeadlineMs) => {
       const assetAttributionById: V9SupplyAttributionById = {};
       const assetJournalRecords: SupplyAttributionJournalV1[] = [];
+      const assetId = descriptor.assetId;
+      const admission = supplyAttributionCaptureAdmission(fixedInput, Math.floor(Date.now() / 1_000), assetDeadlineMs);
+      if (admission.deferredAssetIds.includes(assetId) ||
+        (!REVIEWED_ECONOMIC_SUPPLY_PLANS.has(assetId) && deferred.has(assetId))) {
+        admissionById[assetId] = admission;
+        const sourceStale = admission.sourceStaleAssetIds.includes(assetId);
+        let record: SupplyAttributionJournalV1 | undefined;
+        let journalUnavailable = false;
+        if (!sourceStale && sameSource && options.db) {
+          try {
+            const retained = await loadSupplyAttributionJournalByIdV1(options.db, [assetId], Math.floor(Date.now() / 1_000), assetSignal);
+            record = retained[assetId]?.find(row => row.journalId === prior.outcomesById[assetId]?.journalId);
+            journalUnavailable = !record && prior.outcomesById[assetId] !== undefined;
+          } catch (error) {
+            rethrowIfAborted(error, assetSignal);
+            journalUnavailable = true;
+          }
+        }
+        if (record) {
+          // Retention preserves the original packet, journal and clocks.
+          assetJournalRecords.push(record);
+          const attribution = prior!.attributionById[assetId];
+          if (attribution) assetAttributionById[assetId] = attribution;
+          const outcome = prior!.outcomesById[assetId];
+          if (outcome.diagnostics) diagnosticsById[assetId] = outcome.diagnostics;
+          if (outcome.status === "rejected" && outcome.captureFailureReason) failureReasonById[assetId] = outcome.captureFailureReason;
+          captureClockSec = Math.max(captureClockSec, record.scoringClockSec);
+        } else {
+          await runSupplyAttributionAssetCapture({
+            descriptor, fixedInput, signal: assetSignal, observationClockSec,
+            attributionById: assetAttributionById, journalRecords: assetJournalRecords,
+            rejectionCode: journalUnavailable ? "deployment-state-unavailable" : "observation-stale",
+            rejectedSourceObservedAtSec: economicSupplyInputReferencePrice(fixedInput, assetId)?.observedAtSec ?? fixedInput.clockSec,
+            failedRouteId: journalUnavailable ? "supply-attribution-retained-journal-unavailable"
+              : sourceStale ? "supply-attribution-reference-stale-at-source" : SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON,
+          });
+        }
+        return { attributionById: assetAttributionById, journalRecords: assetJournalRecords };
+      }
       const assetDiagnostics = diagnosticsById[descriptor.assetId] ??= [];
       const performance = createSupplyAttributionPerformance();
       performanceById[descriptor.assetId] = performance.data;
@@ -485,6 +561,7 @@ export async function captureSafetyScoreV9SupplyAttribution(
     diagnosticsById,
     failureReasonById,
     performanceById,
+    admissionById,
   };
 }
 

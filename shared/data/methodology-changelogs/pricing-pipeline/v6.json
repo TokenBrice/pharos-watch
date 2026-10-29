@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.61",
+    "title": "Native HBD supply, BOLD-vault NAV parents and M0 nominal references",
+    "date": "2026-10-29",
+    "effectiveAt": 1793232000,
+    "summary": "HBD supply is read from Hive protocol state net of the liquid DAO treasury, sBOLD and yBOLD value intake NAV from the same-run BOLD quote, KAST USDK and Noble USDN publish reviewed nominal par, and an issuer-native Solana read can confirm an omitted-chain collapse.",
+    "impact": [
+      "HBD supply is `current_hbd_supply` minus the liquid `hive.fund` treasury balance, from the reserve adapter's two-node bracketed Hive proof (owner perimeter, 2026-10-29). CoinGecko caps, including zero, no longer override it, and a failed read withholds supply instead of zeroing it. Published HBD supply steps to about 8.7M HBD; stored CoinGecko-basis history is not rewritten.",
+      "sBOLD and yBOLD opt into the same-run replay-safe BOLD parent that syzUSD uses, keeping every freshness, confidence and fallback gate. During a DefiLlama outage, the CoinGecko fallback builder skips NAV-parent-only ids (BOLD, yzUSD) and HBD.",
+      "KAST USDK and Noble USDN join the scoped protocol-par routes on documented 1:1 M0 USDC swaps and Noble redemption to wM. They publish a labelled nominal reference, never an observed price, and count as nominal coverage. A trusted inherited parent quote still wins.",
+      "StraitsX's issuer-native Solana XUSD mint joins the chain-dropout on-chain roster with a bounded Solana supply read. A native read that confirms a collapse on a chain DefiLlama omits clears the pair's ambiguous hold and releases at the native amount. SBC's Polygon collapse gets a dated reviewed release. xUSD's published supply falls from the carried $58.2M to about $34.2M."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.60",
     "title": "Reviewed native supply and partition exclusions",
     "date": "2026-10-28",

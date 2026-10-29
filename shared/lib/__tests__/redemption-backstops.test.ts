@@ -8,7 +8,6 @@ describe("getRedemptionBackstopConfig", () => {
   it.each([
     ["usdv-solomon-v2", "defer", "issuer-terms-missing", "https://raw.githubusercontent.com/SolomonLabs/chancery/main/spec/04_Settlement_Pathways_and_Permissions.md"],
     ["iusd-initia", "needs-research", "documentation-insufficient", "https://contents.initia.xyz/app/iusd-faq.json"],
-    ["bnusd-balanced", "defer", "route-status-unverified", "https://raw.githubusercontent.com/icon-project/sodax-sdks/main/packages/sdk/docs/MIGRATION.md"],
   ])("keeps %s's opaque composite path unconfigured with its sourced unresolved disposition", (id, disposition, reasonCode, evidenceUrl) => {
     expect(getRedemptionBackstopConfig(id)).toBeNull();
     const review = REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS.filter((row) => row.id === id);
