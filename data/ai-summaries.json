@@ -628,11 +628,11 @@
   },
   "xgz-goldzip": {
     "title": "One-gram gold without ownership of stored bars",
-    "text": "GoldZip Gold references one gram of 99.99%-fine gold, ordinarily redeemable in 1,000-token bar lots after onboarding. Terms deny holders proprietary interests in stored bars; title passes only on collection. The issuer’s 5 October 2026 snapshot maps 39,000 XGZ to 39 Heraeus 1 kg bars at Horsemart Service Limited, without independent physical-inventory assurance. Rules publish Brinks Singapore collection arrangements and per-bar fees, but no unconditional completion deadline. A 15 October notice announces BVI GoldZip Company Limited replacing the Singapore issuer, subject to lawful implementation, on the unchanged Ethereum contract. Holders can elect an additional no-minimum, entire-balance USDT exit by 5 November 2026 at 23:59 UTC through verified self-custody wallets. Conditional settlement is due within 14 Business Days after that deadline; the issuer determines valuation sources and any fair-price fallback. One administrator signature can authorize uncapped minting and immediate upgrades, and balances can be frozen or forcibly burned. Exit access and protection therefore depend on issuer operations and legal terms, not ownership of the allocated bars.",
-    "updatedAt": "2026-10-15",
+    "text": "GoldZip Gold references one gram of 99.99%-fine gold, ordinarily redeemable in 1,000-token bar lots after onboarding. Terms deny holders proprietary interests in stored bars; title passes only on collection. The issuer’s 5 October 2026 snapshot maps 39,000 XGZ to 39 Heraeus 1 kg bars at Horsemart Service Limited, 94.9% of it allocated to one address, without independent physical-inventory assurance. Current Rules set appointment-only collection in Hong Kong, a US$100 application fee and a 0.25% gold-value redemption fee, but no completion deadline. A 15 October notice names BVI GoldZip Company Limited as successor to the Singapore issuer on the unchanged Ethereum contract. Holders can elect an entire-balance USDT exit by 5 November 2026 at 23:59 UTC from verified self-custody wallets, priced at XGZ’s own deadline-day traded price on issuer-selected data. One administrator signature can authorize uncapped minting and immediate upgrades, and balances can be frozen or forcibly burned. Exit access and protection therefore depend on issuer operations and legal terms, not ownership of the allocated bars.",
+    "updatedAt": "2026-10-29",
     "authoredBy": "ai",
-    "model": "openai-codex/gpt-6.1-sol",
-    "factsAsOf": "2026-10-15"
+    "model": "claude-opus-5-5",
+    "factsAsOf": "2026-10-29"
   },
   "zarsc-supercoin": {
     "title": "Cash-backed rand with exchange-only live exit",

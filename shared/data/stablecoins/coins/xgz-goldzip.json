@@ -32,7 +32,7 @@
     "sources": [
       {
         "label": "GoldZip litepaper",
-        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        "url": "https://web.archive.org/web/20260306052812/https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
       },
       {
         "label": "GoldZip transparency and exact deployment",
@@ -72,8 +72,8 @@
       "url": "https://goldzip.info/"
     },
     {
-      "label": "Litepaper",
-      "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+      "label": "White paper",
+      "url": "https://goldzip.info/document/"
     },
     {
       "label": "Ethereum deployment (block 23231220)",
@@ -108,7 +108,7 @@
     {
       "type": "info",
       "title": "Self-reported bar allocation",
-      "message": "The 5 October 2026 issuer snapshot maps 39,000 XGZ to 39 Heraeus 1 kg bars at Horsemart Service Limited. This holder-to-bar mapping does not independently verify physical holdings, confer title or establish segregation. Independent reserve reports remain coming soon."
+      "message": "The 5 October 2026 issuer snapshot maps 39,000 XGZ to 39 Heraeus 1 kg bars at Horsemart Service Limited. This holder-to-bar mapping does not independently verify physical holdings, confer title or establish segregation. Independent reserve reports remain coming soon. On 29 October 2026, one address held 37,000.05 XGZ, 94.9% of supply; the only burn since launch, 19,000 XGZ on 12 March 2026, was re-minted to that address on 20 March."
     },
     {
       "type": "warning",
@@ -118,7 +118,7 @@
     {
       "type": "warning",
       "title": "Issuer change and special redemption deadline",
-      "message": "GoldZip's 15 October 2026 notice announces BVI GoldZip Company Limited (2056034) replacing Singapore GoldZip Pte Limited (202119587H), subject to lawful implementation. The Ethereum contract is unchanged; no swap is required. Object and elect the optional entire-balance special exit by 5 November 2026 at 23:59 UTC. No minimum applies, but only verified self-custody Ethereum wallets qualify. Settlement is in USDT on Ethereum within 14 Business Days after the objection deadline, subject to lawful identity checks, wallet verification and token delivery. Administration and redemption fees are waived; instructed transfer fees are refunded or credited. Valuation uses the deadline-date Hong Kong weighted-average traded price or an issuer-determined fair price if data are insufficient; sources and methodology remain confidential."
+      "message": "GoldZip's 15 October 2026 notice announces BVI GoldZip Company Limited (2056034) replacing Singapore GoldZip Pte Limited (202119587H), subject to lawful implementation. The Ethereum contract is unchanged; no swap is required. Object and elect the optional entire-balance special exit by 5 November 2026 at 23:59 UTC. No minimum applies, but only verified self-custody Ethereum wallets qualify. Settlement is in USDT on Ethereum within 14 Business Days after the objection deadline, subject to lawful identity checks, wallet verification and token delivery. Administration and redemption fees are waived; instructed transfer fees are refunded or credited. Valuation uses XGZ's own weighted-average traded price on the deadline date (Hong Kong calendar day), from trading data the issuer selects, or an issuer-determined fair price if data are insufficient; sources and methodology remain confidential."
     }
   ]
 }

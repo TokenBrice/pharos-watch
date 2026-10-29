@@ -29,7 +29,7 @@
       },
       {
         "label": "GoldZip physical gold claim",
-        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        "url": "https://web.archive.org/web/20260306052812/https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
       },
       {
         "label": "GoldZip issuer allocation and independent-report gap",
@@ -41,7 +41,7 @@
       },
       {
         "label": "GoldZip primary legal terms component",
-        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
+        "url": "https://goldzip.info/_next/static/chunks/7dfbe8943ba12d7c.js"
       },
       {
         "label": "HKGX identifies the Singapore issuing subsidiary GoldZip Pte. Ltd.",
@@ -54,9 +54,13 @@
       {
         "label": "GoldZip issuer-change notice dated 15 October 2026, retrieved 20 October 2026",
         "url": "https://goldzip.info/news/notice-change-of-issuer-special-redemption-option/"
+      },
+      {
+        "label": "Ethereum block 26297907 (2026-10-29T10:49:59Z), XGZ holder balance and mint/burn Transfer census from block 23231220",
+        "url": "https://etherscan.io/token/0x69af64f409c08e9076bf7f3ed9db3a7409717161"
       }
     ],
-    "rationale": "The issuer's 5 October 2026 CSV maps 39,000 XGZ across 39 Heraeus bar serials, each allocated 1,000 XGZ, with Horsemart Service Limited named as vault in every row. Its 298 rows cover 260 addresses. The total matches 39,000 XGZ at Ethereum block 26198051 (2026-10-15T12:55:59Z), but matching token arithmetic is not independent verification of 39 kg of physical gold. Identity correction on 2026-10-20: current terms name GoldZip Company Limited (BVI 2056034) as issuer and default operator unless an operator is appointed, replacing the formerly cited Singapore administrator. Clauses 4.2-4.3 still deny holders proprietary interest in stored bars and pass title only on collection. Independent reserve reports, account segregation and insolvency safeguards remain unverified. This identity correction does not renew the October 5 composition snapshot or October 15 review start.",
+    "rationale": "The issuer's 5 October 2026 CSV maps 39,000 XGZ across 39 Heraeus bar serials, each allocated 1,000 XGZ, with Horsemart Service Limited named as vault in every row. Its 298 rows cover 260 addresses. The total matches 39,000 XGZ at Ethereum block 26198051 (2026-10-15T12:55:59Z), but matching token arithmetic is not independent verification of 39 kg of physical gold. Identity correction on 2026-10-20: current terms name GoldZip Company Limited (BVI 2056034) as issuer and default operator unless an operator is appointed, replacing the formerly cited Singapore administrator. Clauses 4.2-4.3 still deny holders proprietary interest in stored bars and pass title only on collection. Independent reserve reports, account segregation and insolvency safeguards remain unverified. This identity correction does not renew the October 5 composition snapshot or October 15 review start. Holder census on 2026-10-29: the CSV allocates 37,000.05 XGZ (94.9%) to one address, which still held 37,000.049605 XGZ at Ethereum block 26297907 (2026-10-29T10:49:59Z). The mint/burn census from block 23231220 records mints of 18,000, 21,000 and 19,000 XGZ and one 19,000 XGZ burn from the owner wallet on 12 March 2026, re-minted to that address on 20 March; the transparency table gives every bar a 19 March 2026 vault-in date although 39,000 XGZ was outstanding from 19 December 2025. Neither the census nor this note renews the composition snapshot or review start.",
     "compositionBasis": "Issuer-published holder-to-bar allocation snapshot dated 2026-10-05: 39 Heraeus 1 kg bars at Horsemart Service Limited, mapped to 39,000 XGZ; token-total reconciliation by construction, not independent physical inventory assurance",
     "compositionAsOf": "2026-10-05",
     "scope": "full-composition",
@@ -88,7 +92,7 @@
     "sources": [
       {
         "label": "GoldZip physical gold claim",
-        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        "url": "https://web.archive.org/web/20260306052812/https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
       },
       {
         "label": "GoldZip issuer allocation and independent-report gap",
@@ -96,7 +100,7 @@
       },
       {
         "label": "GoldZip primary terms clauses 4.2-4.3 deny proprietary bar interests before collection",
-        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
+        "url": "https://goldzip.info/_next/static/chunks/7dfbe8943ba12d7c.js"
       },
       {
         "label": "GoldZip 5 October 2026 allocation CSV names Horsemart Service Limited",
