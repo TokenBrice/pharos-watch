@@ -5,6 +5,7 @@ import {
   CompiledV9AssetInputSchema,
   V9_REASON_CODES,
   V9UnresolvedFactSchema,
+  type V9DocumentationPolicy,
   type V9MethodologyPolicy,
 } from "@shared/types/safety-score-v9";
 import {
@@ -524,5 +525,204 @@ describe("v10.05 operational governance policy", () => {
       Object.assign(changed.semantic.control.governedIssuance.votingControl, change);
       expect(() => loadV9MethodologyPolicy(changed)).toThrow();
     }
+  });
+});
+
+function documentationFixture(): V9DocumentationPolicy {
+  return {
+    reasonOrder: [
+      "no-scoring-path",
+      "unknown-scores-as-no-credit",
+      "unscored-diagnostic",
+      "coverage-label",
+      "immaterial-deployment",
+      "reserve-dust",
+    ],
+    reasons: [
+      {
+        reason: "no-scoring-path",
+        publicLabel: "Custody question outside the scoring path",
+        retention: "stale-documentation",
+        threshold: null,
+      },
+      {
+        reason: "unknown-scores-as-no-credit",
+        publicLabel: "Mint control credit already withheld",
+        retention: "recompute-per-capture",
+        threshold: null,
+      },
+      {
+        reason: "unscored-diagnostic",
+        publicLabel: "Diagnostic datum, not scored",
+        retention: "recompute-per-capture",
+        threshold: null,
+      },
+      {
+        reason: "coverage-label",
+        publicLabel: "DEX coverage label only",
+        retention: "recompute-per-capture",
+        threshold: null,
+      },
+      {
+        reason: "immaterial-deployment",
+        publicLabel: "Deployment share below the immaterial bar",
+        retention: "recompute-per-capture",
+        threshold: { kind: "known-share-pct", sharePctKey: "documentationImmaterialSharePct" },
+      },
+      {
+        reason: "reserve-dust",
+        publicLabel: "Reserve exposure below the dust bar",
+        retention: "recompute-per-capture",
+        threshold: { kind: "reserve-book-share", sharePctKey: "reserveDustBookSharePct" },
+      },
+    ],
+    documentationImmaterialSharePct: 1,
+    maxAttributableScorePoints: 0.1,
+    reserveDustBookSharePct: 0.01,
+    reserveDustResidualMaxBookSharePct: 0.1,
+    retainExpiredScopedQuestions: true,
+  };
+}
+
+function policyWithDocumentation(documentation: unknown): unknown {
+  const policy = structuredClone(candidatePolicyAsset) as unknown as Record<string, unknown>;
+  const semantic = policy.semantic as Record<string, unknown>;
+  return {
+    ...policy,
+    semantic: {
+      ...semantic,
+      evidence: { ...(semantic.evidence as Record<string, unknown>), documentation },
+    },
+  };
+}
+
+describe("documentation-class policy", () => {
+  it("stays optional for the counting train and binds an authored block into the digest", () => {
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation).toBeUndefined();
+    const loaded = loadV9MethodologyPolicy(policyWithDocumentation(documentationFixture()));
+    expect(loaded.policy.semantic.evidence.documentation).toEqual(documentationFixture());
+    expect(loaded.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+  });
+
+  it.each([
+    ["precedence", (documentation: V9DocumentationPolicy) => {
+      documentation.reasonOrder.reverse();
+      documentation.reasons.reverse();
+    }],
+    ["public label", (documentation: V9DocumentationPolicy) => { documentation.reasons[0]!.publicLabel = "Renamed"; }],
+    ["retention", (documentation: V9DocumentationPolicy) => { documentation.reasons[1]!.retention = "stale-documentation"; }],
+    ["retention switch", (documentation: V9DocumentationPolicy) => {
+      documentation.retainExpiredScopedQuestions = false;
+      documentation.reasons[0]!.retention = "recompute-per-capture";
+    }],
+    ["immaterial share bar", (documentation: V9DocumentationPolicy) => { documentation.documentationImmaterialSharePct = 0.5; }],
+    ["attributable points", (documentation: V9DocumentationPolicy) => { documentation.maxAttributableScorePoints = 0.2; }],
+    ["reserve dust share", (documentation: V9DocumentationPolicy) => { documentation.reserveDustBookSharePct = 0.005; }],
+    ["residual bar", (documentation: V9DocumentationPolicy) => { documentation.reserveDustResidualMaxBookSharePct = 0.2; }],
+  ] as [string, (documentation: V9DocumentationPolicy) => void][])(
+    "changes the semantic digest when the %s changes",
+    (_name, change) => {
+      const documentation = documentationFixture();
+      change(documentation);
+      const loaded = loadV9MethodologyPolicy(policyWithDocumentation(documentation));
+      expect(loaded.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+      expect(loadV9MethodologyPolicy(policyWithDocumentation(documentationFixture())).semanticDigest)
+        .not.toBe(loaded.semanticDigest);
+    },
+  );
+
+  it("requires the exact reason vocabulary in precedence order", () => {
+    const missing = documentationFixture();
+    missing.reasons.pop();
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(missing))).toThrow(/cover the vocabulary/);
+
+    const duplicated = documentationFixture();
+    duplicated.reasons[5] = { ...duplicated.reasons[4]! };
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(duplicated))).toThrow(/cover the vocabulary/);
+
+    const repeatedPrecedence = documentationFixture();
+    repeatedPrecedence.reasonOrder[5] = repeatedPrecedence.reasonOrder[0]!;
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(repeatedPrecedence)))
+      .toThrow(/precedence must list every reason/);
+
+    const misordered = documentationFixture();
+    [misordered.reasonOrder[0], misordered.reasonOrder[1]] =
+      [misordered.reasonOrder[1]!, misordered.reasonOrder[0]!];
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(misordered))).toThrow(/listed in reasonOrder/);
+  });
+
+  it("fails closed on retention, threshold and bar incoherence", () => {
+    const orphanRetention = documentationFixture();
+    orphanRetention.retainExpiredScopedQuestions = false;
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(orphanRetention)))
+      .toThrow(/retainExpiredScopedQuestions/);
+
+    const missingThreshold = documentationFixture();
+    missingThreshold.reasons[4]!.threshold = null;
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(missingThreshold)))
+      .toThrow(/requires a declared share threshold/);
+
+    const predicateThreshold = documentationFixture();
+    predicateThreshold.reasons[0]!.threshold = {
+      kind: "known-share-pct",
+      sharePctKey: "documentationImmaterialSharePct",
+    };
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(predicateThreshold)))
+      .toThrow(/bounded by its predicate/);
+
+    const mismatchedKey = documentationFixture();
+    mismatchedKey.reasons[5]!.threshold = {
+      kind: "known-share-pct",
+      sharePctKey: "reserveDustBookSharePct",
+    };
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(mismatchedKey)))
+      .toThrow(/known-share-pct thresholds read documentationImmaterialSharePct/);
+
+    const mergedBelowRow = documentationFixture();
+    mergedBelowRow.reserveDustBookSharePct = documentationFixture().reserveDustResidualMaxBookSharePct;
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(mergedBelowRow)))
+      .toThrow(/residual bar must exceed the per-row dust share/);
+
+    const materialDocumentation = documentationFixture();
+    materialDocumentation.documentationImmaterialSharePct =
+      V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct;
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(materialDocumentation)))
+      .toThrow(/strictly below the deployment materiality threshold/);
+  });
+
+  it("accepts values one step inside every configured bar", () => {
+    const inside = documentationFixture();
+    inside.documentationImmaterialSharePct =
+      V9_CANDIDATE_POLICY_V1.policy.semantic.materiality.deploymentMaterialSharePct - 0.01;
+    inside.reserveDustBookSharePct = 0.0999;
+    inside.maxAttributableScorePoints = 1;
+    const loaded = loadV9MethodologyPolicy(policyWithDocumentation(inside));
+    expect(loaded.policy.semantic.evidence.documentation?.reserveDustBookSharePct).toBe(0.0999);
+  });
+
+  it.each([
+    "documentationImmaterialSharePct",
+    "maxAttributableScorePoints",
+    "reserveDustBookSharePct",
+    "reserveDustResidualMaxBookSharePct",
+  ] as const)("rejects non-positive or non-finite %s", (field) => {
+    for (const invalid of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      const documentation = documentationFixture();
+      (documentation as unknown as Record<string, unknown>)[field] = invalid;
+      expect(() => loadV9MethodologyPolicy(policyWithDocumentation(documentation))).toThrow();
+    }
+  });
+
+  it("rejects a declared point bound above one point and open or extended blocks", () => {
+    const excessiveBound = documentationFixture();
+    excessiveBound.maxAttributableScorePoints = 1.01;
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(excessiveBound))).toThrow();
+
+    const missingSwitch = documentationFixture() as Partial<V9DocumentationPolicy>;
+    delete missingSwitch.retainExpiredScopedQuestions;
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(missingSwitch))).toThrow();
+
+    const smuggledScoringKey = { ...documentationFixture(), scoringThreshold: 1 };
+    expect(() => loadV9MethodologyPolicy(policyWithDocumentation(smuggledScoringKey))).toThrow();
   });
 });

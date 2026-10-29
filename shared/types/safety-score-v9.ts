@@ -509,6 +509,150 @@ const V9FormulaPolicySchema = z
   })
   .strict();
 
+/**
+ * Documentation-class vocabulary (R5, one authority): an open C/U compiled gap
+ * whose resolution cannot materially move a published score.
+ *
+ * Decision B: nothing declared here may be read by scoring. The class never
+ * changes `evidenceLevel`, `limitedEvidenceCauses`, `limitingCauseGapIds`,
+ * reason treatment, cause, responsibility, binding, mixture weights, caps or
+ * gap identity. Consumers are limited to counting
+ * (`shared/lib/safety-score-v9/open-questions.ts`), public labels, the
+ * evidence-gap registry band and the `openEvidence.byCard[].documentationOnlyLimited`
+ * card annotation, which is derived from the unchanged witnesses.
+ */
+export const V9DocumentationReasonSchema = z.enum([
+  // 3a: `causeScope.factorKey` is `keyCustody`, which no scored component reads.
+  "no-scoring-path",
+  // 3c: mint reconciliation/supervision unknown, a credit the mint grade already withholds.
+  "unknown-scores-as-no-credit",
+  // 3b: policy treatment is `diagnostic`; vetoed when the datum alone gates a pillar.
+  "unscored-diagnostic",
+  // 3d: `incomplete-dex-route-coverage` portfolio label; never a limiting witness.
+  "coverage-label",
+  // 3e: deployment share below `documentationImmaterialSharePct` and non-binding.
+  "immaterial-deployment",
+  // 3f: reserve exposure weight below `reserveDustBookSharePct` of the reserve book.
+  "reserve-dust",
+]);
+export type V9DocumentationReason = z.infer<typeof V9DocumentationReasonSchema>;
+
+/**
+ * What becomes of a classified datum when its own review evidence expires.
+ * `stale-documentation` keeps the datum with its original `reviewedAt` after the
+ * scoped question lapses (gated by `retainExpiredScopedQuestions`);
+ * `recompute-per-capture` carries no authored expiry and is re-derived from the
+ * live predicate on every capture.
+ */
+export const V9DocumentationRetentionSchema = z.enum(["stale-documentation", "recompute-per-capture"]);
+export type V9DocumentationRetention = z.infer<typeof V9DocumentationRetentionSchema>;
+
+/** The share vocabulary a documentation reason can be bounded by; `null` reasons need no bar. */
+export const V9DocumentationThresholdKindSchema = z.enum(["known-share-pct", "reserve-book-share"]);
+export type V9DocumentationThresholdKind = z.infer<typeof V9DocumentationThresholdKindSchema>;
+
+/**
+ * Names the percent-denominated policy key that supplies a threshold reason's
+ * bar so the classifier reads the value instead of restating it. A bar
+ * documents a share strictly below it.
+ */
+export const V9DocumentationThresholdSchema = z
+  .object({
+    kind: V9DocumentationThresholdKindSchema,
+    sharePctKey: z.enum(["documentationImmaterialSharePct", "reserveDustBookSharePct"]),
+  })
+  .strict()
+  .superRefine((threshold, ctx) => {
+    const expectedKey = threshold.kind === "known-share-pct"
+      ? "documentationImmaterialSharePct"
+      : "reserveDustBookSharePct";
+    if (threshold.sharePctKey !== expectedKey) {
+      issue(ctx, ["sharePctKey"], `${threshold.kind} thresholds read ${expectedKey}`);
+    }
+  });
+export type V9DocumentationThreshold = z.infer<typeof V9DocumentationThresholdSchema>;
+
+export const V9DocumentationReasonPolicySchema = z
+  .object({
+    reason: V9DocumentationReasonSchema,
+    publicLabel: z.string().min(1),
+    retention: V9DocumentationRetentionSchema,
+    threshold: V9DocumentationThresholdSchema.nullable(),
+  })
+  .strict();
+export type V9DocumentationReasonPolicy = z.infer<typeof V9DocumentationReasonPolicySchema>;
+
+/** The two reasons that are bounded by a declared share instead of a structural predicate. */
+const V9_DOCUMENTATION_THRESHOLD_REASONS: Readonly<Record<V9DocumentationReason, boolean>> = {
+  "no-scoring-path": false,
+  "unknown-scores-as-no-credit": false,
+  "unscored-diagnostic": false,
+  "coverage-label": false,
+  "immaterial-deployment": true,
+  "reserve-dust": true,
+};
+
+export const V9DocumentationPolicySchema = z
+  .object({
+    // Classifier precedence: the first matching reason wins.
+    reasonOrder: z.array(V9DocumentationReasonSchema).length(V9DocumentationReasonSchema.options.length),
+    reasons: z.array(V9DocumentationReasonPolicySchema).length(V9DocumentationReasonSchema.options.length),
+    // Strict `<` share of one control's supply above which its deployment datum is required again.
+    documentationImmaterialSharePct: z.number().finite().positive().max(100),
+    // Declared worst case published points this class can move; a bound, never a price.
+    maxAttributableScorePoints: z.number().finite().positive().max(1),
+    // Strict `<` share of the reserve book below which one exposure row is dust.
+    reserveDustBookSharePct: z.number().finite().positive().max(100),
+    // A merged per-root dust residual stays documentation below this share of the book.
+    reserveDustResidualMaxBookSharePct: z.number().finite().positive().max(100),
+    // Retains expired scoped questions as stale documentation instead of dropping them.
+    retainExpiredScopedQuestions: z.boolean(),
+  })
+  .strict()
+  .superRefine((documentation, ctx) => {
+    const vocabulary = V9DocumentationReasonSchema.options;
+    const { reasonOrder, reasons } = documentation;
+    if (
+      reasons.length !== vocabulary.length ||
+      !vocabulary.every((reason) => reasons.some((entry) => entry.reason === reason))
+    ) {
+      issue(ctx, ["reasons"], "Documentation reasons must cover the vocabulary exactly once");
+    }
+    if (new Set(reasonOrder).size !== vocabulary.length) {
+      issue(ctx, ["reasonOrder"], "Documentation precedence must list every reason exactly once");
+    }
+    if (reasons.some((entry, index) => entry.reason !== reasonOrder[index])) {
+      issue(ctx, ["reasons"], "Documentation reasons must be listed in reasonOrder");
+    }
+    reasons.forEach((entry, index) => {
+      const thresholded = V9_DOCUMENTATION_THRESHOLD_REASONS[entry.reason];
+      if (thresholded !== (entry.threshold !== null)) {
+        issue(
+          ctx,
+          ["reasons", index, "threshold"],
+          thresholded
+            ? `${entry.reason} requires a declared share threshold`
+            : `${entry.reason} is bounded by its predicate, not a share threshold`,
+        );
+      }
+      if (!documentation.retainExpiredScopedQuestions && entry.retention === "stale-documentation") {
+        issue(
+          ctx,
+          ["reasons", index, "retention"],
+          "Stale documentation retention requires retainExpiredScopedQuestions",
+        );
+      }
+    });
+    if (documentation.reserveDustBookSharePct >= documentation.reserveDustResidualMaxBookSharePct) {
+      issue(
+        ctx,
+        ["reserveDustResidualMaxBookSharePct"],
+        "Merged reserve dust residual bar must exceed the per-row dust share",
+      );
+    }
+  });
+export type V9DocumentationPolicy = z.infer<typeof V9DocumentationPolicySchema>;
+
 const V9EvidencePolicySchema = z
   .object({
     rank: z
@@ -520,6 +664,9 @@ const V9EvidencePolicySchema = z
       })
       .strict(),
     dispositions: z.array(V9FactDispositionSchema),
+    // Optional so the counting train parses a policy without the documentation
+    // class; the T2 train authors the block. Absent classifies nothing.
+    documentation: V9DocumentationPolicySchema.optional(),
     evidenceExpiry: z
       .object({
         reviewedResearchMaxAgeSec: z.number().int().positive(),
@@ -1243,6 +1390,20 @@ export const V9MethodologyPolicySchema = V9MethodologyPolicyBaseSchema.superRefi
   const ranks = Object.values(policy.semantic.evidence.rank);
   if (new Set(ranks).size !== ranks.length || Math.min(...ranks) !== 0 || Math.max(...ranks) !== ranks.length - 1) {
     issue(ctx, ["semantic", "evidence", "rank"], "Evidence ranks must be a complete zero-based ordering");
+  }
+  // A documentation bar at or above the binding materiality threshold would let
+  // the class claim shares the scorer already treats as material; the flag is a
+  // label, never a second binding rule.
+  const documentationPolicy = policy.semantic.evidence.documentation;
+  if (
+    documentationPolicy &&
+    documentationPolicy.documentationImmaterialSharePct >= policy.semantic.materiality.deploymentMaterialSharePct
+  ) {
+    issue(
+      ctx,
+      ["semantic", "evidence", "documentation", "documentationImmaterialSharePct"],
+      "Documentation immaterial share must stay strictly below the deployment materiality threshold",
+    );
   }
 
   const reasonCodes = policy.reasonRegistry.map((entry) => entry.code);
