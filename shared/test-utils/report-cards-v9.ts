@@ -8,7 +8,6 @@ import {
 } from "@shared/types/report-cards-v9";
 import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { scoreToGrade, V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
-import type { V9OpenEvidence } from "@shared/types/safety-score-v9-open-evidence";
 import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard } from "@shared/types/safety-score-v9-public";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 

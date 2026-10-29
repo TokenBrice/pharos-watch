@@ -90,10 +90,10 @@ describe("ReportCardMiniV9 viewport radar", () => {
     expect(html).toContain("min-height:140px");
   });
 
-  it("keeps pipeline-gap wording only for cause A and hides the radar below two pillars", () => {
+  it("keeps data-pipeline-unavailable wording only for cause A and hides the radar below two pillars", () => {
     const gap = projectV9TableCard(makeReportCardsV9PipelineGapCard("control", "A", { id: "usdt-tether" }));
     const html = renderToStaticMarkup(<ReportCardMiniV9 card={gap} identity={identity} />);
-    expect(html).toContain("Backing and Exit excluded · pipeline gap");
+    expect(html).toContain("Backing and Exit excluded · data pipeline unavailable");
     expect(html).toContain("Pillar radar unavailable");
   });
 });

@@ -20,7 +20,6 @@ import {
   compileNativeV3FactSet,
   coreFixture,
   createV9FactStatus,
-  fullAsset,
   knownStatus,
   requiredV9Applicability,
 } from "./safety-score-v9-facts.fixture-support";
