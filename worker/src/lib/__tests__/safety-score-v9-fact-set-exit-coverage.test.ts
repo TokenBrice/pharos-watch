@@ -1069,7 +1069,7 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(missing.evaluated.scoreInput.pillars.exit.score)
       .toBe(complete.evaluated.scoreInput.pillars.exit.score);
     // The suffix in presentation is the disclosure; the verified class never moves the score.
-    expect(missing.evaluated.score).toBe(complete.evaluated.score);
+    expect(missing.evaluated.trace.finalScore).toBe(complete.evaluated.trace.finalScore);
   });
 
   it("keeps the DEX portfolio denominator and cause independent of fee-only changes", () => {
