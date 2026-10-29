@@ -127,6 +127,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     exempt("scripts/ci/check-cron-connection-budget.ts", "read-only"),
     exempt("scripts/ci/check-cron-schedule-sync.ts", "read-only"),
     exempt("scripts/ci/check-env-contract.ts", "read-only"),
+    exempt("scripts/ci/check-incident-review-keys.ts", "read-only"),
     exempt("scripts/ci/check-oracle-risk-coverage.ts", "read-only"),
     exempt("scripts/ci/check-redemption-backstops.ts", "build"),
     exempt("scripts/ci/check-script-entrypoints.ts", "read-only"),
