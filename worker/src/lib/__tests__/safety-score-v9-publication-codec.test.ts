@@ -18,6 +18,7 @@ import {
 import {
   admitAndSerializeSafetyScoreV9Publication,
   parseSafetyScoreV9Publication,
+  requireCurrentSafetyScoreV9Publication,
   publicationIdentityFromStorageEnvelope,
   SafetyScoreV9StorageMetadataSchema,
   serializeSafetyScoreV9Publication,
@@ -403,7 +404,17 @@ describe("Safety Score V9 publication codec", () => {
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toMatchObject({ code: "publication-schema-cutover-pending" });
   });
 
-  it.each([4, 8])("refuses unknown authenticated publication schema %s", async (schemaVersion) => {
+  it("admits the retained schema-7 generation without inventing an open-evidence block", async () => {
+    const publication = makeWorkerSafetyScoreV9Publication();
+    const { openEvidence: _currentBlock, ...previous } = publication;
+    const stored = await authenticatedPayload(publication, () => ({ ...previous, schemaVersion: 7 }));
+    const admitted = await parseSafetyScoreV9Publication(stored);
+    expect(admitted.schemaVersion).toBe(7);
+    expect(admitted).not.toHaveProperty("openEvidence");
+    expect(() => requireCurrentSafetyScoreV9Publication(admitted)).toThrow(/schema 7/);
+  });
+
+  it.each([4, 9])("refuses unknown authenticated publication schema %s", async (schemaVersion) => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const stored = await authenticatedPayload(publication, (payload) => ({ ...payload, schemaVersion }));
     await expect(parseSafetyScoreV9Publication(stored)).rejects.toThrow(`Unsupported Safety Score publication schema ${schemaVersion}`);

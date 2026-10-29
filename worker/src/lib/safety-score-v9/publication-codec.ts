@@ -5,6 +5,8 @@ import {
   type SafetyScoreV9CurrentCard,
   SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9CurrentResponse,
+  SafetyScoreV9PreviousResponseSchema,
+  type SafetyScoreV9PreviousResponse,
 } from "@shared/types/safety-score-v9-public";
 import type { SafetyScoreV9PublicationIdentity } from "@shared/types/safety-score-publication";
 import { BaseInputGenerationIdSchema, Sha256Schema } from "@shared/types/safety-schema-primitives";
@@ -37,9 +39,31 @@ export class SafetyScoreV9SchemaCutoverPendingError extends Error {
   constructor(readonly source: "publication" | "health" = "publication", readonly storedUpdatedAt: number | null = null) {
     super(source === "health"
       ? "publication-schema-cutover-pending: stored health schema 1 awaits health schema 2"
-      : "publication-schema-cutover-pending: stored schema 6 awaits a schema 7 publication");
+      : "publication-schema-cutover-pending: stored schema 6 awaits a schema 7 or 8 publication");
     this.name = "SafetyScoreV9SchemaCutoverPendingError";
   }
+}
+
+/**
+ * A stored publication admitted during the v7→v8 window. Writers emit schema 8
+ * only; the reader also admits the retained schema-7 generation until the next
+ * publication re-publishes it in the new shape. Schema 7 carries no
+ * `openEvidence`, so consumers must render the block as unavailable, never zero.
+ */
+export type SafetyScoreV9AdmittedPublication = SafetyScoreV9CurrentResponse | SafetyScoreV9PreviousResponse;
+
+/**
+ * Assert the current envelope for callers that read `openEvidence` or write
+ * current-only projections. During the v7→v8 window such a caller must fail
+ * visibly instead of treating a retained generation as block-bearing.
+ */
+export function requireCurrentSafetyScoreV9Publication(
+  publication: SafetyScoreV9AdmittedPublication,
+): SafetyScoreV9CurrentResponse {
+  if (publication.schemaVersion !== 8) {
+    throw new Error("Safety Score v9 publication is a retained schema 7 generation without openEvidence");
+  }
+  return publication;
 }
 
 const CacheIdentitySchema = z
@@ -94,7 +118,7 @@ export const SafetyScoreV9StorageMetadataSchema = z.discriminatedUnion("storageS
 type CacheIdentity = z.infer<typeof CacheIdentitySchema>;
 
 function publicationIdentity(
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
 ): CacheIdentity {
   return CacheIdentitySchema.parse({
     candidateId: publication.candidateId,
@@ -152,7 +176,7 @@ function decodeCanonicalBase64(value: string, label: string): Uint8Array {
 function parsePublicationPayload(
   raw: string,
   label: string,
-): SafetyScoreV9CurrentResponse {
+): SafetyScoreV9AdmittedPublication {
   const parsed = parseJson(raw);
   if (!parsed.ok) throw new Error(`Malformed ${label} JSON: ${parsed.message}`);
   if (stableJsonStringifyV1(parsed.value) !== raw) {
@@ -196,17 +220,20 @@ function internPublicationStrings(value: object, strings: Map<string, string>): 
   }
 }
 
-function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): SafetyScoreV9CurrentResponse {
-  if (value !== null && typeof value === "object" && "schemaVersion" in value && value.schemaVersion === 6) {
-    throw new SafetyScoreV9SchemaCutoverPendingError();
+function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): SafetyScoreV9AdmittedPublication {
+  const schemaVersion = value !== null && typeof value === "object" && "schemaVersion" in value
+    ? value.schemaVersion : "missing";
+  if (schemaVersion === 6) throw new SafetyScoreV9SchemaCutoverPendingError();
+  if (schemaVersion !== 7 && schemaVersion !== 8) {
+    throw new Error(`Unsupported Safety Score publication schema ${String(schemaVersion)}; active reader requires schema 7 or 8 and never infers route identity from legacy keys`);
   }
+  const responseSchema = schemaVersion === 7
+    ? SafetyScoreV9PreviousResponseSchema
+    : SafetyScoreV9CurrentResponseSchema;
   if (value === null || typeof value !== "object" || Array.isArray(value) ||
-      !("schemaVersion" in value) || value.schemaVersion !== 7) {
-    const version = value !== null && typeof value === "object" && "schemaVersion" in value
-      ? value.schemaVersion : "missing";
-    throw new Error(`Unsupported Safety Score publication schema ${version}; active reader requires schema 7 and never infers route identity from legacy keys`);
+      !("cards" in value) || !Array.isArray(value.cards)) {
+    return responseSchema.parse(value);
   }
-  if (!("cards" in value) || !Array.isArray(value.cards)) return SafetyScoreV9CurrentResponseSchema.parse(value);
   const cards: unknown[] = value.cards;
   // JSON.parse transferred these rows to this decoder. Admit and replace each
   // owned row before moving on, rather than retaining two complete card graphs.
@@ -230,7 +257,7 @@ function admitPublicationPayload(value: unknown, reuseUnchangedCards = false): S
       throw error;
     }
   }
-  return SafetyScoreV9CurrentResponseSchema.safeExtend({
+  return responseSchema.safeExtend({
     cards: z.array(z.custom<SafetyScoreV9CurrentCard>((card) =>
       card !== null && typeof card === "object" && admittedCards.has(card))),
   }).parse(value);
@@ -253,7 +280,10 @@ export async function admitAndSerializeSafetyScoreV9Publication(
   encoding: "legacy" | "dictionary" = "dictionary",
 ): Promise<{ publication: Readonly<SafetyScoreV9CurrentResponse>; stored: string }> {
   throwIfAborted(signal);
-  const publication = deepFreeze(admitPublicationPayload({ ...value, cards: [...value.cards] }, true));
+  const admitted = admitPublicationPayload({ ...value, cards: [...value.cards] }, true);
+  // Writers emit only the current envelope; admitting a retained generation is read-only.
+  if (admitted.schemaVersion !== 8) throw new Error("Safety Score v9 writers must emit schema 8");
+  const publication = deepFreeze(admitted);
   const dictionary = encoding === "dictionary" ? encodePublicationDictionary(publication, signal) : undefined;
   const compressed = await gzipCanonicalJson(dictionary?.chunks ?? stableJsonStringifyChunksV1(publication), {
     label: "Safety Score v9 publication",
@@ -304,7 +334,7 @@ export async function serializeSafetyScoreV9PublicationWithEncoding(
 export async function parseSafetyScoreV9Publication(
   storedValue: string,
   signal?: AbortSignal,
-): Promise<SafetyScoreV9CurrentResponse> {
+): Promise<SafetyScoreV9AdmittedPublication> {
   throwIfAborted(signal);
   if (
     utf8ByteLength(storedValue) >

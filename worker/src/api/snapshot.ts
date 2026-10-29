@@ -31,6 +31,7 @@ import {
   HistoricalReportCardsV9ResponseSchema,
   WitnessHistoricalReportCardsV9ResponseSchema,
   HistoricalTypedReportCardsV9ResponseSchema,
+  HistoricalResolvedReportCardsV9ResponseSchema,
 } from "@shared/types/report-cards-v9";
 import {
   PublicSnapshotEnvelopeSchema,
@@ -211,11 +212,16 @@ function validateV9ReportCards(
   // fields to manufacture historical identity.
   const historicalMinor = /^10\.(\d{2})$/.exec(version)?.[1];
   const minor = historicalMinor === undefined ? null : Number(historicalMinor);
+  // Report8 spanned two card contracts: typed inline-control cards through
+  // 10.28 and resolved cards from 10.29 until the report9 cutover. Both are
+  // archive-only; anything else must satisfy the live contract.
   const historicalSchema = reportCards.schemaVersion === 7 && minor !== null && minor <= 10
     ? minor < 10 ? WitnessHistoricalReportCardsV9ResponseSchema : HistoricalReportCardsV9ResponseSchema
     : reportCards.schemaVersion === 8 && minor !== null && minor >= 11 && minor <= 28
       ? HistoricalTypedReportCardsV9ResponseSchema
-      : ReportCardsV9ResponseSchema;
+      : reportCards.schemaVersion === 8 && minor !== null && minor >= 29 && minor <= 36
+        ? HistoricalResolvedReportCardsV9ResponseSchema
+        : ReportCardsV9ResponseSchema;
   const parsed = historicalSchema.safeParse(validationInput);
   if (!parsed.success) {
     return "safety-score-publication-invalid";

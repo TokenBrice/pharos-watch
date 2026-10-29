@@ -19,6 +19,7 @@ import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import { createV9OpenEvidenceCounter, type V9OpenEvidenceCounter } from "@shared/lib/safety-score-v9/open-questions";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
 import { buildSafetyScoreV9Response, createSafetyScoreV9ResponseProjector, V9PublicCardProjectionError, type V9PublicCardProjectionInput, type V9PublicResponseProjector } from "@shared/lib/safety-score-v9/public";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -769,6 +770,9 @@ function buildSafetyScoreV9CandidatePipeline(
   const bridgeJoinDiagnostics = "bridgeJoinDiagnostics" in compilation
     ? compilation.bridgeJoinDiagnostics : retainedBridgeJoinDiagnostics;
   let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
+  // Open-evidence counting is derived at build time from the compiled gap table
+  // plus each evaluated card; T1 classifies no gap as documentation.
+  let openEvidenceCounter: V9OpenEvidenceCounter = createV9OpenEvidenceCounter(compiledFacts.assets, () => null);
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
   const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
@@ -797,6 +801,7 @@ function buildSafetyScoreV9CandidatePipeline(
     compilation =
       compileFacts(retryExtension, evaluationFailures);
     compiledFacts = compilation.factSet;
+    openEvidenceCounter = createV9OpenEvidenceCounter(compiledFacts.assets, () => null);
     quarantines = compilation.quarantines;
     publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput });
     compilation = null;
@@ -816,12 +821,14 @@ function buildSafetyScoreV9CandidatePipeline(
     try {
       if (retainIntermediates) {
         evaluatedSet = evaluateValidatedV9FactSet(compiledFacts!, policy);
+        for (const asset of evaluatedSet.assets) openEvidenceCounter.add(asset);
         publication = publishEvaluatedCandidate();
       } else {
         const projector = createSafetyScoreV9ResponseProjector();
         const factOwner = { factSet: compiledFacts };
         compiledFacts = null;
         const projected = evaluateValidatedV9FactSetForPublication(factOwner, policy, (asset) => {
+          openEvidenceCounter.add(asset);
           projector.project(publicProjectionInput(asset));
           publicationFacts.displayByAssetId.delete(asset.assetId);
           publicationFacts.dependencyMetadataByAssetId.delete(asset.assetId);
@@ -937,9 +944,10 @@ function buildSafetyScoreV9CandidatePipeline(
       commonModeGroups: evaluated.commonModeGroups,
       dexMaxAgeSec: dexExitRouteMaxAgeSec,
     };
+    const openEvidence = openEvidenceCounter.finish();
     const candidate = projector === undefined
-      ? buildSafetyScoreV9Response({ ...responseArgs, results: takePublicResults })
-      : projector.finalize({ ...responseArgs, resultDigest: evaluated.scoreResultDigest });
+      ? buildSafetyScoreV9Response({ ...responseArgs, openEvidence, results: takePublicResults })
+      : projector.finalize({ ...responseArgs, openEvidence, resultDigest: evaluated.scoreResultDigest });
     return { candidate, candidateIdentity, retained };
   }
 
