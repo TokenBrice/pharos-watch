@@ -8,12 +8,14 @@ import { normalizeStablecoinsPayload } from "../shared";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import type * as FetchRetry from "../../../lib/fetch-retry";
 import type * as Onchain from "../../reserve-adapters/onchain";
+import type * as TokenSupply from "../../reserve-adapters/token-supply";
 import type * as DbCache from "../../../lib/db-cache";
 import type * as NativeAggregate from "../supplemental-assets/onchain-supply";
 
-const mocks = vi.hoisted(() => ({ chart: vi.fn(), onchain: vi.fn(), nativeAggregate: vi.fn(), getCache: vi.fn(), setCache: vi.fn() }));
+const mocks = vi.hoisted(() => ({ chart: vi.fn(), onchain: vi.fn(), solana: vi.fn(), nativeAggregate: vi.fn(), getCache: vi.fn(), setCache: vi.fn() }));
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({ ...(await importOriginal<typeof FetchRetry>()), fetchTextWithRetry: mocks.chart }));
 vi.mock("../../reserve-adapters/onchain", async (importOriginal) => ({ ...(await importOriginal<typeof Onchain>()), fetchErc20TotalSupply: mocks.onchain }));
+vi.mock("../../reserve-adapters/token-supply", async (importOriginal) => ({ ...(await importOriginal<typeof TokenSupply>()), fetchSolanaTokenSupply: mocks.solana }));
 vi.mock("../../../lib/db-cache", async (importOriginal) => ({ ...(await importOriginal<typeof DbCache>()), getCache: mocks.getCache, setCacheIfNewer: mocks.setCache }));
 vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
   ...(await importOriginal<typeof NativeAggregate>()), fetchCuratedAggregateOnChainMcap: mocks.nativeAggregate,
@@ -55,6 +57,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   vi.spyOn(Date, "now").mockReturnValue(NOW * 1000);
   mocks.onchain.mockResolvedValue(null);
+  mocks.solana.mockResolvedValue(null);
   mocks.chart.mockResolvedValue(null);
   mocks.nativeAggregate.mockResolvedValue(null);
   mocks.getCache.mockResolvedValue(null);
@@ -394,6 +397,133 @@ describe("chain dropout guard", () => {
     expect(asset.supplySource).toBe("defillama-chain-repair");
     expect(asset.supplyObservedAt).toBe(NOW - 900);
     expect(getCirculatingRawOrNull(asset)).toBe(before + 40_000_000);
+  });
+
+  it.each([null, 10_000, 50_505])("publishes native Solana XUSD once and releases its collapse with list current %s", async (listCurrent) => {
+    const now = Date.parse("2026-10-29T10:50:19Z") / 1000;
+    const firstFlaggedAt = Date.parse("2026-10-23T11:46:56Z") / 1000;
+    const key = JSON.stringify(["xusd-straitsx", "solana"]);
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [key]: { assetId: "xusd-straitsx", chainId: "solana", chainLabel: "Solana", baselineUsd: 12_052_667,
+        baselineObservedAt: firstFlaggedAt - 900, baselineSource: "state", quarantinedSince: firstFlaggedAt },
+    } };
+    const asset: PeggedAsset = {
+      id: "xusd-straitsx", name: "StraitsX XUSD", symbol: "XUSD", pegType: "peggedUSD", pegMechanism: "fiat-backed", supplySource: "defillama",
+      circulating: { peggedUSD: 46_000_000 + (listCurrent ?? 0) }, supplyObservedAt: now - 900,
+      chains: ["Ethereum", ...(listCurrent == null ? [] : ["Solana"])],
+      chainCirculating: {
+        Ethereum: { current: 46_000_000, circulatingPrevDay: 46_000_000 },
+        ...(listCurrent == null ? {} : { Solana: { current: listCurrent } }),
+      },
+    };
+    mocks.solana.mockResolvedValue(50_505n * 10n ** 6n);
+    const signal = new AbortController().signal;
+    const result = await guardChainDropouts({ assets: [asset], now, state, signal, chainRpcs: buildChainRpcs("test-alchemy") });
+    expect(result).toMatchObject({ flagged: 1, repaired: 1, historyFetches: 0, quarantinedAssetIds: [], unavailableAssetIds: [] });
+    expect(mocks.solana).toHaveBeenCalledTimes(1);
+    expect(mocks.solana).toHaveBeenCalledWith("4UbvZiomFvXDnZSz6vdHiDNiHozH2ykTEqjhhbVHiv9z", expect.any(AbortSignal), undefined, expect.any(String), undefined);
+    expect(mocks.onchain).not.toHaveBeenCalled();
+    expect(asset).toMatchObject({
+      circulating: { peggedUSD: 46_050_505 }, supplySource: "defillama-chain-repair", supplyObservedAt: now - 900,
+      chainCirculating: { Solana: { current: 50_505 } },
+      supplyChainGuard: { status: "repaired", chains: [{ chainId: "solana", listCurrentUsd: listCurrent,
+        repairedCurrentUsd: 50_505, resolution: "onchain-total-supply", observedAt: now, observedAtKind: "local-read" }] },
+    });
+    expect(asset.chains).toContain("Solana");
+    expect(asset.supplyRestored).toBeUndefined();
+    expect(asset.chainCirculating!.Ethereum.current).toBe(46_000_000);
+    expect(result.state.pairs[key]).toMatchObject({ baselineUsd: 50_505, baselineObservedAt: now, quarantinedSince: null, releasedAt: now });
+    expect(StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0].supplyChainGuard)
+      .toEqual(asset.supplyChainGuard);
+  });
+
+  it.each(["null", "error", "deadline"])("keeps omitted Solana XUSD quarantined when its native read returns %s", async (failure) => {
+    const now = Date.parse("2026-10-29T10:50:19Z") / 1000;
+    const firstFlaggedAt = Date.parse("2026-10-23T11:46:56Z") / 1000;
+    const key = JSON.stringify(["xusd-straitsx", "solana"]);
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [key]: { assetId: "xusd-straitsx", chainId: "solana", chainLabel: "Solana", baselineUsd: 12_052_667,
+        baselineObservedAt: firstFlaggedAt - 900, baselineSource: "state", quarantinedSince: firstFlaggedAt },
+    } };
+    const asset: PeggedAsset = {
+      id: "xusd-straitsx", name: "StraitsX XUSD", symbol: "XUSD", pegType: "peggedUSD", supplySource: "defillama",
+      circulating: { peggedUSD: 46_000_000 }, chains: ["Ethereum"],
+      chainCirculating: { Ethereum: { current: 46_000_000, circulatingPrevDay: 46_000_000 } },
+    };
+    if (failure === "error") mocks.solana.mockRejectedValue(new Error("rpc down"));
+    if (failure === "deadline") {
+      vi.spyOn(AbortSignal, "timeout").mockReturnValue(AbortSignal.abort(new DOMException("guard deadline", "TimeoutError")));
+      mocks.solana.mockResolvedValue(50_505n * 10n ** 6n);
+    }
+    const result = await guardChainDropouts({ assets: [asset], now, state, chainRpcs: buildChainRpcs("test-alchemy") });
+    if (failure === "deadline") expect(AbortSignal.timeout).toHaveBeenCalledWith(CHAIN_DROPOUT_POLICY.solanaReadTimeoutMs);
+    expect(mocks.solana).toHaveBeenCalledTimes(1);
+    expect(result).toMatchObject({ repaired: 0, quarantinedAssetIds: ["xusd-straitsx"] });
+    expect(asset).toMatchObject({ supplyRestored: true, chainCirculating: { Solana: { current: null } },
+      supplyChainGuard: { status: "quarantined", quarantinedSince: firstFlaggedAt,
+        chains: [{ listCurrentUsd: null, resolution: "carried-baseline" }] } });
+    expect(asset.supplyChainGuard!.chains[0].observedAtKind).toBeUndefined();
+    expect(result.state.pairs[key]).toMatchObject({ baselineUsd: 12_052_667, quarantinedSince: firstFlaggedAt });
+    expect(result.state.pairs[key].releasedAt).toBeUndefined();
+  });
+
+  it.each([
+    { source: "state", gain: 0, read: "confirmed" },
+    { source: "publication", gain: 0, read: "confirmed" },
+    { source: "clean", gain: 1_000, read: "confirmed" },
+    { source: "state", gain: 1_000, read: "confirmed" },
+    { source: "state", gain: 0, read: "null" },
+    { source: "state", gain: 0, read: "error" },
+    { source: "state", gain: 0, read: "above-collapse" },
+  ])("handles production XUSD ambiguity from $source with gain $gain and native read $read", async ({ source, gain, read }) => {
+    const now = Date.parse("2026-10-29T12:00:00Z") / 1000;
+    const firstFlaggedAt = 1792756016;
+    const key = JSON.stringify(["xusd-straitsx", "solana"]);
+    const heldTotalUsd = 58_187_635.87;
+    const baselineUsd = 12_052_667.17;
+    const asset: PeggedAsset = {
+      id: "xusd-straitsx", name: "StraitsX XUSD", symbol: "XUSD", pegType: "peggedUSD", pegMechanism: "fiat-backed", supplySource: "defillama",
+      circulating: { peggedUSD: 34_130_563 }, supplyObservedAt: now - 900, chains: ["BSC", "Ethereum"],
+      chainCirculating: { BSC: { current: 21_983_043.6 }, Ethereum: { current: 12_147_519.4 } },
+    };
+    const state: ChainDropoutState = { version: 1, pairs: {
+      [key]: { assetId: "xusd-straitsx", chainId: "solana", chainLabel: "Solana", baselineUsd,
+        baselineObservedAt: 1792754140, baselineSource: "state", quarantinedSince: firstFlaggedAt,
+        ...(source === "clean" ? {} : { ambiguousSince: firstFlaggedAt, heldTotalUsd }) },
+      [JSON.stringify(["xusd-straitsx", "bsc"])]: { assetId: "xusd-straitsx", chainId: "bsc", chainLabel: "BSC",
+        baselineUsd: 21_983_043.6 - gain, baselineObservedAt: now - 900, baselineSource: "state", quarantinedSince: null },
+      [JSON.stringify(["xusd-straitsx", "ethereum"])]: { assetId: "xusd-straitsx", chainId: "ethereum", chainLabel: "Ethereum",
+        baselineUsd: 12_147_519.4, baselineObservedAt: now - 900, baselineSource: "state", quarantinedSince: null },
+    } };
+    const previous: PeggedAsset = { ...structuredClone(asset), circulating: { peggedUSD: heldTotalUsd }, supplyRestored: true,
+      supplyChainGuard: { reason: "supply-chain-dropout", status: "quarantined", quarantinedSince: firstFlaggedAt, concurrentGainUsd: 0,
+        chains: [{ chainId: "solana", chainLabel: "Solana", listCurrentUsd: null, baselineUsd,
+          baselineObservedAt: 1792754140, baselineSource: "state", resolution: "carried-baseline" }] } };
+    mocks.solana.mockResolvedValue(read === "null" ? null : BigInt(read === "above-collapse" ? 8_000_000 : 50_505) * 10n ** 6n);
+    if (read === "error") mocks.solana.mockRejectedValue(new Error("rpc down"));
+    const result = await guardChainDropouts({ assets: [asset], now,
+      state: source === "publication" ? { version: 1, pairs: {} } : state,
+      ...(source === "publication" ? { stateReadFailed: true, previousAssetsById: new Map([["xusd-straitsx", previous]]) } : {}),
+      chainRpcs: buildChainRpcs("test-alchemy"),
+    });
+    if (read === "confirmed") {
+      expect(result).toMatchObject({ repaired: 1, historyFetches: 0, quarantinedAssetIds: [], unavailableAssetIds: [] });
+      expect(getCirculatingRawOrNull(asset)).toBeCloseTo(34_181_068, 2);
+      expect(asset).toMatchObject({ chainCirculating: { Solana: { current: 50_505 } }, supplyObservedAt: now - 900,
+        supplyChainGuard: { status: "repaired", chains: [{ listCurrentUsd: null, repairedCurrentUsd: 50_505,
+          resolution: "onchain-total-supply", observedAt: now, observedAtKind: "local-read" }] } });
+      expect(asset.supplyRestored).toBeUndefined();
+      expect(asset.supplyChainGuard!.concurrentGainUsd).toBeUndefined();
+      expect(result.state.pairs[key]).toMatchObject({ baselineUsd: 50_505, baselineObservedAt: now, quarantinedSince: null, releasedAt: now });
+      expect(result.state.pairs[key].ambiguousSince).toBeUndefined();
+      expect(result.state.pairs[key].heldTotalUsd).toBeUndefined();
+    } else {
+      expect(result).toMatchObject({ repaired: 0, quarantinedAssetIds: ["xusd-straitsx"] });
+      expect(getCirculatingRawOrNull(asset)).toBe(heldTotalUsd);
+      expect(asset).toMatchObject({ supplyRestored: true, chainCirculating: { Solana: { current: null } }, supplyChainGuard: { status: "quarantined" } });
+      expect(result.state.pairs[key]).toMatchObject({ baselineUsd, quarantinedSince: firstFlaggedAt, ambiguousSince: firstFlaggedAt, heldTotalUsd });
+      expect(result.state.pairs[key].releasedAt).toBeUndefined();
+    }
   });
 
   it("keeps a natively confirmed zero at zero across persist/reload when later native and chart reads fail", async () => {
@@ -736,10 +866,11 @@ describe("chain dropout guard", () => {
   });
 
   it.each([
-    { assetId: "satusd-river", chainId: "arbitrum", chainLabel: "Arbitrum", pegKey: "peggedUSD", baseline: 10_735_947.2549878, current: 1_149_846.870580486 },
-    { assetId: "eurs-stasis", chainId: "polygon", chainLabel: "Polygon", pegKey: "peggedEUR", baseline: 2_125_295.460187289, current: 472_657.74823731947 },
-  ])("accepts only the dated reviewed $assetId chain reduction, not omitted or later incidents", async ({ assetId, chainId, chainLabel, pegKey, baseline, current }) => {
-    const reviewedAt = Date.parse("2026-10-16T06:18:46Z") / 1000;
+    { assetId: "satusd-river", chainId: "arbitrum", chainLabel: "Arbitrum", pegKey: "peggedUSD", baseline: 10_735_947.2549878, current: 1_149_846.870580486, reviewDate: "2026-10-16T06:18:46Z" },
+    { assetId: "eurs-stasis", chainId: "polygon", chainLabel: "Polygon", pegKey: "peggedEUR", baseline: 2_125_295.460187289, current: 472_657.74823731947, reviewDate: "2026-10-16T06:18:46Z" },
+    { assetId: "sbc-brale", chainId: "polygon", chainLabel: "Polygon", pegKey: "peggedUSD", baseline: 3_476_881, current: 365_027, reviewDate: "2026-10-29T10:50:19Z" },
+  ])("accepts only the dated reviewed $assetId chain reduction, not omitted or later incidents", async ({ assetId, chainId, chainLabel, pegKey, baseline, current, reviewDate }) => {
+    const reviewedAt = Date.parse(reviewDate) / 1000;
     const key = JSON.stringify([assetId, chainId]);
     const makeState = (quarantinedSince = reviewedAt - DAY): ChainDropoutState => ({
       version: 1,
