@@ -67,7 +67,7 @@ export const DISCOVERY_OFFCHAIN_ISSUER_CONFIGS: Record<string, RedemptionBacksto
       ],
     },
     docs: [
-      sourceRef("GoldZip physical claim and redemption", "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf", ["route", "access"]),
+      sourceRef("GoldZip physical claim and redemption", "https://web.archive.org/web/20260306052812/https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf", ["route", "access"]),
       sourceRef("GoldZip bar lot and physical redemption", "https://goldzip.info/", ["route", "access"]),
       sourceRef("GoldZip current terms, clauses 4-6: eligibility, no bar ownership and operator-set exchange rate", "https://goldzip.info/terms-conditions/", ["route", "access"]),
       sourceRef("GoldZip current ordinary redemption Rules, retrieved 2026-10-20", "https://goldzip.info/goldzip-rules/", ["route", "access", "fees", "settlement"]),

@@ -13,7 +13,7 @@
       },
       {
         "label": "GoldZip issuance claim",
-        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        "url": "https://web.archive.org/web/20260306052812/https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
       },
       {
         "label": "Ethereum block 26197360 (2026-10-15T10:37:11Z), current implementation, owner freeze/burn roles and paused=false",
@@ -27,7 +27,7 @@
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
-    "summary": "HKGXToken uses token quantities and has no external price-feed or borrower liquidation path. Ordinary terms let the administrator set and change the token-to-bar Exchange Rate. The 15 October 2026 special USDT exit uses the deadline-date Hong Kong weighted-average traded price, with issuer discretion over sources and a fair-price fallback if data are insufficient. Pricing sources and detailed methodology remain confidential. Both exits therefore depend on privileged off-chain pricing rather than an immutable conversion ratio.",
+    "summary": "HKGXToken uses token quantities and has no external price-feed or borrower liquidation path. Ordinary terms let the Operator set and change the token-to-bar Exchange Rate. The 15 October 2026 special USDT exit uses XGZ's own weighted-average traded price on the deadline date (Hong Kong calendar day), with issuer discretion over trading data and a fair-price fallback if data are insufficient. Pricing sources and detailed methodology remain confidential. Both exits therefore depend on privileged off-chain pricing rather than an immutable conversion ratio.",
     "reviewedAt": "2026-10-15",
     "reviewer": "Rev_XgzGoldzip",
     "confidence": "verified",
@@ -39,11 +39,11 @@
       },
       {
         "label": "GoldZip fixed-gram physical issuance and delivery terms",
-        "url": "https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+        "url": "https://web.archive.org/web/20260306052812/https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
       },
       {
         "label": "GoldZip primary legal terms: Exchange Rate definition and clause 6.1.2",
-        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
+        "url": "https://goldzip.info/_next/static/chunks/7dfbe8943ba12d7c.js"
       },
       {
         "label": "GoldZip special exit valuation discretion and confidential pricing methodology",
@@ -54,10 +54,10 @@
       "disposition": "top-level-only",
       "reviewedAt": "2026-10-15",
       "reviewer": "Rev_XgzGoldzip",
-      "rationale": "Administrator discretion governs ordinary token-to-bar pricing and the issuer determines special-exit USDT valuation. These are top-level redemption-pricing powers without borrower, collateral-price or liquidation branches.",
+      "rationale": "Operator discretion governs ordinary token-to-bar pricing and the issuer determines special-exit USDT valuation. These are top-level redemption-pricing powers without borrower, collateral-price or liquidation branches.",
       "sources": [{
-        "label": "GoldZip primary legal terms: administrator-set Exchange Rate",
-        "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
+        "label": "GoldZip primary legal terms: Operator-set Exchange Rate",
+        "url": "https://goldzip.info/_next/static/chunks/7dfbe8943ba12d7c.js"
       }]
     },
     "paths": [{
@@ -70,10 +70,10 @@
         "reviewedAt": "2026-10-15",
         "reviewer": "Rev_XgzGoldzip",
         "confidence": "verified",
-        "rationale": "The canonical Ethereum token's physical exit uses an administrator-set token-to-bar Exchange Rate under clauses 1.1 and 6.1.2; quantity-only on-chain accounting does not remove that off-chain pricing authority.",
+        "rationale": "The canonical Ethereum token's physical exit uses an Operator-set token-to-bar Exchange Rate under clauses 1.1 and 6.1.2; quantity-only on-chain accounting does not remove that off-chain pricing authority.",
         "sources": [{
           "label": "GoldZip primary legal terms: Exchange Rate definition and clause 6.1.2",
-          "url": "https://goldzip.info/_next/static/chunks/91ff74ab739a9196.js"
+          "url": "https://goldzip.info/_next/static/chunks/7dfbe8943ba12d7c.js"
         }]
       }
     }]

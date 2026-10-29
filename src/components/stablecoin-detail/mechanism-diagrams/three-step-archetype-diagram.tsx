@@ -146,13 +146,13 @@ const THREE_STEP_ARCHETYPE_CONFIG: Record<ThreeStepArchetype, ThreeStepConfig> =
     accentColor: "var(--mechanism-commodity-claim)",
     stressFootnote: "stress: vault or title failure; whole-bar redemption minimums",
     ariaLabel: (symbol) =>
-      `Buyer funds allocate specific vaulted metal; ${symbol} is a title claim on numbered bars, redeemable for physical delivery in whole-bar lots.`,
+      `Buyer funds allocate specific vaulted metal; ${symbol} is a claim backed by numbered bars, redeemable for physical delivery in whole-bar lots.`,
     description: (symbol) =>
-      `Buyers send funds to the issuer, which purchases metal and allocates specific numbered bars in a named vault; ${symbol} is minted as a title claim on that allocated metal, and holders can redeem for physical delivery subject to whole-bar minimums, fees, and eligibility.`,
+      `Buyers send funds to the issuer, which purchases metal and allocates specific numbered bars in a named vault; ${symbol} is minted against that allocated metal, and holders can redeem for physical delivery subject to whole-bar minimums, fees, and eligibility. Whether holders own the bars before delivery depends on the issuer's terms.`,
     defaultSteps: (symbol) => [
       { label: "Buyer funds", subtitle: "metal purchased" },
-      { label: "Allocated vault", subtitle: "numbered bars, segregated" },
-      { label: `${symbol} minted`, subtitle: "title to specific metal" },
+      { label: "Allocated vault", subtitle: "bars listed by serial" },
+      { label: `${symbol} minted`, subtitle: "backed by allocated bars" },
     ],
     returnArrow: {
       fromX: 500,

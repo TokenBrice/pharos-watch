@@ -74,7 +74,7 @@ This linked evidence boundary preserves the distinction between direct observati
 - Direct USDfr observations measure only the restricted guarded par-state USDC lane; gas/all-in cost remains independent. apyUSD admits only funded owner-claimable apxUSD receipts with same-run valuation and mutable ceiling-rounded fees, eventual-only. Its queued category/20-day modelled horizon and three-day funded-claim minimum are not a completion maximum.
 - Monetrix request transfers versus claim burns, shared refill-dependent escrow, user/operator pauses and stored cooldown ends remain distinct. Saturn processing can skip requests and uses mutable process-time fees. These lanes stay diagnostic-only; balances, counts and initial runbook fees prove no new-holder throughput.
 - Measured exact reserve/route data does not establish full queued-claim coverage. Source-specific USYC authorized receiver, Spiko investor/day/FX and JLTXX cash-versus-securities conditions stay with their reviewed config; an observation cannot clear unmeasured sibling conditions.
-- GoldZip's ordinary physical route remains separate from its conditional, time-limited USDT issuer-change option. A customer-response deadline is not completion, and conflicting fee descriptions/unbounded transport, assay or sale costs remain gaps.
+- GoldZip's ordinary physical route remains separate from its conditional, time-limited USDT issuer-change option. A customer-response deadline is not completion, and unbounded transport, assay or sale costs remain gaps.
 
 
 ## Zero-route producer evidence review (PKT-12, 2026-10-14)

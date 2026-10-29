@@ -30,7 +30,7 @@ const DESCRIPTION_BY_ARCHETYPE: Record<MechanismArchetype, string> = {
   "rwa-credit-fund":
     "Tokenized credit funds wrap private credit and CLO portfolios in an on-chain fund share. Learn the NAV mechanics, redemption gates, and credit risks.",
   "commodity-claim":
-    "Gold and silver tokens are title claims on specific vaulted bars, not on dollars. Learn how allocation, vault custody, bar-list audits, and physical redemption work.",
+    "Gold and silver tokens are claims on specific vaulted bars, not on dollars. Learn how allocation, title, vault custody, bar-list audits, and physical redemption work.",
   "ucits-trs-fund":
     "UCITS fund tokens combine physical securities and total-return swaps. Learn how proportional fund claims, NAV reconciliation, collateral and default recovery differ from cash.",
   "shared-reserve":

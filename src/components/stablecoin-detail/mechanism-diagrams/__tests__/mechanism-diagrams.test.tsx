@@ -171,15 +171,15 @@ const ARCHETYPE_CASES = [
   {
     archetype: "commodity-claim",
     symbol: "XAUT",
-    ariaPhrase: "title claim on numbered bars",
+    ariaPhrase: "claim backed by numbered bars",
     descPhrase: "allocates specific numbered bars in a named vault",
     steps: [
       "Buyer funds",
       "metal purchased",
       "Allocated vault",
-      "numbered bars, segregated",
+      "bars listed by serial",
       "XAUT minted",
-      "title to specific metal",
+      "backed by allocated bars",
     ],
     returnCaption: "physical delivery",
     stress: "stress: vault or title failure; whole-bar redemption minimums",
