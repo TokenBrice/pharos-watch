@@ -51,6 +51,21 @@ function xautPayload(overrides: Partial<SupplyAttributionJournalV1Payload> = {})
 }
 
 describe("Safety Score V9 supply attribution journal runtime", () => {
+  it("admits timestamped economic observation-stale without widening ordinary deployment vocabulary", () => {
+    const stale = payload({
+      assetId: "witry-brix", sourceId: "reviewed.economic-deployment-partition.v1",
+      sourceOriginClass: "issuer-disclosure-plus-onchain",
+      admissionCode: "supply-attribution.admission.rejected-stale", rejectionCode: "observation-stale",
+      fallbackCode: "supply-attribution.fallback.aggregate-only", contentSha256: null,
+      failedRouteId: "supply-attribution-input-stale-for-reference",
+    });
+    expect(createSupplyAttributionJournalV1(stale).rejectionCode).toBe("observation-stale");
+    expect(() => createSupplyAttributionJournalV1({ ...stale, sourceObservedAtSec: null })).toThrow(/rejected source timestamp/);
+    expect(() => createSupplyAttributionJournalV1({ ...stale,
+      sourceId: "wm.reviewed-deployment-unit-partition.v1", sourceOriginClass: "onchain-observation",
+    })).toThrow(/cannot emit observation-stale/);
+  });
+
   it("content-addresses bounded accepted and rejected attempt records", () => {
     const accepted = createSupplyAttributionJournalV1(payload());
     const rejected = createSupplyAttributionJournalV1(

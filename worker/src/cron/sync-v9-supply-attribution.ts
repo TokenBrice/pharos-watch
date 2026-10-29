@@ -13,6 +13,8 @@ import {
 } from "../lib/safety-score-v9/supply-attribution-journal-store";
 import {
   captureSafetyScoreV9SupplyAttribution,
+  supplyAttributionCaptureAdmission,
+  SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON,
 } from "../lib/safety-score-v9/supply-attribution-capture";
 import {
   parseSafetyScoreV9SupplyAttributionSource,
@@ -37,6 +39,7 @@ import {
 import { batchExecute } from "../lib/d1-primitives";
 import { buildResourcePressure } from "../lib/cron-resource-pressure";
 import { ECONOMIC_SUPPLY_BODY_CAPS } from "../lib/safety-score-v9/economic-supply-observer";
+import { safetyScoreV9SupplyAttributionExpectedAssetIds } from "../lib/safety-score-v9/supply-attribution";
 
 function diagnosticRejectedAssetIds(
   generation: SafetyScoreV9SupplyAttributionGeneration,
@@ -193,6 +196,18 @@ export async function syncSafetyScoreV9SupplyAttribution(
     });
   }
 
+  const admission = supplyAttributionCaptureAdmission(fixedInput, Math.floor(Date.now() / 1_000));
+  if (admission.deferredAssetIds.length > 0 &&
+    admission.sourceStaleAssetIds.length === 0 &&
+    admission.deferredAssetIds.length === safetyScoreV9SupplyAttributionExpectedAssetIds(fixedInput).length) {
+    return createCronResult({
+      status: "skipped_neutral", itemCount: 0,
+      metadata: { stage: "capture-admission", reason: SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON,
+        generationId: priorGeneration?.generationId ?? null, ...admission },
+      productivity: { productive: false, reason: SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON },
+    });
+  }
+
   const resourcePressure = buildResourcePressure({
     phase: "supply-attribution-capture", bodyCapBytes: Math.max(...Object.values(ECONOMIC_SUPPLY_BODY_CAPS)),
   });
@@ -208,6 +223,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       db,
       dwellirNative,
       priorGeneration,
+      deferredAssetIds: admission.deferredAssetIds,
       onBodyRead: evidence => {
         resourcePressure.observedAt = Math.floor(Date.now() / 1_000);
         if (evidence.intakeBytes !== null) {
@@ -232,17 +248,26 @@ export async function syncSafetyScoreV9SupplyAttribution(
       capturedAtSec,
     });
 
-  if (capture.journalRecords.length > 0) {
+  const newJournalRecords = capture.journalRecords.filter(record =>
+    record.journalId !== priorGeneration?.outcomesById[record.assetId]?.journalId);
+  if (newJournalRecords.length > 0) {
     await appendSupplyAttributionJournalV1(
       db,
-      capture.journalRecords,
+      newJournalRecords,
       capturedAtSec,
       signal,
     );
   }
-  const { diagnostic: diagnosticRejected, progress, blocking: blockingRejectedAssetIds } = classifyRejectedAssets(generation);
+  const { diagnostic: diagnosticRejected, progress, blocking } = classifyRejectedAssets(generation);
+  const blockingRejectedAssetIds = blocking.filter(assetId => {
+    const outcome = generation.outcomesById[assetId];
+    return outcome.status !== "rejected" || outcome.failedRouteId !== SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON ||
+      admission.sourceStaleAssetIds.includes(assetId);
+  });
   const complete = blockingRejectedAssetIds.length === 0;
   const qualityReasons = [
+    ...(admission.deferredAssetIds.length || Object.keys(capture.admissionById ?? {}).length
+      ? [SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON] : []),
     ...(progress.length ? ["supply-attribution-bootstrap-in-progress"] : []),
     ...(diagnosticRejected.length ? ["supply-attribution-diagnostic-rejections"] : []),
   ];
@@ -292,6 +317,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       blockingRejectedCount: blockingRejectedAssetIds.length,
       blockingRejectedAssetIds,
       priorGenerationStatus,
+      captureAdmission: { ...admission, assets: capture.admissionById ?? {} },
       bootstrapProgressAssetIds: progress,
       captureFailureReasonsById: capture.failureReasonById ?? {},
       latencySummary: { assets: capture.performanceById ?? {} },
