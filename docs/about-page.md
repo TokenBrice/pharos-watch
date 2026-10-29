@@ -24,7 +24,7 @@ Use shared `src/lib/nav-config.ts`, not a copied menu roster. Peg Tracker links 
 
 Midas mTBILL source disclosure distinguishes its registry-committed issuer checkpoint and aggregate from the matching historical API composition rows. Keep issuer-reported provenance and original-date freshness explicit; SAVE origin verification grants no independent financial assurance, custody allocation or redemption capacity. Ondo USDY's dated issuer portfolio supplies fund-level composition separately from manual LLC-report maintenance; composition grants no all-USDY liability reconciliation, financial assurance or redemption capacity.
 
-ChinaAMC CUMIU's public holdings JSON supplies aggregated disclosed pooled-fund cash, term-deposit and unclassified-instrument weights. Preserve reported totals and the original holdings date; its all-cash sector label, missing fund NAV and truncated names cannot establish complete legal reserves or Class I token reconciliation. This is weak telemetry outside independent Safety scoring.
+ChinaAMC CUMIU's reserve view is the dated curated factsheet composition. Its public holdings JSON was never an admitted live feed and is not ingested since 2026-10-29: the payload repeats a holding row and totals 103.19%, and its all-cash sector label, missing fund NAV and truncated names cannot establish complete legal reserves or Class I token reconciliation.
 
 Source-family disclosure must remain honest about depth:
 

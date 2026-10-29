@@ -6,11 +6,11 @@ import type { ReserveSyncStateRecord } from "../live-reserves/store-shared";
 import { evaluateReserveCompositionStatus } from "../status/evaluation-rules";
 import { makeReserveComposition } from "@shared/types/__tests__/status.test-support";
 
-const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "mtbill-midas")!;
+const review = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "yzusd-yuzu")!;
 const now = review.reviewedAt + 1;
 function state(overrides: Partial<ReserveSyncStateRecord> = {}): ReserveSyncStateRecord {
   return {
-    stablecoinId: review.stablecoinId, adapterKey: review.adapterKey, breakerKey: "live-reserves:mtbill-midas",
+    stablecoinId: review.stablecoinId, adapterKey: review.adapterKey, breakerKey: "live-reserves:yzusd-yuzu",
     lastAttemptedAt: now, lastSuccessAt: now - 15 * 86400, lastStatus: "error", warningCount: 0,
     warnings: [], lastError: review.errorPrefix ?? null,
     metadata: { failureCategory: review.failureCategory }, ...overrides,
@@ -59,7 +59,7 @@ describe("reserve feed review policy", () => {
   it.each([
     { reviewedAt: now + 1 }, { owner: " " }, { sources: [{ url: "http://example.com", evidenceDate: "2026-10-06" }] },
     { sources: [{ url: "https://example.com", evidenceDate: "2026-02-30" }] },
-    { sources: [{ url: "https://example.com", evidenceDate: "2026-10-20" }] },
+    { sources: [{ url: "https://example.com", evidenceDate: "2026-11-05" }] },
     { expiresAt: review.reviewedAt }, { failureCategory: "" },
   ])("rejects malformed/future review %j", (overrides) => {
     expect(resolveReserveFeedReviews(now, [{ ...review, ...overrides } as ReserveFeedReview]).invalidIds).toEqual([review.stablecoinId]);
@@ -72,52 +72,71 @@ describe("reserve feed review policy", () => {
   it("matches only the named failure and never future/ambiguous/new warnings", async () => {
     expect(await matchReserveFeedReview(mockD1(), state(), now)).toEqual(review);
     for (const overrides of [
-      { lastError: "primary:http-json: midas-mtbill:future-portfolio-timestamp" },
-      { lastError: "primary:http-json: midas-mtbill: stale or future portfolio timestamp" },
+      { lastError: "primary:http-json: Accountable:future-portfolio-timestamp" },
+      { lastError: "primary:http-json: stale or future portfolio timestamp" },
       { metadata: { failureCategory: "adapter-timeout" } },
       { metadata: { failureCategory: "run-budget-exhausted" } },
       { metadata: { failureCategory: review.failureCategory, uncertainWrite: true } },
       { warnings: [{ code: "new-failure", message: "new", severity: "warning", effect: "degraded" }] },
     ] satisfies Partial<ReserveSyncStateRecord>[]) expect(await matchReserveFeedReview(mockD1(), state(overrides), now)).toBeNull();
   });
-  it("keeps Gemini's original expiry while narrowly reviewing the observed Midas v2 report mismatch", async () => {
-    expect(review.reviewedAt).toBe(Date.parse("2026-10-19T18:48:40Z") / 1000);
-    expect(review.expiresAt).toBe(Date.parse("2026-10-26T18:48:40Z") / 1000);
-    const gemini = RESERVE_FEED_REVIEWS.find((item) => item.stablecoinId === "gusd-gemini")!;
-    expect(gemini.reviewedAt).toBe(Date.parse("2026-10-07T14:19:23Z") / 1000);
-    expect(gemini.expiresAt).toBe(Date.parse("2026-10-21T14:19:23Z") / 1000);
+  it("keeps Yuzu's new review dated and short while naming the stale-timeline cause", async () => {
+    expect(review.reviewedAt).toBe(Date.parse("2026-10-29T11:02:00Z") / 1000);
+    expect(review.expiresAt).toBe(Date.parse("2026-11-05T11:02:00Z") / 1000);
+    expect(review.failureCategory).toBe("unknown");
+    expect(review.errorPrefix).toBe(
+      "primary:http-json: Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation",
+    );
+    expect(review.sources).toEqual([{ url: "https://cache.accountable.capital/dashboard/yuzu", evidenceDate: "2026-10-29" }]);
     expect(await matchReserveFeedReview(mockD1(), state(), review.expiresAt - 1)).toEqual(review);
     expect(await matchReserveFeedReview(mockD1(), state(), review.expiresAt)).toBeNull();
-    for (const reason of ["stale-save-checkpoint", "save-ipfs-gateways-exhausted", "save-proof-identity", "save-signed-content-digest", "save-cid-layout-or-content-mismatch", "save-pin-changed", "save-historical-scope"]) {
-      expect(await matchReserveFeedReview(mockD1(), state({ lastError: `primary:onchain-evm: midas-mtbill:${reason}` }), now)).toBeNull();
-      // Distinct reason tokens also defend against incorrectly retained v1 transport labels.
-      expect(await matchReserveFeedReview(mockD1(), state({ lastError: `primary:http-json: midas-mtbill:${reason}` }), now)).toBeNull();
-    }
   });
-  it("does not acknowledge the former stale source, future checkpoints or gateway failures", async () => {
-    const productionNow = now;
-    expect(resolveReserveFeedReviews(productionNow).activeById.get(review.stablecoinId)).toEqual(review);
+  it("does not acknowledge the superseded bucket-total cause or a transport failure on the same feed", async () => {
+    expect(resolveReserveFeedReviews(now).activeById.get(review.stablecoinId)).toEqual(review);
     for (const lastError of [
-      "primary:http-json: midas-mtbill:stale-portfolio-timestamp",
-      "primary:onchain-evm: midas-mtbill:future-save-checkpoint",
-      "primary:onchain-evm: midas-mtbill:save-exact-totals-mismatch",
-      "primary:http-json: midas-mtbill:save-rounded-totals-mismatch",
-    ]) expect(await matchReserveFeedReview(mockD1(), state({ lastError }), productionNow)).toBeNull();
-    for (const failureCategory of ["upstream-http", "unknown"]) {
-      expect(await matchReserveFeedReview(mockD1(), state({
-        lastError: "primary:onchain-evm: HTTP 429 for gateway.pinata.cloud",
-        metadata: { failureCategory },
-      }), productionNow)).toBeNull();
+      "primary:http-json: Accountable exposure_split bucket total 61782004.86065776 does not match total_reserves 63645930.21",
+      "primary:http-json: Accountable exposure_split has no valid timeline reserve total for reconciliation",
+      "primary:http-json: Accountable exposure_split_ts is invalid: 2026.13.01 00:00:00 UTC",
+      "primary:http-json: Accountable exposure_split has no contemporaneous timeline reserve total for reconciliation: retry",
+      "primary:http-json: HTTP 403 for https://cache.accountable.capital/dashboard/yuzu",
+    ]) expect(await matchReserveFeedReview(mockD1(), state({ lastError }), now)).toBeNull();
+    for (const failureCategory of ["upstream-http", "schema-shape", "corroboration-mismatch"]) {
+      expect(await matchReserveFeedReview(mockD1(), state({ metadata: { failureCategory } }), now)).toBeNull();
     }
     const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {
-      stablecoin_id: review.stablecoinId, attempted_at: productionNow - 1, adapter_key: review.adapterKey,
+      stablecoin_id: review.stablecoinId, attempted_at: now - 1, adapter_key: review.adapterKey,
       breaker_key: "test", status: "error", warnings: "[]",
-      last_error: "primary:onchain-evm: midas-mtbill:save-ipfs-gateways-exhausted: HTTP 429",
-      metadata: JSON.stringify({ failureCategory: "unknown" }),
+      last_error: "primary:http-json: Accountable exposure_split bucket total 1 does not match total_reserves 2",
+      metadata: JSON.stringify({ failureCategory: "corroboration-mismatch" }),
     } }]);
     expect(await matchReserveFeedReview(db, state({
       lastStatus: "skipped", metadata: { failureCategory: "circuit-open" },
-    }), productionNow)).toBeNull();
+    }), now)).toBeNull();
+  });
+  it("retires the recovered Gemini review and the unmatched Midas review", async () => {
+    expect(RESERVE_FEED_REVIEWS.map((item) => item.stablecoinId)).toEqual(["yzusd-yuzu"]);
+    const midas: ReserveSyncStateRecord = {
+      stablecoinId: "mtbill-midas", adapterKey: "midas-mtbill", breakerKey: "live-reserves:mtbill-midas",
+      lastAttemptedAt: now, lastSuccessAt: now - 86400, lastStatus: "error", warningCount: 0, warnings: [],
+      lastError: "primary:onchain-evm: HTTP 403 for https://api-prod.midas.app/api/transparency/by-timestamp?token=[redacted]&timestamp=2026-10-28T10%3A00",
+      metadata: { failureCategory: "upstream-http" },
+    };
+    expect(await matchReserveFeedReview(mockD1(), midas, now)).toBeNull();
+    const midasSaveMismatch: ReserveSyncStateRecord = {
+      ...midas, lastError: "primary:onchain-evm: midas-mtbill:save-rounded-totals-mismatch",
+      metadata: { failureCategory: "unknown" },
+    };
+    expect(await matchReserveFeedReview(mockD1(), midasSaveMismatch, now)).toBeNull();
+    const gemini: ReserveSyncStateRecord = {
+      stablecoinId: "gusd-gemini", adapterKey: "gemini-independent-assurance", breakerKey: "live-reserves:gusd-gemini",
+      lastAttemptedAt: now, lastSuccessAt: now, lastStatus: "ok", warningCount: 0, warnings: [], lastError: null,
+      metadata: {},
+    };
+    expect(await matchReserveFeedReview(mockD1(), gemini, now)).toBeNull();
+    const retired = { ...gemini, lastStatus: "error" as const,
+      lastError: "primary:http-json: gemini-independent-assurance: newer unreviewed report on official index",
+      metadata: { failureCategory: "unknown" } };
+    expect(await matchReserveFeedReview(mockD1(), retired, now)).toBeNull();
   });
   it("inherits circuit-open only from the latest non-skipped matching attempt", async () => {
     const db = mockD1([{ match: "status != 'skipped'", rows: [], first: {

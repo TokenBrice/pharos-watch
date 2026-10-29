@@ -26,7 +26,6 @@ import { MAKINA_ALLOCATIONS_FIXTURE, makinaNetworkSpec } from "./makina-strategy
 import { JPMORGAN_JLTXX_PUBLISHER_URL } from "../jpmorgan-nav";
 import { FRNT_LEDGERLENS_URL } from "../frnt-ledgerlens";
 import COINBASE_ONED_CAPTURE from "./fixtures/coinbase-oned-por.json";
-import CHINAAMC_HOLDINGS_CAPTURE from "./fixtures/chinaamc-holdings-api.json";
 const BLACKROCK_BRSRV_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
 const BLACKROCK_BRSRV_CAPTURE = readFileSync(new URL("./fixtures/blackrock-brsrv-holdings.txt", import.meta.url), "utf8")
   .replace(/<!--[^]*?-->\r?\n/g, "");
@@ -65,6 +64,7 @@ const CORPUS_NOT_REPLAYABLE_NAMES = [
   "europ-independent-assurance", "fdusd-independent-assurance", "fidd-independent-assurance", "gemini-independent-assurance",
   "issuer-attested-report", "rlusd-independent-assurance", "sbc-independent-assurance",
   "straitsx-independent-assurance", "paxos-independent-assurance", "myrc-independent-assurance",
+  "chinaamc-holdings-api",
 ] as const;
 export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
   CORPUS_NOT_REPLAYABLE_NAMES,
@@ -73,6 +73,7 @@ export const CORPUS_NOT_REPLAYABLE = reasonsFromNames(
     "audx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
     "europ-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by its adapter test file.",
     "straitsx-independent-assurance": "Hash-pinned issuer report: the replayable capture is the byte-pinned PDF plus its discovery index, not a JSON/HTML wire payload; owned by independent-assurance.test.ts.",
+    "chinaamc-holdings-api": "No bound catalog coin: cumiu-chinaamc's liveReservesConfig was withdrawn on 2026-10-29 because the issuer payload duplicates a holding row and totals 103.19%, so the corpus cannot resolve a catalog config. The adapter stays registered for a future reviewed admission; its happy path, source clock and duplicate-row rejection are replayed in chinaamc-holdings-api.test.ts against the reviewed configuration.",
   },
 );
 
@@ -799,15 +800,3 @@ CORPUS_CASES["blackrock-brsrv-holdings"] = {
     },
   },
 };
-
-CORPUS_CASES["chinaamc-holdings-api"] = {
-  coinId: "cumiu-chinaamc",
-  nowSec: Date.parse("2026-10-25T21:45:00Z") / 1000,
-  network: { json: { [CHINAAMC_HOLDINGS_CAPTURE._capture.source]: CHINAAMC_HOLDINGS_CAPTURE } },
-  drift: {
-    label: "the holdings result array is absent",
-    network: { json: { [CHINAAMC_HOLDINGS_CAPTURE._capture.source]: { ...CHINAAMC_HOLDINGS_CAPTURE, result: undefined } } },
-    outcome: "error",
-  },
-};
-

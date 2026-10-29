@@ -4,14 +4,31 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { fetchChinaamcHoldingsReserves, parseChinaamcHoldings } from "../chinaamc-holdings-api";
 import { getReserveAdapter } from "../index";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import type { LiveReservesConfig } from "@shared/types/live-reserves";
 import { validateAdapterOutput } from "../validate";
-import { resolveReserveResult } from "../../../lib/live-reserves/store-views";
-import { makeReservesDb } from "../../../lib/__tests__/live-reserves-store.test-support";
 
 const fixture = JSON.parse(readFileSync(new URL("./fixtures/chinaamc-holdings-api.json", import.meta.url), "utf8"));
 const now = Date.parse("2026-10-25T21:45:00Z") / 1000;
 const coin = ACTIVE_STABLECOINS.find((entry) => entry.id === "cumiu-chinaamc")!;
-const config = coin.liveReservesConfig!;
+/** The catalog `liveReservesConfig` was withdrawn on 2026-10-29: the issuer payload repeats a
+ *  holding row and totals 103.19%. The reviewed adapter configuration is pinned here so the
+ *  parser, fetch guards and descriptor policy stay covered while no coin ingests the feed. */
+const config: LiveReservesConfig = {
+  adapter: "chinaamc-holdings-api",
+  version: 1,
+  semantics: "collateral-mix",
+  breakerScope: "cumiu-chinaamc",
+  display: {
+    url: "https://www.chinaamc.com.hk/detail?fundId=USDDMMF&fundName=ChinaAMC-USD-Digital-Money-Market-Fund-%28Tokenized-Unlisted-Class%29&lan=EN",
+    label: "ChinaAMC disclosed fund holdings",
+  },
+  inputs: {
+    primary: {
+      kind: "http-json",
+      url: "https://www.chinaamc.com.hk/jeecg-boot/mainFund/fundQuery/getHoldingsByFundId?fundId=USDDMMF&groupBy=none",
+    },
+  },
+};
 const signal = () => new AbortController().signal;
 
 afterEach(() => vi.unstubAllGlobals());
@@ -43,26 +60,16 @@ describe("ChinaAMC disclosed pooled fund holdings", () => {
     expect(parseChinaamcHoldings(payload, now).metadata?.unknownExposurePct).toBeCloseTo(70.1519, 6);
   });
 
-  it("serves compact live detail while explicitly rejecting independent scoring", async () => {
-    const result = parseChinaamcHoldings(fixture, now);
-    const warnings = JSON.stringify(result.warnings);
-    const db = makeReservesDb({
-      composition: {
-        stablecoin_id: coin.id, source: config.adapter, fetched_at: now, attempt_id: "b2-fixture",
-        slices: JSON.stringify(result.slices), metadata: JSON.stringify(result.metadata),
-        warning_count: result.warnings!.length, warnings,
-        adapter_source_model: "dynamic-mix", adapter_evidence_class: "weak-live-probe",
-      },
-      syncState: {
-        stablecoin_id: coin.id, adapter_key: config.adapter, last_success_at: now,
-        last_attempted_at: now, last_success_attempt_id: "b2-fixture", warning_count: result.warnings!.length, warnings,
-      },
-    });
-    const detail = await resolveReserveResult(db, coin.id, now);
-    expect(detail?.mode).toBe("live");
-    expect(detail?.reserves).toEqual(result.slices);
-    expect(detail?.provenance).toMatchObject({ scoringEligible: false, scoringRejectionReasons: ["non-independent"] });
-    expect(Buffer.byteLength(JSON.stringify(detail))).toBeLessThan(4096);
+  it("keeps the coin on its curated sidecar now that the live config is withdrawn", () => {
+    expect("liveReservesConfig" in coin).toBe(false);
+    expect(getReserveAdapter(config.adapter)?.evidenceClass).toBe("weak-live-probe");
+    const sidecar = JSON.parse(readFileSync(
+      new URL("../../../../../shared/data/stablecoins/domains/reserves/cumiu-chinaamc.json", import.meta.url),
+      "utf8",
+    )) as { reserves: Array<{ pct: number }>; reserveReview?: { compositionAsOf?: string } };
+    expect(sidecar.reserves).toHaveLength(3);
+    expect(sidecar.reserves.reduce((sum, slice) => sum + slice.pct, 0)).toBeCloseTo(100, 6);
+    expect(sidecar.reserveReview?.compositionAsOf).toBe("2026-09-30");
   });
 
   it.each([
