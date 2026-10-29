@@ -8,8 +8,8 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Overcollateralized FiRM loans, predominantly secured by DOLA-paired stablecoin LP tokens; these debt claims are not wholly external stablecoin reserves. Permissioned operator minting is not collateral-gated. The USDS PSM is a swap rail; both reviewed deployments held no USDS or sUSDS at Ethereum block 26214783 (2026-10-17T20:51:59Z).",
-  "pegMechanism": "FiRM Fed issuance supports fixed-rate collateralized borrowing, while the PSM provides a USDS swap rail. Frontier is deprecated, with no new borrowing; its Fed shrinks as legacy bad debt is repaid but remains an authorized minter. The 48-hour Timelock operator can also mint without a collateral check or numeric token cap.",
+"collateral": "Overcollateralized FiRM loans, predominantly secured by DOLA-paired stablecoin LP tokens; Inverse's LP-positions API publishes each market's estimated underlying split. These debt claims are not wholly external stablecoin reserves. Permissioned operator minting is not collateral-gated. The canonical USDS PSM held 200,000 DOLA of inventory and zero USDS or sUSDS reserves at Pharos's Ethereum block 26296822 read (2026-10-29T07:12:23Z); reserve accumulation is demand-driven, with no committed target.",
+"pegMechanism": "FiRM Fed issuance supports fixed-rate collateralized borrowing, while the canonical PSM provides a USDS swap rail. Frontier is deprecated, with no new borrowing; its Fed shrinks as legacy bad debt is repaid but remains an authorized minter. A flash minter can draw up to 5 million DOLA per transaction and burns the principal before the transaction ends; the PSM Fed is capped at 10 million DOLA. The 48-hour Timelock operator can also mint without a collateral check or numeric token cap.",
   "mechanismArchetype": "cdp",
   "llamaId": "15",
   "detailProvider": "defillama",
@@ -89,7 +89,7 @@
     {
       "type": "warning",
       "title": "Legacy third-party bridge representations",
-      "message": "The BSC and Fantom contracts are legacy Multichain/Anyswap representations; Avalanche is also retained as a legacy third-party bridge representation. All three had outstanding supply in the October 17, 2026 review. Their token balances do not establish a live bridge, solvent backing, or redemption at par."
+      "message": "The BSC and Fantom contracts are legacy Multichain/Anyswap representations; Avalanche is also retained as a legacy third-party bridge representation. All three had outstanding supply in the October 17, 2026 review. Inverse confirmed on October 28, 2026 that only canonical Ethereum DOLA is recognized as issuer supply and that these three representations are unsupported; its July 2023 Multichain-DOLA FAQ describes them as bridge IOUs with blocked exits, advises holders to avoid Multichain-bridged DOLA, and records no approved compensation. Their token balances do not establish a live bridge, solvent backing, or redemption at par."
     }
   ],
   "liveReservesConfig": {

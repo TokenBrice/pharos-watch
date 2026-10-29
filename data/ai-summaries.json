@@ -804,17 +804,17 @@
   },
   "dola-inverse-finance": {
     "title": "Fixed-Rate Lending on Circular Collateral",
-    "text": "DOLA is Inverse Finance's {{term:cdp}}CDP{{/term}}-style dollar, minted into FiRM's fixed-rate lending markets and lent against posted collateral. Most FiRM debt is secured by Curve LP positions in which DOLA itself is the larger leg, so much of the collateral base is DOLA backing DOLA. The {{grade}} overall grade is held down by economic control, the weakest pillar. The Fed chair can only expand supply into registered markets and fixed modules within governance-set ceilings, but the DAO's 48-hour Timelock can mint to any address without collateral or a cap. One delegated key holds enough votes to meet quorum alone, so that governance path earns no governed-issuance credit. The USDS {{term:psm}}PSM{{/term}} held no USDS at Pharos's October 2026 review, leaving it without redemption capacity. Permissionless jrDOLA slashing reaches most FiRM markets, but its capital is a small fraction of outstanding debt. Bad debt from the 2022 Frontier oracle exploits is still being repaid. The durable constraint is collateral whose value rests largely on DOLA's own price.",
-    "updatedAt": "2026-10-18",
+    "text": "DOLA is Inverse Finance's {{term:cdp}}CDP{{/term}}-style dollar, minted into FiRM's fixed-rate lending markets and lent against posted collateral. Most FiRM debt is secured by Curve LP positions pairing DOLA or sDOLA against external stablecoins, so much of the collateral base is DOLA backing DOLA. The {{grade}} overall grade is held down by exit, the weakest pillar. The Fed chair can only expand supply into registered markets and fixed modules within governance-set ceilings, but the DAO's 48-hour Timelock can mint to any address without collateral or a cap. Inverse identifies the dominant delegated voting power as the founder's own escrowed INV, enough to meet quorum in an unopposed proposal. The canonical USDS {{term:psm}}PSM{{/term}} held no USDS or sUSDS reserves at Pharos's October 2026 read, leaving the sell direction without funded capacity. Permissionless jrDOLA slashing reaches most FiRM markets, but its capital is a fraction of a percent of outstanding debt. About 2.76 million DOLA of Frontier bad debt remains, and recorded repayments have been sparse since early 2026. The durable constraint is collateral whose value rests largely on DOLA's own price.",
+    "updatedAt": "2026-10-29",
     "authoredBy": "ai",
-    "model": "claude-opus-5-5",
-    "factsAsOf": "2026-10-18",
+    "model": "glm-5.3",
+    "factsAsOf": "2026-10-29",
     "claimTokens": [
       {
         "token": "grade",
         "placeholder": "{{grade}}",
         "source": "report-card.grade",
-        "factsAsOf": "2026-10-18"
+        "factsAsOf": "2026-10-29"
       }
     ]
   },
