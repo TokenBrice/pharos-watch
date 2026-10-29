@@ -10,8 +10,10 @@ import {
   SafetyScoreV9DependencyProvenanceSchema,
   SafetyScoreV9CommonModeGroupsSchema,
   findSafetyScoreV9ParentAttributionIssues,
+  V9OpenEvidenceSchema,
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CardValidationInput,
+  type V9OpenEvidence,
 } from "./safety-score-v9-public";
 import { V9GradeSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { compareText, canonicalTextArray } from "./safety-score-v9-fact-primitives";
@@ -25,7 +27,7 @@ import {
 import { refineV9PublicGapContext } from "./safety-score-v9-public-causes";
 import { SafetyScoreV9PillarFreshnessSchema, refineSafetyScoreV9PillarFreshness } from "./safety-score-v9-public-facts";
 
-export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 8;
+export const REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION = 9;
 
 const V9PublicationSimpleHoldReasonSchema = z
   .object({
@@ -269,6 +271,8 @@ const ReportCardsV9ResponseShape = {
     .strict(),
   dependencyGraph: ReportCardsV9DependencyGraphSchema,
   commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
+  /** T2 carrier: the publication union of documentation-classified cause gaps. */
+  documentationCauseGaps: canonicalTextArray().optional(),
 } as const;
 
 function refineReportCardsV9Response(
@@ -286,6 +290,7 @@ function refineReportCardsV9Response(
     schemaVersion?: number;
     commonModeGroups?: z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
     dependencyGraph: ReportCardsV9DependencyGraph;
+    openEvidence?: V9OpenEvidence;
   },
   ctx: z.RefinementCtx,
   historical = false,
@@ -355,17 +360,43 @@ function refineReportCardsV9Response(
       message: `${issue.cardId}: ${issue.message}`,
     });
   }
+  const publishedCardIds = new Set(cardIds);
+  response.openEvidence?.byCard.forEach((entry, index) => {
+    if (!publishedCardIds.has(entry.id)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidence", "byCard", index, "id"],
+        message: "Open-evidence counts must name a published card",
+      });
+    }
+  });
 }
 
-/** Report8 carries exact typed exit identity; old envelopes require explicit historical dispatch. */
-const ReportCardsV9CurrentEnvelopeShape = {
+/** Envelope fields shared by the live report and its archive-only predecessors. */
+const ReportCardsV9EnvelopeBaseShape = {
   ...ReportCardsV9ResponseShape,
   lifecycle: z.literal("active"),
-  schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
   publicationHealth: V9PublicationHealthSchema,
   foreignCauseGaps: canonicalTextArray(),
   pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
-};
+} as const;
+
+/**
+ * Current report9 envelope. Live projections carry `openEvidence`; it stays
+ * optional so a retained pre-cutover payload fails visible instead of reading
+ * as zero open questions.
+ */
+const ReportCardsV9CurrentEnvelopeShape = {
+  ...ReportCardsV9EnvelopeBaseShape,
+  schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
+  openEvidence: V9OpenEvidenceSchema.optional(),
+} as const;
+
+/** Archive-only report8 envelope: the shape live producers emitted before report9. */
+const HistoricalReport8EnvelopeShape = {
+  ...ReportCardsV9EnvelopeBaseShape,
+  schemaVersion: z.literal(8),
+} as const;
 export const ReportCardsV9CurrentResponseSchema = z.object({
   ...ReportCardsV9CurrentEnvelopeShape,
   cards: z.array(SafetyScoreV9ResolvedCurrentCardSchema),
@@ -409,13 +440,22 @@ export const WitnessHistoricalReportCardsV9ResponseSchema = z.object({
 
 /** Archive-only report8 before v10.29: typed routes and inline control details. */
 export const HistoricalTypedReportCardsV9ResponseSchema = z.object({
-  ...ReportCardsV9CurrentEnvelopeShape,
+  ...HistoricalReport8EnvelopeShape,
   methodology: ReportCardsV9ResponseShape.methodology.extend({
     version: z.string().regex(/^10\.(?:1[1-9]|2[0-8])$/),
   }),
   cards: z.array(SafetyScoreV9HistoricalTypedCardSchema),
 }).strict().superRefine((value, ctx) => {
   refineReportCardsV9Response(value, ctx, true);
+  refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
+});
+
+/** Archive-only report8 from v10.29 to the report9 cutover: resolved cards, no open-evidence block. */
+export const HistoricalResolvedReportCardsV9ResponseSchema = z.object({
+  ...HistoricalReport8EnvelopeShape,
+  cards: z.array(SafetyScoreV9ResolvedCurrentCardSchema),
+}).strict().superRefine((value, ctx) => {
+  refineReportCardsV9Response(value, ctx);
   refineSafetyScoreV9PillarFreshness({ ...value, sourceGenerations: value.source.sourceGenerations }, ctx);
 });
 

@@ -192,10 +192,19 @@ function response() {
 
 export function currentResponse() {
   const current = response() as unknown as CurrentResponse;
-  current.schemaVersion = 7;
+  current.schemaVersion = 8;
   current.lifecycle = "active";
   current.policyVersion = "9.0";
   current.policy = { id: "safety-score-v9", semanticDigest: "d".repeat(64) };
+  current.openEvidence = {
+    semantics: "open-question-v1",
+    totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 0 },
+    owners: [],
+    reasons: [],
+    documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+    issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+    byCard: [],
+  };
   current.cards[0]!.scoreTrace = {
     schemaVersion: 4,
     legacyAliases: {
