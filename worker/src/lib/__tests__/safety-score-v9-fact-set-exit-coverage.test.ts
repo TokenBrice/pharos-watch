@@ -10,6 +10,7 @@ import * as redemptionBackstops from "@shared/lib/redemption-backstops";
 import { deriveReportCardsBaseInputGenerationId } from "@shared/lib/report-cards-base-input-identity";
 import { DEX_ROUTE_CAPABILITY_MATRIX_VERSION } from "@shared/lib/p4-exit-route-capability-policy";
 import { buildV9DependencyEvaluationPlan } from "@shared/lib/safety-score-v9/dependencies";
+import { classifyV9DocumentationGap } from "@shared/lib/safety-score-v9/documentation";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import { buildV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import {
@@ -1028,6 +1029,47 @@ describe("Safety Score v9 exact base fact-set adapter — exit and DEX coverage"
     expect(missing.asset.exitRoutes).toEqual(complete.asset.exitRoutes);
     expect(missing.evaluated.routes.map((route) => route.capacityPoint))
       .toEqual(complete.evaluated.routes.map((route) => route.capacityPoint));
+  });
+
+  it("keeps the DEX coverage label documentation without making it an Exit witness", () => {
+    const run = (missingPool: boolean) => {
+      const draft = exactFixedInput();
+      const coverage = draft.dexLiqMap.alpha!.exitRouteObservationCoverage!;
+      coverage.retainedPoolCount = 10_000;
+      coverage.scoreEligibleCapabilityPoolCount = missingPool ? 2 : 1;
+      coverage.scoreEligiblePoolCount = 1;
+      coverage.unsupportedPoolCount = missingPool ? 9_999 : 9_998;
+      coverage.unsupportedReasons = {
+        "nonExecutableEvidence:discovery-pool-shaped": 9_998,
+        ...(missingPool ? { "executionCapabilityGate:measured-execution:quote-failed": 1 } : {}),
+      };
+      const fixed = rebuildFixed(draft);
+      const reviewed = extension({ registryFingerprint: fixed.registryFingerprint });
+      const factSet = compileSafetyScoreV9FactSetFromFixedInput(fixed, reviewed);
+      return {
+        asset: factSet.assets[0]!,
+        evaluated: evaluateV9FactSet(factSet, V9_CANDIDATE_POLICY_V1).assets[0]!,
+      };
+    };
+    const complete = run(false);
+    const missing = run(true);
+    const gapId = "alpha:gap:exit-portfolio-coverage";
+    const gap = missing.asset.gaps.find((candidate) => candidate.gapId === gapId)!;
+    expect(classifyV9DocumentationGap(V9_CANDIDATE_POLICY_V1, missing.asset, gap)?.reason)
+      .toBe("coverage-label");
+
+    // The datum is an inventory witness, never a limiting one for any pillar.
+    expect(missing.evaluated.exit.causeGapIds).toContain(gapId);
+    for (const { evaluated } of [complete, missing]) {
+      for (const pillar of ["backing", "exit", "control"] as const) {
+        expect(evaluated.scoreInput.pillars[pillar].limitingCauseGapIds ?? []).not.toContain(gapId);
+      }
+    }
+    // Pricing never reads coverage, so the scored Exit pillar is identical.
+    expect(missing.evaluated.scoreInput.pillars.exit.score)
+      .toBe(complete.evaluated.scoreInput.pillars.exit.score);
+    // The suffix in presentation is the disclosure; the verified class never moves the score.
+    expect(missing.evaluated.score).toBe(complete.evaluated.score);
   });
 
   it("keeps the DEX portfolio denominator and cause independent of fee-only changes", () => {
