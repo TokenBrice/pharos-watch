@@ -262,42 +262,34 @@
           {
             "reason": "no-scoring-path",
             "publicLabel": "Custody question outside the scoring path",
-            "retention": "stale-documentation",
             "threshold": null
           },
           {
             "reason": "unknown-scores-as-no-credit",
             "publicLabel": "Mint control credit already withheld",
-            "retention": "recompute-per-capture",
             "threshold": null
           },
           {
             "reason": "unscored-diagnostic",
             "publicLabel": "Diagnostic datum, not scored",
-            "retention": "recompute-per-capture",
             "threshold": null
           },
           {
             "reason": "coverage-label",
             "publicLabel": "DEX coverage label only",
-            "retention": "recompute-per-capture",
             "threshold": null
           },
           {
             "reason": "immaterial-deployment",
             "publicLabel": "Deployment share below the immaterial bar",
-            "retention": "recompute-per-capture",
             "threshold": {
-              "kind": "known-share-pct",
               "sharePctKey": "documentationImmaterialSharePct"
             }
           },
           {
             "reason": "reserve-dust",
             "publicLabel": "Reserve exposure below the dust bar",
-            "retention": "recompute-per-capture",
             "threshold": {
-              "kind": "reserve-book-share",
               "sharePctKey": "reserveDustBookSharePct"
             }
           }
