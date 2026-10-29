@@ -435,18 +435,18 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
 
   it("reads only a reviewed historical source URL and names the selection in the published metadata", async () => {
     const reviewed = "https://api-prod.midas.app/api/transparency/by-timestamp";
-    const defaults = await fetchPacket().result;
-    expect(defaults.metadata?.details).toMatchObject({
-      historicalSourceUrl: reviewed, historicalSourceHost: "api-prod.midas.app", historicalSourceUrlSource: "reviewed-default",
+    const configured = await fetchPacket().result;
+    expect(configured.metadata?.details).toMatchObject({
+      historicalSourceUrl: reviewed, historicalSourceHost: "api-prod.midas.app", historicalSourceUrlSource: "reviewed-params",
     });
     const network = installAdapterNetwork(midasNetwork());
-    const output = await fetchMidasMtbillReserves(coin, { ...config, params: { historicalSourceUrl: reviewed } },
+    const defaults = await fetchMidasMtbillReserves(coin, { ...config, params: undefined },
       AbortSignal.timeout(5000), { chainRpcs: network.chainRpcs, nowSec: fresh });
-    expect(output.metadata?.details).toMatchObject({
-      historicalSourceUrl: reviewed, historicalSourceHost: "api-prod.midas.app", historicalSourceUrlSource: "reviewed-params",
+    expect(defaults.metadata?.details).toMatchObject({
+      historicalSourceUrl: reviewed, historicalSourceHost: "api-prod.midas.app", historicalSourceUrlSource: "reviewed-default",
       historicalUrl: `${reviewed}?token=mTBILL&timestamp=2026-10-16T10%3A00`,
     });
-    expect(output.metadata?.sourceTimestamp).toBe(MIDAS_CHECKPOINT_SEC);
+    expect(defaults.metadata?.sourceTimestamp).toBe(MIDAS_CHECKPOINT_SEC);
     expect(network.unmatched).toEqual([]);
   });
 

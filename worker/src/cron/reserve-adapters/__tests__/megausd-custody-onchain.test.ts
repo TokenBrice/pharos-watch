@@ -15,16 +15,17 @@ import {
   type AdapterRpcValue,
 } from "./reserve-adapter.test-support";
 
-const NOW = Math.floor(Date.parse("2026-10-29T18:20:00.000Z") / 1000);
+const NOW = Math.floor(Date.parse("2026-10-29T18:25:11.000Z") / 1000);
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const USDTB = "0xc139190f447e929f090edeb554d95abb8b18ac1c";
 const ZERO_CUSTODIAN = "0x000000000000000000000000000000000000dead";
 
 /**
- * Design §3.3 roster (five disclosed custodians per asset, 2026-10-29 issuer
- * payload), held as a test fixture only until RA-3b's reviewed roster packet
- * replaces it. Production params arrive through the shared declaration/coin
- * config, not from this file.
+ * RA-3b reviewed roster (`exec/notes/RA-3b-megausd-roster.md` §2–3): five
+ * custodians × USDC/USDtb, all Ethereum. Amounts are the packet's exact
+ * on-chain `balanceOf` raws at block 26300177 (2026-10-29T18:25:11Z), which
+ * matched the issuer payload row-for-row. Production params arrive through the
+ * shared declaration/coin config, not from this file.
  */
 const CUSTODIANS = [
   "0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2",
@@ -52,12 +53,12 @@ const USDTB_TOTAL = USDTB_RAW.reduce((sum, raw) => sum + Number(raw) / 1e18, 0);
 const TOTAL = USDC_TOTAL + USDTB_TOTAL;
 
 const BLOCK = {
-  number: 23_123_456,
+  number: 26_300_177,
   timestamp: NOW,
-  hash: `0x${"ab".repeat(32)}`,
+  hash: "0x1b5fbdd505a18ba64354cec733c7bf147210f62d60b1b1dbd1e0b6220aa105fe",
 };
 
-const base = resolveAdapterCoin("megausd-custody", "usdm-mega");
+const base = resolveAdapterCoin("megausd-custody-onchain", "usdm-mega");
 
 function config(params: Record<string, unknown>): LiveReservesConfig {
   return {
@@ -69,7 +70,7 @@ function config(params: Record<string, unknown>): LiveReservesConfig {
 
 function params(overrides: Partial<MegausdCustodyOnchainParams> = {}): Record<string, unknown> {
   const value: MegausdCustodyOnchainParams = {
-    rosterReviewedAt: "2026-10-29",
+    rosterReviewedAt: "2026-10-29T18:25:11Z",
     roster: ROSTER,
     ...overrides,
   };
@@ -151,7 +152,7 @@ describe("MegaUSD on-chain custody roster", () => {
         chain: "ethereum",
         blockNumber: BLOCK.number,
         blockHash: BLOCK.hash,
-        rosterReviewedAt: "2026-10-29",
+        rosterReviewedAt: "2026-10-29T18:25:11Z",
         rosterDiscovery: "matched",
         rosterDiscoveryUrl: MEGAUSD_CUSTODY_DISCOVERY_URL,
       },
