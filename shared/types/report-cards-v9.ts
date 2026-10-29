@@ -271,8 +271,6 @@ const ReportCardsV9ResponseShape = {
     .strict(),
   dependencyGraph: ReportCardsV9DependencyGraphSchema,
   commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
-  /** T2 carrier: the publication union of documentation-classified cause gaps. */
-  documentationCauseGaps: canonicalTextArray().optional(),
 } as const;
 
 function refineReportCardsV9Response(
@@ -290,7 +288,9 @@ function refineReportCardsV9Response(
     schemaVersion?: number;
     commonModeGroups?: z.infer<typeof SafetyScoreV9CommonModeGroupsSchema>;
     dependencyGraph: ReportCardsV9DependencyGraph;
-    openEvidence?: V9OpenEvidence;
+    documentationCauseGaps?: readonly string[];
+    openEvidence?: V9OpenEvidence | null;
+    openEvidenceUnavailableReason?: V9OpenEvidenceUnavailableReason | null;
   },
   ctx: z.RefinementCtx,
   historical = false,
@@ -360,17 +360,94 @@ function refineReportCardsV9Response(
       message: `${issue.cardId}: ${issue.message}`,
     });
   }
-  const publishedCardIds = new Set(cardIds);
-  response.openEvidence?.byCard.forEach((entry, index) => {
-    if (!publishedCardIds.has(entry.id)) {
+  if (response.openEvidence !== undefined) {
+    const unavailableReason = response.openEvidenceUnavailableReason ?? null;
+    if ((response.openEvidence === null) !== (unavailableReason !== null)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidenceUnavailableReason"],
+        message: "A null open-evidence block requires its machine-readable reason, and a present block publishes none",
+      });
+    }
+  }
+  const openEvidence = response.openEvidence ?? null;
+  const documentationCauseGaps = response.documentationCauseGaps;
+  if (documentationCauseGaps !== undefined) {
+    const resolvable = new Set(response.foreignCauseGaps);
+    for (const card of response.cards) {
+      for (const gapId of card.localCauseGaps) resolvable.add(`${card.id}:gap:${gapId}`);
+    }
+    documentationCauseGaps.forEach((gapId, index) => {
+      if (!resolvable.has(gapId)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["documentationCauseGaps", index],
+          message: "Documentation cause gaps must resolve to a published card or foreign gap",
+        });
+      }
+    });
+  }
+  openEvidence?.byCard.forEach((entry, index) => {
+    const card = cardsById.get(entry.id);
+    if (card === undefined) {
       ctx.addIssue({
         code: "custom",
         path: ["openEvidence", "byCard", index, "id"],
         message: "Open-evidence counts must name a published card",
       });
+      return;
+    }
+    if (entry.issuerNondisclosureReviewedAtSec !== undefined && entry.issuerNondisclosureReviewedAtSec > response.updatedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidence", "byCard", index, "issuerNondisclosureReviewedAtSec"],
+        message: "Issuer review proofs cannot postdate the publication",
+      });
+    }
+    const annotated = entry.documentationOnlyLimited;
+    if (annotated !== undefined) {
+      for (let pillarIndex = 0; pillarIndex < annotated.length; pillarIndex++) {
+        const pillar = annotated[pillarIndex]!;
+        if (documentationCauseGaps === undefined) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["openEvidence", "byCard", index, "documentationOnlyLimited", pillarIndex],
+            message: "A documentation-only pillar annotation requires the documentation gap set",
+          });
+        }
+        const pillarRow = card.pillars[pillar];
+        if (pillarRow.evidenceLevel !== "limited" || (pillarRow.limitedEvidenceCauses?.length ?? 0) === 0) {
+          ctx.addIssue({
+            code: "custom",
+            path: ["openEvidence", "byCard", index, "documentationOnlyLimited", pillarIndex],
+            message: "Only a limited pillar with witnesses can be documented as documentation-only limited",
+          });
+        }
+      }
     }
   });
+  if (openEvidence !== null) {
+    if (documentationCauseGaps === undefined && openEvidence.documentation.datums > 0) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["documentationCauseGaps"],
+        message: "Documentation datums require the publication documentation gap set",
+      });
+    }
+    if (openEvidence.issuer.newestReviewedAtSec !== null && openEvidence.issuer.newestReviewedAtSec > response.updatedAt) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["openEvidence", "issuer", "newestReviewedAtSec"],
+        message: "Issuer review proofs cannot postdate the publication",
+      });
+    }
+  }
 }
+
+/** Report9's machine-readable reason for a null open-evidence block. */
+export const V9_OPEN_EVIDENCE_UNAVAILABLE_REASONS = ["publication-predates-open-evidence"] as const;
+export const V9OpenEvidenceUnavailableReasonSchema = z.enum(V9_OPEN_EVIDENCE_UNAVAILABLE_REASONS);
+export type V9OpenEvidenceUnavailableReason = z.infer<typeof V9OpenEvidenceUnavailableReasonSchema>;
 
 /** Envelope fields shared by the live report and its archive-only predecessors. */
 const ReportCardsV9EnvelopeBaseShape = {
@@ -382,14 +459,17 @@ const ReportCardsV9EnvelopeBaseShape = {
 } as const;
 
 /**
- * Current report9 envelope. Live projections carry `openEvidence`; it stays
- * optional so a retained pre-cutover payload fails visible instead of reading
- * as zero open questions.
+ * Current report9 envelope: `openEvidence` is a required, nullable key. `null`
+ * plus `openEvidenceUnavailableReason` means the source generation predates
+ * the block; it never stands for zero open questions.
  */
 const ReportCardsV9CurrentEnvelopeShape = {
   ...ReportCardsV9EnvelopeBaseShape,
   schemaVersion: z.literal(REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION),
-  openEvidence: V9OpenEvidenceSchema.optional(),
+  openEvidence: V9OpenEvidenceSchema.nullable(),
+  openEvidenceUnavailableReason: V9OpenEvidenceUnavailableReasonSchema.nullable(),
+  /** T2 carrier: the publication union of documentation-classified cause gaps. */
+  documentationCauseGaps: canonicalTextArray().optional(),
 } as const;
 
 /** Archive-only report8 envelope: the shape live producers emitted before report9. */

@@ -17,8 +17,8 @@ function makeOpenEvidence(overrides: Partial<V9OpenEvidence> = {}): V9OpenEviden
     totals: { questions: 5, open: 3, issuer: 2, documentation: 0, obligations: 9 },
     owners: [{ responsibility: "unresearched", questions: 3, obligations: 6 }],
     reasons: [
-      { code: "unresolved-control-identity", bucket: "open", questions: 3, obligations: 6 },
       { code: "missing-reserve-composition", bucket: "issuer", questions: 2, obligations: 3 },
+      { code: "unresolved-control-identity", bucket: "open", questions: 3, obligations: 6 },
     ],
     documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
     issuer: {
@@ -117,7 +117,8 @@ describe("buildDataCoverageModel", () => {
     const response = makeReportCardsV9Response({
       cards: [makeV9Card({ id: "aaa-one" })],
     });
-    expect(response.openEvidence).toBeUndefined();
+    expect(response.openEvidence).toBeNull();
+    expect(response.openEvidenceUnavailableReason).toBe("publication-predates-open-evidence");
 
     const model = buildDataCoverageModel(response)!;
 

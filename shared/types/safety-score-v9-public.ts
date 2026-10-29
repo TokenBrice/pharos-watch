@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { issue } from "./safety-schema-primitives";
+import { issue, UnixSecondsSchema } from "./safety-schema-primitives";
 import { scoreToGrade } from "./safety-score-v9-grade";
 import { V9DependencyEconomicRoleSchema, DependencyTypeSchema } from "./dependency-types";
 import {
@@ -22,6 +22,7 @@ import {
   SafetyScoreV9NrReasonSchema,
   SafetyScoreV9PillarSchema,
   SafetyScoreV9PublicReasonListSchema,
+  RESPONSIBILITIES,
   ScoreSchema,
   Sha256Schema,
   V9PolicyVersionSchema,
@@ -553,10 +554,7 @@ export const V9QuestionKeySchema = z.string().superRefine((value, ctx) => {
 });
 export type V9QuestionKey = z.infer<typeof V9QuestionKeySchema>;
 
-/** Pillars a documentation-only limited witness list may annotate (fail-closed rule). */
-export const V9_DOCUMENTATION_ONLY_PILLARS = ["backing", "control", "exit"] as const;
-export const V9DocumentationOnlyPillarSchema = z.enum(V9_DOCUMENTATION_ONLY_PILLARS);
-export type V9DocumentationOnlyPillar = z.infer<typeof V9DocumentationOnlyPillarSchema>;
+/** The annotated pillar vocabulary is the single `V9QualityPillarSchema`; never restate it. */
 
 const V9OpenEvidenceCountSchema = z.number().int().nonnegative();
 
@@ -590,6 +588,11 @@ const V9OpenEvidenceOwnerSchema = z
 const V9OpenEvidenceReasonSchema = z
   .object({
     code: V9ReasonCodeSchema,
+    /**
+     * Bucket whose questions the row counts. Documentation rows are the
+     * documentation inventory only: they never enter the headline or issuer
+     * number, which are read from `totals`.
+     */
     bucket: V9OpenQuestionBucketSchema,
     questions: V9OpenEvidenceCountSchema,
     obligations: V9OpenEvidenceCountSchema,
@@ -616,9 +619,11 @@ const V9OpenEvidenceDocumentationSchema = z
     if (documentation.facts > documentation.datums) {
       issue(ctx, ["facts"], "Documentation facts cannot exceed its datum count");
     }
-    const reasons = documentation.reasons.map((row) => row.reason);
-    if (new Set(reasons).size !== reasons.length) {
-      issue(ctx, ["reasons"], "Documentation reason rows must be unique");
+    if (!isUniqueSorted(documentation.reasons.map((row) => row.reason))) {
+      issue(ctx, ["reasons"], "Documentation reason rows must be unique and sorted");
+    }
+    if (documentation.reasons.reduce((sum, row) => sum + row.datums, 0) !== documentation.datums) {
+      issue(ctx, ["reasons"], "Every documentation datum carries exactly one reason");
     }
   });
 
@@ -626,8 +631,8 @@ const V9OpenEvidenceIssuerSchema = z
   .object({
     questions: V9OpenEvidenceCountSchema,
     assets: V9OpenEvidenceCountSchema,
-    oldestReviewedAtSec: V9OpenEvidenceCountSchema.nullable(),
-    newestReviewedAtSec: V9OpenEvidenceCountSchema.nullable(),
+    oldestReviewedAtSec: UnixSecondsSchema.nullable(),
+    newestReviewedAtSec: UnixSecondsSchema.nullable(),
   })
   .strict()
   .superRefine((issuer, ctx) => {
@@ -648,24 +653,36 @@ const V9OpenEvidenceIssuerSchema = z
 export const V9OpenEvidenceByCardSchema = z
   .object({
     id: z.string().min(1),
-    openQuestionsCarried: V9OpenEvidenceCountSchema,
-    inheritedOpenQuestionsCarried: V9OpenEvidenceCountSchema,
-    openObligationsCarried: V9OpenEvidenceCountSchema,
+    /** Questions carried on this card that landed in the headline "open" bucket only. */
+    openBucketQuestionsCarried: V9OpenEvidenceCountSchema,
+    /** Open-bucket questions whose root asset is not this card (inherited from a parent). */
+    inheritedOpenBucketQuestionsCarried: V9OpenEvidenceCountSchema,
+    /** Obligations behind this card's open-bucket questions; excludes issuer and documentation ones. */
+    openBucketObligationsCarried: V9OpenEvidenceCountSchema,
+    /** Documentation-classed obligations this card carries, from any bucket. */
     documentationObligationsCarried: V9OpenEvidenceCountSchema,
-    /** Annotated only when a limited pillar has non-empty, all-documentation witnesses. */
-    documentationOnlyLimited: canonicalTextArray(1).pipe(z.array(V9DocumentationOnlyPillarSchema).max(3)).optional(),
-    /** Earliest recorded issuer review behind this card's C questions; absent when nobody is dated. */
-    issuerNondisclosureReviewedAtSec: V9OpenEvidenceCountSchema.optional(),
+    /**
+     * Pillars this card limits only through documentation gaps: the pillar is
+     * `limited`, its witnesses are non-empty, and every witness is
+     * documentation-classed. Absent means plain limited — never publish `[]`.
+     */
+    documentationOnlyLimited: canonicalTextArray(1).pipe(z.array(V9QualityPillarSchema).max(3)).optional(),
+    /** Earliest recorded issuer review behind this card's issuer-bucket questions; absent when none is dated. */
+    issuerNondisclosureReviewedAtSec: UnixSecondsSchema.optional(),
   })
   .strict()
   .superRefine((card, ctx) => {
-    if (card.inheritedOpenQuestionsCarried > card.openQuestionsCarried) {
-      issue(ctx, ["inheritedOpenQuestionsCarried"], "Inherited open questions cannot exceed open questions carried");
+    if (card.inheritedOpenBucketQuestionsCarried > card.openBucketQuestionsCarried) {
+      issue(ctx, ["inheritedOpenBucketQuestionsCarried"], "Inherited open questions cannot exceed open questions carried");
     }
   });
 export type V9OpenEvidenceByCard = z.infer<typeof V9OpenEvidenceByCardSchema>;
 
-/** Server-computed three-number block; `open-questions.ts` is its only authority. */
+/**
+ * Server-computed three-number block; `open-questions.ts` is its only authority.
+ * A card omitted from `byCard` carries zero obligations whenever the block
+ * itself is present; a present card's counts are measured, never inferred.
+ */
 export const V9OpenEvidenceSchema = z
   .object({
     semantics: z.literal(V9_OPEN_EVIDENCE_SEMANTICS),
@@ -684,16 +701,25 @@ export const V9OpenEvidenceSchema = z
     if (evidence.documentation.datums > evidence.totals.obligations) {
       issue(ctx, ["documentation", "datums"], "Documentation datums cannot exceed published obligations");
     }
-    const owners = evidence.owners.map((owner) => owner.responsibility);
-    if (new Set(owners).size !== owners.length) {
-      issue(ctx, ["owners"], "Owner rows must be unique");
+    if (evidence.byCard.reduce((sum, card) => sum + card.documentationObligationsCarried, 0) <
+        evidence.documentation.datums) {
+      issue(ctx, ["byCard"], "Per-card documentation obligations cannot undercount the documentation datums");
+    }
+    // Canonical order keeps replay bytes stable: canonical responsibilities, `mixed` last.
+    const ownerOrder = new Map<string, number>([
+      ...RESPONSIBILITIES.map((responsibility, index) => [responsibility, index] as const),
+      [V9_OPEN_EVIDENCE_MIXED_OWNER, RESPONSIBILITIES.length] as const,
+    ]);
+    const ownerRanks = evidence.owners.map((owner) => ownerOrder.get(owner.responsibility)!);
+    if (ownerRanks.some((rank, index) => index > 0 && ownerRanks[index - 1]! >= rank)) {
+      issue(ctx, ["owners"], "Owner rows must be unique and in canonical responsibility order");
     }
     if (evidence.owners.reduce((sum, owner) => sum + owner.questions, 0) !== evidence.totals.open) {
       issue(ctx, ["owners"], "Headline owner counts must partition the open bucket");
     }
     const reasonIdentities = evidence.reasons.map((row) => `${row.bucket}\u0000${row.code}`);
-    if (new Set(reasonIdentities).size !== reasonIdentities.length) {
-      issue(ctx, ["reasons"], "Reason rows must be unique per bucket and code");
+    if (!isUniqueSorted(reasonIdentities)) {
+      issue(ctx, ["reasons"], "Reason rows must be unique and sorted by bucket and code");
     }
     if (!isUniqueSorted(evidence.byCard.map((card) => card.id))) {
       issue(ctx, ["byCard"], "Open-evidence card IDs must be unique and sorted");
@@ -720,8 +746,6 @@ const SafetyScoreV9ResponseShape = {
   publishedAtSec: z.number().int().nonnegative(),
   completeness: SafetyScoreV9CompletenessSchema,
   foreignCauseGaps: canonicalTextArray(),
-  /** T2 carrier: the publication union of documentation-classified cause gaps. */
-  documentationCauseGaps: canonicalTextArray().optional(),
   commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
   pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
 } as const;
@@ -734,6 +758,7 @@ function refineResponse(
     foreignCauseGaps: readonly string[];
     sourceGenerations: Readonly<Record<string, string>>;
     pillarFreshness?: z.infer<typeof SafetyScoreV9PillarFreshnessSchema>;
+    documentationCauseGaps?: readonly string[];
     openEvidence?: V9OpenEvidence;
   },
   ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
@@ -762,12 +787,55 @@ function refineResponse(
   for (const finding of findSafetyScoreV9ParentAttributionIssues(response)) {
     issue(ctx, ["cards"], `${finding.cardId}: ${finding.message}`);
   }
-  const cardIds = new Set(ids);
-  response.openEvidence?.byCard.forEach((entry, index) => {
-    if (!cardIds.has(entry.id)) {
-      issue(ctx, ["openEvidence", "byCard", index, "id"], "Open-evidence counts must name a published card");
+  const cardsById = new Map(response.cards.map((card) => [card.id, card]));
+  const documentationCauseGaps = response.documentationCauseGaps;
+  if (documentationCauseGaps !== undefined) {
+    const resolvable = new Set(response.foreignCauseGaps);
+    for (const card of response.cards) {
+      for (const gapId of card.localCauseGaps) resolvable.add(`${card.id}:gap:${gapId}`);
     }
-  });
+    documentationCauseGaps.forEach((gapId, index) => {
+      if (!resolvable.has(gapId)) {
+        issue(ctx, ["documentationCauseGaps", index], "Documentation cause gaps must resolve to a published card or foreign gap");
+      }
+    });
+  }
+  if (response.openEvidence !== undefined) {
+    if (documentationCauseGaps === undefined && response.openEvidence.documentation.datums > 0) {
+      issue(ctx, ["documentationCauseGaps"], "Documentation datums require the publication documentation gap set");
+    }
+    if (response.openEvidence.issuer.newestReviewedAtSec !== null &&
+        response.openEvidence.issuer.newestReviewedAtSec > response.publishedAtSec) {
+      issue(ctx, ["openEvidence", "issuer", "newestReviewedAtSec"], "Issuer review proofs cannot postdate the publication");
+    }
+    response.openEvidence.byCard.forEach((entry, index) => {
+      const card = cardsById.get(entry.id);
+      if (card === undefined) {
+        issue(ctx, ["openEvidence", "byCard", index, "id"], "Open-evidence counts must name a published card");
+        return;
+      }
+      if (entry.issuerNondisclosureReviewedAtSec !== undefined &&
+          entry.issuerNondisclosureReviewedAtSec > response.publishedAtSec) {
+        issue(ctx, ["openEvidence", "byCard", index, "issuerNondisclosureReviewedAtSec"],
+          "Issuer review proofs cannot postdate the publication");
+      }
+      const annotated = entry.documentationOnlyLimited;
+      if (annotated !== undefined) {
+        for (let pillarIndex = 0; pillarIndex < annotated.length; pillarIndex++) {
+          const pillar = annotated[pillarIndex]!;
+          const pillarRow = card.pillars[pillar];
+          if (documentationCauseGaps === undefined) {
+            issue(ctx, ["openEvidence", "byCard", index, "documentationOnlyLimited", pillarIndex],
+              "A documentation-only pillar annotation requires the documentation gap set");
+          }
+          if (pillarRow.evidenceLevel !== "limited" || (pillarRow.limitedEvidenceCauses?.length ?? 0) === 0) {
+            issue(ctx, ["openEvidence", "byCard", index, "documentationOnlyLimited", pillarIndex],
+              "Only a limited pillar with witnesses can be documented as documentation-only limited");
+          }
+        }
+      }
+    });
+  }
 }
 
 /** Previous schema-7 envelope: admitted by the publication codec only during the v7→v8 cutover. */
@@ -787,6 +855,8 @@ export const SafetyScoreV9CurrentResponseSchema = z
     ...SafetyScoreV9ResponseShape,
     schemaVersion: z.literal(8),
     openEvidence: V9OpenEvidenceSchema,
+    /** T2 carrier: the publication union of documentation-classified cause gaps. */
+    documentationCauseGaps: canonicalTextArray().optional(),
     cards: z.array(SafetyScoreV9CurrentCardSchema),
   })
   .strict()

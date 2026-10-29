@@ -37,6 +37,7 @@ describe("canonical V9 report-card cache", () => {
       model: "v9",
       schemaVersion: 9,
       openEvidence: publication.openEvidence,
+      openEvidenceUnavailableReason: null,
       lifecycle: "active",
       safetyScoreIdentity: {
         publicationGenerationId: publication.publicationGenerationId,
@@ -44,7 +45,7 @@ describe("canonical V9 report-card cache", () => {
     });
   });
 
-  it("omits the block for a retained schema-7 generation instead of publishing zeros", () => {
+  it("publishes a machine-readable reason for a retained schema-7 generation instead of zeros", () => {
     const { openEvidence: _absent, ...previous } = makeWorkerSafetyScoreV9Publication();
     expect(previous).not.toHaveProperty("openEvidence");
     const health = makeReportCardsV9Response().publicationHealth;
@@ -53,7 +54,8 @@ describe("canonical V9 report-card cache", () => {
       health,
     );
     expect(snapshot.schemaVersion).toBe(9);
-    expect(snapshot).not.toHaveProperty("openEvidence");
+    expect(snapshot.openEvidence).toBeNull();
+    expect(snapshot.openEvidenceUnavailableReason).toBe("publication-predates-open-evidence");
   });
 
 
