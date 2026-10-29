@@ -83,12 +83,13 @@ describe("handleBackfillCgPrices", () => {
 
 it("does not import recycled Solomon CG market caps or prices into either generation", async () => {
   vi.clearAllMocks();
-  for (const id of ["usdv-solomon", "usdv-solomon-v2"]) {
-    const res = await handleBackfillCgPricesTrusted({ db: makeNoopD1(), url: makeApiUrl(`/api/backfill-cg-prices?stablecoin=${id}`) });
-    const body = await readJsonResponse(res, 200) as { coinsProcessed: number; totalRowsInserted: number; skipped: string[] };
-    expect(body.coinsProcessed).toBe(0);
-    expect(body.totalRowsInserted).toBe(0);
-    expect(body.skipped.length).toBe(1);
-  }
+  const v2 = await handleBackfillCgPricesTrusted({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-cg-prices?stablecoin=usdv-solomon-v2") });
+  const body = await readJsonResponse(v2, 200) as { coinsProcessed: number; totalRowsInserted: number; skipped: string[] };
+  expect(body.coinsProcessed).toBe(0);
+  expect(body.totalRowsInserted).toBe(0);
+  expect(body.skipped.length).toBe(1);
+  // The legacy mint is frozen (2026-10-29), so the backfill no longer admits it at all.
+  const legacy = await handleBackfillCgPricesTrusted({ db: makeNoopD1(), url: makeApiUrl("/api/backfill-cg-prices?stablecoin=usdv-solomon") });
+  expect(legacy.status).toBe(404);
   expect(fetchJsonWithRetry).not.toHaveBeenCalled();
 });
