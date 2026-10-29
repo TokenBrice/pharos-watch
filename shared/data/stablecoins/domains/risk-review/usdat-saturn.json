@@ -533,20 +533,20 @@
         "controlRef": "usdat-ccip-rmn-validation",
         "question": "What complete current verifier/off-ramp signing, threshold, owner and bypass topology actually validates the Ethereum-Monad and Ethereum-BNB USDat lanes? Verified selected Ethereum RMN 2.1.0 exposes an emergency curse surface; isBlessed() always returns true for backward compatibility and getVersionedConfig() deliberately returns an empty version-zero structure, not a live signer census. Current active-lane authority closure must be independently established rather than inferred from those functions or curse-admin membership.",
         "subject": "authority-semantics",
-        "reviewedAt": "2026-10-11",
-        "reviewer": "Sol curation campaign 2026-10-11 (C13USDat)",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "Verified selected Ethereum RMN compatibility and curse semantics",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0b047953451a207743fb62541b21199b95190602"
-          },
-          {
-            "label": "Pinned Ethereum block 26155000 getARM identity, observed 2026-10-11T00:56:23.878Z",
+            "label": "ethereum block 26300237, 2026-10-29T18:37:11Z: ARMProxy 0x411de17f12d1a34ecc7f45f49844626267c75e81 owner()=0x44835bbba9d40deda9b64858095ecfb2693c9449 and code present (unchanged); re-read 2026-10-29",
             "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           },
           {
-            "label": "Ethereum CCIP directory current infrastructure",
+            "label": "Chainlink CCIP Ethereum mainnet chain directory accessed 2026-10-29: RMN still 0x411de17f12d1a34ecc7f45f49844626267c75e81; no signer census published",
             "url": "https://docs.chain.link/ccip/directory/mainnet/chain/mainnet"
+          },
+          {
+            "label": "Verified selected Ethereum RMN compatibility and curse semantics",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x0b047953451a207743fb62541b21199b95190602"
           }
         ]
       }

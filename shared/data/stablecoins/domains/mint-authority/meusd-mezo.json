@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-adverse",
     "confidence": "manual-review",
-    "summary": "MUSD's only canonical native issuance route is on Mezo: BorrowerOperations opens BTC-collateralized troves at a 110% minimum collateral ratio and InterestRateManager mints accrued interest. The Mezo token owner's 5-of-9 Safe administers the canonical mintList and can authorize arbitrary additional Mezo minters, so canonical issuance remains unbounded-adverse. Ethereum and Base are Wormhole NTT burning-spoke representations; their bridge minting, burn, rate-limit, upgrade, peer, pause, and Guardian-attestation controls are assessed under bridgeRouteRisk.",
+    "summary": "MUSD's only canonical native issuance route is on Mezo: BorrowerOperations opens BTC-collateralized troves at a 110% minimum collateral ratio and InterestRateManager mints accrued interest. The Mezo token owner's 4-of-7 Safe administers the canonical mintList and can authorize arbitrary additional Mezo minters, so canonical issuance remains unbounded-adverse. Ethereum and Base are Wormhole NTT burning-spoke representations; their bridge minting, burn, rate-limit, upgrade, peer, pause, and Guardian-attestation controls are assessed under bridgeRouteRisk.",
     "upgradeability": {
       "model": "transparent-proxy",
       "deploymentRefs": [
@@ -77,8 +77,8 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "can-authorize",
-        "threshold": 5,
-        "signerCount": 9,
+        "threshold": 4,
+        "signerCount": 7,
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "capDescription": "The Mezo owner Safe administers the canonical token's mintList/burnList allowlists (addToMintList/addToBurnList are onlyOwner in MUSD.sol), so it can authorize arbitrary new Mezo minters; it does not itself call mint(). The same Safe's Ethereum/Base token and NTT-manager ownership is bridge administration reviewed separately under bridgeRouteRisk.",
@@ -90,10 +90,8 @@
         ],
         "safe": {
           "source": "onchain",
-          "threshold": 5,
+          "threshold": 4,
           "owners": [
-            "0x3f9bb00672ad7254eba4be9fe65860ce298a3ab8",
-            "0x7f043ff8b5ce02e543ee83fcdec94944d24ebd5d",
             "0x930b76784c1fb86335ab174dfe321b44ea0adfda",
             "0xabb0c40dbc7ff3455087888c87217064ad10a944",
             "0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85",
@@ -104,15 +102,15 @@
           ],
           "enabledModules": [],
           "guard": null,
-          "observedBlock": 12220336,
-          "observedAt": "2026-10-01"
+          "observedBlock": 12856430,
+          "observedAt": "2026-10-29"
         },
         "executionScope": {
           "controllerDeployment": "mezo:0x98d8899c3030741925be630c710a98b57f397c7a",
-          "reviewedAt": "2026-10-09",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2026-11-01",
-          "reviewer": "Sol curation campaign 2026-10-09 (W4T06Liquity)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "R-MINT-6 renewal 2026-10-29 (fact change: owner Safe now 4-of-7; threshold 5->4 and two owners removed at Mezo block 12530696)",
           "confidence": "verified",
           "sources": [
             {"label": "MUSD owner-managed mint allowlist source", "url": "https://raw.githubusercontent.com/mezo-org/musd/main/solidity/contracts/token/MUSD.sol"},
@@ -121,16 +119,16 @@
             {"label": "Verified CompatibilityFallbackHandler source; exact byte-for-byte correspondence with Mezo fallback runtime at block 12220336", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4"}
           ],
           "pin": {
-            "position": "12220336",
-            "hash": "0x6d938948922b272aa865390746cf774077f5e678550f0086d2053542b888b766",
+            "position": "12856430",
+            "hash": "0x0f645999a5d9c68151239916c1beaafdc8d6e5ae6694223aef875ae36f75a64f",
             "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
-            "signerIdentity": "threshold=5;owners=0x7f043ff8b5ce02e543ee83fcdec94944d24ebd5d,0x3f9bb00672ad7254eba4be9fe65860ce298a3ab8,0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
+            "signerIdentity": "threshold=4;owners=0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
           },
           "observedState": {
-            "position": "12220336",
-            "hash": "0x6d938948922b272aa865390746cf774077f5e678550f0086d2053542b888b766",
+            "position": "12856430",
+            "hash": "0x0f645999a5d9c68151239916c1beaafdc8d6e5ae6694223aef875ae36f75a64f",
             "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
-            "signerIdentity": "threshold=5;owners=0x7f043ff8b5ce02e543ee83fcdec94944d24ebd5d,0x3f9bb00672ad7254eba4be9fe65860ce298a3ab8,0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
+            "signerIdentity": "threshold=4;owners=0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
           },
           "inventory": "complete",
           "closure": {"entrypoints": true, "mutableTargets": true, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": true},
@@ -166,10 +164,10 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "12220336",
-                  "hash": "0x6d938948922b272aa865390746cf774077f5e678550f0086d2053542b888b766",
+                  "position": "12856430",
+                  "hash": "0x0f645999a5d9c68151239916c1beaafdc8d6e5ae6694223aef875ae36f75a64f",
                   "runtimeIdentity": "sha256:5b8bff324e02136edb0775bd77aa0fe773c1e23092305fe63f50a9e92f5b8faf",
-                  "signerIdentity": "threshold=5;owners=0x7f043ff8b5ce02e543ee83fcdec94944d24ebd5d,0x3f9bb00672ad7254eba4be9fe65860ce298a3ab8,0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
+                  "signerIdentity": "threshold=4;owners=0x930b76784c1fb86335ab174dfe321b44ea0adfda,0xabb0c40dbc7ff3455087888c87217064ad10a944,0x9be76d5ab050aa8c77f6ad25f25f633b2cb8ed85,0x696ba87e3ef864335a9e30ae4653b516fb93a1ab,0x91149ef9449bd1068346b6098ebb9624c2d3e849,0xf63bc5326c4d5ab123a20ec5d5805b365a3355e4,0x6f016c33e55e40f24239fb9ab96a6e3d75059686"
                 },
                 "sourceRuntimeIdentity": "sha256:2c242392114e17787f9b23e6cbbab269d734c5483753277932545332f4d77afb",
                 "observedSourceRuntimeIdentity": "sha256:2c242392114e17787f9b23e6cbbab269d734c5483753277932545332f4d77afb",
@@ -246,7 +244,7 @@
     "reconciliation": "unknown",
     "supervision": "none",
     "review": {
-      "evidence": "Canonical Mezo re-review at block 12220336 on 2026-10-01: MUSD and the BorrowerOperations ProxyAdmin are owned by the recorded 5-of-9 protocol Safe. BorrowerOperations is a transparent proxy with implementation 0x501670bbbe2ec8c11449c28c0c9e6677d5ea9b61 and ProxyAdmin 0x778f4ef6cbe4492a6c87abab98821e4242663e58; immutable MUSD token bytecode does not make mint-critical CDP logic immutable. Canonical Safe module pagination is empty and the standard guard storage slot is zero, superseding the 2026-08-16 unresolved getter observation for this chain only. Complete MintListAddressAdded/MintListAddressRemoved log census from genesis through block 12220336, in 10000-block chunks, found three additions and no removals: BorrowerOperations and InterestRateManager at block 178718, and 0x2c5e9afbb670c4a61ac2dcad62c258ee2391389a at block 8550826. All three remain mintList=true. The third address requires separate transfer-rail classification and liability reconciliation; the two CDP paths are not the complete canonical token mint allowlist. Source and docs establish the owner can authorize uncapped additional minters; no dated reconciliation covering every allowlisted mint path was located. EconomicCapSemantics remains unbounded and reconciliation remains unknown. The earlier Ethereum/Base NTT bridge review is preserved under bridgeRouteRisk and is not refreshed by these Mezo-only reads.",
+      "evidence": "Canonical Mezo re-review at block 12220336 on 2026-10-01: MUSD and the BorrowerOperations ProxyAdmin are owned by the recorded protocol Safe (4-of-7 at Mezo block 12856430; threshold changed 5->4 and two owners removed at block 12530696). BorrowerOperations is a transparent proxy with implementation 0x501670bbbe2ec8c11449c28c0c9e6677d5ea9b61 and ProxyAdmin 0x778f4ef6cbe4492a6c87abab98821e4242663e58; immutable MUSD token bytecode does not make mint-critical CDP logic immutable. Canonical Safe module pagination is empty and the standard guard storage slot is zero, superseding the 2026-08-16 unresolved getter observation for this chain only. Complete MintListAddressAdded/MintListAddressRemoved log census from genesis through block 12220336, in 10000-block chunks, found three additions and no removals: BorrowerOperations and InterestRateManager at block 178718, and 0x2c5e9afbb670c4a61ac2dcad62c258ee2391389a at block 8550826. All three remain mintList=true. The third address requires separate transfer-rail classification and liability reconciliation; the two CDP paths are not the complete canonical token mint allowlist. Source and docs establish the owner can authorize uncapped additional minters; no dated reconciliation covering every allowlisted mint path was located. EconomicCapSemantics remains unbounded and reconciliation remains unknown. The earlier Ethereum/Base NTT bridge review is preserved under bridgeRouteRisk and is not refreshed by these Mezo-only reads.",
       "reviewer": "Sol curation pass 2026-10-01 (R2WMisc08)",
       "reviewedAt": "2026-10-01",
       "disposition": "scoreable",

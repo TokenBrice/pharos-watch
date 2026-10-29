@@ -253,34 +253,30 @@
         },
         {
           "controlRef": "steakUSDG vault owner",
-          "question": "What verified source and complete internal authorization census bind supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73? At Robinhood block 89162029 (2026-10-15T10:43:17Z), owner and Guardian getters remain readable, but Sourcify has no verified exact deployment and the issuer Supervisor v2 documentation and repository README still omit Robinhood. The immutable share core excludes arbitrary unbacked share issuance and upgrades. Generic multisig and Aragon-Guardian descriptions do not establish this supervisor internal authorization, veto implementation or execution closure.",
+          "question": "What verified source and complete internal authorization census bind supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73? At Robinhood block 89162029 (2026-10-15T10:43:17Z), owner and Guardian getters remain readable, but Sourcify has no verified exact deployment and the issuer Supervisor v2 documentation and repository README still omit Robinhood. The immutable share core excludes arbitrary unbacked share issuance and upgrades. Generic multisig and Aragon-Guardian descriptions do not establish this supervisor internal authorization, veto implementation or execution closure. Fresh re-read at Robinhood Chain block 101117600, hash 0xe417fb63ebff616b0eb9c455c9f90a6171ee5932221ca1fb2f69b31ed44920fa, timestamp 2026-10-29T18:39:44Z: the supervisor 0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73 still returns owner 0x337feFE49514fb901eB455A501b8Be76CDeF7660, TIMELOCK 1209600 seconds, isVaultSupervised(vault)=true with one supervised vault, guardians [0x8fadb7fcc26a6aad705147097b165b6b8e766e75], allowedVaultOwners(owner EOA)=false, and no pending supervisor-owner transfer or scheduled new owner; the vault owner remains 0xCa50D23F1c18C1Dfaff5d3cae3aa4B9dC5C8db73 with curator 0x9023FBD6A08C666491A2d1648737E400cF42D2Fb. Sourcify still returns no record for this exact supervisor deployment on chain 4663 (queried 2026-10-29).",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Batch-64 review (Rev_SteakusdgSteakhouse)",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), exact control and role census",
+              "label": "Supervisor owner/TIMELOCK/guardian/vault/getters at Robinhood Chain block 101117600, hash 0xe417fb63ebff616b0eb9c455c9f90a6171ee5932221ca1fb2f69b31ed44920fa, timestamp 2026-10-29T18:39:44Z",
               "url": "https://rpc.mainnet.chain.robinhood.com"
             },
             {
-              "label": "Ethereum block 26110706: comparator runtime pin",
-              "url": "https://etherscan.io/block/26110706"
-            },
-            {
-              "label": "Verified Ethereum VaultV2Supervisor reference",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4d7bd498bb24098ca281c05519629c605407f71d"
+              "label": "Sourcify queried 2026-10-29: no record for the exact Robinhood supervisor deployment (HTTP 404)",
+              "url": "https://sourcify.dev/server/v2/contract/4663/0xca50d23f1c18c1dfaff5d3cae3aa4b9dc5c8db73?fields=all"
             },
             {
               "label": "Exact immutable Robinhood VaultV2 source",
               "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
             },
             {
-              "label": "Supervisor v2 issuer deployment table and immediate operations, accessed 2026-10-15",
-              "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
+              "label": "Verified Ethereum VaultV2Supervisor reference",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4d7bd498bb24098ca281c05519629c605407f71d"
             },
             {
-              "label": "Issuer source repository README deployment inventory, accessed 2026-10-15",
-              "url": "https://raw.githubusercontent.com/Steakhouse-Financial/vault-v2-supervisor/main/README.md"
+              "label": "Supervisor v2 issuer deployment table and immediate operations",
+              "url": "https://www.steakhouse.financial/docs/products/infrastructure/supervisor-v2.md"
             }
           ]
         }

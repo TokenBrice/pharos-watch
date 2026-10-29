@@ -495,109 +495,145 @@
         },
         {
           "controlRef": "base:0x827e86072b06674a077f592a531dce4590adecdb",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller the Safe proxy (version 1.4.1) still reports threshold 3 of 9 owners and no enabled modules; the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         },
         {
           "controlRef": "base:0x0a0e559bc3b0950a7e448f0d4894db195b9cf8dd",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller the Safe proxy (version 1.4.1) still reports threshold 5 of 10 owners and no enabled modules; the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         },
         {
           "controlRef": "base:0x0000aeb716a0df7a9a1aad119b772644bc089da8",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller the Safe proxy (version 1.3.0) still reports threshold 1 of 7 owners and no enabled modules; the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         },
         {
           "controlRef": "base:0xfeed46c11f57b7126a773eec6ae9ca7ae1c03c9a",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller it still has no code (plain EOA, no EIP-7702 delegation); the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         },
         {
           "controlRef": "base:0x1be9b8c406120b2c2b8990d0522cd226a3d60e36",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller it still carries the same EIP-1967 proxy runtime as the reviewed VaultV2AllocatorProxy; the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         },
         {
           "controlRef": "base:0xfc580f2a77e85f1f47b60f096d36fdc97ce2d827",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller it still carries the EIP-7702 designator 0xef0100beef1d6cf4f7bd10c1f2cd45864a7ce53888beef; the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         },
         {
           "controlRef": "base:0xbbf1ad10455eed600cd78a1702f7aca41c9abceb",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller it still carries the EIP-7702 designator 0xef0100beef1d6cf4f7bd10c1f2cd45864a7ce53888beef; the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         },
         {
           "controlRef": "base:0xaed282b8ad9257bb1272e93ae63a32a53621e412",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller it still runs the reviewed BluePublicAllocator contract runtime; the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         },
         {
           "controlRef": "base:0x9e0fddda790651e6a05cd2de69e624b94c04eaf5",
-          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+          "question": "What is the complete current maximal execution authority for this controller, including delegated code, fallback/module paths and downstream call constraints? Onchain role membership alone does not certify execution closure. Fresh re-read at Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z: for this controller it still has no code (plain EOA, no EIP-7702 delegation) and isSentinel(address)=true; the vault 0xbeeff2490feffa212fac2f6553682c219e6a8845 still reports owner 0x639bfa26472906ccd40513408284a8ad292bc5d6 and curator 0x827e86072b06674a077f592a531dce4590adecdb, adaptersLength=1, and its isAllocator/isSentinel bindings are unchanged. Delegated-code, fallback/module and downstream-call closure remain open for this controller.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
+              "label": "Base vault, controller, Safe owner/threshold/module and role census; Base block 53254900, hash 0xf2a1c27fededf2da6f4010980ad34e10e3f8b251b482e3713bafa884fa58b86b, timestamp 2026-10-29T18:39:07Z",
               "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            },
+            {
+              "label": "Morpho Vault V2 and gate semantics",
+              "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             }
           ]
         }
