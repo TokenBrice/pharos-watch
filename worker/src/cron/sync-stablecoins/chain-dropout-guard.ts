@@ -571,10 +571,11 @@ export async function guardChainDropouts(input: {
       result.quarantinedAssetIds.push(String(asset.id));
     }
     const carryExpired = quarantinedSince != null && now - quarantinedSince > SUPPLEMENTAL_RESTORE_MAX_AGE_SEC;
-    // A minority-share chain still quarantined past the carry ceiling no longer blanks the asset: the
-    // observed remainder publishes with its own clock, the chains stay null and quarantined, and provenance
-    // names the partial coverage. Nothing is carried or added, so reattributed supply cannot double count.
-    const partialCoverage = carryExpired && deficit <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (aggregate + deficit);
+    // ADR-8(c) exception: an unrepaired deficit of at most 5% of the vetted whole-asset total never holds
+    // the whole asset, not even inside the carry ceiling. The observed provider remainder publishes with
+    // the row's own (provider) clock — never a synthesized restored clock — the dropped chains stay null,
+    // the quarantine is retained and nothing is added, so reattributed supply cannot double count.
+    const partialCoverage = material && deficit > 0 && deficit <= CHAIN_DROPOUT_POLICY.partialCoverageMaxDeficitRatio * (aggregate + deficit);
     if (material && !partialCoverage) {
       asset.supplyRestored = true;
       asset.supplyObservedAt = Math.min(...unrepaired.map((candidate) => candidate.evidence.baselineObservedAt));

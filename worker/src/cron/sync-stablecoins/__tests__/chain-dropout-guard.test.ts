@@ -344,11 +344,49 @@ describe("chain dropout guard", () => {
       expect(recovered.state.pairs[hyperevmKey]).toMatchObject({ quarantinedSince, baselineUsd: 5_000_000 });
     });
 
-    it("keeps carrying the vetted hold inside the carry ceiling", async () => {
-      const { now, state, asset } = setup(5_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1);
+    it("publishes partial coverage inside the carry ceiling instead of a whole-asset hold", async () => {
+      // 5% of the vetted whole-asset total: the inclusive share bound applies from first detection.
+      const { now, quarantinedSince, state, asset } = setup(5_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1);
       await guardChainDropouts({ assets: [asset], now, state });
-      expect(getCirculatingRawOrNull(asset)).toBe(100_000_000);
-      expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined" } });
+      expect(getCirculatingRawOrNull(asset)).toBe(95_000_000);
+      expect(asset.supplyRestored).toBeUndefined();
+      expect(asset.supplyObservedAt).toBe(now - 600);
+      expect(asset.chainCirculating!.HyperEVM.current).toBeNull();
+      expect(SupplyChainGuardProvenanceSchema.parse(asset.supplyChainGuard)).toMatchObject({
+        status: "chains-unavailable", partialCoverage: true, quarantinedSince,
+        chains: [{ chainId: "hyperevm", listCurrentUsd: null, baselineUsd: 5_000_000, resolution: "unavailable" }],
+      });
+    });
+
+    it("keeps carrying the vetted hold inside the carry ceiling above the partial-coverage bound", async () => {
+      const { now, quarantinedSince, state, asset } = setup(5_100_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1);
+      await guardChainDropouts({ assets: [asset], now, state });
+      expect(getCirculatingRawOrNull(asset)).toBe(100_100_000);
+      expect(asset).toMatchObject({
+        supplyRestored: true, supplyObservedAt: quarantinedSince - 5 * DAY,
+        supplyChainGuard: { status: "quarantined" },
+      });
+      expect(asset.supplyChainGuard).not.toHaveProperty("partialCoverage");
+    });
+
+    it("never synthesizes a clock when the provider row carries none", async () => {
+      const { now, state, asset } = setup(5_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1);
+      delete asset.supplyObservedAt;
+      await guardChainDropouts({ assets: [asset], now, state });
+      expect(asset.supplyObservedAt).toBeUndefined();
+      expect(asset.supplyChainGuard).toMatchObject({ status: "chains-unavailable", partialCoverage: true });
+    });
+
+    it("leaves full coverage unchanged", async () => {
+      const asset: PeggedAsset = {
+        ...usdg(), circulating: { peggedUSD: 95_000_000 }, supplyObservedAt: NOW - 600,
+        chains: ["Ethereum"], chainCirculating: { Ethereum: { current: 95_000_000, circulatingPrevDay: 95_000_000 } },
+      };
+      await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
+      expect(asset.supplyChainGuard).toBeUndefined();
+      expect(asset.supplyObservedAt).toBe(NOW - 600);
+      expect(asset.supplyRestored).toBeUndefined();
+      expect(getCirculatingRawOrNull(asset)).toBe(95_000_000);
     });
 
     it("keeps a larger-share dropout unavailable past the carry ceiling", async () => {
