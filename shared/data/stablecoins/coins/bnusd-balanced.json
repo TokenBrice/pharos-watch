@@ -112,6 +112,26 @@
       "message": "Balanced v2 launched on April 7, 2026 and the original v1 app is no longer supported. Issuer documentation asks holders to withdraw or migrate before v1 goes offline on December 1, 2026; after that date, outstanding loans will be liquidated and contracts made inaccessible ahead of ICON's announced end-2026 shutdown. This entry tracks v1 bnUSD(old), not the distinct Sonic-based new bnUSD. The Sonic v2 reserve census does not establish backing or redemption capacity for the tracked legacy liability."
     }
   ],
+  "liveReservesConfig": {
+    "adapter": "sodax-sonic",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "suspended": {
+      "reason": "Tracked ICON bnUSD(old) and its burn-mint representations are a different liability from the Sonic SODAX new bnUSD reserve census. Resume only after identity-bound legacy backing evidence is reviewed.",
+      "since": "2026-10-08"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "sonic",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "display": {
+      "url": "https://balanced.network/stablecoin/",
+      "label": "SODAX borrower collateral"
+    }
+  },
   "obituary": {
     "causeOfDeath": "abandoned",
     "deathDate": "2026-04-07",
