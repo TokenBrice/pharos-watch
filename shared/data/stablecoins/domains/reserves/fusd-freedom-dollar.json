@@ -17,12 +17,12 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-27",
-    "reviewer": "Claude evidence renewal D01-L3 2026-10-27",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Claude evidence renewal 2026-10-29 (R-COMP-6)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Freedom Dollar live reserve disclosure (timestamped 2026-10-27)",
+        "label": "Freedom Dollar live reserve disclosure (last-updated 10/29/2026 6:37:27 PM)",
         "url": "https://www.freedomdollar.com/en"
       },
       {
@@ -30,10 +30,10 @@
         "url": "https://www.freedomdollar.com/en/verify-reserves"
       }
     ],
-    "rationale": "The issuer's live dashboard was opened on 2026-09-21 and carried its own 2026-09-21 08:28:33 timestamp. It disclosed 1,375,148.82 ZANO at $8.185, 5,222,687 fUSD held in the reserve wallet, 7.1M circulating fUSD, 12.3M minted fUSD, $11,255,593.07 of stated public reserves, and a stated 1.59x coverage ratio. The issuer also publishes a view-only tracking seed for direct observation of the ZANO reserve wallet. The reserve-held fUSD is the protocol's own uncirculated supply rather than exogenous collateral, so the backing composition resolves to one ZANO category. The same dashboard re-read on 2026-10-27 carried its own last-updated stamp of 10/27/2026, 8:45:05 AM and disclosed 1,535,256.96 ZANO at $4.039 ($6,200,902.86 of stated public reserves), 6,049,310 fUSD held in reserves, about 6M circulating and 12M minted fUSD, and a stated 1.04x coverage ratio. The ZANO price decline and lower coverage ratio since 2026-09-21 are recorded as observed; the composition remains one ZANO category.",
-    "compositionBasis": "Freedom Dollar issuer dashboard timestamped 2026-10-27 and issuer-published view-only Zano reserve-wallet verification path",
+    "rationale": "The issuer's live dashboard was re-read on 2026-10-29 and carried its own last-updated stamp of 10/29/2026, 6:37:27 PM. It disclosed 1,534,832.53 ZANO at $3.814 ($5,853,851.26 of stated public reserves), 6,054,737 fUSD held in the reserve wallet, about 5.9M circulating and 12M minted fUSD, and a stated 0.98x coverage ratio. The issuer also publishes a view-only tracking seed for direct observation of the ZANO reserve wallet. The reserve-held fUSD is the protocol's own uncirculated supply rather than exogenous collateral, so the backing composition resolves to one ZANO category and the 100% slice weight is unchanged. The ZANO price decline and the move below 1.0x coverage (1.59x on 2026-09-21, 1.04x on 2026-10-27, 0.98x on 2026-10-29) are recorded as observed; sub-1.0x coverage is a verified-worse collateral finding rather than a composition change, and the slice retains its high risk tier.",
+    "compositionBasis": "Freedom Dollar issuer dashboard timestamped 2026-10-29 and issuer-published view-only Zano reserve-wallet verification path",
     "scope": "full-composition",
-    "knownUnknownExposure": "The reserve resolves to one exogenous ZANO collateral category. The dashboard also reports 6,049,310 fUSD held in reserves, which is the protocol's own uncirculated token supply rather than a separate backing asset; staking-reward accrual is not itemized separately.",
+    "knownUnknownExposure": "The reserve resolves to one exogenous ZANO collateral category. The dashboard also reports 6,054,737 fUSD held in reserves, which is the protocol's own uncirculated token supply rather than a separate backing asset; staking-reward accrual is not itemized separately.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
@@ -44,7 +44,7 @@
         "rationale": "ZANO is an external cryptoasset that is not a tracked stablecoin dependency."
       }
     ],
-    "compositionAsOf": "2026-10-27"
+    "compositionAsOf": "2026-10-29"
   },
   "custodyProfile": {
     "providers": [
