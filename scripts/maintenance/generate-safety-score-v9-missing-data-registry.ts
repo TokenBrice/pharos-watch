@@ -93,13 +93,16 @@ const ReplayEvaluatedAssetSchema = z
       })
       .passthrough(),
     // The admitted Exit routes the documentation class's route-diagnostic veto reads.
+    // `included` is the evaluator's admission; `scoringDisposition` only restates
+    // the route's cause (a null cause also reports "included"), so it cannot
+    // answer whether the evaluator scored the route.
     exit: z
       .object({
         routes: z.array(
           z
             .object({
               routeKey: z.string().min(1),
-              scoringDisposition: z.string().min(1),
+              included: z.boolean(),
             })
             .passthrough(),
         ),
@@ -621,7 +624,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
       evaluated.assetId,
       new Set(
         evaluated.exit.routes
-          .filter((route) => route.scoringDisposition === "included")
+          .filter((route) => route.included)
           .map((route) => route.routeKey),
       ),
     ]),
