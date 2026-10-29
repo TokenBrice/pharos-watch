@@ -15,17 +15,17 @@
     "effort": 10,
     "compressionLevel": 9
   },
-  "documentSha256": "96de92204af13500b2bec9600012d4203356b727a282c010d13531bead392cf2",
+  "documentSha256": "a169e9e0888bbc166bbc1ee384d1021b271df2724b2b9a8bcc7aff0c18faf2a2",
   "summary": {
-    "total": 114,
+    "total": 116,
     "firstYear": 2018,
     "latestYear": 2026,
-    "asOf": "2026-10-05",
-    "atlasImageSha256": "58b2e6ecff2eba59eddefa7723ec01c29733faa472c70e78c82327f866f3b898"
+    "asOf": "2026-10-16",
+    "atlasImageSha256": "fd170fc93b99f9e841bbc41e41be651c3261fb28b616645797ddaa8498d0a88f"
   },
   "image": {
-    "sha256": "a380b75447eefbe75772e2772612f845b1cc8d34060a87dae474a3be13c8e478",
-    "bytes": 144382,
+    "sha256": "cb4de49cbbfd0e02381de27a606c07d5e9253f4c9eff5a6172de9cf129148eed",
+    "bytes": 146736,
     "width": 1200,
     "height": 630
   }
