@@ -18,8 +18,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x006aa3eb5e666d8e006aa647d4afab212555ddea"
@@ -37,8 +37,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x0227b54adbfaeec5f1ed1dfa11f54dcff9076e2c"
@@ -56,8 +56,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x03ae53b33feeac1222c3f372f32d37ba95f0f099"
@@ -75,8 +75,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x046b1a5718da6a226d912cfd306ba19980772908"
@@ -94,8 +94,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x08638ef1a205be6762a8b935f5da9b700cf7322c"
@@ -113,8 +113,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c3",
           "memberRef": "ethereum:0x09e05ff6142f2f9de8b6b65855a1d56b6cfe4c58"
@@ -132,8 +132,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c4",
           "memberRef": "ethereum:0x0a59649758aa4d66e25f08dd01271e891fe52199"
@@ -151,8 +151,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c5",
           "memberRef": "ethereum:0x0ac6a1d74e84c2df9063bddc31699ff2a2bb22a2"
@@ -170,8 +170,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c6",
           "memberRef": "ethereum:0x0e2e8f1d1326a4b9633d96222ce399c708b19c28"
@@ -189,8 +189,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x0f6f88f8a4b918584e3539182793a0c276097f44"
@@ -208,8 +208,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x10cd5fbe1b404b7e19ef964b63939907bdaf42e2"
@@ -227,8 +227,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c7",
           "memberRef": "ethereum:0x12f36cdea3a28c35ac8c6cc71d9265c17c74a27f"
@@ -246,8 +246,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c8",
           "memberRef": "ethereum:0x135954d155898d42c90d2a57824c690e0c7bef1b"
@@ -265,8 +265,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c9",
           "memberRef": "ethereum:0x146181aa9b362eaec2ec3add7429a06d53b43d1a"
@@ -284,8 +284,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c10",
           "memberRef": "ethereum:0x1926862f899410bfc19fefb8a3c69c7aed22463a"
@@ -303,8 +303,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c11",
           "memberRef": "ethereum:0x197e90f9fad81970ba7976f33cbd77088e5d7cf7"
@@ -322,8 +322,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c12",
           "memberRef": "ethereum:0x19c0976f590d67707e62397c87829d896dc0f1f1"
@@ -341,8 +341,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x1fe789bbac5b141bdd795a3bc5e12af29ddb4b86"
@@ -360,8 +360,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x248ccbf4864221fc0e840f29bb042ad5bfc89b5c"
@@ -379,8 +379,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x24e459f61ceaa7b1ce70dbaea938940a7c5ad46e"
@@ -398,8 +398,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x2502f65d77ca13f183850b5f9272270454094a08"
@@ -417,8 +417,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c14",
           "memberRef": "ethereum:0x2600004fd1585f7270756ddc88ad9cfa10dd0428"
@@ -436,8 +436,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c9",
           "memberRef": "ethereum:0x26512a41c8406800f21094a7a7a0f980f6e25d43"
@@ -455,8 +455,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x27ca5e525ea473ed52ea9423cd08ccc081d96a98"
@@ -474,8 +474,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x29342f530ed6120bdb219d602dafd584676293d1"
@@ -493,8 +493,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x2ac4c9b49051275acb4c43ec973082388d015d48"
@@ -512,8 +512,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c15",
           "memberRef": "ethereum:0x2b16c07d5fd5cc701a0a871eae2aad6da5fc8f12"
@@ -531,8 +531,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x2bb690931407dca7ece84753ea931ffd304f0f38"
@@ -550,8 +550,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c16",
           "memberRef": "ethereum:0x2cc583c0aacdac9e23cb601fda8f1a0c56cdcb71"
@@ -569,8 +569,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x2f0b23f53734252bda2277357e97e1517d6b042a"
@@ -588,8 +588,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c17",
           "memberRef": "ethereum:0x30784615252b13e1dbe2bdf598627eac297bf4c5"
@@ -607,8 +607,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c18",
           "memberRef": "ethereum:0x3225737a9bbb6473cb4a45b7244aca2befdb276a"
@@ -626,8 +626,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c19",
           "memberRef": "ethereum:0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b"
@@ -645,8 +645,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c20",
           "memberRef": "ethereum:0x36b072ed8afe665e3aa6daba79decbec63752b22"
@@ -664,8 +664,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x3713f83ee6d138ce191294c131148176015bc29a"
@@ -683,8 +683,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x39f29773dcb94a32529d0612c6706c49622161d1"
@@ -702,8 +702,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x3bc3a58b4fc1cbe7e98bb4ab7c99535e8ba9b8f1"
@@ -721,8 +721,8 @@
         "directMintAbility": "none",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c21",
           "memberRef": "ethereum:0x3c0f895007ca717aa01c8693e59df1e8c3777feb"
@@ -740,8 +740,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x3d0b1912b66114d4096f48a8cee3a56c231772ca"
@@ -759,8 +759,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x3d22e6f643e2f4c563fd9db22b229cbb0cd570fb"
@@ -778,8 +778,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x3ea60191b7d5990a3544b6ef79983fd67e85494a"
@@ -797,8 +797,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x3ff33d9162ad47660083d7dc4bc02fb231c81677"
@@ -816,8 +816,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c22",
           "memberRef": "ethereum:0x41ca7a7aa2be78cf7cb80c0f4a9bdfbc96e81815"
@@ -835,8 +835,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x42afd448df7d96291551f1efe1a590101afb1dff"
@@ -854,8 +854,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c23",
           "memberRef": "ethereum:0x4454af7c8bb9463203b66c816220d41ed7837f44"
@@ -873,8 +873,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x475f1a89c1ed844a08e8f6c50a00228b5e59e4a9"
@@ -892,8 +892,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x476aad14f42469989efad0b7a31f07b795ff0621"
@@ -911,8 +911,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x476b81c12dc71edfad1f64b9e07caa60f4b156e2"
@@ -930,8 +930,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x49a33a28c4c7d9576ab28898f4c9ac7e52ea457a"
@@ -949,8 +949,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x4a03aa7fb3973d8f0221b466eefb53d0ac195f55"
@@ -968,8 +968,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x4aad139a88d2dd5e7410b408593208523a3a891d"
@@ -987,8 +987,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x4fc53a57262b87abda61d6d0db2be7e9be68f6b8"
@@ -1006,8 +1006,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c24",
           "memberRef": "ethereum:0x5048c5cd3102026472f8914557a1fd35c8dc6c9e"
@@ -1025,8 +1025,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c24",
           "memberRef": "ethereum:0x5322a3551bc6a1b39d5d142e5e38dc5b4bc5b3d2"
@@ -1044,8 +1044,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c24",
           "memberRef": "ethereum:0x5590f23358fe17361d7e4e4f91219145d8ccfcb3"
@@ -1063,8 +1063,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x56edd5067d89d4e65bf956c49eaf054e6ff0b262"
@@ -1082,8 +1082,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x5e11e34b6745feba9449ae53c185413d6edc66be"
@@ -1101,8 +1101,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c25",
           "memberRef": "ethereum:0x60744434d6339a6b27d73d9eda62b6f66a0a04fa"
@@ -1120,8 +1120,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c26",
           "memberRef": "ethereum:0x65c79fcb50ca1594b025960e539ed7a9a6d434a3"
@@ -1139,8 +1139,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c24",
           "memberRef": "ethereum:0x66609b4799fd7ce12ba799ad01094abd13d5014d"
@@ -1158,8 +1158,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c9",
           "memberRef": "ethereum:0x691a6c29e9e96dd897718305427ad5d534db16ba"
@@ -1177,8 +1177,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x6aa0520354d1b84e1c6abfe64a708939529b619e"
@@ -1196,8 +1196,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x6aac067bb903e633a422de7be9355e62b3ce0378"
@@ -1215,8 +1215,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c27",
           "memberRef": "ethereum:0x6b175474e89094c44da98b954eedeac495271d0f"
@@ -1234,8 +1234,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x6c186404a7a238d3d6027c0299d1822c1cf5d8f1"
@@ -1253,8 +1253,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x71eb894330e8a4b96b8d6056962e7f116f50e06f"
@@ -1272,8 +1272,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x75646f68b8c5d8f415891f7204978efb81ec6410"
@@ -1291,8 +1291,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x779d0fd012815d4239baf75140e6b2971bed5113"
@@ -1310,8 +1310,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c28",
           "memberRef": "ethereum:0x79a0fa989fb7adf1f8e80c93ee605ebb94f7c6a5"
@@ -1329,8 +1329,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c29",
           "memberRef": "ethereum:0x7bbd8ca5e413bca521c2c80d8d1908616894cf21"
@@ -1348,8 +1348,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x7bd3f01e24e0f0838788bc8f573cea43a80cabb5"
@@ -1367,8 +1367,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x7e62b7e279dfc78deb656e34d6a435cc08a44666"
@@ -1386,8 +1386,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c14",
           "memberRef": "ethereum:0x7f62f9592b823331e012d3c5ddf2a7714cfb9de2"
@@ -1405,8 +1405,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x81c5cdf4817dbf75c7f08b8a1cdab05c9b3f70f7"
@@ -1424,8 +1424,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c30",
           "memberRef": "ethereum:0x82d8bfdb61404c796385f251654f6d7e92092b5d"
@@ -1443,8 +1443,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x832dd5f17b30078a5e46fdb8130a68cbc4a74dc0"
@@ -1462,8 +1462,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x834719bea8da68c46484e001143bdde29370a6a3"
@@ -1481,8 +1481,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c31",
           "memberRef": "ethereum:0x836f56750517b1528b5078cba4ac4b94fbe4a399"
@@ -1500,8 +1500,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x854b252ba15eafa4d1609d3b98e00cc10084ec55"
@@ -1519,8 +1519,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x8723b74f598de2ea49747de5896f9034cc09349e"
@@ -1538,8 +1538,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0x885f16e177d45fc9e7c87e1da9fd47a9cfce8e13"
@@ -1557,8 +1557,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c32",
           "memberRef": "ethereum:0x88f88bb9e66241b73b84f3a6e197fbba487b1e30"
@@ -1576,8 +1576,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x8938988f7b368f74bebdd3dcd8d6a3bd18c15c0b"
@@ -1595,8 +1595,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0x9048cb84f46e94ff312dcc50f131191c399d9bc3"
@@ -1614,8 +1614,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c33",
           "memberRef": "ethereum:0x929d9a1435662357f54adcf64dcee4d6b867a6f9"
@@ -1633,8 +1633,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x93ae03815baf1f19d7f18d9116e4b637cc32a131"
@@ -1652,8 +1652,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c34",
           "memberRef": "ethereum:0x9759a6ac90977b93b58547b4a71c78317f391a28"
@@ -1671,8 +1671,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c35",
           "memberRef": "ethereum:0x99cd4ec3f88a45940936f469e4bb72a2a701eeb9"
@@ -1690,8 +1690,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c24",
           "memberRef": "ethereum:0x9b3310708af333f6f379fa42a5d09cbaa10ab309"
@@ -1709,8 +1709,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c36",
           "memberRef": "ethereum:0x9c257e5aaf73d964aebc2140ca38078988fb0c10"
@@ -1728,8 +1728,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x9dacc11dcd0aa13386d295eaeebbd38130897e6f"
@@ -1747,8 +1747,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0x9f6981ba5c77211a34b76c6385c0f6fa10414035"
@@ -1766,8 +1766,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c14",
           "memberRef": "ethereum:0xa191e578a6736167326d05c119ce0c90849e84b7"
@@ -1785,8 +1785,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c37",
           "memberRef": "ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd"
@@ -1804,8 +1804,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c38",
           "memberRef": "ethereum:0xa41b6ef151e06da0e34b009b86e828308986736d"
@@ -1823,8 +1823,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xa47d68b9db0a0361284fa04ba40623fcbd1a263e"
@@ -1842,8 +1842,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c39",
           "memberRef": "ethereum:0xa4c22f0e25c6630b2017979acf1f865e94695c4b"
@@ -1861,8 +1861,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0xa4fd373b93ad8e054970a3d6cd4fd4c31d08192e"
@@ -1880,8 +1880,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xa6ea3b9c04b8a38ff5e224e7c3d6937ca44c0ef9"
@@ -1899,8 +1899,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xa7e4ddde3cbcef122851a7c8f7a55f23c0daf335"
@@ -1918,8 +1918,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xa81598667ac561986b70ae11bbe2dd5348ed4327"
@@ -1937,8 +1937,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c40",
           "memberRef": "ethereum:0xa85621d35caf9cf5c146d2376ce553d7b78a6239"
@@ -1956,8 +1956,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0xad722e51569ef41861fff5e11942a8e07c7c309e"
@@ -1975,8 +1975,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xaf034d882169328caf43b823a4083dabc7eee0f4"
@@ -1994,8 +1994,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xb0ece6f5542a4577e2f1be491a937ccbbec8479e"
@@ -2013,8 +2013,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xb15afab996904170f87a64fe42db0b64a6f75d24"
@@ -2032,8 +2032,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c24",
           "memberRef": "ethereum:0xb55da3d3100c4ebf9de755b6ddc24bf209f6cc06"
@@ -2051,8 +2051,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xbcb396cd139d1116bd89562b49b9d1d6c25378b0"
@@ -2070,8 +2070,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c9",
           "memberRef": "ethereum:0xbd34fc6aaa1d3f52b314cb9d78023dd23eac3b0e"
@@ -2089,8 +2089,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c41",
           "memberRef": "ethereum:0xbe286431454714f511008713973d3b053a2d38f3"
@@ -2108,8 +2108,8 @@
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c42",
           "memberRef": "ethereum:0xbe8e3e3618f7474f8cb1d074a26affef007e98fb"
@@ -2127,8 +2127,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xbea7cdfb4b49ec154ae1c0d731e4dc773a3265aa"
@@ -2146,8 +2146,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c14",
           "memberRef": "ethereum:0xbf72da2bd84c5170618fbe5914b0eca9638d5eb5"
@@ -2165,8 +2165,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xbfd445a97e7459b0ebb34cfbd3245750dba4d7a4"
@@ -2184,8 +2184,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xc2b12567523e3f3cbd9931492b91fe65b240bc47"
@@ -2203,8 +2203,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c43",
           "memberRef": "ethereum:0xc447a9745ade9a44bb9e37b7f6c92f9582544110"
@@ -2222,8 +2222,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xc6424e862f1462281b0a5fac078e4b63006bdebf"
@@ -2241,8 +2241,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xc67963a226eddd77b91ad8c421630a1b0adff270"
@@ -2260,8 +2260,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c44",
           "memberRef": "ethereum:0xc7bdd1f2b16447dcf3de045c4a039a60ec2f0ba3"
@@ -2279,8 +2279,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xc7e8cd72bdee38865b4f5615956ef47ce1a7e5d0"
@@ -2298,8 +2298,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c45",
           "memberRef": "ethereum:0xc8b61d211d3d03a630fb09199e17953a8c9749a9"
@@ -2317,8 +2317,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c46",
           "memberRef": "ethereum:0xce01c90de7fd1bcfa39e237fe6d8d9f569e8a6a3"
@@ -2336,8 +2336,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xd40798267795cbf3aeea8e9f8dcbdba9b5281fcc"
@@ -2355,8 +2355,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0xd50a8e9369140539d1c2d113c4dc1e659c6242eb"
@@ -2374,8 +2374,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c47",
           "memberRef": "ethereum:0xd889477102e8c4a857b78fcc2f134535176ec1fc"
@@ -2393,8 +2393,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xd9e758bd239e5d568f44d0a748633f6a8d52cbbb"
@@ -2412,8 +2412,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xdae88bde1fb38cf39b6a02b595930a3449e593a6"
@@ -2431,8 +2431,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c48",
           "memberRef": "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f"
@@ -2450,8 +2450,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xdc26c9b7a8fe4f5df648e314ec3e6dc3694e6dd2"
@@ -2469,8 +2469,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xdc90d461e148552387f3ab3ebee0bdc58aa16375"
@@ -2488,8 +2488,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c9",
           "memberRef": "ethereum:0xdd3be7650589e6a6171d454b026c4ad1a2c02720"
@@ -2507,8 +2507,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0xde2828c3f7b2161cf2a1711edc36c73c56ea72ae"
@@ -2526,8 +2526,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xdfccaf8fdbd2f4805c174f856a317765b49e4a50"
@@ -2545,8 +2545,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c49",
           "memberRef": "ethereum:0xe29a14bcdea40d83675aa43b72df07f649738c8b"
@@ -2564,8 +2564,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xe30663c6f83a06edee6273d72274ae24f1084a22"
@@ -2583,8 +2583,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c9",
           "memberRef": "ethereum:0xe4470dd3158f7a905cdea07260551f72d4bb0e77"
@@ -2602,8 +2602,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xe4b82be84391b9e7c56a1fc821f47569b364dd4a"
@@ -2621,8 +2621,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0xe72c7e90bc26c11d45dbee736f0acf57fc5b7152"
@@ -2640,8 +2640,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c13",
           "memberRef": "ethereum:0xee0fc514280f09083a32ae906ccbd2fac4c680fa"
@@ -2659,8 +2659,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xf04a5cc80b1e94c69b48f5ee68a08cd2f09a7c3e"
@@ -2678,8 +2678,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c2",
           "memberRef": "ethereum:0xf11a98339fe1cde648e8d1463310ce3ccc3d7cc1"
@@ -2697,8 +2697,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c9",
           "memberRef": "ethereum:0xf275110dfe7b80df66a762f968f59b70babe2b29"
@@ -2716,8 +2716,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xf5c8176e1eb0915359e46ded16e52c071bb435c0"
@@ -2735,8 +2735,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c50",
           "memberRef": "ethereum:0xf6e72db5454dd049d0788e411b06cfaf16853042"
@@ -2754,8 +2754,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c9",
           "memberRef": "ethereum:0xf739a30c74927dc6cfa3b67e4933872a1fc5f4eb"
@@ -2773,8 +2773,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c24",
           "memberRef": "ethereum:0xf93cc3a50f450ed245e003bfecc8a6ec1732b0b2"
@@ -2792,8 +2792,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c14",
           "memberRef": "ethereum:0xfa8c996e158b80d77fbd0082bb437556a65b96e0"
@@ -2811,8 +2811,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c1",
           "memberRef": "ethereum:0xfc9d6dd08bee324a5a8b557d2854b9c36c2aec5d"
@@ -2830,8 +2830,8 @@
         "directMintAbility": "direct",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "not-applicable",
-        "observedAt": "2026-10-29",
-        "observedBlock": 26300150,
+        "observedAt": "2026-10-04",
+        "observedBlock": 26118754,
         "executionClassRef": {
           "classId": "c14",
           "memberRef": "ethereum:0xfd5608515a47c37afba68960c1916b79af9491d0"
@@ -16964,15 +16964,15 @@
         {
           "id": "vat-wards",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "targetDeployment": "ethereum:0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
@@ -18027,15 +18027,15 @@
         {
           "id": "native-perimeter",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "targetDeployment": "ethereum:0x35d1b3f3d7966a1dfe207aa4514c12a259a0492b",
@@ -18240,15 +18240,15 @@
         {
           "id": "dai-wards",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "targetDeployment": "ethereum:0x6b175474e89094c44da98b954eedeac495271d0f",
@@ -18284,15 +18284,15 @@
         {
           "id": "usds-wards",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "targetDeployment": "ethereum:0xdc035d45d973e3ec169d2276ddab16f1e407384f",
@@ -18341,15 +18341,15 @@
         {
           "id": "c1",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -19421,15 +19421,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -19648,15 +19648,15 @@
         {
           "id": "c2",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -20071,15 +20071,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -20183,15 +20183,15 @@
         {
           "id": "c3",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -20409,15 +20409,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -20554,15 +20554,15 @@
         {
           "id": "c4",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -20727,15 +20727,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -20839,15 +20839,15 @@
         {
           "id": "c5",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -21013,15 +21013,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -21125,15 +21125,15 @@
         {
           "id": "c6",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -21431,15 +21431,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -21619,15 +21619,15 @@
         {
           "id": "c7",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -21820,15 +21820,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -21955,15 +21955,15 @@
         {
           "id": "c8",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -22100,15 +22100,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -22189,15 +22189,15 @@
         {
           "id": "c9",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -22522,15 +22522,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -22644,15 +22644,15 @@
         {
           "id": "c10",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -23020,15 +23020,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -23258,15 +23258,15 @@
         {
           "id": "c11",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -23507,15 +23507,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -23675,15 +23675,15 @@
         {
           "id": "c12",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -23871,15 +23871,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -24019,15 +24019,15 @@
         {
           "id": "c13",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -24282,15 +24282,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -24394,15 +24394,15 @@
         {
           "id": "c14",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -24628,15 +24628,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -24740,15 +24740,15 @@
         {
           "id": "c15",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -25036,15 +25036,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -25188,15 +25188,15 @@
         {
           "id": "c16",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -25429,15 +25429,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -25592,15 +25592,15 @@
         {
           "id": "c17",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -25842,15 +25842,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -25997,15 +25997,15 @@
         {
           "id": "c18",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -26129,15 +26129,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -26213,15 +26213,15 @@
         {
           "id": "c19",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -26431,15 +26431,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -26584,15 +26584,15 @@
         {
           "id": "c20",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -26821,15 +26821,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -26971,15 +26971,15 @@
         {
           "id": "c21",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -27090,15 +27090,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -27169,15 +27169,15 @@
         {
           "id": "c22",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -27433,15 +27433,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -27606,15 +27606,15 @@
         {
           "id": "c23",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -27780,15 +27780,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -27892,15 +27892,15 @@
         {
           "id": "c24",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -28354,15 +28354,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -28558,15 +28558,15 @@
         {
           "id": "c25",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -28744,15 +28744,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -28861,15 +28861,15 @@
         {
           "id": "c26",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -29010,15 +29010,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -29112,15 +29112,15 @@
         {
           "id": "c27",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -29271,15 +29271,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -29403,15 +29403,15 @@
         {
           "id": "c28",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -29577,15 +29577,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -29689,15 +29689,15 @@
         {
           "id": "c29",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -29862,15 +29862,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -29974,15 +29974,15 @@
         {
           "id": "c30",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -30258,15 +30258,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -30410,15 +30410,15 @@
         {
           "id": "c31",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -30750,15 +30750,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -30954,15 +30954,15 @@
         {
           "id": "c32",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -31091,15 +31091,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -31188,15 +31188,15 @@
         {
           "id": "c33",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -31428,15 +31428,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -31565,15 +31565,15 @@
         {
           "id": "c34",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -31712,15 +31712,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -31814,15 +31814,15 @@
         {
           "id": "c35",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -32256,15 +32256,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -32507,15 +32507,15 @@
         {
           "id": "c36",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -32691,15 +32691,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -32821,15 +32821,15 @@
         {
           "id": "c37",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -33197,15 +33197,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -33423,15 +33423,15 @@
         {
           "id": "c38",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -33701,15 +33701,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -33879,15 +33879,15 @@
         {
           "id": "c39",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -34120,15 +34120,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -34283,15 +34283,15 @@
         {
           "id": "c40",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -34647,15 +34647,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -34874,15 +34874,15 @@
         {
           "id": "c41",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -35035,15 +35035,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -35142,15 +35142,15 @@
         {
           "id": "c42",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -35236,15 +35236,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -35305,15 +35305,15 @@
         {
           "id": "c43",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -35559,15 +35559,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -35727,15 +35727,15 @@
         {
           "id": "c44",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -35871,15 +35871,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -35986,15 +35986,15 @@
         {
           "id": "c45",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -36209,15 +36209,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -36354,15 +36354,15 @@
         {
           "id": "c46",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -36608,15 +36608,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -36745,15 +36745,15 @@
         {
           "id": "c47",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -36941,15 +36941,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -37076,15 +37076,15 @@
         {
           "id": "c48",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -37161,15 +37161,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -37224,15 +37224,15 @@
         {
           "id": "c49",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -37398,15 +37398,15 @@
                 "vat-wards"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -37510,15 +37510,15 @@
         {
           "id": "c50",
           "review": {
-            "observedAt": "2026-10-29",
-            "reviewedAt": "2026-10-29",
-            "expiresAt": "2027-01-25",
-            "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+            "observedAt": "2026-10-04",
+            "reviewedAt": "2026-10-04",
+            "expiresAt": "2026-12-31",
+            "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
             "pin": {
               "chain": "ethereum",
-              "position": "26300150",
-              "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-              "timestamp": "2026-10-29T18:19:47Z"
+              "position": "26118754",
+              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+              "timestamp": "2026-10-04T11:41:11Z"
             }
           },
           "runtimeVariants": [
@@ -37955,15 +37955,15 @@
                 "native-perimeter"
               ],
               "review": {
-                "observedAt": "2026-10-29",
-                "reviewedAt": "2026-10-29",
-                "expiresAt": "2027-01-25",
-                "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+                "observedAt": "2026-10-04",
+                "reviewedAt": "2026-10-04",
+                "expiresAt": "2026-12-31",
+                "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
                 "pin": {
                   "chain": "ethereum",
-                  "position": "26300150",
-                  "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-                  "timestamp": "2026-10-29T18:19:47Z"
+                  "position": "26118754",
+                  "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+                  "timestamp": "2026-10-04T11:41:11Z"
                 }
               },
               "runtime": {
@@ -45306,15 +45306,15 @@
     "authorityGraph": {
       "id": "sky-authority",
       "review": {
-        "observedAt": "2026-10-29",
-        "reviewedAt": "2026-10-29",
-        "expiresAt": "2027-01-25",
-        "reviewer": "W0 R-MINT-1 authority re-pin (SkyData)",
+        "observedAt": "2026-10-04",
+        "reviewedAt": "2026-10-04",
+        "expiresAt": "2026-12-31",
+        "reviewer": "Sol v10.05 operational-governance campaign (SkyData)",
         "pin": {
           "chain": "ethereum",
-          "position": "26300150",
-          "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
-          "timestamp": "2026-10-29T18:19:47Z"
+          "position": "26118754",
+          "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
+          "timestamp": "2026-10-04T11:41:11Z"
         }
       },
       "liabilityBookId": "sky-vat-dai-usds",
