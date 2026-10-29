@@ -137,7 +137,7 @@ describe("CoverageSafetyScoreDataCard", () => {
     const { container } = render(<CoverageSafetyScoreDataCard safetyScoreDataCoverage={model} />);
     expect(container.textContent).toContain(`${hasRated ? 3 : 2} assets are assessed`);
     expect(container.textContent).not.toMatch(/assets? (?:is|are) scored|Assets scored/);
-    expect(container.textContent).toContain(`${hasRated ? 1 : 0} rated (0 partial) · 1 not rated · 1 pipeline gap`);
+    expect(container.textContent).toContain(`${hasRated ? 1 : 0} rated (0 partial) · 1 not rated · 1 unrated pipeline gap`);
     expect(screen.getByText("Assets assessed")).toBeTruthy();
   });
 
@@ -154,5 +154,81 @@ describe("CoverageSafetyScoreDataCard", () => {
     expect(container.textContent).toContain("1 asset is assessed");
     expect(screen.getByText(/Coverage detail|Which inputs are missing/)).toBeTruthy();
     expect(screen.getByText("Inputs evaluated")).toBeTruthy();
+  });
+
+  it("shows the three server-computed numbers and keeps unavailable distinct from zero", () => {
+    const reviewedAt = Date.parse("2026-10-03T00:00:00Z") / 1000;
+    const evidence = {
+      semantics: "open-question-v1" as const,
+      totals: { questions: 6, open: 3, issuer: 2, documentation: 1, obligations: 269 },
+      owners: [
+        { responsibility: "unresearched" as const, questions: 2, obligations: 4 },
+        { responsibility: "mixed" as const, questions: 1, obligations: 1 },
+      ],
+      reasons: [
+        { code: "missing-reserve-composition" as const, bucket: "issuer" as const, questions: 2, obligations: 3 },
+        { code: "unresolved-control-identity" as const, bucket: "open" as const, questions: 3, obligations: 6 },
+      ],
+      documentation: {
+        questions: 1,
+        datums: 256,
+        facts: 250,
+        reasons: [{ reason: "no-scoring-path" as const, datums: 256 }],
+      },
+      issuer: {
+        questions: 2,
+        assets: 1,
+        oldestReviewedAtSec: reviewedAt,
+        newestReviewedAtSec: reviewedAt,
+      },
+      byCard: [
+        {
+          id: "asset-a",
+          openBucketQuestionsCarried: 3,
+          inheritedOpenBucketQuestionsCarried: 0,
+          openBucketObligationsCarried: 6,
+          documentationObligationsCarried: 256,
+        },
+      ],
+    };
+    const safetyScoreDataCoverage = buildDataCoverageModel(
+      makeReportCardsV9Response({
+        cards: [makeV9Card({ id: "asset-a" })],
+        openEvidence: evidence,
+      }),
+    );
+
+    const { container } = render(
+      <CoverageSafetyScoreDataCard safetyScoreDataCoverage={safetyScoreDataCoverage} />,
+    );
+
+    expect(container.textContent).toContain(
+      "3 open questions · 2 not disclosed by issuers · 1 documentation gap.",
+    );
+    expect(container.textContent).toContain("269 evidence obligations behind them · 256 of which documentation");
+    expect(container.textContent).toContain("Open questions · Controlling entity not identified");
+    expect(container.textContent).toContain("Not disclosed by issuers · Reserve composition not published");
+    expect(container.textContent).toContain("Documentation gaps · No scoring path");
+    expect(container.textContent).toContain("256 datums");
+    expect(container.textContent).toContain(
+      "Not disclosed by issuers. Reviewed Oct 3, 2026; the issuer does not publish this datum.",
+    );
+    expect(container.textContent).not.toContain("unavailable for this publication");
+  });
+
+  it("says the question counts are unavailable when the payload predates open evidence", () => {
+    const safetyScoreDataCoverage = buildDataCoverageModel(
+      makeReportCardsV9Response({ cards: [makeV9Card({ id: "asset-a" })] }),
+    );
+
+    const { container } = render(
+      <CoverageSafetyScoreDataCard safetyScoreDataCoverage={safetyScoreDataCoverage} />,
+    );
+
+    expect(container.textContent).toContain("Open-question counts are unavailable for this publication.");
+    expect(container.textContent).toContain("Evidence obligations");
+    expect(container.textContent).toContain("Unavailable for this publication");
+    expect(container.textContent).toContain("They are unavailable, not zero.");
+    expect(container.textContent).not.toMatch(/0 open questions/);
   });
 });

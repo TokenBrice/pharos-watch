@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { API_PATHS } from "@shared/lib/api-endpoints/paths";
 import { SITE_DATA_PROXY_SECRET_HEADER } from "@shared/lib/site-data-lane";
 import type { SelectorInput } from "@shared/lib/selector/types";
-import { makeReportCardsV9NextResponse, makeReportCardsV9Response, makeV9Card } from "../../src/test/fixtures/safety-score-v9";
+import { makeReportCardsV9Response, makeV9Card } from "../../src/test/fixtures/safety-score-v9";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import { recomputeVerifiedSelectorSnapshot } from "../lib/selector-canonical-snapshot";
@@ -130,7 +130,7 @@ describe("canonical selector snapshot recomputation", () => {
 
   it("recomputes the same verified snapshot from a report9 publication", async () => {
     mockFetch(
-      [...canonicalPayloads(makeReportCardsV9NextResponse({ cards: [makeV9Card({ id: "usdc-circle" })] }))]
+      [...canonicalPayloads(makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle" })] }))]
         .map(([path, body]) => ({
           match: `https://site-api.pharos.watch${path}`,
           body,

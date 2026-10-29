@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { makeReportCardsV9Card, makeReportCardsV9NextResponse, makeReportCardsV9Response } from "@shared/test-utils/report-cards-v9";
+import { makeReportCardsV9Card, makeReportCardsV9Response } from "@shared/test-utils/report-cards-v9";
 import { PharosVilleApiPayloadsSchema } from "../pharosville";
 
 const methodology = {
@@ -33,7 +33,7 @@ const payload = {
 
 const nextPayload = {
   ...payload,
-  reportCards: makeReportCardsV9NextResponse({
+  reportCards: makeReportCardsV9Response({
     safetyScoreIdentity: payload.reportCards.safetyScoreIdentity,
     defaultUpdatedAt: 1, asOfSec: 1,
     source: payload.reportCards.source,

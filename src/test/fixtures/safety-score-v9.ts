@@ -1,14 +1,13 @@
 import {
+  makeReportCardsV9ArchivedResponse as makeSharedReportCardsV9ArchivedResponse,
   makeReportCardsV9Card,
   makeReportCardsV9Pillars,
-  makeReportCardsV9NextResponse as makeSharedReportCardsV9NextResponse,
   makeReportCardsV9Response as makeSharedReportCardsV9Response,
-  type ReportCardsV9NextResponseFixtureOverrides,
+  type ReportCardsV9ArchivedResponse,
   type ReportCardsV9ResponseFixturePreset,
   type ReportCardsV9ResponseFixtureOverrides,
 } from "@shared/test-utils/report-cards-v9";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import type { ReportCardsV9NextResponse } from "@shared/types/report-cards-v9-next";
 import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard } from "@shared/types/safety-score-v9-public";
 
 const A64 = "a".repeat(64);
@@ -49,10 +48,10 @@ export function makeReportCardsV9Response(
   return makeSharedReportCardsV9Response(V9_RESPONSE_PRESET, makeV9Card, overrides);
 }
 
-export function makeReportCardsV9NextResponse(
-  overrides: ReportCardsV9NextResponseFixtureOverrides = {},
-): ReportCardsV9NextResponse {
-  return makeSharedReportCardsV9NextResponse(V9_RESPONSE_PRESET, makeV9Card, overrides);
+export function makeReportCardsV9ArchivedResponse(
+  overrides: ReportCardsV9ResponseFixtureOverrides = {},
+): ReportCardsV9ArchivedResponse {
+  return makeSharedReportCardsV9ArchivedResponse(V9_RESPONSE_PRESET, makeV9Card, overrides);
 }
 
 export const makeV9Pillars = makeReportCardsV9Pillars;

@@ -1,40 +1,18 @@
 import { z } from "zod";
 import { issue, UnixSecondsSchema } from "./safety-schema-primitives";
-import { V9QualityPillarSchema, V9ReasonCodeSchema } from "./safety-score-v9";
+import { V9DocumentationReasonSchema, V9QualityPillarSchema, V9ReasonCodeSchema } from "./safety-score-v9";
 import { canonicalTextArray, V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitives";
 import { isUniqueSorted, RESPONSIBILITIES } from "./safety-score-v9-public-facts";
 
 /**
- * Documentation-class vocabulary (R5, one authority): an open C/U compiled gap
- * whose resolution cannot materially move a published score.
- *
- * Decision B: nothing declared here may be read by scoring. The class never
- * changes `evidenceLevel`, `limitedEvidenceCauses`, `limitingCauseGapIds`,
- * reason treatment, cause, responsibility, binding, mixture weights, caps or
- * gap identity. Consumers are limited to counting
- * (`shared/lib/safety-score-v9/open-questions.ts`), public labels, the
- * evidence-gap registry band and the `openEvidence.byCard[].documentationOnlyLimited`
- * card annotation, which is derived from the unchanged witnesses.
- *
- * Kept beside the only consumer (instead of `safety-score-v9.ts`) so this
- * vocabulary is not duplicated into browser chunks; t1 re-homes it when the
- * open-evidence contract becomes live.
+ * Open-evidence contract: counting semantics, question identity and the block
+ * the publication and report9 envelopes validate. It lives in its own module
+ * (rather than `safety-score-v9-public.ts`, which browser readers import) so
+ * the validators only ship where the block is actually read or written: the
+ * worker publication path, the dataset/audit scripts and the `/coverage/`
+ * reader. The documentation-reason vocabulary stays in `safety-score-v9.ts` —
+ * its single authority.
  */
-export const V9DocumentationReasonSchema = z.enum([
-  // 3a: `causeScope.factorKey` is `keyCustody`, which no scored component reads.
-  "no-scoring-path",
-  // 3c: mint reconciliation/supervision unknown, a credit the mint grade already withholds.
-  "unknown-scores-as-no-credit",
-  // 3b: policy treatment is `diagnostic`; vetoed when the datum alone gates a pillar.
-  "unscored-diagnostic",
-  // 3d: `incomplete-dex-route-coverage` portfolio label; never a limiting witness.
-  "coverage-label",
-  // 3e: deployment share below `documentationImmaterialSharePct` and non-binding.
-  "immaterial-deployment",
-  // 3f: reserve exposure weight below `reserveDustBookSharePct` of the reserve book.
-  "reserve-dust",
-]);
-export type V9DocumentationReason = z.infer<typeof V9DocumentationReasonSchema>;
 
 /** Published open-evidence counting semantics; a definition change renames this literal. */
 export const V9_OPEN_EVIDENCE_SEMANTICS = "open-question-v1" as const;

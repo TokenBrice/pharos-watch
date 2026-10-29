@@ -44,7 +44,12 @@ const DEFAULT_BUDGETS = {
   totalOutFiles: 20_000,
   // The client registry includes reserve and portfolio exposure fields;
   // static pages also consume the full registry at build time.
-  totalJsBytes: 14_500_000,
+  // API 9 open-evidence presentation (/coverage/ and the safety-score modules)
+  // added 91,296 B over the previous ceiling (local measurement 14,591,296 B on
+  // 2026-10-29); the PR build on current main, including that day's registry
+  // data, measured 14,600,043 B. Previous ceiling 14,500,000; rounded up to the
+  // next 50,000 B.
+  totalJsBytes: 14_650_000,
   // Keep generated client-registry growth reviewable.
   largestJsBytes: 1_560_000,
   totalCssBytes: 650_000,

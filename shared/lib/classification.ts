@@ -1,6 +1,7 @@
 import type { BridgeRouteRiskTier, CollateralQuality, CustodyModel, DependencyType, GovernanceType, MechanismArchetype, PegCurrency, ResearchReviewConfidence } from "../types";
 import type { V9DependencyEconomicRole } from "../types/dependency-types";
 import type { V9FailureDomainRef } from "../types/safety-score-v9-fact-primitives";
+import type { V9OpenQuestionBucket } from "../types/safety-score-v9-open-evidence";
 import type { ContagionShock } from "../types/contagion";
 import { BACKING_BADGE_STYLES } from "./classification/badges";
 import { BACKING_DESCRIPTORS, projectDescriptors } from "./classification/descriptors";
@@ -430,14 +431,25 @@ export const SAFETY_EVIDENCE_BADGE_CLASSES = {
 /**
  * Why a Safety Score pillar or component is missing from a card, by evidence
  * cause. C and U are priced as unknowns in the score; A and B are left out.
- * Only A is a Pharos pipeline gap.
+ * Only A is a data-pipeline unavailability, never "not yet researched".
  */
 export const SAFETY_SCORE_GAP_CAUSE_LABELS = {
   C: "undisclosed by issuer",
   U: "not yet researched",
-  A: "pipeline gap",
+  A: "data pipeline unavailable",
   B: "awaiting curation",
 } as const;
+
+/**
+ * Public labels for the three server-counted open-question buckets
+ * (`openEvidence.totals`; PLAN §2.1). The publication computes the numbers;
+ * every surface that names them reads these strings and formats only.
+ */
+export const SAFETY_SCORE_OPEN_EVIDENCE_BUCKET_LABELS = {
+  open: "Open questions",
+  issuer: "Not disclosed by issuers",
+  documentation: "Documentation gaps",
+} as const satisfies Record<V9OpenQuestionBucket, string>;
 
 export type MintPressureBand =
   | "no-activity"

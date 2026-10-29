@@ -98,7 +98,8 @@ function generateExitProjectionFixture(
         compiledFacts,
         candidate: {
           model: "v9-critical-path",
-          schemaVersion: 7,
+          schemaVersion: 8,
+          openEvidence: EMPTY_OPEN_EVIDENCE,
           lifecycle: "active",
           candidateId: "safety-score-v9:fixture",
           policyVersion: policy.policy.releaseVersion,
@@ -135,6 +136,17 @@ function generateExitProjectionFixture(
     }],
   });
 }
+
+/** Schema-valid empty block: these fixtures exercise routing, not open-evidence counts. */
+const EMPTY_OPEN_EVIDENCE = {
+  semantics: "open-question-v1" as const,
+  totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 0 },
+  owners: [],
+  reasons: [],
+  documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+  issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+  byCard: [],
+};
 
 describe("Safety Score v9 missing-data work routing", () => {
   it.each([...new Set(Object.values(V9_MECHANISM_FIELDS).flatMap(({ components }) =>
@@ -182,7 +194,7 @@ describe("Safety Score v9 missing-data work routing", () => {
     };
     const registry = generateV9MissingDataRegistry({
       replay: { pipeline: { compiledFacts, candidate: {
-        model: "v9-critical-path", schemaVersion: 7, lifecycle: "active", candidateId: "safety-score-v9:fixture",
+        model: "v9-critical-path", schemaVersion: 8, openEvidence: EMPTY_OPEN_EVIDENCE, lifecycle: "active", candidateId: "safety-score-v9:fixture",
         policyVersion: policy.policy.releaseVersion, publicationGenerationId: "report-cards:v9:fixture",
         baseInputGenerationId: compiledFacts.baseInputGenerationId, factSetDigest: compiledFacts.v9FactSetDigest,
         resultDigest: "b".repeat(64), policy: { id: policy.policy.policyId, semanticDigest: policy.semanticDigest },

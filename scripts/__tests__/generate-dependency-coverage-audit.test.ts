@@ -7,7 +7,7 @@ import {
   makeReportCardsV9Card,
   makeReportCardsV9PartialCard,
   makeReportCardsV9Pillars,
-  makeReportCardsV9NextResponse,
+  makeReportCardsV9ArchivedResponse,
   makeReportCardsV9Response,
   type ReportCardsV9ResponseFixturePreset,
 } from "@shared/test-utils/report-cards-v9";
@@ -144,7 +144,7 @@ function reportCardFixture(input: {
       methodologyVersion: input.methodologyVersion ?? SAFETY_SCORE_METHODOLOGY_VERSION,
     },
   };
-  const makeResponse = input.version === "report9" ? makeReportCardsV9NextResponse : makeReportCardsV9Response;
+  const makeResponse = input.version === "report9" ? makeReportCardsV9Response : makeReportCardsV9ArchivedResponse;
   return makeResponse(preset, () => makeReportCardsV9Card(), { cards });
 }
 

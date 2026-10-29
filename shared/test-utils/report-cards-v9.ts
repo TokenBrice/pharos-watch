@@ -1,16 +1,13 @@
+import type { z } from "zod";
 import {
   buildReportCardsV9DependencyGraph,
-  REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION,
+  HistoricalResolvedReportCardsV9ResponseSchema,
+  REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
-import {
-  ReportCardsV9NextResponseSchema,
-  type ReportCardsV9NextResponse,
-} from "@shared/types/report-cards-v9-next";
 import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { scoreToGrade, V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
-import type { V9OpenEvidence } from "@shared/types/safety-score-v9-open-evidence";
 import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard } from "@shared/types/safety-score-v9-public";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
@@ -28,15 +25,6 @@ export interface ReportCardsV9ResponseFixturePreset {
 export type ReportCardsV9ResponseFixtureOverrides = Omit<Partial<ReportCardsV9Response>, "cards"> & {
   cards?: SafetyScoreV9CurrentCard[];
 };
-
-/** Report9 adds the required-nullable open-evidence pair to the same fixture data. */
-export type ReportCardsV9NextResponseFixtureOverrides =
-  Omit<ReportCardsV9ResponseFixtureOverrides, "cards" | "schemaVersion"> & {
-    cards?: SafetyScoreV9CurrentCard[];
-    /** Absent/null publishes the retained pre-cutover pair, never a silent zero. */
-    openEvidence?: V9OpenEvidence | null;
-    documentationCauseGaps?: string[];
-  };
 
 /**
  * One default card shape for every V9 consumer. The worker and frontend suites
@@ -443,29 +431,39 @@ export function makeReportCardsV9Response(
     foreignCauseGaps: [],
     dependencyGraph: buildReportCardsV9DependencyGraph(cards),
     commonModeGroups: [],
+    // A fixture with no supplied block is the retained pre-cutover shape: say so
+    // instead of publishing a silent zero. Callers that pass a block get a null reason.
+    openEvidence: null,
+    openEvidenceUnavailableReason: "publication-predates-open-evidence",
     ...overrides,
+    ...(overrides.openEvidence != null && overrides.openEvidenceUnavailableReason === undefined
+      ? { openEvidenceUnavailableReason: null }
+      : {}),
     cards,
   };
 }
 
+/** Archive-only report8 wire payload, as the pre-cutover Worker sealed it. */
+export type ReportCardsV9ArchivedResponse = z.infer<typeof HistoricalResolvedReportCardsV9ResponseSchema>;
+
 /**
- * Report9 fixture built from the same resolved cards as the report8 fixture, so
- * a reader test can prove it admits both wire versions with identical data.
- * T1's fixture semantics: no supplied block means the retained pre-cutover
- * shape, so it carries the required null + machine reason, never a silent zero.
+ * Archive-only report8 fixture: the same resolved cards without the
+ * open-evidence pair, exactly what the pre-cutover Worker sealed. Used to prove
+ * readers still admit the rollback payload and report it as unavailable.
  */
-export function makeReportCardsV9NextResponse(
+export function makeReportCardsV9ArchivedResponse(
   preset: ReportCardsV9ResponseFixturePreset,
   makeCard: () => SafetyScoreV9CurrentCard,
-  overrides: ReportCardsV9NextResponseFixtureOverrides = {},
-): ReportCardsV9NextResponse {
-  const { openEvidence, documentationCauseGaps, ...baseOverrides } = overrides;
-  const base = makeReportCardsV9Response(preset, makeCard, baseOverrides);
-  return ReportCardsV9NextResponseSchema.parse({
-    ...base,
-    schemaVersion: REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION,
-    openEvidence: openEvidence ?? null,
-    openEvidenceUnavailableReason: openEvidence == null ? "publication-predates-open-evidence" : null,
-    ...(documentationCauseGaps === undefined ? {} : { documentationCauseGaps }),
+  overrides: ReportCardsV9ResponseFixtureOverrides = {},
+): ReportCardsV9ArchivedResponse {
+  const {
+    openEvidence: _block,
+    openEvidenceUnavailableReason: _reason,
+    documentationCauseGaps: _gaps,
+    ...report8
+  } = makeReportCardsV9Response(preset, makeCard, overrides);
+  return HistoricalResolvedReportCardsV9ResponseSchema.parse({
+    ...report8,
+    schemaVersion: REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION,
   });
 }

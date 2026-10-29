@@ -14,7 +14,7 @@ import {
 import { buildStablecoinTableInputs } from "@/lib/stablecoin-table-inputs";
 import { makePublishedProcessDiagnostic } from "@shared/lib/__tests__/safety-score-v9-fixtures.test-support";
 import {
-  makeReportCardsV9NextResponse,
+  makeReportCardsV9ArchivedResponse,
   makeReportCardsV9Response,
   makeV9Card,
 } from "@/test/fixtures/safety-score-v9";
@@ -219,25 +219,44 @@ describe("V9 safety consumer projections", () => {
     expect(result.status).toBe("available");
   });
 
-  it("admits report9 with the same identity and ignores its open-evidence carriers", () => {
-    const next = makeReportCardsV9NextResponse();
-    const result = resolveV9ConsumerResponse(next, next.safetyScoreIdentity);
+  it("admits report9 with its open-evidence block and report8 as unavailable", () => {
+    const report9 = makeReportCardsV9Response({
+      openEvidence: {
+        semantics: "open-question-v1",
+        totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 0 },
+        owners: [],
+        reasons: [],
+        documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+        issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+        byCard: [],
+      },
+    });
+    const result = resolveV9ConsumerResponse(report9, report9.safetyScoreIdentity);
     expect(result.status).toBe("available");
     if (result.status !== "available") throw new Error(result.reason);
-    expect(result.value.schemaVersion).toBe(8);
-    expect(result.value).not.toHaveProperty("openEvidence");
-    expect(result.value.cards).toEqual(next.cards);
+    expect(result.value.schemaVersion).toBe(9);
+    expect(result.value.openEvidence?.semantics).toBe("open-question-v1");
+    expect(result.value.openEvidenceUnavailableReason).toBeNull();
+    expect(result.value.cards).toEqual(report9.cards);
+
+    const report8 = makeReportCardsV9ArchivedResponse();
+    const archived = resolveV9ConsumerResponse(report8, report8.safetyScoreIdentity);
+    expect(archived.status).toBe("available");
+    if (archived.status !== "available") throw new Error(archived.reason);
+    // Report8 never carried the block: unavailable with its machine reason, never zero.
+    expect(archived.value.openEvidence).toBeNull();
+    expect(archived.value.openEvidenceUnavailableReason).toBe("publication-predates-open-evidence");
 
     const {
       openEvidence: _openEvidence,
       openEvidenceUnavailableReason: _openEvidenceUnavailableReason,
       ...pairless
-    } = next;
-    expect(resolveV9ConsumerResponse(pairless, next.safetyScoreIdentity)).toEqual({
+    } = report9;
+    expect(resolveV9ConsumerResponse(pairless, report9.safetyScoreIdentity)).toEqual({
       status: "unavailable",
       reason: "invalid-v9-response",
     });
-    expect(resolveV9ConsumerResponse({ ...next, schemaVersion: 10 }, next.safetyScoreIdentity)).toEqual({
+    expect(resolveV9ConsumerResponse({ ...report9, schemaVersion: 10 }, report9.safetyScoreIdentity)).toEqual({
       status: "unavailable",
       reason: "invalid-v9-response",
     });

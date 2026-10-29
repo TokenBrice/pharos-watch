@@ -2,10 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentCardBaseSchema,
-  SafetyScoreV9CurrentResponseSchema,
-  SafetyScoreV9ResponseSchema,
   type SafetyScoreV9CurrentCard,
 } from "../safety-score-v9-public";
+import {
+  SafetyScoreV9CurrentResponseSchema,
+  SafetyScoreV9PreviousResponseSchema,
+  SafetyScoreV9ResponseSchema,
+} from "../safety-score-v9-publication-response";
+import {
+  V9OpenEvidenceByCardSchema,
+  V9OpenQuestionBucketSchema,
+  V9QuestionKeySchema,
+  type V9OpenEvidence,
+} from "../safety-score-v9-open-evidence";
 import { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 import { SafetyScoreV9AccessPostureSchema } from "../safety-score-v9-public-facts";
 import { SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9ScoreTraceSchema } from "../safety-score-v9-public-trace";
@@ -398,6 +407,7 @@ describe("SafetyScoreV9ResponseSchema", () => {
   it("rejects old envelopes and proofless legacy trace bytes on the current publication reader", () => {
     expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), schemaVersion: 5 }).success).toBe(false);
     expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), schemaVersion: 6 }).success).toBe(false);
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse({ ...currentResponse(), schemaVersion: 7 }).success).toBe(false);
     const current = currentResponse();
     const legacy = { ...current, cards: [{ ...current.cards[0], scoreTrace: { ...current.cards[0]!.scoreTrace, schemaVersion: 3 } }] };
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(legacy).success).toBe(false);
@@ -868,5 +878,228 @@ describe("v10.05 public compiled process boundary", () => {
     expect(SafetyScoreV9BreakdownsSchema.safeParse(value).success).toBe(false);
     const legacy = SafetyScoreV9BreakdownsSchema.parse(breakdowns());
     expect(legacy.control.issuanceSummary).toBeUndefined();
+  });
+});
+
+function openEvidence(): V9OpenEvidence {
+  return {
+    semantics: "open-question-v1",
+    totals: { questions: 3, open: 1, issuer: 2, documentation: 0, obligations: 9 },
+    owners: [{ responsibility: "unresearched", questions: 1, obligations: 3 }],
+    reasons: [
+      { code: "material-reserve-slice-unstructured", bucket: "issuer", questions: 2, obligations: 5 },
+      { code: "unresolved-control-identity", bucket: "open", questions: 1, obligations: 3 },
+    ],
+    documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+    issuer: { questions: 2, assets: 2, oldestReviewedAtSec: 90, newestReviewedAtSec: 95 },
+    byCard: [{
+      id: "asset",
+      openBucketQuestionsCarried: 1,
+      inheritedOpenBucketQuestionsCarried: 1,
+      openBucketObligationsCarried: 3,
+      documentationObligationsCarried: 0,
+      issuerNondisclosureReviewedAtSec: 90,
+    }],
+  };
+}
+
+/** A card whose Backing pillar is limited with a witness, plus its documentation gap set. */
+function annotatedResponse() {
+  const response = boundedResponse();
+  response.documentationCauseGaps = ["asset:gap:mechanism"];
+  const evidence = openEvidence();
+  evidence.documentation = {
+    questions: 1, datums: 1, facts: 1, reasons: [{ reason: "no-scoring-path", datums: 1 }],
+  };
+  evidence.totals = { ...evidence.totals, questions: 4, open: 1, documentation: 1 };
+  evidence.byCard[0]!.documentationOnlyLimited = ["backing"];
+  evidence.byCard[0]!.documentationObligationsCarried = 1;
+  response.openEvidence = evidence;
+  return response;
+}
+
+describe("open-evidence publication contract", () => {
+  it("requires the open-evidence block on the schema-8 publication and keeps a schema-7 read path", () => {
+    const current = currentResponse();
+    current.openEvidence = openEvidence();
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(current).success).toBe(true);
+
+    const withoutEvidence: Record<string, unknown> = { ...currentResponse() };
+    delete withoutEvidence.openEvidence;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(withoutEvidence).success).toBe(false);
+
+    const previous: Record<string, unknown> = { ...withoutEvidence, schemaVersion: 7 };
+    expect(SafetyScoreV9PreviousResponseSchema.safeParse(previous).success).toBe(true);
+    expect(SafetyScoreV9PreviousResponseSchema.safeParse({ ...previous, openEvidence: openEvidence() }).success).toBe(false);
+    expect(SafetyScoreV9PreviousResponseSchema.safeParse({ ...previous, schemaVersion: 8 }).success).toBe(false);
+    expect(SafetyScoreV9PreviousResponseSchema.safeParse({
+      ...previous, documentationCauseGaps: ["asset:gap:mechanism"],
+    }).success).toBe(false);
+  });
+
+  it("rejects buckets that do not sum to the question total and any negative or fractional count", () => {
+    const unbalanced = currentResponse();
+    const evidence = openEvidence();
+    evidence.totals.questions = 5;
+    unbalanced.openEvidence = evidence;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(unbalanced).success).toBe(false);
+
+    for (const mutate of [
+      (candidate: V9OpenEvidence) => { candidate.totals.obligations = -1; },
+      (candidate: V9OpenEvidence) => { candidate.documentation.facts = -1; },
+      (candidate: V9OpenEvidence) => { candidate.byCard[0]!.openBucketObligationsCarried = 1.5; },
+    ]) {
+      const response = currentResponse();
+      const invalid = openEvidence();
+      mutate(invalid);
+      response.openEvidence = invalid;
+      expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
+    }
+  });
+
+  it("publishes the three-bucket vocabulary and rejects an unknown or unsorted reason bucket", () => {
+    for (const bucket of ["open", "issuer", "documentation"] as const) {
+      expect(V9OpenQuestionBucketSchema.safeParse(bucket).success).toBe(true);
+    }
+    expect(V9OpenQuestionBucketSchema.safeParse("closed").success).toBe(false);
+
+    const unknown = currentResponse();
+    const evidence = openEvidence();
+    Object.assign(evidence.reasons[0]!, { bucket: "closed" });
+    unknown.openEvidence = evidence;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(unknown).success).toBe(false);
+
+    const unsorted = currentResponse();
+    const reversed = openEvidence();
+    reversed.reasons = [...reversed.reasons].reverse();
+    unsorted.openEvidence = reversed;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(unsorted).success).toBe(false);
+  });
+
+  it("keeps documentationOnlyLimited optional and rejects empty, unknown or duplicate pillars", () => {
+    const plain = currentResponse();
+    plain.openEvidence = openEvidence();
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(plain).success).toBe(true);
+    expect(SafetyScoreV9CurrentResponseSchema.parse(plain).openEvidence!.byCard[0]!.documentationOnlyLimited)
+      .toBeUndefined();
+
+    for (const invalid of [[], ["peg"], ["backing", "backing"]]) {
+      expect(V9OpenEvidenceByCardSchema.safeParse({
+        id: "asset",
+        openBucketQuestionsCarried: 0,
+        inheritedOpenBucketQuestionsCarried: 0,
+        openBucketObligationsCarried: 0,
+        documentationObligationsCarried: 0,
+        documentationOnlyLimited: invalid,
+      }).success).toBe(false);
+    }
+
+    const canonical = V9OpenEvidenceByCardSchema.parse({
+      id: "asset",
+      openBucketQuestionsCarried: 0,
+      inheritedOpenBucketQuestionsCarried: 0,
+      openBucketObligationsCarried: 0,
+      documentationObligationsCarried: 0,
+      documentationOnlyLimited: ["exit", "backing"],
+    });
+    expect(canonical.documentationOnlyLimited).toEqual(["backing", "exit"]);
+  });
+
+  it("fails closed when the annotation is not backed by a limited witness and a gap set", () => {
+    const adequate = annotatedResponse();
+    adequate.openEvidence!.byCard[0]!.documentationOnlyLimited = ["exit"];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(adequate).success).toBe(false);
+
+    const noGapSet = boundedResponse();
+    noGapSet.openEvidence = annotatedResponse().openEvidence;
+    delete noGapSet.documentationCauseGaps;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(noGapSet).success).toBe(false);
+
+    const unresolved = annotatedResponse();
+    unresolved.documentationCauseGaps = ["asset:gap:missing"];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(unresolved).success).toBe(false);
+
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(annotatedResponse()).success).toBe(true);
+  });
+
+  it("reconciles per-card carries, published card membership and the issuer review window", () => {
+    const inherited = currentResponse();
+    const evidence = openEvidence();
+    evidence.byCard[0]!.inheritedOpenBucketQuestionsCarried = 2;
+    inherited.openEvidence = evidence;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(inherited).success).toBe(false);
+
+    const orphan = currentResponse();
+    const unknownCard = openEvidence();
+    unknownCard.byCard[0]!.id = "unknown";
+    orphan.openEvidence = unknownCard;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(orphan).success).toBe(false);
+
+    const halfDated = currentResponse();
+    const issuer = openEvidence();
+    issuer.issuer.newestReviewedAtSec = null;
+    halfDated.openEvidence = issuer;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(halfDated).success).toBe(false);
+
+    const reversed = currentResponse();
+    const window = openEvidence();
+    window.issuer.newestReviewedAtSec = 80;
+    reversed.openEvidence = window;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(reversed).success).toBe(false);
+
+    const futureDated = currentResponse();
+    const future = openEvidence();
+    future.issuer.oldestReviewedAtSec = 1_900_000_000;
+    future.issuer.newestReviewedAtSec = 1_900_000_000;
+    futureDated.openEvidence = future;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(futureDated).success).toBe(false);
+  });
+
+  it("requires root-asset question keys with a supported scope kind", () => {
+    for (const key of [
+      "usdc-circle|control|control:bridge-meta:usdc:digest",
+      "usdc-circle|route|redemption|route-1",
+      "usdc-circle|component|access:freeze",
+      "usdc-circle|reserve-exposure|reserve:deadbeef",
+      "usdc-circle|path|missing-oracle-profile",
+    ]) {
+      expect(V9QuestionKeySchema.safeParse(key).success).toBe(true);
+    }
+    for (const key of ["usdc-circle|workType|release", "usdc-circle|reserve-exposure", "|control|control:mint", "usdc-circle|control|"]) {
+      expect(V9QuestionKeySchema.safeParse(key).success).toBe(false);
+    }
+  });
+
+  it("carries the publication documentation gap set only when it resolves", () => {
+    const response = annotatedResponse();
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+    response.documentationCauseGaps = ["external:gap:absent"];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
+  });
+
+  it("accepts the optional documentation carrier and rejects critical or over-counted documentation facts", () => {
+    const response = currentResponse();
+    response.openEvidence = openEvidence();
+    const evidence = response.cards[0]!.scoreTrace.evidenceResponsibility;
+    const documentation = {
+      semantics: "documentation-class-v1" as const,
+      totalFactCount: 0,
+      criticalFactCount: 0 as const,
+      summaries: [],
+    };
+    evidence.documentation = documentation;
+    evidence.summaries[7]!.documentationFactCount = 0;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+
+    const critical = currentResponse();
+    critical.openEvidence = openEvidence();
+    critical.cards[0]!.scoreTrace.evidenceResponsibility.documentation =
+      { ...documentation, criticalFactCount: 1 as unknown as 0 };
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(critical).success).toBe(false);
+
+    const overCounted = currentResponse();
+    overCounted.openEvidence = openEvidence();
+    overCounted.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.documentationFactCount = 1;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(overCounted).success).toBe(false);
   });
 });

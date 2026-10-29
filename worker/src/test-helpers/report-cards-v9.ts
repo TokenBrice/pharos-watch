@@ -1,18 +1,18 @@
 import {
   makeReportCardsV9Card,
   makeReportCardsV9Pillars,
-  makeReportCardsV9NextResponse as makeSharedReportCardsV9NextResponse,
+  makeReportCardsV9ArchivedResponse as makeSharedReportCardsV9ArchivedResponse,
   makeReportCardsV9Response as makeSharedReportCardsV9Response,
-  type ReportCardsV9NextResponseFixtureOverrides,
+  type ReportCardsV9ArchivedResponse,
   type ReportCardsV9ResponseFixturePreset,
   type ReportCardsV9ResponseFixtureOverrides,
 } from "@shared/test-utils/report-cards-v9";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
-import type { ReportCardsV9NextResponse } from "@shared/types/report-cards-v9-next";
 import type {
   SafetyScoreV9CurrentCard,
   SafetyScoreV9CurrentResponse,
   SafetyScoreV9ResolvedCurrentCard,
+  V9OpenEvidence,
 } from "@shared/types/safety-score-v9-public";
 
 const digest = (character: string) => character.repeat(64);
@@ -50,13 +50,25 @@ export function makeWorkerReportCardsV9Response(
   return makeSharedReportCardsV9Response(V9_RESPONSE_PRESET, makeWorkerV9Card, overrides);
 }
 
-export function makeWorkerReportCardsV9NextResponse(
-  overrides: ReportCardsV9NextResponseFixtureOverrides = {},
-): ReportCardsV9NextResponse {
-  return makeSharedReportCardsV9NextResponse(V9_RESPONSE_PRESET, makeWorkerV9Card, overrides);
+/** Archive-only report8 publication: the pre-cutover Worker bytes, block absent. */
+export function makeWorkerReportCardsV9ArchivedResponse(
+  overrides: ReportCardsV9ResponseFixtureOverrides = {},
+): ReportCardsV9ArchivedResponse {
+  return makeSharedReportCardsV9ArchivedResponse(V9_RESPONSE_PRESET, makeWorkerV9Card, overrides);
 }
 
 export const makeReportCardsV9Response = makeWorkerReportCardsV9Response;
+
+/** Empty but schema-valid block: fixture cohorts publish no counted questions. */
+export const emptyV9OpenEvidence: V9OpenEvidence = {
+  semantics: "open-question-v1",
+  totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 0 },
+  owners: [],
+  reasons: [],
+  documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+  issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+  byCard: [],
+};
 
 export function makeWorkerSafetyScoreV9Publication(
   overrides: Partial<SafetyScoreV9CurrentResponse> = {},
@@ -66,7 +78,8 @@ export function makeWorkerSafetyScoreV9Publication(
   );
   return {
     model: "v9-critical-path",
-    schemaVersion: 7,
+    schemaVersion: 8,
+    openEvidence: emptyV9OpenEvidence,
     lifecycle: "active",
     candidateId: projected.source.candidateId,
     policyVersion: projected.methodology.version,

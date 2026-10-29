@@ -131,7 +131,7 @@ describe("LVUSD reserve target identity", () => {
     expect(usdc).toMatchObject({
       deploymentRef: usdcRef,
       selector: "0x70a08231000000000000000000000000c69d584b3118e94b3443cc6c67076281242fa704",
-      decimals: 6, rawAmount: "906831469062",
+      decimals: 6, rawAmount: "916509772695",
     });
     expect(observation.quantities.find(quantity => quantity.key.endsWith(":totalSupply"))?.deploymentRef).toBe(holderRef);
     expect(observation.deploymentRefs).toEqual([holderRef, usdcRef]);
@@ -144,11 +144,11 @@ describe("LVUSD reserve target identity", () => {
       .not.toContain(usdcRef);
   });
 
-  it("stays partial technical-only evidence at its original clock and expired today", () => {
+  it("stays partial technical-only evidence at its review clock and expires after its window", () => {
     const deploymentRefs = resolve(lvusd);
     expect(admitV10ReserveObservation({ observation, deploymentRefs, clockSec: observation.reviewedAtSec, policy }))
       .toMatchObject({ admitted: true, wholeAssetComposition: false, currentLiabilityShare: null });
-    expect(admitV10ReserveObservation({ observation, deploymentRefs, clockSec: Date.parse("2026-10-26T00:00:00Z") / 1000, policy }))
+    expect(admitV10ReserveObservation({ observation, deploymentRefs, clockSec: observation.expiresAtSec + 1, policy }))
       .toMatchObject({ admitted: false, rejectionCodes: ["expired"] });
   });
 

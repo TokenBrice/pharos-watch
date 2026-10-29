@@ -1,7 +1,7 @@
 import { createServer } from "node:http";
 import {
   makeReportCardsV9Card,
-  makeReportCardsV9NextResponse,
+  makeReportCardsV9ArchivedResponse,
   makeReportCardsV9Response,
 } from "@shared/test-utils/report-cards-v9";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
@@ -85,7 +85,7 @@ export function makeSafetyMapReportCardsResponse(args: SafetyMapReportCardsArgs)
 
 /** Same fixture data on the report9 wire; proves the map reader admits both. */
 export function makeSafetyMapReportCardsNextResponse(args: SafetyMapReportCardsArgs) {
-  return makeReportCardsV9NextResponse(
+  return makeReportCardsV9ArchivedResponse(
     safetyMapReportCardsPreset(args),
     () => makeReportCardsV9Card(),
     { cards: args.cards },

@@ -11,7 +11,7 @@ import { PSI_BAND_CLASSES, type ConditionBand } from "@shared/lib/classification
 import type { DigestSnapshotInputData, DigestSnapshotResponse } from "@shared/types";
 import { Activity, ArrowDownUp, BarChart3, CheckCircle, ImageOff, Shield, ShieldBan, TrendingUp, TriangleAlert } from "lucide-react";
 import { formatDigestDateLabel } from "@/lib/digest";
-import { formatV9ReasonCodeLabel } from "@/lib/safety-score-data-coverage";
+import { formatV9ReasonCodeLabel } from "@/lib/safety-score-reason-code-labels";
 import { humanizeSafetyScoreV9Value } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
 import { formatYieldWarningSignal } from "@/lib/yield-constants";
 import { selectInvestmentWarningSignals } from "@shared/lib/yield-warning-signals";

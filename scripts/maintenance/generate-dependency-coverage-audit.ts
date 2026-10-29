@@ -32,7 +32,7 @@ import type {
 import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9Response,
-} from "@shared/types/report-cards-v9";
+} from "@shared/types/report-cards-v9-current";
 import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import {
   buildMarketCapMapFromStablecoins,

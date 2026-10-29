@@ -10,31 +10,24 @@ import {
 } from "./safety-score-v9";
 import { V9FailureDomainRefSchema } from "./safety-score-v9-fact-primitives";
 import {
-  BaseInputGenerationIdSchema,
   isUniqueSorted,
   numbersAgree,
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9CapSchema,
   SafetyScoreV9EvidenceFreshnessSchema,
-  SafetyScoreV9PillarFreshnessSchema,
-  refineSafetyScoreV9PillarFreshness,
   SafetyScoreV9NrReasonSchema,
   SafetyScoreV9PillarSchema,
   SafetyScoreV9PublicReasonListSchema,
   ScoreSchema,
-  Sha256Schema,
-  V9PolicyVersionSchema,
 } from "./safety-score-v9-public-facts";
 import { refineCard } from "./safety-score-v9-public-internal";
-import { findSafetyScoreV9ParentAttributionIssues } from "./safety-score-v9-public-attribution";
 import { computeV9UnknownPricedWeightShare, SafetyScoreV9BreakdownsSchema, SafetyScoreV9HistoricalBreakdownsSchema, SafetyScoreV9HistoricalTypedBreakdownsSchema } from "./safety-score-v9-public-breakdowns";
 import { SafetyScoreV9ScoreTraceSchema, SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9WitnessScoreTraceSchema } from "./safety-score-v9-public-trace";
 import { SafetyScoreV9HistoricalCapSchema } from "./safety-score-v9-public-historical";
 import { V9WrapperFormSchema } from "./safety-score-v9-wrapper";
 import { V9EffectiveDependenciesV3Schema } from "./safety-score-v9-facts";
 import { ReserveSliceSchema } from "./reserves";
-import { causeGapRefs, V9RatingStatusSchema, V9PartialEvidenceSchema, V9DependencyCauseShape, refineV9RatingStatusFields, refineV9PublicGapReferences, refineV9PublicGapContext } from "./safety-score-v9-public-causes";
-import { canonicalTextArray } from "./safety-score-v9-fact-primitives";
+import { causeGapRefs, V9RatingStatusSchema, V9PartialEvidenceSchema, V9DependencyCauseShape, refineV9RatingStatusFields, refineV9PublicGapReferences } from "./safety-score-v9-public-causes";
 import {
   resolveV9PublicWitnessTexts,
   validateV9PublicWitnessTexts,
@@ -519,72 +512,22 @@ export const SafetyScoreV9CompletenessSchema = z
     }
   });
 
-const SafetyScoreV9ResponseShape = {
-  model: z.literal("v9-critical-path"),
-  lifecycle: z.literal("active"),
-  candidateId: z.string().min(1),
-  policyVersion: V9PolicyVersionSchema,
-  publicationGenerationId: z.string().min(1),
-  baseInputGenerationId: BaseInputGenerationIdSchema,
-  factSetDigest: Sha256Schema,
-  resultDigest: Sha256Schema,
-  policy: z.object({ id: z.string().min(1), semanticDigest: Sha256Schema }).strict(),
-  evaluationBuildDigest: Sha256Schema,
-  sourceGenerations: z.record(z.string().min(1), z.string().min(1)),
-  asOfSec: z.number().int().nonnegative(),
-  publishedAtSec: z.number().int().nonnegative(),
-  completeness: SafetyScoreV9CompletenessSchema,
-  foreignCauseGaps: canonicalTextArray(),
-  commonModeGroups: SafetyScoreV9CommonModeGroupsSchema.optional(),
-  pillarFreshness: SafetyScoreV9PillarFreshnessSchema.optional(),
-} as const;
-function refineResponse(
-  response: {
-    asOfSec: number;
-    publishedAtSec: number;
-    completeness: z.infer<typeof SafetyScoreV9CompletenessSchema>;
-    cards: readonly SafetyScoreV9CurrentCard[];
-    foreignCauseGaps: readonly string[];
-    sourceGenerations: Readonly<Record<string, string>>;
-    pillarFreshness?: z.infer<typeof SafetyScoreV9PillarFreshnessSchema>;
-  },
-  ctx: { addIssue: (issue: { code: "custom"; path?: PropertyKey[]; message: string }) => void },
-): void {
-  refineV9PublicGapContext(response, ctx);
-  refineSafetyScoreV9PillarFreshness(response, ctx);
-  if (response.publishedAtSec < response.asOfSec) {
-    ctx.addIssue({ code: "custom", path: ["publishedAtSec"], message: "Publication cannot predate evidence" });
-  }
-  if (response.cards.length !== response.completeness.expectedCount) {
-    ctx.addIssue({ code: "custom", path: ["cards"], message: "V9 card set is not complete" });
-  }
-  const ids = response.cards.map((card) => card.id);
-  if (!isUniqueSorted(ids)) {
-    ctx.addIssue({ code: "custom", path: ["cards"], message: "V9 card IDs must be unique and sorted" });
-  }
-  const notRatedIds = response.cards.filter((card) => card.grade === "NR").map((card) => card.id);
-  if (JSON.stringify(notRatedIds) !== JSON.stringify(response.completeness.notRatedIds)) {
-    ctx.addIssue({ code: "custom", path: ["completeness"], message: "V9 NR membership does not reconcile" });
-  }
-  const pipelineGapIds = response.cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
-  if (JSON.stringify(pipelineGapIds) !== JSON.stringify(response.completeness.pipelineGapIds) ||
-      response.cards.filter((card) => card.ratingStatus === "rated").length !== response.completeness.ratedCount) {
-    ctx.addIssue({ code: "custom", path: ["completeness"], message: "V9 rated and pipeline-gap membership does not reconcile" });
-  }
-  for (const finding of findSafetyScoreV9ParentAttributionIssues(response)) {
-    issue(ctx, ["cards"], `${finding.cardId}: ${finding.message}`);
-  }
-}
-
-/** Current schema-7 envelope: proof-derived availability and exact typed exit-route identity. */
-export const SafetyScoreV9CurrentResponseSchema = z
-  .object({
-    ...SafetyScoreV9ResponseShape,
-    schemaVersion: z.literal(7),
-    cards: z.array(SafetyScoreV9CurrentCardSchema),
-  })
-  .strict()
-  .superRefine((response, ctx) => refineResponse(response, ctx));
-export type SafetyScoreV9CurrentResponse = z.infer<typeof SafetyScoreV9CurrentResponseSchema>;
-
-export const SafetyScoreV9ResponseSchema = SafetyScoreV9CurrentResponseSchema;
+/**
+ * The open-evidence block lives in `safety-score-v9-open-evidence.ts` and the
+ * publication 7/8 envelopes in `safety-score-v9-publication-response.ts`; both
+ * were split out so browser readers of this module never ship their validators.
+ * Their types stay available here (type-only re-exports are erased) so existing
+ * type imports keep resolving without pulling a runtime dependency.
+ */
+export type {
+  V9OpenEvidence,
+  V9OpenEvidenceByCard,
+  V9OpenEvidenceTotals,
+  V9OpenQuestionBucket,
+  V9OpenQuestionScopeKind,
+  V9QuestionKey,
+} from "./safety-score-v9-open-evidence";
+export type {
+  SafetyScoreV9CurrentResponse,
+  SafetyScoreV9PreviousResponse,
+} from "./safety-score-v9-publication-response";
