@@ -2,7 +2,7 @@ import { projectNegativeIncidentReview, V9AttributedNegativeIncidentReviewSchema
 import { describe, expect, it } from "vitest";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema, V9LaneIncidentCertificateSchema, v9NegativeIncidentReviewTimeSec } from "@shared/types/safety-score-v9-incidents";
+import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema, v9NegativeIncidentReviewTimeSec } from "@shared/types/safety-score-v9-incidents";
 import incidentRegistry from "@shared/data/safety-score-v9/incident-reviews-v1.json";
 import {
   getSafetyScoreV9ReviewedIncidents,
@@ -252,83 +252,18 @@ describe("Safety Score v9 authored incident-review identity", () => {
     } as unknown as ControlOverlay;
   }
 
-  function withCoverage(
-    row: ControlOverlay,
-    coverage: ControlOverlay["incidentCoverage"],
-  ): ControlOverlay {
-    return { ...row, ...(coverage === undefined ? {} : { incidentCoverage: coverage }) };
-  }
-
-  function providerOwnedRow(routeId: string, identity: { id?: string; ids?: readonly string[] }): ControlOverlay {
-    return withAuthoredIdentity({ ...bridgeRow(routeId, `bridge-meta:fixture:${routeId === ROUTE_A ? "provider-owned" : "other"}`), capabilities: ["parameter-change"] }, identity);
-  }
-
-  function laneCertificate(overrides: {
-    certificateId?: string;
-    routeId?: string;
-    windowEndSec?: number;
-    finding?: "no-material-admin-event" | "material-event";
-  } = {}) {
-    const certificateId = overrides.certificateId ?? "lane-cert";
-    const windowEndSec = overrides.windowEndSec ?? NEGATIVE_CLOCK_SEC - 86_400;
-    const finding = overrides.finding ?? "no-material-admin-event";
-    const emitter = `0x${"e".repeat(40)}`;
-    return V9LaneIncidentCertificateSchema.parse({
-      schemaVersion: 1,
-      certificateId,
-      evidenceClass: "explorer-events",
-      subjectDeploymentKey: overrides.routeId ?? ROUTE_A,
-      fromBlock: 100,
-      toBlock: 200,
-      toBlockHash: `0x${"b".repeat(64)}`,
-      windowStartSec: windowEndSec - 86_400,
-      windowEndSec,
-      observedAtSec: windowEndSec + 3_600,
-      screeningPolicyDigest: "c".repeat(64),
-      logDigest: "d".repeat(64),
-      emitters: [{
-        address: emitter, expectedRuntimeCodeSha256: "f".repeat(64), runtimeCodeSha256: "f".repeat(64),
-        families: ["PeerSet"],
-      }],
-      screenedTopics: [{ family: "PeerSet", topic0: `0x${"1".repeat(64)}`, signature: "PeerSet(uint32,bytes32)" }],
-      eventCounts: { PeerSet: finding === "material-event" ? 1 : 0 },
-      finding,
-      ...(finding === "material-event" ? {
-        materialEvents: [{
-          address: emitter, family: "PeerSet" as const, transactionHash: `0x${"2".repeat(64)}`,
-          blockNumber: 150, logIndex: 1,
-        }],
-      } : {}),
-    });
-  }
-
-  function providerRow(routeId = ROUTE_A, certificateId = "lane-cert") {
+  function providerRow(routeId = ROUTE_A) {
     return runtimeReview(
       {
         kind: "provider", providerKey: "layerzero", surface: "dvn-set",
         coveredRoutes: [{ assetId: "fixture", routeId }],
       },
-      { reviewId: "provider-review", laneScreeningRefs: [{ assetId: "fixture", routeId, certificateId }] },
+      { reviewId: "provider-review", laneScreeningRefs: [{ assetId: "fixture", routeId, certificateId: "lane-cert" }] },
     );
   }
 
   function issuerRow(routeIds: readonly string[] = [ROUTE_A]) {
     return runtimeReview({ kind: "issuer-surface", coveredRoutes: [...routeIds] }, { reviewId: "issuer-review" });
-  }
-
-  function closureCoverage(controlIds: readonly string[], certificateId = "lane-cert") {
-    return {
-      source: "provider-screening" as const,
-      providerReviewId: "provider-review",
-      issuerSurfaceReviewId: "issuer-review",
-      certificateRefs: controlIds.map((controlId) => ({ controlId, certificateId })),
-    };
-  }
-
-  function routeWithCertificates(controls: ControlOverlay[], reviews: Parameters<typeof routeSafetyScoreV9NegativeIncidentReviews>[3]) {
-    return routeSafetyScoreV9NegativeIncidentReviews(
-      controls, "fixture", NEGATIVE_CLOCK_SEC, reviews, [], [laneCertificate()],
-    );
   }
 
   it("resolves authored control identity across compiled digest churn", () => {
@@ -409,6 +344,19 @@ describe("Safety Score v9 authored incident-review identity", () => {
     const issuer = issuerRow();
     const target = bridgeRow(ROUTE_A, "bridge-meta:fixture:provider-owned");
     expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer], [])[0]).toBe(target);
+    // A provider-screening coverage block on the fact grants no closure in
+    // v10.38: the three-witness rule moved to v10.39, so the datum stays unknown
+    // even when the provider review and the issuer surface both resolve.
+    const covered: ControlOverlay = {
+      ...withAuthoredIdentity(target, { id: "alpha" }),
+      incidentCoverage: {
+        source: "provider-screening",
+        providerReviewId: "provider-review",
+        issuerSurfaceReviewId: "issuer-review",
+        certificateRefs: [{ controlId: "alpha", certificateId: `lane-cert:ethereum:0x${"e".repeat(40)}:100-200:${"a".repeat(64)}` }],
+      },
+    };
+    expect(routeSafetyScoreV9NegativeIncidentReviews([covered], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer], [])[0]).toBe(covered);
     // A provider row without its per-lane certificate references is rejected.
     expect(() => runtimeReview({
       kind: "provider", providerKey: "layerzero", surface: "dvn-set",
@@ -451,95 +399,6 @@ describe("Safety Score v9 authored incident-review identity", () => {
       { id: "Lido EarnUSD ShareManager" },
     );
     expect(routeSafetyScoreV9NegativeIncidentReviews([anotherAsset], "fixture", NEGATIVE_CLOCK_SEC, [review], [])[0]).toBe(anotherAsset);
-  });
-
-  it("closes a lane only with all three witnesses: provider review, lane certificate and issuer surface", () => {
-    const control = withCoverage(providerOwnedRow(ROUTE_A, { id: "alpha" }), closureCoverage(["alpha"]));
-    expect(routeWithCertificates([control], [providerRow(), issuerRow()])[0]!.incidentState).toBe("none");
-    // Provider review alone closes nothing, and neither does a fact without coverage.
-    expect(routeWithCertificates([control], [providerRow()])[0]).toBe(control);
-    const uncovered = providerOwnedRow(ROUTE_A, { id: "alpha" });
-    expect(routeWithCertificates([uncovered], [providerRow(), issuerRow()])[0]).toBe(uncovered);
-  });
-
-  it("keeps a merged lane unknown until every contributor id is covered and certified", () => {
-    const merged = withCoverage(
-      providerOwnedRow(ROUTE_A, { id: "*", ids: ["alpha", "beta"] }),
-      closureCoverage(["alpha"]),
-    );
-    expect(routeWithCertificates([merged], [providerRow(), issuerRow()])[0]).toBe(merged);
-    const added = withCoverage(
-      providerOwnedRow(ROUTE_A, { id: "*", ids: ["alpha", "beta", "gamma"] }),
-      closureCoverage(["alpha", "beta"]),
-    );
-    expect(routeWithCertificates([added], [providerRow(), issuerRow()])[0]).toBe(added);
-    const complete = withCoverage(
-      providerOwnedRow(ROUTE_A, { id: "*", ids: ["alpha", "beta"] }),
-      closureCoverage(["alpha", "beta"]),
-    );
-    expect(routeWithCertificates([complete], [providerRow(), issuerRow()])[0]!.incidentState).toBe("none");
-  });
-
-  it("refuses a stale, material-event or wrong-lane certificate", () => {
-    const control = withCoverage(providerOwnedRow(ROUTE_A, { id: "alpha" }), closureCoverage(["alpha"]));
-    const reviews = [providerRow(), issuerRow()];
-    const stale = routeSafetyScoreV9NegativeIncidentReviews(
-      [control], "fixture", NEGATIVE_CLOCK_SEC, reviews, [],
-      [laneCertificate({ windowEndSec: NEGATIVE_CLOCK_SEC - 2_592_000 - 1 })],
-    );
-    expect(stale[0]).toBe(control);
-    const material = routeSafetyScoreV9NegativeIncidentReviews(
-      [control], "fixture", NEGATIVE_CLOCK_SEC, reviews, [],
-      [laneCertificate({ finding: "material-event" })],
-    );
-    expect(material[0]).toBe(control);
-    const wrongLane = routeSafetyScoreV9NegativeIncidentReviews(
-      [control], "fixture", NEGATIVE_CLOCK_SEC, reviews, [],
-      [laneCertificate({ routeId: ROUTE_B })],
-    );
-    expect(wrongLane[0]).toBe(control);
-    // A certificate the provider review did not bind for this lane is not a witness.
-    expect(routeWithCertificates([control], [providerRow(ROUTE_A, "other-cert")])[0]).toBe(control);
-  });
-
-  it("never lets provider fan-out close asset-specific or lane-level unbound controls", () => {
-    const assetSpecific = withCoverage(
-      withAuthoredIdentity(
-        { ...bridgeRow(ROUTE_A, "bridge-meta:fixture:asset-specific"), capabilities: ["bridge-mint"] },
-        { id: "alpha" },
-      ),
-      closureCoverage(["alpha"]),
-    );
-    expect(routeWithCertificates([assetSpecific], [providerRow(), issuerRow()])[0]).toBe(assetSpecific);
-    const upgrade = withCoverage(
-      withAuthoredIdentity(
-        { ...bridgeRow(ROUTE_A, "bridge-meta:fixture:upgrade"), capabilities: ["upgrade"] },
-        { id: "alpha" },
-      ),
-      closureCoverage(["alpha"]),
-    );
-    expect(routeWithCertificates([upgrade], [providerRow(), issuerRow()])[0]).toBe(upgrade);
-    const laneLevel = withCoverage(
-      { ...bridgeRow(ROUTE_A, "bridge-meta:fixture:lane-level"), capabilities: ["parameter-change"] },
-      closureCoverage(["alpha"]),
-    );
-    expect(routeWithCertificates([laneLevel], [providerRow(), issuerRow()])[0]).toBe(laneLevel);
-    const wildcardLane = withCoverage(
-      { ...bridgeRow(ROUTE_A, "bridge-meta:fixture:lane-level"), capabilities: ["parameter-change"] },
-      closureCoverage(["*"]),
-    );
-    expect(routeWithCertificates([wildcardLane], [providerRow(), issuerRow()])[0]!.incidentState).toBe("none");
-  });
-
-  it("requires the provider review to cover this exact lane and the issuer to name it", () => {
-    const control = withCoverage(providerOwnedRow(ROUTE_A, { id: "alpha" }), closureCoverage(["alpha"]));
-    expect(routeWithCertificates([control], [providerRow(ROUTE_B, "lane-cert"), issuerRow()])[0]).toBe(control);
-    expect(routeWithCertificates([control], [providerRow(), issuerRow([ROUTE_B])])[0]).toBe(control);
-    const retiredIssuer = runtimeReview(
-      { kind: "issuer-surface", coveredRoutes: [ROUTE_A] },
-      { reviewId: "issuer-review", retired: { reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Superseded lane set" } },
-    );
-    expect(routeWithCertificates([control], [providerRow(), retiredIssuer])[0]).toBe(control);
   });
 });
 

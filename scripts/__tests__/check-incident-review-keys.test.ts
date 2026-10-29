@@ -11,6 +11,7 @@ import {
 const ASSET = "alpha-fixture";
 const ROUTE = "ethereum:0x1111111111111111111111111111111111111111";
 const MINT_KEY = `mint-meta:${ASSET}:0123456789abcdef0123`;
+const CERTIFICATE_ID = `lane-cert:ethereum:0x1111111111111111111111111111111111111111:100-200:${"a".repeat(64)}`;
 
 interface FixtureOptions {
   reviews?: unknown[];
@@ -237,7 +238,7 @@ describe("incident review keys pass on migrated rows", () => {
           },
           reviewedAt: "2026-10-22",
           windowEndSec: 7000,
-          laneScreeningRefs: [{ assetId: ASSET, routeId: ROUTE, certificateId: "certificate-fixture" }],
+          laneScreeningRefs: [{ assetId: ASSET, routeId: ROUTE, certificateId: CERTIFICATE_ID }],
         },
         {
           reviewId: "review-issuer",
@@ -467,10 +468,25 @@ describe("incident review coverer references", () => {
 
   it("rejects a screening reference that names an uncovered lane", () => {
     const dir = fixtureRoot({
-      reviews: [provider([{ assetId: ASSET, routeId: "base:0x3333333333333333333333333333333333333333", certificateId: "certificate-fixture" }])],
+      reviews: [provider([{ assetId: ASSET, routeId: "base:0x3333333333333333333333333333333333333333", certificateId: CERTIFICATE_ID }])],
       rows: [],
     });
     expect(codes(dir)).toEqual(expect.arrayContaining(["coverage-ref-lane", "coverage-ref-missing"]));
+  });
+
+  it.each([
+    `lane-cert-pending:ethereum:0x1111111111111111111111111111111111111111:100-200:${"a".repeat(64)}`,
+    "lane-cert-tbd:ethereum",
+    "certificate-placeholder",
+  ])("rejects the placeholder certificate id %s", (certificateId) => {
+    const dir = fixtureRoot({
+      reviews: [provider([{ assetId: ASSET, routeId: ROUTE, certificateId }])],
+      rows: [],
+    });
+    const report = checkIncidentReviewKeys(dir);
+    expect(report.findings.map((finding) => finding.code)).toEqual(["coverage-ref-placeholder"]);
+    expect(report.findings[0]).toMatchObject({ reviewId: "review-provider" });
+    expect(report.findings[0]!.detail).toContain(certificateId);
   });
 });
 

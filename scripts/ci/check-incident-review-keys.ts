@@ -13,8 +13,12 @@
  * the review-key migration generator compiles from) and reuses its authored
  * candidate map, so route/control identity has one derivation. Lane screening
  * certificates are D1 runtime state (IR-3b stores no committed artifact), so
- * `laneScreeningRefs` are checked structurally and per covered lane; the
- * certificate's existence and freshness stay IR-1c's admission rule.
+ * `laneScreeningRefs` are checked structurally and per covered lane. A reference
+ * must name a certificate an actual read produced: the `lane-cert-pending:`
+ * placeholder form and its siblings resolve nowhere yet would read as coverage,
+ * so they are rejected with a machine-readable finding. Certificate admission
+ * (freshness, finding, contributor set) is the v10.39 provider-screening rule,
+ * not a v10.38 gate.
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -40,6 +44,14 @@ import { INCIDENT_REVIEW_KEY_MIGRATION_PATH } from "../build-data/generate-safet
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 
 export const INCIDENT_REVIEWS_PATH = "shared/data/safety-score-v9/incident-reviews-v1.json";
+
+/**
+ * Placeholder markers that have appeared in authored lane references, as
+ * `-`/`.`/`:`-delimited segments. `lane-cert-pending:<chain>:…` is the known
+ * form; the others are the same claim in different words. A certificate id that
+ * carries one names a promise, not a pinned read, and resolves nowhere.
+ */
+const PLACEHOLDER_CERTIFICATE_SEGMENT = /(?:^|[-.:])(?:pending|placeholder|tbd|todo|to-be-authored|unresolved)(?:[-.:]|$)/u;
 
 const COINS_DIR = "shared/data/stablecoins/coins";
 const RISK_REVIEW_DIR = "shared/data/stablecoins/domains/risk-review";
@@ -526,6 +538,10 @@ export function checkIncidentReviewKeys(root: string): IncidentReviewKeyReport {
         const referencedLanes = new Set<string>();
         for (const ref of review.laneScreeningRefs) {
           const lane = `${ref.assetId}\u0000${normalizeDeploymentId(ref.routeId)}`;
+          if (PLACEHOLDER_CERTIFICATE_SEGMENT.test(ref.certificateId)) {
+            emit("coverage-ref-placeholder", reviewId,
+              `lane screening reference ${ref.assetId}|${ref.routeId} names placeholder certificate ${ref.certificateId}`);
+          }
           if (!coveredLanes.has(lane)) {
             emit("coverage-ref-lane", reviewId, `lane screening reference ${ref.assetId}|${ref.routeId} is not a covered route`);
           }
