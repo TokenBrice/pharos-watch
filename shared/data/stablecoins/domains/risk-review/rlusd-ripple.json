@@ -346,10 +346,10 @@
         "label": "RLUSD ethereum Wormhole NTT Guardian validation mint path",
         "executionScope": {
           "controllerDeployment": "ethereum:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: NTT manager proxy runtime and EIP-1967 implementation runtime, token hasRole(MINTER_ROLE)/hasRole(BURNER_ROLE) for the manager, NTT token(), mode()=1, getThreshold()=1, single transceiver, isPaused()=false, manager owner()=pauser() and gateway owner(). Peers, rate limits and Guardian-set details were not re-read and keep their recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -382,14 +382,14 @@
             }
           ],
           "pin": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26299900",
+            "hash": "0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x80c4b7dffd8294ab32932fbb0df8bef1f7cafa8d sha256:ec5e5b2e4fef2c99d3fdf34b70f8147a9423f6a8442e3660c8b8d79f450a9723",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
           "observedState": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26299900",
+            "hash": "0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x80c4b7dffd8294ab32932fbb0df8bef1f7cafa8d sha256:ec5e5b2e4fef2c99d3fdf34b70f8147a9423f6a8442e3660c8b8d79f450a9723",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
@@ -512,10 +512,10 @@
         "label": "RLUSD ethereum Wormhole NTT issuer weighted MultiSign gateway administration",
         "executionScope": {
           "controllerDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: MultiSign runtime, gateway runtime, signers() roster and signerWeight() values, quorum()=7, and gateway owner(). The complete-closure certificate is retained on the unchanged controller and gateway runtimes.",
           "confidence": "verified",
           "sources": [
             {
@@ -556,14 +556,14 @@
             }
           ],
           "pin": {
-            "position": "26122338",
-            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+            "position": "26299900",
+            "hash": "0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef",
             "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "26122338",
-            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+            "position": "26299900",
+            "hash": "0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef",
             "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -626,8 +626,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "26122338",
-                  "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+                  "position": "26299900",
+                  "hash": "0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef",
                   "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -689,8 +689,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "26122338",
-                  "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+                  "position": "26299900",
+                  "hash": "0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef",
                   "runtimeIdentity": "sha256:9c52e9897f5112cd923bfbc5a133047ce566c647bcd6f2b784862adaafad7b1c",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -757,15 +757,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26299900",
+            "hash": "0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef",
             "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: signers()/signerWeight()/quorum() re-read at this pin; 11 signers with weights 3,3,2,2,3,2,2,2,2,3,2 and quorum 7 unchanged, status verified retained.",
           "sources": [
             {
               "label": "Ethereum: RLUSD proxy creation transaction",
@@ -849,10 +849,10 @@
         "label": "RLUSD base Wormhole NTT Guardian validation mint path",
         "executionScope": {
           "controllerDeployment": "base:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: NTT manager proxy runtime and EIP-1967 implementation runtime, token hasRole(MINTER_ROLE)/hasRole(BURNER_ROLE) for the manager, NTT token(), mode()=1, getThreshold()=1, single transceiver, isPaused()=false, manager owner()=pauser() and gateway owner(). Peers, rate limits and Guardian-set details were not re-read and keep their recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -885,14 +885,14 @@
             }
           ],
           "pin": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x86c5ae628e2218c5597b3e6dce73048adc53fcc5 sha256:b7baf6b1b32dcd764ab32009bb67190b728b47dbb8d42eab8178bb0aa2c02f19",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
           "observedState": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x86c5ae628e2218c5597b3e6dce73048adc53fcc5 sha256:b7baf6b1b32dcd764ab32009bb67190b728b47dbb8d42eab8178bb0aa2c02f19",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
@@ -1015,10 +1015,10 @@
         "label": "RLUSD base Wormhole NTT issuer weighted MultiSign gateway administration",
         "executionScope": {
           "controllerDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: MultiSign runtime, gateway runtime, signers() roster and signerWeight() values, quorum()=7, and gateway owner(). The complete-closure certificate is retained on the unchanged controller and gateway runtimes.",
           "confidence": "verified",
           "sources": [
             {
@@ -1059,14 +1059,14 @@
             }
           ],
           "pin": {
-            "position": "52183926",
-            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "52183926",
-            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -1129,8 +1129,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "52183926",
-                  "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+                  "position": "53254000",
+                  "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
                   "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -1192,8 +1192,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "52183926",
-                  "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+                  "position": "53254000",
+                  "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
                   "runtimeIdentity": "sha256:9c52e9897f5112cd923bfbc5a133047ce566c647bcd6f2b784862adaafad7b1c",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -1260,15 +1260,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "53254000",
+            "hash": "0xdc863233010cf7d748817604a12e034ecec4ca1c5f06d079a5f3fcca7cf43127",
             "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: signers()/signerWeight()/quorum() re-read at this pin; 11 signers with weights 3,3,2,2,3,2,2,2,2,3,2 and quorum 7 unchanged, status verified retained.",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1356,10 +1356,10 @@
         "label": "RLUSD optimism Wormhole NTT Guardian validation mint path",
         "executionScope": {
           "controllerDeployment": "optimism:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: NTT manager proxy runtime and EIP-1967 implementation runtime, token hasRole(MINTER_ROLE)/hasRole(BURNER_ROLE) for the manager, NTT token(), mode()=1, getThreshold()=1, single transceiver, isPaused()=false, manager owner()=pauser() and gateway owner(). Peers, rate limits and Guardian-set details were not re-read and keep their recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -1392,14 +1392,14 @@
             }
           ],
           "pin": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x6c67ef3b8a44b5e575c5ef16629779e0b4c39409 sha256:c63c7372875ae657f4dc55fd9b16b7599ca4876d46badec35857e0e4f2b3206b",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
           "observedState": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x6c67ef3b8a44b5e575c5ef16629779e0b4c39409 sha256:c63c7372875ae657f4dc55fd9b16b7599ca4876d46badec35857e0e4f2b3206b",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
@@ -1522,10 +1522,10 @@
         "label": "RLUSD optimism Wormhole NTT issuer weighted MultiSign gateway administration",
         "executionScope": {
           "controllerDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: MultiSign runtime, gateway runtime, signers() roster and signerWeight() values, quorum()=7, and gateway owner(). The complete-closure certificate is retained on the unchanged controller and gateway runtimes.",
           "confidence": "verified",
           "sources": [
             {
@@ -1566,14 +1566,14 @@
             }
           ],
           "pin": {
-            "position": "157779211",
-            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "157779211",
-            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -1636,8 +1636,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "157779211",
-                  "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+                  "position": "158849000",
+                  "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
                   "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -1699,8 +1699,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "157779211",
-                  "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+                  "position": "158849000",
+                  "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
                   "runtimeIdentity": "sha256:9c52e9897f5112cd923bfbc5a133047ce566c647bcd6f2b784862adaafad7b1c",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -1767,15 +1767,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "158849000",
+            "hash": "0xe3dcbcba2885d946b04fe44c1c64ac1b3d297240a62293e4290c2d6267a66250",
             "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: signers()/signerWeight()/quorum() re-read at this pin; 11 signers with weights 3,3,2,2,3,2,2,2,2,3,2 and quorum 7 unchanged, status verified retained.",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1863,10 +1863,10 @@
         "label": "RLUSD ink Wormhole NTT Guardian validation mint path",
         "executionScope": {
           "controllerDeployment": "ink:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: NTT manager proxy runtime and EIP-1967 implementation runtime, token hasRole(MINTER_ROLE)/hasRole(BURNER_ROLE) for the manager, NTT token(), mode()=1, getThreshold()=1, single transceiver, isPaused()=false, manager owner()=pauser() and gateway owner(). Peers, rate limits and Guardian-set details were not re-read and keep their recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -1899,14 +1899,14 @@
             }
           ],
           "pin": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "59800000",
+            "hash": "0x33297ebad39eb7c5ab3da8795580c68ca09e7c0c36b9a69794263573f01dd24c",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0xf0ace03adbb64eda1005e00d6292ac79bccb0c47 sha256:70e78e463f67f7af1f85d08bf58c5987f6c255de37ff957339130c37401e23c2",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
           "observedState": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "59800000",
+            "hash": "0x33297ebad39eb7c5ab3da8795580c68ca09e7c0c36b9a69794263573f01dd24c",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0xf0ace03adbb64eda1005e00d6292ac79bccb0c47 sha256:70e78e463f67f7af1f85d08bf58c5987f6c255de37ff957339130c37401e23c2",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
@@ -2029,10 +2029,10 @@
         "label": "RLUSD ink Wormhole NTT issuer weighted MultiSign gateway administration",
         "executionScope": {
           "controllerDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: MultiSign runtime, gateway runtime, signers() roster and signerWeight() values, quorum()=7, and gateway owner(). The complete-closure certificate is retained on the unchanged controller and gateway runtimes.",
           "confidence": "verified",
           "sources": [
             {
@@ -2073,14 +2073,14 @@
             }
           ],
           "pin": {
-            "position": "57658788",
-            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+            "position": "59800000",
+            "hash": "0x33297ebad39eb7c5ab3da8795580c68ca09e7c0c36b9a69794263573f01dd24c",
             "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "57658788",
-            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+            "position": "59800000",
+            "hash": "0x33297ebad39eb7c5ab3da8795580c68ca09e7c0c36b9a69794263573f01dd24c",
             "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -2143,8 +2143,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "57658788",
-                  "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+                  "position": "59800000",
+                  "hash": "0x33297ebad39eb7c5ab3da8795580c68ca09e7c0c36b9a69794263573f01dd24c",
                   "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -2206,8 +2206,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "57658788",
-                  "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+                  "position": "59800000",
+                  "hash": "0x33297ebad39eb7c5ab3da8795580c68ca09e7c0c36b9a69794263573f01dd24c",
                   "runtimeIdentity": "sha256:9c52e9897f5112cd923bfbc5a133047ce566c647bcd6f2b784862adaafad7b1c",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -2274,15 +2274,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "59800000",
+            "hash": "0x33297ebad39eb7c5ab3da8795580c68ca09e7c0c36b9a69794263573f01dd24c",
             "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: signers()/signerWeight()/quorum() re-read at this pin; 11 signers with weights 3,3,2,2,3,2,2,2,2,3,2 and quorum 7 unchanged, status verified retained.",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2370,10 +2370,10 @@
         "label": "RLUSD unichain Wormhole NTT Guardian validation mint path",
         "executionScope": {
           "controllerDeployment": "unichain:0x2a71afb11f4633a2681eaa19a01c47990f67e938",
-          "reviewedAt": "2026-10-01",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: NTT manager proxy runtime and EIP-1967 implementation runtime, token hasRole(MINTER_ROLE)/hasRole(BURNER_ROLE) for the manager, NTT token(), mode()=1, getThreshold()=1, single transceiver, isPaused()=false, manager owner()=pauser() and gateway owner(). Peers, rate limits and Guardian-set details were not re-read and keep their recorded observations.",
           "confidence": "partial",
           "sources": [
             {
@@ -2406,14 +2406,14 @@
             }
           ],
           "pin": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "62550000",
+            "hash": "0x718b36874f34efd6ed0d2e9940b3d4b60df548901361a431ca45c97ec7938d09",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x3129cba6dbe5a70c7c6db6df0a52c2c8c2d79423 sha256:2609d538d4fd8c04e101108c193cf7d6355cc12b7a3022dd38a3d5f0c48899a7",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
           "observedState": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "62550000",
+            "hash": "0x718b36874f34efd6ed0d2e9940b3d4b60df548901361a431ca45c97ec7938d09",
             "runtimeIdentity": "proxy sha256:43dacfeea16bd0bd22f6075b7ee02f6f7c6243bae07e018c5ed0d0e6935f6859; implementation 0x3129cba6dbe5a70c7c6db6df0a52c2c8c2d79423 sha256:2609d538d4fd8c04e101108c193cf7d6355cc12b7a3022dd38a3d5f0c48899a7",
             "signerIdentity": "sha256:ae099a3e26d2ab57f2a180de56cb0dbfaa9381a052ff698ec67c7fba3a2729b4"
           },
@@ -2536,10 +2536,10 @@
         "label": "RLUSD unichain Wormhole NTT issuer weighted MultiSign gateway administration",
         "executionScope": {
           "controllerDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: re-read at this record's pinned chain block (pin/observedState, 2026-10-29 UTC). Confirmed unchanged: MultiSign runtime, gateway runtime, signers() roster and signerWeight() values, quorum()=7, and gateway owner(). The complete-closure certificate is retained on the unchanged controller and gateway runtimes.",
           "confidence": "verified",
           "sources": [
             {
@@ -2580,14 +2580,14 @@
             }
           ],
           "pin": {
-            "position": "60408838",
-            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+            "position": "62550000",
+            "hash": "0x718b36874f34efd6ed0d2e9940b3d4b60df548901361a431ca45c97ec7938d09",
             "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "60408838",
-            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+            "position": "62550000",
+            "hash": "0x718b36874f34efd6ed0d2e9940b3d4b60df548901361a431ca45c97ec7938d09",
             "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -2650,8 +2650,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "60408838",
-                  "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+                  "position": "62550000",
+                  "hash": "0x718b36874f34efd6ed0d2e9940b3d4b60df548901361a431ca45c97ec7938d09",
                   "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -2713,8 +2713,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "60408838",
-                  "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+                  "position": "62550000",
+                  "hash": "0x718b36874f34efd6ed0d2e9940b3d4b60df548901361a431ca45c97ec7938d09",
                   "runtimeIdentity": "sha256:9c52e9897f5112cd923bfbc5a133047ce566c647bcd6f2b784862adaafad7b1c",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -2781,15 +2781,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "62550000",
+            "hash": "0x718b36874f34efd6ed0d2e9940b3d4b60df548901361a431ca45c97ec7938d09",
             "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "W0 R-SCOPE-2 renewal 2026-10-29: signers()/signerWeight()/quorum() re-read at this pin; 11 signers with weights 3,3,2,2,3,2,2,2,2,3,2 and quorum 7 unchanged, status verified retained.",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
