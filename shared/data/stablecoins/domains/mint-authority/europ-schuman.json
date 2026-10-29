@@ -343,15 +343,15 @@
             "state": "absent"
           },
           "pin": {
-            "position": "107933446",
-            "hash": "9FB58B97B7018BB7B9AA9B83D7852E29725C549B8CC7477595A581A003FDFAE5",
+            "position": "107985452",
+            "hash": "9AB79690C7514C5671CDAC9187523D674FC9F8520910F55E20D1A80FA79199AE",
             "runtimeIdentity": "xrpl-native-multisigning:SignerList",
             "signerIdentity": "sha256:c6e29e73001fbe3fbef574ca9841e8553dacd04f55b82042ff2ac22cee7a66f8"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "D01 evidence renewal 2026-10-27",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "R-MINT-6 renewal 2026-10-29",
           "sources": [
             {
               "label": "Schuman EUROP official issuer roster",

@@ -17,26 +17,26 @@
   "proofOfReserves": {
     "type": "independent-audit",
     "url": "https://www.forteaud.com/transparency",
-    "provider": "Horizon Nexus (Audit) Pty Ltd independent auditor's report on Forte's AUDF reserve bank-account balance",
+    "provider": "Horizon Nexus (Audit) Pty Ltd independent reasonable-assurance report on Forte's AUDF reserve bank-account balance",
     "attestorTier": "niche",
     "cadence": "ad-hoc",
     "attestorJurisdiction": "Australia",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-07",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-14",
       "publishedAtBasis": "signed-date-standin",
-      "assuranceMethod": "audit",
+      "assuranceMethod": "examination",
       "scope": "assets-only",
       "liabilityReconciliation": "none",
-      "reviewer": "Claude curation campaign 2026-09-21 (Resv13)",
+      "reviewer": "Pharos W0 renewal review 2026-10-29 (R-COMP-8)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "AUDF Reserves Report and Horizon Nexus independent auditor's report (31 August 2026 reserve date; signed 7 September 2026)",
-          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026"
+          "label": "AUDF Reserves Report and Horizon Nexus ASAE 3000 reasonable-assurance report (30 September 2026 reserve date; assurance report signed 14 October 2026)",
+          "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-september-2026"
         },
         {
-          "label": "Forte AUD transparency page",
+          "label": "Forte AUD transparency page (retrieved 2026-10-29)",
           "url": "https://www.forteaud.com/transparency"
         }
       ]

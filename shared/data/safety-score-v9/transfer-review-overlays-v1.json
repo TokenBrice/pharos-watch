@@ -7012,23 +7012,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "base:0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Independent exact singleton share deployment read: base block 52095852, totalSupply=34539931135790694846226928 raw, decimals=18; no representation route in reviewed source inventory",
-            "url": "https://basescan.org/block/52095852"
+            "label": "Reviewed sole exact liability deployment at Base block 53253000 (2026-10-29T17:35:47.000Z; hash 0x6321d9e3089c8ae1b5043ca22f66f5194bfbf0a01ea6a0ed91504cf3d67f9357), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 31515655864198744844026496 at 18 decimals; share asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913; runtime code keccak 0xdca73595ea3b313421c213ffa221484947367e07df717dc8bef18fad43b2f8a3",
+            "url": "https://basescan.org/block/53253000"
           },
           {
-            "label": "Exact native share liability, not look-through parent or underlying-vault liabilities",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
-          },
-          {
-            "label": "Reviewed sole native holder-share identity; no token representation routes. Positive runtime aggregate circulating remains separately required.",
-            "url": "https://app.morpho.org/base/vault/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c"
+            "label": "Sourcify runtime match for the exact deployed runtime (matchId 30034094, verified 2026-05-26T22:26:25Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x91c056b6d4311a743614fbc03ac32d4e6a2d3a3c?fields=compilation"
           }
         ]
       }
@@ -7083,23 +7079,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "base:0xbeeff0be997cca5b1c13a7433c2004637975739e",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Independent exact singleton share deployment read: base block 52095852, totalSupply=30564796655168615600359772 raw, decimals=18; no representation route in reviewed source inventory",
-            "url": "https://basescan.org/block/52095852"
+            "label": "Reviewed sole exact liability deployment at Base block 53253000 (2026-10-29T17:35:47.000Z; hash 0x6321d9e3089c8ae1b5043ca22f66f5194bfbf0a01ea6a0ed91504cf3d67f9357), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 104683319898599259243137 at 18 decimals; share asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913; runtime code keccak 0xdca73595ea3b313421c213ffa221484947367e07df717dc8bef18fad43b2f8a3",
+            "url": "https://basescan.org/block/53253000"
           },
           {
-            "label": "Exact native share liability, not look-through parent or underlying-vault liabilities",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff0be997cca5b1c13a7433c2004637975739e"
-          },
-          {
-            "label": "Reviewed sole native holder-share identity; no token representation routes. Positive runtime aggregate circulating remains separately required.",
-            "url": "https://app.morpho.org/base/vault/0xbeeff0be997cca5b1c13a7433c2004637975739e"
+            "label": "Sourcify runtime match for the exact deployed runtime (matchId 55831816, verified 2026-10-09T16:34:58Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff0be997cca5b1c13a7433c2004637975739e?fields=compilation"
           }
         ]
       }
@@ -7158,23 +7150,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xf3557ad5e984211ac8a0874a670344f2c3376471",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Independent exact singleton share deployment read: ethereum block 26107704, totalSupply=4983174896491884983364107 raw, decimals=18; no representation route in reviewed source inventory",
-            "url": "https://etherscan.io/block/26107704"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 5924504668259007072267572 at 18 decimals; share asset 0xdac17f958d2ee523a2206206994597c13d831ec7; runtime code keccak 0xd3e8fb4da2e312d233b8bf884a7e5f4f4fa8bdd4531dcaa4448791251a1b1f5a",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact native share liability, not look-through parent or underlying-vault liabilities",
+            "label": "Blockscout verified VaultV2 source (verified 2026-05-09T19:03:39.022765Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3557ad5e984211ac8a0874a670344f2c3376471"
-          },
-          {
-            "label": "Reviewed sole native holder-share identity; no token representation routes. Positive runtime aggregate circulating remains separately required.",
-            "url": "https://app.morpho.org/ethereum/vault/0xf3557ad5e984211ac8a0874a670344f2c3376471"
           }
         ]
       }
@@ -7233,23 +7221,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x91600e31fbedc72433d4a57f16639cfe661be7d8",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Independent exact singleton share deployment read: ethereum block 26107704, totalSupply=10004999210318959713616421 raw, decimals=18; no representation route in reviewed source inventory",
-            "url": "https://etherscan.io/block/26107704"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: all four gate addresses zero with all four gate setters abdicated; totalSupply raw 9887643378835134570652562 at 18 decimals; share asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; runtime code keccak 0xb87264448eb495fa597c09eb4a576b7d6f029cb98957d3cb2491904a39abd8e9",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact native share liability, not look-through parent or underlying-vault liabilities",
+            "label": "Blockscout verified VaultV2 source (verified 2026-04-08T19:34:03.140524Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
-          },
-          {
-            "label": "Reviewed sole native holder-share identity; no token representation routes. Positive runtime aggregate circulating remains separately required.",
-            "url": "https://app.morpho.org/ethereum/vault/0x91600e31fbedc72433d4a57f16639cfe661be7d8"
           }
         ]
       }
@@ -7308,23 +7292,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine08), independently pinned deployment census",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x71ffb6a81786ec285d429d531cf655107b9d878d",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Independent exact singleton share deployment read: ethereum block 26107704, totalSupply=10849240390816215589153603 raw, decimals=18; no representation route in reviewed source inventory",
-            "url": "https://etherscan.io/block/26107704"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: all four gate addresses zero with all four gate setters abdicated; totalSupply raw 10671424725557320972720498 at 18 decimals; share asset 0xdac17f958d2ee523a2206206994597c13d831ec7; runtime code keccak 0xd3e8fb4da2e312d233b8bf884a7e5f4f4fa8bdd4531dcaa4448791251a1b1f5a",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact native share liability, not look-through parent or underlying-vault liabilities",
+            "label": "Blockscout verified VaultV2 source (verified 2026-04-08T19:33:56.798707Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x71ffb6a81786ec285d429d531cf655107b9d878d"
-          },
-          {
-            "label": "Reviewed sole native holder-share identity; no token representation routes. Positive runtime aggregate circulating remains separately required.",
-            "url": "https://app.morpho.org/ethereum/vault/0x71ffb6a81786ec285d429d531cf655107b9d878d"
           }
         ]
       }
@@ -7379,43 +7359,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "monad:0x78999cc96d2ba0341588c60ccb0e91c6c33cf371",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact Morpho Vault V2 deployment",
-            "url": "https://app.morpho.org/monad/vault/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371"
+            "label": "Reviewed sole exact liability deployment at Monad block 117650000 (2026-10-29T15:38:34.000Z; hash 0x4d6d8d1aa30a2c9de3b933a947c12c28b5c33b5ac35e937c5cc3ecf39e21f67f), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 48425563237616762272560336 at 18 decimals; share asset 0x754704bc059f8c67012fed69bc8a327a5aafb603; runtime code keccak 0xeb6251a872adcfdd6b5036ad10262a33c865433a9e3ae71bf084174be445f3be",
+            "url": "https://monadscan.com/block/117650000"
           },
           {
-            "label": "Verified deployment code identity",
-            "url": "https://monadscan.com/address/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371#code"
-          },
-          {
-            "label": "Pinned monad block 110016412",
-            "url": "https://monadscan.com/block/110016412"
-          },
-          {
-            "label": "Morpho complete current vault inventory",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Morpho Vault V2 gates",
-            "url": "https://docs.morpho.org/curate/concepts/gates.md"
-          },
-          {
-            "label": "Morpho share accounting and loss realization",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "Exact Morpho lending adapter",
-            "url": "https://monadscan.com/address/0x068f22739a5f8a5c84619d7f355b678d00707908#code"
-          },
-          {
-            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
-            "url": "https://blue-api.morpho.org/graphql"
+            "label": "Sourcify runtime match for the exact deployed runtime (matchId 56246860, verified 2026-10-16T19:41:49Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/143/0x78999cc96d2ba0341588c60ccb0e91c6c33cf371?fields=compilation"
           }
         ]
       }
@@ -7462,39 +7418,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact KPK USDC Prime Morpho Vault V2 deployment",
-            "url": "https://app.morpho.org/ethereum/vault/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 29240039720202125739140022 at 18 decimals; share asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; runtime code keccak 0xb87264448eb495fa597c09eb4a576b7d6f029cb98957d3cb2491904a39abd8e9",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "label": "Blockscout verified VaultV2 source (verified 2026-02-20T14:56:12.295369Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6"
-          },
-          {
-            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
-            "url": "https://eth-mainnet.g.alchemy.com"
-          },
-          {
-            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Morpho gate semantics and irreversible abdication",
-            "url": "https://docs.morpho.org/curate/concepts/gates.md"
-          },
-          {
-            "label": "Exact current MorphoMarketV1AdapterV2 source",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x1d511811aca9d8817a3e50f29cadff6243a02902"
-          },
-          {
-            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
-            "url": "https://blue-api.morpho.org/graphql"
           }
         ]
       }
@@ -7541,39 +7477,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact KPK USDC Yield Morpho Vault V2 deployment",
-            "url": "https://app.morpho.org/ethereum/vault/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 17063484437867463672693583 at 18 decimals; share asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; runtime code keccak 0xb87264448eb495fa597c09eb4a576b7d6f029cb98957d3cb2491904a39abd8e9",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Partially verified VaultV2 source; explorer deployed bytecode matches pinned RPC",
+            "label": "Blockscout verified VaultV2 source (verified 2026-02-23T13:20:46.196849Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13"
-          },
-          {
-            "label": "Ethereum RPC pinned block 26107704, observed 2026-10-02T22:44:52.884200+00:00",
-            "url": "https://eth-mainnet.g.alchemy.com"
-          },
-          {
-            "label": "Morpho itemized vault and adapter data observed 2026-10-02T22:44:52.884200+00:00",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Morpho gate semantics and irreversible abdication",
-            "url": "https://docs.morpho.org/curate/concepts/gates.md"
-          },
-          {
-            "label": "Exact current MorphoMarketV1AdapterV2 source",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4f74895557bea2de5d51d8c06e944da92dbc8550"
-          },
-          {
-            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
-            "url": "https://blue-api.morpho.org/graphql"
           }
         ]
       }
@@ -7620,39 +7536,15 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "arc:0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Keyrock Prime USDC exact vault identity and accounting",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Morpho Vault V2 mechanism documentation",
-            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-          },
-          {
-            "label": "Pinned VaultV2 primary source, gate and loss semantics",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
-          },
-          {
-            "label": "arc fixed-block RPC observation 23952285",
-            "url": "https://rpc.mainnet.arc.io"
-          },
-          {
-            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
-            "url": "https://blue-api.morpho.org/graphql"
-          },
-          {
-            "label": "Exact Arc VaultV2 partial verified source and runtime correspondence at block 23952285",
-            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x5befab92a5a3d60f578cb51eeb4e4fd50a1e3123"
+            "label": "Reviewed sole exact liability deployment at Arc block 28500000 (2026-10-29T15:49:46.000Z; hash 0xbd136b5f714efc6e2c89fd91992a289b5234c0f992ab4ab7572781097c5f41aa), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 75022197361540051918998766 at 18 decimals; share asset 0x3600000000000000000000000000000000000000; runtime code keccak 0xac3d89c4bed30ede74f4e94e9c0e124a13ed24d0e011181515996362879bae57; runtime hex-string SHA-256 785aabab2906e799636c4b424bb35c04fd2d74bf35b5dff761b492b3f0afb274 unchanged from the 2026-10-15 review",
+            "url": "https://explorer.arc.io/block/28500000"
           }
         ]
       }
@@ -7707,19 +7599,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2026-12-31",
-        "reviewer": "Rev_OnedGennius",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-14",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "base:0x10ed0050b7a5d5e1e9cc164f77a71d0bf69f64bd",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Coinbase native ONED full reserve-to-token deployment roster",
-            "url": "https://www.coinbase.com/en-in/oned/proof-of-reserves"
+            "label": "Reviewed sole exact liability deployment at Base block 53253000 (2026-10-29T17:35:47.000Z; hash 0x6321d9e3089c8ae1b5043ca22f66f5194bfbf0a01ea6a0ed91504cf3d67f9357), re-read 2026-10-29: EIP-1967 beacon 0x57ab1ec39f403e6946c944812888bf77fd64f0af returns implementation 0x57ab1e54fca80105a93a735b59f850f8420b5e2c, the reviewed verified implementation; paused()=false; totalSupply raw 11273519010000 at 6 decimals; proxy runtime keccak 0xc156f61ab0779c3527aa3a614cc96450dc9559894d0166c67e5681f25c50ef42",
+            "url": "https://basescan.org/block/53253000"
           },
           {
-            "label": "Native holder terms excluding copies and bridged tokens",
-            "url": "https://oned.global/end-user-terms-and-conditions"
+            "label": "Sourcify exact runtime match for the reviewed implementation 0x57ab1e54fca80105a93a735b59f850f8420b5e2c (matchId 30095109, verified 2026-06-22T18:25:28Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x57ab1e54fca80105a93a735b59f850f8420b5e2c?fields=compilation"
           }
         ]
       }
@@ -7886,27 +7778,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2027-01-13",
-        "reviewer": "Rev_SdaiGnosis primary-source batch64 review",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "gnosis:0xaf204776c7245bf4147c2612bf6e5972ee483701",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Gnosis verified SavingsXDai and imported ERC-4626 source",
-            "url": "https://gnosis.blockscout.com/api/v2/smart-contracts/0xaf204776c7245bf4147c2612bf6e5972ee483701"
+            "label": "Reviewed sole exact liability deployment at Gnosis block 49006900 (2026-10-29T17:32:15.000Z; hash 0x60d707ab23d4254ddb996eea043396c640d6c915044af232d96e045f99d32c5e), re-read 2026-10-29: implementation slot zero and owner() reverts, corroborating the immutable non-proxy runtime; totalSupply raw 30737934002072944897164345 at 18 decimals; share asset 0xe91d153e0b41518a2ce8dd3d7944fa863463a97d; runtime SHA-256 over the 0x-prefixed hex string 3a090cb03bc4708c50986acd44093c4b5220646139a0229bad1e12fb2aabecef unchanged from the 2026-10-15 review",
+            "url": "https://gnosisscan.io/block/49006900"
           },
           {
-            "label": "Gnosis xDAI bridge infrastructure context; exact SavingsXDai flows established by verified contract source",
-            "url": "https://docs.gnosischain.com/bridges/About%20Token%20Bridges/xdai-bridge"
-          },
-          {
-            "label": "Pinned Gnosis block 48768019, 2026-10-15T10:43:10Z",
-            "url": "https://gnosis.blockscout.com/block/48768019"
-          },
-          {
-            "label": "CoinGecko Savings xDAI exact-token deployment metadata, accessed 2026-10-15",
-            "url": "https://api.coingecko.com/api/v3/coins/savings-xdai?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false"
+            "label": "Sourcify exact runtime match for the exact deployed runtime (matchId 1162909, verified 2024-08-08T12:36:09Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/100/0xaf204776c7245bf4147c2612bf6e5972ee483701?fields=compilation"
           }
         ]
       }
@@ -7953,35 +7837,15 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "tempo:0x9a044ae05e5e6290dcf56afd69548565e957a626",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact Sentora vault",
-            "url": "https://app.morpho.org/tempo/vault/0x9a044ae05e5e6290dcf56afd69548565e957a626"
-          },
-          {
-            "label": "Pinned RPC identity, accounting and controls",
+            "label": "Reviewed sole exact liability deployment at Tempo block 46400000 (2026-10-29T05:13:20.000Z; hash 0x50eb8714a8f2773c96b04b64048c3b89d934ece846cb8381d15016ad338b3a1c), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 11411821553786089970421426 at 18 decimals; share asset 0x20c0000000000000000000000000000000000000; runtime code keccak 0x9b591194d111d61e4a5c17bcdb5c0306af93003568a03bf1ac45be4b3f53bdb3; runtime keccak256 0x9b591194d111d61e4a5c17bcdb5c0306af93003568a03bf1ac45be4b3f53bdb3 unchanged from the 2026-10-15 review",
             "url": "https://rpc.tempo.xyz"
-          },
-          {
-            "label": "Morpho Vault V2 documentation",
-            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-          },
-          {
-            "label": "VaultV2 source matched to Tempo runtime apart from immutable asset",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "MorphoMarketV1AdapterV2 source",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
-          },
-          {
-            "label": "Tempo TIP-20 restriction specification",
-            "url": "https://docs.tempo.xyz/protocol/tip20/spec"
           }
         ]
       }
@@ -8028,35 +7892,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xb576765fb15505433af24fee2c0325895c559fb2",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Paypal USD Main exact vault",
-            "url": "https://app.morpho.org/ethereum/vault/0xb576765fb15505433af24fee2c0325895c559fb2"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 179619758161428285820066819 at 18 decimals; share asset 0x6c3ea9036406852006290770bedfcaba0e23a0e8; runtime code keccak 0xd40a644ba3984c98bcffa15709271ecedf2ff7632d763fad84d7f924bd4f6acd",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact verified VaultV2 source",
+            "label": "Blockscout verified VaultV2 source (verified 2025-12-16T12:01:52.516244Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb576765fb15505433af24fee2c0325895c559fb2"
-          },
-          {
-            "label": "Exact current MorphoMarketV1AdapterV2 source",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc2a11ba52ad80124ccc60774c881f93738f334d4"
-          },
-          {
-            "label": "Morpho Vault V2 accounting and redemption mechanics",
-            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-          },
-          {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
-          },
-          {
-            "label": "Morpho exact-vault portfolio API",
-            "url": "https://api.morpho.org/graphql"
           }
         ]
       }
@@ -8103,35 +7951,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact Sentora vault",
-            "url": "https://app.morpho.org/ethereum/vault/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 4112601809244514035936903 at 18 decimals; share asset 0x6c3ea9036406852006290770bedfcaba0e23a0e8; runtime code keccak 0xd40a644ba3984c98bcffa15709271ecedf2ff7632d763fad84d7f924bd4f6acd",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Pinned RPC identity, accounting and controls",
-            "url": "https://eth-mainnet.g.alchemy.com/v2"
-          },
-          {
-            "label": "Morpho Vault V2 documentation",
-            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-          },
-          {
-            "label": "Exact VaultV2 source",
+            "label": "Blockscout verified VaultV2 source (verified 2026-08-01T18:30:28.605444Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x7cbcfc4f64be199ede6db1d916ddcdb69f666b57"
-          },
-          {
-            "label": "MorphoMarketV1AdapterV2 source",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
-          },
-          {
-            "label": "Paxos USD stablecoin terms, section 3.5",
-            "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
           }
         ]
       }
@@ -8182,39 +8014,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xc21b08c16458202593d4d9b26b9984ee67b38bbd",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Sentora PRIME Main exact vault",
-            "url": "https://app.morpho.org/ethereum/vault/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 103637399871196327485744474 at 18 decimals; share asset 0x6c3ea9036406852006290770bedfcaba0e23a0e8; runtime code keccak 0xd40a644ba3984c98bcffa15709271ecedf2ff7632d763fad84d7f924bd4f6acd",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact verified VaultV2 source",
+            "label": "Blockscout verified VaultV2 source (verified 2026-05-12T18:50:32.131155Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc21b08c16458202593d4d9b26b9984ee67b38bbd"
-          },
-          {
-            "label": "Exact current MorphoMarketV1AdapterV2 source",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x93d6393e66b56449b7926b9abfeb37606732de89"
-          },
-          {
-            "label": "Morpho Vault V2 accounting and redemption mechanics",
-            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-          },
-          {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
-          },
-          {
-            "label": "Morpho exact-vault portfolio API",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Sentora PRIME residential-credit case study",
-            "url": "https://sentora.com/case-studies/sentora-s-prime-main-vault-reaches-200m-in-pyusd-deposits-in-under-100-days"
           }
         ]
       }
@@ -8265,35 +8077,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x8381a156958711e230f325428b5eb4b6555c75d9",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact Sentora vault",
-            "url": "https://app.morpho.org/ethereum/vault/0x8381a156958711e230f325428b5eb4b6555c75d9"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 71816312708827383002727423 at 18 decimals; share asset 0x6c3ea9036406852006290770bedfcaba0e23a0e8; runtime code keccak 0xd40a644ba3984c98bcffa15709271ecedf2ff7632d763fad84d7f924bd4f6acd",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Pinned RPC identity, accounting and controls",
-            "url": "https://eth-mainnet.g.alchemy.com/v2"
-          },
-          {
-            "label": "Morpho Vault V2 documentation",
-            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-          },
-          {
-            "label": "Exact VaultV2 source",
+            "label": "Blockscout verified VaultV2 source (verified 2026-08-15T13:23:46.086578Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8381a156958711e230f325428b5eb4b6555c75d9"
-          },
-          {
-            "label": "MorphoMarketV1AdapterV2 source",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
-          },
-          {
-            "label": "Paxos USD stablecoin terms, section 3.5",
-            "url": "https://www.paxos.com/terms-and-conditions/stablecoin-terms-conditions"
           }
         ]
       }
@@ -8340,35 +8136,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine10)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Sentora RLUSD Main exact vault",
-            "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 432742025185724437800461002 at 18 decimals; share asset 0x8292bb45bf1ee4d140127049757c2e0ff06317ed; runtime code keccak 0x0b10d3ab9979405d0970771ee305d10e8c62ea4afd94a6176a7db3ecd97dfd9a",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact verified VaultV2 source",
+            "label": "Blockscout verified VaultV2 source (verified 2026-03-18T12:08:52.614394Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
-          },
-          {
-            "label": "Exact current MorphoMarketV1AdapterV2 source",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
-          },
-          {
-            "label": "Morpho Vault V2 accounting and redemption mechanics",
-            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-          },
-          {
-            "label": "Ethereum RPC, pinned block 26107702",
-            "url": "https://ethereum-rpc.publicnode.com"
-          },
-          {
-            "label": "Morpho exact-vault portfolio API",
-            "url": "https://api.morpho.org/graphql"
           }
         ]
       }
@@ -8561,19 +8341,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2027-01-13",
-        "reviewer": "Pharos batch64 exact-deployment review",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xe15fcc81118895b67b6647bbd393182df44e11e0",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact immutable native share source and transfer mechanics",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 39920816215768195859873964 at 18 decimals; share asset 0xdc035d45d973e3ec169d2276ddab16f1e407384f; runtime code keccak 0xb16835096d5f20aeb6deb4530b73e6c966eca3d67f94c20928f47128414a98bb",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact native share deployment creation transaction",
-            "url": "https://eth.blockscout.com/tx/0xbecea2aa97133574b2e3251bc794e0d827b473d2ac78311ba788e22d2c651b3e"
+            "label": "Blockscout verified VaultV2 source (verified 2026-02-18T07:24:55.492703Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe15fcc81118895b67b6647bbd393182df44e11e0"
           }
         ]
       }
@@ -8620,19 +8400,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Rev_SkymoneyusdtsavingsSky",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-15",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact immutable native share source and transfer mechanics",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 58332643488057788306541189 at 18 decimals; share asset 0xdac17f958d2ee523a2206206994597c13d831ec7; runtime code keccak 0xd3e8fb4da2e312d233b8bf884a7e5f4f4fa8bdd4531dcaa4448791251a1b1f5a",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact native share deployment creation transaction",
-            "url": "https://eth.blockscout.com/tx/0x96ad4f7253a603dced0009beb518702260d31a4dc75dfa9216deaef6173b0a40"
+            "label": "Blockscout verified VaultV2 source (verified 2026-03-05T12:16:24.889113Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x23f5e9c35820f4bab695ac1f19c203cc3f8e1e11"
           }
         ]
       }
@@ -8675,31 +8455,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2026-12-31",
-        "reviewer": "Rev_SreusdResupply batch-64 primary-source review",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-14",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x557ab1e003951a73c12d16f0fea8490e39c33c35",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Resupply savings documentation",
-            "url": "https://docs.resupply.finance/resupply-protocol/savings-reusd.md"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: EIP-1967 implementation slot zero, totalSupply raw 27205620348037504314381428 at 18 decimals, share asset 0x57ab1e0003f623289cd798b1824be09a793e4bec; runtime code keccak 0x5b23bc615a7b0694daeda8d75294a69e5a649675a6bea60cf291b008c6d69e6c",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Resupply official deployment roster",
-            "url": "https://raw.githubusercontent.com/resupplyfi/resupply/main/deployment/contracts.json"
-          },
-          {
-            "label": "Verified current sreUSD implementation",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x557ab1e003951a73c12d16f0fea8490e39c33c35"
-          },
-          {
-            "label": "Ethereum block 26197384, 2026-10-15T10:41:59Z; runtime correspondence and native-share escrow balance",
-            "url": "https://etherscan.io/block/26197384"
-          },
-          {
-            "label": "Complete indexed PeerSet history reviewed through block 26197384; no returned events, not independent absence proof",
-            "url": "https://eth.blockscout.com/api/v2/addresses/0x557ab1e003951a73c12d16f0fea8490e39c33c35/logs?topic=0x238399d427b947898edb290f5ff0f9109849b1c3ba196a42e35f00c50a54b98b"
+            "label": "Sourcify runtime match for the exact deployed SavingsReUSD runtime (matchId 8895745, verified 2025-08-24T14:56:30Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x557ab1e003951a73c12d16f0fea8490e39c33c35?fields=compilation"
           }
         ]
       }
@@ -8750,43 +8518,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2026-12-31",
-        "reviewer": "Pharos batch-64 primary-evidence review (Rev_SteakcusdcSteakhouse)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-14",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xbeef00a59b577423653a1526c7009bde103f542b",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact Morpho Vault V2 deployment",
-            "url": "https://app.morpho.org/ethereum/vault/0xbeef00a59b577423653a1526c7009bde103f542b"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate 0x47c591a3bc346913d0b6bdd96fb50e34efa268aa with setSendAssetsGate not abdicated; totalSupply raw 30647518825296163467915017 at 18 decimals; share asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; runtime code keccak 0xb87264448eb495fa597c09eb4a576b7d6f029cb98957d3cb2491904a39abd8e9",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Verified deployment code identity",
+            "label": "Blockscout verified VaultV2 source (verified 2026-06-22T12:44:49.891392Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef00a59b577423653a1526c7009bde103f542b"
-          },
-          {
-            "label": "Pinned Ethereum block 26196563 (2026-10-15T07:57:11Z)",
-            "url": "https://etherscan.io/block/26196563"
-          },
-          {
-            "label": "Morpho complete current vault inventory",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Morpho Vault V2 gates",
-            "url": "https://docs.morpho.org/curate/concepts/gates.md"
-          },
-          {
-            "label": "Morpho share accounting and loss realization",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "Exact Morpho lending adapter",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x17bc9aa135cef1a5c3a91925e0f865d526318718"
-          },
-          {
-            "label": "Separate public share and confidential wrapper addresses",
-            "url": "https://docs.zama.org/protocol/confidential-vault/reference/addresses.md"
           }
         ]
       }
@@ -8955,22 +8699,18 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-27",
-        "expiresAt": "2026-11-26",
-        "reviewer": "D02 evidence renewal 2026-10-27 (d02-l7)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2026-11-28",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xfc8c624b6080a0a780583799f2a862de936f6e22",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Reviewed sole exact liability deployment at finalized Ethereum block 26285088 (2026-10-27T15:57:11Z; hash 0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534): non-proxy VaultV2, runtime code keccak 0x0b10d3ab9979405d0970771ee305d10e8c62ea4afd94a6176a7db3ecd97dfd9a, totalSupply raw 481331044511367847283923881 at 18 decimals, share and asset gates zero with both share-gate setters abdicated",
-            "url": "https://etherscan.io/block/26285088"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 481870471304769264777764851 at 18 decimals; share asset 0x8292bb45bf1ee4d140127049757c2e0ff06317ed; runtime code keccak 0x0b10d3ab9979405d0970771ee305d10e8c62ea4afd94a6176a7db3ecd97dfd9a",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Morpho Vault V2 census 2026-10-27: no other-chain deployment of this share; two same-name Ethereum sibling vaults are separate liabilities created 2026-08-31",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Exact liability contract and verified source",
+            "label": "Blockscout verified VaultV2 source (verified 2026-09-02T01:19:39.917710Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xfc8c624b6080a0a780583799f2a862de936f6e22"
           }
         ]
@@ -9030,35 +8770,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2026-12-31",
-        "reviewer": "Rev_UsdfcSecuredFinance",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-14",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "filecoin:0x80b98d3aa09ffff255c3ba4a241111ff1262f045",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Official USDFC production token and complete native Filecoin contract roster (calibration explicitly testnet)",
-            "url": "https://docs.secured.finance/usdfc-stablecoin/deployed-contracts.md"
+            "label": "Reviewed sole exact liability deployment at Filecoin block 6470000 (2026-10-19T10:40:00.000Z; hash 0xb14137b23c9b8b8c5112658d3a9ceb58910cbdcd637f1ef419e170e938896a10), re-read 2026-10-29: EIP-1967 implementation slot still binds 0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b; totalSupply raw 204544676450956625545631 at 18 decimals; proxy runtime keccak 0x4d9be648c5bf39973670d9f8b481d5d0b971e6a2db2deccc6b98cde21c5dd83e; later tipsets failed EVM block conversion at read time",
+            "url": "https://api.node.glif.io/rpc/v1"
           },
           {
-            "label": "Issuer in-app Squid cross-chain swap scope",
-            "url": "https://docs.secured.finance/fixed-rate-lending/getting-started/platform-guide/bridge.md"
-          },
-          {
-            "label": "Filecoin primary documentation: swap other tokens into Filecoin USDFC",
-            "url": "https://docs.filecoin.cloud/resources/additional-resources/"
-          },
-          {
-            "label": "Axelar canonical asset registry checked for exact USDFC identity",
-            "url": "https://api.axelarscan.io/api/getAssets"
-          },
-          {
-            "label": "CoinGecko exact USDFC platform inventory",
-            "url": "https://api.coingecko.com/api/v3/coins/usdfc"
-          },
-          {
-            "label": "DefiLlama USDFC chain inventory",
-            "url": "https://stablecoins.llama.fi/stablecoin/248"
+            "label": "Sourcify runtime match for the exact reviewed DebtToken implementation (matchId 11586794, verified 2025-12-23T05:37:28Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/314/0x584c1fa4ab299ae8f7154fce5b1bea7bddacfd0b?fields=compilation"
           }
         ]
       }
@@ -9267,43 +8991,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement 2026-10-03 (Refine09)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x55c1b6e461a6334b567baf0feb5d728715446f05",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Pendle Ecosystem USDC exact vault identity and accounting",
-            "url": "https://api.morpho.org/graphql"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 25117352183297616644776303 at 18 decimals; share asset 0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48; runtime code keccak 0xb87264448eb495fa597c09eb4a576b7d6f029cb98957d3cb2491904a39abd8e9",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Morpho Vault V2 mechanism documentation",
-            "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
-          },
-          {
-            "label": "Pinned VaultV2 primary source, gate and loss semantics",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/VaultV2.sol"
-          },
-          {
-            "label": "Pinned MorphoMarketV1AdapterV2 primary source",
-            "url": "https://raw.githubusercontent.com/morpho-org/vault-v2/c034336f82b0415f786fa15fc61fa81bf5256e31/src/adapters/MorphoMarketV1AdapterV2.sol"
-          },
-          {
-            "label": "Ethereum block 26107703 replay locator; observed via Alchemy Ethereum RPC (credential omitted)",
-            "url": "https://ethereum-rpc.publicnode.com"
-          },
-          {
-            "label": "Exact VaultV2 partial source with matching deployed bytecode",
+            "label": "Blockscout verified VaultV2 source (verified 2026-08-06T13:30:07.722216Z, solc 0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x55c1b6e461a6334b567baf0feb5d728715446f05"
-          },
-          {
-            "label": "Exact adapter partial source with matching deployed bytecode",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa2f362079dbc570a6df5bd04ad91002d17c0db9a"
-          },
-          {
-            "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
-            "url": "https://blue-api.morpho.org/graphql"
           }
         ]
       }
@@ -9591,23 +9291,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Rev_EarnusdLido",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-15",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Ethereum block 26196064, hash 0xe6f654f44af520639428ea34fb84099ac644ba690486e30b6253488d0d4a74fe, 2026-10-15T06:16:59Z",
-            "url": "https://api-ethereum-mainnet.n.dwellir.com"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: EIP-1967 implementation slot still binds 0x000000000c79d2b5cd58ae545afc83030233d7b6; totalSupply raw 57295088476575073363103476 at 18 decimals; proxy runtime keccak 0x59f5343659cb7fe5dd7516a1b0faf518aeb749352ff14164e0b142c641332de6; zero current flags do not remove the configurable pause, whitelist and account-blacklist powers",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact native share liability, not look-through parent or underlying-vault liabilities",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981"
-          },
-          {
-            "label": "Reviewed sole native holder-share identity; no token representation routes. Positive runtime aggregate circulating remains separately required.",
-            "url": "https://docs.lido.fi/earn/deployment-contracts"
+            "label": "Sourcify exact runtime match for the exact deployed proxy runtime (matchId 21454367, verified 2026-03-07T01:55:17Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x4ce1ac8f43e0e5bd7a346a98af777bf8fbea1981?fields=compilation"
           }
         ]
       }
@@ -9973,23 +9669,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2027-01-13",
-        "reviewer": "Pharos batch64 review Rev_SirloinusdcSteakhouse",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "base:0xbeeff2490feffa212fac2f6553682c219e6a8845",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact immutable native share source and transfer mechanics",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xbeeff2490feffa212fac2f6553682c219e6a8845"
+            "label": "Reviewed sole exact liability deployment at Base block 53253000 (2026-10-29T17:35:47.000Z; hash 0x6321d9e3089c8ae1b5043ca22f66f5194bfbf0a01ea6a0ed91504cf3d67f9357), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 466214641285544721616102293 at 18 decimals; share asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913; runtime code keccak 0xdca73595ea3b313421c213ffa221484947367e07df717dc8bef18fad43b2f8a3",
+            "url": "https://basescan.org/block/53253000"
           },
           {
-            "label": "Exact native share deployment creation transaction",
-            "url": "https://base.blockscout.com/tx/0x365e979eb98424e0fcedad75285d1c9ae4cd4be4a3a3841318666316f4082bf7"
-          },
-          {
-            "label": "Base block 52630636, 2026-10-15T07:50:19Z; complete vault, controller and market census",
-            "url": "https://api-base-mainnet-archive.n.dwellir.com"
+            "label": "Sourcify runtime match for the exact deployed runtime (matchId 29095927, verified 2026-05-16T12:41:17Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0xbeeff2490feffa212fac2f6553682c219e6a8845?fields=compilation"
           }
         ]
       }
@@ -10020,19 +9712,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement Refine11",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "base:0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact immutable native share source and transfer mechanics",
-            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a"
+            "label": "Reviewed sole exact liability deployment at Base block 53253000 (2026-10-29T17:35:47Z; hash 0x6321d9e3089c8ae1b5043ca22f66f5194bfbf0a01ea6a0ed91504cf3d67f9357), re-read 2026-10-29: exact MetaMorpho V1.1 runtime exposes no share/asset gate getters; holder 0x2917956eff0b5eaf030abdb4ef4296df775009ca holds 454093940710381493908480027 raw shares and a simulated transfer(0x...dead, 1e18) returned true (observed 2026-10-29T18:43:24Z, no transaction broadcast); totalSupply raw 458702710581873520192341307 at 18 decimals; share asset 0x833589fcd6edb6e08f4c7c32d4f71b54bda02913; runtime code keccak 0x84ca9fa073d8b84cc3f911eb7116b4f311e8326ab1d8b5f5d6ef9d0f7913bdfa",
+            "url": "https://basescan.org/block/53253000"
           },
           {
-            "label": "Exact native share deployment creation transaction",
-            "url": "https://base.blockscout.com/tx/0x4ce6e5d051d2a7951781dc6dd7dc7e0e0cbac3d4723d0ba63faa4f24850370cd"
+            "label": "Sourcify exact runtime match for the exact deployed runtime (matchId 5962749, verified 2025-01-24T01:51:34Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/8453/0x7bfa7c4f149e7415b73bdedfe609237e29cbf34a?fields=compilation"
           }
         ]
       }
@@ -10067,19 +9759,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-03",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol refinement Refine11",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xb0c424116172b55cbb6dd3136f5989f7959e5b91",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Exact immutable native share source and transfer mechanics",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 794962678845689089656239 at 18 decimals; share asset 0xdac17f958d2ee523a2206206994597c13d831ec7; runtime code keccak 0xd3e8fb4da2e312d233b8bf884a7e5f4f4fa8bdd4531dcaa4448791251a1b1f5a",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact native share deployment creation transaction",
-            "url": "https://eth.blockscout.com/tx/0x9ddf415a09a25af3a72dd6a81acb61ab7771e7304a5cc50ce33b51f50ed6da95"
+            "label": "Blockscout verified VaultV2 source (verified 2026-05-18T22:49:15.153241Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb0c424116172b55cbb6dd3136f5989f7959e5b91"
           }
         ]
       }
@@ -10154,35 +9846,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2026-12-31",
-        "reviewer": "Rev_SteakeurcvSteakhouse",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-14",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Morpho exact Steakhouse Prime EURCV deployment",
-            "url": "https://app.morpho.org/ethereum/vault/0xbeef0C075Da5D01112AE5cF34d257074fB5DDB2f"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 137567638532304317776519977 at 18 decimals; share asset 0x5f7827fdeb7c20b443265fc2f40845b715385ff2; runtime code keccak 0x2e630a46febc2ccfef2b5c23cba80915a1972d8600157dd860402dd43482a6aa",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Exact verified VaultV2 source (ethereum, 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f)",
-            "url": "https://sourcify.dev/server/v2/contract/1/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f?fields=all"
-          },
-          {
-            "label": "Morpho current vault identity and asset API",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Steakhouse DeFi vault governing terms",
-            "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
-          },
-          {
-            "label": "Historical gate/abdication read pin, Ethereum block 26110187",
-            "url": "https://etherscan.io/block/26110187"
-          },
-          {
-            "label": "Ethereum block 26197300, 2026-10-15T10:25:11Z; exact vault, roles, Safe and adapter census",
-            "url": "https://etherscan.io/block/26197300"
+            "label": "Blockscout verified VaultV2 source (verified 2026-03-05T12:16:28.628944Z, solc v0.8.28+commit.7893614a, partial verification) reports runtime bytecode byte-identical to the pinned code with no proxy implementation; retrieved 2026-10-29",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
           }
         ]
       }
@@ -10225,31 +9901,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-15",
-        "expiresAt": "2026-12-31",
-        "reviewer": "Batch-64 review (Rev_SteakusdgSteakhouse)",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-14",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "robinhood:0xbeeff033f34c046626b8d0a041844c5d1a5409dd",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Morpho exact Steakhouse USDG deployment",
-            "url": "https://app.morpho.org/robinhood-chain/vault/0xBeEff033F34C046626B8D0A041844C5d1A5409dd/steakhouse-usdg"
-          },
-          {
-            "label": "Exact verified VaultV2 source (robinhood, 0xbeeff033f34c046626b8d0a041844c5d1a5409dd)",
-            "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=all"
-          },
-          {
-            "label": "Morpho current vault identity and asset API",
-            "url": "https://api.morpho.org/graphql"
-          },
-          {
-            "label": "Steakhouse DeFi vault governing terms",
-            "url": "https://www.steakhouse.financial/docs/documents/disclaimers/vaults"
-          },
-          {
-            "label": "Robinhood block 89162029 (2026-10-15T10:43:17Z), complete gate and abdication reads",
+            "label": "Reviewed sole exact liability deployment at Robinhood block 100800000 (2026-10-29T09:29:50.000Z; hash 0x5e50d748f51e7d44d06e718b8986276ec67ddadb7515cb5c7b397de8ae0c288e), re-read 2026-10-29: sendSharesGate, receiveSharesGate, receiveAssetsGate zero with those setters abdicated; deposit-only sendAssetsGate zero with setSendAssetsGate not abdicated; totalSupply raw 534725478834162567895163624 at 18 decimals; share asset 0x5fc5360d0400a0fd4f2af552add042d716f1d168; runtime code keccak 0x3492098028b641c5949beebf8c56898f1ed846f42b59978ed7c75249603c1f6e",
             "url": "https://rpc.mainnet.chain.robinhood.com"
+          },
+          {
+            "label": "Sourcify runtime match for the exact deployed runtime (matchId 42943314, verified 2026-07-27T21:08:18Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/4663/0xbeeff033f34c046626b8d0a041844c5d1a5409dd?fields=compilation"
           }
         ]
       }
@@ -11135,23 +10799,19 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-27",
-        "expiresAt": "2026-11-27",
-        "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7): issuer Product Facts, CoinGecko platforms and pinned Ethereum block 26286557 re-read",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2026-11-29",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "ethereum:0x69af64f409c08e9076bf7f3ed9db3a7409717161",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Issuer Product Facts identifies current Ethereum ERC-20 deployment and supply",
-            "url": "https://goldzip.info/"
+            "label": "Reviewed sole exact liability deployment at Ethereum block 26299900 (2026-10-29T17:29:23.000Z; hash 0xa2c5afac766488431b1a9f5f0d09f19d5018e1bb0316df1b1a19497e41613eef), re-read 2026-10-29: EIP-1967 implementation slot still binds 0x29ed41cb1013a4df63d87b82346b384847db7511; owner()=0xd173e69192b9ff22069aa913ef6e6e94b19f0778, paused()=false, totalSupply raw 3900000000000 at 8 decimals; proxy runtime keccak 0x83a07bf9dad5cf079394093f6515d474baa8c83af5f9a780ee8027340e52c944",
+            "url": "https://etherscan.io/block/26299900"
           },
           {
-            "label": "Issuer transparency deployment and gold-token liability scope",
-            "url": "https://goldzip.info/transparency/"
-          },
-          {
-            "label": "Issuer litepaper technical and gold liability definition",
-            "url": "https://web.archive.org/web/20260306052812/https://goldzip.info/GZ_UPDATED_LITEPAPER_03.11.pdf"
+            "label": "Sourcify exact runtime match for the reviewed HKGXToken implementation (matchId 9672084, verified 2025-10-28T02:30:27Z); retrieved 2026-10-29",
+            "url": "https://sourcify.dev/server/v2/contract/1/0x29ed41cb1013a4df63d87b82346b384847db7511?fields=compilation"
           }
         ]
       },
@@ -11205,19 +10865,15 @@
       "transferScopeAttestation": {
         "kind": "single-deployment-attribution",
         "version": 1,
-        "reviewedAt": "2026-10-27",
-        "expiresAt": "2026-11-26",
-        "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7): issuer contract disclosure, ToS 5.3, CoinGecko platforms and exact-slot mint re-read",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2026-11-28",
+        "reviewer": "Pharos R-SCOPE-4 renewal 2026-10-29 (rscope4 wave-0)",
         "deploymentKey": "solana:5ekaHEqpRUXH4RoZVRMErdJE74bibWAzihMtPcjKyceQ",
         "exhaustiveLiability": true,
         "sources": [
           {
-            "label": "Issuer current sole Solana Token-2022 mint disclosure",
-            "url": "https://www.supercoin.co.za/proof-of-reserves-reports"
-          },
-          {
-            "label": "ToS 5.3: Solana issuance; other chains prospective",
-            "url": "https://www.supercoin.co.za/terms-of-service"
+            "label": "Exact-slot Alchemy getAccountInfo of the reviewed sole mint at finalized Solana slot 462950000 (2026-10-29T16:34:16.000Z; hash H7xrd77VsXQF5YhEdHegRKH4FoxvjjxBTXAWEPeovWDv): mintAuthority UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, freezeAuthority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, mint-close UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, metadata update UuicDY26j4dUf5QraXJ99PwPzGwZjRWZmnxcyMhJAgk, pausable/freeze/metadata-pointer/transfer-hook authority 78gLf8nzh9KpfgHJ3dXN61frauTzdAw5yeBXQbFsVnZi, permanent delegate 3DkHJVMsC7zLLdBa7SamKpr4r6jC9C8AWQdzzvcYjVdc, fee and interest authority 96h1KDUmgqkn6EsSiYFsNiezhEJeB4jEioKmJRZ6Y849, all unchanged from the 2026-10-27 review; paused=false, default state initialized, transfer-hook program unset, supply 8,177,042 at 6 decimals",
+            "url": "https://solana-mainnet.g.alchemy.com/v2/"
           }
         ]
       }

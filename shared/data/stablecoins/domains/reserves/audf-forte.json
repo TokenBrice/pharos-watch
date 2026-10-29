@@ -17,22 +17,22 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-29",
-    "reviewer": "Pharos pre-expiry reserve refresh 2026-09-29",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Pharos W0 renewal review 2026-10-29 (R-COMP-8)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Horizon Nexus (Audit) AUDF Reserves Report: August 2026",
-        "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-august-2026"
+        "label": "Horizon Nexus (Audit) AUDF Reserves Report: September 2026 (as of 2026-09-30; signed 2026-10-14)",
+        "url": "https://www.forteaud.com/api/documents/view/audf-reserves-report-september-2026"
       },
       {
-        "label": "Forte AUD transparency page",
+        "label": "Forte AUD transparency page (retrieved 2026-10-29)",
         "url": "https://www.forteaud.com/transparency"
       }
     ],
-    "rationale": "Reviewed 2026-09-21. Forte's current transparency page states that AUDF is fully backed 1:1 by Australian dollar reserves held with regulated financial institutions. Horizon Nexus (Audit) Pty Ltd audited the complete AUDF reserve bank-account cash balance of AUD 5,142,851.53 as of 31 August 2026 and issued an unmodified opinion dated 7 September 2026 under Australian Auditing Standards. The report supports one 100% AUD bank-deposit slice. It does not identify the bank or reconcile token liabilities inside the audit engagement, so those matters remain custody and assurance limitations rather than unidentified reserve assets. Rechecked 2026-09-29 for the pre-expiry sweep: the issuer documents endpoint still serves audf-reserves-report-august-2026 as the newest monthly reserve audit, the September and October 2026 slugs return 404, monthly slugs resolve continuously from February through August 2026, and the legacy Squarespace PDF paths are dead after the site migration, so no newer primary evidence exists and compositionAsOf stays 2026-08-31. The August report was signed on 7 September 2026, so the September 2026 report covering September 30, 2026 balances is expected around the first week of October 2026; until it is published, this curated composition stops being admitted for Safety Score V9 when the 31-day composition window plus 7-day reporting grace ends on 2026-10-08.",
-    "compositionBasis": "Horizon Nexus independent audit of the AUDF reserve bank-account cash balance as of 2026-08-31",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "Reviewed 2026-10-29. Forte's current transparency page still states that AUDF is fully backed 1:1 by Australian dollar reserves held with regulated financial institutions. The September 2026 AUDF Reserves Report reports AUD 5,141,600.58 of Australian Dollar reserves against 5,125,000.00 AUDF issued as of 30 September 2026 11:59pm AEST across Ethereum (4,197,530.11), Polygon (720,563.32), Base (155,906.57), Redbelly (50,000.00), Arc (1,000.00) and no Avalanche supply. Horizon Nexus (Audit) Pty Ltd performed an ASAE 3000 reasonable-assurance engagement over that reserve bank-account cash balance and issued a reasonable-assurance opinion dated 14 October 2026; the report itself is signed by a Forte director on 1 October 2026. The September engagement replaces the August audit under Australian Auditing Standards with an ASAE 3000 reasonable-assurance engagement; the identified reserve category is unchanged at one 100% AUD bank-deposit slice. The report still does not identify the bank or reconcile token liabilities inside the assurance engagement, so those matters remain custody and assurance limitations rather than unidentified reserve assets.",
+    "compositionBasis": "Horizon Nexus (Audit) ASAE 3000 reasonable-assurance engagement over the AUDF reserve bank-account cash balance as of 2026-09-30",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The complete reserve asset class is identified as an AUD reserve bank-account cash balance. The bank identity, provider concentration, account terms, and audit-level token-liability reconciliation remain undisclosed.",
     "knownUnknownExposurePct": 0,

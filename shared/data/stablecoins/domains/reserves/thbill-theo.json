@@ -73,28 +73,28 @@
     ],
     "observations": [
       {
-        "scopeId": "theo:thbill:issuer-wrapper-accounting:1790924432",
+        "scopeId": "theo:thbill:issuer-wrapper-accounting:1793296810",
         "liabilityBookKey": "theo:thbill:issuer-wrapper-accounting",
         "deploymentRefs": [],
-        "reviewer": "Sol NR wave 2026-10-02 (NrThbill)",
+        "reviewer": "Pharos W0 renewal 2026-10-29 (R-RESB-1)",
         "confidence": "verified",
         "sources": [
           {
             "url": "https://theo-api.theo.xyz/v1/public/thbill/historical/7",
-            "accessedAtSec": 1790926441,
-            "sha256": "9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb"
+            "accessedAtSec": 1793299413,
+            "sha256": "8d5a6ed6058a4567fcce7bd3a8663cc3eb427a2febf5555ab2b4c0128d4cd7f5"
           }
         ],
-        "reviewedAtSec": 1790926441,
-        "expiresAtSec": 1793602832,
-        "sourceGeneration": "theo:thbill:historical:1790924432:9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb",
-        "sourceSha256": "9ff59f53f821e0229e8ca5c6cb7afa7212639e12ce236dc47b1bb6c012d0debb",
+        "reviewedAtSec": 1793299413,
+        "expiresAtSec": 1796580010,
+        "sourceGeneration": "theo:thbill:historical:1793296810:8d5a6ed6058a4567fcce7bd3a8663cc3eb427a2febf5555ab2b4c0128d4cd7f5",
+        "sourceSha256": "8d5a6ed6058a4567fcce7bd3a8663cc3eb427a2febf5555ab2b4c0128d4cd7f5",
         "completeness": "partial",
         "obligations": [
           {
             "key": "pending-tUltra",
             "disposition": "unresolved",
-            "reason": "Issuer API pending tUltra value 36079775.50261039 is not independently joined to settled underlying fund units, receivables or liabilities."
+            "reason": "Issuer API pending tUltra value 10992410.951865662 is not independently joined to settled underlying fund units, receivables or liabilities."
           },
           {
             "key": "underlying-fund-liabilities",
@@ -108,7 +108,7 @@
           }
         ],
         "kind": "portfolio-observation",
-        "observedAtSec": 1790924432,
+        "observedAtSec": 1793296810,
         "wholeAssetDenominator": null
       }
     ]
