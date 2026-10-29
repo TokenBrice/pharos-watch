@@ -6,11 +6,13 @@ import usyc from "@shared/data/stablecoins/coins/usyc-hashnote.json";
 import reusd from "@shared/data/stablecoins/coins/reusd-re-protocol.json";
 import usp from "@shared/data/stablecoins/coins/usp-pikudao.json";
 import usd3 from "@shared/data/stablecoins/coins/usd3-reserve-protocol.json";
+import hbd from "@shared/data/stablecoins/coins/hbd-hive.json";
 
 const fetchWithRetryMock = vi.fn();
 const probeTrackedTokenSupplyMock = vi.fn();
 const fetchErc20TotalSupplyMock = vi.fn();
 const resolveVaultNavSupplyPriceMock = vi.fn();
+const fetchHiveHbdProtocolSupplyMock = vi.fn();
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
   stablecoins: [
@@ -80,6 +82,7 @@ vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
       flags: { pegCurrency: "USD", backing: "crypto-backed", governance: "decentralized", yieldBearing: true, navToken: true },
     },
     { ...usdy, flags: { ...usdy.flags, pegCurrency: "USD" } },
+    { ...hbd, flags: { ...hbd.flags, pegCurrency: "USD" } },
     ...[usyc, reusd, usp, usd3].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
   ],
 }));
@@ -105,9 +108,13 @@ vi.mock("../../../../lib/authoritative-price-sources", () => ({
   resolveVaultNavSupplyPrice: (...args: unknown[]) => resolveVaultNavSupplyPriceMock(...args),
 }));
 
+vi.mock("../../../reserve-adapters/hive-hbd-protocol", () => ({
+  fetchHiveHbdProtocolSupply: (...args: unknown[]) => fetchHiveHbdProtocolSupplyMock(...args),
+}));
+
 import { fetchFiatCoinGeckoTokens, FIAT_CG_METAS } from "../fiat-cg";
 import { applyConsensusResults, createValidationContextResolver } from "../../pricing";
-import { normalizeStablecoinsPayload } from "../../shared";
+import { normalizeStablecoinsPayload, restoreMissingTrackedAssets } from "../../shared";
 import { validatePublishedAssetPrice } from "../../../../lib/price-publish-policy";
 
 describe("fetchFiatCoinGeckoTokens", () => {
@@ -116,6 +123,76 @@ describe("fetchFiatCoinGeckoTokens", () => {
     probeTrackedTokenSupplyMock.mockReset();
     fetchErc20TotalSupplyMock.mockReset();
     resolveVaultNavSupplyPriceMock.mockReset().mockResolvedValue(null);
+    fetchHiveHbdProtocolSupplyMock.mockReset().mockResolvedValue(null);
+  });
+
+  it.each([0, 99_000_000])("publishes HBD native supply regardless of CoinGecko cap %s", async (cap) => {
+    const observedAt = Math.floor(Date.now() / 1000) - 30;
+    fetchHiveHbdProtocolSupplyMock.mockResolvedValue({ supply: 8_737_126.658, observedAt });
+    fetchWithRetryMock.mockImplementation(async () => new Response(JSON.stringify({ coins: {} })));
+    const assets = await fetchFiatCoinGeckoTokens({
+      [hbd.geckoId]: { usd: 1.53, usd_market_cap: cap, last_updated_at: observedAt },
+    });
+    expect(assets.find((asset) => asset.id === hbd.id)).toMatchObject({
+      circulating: { peggedUSD: 8_737_126.658 },
+      price: null,
+      supplySource: "onchain-circulating-supply", supplyObservedAt: observedAt,
+      circulatingPrevDay: null, circulatingPrevWeek: null, circulatingPrevMonth: null,
+    });
+    expect(fetchHiveHbdProtocolSupplyMock).toHaveBeenCalledWith(hbd.liveReservesConfig, expect.any(AbortSignal));
+  });
+
+  it("values HBD units at an admitted market price", async () => {
+    const observedAt = Math.floor(Date.now() / 1000) - 30;
+    fetchHiveHbdProtocolSupplyMock.mockResolvedValue({ supply: 1_000, observedAt });
+    fetchWithRetryMock.mockImplementation(async () => new Response(JSON.stringify({ coins: {} })));
+    const assets = await fetchFiatCoinGeckoTokens({
+      [hbd.geckoId]: { usd: 0.98, usd_market_cap: 0, last_updated_at: observedAt },
+    });
+    expect(assets.find((asset) => asset.id === hbd.id)?.circulating).toEqual({ peggedUSD: 980 });
+  });
+
+  it.each([0, 1_000])("admits observed HBD supply %s without inventing a market quote", async (supply) => {
+    const observedAt = Math.floor(Date.now() / 1000) - 30;
+    fetchHiveHbdProtocolSupplyMock.mockResolvedValue({ supply, observedAt });
+    fetchWithRetryMock.mockImplementation(async () => new Response(JSON.stringify({ coins: {} })));
+    const assets = await fetchFiatCoinGeckoTokens({});
+    expect(assets.find((asset) => asset.id === hbd.id)).toMatchObject({
+      circulating: { peggedUSD: supply }, price: null, supplyObservedAt: observedAt,
+      supplySource: "onchain-circulating-supply", chainCirculating: {},
+    });
+  });
+
+  it("retains the original native supply clock through bounded restoration and then expires it", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    fetchHiveHbdProtocolSupplyMock.mockResolvedValue({ supply: 1_000, observedAt: nowSec - 30 });
+    fetchWithRetryMock.mockImplementation(async () => new Response(JSON.stringify({ coins: {} })));
+    const assets = await fetchFiatCoinGeckoTokens({});
+    const previous = assets.find((asset) => asset.id === hbd.id)!;
+    const previousById = new Map([[hbd.id, previous]]);
+    const restored = restoreMissingTrackedAssets([], previousById, nowSec);
+    expect(restored.assets.find((asset) => asset.id === hbd.id)).toMatchObject({
+      circulating: { peggedUSD: 1_000 }, supplyObservedAt: nowSec - 30, supplyRestored: true,
+    });
+    const expired = restoreMissingTrackedAssets([], previousById, nowSec + 7 * 86_400);
+    expect(expired.droppedIds).toContain(hbd.id);
+    expect(expired.assets.some((asset) => asset.id === hbd.id)).toBe(false);
+  });
+
+  it("withholds HBD on a native read failure even when CoinGecko reports a positive cap", async () => {
+    const observedAt = Math.floor(Date.now() / 1000) - 30;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    fetchHiveHbdProtocolSupplyMock.mockRejectedValue(new Error("nodes disagree"));
+    fetchWithRetryMock.mockImplementation(async () => new Response(JSON.stringify({ coins: {} })));
+    try {
+      const assets = await fetchFiatCoinGeckoTokens({
+        [hbd.geckoId]: { usd: 0.98, usd_market_cap: 99_000_000, last_updated_at: observedAt },
+      });
+      expect(assets.some((asset) => asset.id === hbd.id)).toBe(false);
+      expect(warn).toHaveBeenCalledWith(expect.stringContaining('"reason":"hive-native-supply-unavailable"'));
+    } finally {
+      warn.mockRestore();
+    }
   });
 
   it("publishes USDY from its configured supplemental source when the DefiLlama list omits it", async () => {
