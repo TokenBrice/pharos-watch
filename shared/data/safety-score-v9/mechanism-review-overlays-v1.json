@@ -25314,6 +25314,106 @@
           "sourceUrl": "https://am.jpmorgan.com/JPMorgan/TVT/46655R119/S?site=JPMorganv3"
         }
       }
+    },
+    {
+      "assetId": "swanusd-swan",
+      "archetype": "cdp",
+      "reviewedAt": "2026-10-29T17:31:59Z",
+      "sources": [
+        {
+          "label": "swanUSD Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15 Sourcify exact-match verified source (adjust/liquidate/redeem/writeOff/sell/buy, immutable collateralFactor 8500, minDebt, stalenessThreshold, feed, psmAsset and psmVault)",
+          "url": "https://sourcify.dev/server/v2/contract/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15?fields=sources"
+        },
+        {
+          "label": "Ethereum block 26299913, hash 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, timestamp 2026-10-29T17:31:59Z; pinned state read by this review",
+          "url": "https://etherscan.io/block/26299913"
+        },
+        {
+          "label": "Keyless Ethereum JSON-RPC (dRPC) used to re-execute this review's pinned reads at block 26299913: wstETH.balanceOf(Lender) 203850825454123900563, getCollateralPrice() 2933735095033131387772 with reduceOnly false and allowLiquidations true, getFeedPrice() updatedAt 1793250227, totalPaidDebt 351326006993430199851968, totalFreeDebt 4561000000000000000000, freePsmAssets 64205193253000784236399, Lens.getSyncedTotalDebts 355887784189412364492545, Coin.totalSupply 420092200246430984088367, collateralFactor 8500, minDebt 1000000000000000000000, stalenessThreshold 108000, redeemFeeBps 175, immutabilityDeadline 1918828775, getBuyFeeBps 0, operator 0xf69f74148687ca4860544f865581f05ca3f9098c, manager 0x9d5df30f475cea915b1ed4c0cca59255c897b61b",
+          "url": "https://eth.drpc.org"
+        },
+        {
+          "label": "Monolith liquidations documentation (borrowing-power trigger, 25% chunking with a 10,000 Coin floor, 0-10% incentive, stale feed keeps liquidations enabled, write-off tail)",
+          "url": "https://docs.monolith.market/protocol/liquidations.md"
+        },
+        {
+          "label": "Monolith bad-debt socialization documentation (permissionless writeOff, debt greater than 100x collateral value, pro-rata debt redistribution to all borrowers, residual collateral to the caller)",
+          "url": "https://docs.monolith.market/protocol/bad-debt-socialization.md"
+        },
+        {
+          "label": "Monolith redemptions documentation (holder-chosen redeemable borrower only, oracle price less fee, paid debt untouched, free-debt election)",
+          "url": "https://docs.monolith.market/protocol/redemptions.md"
+        },
+        {
+          "label": "Monolith Peg Stability Module documentation (1:1 reference-asset sell, buy closes at the immutability deadline, buy fee ramp)",
+          "url": "https://docs.monolith.market/protocol/peg-stability-module.md"
+        },
+        {
+          "label": "Monolith immutability deadline documentation (which interest, free-debt-band, redemption-fee and PSM-buy controls lock at the deadline)",
+          "url": "https://docs.monolith.market/protocol/immutability-deadline.md"
+        },
+        {
+          "label": "Monolith risk disclosure (each instance is backed by a single collateral asset with no cross-collateralization; no grace period on permissionless liquidation; bad debt socialised across all borrowers)",
+          "url": "https://docs.monolith.market/security/risks.md"
+        },
+        {
+          "label": "Monolith Lender contract reference (collateralFactor capped at 8500 bps; getCollateralPrice reduceOnly versus allowLiquidations semantics; per-function tunable parameters)",
+          "url": "https://docs.monolith.market/reference/Lender.md"
+        },
+        {
+          "label": "Inverse Finance Risk Working Group, FiRM collateral risk assessment for sSwanUSD, 2026-10-29 (independent review: 24-hour feed cadence against a 30-hour staleness threshold then a 24-hour decay, 1.75% redemption fee, 4,561 swanUSD elective free debt, no redemption/liquidation/write-off executed, single Curve venue with the manager Safe holding all LP)",
+          "url": "https://github.com/InverseFinance/Risk-Assessments/blob/main/Monolith_sSwanUSD/FiRM_Risk_Assessment_sSwanUSD_Monolith.md"
+        },
+        {
+          "label": "Curve swanUSD/USDC pool 0xc1488f04027afea94fa68586b4ff245098a59432 (40,592.91 USDC and 40,131.08 swanUSD at the pin, 80,724 USD TVL, A 250, 0.01% fee, 100% of LP in the manager Safe)",
+          "url": "https://etherscan.io/address/0xc1488f04027afea94fa68586b4ff245098a59432"
+        },
+        {
+          "label": "Monolith security audits page (Electisec, ChainSecurity, Sherlock contest, Nemesis and Zellic reviews of the Factory, Lender, Vault, InterestModel and Coin; the SWAN DAO layer is not named)",
+          "url": "https://docs.monolith.market/security/audits.md"
+        },
+        {
+          "label": "Live Monolith Stablecoin Factory bug bounty (Sherlock, maximum 20,000 DOLA; the swanUSD Coin and sSwanUSD Vault are not eligible instances)",
+          "url": "https://audits.sherlock.xyz/bug-bounties/287"
+        }
+      ],
+      "notes": "Reviewed at Ethereum block 26299913 (hash 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, 2026-10-29T17:31:59Z) against the Sourcify exact-match Lender/Coin/Vault/Factory sources, the pinned batch reads at that block, Monolith's current protocol and risk documentation retrieved 2026-10-29, and the Inverse Finance Risk Working Group's independent 2026-10-29 sSwanUSD assessment. METRIC: collateralizationRatio 1.6804294706 = wstETH 203.850825454123900563 held by the Lender valued at the protocol's own getCollateralPrice() 2933.735095033131387772 USD per wstETH, i.e. 598,044.320786236460 USD, divided by Lender debt 355,887.784189412364 (totalPaidDebt 351,326.006993430200 + totalFreeDebt 4,561.000000000000 + 0.777195982165 pending interest reported by Lens.getSyncedTotalDebts). Numerator and denominator are the CDP book alone, following the DOLA/FiRM and ebUSD precedents: the 64,205.193253000784 USDS PSM reserve is not CDP collateral and the 64,205.193253000784 swanUSD that PSM buy() minted is not borrower debt, so neither leg enters this ratio. The R2 leg-only price (stEthPerToken times ETH/USD, without the stETH/ETH depeg leg, 3 bp higher) gives 1.680999, which is the 168.10% figure in the research packet; that packet's 186.14% is whole-system reserves over debt and 157.69% is reserves over supply. For transparency only, collateral plus freePsmAssets 662,249.514039237245 over supply 420,092.200246430984 is 1.576438 and over debt 1.860838: descriptive ratios across two different backing legs, not the CDP collateralization metric, and no surplus credit is claimed. Nothing was liquidated, written off or redeemed between deployment (block 26249209, 2026-10-22T15:59:35Z) and the pin; the complete Lender log history for that range contains no Liquidated, WrittenOff or Redeemed event, which the RWG review also reports. GRADES. collateralizationParameters limited: the parameters are verified on-chain and immutable (collateralFactor 8500 bps, the documented V2 maximum; minDebt 1000e18; stalenessThreshold 108,000 s; compounded WstETHPriceFeedCompounded with updatedAt equal to the minimum of the stETH/ETH and ETH/USD legs; psmAsset USDS and psmVault sUSDS constructor-fixed), and the 85% factor sets a 117.6% minimum collateral ratio, stricter than the 110% MCR (a 90.9% collateral-factor equivalent) the Liquity V2 forks in this registry run, so the ratio itself is a conservative setting; no independent attestation covers this exact deployment: the published Monolith audits name the core contracts but establish no exact-bytecode scope for this V2 instance, and the Coin and sSwanUSD Vault are not eligible bounty instances. Interest-rate, free-debt-band, redemption-fee and borrow-delta knobs stay with the 3-of-6-signer manager Safe until the 2030-10-21T15:59:35Z immutability deadline, setManager() carries no deadline so the manager itself can be replaced at any time, and the operator can still set a local reserve fee of up to 5,000 bps after the deadline, so the evidence class reaches limited, not adequate; the grade rests on those mutable knobs and the attestation gap, not on the collateral ratio; not weak because every parameter is measured in code and no shortfall or misconfiguration is observed. liquidationMechanics limited: liquidate() is permissionless and oracle-gated and repays any positive amount up to min(debt, max(debt/4, 10,000e18)) per call, so a 20,000 debt can lose up to half at once and a debt at or below 10,000 can be repaid whole, and the repayment is further capped by the borrower's remaining collateral value; it burns the liquidator's swanUSD and pays collateral at the oracle price plus a 0% to 10% incentive that reaches 10% only at 90% LTV. Funding is not the binding constraint: the repayment medium is swanUSD, which a liquidator can mint 1:1 from USDS through buy() with no nominal cap and a 0 bps fee at the pin (the fee ramps only from 2028-10-21 to at most 100 bps and the path closes at the 2030-10-21 deadline), so the 80,724 USD Curve swanUSD/USDC pool, whose LP the same manager Safe holds in full, is not the only venue and Curve depth alone does not limit liquidation, including for the largest borrower (160,361.65, 45.1% of debt). Two measured facts keep it below adequate: the incentive is exactly zero at the 85% trigger, so a liquidator has no profit until the position is already past the factor; and the oracle path that gates liquidation unwinds rather than pauses, because a composite updatedAt older than 30 hours sets reduceOnly and decays the price linearly to zero over a further 24 hours while allowLiquidations stays true, and the pin reading was already 12.47 hours old. No liquidation or stressed-liquidation test has occurred. backstop weak: the design has no stability pool, insurance fund, auction module or other committed capital that funds liquidation repayments, and no such contract exists in the Lender's immutable dependency set (coin, collateral, psmAsset, psmVault, feed, vault, interestModel, factory). A liquidation is funded entirely by an external liquidator that must supply swanUSD, which it can mint at par through the PSM buy() rail until 2030 but which no protocol balance provides, and residual loss has no cushion: writeOff() deletes the debt and re-adds it pro rata to totalFreeDebt and totalPaidDebt, raising every other borrower's debt. That is a pinned structural deficiency in loss absorption, not missing evidence, so it grades weak rather than bounded-unknown, matching the treatment of USDD and JPYm CDPs with no committed debt-offset pool; no bad debt had been realised at the pin. branchIsolation not-applicable: a Monolith instance is one Lender with one immutable collateral token and Monolith states that each instance is backed by a single collateral asset with no cross-collateralization, so there are no independent collateral branches inside this mechanism to isolate. The Factory does deploy each market as a separate Lender/Coin/Vault triplet that shares no debt with swanUSD, which is why no adverse isolation reading is warranted, but there is no branch structure to grade: structurally absent, not undisclosed. shutdownAndBadDebt limited: the deployed Lender has no shutdown, pause or wind-down state, so markets run until borrowers repay and the only terminal rails are the permissionless writeOff() (debt greater than 100x collateral value at the oracle price, which transfers the borrower's remaining collateral to the address the caller names and socialises the debt across both pools) and redemption against free debt. Loss allocation is deterministic and documented and no bad debt has been realised, but there is no cure: no recapitalisation facility, no bad-debt reserve, no governance control over the pool that could cure a deficit. A write-off creates no supply: it deletes the written-off debt and re-adds the same amount pro rata to the surviving borrowers, so the loss lands on their positions rather than on holders, unless the written-off borrower is the last one, when the debt is deleted with no one to absorb it and that supply is left unbacked. The audit page reports the April 2026 Nemesis HIGH on writeOff() as addressed, yet the deployed exact-match source still exposes the entrypoint to any caller, which the issuer also documents as callable by anyone. Limited mirrors the Liquity V1 treatment of a system with no shutdown or unconditional recapitalisation facility; weak is barred because no shortfall is measured. structuralRedemption limited: any holder can call redeem(borrower, amountIn, minAmountOut) and receive wstETH at the oracle price less the 1.75% fee, but only against a borrower that opted into free debt, one borrower per call, capped by that borrower's debt and free collateral. Free debt at the pin is 4,561.00 swanUSD across four borrowers, 1.09% of supply, so the right is real and permissionless but covers about one percent of the token while the paid-debt book (83.6% of supply) is expressly insulated. The separate par rail is PSM sell() at 1:1 USDS with no fee, capped by freePsmAssets 64,205.19 (15.28% of supply), with the buy side closing at the 2030-10-21T15:59:35Z deadline. Both rails pay at oracle or par value rather than at a market discount, and neither is a standing commitment because free debt is a borrower election revocable in one transaction. Adequate is unavailable at 1.09% of supply; failed is barred because no route has been refused or exhausted.",
+      "metrics": {
+        "collateralizationRatio": 1.6804294706,
+        "liquidationCapacityRatio": null
+      },
+      "metricApplicability": {
+        "collateralizationRatio": {
+          "state": "measured"
+        },
+        "liquidationCapacityRatio": {
+          "state": "not-applicable",
+          "rationale": "Monolith commits no capital to liquidation repayment: liquidate() burns the caller's swanUSD and pays out collateral, and the deployed Lender holds no stability pool, insurance fund, auction module or other balance dedicated to debt offset. The only contractually committed buffer is the free debt that borrowers elected, and that is a redemption rail graded under structuralRedemption, not liquidation capacity. A ratio would have to be manufactured from unrelated balances, so no liquidation-capacity ratio exists.",
+          "sourceUrl": "https://docs.monolith.market/protocol/liquidations.md"
+        }
+      },
+      "components": {
+        "collateralizationParameters": {
+          "quality": "limited"
+        },
+        "liquidationMechanics": {
+          "quality": "limited"
+        },
+        "backstop": {
+          "quality": "weak"
+        },
+        "branchIsolation": {
+          "applicability": "not-applicable",
+          "rationale": "A Monolith instance is a single Lender bound to one immutable collateral token with no cross-collateralization, so this mechanism has no independent collateral branches whose isolation could be graded. Cross-market separation exists at the Factory level (each market is its own Lender/Coin/Vault triplet that shares no debt), which is why the absence is not adverse, but no branch structure exists to assess.",
+          "sourceUrl": "https://docs.monolith.market/security/risks.md"
+        },
+        "shutdownAndBadDebt": {
+          "quality": "limited"
+        },
+        "structuralRedemption": {
+          "quality": "limited"
+        }
+      }
     }
   ]
 }

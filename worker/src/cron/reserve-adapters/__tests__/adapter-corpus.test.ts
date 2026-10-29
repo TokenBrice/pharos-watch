@@ -21,6 +21,12 @@ import { BLOCK_TIME_SEC as KAVA_BLOCK_TIME_SEC, KAVA_LCD_FIXTURES, TOTAL_COLLATE
 import { BALANCE_SHEET_ENDPOINT, BALANCE_SHEET_SAMPLE } from "./frax.test-support";
 import { UNITED_POR_ENDPOINT, UNITED_POR_PAYLOAD } from "./united-por.test-support";
 import { ZEPHYR_ENDPOINT, ZEPHYR_CAPTURE } from "./zephyr-scanner.test-support";
+import {
+  MONOLITH_LENDER_COIN,
+  MONOLITH_LENDER_NOW_SEC,
+  MONOLITH_LENDER_PIN,
+  pinnedNetwork,
+} from "./monolith-lender.test-support";
 import type { AdapterResult } from "../types";
 import m0SolanaCapture from "./fixtures/m0-solana-local-2026-10-21.json";
 // Keep numeric-contract source ownership explicit alongside registered replay.
@@ -113,6 +119,56 @@ function m0SolanaNetwork(missingGlobal = false): AdapterNetworkSpec {
 }
 
 const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
+  "monolith-lender": {
+    coinId: "swanusd-swan",
+    coin: MONOLITH_LENDER_COIN,
+    nowSec: MONOLITH_LENDER_NOW_SEC,
+    network: pinnedNetwork(),
+    expected: {
+      slices: [
+        expect.objectContaining({
+          sourceKey: `monolith-lender:ethereum:${MONOLITH_LENDER_PIN.collateral}`,
+          name: "wstETH collateral (Monolith Lender)",
+          pct: expect.closeTo(90.30498446704837, 8),
+          risk: "low",
+        }),
+        expect.objectContaining({
+          sourceKey: `monolith-lender:ethereum:${MONOLITH_LENDER_PIN.psmVault}`,
+          name: "sUSDS PSM reserve (Monolith Lender)",
+          pct: expect.closeTo(9.695015532951636, 8),
+          risk: "low",
+          coinId: "susds-sky",
+          depType: "collateral",
+        }),
+      ],
+      metadata: {
+        freshnessMode: "not-applicable",
+        supplyTokens: expect.closeTo(420092.200246431, 5),
+        totalDebtUsd: expect.closeTo(355887.0069934302, 6),
+        collateralizationRatio: expect.closeTo(1.68043314, 8),
+        unknownExposurePct: 0,
+        redemption: {
+          capacityUsd: expect.closeTo(64205.19325300078, 6),
+          capacityKind: "live-direct",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+          holderEligibility: "any-holder",
+          feeBps: 0,
+          blockNumber: MONOLITH_LENDER_PIN.blockNumber,
+          outputAssetKeys: ["usds-sky"],
+        },
+      },
+      warnings: [],
+      absentMetadata: ["sourceTimestamp"],
+    },
+    drift: {
+      label: "the Lender's own PSM sell accounting read is dropped",
+      network: pinnedNetwork({ [`ethereum:${MONOLITH_LENDER_PIN.lender}:freePsmAssets()`]: null }),
+      outcome: "error",
+      error: /free-psm-assets/,
+    },
+  },
   "m0-solana-wrapper": {
     coinId: "usdk-kast",
     nowSec: m0SolanaCapture.block.timestamp,

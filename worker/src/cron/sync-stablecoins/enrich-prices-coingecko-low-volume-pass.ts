@@ -60,6 +60,11 @@ export const LOW_VOLUME_CG_FALLBACK_IDS = new Set([
   // 2026-10-15: exact Filecoin identity retains an observed sparse-trading quote
   // inside the existing seven-day budget; strict primary freshness rejects it.
   "usdfc-secured-finance",
+  // 2026-10-29: swanUSD trades only on one thin Curve pool (~$36k/day, ~$81k
+  // TVL), so its single CoinGecko market can age past primary freshness while
+  // staying inside the seven-day fallback budget. Recovery keeps the original
+  // clock and fallback confidence and never touches supply.
+  "swanusd-swan",
 ]);
 
 export async function runCoingeckoLowVolumePass(

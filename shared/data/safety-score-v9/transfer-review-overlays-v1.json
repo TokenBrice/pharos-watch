@@ -12594,6 +12594,38 @@
           ]
         }
       ]
+    },
+    {
+      "assetId": "swanusd-swan",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Claude swanUSD promotion 2026-10-29",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Ethereum block 26299913 (hash 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, 2026-10-29T17:31:59Z) the swanUSD Coin returned 2,988 bytes of runtime code with keccak256 0x0d6b80dfade50c8222758c0424dd99c82fd0f087c58cae1085eb0b79b1cc6afb and zero at the EIP-1967 implementation, admin and beacon slots, and Coin.minter() returned the swanUSD Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15. Sourcify reports exact_match for creation and runtime (matchId 56723412, verified 2026-10-22T16:00:40Z) on a 547-byte Coin.sol plus solmate ERC20: transfer and transferFrom perform balance and allowance arithmetic only, permit changes allowance only, burn(uint256) burns the caller's own balance only, and mint is gated on the immutable minter. The deployment has no owner, no blacklist or allowlist, no pause, no freeze or seizure path, no arbitrary-holder burn, no transfer hook and no upgrade path, so holder transfers are unrestricted. Issuance authority, including PSM buy(), is a separate economic-control question and is not asserted absent here.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match swanUSD Coin source, ABI and runtime (chain 1)",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e?fields=all"
+            },
+            {
+              "label": "Pinned eth_getCode and EIP-1967 implementation, admin and beacon slot reads at Ethereum block 26299913",
+              "url": "https://etherscan.io/block/26299913"
+            },
+            {
+              "label": "Keyless Ethereum JSON-RPC (dRPC) used for the pinned eth_getCode, eth_getStorageAt and eth_call reads at block 26299913: runtime 2,988 bytes, keccak256 0x0d6b80dfade50c8222758c0424dd99c82fd0f087c58cae1085eb0b79b1cc6afb, zero implementation/admin/beacon slots, minter 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15",
+              "url": "https://eth.drpc.org"
+            },
+            {
+              "label": "Etherscan verified swanUSD Coin",
+              "url": "https://etherscan.io/address/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e#code"
+            }
+          ]
+        }
+      ]
     }
   ]
 }
