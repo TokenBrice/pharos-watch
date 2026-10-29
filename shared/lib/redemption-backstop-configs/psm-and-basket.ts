@@ -683,6 +683,41 @@ const RAW_PSM_AND_BASKET_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopConf
       "All three observed pools report minRedemptionOrderAmount 10000 in raw API units. This is not evidence of a 10,000-token minimum. The docs describe direction-specific DAO enablement and optional fee management; observed enabled flags and balances are not permanent availability or a canonical-request receipt. Wallet connection remains ordinary onchain access rather than an allowlist.",
     ],
   },
+  "swanusd-swan": {
+    ...psmSwapBase,
+    outputAssets: ["usds-sky"],
+    // Capacity comes from the same-run monolith-lender reserve read, not from
+    // supply: the PSM sell is paid out of the Lender's freePsmAssets accounting.
+    capacityModel: {
+      kind: "reserve-sync-metadata",
+      basis: "live-direct-telemetry",
+      requiredOutputAssetKeys: ["usds-sky"],
+    },
+    costModel: fixedFee(
+      0,
+      "Monolith charges no PSM sell fee: getSellAmountOut() only converts decimals, the PSM page states the sell fee is none, and the Lender exposes no sell-side fee setter. Network gas and ERC-4626 share rounding in the sUSDS withdrawal are separate from that bps schedule.",
+    ),
+    reviewedAt: "2026-10-29",
+    docs: [
+      sourceRefFull("Monolith Peg Stability Module", "https://docs.monolith.market/protocol/peg-stability-module"),
+      sourceRefFull(
+        "Verified Monolith Lender sell() source (Sourcify exact match)",
+        "https://sourcify.dev/server/v2/contract/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15?fields=sources",
+      ),
+      sourceRef("Monolith redemptions (second holder rail)", "https://docs.monolith.market/protocol/redemptions", [
+        "route",
+        "access",
+        "fees",
+        "settlement",
+      ]),
+    ],
+    notes: [
+      "Modeled 2026-10-29 as the Monolith PSM sell rail (Lender.sell) because it is the larger and par-paying of swanUSD's two holder exits: it burns swanUSD and pays the reference asset 1:1, permissionlessly, in one transaction, and it keeps working after the immutability deadline (2030-10-21T15:59:35Z) although the buy path is disabled then. sell() carries no pause, allowlist or sell-fee branch, and the Lender exposes no global pause, so the rail has no configurable off switch. Verified at Ethereum block 26299913 (0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, 2026-10-29T17:31:59Z): psmAsset() is USDS 0xdc035d45d973e3ec169d2276ddab16f1e407384f, tracked as usds-sky, and psmVault() is sUSDS 0xa3931d71877c0e7a3148cb7eb4463524fec27fbd.",
+      "Capacity is measured, not pinned or derived from supply. The exact bound is freePsmAssets(), which read 64,205.193253000784236399 USDS at that block (15.28% of the 420,092.200246430984088367 supply), and the monolith-lender reserve adapter now re-reads it with the Lender's debt and supply every run at one pinned block, cross-bounded by the sUSDS maxWithdraw() payout ceiling that sell() actually redeems. The value falls by the requested amount on every sell and refills only through PSM buys, which stop at the deadline, or sUSDS profit recognition, so a pinned snapshot or a supply share would misstate current exit capacity; the live read is the only honest source. A zero read is published as measured zero with a degraded route status instead of an unavailable capacity.",
+      "The payout runs through the Lender's sUSDS holding: sell() converts the USDS amount into sUSDS shares and redeems them from the vault, so this exit depends on sUSDS paying USDS in the same transaction and ERC-4626 share rounding can land the received USDS below the nominal 1:1 amount.",
+      "The second holder rail is collateral redemption, described here because only one route config per id is allowed. redeem(borrower, amountIn, minAmountOut) burns swanUSD and transfers wstETH at the oracle price minus redeemFeeBps, which read 175 bps at the same block and can be set up to 500 bps before the deadline, against isRedeemable borrowers only. That rail held 4,561.00 swanUSD of free debt across 4 borrowers (1.09% of supply). It reverts when the composite wstETH feed reverts or returns a non-positive price; a feed older than the 30-hour stalenessThreshold does not pause it, it unwinds the price linearly toward zero over the following 24 hours. It is not modeled because it pays volatile collateral and is capped by borrowers' opt-in free debt.",
+    ],
+  },
 };
 
 const FINALIZED_PSM_AND_BASKET_BACKSTOP_REGISTRY = finalizeBackstopRegistry(

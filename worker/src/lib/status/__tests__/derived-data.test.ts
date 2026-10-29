@@ -12,6 +12,7 @@ import { getDatasetFreshness, getMintBurnReconciliation } from "../derived-data"
 import { makeMintBurnScanSegments } from "../../../test-helpers/__shared/mint-burn";
 import { mintBurnConfigKey } from "../../mint-burn-pipeline/sync-state";
 import { mintBurnScanFingerprint } from "../../mint-burn-pipeline/scan-coverage";
+import { isGrandfatheredMintBurnConfig } from "../../mint-burn-publication";
 
 const NOW = 1_800_000_000;
 
@@ -74,7 +75,10 @@ async function reconcile(options: {
   expect(db.getHistory().some((entry) => entry.sql.includes("mint-burn-24h") || entry.sql.includes("key = ?"))).toBe(false);
   expect(result.conservationVersion).toBe(1);
   if (!options.disabledKeys) {
-    expect(result.rows).toHaveLength(new Set(MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)).map((config) => config.stablecoinId)).size);
+    // Only admitted configs reach reconciliation; post-gate additions stay pending until admitted.
+    const admittedTron = (config: (typeof MINT_BURN_CONFIGS)[number]) => !!options.admittedTron && config.chain.chainId === "tron";
+    expect(result.rows).toHaveLength(new Set(MINT_BURN_CONFIGS.filter((config) => ACTIVE_IDS.has(config.stablecoinId)
+      && (isGrandfatheredMintBurnConfig(config) || admittedTron(config))).map((config) => config.stablecoinId)).size);
   }
   return { ...result, rows: result.rows.filter((row) => row.stablecoinId === id) };
 }

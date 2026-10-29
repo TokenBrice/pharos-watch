@@ -3,21 +3,16 @@
   "name": "swanUSD",
   "symbol": "swanUSD",
   "brand": "Swan",
-  "oneLiner": "swanUSD is a SwanDAO-governed dollar stablecoin minted against wstETH on Inverse Finance's Monolith CDP factory, live on Ethereum since October 2026.",
+  "oneLiner": "swanUSD is SwanDAO's wstETH-backed dollar, minted in an Inverse Finance Monolith CDP with 1:1 USDS swaps and borrower-specific collateral redemptions.",
   "flags": {
     "backing": "crypto-backed",
-    "governance": "decentralized"
+    "governance": "centralized-dependent"
   },
-  "collateral": "wstETH deposited in swanUSD's Monolith Lender (0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15), which held 44.10 wstETH at Ethereum block 26268775 on October 25 2026 against 213,731.85 swanUSD supply. The issuer site also describes 1:1 swaps with sUSDS; that module and the gap between supply and Lender debt are not yet reconciled.",
-  "pegMechanism": "Monolith CDP instance: borrowers mint swanUSD against wstETH at 0% or a variable rate under Monolith's dual free and paid debt system, the issuer site says swanUSD is redeemable for wstETH, and stakers deposit it in the sSwanUSD ERC-4626 vault to earn borrower interest.",
+  "collateral": "Single-collateral Monolith Lender on Ethereum (0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15) holding wstETH at an 85% collateral factor; the same contract holds a USDS peg-stability reserve through sUSDS, which funds 1:1 PSM sells and is not borrower collateral.",
+  "pegMechanism": "Borrowers mint swanUSD against wstETH up to 85% of collateral value, priced by a constructor-fixed composite feed that multiplies Lido's stETH-per-wstETH rate by Chainlink stETH/ETH and ETH/USD. Paid debt accrues interest at a rate the shared Monolith InterestModel steers around a target free-debt band; free debt pays nothing and is the only debt redeemable, with holders burning swanUSD against an opted-in borrower at the oracle price less a 1.75% fee that the manager Safe can raise to 5% before the immutability deadline. Liquidations are permissionless above 85% LTV with a 0 to 10% incentive, and a write-off rail socialises debt above 100 times collateral value. The PSM mints and burns 1:1 against USDS held as sUSDS, capped on the sell side by the reserve balance, with buys disabled at the 2030-10-21 immutability deadline. sSwanUSD stakers receive half of borrower interest.",
   "mechanismArchetype": "cdp",
-  "contracts": [
-    {
-      "chain": "ethereum",
-      "address": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
-      "decimals": 18
-    }
-  ],
+  "detailProvider": "coingecko",
+  "geckoId": "swanusd",
   "links": [
     {
       "label": "Website",
@@ -32,18 +27,78 @@
       "url": "https://docs.monolith.market"
     },
     {
+      "label": "Monolith audits",
+      "url": "https://docs.monolith.market/security/audits"
+    },
+    {
       "label": "Launch announcement",
       "url": "https://x.com/MonolithMarket/status/2113318282921144781"
     },
     {
       "label": "Token contract",
       "url": "https://etherscan.io/address/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e"
+    },
+    {
+      "label": "Lender contract",
+      "url": "https://etherscan.io/address/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15"
     }
   ],
-  "status": "pre-launch",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+      "decimals": 18
+    }
+  ],
+  "liveReservesConfig": {
+    "adapter": "monolith-lender",
+    "version": 1,
+    "semantics": "collateral-mix",
+    "breakerScope": "swanusd-swan",
+    "display": {
+      "url": "https://app.monolith.market/1/coin/2",
+      "label": "Monolith Lender"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
+      }
+    },
+    "params": {
+      "lenderAddress": "0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15",
+      "collateral": {
+        "address": "0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+        "decimals": 18,
+        "name": "wstETH collateral (Monolith Lender)",
+        "risk": "low"
+      },
+      "psmAsset": {
+        "address": "0xdc035d45d973e3ec169d2276ddab16f1e407384f",
+        "decimals": 18,
+        "name": "USDS"
+      },
+      "psmVault": {
+        "address": "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+        "name": "sUSDS PSM reserve (Monolith Lender)",
+        "risk": "low",
+        "coinId": "susds-sky",
+        "depType": "collateral"
+      },
+      "psmAssetUnitValueUsd": 1,
+      "redemptionOutputAssetKey": "usds-sky",
+      "sourceUrls": [
+        "https://docs.monolith.market/protocol/peg-stability-module",
+        "https://sourcify.dev/server/v2/contract/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15?fields=sources"
+      ]
+    }
+  },
+  "collateralQuality": "eth-lst",
+  "custodyModel": "onchain",
+  "governanceQuality": "multisig",
+  "launchDate": "2026-10-22",
   "announcedDate": "2026-10-22",
-  "launchPhase": "launched",
-  "launchPhaseDetail": "Monolith announced on October 22 2026 that swanUSD is live on Ethereum as a DAO-governed stablecoin backed by wstETH, built on Inverse Finance's Monolith factory (V2 deployment index 2). The token 0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e (18 decimals, Ethereum only) is a non-proxy Coin contract whose only minter is its Lender; supply was 213,731.85 at block 26268775 on October 25 2026. Pharos tracks it pre-launch because no price source admits it: there is no CoinGecko or DefiLlama stablecoin listing, and DefiLlama's contract quote was about two hours old on October 25, outside the 15-minute freshness budget.",
   "milestones": [
     {
       "date": "2026-10-22",
@@ -52,11 +107,5 @@
       "description": "Monolith announced that swanUSD is live on Ethereum as a DAO-governed stablecoin backed by wstETH and built on Inverse Finance's Monolith factory. Holders can stake it as sSwanUSD to earn protocol revenue. A 100,000 SWAN launch airdrop opened the same day.",
       "sourceUrl": "https://x.com/MonolithMarket/status/2113318282921144781"
     }
-  ],
-  "launchDate": "2026-10-22",
-  "listingStatusReview": {
-    "changedAt": "2026-10-25",
-    "reason": "Missing lane: price. DefiLlama returned a fresh contract quote on October 26, 2026, but its source is unverified and the quote has not been admitted. Supply is readable on-chain.",
-    "reviewBy": "2026-12-24"
-  }
+  ]
 }

@@ -1,0 +1,321 @@
+{
+  "id": "swanusd-swan",
+  "mintAuthority": {
+    "mintPath": "user-collateralized-governed",
+    "authorityPosture": "unbounded-adverse",
+    "confidence": "verified",
+    "headline": "Supply is collateral-, deposit- or debt-matched; the 3-of-6 manager Safe can still drive interest issuance with no practical ceiling.",
+    "summary": "swanUSD is issued by one Monolith Lender. The Coin minter is a constructor-immutable pointer to that Lender, and Coin, Lender and Vault are non-proxy deployments, so no role can authorize another minter or replace mint logic. Five paths create supply, all read at Ethereum block 26299913. Users may borrow against wstETH at an 85% collateral factor, which is the constructor maximum and cannot be changed. Anyone may call the in-Lender PSM to buy swanUSD 1:1 against USDS until the immutability deadline on 21 October 2030; the buy fee is zero until 21 October 2028 and then ramps to 100 basis points, and the path has no nominal cap but every coin needs an equal USDS deposit held as sUSDS. accrueInterest mints newly accrued interest to the sSwanUSD vault and to the local and global reserve buckets, adds the full interest to paid debt in the same call, and does not re-run the solvency check, so what it mints, including the fee shares pulled later, is matched by new borrower debt rather than by collateral at mint time. pullLocalReserves is permissionless and mints already-accrued local fees to the RevenueRouter for sSWAN stakers; pullGlobalReserves mints the Factory fee share to the Factory's fee recipient. The interest envelope is not a supply bound. The rate has a 0.5% floor and no practical ceiling: it doubles at most once per half-life, the half-life cannot be set below 12 hours, and one manager transaction can set the target free-debt band to 9,500 basis points, which puts today's 1,636-basis-point ratio on the rising branch; only enough paid-debt repayment, free-debt borrowing or PSM deposits to lift the ratio above the band reverses it. From the pinned 1.184034% rate, about 35 doublings, or roughly 17 days at the 12-hour floor, reach the uint88 rate cast (mantissa 3.09e26, a 3.09e8 multiple of principal per year); near that ceiling a single accrual can charge hundreds of thousands of times the outstanding paid debt, and calculateInterest then returns the last rate with zero interest, so accrual stops instead of supply being capped. The immutability deadline freezes the half-life and band setters, not the rate they select: a band left on the rising branch keeps compounding after the deadline. The Factory operator can route at most 1,000 basis points of interest to a fee recipient that is currently unset. At the pin, supply of 420,092.20 equals free debt, paid debt and PSM assets exactly, and no admitted path mints to a chosen recipient without collateral, a deposit or already-accrued debt. A 3-of-6 Safe of EOAs manages the Lender with no timelock. It can set the redemption fee up to 500 basis points, the rate half-life, the target free-debt band and the borrow rounding limit until the deadline, and it can replace itself at any time. The half-life and band setters are the unbounded issuance lever described above. The operator is the RevenueRouter, which exposes no pending-operator call and is a non-upgradeable clone, so the operator role cannot be handed off. Its owner is a 2-day Timelock whose proposer is the SwanDAO Governor. That path can set the local reserve fee up to 5,000 basis points, bring the immutability deadline forward and replace the manager. The same 3-of-6 Safe holds 80.4% of sSWAN votes, and with it about 40% of gross interest through the 50% local-reserve fee routed to sSWAN stakers, so the DAO route is not independent of the manager, and nothing on-chain commits either body to enable immutability early. Collateral factor, oracle, staleness bound, minimum debt, PSM asset and PSM vault are constructor-immutable. The permissionless write-off rail socialises bad debt across surviving borrowers and mints nothing; if the written-off borrower is the last one, its debt is deleted with no one to absorb it, leaving that supply unbacked. No issuer reconciliation, attestation or prudential supervisor exists; backing is readable on-chain and is not the subject of a published whole-supply report.",
+    "upgradeability": {
+      "model": "immutable",
+      "deploymentRefs": [
+        "ethereum:0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e"
+      ],
+      "canChangeMintLogic": false,
+      "observedAt": "2026-10-29",
+      "observedBlock": 26299913,
+      "sources": [
+        {
+          "label": "swanUSD Coin exact-match verified source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e/"
+        },
+        {
+          "label": "swanUSD Lender exact-match verified source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15/"
+        },
+        {
+          "label": "swanUSD Coin on Etherscan",
+          "url": "https://etherscan.io/address/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e#code"
+        },
+        {
+          "label": "swanUSD Lender on Etherscan",
+          "url": "https://etherscan.io/address/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15#code"
+        },
+        {
+          "label": "Ethereum evidence pin 26299913 (2026-10-29T17:31:59Z)",
+          "url": "https://etherscan.io/block/26299913"
+        }
+      ]
+    },
+    "controls": [
+      {
+        "chain": "ethereum",
+        "address": "0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15",
+        "deploymentRefs": [
+          "ethereum:0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e"
+        ],
+        "label": "Monolith Lender (only Coin minter and in-Lender PSM)",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "cap-limited",
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-29",
+        "observedBlock": 26299913,
+        "capDescription": "There is no numeric supply cap and no supply bound. Four paths are gated: a borrow must post wstETH collateral and pass the 85% collateral-factor solvency check; a PSM buy mints only against an equal USDS deposit and only before the immutability deadline; local and global reserve pulls mint only fees and PSM profit already accrued. The fifth path, accrueInterest, re-runs no collateral check: it mints newly accrued interest to the Vault and to the local and global reserve buckets and adds the full interest to totalPaidDebt in the same call, so its coins are matched by new borrower debt, not by collateral at mint time. Its amount follows the borrow rate, which has no practical ceiling: the floor is the InterestModel MIN_RATE of 0.5%, expRate is ln(2)/halfLife with halfLife at least 12 hours, the manager can set the target free-debt band up to 9,500 basis points, and the rate then doubles at most every half-life until the uint88 rate cast (mantissa 3.09e26, a 3.09e8 multiple of principal per year), at which point calculateInterest returns the last rate and zero interest. The immutability deadline freezes the half-life and band setters but not the rate they select, and the local reserve fee setter (up to 5,000 basis points, half of interest) has no deadline. The 85% factor is the constructor maximum, and the factor, oracle, staleness bound, minimum debt and PSM asset and vault are constructor-immutable.",
+        "sources": [
+          {
+            "label": "swanUSD Lender exact-match verified source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15/"
+          },
+          {
+            "label": "Monolith InterestModel exact-match verified source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0x77fb136ed844df83bac1bd6b87b0930764d5ad6d/"
+          },
+          {
+            "label": "swanUSD Coin exact-match verified source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e/"
+          },
+          {
+            "label": "Monolith Lender reference",
+            "url": "https://docs.monolith.market/reference/Lender.md"
+          },
+          {
+            "label": "Monolith Peg Stability Module documentation",
+            "url": "https://docs.monolith.market/protocol/peg-stability-module.md"
+          },
+          {
+            "label": "Ethereum evidence pin 26299913 (2026-10-29T17:31:59Z)",
+            "url": "https://etherscan.io/block/26299913"
+          }
+        ],
+        "evidence": "At Ethereum block 26299913 (hash 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, 2026-10-29T17:31:59Z), Coin.minter() returned this Lender, and the Coin source requires msg.sender == minter for mint(), with burn() limited to the caller's own balance. The exact-match Lender source calls coin.mint in five places: adjust() after increaseDebt() and the ownership and solvency checks; buy() after psmAsset.safeTransferFrom(msg.sender, assetIn) and only while block.timestamp is before the immutability deadline; accrueInterest() for interestAfterFees, with the full interest added to totalPaidDebt in the same call; pullLocalReserves() for accruedLocalReserves; and pullGlobalReserves() for accruedGlobalReserves when the caller is the Factory. pullLocalReserves is permissionless and pays the fixed operator address. At the pin, totalPaidDebt 351,326.006993430199851968 plus totalFreeDebt 4,561.00 plus freePsmAssets 64,205.193253000784236399 equalled Coin.totalSupply 420,092.200246430984088367 exactly, and accruedLocalReserves and accruedGlobalReserves were both zero. Collateral factor 8,500 bps, oracle feed 0x6148b9e0246380a70f1404c78b66661f39f76c90, staleness threshold 108,000 seconds, minimum debt 1,000 swanUSD and PSM asset and vault were all set at construction. The Lender, Coin and Vault returned zero EIP-1967 implementation, admin and beacon slots."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x9d5df30f475cea915b1ed4c0cca59255c897b61b",
+        "deploymentRefs": [
+          "ethereum:0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e"
+        ],
+        "label": "swanUSD Lender manager Safe (3-of-6, no timelock)",
+        "role": "other",
+        "authorityType": "safe",
+        "directMintAbility": "parameter-only",
+        "threshold": 3,
+        "signerCount": 6,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "none-detected",
+        "safe": {
+          "version": "1.3.0",
+          "owners": [
+            "0x2723723fdd3db8ba2d6f0e1b333e90a7e60a0411",
+            "0x52f63971afd2a32524c859c29943f9bea38ca907",
+            "0x9f3614afb3df9f899cadbffaa05c6c908059f726",
+            "0x962228a90eac69238c7d1f216d80037e61ea9255",
+            "0x6535020cceb810bdb3f3ca5e93de2460ff7989bb",
+            "0x3fcb35a1cbfb6007f9bc638d388958bc4550cb28"
+          ],
+          "threshold": 3,
+          "enabledModules": [],
+          "guard": "0x0000000000000000000000000000000000000000",
+          "fallbackHandler": "0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4",
+          "masterCopy": "0xd9db270c1b5e3bd161e8c8503c55ceabee709552",
+          "observedAt": "2026-10-29",
+          "observedBlock": 26299913,
+          "source": "onchain"
+        },
+        "observedAt": "2026-10-29",
+        "observedBlock": 26299913,
+        "capDescription": "The manager cannot mint, authorize a minter, change the collateral factor, oracle, staleness bound, minimum debt or PSM asset or vault, or upgrade a contract. Until the immutability deadline it can set redeemFeeBps at or below 500, the rate half-life between 12 hours and 30 days, the target free-debt band between 500 and 9,500 bps and maxBorrowDeltaBps between 50 and 200. It can replace itself at any time, and the operator can replace it too. The half-life and target-band setters are the unbounded issuance lever: one transaction can set the band to 9,500 bps and the half-life to 12 hours, after which the interest rate doubles at most every 12 hours with no practical ceiling, and the immutability deadline freezes the setters but not the rate they selected. This cannot create an unbacked coin in one call, because each accrual adds the full interest to paid debt, but it can grow recorded debt and supply far beyond the collateral without any collateral check.",
+        "sources": [
+          {
+            "label": "swanUSD Lender exact-match verified source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15/"
+          },
+          {
+            "label": "swanUSD manager Safe on Etherscan",
+            "url": "https://etherscan.io/address/0x9d5df30f475cea915b1ed4c0cca59255c897b61b"
+          },
+          {
+            "label": "Monolith immutability deadline documentation",
+            "url": "https://docs.monolith.market/protocol/immutability-deadline.md"
+          },
+          {
+            "label": "Ethereum evidence pin 26299913 (2026-10-29T17:31:59Z)",
+            "url": "https://etherscan.io/block/26299913"
+          }
+        ],
+        "evidence": "At Ethereum block 26299913, Lender.manager() returned this Safe. getThreshold() returned 3, getOwners() returned the six listed addresses with no code at the pin, getModulesPaginated() returned an empty array, VERSION() returned 1.3.0 and nonce() returned 4,127. Safe 1.3.0 keeps its guard in GuardManager slot 0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8, which read zero, so there is no guard; getGuard() reverts because 1.3.0 exposes no getter, so the slot read is the applicable method. Slot 9 also read zero but is not the guard slot. The FallbackManager slot 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5 returned the exact-match CompatibilityFallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4 (runtime keccak256 0x03e69f7ce809e81687c69b19a7d7cca45b6d551ffdec73d9bb87178476de1abf), whose external surface is EIP-1271 signature checks, receiver hooks and an always-reverting simulate, so it grants no transaction-execution reach. Singleton slot 0 read GnosisSafe 1.3.0 0xd9db270c1b5e3bd161e8c8503c55ceabee709552; ownerCount slot 3 read 6 and threshold slot 4 read 3. The exact-match Lender source makes setHalfLife, setTargetFreeDebtRatio, setRedeemFeeBps and setMaxBorrowDeltaBps callable by the operator or manager and gated by beforeDeadline; setManager is callable by the operator or manager with no deadline; the manager appears in no mint, minter-authorization, collateral-factor, oracle or upgrade function. The same Safe held 100,000 of the 124,440.192099487927455328 sSWAN votes at the pin, 80.4%, and it is the sole holder of the Curve pool's LP supply."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x2ff07dc67d0ae4ebc2546923c18bbedab5bc9b4e",
+        "deploymentRefs": [
+          "ethereum:0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e"
+        ],
+        "label": "SwanDAO 2-day Timelock owning the fixed RevenueRouter operator",
+        "role": "timelock",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-29",
+        "observedBlock": 26299913,
+        "capDescription": "This path can set the local reserve fee at or below 5,000 basis points, which changes how much of accrued interest is minted to the RevenueRouter for sSWAN stakers, and it can bring the immutability deadline forward. It can also replace the manager. It cannot change the collateral factor, oracle, minimum debt, PSM asset or minter, and any interest it redirects is added to paid debt before it is minted. The fee is a share of interest that is already recorded as debt, so this path redirects an existing mint rather than creating supply at a chosen recipient; the RevenueRouter exposes no generic call, so the Timelock cannot set the half-life or the target free-debt band. Its 172,800-second delay cannot be shortened by an external key: DEFAULT_ADMIN holds only the Timelock itself at the pin (the deployment-time grant to the CoinDAOFactory is renounced) and updateDelay requires a self-scheduled operation.",
+        "sources": [
+          {
+            "label": "swanUSD Lender exact-match verified source",
+            "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15/"
+          },
+          {
+            "label": "RevenueRouter source in the verified CoinDAOFactory bundle",
+            "url": "https://repo.sourcify.dev/contracts/partial_match/1/0x02a5f862e7aad164aa570da15384d2563f3b9f4a/"
+          },
+          {
+            "label": "SwanDAO Timelock on Etherscan",
+            "url": "https://etherscan.io/address/0x2ff07dc67d0ae4ebc2546923c18bbedab5bc9b4e"
+          },
+          {
+            "label": "SwanDAO Governor on Etherscan",
+            "url": "https://etherscan.io/address/0x0a8cdfb15040a57b337d2a3214c6664f7c566a0f"
+          },
+          {
+            "label": "Monolith DAO documentation",
+            "url": "https://docs.monolith.market/protocol/dao.md"
+          },
+          {
+            "label": "Ethereum evidence pin 26299913 (2026-10-29T17:31:59Z)",
+            "url": "https://etherscan.io/block/26299913"
+          }
+        ],
+        "evidence": "At Ethereum block 26299913, Lender.operator() returned RevenueRouter 0xf69f74148687ca4860544f865581f05ca3f9098c, whose owner() was this Timelock; Lender.pendingOperator() was zero. The RevenueRouter source exposes setLocalReserveFeeBps and enableImmutabilityNow as onlyOwner and deliberately exposes no setPendingOperator, and the deployed router is a 45-byte EIP-1167 clone of that implementation, so the operator role cannot be handed off. Timelock getMinDelay() returned 172800 seconds, and the Governor 0x0a8cdfb15040a57b337d2a3214c6664f7c566a0f holds PROPOSER and CANCELLER while the executor role is open at address zero. Lender.setLocalReserveFeeBps enforces a 5,000 bps cap with no deadline; setManager is callable by the operator; enableImmutabilityNow sets the deadline to the execution timestamp and is irreversible. The Governor's quorum is 0.1% of the fixed 10,000,000 SWAN supply, and the manager Safe held 80.4% of sSWAN votes at the pin, so this route is not independent of the manager."
+      },
+      {
+        "chain": "ethereum",
+        "address": "0x926df14a23be491164dcf93f4c468a50ef659d5b",
+        "deploymentRefs": [
+          "ethereum:0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e"
+        ],
+        "label": "Monolith V2 Factory operator (Inverse 2-day Timelock, global interest fee)",
+        "role": "cap-admin",
+        "authorityType": "timelock",
+        "directMintAbility": "parameter-only",
+        "timelockDelaySec": 172800,
+        "canRaiseCap": false,
+        "modulesOrGuardsStatus": "not-applicable",
+        "observedAt": "2026-10-29",
+        "observedBlock": 26299913,
+        "capDescription": "Fee-only reach over this instance: setFeeRecipient to any address and feeBps or customFeeBps at or below 1,000 basis points of borrower interest, which pullGlobalReserves can mint to that recipient once the fees accrue. feeRecipient and feeBps are both zero at the pin, so no global fee accrues and pullReserves reverts. The role cannot mint arbitrarily, change risk parameters, pause or upgrade anything. feeBps is a share of borrower interest that is already added to totalPaidDebt, so pullGlobalReserves mints debt-matched fees and nothing else.",
+        "sources": [
+          {
+            "label": "Monolith Factory verified source",
+            "url": "https://repo.sourcify.dev/contracts/partial_match/1/0xc68f3e777f28c52ff9db0276a14f59d96aa2f931/"
+          },
+          {
+            "label": "Monolith V2 Factory on Etherscan",
+            "url": "https://etherscan.io/address/0xc68f3e777f28c52ff9db0276a14f59d96aa2f931#code"
+          },
+          {
+            "label": "Inverse Timelock (V2 operator) verified source",
+            "url": "https://repo.sourcify.dev/contracts/partial_match/1/0x926df14a23be491164dcf93f4c468a50ef659d5b/"
+          },
+          {
+            "label": "Monolith Stablecoin Factory documentation",
+            "url": "https://docs.monolith.market/protocol/stablecoin-factory.md"
+          },
+          {
+            "label": "Ethereum evidence pin 26299913 (2026-10-29T17:31:59Z)",
+            "url": "https://etherscan.io/block/26299913"
+          }
+        ],
+        "evidence": "At Ethereum block 26299913, Lender.factory() was 0xc68f3e777f28c52ff9db0276a14f59d96aa2f931 and Factory.operator() was this Inverse Timelock. Factory.feeRecipient() and Factory.feeBps() were both zero, pendingOperator() was zero, and Lender.cachedGlobalFeeBps() was zero. The verified Factory source caps feeBps and customFeeBps at MAX_FEE_BPS 1,000, exposes no mint, pause, upgrade or risk-parameter function, and pullReserves requires msg.sender == feeRecipient. Lender.pullGlobalReserves requires msg.sender == factory and mints only accruedGlobalReserves, which is interest times the global fee cached at accrual. The Timelock's delay() returned 172800 seconds and admin() returned the Inverse Governor 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6. Monolith documentation states that the Factory operator controls fee parameters only and cannot mint tokens, move user funds, pause instances or change risk parameters."
+      }
+    ],
+    "economicCapSemantics": "unbounded",
+    "reconciliation": "not-applicable",
+    "supervision": "none",
+    "review": {
+      "evidence": "Reviewed at Ethereum block 26299913 (0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, 2026-10-29T17:31:59Z) against Sourcify exact-match sources for Coin and Lender, the partial-match Factory source, the CoinDAOFactory bundle that carries the RevenueRouter source, the Inverse Timelock source, pinned getters, storage slots and governance reads. Coin.minter is the Lender and mint() admits nobody else. Lender, Coin, Vault, the feed, InterestModel and the Factory have zero EIP-1967 implementation, admin and beacon slots. Supply of 420,092.200246430984088367 equals totalFreeDebt 4,561.00 plus totalPaidDebt 351,326.006993430199851968 plus freePsmAssets 64,205.193253000784236399, exactly to the wei, with zero accrued local and global reserves. Manager is a Safe 1.3.0 at 0x9d5df30f475cea915b1ed4c0cca59255c897b61b with six EOA owners, threshold 3, no modules, and nonce 4,127. Its GuardManager slot 0x4a204f620c8c5ccdca3fd54d003badd85ba500436a431f0cbda4f558c93c34c8 read zero, so there is no guard (slot 9 also read zero but is not the guard slot; getGuard() reverts in 1.3.0). Its FallbackManager slot 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5 holds the exact-match CompatibilityFallbackHandler 0xf48f2b2d2a534e402487b3ee7c18c33aec0fe5e4, which adds EIP-1271 signature checks, receiver hooks and a reverting simulate but no execution reach, and its singleton is GnosisSafe 1.3.0 0xd9db270c1b5e3bd161e8c8503c55ceabee709552. It is also the sole Curve LP holder and holds 100,000 of 124,440.192099487927455328 sSWAN votes, 80.4%. Operator is RevenueRouter 0xf69f74148687ca4860544f865581f05ca3f9098c, a 45-byte EIP-1167 clone that exposes no setPendingOperator, owned by Timelock 0x2ff07dc67d0ae4ebc2546923c18bbedab5bc9b4e with getMinDelay 172800; the SwanDAO Governor 0x0a8cdfb15040a57b337d2a3214c6664f7c566a0f holds the proposer and canceller roles and execution is open. The immutability deadline is 2030-10-21T15:59:35Z and has not passed; only the operator can move it earlier and nobody can extend it. The Factory operator is Inverse Timelock 0x926df14a23be491164dcf93f4c468a50ef659d5b with delay 172800 and admin 0xbeccb6bb0aa4ab551966a7e4b97cec74bb359bf6; feeBps and feeRecipient are zero. Economic-posture fields reviewed on the same pin: the four collateral, deposit and accrued-fee paths are fully gated, and none of the five admits a chosen-recipient mint, but accrueInterest performs no collateral check and its rate envelope has no practical ceiling (0.5% InterestModel floor; expRate = ln(2)/halfLife with halfLife at least 12 hours; manager-set band up to 9,500 bps; no APR ceiling below the uint88 cast at 3.09e26 mantissa, where a single accrual near the cast can charge hundreds of thousands of times the outstanding paid debt), so the reviewed economic cap semantics are unbounded and no capSemanticsReview is authored, because the schema forbids one with unbounded semantics. Reconciliation is not applicable to an on-chain CDP claim with no off-chain reserve or published whole-supply report, and no prudential supervisor or independent attestor exists. Signer identities, human independence and any hardware-wallet or MPC custody arrangement for the six manager EOAs were not established, and no key-custody attestation is authored. A live proposal at the pin would raise the proposal threshold and quorum and grant a canceller role; its outcome after the pin was not read and it does not change the current controls. The Nemesis April 2026 write-off finding is the documented bad-debt socialisation rail, not a mint path. No control carries an executionScope. The Lender's capability-bearing entrypoints are enumerable from exact-match source, but a complete certificate would split the single control into per-path controls whose published posture is selected by path-id ordering, and the capability vocabulary has no value for its view entrypoints; the manager Safe and both timelocks execute arbitrary (target, calldata), so a complete scope for them would need the conservative-maximal envelope that asserts capabilities they do not hold, and the SwanDAO Timelock exposes no role enumeration (getRoleMemberCount reverts), so permission closure is not established from getters alone. The control facts therefore retain the authored delays: the manager has none, and both timelocks are 172800 seconds.",
+      "reviewer": "Claude swanUSD promotion 2026-10-29",
+      "reviewedAt": "2026-10-29",
+      "disposition": "scoreable",
+      "sources": [
+        {
+          "label": "Ethereum evidence pin 26299913 (2026-10-29T17:31:59Z)",
+          "url": "https://etherscan.io/block/26299913"
+        },
+        {
+          "label": "swanUSD Coin exact-match verified source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e/"
+        },
+        {
+          "label": "swanUSD Lender exact-match verified source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15/"
+        },
+        {
+          "label": "Monolith InterestModel exact-match verified source",
+          "url": "https://repo.sourcify.dev/contracts/full_match/1/0x77fb136ed844df83bac1bd6b87b0930764d5ad6d/"
+        },
+        {
+          "label": "Monolith Factory verified source",
+          "url": "https://repo.sourcify.dev/contracts/partial_match/1/0xc68f3e777f28c52ff9db0276a14f59d96aa2f931/"
+        },
+        {
+          "label": "CoinDAOFactory verified source bundle carrying RevenueRouter",
+          "url": "https://repo.sourcify.dev/contracts/partial_match/1/0x02a5f862e7aad164aa570da15384d2563f3b9f4a/"
+        },
+        {
+          "label": "Inverse Timelock (V2 operator) verified source",
+          "url": "https://repo.sourcify.dev/contracts/partial_match/1/0x926df14a23be491164dcf93f4c468a50ef659d5b/"
+        },
+        {
+          "label": "swanUSD Lender on Etherscan",
+          "url": "https://etherscan.io/address/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15#code"
+        },
+        {
+          "label": "swanUSD Vault on Etherscan",
+          "url": "https://etherscan.io/address/0xfa80c7349cc2357c42a64c2954b24b1a61c29435#code"
+        },
+        {
+          "label": "swanUSD manager Safe on Etherscan",
+          "url": "https://etherscan.io/address/0x9d5df30f475cea915b1ed4c0cca59255c897b61b"
+        },
+        {
+          "label": "RevenueRouter on Etherscan",
+          "url": "https://etherscan.io/address/0xf69f74148687ca4860544f865581f05ca3f9098c#code"
+        },
+        {
+          "label": "SwanDAO Timelock on Etherscan",
+          "url": "https://etherscan.io/address/0x2ff07dc67d0ae4ebc2546923c18bbedab5bc9b4e"
+        },
+        {
+          "label": "SwanDAO Governor on Etherscan",
+          "url": "https://etherscan.io/address/0x0a8cdfb15040a57b337d2a3214c6664f7c566a0f"
+        },
+        {
+          "label": "Monolith V2 Factory on Etherscan",
+          "url": "https://etherscan.io/address/0xc68f3e777f28c52ff9db0276a14f59d96aa2f931#code"
+        },
+        {
+          "label": "Inverse Timelock (V2 operator) on Etherscan",
+          "url": "https://etherscan.io/address/0x926df14a23be491164dcf93f4c468a50ef659d5b#code"
+        },
+        {
+          "label": "Monolith immutability deadline documentation",
+          "url": "https://docs.monolith.market/protocol/immutability-deadline.md"
+        },
+        {
+          "label": "Monolith Peg Stability Module documentation",
+          "url": "https://docs.monolith.market/protocol/peg-stability-module.md"
+        },
+        {
+          "label": "Monolith Stablecoin Factory documentation",
+          "url": "https://docs.monolith.market/protocol/stablecoin-factory.md"
+        },
+        {
+          "label": "Monolith DAO documentation",
+          "url": "https://docs.monolith.market/protocol/dao.md"
+        },
+        {
+          "label": "Monolith bad debt socialization documentation",
+          "url": "https://docs.monolith.market/protocol/bad-debt-socialization.md"
+        },
+        {
+          "label": "Monolith risk disclosure",
+          "url": "https://docs.monolith.market/security/risks.md"
+        }
+      ]
+    }
+  }
+}
