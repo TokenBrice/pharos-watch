@@ -36,12 +36,13 @@ export function createEmptyPriceSourceHealthDistribution(): Record<PriceSourceHe
   >;
 }
 
-/** Reviewed missing rows remain visible, but only unacknowledged gaps alert. */
-export function getPriceSourceHealthMissingCounts(missing: number, acknowledgedMissingCount?: number) {
+/** Reviewed and market-closed rows remain missing without driving operator tiles. */
+export function getPriceSourceHealthMissingCounts(missing: number, acknowledgedMissingCount?: number, scheduledClosureMissingCount = 0) {
   const acknowledged = typeof acknowledgedMissingCount === "number"
     ? Math.max(0, Math.min(acknowledgedMissingCount, missing))
     : 0;
-  return { acknowledged, unacknowledged: missing - acknowledged };
+  const scheduledClosure = Math.max(0, Math.min(scheduledClosureMissingCount, missing - acknowledged));
+  return { acknowledged, scheduledClosure, unacknowledged: missing - acknowledged - scheduledClosure };
 }
 
 export function getPricingSourceLabel(sourceKey: string): string {

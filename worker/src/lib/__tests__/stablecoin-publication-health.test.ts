@@ -1,3 +1,4 @@
+import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { ACTIVE_IDS } from "@shared/lib/stablecoins/registry";
 import { afterEach, describe, expect, it } from "vitest";
 import type { DatabaseSync } from "node:sqlite";
@@ -320,6 +321,56 @@ describe("stablecoin publication health", () => {
     });
     expect(after.expiredGapReviewIds).toContain(review.stablecoinId);
     expect(after.missingActiveAssets[0]?.acknowledgedGap).toBeNull();
+  });
+
+  it("recomputes scheduled closures from compact legacy gaps across close and reopen without a new run", async () => {
+    const { sqlite, db } = fixtures.open();
+    const id = "chfm-mento";
+    const close = Date.UTC(2026, 9, 30, 21) / 1000;
+    insertRun(sqlite, "sync-stablecoins", close - 60, {
+      activePublicationCoverage: publicationCoverage(),
+      activePriceCoverage: priceCoverage({
+        complete: false, pricedActiveCount: activeIds.length - 1,
+        pricedActiveIds: activeIds.filter((candidate) => candidate !== id),
+        missingActiveIds: [id], missingPriceCount: 1,
+        missingActiveState: [[id, 800, 1.2, "mento-fpmm", close - 900, "no-accepted-price"]],
+        alertEligibleIds: [id], alertEligibleCount: 1,
+        // Legacy review/closure decisions are never read as current truth.
+        acknowledgedGapIds: [id], expiredGapReviewIds: [id], scheduledClosureGapIds: [id],
+      }),
+    });
+    const before = (await loadStablecoinCoverageHealth(db, close - 1)).activePriceCoverage;
+    expect(before).toMatchObject({ scheduledClosureGapIds: [], alertEligibleIds: [id], acknowledgedGapIds: [] });
+    const during = (await loadStablecoinCoverageHealth(db, close)).activePriceCoverage;
+    expect(during).toMatchObject({
+      status: "incomplete", missingPriceCount: 1, missingActiveIds: [id], scheduledClosureGapIds: [id],
+      alertEligibleIds: [], alertEligibleCount: 0, acknowledgedGapIds: [],
+    });
+    expect(during.expiredGapReviewIds).not.toContain(id);
+    expect(during.missingActiveAssets[0]).toMatchObject({
+      currentPrice: null, consecutiveMissingGenerations: 800, alertEligible: false, acknowledgedGap: null,
+      scheduledClosure: { reason: "market-closed", lane: "mento-fpmm" },
+    });
+    const reopen = Date.UTC(2026, 10, 1, 23) / 1000;
+    for (const [elapsed, eligible] of [[0, false], [CRON_INTERVALS["sync-stablecoins"], false],
+      [2 * CRON_INTERVALS["sync-stablecoins"], true]] as const) {
+      const after = (await loadStablecoinCoverageHealth(db, reopen + elapsed)).activePriceCoverage;
+      expect(after).toMatchObject({ scheduledClosureGapIds: [], alertEligibleIds: eligible ? [id] : [],
+        alertEligibleCount: eligible ? 1 : 0, missingActiveIds: [id] });
+      expect(after.missingActiveAssets[0]).toMatchObject({ scheduledClosure: null, alertEligible: eligible, consecutiveMissingGenerations: 800 });
+    }
+  });
+
+  it.each([
+    ["invalidMarketHoursCalendarIds", Date.UTC(2026, 9, 29, 10) / 1000],
+    ["expiredMarketHoursCalendarIds", Date.UTC(2027, 9, 30, 12) / 1000],
+  ] as const)("exposes %s independently of persisted calendar decisions", async (field, nowSec) => {
+    const { sqlite, db } = fixtures.open();
+    insertRun(sqlite, "sync-stablecoins", nowSec - 60, {
+      activePublicationCoverage: publicationCoverage(), activePriceCoverage: priceCoverage(),
+    });
+    const result = (await loadStablecoinCoverageHealth(db, nowSec)).activePriceCoverage;
+    expect(result[field]).toEqual(["mento-fx"]);
   });
 
   it.each([[false, false], [false, true], [true, false], [true, true]])(

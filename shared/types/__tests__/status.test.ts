@@ -7,6 +7,39 @@ import { makeHealthyHealthResponse } from "@shared/test-utils/health-fixtures";
 
 import { makeReserveComposition, reserveComposition, statusResponse } from "./status.test-support";
 
+describe("HealthResponseSchema scheduled market closure evidence", () => {
+  it("retains additive calendar evidence while accepting legacy coverage without it", () => {
+    const closure = {
+      calendarId: "mento-fx", reason: "market-closed", lane: "mento-fpmm", owner: "ops",
+      reviewReason: "Reviewed source calendar.", sources: ["https://example.com/pinned-source"],
+      reviewedAt: 1_700_000_000, reviewDeadline: 1_731_536_000,
+    };
+    const coverage = {
+      status: "incomplete", expectedActiveCount: 1, presentActiveCount: 1, pricedActiveCount: 0,
+      missingPriceCount: 1, pricedActiveIds: [], missingActiveIds: ["chfm-mento"], affectedMarketCapUsd: null,
+      missingActiveAssets: [{
+        stablecoinId: "chfm-mento", symbol: "CHFm", marketCapUsd: null, currentPrice: null,
+        currentSource: null, currentObservedAt: null, currentConfidence: null, consecutiveMissingGenerations: 2,
+        lastAcceptedPrice: null, lastAcceptedSource: null, lastAcceptedObservedAt: null,
+        rejectionReason: "no-accepted-price", alertEligible: false, acknowledgedGap: null, scheduledClosure: closure,
+      }],
+      alertEligibleCount: 0, alertEligibleIds: [], scheduledClosureGapIds: ["chfm-mento"],
+      invalidMarketHoursCalendarIds: [], expiredMarketHoursCalendarIds: ["other-calendar"],
+      maxConsecutiveMissingGenerations: 2, observedAt: 1_700_000_100,
+    };
+    const parsed = HealthResponseSchema.parse({ ...makeHealthyHealthResponse(), activePriceCoverage: coverage });
+    expect(parsed.activePriceCoverage?.expiredMarketHoursCalendarIds).toEqual(["other-calendar"]);
+    expect(parsed.activePriceCoverage?.invalidMarketHoursCalendarIds).toEqual([]);
+    expect(parsed.activePriceCoverage?.scheduledClosureGapIds).toEqual(["chfm-mento"]);
+    expect(parsed.activePriceCoverage?.missingActiveAssets[0].scheduledClosure).toEqual(closure);
+    const { scheduledClosureGapIds: _ids, ...legacy } = coverage;
+    const { scheduledClosure: _closure, ...gap } = legacy.missingActiveAssets[0];
+    expect(HealthResponseSchema.safeParse({ ...makeHealthyHealthResponse(), activePriceCoverage: {
+      ...legacy, missingActiveAssets: [gap],
+    } }).success).toBe(true);
+  });
+});
+
 describe("TelegramPulseSchema quality admission", () => {
   const legacyPulse = {
     activeWatchers: 8,

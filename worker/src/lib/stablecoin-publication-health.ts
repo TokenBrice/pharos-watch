@@ -10,6 +10,7 @@ import { tryParseJson } from "./json-parse";
 import {
   parseMissingActivePriceDetailsById,
   resolveStablecoinPriceGapReviews,
+  resolveStablecoinMarketHours,
 } from "./stablecoin-publication-coverage";
 
 export function unknownStablecoinPublicationHealth(
@@ -48,8 +49,11 @@ export function unknownActivePriceCoverageHealth(
     missingActiveAssets: [],
     alertEligibleCount: null,
     alertEligibleIds: [],
+    scheduledClosureGapIds: [],
     acknowledgedGapIds: [],
     acknowledgedGapCount: null,
+    expiredMarketHoursCalendarIds: [],
+    invalidMarketHoursCalendarIds: [],
     expiredGapReviewIds: [],
     invalidGapReviewIds: [],
     maxConsecutiveMissingGenerations: null,
@@ -125,6 +129,7 @@ function parseActivePriceCoverageHealth(
   const nominalReferenceCount = parsed.data.nominalReferenceCount ?? 0;
   const accountedIds = [...pricedActiveIds, ...nominalReferenceIds];
   const reviews = resolveStablecoinPriceGapReviews([...ACTIVE_IDS], nowSec);
+  const marketHours = resolveStablecoinMarketHours([...ACTIVE_IDS], nowSec);
   const parseOptions = { nowSec, reviewsById: reviews.activeById };
   const missingDetailsById = parseMissingActivePriceDetailsById(coverage, parseOptions);
   const missingActiveAssets = (missingActiveIds.length > 0
@@ -138,8 +143,11 @@ function parseActivePriceCoverageHealth(
   // Recompute from registry truth even for metadata written before a review
   // was added, renewed, removed, or expired. Compact streaks keep re-alerting
   // after expiry even when the producer persisted an empty eligible-ID list.
-  const acknowledgedGapIds = missingActiveIds.filter((id) =>
-    reviews.activeById.has(id)
+  const scheduledClosureGapIds = missingActiveIds.filter((id) => marketHours.closedById.has(id)
+    && !pricedActiveIds.includes(id) && (missingDetailsById.get(id)?.currentPrice ?? 0) <= 0);
+  const scheduledIds = new Set(scheduledClosureGapIds);
+  const acknowledgedGapIds = missingActiveIds.filter((id) => !scheduledIds.has(id)
+    && reviews.activeById.has(id)
     && !pricedActiveIds.includes(id)
     && (missingDetailsById.get(id)?.currentPrice ?? 0) <= 0,
   );
@@ -147,7 +155,7 @@ function parseActivePriceCoverageHealth(
   const alertEligibleIds = [...new Set([
     ...stringArray(coverage.alertEligibleIds),
     ...derivedAlertEligibleIds,
-  ])].filter((id) => !acknowledgedIds.has(id) && !nominalReferenceIds.includes(id));
+  ])].filter((id) => !acknowledgedIds.has(id) && !marketHours.alertSuppressedIds.has(id) && !nominalReferenceIds.includes(id));
   const complete = coverage.complete === true
     && expectedActiveCount === ACTIVE_IDS.size
     && presentActiveCount === ACTIVE_IDS.size
@@ -176,8 +184,11 @@ function parseActivePriceCoverageHealth(
     missingActiveAssets,
     alertEligibleCount: alertEligibleIds.length,
     alertEligibleIds,
+    scheduledClosureGapIds,
     acknowledgedGapIds,
     acknowledgedGapCount: acknowledgedGapIds.length,
+    expiredMarketHoursCalendarIds: marketHours.expiredCalendarIds,
+    invalidMarketHoursCalendarIds: marketHours.invalidCalendarIds,
     expiredGapReviewIds: reviews.expiredGapReviewIds,
     invalidGapReviewIds: reviews.invalidGapReviewIds,
     maxConsecutiveMissingGenerations: parsed.data.maxConsecutiveMissingGenerations,

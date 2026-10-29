@@ -4,6 +4,8 @@ Triggered by `StatusCause.code`:
 - `price_gap_reviews_expiring`
 - `price_gap_reviews_expired`
 - `price_gap_reviews_invalid`
+- `price_market_hours_calendars_invalid`
+- `price_market_hours_calendars_expired`
 - `reserve_feed_reviews_expiring`
 - `reserve_feed_reviews_expired`
 - `reserve_feed_reviews_invalid`
@@ -30,13 +32,18 @@ Edit `STABLECOIN_PRICE_GAP_REVIEWS` in `worker/src/lib/stablecoin-publication-co
 - Keep the exact active stablecoin identity and a nonblank accountable owner and reason.
 - Record fresh, relevant public evidence using HTTPS sources and a nonfuture `reviewedAt` (Unix seconds). The resolver enforces this: a review dated after the evaluation clock is reported in `invalidGapReviewIds` and acknowledges nothing.
 - Set `expiresAt > reviewedAt` and keep the acknowledgement within the documented roughly 30-day review policy. The resolver validates date shape, ordering and the nonfuture review date, not that duration cap; enforce the policy during review. Renewal is a new review decision, not automatic date extension.
-- Preserve any `weeklyUtcWindow` that limits applicability. An out-of-window review acknowledges nothing, even before its expiry.
 - Never substitute an invented quote, lower a price-validation floor, or change source freshness to close the gap. If the source recovers, the normal price pipeline clears the gap without a new acknowledgement.
 - After verifying recovery through an admitted source with its real observation clock, remove an obsolete expired review instead of renewing an acknowledgement the asset no longer needs. Preserve source-specific freshness and admission guards; a merely numeric upstream response is not recovery.
 - For unresolved venue divergence, record the rejected quote and the alternative venue's identity/depth limits, keep the gap missing, and use only a short explicit source-review deadline. An acknowledgement does not establish that the divergence is harmless or admit either venue.
 - If current official evidence announces termination, name the lifecycle owner's archive/freeze decision and deadline explicitly. A temporary review changes no lifecycle fields, proves no redemption, and must not become a substitute for that decision.
 - Keep source-review acknowledgement expiry separate from an existing lifecycle/holder-exit decision deadline. A fresh source review may acknowledge the still-missing price for a short explicit interval, but must retain the original lifecycle deadline and accountable owner in its reason; it neither satisfies that decision nor authorizes extending it. Report any outstanding lifecycle decision explicitly at hand-off.
 - Recheck inherited-price dependencies as well as the asset's own exact contracts. A stale parent quote, fallback-confidence parent, below-floor pool or unreviewed native cross-rate is not recovery. Record actual observation clocks and depth; an empty market response is different from a failed request.
+
+### Market-hours calendars
+
+Mento's standing source calendar is separate from `STABLECOIN_PRICE_GAP_REVIEWS`; do not recreate monthly weekend acknowledgements. Inspect `/api/health.activePriceCoverage.scheduledClosureGapIds` and `missingActiveAssets[].scheduledClosure` for `market-closed`, lane, owner, sources, review date and `reviewDeadline`. The five assets remain in `missingActiveIds` and retain their missing streaks. Health reads recompute calendar applicability. At reopening, the gap remains ineligible until `ACTIVE_PRICE_COVERAGE_ALERT_GENERATIONS × CRON_INTERVALS["sync-stablecoins"]` has elapsed since the most recent closure end (currently 30 minutes); then the ordinary persistence gate applies. This excludes closure-only misses without changing measured streaks. Missing/Markets tiles retain producer counts until the next sync. These are not prices, acknowledgements or publication waivers; public breadth still counts them.
+
+At the annual source-review deadline, re-read the pinned `MarketHoursBreaker` and `OracleAdapter` sources plus `BreakerBox`/`BiPoolManager` for broker lanes and `FPMM` for FPMM lanes, verify the current deployed route and exact asset/lane mapping, and update all five HTTPS source URLs to the newly verified mento-core commit together with `reviewedAt`/`reviewDeadline` only after review. The registry owns the dates; it does not use `price_gap_reviews_expiring`/`expired` notices. Track its annual deadline in operator review planning. Future, malformed or overdue calendar reviews suppress nothing; inspect `invalidMarketHoursCalendarIds` / `expiredMarketHoursCalendarIds` and their `price_market_hours_calendars_invalid` / `price_market_hours_calendars_expired` info causes. Verify Friday 20:59/21:00 and Sunday 22:59/23:00 UTC, December 24/31 21:59/22:00, December 25 and January 1; retain no DST adjustment or substitute holiday, and verify the post-reopen gate at 0, one and two producer intervals. If rules or routes drift, remove the unsupported scope and let missing prices alert normally. Acceptance requires the first production closure and reopening with unchanged raw missing counts and restored off-calendar alert eligibility.
 
 ### Reserve-feed reviews
 
@@ -57,6 +64,5 @@ At `nowSec >= expiresAt`, the registry ignores the acknowledgement automatically
 ## Prevention
 
 - Use the 48-hour informational watch to schedule a fresh evidence review and deploy before the deadline. There is no automatic renewal or separate webhook delivery.
-- Reminders cover in-use acknowledgements only. Priced assets, recovered/unmatched feeds, and price reviews outside their weekly UTC window do not trigger a reminder merely because a registry entry is near expiry.
-- Keep a windowed review's expiry inside its applicable window when a reminder is needed; otherwise its lapse can occur without an in-use reminder.
+- Reminders cover in-use acknowledgements only. Priced assets and recovered/unmatched feeds do not trigger a reminder merely because a registry entry is near expiry.
 - Renew only when current evidence supports the same narrowly scoped acknowledgement. Otherwise let alerts re-arm and address the source or catalog decision.

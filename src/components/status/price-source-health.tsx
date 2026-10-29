@@ -58,6 +58,7 @@ export function PriceSourceHealthCard({
     confidenceMarketCapUsd: cdValue,
     pricedMarketCapUsd: pricedValue,
     acknowledgedMissingCount,
+    scheduledClosureMissingCount,
     supplyCoverage,
   } = health.active ?? health;
   const pct = (n: number) => totalAssets > 0 ? `${((n / totalAssets) * 100).toFixed(1)}%` : "—";
@@ -98,8 +99,10 @@ export function PriceSourceHealthCard({
     },
   ];
 
-  const { acknowledged, unacknowledged: unacknowledgedMissing } =
-    getPriceSourceHealthMissingCounts(sd.missing, acknowledgedMissingCount);
+  const { acknowledged, scheduledClosure, unacknowledged: unacknowledgedMissing } =
+    getPriceSourceHealthMissingCounts(sd.missing, acknowledgedMissingCount, scheduledClosureMissingCount);
+  const missingContext = [acknowledged > 0 ? `${acknowledged} acknowledged` : null,
+    scheduledClosure > 0 ? `${scheduledClosure} market closed` : null].filter(Boolean).join(" · ");
 
   return (
     <Card>
@@ -132,8 +135,8 @@ export function PriceSourceHealthCard({
           <MetricCard
             label="Missing"
             value={unacknowledgedMissing}
-            pct={acknowledged > 0
-              ? `${pct(unacknowledgedMissing)} · ${acknowledged} acknowledged`
+            pct={missingContext
+              ? `${pct(unacknowledgedMissing)} · ${missingContext}`
               : pct(unacknowledgedMissing)}
             severity={getMissingPriceTileSeverity(unacknowledgedMissing)}
           />
