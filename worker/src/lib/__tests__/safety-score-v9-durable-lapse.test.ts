@@ -89,7 +89,6 @@ describe("Safety Score v9 durable custody lapse (documentation class)", { timeou
     const policy = structuredClone(candidatePolicyAsset);
     const documentation = policy.semantic.evidence.documentation!;
     documentation.retainExpiredScopedQuestions = false;
-    documentation.reasons.find((entry) => entry.reason === "no-scoring-path")!.retention = "recompute-per-capture";
     vi.resetModules();
     vi.doMock("../../../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json", () => ({ default: policy }));
     try {
