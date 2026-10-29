@@ -5,6 +5,8 @@ import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9Response,
 } from "../report-cards-v9";
+import { ReportCardsV9DetailResponseSchema } from "../report-cards-v9-projections";
+import { projectV9Detail } from "../../lib/report-cards-v9-projections";
 import type { V9OpenEvidence } from "../safety-score-v9-public";
 import { makeReportCardsV9Card, makeReportCardsV9Response } from "@shared/test-utils/report-cards-v9";
 
@@ -78,6 +80,28 @@ describe("report-cards v9 open-evidence envelope", () => {
     overCounted.byCard[0]!.openObligationsCarried = -1;
     expect(ReportCardsV9CurrentResponseSchema.safeParse(
       makeReportCardsV9Response(preset, makeReportCardsV9Card, { openEvidence: overCounted }),
+    ).success).toBe(false);
+  });
+
+  it("mirrors the documentation-only pillar annotation into the detail projection", () => {
+    const annotatedEvidence: V9OpenEvidence = {
+      ...openEvidence,
+      byCard: [{ ...openEvidence.byCard[0]!, documentationOnlyLimited: ["backing", "control", "exit"] }],
+    };
+    const annotated = projectV9Detail(
+      makeReportCardsV9Response(preset, makeReportCardsV9Card, { openEvidence: annotatedEvidence }),
+      "usdc-circle",
+    );
+    expect(annotated.documentationOnlyLimited).toEqual(["backing", "control", "exit"]);
+    expect(ReportCardsV9DetailResponseSchema.safeParse(annotated).success).toBe(true);
+
+    const plain = projectV9Detail(base, "usdc-circle");
+    expect("documentationOnlyLimited" in plain).toBe(false);
+
+    expect(ReportCardsV9DetailResponseSchema.safeParse({ ...annotated, documentationOnlyLimited: [] }).success).toBe(false);
+    expect(ReportCardsV9DetailResponseSchema.safeParse({ ...annotated, documentationOnlyLimited: ["peg"] }).success).toBe(false);
+    expect(ReportCardsV9DetailResponseSchema.safeParse(
+      { ...annotated, documentationOnlyLimited: ["exit", "backing"] },
     ).success).toBe(false);
   });
 });

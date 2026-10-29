@@ -1452,7 +1452,17 @@ export function buildSafetyScoresPreviewExpectation({
   const dataset = readJsonFile(path.join(datasetsDir, "scores-latest", `${datasetDate}.json`));
   if (!dataset) return unavailable(`scores-latest-dataset-missing:${datasetDate}`);
   const display = dataset._meta?.displayProjection;
-  if (display?.version !== 1) return unavailable("display-projection-missing");
+  // v1 predates the open-question counts; v2 adds them and keeps the Safety
+  // block this expectation reads. An unknown version is named instead of folded
+  // into "missing" so the warning states that the artifact and the check are
+  // out of step while the page serves its neutral skeleton.
+  if (display?.version !== 1 && display?.version !== 2) {
+    return unavailable(
+      display?.version === undefined
+        ? "display-projection-missing"
+        : `display-projection-version-unsupported:${display.version}`,
+    );
+  }
   if (display.snapshotDate !== datasetDate) return unavailable("display-projection-date-mismatch");
   const safety = display.safety;
   if (!safety) return unavailable(display.safetyUnavailableReason ?? "safety-projection-missing");

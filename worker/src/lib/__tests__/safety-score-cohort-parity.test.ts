@@ -8,7 +8,7 @@ import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { projectV9Table, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
 import { projectV9CompactPartialEvidence } from "@shared/types/safety-score-v9-causes";
 import { SafetyScoreIndexSchema } from "@shared/types/safety-score-index";
-import type { SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentResponse, SafetyScoreV9PreviousResponse } from "@shared/types/safety-score-v9-public";
 import type { ReportCardsV9CurrentResponse, V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
@@ -27,7 +27,7 @@ import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
 import * as activeSource from "../safety-score-active-source";
 import * as scoreIndex from "../safety-score-index";
 import { projectSafetyScoreV9PublicationToPublicSnapshot } from "../report-cards-v9-cache";
-import { admitAndSerializeSafetyScoreV9Publication, parseSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
+import { admitAndSerializeSafetyScoreV9Publication, parseSafetyScoreV9Publication, requireCurrentSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import {
   loadSafetyScoreV9PublicationStoredRow, shardSafetyScoreV9CohortStoredValue,
   reassembleSafetyScoreV9CohortStoredValue, SAFETY_SCORE_V9_PUBLICATION_CHUNK_MAX_BYTES,
@@ -64,7 +64,7 @@ async function readStoredPublication(kind: "fixture" | "capture" | "database"): 
   } finally { sqlite.close(); }
 }
 
-function currentHealth(publication: SafetyScoreV9CurrentResponse): V9PublicationHealth {
+function currentHealth(publication: SafetyScoreV9CurrentResponse | SafetyScoreV9PreviousResponse): V9PublicationHealth {
   return {
     schemaVersion: 2, status: "current", acceptedPublicationGenerationId: publication.publicationGenerationId,
     acceptedAtSec: publication.publishedAtSec, attemptedAtSec: publication.publishedAtSec,
@@ -73,7 +73,7 @@ function currentHealth(publication: SafetyScoreV9CurrentResponse): V9Publication
 }
 
 async function assertReaderParity(stored: string, label: string) {
-  const publication = await parseSafetyScoreV9Publication(stored);
+  const publication = requireCurrentSafetyScoreV9Publication(await parseSafetyScoreV9Publication(stored));
   const canonicalBefore = sha256(publication);
   const health = currentHealth(publication);
   const full = projectSafetyScoreV9PublicationToPublicSnapshot(publication, health);
