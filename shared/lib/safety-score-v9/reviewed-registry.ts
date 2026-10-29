@@ -65,16 +65,11 @@ function isObservationTable(table: unknown): table is { id: string; value: unkno
     Object.keys(entry).every((key) => key === "id" || key === "value"));
 }
 
-/**
- * Expand an authored envelope before its existing strict schema and digest boundary.
- * Rows are asset-attributed by default; a row kind that carries its attribution
- * inside its own scope (a provider-wide review) declares itself unattributed.
- */
+/** Expand an authored envelope before its existing strict schema and digest boundary. */
 export function expandReviewedRegistryReferences(
   value: Record<string, unknown>,
   rowKey: string,
   tableFields: Readonly<Record<string, string>>,
-  isUnattributedRow: (row: Record<string, unknown>) => boolean = () => false,
 ): Record<string, unknown> {
   const expanded = { ...value };
   const tables: Record<string, { id: string; value: unknown }[]> = {};
@@ -95,11 +90,10 @@ export function expandReviewedRegistryReferences(
   }
   const expand = createReviewedRegistryReferenceExpander(tables, rowKey);
   const rows = value[rowKey];
-  if (!Array.isArray(rows) || rows.some((row) =>
-    !isRecord(row) || (typeof row.assetId !== "string" && !isUnattributedRow(row)))) {
+  if (!Array.isArray(rows) || rows.some((row) => !isRecord(row) || typeof row.assetId !== "string")) {
     throw new ReviewedRegistryEntryError(rowKey, "Expected attributed authored review rows");
   }
-  expanded[rowKey] = rows.map((row, index) => expand(row as AttributedRow, index));
+  expanded[rowKey] = rows.map(expand);
   return expanded;
 }
 
