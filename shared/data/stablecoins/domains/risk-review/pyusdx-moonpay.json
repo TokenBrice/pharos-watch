@@ -829,7 +829,7 @@
         "sources": [
           {
             "label": "ethereum block 26300237, 2026-10-29T18:37:11Z: Safe getThreshold()=3, getOwners()=5, Portal DEFAULT_ADMIN_ROLE=True, both bridge ProxyAdmin owner()=Safe; re-read 2026-10-29",
-            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           },
           {
             "label": "M0 PYUSDx Portal bridging doc accessed 2026-10-29: pluggable adapter peer/route design published; no signer independence, enforced upgrade delay or numeric route-limit inventory",
@@ -846,7 +846,7 @@
         "sources": [
           {
             "label": "arbitrum block 519439129, 2026-10-29T18:38:46Z: Safe getThreshold()=3, getOwners()=5, Portal DEFAULT_ADMIN_ROLE=True, both bridge ProxyAdmin owner()=Safe; re-read 2026-10-29",
-            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+            "url": "https://arb1.arbitrum.io/rpc"
           },
           {
             "label": "M0 PYUSDx Portal bridging doc accessed 2026-10-29: pluggable adapter peer/route design published; no signer independence, enforced upgrade delay or numeric route-limit inventory",
@@ -863,7 +863,7 @@
         "sources": [
           {
             "label": "monad block 117670523, 2026-10-29T17:21:53Z: Safe getThreshold()=3, getOwners()=5, Portal DEFAULT_ADMIN_ROLE=True, both bridge ProxyAdmin owner()=Safe; re-read 2026-10-29",
-            "url": "https://docs.m0.org/raw/protocol/pyusdx/bridging.md"
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
           },
           {
             "label": "M0 PYUSDx Portal bridging doc accessed 2026-10-29: pluggable adapter peer/route design published; no signer independence, enforced upgrade delay or numeric route-limit inventory",
