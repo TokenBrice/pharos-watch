@@ -1,4 +1,4 @@
-import { sha256Hex } from "@shared/lib/sha256";
+import { sha256Hex, sha256HexFromBytes } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { isWellFormedDeploymentId } from "@shared/types/deployment-id";
 import {
@@ -8,7 +8,6 @@ import {
   type V9LaneIncidentScreeningResult,
   type V9LaneScreeningFailureReason,
 } from "@shared/types/safety-score-v9-incidents";
-import { keccak256 } from "viem/utils";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
 import type { ChainRpcConfig } from "../chain-registry";
 import {
@@ -20,28 +19,31 @@ import {
   type EvmRpcBatchCall,
   type EvmRpcBatchDetailedResult,
 } from "../evm-rpc";
+import { decodeEvmHexBytes } from "./supply-observation-primitives";
 
 /**
- * Pinned admin-event screening for one exact EVM lane contract.
+ * Pinned admin-event screening for one EVM lane and every contract that can
+ * administer it.
  *
  * The producer reads the frozen `topic0` list below over one caller-pinned,
- * finalized block range and either emits a C3 `V9LaneIncidentCertificate` or a
- * machine-reasoned failure. A partial read never becomes a certificate (ADR-29):
- * a missing certificate keeps the lane's incident state unknown, never "none".
+ * finalized block range for each declared emitter (OApp, endpoint, ULN library)
+ * and either emits a C3 `V9LaneIncidentCertificate` or a machine-reasoned
+ * failure. Every emitter's runtime code must hash to its reviewed SHA-256, and a
+ * partial or malformed read never becomes a certificate (ADR-29): a missing
+ * certificate keeps the lane's incident state unknown, never "none".
  *
  * Every read is one JSON-RPC batch with at most one request in flight, so a lane
  * never contributes more than one connection to the invocation budget. Per-lane
  * cost is `2 + ceil(blocks / pageSpan)` sequential RPC batches (finalized head,
- * block-range pin plus code, then one batch per log page).
+ * block-range pin plus every emitter's code, then one batch per log page).
  */
 
 /**
- * C3 family vocabulary mapped to the exact, frozen ABI signature per family.
- * Frozen 2026-10-29 against LayerZero-v2 `main` (`IMessageLibManager.sol`,
- * `UlnBase.sol`, `SendLibBase.sol`, `OAppCore.sol`, `RateLimiter.sol`) and
- * chainlink-ccip `main` (`pools/TokenPool.sol`). Family names stay the C3
- * vocabulary; where the contract emits a differently named event (for example
- * `SetPeer` -> `PeerSet`) the signature column is authoritative.
+ * Emitted-event family mapped to its exact frozen ABI signature. Frozen
+ * 2026-10-29 against LayerZero-v2 `main` (`IMessageLibManager.sol`,
+ * `UlnBase.sol`, `SendLibBase.sol`, `OAppCore.sol`, `IOAppOptionsType3.sol`,
+ * `OFTCore.sol`, `IOAppPreCrimeSimulator.sol`, `RateLimiter.sol`) and
+ * chainlink-ccip `main` (`pools/TokenPool.sol`).
  */
 export const LANE_ADMIN_EVENT_TOPICS = [
   { family: "OwnershipTransferred", signature: "OwnershipTransferred(address,address)", topic0: "0x8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e0" },
@@ -52,18 +54,21 @@ export const LANE_ADMIN_EVENT_TOPICS = [
   { family: "Upgraded", signature: "Upgraded(address)", topic0: "0xbc7cd75a20ee27fd9adebab32041f755214dbc6bffa90cc0225b39da2e5c2d3b" },
   { family: "AdminChanged", signature: "AdminChanged(address,address)", topic0: "0x7e644d79422f17c01e4894b5f4f588d331ebfa28653d42ae832dc59e38c9798f" },
   { family: "BeaconUpgraded", signature: "BeaconUpgraded(address)", topic0: "0x1cf3b03a6cf19fa2baba4df148e9dcabedea7f8a5c07840e207e5c089be95d3e" },
-  // LayerZero v2 OApp peer and endpoint-delegate controls.
-  { family: "SetPeer", signature: "PeerSet(uint32,bytes32)", topic0: "0x238399d427b947898edb290f5ff0f9109849b1c3ba196a42e35f00c50a54b98b" },
-  { family: "SetDelegate", signature: "DelegateSet(address,address)", topic0: "0x6ee10e9ed4d6ce9742703a498707862f4b00f1396a87195eb93267b3d7983981" },
-  // Chainlink CCIP TokenPool admin config and rate-limit setters.
-  { family: "SetConfig", signature: "DynamicConfigSet(address,address,address)", topic0: "0x3f1036e85d016a93254a0b1415844f79b85424959d90ae5ad51ce8f4533fe701" },
-  { family: "SetRateLimit", signature: "RateLimitConfigured(uint64,bool,(bool,uint128,uint128),(bool,uint128,uint128))", topic0: "0x41f7c8f7cfdad9350aa495e6c54cbbf750a07ab38a9098aed1256e30dd1682bb" },
-  // LayerZero v2 RateLimiter mixin used by OFT contracts.
-  { family: "RateLimitChanged", signature: "RateLimitsChanged((uint32,uint256,uint256)[])", topic0: "0xe888347665897e637801f36c5129f510657276178c89022bc5fa0246dbc19de1" },
-  // LayerZero v2 ULN DVN and executor configuration.
+  // LayerZero OApp admin setters.
+  { family: "PeerSet", signature: "PeerSet(uint32,bytes32)", topic0: "0x238399d427b947898edb290f5ff0f9109849b1c3ba196a42e35f00c50a54b98b" },
+  { family: "DelegateSet", signature: "DelegateSet(address,address)", topic0: "0x6ee10e9ed4d6ce9742703a498707862f4b00f1396a87195eb93267b3d7983981" },
+  // Chainlink CCIP router configuration, rate limits and enforcement.
+  { family: "DynamicConfigSet", signature: "DynamicConfigSet(address,address,address)", topic0: "0x3f1036e85d016a93254a0b1415844f79b85424959d90ae5ad51ce8f4533fe701" },
+  { family: "RateLimitConfigured", signature: "RateLimitConfigured(uint64,bool,(bool,uint128,uint128),(bool,uint128,uint128))", topic0: "0x41f7c8f7cfdad9350aa495e6c54cbbf750a07ab38a9098aed1256e30dd1682bb" },
+  { family: "RateLimitsChanged", signature: "RateLimitsChanged((uint32,uint256,uint256)[])", topic0: "0xe888347665897e637801f36c5129f510657276178c89022bc5fa0246dbc19de1" },
+  // LayerZero enforced options, message inspector and pre-crime hook.
+  { family: "EnforcedOptionSet", signature: "EnforcedOptionSet((uint32,uint16,bytes)[])", topic0: "0xbe4864a8e820971c0247f5992e2da559595f7bf076a21cb5928d443d2a13b674" },
+  { family: "MsgInspectorSet", signature: "MsgInspectorSet(address)", topic0: "0xf0be4f1e87349231d80c36b33f9e8639658eeaf474014dee15a3e6a4d4414197" },
+  { family: "PreCrimeSet", signature: "PreCrimeSet(address)", topic0: "0xd48d879cef83a1c0bdda516f27b13ddb1b3f8bbac1c9e1511bb2a659c2427760" },
+  // LayerZero send/receive ULN DVN and executor configuration.
   { family: "UlnConfigSet", signature: "UlnConfigSet(address,uint32,(uint64,uint8,uint8,uint8,address[],address[]))", topic0: "0x82118522aa536ac0e96cc5c689407ae42b89d592aa133890a01f1509842f5081" },
   { family: "ExecutorConfigSet", signature: "ExecutorConfigSet(address,uint32,(uint32,address))", topic0: "0x779cb2dd9d2bb1be1737d05435d744facbfb84a2a4912e21379d39beddcdc805" },
-  // LayerZero v2 EndpointV2 message-library changes.
+  // LayerZero endpoint message-library changes.
   { family: "DefaultSendLibrarySet", signature: "DefaultSendLibrarySet(uint32,address)", topic0: "0x16aa0f528038ab41019e95bae5b418a50ba8532c5800e3b7ea2f517d3fa625f5" },
   { family: "DefaultReceiveLibrarySet", signature: "DefaultReceiveLibrarySet(uint32,address)", topic0: "0xc16891855cffb4a5ac51ac11864a3f3c96ba816cc45fe686c987ae36277de5ec" },
   { family: "SendLibrarySet", signature: "SendLibrarySet(address,uint32,address)", topic0: "0x4cff966ebee29a156dcb34cf72c1d06231fb1777f6bdf6e8089819232f002b1c" },
@@ -85,10 +90,12 @@ export const LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST = sha256Hex(stableJsonStri
   topics: LANE_ADMIN_EVENT_TOPICS.map((topic) => ({ ...topic })),
 }));
 
-const TOPIC0_BY_FAMILY = new Map<string, V9LaneAdminEventFamily>(
-  LANE_ADMIN_EVENT_TOPICS.map((topic) => [topic.topic0, topic.family]),
+const TOPIC_BY0 = new Map<string, { family: V9LaneAdminEventFamily; signature: string; topic0: string }>(
+  LANE_ADMIN_EVENT_TOPICS.map((topic) => [topic.topic0, { ...topic }]),
 );
-const SCREENED_TOPIC0S = LANE_ADMIN_EVENT_TOPICS.map((topic) => topic.topic0);
+const TOPICS_BY_FAMILY = new Map<string, { family: V9LaneAdminEventFamily; signature: string; topic0: string }>(
+  LANE_ADMIN_EVENT_TOPICS.map((topic) => [topic.family, { ...topic }]),
+);
 
 /** Fallback `eth_getLogs` page span when the serving provider declares none. */
 export const LANE_ADMIN_EVENT_DEFAULT_LOG_PAGE_BLOCKS = 10_000;
@@ -101,6 +108,7 @@ export const LANE_ADMIN_EVENT_MAX_MATERIAL_EVENTS = 1_024;
 const MAX_DETAIL_LENGTH = 240;
 const ADDRESS_PATTERN = /^0x[0-9a-f]{40}$/u;
 const BYTES32_PATTERN = /^0x[0-9a-f]{64}$/u;
+const SHA256_PATTERN = /^[a-f0-9]{64}$/u;
 const QUANTITY_PATTERN = /^0x[0-9a-f]{1,16}$/u;
 const HEX_BYTES_PATTERN = /^0x[0-9a-f]*$/u;
 const PRUNED_MESSAGE_HINTS = ["pruned", "not available", "missing trie node", "history", "oldest", "earliest"] as const;
@@ -109,13 +117,22 @@ const RANGE_MESSAGE_HINTS = [
   "response size", "result set", "exceeds",
 ] as const;
 
+export interface LaneAdminEventEmitter {
+  /** Lowercase emitter contract address (OApp, endpoint, ULN library, ...). */
+  address: `0x${string}`;
+  /** Reviewed runtime code hash (sha256 hex, no prefix); a mismatch fails closed. */
+  expectedRuntimeCodeSha256: string;
+  /** Emitted-event families this emitter can produce. */
+  families: readonly V9LaneAdminEventFamily[];
+}
+
 export interface LaneAdminEventScreeningTarget {
-  /** Exact lane deployment identity (`chain:contractAddress`, already normalized). */
-  deploymentKey: string;
-  /** Reviewed runtime code hash (keccak256 of `eth_getCode`); a mismatch fails closed. */
-  expectedCodeHash: `0x${string}`;
+  /** Lane/controller deployment the certificate closes (`chain:contractAddress`, normalized). */
+  subjectDeploymentKey: string;
   fromBlock: number;
   toBlock: number;
+  /** Every contract whose logs this certificate covers; at least one. */
+  emitters: readonly LaneAdminEventEmitter[];
 }
 
 export interface LaneAdminEventScreeningOptions {
@@ -127,14 +144,23 @@ export interface LaneAdminEventScreeningOptions {
 }
 
 interface ParsedLog {
-  family: V9LaneAdminEventFamily;
   address: string;
+  family: V9LaneAdminEventFamily;
   topics: string[];
   data: string;
   blockNumber: number;
   blockHash: string;
   transactionHash: string;
   logIndex: number;
+}
+
+interface ResolvedTarget {
+  chainId: string;
+  subjectDeploymentKey: string;
+  fromBlock: number;
+  toBlock: number;
+  emitters: Array<{ address: string; expectedRuntimeCodeSha256: string; families: V9LaneAdminEventFamily[] }>;
+  screenedFamilies: V9LaneAdminEventFamily[];
 }
 
 function failedResult(
@@ -186,8 +212,8 @@ function rpcErrorReason(error: { code?: number; message?: string }): V9LaneScree
 }
 
 /**
- * One batch with at most one call; transport failures return null. Abort reasons
- * pass through unchanged so cancellation is never reported as a lane failure.
+ * One batch; transport failures return null. Abort reasons pass through
+ * unchanged so cancellation is never reported as a lane failure.
  */
 async function readBatch(
   chainId: string,
@@ -209,12 +235,13 @@ async function readBatch(
 
 function parseLogEntry(
   value: unknown,
-  lane: { address: string; fromBlock: number; toBlock: number },
+  lane: { addresses: ReadonlySet<string>; familiesByAddress: ReadonlyMap<string, ReadonlySet<string>>; fromBlock: number; toBlock: number },
 ): ParsedLog | null {
   if (!value || typeof value !== "object") return null;
   const entry = value as Record<string, unknown>;
-  if (typeof entry.address !== "string" || !ADDRESS_PATTERN.test(entry.address.toLowerCase())) return null;
-  if (entry.address.toLowerCase() !== lane.address) return null;
+  if (typeof entry.address !== "string") return null;
+  const address = entry.address.toLowerCase();
+  if (!ADDRESS_PATTERN.test(address) || !lane.addresses.has(address)) return null;
   if (entry.removed === true) return null;
   if (!Array.isArray(entry.topics) || entry.topics.length === 0) return null;
   const topics: string[] = [];
@@ -222,8 +249,9 @@ function parseLogEntry(
     if (typeof topic !== "string" || !BYTES32_PATTERN.test(topic)) return null;
     topics.push(topic);
   }
-  const family = TOPIC0_BY_FAMILY.get(topics[0]!);
-  if (family === undefined) return null;
+  const screened = TOPIC_BY0.get(topics[0]!);
+  if (screened === undefined) return null;
+  if (!lane.familiesByAddress.get(address)?.has(screened.family)) return null;
   if (typeof entry.data !== "string" || entry.data.length % 2 !== 0 || !HEX_BYTES_PATTERN.test(entry.data)) return null;
   if (typeof entry.blockHash !== "string" || !BYTES32_PATTERN.test(entry.blockHash)) return null;
   if (typeof entry.transactionHash !== "string" || !BYTES32_PATTERN.test(entry.transactionHash)) return null;
@@ -232,8 +260,8 @@ function parseLogEntry(
   if (blockNumber === null || logIndex === null || logIndex >= 1_000_000) return null;
   if (blockNumber < lane.fromBlock || blockNumber > lane.toBlock) return null;
   return {
-    family,
-    address: lane.address,
+    address,
+    family: screened.family,
     topics,
     data: entry.data,
     blockNumber,
@@ -243,33 +271,52 @@ function parseLogEntry(
   };
 }
 
-function parseTarget(target: LaneAdminEventScreeningTarget): { chainId: string; address: string; expectedCodeHash: string } {
-  if (!isWellFormedDeploymentId(target.deploymentKey)) {
-    throw new TypeError(`Lane screening requires a normalized deployment id: ${target.deploymentKey}`);
+function resolveTarget(target: LaneAdminEventScreeningTarget): ResolvedTarget {
+  if (!isWellFormedDeploymentId(target.subjectDeploymentKey)) {
+    throw new TypeError(`Lane screening requires a normalized subject deployment id: ${target.subjectDeploymentKey}`);
   }
   for (const [label, value] of [["fromBlock", target.fromBlock], ["toBlock", target.toBlock]] as const) {
     if (!Number.isSafeInteger(value) || value < 0) throw new TypeError(`Lane screening ${label} must be a non-negative safe integer`);
   }
   if (target.toBlock < target.fromBlock) throw new TypeError("Lane screening block range must end at or after its start");
-  if (typeof target.expectedCodeHash !== "string" || !BYTES32_PATTERN.test(target.expectedCodeHash.toLowerCase())) {
-    throw new TypeError("Lane screening requires a 32-byte reviewed code hash");
-  }
-  const separator = target.deploymentKey.indexOf(":");
+  if (target.emitters.length === 0) throw new TypeError("Lane screening requires at least one emitter");
+  const addresses = new Set<string>();
+  const screened = new Set<V9LaneAdminEventFamily>();
+  const emitters = target.emitters.map((emitter) => {
+    const address = emitter.address.toLowerCase();
+    if (!ADDRESS_PATTERN.test(address)) throw new TypeError(`Lane screening emitter address is not an EVM address: ${emitter.address}`);
+    if (addresses.has(address)) throw new TypeError(`Lane screening emitter addresses must be unique: ${address}`);
+    addresses.add(address);
+    const expected = emitter.expectedRuntimeCodeSha256.toLowerCase();
+    if (!SHA256_PATTERN.test(expected)) throw new TypeError(`Lane screening emitter ${address} needs a sha256 runtime code hash`);
+    if (emitter.families.length === 0) throw new TypeError(`Lane screening emitter ${address} declares no families`);
+    const families = [...new Set(emitter.families)];
+    for (const family of families) {
+      if (!TOPICS_BY_FAMILY.has(family)) throw new TypeError(`Lane screening family is not in the frozen list: ${family}`);
+      screened.add(family);
+    }
+    return { address, expectedRuntimeCodeSha256: expected, families: families.sort() };
+  });
+  const separator = target.subjectDeploymentKey.indexOf(":");
   return {
-    chainId: target.deploymentKey.slice(0, separator),
-    address: target.deploymentKey.slice(separator + 1),
-    expectedCodeHash: target.expectedCodeHash.toLowerCase(),
+    chainId: target.subjectDeploymentKey.slice(0, separator),
+    subjectDeploymentKey: target.subjectDeploymentKey,
+    fromBlock: target.fromBlock,
+    toBlock: target.toBlock,
+    emitters,
+    screenedFamilies: [...screened].sort(),
   };
 }
 
 /**
- * Screen one exact lane contract over a pinned finalized block range.
+ * Screen one lane over a pinned finalized block range.
  *
  * Fail-closed outcomes (never a certificate): unsupported chain, unavailable
  * RPC, unpinned or future-dated range end, pruned or budget-exhausted log read,
- * malformed log/header data, absent lane code, and observed/reviewed code-hash
- * mismatch. The certificate itself is the C3 wire shape, `evidenceClass`
- * `explorer-events`, with the observed `codeHash` and `logDigest`.
+ * malformed header/log data, absent emitter code, and any emitter whose observed
+ * runtime code hash differs from its reviewed hash. The certificate is the C3
+ * wire shape, `evidenceClass` `explorer-events`, with every screened emitter's
+ * observed code hash and the full read's `logDigest`.
  */
 export async function screenLaneAdminEvents(
   target: LaneAdminEventScreeningTarget,
@@ -279,110 +326,95 @@ export async function screenLaneAdminEvents(
   if (!Number.isSafeInteger(observedAtSec) || observedAtSec < 0) {
     throw new TypeError("Lane screening producer clock must be a non-negative integer");
   }
-  const { chainId, address, expectedCodeHash } = parseTarget(target);
-  const deploymentKey = target.deploymentKey;
+  const resolved = resolveTarget(target);
+  const { chainId, subjectDeploymentKey, fromBlock, toBlock, emitters, screenedFamilies } = resolved;
   const timeoutMs = options.timeoutMs ?? 10_000;
   const readOptions = { chainRpcs: options.chainRpcs, signal: options.signal, timeoutMs };
 
   const chain = options.chainRpcs.get(chainId);
-  if (!chain || chain.type !== "evm") return failedResult(deploymentKey, "unsupported-chain", observedAtSec, `chain:${chainId}`);
-  if (!ADDRESS_PATTERN.test(address)) return failedResult(deploymentKey, "unsupported-chain", observedAtSec, "non-evm-address");
+  if (!chain || chain.type !== "evm") return failedResult(subjectDeploymentKey, "unsupported-chain", observedAtSec, `chain:${chainId}`);
 
   throwIfAborted(options.signal);
   const finalized = await fetchEvmBlockHeader(chainId, "finalized", readOptions);
-  if (!finalized) return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "finalized-head-unavailable");
-  if (target.toBlock > finalized.number) {
-    return failedResult(deploymentKey, "non-finalized-head", observedAtSec, `to-block:${target.toBlock}>finalized:${finalized.number}`);
+  if (!finalized) return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "finalized-head-unavailable");
+  if (toBlock > finalized.number) {
+    return failedResult(subjectDeploymentKey, "non-finalized-head", observedAtSec, `to-block:${toBlock}>finalized:${finalized.number}`);
   }
 
-  const pinCalls: EvmRpcBatchCall[] = [{
-    method: "eth_getBlockByNumber",
-    params: [toBlockTag(target.fromBlock), false],
-  }];
-  if (target.toBlock !== target.fromBlock) {
-    pinCalls.push({ method: "eth_getBlockByNumber", params: [toBlockTag(target.toBlock), false] });
-  }
-  pinCalls.push({ method: "eth_getCode", params: [address, toBlockTag(target.toBlock)] });
+  const pinCalls: EvmRpcBatchCall[] = [{ method: "eth_getBlockByNumber", params: [toBlockTag(fromBlock), false] }];
+  if (toBlock !== fromBlock) pinCalls.push({ method: "eth_getBlockByNumber", params: [toBlockTag(toBlock), false] });
+  const headerCallCount = pinCalls.length;
+  for (const emitter of emitters) pinCalls.push({ method: "eth_getCode", params: [emitter.address, toBlockTag(toBlock)] });
 
   const pin = await readBatch(chainId, pinCalls, { ...readOptions, observedHeadBlock: finalized.number });
-  if (!pin) return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "block-range-pin-unavailable");
-  const fromHeader = parseBlockHeader(pin.results[0], target.fromBlock);
-  const toHeader = target.toBlock === target.fromBlock
-    ? fromHeader
-    : parseBlockHeader(pin.results[1], target.toBlock);
-  const codeIndex = pinCalls.length - 1;
-  const codeError = pin.errors.find((error) => error.index === codeIndex);
-  const fromError = pin.errors.find((error) => error.index === 0);
-  const toError = target.toBlock === target.fromBlock
-    ? undefined
-    : pin.errors.find((error) => error.index === 1);
-  if (fromError || toError) {
-    const error = fromError ?? toError!;
-    return failedResult(deploymentKey, rpcErrorReason(error), observedAtSec, `header:${error.code ?? "?"}:${error.message ?? ""}`);
+  if (!pin) return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "block-range-pin-unavailable");
+  const fromHeader = parseBlockHeader(pin.results[0], fromBlock);
+  const toHeader = toBlock === fromBlock ? fromHeader : parseBlockHeader(pin.results[1], toBlock);
+  for (const error of pin.errors) {
+    if (error.index < headerCallCount) {
+      return failedResult(subjectDeploymentKey, rpcErrorReason(error), observedAtSec, `header:${error.code ?? "?"}:${error.message ?? ""}`);
+    }
+    return failedResult(subjectDeploymentKey, rpcErrorReason(error), observedAtSec, `code:${emitters[error.index - headerCallCount]?.address ?? "?"}:${error.code ?? "?"}`);
   }
-  if (!fromHeader || !toHeader) return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "malformed-block-header");
+  if (!fromHeader || !toHeader) return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "malformed-block-header");
   if (toHeader.timestamp < fromHeader.timestamp) {
-    return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "window-clock-inversion");
+    return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, "window-clock-inversion");
   }
   if (toHeader.timestamp > observedAtSec) {
-    return failedResult(deploymentKey, "non-finalized-head", observedAtSec, "window-end-in-future");
+    return failedResult(subjectDeploymentKey, "non-finalized-head", observedAtSec, "window-end-in-future");
   }
-  if (codeError) {
-    return failedResult(deploymentKey, rpcErrorReason(codeError), observedAtSec, `code:${codeError.code ?? "?"}:${codeError.message ?? ""}`);
-  }
-  const code = pin.results[codeIndex];
-  if (code === "0x") return failedResult(deploymentKey, "missing-controller", observedAtSec, "no-runtime-code");
-  if (typeof code !== "string" || code.length % 2 !== 0 || !/^0x[0-9a-f]+$/u.test(code)) {
-    return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "malformed-runtime-code");
-  }
-  const observedCodeHash = keccak256(code as `0x${string}`);
-  if (observedCodeHash !== expectedCodeHash) {
-    return failedResult(deploymentKey, "code-hash-mismatch", observedAtSec, `observed:${observedCodeHash}`);
+
+  const observedCodeHashes = new Map<string, string>();
+  for (let index = 0; index < emitters.length; index += 1) {
+    const emitter = emitters[index]!;
+    const code = pin.results[headerCallCount + index];
+    if (code === "0x") return failedResult(subjectDeploymentKey, "missing-controller", observedAtSec, emitter.address);
+    if (typeof code !== "string" || code.length % 2 !== 0 || !HEX_BYTES_PATTERN.test(code)) {
+      return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, `code:${emitter.address}`);
+    }
+    const runtimeBytes = decodeEvmHexBytes(code);
+    if (!runtimeBytes) return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, `code:${emitter.address}`);
+    const observed = sha256HexFromBytes(runtimeBytes);
+    if (observed !== emitter.expectedRuntimeCodeSha256) {
+      return failedResult(subjectDeploymentKey, "code-hash-mismatch", observedAtSec, `${emitter.address}:${observed}`);
+    }
+    observedCodeHashes.set(emitter.address, observed);
   }
 
   const eligible = usableCcipRpcEndpoints(chainId, options.chainRpcs, {
     kind: "logs",
-    fromBlock: target.fromBlock,
-    toBlock: target.fromBlock,
+    fromBlock,
+    toBlock: fromBlock,
     observedHeadBlock: finalized.number,
   });
-  if (eligible.length === 0) {
-    return failedResult(deploymentKey, "pruned-range", observedAtSec, "range-outside-retained-logs");
-  }
+  if (eligible.length === 0) return failedResult(subjectDeploymentKey, "pruned-range", observedAtSec, "range-outside-retained-logs");
   const declaredSpan = eligible[0]?.maxLogBlockSpan;
   if (declaredSpan !== undefined && (!Number.isSafeInteger(declaredSpan) || declaredSpan < 1)) {
-    return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "invalid-log-span");
+    return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "invalid-log-span");
   }
 
+  const addresses = emitters.map((emitter) => emitter.address);
+  const familiesByAddress = new Map(emitters.map((emitter) => [emitter.address, new Set<string>(emitter.families)] as const));
+  const logTopics = [...new Set(screenedFamilies.map((family) => TOPICS_BY_FAMILY.get(family)!.topic0))];
   const logs: ParsedLog[] = [];
   let pageSpan = declaredSpan ?? LANE_ADMIN_EVENT_DEFAULT_LOG_PAGE_BLOCKS;
-  let cursor = target.fromBlock;
+  let cursor = fromBlock;
   let pages = 0;
   let lastBlockNumber = -1;
   let lastLogIndex = -1;
   let sawRangeRefusal = false;
-  while (cursor <= target.toBlock) {
+  while (cursor <= toBlock) {
     throwIfAborted(options.signal);
     if (pages >= LANE_ADMIN_EVENT_MAX_LOG_PAGES) {
-      return failedResult(
-        deploymentKey,
-        sawRangeRefusal ? "pruned-range" : "rpc-unavailable",
-        observedAtSec,
-        "log-read-budget-exhausted",
-      );
+      return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, `pages:${pages};from:${cursor}`);
     }
-    const end = Math.min(target.toBlock, cursor + pageSpan - 1);
+    const end = Math.min(toBlock, cursor + pageSpan - 1);
     pages += 1;
     const batch = await readBatch(chainId, [{
       method: "eth_getLogs",
-      params: [{
-        address,
-        fromBlock: toBlockTag(cursor),
-        toBlock: toBlockTag(end),
-        topics: [SCREENED_TOPIC0S],
-      }],
+      params: [{ address: addresses, fromBlock: toBlockTag(cursor), toBlock: toBlockTag(end), topics: [logTopics] }],
     }], { ...readOptions, observedHeadBlock: finalized.number });
-    if (!batch) return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, `log-page:${cursor}-${end}`);
+    if (!batch) return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, `log-page:${cursor}-${end}`);
 
     const error = batch.errors[0];
     if (error) {
@@ -392,63 +424,71 @@ export async function screenLaneAdminEvents(
         pageSpan = Math.max(1, Math.floor(pageSpan / 2));
         continue;
       }
-      return failedResult(deploymentKey, rpcErrorReason(error), observedAtSec, `log-error:${error.code ?? "?"}:${error.message ?? ""}`);
+      return failedResult(subjectDeploymentKey, rpcErrorReason(error), observedAtSec, `log-error:${error.code ?? "?"}:${error.message ?? ""}`);
     }
 
     const raw = batch.results[0];
-    if (!Array.isArray(raw)) return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "malformed-log-result");
+    if (!Array.isArray(raw)) return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, "malformed-log-result");
     if (raw.length > LANE_ADMIN_EVENT_MAX_EVENTS_PER_PAGE) {
       if (end > cursor && pages < LANE_ADMIN_EVENT_MAX_LOG_PAGES) {
         sawRangeRefusal = true;
         pageSpan = Math.max(1, Math.floor(pageSpan / 2));
         continue;
       }
-      return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "log-page-capacity");
+      return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, `page-capacity:${cursor}-${end}`);
     }
 
     const pageLogs: ParsedLog[] = [];
     for (const value of raw) {
-      const log = parseLogEntry(value, { address, fromBlock: cursor, toBlock: end });
-      if (!log) return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, `malformed-log-entry:${cursor}-${end}`);
+      const log = parseLogEntry(value, { addresses: new Set(addresses), familiesByAddress, fromBlock: cursor, toBlock: end });
+      if (!log) return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, `malformed-log-entry:${cursor}-${end}`);
       pageLogs.push(log);
     }
     pageLogs.sort((left, right) => left.blockNumber - right.blockNumber || left.logIndex - right.logIndex);
     for (const log of pageLogs) {
       const position = log.blockNumber * 1_000_000 + log.logIndex;
       if (position <= lastBlockNumber * 1_000_000 + lastLogIndex) {
-        return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, `log-duplicate:${log.blockNumber}:${log.logIndex}`);
+        return failedResult(subjectDeploymentKey, "malformed-read", observedAtSec, `log-duplicate:${log.blockNumber}:${log.logIndex}`);
       }
       lastBlockNumber = log.blockNumber;
       lastLogIndex = log.logIndex;
       logs.push(log);
       if (logs.length > LANE_ADMIN_EVENT_MAX_MATERIAL_EVENTS) {
-        return failedResult(deploymentKey, "rpc-unavailable", observedAtSec, "material-event-capacity");
+        return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, "material-event-capacity");
       }
     }
     cursor = end + 1;
   }
+  if (sawRangeRefusal && logs.length === 0 && pages >= LANE_ADMIN_EVENT_MAX_LOG_PAGES) {
+    return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, "log-read-budget");
+  }
 
   const eventCounts: Partial<Record<V9LaneAdminEventFamily, number>> = {};
-  for (const topic of LANE_ADMIN_EVENT_TOPICS) eventCounts[topic.family] = 0;
+  for (const family of screenedFamilies) eventCounts[family] = 0;
   for (const log of logs) eventCounts[log.family] = (eventCounts[log.family] ?? 0) + 1;
 
   const logDigest = sha256Hex(stableJsonStringifyV1({
-    domain: "safety-score-v9.lane-admin-event-log.v1",
+    domain: "safety-score-v9.lane-admin-event-log.v2",
     evidenceClass: V9_LANE_SCREENING_EVIDENCE_CLASS,
-    deploymentKey,
-    codeHash: observedCodeHash,
+    subjectDeploymentKey,
     screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
-    fromBlock: target.fromBlock,
-    toBlock: target.toBlock,
+    fromBlock,
+    toBlock,
     fromBlockHash: fromHeader.hash,
     fromBlockTimestamp: fromHeader.timestamp,
     toBlockHash: toHeader.hash,
     toBlockTimestamp: toHeader.timestamp,
     finalizedHeadNumber: finalized.number,
     finalizedHeadHash: finalized.hash,
+    emitters: emitters.map((emitter) => ({
+      address: emitter.address,
+      expectedRuntimeCodeSha256: emitter.expectedRuntimeCodeSha256,
+      runtimeCodeSha256: observedCodeHashes.get(emitter.address),
+      families: emitter.families,
+    })),
     logs: logs.map((log) => ({
-      family: log.family,
       address: log.address,
+      family: log.family,
       topics: log.topics,
       data: log.data,
       blockNumber: log.blockNumber,
@@ -460,22 +500,29 @@ export async function screenLaneAdminEvents(
 
   const certificate = V9LaneIncidentCertificateSchema.parse({
     schemaVersion: 1,
-    certificateId: `lane-cert:${chainId}:${address}:${target.fromBlock}-${target.toBlock}:${logDigest.slice(0, 12)}`,
+    certificateId: `lane-cert:${chainId}:${emitters[0]!.address}:${fromBlock}-${toBlock}:${logDigest.slice(0, 12)}`,
     evidenceClass: V9_LANE_SCREENING_EVIDENCE_CLASS,
-    deploymentKey,
-    codeHash: observedCodeHash,
-    fromBlock: target.fromBlock,
-    toBlock: target.toBlock,
+    subjectDeploymentKey,
+    fromBlock,
+    toBlock,
+    toBlockHash: toHeader.hash,
     windowStartSec: fromHeader.timestamp,
     windowEndSec: toHeader.timestamp,
     observedAtSec,
     screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
     logDigest,
-    screenedTopics: LANE_ADMIN_EVENT_TOPICS.map((topic) => ({ family: topic.family, topic0: topic.topic0 })),
+    emitters: emitters.map((emitter) => ({
+      address: emitter.address,
+      expectedRuntimeCodeSha256: emitter.expectedRuntimeCodeSha256,
+      runtimeCodeSha256: observedCodeHashes.get(emitter.address)!,
+      families: emitter.families,
+    })),
+    screenedTopics: screenedFamilies.map((family) => ({ ...TOPICS_BY_FAMILY.get(family)! })),
     eventCounts,
     finding: logs.length > 0 ? "material-event" : "no-material-admin-event",
     ...(logs.length === 0 ? {} : {
       materialEvents: logs.map((log) => ({
+        address: log.address,
         family: log.family,
         transactionHash: log.transactionHash,
         blockNumber: log.blockNumber,
