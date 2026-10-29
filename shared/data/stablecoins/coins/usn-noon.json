@@ -8,7 +8,7 @@
     "governance": "centralized-dependent",
     "rwa": true
   },
-  "collateral": "USN is minted 1:1 against USDT or USDC, but the deposited assets are redeployed: on Accountable's 2026-09-22 snapshot the reserve composition is 62.0% Fasanara FTAC private credit, 13.4% funding-rate arbitrage, 9.9% tokenized Treasury bills held through Dinari USD+, 5.4% undeployed USDC/USDT, 4.5% Janus Henderson JAAA CLOs, and 4.8% Morpho and Euler lending.",
+  "collateral": "USN is minted 1:1 against USDT or USDC, but the deposited assets are redeployed: on Accountable's 2026-10-27 snapshot the reserve composition is 64.4% Fasanara FTAC private credit, 22.8% funding-rate arbitrage, 4.6% Janus Henderson JAAA CLOs, 3.1% undeployed USDC/USDT, 2.5% Morpho and 2.5% Euler lending, and a residual 0.01% Treasury-bill position.",
   "pegMechanism": "Permissioned institutional mint and redeem path for USN; raw reserve returns accrue to sUSN holders rather than base USN holders.",
   "mechanismArchetype": "rwa-credit-fund",
   "llamaId": "230",
