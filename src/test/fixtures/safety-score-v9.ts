@@ -7,7 +7,8 @@ import {
   type ReportCardsV9ResponseFixturePreset,
   type ReportCardsV9ResponseFixtureOverrides,
 } from "@shared/test-utils/report-cards-v9";
-import type { ReportCardsV9NextResponse, ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
+import type { ReportCardsV9NextResponse } from "@shared/types/report-cards-v9-next";
 import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard } from "@shared/types/safety-score-v9-public";
 
 const A64 = "a".repeat(64);

@@ -2,13 +2,16 @@ import {
   buildReportCardsV9DependencyGraph,
   REPORT_CARDS_V9_NEXT_RESPONSE_SCHEMA_VERSION,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
-  ReportCardsV9NextResponseSchema,
-  type ReportCardsV9NextResponse,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
+import {
+  ReportCardsV9NextResponseSchema,
+  type ReportCardsV9NextResponse,
+} from "@shared/types/report-cards-v9-next";
 import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { scoreToGrade, V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
-import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard, V9OpenEvidence } from "@shared/types/safety-score-v9-public";
+import type { V9OpenEvidence } from "@shared/types/safety-score-v9-open-evidence";
+import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard } from "@shared/types/safety-score-v9-public";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
 type V9PillarKey = keyof SafetyScoreV9CurrentCard["pillars"];

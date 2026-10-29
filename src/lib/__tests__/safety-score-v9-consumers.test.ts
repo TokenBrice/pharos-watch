@@ -227,6 +227,20 @@ describe("V9 safety consumer projections", () => {
     expect(result.value.schemaVersion).toBe(8);
     expect(result.value).not.toHaveProperty("openEvidence");
     expect(result.value.cards).toEqual(next.cards);
+
+    const {
+      openEvidence: _openEvidence,
+      openEvidenceUnavailableReason: _openEvidenceUnavailableReason,
+      ...pairless
+    } = next;
+    expect(resolveV9ConsumerResponse(pairless, next.safetyScoreIdentity)).toEqual({
+      status: "unavailable",
+      reason: "invalid-v9-response",
+    });
+    expect(resolveV9ConsumerResponse({ ...next, schemaVersion: 10 }, next.safetyScoreIdentity)).toEqual({
+      status: "unavailable",
+      reason: "invalid-v9-response",
+    });
   });
 
   it("uses explicit V9 grade classes and three-pillar table rows", () => {

@@ -37,6 +37,7 @@ describe("accepted report-cards response contract", () => {
   it("keeps the wire version and the report9-only carriers on the accepted payload", () => {
     const parsed = ReportCardsV9AcceptedResponseSchema.parse(report9);
     expect(parsed.schemaVersion).toBe(9);
+    if (parsed.schemaVersion !== 9) throw new Error("expected report9");
     expect(parsed.openEvidence).toBeNull();
     expect(parsed.openEvidenceUnavailableReason).toBe("publication-predates-open-evidence");
   });

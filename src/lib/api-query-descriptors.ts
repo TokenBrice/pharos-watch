@@ -401,7 +401,7 @@ export const FRONTEND_API_QUERY_DESCRIPTORS = {
     },
     "meta",
     createLazySchema<ReportCardsV9CurrentResponse>(
-      async () => (await import("@shared/types/report-cards-v9-accepted")).ReportCardsV9ReaderResponseSchema,
+      async () => (await import("@shared/types/report-cards-v9")).ReportCardsV9BrowserResponseSchema,
     ),
   ),
   // Lazy schemas preserve the report family client chunk boundary.

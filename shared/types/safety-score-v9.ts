@@ -104,34 +104,6 @@ export const V9_REASON_CODES = [
 export const V9ReasonCodeSchema = z.enum(V9_REASON_CODES);
 export type V9ReasonCode = z.infer<typeof V9ReasonCodeSchema>;
 
-/**
- * Documentation-class vocabulary (R5, one authority): an open C/U compiled gap
- * whose resolution cannot materially move a published score.
- *
- * Decision B: nothing declared here may be read by scoring. The class never
- * changes `evidenceLevel`, `limitedEvidenceCauses`, `limitingCauseGapIds`,
- * reason treatment, cause, responsibility, binding, mixture weights, caps or
- * gap identity. Consumers are limited to counting
- * (`shared/lib/safety-score-v9/open-questions.ts`), public labels, the
- * evidence-gap registry band and the `openEvidence.byCard[].documentationOnlyLimited`
- * card annotation, which is derived from the unchanged witnesses.
- */
-export const V9DocumentationReasonSchema = z.enum([
-  // 3a: `causeScope.factorKey` is `keyCustody`, which no scored component reads.
-  "no-scoring-path",
-  // 3c: mint reconciliation/supervision unknown, a credit the mint grade already withholds.
-  "unknown-scores-as-no-credit",
-  // 3b: policy treatment is `diagnostic`; vetoed when the datum alone gates a pillar.
-  "unscored-diagnostic",
-  // 3d: `incomplete-dex-route-coverage` portfolio label; never a limiting witness.
-  "coverage-label",
-  // 3e: deployment share below `documentationImmaterialSharePct` and non-binding.
-  "immaterial-deployment",
-  // 3f: reserve exposure weight below `reserveDustBookSharePct` of the reserve book.
-  "reserve-dust",
-]);
-export type V9DocumentationReason = z.infer<typeof V9DocumentationReasonSchema>;
-
 const IsoTimestampSchema = z.string().datetime({ offset: true });
 
 function exactEnumScoreMapSchema<const Value extends string>(values: readonly Value[]) {

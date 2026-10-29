@@ -2,9 +2,9 @@ import { z } from "zod";
 import {
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   ReportCardsV9CurrentResponseSchema,
-  ReportCardsV9NextResponseSchema,
   type ReportCardsV9CurrentResponse,
 } from "./report-cards-v9";
+import { ReportCardsV9NextResponseSchema } from "./report-cards-v9-next";
 
 /**
  * Every in-repo reader of `GET /api/report-cards/v9` admits both wire contracts
