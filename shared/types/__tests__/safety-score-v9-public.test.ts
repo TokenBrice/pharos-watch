@@ -5,6 +5,7 @@ import {
   SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9PreviousResponseSchema,
   SafetyScoreV9ResponseSchema,
+  V9OpenEvidenceByCardSchema,
   V9OpenQuestionBucketSchema,
   V9QuestionKeySchema,
   type SafetyScoreV9CurrentCard,
@@ -879,29 +880,38 @@ describe("v10.05 public compiled process boundary", () => {
 function openEvidence(): V9OpenEvidence {
   return {
     semantics: "open-question-v1",
-    totals: { questions: 4, open: 1, issuer: 2, documentation: 1, obligations: 9 },
+    totals: { questions: 3, open: 1, issuer: 2, documentation: 0, obligations: 9 },
     owners: [{ responsibility: "unresearched", questions: 1, obligations: 3 }],
     reasons: [
-      { code: "unresolved-control-identity", bucket: "open", questions: 1, obligations: 3 },
       { code: "material-reserve-slice-unstructured", bucket: "issuer", questions: 2, obligations: 5 },
+      { code: "unresolved-control-identity", bucket: "open", questions: 1, obligations: 3 },
     ],
-    documentation: {
-      questions: 1,
-      datums: 1,
-      facts: 1,
-      reasons: [{ reason: "no-scoring-path", datums: 1 }],
-    },
-    issuer: { questions: 2, assets: 2, oldestReviewedAtSec: 1_790_000_000, newestReviewedAtSec: 1_795_000_000 },
+    documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+    issuer: { questions: 2, assets: 2, oldestReviewedAtSec: 90, newestReviewedAtSec: 95 },
     byCard: [{
       id: "asset",
-      openQuestionsCarried: 4,
-      inheritedOpenQuestionsCarried: 1,
-      openObligationsCarried: 8,
-      documentationObligationsCarried: 1,
-      documentationOnlyLimited: ["backing", "control", "exit"],
-      issuerNondisclosureReviewedAtSec: 1_790_000_000,
+      openBucketQuestionsCarried: 1,
+      inheritedOpenBucketQuestionsCarried: 1,
+      openBucketObligationsCarried: 3,
+      documentationObligationsCarried: 0,
+      issuerNondisclosureReviewedAtSec: 90,
     }],
   };
+}
+
+/** A card whose Backing pillar is limited with a witness, plus its documentation gap set. */
+function annotatedResponse() {
+  const response = boundedResponse();
+  response.documentationCauseGaps = ["asset:gap:mechanism"];
+  const evidence = openEvidence();
+  evidence.documentation = {
+    questions: 1, datums: 1, facts: 1, reasons: [{ reason: "no-scoring-path", datums: 1 }],
+  };
+  evidence.totals = { ...evidence.totals, questions: 4, open: 1, documentation: 1 };
+  evidence.byCard[0]!.documentationOnlyLimited = ["backing"];
+  evidence.byCard[0]!.documentationObligationsCarried = 1;
+  response.openEvidence = evidence;
+  return response;
 }
 
 describe("open-evidence publication contract", () => {
@@ -918,6 +928,9 @@ describe("open-evidence publication contract", () => {
     expect(SafetyScoreV9PreviousResponseSchema.safeParse(previous).success).toBe(true);
     expect(SafetyScoreV9PreviousResponseSchema.safeParse({ ...previous, openEvidence: openEvidence() }).success).toBe(false);
     expect(SafetyScoreV9PreviousResponseSchema.safeParse({ ...previous, schemaVersion: 8 }).success).toBe(false);
+    expect(SafetyScoreV9PreviousResponseSchema.safeParse({
+      ...previous, documentationCauseGaps: ["asset:gap:mechanism"],
+    }).success).toBe(false);
   });
 
   it("rejects buckets that do not sum to the question total and any negative or fractional count", () => {
@@ -930,7 +943,7 @@ describe("open-evidence publication contract", () => {
     for (const mutate of [
       (candidate: V9OpenEvidence) => { candidate.totals.obligations = -1; },
       (candidate: V9OpenEvidence) => { candidate.documentation.facts = -1; },
-      (candidate: V9OpenEvidence) => { candidate.byCard[0]!.openObligationsCarried = 1.5; },
+      (candidate: V9OpenEvidence) => { candidate.byCard[0]!.openBucketObligationsCarried = 1.5; },
     ]) {
       const response = currentResponse();
       const invalid = openEvidence();
@@ -940,46 +953,75 @@ describe("open-evidence publication contract", () => {
     }
   });
 
-  it("publishes the three-bucket vocabulary and rejects an unknown reason bucket", () => {
+  it("publishes the three-bucket vocabulary and rejects an unknown or unsorted reason bucket", () => {
     for (const bucket of ["open", "issuer", "documentation"] as const) {
       expect(V9OpenQuestionBucketSchema.safeParse(bucket).success).toBe(true);
     }
     expect(V9OpenQuestionBucketSchema.safeParse("closed").success).toBe(false);
 
-    const response = currentResponse();
+    const unknown = currentResponse();
     const evidence = openEvidence();
     Object.assign(evidence.reasons[0]!, { bucket: "closed" });
-    response.openEvidence = evidence;
-    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
+    unknown.openEvidence = evidence;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(unknown).success).toBe(false);
+
+    const unsorted = currentResponse();
+    const reversed = openEvidence();
+    reversed.reasons = [...reversed.reasons].reverse();
+    unsorted.openEvidence = reversed;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(unsorted).success).toBe(false);
   });
 
-  it("keeps documentationOnlyLimited optional and restricted to the three pillars", () => {
-    const response = currentResponse();
-    const evidence = openEvidence();
-    delete evidence.byCard[0]!.documentationOnlyLimited;
-    response.openEvidence = evidence;
-    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
+  it("keeps documentationOnlyLimited optional and rejects empty, unknown or duplicate pillars", () => {
+    const plain = currentResponse();
+    plain.openEvidence = openEvidence();
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(plain).success).toBe(true);
+    expect(SafetyScoreV9CurrentResponseSchema.parse(plain).openEvidence!.byCard[0]!.documentationOnlyLimited)
+      .toBeUndefined();
 
     for (const invalid of [[], ["peg"], ["backing", "backing"]]) {
-      const invalidated = currentResponse();
-      const candidate = openEvidence();
-      Object.assign(candidate.byCard[0]!, { documentationOnlyLimited: invalid });
-      invalidated.openEvidence = candidate;
-      expect(SafetyScoreV9CurrentResponseSchema.safeParse(invalidated).success).toBe(false);
+      expect(V9OpenEvidenceByCardSchema.safeParse({
+        id: "asset",
+        openBucketQuestionsCarried: 0,
+        inheritedOpenBucketQuestionsCarried: 0,
+        openBucketObligationsCarried: 0,
+        documentationObligationsCarried: 0,
+        documentationOnlyLimited: invalid,
+      }).success).toBe(false);
     }
 
-    const canonical = currentResponse();
-    const unsorted = openEvidence();
-    unsorted.byCard[0]!.documentationOnlyLimited = ["exit", "backing"];
-    canonical.openEvidence = unsorted;
-    expect(SafetyScoreV9CurrentResponseSchema.parse(canonical).openEvidence!.byCard[0]!.documentationOnlyLimited)
-      .toEqual(["backing", "exit"]);
+    const canonical = V9OpenEvidenceByCardSchema.parse({
+      id: "asset",
+      openBucketQuestionsCarried: 0,
+      inheritedOpenBucketQuestionsCarried: 0,
+      openBucketObligationsCarried: 0,
+      documentationObligationsCarried: 0,
+      documentationOnlyLimited: ["exit", "backing"],
+    });
+    expect(canonical.documentationOnlyLimited).toEqual(["backing", "exit"]);
+  });
+
+  it("fails closed when the annotation is not backed by a limited witness and a gap set", () => {
+    const adequate = annotatedResponse();
+    adequate.openEvidence!.byCard[0]!.documentationOnlyLimited = ["exit"];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(adequate).success).toBe(false);
+
+    const noGapSet = boundedResponse();
+    noGapSet.openEvidence = annotatedResponse().openEvidence;
+    delete noGapSet.documentationCauseGaps;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(noGapSet).success).toBe(false);
+
+    const unresolved = annotatedResponse();
+    unresolved.documentationCauseGaps = ["asset:gap:missing"];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(unresolved).success).toBe(false);
+
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(annotatedResponse()).success).toBe(true);
   });
 
   it("reconciles per-card carries, published card membership and the issuer review window", () => {
     const inherited = currentResponse();
     const evidence = openEvidence();
-    evidence.byCard[0]!.inheritedOpenQuestionsCarried = 5;
+    evidence.byCard[0]!.inheritedOpenBucketQuestionsCarried = 2;
     inherited.openEvidence = evidence;
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(inherited).success).toBe(false);
 
@@ -997,9 +1039,16 @@ describe("open-evidence publication contract", () => {
 
     const reversed = currentResponse();
     const window = openEvidence();
-    window.issuer.newestReviewedAtSec = 1_700_000_000;
+    window.issuer.newestReviewedAtSec = 80;
     reversed.openEvidence = window;
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(reversed).success).toBe(false);
+
+    const futureDated = currentResponse();
+    const future = openEvidence();
+    future.issuer.oldestReviewedAtSec = 1_900_000_000;
+    future.issuer.newestReviewedAtSec = 1_900_000_000;
+    futureDated.openEvidence = future;
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(futureDated).success).toBe(false);
   });
 
   it("requires root-asset question keys with a supported scope kind", () => {
@@ -1017,33 +1066,35 @@ describe("open-evidence publication contract", () => {
     }
   });
 
-  it("carries the publication-level documentation gap union as an optional canonical list", () => {
-    const response = currentResponse();
-    delete response.documentationCauseGaps;
+  it("carries the publication documentation gap set only when it resolves", () => {
+    const response = annotatedResponse();
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
-    response.documentationCauseGaps = ["b:gap:x", "a:gap:y"];
-    expect(SafetyScoreV9CurrentResponseSchema.parse(response).documentationCauseGaps).toEqual(["a:gap:y", "b:gap:x"]);
+    response.documentationCauseGaps = ["external:gap:absent"];
+    expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(false);
   });
 
   it("accepts the optional documentation carrier and rejects critical or over-counted documentation facts", () => {
     const response = currentResponse();
+    response.openEvidence = openEvidence();
     const evidence = response.cards[0]!.scoreTrace.evidenceResponsibility;
     const documentation = {
       semantics: "documentation-class-v1" as const,
       totalFactCount: 0,
-      criticalFactCount: 0,
+      criticalFactCount: 0 as const,
       summaries: [],
-      gapIds: ["asset:gap:custody"],
     };
     evidence.documentation = documentation;
     evidence.summaries[7]!.documentationFactCount = 0;
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(response).success).toBe(true);
 
     const critical = currentResponse();
-    critical.cards[0]!.scoreTrace.evidenceResponsibility.documentation = { ...documentation, criticalFactCount: 1 };
+    critical.openEvidence = openEvidence();
+    critical.cards[0]!.scoreTrace.evidenceResponsibility.documentation =
+      { ...documentation, criticalFactCount: 1 as unknown as 0 };
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(critical).success).toBe(false);
 
     const overCounted = currentResponse();
+    overCounted.openEvidence = openEvidence();
     overCounted.cards[0]!.scoreTrace.evidenceResponsibility.summaries[7]!.documentationFactCount = 1;
     expect(SafetyScoreV9CurrentResponseSchema.safeParse(overCounted).success).toBe(false);
   });

@@ -815,11 +815,34 @@ export const V9ReviewedIncidentRegistryEnvelopeSchema = z.object({
   negativeReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()).optional(),
 }).strict();
 
+/**
+ * Authored registry rows are attributed before expansion. Provider-wide reviews
+ * are the only kind without an asset: `assetId` is required for every
+ * asset-scoped authored review and forbidden on a provider row, so the two
+ * identities cannot be confused at the authored boundary.
+ */
+export const V9AuthoredNegativeIncidentReviewRowSchema = z
+  .object({
+    scope: z.object({ kind: CanonicalTextSchema }).passthrough().optional(),
+  })
+  .passthrough()
+  .superRefine((row, ctx) => {
+    if (row.scope?.kind === "provider") {
+      if ("assetId" in row) {
+        issue(ctx, ["assetId"], "A provider-wide review must not name an asset");
+      }
+      return;
+    }
+    if (typeof row.assetId !== "string") {
+      issue(ctx, ["assetId"], "An asset-scoped authored review requires its assetId");
+    }
+  });
+
 /** Authored references are expanded before the strict, unchanged review schemas above. */
 export const V9AuthoredIncidentRegistryEnvelopeSchema = V9ReviewedIncidentRegistryEnvelopeSchema.extend({
   sourceObservations: z.array(z.object({ id: CanonicalKeySchema, value: z.unknown() }).strict()),
   searchedSurfaceObservations: z.array(z.object({ id: CanonicalKeySchema, value: z.unknown() }).strict()),
-  negativeReviews: z.array(z.object({ assetId: CanonicalTextSchema }).passthrough()),
+  negativeReviews: z.array(V9AuthoredNegativeIncidentReviewRowSchema),
 });
 
 /** Pure projection of an admitted positive incident, retaining its original witness. */

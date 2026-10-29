@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import incidentReviewsAsset from "../../data/safety-score-v9/incident-reviews-v1.json";
 import {
   V9DeploymentControlFactBaseSchema,
   V9DeploymentControlFactV2Schema,
@@ -6,6 +7,7 @@ import {
 } from "../safety-score-v9-facts";
 import {
   V9AuthoredNegativeIncidentReviewSchema,
+  V9AuthoredIncidentRegistryEnvelopeSchema,
   V9IssuerSurfaceIncidentReviewSchema,
   V9NegativeIncidentReviewSchema,
   V9ProviderIncidentReviewSchema,
@@ -408,5 +410,39 @@ describe("incident coverage closure (M-8)", () => {
     expect(valid({}, [{ controlId: "*", certificateId: CERTIFICATE_ID }])).toBe(true);
     expect(valid({}, refs)).toBe(false);
     expect(V9DeploymentControlFactV2Schema.safeParse({ ...CONTROL_FACT_V2, incidentCoverage: { ...CLOSURE_WITNESSES, certificateRefs: refs } }).success).toBe(false);
+  });
+});
+
+describe("authored registry envelope attribution (provider-wide rows)", () => {
+  const envelope = {
+    schemaVersion: 1,
+    incidents: [],
+    negativeReviews: [],
+    sourceObservations: [],
+    searchedSurfaceObservations: [],
+  } as const;
+  const providerRow = {
+    reviewId: "provider-review:layerzero:2026-10-07",
+    scope: { kind: "provider", providerKey: "layerzero", surface: "dvn-set", coveredRoutes: [{ assetId: ASSET, routeId: ROUTE_ETHEREUM }] },
+    reviewedAt: "2026-10-07T14:00:00Z",
+  } as const;
+
+  it("admits a provider-wide row without assetId and rejects one that names an asset", () => {
+    expect(V9AuthoredIncidentRegistryEnvelopeSchema.safeParse({ ...envelope, negativeReviews: [providerRow] }).success).toBe(true);
+    expect(V9AuthoredIncidentRegistryEnvelopeSchema.safeParse({
+      ...envelope, negativeReviews: [{ ...providerRow, assetId: ASSET }],
+    }).success).toBe(false);
+  });
+
+  it("still requires assetId on asset-scoped rows and leaves the authored registry unchanged", () => {
+    for (const scope of [{ kind: "control" }, { kind: "deployment" }, { kind: "issuer-surface" }]) {
+      expect(V9AuthoredIncidentRegistryEnvelopeSchema.safeParse({
+        ...envelope, negativeReviews: [{ reviewId: "fixture-row", scope }],
+      }).success).toBe(false);
+      expect(V9AuthoredIncidentRegistryEnvelopeSchema.safeParse({
+        ...envelope, negativeReviews: [{ reviewId: "fixture-row", assetId: ASSET, scope }],
+      }).success).toBe(true);
+    }
+    expect(V9AuthoredIncidentRegistryEnvelopeSchema.safeParse(incidentReviewsAsset).success).toBe(true);
   });
 });
