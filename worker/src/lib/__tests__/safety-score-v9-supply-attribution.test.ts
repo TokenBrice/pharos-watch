@@ -59,10 +59,7 @@ import {
 } from "../safety-score-v9/supply-attribution";
 import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
-import {
-  V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC,
-  V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID,
-} from "@shared/types/safety-score-v9";
+import { V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID } from "@shared/types/safety-score-v9";
 import { createSafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
 import {
@@ -799,24 +796,24 @@ describe("Safety Score V9 chain-supply ceilings (v10.38)", () => {
     } as unknown as SafetyScoreV9CompilerInput, assetId, declaredMaxAgeSec);
   }
 
-  it("keeps provider chain-circulating rows at their pre-v10.38 5,400 s ceiling", () => {
-    expect(ceilings.maxAgeSecBySource[V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID]).toBe(
-      V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC,
-    );
+  it("keeps provider chain-circulating rows at the default-plus-carry ceiling", () => {
+    // The policy schema caps the provider entry at default + carry (S-13), so
+    // the invariant is expressed through the policy values, not a code literal.
+    expect(ceilings.maxAgeSecBySource[V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID]).toBe(defaultCeilingSec);
+    expect(defaultCeilingSec).toBe(5_400);
     expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID)).toBe(
-      V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC,
+      defaultCeilingSec,
     );
     // A source clock that declares a narrower window cannot tighten a listed
     // source: one ceiling replaces the two-part default.
     expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID, 900)).toBe(
-      V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC,
+      defaultCeilingSec,
     );
     expect(sourceIdOf(undefined)).toBe(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID);
-    expect(maxAgeOf(undefined)).toBe(V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC);
+    expect(maxAgeOf(undefined)).toBe(defaultCeilingSec);
   });
 
   it("fails an unlisted source closed to the policy default window", () => {
-    expect(defaultCeilingSec).toBe(V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC);
     for (const sourceId of [
       SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
       SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID,

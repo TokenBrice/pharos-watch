@@ -2000,15 +2000,15 @@ export function hasPublishedReserveReconciliationEvidence(
  * C1). A lapsed custody-only question stays a `stale` factor gap with its
  * original review date instead of silently disappearing at 90 days.
  *
- * Both the policy activation switch and the reason's declared retention are
- * required, mirroring the policy schema's own cross-field check, so a captured
- * overlay cannot be retained after the policy is rolled back.
+ * The activation switch is the single authority (OP-R0 S-1 removed the
+ * per-reason `retention` field); listing the `no-scoring-path` reason keeps the
+ * gate tied to the documented reason vocabulary, so a captured overlay cannot
+ * be retained after the policy is rolled back.
  */
 const RETAIN_EXPIRED_SCOPED_QUESTIONS = (() => {
   const documentation = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation;
   return documentation?.retainExpiredScopedQuestions === true &&
-    documentation.reasons.some((entry) =>
-      entry.reason === "no-scoring-path" && entry.retention === "stale-documentation");
+    documentation.reasons.some((entry) => entry.reason === "no-scoring-path");
 })();
 
 function adaptMintReview(
