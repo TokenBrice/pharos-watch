@@ -17,6 +17,7 @@ import { installAdapterNetwork, expectValidAdapterOutput, type AdapterNetworkSpe
 import { midasNetwork, midasClaimData, MIDAS_CAPTURE_NOW, MIDAS_CHECKPOINT_SEC, type MidasTestDocument } from "./midas-mtbill.test-support";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { evaluateLiveReserveAdmission } from "../../../lib/live-reserves/store-snapshot-state";
+import { classifyFailure } from "../../sync-live-reserves-shared";
 import type { ReserveCompositionRecord } from "../../../lib/live-reserves/store-shared";
 
 interface HistoricalFixture {
@@ -430,5 +431,62 @@ describe("mTBILL registry-checkpoint issuer portfolio v2", () => {
     await expect(fetchMidasMtbillReserves(coin, { ...config, inputs: { primary: { kind: "http-json", url: "https://api-prod.midas.app/api/transparency?token=mTBILL" } } }, AbortSignal.timeout(5000), ctx)).rejects.toThrow("save-config-identity");
     expect(computeLiveReserveConfigFingerprint(config)).not.toBe(computeLiveReserveConfigFingerprint({ ...config, version: 1, inputs: { primary: { kind: "http-json", url: "https://api-prod.midas.app/api/transparency?token=mTBILL" } } }));
     expect(LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS["midas-mtbill"]).toMatchObject({ sourceOriginClass: "issuer-attested", evidenceClass: "independent", sourceModel: "dynamic-mix", primaryInputKinds: ["onchain-evm"] });
+  });
+
+  it("reads only a reviewed historical source URL and names the selection in the published metadata", async () => {
+    const reviewed = "https://api-prod.midas.app/api/transparency/by-timestamp";
+    const defaults = await fetchPacket().result;
+    expect(defaults.metadata?.details).toMatchObject({
+      historicalSourceUrl: reviewed, historicalSourceHost: "api-prod.midas.app", historicalSourceUrlSource: "reviewed-default",
+    });
+    const network = installAdapterNetwork(midasNetwork());
+    const output = await fetchMidasMtbillReserves(coin, { ...config, params: { historicalSourceUrl: reviewed } },
+      AbortSignal.timeout(5000), { chainRpcs: network.chainRpcs, nowSec: fresh });
+    expect(output.metadata?.details).toMatchObject({
+      historicalSourceUrl: reviewed, historicalSourceHost: "api-prod.midas.app", historicalSourceUrlSource: "reviewed-params",
+      historicalUrl: `${reviewed}?token=mTBILL&timestamp=2026-10-16T10%3A00`,
+    });
+    expect(output.metadata?.sourceTimestamp).toBe(MIDAS_CHECKPOINT_SEC);
+    expect(network.unmatched).toEqual([]);
+  });
+
+  it.each([
+    ["a sibling Midas host", "https://api.midas.app/api/transparency/by-timestamp"],
+    ["a trailing slash", "https://api-prod.midas.app/api/transparency/by-timestamp/"],
+    ["an appended query", "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL"],
+    ["a lookalike host", "https://api-prod.midas.app.evil.example/api/transparency/by-timestamp"],
+    ["a plain-HTTP scheme", "http://api-prod.midas.app/api/transparency/by-timestamp"],
+    ["an unrelated host", "https://reserves.example.org/mtbill/latest.json"],
+  ])("fails closed on %s without reading any source", async (_label, historicalSourceUrl) => {
+    const network = installAdapterNetwork(midasNetwork());
+    const failure = fetchMidasMtbillReserves(coin, { ...config, params: { historicalSourceUrl } },
+      AbortSignal.timeout(5000), { chainRpcs: network.chainRpcs, nowSec: fresh });
+    await expect(failure).rejects.toThrow("midas-mtbill:historical-source-url-not-allowlisted");
+    expect(network.requests).toEqual([]);
+    expect(network.rpcCalls).toEqual([]);
+  });
+
+  it("rejects unreviewed params keys instead of silently ignoring them", async () => {
+    const network = installAdapterNetwork(midasNetwork());
+    const failure = fetchMidasMtbillReserves(coin, { ...config, params: {
+      historicalSourceUrl: "https://api-prod.midas.app/api/transparency/by-timestamp",
+      fallbackHistoricalSourceUrl: "https://api.midas.app/api/transparency/by-timestamp",
+    } }, AbortSignal.timeout(5000), { chainRpcs: network.chainRpcs, nowSec: fresh });
+    await expect(failure).rejects.toThrow("midas-mtbill:historical-source-params-invalid");
+    expect(network.requests).toEqual([]);
+  });
+
+  it("names a 403 historical read as an egress block and still yields no snapshot", async () => {
+    const spec = midasNetwork();
+    const url = "https://api-prod.midas.app/api/transparency/by-timestamp?token=mTBILL&timestamp=2026-10-16T10%3A00";
+    spec.json![url] = () => new Response("{}", { status: 403, headers: { "content-type": "application/json" } });
+    const { result, network } = fetchPacket(spec);
+    const error = await result.catch((failure: unknown) => failure);
+    expect(error).toBeInstanceOf(Error);
+    const message = (error as Error).message;
+    expect(message).toContain("midas-mtbill:source-egress-blocked");
+    expect(message).toContain("HTTP 403");
+    expect(classifyFailure("adapter-exception", message)).toBe("upstream-http");
+    expect(network.requests.filter(({ url: requested }) => requested.includes("by-timestamp"))).toHaveLength(1);
   });
 });
