@@ -9245,7 +9245,7 @@
     {
       "assetId": "wbrl-ripio",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-29T18:50:00Z",
+      "reviewedAt": "2026-10-29",
       "sources": [
         {
           "label": "Independent public accountant's certification of wBRL collateral as of 2026-06-30, signed 2026-07-28 by Pablo Eduardo Soto (SLD y Asociados S.A., CPCECABA T.275 F.153); reconciles 2,586,148 wBRL against on-chain mint/burn reports on seven networks and R$ 2,594,240.11 held in a Brazilian bank account",
@@ -10516,7 +10516,7 @@
     {
       "assetId": "wcop-ripio",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-29T18:50:00Z",
+      "reviewedAt": "2026-10-29",
       "sources": [
         {
           "label": "Ripio wFIAT Attestations index (official publication surface; observed 2026-10-29 lists the June 2026 attestations for wARS, wBRL, wMXN, wCOP and wCLP, with no wPEN entry and no September 2026 entry)",
@@ -13055,7 +13055,7 @@
     {
       "assetId": "wmxn-ripio",
       "archetype": "fiat-cash",
-      "reviewedAt": "2026-10-29T18:50:00Z",
+      "reviewedAt": "2026-10-29",
       "sources": [
         {
           "label": "Independent Public Accountant's Certification regarding the collateral backing of wMXN tokens as of 2026-06-30, signed 2026-07-28 (Pablo Eduardo Soto, CPA, Professional Council of Economic Sciences of CABA); reconciles 968,789 tokens against on-chain mint/burn reports on seven networks and MXN 2,086,193.01 in a Mexican bank account",
