@@ -6,6 +6,18 @@ These records preserve review dates, scope limits and operator observations form
 
 The existing wrapper allocation/local-review schemas carry scoped rationale and observations, not a free-standing historical-ruling field. Per-asset measurement summaries are capture manifests, not review-note sidecars. These records therefore stay here rather than adding fields or unrelated history to score-bearing JSON.
 
+## DOLA and sDOLA Issuer Follow-up — 2026-10-29
+
+Inverse Finance's 28 October answers to the 18 October questionnaire were checked against Ethereum block 26296822 (`2026-10-29T07:12:23Z`). The DOLA reserve adapter now probes the canonical Peg Stability Module (PSM), `0x1d02f2841afa3cc20435a8c804c24deac5f30dfa`, which proposal 343 made canonical and to which the PSM Fed `0x67fc…f9cc` points. It previously probed the drained original. A `fed()` identity pin now fails closed on a retired generation. At the pin the canonical PSM had zero accounted supply and zero reserves, so the redemption route stays excluded. The questionnaire's claim that the enabled Fed pointed to an older PSM had the generations reversed.
+
+Overlay structural-redemption, backstop, shutdown/bad-debt, liquidation and collateralization reviews were re-pinned without grade change. Branch isolation moved from `adequate` to `limited`: its only evidence was issuer documentation, while `adequate` requires a dated independent attestation. Per-user escrow isolation is verified on-chain, and losses remain mutualized at the DOLA level.
+
+The LP collateral composition is recorded as diagnostic evidence only: about 65% of the claim map is DOLA/sDOLA self-reference at near-par prices. Scored reserve rows stay undecomposed until the methodology defines own-token collateral. The legacy Multichain BSC, Avalanche and Fantom representations carry active control incidents: Inverse confirmed them as unsupported bridge IOUs, and its July 2023 FAQ records blocked exits. The four shut-down sDOLA CCIP (Chainlink Cross-Chain Interoperability Protocol) bridge controls carry negative incident reviews.
+
+Mint authority records reconciliation as `none` on issuer confirmation. Voting control is now attributed to founder-affiliated unilateral power: the founder's identification of the escrow and delegate is partly corroborated by Inverse's public founder-address list. It still fails D32, and native mint remains opaque60. The sDOLA wrapper-allocation review was renewed at the same block.
+
+This is evidence curation under methodology v10.36, not a methodology change. It neither renews unrelated evidence nor establishes production acceptance.
+
 ## Inactive Wrapper Evidence Windows — 2026-10-28
 
 The F-04/K-002 cohort tracked in [#945](https://github.com/TokenBrice/pharos-watch/issues/945) comprises 101 wrapper evidence windows through January 31, 2027 (59 whole-allocation, 13 allocation-claim and 29 local-review expiries). Retain all as `inactive-retained`, non-contributing windows under the [inactive/history census](../../worker/scripts/list-curation-expiry-queue.ts), not renewal work. Original evidence, review/expiry clocks and adverse history remain unchanged; independently consumed `parentBackingInheritance`, active execution reviews and xDAI/LVUSD reserve observations retain their separate admission obligations. This dated disposition neither renews evidence nor reactivates retired numerical consumers; no live generation, grade or alert receipt was obtained.

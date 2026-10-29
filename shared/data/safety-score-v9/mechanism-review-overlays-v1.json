@@ -11761,6 +11761,46 @@
         {
           "label": "Ethereum block 26218090, hash 0x34bd6a2053f765627143843da128f7fc8d1f2680028cc2c5344bca4c2afc3488, timestamp 2026-10-18T07:55:59Z; Alchemy pinned vault/module/market reads and approval events",
           "url": "https://etherscan.io/block/26218090"
+        },
+        {
+          "label": "Canonical PSM 0x1d02f2841afa3cc20435a8c804c24deac5f30dfa verified source (canonical pair since proposal 343; getTotalReserves/supply/fee getters)",
+          "url": "https://etherscan.io/address/0x1d02f2841afa3cc20435a8c804c24deac5f30dfa#code"
+        },
+        {
+          "label": "Ethereum block 26296822, hash 0xd9a1213a6ee74b12106e77b6293c317a268a6669fb7609eda8465214559875c6, timestamp 2026-10-29T07:12:23Z; pinned PSM, Frontier cToken, jrDOLA/module, Curve pool and FiRM escrow reads",
+          "url": "https://etherscan.io/block/26296822"
+        },
+        {
+          "label": "Dwellir Ethereum JSON-RPC used for the pinned batch eth_calls at block 26296822 (credentials omitted)",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Inverse LP-positions breakdown API (per-market/per-position underlying splits; payload timestamp 2026-10-29T07:42:00.209Z, no block pin, cached USD prices with silent price||1 fallback, up to 30-minute position reuse; LP debt 68,543,938.67 DOLA)",
+          "url": "https://www.inverse.finance/api/firm-positions-breakdown?lpOnly=true"
+        },
+        {
+          "label": "Inverse repayments API (remaining Frontier bad debt 2,764,979.12 DOLA at lastBlock 26296743, payload timestamp 2026-10-29T06:56:45.981Z; repayments idle since 2026-02-02; historical-price repayment precedent 14,415,588.17 USD)",
+          "url": "https://www.inverse.finance/api/transparency/repayments-v2?v=3"
+        },
+        {
+          "label": "Inverse treasury runway API (7.84 months on 2026-10-28; below 12 months since 2026-08-07)",
+          "url": "https://www.inverse.finance/api/transparency/runway-histo?v=1.0.2"
+        },
+        {
+          "label": "RWG reUSD/sDOLA feed stress backtest at pinned commit 475e02f (max 24h collateral drawdown 0.4553%, committed 2026-08-06, data windows ending 2026-08-05; 'untested rather than disproven')",
+          "url": "https://github.com/InverseFinance/Risk-Assessments/blob/475e02f662014e7acf41a2d0b4d4b42affee4dd3/Resupply_reUSD/feed_stress_summary.md"
+        },
+        {
+          "label": "RWG Incident Response Protocol text export (publicly readable, undated, fetched 2026-10-29T07:46:24.851Z; operational triage and containment only, no loss-allocation, shutdown or holder-settlement waterfall)",
+          "url": "https://docs.google.com/document/d/1uBRGuYVF4CcBnuE1A-iydhCEnmFjhP-v1ByhCuAiH9M/export?format=txt"
+        },
+        {
+          "label": "FiRM sUSDe-DOLA Market 0xb427fc22561f3963b04202f9bb5bcebd76c14a99 verified source (escrows(user) per-user escrow mapping, escrowImplementation, predictEscrow)",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0xb427fc22561f3963b04202f9bb5bcebd76c14a99"
+        },
+        {
+          "label": "ConvexEscrowV2 escrow implementation 0x141e4a7efe8addb63d4a51b30a9a8656ce0678f5 verified source (initialize binds one market and beneficiary; pay callable only by the owning market)",
+          "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x141e4a7efe8addb63d4a51b30a9a8656ce0678f5"
         }
       ],
       "notes": "DOLA dispute review 2026-10-17; evidence D-2/D-3 in BackingD and independently refreshed D-3 in verify-VerifyBacking. CURRENT GROSS FiRM METRIC: collateralizationRatio = 1.2528786141571429 = issuer API firmTotalTvl 89,321,165.41159895 / drawn debt 71,292,752.86711518. TVL observed 2026-10-17T21:31:34.476Z (payload timestamp 1792272688836), fixed-markets observed 2026-10-17T21:31:34.440Z (payload timestamp 1792272424141). These nearby but distinct issuer clocks do not establish same-pin independently priced whole-system solvency or net external backing; the API omits approximately 88.0122 DOLA of yv-USR debt. Idle pre-minted DOLA is protocol inventory, not independent collateral, and any liability netting must symmetrically remove the matching own-token assets. CURRENT CIRCULARITY (D-2): balances(uint256) and stored_rates() at Ethereum block 26214783, hash 0xd8de05d65dd285a6482739aeee16a7ee5a9a492fb9d8a0f0edf784957f94caee, timestamp 2026-10-17T20:51:59Z, measured through the cited Alchemy RPC, show DOLA/sUSDe is 75.7122% DOLA, DOLA/sUSDS 76.9298% DOLA, and scrvUSD/sDOLA 75.1979% sDOLA by normalized constituent value, not roughly half. These are rate-normalized shares, not independent USD marks. reUSD/sDOLA differs materially at 26.3163% sDOLA and must not inherit the dominant pools' approximately 75% circularity. BackingD's fixed-markets observation 2026-10-17T20:52:45.065Z (payload timestamp 1792270364354) shows LP-secured debt 96.1846% of drawn debt; sUSDe-related markets (including direct sUSDe) are 75.3205% of drawn debt. Its TVL observation 2026-10-17T20:53:04.626Z (payload timestamp 1792270299730) gives sUSDe-related gross collateral TVL 60,747,716.60121238 / 89,337,841.40984431 = 67.9977%. These composition denominators and clocks are distinct from the later refreshed gross ratio. COLLATERALIZATION PARAMETERS and LIQUIDATION MECHANICS remain limited: governance-set collateral/liquidation factors, incentives, debt ceilings, rolling borrow limits, Pessimistic Price Oracles and permissionless liquidators are documented, but the measured dominant-pool circularity reinforces rather than removes the 2026-07-22 reflexivity deficiency. No independent liquidation stress replay or recovery valuation was established; neither a favorable upgrade nor a new weak/failed grade follows from the constituent shares alone. BACKSTOP REFRESH 2026-10-18: Ethereum block 26218090, hash 0x34bd6a2053f765627143843da128f7fc8d1f2680028cc2c5344bca4c2afc3488, timestamp 2026-10-18T07:55:59Z, through the cited Alchemy RPC, independently identifies current jrDOLA v2 0x6f80a22a57c7f0257094ea8d426af3f747defbc7 and FiRMSlashingModule 0x316a01f878aa6d5a4c7ea2080d64d364f9538aa2: module.JUNIOR_POOL() points to v2 and v2.slashingModules(module) is true. asset() is sDOLA 0xb45ad160634c528cc3d2926d9807104fa3157305; totalAssets() is 127,925.798305387814640250 sDOLA, converted at the same pin to 182,132.678089102624028235 DOLA. The slash ceiling after MIN_ASSETS of 1 sDOLA is 182,131.254352213726053747 DOLA. Superseded v1 0x633821b8e003344e5223509277f2084ea809a452 still holds 438.754495829790683000 sDOLA (624.670960882705508263 DOLA at this pin), not the current buffer. Permissionless slash(market,borrower) requires an allowed, DBR-registered, activated market; debt greater than collateral value, debt at least 5 DOLA and residual collateral value at most 100 DOLA. Governance approves markets with a minimum/current 604800-second activation delay; no governance or guardian action is required for each eligible repayment. Governance can remove active markets or revoke modules; guardian can remove only pre-activation markets. NewMarket events from deployment block 25377640 through the pin enumerate 19 markets, all joined to the issuer API's 49-address universe observed 2026-10-18T07:58:52.601Z (payload timestamp 1792310194230); getters confirm 18 activated and one pending. Same-pin totalDebt() across all 49 markets is 71,285,363.760826413327509144 DOLA, of which activated markets hold 70,445,168.378071525849741745 (98.8213634%). ysyBOLD is approved but activates only at 2026-10-19T21:37:59Z. Market eligibility is not loss-capital coverage: the slash ceiling is only 0.2554960% of this drawn debt, and borrower eligibility further limits use; no guaranteed stressed loss recovery follows. Retain limited, not adequate financial assurance. Withdrawals require escrow 0x8554d8a6bcc5b6d6eb7bea2189e6a8f8d24c7e45, a currently configured 1-to-10-day queue, 2-day exit window and 5-bps queue fee; governance can pause queueing and completion for up to 90 days per action and can renew the pause. Queued shares remain slashable. RETAINED HISTORICAL EVIDENCE (not refreshed): BRANCH ISOLATION adequate remains based on documented Personal Collateral Escrows isolating borrower collateral by market while bad debt is mutualized through jrDOLA/reserves. SHUTDOWN AND BAD DEBT weak retains the July observation of unresolved approximately 2.75M DOLA legacy Frontier debt, revenue-dependent DBR-auction repayment and no documented global holder settlement path; the old v1 balance is not a current-capacity premise, and the v2 FiRM module does not establish legacy Frontier recovery. That historical debt observation is not a current balance. STRUCTURAL REDEMPTION limited: historical PSM 0x4dfd662622d766304cb539e66f893c4defa19398 source and block 25572058 reads established permissionless DOLA-to-USDS sells at 20 bps, sUSDS vault identity and zero sold supply/capacity, not a current execution guarantee; no redemption for FiRM collateral is documented. Liquidation funding remains structurally external rather than a committed DOLA-dedicated pool; jrDOLA absorbs eligible bad-debt shortfalls, not ordinary liquidation funding. Removed stale analogous supply-wide and first-loss ratios rather than renew them without matching fresh evidence. The global metric clock and unchanged components retain their original evidence-pin dates. The refreshed backstop component becomes score-bearing only after the 2026-10-18 UTC day elapses, per the mechanism-overlay evidence standard.",
@@ -11783,28 +11823,40 @@
           "applicability": "measured",
           "quality": "limited",
           "review": {
-            "reviewedAt": "2026-10-17",
-            "reviewer": "DOLA dispute review 2026-10-17",
-            "rationale": "D-2/D-3: governance-set risk parameters do not eliminate measured LP reflexivity. At Ethereum block 26214783 (2026-10-17T20:51:59Z), normalized DOLA/sUSDe value is 75.7122% DOLA and DOLA/sUSDS is 76.9298% DOLA; issuer gross FiRM TVL/debt observed 2026-10-17 is 1.2528786141571429, not independent net external backing. Retain limited; current composition corrects the stale roughly-half premise without establishing a new quality rung.",
+            "reviewedAt": "2026-10-29T07:42:00.209Z",
+            "reviewer": "Inverse follow-up composition refresh 2026-10-29",
+            "rationale": "Issuer LP-composition API (https://www.inverse.finance/api/firm-positions-breakdown?lpOnly=true, payload timestamp 2026-10-29T07:42:00.209Z; no block pin; cached USD prices with a silent price||1 fallback; up to 30-minute position reuse) itemizes per-market and per-position underlying splits: DOLA+sDOLA is 71.07% of LP collateral USD at the API's cached prices. Valuation basis stated explicitly: the same-block Curve anchors at Ethereum block 26296822 (balances() and stored_rates(), 2026-10-29T07:12:23Z) are unit/NAV conversions yielding base-asset units at par — DOLA 74.08% of the sUSDe pools, 75.56% of the sUSDS pools, sDOLA 71.58% of the scrvUSD/sDOLA pool and 30.10% of the reUSD/sDOLA pool — within 0.09 pp of the API's price-weighted shares, while the API weights themselves use cached USD prices; the two bases agree only because constituent prices sit near par at this pin. About 65.4% of the reserve claim map is DOLA/sDOLA self-reference (65.38% self versus 26.47% external LP constituents at this pin): recorded here as the pinned diagnostic decomposition only — it changes no scored reserve row and is not independent backing. Governance-set collateral and liquidation parameters remain documented and the measured LP reflexivity is unchanged; no independent valuation exists; limited retained.",
             "sources": [
               {
                 "label": "Inverse FiRM Security & Safety documentation",
                 "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm/firm-security-and-safety"
               },
               {
-                "label": "D-2 DOLA/sUSDe pool, Ethereum block 26214783 (2026-10-17T20:51:59Z)",
+                "label": "Inverse LP-positions breakdown API (DOLA+sDOLA 71.07% of LP collateral USD; payload timestamp 2026-10-29T07:42:00.209Z, cached prices, no block)",
+                "url": "https://www.inverse.finance/api/firm-positions-breakdown?lpOnly=true"
+              },
+              {
+                "label": "DOLA/sUSDe pool balances and stored_rates at Ethereum block 26296822 (2026-10-29T07:12:23Z)",
                 "url": "https://etherscan.io/address/0x744793b5110f6ca9cc7cdfe1ce16677c3eb192ef#readContract"
               },
               {
-                "label": "D-2 DOLA/sUSDS pool, Ethereum block 26214783 (2026-10-17T20:51:59Z)",
+                "label": "DOLA/sUSDS pool balances and stored_rates at Ethereum block 26296822 (2026-10-29T07:12:23Z)",
                 "url": "https://etherscan.io/address/0x8b83c4aa949254895507d09365229bc3a8c7f710#readContract"
               },
               {
-                "label": "D-3 issuer FiRM TVL observed 2026-10-17T21:31:34.476Z",
-                "url": "https://www.inverse.finance/api/f2/tvl"
+                "label": "scrvUSD/sDOLA pool balances and stored_rates at Ethereum block 26296822 (2026-10-29T07:12:23Z)",
+                "url": "https://etherscan.io/address/0x76a962ba6770068bcf454d34dde17175611e6637#readContract"
               },
               {
-                "label": "D-3 issuer FiRM debt observed 2026-10-17T21:31:34.440Z",
+                "label": "reUSD/sDOLA pool balances and stored_rates at Ethereum block 26296822 (2026-10-29T07:12:23Z)",
+                "url": "https://etherscan.io/address/0x48d670d189b4b48757992d36897bca6e3f889040#readContract"
+              },
+              {
+                "label": "Ethereum block 26296822 pinned Curve pool reads (2026-10-29T07:12:23Z)",
+                "url": "https://etherscan.io/block/26296822"
+              },
+              {
+                "label": "Issuer FiRM 49-market debt universe (payload timestamp 2026-10-29T07:42:04.338Z)",
                 "url": "https://www.inverse.finance/api/f2/fixed-markets"
               }
             ]
@@ -11814,21 +11866,25 @@
           "applicability": "measured",
           "quality": "limited",
           "review": {
-            "reviewedAt": "2026-10-17",
-            "reviewer": "DOLA dispute review 2026-10-17",
-            "rationale": "D-2: permissionless liquidation and parameterized incentives remain documented, but LP-secured markets account for 96.1846% of issuer-reported drawn debt observed 2026-10-17T20:52:45.065Z. Dominant pools contain approximately 75.7% DOLA, 76.9% DOLA and 75.2% sDOLA by normalized value at Ethereum block 26214783 (2026-10-17T20:51:59Z), reinforcing liquidation reflexivity. No independent stress replay or recovery valuation supports changing limited to another grade.",
+            "reviewedAt": "2026-10-29T07:42:04.338Z",
+            "reviewer": "Inverse follow-up liquidation refresh 2026-10-29",
+            "rationale": "LP-secured markets now carry 68,543,938.67 DOLA of issuer-reported drawn debt, 95.976% of the 71,417,872.80 DOLA 49-market total (issuer LP-breakdown payload timestamp 2026-10-29T07:42:00.209Z and fixed-markets payload timestamp 2026-10-29T07:42:04.338Z — distinct issuer clocks, no block pin). Inverse confirms no consolidated DOLA-depeg liquidation test exists: absence of stress evidence, not a measured deficiency, so weak-on-absence is barred and no independent stress attestation exists for adequate. The RWG reUSD/sDOLA feed backtest (pinned commit 475e02f, committed 2026-08-06, data windows ending 2026-08-05) reports a largest 24-hour collateral drawdown of 0.4553% and itself concludes the lag risk is 'untested rather than disproven'; it covers the reUSD/sDOLA family, about 5.95% of LP debt, not the dominant sUSDe/sUSDS families — dated analogous context, not component coverage. Permissionless third-party liquidation with parameterized incentives and pessimistic oracles remains documented; limited retained.",
             "sources": [
               {
                 "label": "Inverse FiRM Liquidations & Replenishments documentation",
                 "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm/firm-liquidations-and-replenishments"
               },
               {
-                "label": "D-2 issuer market debt observed 2026-10-17T20:52:45.065Z",
+                "label": "Inverse LP-positions breakdown API (LP-secured debt 68,543,938.67 DOLA; payload timestamp 2026-10-29T07:42:00.209Z, no block, cached prices)",
+                "url": "https://www.inverse.finance/api/firm-positions-breakdown?lpOnly=true"
+              },
+              {
+                "label": "Issuer FiRM 49-market debt 71,417,872.80 DOLA (payload timestamp 2026-10-29T07:42:04.338Z)",
                 "url": "https://www.inverse.finance/api/f2/fixed-markets"
               },
               {
-                "label": "D-2 pinned pool observations at Ethereum block 26214783 (2026-10-17T20:51:59Z)",
-                "url": "https://eth-mainnet.g.alchemy.com/v2/"
+                "label": "RWG reUSD/sDOLA feed stress backtest at pinned commit 475e02f (max 24h collateral drawdown 0.4553%; committed 2026-08-06; 'untested rather than disproven')",
+                "url": "https://github.com/InverseFinance/Risk-Assessments/blob/475e02f662014e7acf41a2d0b4d4b42affee4dd3/Resupply_reUSD/feed_stress_summary.md"
               }
             ]
           }
@@ -11837,9 +11893,9 @@
           "applicability": "measured",
           "quality": "limited",
           "review": {
-            "reviewedAt": "2026-10-18T07:55:59Z",
-            "reviewer": "Inverse feedback jrDOLA/slashing review 2026-10-18",
-            "rationale": "Ethereum block 26218090 (2026-10-18T07:55:59Z), hash 0x34bd6a2053f765627143843da128f7fc8d1f2680028cc2c5344bca4c2afc3488: current jrDOLA v2 0x6f80a22a57c7f0257094ea8d426af3f747defbc7 is wired both ways to FiRMSlashingModule 0x316a01f878aa6d5a4c7ea2080d64d364f9538aa2. Its 127,925.798305387814640250 sDOLA totalAssets converts to 182,132.678089102624028235 DOLA; the source-defined slash ceiling after 1 sDOLA MIN_ASSETS is 182,131.254352213726053747 DOLA. Anyone may repay an eligible bad-debt borrower after governance market approval and activation: debt exceeds collateral value, debt >= 5 DOLA, collateral value <= 100 DOLA. There is no per-repayment governance/guardian gate, percentage slash cap or inter-slash cooldown in this module. Eighteen activated markets account for 70,445,168.378071525849741745 / 71,285,363.760826413327509144 same-pin DOLA totalDebt across all 49 issuer-listed FiRM markets (98.8213634%); approved ysyBOLD activates 2026-10-19T21:37:59Z after the current 7-day delay. This is market eligibility, not funded loss coverage: the slash ceiling is only 0.2554960% of drawn debt, subject to borrower eligibility and sDOLA withdrawal execution. Governance can remove active markets/revoke modules; guardian can remove only pending markets. jrDOLA withdrawals use the escrow's configured 1-to-10-day queue, 2-day exit window and 5-bps queue fee; a 90-day-per-action governance pause can be renewed, and queued shares remain slashable. Verified code and independent pinned accounting corroborate issuer documentation, supporting limited; broad nominal market reach and vault accounting do not establish independent financial assurance or stressed recovery for adequate.",
+            "reviewedAt": "2026-10-29T07:12:23Z",
+            "reviewer": "Inverse follow-up jrDOLA census refresh 2026-10-29",
+            "rationale": "Ethereum block 26296822 (hash 0xd9a1213a6ee74b12106e77b6293c317a268a6669fb7609eda8465214559875c6, 2026-10-29T07:12:23Z): jrDOLA v2 0x6f80a22a57c7f0257094ea8d426af3f747defbc7 holds totalAssets 147,836.836793632058771701 sDOLA; the source-defined slash ceiling sDOLA.previewRedeem(totalAssets − MIN_ASSETS of 1 sDOLA) is 210,831.807345697893633924 DOLA, 0.295307% of the same-block 49-market totalDebt() sum of 71,394,111.001270796596947671 DOLA (each market debt read individually at the pin over the issuer registry universe, payload 2026-10-29T07:33:11.466Z). Nineteen governance-approved and activated markets hold 71,391,684.769577473955782688 DOLA (99.996602% of that debt). Module thresholds re-verified at the pin: debt greater than collateral value, debt at least 5 DOLA, remaining collateral value at most 100 market-accounting units, 604800-second activation delay; slashing is permissionless once all checks pass, with no per-repayment governance or guardian gate, percentage slash cap or inter-slash cooldown. Queued withdrawals remain jrDOLA shares inside the withdrawal escrow and stay slashable until completed. This is market eligibility with one thin shared buffer, not funded loss coverage or independently assured stressed recovery; limited retained, not adequate.",
             "sources": [
               {
                 "label": "Inverse jrDOLA first-loss documentation",
@@ -11858,15 +11914,11 @@
                 "url": "https://etherscan.io/address/0x8554d8a6bcc5b6d6eb7bea2189e6a8f8d24c7e45#code"
               },
               {
-                "label": "Ethereum 26218090 pinned vault/module/49-market reads and approval events (2026-10-18T07:55:59Z)",
-                "url": "https://etherscan.io/block/26218090"
+                "label": "Ethereum block 26296822 pinned vault/module/49-market census reads (2026-10-29T07:12:23Z)",
+                "url": "https://etherscan.io/block/26296822"
               },
               {
-                "label": "Alchemy Ethereum JSON-RPC (explicit block 26218090; credentials omitted)",
-                "url": "https://eth-mainnet.g.alchemy.com/v2/"
-              },
-              {
-                "label": "Issuer FiRM market universe observed 2026-10-18T07:58:52.601Z; debts independently read at block 26218090",
+                "label": "Issuer FiRM market universe observed 2026-10-29T07:33:11.466Z; per-market debts independently read at block 26296822",
                 "url": "https://www.inverse.finance/api/f2/fixed-markets"
               }
             ]
@@ -11874,11 +11926,11 @@
         },
         "branchIsolation": {
           "applicability": "measured",
-          "quality": "adequate",
+          "quality": "limited",
           "review": {
-            "reviewedAt": "2026-07-22",
-            "reviewer": "DOLA dispute review 2026-10-17",
-            "rationale": "Preserve the original evidence pin: Personal Collateral Escrows isolate borrower collateral by market, but bad debt remains mutualized through jrDOLA/reserves. The D-2/D-3 composition refresh does not re-review branch isolation or renew its evidence.",
+            "reviewedAt": "2026-10-29T07:12:23Z",
+            "reviewer": "Inverse follow-up branch-isolation re-read 2026-10-29",
+            "rationale": "Downgraded adequate to limited per the evidence standard: the prior adequate rating rested on two Inverse documentation pages, and adequate-class evidence for this component (a dated independent attestation, regulatory filing or independently operated oracle feed) is absent. New on-chain anchors at Ethereum block 26296822 (hash 0xd9a1213a6ee74b12106e77b6293c317a268a6669fb7609eda8465214559875c6, 2026-10-29T07:12:23Z) establish per-user escrow isolation concretely for three major LP markets: sUSDe-DOLA 0xb427fc22561f3963b04202f9bb5bcebd76c14a99 (escrowImplementation 0x141e4a7efe8addb63d4a51b30a9a8656ce0678f5, ConvexEscrowV2 minimal proxies), sUSDS-DOLA 0xd68d3a44d46dd50bfeba8cca544717b76e7c4b29 (0x44e2a62695d525caada1378405e4d565d8741df0) and scrvUSD-sDOLA 0xc45e9c231ab5d9bd3f1131e7901b100d8d236c4d (0x88df2a32c1130ae8371bf6b5d5c644a485fc650b). Verified market source: collateral moves through escrows(user), initialize() binds each escrow to one (market, beneficiary) pair and pay() is callable only by that market. Pinned per-user escrow reads: user 0x0591926d5d3b9cc48ae6efb8db68025ddc3adfa5 holds 24,459,804.707223 LP in escrow 0x8a0942ee4a9048bbdf202d67049d7c8e2f785a44 on sUSDe-DOLA and a distinct escrow 0x11325a7eae033fcc1bcd2779974cff70fc612a1a holding 5,396,674.289702 LP on sUSDS-DOLA; user 0xa05e21550eb86462388783047da318d2de20bbda holds 4,593,102.595556 LP via 0xb8cb37f92a19be3359fb207285ef0be606533370 (sUSDe-DOLA) and 3,385,643.978689 LP via 0xb7b18b339fc62bcc7e52ada5203ea85f2ef33629 (scrvUSD-sDOLA); user 0x3be3a8613dc18554a73773a5bfb8e9819d360dc0 holds 9,644,797.174297 LP via 0x635893bb6ce1d16ac694e141e5f9f09e04f06919 and user 0xe837770fc477522360cf620bc15ba34cb9e4a6d0 holds 1,279,480.313815 LP via 0x6287518779c2b654a6f37c1f9ef3c097d90902c5. Each escrow reads back its own market, its market's collateral token and its beneficiary; balances reconcile with the issuer FiRM positions API (payload clock 2026-10-29T07:42:00.209Z; five exact matches, one scrvUSD-sDOLA position within 0.6% day-scale drift). Collateral isolation is not loss isolation: bad debt is mutualized at the DOLA level through the shared jrDOLA buffer and treasury (Frontier precedent), so DOLA-level losses are not isolated per branch. Limited: issuer-structured escrow design corroborated by verifiable on-chain reads.",
             "sources": [
               {
                 "label": "Inverse core concepts documentation (Personal Collateral Escrows)",
@@ -11887,6 +11939,30 @@
               {
                 "label": "Inverse FiRM Security & Safety documentation",
                 "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/firm/firm-security-and-safety"
+              },
+              {
+                "label": "Issuer FiRM market universe, payload 2026-10-29T07:42:04.338Z; escrow balances reconciled against the issuer positions API at its own clock",
+                "url": "https://www.inverse.finance/api/f2/fixed-markets"
+              },
+              {
+                "label": "Inverse LP-positions breakdown API (per-position deposits reconciling the pinned escrow balances; payload 2026-10-29T07:42:00.209Z, no block, cached prices)",
+                "url": "https://www.inverse.finance/api/firm-positions-breakdown?lpOnly=true"
+              },
+              {
+                "label": "FiRM sUSDe-DOLA Market verified source (escrows(user) mapping, escrowImplementation, predictEscrow; per-user escrow creation)",
+                "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0xb427fc22561f3963b04202f9bb5bcebd76c14a99"
+              },
+              {
+                "label": "ConvexEscrowV2 escrow implementation verified source (initialize binds market and beneficiary; pay restricted to the owning market; per-escrow balance)",
+                "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x141e4a7efe8addb63d4a51b30a9a8656ce0678f5"
+              },
+              {
+                "label": "Ethereum block 26296822 pinned market/escrow reads (per-user escrow addresses, markets, collateral tokens, beneficiaries and balances; 2026-10-29T07:12:23Z)",
+                "url": "https://etherscan.io/block/26296822"
+              },
+              {
+                "label": "Dwellir Ethereum JSON-RPC used for the pinned batch eth_calls at block 26296822 (credentials omitted)",
+                "url": "https://api-ethereum-mainnet.n.dwellir.com"
               }
             ]
           }
@@ -11895,21 +11971,29 @@
           "applicability": "measured",
           "quality": "weak",
           "review": {
-            "reviewedAt": "2026-07-22",
-            "reviewer": "DOLA dispute review 2026-10-17",
-            "rationale": "Preserve the July measured-adverse ruling and its original clock: unresolved approximately 2.75M DOLA legacy Frontier debt, revenue-dependent DBR-auction repayment and no documented global holder settlement path. These are historical observations, not refreshed balances. The superseded v1 vault balance is removed as a current-capacity premise; the separately refreshed backstop component concerns eligible FiRM shortfalls and does not establish recovery of legacy Frontier debt or a global holder settlement path.",
+            "reviewedAt": "2026-10-29T07:12:23Z",
+            "reviewer": "Inverse follow-up bad-debt refresh 2026-10-29",
+            "rationale": "Measured deficiency re-confirmed with refreshed figures: the issuer repayments API (lastBlock 26296743, payload 2026-10-29T06:56:45.981Z) reports remaining Frontier bad debt 2,764,979.12 DOLA with non-Frontier DOLA debt at 0 and Frontier progress 78.0738% (9,845,416.93 DOLA repaid across 152 payments); same-pin Frontier cToken reads at block 26296822 show totalBorrows 2,764,701.26 DOLA and Fed supply 3,100,000 DOLA. Recorded Frontier repayments are idle since 2026-02-02 (3 payments totalling 130,770.29 DOLA in 2026 versus the 2025 pace of about 3.84M DOLA/yr), and the issuer runway API reads 7.84 months on 2026-10-28, below 12 since 2026-08-07. Losses beyond jrDOLA are a treasury liability / DAO repayment commitment per Inverse's 2026-10-28 response (first confirmed 2026-10-20) — an issuer statement, not a funded or enforceable obligation. The public RWG Incident Response Protocol is undated and operational only, with no loss-allocation, shutdown or holder-settlement waterfall. The cross-asset repayment precedent of 14,415,588.17 USD at historical prices (issuer API arithmetic) is context, not protection capital. DBR-auction funding remains revenue-dependent, no completion date is committed and no global holder settlement path is documented; weak retained.",
             "sources": [
               {
-                "label": "Inverse DBR documentation (Frontier bad-debt repayment)",
+                "label": "Inverse DBR documentation (auction proceeds flow via sendToSaleHandler toward repaying the 2022 Frontier bad debt; governance can redirect)",
                 "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dbr"
               },
               {
-                "label": "Inverse jrDOLA first-loss documentation",
-                "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+                "label": "Inverse repayments API (remaining Frontier bad debt 2,764,979.12 DOLA at lastBlock 26296743, payload 2026-10-29T06:56:45.981Z; repayments idle since 2026-02-02; historical-price precedent 14,415,588.17 USD)",
+                "url": "https://www.inverse.finance/api/transparency/repayments-v2?v=3"
               },
               {
-                "label": "Historical Ethereum block 25572058 reads (2026-07-20)",
-                "url": "https://ethereum-rpc.publicnode.com"
+                "label": "Inverse treasury runway API (7.84 months on 2026-10-28; below 12 since 2026-08-07)",
+                "url": "https://www.inverse.finance/api/transparency/runway-histo?v=1.0.2"
+              },
+              {
+                "label": "RWG Incident Response Protocol text export (publicly readable, undated; operational triage and containment only, no shutdown or holder-settlement waterfall; fetched 2026-10-29T07:46:24.851Z)",
+                "url": "https://docs.google.com/document/d/1uBRGuYVF4CcBnuE1A-iydhCEnmFjhP-v1ByhCuAiH9M/export?format=txt"
+              },
+              {
+                "label": "Ethereum block 26296822 pinned Frontier cToken reads (totalBorrows 2,764,701.26 DOLA; Fed supply 3,100,000 DOLA; 2026-10-29T07:12:23Z)",
+                "url": "https://etherscan.io/block/26296822"
               }
             ]
           }
@@ -11918,21 +12002,21 @@
           "applicability": "measured",
           "quality": "limited",
           "review": {
-            "reviewedAt": "2026-07-22",
-            "reviewer": "DOLA dispute review 2026-10-17",
-            "rationale": "Preserve the original PSM evidence pin: verified source and block 25572058 reads on 2026-07-20 established a 20-bps DOLA-to-USDS route with zero sold supply/capacity, not a current execution guarantee. No FiRM-collateral redemption is documented. D-2/D-3 do not renew this route review.",
+            "reviewedAt": "2026-10-29T07:12:23Z",
+            "reviewer": "Inverse follow-up canonical-PSM re-pin 2026-10-29",
+            "rationale": "Canonical pair re-pin: PSM 0x1d02f2841afa3cc20435a8c804c24deac5f30dfa, PSM Fed 0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc, controller 0xe3475728673eabaec90a37aa3ae2ced9f0db5ff2 (proposal 343, executed 2025-12-20); the corrected issuer PSM documentation, verified 2026-10-29, lists this canonical pair and marks PSM 0x4dfd662622d766304cb539e66f893c4defa19398 and its Fed 0x4005…0d28 as historical deployments, so the prior review pinned a superseded deployment. At Ethereum block 26296822 (hash 0xd9a1213a6ee74b12106e77b6293c317a268a6669fb7609eda8465214559875c6, 2026-10-29T07:12:23Z): getTotalReserves() = 0, PSM.supply() = 0, DOLA inventory 200,000 (balanceOf 199,999.99999999997 DOLA), buy fee 0 and sell fee 20 bps. sell() reverts while supply() == 0, so redemption capacity only arises from prior USDS-to-DOLA buys; the issuer states reserve accumulation is demand-driven with no committed target or date, an issuer statement creating no present capacity. No FiRM-collateral redemption is documented. Same limited basis as the superseded 2026-07-22 ruling, now pinned to the current canonical deployment: verified permissionless route machinery with zero funded reserve capacity, not a current execution guarantee.",
             "sources": [
               {
-                "label": "Inverse Peg Stability Module documentation",
+                "label": "Inverse Peg Stability Module documentation (corrected canonical pair, proposal 343 executed 2025-12-20, 20-bps sell fee; Fed supply cap does not measure USDS reserves or guarantee redemption capacity)",
                 "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/peg-stability-module"
               },
               {
-                "label": "PSM verified Solidity source",
-                "url": "https://api.routescan.io/v2/network/mainnet/evm/1/etherscan/api?module=contract&action=getsourcecode&address=0x4dfd662622d766304cb539e66f893c4defa19398"
+                "label": "Canonical PSM 0x1d02f2841afa3cc20435a8c804c24deac5f30dfa verified source",
+                "url": "https://etherscan.io/address/0x1d02f2841afa3cc20435a8c804c24deac5f30dfa#code"
               },
               {
-                "label": "Historical Ethereum block 25572058 reads (2026-07-20)",
-                "url": "https://ethereum-rpc.publicnode.com"
+                "label": "Ethereum block 26296822 pinned PSM reads (getTotalReserves/supply/DOLA inventory/fees; 2026-10-29T07:12:23Z)",
+                "url": "https://etherscan.io/block/26296822"
               }
             ]
           }
@@ -13574,6 +13658,18 @@
         {
           "label": "Ethereum PublicNode RPC used for the eth_call reads at block 25572058",
           "url": "https://ethereum-rpc.publicnode.com"
+        },
+        {
+          "label": "jrDOLA v2 0x6f80a22a57c7f0257094ea8d426af3f747defbc7 verified JDola source (sDOLA asset, totalAssets/MIN_ASSETS, approved-module slashing, withdrawal-escrow restriction)",
+          "url": "https://etherscan.io/address/0x6f80a22a57c7f0257094ea8d426af3f747defbc7#code"
+        },
+        {
+          "label": "FiRMSlashingModule v2 0x316a01f878aa6d5a4c7ea2080d64d364f9538aa2 verified source (permissionless slash, market activation and borrower eligibility)",
+          "url": "https://etherscan.io/address/0x316a01f878aa6d5a4c7ea2080d64d364f9538aa2#code"
+        },
+        {
+          "label": "Ethereum block 26296822, hash 0xd9a1213a6ee74b12106e77b6293c317a268a6669fb7609eda8465214559875c6, timestamp 2026-10-29T07:12:23Z; pinned jrDOLA v2 and sDOLA vault reads",
+          "url": "https://etherscan.io/block/26296822"
         }
       ],
       "notes": "Measured 2026-07-20 at Ethereum block 25572058 via eth_call over https://ethereum-rpc.publicnode.com on the canonical Ethereum sDOLA 0xb45ad160634c528cc3d2926d9807104fa3157305: asset() = DOLA 0x865377367054516e17014ccded1e7d814edc9ce4, totalSupply() = 3,654,056.350154 shares, totalAssets() = 5,121,790.839912 DOLA, convertToAssets(1e18) = previewRedeem(1e18) = 1.401672648 DOLA per sDOLA (previewRedeem equals convertToAssets, so no redemption fee), and previewRedeem(totalSupply) = 5,121,790.839912 = totalAssets exactly, so the full share supply converts into vault DOLA at the current exchange rate. The pinned verified source establishes an immutable ERC-4626 wrapper over the DOLA Savings Account with no proxy/upgrade slot; its only withdrawal caveats are dust-level (MIN_SHARES 1e18 shares always unwithdrawable and MIN_BALANCE 0.01 DOLA remaining, per the constructor warning), and governance (a Timelock per the reviewed coin record) can set operator/gov and sweep non-DBR tokens but cannot change share accounting. COLLATERALIZATION PARAMETERS and LIQUIDATION MECHANICS are structurally not-applicable: the documented wrapper originates no borrower debt positions and operates no liquidation engine; the CDP mechanics live on the underlying DOLA parent (FiRM). Both CDP metrics are therefore null with not-applicable metricApplicability. STRUCTURAL REDEMPTION (adequate): the docs describe instant, permissionless, lock-up-free unwrapping into DOLA, and the measured full-supply previewRedeem path confirms 1:1 backing at the current exchange rate — adequate for redemption into the tracked DOLA parent without claiming DOLA itself has an adequate exit (DOLA's own PSM redemption facility read supply() = 0 at the same block, noted on the parent review). BACKSTOP (limited): the documented design makes sDOLA the senior tranche protected by the jrDOLA junior buffer, but at block 25572058 the junior vault held only 438.754496 sDOLA (~615 DOLA, 0.012% of the wrapper's 5.12M DOLA assets), so the buffer currently protects against nothing material; protection effectively reduces to the parent's unquantified protocol reserves. BRANCH ISOLATION (limited): the wrapper itself has no collateral branches; sDOLA holders are passively exposed to whichever FiRM markets generate the underlying DOLA, inheriting the parent's isolation properties without a wrapper-local control. SHUTDOWN AND BAD DEBT (limited): inherits the parent's bad-debt path (jrDOLA slash then reserves, with DBR auction proceeds repaying legacy 2022 bad debt); the wrapper source documents no local shutdown or settlement facility, and bad debt inside FiRM would flow through the DOLA exchange rate. NOT ESTABLISHED this session: no audit report for the sDOLA wrapper was fetched (the docs reference audits generally); the cross-chain CCIP exchange-rate synchronization for L2 sDOLA was not re-verified; the DBR auction revenue path that drives the exchange rate was documented but not independently replayed.",
@@ -13610,7 +13706,30 @@
           "sourceUrl": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/sdola"
         },
         "backstop": {
-          "quality": "limited"
+          "quality": "limited",
+          "review": {
+            "reviewedAt": "2026-10-29T07:12:23Z",
+            "reviewer": "Inverse follow-up sDOLA backstop refresh 2026-10-29",
+            "rationale": "Component-scoped re-review superseding the July 2026-07-20 backstop premise in this overlay's global notes (jrDOLA held 438.754496 sDOLA and 'currently protects against nothing material', measured at block 25572058): at Ethereum block 26296822 (hash 0xd9a1213a6ee74b12106e77b6293c317a268a6669fb7609eda8465214559875c6, 2026-10-29T07:12:23Z), jrDOLA v2 0x6f80a22a57c7f0257094ea8d426af3f747defbc7 has asset() = sDOLA 0xb45ad160634c528cc3d2926d9807104fa3157305, totalAssets 147,836.836794 sDOLA (approximately 210,833.23 DOLA gross; source-defined slash ceiling 210,831.81 DOLA after the 1 sDOLA MIN_ASSETS) and is wired to FiRMSlashingModule 0x316a01f878aa6d5a4c7ea2080d64d364f9538aa2 — about 0.2953% of the same-block 71,394,111.00 DOLA FiRM debt, or about 1.08% of sDOLA supply. The superseded v1 vault 0x633821b8e003344e5223509277f2084ea809a452 (still holding 438.75 sDOLA) is not the current buffer. sDOLA remains the senior tranche: the first-loss buffer is now real but thin, and losses beyond it rest on the parent's treasury-liability / DAO repayment policy, an issuer statement only (Inverse 2026-10-28 response, first confirmed 2026-10-20), not a funded or enforceable obligation. Limited retained. Same-pin wrapper figures carried in this review: totalSupply 13,654,046.657321 sDOLA, totalAssets 19,472,324.145355 DOLA, convertToAssets(1e18) = 1.426121107833979190 DOLA per sDOLA; the global July pin (block 25572058: 3,654,056.35 shares, 5,121,790.84 DOLA, 1.401673) and analogousMetrics retain their original clock per the evidence standard's no-renewal rule.",
+            "sources": [
+              {
+                "label": "Inverse jrDOLA first-loss documentation",
+                "url": "https://docs.inverse.finance/inverse-finance/inverse-finance/products/tokens/dola/jrdola"
+              },
+              {
+                "label": "jrDOLA v2 verified JDola source (asset() = sDOLA; totalAssets/MIN_ASSETS)",
+                "url": "https://etherscan.io/address/0x6f80a22a57c7f0257094ea8d426af3f747defbc7#code"
+              },
+              {
+                "label": "FiRMSlashingModule v2 verified source",
+                "url": "https://etherscan.io/address/0x316a01f878aa6d5a4c7ea2080d64d364f9538aa2#code"
+              },
+              {
+                "label": "Ethereum block 26296822 pinned jrDOLA v2 and sDOLA vault reads (2026-10-29T07:12:23Z)",
+                "url": "https://etherscan.io/block/26296822"
+              }
+            ]
+          }
         },
         "branchIsolation": {
           "quality": "limited"

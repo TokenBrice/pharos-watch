@@ -17,13 +17,15 @@ function makeMarket(symbol: string, totalDebt = 1_000_000): FirmMarket {
   return { name: `${symbol} Market`, underlying: { symbol }, totalDebt, dolaLiquidity: 0, borrowPaused: false };
 }
 
-const PSM_ADDRESS = "0x4dfd662622d766304cb539e66f893c4defa19398";
+const PSM_ADDRESS = "0x1d02f2841afa3cc20435a8c804c24deac5f30dfa";
+const FED_ADDRESS = "0x67fc21332d24fc5250a3b7fc988191ad7f38f9cc";
 const SUSDS_ADDRESS = "0xa3931d71877c0e7a3148cb7eb4463524fec27fbd";
 const USDS_ADDRESS = "0xdc035d45d973e3ec169d2276ddab16f1e407384f";
 const DOLA_ADDRESS = "0x865377367054516e17014ccded1e7d814edc9ce4";
 const VAULT_SELECTOR = "0xfbfa77cf";
 const COLLATERAL_SELECTOR = "0xd8dfeb45";
 const DOLA_SELECTOR = "0x92c592d0";
+const FED_SELECTOR = "0x53d06f94";
 const SUPPLY_SELECTOR = "0x047fc9aa";
 const SELL_FEE_BPS_SELECTOR = "0x23cbe1f3";
 const MAX_WITHDRAW_DATA = `0xce96cb77${PSM_ADDRESS.slice(2).padStart(64, "0")}`;
@@ -44,6 +46,7 @@ function dolaNetwork(options: {
   vault?: string | null;
   collateral?: string | null;
   dola?: string | null;
+  fed?: string | null;
   supply?: bigint | null;
   maxWithdraw?: bigint | null;
   sellFeeBps?: bigint | null;
@@ -69,10 +72,11 @@ function dolaNetwork(options: {
       [`${PSM_ADDRESS}:${COLLATERAL_SELECTOR}`]:
         options.collateral === undefined ? word(USDS_ADDRESS) : options.collateral,
       [`${PSM_ADDRESS}:${DOLA_SELECTOR}`]: options.dola === undefined ? word(DOLA_ADDRESS) : options.dola,
-      [`${PSM_ADDRESS}:${SUPPLY_SELECTOR}`]: options.supply === undefined ? 0n : options.supply,
+      [`${PSM_ADDRESS}:${FED_SELECTOR}`]: options.fed === undefined ? word(FED_ADDRESS) : options.fed,
       [`${PSM_ADDRESS}:${SELL_FEE_BPS_SELECTOR}`]: options.sellFeeBps === undefined ? 20n : options.sellFeeBps,
       [`${SUSDS_ADDRESS}:${MAX_WITHDRAW_DATA}`]:
         options.maxWithdraw === undefined ? 0n : options.maxWithdraw,
+      [`${PSM_ADDRESS}:${SUPPLY_SELECTOR}`]: options.supply === undefined ? 0n : options.supply,
       ...options.marketRpc,
     },
   });
@@ -428,8 +432,10 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
   });
 
   it("publishes the measured zero capacity without claiming the route is open", async () => {
-    // The PSM has been empty since 2025-12-10. It is not paused — it has
-    // nothing to pay out — so neither "open" nor "paused" is an honest claim.
+    // The canonical PSM has read supply() = 0 at every Pharos pin since its
+    // 2025-12-20 activation, and sell() reverts while supply() is zero. It is
+    // not paused — it has no accounted supply to pay out — so neither "open"
+    // nor "paused" is an honest claim.
     const { result } = await runDola({ supply: 0n, maxWithdraw: 0n });
 
     expect(result.metadata).toMatchObject({
@@ -486,6 +492,21 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
     expectValidAdapterOutput("dola-inverse", result);
   });
 
+  it("withholds the whole redemption block when fed() names a retired PSM Fed generation", async () => {
+    // The drained original PSM 0x4dfd… still answers vault()/collateral()/DOLA()
+    // with the pinned identities, so fed() is the pin that separates generations.
+    const { result } = await runDola({
+      fed: word("0x400510611bcbf9171f0e548f1c3dca7159e60d28"),
+      supply: 5_000n * 10n ** 18n,
+    });
+
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.metadata?.psmSupplyRaw).toBeUndefined();
+    expect(result.warnings ?? []).toEqual(
+      expect.arrayContaining([expect.objectContaining({ code: "dola-psm-unreadable", effect: "info" })]),
+    );
+    expectValidAdapterOutput("dola-inverse", result);
+  });
 
   it("measures non-FiRM issuance from the fresh stablecoins cache instead of degrading", async () => {
     const { result } = await runDola({}, dolaCacheDb(1_500_000));
@@ -551,6 +572,7 @@ describe("fetchDolaInverseReserves PSM redemption telemetry", () => {
         [`${PSM_ADDRESS}:${VAULT_SELECTOR}`]: word(SUSDS_ADDRESS),
         [`${PSM_ADDRESS}:${COLLATERAL_SELECTOR}`]: word(USDS_ADDRESS),
         [`${PSM_ADDRESS}:${DOLA_SELECTOR}`]: word(DOLA_ADDRESS),
+        [`${PSM_ADDRESS}:${FED_SELECTOR}`]: word(FED_ADDRESS),
         [`${PSM_ADDRESS}:${SUPPLY_SELECTOR}`]: 0n,
         [`${PSM_ADDRESS}:${SELL_FEE_BPS_SELECTOR}`]: 20n,
         [`${SUSDS_ADDRESS}:${MAX_WITHDRAW_DATA}`]: 0n,
