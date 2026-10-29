@@ -99,10 +99,10 @@
         "modulesOrGuardsStatus": "not-applicable",
         "executionScope": {
           "controllerDeployment": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-27",
-          "reviewer": "D03 evidence renewal 2026-10-27 (d03-l7): owner, implementation, trust service, MASTER role and owner code re-read at pinned block 26286588",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "R-MINT-5 evidence renewal 2026-10-29: owner(), implementation and owner code re-read at pinned block 26300150",
           "confidence": "partial",
           "sources": [
             {
@@ -110,19 +110,19 @@
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x77684815f44b28726bc3efa4471b88ef3b93feb0"
             },
             {
-              "label": "Dwellir Ethereum block 26286588 (2026-10-27T20:57:59Z): owner, implementation, trust service and MASTER role",
+              "label": "Dwellir Ethereum block 26300150 (2026-10-29T18:19:47Z): owner, implementation and owner code",
               "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26286588",
-            "hash": "0x5c2b6a519a0d480d69579d8ab829e3061b5e0183e4f49b4600ff1e63d0615723",
+            "position": "26300150",
+            "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
             "runtimeIdentity": "eth_getCode:0x",
             "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
           },
           "observedState": {
-            "position": "26286588",
-            "hash": "0x5c2b6a519a0d480d69579d8ab829e3061b5e0183e4f49b4600ff1e63d0615723",
+            "position": "26300150",
+            "hash": "0x24373f83021cb40374be9f01661192a60773b01d04c3beb547c68302e308d781",
             "runtimeIdentity": "eth_getCode:0x",
             "signerIdentity": "ethereum:0x59c1eacec450c57dcb9b8725d0f96635c2b676ee"
           },
@@ -211,8 +211,8 @@
             }
           ]
         },
-        "observedAt": "2026-10-27",
-        "observedBlock": 26286588,
+        "observedAt": "2026-10-29",
+        "observedBlock": 26300150,
         "sources": [
           {
             "label": "STAC token proxy (Blockscout)",
@@ -287,10 +287,10 @@
         "modulesOrGuardsStatus": "none-detected",
         "executionScope": {
           "controllerDeployment": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6",
-          "reviewedAt": "2026-10-27",
-          "observedAt": "2026-10-27",
-          "expiresAt": "2026-11-26",
-          "reviewer": "D01 evidence renewal 2026-10-27",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2026-11-28",
+          "reviewer": "R-MINT-5 evidence renewal 2026-10-29: controller program and ProgramData authority re-read at finalized slot 462941000",
           "confidence": "partial",
           "sources": [
             {
@@ -303,14 +303,14 @@
             }
           ],
           "pin": {
-            "position": "462008033",
-            "hash": "5w7RzY9XNbD6uHVZZwjZmTPuLG1n98PQCWHepvuGZ7dX",
+            "position": "462941000",
+            "hash": "F2YvX9ayhqmNrCwCakw59LUQJ9X3oz7iG4RwXeAPJmFQ",
             "runtimeIdentity": "system-owned:zero-data:non-executable",
             "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
           },
           "observedState": {
-            "position": "462008033",
-            "hash": "5w7RzY9XNbD6uHVZZwjZmTPuLG1n98PQCWHepvuGZ7dX",
+            "position": "462941000",
+            "hash": "F2YvX9ayhqmNrCwCakw59LUQJ9X3oz7iG4RwXeAPJmFQ",
             "runtimeIdentity": "system-owned:zero-data:non-executable",
             "signerIdentity": "solana:8d36iv2YUD8yDChuVZchx1NqE4qkDWCAEgsUEEUqzbB6"
           },
@@ -363,8 +363,8 @@
           "eoa:solana:8d36iv2yud8ydchuvzchx1nqe4qkdwcaegsueeuqzbb6",
           "program:solana:7txjmbkzvy3gmg9kdbebcnxt1yc5pyoxxxvlwdbv9tvp"
         ],
-        "observedAt": "2026-10-27",
-        "observedBlock": 462008033,
+        "observedAt": "2026-10-29",
+        "observedBlock": 462941000,
         "sources": [
           {
             "label": "STAC Solana controller program",

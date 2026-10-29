@@ -51,10 +51,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -71,14 +71,14 @@
             }
           ],
           "pin": {
-            "position": "26122338",
-            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+            "position": "26300241",
+            "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
             "runtimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
             "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
           },
           "observedState": {
-            "position": "26122338",
-            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+            "position": "26300241",
+            "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
             "runtimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
             "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
           },
@@ -141,8 +141,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "26122338",
-                  "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+                  "position": "26300241",
+                  "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
                   "runtimeIdentity": "sha256:8f32eb0b4b83b5cdf14d42a3d4f53a40223c0c999c0bee3d27b1aaf777e00e7c",
                   "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
                 },
@@ -162,8 +162,8 @@
         "threshold": 2,
         "signerCount": 32,
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095802,
+        "observedAt": "2026-10-29",
+        "observedBlock": 26300241,
         "sources": [
           {
             "label": "Ethereum: RLUSD token contract",
@@ -174,7 +174,7 @@
             "url": "https://eth.blockscout.com/address/0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591"
           }
         ],
-        "evidence": "At Ethereum block 26095802, hasRole(MINTER_ROLE, 0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591) returned true. MultiSign signers() returned 32 addresses; quorum() returned 2; all 32 signerWeight() reads returned 1; nonce() returned 610. The EIP-1967 implementation remained 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. This custom EIP-712 MultiSign controls Ethereum issuance, not the XRPL issuer."
+        "evidence": "Fresh pinned read 2026-10-29 at ethereum block 26300241 (hash 0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38, 2026-10-29T18:37:59.000Z) from the chain's archive RPC: hasRole(MINTER_ROLE, 0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591) returned true; quorum()=2; signers()=32 addresses; signerWeight() roster 32 signer(s) weight 1; nonce()=691; EIP-1967 implementation slot 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e; controller runtime and signer identities byte-identical to the prior pin. At Ethereum block 26095802, hasRole(MINTER_ROLE, 0x97e9d0b0bcbe86e1e230b0ffd3a5f1f9b8428591) returned true. MultiSign signers() returned 32 addresses; quorum() returned 2; all 32 signerWeight() reads returned 1; nonce() returned 610. The EIP-1967 implementation remained 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e. This custom EIP-712 MultiSign controls Ethereum issuance, not the XRPL issuer."
       },
       {
         "deploymentRefs": [
@@ -200,10 +200,10 @@
         },
         "executionScope": {
           "controllerDeployment": "xrpl:rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
-          "reviewedAt": "2026-10-09",
-          "observedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation campaign 2026-10-09 (W4C05Origin)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "partial",
           "sources": [
             {
@@ -221,19 +221,23 @@
             {
               "label": "XRPL permission delegation: amendment state and delegate inventory require exact-ledger review",
               "url": "https://xrpl.org/docs/concepts/accounts/permission-delegation"
+            },
+            {
+              "label": "Pinned XRPL account_info/SignerList at validated ledger 107985446",
+              "url": "https://xrpl.org/docs/references/http-websocket-apis/public-api-methods/account-methods/account_info"
             }
           ],
           "pin": {
-            "position": "107364064",
-            "hash": "140428C89835397DD997E0979CD419177643DD61ADDF82C2608902CFBA13B83B",
+            "position": "107985446",
+            "hash": "5943AAB65D05DEB7AE75F3C75A8CB64C6FBBD25FB26C37460F03DC829F450D7B",
             "runtimeIdentity": "XRPL AccountRoot and SignerListID 0",
-            "signerIdentity": "sha256:99f9566c2c1ef11b25f356ed98663b8057b3fd11cdd82ab0836e81615123aac6"
+            "signerIdentity": "sha256:c9de4f57b8b1c2229cad62d87d7c7eefad0846681fe83346e4c1a299371def6e"
           },
           "observedState": {
-            "position": "107364064",
-            "hash": "140428C89835397DD997E0979CD419177643DD61ADDF82C2608902CFBA13B83B",
+            "position": "107985446",
+            "hash": "5943AAB65D05DEB7AE75F3C75A8CB64C6FBBD25FB26C37460F03DC829F450D7B",
             "runtimeIdentity": "XRPL AccountRoot and SignerListID 0",
-            "signerIdentity": "sha256:99f9566c2c1ef11b25f356ed98663b8057b3fd11cdd82ab0836e81615123aac6"
+            "signerIdentity": "sha256:c9de4f57b8b1c2229cad62d87d7c7eefad0846681fe83346e4c1a299371def6e"
           },
           "inventory": "partial",
           "closure": {
@@ -471,15 +475,15 @@
             "state": "absent"
           },
           "pin": {
-            "position": "107364064",
-            "hash": "140428C89835397DD997E0979CD419177643DD61ADDF82C2608902CFBA13B83B",
+            "position": "107985446",
+            "hash": "5943AAB65D05DEB7AE75F3C75A8CB64C6FBBD25FB26C37460F03DC829F450D7B",
             "runtimeIdentity": "XRPL AccountRoot and SignerListID 0",
-            "signerIdentity": "sha256:99f9566c2c1ef11b25f356ed98663b8057b3fd11cdd82ab0836e81615123aac6"
+            "signerIdentity": "sha256:c9de4f57b8b1c2229cad62d87d7c7eefad0846681fe83346e4c1a299371def6e"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
@@ -488,15 +492,15 @@
           ]
         },
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-01",
-        "observedBlock": 107358397,
+        "observedAt": "2026-10-29",
+        "observedBlock": 107985446,
         "sources": [
           {
             "label": "XRPL: RLUSD issuer account rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De",
             "url": "https://xrpscan.com/account/rMxCKbEDwqr76QuheSUMdEGf4B9xJ8m5De"
           }
         ],
-        "evidence": "Pinned XRPL account_info at validated ledger 107354222, hash B8DE3B19D5292634507586AC6D1FE22BF589213B84EBD629733F27062D164411: Flags 0x819a0000 includes DisableMaster; no RegularKey is present. SignerListID 0 has SignerQuorum 25 and 26 entries: eight signers have weight 24 and eighteen have weight 1. NoFreeze and GlobalFreeze are unset. The former master-key-active/no-signer-list description was incorrect. Mapping this weighted quorum into the person-count multisig schema remains a separate review question. D15 current observation at validated XRPL ledger 107358397 confirms the weighted roster and authority unchanged. One maximum-weight signer supplies 24, below quorum 25; two can meet quorum as 24+1 or 24+24. Master key remains disabled and no RegularKey is present. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
+        "evidence": "Fresh pinned XRPL account_info at validated ledger 107985446 (hash 5943AAB65D05DEB7AE75F3C75A8CB64C6FBBD25FB26C37460F03DC829F450D7B, close 2026-10-29T18:42:20Z) via keyless https://s1.ripple.com:51234/: Flags 0x819a0000 (AllowTrustLineClawback, DepositAuth, DefaultRipple, DisableMaster, DisallowXRP, RequireDestTag; NoFreeze and GlobalFreeze unset), no RegularKey, SignerListID 0 SignerQuorum 25 with 26 entries (eight weight 24, eighteen weight 1), OwnerCount 19, Domain set. Roster and authority unchanged from the prior pin; the current XRPL execution inventory remains partial (no complete Delegate/amendment or issued-currency liability census). Pinned XRPL account_info at validated ledger 107354222, hash B8DE3B19D5292634507586AC6D1FE22BF589213B84EBD629733F27062D164411: Flags 0x819a0000 includes DisableMaster; no RegularKey is present. SignerListID 0 has SignerQuorum 25 and 26 entries: eight signers have weight 24 and eighteen have weight 1. NoFreeze and GlobalFreeze are unset. The former master-key-active/no-signer-list description was incorrect. Mapping this weighted quorum into the person-count multisig schema remains a separate review question. D15 current observation at validated XRPL ledger 107358397 confirms the weighted roster and authority unchanged. One maximum-weight signer supplies 24, below quorum 25; two can meet quorum as 24+1 or 24+24. Master key remains disabled and no RegularKey is present. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
       },
       {
         "chain": "ethereum",
@@ -509,10 +513,10 @@
         "authorityType": "multisig",
         "executionScope": {
           "controllerDeployment": "ethereum:0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -530,17 +534,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
+            },
+            {
+              "label": "Pinned ethereum block 26300241 controller identity and role/quorum state",
+              "url": "https://eth.blockscout.com/address/0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e"
             }
           ],
           "pin": {
-            "position": "26122338",
-            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+            "position": "26300241",
+            "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
             "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "26122338",
-            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+            "position": "26300241",
+            "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
             "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -603,8 +611,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "26122338",
-                  "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+                  "position": "26300241",
+                  "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
                   "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -672,15 +680,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26300241",
+            "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
             "runtimeIdentity": "sha256:9019e664c8ea27713d9cf5813a070f3b91170917708aa68f510164cb20124496",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ethereum: RLUSD proxy creation transaction",
@@ -697,8 +705,8 @@
           ]
         },
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26097127,
+        "observedAt": "2026-10-29",
+        "observedBlock": 26300241,
         "sources": [
           {
             "label": "Ethereum: RLUSD proxy creation transaction",
@@ -713,7 +721,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 26095802, hasRole(DEFAULT_ADMIN_ROLE, 0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e) returned true. MultiSign quorum() returned 7 and signers() returned 11 addresses. signerWeight() returned four weights of 3 and seven weights of 2. Weighted quorum 7 must not be presented as a seven-person threshold. The role can grant and revoke mint-critical roles; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
+        "evidence": "Fresh pinned read 2026-10-29 at ethereum block 26300241 (hash 0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38, 2026-10-29T18:37:59.000Z) from the chain's archive RPC: hasRole(DEFAULT_ADMIN_ROLE, 0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=23; EIP-1967 implementation slot 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e; controller runtime and signer identities byte-identical to the prior pin. At Ethereum block 26095802, hasRole(DEFAULT_ADMIN_ROLE, 0x66fc2d9e4897cf3886a340a4cabc23cca2ac6a0e) returned true. MultiSign quorum() returned 7 and signers() returned 11 addresses. signerWeight() returned four weights of 3 and seven weights of 2. Weighted quorum 7 must not be presented as a seven-person threshold. The role can grant and revoke mint-critical roles; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
       },
       {
         "chain": "ethereum",
@@ -726,10 +734,10 @@
         "authorityType": "multisig",
         "executionScope": {
           "controllerDeployment": "ethereum:0x863c8754c298d3efec3863f2a46f1c71a355ce6c",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -747,17 +755,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x863c8754c298d3efec3863f2a46f1c71a355ce6c"
+            },
+            {
+              "label": "Pinned ethereum block 26300241 controller identity and role/quorum state",
+              "url": "https://eth.blockscout.com/address/0x863c8754c298d3efec3863f2a46f1c71a355ce6c"
             }
           ],
           "pin": {
-            "position": "26122338",
-            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+            "position": "26300241",
+            "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
             "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "26122338",
-            "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+            "position": "26300241",
+            "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
             "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -820,8 +832,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "26122338",
-                  "hash": "0xac239e018e42b9633be3a606d49dbeb37745d6a4bdd1515e9efc2e1d08a7d304",
+                  "position": "26300241",
+                  "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
                   "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -889,15 +901,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "26098939",
-            "hash": "0x8cb8de2de5983d67cc251d6c689a18ddacc4179199d20806c7b4871aa057fd7c",
+            "position": "26300241",
+            "hash": "0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38",
             "runtimeIdentity": "sha256:86d0cef73ba7671005bbcbe2904d6c6f25eb4bd1d503746f513b209a7afad687",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ethereum: RLUSD proxy creation transaction",
@@ -914,8 +926,8 @@
           ]
         },
         "modulesOrGuardsStatus": "none-detected",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26097127,
+        "observedAt": "2026-10-29",
+        "observedBlock": 26300241,
         "sources": [
           {
             "label": "Ethereum: RLUSD proxy creation transaction",
@@ -930,7 +942,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "At Ethereum block 26095802, hasRole(UPGRADER_ROLE, 0x863c8754c298d3efec3863f2a46f1c71a355ce6c) returned true. MultiSign quorum() returned 7 and signers() returned the same 11 addresses as the role-admin contract. signerWeight() returned four weights of 3 and seven weights of 2. The current UUPS implementation is unchanged. Weighted quorum 7 is not a seven-person threshold; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
+        "evidence": "Fresh pinned read 2026-10-29 at ethereum block 26300241 (hash 0x5f42e75044e2d8997db6dd17cfe94a68c2e09a23406144ddda8c80c1d4695c38, 2026-10-29T18:37:59.000Z) from the chain's archive RPC: hasRole(UPGRADER_ROLE, 0x863c8754c298d3efec3863f2a46f1c71a355ce6c) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=13; EIP-1967 implementation slot 0x9747a0d261c2d56eb93f542068e5d1e23170fa9e; controller runtime and signer identities byte-identical to the prior pin. At Ethereum block 26095802, hasRole(UPGRADER_ROLE, 0x863c8754c298d3efec3863f2a46f1c71a355ce6c) returned true. MultiSign quorum() returned 7 and signers() returned the same 11 addresses as the role-admin contract. signerWeight() returned four weights of 3 and seven weights of 2. The current UUPS implementation is unchanged. Weighted quorum 7 is not a seven-person threshold; no person-count threshold is authored pending category mapping. D15 current observation at Ethereum block 26097127 confirms the weighted roster and authority unchanged. Two maximum-weight signers supply 3+3=6, below quorum 7; three can meet quorum as 3+2+2=7. The new threshold is the minimum cryptographic signature count, not independent people. Complete current address/weight roster is retained in review.evidence."
       },
       {
         "label": "RLUSD base minter MultiSign (weighted quorum 2, 32 signers)",
@@ -943,10 +955,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "base:0x9b8a83e875023c3fefd8354044e011d8bc847a34",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -968,17 +980,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x9b8a83e875023c3fefd8354044e011d8bc847a34"
+            },
+            {
+              "label": "Pinned base block 53254879 controller identity and role/quorum state",
+              "url": "https://base.blockscout.com/address/0x9b8a83e875023c3fefd8354044e011d8bc847a34"
             }
           ],
           "pin": {
-            "position": "52183926",
-            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+            "position": "53254879",
+            "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
             "runtimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
             "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
           },
           "observedState": {
-            "position": "52183926",
-            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+            "position": "53254879",
+            "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
             "runtimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
             "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
           },
@@ -1041,8 +1057,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "52183926",
-                  "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+                  "position": "53254879",
+                  "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
                   "runtimeIdentity": "sha256:9d04dd2daa5bb61a47546503fefcf3cbadaaec9698ce43a58b4e5f2bd4fc9fbb",
                   "signerIdentity": "sha256:628414319f4de6ce46027bb2381263e4944a0cca9bbeb228a1eefa99f3903827"
                 },
@@ -1067,8 +1083,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 52041924,
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254879,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -1087,7 +1103,7 @@
             "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned base block 52041924: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 32 addresses; complete signerWeight(address) roster: 0x0202e69c6aa94d5b34123d3eae4aa5e104f569d2:1; 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x053dacfbbc80ef8a0d09f2f9931d03554f246257:1; 0x131810c8c6dcd264c999b878555889fb2b13e4cb:1; 0x15b9812edb53d416a53743219b59dfe35593e79e:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x243623fa9e049c1ee0a3be683d93550aa907a226:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2cca7cb3141b08883dbc7a8fbe5cc65a9db7d8a7:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x7458967dbbd70d5fa643f088340bd4326974e955:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x7701cd6e62e9c25b9b4fd41612298f1fac25348f:1; 0x893ae7f682c62df584ef1a22b508d866d871e8c4:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0x9d4a75310f713a580541c0c94e0e1792493a076a:1; 0xa7471bd513fd220ed959a05e80369534261e7fea:1; 0xa7a60679b2b345a93e142cd825b04afa186e6559:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xb44895320536bd35a0e81b4158c9d4b6598d407e:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1; 0xec699bee3c011ba2ec026e4a377c6cd354d91bc6:1. Minimum cryptographic signatures=2; independent people/organizations are not established. Base explorer source is unverified; pinned runtime differs from the verified Optimism MultiSign in exactly its sole 32-byte EIP-712 domain immutable, independently reconciled to chain/address. All remaining runtime and metadata bytes match. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+        "evidence": "Fresh pinned read 2026-10-29 at base block 53254879 (hash 0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6, 2026-10-29T18:38:25.000Z) from the chain's archive RPC: hasRole(MINTER_ROLE, 0x9b8a83e875023c3fefd8354044e011d8bc847a34) returned true; quorum()=2; signers()=32 addresses; signerWeight() roster 32 signer(s) weight 1; nonce()=24; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned base block 52041924: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 32 addresses; complete signerWeight(address) roster: 0x0202e69c6aa94d5b34123d3eae4aa5e104f569d2:1; 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x053dacfbbc80ef8a0d09f2f9931d03554f246257:1; 0x131810c8c6dcd264c999b878555889fb2b13e4cb:1; 0x15b9812edb53d416a53743219b59dfe35593e79e:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x243623fa9e049c1ee0a3be683d93550aa907a226:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2cca7cb3141b08883dbc7a8fbe5cc65a9db7d8a7:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x7458967dbbd70d5fa643f088340bd4326974e955:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x7701cd6e62e9c25b9b4fd41612298f1fac25348f:1; 0x893ae7f682c62df584ef1a22b508d866d871e8c4:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0x9d4a75310f713a580541c0c94e0e1792493a076a:1; 0xa7471bd513fd220ed959a05e80369534261e7fea:1; 0xa7a60679b2b345a93e142cd825b04afa186e6559:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xb44895320536bd35a0e81b4158c9d4b6598d407e:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1; 0xec699bee3c011ba2ec026e4a377c6cd354d91bc6:1. Minimum cryptographic signatures=2; independent people/organizations are not established. Base explorer source is unverified; pinned runtime differs from the verified Optimism MultiSign in exactly its sole 32-byte EIP-712 domain immutable, independently reconciled to chain/address. All remaining runtime and metadata bytes match. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
       },
       {
         "label": "RLUSD base role-admin MultiSign (weighted quorum 7, 11 signers)",
@@ -1100,10 +1116,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "base:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -1125,17 +1141,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
+            },
+            {
+              "label": "Pinned base block 53254879 controller identity and role/quorum state",
+              "url": "https://base.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
             }
           ],
           "pin": {
-            "position": "52183926",
-            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+            "position": "53254879",
+            "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
             "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "52183926",
-            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+            "position": "53254879",
+            "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
             "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -1198,8 +1218,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "52183926",
-                  "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+                  "position": "53254879",
+                  "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
                   "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -1267,15 +1287,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "53254879",
+            "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
             "runtimeIdentity": "sha256:1d19a0427fc0e76b7c9acec4b9b8d197e29fff8bd4f27d99fd6a658093c32f07",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1301,8 +1321,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 52041924,
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254879,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -1321,7 +1341,7 @@
             "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned base block 52041924: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+        "evidence": "Fresh pinned read 2026-10-29 at base block 53254879 (hash 0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6, 2026-10-29T18:38:25.000Z) from the chain's archive RPC: hasRole(DEFAULT_ADMIN_ROLE, 0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=11; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned base block 52041924: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
       },
       {
         "label": "RLUSD base upgrader MultiSign (weighted quorum 7, 11 signers)",
@@ -1334,10 +1354,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "base:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -1359,17 +1379,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://base.blockscout.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            },
+            {
+              "label": "Pinned base block 53254879 controller identity and role/quorum state",
+              "url": "https://base.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
             }
           ],
           "pin": {
-            "position": "52183926",
-            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+            "position": "53254879",
+            "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
             "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "52183926",
-            "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+            "position": "53254879",
+            "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
             "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -1432,8 +1456,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "52183926",
-                  "hash": "0x31bd474ff9fb6d865cc3383747b3cc0f35921cf0ce1f6c761efccac81c40d004",
+                  "position": "53254879",
+                  "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
                   "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -1501,15 +1525,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "52043057",
-            "hash": "0x94e5f2a59cd7955e0f663d481d557fa0928590601cf2272f5700bb0c9f079df7",
+            "position": "53254879",
+            "hash": "0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6",
             "runtimeIdentity": "sha256:b71cc8ff4396e6cfa40ddd5a8c3bfd2ba090ad203c515c716bd5981358a039ea",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1535,8 +1559,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 52041924,
+        "observedAt": "2026-10-29",
+        "observedBlock": 53254879,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -1555,7 +1579,7 @@
             "url": "https://base.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned base block 52041924: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "evidence": "Fresh pinned read 2026-10-29 at base block 53254879 (hash 0xbd55bf0d7900a36bf864b8ee17c32671c3d9d4ac05b220ac832cc0e5c32e41a6, 2026-10-29T18:38:25.000Z) from the chain's archive RPC: hasRole(UPGRADER_ROLE, 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=8; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned base block 52041924: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
         "bypassSurfaces": [
           "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
         ]
@@ -1571,10 +1595,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "optimism:0x6e36e38910c0145cafaa96516083c160049fe3e6",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -1596,17 +1620,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x6e36e38910c0145cafaa96516083c160049fe3e6"
+            },
+            {
+              "label": "Pinned optimism block 158850165 controller identity and role/quorum state",
+              "url": "https://explorer.optimism.io/address/0x6e36e38910c0145cafaa96516083c160049fe3e6"
             }
           ],
           "pin": {
-            "position": "157779211",
-            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+            "position": "158850165",
+            "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
             "runtimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
           "observedState": {
-            "position": "157779211",
-            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+            "position": "158850165",
+            "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
             "runtimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
@@ -1669,8 +1697,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "157779211",
-                  "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+                  "position": "158850165",
+                  "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
                   "runtimeIdentity": "sha256:ab2950a037df73696d0783d0fb2aefc3fdfc76acf46c5ad6ef7afc177971532a",
                   "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
                 },
@@ -1695,8 +1723,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 157637209,
+        "observedAt": "2026-10-29",
+        "observedBlock": 158850165,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -1715,7 +1743,7 @@
             "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+        "evidence": "Fresh pinned read 2026-10-29 at optimism block 158850165 (hash 0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638, 2026-10-29T18:38:27.000Z) from the chain's archive RPC: hasRole(MINTER_ROLE, 0x6e36e38910c0145cafaa96516083c160049fe3e6) returned true; quorum()=2; signers()=30 addresses; signerWeight() roster 30 signer(s) weight 1; nonce()=19; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned optimism block 157637209: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
       },
       {
         "label": "RLUSD optimism role-admin MultiSign (weighted quorum 7, 11 signers)",
@@ -1728,10 +1756,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "optimism:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -1753,17 +1781,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
+            },
+            {
+              "label": "Pinned optimism block 158850165 controller identity and role/quorum state",
+              "url": "https://explorer.optimism.io/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
             }
           ],
           "pin": {
-            "position": "157779211",
-            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+            "position": "158850165",
+            "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
             "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "157779211",
-            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+            "position": "158850165",
+            "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
             "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -1826,8 +1858,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "157779211",
-                  "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+                  "position": "158850165",
+                  "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
                   "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -1895,15 +1927,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "158850165",
+            "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
             "runtimeIdentity": "sha256:0c16118ed74f9ae68306505d21ad07a5265e313e5aed0e5f3993dbd81b7d6ac5",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -1929,8 +1961,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 157637209,
+        "observedAt": "2026-10-29",
+        "observedBlock": 158850165,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -1949,7 +1981,7 @@
             "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+        "evidence": "Fresh pinned read 2026-10-29 at optimism block 158850165 (hash 0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638, 2026-10-29T18:38:27.000Z) from the chain's archive RPC: hasRole(DEFAULT_ADMIN_ROLE, 0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=11; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned optimism block 157637209: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
       },
       {
         "label": "RLUSD optimism upgrader MultiSign (weighted quorum 7, 11 signers)",
@@ -1962,10 +1994,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "optimism:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -1987,17 +2019,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://explorer.optimism.io/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            },
+            {
+              "label": "Pinned optimism block 158850165 controller identity and role/quorum state",
+              "url": "https://explorer.optimism.io/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
             }
           ],
           "pin": {
-            "position": "157779211",
-            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+            "position": "158850165",
+            "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
             "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "157779211",
-            "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+            "position": "158850165",
+            "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
             "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -2060,8 +2096,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "157779211",
-                  "hash": "0xf178bc4399e591865bcaac618dc202182cd732c2aa8cb7bade1b38107f91bbe9",
+                  "position": "158850165",
+                  "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
                   "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -2129,15 +2165,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "157638342",
-            "hash": "0x2c2b274012bd4b3116c5db95bf24c8b313e8afb2c065644dd45d3628f980c535",
+            "position": "158850165",
+            "hash": "0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638",
             "runtimeIdentity": "sha256:3dea8b1b7940ad2e487119c3510589e95c9bd26bec54812615ac7980bbf75653",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2163,8 +2199,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 157637209,
+        "observedAt": "2026-10-29",
+        "observedBlock": 158850165,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -2183,7 +2219,7 @@
             "url": "https://explorer.optimism.io/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned optimism block 157637209: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "evidence": "Fresh pinned read 2026-10-29 at optimism block 158850165 (hash 0xfbcd02b27200ee48738d5c829325009976264fbb1b4b0bafc41fcafcf052e638, 2026-10-29T18:38:27.000Z) from the chain's archive RPC: hasRole(UPGRADER_ROLE, 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=12; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned optimism block 157637209: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
         "bypassSurfaces": [
           "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
         ]
@@ -2199,10 +2235,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ink:0xa2eea193444b16fe2d18cfe977aceeea6dd9c367",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -2224,17 +2260,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0xa2eea193444b16fe2d18cfe977aceeea6dd9c367"
+            },
+            {
+              "label": "Pinned ink block 59800737 controller identity and role/quorum state",
+              "url": "https://explorer.inkonchain.com/address/0xa2eea193444b16fe2d18cfe977aceeea6dd9c367"
             }
           ],
           "pin": {
-            "position": "57658788",
-            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+            "position": "59800737",
+            "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
             "runtimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
           "observedState": {
-            "position": "57658788",
-            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+            "position": "59800737",
+            "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
             "runtimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
@@ -2297,8 +2337,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "57658788",
-                  "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+                  "position": "59800737",
+                  "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
                   "runtimeIdentity": "sha256:5705705405fefa4e3a6b00d33211ef59504dfac938ed2d6938ab8f7927e6dd0b",
                   "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
                 },
@@ -2323,8 +2363,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 57374785,
+        "observedAt": "2026-10-29",
+        "observedBlock": 59800737,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -2343,7 +2383,7 @@
             "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned ink block 57374785: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+        "evidence": "Fresh pinned read 2026-10-29 at ink block 59800737 (hash 0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5, 2026-10-29T18:39:08.000Z) from the chain's archive RPC: hasRole(MINTER_ROLE, 0xa2eea193444b16fe2d18cfe977aceeea6dd9c367) returned true; quorum()=2; signers()=30 addresses; signerWeight() roster 30 signer(s) weight 1; nonce()=19; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned ink block 57374785: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
       },
       {
         "label": "RLUSD ink role-admin MultiSign (weighted quorum 7, 11 signers)",
@@ -2356,10 +2396,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ink:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -2381,17 +2421,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
+            },
+            {
+              "label": "Pinned ink block 59800737 controller identity and role/quorum state",
+              "url": "https://explorer.inkonchain.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
             }
           ],
           "pin": {
-            "position": "57658788",
-            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+            "position": "59800737",
+            "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
             "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "57658788",
-            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+            "position": "59800737",
+            "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
             "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -2454,8 +2498,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "57658788",
-                  "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+                  "position": "59800737",
+                  "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
                   "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -2523,15 +2567,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "59800737",
+            "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
             "runtimeIdentity": "sha256:914d976ae5efab2a882bfe52dac7e11587aa8fb313f7d75c633a5d4cbbf1dafe",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2557,8 +2601,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 57374785,
+        "observedAt": "2026-10-29",
+        "observedBlock": 59800737,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -2577,7 +2621,7 @@
             "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned ink block 57374785: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+        "evidence": "Fresh pinned read 2026-10-29 at ink block 59800737 (hash 0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5, 2026-10-29T18:39:08.000Z) from the chain's archive RPC: hasRole(DEFAULT_ADMIN_ROLE, 0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=11; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned ink block 57374785: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
       },
       {
         "label": "RLUSD ink upgrader MultiSign (weighted quorum 7, 11 signers)",
@@ -2590,10 +2634,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ink:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -2615,17 +2659,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            },
+            {
+              "label": "Pinned ink block 59800737 controller identity and role/quorum state",
+              "url": "https://explorer.inkonchain.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
             }
           ],
           "pin": {
-            "position": "57658788",
-            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+            "position": "59800737",
+            "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
             "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "57658788",
-            "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+            "position": "59800737",
+            "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
             "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -2688,8 +2736,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "57658788",
-                  "hash": "0x9e7e5e2c947062d671ffdc32ad47f59712934d81274f65483e12bcd1301e78ef",
+                  "position": "59800737",
+                  "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
                   "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -2757,15 +2805,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "57377051",
-            "hash": "0xfa593d9d9b3c0752ce837f140de413ddda0eb907f4a2146da72e1b993239f96b",
+            "position": "59800737",
+            "hash": "0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5",
             "runtimeIdentity": "sha256:bc4b0b5ba33262221bbee1eecd1dc691f77e7c26db7e48f54eed809eb4596181",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -2791,8 +2839,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 57374785,
+        "observedAt": "2026-10-29",
+        "observedBlock": 59800737,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -2811,7 +2859,7 @@
             "url": "https://explorer.inkonchain.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned ink block 57374785: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "evidence": "Fresh pinned read 2026-10-29 at ink block 59800737 (hash 0xc14e09ec1966da5feeda64b96507337188b95ccfc76c62a46bae4f5e3b6521d5, 2026-10-29T18:39:08.000Z) from the chain's archive RPC: hasRole(UPGRADER_ROLE, 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=8; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned ink block 57374785: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
         "bypassSurfaces": [
           "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
         ]
@@ -2827,10 +2875,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "unichain:0x866eb2f5c483fa525137f982c2be220aa096918c",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -2852,17 +2900,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x866eb2f5c483fa525137f982c2be220aa096918c"
+            },
+            {
+              "label": "Pinned unichain block 62550749 controller identity and role/quorum state",
+              "url": "https://unichain.blockscout.com/address/0x866eb2f5c483fa525137f982c2be220aa096918c"
             }
           ],
           "pin": {
-            "position": "60408838",
-            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+            "position": "62550749",
+            "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
             "runtimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
           "observedState": {
-            "position": "60408838",
-            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+            "position": "62550749",
+            "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
             "runtimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
             "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
           },
@@ -2925,8 +2977,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "60408838",
-                  "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+                  "position": "62550749",
+                  "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
                   "runtimeIdentity": "sha256:4c0c846d4dd5c750454037012a3ecd7ff8e8bdab51e9c23fe76041b02f8d6854",
                   "signerIdentity": "sha256:2efffa6712dfbad914d5b070529921ed30ff7a34fcbd8c461e53bce4d3893969"
                 },
@@ -2951,8 +3003,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 60124837,
+        "observedAt": "2026-10-29",
+        "observedBlock": 62550749,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -2971,7 +3023,7 @@
             "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+        "evidence": "Fresh pinned read 2026-10-29 at unichain block 62550749 (hash 0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2, 2026-10-29T18:38:28.000Z) from the chain's archive RPC: hasRole(MINTER_ROLE, 0x866eb2f5c483fa525137f982c2be220aa096918c) returned true; quorum()=2; signers()=30 addresses; signerWeight() roster 30 signer(s) weight 1; nonce()=19; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned unichain block 60124837: hasRole for the token's actual MINTER_ROLE getter returned true. quorum()=2; signers() returns 30 addresses; complete signerWeight(address) roster: 0x05302281b1d4cfa8716dbb55bb3a4f3d1c101515:1; 0x16ad0ca127e6f1695a90e1ba607854de479ea9a0:1; 0x195ce8a62d7663f242fad91b1d9f9d62c6d380c2:1; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:1; 0x27adea6c3a4e4d0f42f45e6e5e1faeefce072aa1:1; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:1; 0x2b3be65beb6f7572e0f9e94db5b9df16d1b1e651:1; 0x2eb17005fa381d0eac55e43acadf276a7f93e187:1; 0x3201f381b557b28a8b7c7e63d7be0597f2e36b6b:1; 0x3659a8dd16e0632bf68f27fee735b8ac2d391230:1; 0x3d3c74bba09554e6c9960d541e3e2815f892d6b2:1; 0x422a428af79dafc0203869604ef247b23cef2f84:1; 0x429ac8b23e2d81387effb38de58ad0e1356d19c1:1; 0x4668bd74a171879c86cce0bda355195ab2d202e2:1; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:1; 0x50e3f34e3a29ddc50720898b649b77a2cb752efa:1; 0x664a24cd367021cf1aa360587114d0ad86188918:1; 0x6cba9d49aaca72b556baf4c776370204bdf32f50:1; 0x728e96ad32132471735ab7819ed099cd1f41036b:1; 0x76634e26dde2d01962c3857aad89650e58fb2bcf:1; 0x8287885371490eb013b4cd257ffc0cfbbac56c0d:1; 0x948fe94d96ca2b1fdcad9f8b18f5fda58a33bd46:1; 0x9c036a73ad9e788a49504d590c40cf3692cba661:1; 0xa4fd21be102f34feddbece3c2c8c9b3830fcb33e:1; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:1; 0xac7d50a18b0b5a542b30c6136387eb70e3faba64:1; 0xb08648a45bfe2d7c888a7486d242d8a634583848:1; 0xbedd5b63a7619744822e0d77b015f792a7a26027:1; 0xd324dd7f49eee3bbe58dea6ebc49e4f43a0ee3b3:1; 0xde8adb41ffbbfad6c748d4f8be587de4b500e9fe:1. Minimum cryptographic signatures=2; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
       },
       {
         "label": "RLUSD unichain role-admin MultiSign (weighted quorum 7, 11 signers)",
@@ -2984,10 +3036,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "unichain:0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -3009,17 +3061,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
+            },
+            {
+              "label": "Pinned unichain block 62550749 controller identity and role/quorum state",
+              "url": "https://unichain.blockscout.com/address/0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9"
             }
           ],
           "pin": {
-            "position": "60408838",
-            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+            "position": "62550749",
+            "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
             "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "60408838",
-            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+            "position": "62550749",
+            "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
             "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -3082,8 +3138,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "60408838",
-                  "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+                  "position": "62550749",
+                  "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
                   "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -3151,15 +3207,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "62550749",
+            "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
             "runtimeIdentity": "sha256:076a4010515657f356ea878e68f30b62168b4981d8efcb5faec4804a142c5544",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -3185,8 +3241,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 60124837,
+        "observedAt": "2026-10-29",
+        "observedBlock": 62550749,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -3205,7 +3261,7 @@
             "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
+        "evidence": "Fresh pinned read 2026-10-29 at unichain block 62550749 (hash 0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2, 2026-10-29T18:38:28.000Z) from the chain's archive RPC: hasRole(DEFAULT_ADMIN_ROLE, 0x754e3102ddc1b454aadc5ebbc7e260e074b6acd9) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=11; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned unichain block 60124837: hasRole for the token's actual DEFAULT_ADMIN_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk."
       },
       {
         "label": "RLUSD unichain upgrader MultiSign (weighted quorum 7, 11 signers)",
@@ -3218,10 +3274,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "unichain:0x4d664381afc9e6eb9d29572e226c6cb6b9b30395",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "B03MaximalReach: independently re-pinned R01 verified arbitrary-call adverse upper envelope",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "confidence": "verified",
           "sources": [
             {
@@ -3243,17 +3299,21 @@
             {
               "label": "Re-verified arbitrary MultiSign executor source",
               "url": "https://unichain.blockscout.com/api/v2/smart-contracts/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
+            },
+            {
+              "label": "Pinned unichain block 62550749 controller identity and role/quorum state",
+              "url": "https://unichain.blockscout.com/address/0x4d664381afc9e6eb9d29572e226c6cb6b9b30395"
             }
           ],
           "pin": {
-            "position": "60408838",
-            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+            "position": "62550749",
+            "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
             "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "observedState": {
-            "position": "60408838",
-            "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+            "position": "62550749",
+            "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
             "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
@@ -3316,8 +3376,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "60408838",
-                  "hash": "0x40915d008c8bb61878a0cd1822b9fdcea9ceb553ebab263fef012a13fa917e50",
+                  "position": "62550749",
+                  "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
                   "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
                   "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
                 },
@@ -3385,15 +3445,15 @@
           ],
           "quorum": 7,
           "pin": {
-            "position": "60127103",
-            "hash": "0x78b6743cd07a71b741f20e2a745892d30f2fae5ef5107bedd202324654c159b0",
+            "position": "62550749",
+            "hash": "0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2",
             "runtimeIdentity": "sha256:d5a0cf89d7bb96ad7a38785d205db3c2de28b58cacf4ef2fa9473185310f2c15",
             "signerIdentity": "sha256:d535d74eed44c9a472138534ec94782e63c2ca386b1637e02544add7b41f09f6"
           },
           "status": "verified",
-          "reviewedAt": "2026-10-01",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation pass 2026-10-01 (DataMisc09)",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-04-01",
+          "reviewer": "W0 R-MINT-2 renewal 2026-10-29 (pinned chain reads; fresh observation)",
           "sources": [
             {
               "label": "Ripple RLUSD mainnet token addresses",
@@ -3419,8 +3479,8 @@
         "failureDomainKeys": [
           "issuer:ripple-sctc"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 60124837,
+        "observedAt": "2026-10-29",
+        "observedBlock": 62550749,
         "sources": [
           {
             "label": "Ripple RLUSD mainnet token addresses",
@@ -3439,7 +3499,7 @@
             "url": "https://unichain.blockscout.com/address/0xc2cefa895842ebc468c154ba8da1ab83c3e053b7?tab=contract"
           }
         ],
-        "evidence": "Pinned unichain block 60124837: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
+        "evidence": "Fresh pinned read 2026-10-29 at unichain block 62550749 (hash 0x5dd5af088b1d18b5f67345c376048fdd4a6c135a67d5258def8e7dd2ee7eaae2, 2026-10-29T18:38:28.000Z) from the chain's archive RPC: hasRole(UPGRADER_ROLE, 0x4d664381afc9e6eb9d29572e226c6cb6b9b30395) returned true; quorum()=7; signers()=11 addresses; signerWeight() roster 7 signer(s) weight 2, 4 signer(s) weight 3; nonce()=10; EIP-1967 implementation slot 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; controller runtime and signer identities byte-identical to the prior pin. Pinned unichain block 60124837: hasRole for the token's actual UPGRADER_ROLE getter returned true. quorum()=7; signers() returns 11 addresses; complete signerWeight(address) roster: 0x07808a134bd2bc8714993a6a4314449ea289df37:3; 0x0ed0c62aebe31fde32531ee8f8660900a184aad9:3; 0x1e88672935a5aec6222d4cdcf1a1e210eda7361a:2; 0x2abbee8057bbb0c3a3aa02e7b6a976359c120e26:2; 0x42d887d2198c171308e465fd77293f1507b5e4bd:3; 0x46eb68d9ea5f69cd56b062898ae0b393fc4ccaf6:2; 0x7bb2161de41fa3232b58c724196e34b2c4ea8a3b:2; 0xa50b04d5ca1f13b40a2f240190917aea87f5c700:2; 0xd8e1af528960ed42c29bd9d3aa01b241235d2078:2; 0xdb1a4212d48ced9b35533455ee49f99fcfb89ec2:3; 0xea23cc32e2eb009a0623c5faf8070bb32445fdc9:2. Minimum cryptographic signatures=3; independent people/organizations are not established. The current token is UUPS with implementation 0xc2cefa895842ebc468c154ba8da1ab83c3e053b7; onlyRole(MINTER_ROLE) gates unrestricted mint amounts and onlyRole(UPGRADER_ROLE) gates changing mint logic. Explorer event history from deployment to the pinned block returned 12 grants, zero revokes, zero role-admin changes, and one upgrade; 500-block RPC windows independently match all reported event blocks. The zero-address initializer role cannot submit a transaction. The separate NTT manager also holds MINTER_ROLE/BURNER_ROLE and is recorded only under Bridge Risk.",
         "bypassSurfaces": [
           "UPGRADER_ROLE can replace the native token mint implementation without an enforced delay."
         ]

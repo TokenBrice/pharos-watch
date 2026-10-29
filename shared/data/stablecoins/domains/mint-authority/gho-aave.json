@@ -56,10 +56,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x5300a1a15135ea4dc7ad5a167152c01efc9b192a",
-          "reviewedAt": "2026-10-11",
-          "observedAt": "2026-10-11",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol curation campaign 2026-10-11 (C36GHO)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "verified",
           "sources": [
             {
@@ -81,17 +81,21 @@
             {
               "label": "Pinned Ethereum runtime, owner and all three GHO roles at block 26165719, 2026-10-11T00:47:47Z",
               "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26165719",
-            "hash": "0x00587986baad89aea13d080173eab122777387afed59d3e01a581ffe9c38ab54",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
             "signerIdentity": "onlyOwner:ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5; local adverse upper envelope only, upstream governance timing and bypasses remain uncertified"
           },
           "observedState": {
-            "position": "26165719",
-            "hash": "0x00587986baad89aea13d080173eab122777387afed59d3e01a581ffe9c38ab54",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
             "signerIdentity": "onlyOwner:ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5; local adverse upper envelope only, upstream governance timing and bypasses remain uncertified"
           },
@@ -190,8 +194,8 @@
                 "arbitraryCallVerified": true,
                 "sourceRuntimeCorrespondence": "verified",
                 "executorPin": {
-                  "position": "26165719",
-                  "hash": "0x00587986baad89aea13d080173eab122777387afed59d3e01a581ffe9c38ab54",
+                  "position": "26300000",
+                  "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
                   "runtimeIdentity": "sha256:8c604a38d041e5836c3eb1960ee826eca38582abae736bd27684984cea506216",
                   "signerIdentity": "onlyOwner:ethereum:0xdabad81af85554e9ae636395611c58f7ec1aaec5; local adverse upper envelope only, upstream governance timing and bypasses remain uncertified"
                 },
@@ -235,10 +239,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x5513224daaeabca31af5280727878d52097afa05",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "partial",
           "sources": [
             {
@@ -248,17 +252,21 @@
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe4c958de49303c9be571e00582cf9454586de76f"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:bced558b5edce6bcf0f79c6dc74ceca089ff6be9431515895b02fb828f451a8f;implementation:0xe4c958de49303c9be571e00582cf9454586de76f;sha256:bf23554839e3f633fbf56eb76f978370b787c13346191745fd3d9c2711604fef",
             "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:bced558b5edce6bcf0f79c6dc74ceca089ff6be9431515895b02fb828f451a8f;implementation:0xe4c958de49303c9be571e00582cf9454586de76f;sha256:bf23554839e3f633fbf56eb76f978370b787c13346191745fd3d9c2711604fef",
             "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
           },
@@ -332,10 +340,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xb639d208bcf0589d54fac24e655c79ec529762b8",
-          "reviewedAt": "2026-10-05",
-          "observedAt": "2026-10-05",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Wave-4 R11 immutable flash-accounting review",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "verified",
           "sources": [
             {
@@ -353,17 +361,21 @@
             {
               "label": "Ethereum flash certificate observation pin",
               "url": "https://etherscan.io/block/26124931"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26124931",
-            "hash": "0x9a5ce221b717370d3b6291d13d2dde6a72ddf63b7eb57fc1d84e9f27a4813a6c",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:f82aa2521daceb45649f1a7248bcaa230167b9f72890cfff0f15dfe16a7751a0",
             "signerIdentity": "Public flashLoan and fee distribution; ACLManager POOL_ADMIN and DEFAULT_ADMIN are 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. Complete ACL role history and membership pinned; arbitrary role replacement changes fee/treasury authorization, never mandatory principal repayment/burn."
           },
           "observedState": {
-            "position": "26124931",
-            "hash": "0x9a5ce221b717370d3b6291d13d2dde6a72ddf63b7eb57fc1d84e9f27a4813a6c",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:f82aa2521daceb45649f1a7248bcaa230167b9f72890cfff0f15dfe16a7751a0",
             "signerIdentity": "Public flashLoan and fee distribution; ACLManager POOL_ADMIN and DEFAULT_ADMIN are 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a. Complete ACL role history and membership pinned; arbitrary role replacement changes fee/treasury authorization, never mandatory principal repayment/burn."
           },
@@ -506,10 +518,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x2bd010ab5393ab51b601b99c4b33ba148d9466e9",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "partial",
           "sources": [
             {
@@ -519,17 +531,21 @@
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
             "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
             "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
           },
@@ -603,10 +619,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xe9ac5231faecb633da0fe85fcb2785b8363427d2",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "partial",
           "sources": [
             {
@@ -620,17 +636,21 @@
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x46aa1063e5265b43663e81329333b47c517a5409"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
             "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; additional MINTER 0x8513e6f37dbc52de87b166980fa3f50639694b60 with no delay; capacity can be raised by Council through Bucket Steward"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:8ae4454d78278df2c1db9f6f9ed0fa8dde5e81b1c63e1e9e85118f38b93db8db",
             "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; additional MINTER 0x8513e6f37dbc52de87b166980fa3f50639694b60 with no delay; capacity can be raised by Council through Bucket Steward"
           },
@@ -708,10 +728,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x2ce01c87fec1b71a9041c52caed46fc5f4807285",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "partial",
           "sources": [
             {
@@ -721,17 +741,21 @@
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xc718786a7e45353835de634897385b3371a749f0"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:932478c708ab90ad297875ae984f9707d13e22db8b536d102285975874c399b5;implementation:0xc718786a7e45353835de634897385b3371a749f0;sha256:3a6723c10cac95f1a4a1043cad069e9ae9d6eae884b27cdf63b6c5a2b30b3e95",
             "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:932478c708ab90ad297875ae984f9707d13e22db8b536d102285975874c399b5;implementation:0xc718786a7e45353835de634897385b3371a749f0;sha256:3a6723c10cac95f1a4a1043cad069e9ae9d6eae884b27cdf63b6c5a2b30b3e95",
             "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
           },
@@ -809,10 +833,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0xe10c78a3ac7f016ed2de1a89c5479b1039eab9ea",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "partial",
           "sources": [
             {
@@ -822,17 +846,21 @@
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68807d04df1f1bb74bb7498b1e832d2ce356cd18"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:0e40808f1ddd94722c78590a7ac9de7fb79a4261dd207fd7a0942a92f0285319;implementation:0x68807d04df1f1bb74bb7498b1e832d2ce356cd18;sha256:4c777ea06dd7f5de15924eef965975c3b36b15697863f0d53c5b33b8fdc382b8",
             "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:0e40808f1ddd94722c78590a7ac9de7fb79a4261dd207fd7a0942a92f0285319;implementation:0x68807d04df1f1bb74bb7498b1e832d2ce356cd18;sha256:4c777ea06dd7f5de15924eef965975c3b36b15697863f0d53c5b33b8fdc382b8",
             "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; guardian 0x8513e6f37dbc52de87b166980fa3f50639694b60; onlyOwnerOrGuardian admits both; pool lending/configuration and proxy-upgrade closure not certified"
           },
@@ -906,10 +934,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x436dccc028322afc355f608cf582b7d7f19fdfed",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "partial",
           "sources": [
             {
@@ -919,17 +947,21 @@
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:4306746e84ca6ca5d28179073fdba4de12fb5968274b6f9cd35a770794fe5172",
             "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:4306746e84ca6ca5d28179073fdba4de12fb5968274b6f9cd35a770794fe5172",
             "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
           },
@@ -1003,10 +1035,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x0cb7c2a2ab38aed3e6096631d7dba3dabf237134",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "partial",
           "sources": [
             {
@@ -1016,17 +1048,21 @@
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:4306746e84ca6ca5d28179073fdba4de12fb5968274b6f9cd35a770794fe5172",
             "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:4306746e84ca6ca5d28179073fdba4de12fb5968274b6f9cd35a770794fe5172",
             "signerIdentity": "DEFAULT_ADMIN and MINTER 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; full facilitator role grant/revoke history checked at pin; upstream executor bypass closure not certified"
           },
@@ -1104,10 +1140,10 @@
         ],
         "executionScope": {
           "controllerDeployment": "ethereum:0x46aa1063e5265b43663e81329333b47c517a5409",
-          "reviewedAt": "2026-10-03",
-          "observedAt": "2026-10-03",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.02 D14/D29 sweep (U3GhoGoverned)",
+          "reviewedAt": "2026-10-29",
+          "observedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "confidence": "partial",
           "sources": [
             {
@@ -1117,17 +1153,21 @@
             {
               "label": "Verified deployed source",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe9ac5231faecb633da0fe85fcb2785b8363427d2"
+            },
+            {
+              "label": "Fresh pinned re-read at Ethereum block 26300000, 2026-10-29T17:49:23Z: runtime and implementation identities, owner, roles, facilitator buckets, governor voting config, cooldown and payload-executor delay, Council quorum",
+              "url": "https://api-ethereum-mainnet.n.dwellir.com"
             }
           ],
           "pin": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:c0a49993c08c34c75dac3b2fc005a98c5a527937eb45f8e505ef38142e4b1efa",
             "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; RISK_COUNCIL 0x8513e6f37dbc52de87b166980fa3f50639694b60; capacity updates are Council-only; elapsed debounce does not delay a new arbitrary mint; Council and downstream paths prevent governance-only certification"
           },
           "observedState": {
-            "position": "26112822",
-            "hash": "0x9a43012d71f59ade74c58a438ae4cf7eba960288f5357ddd8203d3a0ac51042a",
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
             "runtimeIdentity": "sha256:c0a49993c08c34c75dac3b2fc005a98c5a527937eb45f8e505ef38142e4b1efa",
             "signerIdentity": "owner 0x5300a1a15135ea4dc7ad5a167152c01efc9b192a; RISK_COUNCIL 0x8513e6f37dbc52de87b166980fa3f50639694b60; capacity updates are Council-only; elapsed debounce does not delay a new arbitrary mint; Council and downstream paths prevent governance-only certification"
           },
@@ -1446,15 +1486,15 @@
         "id": "gho-aave-voting-control",
         "governorNodeId": "aave-token-governor",
         "review": {
-          "observedAt": "2026-10-04",
-          "reviewedAt": "2026-10-04",
-          "expiresAt": "2027-01-01",
-          "reviewer": "Sol v10.05 operational-governance campaign (GhoData)",
+          "observedAt": "2026-10-29",
+          "reviewedAt": "2026-10-29",
+          "expiresAt": "2027-01-27",
+          "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
           "pin": {
             "chain": "ethereum",
-            "position": "26118754",
-            "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
-            "timestamp": "2026-10-04T11:41:11Z"
+            "position": "26300000",
+            "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+            "timestamp": "2026-10-29T17:49:23Z"
           }
         },
         "votingToken": "ethereum:0x7fc66500c84a76ad7e9c93437bfc5ac33e2ddae9",
@@ -3093,15 +3133,15 @@
         {
           "id": "gho-token-local-facilitators",
           "review": {
-            "observedAt": "2026-10-04",
-            "reviewedAt": "2026-10-04",
-            "expiresAt": "2027-01-01",
-            "reviewer": "Sol v10.05 operational-governance campaign (GhoData)",
+            "observedAt": "2026-10-29",
+            "reviewedAt": "2026-10-29",
+            "expiresAt": "2027-01-27",
+            "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
             "pin": {
               "chain": "ethereum",
-              "position": "26118754",
-              "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
-              "timestamp": "2026-10-04T11:41:11Z"
+              "position": "26300000",
+              "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+              "timestamp": "2026-10-29T17:49:23Z"
             }
           },
           "targetDeployment": "ethereum:0x40d16fc0246ad3160ccc09b8d0d3a2cd28ae6c2f",
@@ -3192,15 +3232,15 @@
     "authorityGraph": {
       "id": "gho-v1005-authority",
       "review": {
-        "observedAt": "2026-10-04",
-        "reviewedAt": "2026-10-04",
-        "expiresAt": "2027-01-01",
-        "reviewer": "Sol v10.05 operational-governance campaign (GhoData)",
+        "observedAt": "2026-10-29",
+        "reviewedAt": "2026-10-29",
+        "expiresAt": "2027-01-27",
+        "reviewer": "Sol W0 R-MINT-3 renewal 2026-10-29 (fresh pinned refresh at Ethereum 26300000)",
         "pin": {
           "chain": "ethereum",
-          "position": "26118754",
-          "hash": "0x46fd43392d650fe2bc04e7c1549d6982a476b9e11d4aa0996323c90f6328ab10",
-          "timestamp": "2026-10-04T11:41:11Z"
+          "position": "26300000",
+          "hash": "0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56",
+          "timestamp": "2026-10-29T17:49:23Z"
         }
       },
       "liabilityBookId": "gho-aave",
