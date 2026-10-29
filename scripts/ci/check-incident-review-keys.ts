@@ -50,6 +50,8 @@ interface AssetInventory {
   readonly controlIdsByRoute: Map<string, Set<string>>;
   readonly controlIds: Set<string>;
   readonly mintLabels: Set<string>;
+  /** Deployment-split mint controls: the label is exact identity on the referenced route. */
+  readonly mintLabelRoutes: Map<string, Set<string>>;
   readonly deploymentIds: Set<string>;
 }
 
@@ -174,6 +176,7 @@ export function loadIncidentReviewInventory(root: string): Map<string, AssetInve
       controlIdsByRoute: new Map(),
       controlIds: new Set(),
       mintLabels: new Set(),
+      mintLabelRoutes: new Map(),
       deploymentIds: new Set(),
     };
     assets.set(assetId, created);
@@ -215,8 +218,17 @@ export function loadIncidentReviewInventory(root: string): Map<string, AssetInve
     if (typeof sidecar.id !== "string") continue;
     const inventory = inventoryOf(sidecar.id);
     for (const control of sidecar.mintAuthority?.controls ?? []) {
-      if (typeof control.label === "string" && control.label !== "") inventory.mintLabels.add(control.label);
-      for (const deploymentRef of control.deploymentRefs ?? []) addDeployment(inventory, deploymentRef);
+      if (typeof control.label !== "string" || control.label === "") continue;
+      inventory.mintLabels.add(control.label);
+      for (const deploymentRef of control.deploymentRefs ?? []) {
+        addDeployment(inventory, deploymentRef);
+        if (typeof deploymentRef !== "string") continue;
+        const routeId = normalizeDeploymentId(deploymentRef);
+        if (routeId === "") continue;
+        const routes = inventory.mintLabelRoutes.get(control.label) ?? new Set<string>();
+        routes.add(routeId);
+        inventory.mintLabelRoutes.set(control.label, routes);
+      }
     }
   }
   return assets;
@@ -313,9 +325,12 @@ function resolveReviewScope(
         return { ok: false, detail: `route ${scope.routeId} is not a reviewed route of ${String(assetId)}` };
       }
       if (controlId === "*") return { ok: true, detail: "" };
-      return inventory.controlIdsByRoute.get(routeId)?.has(controlId) === true
+      if (inventory.controlIdsByRoute.get(routeId)?.has(controlId) === true) return { ok: true, detail: "" };
+      // A deployment-split mint control compiles with the route as its deployment
+      // key and the mint label as its authored id (USDSM Etherlink proxy owner).
+      return inventory.mintLabelRoutes.get(controlId)?.has(routeId) === true
         ? { ok: true, detail: "" }
-        : { ok: false, detail: `control ${controlId} is not a compiled control of ${scope.routeId}` };
+        : { ok: false, detail: `control ${controlId} is not a compiled control or deployment-scoped mint control of ${scope.routeId}` };
     }
     default: {
       const unknownScope: { kind?: unknown } = scope;
@@ -353,7 +368,7 @@ function checkStableId(
     return;
   }
   const authoredRoute = row.authored?.routeId !== undefined && row.authored.routeId !== null;
-  const expectedPrefix = authoredRoute ? "bridge:" : row.resolution === "mint-control" ? "mint:" : null;
+  const expectedPrefix = row.resolution === "mint-control" ? "mint:" : authoredRoute ? "bridge:" : null;
   if (expectedPrefix === null) {
     if (!stableReviewId.includes(":")) {
       emit("stable-id", review.reviewId, "non-reviewId stable identity must be ':'-separated");

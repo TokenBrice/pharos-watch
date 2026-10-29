@@ -83,6 +83,16 @@ function deploymentReview(reviewId = "review-deploy"): unknown {
   };
 }
 
+function deploymentMintReview(reviewId = "review-mint-deploy", windowEndSec = 1100): unknown {
+  return {
+    reviewId,
+    assetId: ASSET,
+    scope: { kind: "control", routeId: ROUTE, controlId: "Alpha route owner" },
+    reviewedAt: "2026-10-22",
+    windowEndSec,
+  };
+}
+
 function retiredReview(reviewId = "review-retired"): unknown {
   return {
     reviewId,
@@ -118,6 +128,7 @@ function fixtureRoot(options: FixtureOptions = {}): string {
     laneReview(),
     aggregateReview(),
     singleReview(),
+    deploymentMintReview(),
     mintReview(),
     deploymentReview(),
     retiredReview(),
@@ -132,6 +143,12 @@ function fixtureRoot(options: FixtureOptions = {}): string {
       resolution: "control",
       authored: { assetId: ASSET, routeId: ROUTE, controlId: "alpha-owner" },
       stableReviewId: `bridge:${ASSET}:${ROUTE}:alpha-owner:3000`,
+    }),
+    migrationRow("review-mint-deploy", {
+      legacyControlKey: `mint-meta:${ASSET}:fedcba9876543210fedc`,
+      resolution: "mint-control",
+      authored: { assetId: ASSET, routeId: ROUTE, controlId: "Alpha route owner" },
+      stableReviewId: `mint:${ASSET}:alpha-route-owner:1100`,
     }),
     migrationRow("review-mint", {
       legacyControlKey: MINT_KEY,
@@ -172,7 +189,12 @@ function fixtureRoot(options: FixtureOptions = {}): string {
   });
   writeJson(dir, "shared/data/stablecoins/domains/mint-authority/alpha-fixture.json", options.mint ?? {
     id: ASSET,
-    mintAuthority: { controls: [{ label: "Alpha mint owner" }] },
+    mintAuthority: {
+      controls: [
+        { label: "Alpha mint owner" },
+        { label: "Alpha route owner", deploymentRefs: [ROUTE] },
+      ],
+    },
   });
   writeJson(dir, INCIDENT_REVIEWS_PATH, {
     schemaVersion: 1,
@@ -198,7 +220,7 @@ describe("incident review keys pass on migrated rows", () => {
   it("accepts lane, aggregate, single-control, legacy mint, deployment and retired identities", () => {
     const report = checkIncidentReviewKeys(fixtureRoot());
     expect(report.findings).toEqual([]);
-    expect(report).toMatchObject({ reviews: 6, live: 5, retired: 1, legacyDigestHeld: 1 });
+    expect(report).toMatchObject({ reviews: 7, live: 6, retired: 1, legacyDigestHeld: 1 });
   });
 
   it("accepts provider and issuer-surface rows without migration rows and validates covered lanes", () => {
@@ -301,6 +323,31 @@ describe("incident review keys report orphans and digest rows", () => {
 });
 
 describe("incident review keys enforce retirement and migration state", () => {
+  it("rejects a deployment-split mint control whose label is not bound to that route", () => {
+    const dir = fixtureRoot({
+      reviews: [deploymentMintReview()],
+      rows: [migrationRow("review-mint-deploy", {
+        resolution: "mint-control",
+        authored: { assetId: ASSET, routeId: ROUTE, controlId: "Alpha route owner" },
+        stableReviewId: `mint:${ASSET}:alpha-route-owner:1100`,
+      })],
+      mint: { id: ASSET, mintAuthority: { controls: [{ label: "Alpha route owner", deploymentRefs: ["base:0x4444444444444444444444444444444444444444"] }] } },
+    });
+    expect(codes(dir)).toEqual(["orphan-key"]);
+  });
+
+  it("rejects a deployment-split mint stable id written with the bridge prefix", () => {
+    const dir = fixtureRoot({
+      reviews: [deploymentMintReview()],
+      rows: [migrationRow("review-mint-deploy", {
+        resolution: "mint-control",
+        authored: { assetId: ASSET, routeId: ROUTE, controlId: "Alpha route owner" },
+        stableReviewId: `bridge:${ASSET}:${ROUTE}:alpha-route-owner:1100`,
+      })],
+    });
+    expect(codes(dir)).toEqual(["stable-id"]);
+  });
+
   it("rejects a retired review whose migration row is not retired", () => {
     const dir = fixtureRoot({
       reviews: [retiredReview()],
@@ -434,7 +481,7 @@ describe("incident review key CLI", () => {
     const stderr = { write: vi.fn(() => true) };
     expect(runIncidentReviewKeyCheck([], dir, stdout, stderr)).toBe(0);
     expect(stdout.write).toHaveBeenCalledWith(
-      "incident-review keys: 6 reviews (5 live, 1 retired, 1 legacy digest held) — 0 finding(s)\n",
+      "incident-review keys: 7 reviews (6 live, 1 retired, 1 legacy digest held) — 0 finding(s)\n",
     );
     expect(stderr.write).not.toHaveBeenCalled();
   });

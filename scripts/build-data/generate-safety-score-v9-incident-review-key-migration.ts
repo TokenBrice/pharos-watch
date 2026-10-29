@@ -131,7 +131,7 @@ type AuthoredCandidate =
   | { readonly resolution: "lane"; readonly routeId: string }
   | { readonly resolution: "control"; readonly routeId: string; readonly controlId: string }
   | { readonly resolution: "lane-aggregate"; readonly routeId: string; readonly controlIds: readonly string[] }
-  | { readonly resolution: "mint-control"; readonly label: string };
+  | { readonly resolution: "mint-control"; readonly label: string; readonly routeId?: string };
 
 interface OrphanAdjudication {
   readonly collision: boolean;
@@ -171,6 +171,19 @@ export const INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS: Readonly<Record<string, Orpha
   "bridge-meta:syrupusdg-maple:4e75fee958913edd757b": { collision: false, reason: UNRESOLVABLE_REASON },
   "bridge-meta:syrupusdg-maple:a0fd4144c59659be18f3": { collision: false, reason: UNRESOLVABLE_REASON },
   "bridge-meta:gldon-ondo:aa4f8cd10fdfe386155a": { collision: false, reason: UNRESOLVABLE_REASON },
+};
+
+/**
+ * Mint controls whose compiled fact is deployment-scoped rather than the
+ * asset-local `asset:<assetId>` row. IR-1d emits `authoredControlId` on both
+ * forms; an asset-local scope only matches the asset row, so these rows must
+ * name the compiled deploymentKey. The map mirrors the compiled inventory of
+ * the 2026-10-29 capture (1 of 59 mint-review controls; the reviewed supply
+ * partition is runtime data, not metadata) and IR-5's CI check revalidates every
+ * authored scope against a fresh compile.
+ */
+export const MINT_DEPLOYMENT_SCOPED_ROUTES: Readonly<Record<string, string>> = {
+  "usdsm-stable-mint\u0000USDSM Etherlink proxy owner": "etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de",
 };
 
 function readJson(path: string): unknown {
@@ -289,13 +302,16 @@ export function buildAuthoredCandidates(
       : { resolution: "lane-aggregate", routeId, controlIds });
   }
   for (const control of metadata.mintControls) {
-    add(mintControlKey(assetId, control), { resolution: "mint-control", label: control.label });
+    const routeId = MINT_DEPLOYMENT_SCOPED_ROUTES[`${assetId}\u0000${control.label}`];
+    add(mintControlKey(assetId, control), { resolution: "mint-control", label: control.label, ...(routeId === undefined ? {} : { routeId }) });
   }
   return candidates;
 }
 
 function authoredIdentity(assetId: string, candidate: AuthoredCandidate): IncidentReviewAuthoredIdentity {
-  if (candidate.resolution === "mint-control") return { assetId, controlId: candidate.label };
+  if (candidate.resolution === "mint-control") {
+    return { assetId, ...(candidate.routeId === undefined ? {} : { routeId: candidate.routeId }), controlId: candidate.label };
+  }
   if (candidate.resolution === "lane-aggregate") {
     return { assetId, routeId: candidate.routeId, controlIds: candidate.controlIds };
   }
@@ -313,12 +329,14 @@ export function legacyControlKeyForAuthored(
   assetId: string,
   identity: IncidentReviewAuthoredIdentity,
   metadata: ReadonlyMap<string, AssetControlMetadata>,
+  resolution?: IncidentReviewMigrationResolution,
 ): string | null {
-  if (identity.routeId === undefined) {
-    if (identity.controlId === undefined || identity.controlId === "*") return null;
-    const control = (metadata.get(assetId)?.mintControls ?? []).find((entry) => entry.label === identity.controlId);
-    return control ? mintControlKey(assetId, control) : null;
+  const mintLabel = identity.routeId === undefined || resolution === "mint-control" ? identity.controlId : undefined;
+  if (mintLabel !== undefined && mintLabel !== "*") {
+    const control = (metadata.get(assetId)?.mintControls ?? []).find((entry) => entry.label === mintLabel);
+    if (control) return mintControlKey(assetId, control);
   }
+  if (identity.routeId === undefined) return null;
   const routeId = normalizeDeploymentId(identity.routeId);
   if (identity.controlIds !== undefined) {
     return structuredRouteAggregateKey(assetId, routeId, [...identity.controlIds]);
@@ -349,6 +367,12 @@ function stableReviewIdFor(
   windowEndSec: number,
   row: Pick<IncidentReviewKeyMigrationRow, "resolution" | "authored">,
 ): string {
+  if (row.resolution === "mint-control" && row.authored?.controlId !== undefined) {
+    return canonicalReviewId(
+      `mint:${canonicalKeySegment(assetId)}:${canonicalKeySegment(row.authored.controlId)}:${windowEndSec}`,
+      reviewId,
+    );
+  }
   if (row.authored?.routeId !== undefined) {
     const controlId = row.authored.controlId ?? "lane";
     return canonicalReviewId(
@@ -397,13 +421,17 @@ export function buildIncidentReviewKeyMigration(
       // authored under the aggregate namespace lands on the single-form digest,
       // which selects the same compiled fact (asserted below).
       const scope = review.scope;
+      const isMintLabel = scope.controlId !== undefined && scope.controlId !== "*" &&
+        (metadata.get(assetId)?.mintControls ?? []).some((control) => control.label === scope.controlId);
       const resolution: IncidentReviewMigrationResolution = scope.controlIds !== undefined
         ? "lane-aggregate"
-        : scope.routeId === undefined
+        : isMintLabel
           ? "mint-control"
-          : scope.controlId === "*"
-            ? "lane"
-            : "control";
+          : scope.routeId === undefined
+            ? "mint-control"
+            : scope.controlId === "*"
+              ? "lane"
+              : "control";
       const identity: IncidentReviewAuthoredIdentity = {
         assetId,
         ...(scope.routeId === undefined ? {} : { routeId: scope.routeId }),
@@ -413,12 +441,12 @@ export function buildIncidentReviewKeyMigration(
       rows.push({
         reviewId: review.reviewId,
         assetId,
-        legacyControlKey: legacyControlKeyForAuthored(assetId, identity, metadata),
+        legacyControlKey: legacyControlKeyForAuthored(assetId, identity, metadata, resolution),
         resolution,
         authored: identity,
         digestMatch: true,
         collidesWithCurrentCandidate: false,
-        applied: resolution === "mint-control" ? "legacy-blocked" : "authored",
+        applied: "authored",
         reason: "authored identity already applied; legacy digest key re-derived from metadata",
         stableReviewId: stableReviewId(resolution, identity),
       });
@@ -453,7 +481,7 @@ export function buildIncidentReviewKeyMigration(
       );
     }
     const identity = authoredIdentity(assetId, candidate);
-    const mintBlocked = candidate.resolution === "mint-control";
+    const mintBlocked = false;
     rows.push({
       reviewId: review.reviewId,
       assetId,
@@ -462,10 +490,9 @@ export function buildIncidentReviewKeyMigration(
       authored: identity,
       digestMatch: true,
       collidesWithCurrentCandidate: false,
-      applied: mintBlocked ? "legacy-blocked" : "authored",
-      reason: mintBlocked
-        ? `mint-meta digest recomputed from mintAuthority control "${candidate.label}"; ` +
-          "authored mint scope held on the legacy key until the mint fact carries authoredControlId"
+      applied: "authored",
+      reason: candidate.resolution === "mint-control"
+        ? `mint-meta digest recomputed from mintAuthority control "${candidate.label}" (${candidate.routeId === undefined ? "asset-local" : `deployment ${candidate.routeId}`})`
         : candidate.resolution === "lane-aggregate"
           ? `structured route digest recomputed from route ${candidate.routeId} and ${candidate.controlIds.length} control ids`
           : candidate.resolution === "control"
@@ -524,7 +551,7 @@ export function assertMigrationPreservesLegacyKeys(root: string, artifact: Incid
       failures.push(`${row.reviewId}: ${row.resolution} row has no authored identity`);
       continue;
     }
-    const derived = legacyControlKeyForAuthored(row.assetId, row.authored, metadata);
+    const derived = legacyControlKeyForAuthored(row.assetId, row.authored, metadata, row.resolution);
     // A one-contributor lane compiles with `authoredControlId: <id>`; the digest
     // namespace it was authored under may be either the aggregate or the single
     // form. Both select the same fact, so both digests are outcome-equivalent.
@@ -587,7 +614,7 @@ export function runCli(argv = process.argv.slice(2)): void {
     },
   });
   const reviewsValue = readJson(resolve(ROOT, INCIDENT_REVIEWS_PATH));
-  const artifact = buildIncidentReviewKeyMigration(ROOT, reviewsValue);
+  let artifact = buildIncidentReviewKeyMigration(ROOT, reviewsValue);
   if (values["assert-equivalent"] === true || values.check === true || values.apply === true) {
     assertMigrationPreservesLegacyKeys(ROOT, artifact);
     process.stdout.write(
@@ -599,6 +626,8 @@ export function runCli(argv = process.argv.slice(2)): void {
   if (values.apply === true) {
     const next = applyIncidentReviewMigration(reviewsValue, artifact);
     writeFileSync(resolve(ROOT, INCIDENT_REVIEWS_PATH), `${JSON.stringify(next, null, 2)}\n`);
+    artifact = buildIncidentReviewKeyMigration(ROOT, next);
+    writeFileSync(resolve(ROOT, INCIDENT_REVIEW_KEY_MIGRATION_PATH), `${JSON.stringify(artifact)}\n`);
     process.stdout.write("Applied Safety Score incident review key migration\n");
   }
   syncGeneratedArtifacts({

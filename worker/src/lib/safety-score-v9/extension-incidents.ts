@@ -43,7 +43,7 @@ const NegativeIncidentRuntimeScopeSchema = z.union([
   V9ProviderIncidentReviewScopeSchema,
 ]);
 type NegativeIncidentRuntimeScope = z.output<typeof NegativeIncidentRuntimeScopeSchema>;
-type AuthoredControlReviewScope = Extract<
+export type AuthoredControlReviewScope = Extract<
   z.output<typeof V9AuthoredNegativeIncidentReviewScopeSchema>,
   { kind: "control" }
 >;
@@ -199,11 +199,13 @@ function laneLevelControlMatches(control: ControlOverlay, assetId: string, route
 
 /**
  * Authored identity is `(assetId, routeId, controlId | controlIds | "*")` plus the
- * asset-local mint form `(assetId, controlId)`. Only exact identity matches; there
- * is no fallback to a digest or to another form, so a colliding legacy digest
- * cannot reattach a review to a different control.
+ * asset-local mint form `(assetId, controlId)`; it resolves only against the
+ * control's own authored tuple. There is no fallback to a digest or to another
+ * form, so a colliding legacy digest cannot reattach a review to a different
+ * control. Shared with IR-5's CI orphan check so the build-time check and the
+ * Worker cannot drift apart.
  */
-function authoredControlScopeMatches(
+export function authoredControlScopeMatches(
   scope: AuthoredControlReviewScope,
   control: ControlOverlay,
   assetId: string,

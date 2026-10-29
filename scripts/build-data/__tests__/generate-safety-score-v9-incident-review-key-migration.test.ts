@@ -36,9 +36,9 @@ describe("incident review key migration", () => {
       mapped: 626,
       orphans: 23,
       collisions: 11,
-      authoredApplied: 555,
-      legacyBlocked: 59,
-      digestKeysRemaining: 82,
+      authoredApplied: 614,
+      legacyBlocked: 0,
+      digestKeysRemaining: 23,
       total: 649,
     });
   });
@@ -46,7 +46,7 @@ describe("incident review key migration", () => {
   it("keeps every applied authored identity outcome-equivalent to its digest key", () => {
     const generated = buildIncidentReviewKeyMigration(ROOT);
     expect(() => assertMigrationPreservesLegacyKeys(ROOT, generated)).not.toThrow();
-    expect(generated.rows.filter((row) => row.applied === "authored")).toHaveLength(555);
+    expect(generated.rows.filter((row) => row.applied === "authored")).toHaveLength(614);
     expect(generated.rows
       .filter((row) => row.applied === "authored")
       .every((row) => row.authored !== null && typeof row.legacyControlKey === "string")).toBe(true);
@@ -62,21 +62,23 @@ describe("incident review key migration", () => {
     expect(retired.every((row) => row.authored === null && row.reason.length > 0 && row.applied === "retired")).toBe(true);
   });
 
-  it("applies authored scopes to 555 rows and retires 23 with provenance, keeping 82 legacy keys", () => {
+  it("applies authored scopes to 614 rows and retires 23 with provenance, keeping 23 legacy keys", () => {
     const reviews = readJson(INCIDENT_REVIEWS_PATH) as { negativeReviews: RawReview[] };
     const authored = reviews.negativeReviews.filter((review) =>
       review.scope.kind === "control" && review.scope.controlKey === undefined);
     const retired = reviews.negativeReviews.filter((review) => review.retired !== undefined);
     const legacyDigests = reviews.negativeReviews.filter((review) =>
       typeof review.scope.controlKey === "string");
-    expect(authored).toHaveLength(555);
+    expect(authored).toHaveLength(614);
     expect(authored.every((review) => typeof review.scope.routeId === "string" || review.scope.controlId !== undefined)).toBe(true);
     expect(retired).toHaveLength(23);
     expect(retired.every((review) =>
       review.retired?.reviewedAt === REVIEW_KEY_MIGRATION_RETIRED_AT && review.retired.reason.length > 0)).toBe(true);
-    // 59 mint rows stay legacy until the mint fact carries authoredControlId, and
-    // the 23 retired rows keep the digest scope they were adjudicated under.
-    expect(legacyDigests).toHaveLength(82);
+    // Only the 23 retired rows keep the digest scope they were adjudicated under.
+    expect(legacyDigests).toHaveLength(23);
+    const deploymentScopedMint = authored.find((review) =>
+      review.scope.controlId === "USDSM Etherlink proxy owner");
+    expect(deploymentScopedMint?.scope.routeId).toBe("etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de");
   });
 
   it("emits only canonical colon-separated stable review ids", () => {

@@ -1367,7 +1367,7 @@
       "assetId": "earnusd-lido",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:earnusd-lido:654ae2376eb1fab2ff54"
+        "controlId": "Lido EarnUSD ShareManager"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1395,7 +1395,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:63d41c2f14cc97c38134"
+        "controlId": "senRLUSDv2 immutable asset-backed share accounting"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1420,7 +1420,7 @@
       "assetId": "fiusd-sygnum",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fiusd-sygnum:494929369feac8fc23ef"
+        "controlId": "FIUSD Arbitrum proxy-admin EOA"
       },
       "reviewedAt": "2026-10-07T15:27:07.178Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A)",
@@ -1446,7 +1446,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:6e802d84a80d477e3ec4"
+        "controlId": "Sentora curator 1-of-1 Safe"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1471,7 +1471,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:a348fa79f4e572444fec"
+        "controlId": "Sentora allocator 0xc4ba4e822c420452fe2bab93211208d3ccbd79d3"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1496,7 +1496,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:d310e45a88dd41ef72d0"
+        "controlId": "Sentora sentinel 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1521,7 +1521,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:e5ff3e67a87264457270"
+        "controlId": "Sentora owner 1-of-1 Safe"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1546,7 +1546,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:a895122d089b7395ca9d"
+        "controlId": "Sentora curator 1-of-1 Safe"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1571,7 +1571,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:8fda9a99f9e24d3ee165"
+        "controlId": "Sentora sentinel 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1596,7 +1596,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:ec580e6b0049c5f56713"
+        "controlId": "Sentora owner 1-of-1 Safe"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1621,7 +1621,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:ed10db7a6ba89f3f6092"
+        "controlId": "Sentora allocator 0xc4ba4e822c420452fe2bab93211208d3ccbd79d3"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1646,7 +1646,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:ede4f9ea6d0bbbb4d14c"
+        "controlId": "senPYUSDmain immutable asset-backed share accounting"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1671,7 +1671,7 @@
       "assetId": "brsrv-blackrock",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:brsrv-blackrock:287858f810434b36d107"
+        "controlId": "BRSRV Ethereum native issuance service surface"
       },
       "reviewedAt": "2026-10-07T15:36:04.960631+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_C)",
@@ -1697,7 +1697,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:0f65e417b884ad92936d"
+        "controlId": "Morpho RegistryList administrator 6-of-10 Safe"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1722,7 +1722,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:dbef2efb94defec68db1"
+        "controlId": "Morpho RegistryList administrator 6-of-10 Safe"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1747,7 +1747,7 @@
       "assetId": "senrlusdv2-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senrlusdv2-sentora:9929f5382df5b13f1914"
+        "controlId": "Sentora allocator 0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1773,7 +1773,7 @@
       "assetId": "senpyusdmain-sentora",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:senpyusdmain-sentora:4e655c286cd216eb3ada"
+        "controlId": "Sentora allocator 0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1"
       },
       "reviewedAt": "2026-10-07T15:45:07.431392+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_B)",
@@ -1799,7 +1799,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:108ff9048988b11c6280"
+        "controlId": "FinChain exSat token and gateway administrator EOA"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -1823,7 +1823,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:f1460cfa02904fe5522d"
+        "controlId": "FUSD exSat native mint gateway"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -1847,7 +1847,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:78caabcda91e9f1d2c04"
+        "controlId": "FUSD exSat native ProxyAdmin contract"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -1871,7 +1871,7 @@
       "assetId": "wcop-ripio",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:wcop-ripio:c953959f63d2b186da9f"
+        "controlId": "Ripio Celo WCOP Safe native minter and role administrator"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -1897,7 +1897,7 @@
       "assetId": "wcop-ripio",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:wcop-ripio:490b2c915911f5f74972"
+        "controlId": "Ripio Celo WCOP Safe native UUPS upgrader"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -1923,7 +1923,7 @@
       "assetId": "wcop-ripio",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:wcop-ripio:41768ba7de1a39b07d9b"
+        "controlId": "Ripio Celo WCOP native LimitedMinter"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -1949,7 +1949,7 @@
       "assetId": "fiusd-sygnum",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fiusd-sygnum:199dcf2d2ac7c4452660"
+        "controlId": "FIUSD zksync operators registry"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -1972,7 +1972,7 @@
       "assetId": "fiusd-sygnum",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fiusd-sygnum:524d35c52371ad977ac2"
+        "controlId": "FIUSD zkSync proxy-admin Safe"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -1995,7 +1995,7 @@
       "assetId": "fiusd-sygnum",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fiusd-sygnum:505e5a6b88cfec593817"
+        "controlId": "FIUSD arbitrum operators registry"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -2019,7 +2019,7 @@
       "assetId": "wcop-ripio",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:wcop-ripio:cc4c075e4b978c28f795"
+        "controlId": "Ripio WCOP Ethereum minter-router contract"
       },
       "reviewedAt": "2026-10-07T15:50:21.295Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_A2)",
@@ -2044,7 +2044,7 @@
       "assetId": "xgld-unitas",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:xgld-unitas:4910ed9aa991864ac1e3"
+        "controlId": "Unitas original BNB native minter"
       },
       "reviewedAt": "2026-10-07T15:51:04.179404+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_C2)",
@@ -2072,7 +2072,7 @@
       "assetId": "xgld-unitas",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:xgld-unitas:65bf58eabfb5f57c279a"
+        "controlId": "Unitas BNB native XGLD minter administration"
       },
       "reviewedAt": "2026-10-07T15:51:04.179433+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_C2)",
@@ -2100,7 +2100,7 @@
       "assetId": "xgld-unitas",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:xgld-unitas:a8c46a08ccef7e6e8ade"
+        "controlId": "Unitas XGLDMinting BNB native minter"
       },
       "reviewedAt": "2026-10-07T15:51:04.179449+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_C2)",
@@ -2128,7 +2128,7 @@
       "assetId": "brsrv-blackrock",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:brsrv-blackrock:a05ddf9412022f498bfb"
+        "controlId": "BRSRV Solana Token-2022 mint authority"
       },
       "reviewedAt": "2026-10-07T16:03:48.629098+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_C2)",
@@ -2157,7 +2157,7 @@
       "assetId": "gbpa-agant",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:gbpa-agant:075d5034f9e458604fa0"
+        "controlId": "GBPA Solana native mint multisig"
       },
       "reviewedAt": "2026-10-07T17:42:09.049Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_D)",
@@ -2183,7 +2183,7 @@
       "assetId": "earnusd-lido",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:earnusd-lido:01b7e766009f5bd6b71c"
+        "controlId": "Lido EarnUSD Proxy Admin Safe"
       },
       "reviewedAt": "2026-10-07T17:57:35.084237+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_E)",
@@ -2209,7 +2209,7 @@
       "assetId": "earnusd-lido",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:earnusd-lido:7199def3b50d7094744a"
+        "controlId": "Lido EarnUSD curator Safe"
       },
       "reviewedAt": "2026-10-07T17:57:35.084237+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_E)",
@@ -2235,7 +2235,7 @@
       "assetId": "earnusd-lido",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:earnusd-lido:87f8f76514e83baeaea3"
+        "controlId": "Lido EarnUSD Active Vault Admin Safe"
       },
       "reviewedAt": "2026-10-07T17:57:35.084237+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_E)",
@@ -2261,7 +2261,7 @@
       "assetId": "earnusd-lido",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:earnusd-lido:d4820d60b8218389c4e6"
+        "controlId": "Lido EarnUSD Lazy Vault Admin Safe"
       },
       "reviewedAt": "2026-10-07T17:57:35.084237+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_E)",
@@ -2287,7 +2287,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:14012ade7e0b40755324"
+        "controlId": "FinChain issuer-operated mint authority"
       },
       "reviewedAt": "2026-10-07T17:58:22.289Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_D)",
@@ -2317,7 +2317,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:890998f14336957d141c"
+        "controlId": "FinChain token, gateway, pool, and ProxyAdmin owner EOA"
       },
       "reviewedAt": "2026-10-07T17:58:22.289Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_D)",
@@ -2347,7 +2347,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:35c60072b4f2c919faed"
+        "controlId": "FUSD FinChain mint proxy (MINTER_ROLE)"
       },
       "reviewedAt": "2026-10-07T17:58:22.289Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_D)",
@@ -2377,7 +2377,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:3719cb3eea62deec8814"
+        "controlId": "FUSD shared ProxyAdmin contract"
       },
       "reviewedAt": "2026-10-07T17:58:22.289Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_D)",
@@ -2407,7 +2407,7 @@
       "assetId": "wcop-ripio",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:wcop-ripio:c5c1d9382c44360d311b"
+        "controlId": "Ripio WCOP Safe multisig (DEFAULT_ADMIN_ROLE)"
       },
       "reviewedAt": "2026-10-07T18:15:29.955Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_D)",
@@ -2438,7 +2438,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:41ae67214e531ed07feb"
+        "controlId": "FinChain exSat gateway fresh-message-ID minter EOA"
       },
       "reviewedAt": "2026-10-07T18:39:27.051Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_F)",
@@ -2464,7 +2464,7 @@
       "assetId": "fusd-finchain",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:fusd-finchain:9f2ae3fdc4f64d56e551"
+        "controlId": "FinChain gateway message-ID minter EOA"
       },
       "reviewedAt": "2026-10-07T18:39:27.051Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_F)",
@@ -2498,7 +2498,7 @@
       "assetId": "wcop-ripio",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:wcop-ripio:fb00c7684bc9c249331b"
+        "controlId": "Ripio shared WCOP admin and MINTER_ROLE holder (EOA)"
       },
       "reviewedAt": "2026-10-07T18:39:27.051Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_F)",
@@ -2535,7 +2535,7 @@
       "assetId": "gbpa-agant",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:gbpa-agant:9274ef656b1a4469505d"
+        "controlId": "GBPA EVM fiat minter"
       },
       "reviewedAt": "2026-10-07T18:39:27.051Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_F)",
@@ -2567,7 +2567,7 @@
       "assetId": "gbpa-agant",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:gbpa-agant:837bec1693d9879c4f77"
+        "controlId": "GBPA EVM ProxyAdmin owner"
       },
       "reviewedAt": "2026-10-07T18:39:27.051Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_F)",
@@ -2599,7 +2599,7 @@
       "assetId": "gbpa-agant",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:gbpa-agant:f0519a474b5479587b4b"
+        "controlId": "GBPA Tempo native issuance role inventory"
       },
       "reviewedAt": "2026-10-07T18:39:27.051Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_F)",
@@ -2630,7 +2630,7 @@
       "assetId": "gbpa-agant",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:gbpa-agant:f7c1e859b983dbc4cb65"
+        "controlId": "GBPA Tempo native role and supply-cap administrator"
       },
       "reviewedAt": "2026-10-07T18:39:27.051Z",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_F)",
@@ -2661,7 +2661,7 @@
       "assetId": "sparkusdc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdc-spark:2fff2a21014a156ef53d"
+        "controlId": "Spark vault owner configuration authority"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -2690,7 +2690,7 @@
       "assetId": "sparkusdc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdc-spark:66ede35032b2a14f174b"
+        "controlId": "Exact deposit-backed ERC-4626 share issuer"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -2719,7 +2719,7 @@
       "assetId": "sparkusdc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdc-spark:29603b0cab1dac38012d"
+        "controlId": "Spark current curator Safe"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -2748,7 +2748,7 @@
       "assetId": "sparkusdtbc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdtbc-spark:44763b77986d5ef35ea5"
+        "controlId": "Exact deposit-backed ERC-4626 share issuer"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -2777,7 +2777,7 @@
       "assetId": "sparkusdtbc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdtbc-spark:20f437472bb89c674188"
+        "controlId": "Spark vault owner configuration authority"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -2806,7 +2806,7 @@
       "assetId": "sparkusdtbc-spark",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:sparkusdtbc-spark:f7a4ed3ff0dd3cf03263"
+        "controlId": "Spark current curator Safe"
       },
       "reviewedAt": "2026-10-07T18:41:17.703781+00:00",
       "reviewer": "Sol unknown-resolver wave 2026-10-07 (INCIDENT_G)",
@@ -2835,7 +2835,7 @@
       "assetId": "brsrv-blackrock",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:brsrv-blackrock:6b46427ffdd664cdfd7a"
+        "controlId": "BRSRV Tempo native issuance service surface"
       },
       "reviewedAt": "2026-10-09T11:45:25Z",
       "reviewer": "Sol curation campaign 2026-10-09 (W2L10Blackrock)",
@@ -10600,7 +10600,8 @@
       "assetId": "usdsm-stable-mint",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:usdsm-stable-mint:5951c00b5ef7965fec9f"
+        "routeId": "etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de",
+        "controlId": "USDSM Etherlink proxy owner"
       },
       "reviewedAt": "2026-10-11T06:24:49Z",
       "reviewer": "Sol curation campaign 2026-10-11 (I43ApxUSDb)",
@@ -10632,7 +10633,7 @@
       "assetId": "usdsm-stable-mint",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:usdsm-stable-mint:8ea62eea76364fb14c11"
+        "controlId": "USDSM Etherlink native minter and role admin"
       },
       "reviewedAt": "2026-10-11T06:24:49Z",
       "reviewer": "Sol curation campaign 2026-10-11 (I43ApxUSDb)",
@@ -10664,7 +10665,7 @@
       "assetId": "usdsm-stable-mint",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:usdsm-stable-mint:bbb3136e12def53ad156"
+        "controlId": "USDSM additional Etherlink native minter"
       },
       "reviewedAt": "2026-10-11T06:24:49Z",
       "reviewer": "Sol curation campaign 2026-10-11 (I43ApxUSDb)",
@@ -22686,7 +22687,7 @@
       "assetId": "xgz-goldzip",
       "scope": {
         "kind": "control",
-        "controlKey": "mint-meta:xgz-goldzip:65b240a7ea10ee3756cb"
+        "controlId": "GoldZip owner mint and UUPS administration"
       },
       "reviewedAt": "2026-10-15",
       "reviewer": "Rev_XgzGoldzip",
