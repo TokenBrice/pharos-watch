@@ -44,7 +44,8 @@
         "defaultMaxAgeSec": 1800,
         "carryForwardExtraSec": 3600,
         "maxAgeSecBySource": {
-          "report-cards-chain-circulating": 5400
+          "report-cards-chain-circulating": 5400,
+          "deployment-supply-census-v1": 5400
         }
       },
       "deploymentSupplyCensus": {
@@ -57,9 +58,7 @@
         "solanaCommitment": "finalized",
         "solanaMaxAccountsPerRequest": 100,
         "movePin": "ledger-version",
-        "maxDeploymentsPerAsset": 64,
-        "observationMaxAgeSec": 1800,
-        "observationMaxSkewSec": 120
+        "maxDeploymentsPerAsset": 64
       }
     },
     "formula": {

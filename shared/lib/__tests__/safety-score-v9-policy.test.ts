@@ -745,7 +745,10 @@ describe("v10.38 producer admission keys", () => {
     expect(semantic.supplyAttribution.chainSupplyMaxAgeBySource).toEqual({
       defaultMaxAgeSec: 1800,
       carryForwardExtraSec: 3600,
-      maxAgeSecBySource: { "report-cards-chain-circulating": 5400 },
+      maxAgeSecBySource: {
+        "report-cards-chain-circulating": 5400,
+        "deployment-supply-census-v1": 5400,
+      },
     });
     expect(semantic.supplyAttribution.deploymentSupplyCensus).toMatchObject({
       model: "deployment-supply-census-v1",
@@ -754,9 +757,9 @@ describe("v10.38 producer admission keys", () => {
       evmMulticallMaxBatchSize: 64,
       solanaCommitment: "finalized",
       maxDeploymentsPerAsset: 64,
-      observationMaxAgeSec: semantic.supplyAttribution.observationMaxAgeSec,
-      observationMaxSkewSec: semantic.supplyAttribution.observationMaxSkewSec,
     });
+    expect(semantic.supplyAttribution.deploymentSupplyCensus).not.toHaveProperty("observationMaxAgeSec");
+    expect(semantic.supplyAttribution.deploymentSupplyCensus).not.toHaveProperty("observationMaxSkewSec");
     expect(semantic.evidence.laneIncidentCertificateMaxAgeSec).toBe(2_592_000);
   });
 
@@ -772,18 +775,24 @@ describe("v10.38 producer admission keys", () => {
     }
   });
 
-  it("caps the provider chain-supply ceiling and requires the provider entry", () => {
+  it("caps the provider and census sources at the default plus carry window", () => {
     const widened = candidateClone();
     widened.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
       "report-cards-chain-circulating"
     ] = 5_401;
-    expect(() => loadV9MethodologyPolicy(widened)).toThrow(/cannot exceed 5400 s/);
+    expect(() => loadV9MethodologyPolicy(widened)).toThrow(/cannot exceed the default plus carry window/);
 
     const missing = candidateClone();
     delete missing.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
       "report-cards-chain-circulating"
     ];
     expect(() => loadV9MethodologyPolicy(missing)).toThrow(/must declare their ceiling/);
+
+    const missingCensus = candidateClone();
+    delete missingCensus.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
+      "deployment-supply-census-v1"
+    ];
+    expect(() => loadV9MethodologyPolicy(missingCensus)).toThrow(/must declare their ceiling/);
 
     const atCeiling = candidateClone();
     atCeiling.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
@@ -793,14 +802,14 @@ describe("v10.38 producer admission keys", () => {
       .maxAgeSecBySource["report-cards-chain-circulating"]).toBe(5_400);
   });
 
-  it("keeps the census observation gates equal to the supply-attribution authority", () => {
-    const ageDrift = candidateClone();
-    ageDrift.semantic.supplyAttribution.deploymentSupplyCensus.observationMaxAgeSec += 1;
-    expect(() => loadV9MethodologyPolicy(ageDrift)).toThrow(/must equal the supply-attribution authority/);
-
-    const skewDrift = candidateClone();
-    skewDrift.semantic.supplyAttribution.deploymentSupplyCensus.observationMaxSkewSec = 121;
-    expect(() => loadV9MethodologyPolicy(skewDrift)).toThrow(/must equal the supply-attribution authority/);
+  it("derives the documented window from the authored default plus carry", () => {
+    const widened = candidateClone();
+    widened.semantic.supplyAttribution.chainSupplyMaxAgeBySource.defaultMaxAgeSec = 1_900;
+    widened.semantic.supplyAttribution.chainSupplyMaxAgeBySource.maxAgeSecBySource[
+      "report-cards-chain-circulating"
+    ] = 5_401;
+    expect(loadV9MethodologyPolicy(widened).policy.semantic.supplyAttribution.chainSupplyMaxAgeBySource
+      .maxAgeSecBySource["report-cards-chain-circulating"]).toBe(5_401);
   });
 
   it("bounds census batches and the per-asset deployment cap at 64", () => {
