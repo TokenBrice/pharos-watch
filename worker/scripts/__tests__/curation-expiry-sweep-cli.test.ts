@@ -17,12 +17,14 @@ function stepRun(id: string): string {
 }
 
 describe("curation sweep executable workflow contract", () => {
-  it("isolates all five generators and retains failure status after a timed-out report", () => {
+  it("isolates every generator and retains failure status after a timed-out report", () => {
     const generators = [
       ["replay", "safety-score-v9:replay", "replay_status"],
       ["worklist", "safety-score-v9:curation-worklist", "worklist_status"],
       ["queue", "safety-score-v9:expiry-queue", "queue_status"],
       ["registry", "safety-score-v9:missing-data-registry", "registry_status"],
+      ["renewals", "safety-score-v9:expiry-queue", "renewals_status"],
+      ["calendar", "safety-score-v9:expiry-queue", "calendar_status"],
       ["live_withheld", "safety-score-v9:live-withheld", "live_withheld_status"],
     ];
     const collect = steps.find((step) => step.id === "generate")!;
@@ -42,13 +44,31 @@ describe("curation sweep executable workflow contract", () => {
       expect(collect.run).toContain(`echo "${status}=$${status}" >> "$GITHUB_OUTPUT"`);
     }
     expect(collect.if).toContain("!cancelled()");
+    const sentinels = steps.find((step) => step.id === "sentinels")!;
+    expect(sentinels["continue-on-error"]).toBe(true);
+    expect(sentinels["timeout-minutes"]).toBe(10);
+    expect(sentinels.env?.NODE_OPTIONS).toBe("--max-old-space-size=12288");
+    // A sentinel verdict on a missing or unbound registry is not a closure claim.
+    expect(sentinels.if).toContain("steps.registry.outcome == 'success'");
+    expect(sentinels.run).toContain("worker/scripts/check-safety-score-v9-ledger-sentinels.ts");
+    expect(sentinels.run).toContain("--registry agents/sweep/missing-data-registry.json");
+    expect(sentinels.run).toContain("--ledger .github/artifacts/safety-score-missing-data-reviewed-ledger.json");
+    expect(sentinels.run).toContain("--replay agents/sweep/replay.json");
+    expect(sentinels.run).toContain("--output agents/sweep/sentinel-resolutions.json");
+    expect(sentinels.run).toContain("--markdown agents/sweep/sentinel-resolutions.md");
+    expect(collect.env?.sentinels_status).toBe("${{ steps.sentinels.outputs.status || '1' }}");
+    expect(collect.run).toContain('echo "sentinels_status=$sentinels_status"');
     const issue = steps.find((step) => step.run?.includes('gh issue edit'))!;
     expect(issue.run).toContain('[ "$LIVE_WITHHELD_STATUS" != 0 ]');
+    expect(issue.run).toContain('[ "$SENTINELS_STATUS" != 0 ]');
     expect(issue.run).toContain("Curation sweep incomplete");
     expect(issue.run).toContain("exit 1");
+    // The sweep is process-only: a green run never writes the ledger or the repo.
+    expect(issue.run).not.toContain("git push");
+    expect(issue.run).not.toContain("gh pr merge");
   });
 
-  it.each(["replay", "worklist", "queue", "registry", "live_withheld"])(
+  it.each(["replay", "worklist", "queue", "registry", "renewals", "calendar", "live_withheld"])(
     "preserves %s failure through the successful tee", (id) => {
       const dir = mkdtempSync(join(tmpdir(), "curation-generator-"));
       try {
@@ -111,7 +131,20 @@ describe("curation sweep executable workflow contract", () => {
         openItemCount: 42, claimGroupCount: 8, compiledFactItemCount: 35,
         supplementalScoreItemCount: 7, affectedStablecoinCount: 6,
       } }));
-      for (const name of ["replay", "worklist", "queue", "live-withheld", "missing-data-registry"]) {
+      writeFileSync(join(dir, "agents/sweep/renewals-next-14-days.md"), "| Week (Mon) | Family | Asset |\n|---|---|---|\n| 2026-11-23 | execution-review | susdc-spark |\n");
+      writeFileSync(join(dir, "agents/sweep/sentinel-resolutions.json"), JSON.stringify({
+        summary: {
+          verdictCounts: { closed: 3, "still-open": 5, "replaced-adversely": 1, unverifiable: 7 },
+          admissionCounts: { verified: 2, failed: 1, "not-applicable": 11, unverifiable: 3 },
+          closure: { groups: 3, groupsWithOpenItems: 1, openItemsInClosedGroups: 2, derivedFactsClosed: 4 },
+        },
+        inputs: { registry: { missingDataRegistryFingerprint: "abc123", binding: { asOfIso: "2026-10-29T17:17:24.000Z" } }, closureEvidence: "replay-verified" },
+      }));
+      writeFileSync(join(dir, "agents/sweep/sentinel-resolutions.md"), "Verdicts: closed 3 · still-open 5.\n");
+      for (const name of [
+        "replay", "worklist", "queue", "live-withheld", "missing-data-registry",
+        "renewals", "calendar", "sentinel-resolutions",
+      ]) {
         writeFileSync(join(dir, `agents/sweep/${name}-command.log`), `${name} diagnostic`);
       }
       const ghPath = join(dir, "gh");
@@ -124,6 +157,7 @@ describe("curation sweep executable workflow contract", () => {
           GITHUB_SERVER_URL: "https://github.com", GITHUB_REPOSITORY: "example/pharos",
           SNAPSHOT_URL: "https://github.com/example/pharos/actions/runs/1/artifacts/2", SNAPSHOT_STATUS: "success",
           REPLAY_STATUS: "0", WORKLIST_STATUS: "0", QUEUE_STATUS: "0", LIVE_WITHHELD_STATUS: "0", REGISTRY_STATUS: "0",
+          RENEWALS_STATUS: "0", CALENDAR_STATUS: "0", SENTINELS_STATUS: "0",
           ...(failedStatus ? { [failedStatus]: "7" } : {}),
         },
       });
@@ -142,9 +176,16 @@ describe("curation sweep executable workflow contract", () => {
     expect(body).toContain("output truncated to fit the 60,000-byte issue body budget");
     expect(body).toContain("Open task rows: **42**");
     expect(body).toContain("Command status: replay=0, worklist=0, expiry queue=0, live-withheld=0, missing-data registry=0.");
+    expect(body).toContain("Process status: renewals (next 14 days)=0, renewal calendar=0, ledger sentinels=0.");
+    expect(body).toContain("## Renewals due next 14 days (by UTC week)");
+    expect(body).toContain("| 2026-11-23 | execution-review | susdc-spark |");
+    expect(body).toContain("## Ledger sentinel check");
+    expect(body).toContain("Closure-bookable claim groups: **3**");
+    expect(body).toContain("Missing-data registry fingerprint: abc123");
     expect(body.indexOf("Open task rows")).toBeLessThan(body.indexOf("Command status:"));
     expect(body.indexOf("Command status:")).toBeLessThan(body.indexOf("Full downloadable reports"));
-    expect(body.indexOf("Full downloadable reports")).toBeLessThan(body.indexOf("## Live-withheld"));
+    expect(body.indexOf("Full downloadable reports")).toBeLessThan(body.indexOf("## Renewals due next 14 days"));
+    expect(body.indexOf("## Renewals due next 14 days")).toBeLessThan(body.indexOf("## Live-withheld"));
     expect(body.endsWith("Run: https://github.com/example/pharos/actions/runs/1\n")).toBe(true);
   });
 
@@ -155,12 +196,18 @@ describe("curation sweep executable workflow contract", () => {
     const { status, body } = publishIssue(`${prefix}## Dependencies\n${"x".repeat(80_000)}`);
     expect(status).toBe(0);
     expect(Buffer.byteLength(body, "utf8")).toBeLessThanOrEqual(60_000);
-    expect(body.match(/^```/gm)).toHaveLength(2);
+    // Complete excerpts before the cut keep their fences paired; a cut inside a
+    // fence is closed before the marker, so the marker and footer stay outside code.
+    expect((body.match(/^```/gm) ?? []).length % 2).toBe(0);
+    expect(body).toContain("\n... output truncated to fit the 60,000-byte issue body budget; download the full artifact ...\n");
     expect(body).toContain("output truncated to fit the 60,000-byte issue body budget");
     expect(body.endsWith("Run: https://github.com/example/pharos/actions/runs/1\n")).toBe(true);
   });
 
-  it.each(["REPLAY_STATUS", "WORKLIST_STATUS", "QUEUE_STATUS", "LIVE_WITHHELD_STATUS", "REGISTRY_STATUS"])(
+  it.each([
+    "REPLAY_STATUS", "WORKLIST_STATUS", "QUEUE_STATUS", "LIVE_WITHHELD_STATUS", "REGISTRY_STATUS",
+    "RENEWALS_STATUS", "CALENDAR_STATUS", "SENTINELS_STATUS",
+  ])(
     "publishes diagnostics and fails the run when %s failed", (statusName) => {
       const { status, body } = publishIssue("small report", statusName);
       expect(status).toBe(1);
