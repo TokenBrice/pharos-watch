@@ -5,6 +5,11 @@ import type { SafetyScorePublicationIdentity } from "@shared/types/safety-score-
 
 export interface DigestMintBurnCoinNet extends ValuedNetFlow24h {
   id: string;
+  /**
+   * Whether the published 24h flow window itself is complete. `null` when the
+   * publication carries no window evidence (legacy payload).
+   */
+  window24hComplete: boolean | null;
 }
 
 export type DigestMintBurnFtqFlows =
@@ -53,7 +58,13 @@ export async function computeDigestMintBurnFtqFlows(
     return unavailable(classification.reason, source.snapshot.safetyScoreIdentity);
   }
   const gradeClassification = classification.classification;
-  if (coinNets.some((coin) => coin.knownNetUsd === null)) {
+  // A withheld net has two distinct causes. An incomplete 24h flow window means
+  // the flow evidence itself is missing, which degrades the run; missing USD
+  // valuation is decided below by the bounded detector (or named
+  // `valuation-incomplete`). Window completeness is the publication's
+  // scan-coverage fact; a publication that does not carry it proves nothing,
+  // so the fail-closed degrade stays.
+  if (coinNets.some((coin) => coin.knownNetUsd === null && coin.window24hComplete !== true)) {
     return unavailable("flow-window-unavailable", gradeClassification.safetyScoreIdentity);
   }
   const ftq = detectFlightToQualityFromValuedNets({

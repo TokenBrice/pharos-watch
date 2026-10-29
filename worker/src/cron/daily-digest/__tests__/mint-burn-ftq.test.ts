@@ -19,8 +19,8 @@ const { computeDigestMintBurnFtqFlows } = await import("../mint-burn-ftq");
 const db = {} as D1Database;
 const COMPLETE = { mintCompleteness: "complete", burnCompleteness: "complete" } as const;
 const intensities = [
-  { id: "usdt-tether", knownNetUsd: 40_000_000, valuation: COMPLETE },
-  { id: "usdc-circle", knownNetUsd: -50_000_000, valuation: COMPLETE },
+  { id: "usdt-tether", knownNetUsd: 40_000_000, valuation: COMPLETE, window24hComplete: true },
+  { id: "usdc-circle", knownNetUsd: -50_000_000, valuation: COMPLETE, window24hComplete: true },
 ];
 
 describe("digest mint/burn flight-to-quality flows", () => {
@@ -60,12 +60,45 @@ describe("digest mint/burn flight-to-quality flows", () => {
     });
   });
 
-  it("does not turn an unscanned nullable coin net into an inactive FTQ claim", async () => {
+  it("degrades when a coin's 24h flow window is unavailable", async () => {
     classify(["usdt-tether"], ["usdc-circle"]);
     await expect(computeDigestMintBurnFtqFlows(db, [
-      { id: "usdt-tether", knownNetUsd: null, valuation: COMPLETE },
-      { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: COMPLETE },
+      { id: "usdt-tether", knownNetUsd: null, valuation: COMPLETE, window24hComplete: false },
+      { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: COMPLETE, window24hComplete: true },
     ])).resolves.toMatchObject({ kind: "unavailable", reason: "flow-window-unavailable" });
+  });
+
+  it("degrades when a withheld net comes from a publication with no window evidence", async () => {
+    classify(["usdt-tether"], ["usdc-circle"]);
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
+      { id: "usdc-circle", knownNetUsd: null, valuation: COMPLETE, window24hComplete: null },
+    ])).resolves.toMatchObject({ kind: "unavailable", reason: "flow-window-unavailable" });
+  });
+
+  it("leaves a complete-window net withheld for missing valuation to the bounded detector", async () => {
+    const snapshot = classify(["usdt-tether"], ["usdc-circle"]);
+    // The unpriced risky coin could still carry the outflow past the threshold,
+    // so the activation is unproven: a valuation quality finding, not a degrade.
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
+      { id: "usdc-circle", knownNetUsd: null, valuation: { ...COMPLETE, mintCompleteness: "partial" }, window24hComplete: true },
+    ])).resolves.toEqual({
+      kind: "unavailable",
+      active: false,
+      safeNet24h: 0,
+      riskyNet24h: 0,
+      reason: "valuation-incomplete",
+      safetyScoreIdentity: snapshot.safetyScoreIdentity,
+    });
+  });
+
+  it("keeps a proven-inactive FTQ when an unpriced complete-window coin cannot reach the threshold", async () => {
+    classify(["usdt-tether"], ["usdc-circle"]);
+    await expect(computeDigestMintBurnFtqFlows(db, [
+      { id: "usdt-tether", knownNetUsd: 10_000_000, valuation: COMPLETE, window24hComplete: true },
+      { id: "usdc-circle", knownNetUsd: null, valuation: { ...COMPLETE, mintCompleteness: "partial" }, window24hComplete: true },
+    ])).resolves.toMatchObject({ kind: "ok", active: false });
   });
 
   it("withholds FTQ when missing valuation could flip it", async () => {
@@ -73,8 +106,8 @@ describe("digest mint/burn flight-to-quality flows", () => {
     // The risky outflow looks decisive, but unpriced risky mints of unknown size can
     // lift it above the -$100M threshold, so the activation itself is unproven.
     await expect(computeDigestMintBurnFtqFlows(db, [
-      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE },
-      { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: { ...COMPLETE, mintCompleteness: "partial" } },
+      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
+      { id: "usdc-circle", knownNetUsd: -150_000_000, valuation: { ...COMPLETE, mintCompleteness: "partial" }, window24hComplete: true },
     ])).resolves.toEqual({
       kind: "unavailable",
       active: false,
@@ -88,8 +121,8 @@ describe("digest mint/burn flight-to-quality flows", () => {
   it("keeps a proven-inactive FTQ when unpriced mints can only raise a risky net", async () => {
     classify(["usdt-tether"], ["usdc-circle"]);
     await expect(computeDigestMintBurnFtqFlows(db, [
-      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE },
-      { id: "usdc-circle", knownNetUsd: 10_000_000, valuation: { ...COMPLETE, mintCompleteness: "partial" } },
+      { id: "usdt-tether", knownNetUsd: 150_000_000, valuation: COMPLETE, window24hComplete: true },
+      { id: "usdc-circle", knownNetUsd: 10_000_000, valuation: { ...COMPLETE, mintCompleteness: "partial" }, window24hComplete: true },
     ])).resolves.toMatchObject({ kind: "ok", active: false });
   });
 

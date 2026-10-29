@@ -35,6 +35,13 @@ const ISSUE_KIND_RANK: Record<DashboardIssueKind, number> = {
   watch: 3,
 };
 const MAINTENANCE_CAUSE_CODES = new Set(["ddr_repair_debt_present", "reserve_sync_history_write_gap"]);
+/**
+ * By-design informational causes: the condition they describe is reviewed and
+ * expected, so they are standing notices rather than triage findings. They stay
+ * in `/api/status` causes (and every raw cause history), but never become a
+ * dashboard issue, so they neither count as Watch items nor appear in Triage.
+ */
+const STANDING_NOTICE_CAUSE_CODES = new Set(["active_price_coverage_nominal_reference"]);
 const PUBLICATION_CAUSE_CODES = new Set(["stablecoin_publication_incomplete", "stablecoin_publication_unknown"]);
 const ACTIVE_PRICE_COVERAGE_CAUSE_CODE = "active_price_coverage_incomplete";
 const ACTIVE_PRICE_COVERAGE_CAUSE_CODES = new Set([ACTIVE_PRICE_COVERAGE_CAUSE_CODE, "active_price_coverage_unknown"]);
@@ -173,10 +180,12 @@ export function normalizeStatusIssues(
       });
     }
   }
-  return [...deduped.entries()].map(([id, cause]) => {
+  return [...deduped.entries()].flatMap(([id, cause]) => {
+    // A standing notice is by-design context, never a triage finding.
+    if (STANDING_NOTICE_CAUSE_CODES.has(cause.code)) return [];
     const publicImpacting = transitionHasPublicImpact([cause]);
     const kind = getIssueKind(cause, publicImpacting);
-    return { ...cause, id, kind, publicImpacting, affectedSurface: getAffectedSurface(cause, publicImpacting), impactLabel: getIssueImpactLabel(kind) };
+    return [{ ...cause, id, kind, publicImpacting, affectedSurface: getAffectedSurface(cause, publicImpacting), impactLabel: getIssueImpactLabel(kind) }];
   }).sort((a, b) => {
     const kindDelta = ISSUE_KIND_RANK[a.kind] - ISSUE_KIND_RANK[b.kind];
     if (kindDelta !== 0) return kindDelta;

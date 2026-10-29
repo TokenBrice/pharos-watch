@@ -492,7 +492,12 @@ export async function collectMintBurnFlows(
 
     const ftqFlows = await computeDigestMintBurnFtqFlows(
       ctx.db,
-      gauge.coins.map((coin) => ({ id: coin.id, knownNetUsd: coin.net24hUsd, valuation: coin.valuation24h })),
+      gauge.coins.map((coin) => ({
+        id: coin.id,
+        knownNetUsd: coin.net24hUsd,
+        valuation: coin.valuation24h,
+        window24hComplete: coin.scanCoverage?.window24h.complete ?? null,
+      })),
     );
     if (ftqFlows.kind === "unavailable") {
       if (ftqFlows.reason === "valuation-incomplete") qualityReasons.push("mint-burn-ftq-valuation-incomplete");
