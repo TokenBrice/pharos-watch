@@ -30,33 +30,45 @@ import type { ResolutionMode, WorkType } from "../lib/safety-score-v9-missing-da
 /**
  * Apply sentinel-sweep verdicts as append-only curation-ledger decisions.
  *
- * The sweep checker (DUR-1) owns verdicts: bookable / split / re-review /
- * pending for open groups, admission-verified / admission-failed for
- * structured-pending-production (SPP) groups. This applier independently
- * verifies the parts it can re-derive from the registry it was handed
- * (sentinel absence, group task rows, factsClosed) and books:
+ * The sweep checker (`worker/scripts/check-safety-score-v9-ledger-sentinels.ts`)
+ * owns verdicts and the artifact read here: one row per claim group's latest
+ * decision, the verdict axis `closed | still-open | replaced-adversely |
+ * unverifiable`, and a separate `admission` axis for
+ * structured-pending-production (SPP) decisions. This applier re-verifies the
+ * parts it can re-derive from the registry it was handed (sentinel absence,
+ * group task rows, factsClosed) and books:
  *
- *   bookable, split, admission-verified  -> promote
- *   admission-failed                     -> reject
+ *   closed (SPP admission verified)                  -> promote
+ *   still-open + reason `sentinels-partially-absent` -> partial promote
  *
- * re-review and pending require human review and are reported, never booked.
- * Nothing is booked when the registry is for a different clock/fingerprint, the
- * group's latest decision changed since the sweep read the ledger, the asset is
- * quarantined, the sentinel is still open, or no task row actually closed.
+ * Every other verdict is reported and never booked. An SPP row whose admission
+ * has not verified is a wait state, never a reviewed rejection: it is skipped
+ * with `spp-admission-failed` and books nothing. Nothing is booked when the
+ * artifact was not replay-verified, names a different registry digest, clock or
+ * ledger version, the group's latest decision is already booked, the asset is
+ * quarantined, a sentinel is still open (or prose), or no task row closed.
  */
 
-export const SENTINEL_VERDICTS = [
-  "bookable",
-  "split",
-  "re-review",
-  "pending",
-  "admission-verified",
-  "admission-failed",
-] as const;
+/**
+ * Verdict axis of the sweep checker's artifact. Restated rather than imported:
+ * `scripts/` is excluded from the worker TypeScript project and cannot import
+ * `worker/scripts/`. The contract test in `__tests__/apply-sentinel-closures.test.ts`
+ * runs the checker's own report through this parser, so drift fails there.
+ */
+export const SENTINEL_VERDICTS = ["closed", "still-open", "replaced-adversely", "unverifiable"] as const;
 export type SentinelVerdict = (typeof SENTINEL_VERDICTS)[number];
+
+/** SPP admission axis, independent of the verdict. */
+export const SENTINEL_ADMISSIONS = ["verified", "failed", "not-applicable", "unverifiable"] as const;
+export type SentinelAdmission = (typeof SENTINEL_ADMISSIONS)[number];
+
+const STRUCTURED_PENDING_PRODUCTION = "structured-pending-production";
+const SPLIT_REASON = "sentinels-partially-absent";
+const REQUIRED_CLOSURE_EVIDENCE = "replay-verified";
 
 export type SentinelApplyFailureReason =
   | "resolutions-schema-invalid"
+  | "closure-evidence-insufficient"
   | "registry-schema-invalid"
   | "registry-fingerprint-mismatch"
   | "capture-clock-mismatch"
@@ -82,37 +94,52 @@ const SentinelResolutionRowSchema = z
   .object({
     claimGroupId: nonEmptyText,
     verdict: z.enum(SENTINEL_VERDICTS),
-    items: z.number().int().nonnegative().optional(),
-    ledgerDecisionIndex: z.number().int().nonnegative().optional(),
+    reason: nonEmptyText,
+    admission: z.enum(SENTINEL_ADMISSIONS),
+    ledgerDecisionIndex: z.number().int().nonnegative(),
     registryFingerprint: sha256Text.optional(),
-    captureClockSec: clockSec.optional(),
+    asOfSec: clockSec.nullable().optional(),
+    openItemCount: z.number().int().nonnegative().optional(),
   })
   .passthrough();
 
 const SentinelResolutionsArtifactSchema = z
   .object({
     schemaVersion: z.literal(1),
-    generatedAtSec: clockSec,
-    registryFingerprint: sha256Text.optional(),
-    captureClockSec: clockSec.optional(),
-    ledgerDecisionCount: z.number().int().nonnegative().optional(),
-    rows: z.array(SentinelResolutionRowSchema).min(1),
+    inputs: z
+      .object({
+        registry: z
+          .object({
+            missingDataRegistryFingerprint: sha256Text,
+            registrySha256: sha256Text,
+            binding: z.object({ asOfSec: clockSec }).passthrough().nullable().optional(),
+          })
+          .passthrough(),
+        ledger: z.object({ decisionCount: z.number().int().nonnegative() }).passthrough(),
+        closureEvidence: nonEmptyText,
+      })
+      .passthrough(),
+    groups: z.array(SentinelResolutionRowSchema).min(1),
   })
   .passthrough();
 
 export interface SentinelResolutionRow {
   claimGroupId: string;
   verdict: SentinelVerdict;
-  items?: number;
-  ledgerDecisionIndex?: number;
+  reason: string;
+  admission: SentinelAdmission;
+  ledgerDecisionIndex: number;
+  openItemCount?: number;
 }
 
 export interface SentinelResolutions {
   schemaVersion: 1;
-  generatedAtSec: number;
-  registryFingerprint: string;
+  /** SHA-256 of the exact registry bytes the checker read; matched against the registry handed to the applier. */
+  registrySha256: string;
+  /** Checker identity fingerprint (replay binding plus open-item set); carried into booked evidence. */
+  identityFingerprint: string;
   captureClockSec: number;
-  ledgerDecisionCount?: number;
+  ledgerDecisionCount: number;
   rows: readonly SentinelResolutionRow[];
 }
 
@@ -124,8 +151,9 @@ function describeIssues(error: z.ZodError): string {
 }
 
 /**
- * Resolve provenance from the artifact root or from every row. Rows must agree
- * on one registry fingerprint and capture clock; mixed provenance is refused.
+ * Read a checker artifact this applier is willing to book from. Only
+ * replay-verified sweeps qualify: a registry-snapshot run has no replay to
+ * cross-check, so its `closed` rows must not reach the ledger.
  */
 export function parseSentinelResolutions(value: unknown): SentinelResolutions {
   const parsed = SentinelResolutionsArtifactSchema.safeParse(value);
@@ -133,67 +161,50 @@ export function parseSentinelResolutions(value: unknown): SentinelResolutions {
     throw new SentinelApplyError("resolutions-schema-invalid", describeIssues(parsed.error));
   }
   const artifact = parsed.data;
-  let fingerprint = artifact.registryFingerprint;
-  let captureClock = artifact.captureClockSec;
+  const closureEvidence = artifact.inputs.closureEvidence;
+  if (closureEvidence !== REQUIRED_CLOSURE_EVIDENCE) {
+    throw new SentinelApplyError(
+      "closure-evidence-insufficient",
+      `inputs.closureEvidence is ${closureEvidence}; only ${REQUIRED_CLOSURE_EVIDENCE} artifacts may book closures`,
+    );
+  }
+  const captureClockSec = artifact.inputs.registry.binding?.asOfSec;
+  if (captureClockSec === undefined) {
+    throw new SentinelApplyError(
+      "resolutions-schema-invalid",
+      "inputs.registry.binding.asOfSec is required to prove the capture clock",
+    );
+  }
+  const identityFingerprint = artifact.inputs.registry.missingDataRegistryFingerprint;
   const rows: SentinelResolutionRow[] = [];
-  for (const [index, row] of artifact.rows.entries()) {
-    const rowFingerprint = row.registryFingerprint ?? fingerprint;
-    const rowClock = row.captureClockSec ?? captureClock;
-    if (rowFingerprint === undefined || rowClock === undefined) {
+  for (const [index, row] of artifact.groups.entries()) {
+    if (row.registryFingerprint !== undefined && row.registryFingerprint !== identityFingerprint) {
       throw new SentinelApplyError(
         "resolutions-schema-invalid",
-        `rows.${index}: registryFingerprint and captureClockSec are required at the root or on every row`,
+        `groups.${index}: registryFingerprint disagrees with inputs.registry.missingDataRegistryFingerprint`,
       );
     }
-    if (row.registryFingerprint !== undefined && fingerprint !== undefined
-      && row.registryFingerprint !== fingerprint) {
+    if (row.asOfSec !== undefined && row.asOfSec !== captureClockSec) {
       throw new SentinelApplyError(
         "resolutions-schema-invalid",
-        `rows.${index}: registryFingerprint disagrees with the artifact root`,
+        `groups.${index}: asOfSec ${row.asOfSec} disagrees with inputs.registry.binding.asOfSec ${captureClockSec}`,
       );
     }
-    if (row.captureClockSec !== undefined && captureClock !== undefined
-      && row.captureClockSec !== captureClock) {
-      throw new SentinelApplyError(
-        "resolutions-schema-invalid",
-        `rows.${index}: captureClockSec disagrees with the artifact root`,
-      );
-    }
-    if (fingerprint !== undefined && rowFingerprint !== fingerprint) {
-      throw new SentinelApplyError(
-        "resolutions-schema-invalid",
-        `rows.${index}: rows mix registry fingerprints`,
-      );
-    }
-    if (captureClock !== undefined && rowClock !== captureClock) {
-      throw new SentinelApplyError(
-        "resolutions-schema-invalid",
-        `rows.${index}: rows mix capture clocks`,
-      );
-    }
-    fingerprint = rowFingerprint;
-    captureClock = rowClock;
     rows.push({
       claimGroupId: row.claimGroupId,
       verdict: row.verdict,
-      ...(row.items === undefined ? {} : { items: row.items }),
-      ...(row.ledgerDecisionIndex === undefined ? {} : { ledgerDecisionIndex: row.ledgerDecisionIndex }),
+      reason: row.reason,
+      admission: row.admission,
+      ledgerDecisionIndex: row.ledgerDecisionIndex,
+      ...(row.openItemCount === undefined ? {} : { openItemCount: row.openItemCount }),
     });
-  }
-  if (fingerprint === undefined || captureClock === undefined) {
-    throw new SentinelApplyError(
-      "resolutions-schema-invalid",
-      "registryFingerprint and captureClockSec are required",
-    );
   }
   return {
     schemaVersion: 1,
-    generatedAtSec: artifact.generatedAtSec,
-    registryFingerprint: fingerprint,
-    captureClockSec: captureClock,
-    ...(artifact.ledgerDecisionCount === undefined
-      ? {}
-      : { ledgerDecisionCount: artifact.ledgerDecisionCount }),
+    registrySha256: artifact.inputs.registry.registrySha256,
+    identityFingerprint,
+    captureClockSec,
+    ledgerDecisionCount: artifact.inputs.ledger.decisionCount,
     rows,
   };
 }
@@ -368,7 +379,6 @@ export type SentinelSkipReason =
   | "latest-decision-reject"
   | "unknown-work-type"
   | "unknown-resolution-mode"
-  | "work-type-mismatch"
   | "missing-sentinel"
   | "non-machine-sentinel"
   | "sentinel-still-open"
@@ -376,6 +386,7 @@ export type SentinelSkipReason =
   | "quarantined-or-missing-asset"
   | "no-derived-closure"
   | "spp-state-mismatch"
+  | "spp-admission-failed"
   | "verdict-not-bookable";
 
 export interface SkippedResolution {
@@ -388,7 +399,6 @@ export interface SkippedResolution {
 export interface BookedClosure {
   claimGroupId: string;
   verdict: SentinelVerdict;
-  decision: "promote" | "reject";
   factsClosed: number;
   closedTaskIds: readonly string[];
   remainingTaskIds: readonly string[];
@@ -401,7 +411,7 @@ export interface ApplySentinelClosuresInput {
   resolutions: unknown;
   /** SHA-256 of the exact registry bytes read by the caller. */
   registryFingerprint: string;
-  /** Suffix appended to `sentinel-sweep/`; defaults to the artifact's generatedAtSec. */
+  /** Suffix appended to `sentinel-sweep/`; defaults to the artifact's capture clock. */
   runId?: string;
 }
 
@@ -443,74 +453,49 @@ function sentinelCarryForward(
 
 function buildDecisionForResolution(input: {
   latest: CurationLedgerDecision;
-  verdict: SentinelVerdict;
+  split: boolean;
   group: RegistryGroupIndex | undefined;
   evaluations: readonly { sentinel: unknown; evaluation: SentinelEvaluation }[];
   reviewedAt: string;
   reviewer: string;
   registryFingerprint: string;
+  identityFingerprint: string;
   captureClockSec: number;
 }): { decision: NewCurationLedgerDecision; closedTaskIds: string[]; remainingTaskIds: string[] } | null {
-  const { latest, verdict, group, evaluations } = input;
+  const { latest, split, group, evaluations } = input;
   const currentTaskIds = group?.taskIds ?? new Set<string>();
   const remainingTaskIds = latest.taskIds.filter((taskId) => currentTaskIds.has(taskId));
   const closedTaskIds = latest.taskIds.filter((taskId) => !currentTaskIds.has(taskId));
-  const provenance = `registry ${input.registryFingerprint} @ ${input.captureClockSec}:`;
-  const absentEvidence = evaluations
-    .flatMap(({ evaluation }) => evaluation.absentLabels)
-    .map((label) => `${provenance} ${label}`);
-  const base = {
-    claimGroupId: latest.claimGroupId,
-    workType: latest.workType,
-    resolutionMode: latest.resolutionMode,
-    reviewedAt: input.reviewedAt,
-    reviewer: input.reviewer,
-    changeRefs: [] as string[],
-  };
-  if (verdict === "admission-failed") {
-    return {
-      closedTaskIds,
-      remainingTaskIds,
-      decision: {
-        ...base,
-        taskIds: [...latest.taskIds],
-        decision: "reject",
-        evidence: [
-          `${provenance} structured-pending-production admission failed; no fact closed`,
-          ...absentEvidence,
-        ],
-        rationale:
-          "Mechanical SPP booking: the sentinel sweep reports the deferred structured evidence " +
-          `failed production admission in ${provenance.replace(/:$/, "")}. No new issuer evidence was ` +
-          "reviewed and no fact closed; re-author or replace the evidence before promotion.",
-        sentinels: sentinelCarryForward(evaluations, true),
-        nextReviewTrigger:
-          `Re-review when a future registry reopens ${latest.claimGroupId} with admitted evidence ` +
-          "or when the rejected source is replaced by a fresh primary source.",
-        factsClosed: 0,
-      },
-    };
-  }
   const factsClosed = closedTaskIds.length;
   if (factsClosed === 0) return null;
-  const split = verdict === "split";
+  const provenance =
+    `registry ${input.registryFingerprint} @ ${input.captureClockSec} ` +
+    `(missing-data identity ${input.identityFingerprint})`;
+  const absentEvidence = evaluations
+    .flatMap(({ evaluation }) => evaluation.absentLabels)
+    .map((label) => `${provenance}: ${label}`);
   return {
     closedTaskIds,
     remainingTaskIds,
     decision: {
-      ...base,
+      claimGroupId: latest.claimGroupId,
       taskIds: [...remainingTaskIds],
+      workType: latest.workType,
+      resolutionMode: latest.resolutionMode,
       decision: "promote",
+      reviewedAt: input.reviewedAt,
+      reviewer: input.reviewer,
+      changeRefs: [],
       evidence: [
-        `${provenance} ${verdict} verdict; factsClosed ${factsClosed} re-derived from registry task rows` +
-          (closedTaskIds.length > 0 ? ` (${closedTaskIds.join(", ")})` : ""),
+        `${provenance}: ${split ? "still-open split" : "closed"} verdict; factsClosed ${factsClosed} ` +
+          `re-derived from registry task rows (${closedTaskIds.join(", ")})`,
         ...absentEvidence,
       ],
       rationale:
         (split
           ? "Mechanical split closure: some sentinels are absent while sibling rows remain open; "
           : "Mechanical sentinel closure: every machine-checkable sentinel on the latest decision is absent ") +
-        `in ${provenance.replace(/:$/, "")} with no adverse replacement reported by the sweep. ` +
+        `on a replay-verified registry sweep in ${provenance} with no adverse replacement. ` +
         "No new issuer evidence was reviewed; factsClosed is re-derived from registry task rows and " +
         "recorded here, never taken from the reviewer.",
       sentinels: split ? sentinelCarryForward(evaluations, false) : [],
@@ -537,10 +522,10 @@ function skip(
 export function applySentinelClosures(input: ApplySentinelClosuresInput): ApplySentinelClosuresResult {
   const resolutions = parseSentinelResolutions(input.resolutions);
   const registry = buildRegistryIndex(input.registry, input.registryFingerprint);
-  if (resolutions.registryFingerprint !== registry.fingerprint) {
+  if (resolutions.registrySha256 !== registry.fingerprint) {
     throw new SentinelApplyError(
       "registry-fingerprint-mismatch",
-      `artifact ${resolutions.registryFingerprint} != registry bytes ${registry.fingerprint}`,
+      `artifact registrySha256 ${resolutions.registrySha256} != registry bytes ${registry.fingerprint}`,
     );
   }
   if (resolutions.captureClockSec !== registry.captureClockSec) {
@@ -559,13 +544,15 @@ export function applySentinelClosures(input: ApplySentinelClosuresInput): ApplyS
     }
     seenGroups.add(row.claimGroupId);
   }
-  const runId = input.runId ?? String(resolutions.generatedAtSec);
+  const runId = input.runId ?? String(resolutions.captureClockSec);
   if (runId.trim().length === 0) {
     throw new SentinelApplyError("run-id-invalid", "run id must not be blank");
   }
   const reviewer = `sentinel-sweep/${runId}`;
   const reviewedAt = new Date(registry.captureClockSec * 1000).toISOString().slice(0, 10);
-  const marker = `registry ${registry.fingerprint} @ ${registry.captureClockSec}:`;
+  const marker = `registry ${registry.fingerprint} @ ${registry.captureClockSec}`;
+  const ledgerDecisionCount = input.ledger.decisions.length;
+  const staleLedgerBasis = resolutions.ledgerDecisionCount !== ledgerDecisionCount;
   const latestByGroup = indexLatestCurationDecisions(input.ledger.decisions);
   const candidates: NewCurationLedgerDecision[] = [];
   const booked: BookedClosure[] = [];
@@ -580,29 +567,27 @@ export function applySentinelClosures(input: ApplySentinelClosuresInput): ApplyS
     }
     const latest = latestEntry.decision;
     if (latest.evidence.some((entry) => typeof entry === "string" && entry.startsWith(marker))) {
-      skipped.push(skip(row, "already-applied", `latest decision already cites ${marker.slice(0, -1)}`));
+      skipped.push(skip(row, "already-applied", `latest decision already cites ${marker}`));
       continue;
     }
-    if (row.ledgerDecisionIndex !== undefined) {
-      if (row.ledgerDecisionIndex !== latestEntry.index) {
-        skipped.push(
-          skip(row, "ledger-advanced", `artifact read decision ${row.ledgerDecisionIndex}, latest is ${latestEntry.index}`),
-        );
-        continue;
-      }
-    } else if (resolutions.ledgerDecisionCount !== undefined) {
-      if (resolutions.ledgerDecisionCount !== input.ledger.decisions.length) {
-        skipped.push(
-          skip(
-            row,
-            "stale-ledger-basis",
-            `artifact read ${resolutions.ledgerDecisionCount} decisions, ledger has ${input.ledger.decisions.length}`,
-          ),
-        );
-        continue;
-      }
-    } else {
-      skipped.push(skip(row, "stale-ledger-basis", "artifact records neither per-row decision index nor ledger count"));
+    if (staleLedgerBasis) {
+      skipped.push(
+        skip(
+          row,
+          "stale-ledger-basis",
+          `artifact read ${resolutions.ledgerDecisionCount} decisions, ledger has ${ledgerDecisionCount}`,
+        ),
+      );
+      continue;
+    }
+    if (row.ledgerDecisionIndex !== latestEntry.index) {
+      skipped.push(
+        skip(
+          row,
+          "ledger-advanced",
+          `artifact evaluated decision index ${row.ledgerDecisionIndex}, latest is ${latestEntry.index}`,
+        ),
+      );
       continue;
     }
     if (latest.decision === "reject") {
@@ -618,9 +603,13 @@ export function applySentinelClosures(input: ApplySentinelClosuresInput): ApplyS
       continue;
     }
     const group = registry.groups.get(row.claimGroupId);
-    if (row.items !== undefined && row.items !== (group?.items.length ?? 0)) {
+    if (row.openItemCount !== undefined && row.openItemCount !== (group?.items.length ?? 0)) {
       skipped.push(
-        skip(row, "stale-row-count", `artifact counted ${row.items} items, registry has ${group?.items.length ?? 0}`),
+        skip(
+          row,
+          "stale-row-count",
+          `artifact counted ${row.openItemCount} items, registry has ${group?.items.length ?? 0}`,
+        ),
       );
       continue;
     }
@@ -630,17 +619,46 @@ export function applySentinelClosures(input: ApplySentinelClosuresInput): ApplyS
       );
       continue;
     }
-    if (row.verdict === "re-review" || row.verdict === "pending") {
-      skipped.push(skip(row, "verdict-not-bookable", `verdict ${row.verdict} requires human review`));
+    const spp = latest.deferState === STRUCTURED_PENDING_PRODUCTION;
+    if (spp && row.admission === "not-applicable") {
+      skipped.push(
+        skip(row, "spp-state-mismatch", "structured-pending-production decision reports admission not-applicable"),
+      );
       continue;
     }
-    if (row.verdict === "admission-verified" || row.verdict === "admission-failed") {
-      if (latest.deferState !== "structured-pending-production") {
-        skipped.push(
-          skip(row, "spp-state-mismatch", `latest deferState is ${latest.deferState ?? "absent"}, not structured-pending-production`),
-        );
-        continue;
-      }
+    if (!spp && row.admission !== "not-applicable") {
+      skipped.push(
+        skip(
+          row,
+          "spp-state-mismatch",
+          `latest deferState is ${latest.deferState ?? "absent"} but the row reports admission ${row.admission}`,
+        ),
+      );
+      continue;
+    }
+    if (row.admission === "failed") {
+      skipped.push(
+        skip(
+          row,
+          "spp-admission-failed",
+          "structured-pending-production admission has not verified; waiting for admitted production evidence " +
+            "and booking no reject",
+        ),
+      );
+      continue;
+    }
+    const split = row.verdict === "still-open" && row.reason === SPLIT_REASON;
+    if (row.verdict !== "closed" && !split) {
+      skipped.push(
+        skip(row, "verdict-not-bookable", `verdict ${row.verdict} (${row.reason}) requires human review`),
+      );
+      continue;
+    }
+    if (spp && row.admission !== "verified") {
+      skipped.push(
+        skip(row, "spp-state-mismatch", `a closed structured-pending-production row requires admission verified`),
+      );
+      continue;
     }
     const sentinels = ledgerSentinelList(latest);
     if (sentinels.length === 0) {
@@ -651,31 +669,34 @@ export function applySentinelClosures(input: ApplySentinelClosuresInput): ApplyS
       sentinel,
       evaluation: evaluateSentinel(sentinel, group),
     }));
-    if (row.verdict !== "admission-failed") {
-      if (evaluations.some(({ evaluation }) => !evaluation.machineCheckable)) {
-        skipped.push(skip(row, "non-machine-sentinel", "a sentinel is prose and cannot authorize a closure"));
-        continue;
-      }
-      const absentCount = evaluations.filter(({ evaluation }) => evaluation.absent).length;
-      if (row.verdict === "split" ? absentCount === 0 : absentCount !== evaluations.length) {
-        skipped.push(
-          skip(
-            row,
-            "sentinel-still-open",
-            evaluations.flatMap(({ evaluation }) => evaluation.openLabels).join("; "),
-          ),
-        );
-        continue;
-      }
+    if (evaluations.some(({ evaluation }) => !evaluation.machineCheckable)) {
+      skipped.push(skip(row, "non-machine-sentinel", "a sentinel is prose and cannot authorize a closure"));
+      continue;
+    }
+    const absentCount = evaluations.filter(({ evaluation }) => evaluation.absent).length;
+    const absentBookable = split
+      ? absentCount > 0 && absentCount < evaluations.length
+      : absentCount === evaluations.length;
+    if (!absentBookable) {
+      skipped.push(
+        skip(
+          row,
+          "sentinel-still-open",
+          evaluations.flatMap(({ evaluation }) => evaluation.openLabels).join("; ") ||
+            "the registry disagrees with the artifact's closure claim",
+        ),
+      );
+      continue;
     }
     const built = buildDecisionForResolution({
       latest,
-      verdict: row.verdict,
+      split,
       group,
       evaluations,
       reviewedAt,
       reviewer,
       registryFingerprint: registry.fingerprint,
+      identityFingerprint: resolutions.identityFingerprint,
       captureClockSec: registry.captureClockSec,
     });
     if (built === null) {
@@ -688,7 +709,6 @@ export function applySentinelClosures(input: ApplySentinelClosuresInput): ApplyS
     booked.push({
       claimGroupId: row.claimGroupId,
       verdict: row.verdict,
-      decision: built.decision.decision === "reject" ? "reject" : "promote",
       factsClosed: built.decision.factsClosed,
       closedTaskIds: built.closedTaskIds,
       remainingTaskIds: built.remainingTaskIds,
@@ -717,15 +737,18 @@ Options:
   --resolutions <path>  sentinel-resolutions.json from the sweep checker (required)
   --registry <path>     The same missing-data registry JSON the checker read (required)
   --ledger <path>       Ledger path (default ${CURATION_LEDGER_PATH})
-  --run-id <id>         Reviewer suffix (default: generatedAtSec -> sentinel-sweep/<id>)
+  --run-id <id>         Reviewer suffix (default: the registry capture clock -> sentinel-sweep/<id>)
   --write               Append to the ledger; without it the run is a preview
   --dry-run             Explicit preview; conflicts with --write
   -h, --help            Show this help
 
-The artifact must name the registry SHA-256 and capture clock it was computed
-from. The applier re-verifies sentinel absence and derives factsClosed from the
-registry; bookable/admission-verified book promote, admission-failed books
-reject, and split books a partial promote with the outstanding sentinels.`;
+The artifact must be replay-verified and name the registry SHA-256 and capture
+clock it was computed from; the applier re-verifies sentinel absence and derives
+factsClosed from the registry. A closed verdict books a promote (every sentinel
+absent); still-open with reason sentinels-partially-absent books a partial
+promote carrying the outstanding sentinels; every other verdict is reported,
+never booked. Structured-pending-production rows that have not verified
+admission wait (spp-admission-failed) instead of booking a reject.`;
 
 interface ApplierCliOutput {
   write(text: string): unknown;
@@ -808,13 +831,12 @@ export function runApplySentinelClosuresCli(
   const factsClosed = result.booked.reduce((sum, entry) => sum + entry.factsClosed, 0);
   const lines = [
     `${write ? "Applied" : "Preview (dry run)"}: ${result.booked.length} booked, ${result.skipped.length} skipped`,
-    `Booked: ${result.booked.filter((entry) => entry.decision === "promote").length} promote, ` +
-      `${result.booked.filter((entry) => entry.decision === "reject").length} reject, factsClosed ${factsClosed}`,
+    `Booked: ${result.booked.length} promote, factsClosed ${factsClosed}`,
     ...(result.booked.length === 0
       ? []
       : result.booked.map(
           (entry) =>
-            `  - ${entry.decision} ${entry.claimGroupId} (${entry.verdict}, factsClosed ${entry.factsClosed})`,
+            `  - promote ${entry.claimGroupId} (${entry.verdict}, factsClosed ${entry.factsClosed})`,
         )),
     ...(skippedByReason.size === 0
       ? []

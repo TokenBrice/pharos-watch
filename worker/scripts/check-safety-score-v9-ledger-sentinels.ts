@@ -29,9 +29,11 @@
  * Fail-closed rules (ADR-28..35): a failed read never becomes a positive claim.
  * No closure verdict exists unless the registry names its snapshot bindings
  * (`asOfSec`, `candidateId`, `publicationGenerationId`); every row repeats the
- * missing-data registry fingerprint and capture clock; `--replay` rejects a
- * registry that does not belong to that replay; and `unknown` outcome never
- * collapses into `closed`.
+ * missing-data registry fingerprint and capture clock and names the ledger
+ * decision index it evaluated; `inputs.registry.registrySha256` is the digest of
+ * the exact registry bytes read, so a consumer (the closure applier) can prove
+ * file identity; `--replay` rejects a registry that does not belong to that
+ * replay; and `unknown` outcome never collapses into `closed`.
  *
  * Capture-scale registries exceed Node's default heap. Run locally with
  * `NODE_OPTIONS=--max-old-space-size=12288`.
@@ -239,6 +241,8 @@ export interface SentinelResolutionRow {
   deferState: string | null;
   reviewedAt: string;
   reviewedAtSec: number;
+  /** Position of the evaluated decision in the ledger this run read. */
+  ledgerDecisionIndex: number;
   verdict: SentinelVerdict;
   reason: SentinelVerdictReason;
   admission: SentinelAdmission;
@@ -282,6 +286,8 @@ export interface SentinelResolutionReport {
       stablecoinCount: number;
       openItemCount: number;
       missingDataRegistryFingerprint: string;
+      /** SHA-256 of the exact registry file bytes this run parsed; null for programmatic callers without bytes. */
+      registrySha256: string | null;
       binding: RegistryBinding | null;
     };
     ledger: {
@@ -759,6 +765,8 @@ function emptyAdmissionCounts(): Record<SentinelAdmission, number> {
 
 export interface BuildSentinelResolutionReportInput {
   registry: unknown;
+  /** SHA-256 of the registry bytes read; the CLI always supplies it so consumers can prove file identity. */
+  registrySha256?: string;
   ledger: unknown;
   registryPath: string;
   ledgerPath: string;
@@ -836,7 +844,7 @@ export function buildSentinelResolutionReport(
 
   const rows: SentinelResolutionRow[] = [];
   for (const claimGroupId of [...latestByGroup.keys()].sort(compareCodeUnits)) {
-    const { decision } = latestByGroup.get(claimGroupId)!;
+    const { decision, index: ledgerDecisionIndex } = latestByGroup.get(claimGroupId)!;
     const location = `${input.ledgerPath}:${claimGroupId}`;
     const separator = claimGroupId.indexOf(":");
     if (separator <= 0 || separator === claimGroupId.length - 1) {
@@ -946,6 +954,7 @@ export function buildSentinelResolutionReport(
       deferState: decision.deferState ?? null,
       reviewedAt: decision.reviewedAt,
       reviewedAtSec,
+      ledgerDecisionIndex,
       verdict,
       reason,
       admission,
@@ -1034,6 +1043,7 @@ export function buildSentinelResolutionReport(
         stablecoinCount: index.stablecoinCount,
         openItemCount: index.openItemCount,
         missingDataRegistryFingerprint: index.fingerprint,
+        registrySha256: input.registrySha256 ?? null,
         binding: index.binding,
       },
       ledger: {
@@ -1161,14 +1171,21 @@ export function renderSentinelResolutionMarkdown(report: SentinelResolutionRepor
 }
 
 export interface SentinelCheckIo {
-  readJson(path: string): unknown;
+  /** Parse one JSON artifact and return the SHA-256 of the exact bytes parsed. */
+  readJson(path: string): { value: unknown; sha256: string };
   writeText(path: string, contents: string): void;
   stdout: { write(text: string): unknown };
   stderr: { write(text: string): unknown };
 }
 
 const DEFAULT_IO: SentinelCheckIo = {
-  readJson: (path) => JSON.parse(readFileSync(path, "utf8")) as unknown,
+  readJson: (path) => {
+    const bytes = readFileSync(path);
+    return {
+      value: JSON.parse(bytes.toString("utf8")) as unknown,
+      sha256: createHash("sha256").update(bytes).digest("hex"),
+    };
+  },
   writeText: (path, contents) => {
     writeFileResolved(path, contents);
   },
@@ -1192,12 +1209,16 @@ export function runV9LedgerSentinelCheckCli(
   if (writeCliHelpIfRequested(values, USAGE, io.stdout)) return null;
   const registryPath = requireCliString(values.registry, "--registry");
   const ledgerPath = typeof values.ledger === "string" ? values.ledger : DEFAULT_LEDGER_PATH;
+  const registryInput = io.readJson(registryPath);
   const report = buildSentinelResolutionReport({
-    registry: io.readJson(registryPath),
-    ledger: io.readJson(ledgerPath),
+    registry: registryInput.value,
+    registrySha256: registryInput.sha256,
+    ledger: io.readJson(ledgerPath).value,
     registryPath,
     ledgerPath,
-    ...(typeof values.replay === "string" ? { replay: { value: io.readJson(values.replay), path: values.replay } } : {}),
+    ...(typeof values.replay === "string"
+      ? { replay: { value: io.readJson(values.replay).value, path: values.replay } }
+      : {}),
   });
   const serialized = stringifySentinelResolutionReport(report);
   if (values.output !== undefined) io.writeText(requireCliString(values.output, "--output"), serialized);

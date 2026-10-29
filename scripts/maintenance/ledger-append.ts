@@ -206,9 +206,20 @@ export function normalizeWritableLedgerSentinel(value: unknown): LedgerSentinel 
   return null;
 }
 
+const LEDGER_DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
+const LEDGER_TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:Z|[+-]\d{2}:\d{2})$/;
+// Fractional seconds are bounded so every accepted pattern stays flat (no
+// nested quantifier); nine digits covers any ISO-8601 fraction JS can parse.
+const LEDGER_TIMESTAMP_FRACTION =
+  /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{1,9}(?:Z|[+-]\d{2}:\d{2})$/;
+
 /** Ledger `reviewedAt` has historically used date-only and exact UTC timestamps. */
 export function parseLedgerInstant(value: string): number | null {
-  if (!/^\d{4}-\d{2}-\d{2}(?:T\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2}))?$/.test(value)) {
+  if (
+    !LEDGER_DATE_ONLY.test(value) &&
+    !LEDGER_TIMESTAMP.test(value) &&
+    !LEDGER_TIMESTAMP_FRACTION.test(value)
+  ) {
     return null;
   }
   const parsed = Date.parse(value);
@@ -608,12 +619,25 @@ export function curationLedgerParkState(
   return state;
 }
 
+/**
+ * Latest decision per claim group: the greatest `reviewedAt`, ties to the later
+ * appended row. The sweep checker selects the same way, so its per-row decision
+ * index resolves to the same row here; taking the last array slot instead would
+ * let a backdated append shadow the group's real latest decision.
+ */
 export function indexLatestCurationDecisions(
   decisions: readonly CurationLedgerDecision[],
 ): ReadonlyMap<string, { index: number; decision: CurationLedgerDecision }> {
   const latest = new Map<string, { index: number; decision: CurationLedgerDecision }>();
   for (const [index, decision] of decisions.entries()) {
-    latest.set(decision.claimGroupId, { index, decision });
+    const current = latest.get(decision.claimGroupId);
+    if (current === undefined) {
+      latest.set(decision.claimGroupId, { index, decision });
+      continue;
+    }
+    const candidateSec = parseLedgerInstant(decision.reviewedAt) ?? Number.NEGATIVE_INFINITY;
+    const currentSec = parseLedgerInstant(current.decision.reviewedAt) ?? Number.NEGATIVE_INFINITY;
+    if (candidateSec >= currentSec) latest.set(decision.claimGroupId, { index, decision });
   }
   return latest;
 }
@@ -699,7 +723,8 @@ Options:
   --ledger <path>          Ledger path (default ${CURATION_LEDGER_PATH})
   --trigger-fired <group>  Claim group whose recorded trigger demonstrably fired;
                            repeatable. Without it a 4th identical outcome needs unpark evidence.
-  --dry-run                Validate and report without writing
+  --write                  Append to the ledger; without it the run is a preview
+  --dry-run                Explicit preview; conflicts with --write
   -h, --help               Show this help
 
 A decision must use the ledger's decisionFields roster, name a current work type
@@ -746,10 +771,12 @@ export function runLedgerAppendCli(
   io: LedgerAppendIo = { stdout: process.stdout },
 ): number {
   const { values } = parseStrictCliArgs(argv, {
+    conflicts: [["write", "dry-run"]],
     options: {
       decisions: { type: "string" },
       ledger: { type: "string" },
       "trigger-fired": { type: "string", multiple: true },
+      write: { type: "boolean" },
       "dry-run": { type: "boolean" },
     },
   });
@@ -772,19 +799,19 @@ export function runLedgerAppendCli(
     decisions: candidates,
     triggerFiredGroups,
   });
-  const dryRun = values["dry-run"] === true;
-  if (!dryRun) {
+  const write = values.write === true;
+  if (write) {
     writeCurationLedger({ path: ledgerPath, ledger, expectedSha256: existing.sha256 });
   }
   const lines = [
-    `${dryRun ? "Ledger append preview (dry run)" : "Appended decisions"}: ${appended.length}`,
+    `${write ? "Appended decisions" : "Ledger append preview (dry run)"}: ${appended.length}`,
     ...appended.map(
       (decision) =>
         `  - ${decision.decision} ${decision.claimGroupId} @ ${decision.reviewedAt} ` +
         `(factsClosed ${decision.factsClosed}${decision.unpark ? ", unpark" : ""})`,
     ),
     `Ledger decisions: ${existing.ledger.decisions.length} -> ${ledger.decisions.length}`,
-    dryRun ? "Dry run: no file was written." : `Wrote ${ledgerPath}`,
+    write ? `Wrote ${ledgerPath}` : "Dry run: pass --write to append.",
   ];
   io.stdout.write(`${lines.join("\n")}\n`);
   return appended.length;

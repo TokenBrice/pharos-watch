@@ -8,6 +8,7 @@ import {
   appendCurationLedgerDecisions,
   assertCurationLedgerAppendOnly,
   curationLedgerParkState,
+  indexLatestCurationDecisions,
   parseCurationLedger,
   runLedgerAppendCli,
   serializeCurationLedger,
@@ -314,7 +315,7 @@ describe("curation ledger append", () => {
     expect(curationLedgerParkState(unparked.decisions).get(FIXTURE_GROUP)).toBe("active");
   });
 
-  it("previews without writing and appends only with an explicit write", () => {
+  it("previews without writing and appends only with an explicit --write", () => {
     const ledgerPath = temporaryFile("ledger.json");
     const decisionsPath = temporaryFile("decisions.json");
     writeFileSync(ledgerPath, serializeCurationLedger(makeLedger([fixtureDecision()])));
@@ -323,17 +324,49 @@ describe("curation ledger append", () => {
     ]));
 
     const output = { lines: [] as string[], write(text: string) { this.lines.push(text); return true; } };
+    expect(runLedgerAppendCli(["--decisions", decisionsPath, "--ledger", ledgerPath], { stdout: output })).toBe(1);
+    expect(parseCurationLedger(JSON.parse(readFileSync(ledgerPath, "utf8"))).decisions).toHaveLength(1);
+    expect(output.lines.join("")).toContain("pass --write to append");
+
     expect(runLedgerAppendCli(["--decisions", decisionsPath, "--ledger", ledgerPath, "--dry-run"], { stdout: output })).toBe(1);
     expect(parseCurationLedger(JSON.parse(readFileSync(ledgerPath, "utf8"))).decisions).toHaveLength(1);
-    expect(output.lines.join("")).toContain("no file was written");
 
-    runLedgerAppendCli(["--decisions", decisionsPath, "--ledger", ledgerPath], { stdout: output });
+    expect(() =>
+      runLedgerAppendCli(["--decisions", decisionsPath, "--ledger", ledgerPath, "--write", "--dry-run"], { stdout: output }),
+    ).toThrow(/cannot be used together/);
+    expect(parseCurationLedger(JSON.parse(readFileSync(ledgerPath, "utf8"))).decisions).toHaveLength(1);
+
+    expect(runLedgerAppendCli(["--decisions", decisionsPath, "--ledger", ledgerPath, "--write"], { stdout: output })).toBe(1);
     expect(parseCurationLedger(JSON.parse(readFileSync(ledgerPath, "utf8"))).decisions).toHaveLength(2);
 
     writeFileSync(decisionsPath, readFileSync(ledgerPath, "utf8"));
     expectAppendReason(
-      () => runLedgerAppendCli(["--decisions", decisionsPath, "--ledger", ledgerPath], { stdout: output }),
+      () => runLedgerAppendCli(["--decisions", decisionsPath, "--ledger", ledgerPath, "--write"], { stdout: output }),
       "decision-input-invalid",
     );
+  });
+
+  it("selects each group's latest decision by reviewedAt, ties to the later append", () => {
+    const otherGroup = "MINT_AUTHORITY:fixture";
+    const ledger = makeLedger([
+      fixtureDecision({ reviewedAt: "2026-10-05", evidence: ["newest"] }),
+      fixtureDecision({ reviewedAt: "2026-10-01", evidence: ["backdated"] }),
+      fixtureDecision({
+        claimGroupId: otherGroup,
+        workType: "MINT_AUTHORITY",
+        reviewedAt: "2026-10-03",
+        evidence: ["tie a"],
+      }),
+      fixtureDecision({
+        claimGroupId: otherGroup,
+        workType: "MINT_AUTHORITY",
+        reviewedAt: "2026-10-03",
+        evidence: ["tie b"],
+      }),
+    ]);
+
+    const latest = indexLatestCurationDecisions(ledger.decisions);
+    expect(latest.get(FIXTURE_GROUP)).toMatchObject({ index: 0 });
+    expect(latest.get(otherGroup)).toMatchObject({ index: 3 });
   });
 });
