@@ -73,7 +73,9 @@ function historicalTypedSnapshot() {
 /** Modeled 10.29–10.36 archive: report8 resolved cards with no open-evidence block. */
 function historicalResolvedSnapshot(version = "10.30") {
   const envelope = structuredClone(historicalSnapshot);
-  const { openEvidence: _liveBlock, ...report } = structuredClone(makeWorkerReportCardsV9Response());
+  // Report8 archives predate both the block and the report9-only reason key.
+  const { openEvidence: _liveBlock, openEvidenceUnavailableReason: _liveReason, ...report } =
+    structuredClone(makeWorkerReportCardsV9Response());
   // The imported JSON fixture infers literal archive types; the archive row is
   // re-parsed at request time, so this modeled payload is a fixture shape only.
   envelope.reportCards = {
