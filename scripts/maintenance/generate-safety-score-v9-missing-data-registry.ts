@@ -6,6 +6,11 @@ import {
   buildV9EvidenceGapQueue,
 } from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { classifyV9DocumentationGap } from "@shared/lib/safety-score-v9/documentation";
+import {
+  questionKeyForGap,
+  residualQuestionKey,
+  v9QuestionRootAssetId,
+} from "@shared/lib/safety-score-v9/open-questions";
 import { readCompiledV9FactSetForEvaluation } from "@shared/lib/safety-score-v9/facts";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
@@ -115,32 +120,13 @@ const ReplayArtifactSchema = z
   .passthrough();
 
 /**
- * The question identity (PLAN §2.2, ImplCounting §3.1): `<root>|<kind>|<identity>`.
- * The root is the prefix before `:gap:` of the gap id; a local fact keeps its own
- * card. Route identities drop the producer generation only.
- *
- * DEB-2 derives the key here because CNT-1's `shared/lib/safety-score-v9/open-questions.ts`
- * is still in flight on the T1 train; the integrator replaces this single
- * function with `questionKeyForGap` at the T1→T2 merge (see the DEB-2 report).
+ * Question identity comes from the single authority
+ * (`shared/lib/safety-score-v9/open-questions.ts`, PLAN §2.2 / ImplCounting §3.1).
+ * The registry only adds the dust-residual merge (PLAN §2.4, §10.5 U6) and the
+ * queue-row shape.
  */
-function rootAssetIdForGap(assetId: string, gapId: string): string {
-  return gapId.includes(":gap:") ? gapId.slice(0, gapId.indexOf(":gap:")) : assetId;
-}
-
-const RESEARCH_DEX_ROUTE_KEY = /^(dex):dex-liquidity-[0-9]+:(.+)$/u;
-const RESEARCH_REDEMPTION_ROUTE_KEY =
-  /^(redemption):(?:redemption:(?:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}|[0-9]+:[a-z0-9]{0,8})|redemption-backstops-unavailable):(.+)$/u;
-
-function routeQuestionIdentity(routeKey: string): string {
-  const match = RESEARCH_DEX_ROUTE_KEY.exec(routeKey) ?? RESEARCH_REDEMPTION_ROUTE_KEY.exec(routeKey);
-  return match === null ? routeKey : `${match[1]}|${match[2]}`;
-}
-
-const RESERVE_DUST_RESIDUAL_IDENTITY = "reserve-residual:sub-0.01pct";
-
-/** The synthetic 3f residual question key (PLAN §2.4, §10.5 U6). */
 export function documentationResidualQuestionKey(rootAssetId: string): string {
-  return `${rootAssetId}|reserve-exposure|${RESERVE_DUST_RESIDUAL_IDENTITY}`;
+  return residualQuestionKey(rootAssetId);
 }
 
 /** The queue columns the question identity reads. */
@@ -150,19 +136,14 @@ export type DocumentationQuestionEntry = Pick<
 >;
 
 export function questionKeyForEntry(entry: DocumentationQuestionEntry): string {
-  const root = rootAssetIdForGap(entry.assetId, entry.gapId);
   // One dust residual question per root replaces the per-datum dust questions.
-  if (entry.documentation?.reason === "reserve-dust") return documentationResidualQuestionKey(root);
-  const scope = entry.causeScope;
-  if (scope === null) return `${root}|path|${entry.reasonCode}`;
-  // Control precedes exposure: every control datum gap carries
-  // `exposureId = "deployment"`. The factor key never joins the identity.
-  if (scope.pillar === "control" && scope.componentKey.startsWith("control:")) {
-    return `${root}|control|${scope.componentKey}`;
+  if (entry.documentation?.reason === "reserve-dust") {
+    return residualQuestionKey(v9QuestionRootAssetId(entry.gapId) ?? entry.assetId);
   }
-  if (scope.routeKey !== null) return `${root}|route|${routeQuestionIdentity(scope.routeKey)}`;
-  if (scope.exposureId !== null) return `${root}|reserve-exposure|${scope.exposureId}`;
-  return `${root}|component|${scope.componentKey}`;
+  return questionKeyForGap(
+    { gapId: entry.gapId, reasonCode: entry.reasonCode, causeScope: entry.causeScope ?? undefined },
+    entry.assetId,
+  );
 }
 
 export interface DocumentationResidual {
@@ -233,7 +214,7 @@ export function documentationQuestionKeysByRoot(
   const byRoot = new Map<string, Map<string, boolean>>();
   for (const entry of entries) {
     if (entry.cause === "D") continue;
-    const root = rootAssetIdForGap(entry.assetId, entry.gapId);
+    const root = v9QuestionRootAssetId(entry.gapId) ?? entry.assetId;
     const questions = byRoot.get(root) ?? new Map<string, boolean>();
     const key = questionKeyForEntry(entry);
     questions.set(key, (questions.get(key) ?? true) && documentationOf(entry) !== null);
@@ -591,7 +572,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
     documentationByQueueKey.get(entry.queueKey) ?? entry.documentation;
   const entriesByRoot = new Map<string, V9EvidenceGapQueueEntryV3[]>();
   for (const entry of queue.entries) {
-    const root = rootAssetIdForGap(entry.assetId, entry.gapId);
+    const root = v9QuestionRootAssetId(entry.gapId) ?? entry.assetId;
     const existing = entriesByRoot.get(root) ?? [];
     existing.push(entry);
     entriesByRoot.set(root, existing);
@@ -602,7 +583,7 @@ export function generateV9MissingDataRegistry(input: GenerateV9MissingDataRegist
     const dustByRoot = new Map<string, V9EvidenceGapQueueEntryV3[]>();
     for (const entry of queue.entries) {
       if (documentationOf(entry)?.reason !== "reserve-dust") continue;
-      const root = rootAssetIdForGap(entry.assetId, entry.gapId);
+      const root = v9QuestionRootAssetId(entry.gapId) ?? entry.assetId;
       const existing = dustByRoot.get(root) ?? [];
       existing.push(entry);
       dustByRoot.set(root, existing);
