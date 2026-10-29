@@ -1,6 +1,7 @@
 import { logCronEvent, type CronProgressReporter, type CronResult } from "../lib/cron-logger";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import { raceWithTimeout } from "@shared/lib/timeout-signal";
+import { STATUS_RESERVE_COMPOSITION_THRESHOLDS } from "@shared/lib/status-thresholds";
 import type { ReserveFeedReview } from "@shared/types/live-reserves";
 import { throwIfAborted } from "../lib/abort";
 import { matchReserveFeedReview, resolveReserveFeedReviews } from "../lib/reserve-feed-reviews";
@@ -26,10 +27,13 @@ import {
   type LiveReserveDeferredTailOutcome,
   type LiveReservePhaseTimings,
   type LiveReserveQueueCounts,
+  type LiveReserveCohortGrading,
   type ReserveAttemptFailureSummary,
 } from "./sync-live-reserves-shared";
 import type { LiveReserveSyncBudgetConfig } from "./sync-live-reserves-config";
 import type { AdapterLatencySummary, AdapterTelemetryProgress } from "./sync-live-reserves-core";
+import { setLiveReserveCheckpointCohortGrading } from "../lib/scheduled-recovery-checkpoint";
+import type { ScheduledCheckpointIdentity } from "../lib/scheduled-checkpoint-primitives";
 
 export interface ReserveSyncAttemptFailureGroup {
   stablecoinId: string;
@@ -56,6 +60,8 @@ export interface FinalizeReserveSyncRunArgs {
   budgetConfig: LiveReserveSyncBudgetConfig;
   phaseTimings: LiveReservePhaseTimings;
   cohortItemsDoneBeforeRun?: number;
+  cohortGradingBeforeRun?: LiveReserveCohortGrading;
+  checkpointIdentity?: ScheduledCheckpointIdentity;
   adapterLatency: AdapterLatencySummary;
   adapterTelemetryProgress: AdapterTelemetryProgress;
 }
@@ -218,10 +224,20 @@ async function recordFinalizationWarning(
   return { eventType, message, error: errorMessage };
 }
 
+// The coverage floor is shared with reserve health; circuit holds are not fetches.
+const MAX_ADAPTER_FAILURE_RATIO = 1 - STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedFreshCoverageRatio;
+
+function hasRequiredReserveSyncFailure(counts: LiveReserveQueueCounts): boolean {
+  const attempted = counts.attemptedCoins - counts.circuitSkipped;
+  return counts.persistenceFailed > 0
+    || attempted - counts.failed < STATUS_RESERVE_COMPOSITION_THRESHOLDS.degradedFreshCoverageRatio * attempted;
+}
+
 export function resolveReserveSyncRunStatus(
   args: Pick<FinalizeReserveSyncRunArgs, "counts" | "total" | "checkpointOwned">,
 ): CronResult["status"] {
-  if (args.checkpointOwned && args.counts.failed === 0 && args.counts.circuitSkipped === 0) {
+  const hasRequiredFailure = hasRequiredReserveSyncFailure(args.counts);
+  if (args.checkpointOwned && !hasRequiredFailure && args.counts.circuitSkipped === 0) {
     // A bounded, checkpointed slice positively completed its admitted work.
     // Unadmitted suffix work is normal continuation, not an adapter failure.
     return "ok";
@@ -239,7 +255,7 @@ export function resolveReserveSyncRunStatus(
     return "error";
   }
   if (!args.checkpointOwned && args.counts.deferredCoins > 0) return "degraded";
-  return args.counts.failed > 0 || args.counts.circuitSkipped > 0 ? "degraded" : "ok";
+  return hasRequiredFailure || args.counts.circuitSkipped > 0 ? "degraded" : "ok";
 }
 
 export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): Promise<CronResult> {
@@ -367,13 +383,33 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
     failed: args.counts.failed - acknowledgedFailed,
     circuitSkipped: args.counts.circuitSkipped - acknowledgedCircuitSkipped,
     skipped: args.counts.skipped - acknowledgedCircuitSkipped,
+    attemptedCoins: args.counts.attemptedCoins - acknowledgedFailed - acknowledgedCircuitSkipped,
   };
-  const runStatus = resolveReserveSyncRunStatus({ ...args, counts: requiredCounts });
+  const itemsDoneBeforeRun = args.cohortItemsDoneBeforeRun ?? 0;
+  const previous = args.checkpointOwned && args.cohortGradingBeforeRun?.itemsDone === itemsDoneBeforeRun
+    ? args.cohortGradingBeforeRun : undefined;
+  const cohortGrading: LiveReserveCohortGrading = {
+    itemsDone: itemsDoneBeforeRun + args.counts.attemptedCoins,
+    complete: !args.checkpointOwned || itemsDoneBeforeRun === 0 || previous?.complete === true,
+    synced: requiredCounts.synced + (previous?.synced ?? 0),
+    failed: requiredCounts.failed + (previous?.failed ?? 0),
+    persistenceFailed: requiredCounts.persistenceFailed + (previous?.persistenceFailed ?? 0),
+    circuitSkipped: requiredCounts.circuitSkipped + (previous?.circuitSkipped ?? 0),
+    attemptedCoins: requiredCounts.attemptedCoins + (previous?.attemptedCoins ?? 0),
+  };
+  const gradingCounts = { ...requiredCounts, ...cohortGrading,
+    skipped: requiredCounts.skipped + (previous?.circuitSkipped ?? 0) };
+  const hasRequiredFailure = !cohortGrading.complete || hasRequiredReserveSyncFailure(gradingCounts);
+  const measuredStatus = resolveReserveSyncRunStatus({ ...args, counts: gradingCounts });
+  const runStatus = !cohortGrading.complete && measuredStatus === "ok" ? "degraded" : measuredStatus;
+  if (args.checkpointIdentity) {
+    await setLiveReserveCheckpointCohortGrading(args.db, args.checkpointIdentity, cohortGrading);
+  }
   const reasons = [
-    ...(requiredCounts.failed > 0 ? ["reserve-adapter-or-persistence-failed"] : []),
+    ...(cohortGrading.failed > 0 || !cohortGrading.complete ? ["reserve-adapter-or-persistence-failed"] : []),
     ...(args.counts.deferredCoins > 0 || args.counts.deferredSkipped > 0
       ? [args.checkpointOwned ? "reserve-continuation-pending" : "reserve-run-budget-deferred"] : []),
-    ...(requiredCounts.circuitSkipped > 0 ? ["reserve-circuit-open"] : []),
+    ...(cohortGrading.circuitSkipped > 0 ? ["reserve-circuit-open"] : []),
   ];
 
   return {
@@ -385,9 +421,9 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       ...(args.counts.latestPublishedAt != null ? { outputPublishedAt: args.counts.latestPublishedAt } : {}),
       ...(runStatus !== "ok"
         ? {
-            reason: requiredCounts.failed > 0
+            reason: hasRequiredFailure
               ? "reserve-adapter-or-persistence-failed"
-              : requiredCounts.circuitSkipped > 0
+              : cohortGrading.circuitSkipped > 0
                 ? "reserve-circuit-open"
                 : args.checkpointOwned ? "reserve-continuation-pending" : "reserve-run-budget-deferred",
           }
@@ -396,12 +432,26 @@ export async function finalizeReserveSyncRun(args: FinalizeReserveSyncRunArgs): 
       structureVersion: 2,
       synced: args.counts.synced,
       failed: args.counts.failed,
+      persistenceFailed: args.counts.persistenceFailed,
       unacknowledgedFailed: requiredCounts.failed,
       unacknowledgedCircuitSkipped: requiredCounts.circuitSkipped,
-      ...(acknowledgedFeeds.length > 0 ? { quality: {
-        reason: "reserve-feed-failure-reviewed",
-        acknowledgedFeedIds: acknowledgedFeeds.map((review) => review.stablecoinId),
-        acknowledgedFeeds,
+      ...(args.checkpointOwned ? {
+        cohortGrading: cohortGrading.complete ? cohortGrading : null,
+        ...(!cohortGrading.complete ? { cohortGradingUnavailableReason: "checkpoint-grading-frontier-unavailable" } : {}),
+      } : {}),
+      adapterFailureBudget: {
+        maxFailureRatio: MAX_ADAPTER_FAILURE_RATIO,
+        attemptedFeeds: cohortGrading.complete ? cohortGrading.attemptedCoins - cohortGrading.circuitSkipped : null,
+        failedFeeds: cohortGrading.complete ? cohortGrading.failed - cohortGrading.persistenceFailed : null,
+      },
+      ...(acknowledgedFeeds.length > 0 || (cohortGrading.failed > 0 && !hasRequiredFailure) ? { quality: {
+        ...(cohortGrading.failed > 0 && !hasRequiredFailure
+          ? { reasons: ["reserve-adapter-or-persistence-failed"] } : {}),
+        ...(acknowledgedFeeds.length > 0 ? {
+          reason: "reserve-feed-failure-reviewed",
+          acknowledgedFeedIds: acknowledgedFeeds.map((review) => review.stablecoinId),
+          acknowledgedFeeds,
+        } : {}),
       } } : {}),
       skipped: args.counts.skipped,
       total: args.total,

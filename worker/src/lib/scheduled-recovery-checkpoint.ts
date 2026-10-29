@@ -8,6 +8,7 @@ import {
 import {
   LIVE_RESERVE_QUEUE_HASH,
   SYNC_ORDERED_CONFIGURED_COINS,
+  type LiveReserveCohortGrading,
 } from "../cron/sync-live-reserves-shared";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { hasActiveChildLeaseForScheduledSlot } from "./scheduled-slot-reconciliation";
@@ -45,6 +46,7 @@ export interface ScheduledRecoveryCheckpoint extends ScheduledCheckpointIdentity
   itemsDone: number;
   itemsTotal: number;
   childDispositions: Record<string, ScheduledChildDisposition>;
+  cohortGrading?: LiveReserveCohortGrading;
   recoveryOwner: string | null;
   recoveryLeaseUntil: number | null;
   sourceAttemptNo: number | null;
@@ -188,7 +190,26 @@ function parseChildDispositions(value: string): Record<string, ScheduledChildDis
   );
 }
 
+function parseCohortGrading(value: string): LiveReserveCohortGrading | null {
+  const state = parseJsonObject(value)?._reserveSyncGrading;
+  if (!state || typeof state !== "object" || Array.isArray(state)) return null;
+  const fields = ["itemsDone", "synced", "failed", "persistenceFailed", "circuitSkipped", "attemptedCoins"] as const;
+  const record = state as Record<string, unknown>;
+  if (typeof record.complete !== "boolean"
+    || fields.some((key) => !Number.isSafeInteger(record[key]) || (record[key] as number) < 0)) return null;
+  const grading = record as unknown as LiveReserveCohortGrading;
+  if (grading.persistenceFailed > grading.failed || grading.attemptedCoins > grading.itemsDone
+    || grading.synced + grading.failed + grading.circuitSkipped !== grading.attemptedCoins) return null;
+  return grading;
+}
+
+function checkpointChildState(checkpoint: ScheduledRecoveryCheckpoint): Record<string, unknown> {
+  return { ...checkpoint.childDispositions,
+    ...(checkpoint.cohortGrading ? { _reserveSyncGrading: checkpoint.cohortGrading } : {}) };
+}
+
 function mapCheckpointRow(row: ScheduledCheckpointRow): ScheduledRecoveryCheckpoint {
+  const cohortGrading = parseCohortGrading(row.child_dispositions_json);
   return {
     scheduleKey: row.schedule_key,
     slotStartedAt: row.slot_started_at,
@@ -205,6 +226,7 @@ function mapCheckpointRow(row: ScheduledCheckpointRow): ScheduledRecoveryCheckpo
     itemsDone: row.items_done,
     itemsTotal: row.items_total,
     childDispositions: parseChildDispositions(row.child_dispositions_json),
+    ...(cohortGrading ? { cohortGrading } : {}),
     recoveryOwner: row.recovery_owner,
     recoveryLeaseUntil: row.recovery_lease_until,
     sourceAttemptNo: row.source_attempt_no,
@@ -339,6 +361,19 @@ export async function advanceLiveReserveCheckpoint(
     runWithOverloadRetry(() => buildScheduledCheckpointAdvanceStatement(db, identity, input).run()),
     identity,
   );
+}
+
+/** Settlement is fenced to the exact owner and frontier; retries replace, never add counts. */
+export async function setLiveReserveCheckpointCohortGrading(
+  db: D1Database,
+  identity: ScheduledCheckpointIdentity,
+  grading: LiveReserveCohortGrading,
+): Promise<void> {
+  await requireChanged(runWithOverloadRetry(() => db.prepare(
+    `UPDATE worker_scheduled_checkpoints
+        SET child_dispositions_json = json_set(child_dispositions_json, '$._reserveSyncGrading', json(?))
+      WHERE ${identityWhereSql()} AND state IN ('running', 'recovering') AND items_done = ?`,
+  ).bind(JSON.stringify(grading), ...identityBinds(identity), grading.itemsDone).run()), identity);
 }
 
 export async function setLiveReserveCheckpointChildDisposition(
@@ -520,8 +555,8 @@ async function prepareCheckpointAttemptForRecovery(
   timestamp: number,
 ): Promise<AbandonedCheckpointPreparation | null> {
   const completedJobs = await loadCompletedCronJobsForSlot(db, checkpoint.slotStartedAt);
-  const abandonedChildDispositions = { ...checkpoint.childDispositions };
-  const recoveryChildDispositions = { ...checkpoint.childDispositions };
+  const abandonedChildDispositions = checkpointChildState(checkpoint);
+  const recoveryChildDispositions = checkpointChildState(checkpoint);
   const queueExhausted = checkpoint.nextItemKey === null && checkpoint.itemsDone === checkpoint.itemsTotal;
   const preservedCompletedJobs = new Set<string>();
   for (const childJob of LIVE_RESERVE_SLOT_JOBS) {
@@ -1062,7 +1097,7 @@ export async function releaseUnstartedLiveReserveRecoveryClaim(
     claimedCheckpoint.currentDomainAttemptId,
     claimedCheckpoint.itemsDone,
     claimedCheckpoint.itemsTotal,
-    JSON.stringify(claimedCheckpoint.childDispositions),
+    JSON.stringify(checkpointChildState(claimedCheckpoint)),
     claimedCheckpoint.sourceAttemptNo,
     claimedCheckpoint.updatedAt,
   ).run());

@@ -1316,6 +1316,8 @@ describe("syncLiveReserves", () => {
     const result = await runPromise;
 
     expect(result?.itemCount).toBe(configuredCoinCount - 1);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata!)).toMatchObject({ persistenceFailed: 1, reason: "reserve-adapter-or-persistence-failed" });
     const timeoutAttempt = db.getHistory().find((entry) => (
       entry.sql.includes("reserve_sync_attempt_history")
       && entry.binds.some((bind) => typeof bind === "string" && bind.includes("storage-write-timeout"))
@@ -1619,6 +1621,8 @@ describe("syncLiveReserves", () => {
   it.each([
     { name: "reviewed failure only", remaining: 0, expected: "ok" },
     { name: "mixed reviewed and unexplained failures", remaining: 1, expected: "degraded" },
+    { name: "reviewed feed excluded from an at-budget cohort", synced: 6, remaining: 2, expected: "ok" },
+    { name: "reviewed feed cannot dilute an over-budget cohort", synced: 5, remaining: 2, expected: "degraded" },
     { name: "expired review", expired: true, expected: "degraded" },
     { name: "changed cause", changed: true, expected: "degraded" },
     { name: "timeout", timeout: true, expected: "degraded" },
@@ -1655,7 +1659,8 @@ describe("syncLiveReserves", () => {
     const result = await finalizeReserveSyncRun({
       db, total: synced + failed + circuitSkipped, runStartedAt: now,
       runStartedMs: (scenario.budget ? now - 3600 : now) * 1000,
-      counts: { synced, failed, skipped: circuitSkipped, circuitSkipped, deferredCoins: 0, deferredSkipped: 0,
+      counts: { synced, failed, persistenceFailed: scenario.uncertain || scenario.unconfirmed ? 1 : 0,
+        skipped: circuitSkipped, circuitSkipped, deferredCoins: 0, deferredSkipped: 0,
         attemptedCoins: synced + failed + circuitSkipped, ...(synced ? { latestPublishedAt: now - 2 } : {}) },
       persistedFailures: scenario.unconfirmed ? [] : [failure],
       warningMessages: [], coinsWithErrors: failed ? [review.stablecoinId] : [], coinsWithWarnings: [],
@@ -1669,12 +1674,13 @@ describe("syncLiveReserves", () => {
     expect(result.status).toBe(scenario.expected);
     expect(failure).toEqual(original);
     const metadata = JSON.parse(result.metadata!);
-    const acknowledged = scenario.expected === "ok" || scenario.remaining === 1;
+    const acknowledged = scenario.expected === "ok" || (scenario.remaining ?? 0) > 0;
     expect(metadata).toMatchObject({
       failed, skipped: circuitSkipped, synced,
       unacknowledgedFailed: failed - (acknowledged && !scenario.circuit ? 1 : 0),
       unacknowledgedCircuitSkipped: circuitSkipped - (acknowledged && scenario.circuit ? 1 : 0),
     });
+    expect(metadata.adapterFailureBudget.attemptedFeeds).toBe(synced + failed - Number(acknowledged && !scenario.circuit));
     if (acknowledged) {
       expect(metadata.quality).toMatchObject({ reason: "reserve-feed-failure-reviewed", acknowledgedFeedIds: [review.stablecoinId] });
       expect(metadata.quality.acknowledgedFeeds).toEqual([review]);
@@ -1689,7 +1695,7 @@ describe("syncLiveReserves", () => {
     {
       name: "simultaneous failure, budget deferral and circuit skip",
       counts: { synced: 60, failed: 10, skipped: 30, deferredCoins: 25, deferredSkipped: 25, circuitSkipped: 5 },
-      status: "degraded", reason: "reserve-adapter-or-persistence-failed",
+      status: "degraded", reason: "reserve-circuit-open",
       reasons: ["reserve-adapter-or-persistence-failed", "reserve-run-budget-deferred", "reserve-circuit-open"],
     },
     {
@@ -1710,7 +1716,7 @@ describe("syncLiveReserves", () => {
     {
       name: "one failed member of a hundred",
       counts: { synced: 99, failed: 1, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
-      status: "degraded", reason: "reserve-adapter-or-persistence-failed", reasons: ["reserve-adapter-or-persistence-failed"],
+      status: "ok", reason: undefined, reasons: ["reserve-adapter-or-persistence-failed"],
     },
     {
       name: "one failed member of two",
@@ -1720,6 +1726,22 @@ describe("syncLiveReserves", () => {
     {
       name: "two failed members of twenty",
       counts: { synced: 18, failed: 2, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
+      status: "ok", reason: undefined, reasons: ["reserve-adapter-or-persistence-failed"],
+    },
+    {
+      name: "at the failure budget",
+      counts: { synced: 75, failed: 25, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
+      status: "ok", reason: undefined, reasons: ["reserve-adapter-or-persistence-failed"],
+    },
+    {
+      name: "above the failure budget",
+      counts: { synced: 74, failed: 26, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
+      status: "degraded", reason: "reserve-adapter-or-persistence-failed", reasons: ["reserve-adapter-or-persistence-failed"],
+    },
+    {
+      name: "one persistence failure of a hundred",
+      persistenceFailed: 1,
+      counts: { synced: 99, failed: 1, skipped: 0, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 0 },
       status: "degraded", reason: "reserve-adapter-or-persistence-failed", reasons: ["reserve-adapter-or-persistence-failed"],
     },
     {
@@ -1728,16 +1750,28 @@ describe("syncLiveReserves", () => {
       status: "degraded", reason: "reserve-circuit-open", reasons: ["reserve-circuit-open"],
     },
     {
+      name: "circuit holds cannot dilute an over-budget fetched cohort",
+      counts: { synced: 2, failed: 1, skipped: 97, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 97 },
+      status: "degraded", reason: "reserve-adapter-or-persistence-failed",
+      reasons: ["reserve-adapter-or-persistence-failed", "reserve-circuit-open"],
+    },
+    {
+      name: "exact fresh-coverage equality after circuit exclusion",
+      counts: { synced: 3, failed: 1, skipped: 96, deferredCoins: 0, deferredSkipped: 0, circuitSkipped: 96 },
+      status: "degraded", reason: "reserve-circuit-open",
+      reasons: ["reserve-adapter-or-persistence-failed", "reserve-circuit-open"],
+    },
+    {
       name: "deferred skip without a recorded deferred-coin count",
       counts: { synced: 99, failed: 0, skipped: 1, deferredCoins: 0, deferredSkipped: 1, circuitSkipped: 0 },
       status: "ok", reason: undefined, reasons: ["reserve-run-budget-deferred"],
     },
-  ])("retains all applicable reasons without changing terminal priority: $name", async ({ counts, status, reason, reasons }) => {
+  ])("retains all applicable reasons with budget-aware terminal priority: $name", async ({ counts, status, reason, reasons, persistenceFailed = 0 }) => {
     const collector = createAdapterLatencyCollector();
     const nowMs = Date.now();
     const result = await finalizeReserveSyncRun({
       db: mockD1(), total: 100, runStartedAt: Math.floor(nowMs / 1000), runStartedMs: nowMs,
-      counts: { ...counts, attemptedCoins: counts.synced + counts.failed,
+      counts: { ...counts, persistenceFailed, attemptedCoins: counts.synced + counts.failed + counts.circuitSkipped,
         ...(counts.synced > 0 ? { latestPublishedAt: 1_000 } : {}) },
       warningMessages: [], coinsWithErrors: [], coinsWithWarnings: [],
       breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
@@ -1756,10 +1790,69 @@ describe("syncLiveReserves", () => {
     expect(result.productivity).toEqual({ productive: counts.synced > 0 });
     expect(metadata.reason).toBe(reason);
     expect(metadata.reasons).toEqual(reasons);
+    expect(metadata.failed).toBe(counts.failed);
+    expect(metadata.unacknowledgedFailed).toBe(counts.failed);
+    expect(metadata.persistenceFailed).toBe(persistenceFailed);
+    expect(metadata.adapterFailureBudget).toEqual({
+      maxFailureRatio: 0.25,
+      attemptedFeeds: counts.synced + counts.failed,
+      failedFeeds: counts.failed - persistenceFailed,
+    });
+    if (counts.failed > 0 && persistenceFailed === 0 && counts.failed <= (counts.synced + counts.failed) * 0.25) {
+      expect(metadata.quality.reasons).toEqual(["reserve-adapter-or-persistence-failed"]);
+    }
     expect(metadata.reasons.length).toBeLessThanOrEqual(3);
     expect(new Set(metadata.reasons).size).toBe(metadata.reasons.length);
     expect(metadata.outputPublishedAt).toBe(counts.synced > 0 ? 1_000 : undefined);
     expect(metadata.runBudgetTruncated).toBe(counts.deferredCoins > 0);
+  });
+
+  it.each([
+    { name: "one failed feed in a two-feed tail", priorSynced: 328, priorFailed: 0, synced: 1, failed: 1, status: "ok" },
+    { name: "an all-failed three-feed tail after a clean head", priorSynced: 327, priorFailed: 0, synced: 0, failed: 3, status: "ok" },
+    { name: "an over-budget head followed by a clean tail", priorSynced: 90, priorFailed: 60, synced: 60, failed: 0, status: "degraded" },
+    { name: "an exact-equality cohort", priorSynced: 6, priorFailed: 2, synced: 3, failed: 1, status: "ok" },
+    { name: "a prior storage failure", priorSynced: 149, priorFailed: 1, priorPersistence: 1, synced: 2, failed: 0, status: "degraded" },
+    { name: "missing prefix evidence", priorSynced: 150, priorFailed: 0, missing: true, synced: 2, failed: 0, status: "degraded" },
+    { name: "a mismatched prefix frontier", priorSynced: 150, priorFailed: 0, mismatch: true, synced: 2, failed: 0, status: "degraded" },
+  ])("grades the cumulative cohort for $name", async (scenario) => {
+    const collector = createAdapterLatencyCollector();
+    const nowMs = Date.now();
+    const prefix = scenario.priorSynced + scenario.priorFailed;
+    const complete = !scenario.missing && !scenario.mismatch;
+    const result = await finalizeReserveSyncRun({
+      db: mockD1(), total: scenario.synced + scenario.failed, runStartedAt: Math.floor(nowMs / 1000), runStartedMs: nowMs,
+      counts: { synced: scenario.synced, failed: scenario.failed, persistenceFailed: 0,
+        skipped: 0, circuitSkipped: 0, deferredCoins: 0, deferredSkipped: 0,
+        attemptedCoins: scenario.synced + scenario.failed },
+      cohortItemsDoneBeforeRun: prefix,
+      cohortGradingBeforeRun: scenario.missing ? undefined : {
+        itemsDone: prefix - Number(scenario.mismatch === true), complete: true,
+        synced: scenario.priorSynced, failed: scenario.priorFailed, persistenceFailed: scenario.priorPersistence ?? 0,
+        circuitSkipped: 0, attemptedCoins: prefix,
+      },
+      warningMessages: [], coinsWithErrors: [], coinsWithWarnings: [],
+      breaker: { breakerKeys: new Set(), breakerOutcomes: new Map() },
+      deferredTail: { nextCursorStablecoinId: null, cursorTailState: null, cursorRecordedAt: null,
+        cursorTailCompletedAt: null, cursorTailFailedAt: null, cursorTailError: null, runBudgetTruncationCount: 0 },
+      checkpointOwned: true, attemptFailureSummaries: [], budgetConfig: resolveLiveReserveSyncBudgetConfig(),
+      phaseTimings: { setup: 0, queue: 0, adapter: 0, d1CoinPersistence: 0 },
+      adapterLatency: collector.finalize(), adapterTelemetryProgress: collector.progress(),
+    });
+    expect(result.status).toBe(scenario.status);
+    const metadata = JSON.parse(result.metadata!);
+    expect(metadata.failed).toBe(scenario.failed);
+    expect(metadata.synced).toBe(scenario.synced);
+    expect(metadata.unacknowledgedFailed).toBe(scenario.failed);
+    expect(metadata.adapterFailureBudget).toEqual({
+      maxFailureRatio: 0.25,
+      attemptedFeeds: complete ? prefix + scenario.synced + scenario.failed : null,
+      failedFeeds: complete ? scenario.priorFailed + scenario.failed - (scenario.priorPersistence ?? 0) : null,
+    });
+    if (complete) expect(metadata.cohortGrading).toMatchObject({
+      failed: scenario.priorFailed + scenario.failed, itemsDone: prefix + scenario.synced + scenario.failed,
+    });
+    else expect(metadata).toMatchObject({ cohortGrading: null, cohortGradingUnavailableReason: "checkpoint-grading-frontier-unavailable" });
   });
 
   it("finalizes breaker outcomes when deferred-tail persistence fails", async () => {

@@ -15,6 +15,7 @@ import {
   retireSupersededLiveReserveCheckpoints,
   releaseUnstartedLiveReserveRecoveryClaim,
   setLiveReserveCheckpointChildDisposition,
+  setLiveReserveCheckpointCohortGrading,
 } from "../scheduled-recovery-checkpoint";
 import { ScheduledCheckpointOwnershipLostError } from "../scheduled-checkpoint-primitives";
 import { LIVE_RESERVE_QUEUE_HASH } from "../../cron/sync-live-reserves-shared";
@@ -88,6 +89,35 @@ describe("scheduled recovery checkpoint", () => {
     openDatabases.push(value.sqlite);
     return value;
   }
+
+  it("retains cohort grading through handoff, unstarted release and crash recovery", async () => {
+    const { db } = harness();
+    const owner = await seedCheckpointFrontier(db, {
+      slotStartedAt: 1_700, invocationId: "producer", itemsTotal: 3, nowSec: 1_700,
+    });
+    await advanceLiveReserveCheckpoint(db, owner, { nextItemKey: "coin-1", itemsDone: 1, nowSec: 1_701 });
+    const grading = { itemsDone: 1, complete: true, synced: 0, failed: 1,
+      persistenceFailed: 0, circuitSkipped: 0, attemptedCoins: 1 };
+    await setLiveReserveCheckpointCohortGrading(db, owner, grading);
+    await setLiveReserveCheckpointCohortGrading(db, owner, grading);
+    const loaded = await loadLiveReserveCheckpoint(db, owner);
+    expect(loaded?.cohortGrading).toEqual(grading);
+    expect(loaded?.childDispositions).not.toHaveProperty("_reserveSyncGrading");
+    await continueLiveReserveCheckpoint(db, owner);
+    const claim = await claimNextLiveReserveCheckpointRecovery(db, { owner: "continuation", leaseSec: 900, nowSec: 1_710 });
+    if (claim.disposition !== "claimed") throw new Error("expected continuation");
+    expect(claim.checkpoint.cohortGrading).toEqual(grading);
+    expect(await releaseUnstartedLiveReserveRecoveryClaim(db, claim.checkpoint)).toEqual({ disposition: "released" });
+    const next = await claimNextLiveReserveCheckpointRecovery(db, { owner: "recovery", leaseSec: 900, nowSec: 1_711 });
+    if (next.disposition !== "claimed") throw new Error("expected recovery");
+    await expect(setLiveReserveCheckpointCohortGrading(db, owner, grading))
+      .rejects.toBeInstanceOf(ScheduledCheckpointOwnershipLostError);
+    await expect(setLiveReserveCheckpointCohortGrading(db, next.checkpoint, { ...grading, itemsDone: 2 }))
+      .rejects.toBeInstanceOf(ScheduledCheckpointOwnershipLostError);
+    await prepareLiveReserveCheckpointRecoveryForSlot(db, { slotStartedAt: 1_700, nowSec: 2_700 });
+    const prepared = await loadLiveReserveCheckpoint(db, { ...owner, attemptNo: 2 });
+    expect(prepared?.cohortGrading).toEqual(grading);
+  });
 
   it("hands a producer and two continuations through one frontier and persists the cohort completion clock", async () => {
     const { sqlite, db } = harness();
