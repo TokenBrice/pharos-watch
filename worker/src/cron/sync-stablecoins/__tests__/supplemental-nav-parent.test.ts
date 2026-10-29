@@ -1,24 +1,32 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockRegistry } from "../../../test-helpers/cron";
 import type * as FetchRetry from "../../../lib/fetch-retry";
 import type * as OnchainSupply from "../supplemental-assets/onchain-supply";
+import type * as EvmRpc from "../../../lib/evm-rpc";
 import type { PeggedAsset } from "../enrich-prices-shared";
 import type { CoinGeckoMcapData } from "../supplemental-assets/shared";
 import syzusd from "@shared/data/stablecoins/coins/syzusd-yuzu.json";
 import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
+import sbold from "@shared/data/stablecoins/coins/sbold-k3-capital.json";
+import ybold from "@shared/data/stablecoins/coins/ybold-yearn.json";
+import bold from "@shared/data/stablecoins/coins/bold-liquity.json";
 
-const mocks = vi.hoisted(() => ({ resolveNav: vi.fn(), onChainMcap: vi.fn() }));
+const mocks = vi.hoisted(() => ({ resolveNav: vi.fn(), onChainMcap: vi.fn(), evmCall: vi.fn() }));
 
 vi.mock("@shared/lib/stablecoins/registry", () => mockRegistry({
-  stablecoins: [syzusd, yzusd].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
+  stablecoins: [syzusd, yzusd, sbold, ybold, bold].map((meta) => ({ ...meta, flags: { ...meta.flags, pegCurrency: "USD" } })),
 }));
 vi.mock("../../../lib/fetch-retry", async (importOriginal) => ({
   ...(await importOriginal<typeof FetchRetry>()),
   fetchTextWithRetry: async () => ({ response: Response.json({ coins: {} }), body: '{"coins":{}}' }),
 }));
-vi.mock("../../../lib/authoritative-price-sources", () => ({
-  getFreshSingleSourceNavParentId: (id: string) => id === "syzusd-yuzu" ? "yzusd-yuzu" : null,
-  resolveVaultNavSupplyPrice: (...args: unknown[]) => mocks.resolveNav(...args),
+vi.mock("../../../lib/authoritative-price-sources", async () => {
+  const { getFreshSingleSourceNavParentId } = await import("../../../lib/authoritative-price-sources/erc4626-nav");
+  return { getFreshSingleSourceNavParentId, resolveVaultNavSupplyPrice: (...args: unknown[]) => mocks.resolveNav(...args) };
+});
+vi.mock("../../../lib/evm-rpc", async (importOriginal) => ({
+  ...(await importOriginal<typeof EvmRpc>()),
+  fetchEvmCallHexAtBlock: (...args: unknown[]) => mocks.evmCall(...args),
 }));
 vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
   ...(await importOriginal<typeof OnchainSupply>()),
@@ -27,8 +35,12 @@ vi.mock("../supplemental-assets/onchain-supply", async (importOriginal) => ({
 }));
 
 import { FIAT_CG_NAV_PARENT_METAS, fetchFiatCoinGeckoTokens } from "../supplemental-assets/fiat-cg";
+import { resolveVaultNavSupplyPrice } from "../../../lib/authoritative-price-sources/erc4626-nav";
 
-const nowSec = () => Math.floor(Date.now() / 1000);
+const NOW_SEC = 1_793_268_940;
+const nowSec = () => NOW_SEC;
+beforeEach(() => { vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000); });
+afterEach(() => { vi.restoreAllMocks(); });
 const parentQuote = (ageSec: number, usd = 1): CoinGeckoMcapData => ({
   "yuzu-usd": { usd, usd_market_cap: 50_000_000, last_updated_at: nowSec() - ageSec },
 });
@@ -36,8 +48,8 @@ const parentPassed = () => (mocks.resolveNav.mock.calls[0]![1] as ReadonlyMap<st
 
 describe("fiat-cg NAV supply valuation from an admitted same-run parent (K-033)", () => {
   beforeEach(() => {
-    mocks.resolveNav.mockReset().mockImplementation(async (_id: string, parents: ReadonlyMap<string, PeggedAsset>) =>
-      parents.has("yzusd-yuzu") ? { price: 1.05, source: "coingecko", confidence: "single-source" } : null);
+    mocks.resolveNav.mockReset().mockImplementation(async (id: string, parents: ReadonlyMap<string, PeggedAsset>) =>
+      id === "syzusd-yuzu" && parents.has("yzusd-yuzu") ? { price: 1.05, source: "coingecko", confidence: "single-source" } : null);
     mocks.onChainMcap.mockReset().mockImplementation(async (_meta: unknown, price: number) => ({
       mcap: 1_000_000 * price, supplySource: "onchain-total-supply", observedAt: nowSec() - 30,
       chainCirculating: { Plasma: { chainId: "plasma", current: 1_000_000 * price } },
@@ -45,7 +57,9 @@ describe("fiat-cg NAV supply valuation from an admitted same-run parent (K-033)"
   });
 
   it("requests the DefiLlama-owned parent once", () => {
-    expect(FIAT_CG_NAV_PARENT_METAS.map((meta) => [meta.id, meta.geckoId])).toEqual([["yzusd-yuzu", "yuzu-usd"]]);
+    expect(FIAT_CG_NAV_PARENT_METAS.map((meta) => [meta.id, meta.geckoId])).toEqual([
+      ["yzusd-yuzu", "yuzu-usd"], ["bold-liquity", "liquity-bold-2"],
+    ]);
   });
 
   it("admits syzUSD supply on a first run from a fresh direct CoinGecko parent", async () => {
@@ -103,7 +117,51 @@ describe("fiat-cg NAV supply valuation from an admitted same-run parent (K-033)"
   it("does not consult the NAV route when the vault has its own market price", async () => {
     const cgData = { ...parentQuote(60), "staked-yuzu-usd": { usd: 1.04, last_updated_at: nowSec() - 60 } };
     const [asset] = await fetchFiatCoinGeckoTokens(cgData);
-    expect(mocks.resolveNav).not.toHaveBeenCalled();
+    expect(mocks.resolveNav.mock.calls.some(([id]) => id === "syzusd-yuzu")).toBe(false);
     expect(asset).toMatchObject({ price: 1.04, circulating: { peggedUSD: 1_040_000 } });
+  });
+});
+
+describe.each(["sbold-k3-capital", "ybold-yearn"])("%s same-run BOLD supply valuation", (id) => {
+  beforeEach(() => {
+    mocks.resolveNav.mockReset().mockImplementation(resolveVaultNavSupplyPrice);
+    mocks.evmCall.mockReset().mockResolvedValue(`0x${(1_087n * 10n ** 15n).toString(16).padStart(64, "0")}`);
+    mocks.onChainMcap.mockReset().mockImplementation(async (_meta: unknown, price: number) => ({
+      mcap: 1_000_000 * price, supplySource: "onchain-total-supply", observedAt: nowSec() - 30,
+      chainCirculating: { Ethereum: { chainId: "ethereum", current: 1_000_000 * price } },
+    }));
+  });
+
+  it("admits current supply from a fresh BOLD quote despite a stale previous consensus", async () => {
+    const previousParent: PeggedAsset = {
+      id: bold.id, name: bold.name, symbol: bold.symbol, price: 0.99,
+      priceSource: "coingecko+defillama+coingecko-onchain", priceConfidence: "high",
+      priceObservedAt: nowSec() - 1200, priceObservedAtMode: "upstream", priceSyncedAt: nowSec(),
+    };
+    const previous = new Map([[bold.id, previousParent]]);
+    const assets = await fetchFiatCoinGeckoTokens({
+      [bold.geckoId]: { usd: 1, last_updated_at: nowSec() - 60 },
+    }, undefined, undefined, undefined, undefined, previous);
+    expect(assets.find((asset) => asset.id === id)).toMatchObject({
+      circulating: { peggedUSD: 1_087_000 }, supplySource: "onchain-total-supply",
+      supplyObservedAt: nowSec() - 30,
+    });
+    expect(assets.find((asset) => asset.id === id)!.price ?? null).toBeNull();
+    expect(previous.get(bold.id)).toBe(previousParent);
+    expect(assets.some((asset) => asset.id === bold.id)).toBe(false);
+  });
+
+  it.each(["missing", "fallback", "stale"])("withholds the row for a %s BOLD parent instead of publishing zero supply", async (state) => {
+    const previous = new Map<string, PeggedAsset>();
+    if (state !== "missing") previous.set(bold.id, {
+      id: bold.id, name: bold.name, symbol: bold.symbol, price: 1, priceSource: "coingecko",
+      priceConfidence: state === "fallback" ? "fallback" : "high",
+      priceObservedAt: nowSec() - (state === "stale" ? 901 : 60), priceObservedAtMode: "upstream",
+      priceSyncedAt: nowSec(),
+    });
+    const assets = await fetchFiatCoinGeckoTokens({}, undefined, undefined, undefined, undefined, previous);
+    expect(assets.find((asset) => asset.id === id)).toBeUndefined();
+    expect(mocks.onChainMcap).not.toHaveBeenCalled();
+    expect(mocks.evmCall).not.toHaveBeenCalled();
   });
 });

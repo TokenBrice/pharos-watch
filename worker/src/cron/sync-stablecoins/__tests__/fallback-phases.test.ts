@@ -206,6 +206,22 @@ describe("CoinGecko fallback phases", () => {
     });
   });
 
+  it.each(["bold-liquity", "yzusd-yuzu", "hbd-hive"])("does not admit %s's CoinGecko cap during a DefiLlama outage", (id) => {
+    const excluded = ACTIVE_STABLECOINS.find((meta) => meta.id === id)!;
+    const assets = buildFallbackAssetsFromCoinGecko({
+      syncStartSec: NOW_SEC,
+      cgData: {
+        [excluded.geckoId!]: { usd: 1, usd_market_cap: 39_000_000, last_updated_at: NOW_SEC },
+        "usd-coin": { usd: 1, usd_market_cap: 5_000_000, last_updated_at: NOW_SEC },
+      },
+    });
+
+    expect(assets.map((asset) => asset.id)).toEqual(["usdc-circle"]);
+    expect(assets[0]).toMatchObject({
+      supplySource: "coingecko-fallback", circulating: { peggedUSD: 5_000_000 }, supplyObservedAt: NOW_SEC,
+    });
+  });
+
   it("keeps insufficient fallback metadata in no-write degraded mode", () => {
     const result = buildInsufficientFallbackResult(2);
     const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;

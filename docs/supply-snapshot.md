@@ -400,7 +400,7 @@ The [Algorithm](#algorithm) owns cache, marker, row ownership and recovery rules
 Bounded supplemental/repair lanes below follow the source rules above.
 
 - **DefiLlama** — primary for stablecoins tracked by its stablecoin API
-- **CoinGecko market cap** — supplemental commodity and CoinGecko-detail assets. During DefiLlama outages, `syncViaCoingeckoFallback()` uses the already-fetched commodity/CoinGecko-detail cap feed, not a new whole-cohort request. Missing fresh caps are omitted from intake; fewer than `MIN_VALID_ASSET_COUNT` admitted rows blocks publication before continuity restoration.
+- **CoinGecko market cap** — supplemental commodity and CoinGecko-detail assets. During DefiLlama outages, `syncViaCoingeckoFallback()` uses the already-fetched commodity/CoinGecko-detail cap feed, not a new whole-cohort request. NAV-parent-only quotes and HBD are excluded from CoinGecko supply intake; HBD retains its separate native-supply/carry path. Missing fresh caps are omitted from intake; fewer than `MIN_VALID_ASSET_COUNT` admitted rows blocks publication before continuity restoration.
 
 Main/fallback share post-intake publication. Only their context sets operational labels/DefiLlama circuit bookkeeping; admission, aggregate/chain/history packets and clocks stay source-owned. Completion metadata omits intake payloads and guard persistence state.
 
@@ -443,7 +443,7 @@ DEC-01 (2026-09-27) retains this explicit, fail-closed, double-count-safe raise.
 
 **History discontinuity and live-depeg impact:** rejected fills revert to canonical DefiLlama totals, so published supply and the next daily `supply_history` observation step down once: a methodology change, not a redemption; prior rows are not rewritten. USDXL and scUSD fall below the **$1M live-depeg floor**, lose live detection, and open events close as `coverage-lost-supply`. The bound (delegated DEC-01, 2026-09-27) remains subject to owner review.
 
-NAV/yield-bearing supplemental assets are never par-valued for supply. When every market price lane fails (e.g. a CoinGecko delisting), an asset with a registered vault NAV route values its on-chain total supply through the pre-intake `resolveVaultNavSupplyPrice` protocol-redeem reuse (parent from an admitted same-run CoinGecko quote or the previous payload) described in [pricing-pipeline.md](process/pricing-pipeline-appendix.md#coingecko-low-volume-lane); without a trusted NAV the asset stays out and eventually reports as dropped in `trackedCoverage`.
+NAV/yield-bearing supplemental assets are never par-valued for supply. When every market price lane fails (e.g. a CoinGecko delisting), an asset with a registered vault NAV route values its on-chain total supply through the pre-intake `resolveVaultNavSupplyPrice` protocol-redeem reuse (parent from an admitted same-run CoinGecko quote, including BOLD for sBOLD/yBOLD, or the previous payload) described in [pricing-pipeline.md](process/pricing-pipeline-appendix.md#coingecko-low-volume-lane); without a trusted NAV the asset stays out and eventually reports as dropped in `trackedCoverage`.
 
 Cached `onchain-total-supply` rows must also satisfy the current curated deployment roster and reconcile their chain packet before any supplemental or missing-tracked carry-forward. Removed/incomplete aggregates and packets missing newly required legs cannot be restored; reviewed canonical escrow residual labels remain allowed. Single-deployment totals retain their existing eligibility, and other upstream supply sources keep the ordinary age ceiling.
 

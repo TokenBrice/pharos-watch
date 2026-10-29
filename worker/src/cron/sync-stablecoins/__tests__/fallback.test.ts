@@ -11,6 +11,7 @@ import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
 import { getCirculatingRawOrNull, getPrevDayRawOrNull, getPrevWeekRawOrNull, getPrevMonthRawOrNull, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC } from "@shared/lib/supply";
 import { StablecoinListResponseSchema } from "@shared/types/market";
 import { buildFallbackAssetsFromCoinGecko } from "../fallback-intake";
+import { NAV_PARENT_ONLY_GECKO_IDS } from "../supplemental-assets";
 import type { PeggedAsset } from "../enrich-prices";
 import type { PreviousStablecoinsLoadResult } from "../shared";
 import { normalizeStablecoinsPayload } from "../shared";
@@ -179,7 +180,8 @@ describe("syncViaCoingeckoFallback orchestrator", () => {
       if (omittedIds.includes(coin.id) && coin.geckoId) delete cgData[coin.geckoId];
     }
     const expectedMissingIds = ACTIVE_STABLECOINS
-      .filter((coin) => !coin.geckoId || !cgData[coin.geckoId])
+      .filter((coin) => !coin.geckoId || !cgData[coin.geckoId]
+        || NAV_PARENT_ONLY_GECKO_IDS.has(coin.geckoId) || coin.id === "hbd-hive")
       .map((coin) => coin.id).sort();
     const db = mockD1([]);
 
