@@ -28,6 +28,49 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "USD0 mint and par redemption are priced through Usual's upgradable ClassicalOracle, which stores one ChainlinkV3Aggregator-compatible feed per accepted token; the issuer publishes the two USD0 collateral feeds (Chainlink USDC/USD and the Hashnote USYC/USD oracle) and a stablecoin depeg guard that reverts getPrice/getQuote away from $1. No secondary aggregator, medianization, failover or per-read staleness bound is documented for the collateral path, so the reviewed tier is single source per collateral rather than redundant-with-failover. The Chainlink and Pyth USD0/USD feeds the issuer lists are price data for external DeFi integrations, not a collateral-valuation failover.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS065 research sprint 2026-10-29 (RS-065)",
+      "rationale": "USD0 exposes no borrower-specific CDP or liquidation branch: DaoCollateral and SwapperEngine read ClassicalOracle quotes to size 1:1 minting and par redemption against tokenized-RWA collateral, so the pricing authority is a single top-level source per collateral token.",
+      "sources": [
+        {
+          "label": "Usual USD0 ClassicalOracle: per-token aggregator registration, one-time feed freshness check, stablecoin depeg guard; accessed 2026-10-29",
+          "url": "https://tech.usual.money/smart-contracts/utility-contracts/usd0/usd0-classicaloracle"
+        },
+        {
+          "label": "Usual USD0 DaoCollateral: oracle-integrated RWA swap and redeem; accessed 2026-10-29",
+          "url": "https://tech.usual.money/smart-contracts/protocol-contracts/usd0/usd0-daocollateral"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS065 research sprint 2026-10-29 (RS-065)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Usual USD0 ClassicalOracle: published pricefeeds (Chainlink USDC/USD 0x8fffffd4afb6115b954bd326cbe7b4ba576818f6, Hashnote USYC/USD 0x4c48bcb2160f8e0adbf9d4f3b034f1e36d1f8b3e), initializeTokenOracle(token,dataSource,timeout,isStablecoin) and the single freshness check; accessed 2026-10-29",
+        "url": "https://tech.usual.money/smart-contracts/utility-contracts/usd0/usd0-classicaloracle"
+      },
+      {
+        "label": "Usual USD0 oracle infrastructure table: ClassicalOracle for collateral pricing and ratio enforcement, Chainlink USD0/USD oracle for external DeFi integrations; accessed 2026-10-29",
+        "url": "https://docs.usual.money/usual-products/usd0-stablecoin/usd0/flow-and-architecture"
+      },
+      {
+        "label": "Usual Chainlink oracle page: USD0/USD feed 0x7e891DEbD8FA0A4Cf6BE58Ddff5a8ca174FebDCB listed as a USD0 price feed; accessed 2026-10-29",
+        "url": "https://tech.usual.money/smart-contracts/utility-contracts/usd0/chainlink-oracles"
+      },
+      {
+        "label": "Usual Pyth oracle page: separate USD0/USD feed on 75+ chains; accessed 2026-10-29",
+        "url": "https://tech.usual.money/smart-contracts/utility-contracts/usd0/pyth-oracles"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "Usual documents USD0 cross-chain transfers across Ethereum, Arbitrum, Base, and BNB Chain using Chainlink CCIP for messaging and LayerZero for omnichain token transfers.",

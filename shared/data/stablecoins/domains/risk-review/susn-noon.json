@@ -1,5 +1,44 @@
 {
   "id": "susn-noon",
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "Noon publishes redemption-rate quotes rather than a market aggregate for the wrapper: Stork sUSNUSN_RR (sUSN in USN) and Stork USNUSD_RR_CAPPED_1 (USN in USD, capped at 1.00) on EVM and Sui, plus Pragma SUSN/USD on Starknet. Each deployment depends on a single named provider; no secondary feed, failover, heartbeat, staleness bound or deviation guard is disclosed for any of them, and the USD leg is a hard cap at par rather than a validating cross-check.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS099 research sprint 2026-10-29 (RS-099)",
+      "rationale": "sUSN is a savings-passthrough wrapper of USN with no borrower debt or liquidation engine. The oracle surface the issuer publishes for it is the sUSN/USN and USN/USD redemption-rate conversion, so the profile is a single top-level rate path rather than borrower collateral branches.",
+      "sources": [
+        {
+          "label": "Noon docs — Contract Addresses & Oracles",
+          "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+        },
+        {
+          "label": "Noon docs — $USN & $sUSN",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS099 research sprint 2026-10-29 (RS-099)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Noon docs — Contract Addresses & Oracles (feed names, providers, keys)",
+        "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+      },
+      {
+        "label": "Noon docs — $USN & $sUSN",
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
+      },
+      {
+        "label": "Noon docs — Liquidity (unstaking cooldown, permissioned redemption waterfall)",
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/liquidity.md"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

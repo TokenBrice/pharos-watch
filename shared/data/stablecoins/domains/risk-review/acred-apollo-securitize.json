@@ -48,6 +48,41 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "ACRED is a permissioned feeder share into Apollo Diversified Credit Fund, a continuously offered closed-end interval fund administered through Securitize. Its per-token value is the fund's administrator-calculated net asset value: the fund calculates NAV on a daily basis, shares are sold and repurchased only at NAV through quarterly repurchase offers, and no exchange listing or continuous market price exists. That administrator NAV is then relayed onchain: RedStone documents delivering the ACRED NAV across six networks on a 24-hour heartbeat through its Trusted Single Source Oracle, an architecture built precisely because multi-source aggregation does not apply to single-authority fund NAVs. Every observed publication layer therefore relays the same privileged administrator valuation rather than aggregating independent market feeds; this repo's own live-reserve adapter reading a Chainlink ACRED NAV feed is a second relay of that same authority, not a second valuation. The onchain relay does not establish independent valuation, redundant pricing or publisher signer closure. This review scopes top-level pricing authority only and makes no claim about relay updater keys, TSSO signer composition or downstream integration oracle routers.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "RS-062 oracle-profile research 2026-10-29",
+      "rationale": "The only price-sensitive authority for this share class is fund NAV. The underlying vehicle is an interval fund whose shares have no public trading market and are repurchased only through quarterly offers at NAV, so no borrower collateral or liquidation branch consumes an ACRED price, and ACRED itself creates no borrower debt positions. NAV relays and downstream lending integrations are consumers of the same top-level valuation, not independent pricing branches.",
+      "sources": [
+        {
+          "label": "Apollo Diversified Credit Fund prospectus dated April 29, 2025: interval fund; NAV calculated on a daily basis; quarterly repurchase offers at NAV of no less than 5% of shares; no secondary market expected; fetched 2026-10-29",
+          "url": "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf"
+        },
+        {
+          "label": "RedStone, Tokenize the World: RedStone's Role in the Securitize Ecosystem (2026-07-06): ACRED NAV delivered onchain on a 24-hour heartbeat across six networks via the TSSO single-source architecture, with NAV calculated off-chain by a fund administrator; fetched 2026-10-29",
+          "url": "https://blog.redstone.finance/2026/07/06/tokenize-the-world-redstones-role-in-the-securitize-ecosystem"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RS-062 oracle-profile research 2026-10-29",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Apollo Diversified Credit Fund prospectus dated April 29, 2025: interval fund; NAV calculated on a daily basis; quarterly repurchase offers at NAV of no less than 5% of shares; no secondary market expected; fetched 2026-10-29",
+        "url": "https://www.apollo.com/content/dam/apolloaem/documents/fund-documents/adcf-prospectus.pdf"
+      },
+      {
+        "label": "RedStone, Tokenize the World: RedStone's Role in the Securitize Ecosystem (2026-07-06): ACRED NAV delivered onchain on a 24-hour heartbeat across six networks via the TSSO single-source architecture, with NAV calculated off-chain by a fund administrator; fetched 2026-10-29",
+        "url": "https://blog.redstone.finance/2026/07/06/tokenize-the-world-redstones-role-in-the-securitize-ecosystem"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "ACRED uses Securitize/Wormhole cross-chain transport. The issuer feed identifies BridgeAddress 0x9A0460445E9B3E859F3C91A1b3f318354a0b11B6 on Ethereum, Ink, Avalanche and Polygon, plus Sei bridge 0x1643903347B8F995A8b3e303d53d2CB52A5ca623. Current exact block pins on Ethereum 26122489, Polygon 94970204, Avalanche 96771552, Ink 57662156 and Sei 235783673 bind each adapter to the exact ACRED token, Wormhole relayer 0x27428DD2d3DD32A4D7f7C497eAaa23130d894911, common owner 0x59c1eAcEc450c57Dcb9b8725d0F96635C2b676Ee, paused=false and reciprocal EVM peers for Wormhole IDs 2, 5, 6, 40 and 46 (self entries are zero). Ethereum, Polygon, Avalanche and Ink resolve implementation 0xA42A23Db258666aDE7A40F52Ea55819DA4FA9853; Sei resolves 0x0c31f7cb10370692558e9e503b167cc16e8c3497. Aptos ledger 7485299960 resolves the feed's 0x13816cd4562c9cf260a0471615451253ab96cca6d6adf746969c52c78480f06a as the ds_token package: dstoken_address() and metadata() both bind the existing catalog metadata object 0xe528f4df568eb9fff6398adc514bc9585fab397f478972bcbebf1e75dee40a88, so this is not a changed token identity. Solana finalized account context slot 453414024 confirms the existing ACRED Token-2022 mint and issuer-controlled transfer hook and permanent delegate. Sei EVM token 0xf7fa6725183e603059fc23d95735bf67f72b2d78 and its route are registered from the issuer feed and rechecked block 235841985; complete seven-rail economic attribution, non-EVM bridge-manager/authorization paths and message/supply conservation are not established. Existing destination administration and upgrade controls remain adverse common-mode exposure; the aggregate review date is retained.",
