@@ -85,6 +85,21 @@ export function safetyScoreV9ChainSupplyObservedAtSec(
 export const SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID = "safety-score-v9-lock-mint-attribution";
 export const SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID = "safety-score-v9-reviewed-deployment-attribution";
 
+/** Evidence source id of the v10.38 per-deployment supply census bounds. */
+export const SAFETY_SCORE_V9_CHAIN_SUPPLY_DEPLOYMENT_CENSUS_SOURCE_ID = "deployment-supply-census-v1";
+
+/**
+ * Evaluation-time ceiling for one census bound (PLAN §4.6 R3, OP-R0 S-14).
+ * A bound is admitted only while its own `observedAtSec` sits inside the census
+ * observation window (`semantic.supplyAttribution.observationMaxAgeSec`); it
+ * never inherits the chain-supply carry-forward, because an expired bound must
+ * return the deployment's datums to required on the next capture — no
+ * carry-forward, no re-dating.
+ */
+export function safetyScoreV9DeploymentSupplyCensusMaxAgeSec(): number {
+  return V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
+}
+
 /**
  * Single authority for the evidence source id that owns an asset's chain-supply
  * rows. The published chain-supply evidence and the per-source ceiling both

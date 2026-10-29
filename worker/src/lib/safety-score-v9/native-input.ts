@@ -195,6 +195,7 @@ export function deriveNativeV9BaseInputGenerationId(input: NativeV9BaseInputDige
   const {
     baseInputGenerationId: _generationId,
     safetyScoreV9SupplyAttributionById: _supplyAttribution,
+    safetyScoreV9DeploymentSupplyCensusById: _deploymentSupplyCensus,
     evidenceJournalById: _evidenceJournal,
     supplyAttributionJournalById: _supplyAttributionJournal,
     pegProvenanceById: _pegProvenance,
@@ -416,6 +417,7 @@ export async function buildNativeV9InputCacheEntry(
   }
   const {
     safetyScoreV9SupplyAttributionById: _v9SupplyAttribution,
+    safetyScoreV9DeploymentSupplyCensusById: _deploymentSupplyCensus,
     evidenceJournalById: _evidenceJournal,
     supplyAttributionJournalById: _supplyAttributionJournal,
     pegProvenanceById: _pegProvenance,
