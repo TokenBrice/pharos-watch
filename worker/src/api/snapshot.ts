@@ -219,7 +219,10 @@ function validateV9ReportCards(
     ? minor < 10 ? WitnessHistoricalReportCardsV9ResponseSchema : HistoricalReportCardsV9ResponseSchema
     : reportCards.schemaVersion === 8 && minor !== null && minor >= 11 && minor <= 28
       ? HistoricalTypedReportCardsV9ResponseSchema
-      : reportCards.schemaVersion === 8 && minor !== null && minor >= 29 && minor <= 36
+      // From 10.29 on, report8 rows carry resolved cards regardless of the
+      // methodology version, so every archived row resolves through the
+      // historical schema instead of failing the live report9 contract.
+      : reportCards.schemaVersion === 8 && minor !== null && minor >= 29
         ? HistoricalResolvedReportCardsV9ResponseSchema
         : ReportCardsV9ResponseSchema;
   const parsed = historicalSchema.safeParse(validationInput);
