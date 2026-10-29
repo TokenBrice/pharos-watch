@@ -54,7 +54,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "USN is natively issued on Ethereum through MinterHandlerV2. Its zkSync, Sophon, and Starknet deployments are burn-mint bridge representations: Hyperlane warp/router paths cover those tracked routes, while LayerZero Endpoint V2 peers are live between Ethereum and zkSync/Sophon only. The official TAC registry also identifies USN 0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 on TAC, now included in the catalog with an unresolved route disposition; TAC is registered in the chain-identity and public RPC registries. Its TAC block 24352134 owner Safe 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750, token implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2, proxy admin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe, Hyperlane mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e, mailbox owner 0xb801c2712f92e2d29e1120862e0f9c93d80cbbca, and default ISM 0xad3bce653f56d4e03d0789d01d055b06cf6ac48f remain historical Bridge Risk evidence, not current liability shares. Current tracked-route token owners, proxy slots, mailbox owners, default ISMs, Hyperlane remote mappings, and LayerZero peer reads are recorded below; Hyperlane validator sets and LayerZero DVN/message-library/executor configuration remain unresolved, so the external-validated-network tier is provisional. Sol curation campaign 2026-10-11 (C08USN), issuer sources observed 2026-10-11T00:50:58Z: Noon lists Sophon and TAC as deprecated, not as extinguished liabilities. Its specific USN architecture says burn-mint across supported chains, while Bridging Operations describes Hyperlane generally as lock-and-mint. TAC block 26795569 (2026-10-11T00:51:29Z), observed 2026-10-11T00:51:51.117Z at https://rpc.tac.build, returns 18 decimals and nonzero totalSupply 3882062016887419165253 atomic USN. Without exact historical route/escrow reconciliation, this inventory is not an exhaustive independent-liability proof; existing control observations and review dates are not refreshed.",
+    "summary": "USN is natively issued on Ethereum through MinterHandlerV2. Its zkSync, Sophon, and Starknet deployments are burn-mint bridge representations: Hyperlane warp/router paths cover those tracked routes, while LayerZero Endpoint V2 peers are live between Ethereum and zkSync/Sophon only. The official TAC registry also identifies USN 0x51a30e647d33a044967fa3dbb04d6ed6f45455f6 on TAC, now included in the catalog with a reviewed Hyperlane burn-mint route (pinned at TAC block 27826000, 2026-10-29); TAC is registered in the chain-identity and public RPC registries. Its TAC block 24352134 owner Safe 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750, token implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2, proxy admin 0xf4059d5f0b70f828ed2f087b43e91351203b2bbe, Hyperlane mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e, mailbox owner 0xb801c2712f92e2d29e1120862e0f9c93d80cbbca, and default ISM 0xad3bce653f56d4e03d0789d01d055b06cf6ac48f remain historical Bridge Risk evidence, not current liability shares. Current tracked-route token owners, proxy slots, mailbox owners, default ISMs, Hyperlane remote mappings, and LayerZero peer reads are recorded below; Hyperlane validator sets and LayerZero DVN/message-library/executor configuration remain unresolved, so the external-validated-network tier is provisional. Sol curation campaign 2026-10-11 (C08USN), issuer sources observed 2026-10-11T00:50:58Z: Noon lists Sophon and TAC as deprecated, not as extinguished liabilities. Its specific USN architecture says burn-mint across supported chains, while Bridging Operations describes Hyperlane generally as lock-and-mint. TAC block 26795569 (2026-10-11T00:51:29Z), observed 2026-10-11T00:51:51.117Z at https://rpc.tac.build, returns 18 decimals and nonzero totalSupply 3882062016887419165253 atomic USN. Without exact historical route/escrow reconciliation, this inventory is not an exhaustive independent-liability proof; existing control observations and review dates are not refreshed.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Pharos mint-bridge boundary migration; Codex usn-noon; Sol curation campaign 2026-10-09 (W4T08Nexus), route accounting/identity only",
     "confidence": "manual-review",
@@ -284,27 +284,36 @@
       },
       {
         "id": "tac:0x51a30e647d33a044967fa3dbb04d6ed6f45455f6",
+        "sourceChain": "ethereum",
         "destinationChain": "tac",
+        "canonicalChain": "ethereum",
         "contractAddress": "0x51a30e647d33a044967fa3dbb04d6ed6f45455f6",
-        "protocol": "Noon TAC deployment; exact current transport unreviewed",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Sol curation campaign 2026-10-11 (C08USN): issuer registry lists this deprecated TAC USN address. Pinned https://rpc.tac.build block 26795569, hash 0xc0823095b63e488e3c18155688a5fd0940774413f5bfc658b7c7442f54c32c06, timestamp 2026-10-11T00:51:29Z, observed 2026-10-11T00:51:51.117Z and 2026-10-11T00:52:28.173Z, establishes name USN, symbol USN, 18 decimals and totalSupply 3882062016887419165253 atomic units. Identity and nonzero supply do not certify current proxy/controller reach, escrow absence, every historical transport lane or authenticated in-flight accounting. Existing historical TAC controls in the summary are not promoted as a current control inventory.",
+        "protocol": "Noon USN Hyperlane burn-mint representation",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "At pinned TAC block 27826000 (hash 0x32dc3bd6de52eac70148949f619704dab9b692799312f9153019623a78bdf2df, timestamp 2026-10-29T18:33:51Z) helper reads return name/symbol USN, 18 decimals, totalSupply 3882.062016887419165253 USN, owner 0x868dd9bce1d60362f2169e7b91e6aa2f71f64750, hyperlaneEnabled true, mailbox 0x3a464f746d23ab22155710f44db16dca53e0775e, default ISM zero, and remoteTokens(1) equal to Ethereum USN 0xda67b4284609d2d48e5d10cfac411572727dc1ed. The TAC explorer-verified implementation 0x01a660f4b4f87b8b42ba6f02c63c38c87af610c2 (USNHyperlane, compiler 0.8.28) burns the sender balance in sendTokensViaHyperlane and mints only inside handle() gated to the registered mailbox and registered remote token, with a separate privileged MINTER_ROLE mint. This establishes the Ethereum-to-TAC burn-mint representation for this exact deployment; it does not certify Hyperlane validator or ISM quorum configuration, key custody, incident history, historical transport lanes or in-flight accounting, and the issuer registry still lists this TAC address as deprecated. No supply share is authored here.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:hyperlane-v2",
+          "contract:tac:0x51a30e647d33a044967fa3dbb04d6ed6f45455f6"
+        ],
+        "observedAt": "2026-10-29",
+        "observedBlock": 27826000,
         "sources": [
           {
             "label": "Noon issuer deployment registry; deprecated TAC USN",
             "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
           },
           {
-            "label": "TAC USN verified proxy metadata; current transport not certified",
-            "url": "https://explorer.tac.build/api/v2/smart-contracts/0x51A30E647D33A044967FA3DBb04d6ED6F45455F6"
+            "label": "TAC USN verified proxy and verified USNHyperlane implementation source",
+            "url": "https://explorer.tac.build/api/v2/smart-contracts/0x01a660f4b4f87b8b42BA6f02c63c38C87Af610c2"
           },
           {
-            "label": "Pinned TAC RPC identity and nonzero totalSupply, block 26795569",
+            "label": "Pinned TAC RPC reads at block 27826000 (2026-10-29T18:33:51Z)",
             "url": "https://rpc.tac.build"
           }
         ]
