@@ -362,7 +362,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.36");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.37");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -539,7 +539,7 @@ describe("methodology registry", () => {
   });
 
   it("discloses the v10.36 unrounded reserve composition shares", () => {
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[0]!;
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.36")!;
     expect(release).toMatchObject({
       version: "10.36", date: "2026-10-28", effectiveAt: 1_793_145_600, reconstructed: false, commits: [],
     });
@@ -549,8 +549,21 @@ describe("methodology registry", () => {
     expect(release.impact.join(" ")).toContain("no deployment or production acceptance is claimed");
   });
 
+  it("discloses the v10.37 documentation class at its own release boundary", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.37")!;
+    expect(release).toMatchObject({
+      version: "10.37", date: "2026-10-30", effectiveAt: 1_793_318_400, reconstructed: false, commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.36");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.37");
+    const impact = release.impact.join(" ");
+    expect(impact).toContain("One evidence level, unchanged");
+    expect(impact).toContain("Zero declared movers, measured not assumed");
+    expect(impact).toContain("re-date effectiveAt at release");
+  });
+
   it("discloses the v10.35 asset-local measured-route expiry and bounded DEX capture admission", () => {
-    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG[1]!;
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.35")!;
     expect(release).toMatchObject({
       version: "10.35", date: "2026-10-28", effectiveAt: 1_793_145_600, reconstructed: false, commits: [],
     });

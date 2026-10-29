@@ -180,6 +180,8 @@ Read an individual decision rather than the entire record collection: [ADR-1](#a
   3. Update the owning methodology document.
   4. Update the relevant public `/methodology` section when its explanation changes.
 
+  A policy-semantic change takes a numeric version even when it is provably score-neutral, because the policy semantic digest rotates and replay/publication identity must name it (the v10.37 documentation class is the precedent); score-neutrality is proven by capture gates, never assumed, and is not a reason to skip the version. A counting- or presentation-only change that leaves the policy digest, scored bytes and evidence fields unchanged takes no version and is recorded in structured history and the weekly changelog instead.
+
   New history shards or lanes are wired into the authored shared registry; regenerate/check downstream changelog exports, route-parity fixtures, and generated documentation outputs. Manifest-pinned scoring input changes also regenerate the evaluation-build manifest from source. Skipping the runtime version source ships a history entry for a version the runtime never adopts. Do not record release targets in this record; they live in structured methodology history and owning docs.
 
 
