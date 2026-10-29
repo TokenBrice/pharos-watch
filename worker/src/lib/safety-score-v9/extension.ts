@@ -1112,6 +1112,11 @@ function adaptMintControl(
   const globalControl: ControlOverlay = {
     controlKey,
     deploymentKey: `asset:${assetId}`,
+    // Authored identity (IR-1a/IR-2b/IR-5, contract C3): incident reviews bind
+    // the mint-authority label, never the digest payload, so re-deriving
+    // `controlKey` (address, refs, role) cannot orphan a reviewed closure. Every
+    // path/deployment row below inherits it from this base.
+    authoredControlId: control.label,
     ...(control.controllerAssetId ? { controllerAssetId: control.controllerAssetId } : {}),
     controlKind,
     scope: "global",
