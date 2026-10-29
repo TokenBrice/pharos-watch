@@ -50,11 +50,26 @@ import { captureSafetyScoreV9SupplyAttribution } from "../safety-score-v9/supply
 import {
   safetyScoreV9SupplyAttributionExpectedAssetIds,
   safetyScoreV9ChainRows,
+  safetyScoreV9ChainSupplyMaxAgeSec,
+  safetyScoreV9ChainSupplyMaxAgeSecForSource,
   safetyScoreV9ChainSupplyObservedAtSec,
+  safetyScoreV9ChainSupplySourceId,
+  SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
+  SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID,
 } from "../safety-score-v9/supply-attribution";
+import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import {
+  V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC,
+  V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID,
+} from "@shared/types/safety-score-v9";
 import { createSafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
-import { deriveXautRepresentationGroupSupplyAttribution } from "../safety-score-v9/xaut-supply-attribution-contract";
+import {
+  deriveXautRepresentationGroupSupplyAttribution,
+  XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC,
+  XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+} from "../safety-score-v9/xaut-supply-attribution-contract";
 import { makeXautObservation } from "../../test-helpers/v9-fixed-input";
 import { createSupplyAttributionPerformance, emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-diagnostics";
 import { compactCronMetadataForPersistence } from "../cron-metadata-persistence";
@@ -758,6 +773,105 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
         "plume:0x9477724bb54ad5417de8baff29e59df3fb4da74f",
       contentSha256: null,
     });
+  });
+});
+
+describe("Safety Score V9 chain-supply ceilings (v10.38)", () => {
+  const ceilings = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.chainSupplyMaxAgeBySource;
+  const defaultCeilingSec = ceilings.defaultMaxAgeSec + ceilings.carryForwardExtraSec;
+
+  function sourceIdOf(attribution: unknown, assetId = "alpha"): string {
+    return safetyScoreV9ChainSupplySourceId({
+      safetyScoreV9SupplyAttributionById: attribution === undefined ? {} : { [assetId]: attribution },
+    } as unknown as SafetyScoreV9CompilerInput, assetId);
+  }
+
+  function maxAgeOf(
+    attribution: unknown,
+    assetId = "alpha",
+    declaredMaxAgeSec: number | null = 1800,
+  ): number | null {
+    return safetyScoreV9ChainSupplyMaxAgeSec({
+      clockSec: OBSERVED_AT_SEC,
+      aggregateCirculatingById: {},
+      chainCirculatingById: {},
+      safetyScoreV9SupplyAttributionById: { [assetId]: attribution },
+    } as unknown as SafetyScoreV9CompilerInput, assetId, declaredMaxAgeSec);
+  }
+
+  it("keeps provider chain-circulating rows at their pre-v10.38 5,400 s ceiling", () => {
+    expect(ceilings.maxAgeSecBySource[V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID]).toBe(
+      V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC,
+    );
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID)).toBe(
+      V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC,
+    );
+    // A source clock that declares a narrower window cannot tighten a listed
+    // source: one ceiling replaces the two-part default.
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID, 900)).toBe(
+      V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC,
+    );
+    expect(sourceIdOf(undefined)).toBe(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID);
+    expect(maxAgeOf(undefined)).toBe(V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC);
+  });
+
+  it("fails an unlisted source closed to the policy default window", () => {
+    expect(defaultCeilingSec).toBe(V9_CHAIN_SUPPLY_PROVIDER_MAX_AGE_SEC);
+    for (const sourceId of [
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID,
+      "unlisted-future-lane",
+    ]) {
+      expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(sourceId), sourceId).toBe(defaultCeilingSec);
+    }
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource("unlisted-future-lane", null)).toBe(defaultCeilingSec);
+  });
+
+  it("lets an unlisted source clock tighten the default window but never widen it", () => {
+    const sourceId = SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID;
+    const declaredNarrowSec = 900;
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(sourceId, declaredNarrowSec)).toBe(
+      declaredNarrowSec + ceilings.carryForwardExtraSec,
+    );
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(sourceId, 30 * 86_400)).toBe(defaultCeilingSec);
+  });
+
+  it("resolves every attribution model to the source id its ceiling is keyed by", () => {
+    expect(sourceIdOf({ model: "canonical-lock-mint-partition-v1" })).toBe(
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
+    );
+    expect(sourceIdOf({ model: "canonical-lock-mint-group-partition-v2" })).toBe(
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
+    );
+    expect(sourceIdOf({ model: "reviewed-deployment-unit-partition-v1" })).toBe(
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID,
+    );
+    expect(sourceIdOf({ model: "reviewed-economic-deployment-partition-v1" })).toBe(
+      V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
+    );
+  });
+
+  it("keeps per-asset lane admission windows ahead of the generic source ceiling", () => {
+    const supplyPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+    // A reviewed economic partition is admitted inside its own pin window, so
+    // its evidence cannot borrow the wider generic ceiling.
+    expect(maxAgeOf({
+      model: "reviewed-economic-deployment-partition-v1",
+      deployments: [{ chainId: "ethereum" }],
+    })).toBe(supplyPolicy.observationMaxAgeSec);
+    expect(maxAgeOf({
+      model: "reviewed-economic-deployment-partition-v1",
+      deployments: [{ chainId: "ethereum" }, { chainId: "optimism" }],
+    })).toBe(supplyPolicy.observationMaxAgeSec + supplyPolicy.finalityMarginSecByChainId.optimism!);
+    // XAUT's finalized observation keeps its one-hour window, carried or not.
+    expect(maxAgeOf({ model: "canonical-lock-mint-group-partition-v2" }, "xaut-tether")).toBe(
+      XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+    );
+    expect(maxAgeOf({
+      model: "canonical-lock-mint-group-partition-v2",
+      carriedForwardFromGenerationId: "gen-prior",
+    }, "xaut-tether")).toBe(XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC);
+    expect(XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC).toBeLessThan(defaultCeilingSec);
   });
 });
 
