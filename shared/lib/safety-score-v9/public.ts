@@ -5,14 +5,16 @@ import { createV9PublicCardShardViewFactory } from "./public-card-shard";
 import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import {
   SafetyScoreV9CurrentCardSchema,
-  SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9EvidenceFreshness,
   type SafetyScoreV9NrReason,
   type SafetyScoreV9PublicReason,
-  type SafetyScoreV9CurrentResponse,
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CommonModeGroups,
 } from "../../types/safety-score-v9-public";
+import {
+  SafetyScoreV9CurrentResponseSchema,
+  type SafetyScoreV9CurrentResponse,
+} from "../../types/safety-score-v9-publication-response";
 import { computeV9UnknownPricedWeightShare, type SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
 import type {
   V9EvidenceLevel,
@@ -39,7 +41,7 @@ import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 import { v9BridgeMintControlKey, v9ControlChainLabel } from "./control-component-keys";
 import { readableV9PublicText, readableV9PublicWitnesses } from "./public-witness-texts";
 import { assertV9PublicCardProjections } from "../report-cards-v9-projections";
-import type { V9OpenEvidence } from "../../types/safety-score-v9-public";
+import type { V9OpenEvidence } from "../../types/safety-score-v9-open-evidence";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];

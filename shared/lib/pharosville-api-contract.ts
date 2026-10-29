@@ -14,7 +14,7 @@ import {
   StablecoinListResponseSchema,
   StressSignalsAllResponseSchema,
 } from "../types/market";
-import { ReportCardsV9CurrentResponseSchema } from "../types/report-cards-v9";
+import { ReportCardsV9AcceptedResponseSchema } from "../types/report-cards-v9-accepted";
 import { StabilityIndexResponseSchema } from "../types/stability";
 
 export interface PharosVilleApiEndpoint<K extends PharosVilleApiEndpointKey = PharosVilleApiEndpointKey> {
@@ -68,7 +68,7 @@ export const PHAROSVILLE_API_CONTRACT = {
   reportCards: {
     key: "reportCards",
     path: DATA_SURFACE_DESCRIPTORS.reportCards.apiPath,
-    schema: ReportCardsV9CurrentResponseSchema,
+    schema: ReportCardsV9AcceptedResponseSchema,
     metaMaxAgeSec: DATA_SURFACE_DESCRIPTORS.reportCards.endpointMaxAgeSec,
     producerIntervalSec: DATA_SURFACE_DESCRIPTORS.reportCards.producerIntervalSec,
   },

@@ -113,17 +113,17 @@ For collateral quality `q`/LLTV fraction `l`, lender quality=`100 − l² × (10
 
 ### Report schema v9
 
-`/api/report-cards/v9` wraps publication schema 8 as body schema 9 (`model: "v9"`). `openEvidence` is a required but nullable key, and `openEvidenceUnavailableReason` is also required and nullable: it carries `publication-predates-open-evidence` exactly when `openEvidence` is `null` (a report9 body sourced from a retained schema-7 generation) and is `null` whenever the block is present. A `null` block means unavailable open-question evidence, never zero counts. Publication schema 8 itself requires a present `openEvidence` block; the report9 envelope wraps it with that nullable pair over the same card, cause and typed-route contracts below.
+Body 9 wraps publication 8 (`model: "v9"`); see the [report9 wire contract](api-reference.md#full-cards).
 
 ### Report schema v8
 
-Superseded for current writes by [Report schema v9](#report-schema-v9); report8 and the API v8 (`model: "v9"`)/publication v7 pair are archive-only shapes admitted through explicit historical dispatch. Exclusions/partial weights, pipeline-gap/null-grade and NR remain distinct. Cards reconcile `ratingStatus`, `partialEvidence`, `confidenceDimensions`, `completeness.pipelineGapCount/pipelineGapIds`; supply/shared-book semantics stand. Optional provisional fields reconcile to the breakdown and aggregation weights when present; historical cards without them remain valid and are not retroactively relabelled.
+Archive-only via explicit historical dispatch: report8 (API v8)/publication v7 retain exact exit identity. Exclusions/partial weights, pipeline-gap/null-grade and NR remain distinct. Cards reconcile `ratingStatus`, `partialEvidence`, `confidenceDimensions`, `completeness.pipelineGapCount/pipelineGapIds`; supply/shared-book semantics stand. Optional provisional fields reconcile to the breakdown and aggregation weights when present; historical cards without them remain valid and are not retroactively relabelled.
 
-Inherited-parent attribution must match referenced parents; mismatch fails schema validation at `cards`, including `safeParse`, never an escaped exception.
+Inherited-parent attribution must match referenced parents; mismatches fail `safeParse` at `cards`, never escaping.
 
-Lossless witness interning preserves evidence; obligation counts distinguish questions from repeated witnesses. Supply/dependency/common-mode projections preserve identities/clocks ([schema details](process/report-cards-appendix.md#report-schema-v8)).
+Witness interning stays lossless and separates questions from repeated witnesses ([schema details](process/report-cards-appendix.md#report-schema-v8)).
 
-Seed/verify both accepted private read models before strict readers. Preparation/pre-compile uses them, never full-publication fallback. Invalid baselines block compilation; unavailable lender sources use class fallback. Recovery: revert strict readers on current head, reseed an accepted cycle, reapply ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API/score-index schema 2 stay unchanged.
+Seed/verify both accepted private read models before strict readers; preparation/pre-compile uses them, never full-publication fallback. Invalid baselines block compilation; recovery reseeds then reverts strict readers ([rollout](process/report-cards-appendix.md#accepted-publication-read-models)). Public API/score-index schema 2 stay unchanged.
 
 ## Local authority exposure display
 
@@ -174,7 +174,7 @@ Endpoint freshness uses 2x `compute-safety-score-v9` (7200 s), matching consumer
 
 The response carries V9 identity/source digests, methodology/policy identity, active-set completeness, current/held health, native three-pillar cards with nullable excluded diagnostics and status-aware breakdowns, per-card `backingFromLiveReserves`, the serial/basket dependency graph and accepted `updatedAt`.
 
-`/api/report-cards/v9` wraps publication 8 as body 9; a body sourced from a retained schema-7 publication publishes `openEvidence: null` with `openEvidenceUnavailableReason: "publication-predates-open-evidence"`, never zero counts. Reject public v6 rather than infer it current. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; NR/pipeline IDs are disjoint and sorted. Index 2/free-grades 1 retain compact status/partial metadata; graph/scenario 2 distinguish technical parent/model nulls from NR. Pillar freshness stays categorical, opt-in operands follow the compact-representation contract, and scores/legacy wire are unchanged. [Report schema v9](#report-schema-v9) owns the current wire contract; its archive-only [v8 predecessor](#report-schema-v8) owns cause-bearing fields and typed route identity.
+`/api/report-cards/v9` wraps publication 8 as body 9. Reject public v6 rather than infer it current. `expectedCount = ratedCount + notRatedCount + pipelineGapCount`; NR/pipeline IDs are disjoint and sorted. Index 2/free-grades 1 retain compact status/partial metadata; graph/scenario 2 distinguish technical parent/model nulls from NR. Pillar freshness stays categorical, opt-in operands follow the compact-representation contract, and scores/legacy wire are unchanged. [Report schema v9](#report-schema-v9) owns the current wire; archive-only [v8](#report-schema-v8) owns cause-bearing fields and typed route identity.
 
 See the [public API reference](https://pharos.watch/api/) for the wire contract.
 

@@ -1,10 +1,14 @@
+import type { z } from "zod";
 import {
   buildReportCardsV9DependencyGraph,
+  HistoricalResolvedReportCardsV9ResponseSchema,
+  REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
   type ReportCardsV9Response,
 } from "@shared/types/report-cards-v9";
 import { V9EvidenceResponsibilitySchema } from "@shared/types/safety-score-v9-fact-primitives";
 import { scoreToGrade, V9_PILLAR_WEIGHTS } from "@shared/types/safety-score-v9-grade";
+import type { V9OpenEvidence } from "@shared/types/safety-score-v9-open-evidence";
 import type { SafetyScoreV9CurrentCard, SafetyScoreV9ResolvedCurrentCard } from "@shared/types/safety-score-v9-public";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 
@@ -438,4 +442,29 @@ export function makeReportCardsV9Response(
       : {}),
     cards,
   };
+}
+
+/** Archive-only report8 wire payload, as the pre-cutover Worker sealed it. */
+export type ReportCardsV9ArchivedResponse = z.infer<typeof HistoricalResolvedReportCardsV9ResponseSchema>;
+
+/**
+ * Archive-only report8 fixture: the same resolved cards without the
+ * open-evidence pair, exactly what the pre-cutover Worker sealed. Used to prove
+ * readers still admit the rollback payload and report it as unavailable.
+ */
+export function makeReportCardsV9ArchivedResponse(
+  preset: ReportCardsV9ResponseFixturePreset,
+  makeCard: () => SafetyScoreV9CurrentCard,
+  overrides: ReportCardsV9ResponseFixtureOverrides = {},
+): ReportCardsV9ArchivedResponse {
+  const {
+    openEvidence: _block,
+    openEvidenceUnavailableReason: _reason,
+    documentationCauseGaps: _gaps,
+    ...report8
+  } = makeReportCardsV9Response(preset, makeCard, overrides);
+  return HistoricalResolvedReportCardsV9ResponseSchema.parse({
+    ...report8,
+    schemaVersion: REPORT_CARDS_V9_REPORT8_SCHEMA_VERSION,
+  });
 }
