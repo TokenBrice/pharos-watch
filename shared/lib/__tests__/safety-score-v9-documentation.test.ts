@@ -274,6 +274,23 @@ describe("Safety Score v9 documentation classifier", () => {
     expect(classifyV9DocumentationGap(POLICY, facts, pillarTreated)).toBeNull();
   });
 
+  it("classifies a route-scoped diagnostic only on an already-admitted route", () => {
+    const output = gap({
+      gapId: "alpha:gap:route:redemption:redemption:r1:output",
+      reasonCode: "unresolved-exit-output",
+      path: { kind: "optional-exit", routeKey: "redemption:redemption:r1" },
+    });
+    const routeKey = "redemption:redemption:r1";
+    const admitted = asset({ gaps: [output], exitRoutes: baseFacts.exitRoutes,
+      admittedExitRouteKeys: new Set([routeKey]) });
+    expect(classifyV9DocumentationGap(POLICY, admitted, output)?.reason).toBe("unscored-diagnostic");
+    const unscored = asset({ gaps: [output], exitRoutes: baseFacts.exitRoutes,
+      admittedExitRouteKeys: new Set(["redemption:redemption:other"]) });
+    expect(classifyV9DocumentationGap(POLICY, unscored, output)).toBeNull();
+    const unknown = asset({ gaps: [output], exitRoutes: baseFacts.exitRoutes });
+    expect(classifyV9DocumentationGap(POLICY, unknown, output)).toBeNull();
+  });
+
   it("classifies the DEX coverage label only on a non-empty route inventory", () => {
     const coverage = gap({
       gapId: "alpha:gap:exit-portfolio-coverage",

@@ -41,7 +41,15 @@ export type V9DocumentationAssetFacts = Pick<
   | "economicControlReview"
   | "reserveExposures"
   | "exitRoutes"
->;
+> & {
+  /**
+   * Route keys the evaluator already admitted/scored for this asset
+   * (`exit.routes[].included === true`). Route-scoped diagnostics on any other
+   * route can still change pillar admission, so they are NOT documentation.
+   * Omit it and those diagnostics stay required (fail closed).
+   */
+  readonly admittedExitRouteKeys?: ReadonlySet<string>;
+};
 
 export interface V9DocumentationClassification {
   readonly reason: V9DocumentationReason;
@@ -98,16 +106,28 @@ function classifyNoScoringPath(ctx: V9DocumentationClassifyContext): V9Documenta
 }
 
 /**
- * A policy-`diagnostic` datum is not a pillar witness. The sole veto is
- * `missing-archetype`: it is NR-treated yet for `usdr-ring` it is the only cause
- * of a null Backing score (`archetypes/evaluation.ts`), so resolving it can add
- * a priced pillar. Release invariants (DOC-6) assert no other diagnostic datum
- * alone gates an excluded/null pillar.
+ * A policy-`diagnostic` datum is not a pillar witness, but only where its
+ * resolution cannot change pillar admission. Two vetoes apply:
+ *
+ * 1. `missing-archetype` is NR-treated yet for `usdr-ring` it is the only cause
+ *    of a null Backing score (`archetypes/evaluation.ts`), so resolving it can
+ *    add a priced pillar.
+ * 2. A route-scoped datum is documentation only when the evaluator already
+ *    admitted the carrying route; on an unscored route the datum gates admission
+ *    (`evaluateV9Exit`), so it stays required. Unknown admission fails closed.
+ *
+ * Release invariants (DOC-6) assert no other diagnostic datum alone gates a
+ * pillar.
  */
 function classifyUnscoredDiagnostic(ctx: V9DocumentationClassifyContext): V9DocumentationClassification | null {
   if (ctx.gap.reasonCode === "missing-archetype") return null;
   const treatment = resolveV9ReasonTreatment(ctx.envelope, ctx.gap.reasonCode, ctx.gap.causeProof.cause);
-  return treatment.treatment === "diagnostic" ? classify("unscored-diagnostic") : null;
+  if (treatment.treatment !== "diagnostic") return null;
+  if (ctx.gap.path.kind === "optional-exit") {
+    const admitted = ctx.asset.admittedExitRouteKeys;
+    if (admitted === undefined || !admitted.has(ctx.gap.path.routeKey)) return null;
+  }
+  return classify("unscored-diagnostic");
 }
 
 /**
@@ -195,8 +215,10 @@ export function resolveV9DocumentationControl(
   gap: V9FactGapV3,
 ): V9DeploymentControlFactV2 | null {
   const controls = asset.controls;
-  if (gap.path.kind === "deployment-control") {
-    return controls.find((control) => control.controlKey === gap.path.controlKey) ?? null;
+  const path = gap.path;
+  if (path.kind === "deployment-control") {
+    const { controlKey } = path;
+    return controls.find((control) => control.controlKey === controlKey) ?? null;
   }
   const componentKey = gap.causeScope?.componentKey;
   if (componentKey === undefined || !componentKey.startsWith("control:")) return null;
