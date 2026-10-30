@@ -238,9 +238,9 @@ New material-clock consumers must submit every material contributor to the cover
 
 ## Frontend Consumers
 
-Reserve composition and collateralization footers separate neutral source/report-as-of and checked dates and never label a refreshed historical attestation as a new live measurement; the detail health lane owns staleness. Attestation-mix snapshots use the proof badge with an `Attestation` label. A source-age-only degradation explains that evidence is out of date; retained-book sync faults have no separate public notice. Composition notes label a `gross-assets` denominator and name the excluded protocol financing debt instead of presenting gross shares as net backing.
+Reserve composition/collateralization footers separate neutral source/report-as-of from checked dates and never present a refreshed historical attestation as a new live measurement; detail health owns staleness. Attestation-mix snapshots use the `Attestation` proof badge. Source-age-only degradation explains stale evidence; retained-book sync faults get no public notice. Composition notes name the `gross-assets` denominator and excluded protocol financing debt, never gross shares as net backing.
 
-The checked-time formatter preserves present finite `liveAt` values, including epoch zero (`1970-01-01 00:00 UTC`). Only an absent or non-finite checked timestamp uses the previous-successful-run fallback; source/report dates and stale status remain separate.
+The checked-time formatter keeps present finite `liveAt` values, including epoch zero (`1970-01-01 00:00 UTC`). Only an absent/non-finite timestamp uses the previous-successful-run fallback.
 
 `buildReserveFeedStatus()` appends reviewed exclusion reason, evidence date/URL, owner, reviewed date and expiry to the eligible first-sync bootstrap row only. The status card distinguishes raw evidence coverage from health-cohort exclusions; neither surface claims acknowledgement makes evidence fresh.
 

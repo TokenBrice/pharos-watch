@@ -199,6 +199,10 @@ export const DEPENDENCY_ADAPTER_MAPPING_REVIEWS: readonly DependencyAdapterMappi
     reviewedAt: "2026-09-09",
     sourceFiles: ["worker/src/cron/reserve-adapters/initia-wrapper-vault.ts"],
     rationale: "Maps only the pinned AUSD0 vault backing to ausd-agora after verifying Move vault and metadata identities.",
+    retainedBinding: {
+      status: "suspended",
+      reason: "The sole iusd-initia binding is suspended after the 2026-10-23 Initia L1 halt; resume requires the planned 2026-11-02 restart and an on-chain backing re-read.",
+    },
   },
   {
     adapter: "usdgo-transparency",
