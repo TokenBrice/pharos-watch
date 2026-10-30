@@ -478,6 +478,36 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.size).toBe(1);
   });
 
+  it("requests the reviewed CASH and USDGO markets and prefers their bid/ask midpoints", async () => {
+    const requestedUrls: string[] = [];
+    mockFetch([{
+      match: (request) => {
+        requestedUrls.push(request.url);
+        return true;
+      },
+      body: {
+        error: [],
+        result: {
+          // Live ticker shapes observed 2026-10-30.
+          CASHUSD: { a: ["1.00000000", "101"], b: ["0.99970000", "101"], c: ["1.00070000", "1900.92179"] },
+          USDGOUSD: { a: ["1.00001000", "41158"], b: ["0.99993000", "15239"], c: ["0.99993000", "344.90729"] },
+        },
+      },
+    }]);
+
+    const symbols = ["CASH", "USDGO"];
+    const outcome = await fetchKrakenPrices(symbols);
+
+    for (const symbol of symbols) expect(KRAKEN_KNOWN_SYMBOLS).toContain(symbol);
+    expect(requestedUrls).toEqual([
+      "https://api.kraken.com/0/public/Ticker?pair=CASHUSD,USDGOUSD",
+    ]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("CASH")).toBeCloseTo(0.99985, 8);
+    expect(outcome.value.get("USDGO")).toBeCloseTo(0.99997, 8);
+    expect(outcome.value.size).toBe(2);
+  });
+
   it("requests Wyoming FRNT's exact USD book and uses its bid/ask instead of the last trade", async () => {
     const requestedUrls: string[] = [];
     mockFetch([{

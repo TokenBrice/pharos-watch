@@ -167,6 +167,18 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "frxusd-frax" },
     routeType: "chained-hop", maxHopDepth: 2,
   }),
+  // frxUSD/USD3 (factory-stable-ng, ~$1.7M TVL)
+  priceRoute("usd3-3jane", "0x7BA89Bc658c07569cfa6d7947adAA80181a24568", {
+    inputIndex: 0, inputDecimals: 18, outputDecimals: 6, hop: { viaStablecoinId: "frxusd-frax" },
+    routeType: "chained-hop", maxHopDepth: 2,
+  }),
+  // DOLA/sUSDe (factory-stable-ng, ~$59M TVL). sUSDe is rate-bearing inside the
+  // pool, so raw get_dy is already DOLA per sUSDe; DOLA resolves through its
+  // reviewed DOLA -> sUSDS -> USDT chain rather than at par.
+  priceRoute("susde-ethena", "0x744793B5110f6ca9cC7CDfe1CE16677c3Eb192ef", {
+    inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "dola-inverse-finance" },
+    routeType: "chained-hop", maxHopDepth: 3,
+  }),
 
   // ── Metapools (get_dy_underlying) ──
   // Underlying indices for 3Crv metapools: 0=metapool token, 1=DAI(18), 2=USDC(6), 3=USDT(6)
