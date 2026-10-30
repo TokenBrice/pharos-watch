@@ -1229,7 +1229,7 @@
         { "path": "docs/architecture.md", "anchor": "adr-37" },
         "docs/tape-page.md",
         {"path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it"},
-        "docs/process/safety-score-curation-expiry-sweep.md",
+        {"path": "docs/process/safety-score-curation-expiry-sweep.md", "anchor": "1-capture-the-current-production-input"},
         "docs/process/safety-score-v9-readiness.md",
         "docs/process/shock-coverage-refresh.md",
         "docs/process/report-cards-evidence-log.md"

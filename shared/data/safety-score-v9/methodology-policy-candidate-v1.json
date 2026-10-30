@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.36",
+  "releaseVersion": "10.37",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -249,6 +249,57 @@
           "publicLabel": "Material evidence is stale"
         }
       ],
+      "documentation": {
+        "reasonOrder": [
+          "no-scoring-path",
+          "unknown-scores-as-no-credit",
+          "unscored-diagnostic",
+          "coverage-label",
+          "immaterial-deployment",
+          "reserve-dust"
+        ],
+        "reasons": [
+          {
+            "reason": "no-scoring-path",
+            "publicLabel": "Custody question outside the scoring path",
+            "threshold": null
+          },
+          {
+            "reason": "unknown-scores-as-no-credit",
+            "publicLabel": "Mint control credit already withheld",
+            "threshold": null
+          },
+          {
+            "reason": "unscored-diagnostic",
+            "publicLabel": "Diagnostic datum, not scored",
+            "threshold": null
+          },
+          {
+            "reason": "coverage-label",
+            "publicLabel": "DEX coverage label only",
+            "threshold": null
+          },
+          {
+            "reason": "immaterial-deployment",
+            "publicLabel": "Deployment share below the immaterial bar",
+            "threshold": {
+              "sharePctKey": "documentationImmaterialSharePct"
+            }
+          },
+          {
+            "reason": "reserve-dust",
+            "publicLabel": "Reserve exposure below the dust bar",
+            "threshold": {
+              "sharePctKey": "reserveDustBookSharePct"
+            }
+          }
+        ],
+        "documentationImmaterialSharePct": 1,
+        "maxAttributableScorePoints": 0.1,
+        "reserveDustBookSharePct": 0.01,
+        "reserveDustResidualMaxBookSharePct": 0.1,
+        "retainExpiredScopedQuestions": true
+      },
       "evidenceExpiry": {
         "reviewedResearchMaxAgeSec": 31536000,
         "accessReviewMaxAgeSec": 31536000,

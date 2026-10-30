@@ -119,6 +119,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/lib/safety-score-v9/control-scope.ts",
   "shared/lib/safety-score-v9/control.ts",
   "shared/lib/safety-score-v9/dependencies.ts",
+  "shared/lib/safety-score-v9/documentation.ts",
   "shared/lib/safety-score-v9/evaluate-asset.ts",
   "shared/lib/safety-score-v9/evaluate-set.ts",
   "shared/lib/safety-score-v9/evidence.ts",

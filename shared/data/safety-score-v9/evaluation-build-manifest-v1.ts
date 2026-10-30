@@ -42,7 +42,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
-      "sha256": "b43a4487f44e53db0cba67dd59b6c3be19d2af948125771b52e84cd28000f434"
+      "sha256": "b1bcf9d511c940e846beb8ddb288af066f0d7cda7055405831a47605ba19dae9"
     },
     {
       "path": "shared/data/safety-score-v9/reserve-bound-facts-v1.json",
@@ -525,6 +525,10 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "sha256": "fe560b7930c4869d1bfad6764d3ba794e1eadfc2db19e4947e51259c18bac4c6"
     },
     {
+      "path": "shared/lib/safety-score-v9/documentation.ts",
+      "sha256": "5475b29b9fe50956a4d7ae36d0b09b383cb185700fcc507d3416ed31cc42f521"
+    },
+    {
       "path": "shared/lib/safety-score-v9/evaluate-asset.ts",
       "sha256": "ffd94c175530502fa31bb51553bf098caa523a85b30184809a052b165f28f744"
     },
@@ -622,7 +626,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/safety-score-v9/public.ts",
-      "sha256": "1361151efab03a853898dda649d5da691b75426047c64c054a59bda13b247136"
+      "sha256": "a4783ac8571648910e7f0b5b75e785baa615ddb5346fb7c7f20e960bcf54fbf4"
     },
     {
       "path": "shared/lib/safety-score-v9/reasons.ts",
@@ -1170,7 +1174,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
-      "sha256": "f6c6dc938a79a2e0a20ff899e32387eebe5254d9d771ff580f98953f0dda2b48"
+      "sha256": "71e677398c7985d8ee1f4eac4bd291c60109330ec74a87c795d5ced6b73f7e96"
     },
     {
       "path": "worker/src/lib/safety-score-v9/consumer-freshness.ts",
@@ -1234,7 +1238,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/extension.ts",
-      "sha256": "8b793d290ce5ef7e2251b29a4cab37f4822291ffa9ed3433e7983da618acd838"
+      "sha256": "52234c388a1768c58d2063e195d10c0e80ffb0e3f6b2c573f901ca2a659e72c4"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-backing.ts",
@@ -1250,7 +1254,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-control.ts",
-      "sha256": "b2288d1c98aa96d843dc7ca9dc981e6e1a4c219c03877dc435773b89af899eb7"
+      "sha256": "619041af6aeb15698c74849edc72b4fa5c101088d030cbd080ab11d49b47ac87"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-exit.ts",
@@ -1347,7 +1351,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-28-block-26290416-shock-coverage.json.gz"
     }
   ],
-  "digest": "24f8d05afc301b093a042b9807f009b836109fe1697a9751dac841b635449eff"
+  "digest": "34d6b99a2c2da9c9fbda4fdc4e018685acad0bf0b0d885f6c1627eee1f8381b1"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
