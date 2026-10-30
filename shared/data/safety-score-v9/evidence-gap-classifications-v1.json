@@ -49583,36 +49583,6 @@
       "rationale": "The issuer documents native sFRAX vault mechanics and a legacy per-chain address table, and its current LayerZero x Stargate page discloses a generic 3/6 multisig pattern plus that OFT settlement is delegated to LayerZero DVNs it does not operate. No reviewed issuer surface publishes the complete legacy sFRAX transport and economic-control specification: per-route DVN set and verification threshold, peer/endpoint-delegate bindings, escrow or lockbox supply conservation, representation-mint reconciliation, or per-route economic-loss and holder-claim scope. The retained 2026-10-15 route review also records that the Avalanche and Solana legacy representations remain opaque and that a LayerZero route is not inferred where the issuer table carries no label. Existing pinned route identities and reviewed tiers are preserved unchanged; this records the documentary omission only and asserts no incident, no verification absence and no complete execution reach."
     },
     {
-      "id": "rs2-002-usdt-tether-deployment-controls-20261030",
-      "assetId": "usdt-tether",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "deployment-controls",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "deployment-controls"
-      },
-      "cause": "C",
-      "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-30T11:04:21Z",
-      "reviewer": "RS2-002 research sprint 2026-10-30",
-      "sourcesRefs": [
-        "source:7651efe85eef79ec1e0872ee",
-        "source:ef2559482249442f37ece712",
-        "source:6dd6934b19e2d5360a846dc8",
-        "source:c4d3977b20c6646c48193e6e",
-        "source:a7b9237d1fbfeba9842872a4"
-      ],
-      "searchedSurfacesRefs": [
-        "surface:e014884c108933a7177bef5f",
-        "surface:9d007526aaa738d67b1b00a7",
-        "surface:54e7139a797dea994566e875",
-        "surface:3fdf95e08d38a3a91f0fbaa1"
-      ],
-      "rationale": "Tether's reviewed issuer surfaces publish token contract addresses per supported protocol, a unilateral freeze power, daily circulation/reserve transparency, and an express disclaimer that third-party wrapped or bridged tokens are not Tether Tokens and are not redeemable with Tether. They publish no controller identities, signer sets, approval thresholds, timelocks, minter lists, token-level caps, economic-loss scope or per-deployment materiality for the issuer-native deployments, and no controller inventory or approval semantics for the third-party representation routes (USDT0 LayerZero OFTs, Binance-Peg, legacy Multichain, Gnosis OmniBridge, canonical rollup bridges and Stargate). Existing pinned third-party route controllers and the reviewed route tiers are preserved unchanged; no safe-authority, zero-incident, bounded-loss or complete-execution-reach conclusion is inferred."
-    },
-    {
       "id": "rs2-003-sfrxusd-06750749b74ff7456b2b-incident-state-20261030",
       "assetId": "sfrxusd-frax",
       "scope": {
@@ -53426,28 +53396,6 @@
       "rationale": "The slice is the issuer's USDG position supplied to Loopscale lending (Schedule of Assets row 'USDG (Loopscale Lending)', $1,530,169.61 at the 2026-10-29 snapshot). The issuer publishes only the token account that holds the position; it publishes no vault or market, loan-term mix, liquidity-buffer setting, notice period or queue depth for the position, so the position-specific maximum cash-realization interval is not published. Loopscale's own documentation publishes three conditional exit paths - instant from the vault buffer, an immediate exit at a small fee when liquidity is low, and a FIFO queue that fills when capital returns - with loan durations of 1 day to 3 months, but no maximum interval within which an exit is guaranteed. A maximum realization horizon for the material slice therefore has to be inferred from unstipulated vault parameters, which the classification does not do; the datum stays undisclosed."
     },
     {
-      "id": "rs2-010-v9g-e65d4318b950d45b",
-      "assetId": "slvon-ondo",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:slvon-ondo:e3832d5b78815b0a9c35",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "control:bridge-meta:slvon-ondo:e3832d5b78815b0a9c35"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-30T11:02:00Z",
-      "reviewer": "RS2-010 research shard 2026-10-30",
-      "sourcesRefs": [
-        "source:2017c4c7d3b561b8647f33e1",
-        "source:5dc4efeaf63ab873ed7da3fa",
-        "source:a4ebc85d6663ca7314f36273",
-        "source:4e7e042caf2da78674ee201f"
-      ]
-    },
-    {
       "id": "rs2-010-v9g-c1fa5d98c410cfa9",
       "assetId": "slvon-ondo",
       "scope": {
@@ -53535,28 +53483,6 @@
         "surface:179c5ff821d2103999430f9c"
       ],
       "rationale": "The component asks for the reconciliation, incident, cap, economic-loss and materiality semantics of the reviewed SLVon controls. Ondo publishes policy-level statements only: a three-DVN bridge quorum across differing codebases, an in-house Ondo DVN, per-asset per-direction daily bridge rate limits, oracle-bounded mint and redeem with rate limits at multiple granularities, timelocks on non-emergency admin actions, and dedicated signing infrastructure. It publishes no per-control register: no administrator roster or key thresholds, no timelock durations per action, no per-route caps or pause authority, no mint ceilings, no incident register and no materiality data at control scope. The published policy cannot be bound to individual controls, so the component's semantics remain undisclosed rather than public."
-    },
-    {
-      "id": "rs2-010-v9g-cd23912cc5c73231",
-      "assetId": "iauon-ondo",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:iauon-ondo:a63827c3e04bcf2190a6",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "control:bridge-meta:iauon-ondo:a63827c3e04bcf2190a6"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-30T11:02:00Z",
-      "reviewer": "RS2-010 research shard 2026-10-30",
-      "sourcesRefs": [
-        "source:2017c4c7d3b561b8647f33e1",
-        "source:5dc4efeaf63ab873ed7da3fa",
-        "source:a4ebc85d6663ca7314f36273",
-        "source:4e7e042caf2da78674ee201f"
-      ]
     },
     {
       "id": "rs2-010-v9g-5d58cec42a13299d",
@@ -59291,51 +59217,6 @@
         "surface:0d5be7a2036b8594c754da55"
       ],
       "rationale": "The whole-asset deployment control envelope remains unresolved at the issuer level. Nest publishes the OFT architecture and, through the API, per-chain share supply, but no per-deployment authority, peer/DVN/limit table, upgrade administration or deployment-scoped incident disposition for any of its Ethereum, Plume, BNB Chain and Solana deployments. The asset-level deployment-control datum is therefore not disclosed."
-    },
-    {
-      "id": "rs2030-v9g-60f04c8a656c7d54",
-      "assetId": "iusd-initia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "control:bridge-meta:iusd-initia:54ec166c0f5c3c031878",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "control:bridge-meta:iusd-initia:54ec166c0f5c3c031878"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-30T11:04:02Z",
-      "reviewer": "RS2-030 control-identity and reserve research 2026-10-30",
-      "sourcesRefs": [
-        "source:a12eb9e4021a97d0ac4f42d0",
-        "source:7932de7ffbb1b2d6d6c5c297",
-        "source:f8d8de0102b5c5e72e05b3a4",
-        "source:44b63cfc812f9e4fe7a67a0b",
-        "source:73dd2c660e72e6006dacacf5"
-      ]
-    },
-    {
-      "id": "rs2030-v9g-14bb0f4251b9a2ee",
-      "assetId": "iusd-initia",
-      "scope": {
-        "pillar": "control",
-        "componentKey": "deployment-controls",
-        "factorKey": null,
-        "routeKey": null,
-        "exposureId": null,
-        "requiredDatum": "deployment-controls"
-      },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-30T11:04:02Z",
-      "reviewer": "RS2-030 control-identity and reserve research 2026-10-30",
-      "sourcesRefs": [
-        "source:a12eb9e4021a97d0ac4f42d0",
-        "source:7932de7ffbb1b2d6d6c5c297",
-        "source:f8d8de0102b5c5e72e05b3a4",
-        "source:44b63cfc812f9e4fe7a67a0b"
-      ]
     },
     {
       "id": "rs2030-v9g-691852099a382390",

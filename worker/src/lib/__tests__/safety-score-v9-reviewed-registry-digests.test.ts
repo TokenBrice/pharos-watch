@@ -53,7 +53,7 @@ describe("reviewed registry provenance identity", () => {
     });
     expect(V9EvidenceGapClassificationsV1Schema.parse(expanded).entries).toHaveLength(gaps.entries.length);
     // Full authored-registry identity pin; deliberate curation rotates this snapshot.
-    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("a84d7e43a4554e9c735018f09fddd7b42bb8453fe7656c0d04cd6ceddc623040");
+    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("6ae7063df6d387ac914f5a194735a78de65ead1cdddf7161de909730af915d91");
     expect(V9EvidenceGapClassificationsV1Schema.safeParse(gaps).success).toBe(false);
   });
 
