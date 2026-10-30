@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { mockD1 as baseMockD1 } from "@shared/test-utils/mock-d1";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import { makeYieldRanking, makeYieldProvenance } from "@shared/test-utils/yield-ranking-fixtures";
+import { buildStatusMessage } from "../telegram-webhook-messages";
 import { loadStatusForCoin } from "../telegram-webhook-status";
 import { buildDewsStablecoinIdsDigest } from "../../../lib/dews-publication-pointer";
 import {
@@ -50,6 +51,25 @@ describe("loadStatusForCoin", () => {
     ]), "usdc-circle");
     expect(status.liquidity).toBeNull();
     expect(status.liquidityUnavailableReason).toBe("invalid-coverage-evidence");
+  });
+
+  it("withholds an unobserved DEX placeholder row instead of publishing DEX liquidity $0", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-30T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    // The published row the DEX pipeline writes for a tracked coin with no
+    // observed pools: zero TVL, no score, unobserved coverage at confidence 0.
+    const row = { liquidity_score: null, total_tvl_usd: 0, updated_at: nowSec - 60,
+      coverage_class: "unobserved", coverage_confidence: 0 };
+    const status = await loadStatusForCoin(mockD1([
+      { match: "FROM dex_liquidity", rows: [row], first: row },
+    ]), "aa-falconx-mev-capital");
+
+    expect(status.liquidity).toBeNull();
+    expect(status.liquidityUnavailableReason).toBe("unobserved-liquidity");
+    const message = buildStatusMessage("AA_FalconXUSDC", status, nowSec);
+    expect(message).toContain("DEX liquidity not available right now");
+    expect(message).not.toContain("DEX liquidity $0");
   });
 
   beforeEach(() => {
