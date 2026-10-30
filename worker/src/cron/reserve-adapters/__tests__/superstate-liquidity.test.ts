@@ -75,23 +75,50 @@ describe("adaptSuperstateLiquidity", () => {
     });
   });
 
-  it("throws when the requested ticker is absent", () => {
-    expect(() => adaptSuperstateLiquidity(navResult, {}, "USTB", 9_310_000)).toThrow("missing USTB");
+  it("keeps NAV slices and on-chain capacity when the ticker is absent from the optional liquidity body", () => {
+    const result = adaptSuperstateLiquidity(navResult, {}, "USTB", 9_310_000);
+
+    expect(result.slices).toEqual(navResult.slices);
+    expect(result.metadata).toMatchObject({
+      superstateLiquidityTicker: "USTB",
+      redemption: { capacityUsd: 9_310_000 },
+    });
+    expect(result.metadata).not.toHaveProperty("apiLiquidityUsd");
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "superstate-liquidity-unavailable", effect: "info" }),
+    ]);
   });
 
-  it("throws on malformed liquidity amounts", () => {
-    expect(() =>
-      adaptSuperstateLiquidity(
-        navResult,
-        {
-          USTB: {
-            circle_usd_available_amount: "not-a-number",
-            usdc_redemption_idle_balance: "0",
-          },
+  it("keeps NAV slices and on-chain capacity when liquidity amounts are malformed", () => {
+    const result = adaptSuperstateLiquidity(
+      navResult,
+      {
+        USTB: {
+          circle_usd_available_amount: "not-a-number",
+          usdc_redemption_idle_balance: "0",
         },
-        "USTB",
-        9_310_000,
-      ),
-    ).toThrow("invalid circle_usd_available_amount");
+      },
+      "USTB",
+      9_310_000,
+    );
+
+    expect(result.slices).toEqual(navResult.slices);
+    expect(result.metadata?.redemption).toMatchObject({ capacityUsd: 9_310_000 });
+    expect(result.metadata).not.toHaveProperty("circleUsdAvailable");
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "superstate-liquidity-unavailable", effect: "info" }),
+    ]);
+  });
+
+  it("keeps NAV slices and on-chain capacity when the optional liquidity body is unavailable", () => {
+    const result = adaptSuperstateLiquidity(navResult, null, "USTB", 9_310_000);
+
+    expect(result.slices).toEqual(navResult.slices);
+    expect(result.metadata?.redemption).toMatchObject({
+      capacityUsd: 9_310_000,
+      capacityKind: "live-direct-bounded",
+    });
+    expect(result.metadata).not.toHaveProperty("apiLiquidityUsd");
+    expect(result.warnings ?? []).toEqual([]);
   });
 });

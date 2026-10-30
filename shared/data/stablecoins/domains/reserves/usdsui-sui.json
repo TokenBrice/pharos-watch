@@ -3,6 +3,7 @@
   "reserves": [
     {
       "name": "Cash",
+      "sourceKey": "bridge-transparency:cash",
       "pct": 10,
       "risk": "very-low",
       "assetClass": "cash",
@@ -13,7 +14,7 @@
         "custody",
         "counterparty"
       ],
-      "liquidityHorizon": "immediate"
+      "liquidityHorizon": "unknown"
     },
     {
       "name": "Treasury",

@@ -5,7 +5,7 @@ import {
 } from "@shared/lib/live-reserve-adapters";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "@shared/lib/redemption-backstop-configs";
 import type { AdapterContext, AdapterResult } from "./types";
-import { probeTrackedTokenSupply } from "./helpers";
+import { notApplicableFreshnessMetadata, probeTrackedTokenSupply } from "./helpers";
 
 /**
  * Adapter that validates on-chain supply is non-zero, then returns the
@@ -32,6 +32,11 @@ export async function fetchCuratedValidatedReserves(
   return {
     slices: coin.reserves,
     metadata: {
+      // The curated composition is static; the same-run probe establishes
+      // supply liveness, not a dated composition clock. Say so explicitly so
+      // the declared not-applicable freshness policy is met instead of being
+      // read back as an invalid/absent mode.
+      ...notApplicableFreshnessMetadata(),
       totalSupplyRaw: totalSupply.toString(),
       redemption: {
         capacityKind: "documented-eventual" as const,

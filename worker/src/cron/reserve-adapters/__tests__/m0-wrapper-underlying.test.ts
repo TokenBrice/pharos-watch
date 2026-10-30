@@ -102,6 +102,24 @@ function runWrapper(
 }
 
 describe("fetchM0WrapperUnderlyingReserves", () => {
+  it("names catalog deployments omitted from the measured supply perimeter", async () => {
+    const coin = {
+      ...wrapperCoin("wm-m0", baseConfig()),
+      contracts: [
+        { chain: "ethereum", address: WRAPPER, decimals: 6 },
+        { chain: "solana", address: "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp", decimals: 6 },
+      ],
+    } as StablecoinMeta;
+    const { result } = await runAdapter("m0-wrapper-underlying", coin, {
+      network: wrapperNetwork({ "https://rpc.example": { supply: 80_000_000_000000n, balance: 81_000_000_000000n } }),
+    });
+
+    expect(result.metadata?.supplyCoverageComplete).toBe(false);
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "m0-wrapper-deployments-omitted", effect: "info", message: expect.stringContaining("solana") }),
+    ]);
+  });
+
   it("reads direct WrappedMToken M balance as live redemption capacity", async () => {
     const { result } = await runWrapper(
       "wm-m0",

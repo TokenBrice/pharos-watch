@@ -98,6 +98,11 @@ const MODULE_MAP: Record<string, ModuleSpec> = {
 
 const KNOWN_GROUPS = new Set(Object.keys(MODULE_MAP));
 
+// The PSM attribution and `skyStablecoinsModuleCollateralUsd` depend on this
+// module. Its disappearance must fail the census instead of silently
+// redistributing its share across the remaining modules.
+const REQUIRED_MODULE_GROUPS = ["stablecoins"] as const;
+
 interface ParsedSkyGroup extends SkyGroupResult {
   debtValue: number;
 }
@@ -235,9 +240,9 @@ function adaptParsedSkyModules(
     .sort((a, b) => b.pct - a.pct);
 }
 
-export function resolveSkyImmediateRedeemableUsd(groups: SkyGroupResult[]): number {
+export function resolveSkyImmediateRedeemableUsd(groups: SkyGroupResult[]): number | null {
   const stableGroup = groups.find((g) => g.group === "stablecoins");
-  if (!stableGroup) return 0;
+  if (!stableGroup) return null;
   return parseSkyCollateral(stableGroup);
 }
 
@@ -358,6 +363,12 @@ export async function fetchSkyMakercoreReserves(
     }
     groupIds.add(result.group);
   }
+  const missingRequiredGroups = REQUIRED_MODULE_GROUPS.filter((group) => !groupIds.has(group));
+  if (missingRequiredGroups.length > 0) {
+    throw new Error(
+      `sky-makercore: incomplete-groups-census: missing required group(s) ${missingRequiredGroups.join(", ")}`,
+    );
+  }
   // An incomplete debt census cannot support any normalized shared-book mix.
   // Fail the attempt before on-chain attribution and retain the last good book.
   const groups = parseSkyGroupDebts(payload.results);
@@ -455,7 +466,7 @@ export async function fetchSkyMakercoreReserves(
           }
         : {}),
       ...(totalDebt > 0 ? { collateralizationRatio: totalCollateralUsd / totalDebt } : {}),
-      skyStablecoinsModuleCollateralUsd: immediateRedeemableUsd,
+      ...(immediateRedeemableUsd != null ? { skyStablecoinsModuleCollateralUsd: immediateRedeemableUsd } : {}),
       ...(hasCompleteTimestamps ? { snapshotDate: sourceTimestamp } : {}),
       ...(hasCompleteTimestamps
         ? {

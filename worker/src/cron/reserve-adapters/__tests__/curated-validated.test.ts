@@ -84,6 +84,7 @@ describe("fetchCuratedValidatedReserves", () => {
 
     expect(result.slices).toEqual(MULTI_SLICE_RESERVES);
     expect(result.metadata?.totalSupplyRaw).toBe("1000000");
+    expect(result.metadata?.freshnessMode).toBe("not-applicable");
   });
 
   it("throws when coin.reserves is empty", async () => {

@@ -448,6 +448,32 @@ describe("fetchChainlinkNavCore", () => {
     expect(result.warnings).toBeUndefined();
   });
 
+  it("marks the supply perimeter incomplete when the catalog lists other deployments", async () => {
+    const updatedAt = 1_781_083_007;
+    const { result } = await runAdapter("chainlink-nav", {
+      ...NAV_COIN,
+      contracts: [
+        { chain: "ethereum", address: TOKEN_ADDRESS, decimals: 18 },
+        { chain: "solana", address: "Mint1111111111111111111111111111111111", decimals: 6 },
+      ],
+      liveReservesConfig: makeChainlinkNavConfig({
+        params: { assetLabel: "Ondo T-Bills", assetRisk: "very-low" },
+      }),
+    } as unknown as StablecoinMeta, {
+      network: navNetwork({}),
+      nowSec: updatedAt + 60,
+    });
+
+    expect(result.metadata).toMatchObject({
+      totalSupplyChain: "ethereum",
+      supplyReadComplete: true,
+      supplyCoverageComplete: false,
+    });
+    expect(result.warnings).toEqual([
+      expect.objectContaining({ code: "por-supply-chain-omitted", effect: "info", message: expect.stringContaining("solana") }),
+    ]);
+  });
+
   it("emits chainlink-nav-wrapper-oracle-malformed when the wrapper oracle returns garbage", async () => {
     const network = navNetwork({
       tokenDecimals: 6n,

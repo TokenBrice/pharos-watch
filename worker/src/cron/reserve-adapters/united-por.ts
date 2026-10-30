@@ -9,7 +9,7 @@ import {
   parseTimestampLikeToUnixSeconds,
   requireJsonInput,
   reserveDegradedWarning,
-  verifiedFreshnessMetadata,
+  sameRunRenderClockFreshnessMetadata,
 } from "./helpers";
 
 export interface UnitedPorPayload {
@@ -79,6 +79,10 @@ export function adaptUnitedPorPayload(
 
   const collateralizationRatio = supplyUsd > 0 ? totalReserveUsd / supplyUsd : undefined;
   const ripcordDetails = normalizeRipcordDetails(payload.ripcordDetails);
+  // `updatedAt` advances to the request instant on every fetch, so it is a
+  // render clock, not a dated reserve observation. Name that basis explicitly
+  // instead of letting the serve time read as a verified disclosure clock.
+  const freshness = sameRunRenderClockFreshnessMetadata(sourceTimestamp);
 
   const warnings: LiveReserveWarning[] = buildCoverageShortfallWarnings({
     code: "united-por-reserve-under-token",
@@ -118,11 +122,12 @@ export function adaptUnitedPorPayload(
       ...(slice.depType ? { depType: slice.depType } : {}),
     }],
     metadata: {
-      ...verifiedFreshnessMetadata(sourceTimestamp),
+      ...freshness,
       ...(collateralizationRatio != null ? { collateralizationRatio } : {}),
       totalReserveUsd,
       supplyUsd,
       details: {
+        ...freshness.details,
         accountName: payload.accountName,
         ripcord: payload.ripcord,
         ...(ripcordDetails.length > 0 ? { ripcordDetails } : {}),

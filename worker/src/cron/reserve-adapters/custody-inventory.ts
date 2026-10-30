@@ -82,7 +82,11 @@ export function adaptCustodyInventory(key: CustodyProfile["key"], payload: Backi
     }
   }
   if (profile.liability === "payload-global-supply") {
-    const assetsInMotionUsd = payload.assetsInMotion != null ? parseAmount(payload.assetsInMotion, "assetsInMotion") : 0;
+    // Settlement float is a required part of the USDtb book. A missing or
+    // renamed field must fail the read closed instead of publishing a
+    // BUIDL-only book whose only signal is a misnamed coverage shortfall.
+    if (payload.assetsInMotion == null) throw new Error(`${key} payload missing assetsInMotion`);
+    const assetsInMotionUsd = parseAmount(payload.assetsInMotion, "assetsInMotion");
     if (assetsInMotionUsd < 0) throw new Error(`${key} assetsInMotion is negative`);
     if (assetsInMotionUsd > 0) sliceInputs.push({ sourceKey: `${key}:assets-in-motion`, name: "Assets in motion (settlement float)", value: assetsInMotionUsd, risk: "low" });
   }

@@ -470,15 +470,15 @@ const NUMERIC_CORPUS_CASES: Record<string, NumericAdapterCorpusCase> = {
           routeStatusSource: "static-config",
         },
       },
-      warnings: [],
+      warnings: [expect.objectContaining({ code: "por-supply-chain-omitted", effect: "info" })],
       absentMetadata: ["redemption.sourceTimestamp"],
       requestIncludes: [{ url: SUPERSTATE_LIQUIDITY_URL, method: "GET" }],
     },
     drift: {
-      label: "the required liquidity payload renames circle_usd_available_amount",
+      label: "the optional liquidity payload renames circle_usd_available_amount",
       network: superstateNetwork({ USTB: { usdc_redemption_idle_balance: "3412248.944618" } }),
-      outcome: "error",
-      error: /circle_usd_available_amount/,
+      outcome: "info",
+      warningCode: "superstate-liquidity-unavailable",
     },
   },
   "zephyr-scanner": {
@@ -628,6 +628,18 @@ describe("adapter corpus replay", () => {
         expect(run.error).toBeInstanceOf(Error);
         if (drift.error) expect(run.error).toHaveProperty("message", expect.stringMatching(drift.error));
       }
+      return;
+    }
+
+    if (drift.outcome === "info") {
+      expect(run.status, `${key}: ${drift.label} threw; the corpus expects an informational publication`).toBe("ok");
+      if (run.status !== "ok") return;
+      const warnings = [...(run.value.result.warnings ?? []), ...run.value.report.warnings];
+      expect(
+        warnings.map((warning) => warning.code),
+        `${key}: ${drift.label} published without naming the omitted optional feed`,
+      ).toContain(drift.warningCode);
+      expect(warnings.find((warning) => warning.code === drift.warningCode)?.effect).toBe("info");
       return;
     }
 

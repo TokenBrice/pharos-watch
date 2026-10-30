@@ -1,9 +1,18 @@
 import type { ReserveAdapterCoin } from "@shared/types/core";
-import type { LiveReservesConfig } from "@shared/types/live-reserves";
+import type { LiveReservesConfig, LiveReserveWarning } from "@shared/types/live-reserves";
 import { parseLiveReserveAdapterParams } from "@shared/lib/live-reserve-adapters";
+import { toErrorMessage } from "@shared/lib/error-utils";
 import type { AdapterContext, AdapterResult } from "./types";
+import { redactProviderUrls } from "../../lib/safe-error-message";
 import { fetchChainlinkNavCore } from "./chainlink-nav-core";
-import { decimalNumberFromBigInt, fetchErc20Balance, fetchJsonWithRetry, parseFiniteNumber, requireOnchainInput } from "./helpers";
+import {
+  decimalNumberFromBigInt,
+  fetchErc20Balance,
+  fetchJsonWithRetry,
+  parseFiniteNumber,
+  requireOnchainInput,
+  reserveInfoWarning,
+} from "./helpers";
 
 // Superstate's instant-redemption buffer: USDC held by the RedemptionIdle contract on Ethereum.
 const USDC_ETHEREUM_ADDRESS = "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
@@ -27,19 +36,39 @@ function parseAmount(value: unknown, label: string): number {
 
 export function adaptSuperstateLiquidity(
   navResult: AdapterResult,
-  payload: SuperstateLiquidityResponse,
+  payload: SuperstateLiquidityResponse | null,
   ticker: string,
   onchainRedemptionIdleUsd: number,
+  warnings: LiveReserveWarning[] = [],
 ): AdapterResult {
-  const entry = payload[ticker];
-  if (!entry) {
-    throw new Error(`superstate-liquidity missing ${ticker} liquidity entry`);
+  // The issuer liquidity body is context only: its failure must not discard an
+  // otherwise valid NAV composition or the on-chain RedemptionIdle capacity.
+  let liquidityContext: {
+    circleUsdAvailable: number;
+    usdcRedemptionIdle: number;
+    apiLiquidityUsd: number;
+  } | null = null;
+  if (payload != null) {
+    try {
+      const entry = payload[ticker];
+      if (!entry) {
+        throw new Error(`superstate-liquidity missing ${ticker} liquidity entry`);
+      }
+      const circleUsdAvailable = parseAmount(entry.circle_usd_available_amount, "circle_usd_available_amount");
+      const usdcRedemptionIdle = parseAmount(entry.usdc_redemption_idle_balance, "usdc_redemption_idle_balance");
+      liquidityContext = {
+        circleUsdAvailable,
+        usdcRedemptionIdle,
+        // Kept as context/fallback; the on-chain RedemptionIdle balance above is the capacity of record.
+        apiLiquidityUsd: circleUsdAvailable + usdcRedemptionIdle,
+      };
+    } catch (error) {
+      warnings.push(reserveInfoWarning(
+        "superstate-liquidity-unavailable",
+        `Superstate liquidity feed was unreadable; NAV slices and on-chain capacity still publish: ${toErrorMessage(error)}`,
+      ));
+    }
   }
-
-  const circleUsdAvailable = parseAmount(entry.circle_usd_available_amount, "circle_usd_available_amount");
-  const usdcRedemptionIdle = parseAmount(entry.usdc_redemption_idle_balance, "usdc_redemption_idle_balance");
-  // Kept as context/fallback; the on-chain RedemptionIdle balance above is now the capacity of record.
-  const apiLiquidityUsd = circleUsdAvailable + usdcRedemptionIdle;
   const navDetails =
     typeof navResult.metadata?.details === "object" && navResult.metadata.details != null
       ? navResult.metadata.details
@@ -47,12 +76,19 @@ export function adaptSuperstateLiquidity(
 
   return {
     ...navResult,
+    ...(warnings.length > 0
+      ? { warnings: [...(navResult.warnings ?? []), ...warnings] }
+      : {}),
     metadata: {
       ...(navResult.metadata ?? {}),
       superstateLiquidityTicker: ticker,
-      circleUsdAvailable,
-      usdcRedemptionIdle,
-      apiLiquidityUsd,
+      ...(liquidityContext != null
+        ? {
+            circleUsdAvailable: liquidityContext.circleUsdAvailable,
+            usdcRedemptionIdle: liquidityContext.usdcRedemptionIdle,
+            apiLiquidityUsd: liquidityContext.apiLiquidityUsd,
+          }
+        : {}),
       liquidityFreshnessSource: "same-run-onchain" as const,
       redemption: {
         capacityUsd: onchainRedemptionIdleUsd,
@@ -64,7 +100,7 @@ export function adaptSuperstateLiquidity(
       },
       details: {
         ...navDetails,
-        apiLiquidityUsd,
+        ...(liquidityContext != null ? { apiLiquidityUsd: liquidityContext.apiLiquidityUsd } : {}),
         liquidityFreshnessSource: "same-run-onchain",
       },
     },
@@ -80,6 +116,7 @@ export async function fetchSuperstateLiquidityReserves(
   const params = parseLiveReserveAdapterParams("superstate-liquidity", config.params);
   const { liquidityUrl, ticker, ...chainlinkParams } = params;
   const input = requireOnchainInput(config.inputs.primary, "superstate-liquidity");
+  const warnings: LiveReserveWarning[] = [];
 
   const [navResult, payload, redemptionIdleBalanceRaw] = await Promise.all([
     fetchChainlinkNavCore(
@@ -96,7 +133,14 @@ export async function fetchSuperstateLiquidityReserves(
       signal,
       12_000,
       ctx,
-    ),
+    ).catch((error) => {
+      if (signal.aborted) throw error;
+      warnings.push(reserveInfoWarning(
+        "superstate-liquidity-unavailable",
+        redactProviderUrls(`Superstate liquidity feed failed: ${liquidityUrl}: ${toErrorMessage(error)}`),
+      ));
+      return null;
+    }),
     fetchErc20Balance(
       input,
       USDC_ETHEREUM_ADDRESS,
@@ -117,5 +161,6 @@ export async function fetchSuperstateLiquidityReserves(
     payload,
     ticker,
     decimalNumberFromBigInt(redemptionIdleBalanceRaw, USDC_DECIMALS),
+    warnings,
   );
 }

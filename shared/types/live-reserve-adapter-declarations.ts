@@ -296,6 +296,12 @@ const depTypeRecordSchema = z.record(z.string(), LiveReserveDependencyTypeSchema
 
 const noParamsSchema = z.object({}).strict();
 
+// USDD publishes one latest-collateral feed per chain; the whole-coin book must
+// sum every configured chain instead of publishing the primary chain alone.
+const usddDataPlatformParamsSchema = z.object({
+  additionalCollateralUrls: z.array(AbsoluteUrlSchema).min(1).optional(),
+}).strict();
+
 const forestRoadReserveManagerParamsSchema = z.object({
   managerAddress: z.literal("0x8317736611b542ddb4a820fe344b621a904bdd48"),
   managerImplementation: z.literal("0x99b4dfa4e1344273d5335bd90de1dea3a02b9c3a"),
@@ -3274,7 +3280,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   }),
   "usdd-data-platform": {
     primaryInputKinds: ["http-json"],
-    paramsSchema: noParamsSchema,
+    paramsSchema: usddDataPlatformParamsSchema,
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     preferredFreshnessMode: "verified",

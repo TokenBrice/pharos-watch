@@ -236,7 +236,7 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
  * `superstate-liquidity` registry-bound adapters.
  */
 export async function fetchChainlinkNavCore(
-  _coin: ReserveAdapterCoin,
+  coin: ReserveAdapterCoin,
   config: LiveReservesConfig,
   signal: AbortSignal,
   ctx?: AdapterContext,
@@ -415,6 +415,25 @@ export async function fetchChainlinkNavCore(
     },
     params,
   );
+  // The contract supply read is one deployment, never the token's cross-chain
+  // total. When the catalog lists other deployments, say the supply perimeter
+  // is incomplete instead of publishing the single-chain number as complete.
+  const omittedDeploymentChains = Array.from(new Set(
+    (coin.contracts ?? [])
+      .filter((contract) => contract.chain !== input.chain)
+      .map((contract) => contract.chain),
+  )).sort();
+  if (omittedDeploymentChains.length > 0) {
+    adapted.metadata = {
+      ...adapted.metadata,
+      supplyReadComplete: true,
+      supplyCoverageComplete: false,
+    };
+    warnings.push(reserveInfoWarning(
+      "por-supply-chain-omitted",
+      `Supply is read from ${input.chain} only; catalog deployments omitted: ${omittedDeploymentChains.join(", ")}`,
+    ));
+  }
   if (params.redemptionCapacity) {
     const redemption = await probeRedemptionCapacity(params, onchain, signal, warnings);
     if (redemption) {
