@@ -22,6 +22,28 @@ describe("CI workflow scope", () => {
     ]));
   });
 
+  it("gates new stablecoin admissions once on the prepared workspace against the frozen base", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; uses?: string; run?: string; env?: Record<string, string> }> }>;
+    };
+    const steps = workflow.jobs.prepare.steps;
+    const gate = steps.findIndex((step) => step.name === "Check new-asset evidence packet");
+    // The receipt is bound to the post-addition registry fingerprint, so the
+    // gate must run after npm ci + bootstrap:generated inside setup-workspace.
+    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    // One invocation per PR: restored validation shards never re-run the gate.
+    expect(steps.filter((step) => step.run?.includes("check:new-asset-evidence-packet"))).toHaveLength(1);
+    expect(steps[gate].env).toEqual({
+      PR_BASE_SHA: "${{ github.event.pull_request.base.sha }}",
+      NEW_ASSET_GATE_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'new-asset-gate-override') }}",
+    });
+    // The owner label is the only path to `--override`; it never bypasses a
+    // missing receipt or a counted mint-authority gap.
+    expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
+    expect(steps[gate].run)
+      .toContain('if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
+  });
+
   it("feeds nightly Lighthouse trusted retained release data with a token confined to acquisition", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {

@@ -181,6 +181,7 @@ Keep one compact packet per asset in the task handoff (or ignored `agents/` scra
 | Authorized writers | Base/sidecar paths, permitted fields, assigned writer, and the explicit apply authorization or research-only boundary. Name the separately authorized Mint Authority and Bridge Risk owners when deployment changes couple them; a packet never grants write authority. |
 | Reviewed gaps | Each applicable editorial/downstream branch: added, reviewed not applicable, or intentional gap with reason, evidence scope, and unanswered questions. Distinguish unchecked/unavailable evidence from a reviewed negative. |
 | Changed sources/outputs | Proposed versus actually changed source paths; generated artifact IDs/outputs expected from the owning registry, then the coordinator's actually regenerated/changed outputs after integration. |
+| Admission receipt | For a listing or a pre-launch -> active promotion: the committed Safety Score admission receipt path, its replay `captureId`, the registry fingerprint it is bound to, and the asset's own versus inherited open-question counts. Not applicable to a pre-launch stub. |
 | Verification | Commands/source reads actually exercised, observed result and source state, versus unexercised checks, backfills, or post-deploy observations. Never report a planned check or successful deploy as observed runtime health. |
 
 Populate the pre-edit evidence and authorization fields before Phase 4, then update changed paths and verification after integration. Active additions/promotions still require the Phase 1a gate **before editing**; a packet cannot waive it.
@@ -536,6 +537,80 @@ a deliberate reviewed change rather than a side effect of an addition, and expec
 `npm run check:generated-artifacts` to report the `safety-score-v9-evaluation-build` manifest as
 stale until the rotated identity is regenerated and committed.
 
+### 5j. Safety Score admission receipt (new-asset evidence packet)
+
+Listing a stablecoin, and promoting a pre-launch row to active, must pass the new-asset evidence packet gate. Unlike the branches above, this is a binary admission gate: a gated asset has no "not applicable" or "intentional gap" disposition — close the questions or use the owner override below. Only two PR shapes are gated: an added `shared/data/stablecoins/coins/<id>.json` whose status is active (`status` omitted or `"active"`), and a modified coin file whose status moves `"pre-launch"` -> active. A pre-launch stub publishes no scored open questions, and an ordinary edit of an existing asset is not gated. The check is `scripts/ci/check-new-asset-evidence-packet.ts`. It never re-derives the counting model — `shared/lib/safety-score-v9/open-questions.ts` owns question keys and buckets — and it reads the asset's counted questions from a committed receipt. A coin file whose status is unreadable or unrecognized is skipped here and fails `check:stablecoin-data`, which stays the catalog-validity authority.
+
+#### Receipt
+
+Commit one receipt per gated asset at `.github/artifacts/new-asset-evidence-packet/<id>.json`, named by the canonical asset id (lowercase `ticker-issuer`; the file name and `assetId` must agree). `NewAssetAdmissionReceiptSchema` in the gate is the field authority; the shape is:
+
+```json
+{
+  "schemaVersion": 1,
+  "kind": "safety-score-v9-new-asset-admission-receipt",
+  "assetId": "ausd-acme",
+  "captureId": "20261029T1814Z",
+  "captureClockSec": 1793294244,
+  "registryFingerprint": "<64 lowercase hex>",
+  "card": {
+    "id": "ausd-acme",
+    "openBucketQuestionsCarried": 1,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 1,
+    "documentationObligationsCarried": 0
+  },
+  "questions": [
+    {
+      "questionKey": "ausd-acme|component|economic-control:mint",
+      "bucket": "open",
+      "inherited": false,
+      "obligations": 1,
+      "codes": [{ "code": "missing-mint-authority", "obligations": 1, "documentation": false }]
+    }
+  ]
+}
+```
+
+- `card` is the replay's `openEvidence.byCard[]` row for the asset — the same counts the publication shows. The schema rejects a receipt whose list contradicts the row: open questions, inherited open questions, their summed obligations, and documentation-classed obligations must match the four `...Carried` counts.
+- `questions[]` holds one row per question the card carries, across all three buckets: `questionKey` (the counting authority's key), `bucket` (`open`, `issuer`, or `documentation`), `inherited` when the key is rooted at another asset, the question's `obligations`, and one `codes[]` row per reason code with its own obligation count and documentation flag. Per-code obligations must sum to `obligations`; a `documentation` question carries only documentation-classed datums while any other bucket carries at least one counted datum; reason codes are unique per question.
+- `registryFingerprint` must be the branch tree's registry fingerprint **after** the listing or promotion. A receipt replayed before the asset was in the tree is stale and rejected. Replay after the last coin edit: a second gated asset in the same PR changes the fingerprint and stales the first receipt. `captureId` and `captureClockSec` are provenance, not a freshness budget.
+
+#### Gate conditions
+
+The gate fails an asset when:
+
+- the receipt is missing, is not valid JSON, fails the schema, or names another asset;
+- its `registryFingerprint` differs from the PR checkout's fingerprint, recomputed over the loaded registry with the same authority the replay snapshot uses;
+- the asset's own open questions exceed `NEW_ASSET_OPEN_QUESTION_LIMIT` (6). Own means `bucket: "open"` with `inherited: false`, i.e. `openBucketQuestionsCarried` minus `inheritedOpenBucketQuestionsCarried`. Inherited questions are counted once at their root: the pass line discloses them, and a non-documentation `missing-mint-authority` datum on an inherited question is a warning, not a failure;
+- any of the asset's own questions carries a `missing-mint-authority` datum with `documentation: false`. The condition is per datum, not per code: a `missing-mint-authority` datum the documentation classifier assigned a documentation reason (`documentation: true`, a documentation-only gap such as a narrow reconciliation or supervision item) passes; a whole-profile, authority or topology gap stays counted.
+
+The failure kinds are `invalid-asset-id`, `missing-receipt`, `invalid-receipt`, `mismatched-receipt`, `stale-receipt`, `open-question-limit`, and `missing-mint-authority`.
+
+#### Override
+
+The `new-asset-gate-override` owner label (the check's `--override`) bypasses the open-question count only. It never waives the receipt, its fingerprint binding, or the mint-authority condition, and the pass line marks the asset as overridden. Reserve it for an owner-approved addition whose remaining open questions are deliberately accepted, and say why in the reviewer notes.
+
+#### Authoring the receipt
+
+The gate trusts a committed, reviewed receipt: it does not re-run the replay. The counting authority publishes aggregates and `byCard`, not per-question rows (`V9OpenEvidenceCounter` exposes `add`/`finish` only), and the gate does not re-implement `obligationsForCard`. Until a per-question projection exists, produce `questions[]` from the replay that generated the capture and review it against the replay's `openEvidence` block; never hand-estimate the rows. Replay the newest production capture with `npm run safety-score-v9:replay` (see [Capture-Time Replay](../scripts.md#safety-score-capture-time-replay)).
+
+#### Run it locally
+
+```bash
+npm run check:new-asset-evidence-packet -- --base=origin/main
+```
+
+| Option | Meaning |
+| --- | --- |
+| `--base=<ref>` | Base ref for the diff; default `PR_BASE_SHA`, then `GITHUB_BASE_SHA`, then `origin/main`. The diff runs from its merge-base to `--head`. |
+| `--head=<ref>` | Head ref under test; default `PR_HEAD_SHA`, then `GITHUB_HEAD_SHA`, then `HEAD`. |
+| `--receipt-dir=<path>` | Receipt directory; default `.github/artifacts/new-asset-evidence-packet/`. |
+| `--override` | Treat the owner override as present (question count only). |
+| `--json` | Print the full report as JSON. |
+
+Exit codes: `0` admitted, `1` gate violation, `2` usage error. Ungated paths print their skip reason (`not-a-listing (pre-launch)`, `existing-asset`, ...). Without the package alias, run `node --import tsx scripts/ci/check-new-asset-evidence-packet.ts` with the same options.
+
 ---
 
 ## Phase 6 - Static Assets And Editorial Copy
@@ -637,6 +712,7 @@ After all authorized specialist edits land, the coordinator owns the single gene
 - `data/logos.json` has a canonical-ID key and the referenced local file exists, or the skip reason is documented
 - `data/ai-summaries.json` has a canonical-ID key, or the skip reason is documented
 - high-value active additions have either a reviewed `mintAuthority` profile or a documented intentional gap
+- a listing or pre-launch -> active promotion has a committed Safety Score admission receipt replayed after the last coin edit (Phase 5j), and `npm run check:new-asset-evidence-packet` passes
 - the source inputs and applicable Phase 4b test snapshots are ready for Phase 4a/4c generation
 - downstream coverage decision notes cover every Phase 5 branch
 - every per-coin or per-chain map this addition touches (native-peg currency, canonical mint/burn chain, Bluechip slug, redemption-backstop config) is derived from the registry or covered by a registry-iterating test that fails on the next unmapped addition — rule R5, ADR-32 in [../architecture.md](../architecture.md#adr-32); a "keep in sync" comment is not a mechanism
@@ -666,6 +742,7 @@ You can also run the individual checks directly when iterating:
 - new redemption config -> `npm run audit:coverage -- --domain=redemption-backstops`
 - L2BEAT-backed chain route review -> `npm run candidates:l2beat-bridge-routes` and `npm run audit:coverage -- --domain=l2beat-snapshot --check`
 - dependency/process context review -> `npm run audit:coverage -- --domain=dependency-coverage` (report) or `npm run check:dependency-review-gaps` (gate), and inspect the L2BEAT Deployment Context section when contracts land on matched L2BEAT chains
+- a gated listing or promotion -> `npm run check:new-asset-evidence-packet -- --base=origin/main`
 - verified docs changed -> `npm run check:verified-doc-links`, `npm run check:doc-sync`
 
 If you added or changed a new upstream/provider or methodology-affecting runtime path, update the matching verified docs in the same change:
