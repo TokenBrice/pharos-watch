@@ -125,7 +125,6 @@ const LOCK_MINT_ROUTES: readonly RouteFacts[] = [
 
 function run(
   routes: readonly RouteFacts[],
-  supplies: Readonly<Record<string, bigint>>,
   aggregateUsd: number,
   dependencies: DeploymentSupplyCensusAssemblyDependencies = {},
 ) {
@@ -139,10 +138,9 @@ function run(
 
 describe("deployment supply census lock-mint mirror", () => {
   it("counts a lock-mint representation once by netting it out of the canonical deployment", async () => {
-    const generation = await run(LOCK_MINT_ROUTES, {
-      [CANONICAL]: 100_000_000n, // 100 units
-      [MIRROR]: 99_000_000n, // 99 units escrowed on Ethereum
-    }, 100, { evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 99_000_000n }) });
+    const generation = await run(LOCK_MINT_ROUTES, 100, {
+      evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 99_000_000n }),
+    });
 
     const packet = generation.censusById["wi-mirror"]!;
     expect(packet.conservation).toMatchObject({ conserved: true });
@@ -165,7 +163,7 @@ describe("deployment supply census lock-mint mirror", () => {
     const generation = await run([
       LOCK_MINT_ROUTES[0]!,
       { chain: "megaeth", address: MIRROR, scope: "peripheral", semantics: "burn-mint" },
-    ], {}, 100, { evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 99_000_000n }) });
+    ], 100, { evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 99_000_000n }) });
 
     const packet = generation.censusById["wi-mirror"]!;
     expect(packet.conservation).toMatchObject({ conserved: false, rosterComplete: true });
@@ -177,7 +175,7 @@ describe("deployment supply census lock-mint mirror", () => {
   });
 
   it("fails closed when the mirrors claim more than the canonical deployment holds", async () => {
-    const generation = await run(LOCK_MINT_ROUTES, {}, 200, {
+    const generation = await run(LOCK_MINT_ROUTES, 200, {
       evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 120_000_000n }),
     });
 
@@ -194,7 +192,7 @@ describe("deployment supply census lock-mint mirror", () => {
 describe("deployment supply census pin budget", () => {
   it("pins with the header body budget and one retry instead of the state-read cap", async () => {
     const seen: { maxResponseBytes?: number; maxRetries?: number }[] = [];
-    await run(LOCK_MINT_ROUTES, {}, 100, {
+    await run(LOCK_MINT_ROUTES, 100, {
       evm: evm({ [CANONICAL]: 100_000_000n, [MIRROR]: 99_000_000n }, options => seen.push(options)),
     });
     // Base blocks exceed the 128 KiB state cap; a pin read is a full block body.

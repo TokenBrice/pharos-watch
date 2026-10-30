@@ -956,6 +956,10 @@ describe("Supply attribution shadow census projection", () => {
         state: "ok",
         generationId: generation.generationId,
         capturedAtSec: OBSERVED_AT_SEC,
+        // SA-FIX F2: the provenance names the input the map is bound to, so no
+        // carrier has to re-read the store to prove which generation it holds.
+        registryFingerprint: xautFixedInput().registryFingerprint,
+        sourceBaseInputGenerationId: xautFixedInput().baseInputGenerationId,
         maxAgeSec: SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MAX_AGE_SEC,
         excluded: [],
       });
