@@ -270,12 +270,13 @@
         "smart-contract",
         "legal"
       ],
+      "liquidityHorizon": "over-seven-days",
       "maturityDaysMax": 62
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-27",
-    "reviewer": "Claude evidence renewal 2026-10-27 (D01-L4)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Research shard RS-017 (2026-10-29)",
     "confidence": "verified",
     "sources": [
       {
@@ -333,10 +334,18 @@
       {
         "label": "Ethereum block 26155400 (2026-10-09T14:17:59Z): PT expiry 1796860800, 6 decimals; SY 0x9487bd5a3b16ecb5f3184453e3ee75b800141648 getTokensIn binds exact reUSD 0x5086bf358635b81d8c47c66d1c8b9e567db70c72; observed 2026-10-09T14:43:30Z-14:44:07Z",
         "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+      },
+      {
+        "label": "Pendle PT redemption at 1:1 for the accounting asset only upon maturity; re-observed 2026-10-29",
+        "url": "https://docs.pendle.finance/pendle-v2/ProtocolMechanics/YieldTokenization/PT"
+      },
+      {
+        "label": "Ethereum block 26290000 (2026-10-28T08:22:47Z): PT 0xecfafdc7741323a945a163ed068b5a3c43483957 expiry() = 1796860800 (2026-12-10T00:00:00Z); read 2026-10-29",
+        "url": "https://eth.blockscout.com/block/26290000"
       }
     ],
     "rationale": "The infiniFi live protocol capture on 2026-10-27 reports thirteen nonzero farm slices (farm balances sum to $69,343,008.49 against reported protocol TVL of $69,342,920.04) totaling 100.0% after rounding to one decimal. Rows that carried zero weight on 2026-09-21 (Liquid Cap stcUSD, Pendle PT reUSD 10DEC2026, Aave USDC on Monad, August USDC) now carry measured weights, and the Morpho infiniFi Ecosystem Vault farm is empty. Morpho's vault page identifies the previously unmapped Steakhouse Prime USDC position (0.5% on 2026-10-27) as a Base Morpho vault curated by Steakhouse Financial with USDC as its underlying asset. Metadata reviewed 2026-10-04 on the keyed rows is retained. Exact Monad AaveV3Farm and Ethereum AaveV4Farm verified sources establish protocol-position classes and protocol counterparties for the separately keyed live rows. The issuer API identifies both exact Sentora farms and states redemptions are available within one week. Aave utilization, USDG keeper withdrawal/swap, and cross-chain final settlement remain unbounded; no immediate liquidity or zero maturity is inferred. Classification metadata reviewed on 2026-10-07 and 2026-10-09 is retained; the weights are the 2026-10-27 measurements. The issuer API binds MAINNET aave-v4-usdg farm 0x2CdF51ca20C2DD56480c35adEA667A6653Fb7657 to USDG 0xe343167631d89B6Ffc58B88d6b7fB0228795491D and describes Aave V3/V4 lending. It binds MONAD morpho-v2-august-usdc farm 0x1330902050dB4edAc0D9D8ca33FdAb5DbE986c9c to AugustUSDCv2 share 0x80017bF0f793EBbE9679Cd61ff0e395B62CAbB59; Morpho identifies that exact vault as USDC with August Digital as curator, and Circle identifies native Monad USDC 0x754704Bc059F8C67012fEd69BC8A327a5aafb603. No farm bucket or conditional pool-utilization statement is converted into a liquidity guarantee.",
-    "compositionBasis": "infiniFi protocol farm balances captured on 2026-10-27, with the Base Steakhouse Prime vault identity verified against Morpho. The October 9 keyed classification metadata for Liquid Cap and PT-reUSD, and the ordinary liquidity terms on the Aave and August rows, apply to rows that now carry measured weights. PT expiry() is 2026-12-10T00:00:00Z, giving a conservative 62-day maximum remaining instrument tenor at the October 9 pin, not a USDC settlement guarantee. PT SY getTokensIn() names exact registered reUSD; SY assetInfo() names USDC as accounting asset, not collateral. Resilience issuer attribution does not give PT holders registered-noteholder rights. PT liquidity remains unknown. Aave immediate horizons are utilization-conditional ordinary withdrawal terms; August seven-days is the issuer's approximate normal horizon, not a binding maximum. No hard liquidity bound, current available fraction, stress exit capacity or financial assurance is inferred.",
+    "compositionBasis": "infiniFi protocol farm balances captured on 2026-10-27, with the Base Steakhouse Prime vault identity verified against Morpho. The October 9 keyed classification metadata for Liquid Cap and PT-reUSD, and the ordinary liquidity terms on the Aave and August rows, apply to rows that now carry measured weights. PT expiry() is 2026-12-10T00:00:00Z, giving a conservative 62-day maximum remaining instrument tenor at the October 9 pin, not a USDC settlement guarantee. PT SY getTokensIn() names exact registered reUSD; SY assetInfo() names USDC as accounting asset, not collateral. Resilience issuer attribution does not give PT holders registered-noteholder rights. PT liquidity is classified over-seven-days: Pendle documents PT redemption at 1:1 for the accounting asset only upon maturity, the pinned expiry() read at Ethereum block 26290000 (2026-10-28T08:22:47Z) returns 2026-12-10T00:00:00Z, and no earlier contractual conversion to USDC exists; secondary-market depth remains unquantified. Aave immediate horizons are utilization-conditional ordinary withdrawal terms; August seven-days is the issuer's approximate normal horizon, not a binding maximum. No hard liquidity bound, current available fraction, stress exit capacity or financial assurance is inferred.",
     "compositionAsOf": "2026-10-27",
     "scope": "full-composition",
     "knownUnknownExposure": "All thirteen nonzero adapter farm slices are identified. Private-credit and fund positions remain explicit non-links; the Aave, Spark, and Morpho positions are linked to their tracked USDC underlying.",

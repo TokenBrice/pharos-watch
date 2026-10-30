@@ -1,5 +1,44 @@
 {
   "id": "m-m0",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "M0 mints $M only against permissioned Minters' offchain eligible collateral whose USD value is attested onchain by threshold Validators inside MinterGateway. The protocol publishes no external price feed and no borrower-liquidation branch: issuance is bounded by the governance-set mint ratio applied to validator-attested collateral value, with propose-delay-execute minting, validator freeze and mint-cancellation powers as the risk controls. M is therefore valued through a privileged internal valuation authority rather than an independent market oracle.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Sprint RS-092 research sprint 2026-10-29",
+      "rationale": "M0's issuer documentation describes collateral update, mint and retrieval as MinterGateway flows gated by multiple Validator signatures and governance parameters. It describes no price feed, collateral-health oracle, borrower market or forced-liquidation path whose branch would need separate oracle review. The only price-sensitive input is the offchain collateral value attested by permissioned Validators, so the review stays top-level and no borrower-collateral branch is applicable.",
+      "sources": [
+        {
+          "label": "M0 MinterGateway documentation: validator-signed collateral updates, mint ratio, propose-delay-execute minting and freeze/cancel powers",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        },
+        {
+          "label": "M0 protocol roles: permissioned Minters and independent Validators, no external price-feed role",
+          "url": "https://docs.m0.org/protocol/roles"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sprint RS-092 research sprint 2026-10-29",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 MinterGateway documentation: validator-signed collateral updates, mint ratio, propose-delay-execute minting and freeze/cancel powers",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "M0 protocol roles: permissioned Minters and independent Validators, no external price-feed role",
+        "url": "https://docs.m0.org/protocol/roles"
+      },
+      {
+        "label": "M0 liquidity documentation: primary-market issuance is a direct issuer onboarding process; onchain conversions are deterministic SwapFacility paths",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "inherited",
     "sources": [

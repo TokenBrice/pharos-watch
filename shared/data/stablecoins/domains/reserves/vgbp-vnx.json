@@ -8,12 +8,12 @@
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Bermuda Commercial Bank",
       "riskFactors": ["credit", "liquidity", "custody", "counterparty", "concentration"],
-      "liquidityHorizon": "unknown"
+      "liquidityHorizon": "seven-days"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-27",
-    "reviewer": "D02 evidence renewal 2026-10-27 (September Apex report read)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sprint RS-068 VGBP reserve-liquidity review 2026-10-29 (composition unchanged from the Apex September 30 examination)",
     "confidence": "verified",
     "sources": [
       {
@@ -27,9 +27,13 @@
       {
         "label": "VNX Global monthly independent attestation reports",
         "url": "https://vnx.gitbook.io/vnx-global/transparency/audits"
+      },
+      {
+        "label": "VNX Global reserve management policy: T+0 and 48-hour buffer, two-day deposit limit",
+        "url": "https://vnx.gitbook.io/vnx-global/institutional/reserve/reserve-management"
       }
     ],
-    "rationale": "Apex's ISAE 3000 reasonable-assurance examination reconciled GBP 126,595.48 of VGBP liabilities across all three tracked deployments (Solana, Celo, and Base) to GBP 126,596.33 of cash in VNX Global Ltd.'s designated GBP reserve account ending 5514 at Bermuda Commercial Bank on September 30 and September 9, 2026 (report signed October 7, 2026). The August report records the same reserve and liability totals. Reserves consisted solely of GBP cash and were separately maintained from operating accounts, with no cross-currency netting. The 100% bank-deposit slice uses a conservative medium legacy risk tier because the canonical reserve-asset risk map has no GBP bank-cash entry and the balance is concentrated at one bank; this tier does not replace the structured backing facts.",
+    "rationale": "Apex's ISAE 3000 reasonable-assurance examination reconciled GBP 126,595.48 of VGBP liabilities across all three tracked deployments (Solana, Celo, and Base) to GBP 126,596.33 of cash in VNX Global Ltd.'s designated GBP reserve account ending 5514 at Bermuda Commercial Bank on September 30 and September 9, 2026 (report signed October 7, 2026). The August report records the same reserve and liability totals. Reserves consisted solely of GBP cash and were separately maintained from operating accounts, with no cross-currency netting. The 100% bank-deposit slice uses a conservative medium legacy risk tier because the canonical reserve-asset risk map has no GBP bank-cash entry and the balance is concentrated at one bank; this tier does not replace the structured backing facts. Review RS-068 on 2026-10-29 added the slice liquidity horizon from the issuer's reserve-management policy: at least 10% of reserves stay in immediately available T+0 cash, the remainder sits in deposits redeemable within 48 hours, and reserves may only be bank deposits with maturities up to two days. Because the 100% slice aggregates both layers, its realization bound is 48 hours, encoded as the conservative seven-days bucket rather than immediate or one-day. Composition, weights and compositionAsOf are unchanged from the September 30 Apex examination.",
     "compositionBasis": "Apex ISAE 3000 examination of the complete VGBP cash reserve and Solana/Celo/Base liabilities",
     "compositionAsOf": "2026-09-30",
     "scope": "full-composition",

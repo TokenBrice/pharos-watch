@@ -139,5 +139,30 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "iTRY and wiTRY valuation follows the Digital Liquidity Fund's money-market NAV, published by a licensed fund administrator and relayed onchain by Redstone; the issuer names one NAV feed (Ethereum 0xa5b6f7404D960BaC4075EcAEc31E37B940c2A145) used for supply expansion and publishes no heartbeat, deviation bound, fallback feed, independent valuation or NAV signer set. wiTRY is the ERC-4626 staking wrapper whose share value accrues as iTRY rewards are minted into the pool, so it exposes the same administered NAV authority without separate market-price discovery.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "RS-027 research sprint 2026-10-29",
+      "rationale": "The reviewed stabilization path is a top-level NAV claim: whitelisted 1:1 TRY primary mint and redeem plus ERC-4626 share accrual consume the administered fund NAV, and neither deployment exposes a borrower collateral market whose liquidation would consume a branch-specific feed.",
+      "sources": [
+        { "label": "Brix Oracles", "url": "https://docs.brix.money/technical/oracles.md" },
+        { "label": "Brix Staking (Vesting, Reward vesting, Unstake cooldown)", "url": "https://docs.brix.money/itry/staking.md" }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RS-027 research sprint 2026-10-29",
+    "confidence": "probable",
+    "sources": [
+      { "label": "Brix Oracles (Redstone NAV publication)", "url": "https://docs.brix.money/technical/oracles.md" },
+      { "label": "Brix Contracts (NAV Feed 0xa5b6f7404D960BaC4075EcAEc31E37B940c2A145)", "url": "https://docs.brix.money/resources/contracts.md" },
+      { "label": "Brix Backing (licensed fund administrator NAV, daily)", "url": "https://docs.brix.money/itry/backing.md" },
+      { "label": "Brix Risks (oracle dependency and provider)", "url": "https://docs.brix.money/itry/risks.md" }
+    ]
   }
 }

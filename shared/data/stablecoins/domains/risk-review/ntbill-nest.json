@@ -557,5 +557,52 @@
         "evidence": "The 2026-08-29 route review recorded Arbitrum as reviewed native issuance and did not identify any cross-chain machinery there. At Arbitrum block 500610274 on 2026-09-01 that machinery is present but dormant: the single holder of RolesAuthority role 3 over the vault's enter(address,address,uint256,address,uint256) capability is 0x1492062b3ae7996c71f87a2b390b6b82afea0c59, a verified MultiChainLayerZeroTellerWithMultiAssetSupport whose vault() is the nTBILL BoringVault, whose endpoint() is LayerZero Endpoint V2, and whose owner() is the Nest Arbitrum Safe. Every probed peer and selectorToChains entry is zero, so no authenticated remote can credit shares on this leg today, but the Safe that owns the teller, the RolesAuthority, the accountant and the vault can set a peer and grant further mint roles without any cap, delay, guard or module standing in the way. This is retained as adverse bridge/common-mode exposure on the Arbitrum deployment, distinct from the Mint Authority record of the same Safe's native issuance control."
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "nTBILL is the Nest Treasury Vault share token, a Boring Vault-style NAV receipt over Treasury-fund and stablecoin positions. Its mint and redemption price is the vault net asset value per share that Nest operations publishes through the vault accountant, subject to onchain update bounds. No external price feed, borrower collateral ratio, or liquidatable collateral market consumes it, so the reviewed price authority is a privileged internal NAV quote rather than a market oracle or a collateral-liquidation feed.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS037 research sprint 2026-10-29 (RS-037)",
+      "rationale": "The vault mints and redeems shares at the current vault share price and holds fund shares and stablecoins; it has no borrower debt positions, collateral-ratio checks, or liquidatable collateral market whose branches would need separate oracle reviews. The NAV/accountant quote is a price-sensitive top-level authority, not a borrower-liquidation branch.",
+      "sources": [
+        {
+          "label": "Nest Vault Operations & Valuation: NAV pricing, operations-run updates, onchain price bounds; accessed 2026-10-29",
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+        },
+        {
+          "label": "Nest nTBILL per-chain accountant NAV price updates; retrieved 2026-10-29",
+          "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault/last-price-update"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS037 research sprint 2026-10-29 (RS-037)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Nest Vault Operations & Valuation: NAV pricing, operations-run updates, onchain price bounds; accessed 2026-10-29",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+      },
+      {
+        "label": "Nest protocol: ERC-4626/7540/7575 vault stack extending Boring Vault economics; accessed 2026-10-29",
+        "url": "https://docs.nest.credit/developers/nest-protocol"
+      },
+      {
+        "label": "Nest Treasury Vault registry: accountant, authority and teller addresses; retrieved 2026-10-29",
+        "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault"
+      },
+      {
+        "label": "Nest nTBILL per-chain NAV price updates and accountant address; retrieved 2026-10-29",
+        "url": "https://api.nest.credit/v1/vaults/nest-treasury-vault/last-price-update"
+      },
+      {
+        "label": "Nest nTBILL integration guide: share token, rate and quote fields; accessed 2026-10-29",
+        "url": "https://docs.nest.credit/developers/integration-guides/ntbill/"
+      }
+    ]
   }
 }

@@ -76,5 +76,44 @@
     "evidence": "Ethereum is the only material stcUSD deployment after directly measuring official satellite supplies. The API has an empty chainCirculating map despite total circulating value77,994,674.6770 USD, so the zero recorded in the supply data is not proof of zero supply. At ethereum@26224760 (2026-10-19T06:14:11+00:00; hash 0x2a6c0b20faae49bb23f77a582b517057741efcee5bd423a8552f672144c83b85; observed 2026-10-19T06:19:28.419767+00:00) via https://ethereum-rpc.publicnode.com, canonical totalSupply is71,850,674.3900909 shares. Official MegaETH, Tempo and Katana deployments have6,672,058.520565,1,652.353990 and90,917.176288 shares at blocks29593546/44841291/45647747 (2026-10-19T06:15:57-58Z). Their upper-bound shares against canonical supply are9.286007%,0.002300%,0.126536%, all below10%; subtracting all satellites from canonical local supply still leaves Ethereum90.585157%. At the Ethereum pin, proxy 0x88887be419578051ff9f4eb6c858a951921d8888 remains on verified StakedCap0x42c0e0ef7c2f35de073f4d6f9c0e4483429c3d31 and asset() returns cUSD0xcccc62962d17b8914c62d74ffb843d73b2a3cccc. Verified source retains standard ERC-4626 share transfers without a deployed direct blacklist, transfer pause or arbitrary-holder burn. Native withdrawal share burns use ordinary holder allowance rules. StakedCap nevertheless has an active UUPS implementation upgrade path: _authorizeUpgrade checks AccessControl0x7731129a10d51e18cde607c5c115f26503d2c683, and checkAccess(0x00000000,0x88887be419578051ff9f4eb6c858a951921d8888,0xd8236031d8279d82e615af2bfab5fc0127a329ab) returns true. The timelock minimum delay is86400 seconds. This current mutable-token surface makes the wrapper direct Possible; lack of a presently installed blacklist and a one-day delay do not make it merely Upstream. Parent cUSD now resolves to0xbdaa34082f1a1a3c32190a672bc9dd1b69791b97, is itself classified Possible, and its issuer/custodial reserves remain adverse exposure. Those parent facts cannot override direct wrapper Possible. MegaETH/Katana retain proxy implementation paths; Tempo returns transferPolicyId()=1 and paused()=false, all below threshold. Historical July30 and October1 implementation/parent observations remain consistent with these current bindings.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "summary": "stcUSD is valued by Cap's on-chain Oracle 0xcD7f45566bc0E7303fB92A93969BB4D3f6e662bb through external price adapters, measured at Ethereum block 26300000 (0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56, 2026-10-29T17:49:23Z) via https://api-ethereum-mainnet.n.dwellir.com. getPrice(stcUSD) returned 1.08742165 USD (8 decimals, lastUpdated 2026-10-29T15:23:47Z) through adapter 0x697f57522c62a6d29d1931d488977717d14eb49f with a price(address) payload, and getPrice(cUSD) returned 0.99977397 USD through adapter 0xacc9ce4c15a0f6a2bec49c3f81261d60553d2faf. Reserve-asset pricing is external and partly redundant: the USDC slot's primary source is the RedStone feed adapter 0xeef31c7d9f2e82e8a497b140cc60cc082be4b94e (description() = \"RedStone Price Feed for USDC_V2\") and its backup is the distinct Chainlink aggregator 0x8fffffd4afb6115b954bd326cbe7b4ba576818f6 (description() = \"USDC / USD\"), both called through adapter 0xc850409dc3587039e87930008217b6622cc3b2e2. Two measured weaknesses are recorded rather than scored away: the cUSD and stcUSD slots' configured backup is a byte-identical duplicate of the primary (same adapter, same payload), so the coin/basket valuation slot has no independent failover, and staleness is 86,600 s (24.06 h) for cUSD, stcUSD and USDC alike with an admin-settable bound. The USDT slot is unconfigured (adapter 0x0) at this pin. Cap documents RedStone as the primary reserve-asset oracle, Chainlink for delegation assets, and CapTokenAdapter/StakedCapAdapter for cUSD/stcUSD valuation, and documents that adapter failures fall through to the backup and revert with PriceError only when both fail.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS089 research sprint 2026-10-29 (RS-089)",
+      "rationale": "stcUSD is an ERC-4626 staking wrapper over cUSD: its price is the cUSD basket valuation multiplied by the vault conversion ratio, so the pricing authority is a top-level valuation path rather than a borrower-collateral price inside a liquidation engine for stcUSD holders. Cap's borrower liquidations consume separate delegation-collateral feeds and the cUSD price, and no stcUSD holder position is liquidated against a feed.",
+      "sources": [
+        {
+          "label": "Cap Lending Mechanics (stcUSD as staked cUSD, liquidation via Underwriter collateral)",
+          "url": "https://docs.cap.app/overview/protocol-overview/stcusd-mechanics"
+        },
+        {
+          "label": "Cap Oracles (RedStone reserve pricing, Chainlink delegation pricing, CapTokenAdapter/StakedCapAdapter)",
+          "url": "https://docs.cap.app/concepts/oracles"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS089 research sprint 2026-10-29 (RS-089)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Cap Oracles (RedStone primary reserve pricing incl. cUSD, Chainlink delegation pricing, CapTokenAdapter and StakedCapAdapter)",
+        "url": "https://docs.cap.app/concepts/oracles"
+      },
+      {
+        "label": "Cap Oracle contract reference (per-asset primary and backup slots, staleness bound, silent adapter failure fall-through, PriceError when both fail)",
+        "url": "https://docs.cap.app/developers/contracts/oracle"
+      },
+      {
+        "label": "Cap Price Sources (RedStone cUSD feed wrapper and deployed protocol Oracle address)",
+        "url": "https://docs.cap.app/developers/price-sources"
+      }
+    ]
   }
 }

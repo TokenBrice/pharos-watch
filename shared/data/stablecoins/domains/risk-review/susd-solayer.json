@@ -1,5 +1,48 @@
 {
   "id": "susd-solayer",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "sUSD's redemption value is the Solayer program's Token-2022 interest-bearing exchange rate, not an independently sourced market price: the issuer FAQ states the 1:1 peg is maintained through the Token-2022 interest-bearing extension and the litepaper states the protocol adjusts balance multipliers rather than token amounts. Solayer publishes exactly one price surface, the Switchboard 'sUSD Redemption Price' feed DtoFRRd3ZQX6dDgt1fJaesgtNCr4XAPSqMkMMMXsNnzC with authority 7xAdgHMXqxErMQi5uGPWdCZcDR9E34bLputsbUbA29Rr, maximum variance 5%, minimum 3 samples and maximum staleness 150 slots, derived from the TBill exchange rate. No second feed, failover or independent NAV publisher is disclosed, and the interest-bearing rate authority key was not independently re-verified in this review.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS040 primary-source oracle review 2026-10-29",
+      "rationale": "sUSD is a T-bill issuer-NAV claim with no borrower liquidation market of its own; the price-sensitive surface is the top-level redemptive value plus the single published republication feed, not borrower collateral branches.",
+      "sources": [
+        {
+          "label": "Solayer sUSD Oracle & Price Feeds: Switchboard redemption price feed identity and bounds",
+          "url": "https://docs.solayer.org/susd/protocol-info/oracle&price_feeds"
+        },
+        {
+          "label": "Solayer sUSD FAQs: Token-2022 interest-bearing peg design",
+          "url": "https://docs.solayer.org/susd/protocol-info/faqs"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS040 primary-source oracle review 2026-10-29",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Solayer sUSD Oracle & Price Feeds: Switchboard redemption price feed, authority, variance and staleness bounds",
+        "url": "https://docs.solayer.org/susd/protocol-info/oracle&price_feeds"
+      },
+      {
+        "label": "Solayer sUSD FAQs: Token-2022 interest-bearing extension peg design",
+        "url": "https://docs.solayer.org/susd/protocol-info/faqs"
+      },
+      {
+        "label": "Solayer sUSD litepaper page: balance-multiplier accrual through SPL Token-2022 extensions",
+        "url": "https://docs.solayer.org/susd/protocol-info/litepaper"
+      },
+      {
+        "label": "Solayer sUSD product page (published 2026-09-21): U.S. T-bill backing and issuer programme",
+        "url": "https://solayer.org/product/susd"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": "possible",
     "sources": [

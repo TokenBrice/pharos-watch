@@ -28,6 +28,74 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "MetaMask USD is a fixed-dollar M0 extension: approved swappers deposit M into the SwapFacility to mint an equivalent amount of mUSD and burn mUSD to retrieve the same amount of M, and Bridge Building Inc redeems Bridge Stablecoins for one U.S. dollar. Neither the audited MUSD token nor the SwapFacility consumes an external price feed, NAV, collateral ratio or borrower liquidation price; conversions are equivalent-amount wrap/unwrap steps. Validator-attested offchain collateral keeps the parent M issuance solvent but does not price any mUSD conversion.",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Sprint RS-096 oracle-profile review 2026-10-29",
+      "rationale": "mUSD has no collateralized borrower market, variable-NAV share class or price-dependent mint gate. The audited lifecycle is an equivalent-amount M-to-mUSD wrap and mUSD-to-M unwrap through the SwapFacility, and the issuer's binding terms redeem Bridge Stablecoins for one U.S. dollar. Minter collateral thresholds govern parent M issuance capacity only; they enter no holder conversion price. Linea and Monad mUSD are Portal bridge representations of the same non-pricing wrapper and are assessed under Bridge Risk.",
+      "sources": [
+        {
+          "label": "Consensys Diligence MetaMask USD audit, system overview and actors (no pricing role)",
+          "url": "https://diligence.security/audits/2025/08/metamask-usd-token/"
+        },
+        {
+          "label": "M0 Extensions and SwapFacility: 1:1 conversions, no slippage or trading fees",
+          "url": "https://docs.m0.org/raw/protocol/extensions.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sprint RS-096 oracle-profile review 2026-10-29",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Consensys Diligence MetaMask USD audit, system overview and trust model",
+        "url": "https://diligence.security/audits/2025/08/metamask-usd-token/"
+      },
+      {
+        "label": "Verified Ethereum MUSD implementation 0x37a309611e1d278cddc341e479957ec8bc6256ce (mToken and swapFacility constructor args only)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37a309611e1d278cddc341e479957ec8bc6256ce"
+      },
+      {
+        "label": "M0 Extensions and SwapFacility: atomic 1:1 conversions",
+        "url": "https://docs.m0.org/raw/protocol/extensions.md"
+      },
+      {
+        "label": "Bridge Building Inc Stablecoin Terms section 01: each Bridge Stablecoin redeems for one U.S. dollar",
+        "url": "https://www.bridge.xyz/legal/bridge-stablecoin-terms/bridge-building-inc"
+      }
+    ],
+    "paths": [
+      {
+        "id": "musd-ethereum-par",
+        "chain": "ethereum",
+        "address": "0xaca92e438df0b2401ff60da7e4337b687a2435da",
+        "pricingAuthority": "none",
+        "applicability": {
+          "disposition": "not-applicable",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Sprint RS-096 oracle-profile review 2026-10-29",
+          "confidence": "verified",
+          "rationale": "The verified MUSD implementation wraps and unwraps M through the SwapFacility at a 1:1 equivalent amount; its source and ABI expose ERC-20, recipient, pause, role, yield-claim and forced-transfer paths only, with no feed, price, NAV or liquidation selector. Ethereum is the canonical native issuance chain where the hub M is created by the MinterGateway.",
+          "sources": [
+            {
+              "label": "Verified MUSD implementation source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x37a309611e1d278cddc341e479957ec8bc6256ce"
+            },
+            {
+              "label": "Consensys Diligence mUSD audit, system overview",
+              "url": "https://diligence.security/audits/2025/08/metamask-usd-token/"
+            }
+          ]
+        }
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "MetaMask USD has one canonical native issuance route on Ethereum, where M0 M is created by the immutable MinterGateway and MUSD wraps hub-native M through the Ethereum SwapFacility. Linea and Monad MUSD are bridge representations: M0 Portal v2 burns and mints spoke M, then the local SwapFacility wraps it. Their token and SwapFacility proxy-admin paths, Portal roles and UUPS upgrades, Hyperlane adapter peers, mailbox default ISM validation trees, pauses, and the absence of a token-specific Portal rate limit are assessed here as Bridge Risk and are excluded from Mint Authority posture. October 1 pinned reads supersede the historical two-validator default ISMs with aggregation and routing trees; their Ethereum-origin multisig branches use six of nine validators.",

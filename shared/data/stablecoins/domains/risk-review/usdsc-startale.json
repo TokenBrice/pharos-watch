@@ -28,6 +28,53 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDSC has no external price feed and no borrower-liquidation branch. The verified Soneium proxy resolves to UsdscToken, an MYieldToOne M0 extension whose wrap/unwrap are callable only by the M0 SwapFacility; the implementation and its imported MExtension base expose no price-feed, collateral-parameter, liquidation, backstop or shutdown function. USDSC value is the deterministic 1:1 M0 extension conversion, which M0 documents as fee- and slippage-free with parity preserved, and M itself is documented as backed 1:1 by approved collateral attested through M0's permissioned Validator path. Pricing is therefore set by M0's permissioned layer rather than an independent market measure. The same tier and top-level-only single-path model is retained for the M parent profile and the reference wrapper wM, which share this MExtension and SwapFacility conversion.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Pharos research sprint RS-070 (2026-10-29)",
+      "rationale": "USDSC has one top-level pricing path. At Soneium block 30083400 (2026-10-29T19:19:11Z) the proxy 0x3f99231dd03a9f0e7e3421c92b7b90fbe012985a returns mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b and swapFacility() 0xb6807116b3b1b321a390594e31ecd6e0076f6278, matching the curated M0 extension wiring. The verified UsdscToken is MYieldToOne, and the verified imported MExtension declares wrap and unwrap external onlySwapFacility with M sent to the SwapFacility on unwrap. No borrower market, collateral parameter set, liquidation path, backstop or shutdown function exists to create a collateral branch.",
+      "sources": [
+        {
+          "label": "M0 Extensions documentation: SwapFacility converts approved extensions atomically at 1:1 with no slippage or trading fees",
+          "url": "https://docs.m0.org/protocol/extensions"
+        },
+        {
+          "label": "Verified UsdscToken implementation and imported MExtension source (Soneium 0x38e4713a896efcf253430efd6292515dc13489a1)",
+          "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x38e4713a896efcf253430efd6292515dc13489a1"
+        },
+        {
+          "label": "Pinned Soneium block 30083400 read of proxy mToken() and swapFacility()",
+          "url": "https://rpc.soneium.org"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Pharos research sprint RS-070 (2026-10-29)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 Extensions documentation: extension architecture, 1:1 conversions through the SwapFacility, no slippage or trading fees",
+        "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "M0 M Token documentation: each unit backed 1:1 by approved collateral; earner status and rate model are governance-controlled",
+        "url": "https://docs.m0.org/protocol/m-token"
+      },
+      {
+        "label": "Verified UsdscToken implementation and imported MExtension source: wrap/unwrap restricted to SwapFacility, no price-feed logic (Soneium 0x38e4713a896efcf253430efd6292515dc13489a1)",
+        "url": "https://soneium.blockscout.com/api/v2/smart-contracts/0x38e4713a896efcf253430efd6292515dc13489a1"
+      },
+      {
+        "label": "Pinned Soneium block 30083400 (2026-10-29T19:19:11Z): proxy mToken() 0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, swapFacility() 0xb6807116b3b1b321a390594e31ecd6e0076f6278",
+        "url": "https://rpc.soneium.org"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDSC is native on Ethereum as an M0 hub-side wrapper and is represented on Soneium through M0 Portal V2. The active route unwraps USDSC, transfers M through the Ethereum HubPortal and Soneium SpokePortal over Hyperlane, then rewraps M into Soneium USDSC. Portal roles, local representation upgrades, adapter peers/operators, Hyperlane Mailbox validation, and the unresolved default-ISM validator domain are assessed here rather than in Mint Authority.",
