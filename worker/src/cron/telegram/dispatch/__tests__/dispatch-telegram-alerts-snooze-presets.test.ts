@@ -32,6 +32,14 @@ function createDispatchHarness(...args: Parameters<typeof createBaseDispatchHarn
   return harness;
 }
 
+// Durable counter read by `telegramBot.presetQueryFailures`
+// (worker/src/lib/status/telegram-bot-stats.ts).
+const PRESET_QUERY_FAILURE_CACHE_KEY = "telegram:preset-query-failure-count";
+
+function readPersistedPresetFailureCount(harness: ReturnType<typeof createDispatchHarness>): number {
+  return Number(readCacheValue(harness.sqlite, PRESET_QUERY_FAILURE_CACHE_KEY) ?? "0");
+}
+
 function sources(
   harness: ReturnType<typeof createDispatchHarness>,
   options: {
@@ -45,6 +53,25 @@ function sources(
   } = {},
 ) {
   seedDispatchSnapshots(harness, { ...options, safetySource: options.safety });
+}
+
+/** A fresh depeg baseline plus a preset follower whose membership needs the cache. */
+function seedPresetFollowerWithDepeg(harness: ReturnType<typeof createDispatchHarness>): void {
+  const now = Math.floor(Date.now() / 1000);
+  sources(harness, { depeg: {} });
+  harness.seed({
+    depegs: [
+      {
+        stablecoinId: "usdc-circle",
+        symbol: "USDC",
+        direction: "below",
+        peakDeviationBps: 125,
+        startedAt: now - 300,
+      },
+    ],
+    subscribers: [{ chatId: "preset-chat" }],
+    presets: [{ chatId: "preset-chat", presetId: "usd-top25", alerts: { depeg: true } }],
+  });
 }
 
 function dewsDirect(chatId: string, options: Record<string, unknown> = {}) {
@@ -172,6 +199,42 @@ describe("dispatchTelegramAlerts", () => {
     } finally {
       warnSpy.mockRestore();
     }
+  });
+
+  it("records and persists per-mode preset failure counters when preset resolution fails closed", async () => {
+    const harness = createDispatchHarness();
+    seedPresetFollowerWithDepeg(harness);
+    // No `stablecoins` cache: resolveTelegramPresetTargets cannot resolve the
+    // follower's preset, so the alert fan-out page fails closed.
+    expect(readCacheValue(harness.sqlite, "stablecoins")).toBeNull();
+
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata.deliveryV2.jobsFailedClosed).toBe(1);
+    expect(metadata.presetFailure).toBe(true);
+    expect(metadata.presetQueryFailures + metadata.presetResolutionFailures).toBeGreaterThanOrEqual(1);
+    // /api/status.telegramBot.presetQueryFailures reads this durable counter.
+    expect(readPersistedPresetFailureCount(harness)).toBeGreaterThanOrEqual(1);
+    expect(harness.sqlite.prepare("SELECT state FROM telegram_jobs WHERE kind = 'alert'").get())
+      .toEqual({ state: "planning" });
+  });
+
+  it("clears the preset failure counters on the next clean run", async () => {
+    const harness = createDispatchHarness();
+    seedPresetFollowerWithDepeg(harness);
+    await dispatchTelegramAlerts(harness.db, "bot-token");
+    expect(readPersistedPresetFailureCount(harness)).toBeGreaterThanOrEqual(1);
+
+    // The cache becomes readable again; the retried planning job loads presets cleanly.
+    harness.cache("stablecoins", STABLECOINS_CACHE_WITH_USDC);
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    expect(metadata.deliveryV2.jobsFailedClosed).toBe(0);
+    expect(metadata.presetFailure).toBe(false);
+    expect(metadata.presetQueryFailures).toBe(0);
+    expect(metadata.presetResolutionFailures).toBe(0);
+    expect(readPersistedPresetFailureCount(harness)).toBe(0);
+    expect(telegramDeliveryTranscript).toEqual([expect.objectContaining({ chatId: "preset-chat" })]);
   });
 
   it("chunks a 120-coin depeg fan-out for one chat without losing coin identities", async () => {

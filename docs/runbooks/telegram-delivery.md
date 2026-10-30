@@ -52,7 +52,7 @@ A run claims pages of 100 rows until the four-minute soft deadline (`drainStoppe
 ## Rate-Limit Storm
 
 1. **One chat.** A chat 429 pushes all of that chat's queued rows to the Retry-After deadline (`state='retry'`, `error_class='rate_limit'`). Peers continue.
-2. **Many chats.** 429s from two or more chats in one wave raise `telegram:global-send-backoff-until` and stop the run (`drainStoppedReason: "global-backoff"`). Later runs skip sending until the deadline passes. Do not delete the cache key.
+2. **Many chats.** 429s from two or more chats in one wave raise `telegram:global-send-backoff-until` and stop the run (`drainStoppedReason: "global-backoff"`). Later runs skip sending until the deadline passes. Do not delete the cache key. A gate read that fails or returns a non-numeric value stops the run as `global-backoff-unreadable` instead of sending.
 3. **Expiry risk.** Go to [Backlog and expiration](#backlog-and-expiration).
 
 ## Bot-Wide Transport

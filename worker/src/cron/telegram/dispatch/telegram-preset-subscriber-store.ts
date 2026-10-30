@@ -27,6 +27,17 @@ export type PresetMembershipResult =
   | { kind: "query-failed"; error: unknown }
   | { kind: "resolution-failed"; reason: string };
 
+/** A failed preset fan-out page whose mode is attributable in dispatch metadata. */
+export class TelegramPresetFanoutError extends Error {
+  constructor(
+    readonly mode: "query" | "resolution",
+    readonly detail: unknown,
+  ) {
+    super(`Telegram preset ${mode} failure`);
+    this.name = "TelegramPresetFanoutError";
+  }
+}
+
 export interface PresetFollower {
   preset_id: TelegramPresetId;
   chat_id: string;

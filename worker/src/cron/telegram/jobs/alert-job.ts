@@ -23,6 +23,7 @@ import {
   loadSubscriberRowsBatch,
 } from "../dispatch/dispatch-telegram-subscribers";
 import {
+  TelegramPresetFanoutError,
   loadActivePresetFollowers,
   projectPresetFollowers,
   resolvePresetMemberships,
@@ -87,7 +88,7 @@ export async function buildTelegramAlertJobSpec(args: {
   };
 }
 
-/** Fail-closed preset loader: any membership or follower failure throws upstream. */
+/** Fail-closed preset loader: any membership or follower failure throws upstream, retaining its mode. */
 async function loadPresetSubscribersForChats(
   db: D1Database,
   stablecoinIds: string[],
@@ -96,16 +97,14 @@ async function loadPresetSubscribersForChats(
   chatIds: readonly string[],
 ): Promise<PresetSubscriberLoadResult> {
   const memberships = await resolvePresetMemberships(db, { alertType: type, wantedStablecoinIds: stablecoinIds, nowSec });
-  if (memberships.kind === "query-failed") return { kind: "query-failed", error: memberships.error };
-  if (memberships.kind === "resolution-failed") {
-    return { kind: "query-failed", error: new Error(`preset resolution failed: ${memberships.reason}`) };
-  }
+  if (memberships.kind === "query-failed") throw new TelegramPresetFanoutError("query", memberships.error);
+  if (memberships.kind === "resolution-failed") throw new TelegramPresetFanoutError("resolution", memberships.reason);
   if (memberships.memberships.length === 0) return { kind: "ok", rows: new Map() };
   const presetIds = [...new Set(memberships.memberships.map((membership) => membership.preset_id))];
   const followers: PresetFollower[] = [];
   for (const chunk of chunkArray(chatIds, PRESET_CHAT_CHUNK)) {
     const page = await loadActivePresetFollowers(db, { alertType: type, presetIds, nowSec, chatIds: chunk });
-    if (page.kind !== "ok") return { kind: "query-failed", error: page.error };
+    if (page.kind !== "ok") throw new TelegramPresetFanoutError("query", page.error);
     followers.push(...page.followers);
   }
   return { kind: "ok", rows: projectPresetFollowers(memberships.memberships, followers) };
@@ -163,7 +162,7 @@ async function buildAlertJobPage(
   );
   for (const preset of Object.values(inputs.preset)) {
     if (preset.kind !== "ok") {
-      throw new Error("Telegram alert fan-out preset resolution failed (fail closed)");
+      throw new TelegramPresetFanoutError("query", "unexpected preset load result");
     }
   }
 

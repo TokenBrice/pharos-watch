@@ -64,7 +64,12 @@ export interface TelegramDeliveryDrainResult {
   attempted: number;
   sent: number;
   retried: number;
+  /** Terminal non-send outcomes; the sum of the two attribution counters below. */
   failed: number;
+  /** Terminal rows dropped on a non-retryable Telegram error. */
+  failedPermanent: number;
+  /** Terminal rows dropped at the defensive attempts ceiling inside the TTL. */
+  failedMaxAttempts: number;
   blocked: number;
   unknown: number;
   cancelled: number;
@@ -73,7 +78,7 @@ export interface TelegramDeliveryDrainResult {
   /** Distinct chats with at least one Bot API-accepted message. */
   acceptedChats: number;
   globalBackoffUntil: number | null;
-  stoppedReason: "empty" | "deadline" | "aborted" | "global-backoff" | null;
+  stoppedReason: "empty" | "deadline" | "aborted" | "global-backoff" | "global-backoff-unreadable" | null;
 }
 
 function emptyTelegramDeliveryDrainResult(): TelegramDeliveryDrainResult {
@@ -83,6 +88,8 @@ function emptyTelegramDeliveryDrainResult(): TelegramDeliveryDrainResult {
     sent: 0,
     retried: 0,
     failed: 0,
+    failedPermanent: 0,
+    failedMaxAttempts: 0,
     blocked: 0,
     unknown: 0,
     cancelled: 0,
@@ -473,8 +480,13 @@ export async function drainTelegramDeliveries(
   // Per-chat delivery diagnostics shown by /status, /list and the Mini App.
   const deliveryOutcomes: Array<{ chatId: string; ok: boolean; errorClass: string | null; nowSec: number }> = [];
   const globalBackoff = await readTelegramGlobalBackoff(db, now());
-  if (globalBackoff != null) {
-    result.globalBackoffUntil = globalBackoff;
+  if (globalBackoff.state === "unavailable") {
+    // An unreadable gate is not "no gate": fail closed and name the reason.
+    result.stoppedReason = "global-backoff-unreadable";
+    return result;
+  }
+  if (globalBackoff.state === "active") {
+    result.globalBackoffUntil = globalBackoff.until;
     result.stoppedReason = "global-backoff";
     return result;
   }
@@ -624,6 +636,8 @@ export async function drainTelegramDeliveries(
                   result.retried += 1;
                 } else if (settlement.state === "failed") {
                   result.failed += 1;
+                  if (settlement.reason === "max_attempts") result.failedMaxAttempts += 1;
+                  else result.failedPermanent += 1;
                 } else if (settlement.state === "unknown") {
                   result.unknown += 1;
                 } else if (settlement.state === "cancelled") {

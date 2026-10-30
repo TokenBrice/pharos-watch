@@ -13,6 +13,7 @@ import {
 } from "../../../telegram/delivery/jobs";
 import { TELEGRAM_JOB_KIND_HANDLERS } from "./registry";
 import { applyTelegramChatCap } from "../rollup/chat-cap";
+import { TelegramPresetFanoutError } from "../dispatch/telegram-preset-subscriber-store";
 
 /** Live kinds subject to the per-chat cap at plan time (roll-ups and batches are not). */
 const CAPPED_KINDS: ReadonlySet<string> = new Set(["alert", "freeze"]);
@@ -36,6 +37,9 @@ export interface TelegramFanoutResult {
   suppressedDuplicate: number;
   jobsReady: number;
   jobsFailedClosed: number;
+  /** Fail-closed alert pages attributed to the preset loader's failure mode. */
+  presetQueryFailures: number;
+  presetResolutionFailures: number;
   jobsCancelled: number;
   /** Rows held back by the per-chat cap (reported in the next roll-up). */
   cappedRows: number;
@@ -78,6 +82,8 @@ export async function fanOutPlanningTelegramJobs(
     suppressedDuplicate: 0,
     jobsReady: 0,
     jobsFailedClosed: 0,
+    presetQueryFailures: 0,
+    presetResolutionFailures: 0,
     jobsCancelled: 0,
     cappedRows: 0,
   };
@@ -118,6 +124,10 @@ export async function fanOutPlanningTelegramJobs(
     const failClosed = async (error: unknown) => {
       // Fail closed: keep the job planning (retried next run; cancelled at expiry).
       result.jobsFailedClosed += 1;
+      if (error instanceof TelegramPresetFanoutError) {
+        if (error.mode === "query") result.presetQueryFailures += 1;
+        else result.presetResolutionFailures += 1;
+      }
       await db.prepare("UPDATE telegram_jobs SET error = ? WHERE job_id = ? AND state = 'planning'")
         .bind(classifyTelegramLogError(error), job.job_id).run();
       logTelegramEvent({

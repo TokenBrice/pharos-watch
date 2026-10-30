@@ -56,14 +56,15 @@ export function assignSharedDispatchState(
   Object.assign(sharedState, updates);
 }
 
-export async function readPresetFailureCount(db: D1Database): Promise<number> {
+/** `null` when the persisted count could not be read: an unavailable read is not zero. */
+export async function readPresetFailureCount(db: D1Database): Promise<number | null> {
   try {
     const cached = await getCache(db, PRESET_QUERY_FAILURE_CACHE_KEY);
     if (!cached) return 0;
     const parsed = Number(cached.value);
     return Number.isFinite(parsed) && parsed > 0 ? Math.floor(parsed) : 0;
   } catch {
-    return 0;
+    return null;
   }
 }
 
