@@ -1250,7 +1250,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-context.ts",
-      "sha256": "059915dbbf6f203ef26e4c90133779c6bd1250f59ca4fff614c0bf9eca3e6329"
+      "sha256": "0016abf062b710ce7faf0f41d18e27bc049fefe5837da117d9be7bc59bb29c42"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-control.ts",
@@ -1258,7 +1258,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-exit.ts",
-      "sha256": "df0765929ba8057eacb5359a9cd8dc5aa93366454bc9bb504354ae849f188f09"
+      "sha256": "f51bda31f719def03142b240974dae4bfb5064bd887515d027939eb0583127e1"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-lender-book.ts",
@@ -1294,7 +1294,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/redemption-reserve-quarantine.ts",
-      "sha256": "7ebb73b361d7b071408b6ba4fb6cf70edf49ce6eb141ebc82a7bf20f2c3c99e4"
+      "sha256": "36c0a22251bb7b36407e8de81c6d6fae1e529a35e85d68196e246cde77d6dba5"
     },
     {
       "path": "worker/src/lib/safety-score-v9/redemption-route-freshness.ts",
@@ -1351,7 +1351,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-28-block-26290416-shock-coverage.json.gz"
     }
   ],
-  "digest": "34d6b99a2c2da9c9fbda4fdc4e018685acad0bf0b0d885f6c1627eee1f8381b1"
+  "digest": "add812ecc9c62d3c01bca840d216dc4202283a59e7b57c0c943a036208e1875f"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
