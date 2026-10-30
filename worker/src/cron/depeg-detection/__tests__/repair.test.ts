@@ -120,6 +120,54 @@ describe("buildDuplicateOpenEventRepair", () => {
     expect(mergeUnknownDepegSeconds(repaired, 0, 500)).toBe(instrumented ? 350 : 450);
   });
 
+  it("does not absorb a native-domain peak onto a USD-domain keeper", () => {
+    const result = buildDuplicateOpenEventRepair([
+      makeOpenRow({
+        id: 1, stablecoin_id: "pht-pht", symbol: "PHT", peg_type: "peggedPHP",
+        direction: "below", peak_deviation_bps: -159, peak_price: 0.9841,
+        peg_reference: 1, started_at: 100,
+      }),
+      makeOpenRow({
+        id: 2, stablecoin_id: "pht-pht", symbol: "PHT", peg_type: "peggedPHP",
+        direction: "below", peak_deviation_bps: -400, peak_price: 0.0162,
+        peg_reference: 0.016472576, started_at: 200,
+      }),
+    ]);
+
+    expect(result.openEvents.get("pht-pht")).toMatchObject({
+      id: 1,
+      peak_deviation_bps: -159,
+      peak_price: 0.9841,
+    });
+    expect(result.commands).toEqual([
+      { type: "delete-event", id: 2 },
+      { type: "update-peak", id: 1, peakDeviationBps: -159, peakPrice: 0.9841 },
+    ]);
+  });
+
+  it("does not absorb a peak measured against a drifted reference", () => {
+    const result = buildDuplicateOpenEventRepair([
+      makeOpenRow({
+        id: 1, stablecoin_id: "kag-kinesis", symbol: "KAG", peg_type: "peggedGOLD",
+        direction: "below", peak_deviation_bps: -632, peak_price: 58.42, peg_reference: 58.797, started_at: 100,
+      }),
+      makeOpenRow({
+        id: 2, stablecoin_id: "kag-kinesis", symbol: "KAG", peg_type: "peggedGOLD",
+        direction: "below", peak_deviation_bps: -1190, peak_price: 55.42, peg_reference: 62.52, started_at: 200,
+      }),
+    ]);
+
+    expect(result.openEvents.get("kag-kinesis")).toMatchObject({
+      id: 1,
+      peak_deviation_bps: -632,
+      peak_price: 58.42,
+    });
+    expect(result.commands).toEqual([
+      { type: "delete-event", id: 2 },
+      { type: "update-peak", id: 1, peakDeviationBps: -632, peakPrice: 58.42 },
+    ]);
+  });
+
   it("closes stale opposite-direction rows instead of absorbing their peak", () => {
     const result = buildDuplicateOpenEventRepair([
       makeOpenRow({ id: 1, direction: "below", peak_deviation_bps: -150, peak_price: 0.985, started_at: 100 }),
