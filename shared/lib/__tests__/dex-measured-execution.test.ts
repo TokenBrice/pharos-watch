@@ -123,6 +123,41 @@ describe("DEX measured execution contract", () => {
     expect(validateDexMeasuredExecutionProfile(validationInput(profile(nowSec), nowSec))).toEqual([]);
   });
 
+  it("keeps a quote when only the pool token labels differ from the current row", () => {
+    // The direct-api pool row intermittently omits a token symbol, and the target
+    // builder then substitutes the tracked asset id. The label is not identity.
+    const nowSec = 10_000;
+    const quoted = target(nowSec);
+    const current = target(nowSec, {
+      tokenIn: { ...quoted.tokenIn, symbol: quoted.tokenIn.trackedAssetId },
+      tokenOut: { ...quoted.tokenOut, symbol: quoted.tokenOut.trackedAssetId },
+    });
+    expect(current.tokenIn.symbol).not.toBe(quoted.tokenIn.symbol);
+    expect(validateDexMeasuredExecutionProfile(validationInput(profile(nowSec, quoted), nowSec, {
+      quotedTarget: quoted, currentTarget: current,
+    }))).toEqual([]);
+  });
+
+  it("still rejects a current row whose token address moved", () => {
+    const nowSec = 10_000;
+    const quoted = target(nowSec);
+    const moved = target(nowSec, {
+      tokenOut: { ...quoted.tokenOut, address: "0x9999999999999999999999999999999999999999" },
+    });
+    expect(validateDexMeasuredExecutionProfile(validationInput(profile(nowSec, quoted), nowSec, {
+      quotedTarget: quoted, currentTarget: moved,
+    }))).toContain("identity-mismatch");
+  });
+
+  it("still rejects a current row whose token decimals changed", () => {
+    const nowSec = 10_000;
+    const quoted = target(nowSec);
+    const rescaled = target(nowSec, { tokenOut: { ...quoted.tokenOut, decimals: 18 } });
+    expect(validateDexMeasuredExecutionProfile(validationInput(profile(nowSec, quoted), nowSec, {
+      quotedTarget: quoted, currentTarget: rescaled,
+    }))).toContain("identity-mismatch");
+  });
+
   it("accepts successful high-tier probes while clamping reported capacity to 1.5x TVL", () => {
     const nowSec = 10_000;
     const highTvlTarget = { ...target(nowSec), retainedTvlUsd: 3_000_000 };
