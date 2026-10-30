@@ -52,6 +52,19 @@ regexes = [
 ]
 paths = ['''(?:^|/)shared/data/safety-score-v9/incident-review-key-migration-v1\.generated\.json$''']
 
+# Lane emitter descriptors list reviewed route ids in compact JSON arrays. A route id
+# containing "token" (susds-base-l1-token-bridge) followed by `","` and the next route
+# id reads to generic-api-key as `token` = <value>. Match only that adjacency of
+# kebab route ids, only in the generated descriptors, so any other high-entropy
+# value in that file (a UUID-shaped token included) still fails the scan.
+[[allowlists]]
+description = "Adjacent reviewed route ids in the generated lane emitter descriptors are not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^[a-z0-9-]*token[a-z0-9-]*","[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)+"$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/lane-emitter-descriptors-v1\.generated\.json$''']
+
 # Repo-relative source paths are not credentials. CI gates that enumerate route roots
 # (`src/app/api`, `src/app/funding`, ...) otherwise trip the generic-api-key rule on
 # their own configuration constants.
