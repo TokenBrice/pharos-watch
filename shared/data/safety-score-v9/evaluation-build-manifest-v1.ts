@@ -38,7 +38,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/mechanism-review-overlays-v1.json",
-      "sha256": "e6df15e824061a928d26f4b2238c88ac86f02f554f3879d596f7f9943196b244"
+      "sha256": "08fcab124d18f1a4cc3f7a769abc2477b2e10e8eb3ce51915fee7c55381fc19c"
     },
     {
       "path": "shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
@@ -70,15 +70,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "ba1c02ef3c948815e13f93fccabe4352254dab899c5bbcee4b2e9b75052809e0"
+      "sha256": "76e685fbbdf5d93c60e7fa6802b3bff53b964ecf522388aa65c44710d01feffc"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "f010209a6f7b006c1902261a0212bfd2e1fbbad2545514fd4eabeaca7cf215c2"
+      "sha256": "470775719e7992c4a8725baf4d44e6f8f15eba20f9d1373169e9f0153662f66b"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "183a893e2dde31cc57d223cebdb0ba5a676352d488a24b60ab4a4ce0f8f1c537"
+      "sha256": "0f94752eafd2570a1b8b1aa651fabd63afd454be2cc9ca1ff1eef5f778825098"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -138,7 +138,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "baa601d70e12ae2322e0de4c3b39b6228380014b9934cae8074b7fb07035b6f1"
+      "sha256": "3e390613156035aec64ea3d777cc8a8149c2cbe919a9373c82239a7bc97aff77"
     },
     {
       "path": "shared/lib/curve-composite-identities.ts",
@@ -1254,7 +1254,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-context.ts",
-      "sha256": "0016abf062b710ce7faf0f41d18e27bc049fefe5837da117d9be7bc59bb29c42"
+      "sha256": "4d28c6dfd649d101360811be0afcdc81a1b3d57bb54f1eb4d8902fc0b2e6e2d8"
     },
     {
       "path": "worker/src/lib/safety-score-v9/fact-set-control.ts",
@@ -1355,7 +1355,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "9d551975354beb042114575ee4c52233a10a26ff9d5483e0eb6c3f94b2873957"
+  "digest": "443611d2ada5afdb33e2ef0634a8607061b1a77323c2ef7b6487d7c6a4852acd"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
