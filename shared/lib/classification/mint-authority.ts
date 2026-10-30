@@ -21,12 +21,25 @@ function hasActiveMultisigMintControl(summary: MintAuthorityCoverageSummary): bo
   );
 }
 
-function hasDirectNonMultisigMintControl(summary: MintAuthorityCoverageSummary): boolean {
+/**
+ * Direct minters that are protocol mechanisms rather than a named issuer party:
+ * a vault/Fed contract, a governance quorum, or a governance timelock. The
+ * `issuer-or-backend-mint` copy names an issuer role, EOA, backend signer,
+ * custodian, or service role, so these route to `governed-mint` instead.
+ */
+const GOVERNED_DIRECT_MINT_AUTHORITY_TYPES: ReadonlySet<string> = new Set([
+  "contract",
+  "dao-governor",
+  "timelock",
+]);
+
+function hasDirectIssuerMintControl(summary: MintAuthorityCoverageSummary): boolean {
   return (summary.controls ?? []).some(
     (control) =>
       control.directMintAbility === "direct" &&
       control.authorityType !== "safe" &&
-      control.authorityType !== "multisig",
+      control.authorityType !== "multisig" &&
+      !GOVERNED_DIRECT_MINT_AUTHORITY_TYPES.has(control.authorityType),
   );
 }
 
@@ -59,7 +72,7 @@ export function resolveMintAuthorityStatusKind(
   if (
     summary.mintPath === "issuer-direct-mint" ||
     summary.mintPath === "offchain-attested-minter" ||
-    hasDirectNonMultisigMintControl(summary)
+    hasDirectIssuerMintControl(summary)
   ) {
     return "issuer-or-backend-mint";
   }
