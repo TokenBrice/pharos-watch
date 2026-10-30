@@ -60,10 +60,10 @@ describe("fetchCurveOnchainPrices", () => {
     mockEvmCall.mockClear();
     const candidate = await fetchCurveOnchainPrices(CURVE_POOL_CONFIGS);
     expect(baseline.kind).toBe("ok");
-    expect(baseline.value.prices.size).toBe(38);
+    expect(baseline.value.prices.size).toBe(44);
     expect(mockEvmCall.mock.calls).toStrictEqual(baselineCalls);
     expect(candidate).toStrictEqual(baseline);
-    expect([...candidate.value.observedAtByCoinId.values()]).toEqual(Array(38).fill(1_799_999_970));
+    expect([...candidate.value.observedAtByCoinId.values()]).toEqual(Array(44).fill(1_799_999_970));
   });
 
   it("includes verified Curve configs with explicit indices, decimals and USD dependencies", () => {

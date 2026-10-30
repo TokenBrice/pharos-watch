@@ -115,6 +115,10 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   priceRoute("susds-sky", "0x00836Fe54625BE242BcFA286207795405ca4fD10", {
     hop: { viaStablecoinId: "usdt-tether" }, routeType: "one-hop",
   }),
+  // USDx/USDT (factory-stable-ng, ~$3.0M TVL; coins(0)=USDx 18dp, coins(1)=USDT 6dp)
+  priceRoute("usdx-axis", "0xE521BA88837B2726E5343ccA91adA6f19F356C45", {
+    hop: { viaStablecoinId: "usdt-tether" }, routeType: "one-hop",
+  }),
   // ── Hop pools (paired against crvUSD or PYUSD, resolved via two-phase pricing) ──
 
   // pmUSD/crvUSD (factory-stable-ng, ~$19.4M TVL)
@@ -136,6 +140,10 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   // apyUSD/apxUSD (factory-stable-ng, ~$14.9M TVL)
   priceRoute("apyusd-apyx", "0xe41be7B340f7c2EDA4DA1e99b42Ee1b228b526b7", {
     inputDecimals: 18, hop: { viaStablecoinId: "apxusd-apyx" }, routeType: "one-hop",
+  }),
+  // reUSD/fxUSD (factory-stable-ng, ~$2.0M TVL; coins(0)=reUSD 18dp, coins(1)=fxUSD 18dp)
+  priceRoute("reusd-resupply", "0xb0ef04ACE97d350E24Efa5139d2590D26a61A8Dc", {
+    inputDecimals: 18, hop: { viaStablecoinId: "fxusd-f-x-protocol" }, routeType: "one-hop",
   }),
 
   // ── Explicit chained-hop pools ──
@@ -179,6 +187,21 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
     inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "dola-inverse-finance" },
     routeType: "chained-hop", maxHopDepth: 3,
   }),
+  // frxUSD/trUSD (factory-stable-ng, ~$1.06M TVL; coins(0)=frxUSD 18dp, coins(1)=trUSD 18dp)
+  priceRoute("trusd-tori", "0xd1D954BC94c843815EC7b8119f2de00AF27Fa6Ff", {
+    inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "frxusd-frax" },
+    routeType: "chained-hop", maxHopDepth: 2,
+  }),
+  // frxUSD/DUSD (factory-stable-ng, ~$4.2M TVL; coins(0)=frxUSD 18dp, coins(1)=DUSD 18dp)
+  priceRoute("dusd-alto", "0x104d6a1b97A6CEf88D905d7b865A378d90BE932A", {
+    inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "frxusd-frax" },
+    routeType: "chained-hop", maxHopDepth: 2,
+  }),
+  // reUSD/scrvUSD (factory-stable-ng, ~$9.9M TVL; coins(0)=reUSD 18dp, coins(1)=scrvUSD 18dp)
+  priceRoute("scrvusd-curve", "0xc522A6606BBA746d7960404F22a3DB936B6F4F50", {
+    inputIndex: 0, inputDecimals: 18, hop: { viaStablecoinId: "reusd-resupply" },
+    routeType: "chained-hop", maxHopDepth: 2,
+  }),
 
   // ── Metapools (get_dy_underlying) ──
   // Underlying indices for 3Crv metapools: 0=metapool token, 1=DAI(18), 2=USDC(6), 3=USDT(6)
@@ -190,5 +213,9 @@ export const CURVE_POOL_CONFIGS: CurvePoolConfig[] = [
   // GUSD/3Crv metapool (~$1.9M TVL)
   priceRoute("gusd-gemini", "0x4f062658EaAF2C1ccf8C8e36D6824CDf41167956", {
     inputIndex: 2, outputIndex: 0, outputDecimals: 2, useUnderlying: true,
+  }),
+  // MUSD/crv2pool metapool (~$1.2M TVL, underlying 0=MUSD 18dp, 1=USDC 6dp, 2=USDT 6dp)
+  priceRoute("meusd-mezo", "0xB5571E76693ba60110B5811DD650FFefce1C955f", {
+    inputIndex: 1, outputIndex: 0, useUnderlying: true,
   }),
 ];

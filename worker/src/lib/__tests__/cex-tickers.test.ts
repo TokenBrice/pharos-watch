@@ -306,6 +306,30 @@ describe("fetchCoinbasePrices", () => {
     expect(outcome.value.observedAtBySymbol.get("AUDD")).toBe(expectedSec);
   });
 
+  it("prices the XSGD-USDC FX-stablecoin product from its bid/ask midpoint", async () => {
+    // Live shape probed 2026-10-30 from
+    // https://api.exchange.coinbase.com/products/XSGD-USDC/ticker (USDC quote
+    // treated at USD par under the AUDD-USDC precedent).
+    mockFetch([
+      {
+        match: "/products/XSGD-USDC/ticker",
+        body: {
+          ask: "0.7831",
+          bid: "0.7821",
+          price: "0.783",
+          time: "2026-10-30T21:18:48.841299403Z",
+        },
+      },
+      { match: () => true, body: {}, status: 404 },
+    ], { requireMatch: true });
+    const outcome = await fetchCoinbasePrices(["XSGD"]);
+    expect(COINBASE_KNOWN_SYMBOLS).toContain("XSGD");
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.get("XSGD")).toBeCloseTo(0.7826, 6);
+    const expectedSec = Math.floor(Date.parse("2026-10-30T21:18:48.841299403Z") / 1000);
+    expect(outcome.value.observedAtBySymbol.get("XSGD")).toBe(expectedSec);
+  });
+
   it("cancels failed product responses and returns upstream-error outcome", async () => {
     const cancel = vi.fn(async () => undefined);
     const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 404 });
@@ -506,6 +530,51 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.get("CASH")).toBeCloseTo(0.99985, 8);
     expect(outcome.value.get("USDGO")).toBeCloseTo(0.99997, 8);
     expect(outcome.value.size).toBe(2);
+  });
+
+  it("requests the 2026-10-30 reviewed Kraken books and prefers their bid/ask midpoints", async () => {
+    const requestedUrls: string[] = [];
+    mockFetch([{
+      match: (request) => {
+        requestedUrls.push(request.url);
+        return true;
+      },
+      body: {
+        error: [],
+        result: {
+          // Live ticker shapes observed 2026-10-30.
+          AUDXUSD: { a: ["0.70372000", "107413"], b: ["0.70318000", "15000"], c: ["0.70330000", "599.98546851"] },
+          BRL1USD: { a: ["0.18285000", "8656"], b: ["0.18241000", "2787"], c: ["0.18287000", "2593.34863638"] },
+          EUROPUSD: { a: ["1.11580000", "13974"], b: ["1.11450000", "1000"], c: ["1.11450000", "94.76470"] },
+          QCADUSD: { a: ["0.71510000", "69954"], b: ["0.71440000", "69964"], c: ["0.71510000", "16769.00000000"] },
+          USDPTUSD: { a: ["1.00044000", "100000"], b: ["0.99955000", "100000"], c: ["1.00044000", "247.41593"] },
+          USDSMUSD: { a: ["1.00050000", "24985"], b: ["0.99950000", "23177"], c: ["0.99950000", "6.03650"] },
+          USDSUIUSD: { a: ["1.00039000", "9974"], b: ["1.00020000", "12813"], c: ["1.00014000", "9973.75794"] },
+          ZCHFUSD: { a: ["1.21152000", "4116"], b: ["1.20987000", "417"], c: ["1.21003000", "4.59130"] },
+        },
+      },
+    }]);
+
+    const symbols = ["ZCHF", "USDSM", "USDSUI", "USDPT", "EUROP", "QCAD", "AUDX", "BRL1"];
+    const outcome = await fetchKrakenPrices(symbols);
+
+    for (const symbol of symbols) expect(KRAKEN_KNOWN_SYMBOLS).toContain(symbol);
+    expect(requestedUrls).toEqual([
+      `https://api.kraken.com/0/public/Ticker?pair=${[
+        "AUDXUSD", "BRL1USD", "EUROPUSD", "QCADUSD",
+        "USDPTUSD", "USDSMUSD", "USDSUIUSD", "ZCHFUSD",
+      ].join(",")}`,
+    ]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("AUDX")).toBeCloseTo(0.70345, 8);
+    expect(outcome.value.get("BRL1")).toBeCloseTo(0.18263, 8);
+    expect(outcome.value.get("EUROP")).toBeCloseTo(1.11515, 8);
+    expect(outcome.value.get("QCAD")).toBeCloseTo(0.71475, 8);
+    expect(outcome.value.get("USDPT")).toBeCloseTo(0.999995, 8);
+    expect(outcome.value.get("USDSM")).toBeCloseTo(1.0, 8);
+    expect(outcome.value.get("USDSUI")).toBeCloseTo(1.000295, 8);
+    expect(outcome.value.get("ZCHF")).toBeCloseTo(1.210695, 8);
+    expect(outcome.value.size).toBe(8);
   });
 
   it("requests Wyoming FRNT's exact USD book and uses its bid/ask instead of the last trade", async () => {
