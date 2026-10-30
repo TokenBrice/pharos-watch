@@ -21,7 +21,7 @@ import { toErrorMessage } from "@shared/lib/error-utils";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import type { BlacklistRow } from "./shared";
 import { blacklistRuntimeBudgetReached, blacklistSubrequestBudgetReached, type BlacklistRunBudget } from "./run-budget";
-import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "./amount-repair-queue";
+import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue, MAX_LEGACY_EVM_REVIEW_ATTEMPTS } from "./amount-repair-queue";
 import {
   buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence,
   type BlacklistAmountSelectedState,
@@ -29,11 +29,16 @@ import {
 
 import { decodeBlacklistEvmPayload, type BlacklistEvmPayload } from "./evm-payload";
 import { BlacklistDecodeError } from "./decode-quarantine";
+import type { ChainRpcConfig } from "../chain-registry";
+import { evmBracketProofAdmitted, recoverEvmBracketAmount } from "./evm-amount-recovery";
 
 // Conservative scheduled recovery cap: one D1 batch chunk and well below the
 // sync-blacklist 900-subrequest run budget observed in production.
 const BACKFILL_BATCH_SIZE = 100;
 const MAX_DERIVED_RECOVERY_ATTEMPTS = 3;
+// Four or more reads per proof; 25 per run drains a freeze wave without
+// crowding out the run's other repair stages.
+const MAX_EVM_BRACKET_PROOFS_PER_RUN = 25;
 
 export type BlacklistRecoveryErrorClass =
   | "provider_null"
@@ -45,6 +50,7 @@ export type BlacklistRecoveryErrorClass =
   | "ambiguous"
   | "evidence_mismatch"
   | "event_time_unproven"
+  | "event_time_unreconciled"
   | "history_over_cap"
   | "state_raced"
   | "runtime_budget"
@@ -80,7 +86,7 @@ function recoveryAmountStatus(
   amount: number | null, eventType: string, errorClass: BlacklistRecoveryErrorClass | null,
 ): RecoverBlacklistAmountForRowResult["amountStatus"] {
   if (amount != null) return "resolved";
-  return eventType !== "destroy" && errorClass === "event_time_unproven"
+  return eventType !== "destroy" && (errorClass === "event_time_unproven" || errorClass === "event_time_unreconciled")
     ? "permanently_unavailable" : "provider_failed";
 }
 
@@ -88,6 +94,8 @@ export async function enrichRowBalances(opts: {
   rows: BlacklistRow[];
   config: ContractEventConfig;
   etherscanApiKey: string | null;
+  drpcApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
   etherscanLimiter: RateLimitedFetch;
   runBudget: BlacklistRunBudget;
   signal?: AbortSignal;
@@ -111,16 +119,21 @@ export async function enrichRowBalances(opts: {
       // Keep them unresolved rather than substituting a current balance.
       continue;
     } else if (config.chain.evmChainId != null) {
+      // Deferred rows stay recoverable_pending for the capped scheduled repair.
+      if (row.event_type !== "destroy" && !evmBracketProofAdmitted(runBudget)) continue;
       counters.attempted++;
+      markRecoveryAttempt(row, "none", null);
       try {
         const { amount, amountSource, lastErrorClass, lastProvider } = await recoverEvmEventAmount({
           row,
           config,
           etherscanApiKey,
+          drpcApiKey: opts.drpcApiKey,
+          chainRpcs: opts.chainRpcs,
           etherscanLimiter,
           runBudget,
           signal,
-          onProviderAttempt: (provider) => markRecoveryAttempt(row, provider, null),
+          onProviderAttempt: (provider) => { row.amount_last_provider = provider; },
         });
 
         row.amount_native = amount;
@@ -230,6 +243,7 @@ async function fetchDestroyAmountFromLog(
 }
 
 type RecoverableAmountRow = {
+  id: string;
   event_type: string;
   address: string;
   block_number: number;
@@ -239,6 +253,8 @@ type RecoverableAmountRow = {
 
 export interface RecoverBlacklistAmountForRowOptions {
   etherscanApiKey: string | null;
+  drpcApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
   etherscanLimiter: RateLimitedFetch;
   runBudget: BlacklistRunBudget;
   signal?: AbortSignal;
@@ -247,7 +263,7 @@ export interface RecoverBlacklistAmountForRowOptions {
 export interface RecoverBlacklistAmountForRowResult {
   amount: number | null;
   amountUsd: number | null;
-  amountSource: "event" | "unavailable";
+  amountSource: "event" | "historical_balance" | "unavailable";
   amountStatus: "resolved" | "provider_failed" | "permanently_unavailable";
   lastErrorClass: BlacklistRecoveryErrorClass | null;
   lastProvider: BlacklistRecoveryProvider;
@@ -263,12 +279,14 @@ export interface BlacklistAmountBackfillResult {
 
 export interface BlacklistAmountBackfillOptions {
   maxRows?: number;
+  drpcApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
 
 type EvmAmountRecoveryResult = {
   amount: number | null;
-  amountSource: "event" | "unavailable";
+  amountSource: "event" | "historical_balance" | "unavailable";
   lastErrorClass: BlacklistRecoveryErrorClass | null;
   lastProvider: BlacklistRecoveryProvider;
 };
@@ -277,6 +295,8 @@ async function recoverEvmEventAmount(opts: {
   row: RecoverableAmountRow;
   config: ContractEventConfig;
   etherscanApiKey: string | null;
+  drpcApiKey?: string | null;
+  chainRpcs?: Map<string, ChainRpcConfig>;
   etherscanLimiter: RateLimitedFetch;
   runBudget: BlacklistRunBudget;
   signal?: AbortSignal;
@@ -320,11 +340,10 @@ async function recoverEvmEventAmount(opts: {
     }
   }
 
-  // balanceOf(block - 1) is end-of-previous-block state, not the balance at
-  // this log position. Incoming/outgoing transfers or an earlier wipe in the
-  // same block can change it, including turning an apparent zero into a funded
-  // EURC freeze. Until ordered balance effects are proved, keep it unavailable.
-  if (row.event_type !== "destroy") onProviderAttempt?.("none");
+  if (row.event_type === "blacklist" || row.event_type === "unblacklist") {
+    const recovered = await recoverEvmBracketAmount(opts);
+    return { ...recovered, amountSource: recovered.amount == null ? "unavailable" : "historical_balance" };
+  }
   return {
     amount: null,
     amountSource: "unavailable",
@@ -353,6 +372,8 @@ export async function recoverBlacklistAmountForRow(
     row,
     config,
     etherscanApiKey: options.etherscanApiKey,
+    drpcApiKey: options.drpcApiKey,
+    chainRpcs: options.chainRpcs,
     etherscanLimiter: options.etherscanLimiter,
     runBudget: options.runBudget,
     signal: options.signal,
@@ -419,6 +440,12 @@ export async function backfillAmounts(
          AND (
                events.amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
                OR (
+                 events.amount_status = 'permanently_unavailable'
+                 AND events.amount_last_error_class = 'event_time_unproven'
+                 AND events.event_type IN ('blacklist', 'unblacklist')
+                 AND COALESCE(queue.attempt_count, 0) < ${MAX_LEGACY_EVM_REVIEW_ATTEMPTS}
+               )
+               OR (
                  events.amount_source = 'derived'
                  AND events.amount_native = 0
                  AND events.amount_status = 'resolved'
@@ -471,6 +498,7 @@ export async function backfillAmounts(
   let retriedRepairRows = 0;
   let unrecoverableRepairRows = 0;
   let runtimeBudgetHit = false;
+  let bracketProofs = 0;
 
   for (const row of result.results) {
     throwIfAborted(signal);
@@ -481,6 +509,9 @@ export async function backfillAmounts(
     if (blacklistSubrequestBudgetReached(runBudget)) break;
 
     const attemptAt = Math.floor(Date.now() / 1000);
+    const legacyReview = row.amount_status === "permanently_unavailable"
+      && row.amount_last_error_class === "event_time_unproven";
+    const legacyRetryExhausted = legacyReview && row.queue_attempt_count + 1 >= MAX_LEGACY_EVM_REVIEW_ATTEMPTS;
     const symbol = row.stablecoin as ContractEventConfig["stablecoin"];
     const config = row.config_key
       ? getBlacklistConfigByKey(row.config_key)
@@ -501,7 +532,7 @@ export async function backfillAmounts(
         buildAttemptUpdate(
           row,
           attemptAt,
-          row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
+          legacyReview ? "event_time_unproven" : row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
           "none",
           derivedRetryExhausted ? "permanently_unavailable" : undefined,
         ),
@@ -509,20 +540,26 @@ export async function backfillAmounts(
       stmts.push(
         buildBlacklistAmountRepairQueueUpdate(db, {
           eventId: row.id,
-          outcome: derivedRetryExhausted ? "unrecoverable" : "retry",
+          outcome: derivedRetryExhausted || legacyRetryExhausted ? "unrecoverable" : "retry",
           attemptedAt: attemptAt,
           priorAttempts: row.queue_attempt_count ?? 0,
           errorClass: row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
           requireChangedEvent: true,
         }),
       );
-      outcomes.push(derivedRetryExhausted ? "unrecoverable" : "retry");
+      outcomes.push(derivedRetryExhausted || legacyRetryExhausted ? "unrecoverable" : "retry");
       continue;
     }
 
 
+    if (config.chain.evmChainId != null && (row.event_type === "blacklist" || row.event_type === "unblacklist")) {
+      // Untouched rows stay queued for the next run.
+      if (bracketProofs >= MAX_EVM_BRACKET_PROOFS_PER_RUN || !evmBracketProofAdmitted(runBudget)) continue;
+      bracketProofs++;
+    }
+
     let amount: number | null = null;
-    let amountSource: "event" | "unavailable" = "unavailable";
+    let amountSource: EvmAmountRecoveryResult["amountSource"] = "unavailable";
     let amountStatus: BlacklistAmountStatus = "provider_failed";
     let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
     let lastProvider: BlacklistRecoveryProvider = "none";
@@ -533,6 +570,8 @@ export async function backfillAmounts(
         row,
         config,
         etherscanApiKey,
+        drpcApiKey: options.drpcApiKey,
+        chainRpcs: options.chainRpcs,
         etherscanLimiter,
         runBudget,
         signal,
@@ -542,6 +581,12 @@ export async function backfillAmounts(
       lastErrorClass = recovered.lastErrorClass;
       lastProvider = recovered.lastProvider;
     }
+
+    if (lastErrorClass === "runtime_budget") {
+      runtimeBudgetHit = true;
+      break;
+    }
+    if (lastErrorClass === "budget_exhausted") break;
 
     amountStatus = recoveryAmountStatus(amount, row.event_type, lastErrorClass);
     if (amount != null) {
@@ -577,8 +622,11 @@ export async function backfillAmounts(
         row.amount_last_error_class !== "runtime_budget" &&
         row.amount_last_error_class !== "budget_exhausted" &&
         (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
-      const unrecoverable = derivedRetryExhausted || amountStatus === "permanently_unavailable";
-      if (wasLegacyDerived) {
+      const unrecoverable = derivedRetryExhausted || legacyRetryExhausted || amountStatus === "permanently_unavailable";
+      if (legacyReview) {
+        stmts.push(buildAttemptUpdate(row, attemptAt,
+          amountStatus === "permanently_unavailable" ? lastErrorClass : "event_time_unproven", lastProvider));
+      } else if (wasLegacyDerived) {
         stmts.push(
           buildAttemptUpdate(
             row,

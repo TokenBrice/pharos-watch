@@ -100,6 +100,8 @@ export interface EtherscanProxyRequest {
   position?: string;
   signal?: AbortSignal;
   timeoutMs?: number;
+  deadlineMs?: number;
+  maxRetries?: number;
 }
 
 export interface EvmBlockSearchCache {
@@ -876,7 +878,7 @@ export async function fetchJsonRpcHexAtUrl(
   rpcUrl: string,
   method: string,
   params: unknown[],
-  options?: Pick<EvmRpcOptions, "signal" | "timeoutMs">,
+  options?: Pick<EvmRpcOptions, "signal" | "timeoutMs" | "deadlineMs" | "maxRetries">,
 ): Promise<`0x${string}` | null> {
   return fetchJsonRpcResult<`0x${string}`>([rpcUrl], method, params, options, {
     acceptResult: (value): value is `0x${string}` => isHexBytes(value) && value !== "0x",
@@ -1091,8 +1093,8 @@ export async function fetchEtherscanProxyHex(request: EtherscanProxyRequest): Pr
   const result = await fetchJsonWithRetry<JsonRpcEnvelope<string>>(
     `${ETHERSCAN_V2_BASE}?${params.toString()}`,
     request.signal ? { signal: request.signal } : undefined,
-    1,
-    { timeoutMs: request.timeoutMs ?? 10_000 },
+    request.maxRetries ?? 1,
+    { timeoutMs: request.timeoutMs ?? 10_000, deadlineMs: request.deadlineMs },
   );
   if (!result?.response.ok) return null;
 

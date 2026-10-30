@@ -17,6 +17,7 @@ import {
   buildBlacklistAmountAttemptUpdate, buildRecoveredBlacklistAmountPersistence,
   type BlacklistAmountSelectedState,
 } from "../../../lib/blacklist/amount-persistence";
+import { buildBlacklistAmountRepairQueueUpdate, refreshBlacklistAmountRepairQueue } from "../../../lib/blacklist/amount-repair-queue";
 
 const fixtures = createLatestSchemaFixtureTracker();
 
@@ -27,6 +28,56 @@ afterEach(() => {
 
 
 describe("insertBlacklistRows", () => {
+  it.each(["eligible", "other-error", "destroy", "tron", "suppressed", "raced-error", "event-source", "derived-source", "provider-failed"] as const)(
+    "only resolves the exact unsuppressed legacy EVM state (%s)", async (scenario) => {
+      const { db, sqlite } = fixtures.open();
+      const [config] = getBlacklistConfigsForSymbolAndChain("EURC", "ethereum");
+      await insertBlacklistRows(db, [makePendingBlacklistRow({
+        id: "legacy-review", stablecoin: "EURC", amount_status: "permanently_unavailable",
+        amount_last_error_class: scenario === "other-error" ? "event_time_unreconciled" : "event_time_unproven",
+        event_type: scenario === "destroy" ? "destroy" : "blacklist",
+        chain_id: scenario === "tron" ? "tron" : "ethereum",
+        config_key: config.configKey, contract_address: config.contractAddress,
+      })]);
+      await refreshBlacklistAmountRepairQueue(db, 100);
+      const selectedState = sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'legacy-review'").get() as BlacklistAmountSelectedState;
+      const persistence = buildRecoveredBlacklistAmountPersistence(db, {
+        eventId: "legacy-review", eventType: "blacklist", config,
+        amount: 0, amountUsd: null,
+        amountSource: scenario === "event-source" ? "event" : scenario === "derived-source" ? "derived" : "historical_balance",
+        amountStatus: scenario === "provider-failed" ? "provider_failed" : "resolved",
+        attemptedAt: 200, lastErrorClass: null, lastProvider: "chain_rpc",
+      }, { selectedState });
+      if (scenario === "suppressed") {
+        sqlite.prepare("UPDATE blacklist_events SET suppression_reason = 'operator-suppressed' WHERE id = 'legacy-review'").run();
+      } else if (scenario === "raced-error") {
+        sqlite.prepare("UPDATE blacklist_events SET amount_last_error_class = 'operator-reviewed' WHERE id = 'legacy-review'").run();
+      }
+      const before = sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'legacy-review'").get();
+      const queueBefore = sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = 'legacy-review'").get();
+      const [result] = await db.batch([
+        persistence.statement,
+        buildBlacklistAmountRepairQueueUpdate(db, {
+          eventId: "legacy-review", outcome: "resolved", attemptedAt: 200, priorAttempts: 0,
+          errorClass: null, requireChangedEvent: true,
+        }),
+      ]);
+      if (scenario === "eligible") {
+        expect(result.meta.changes).toBe(1);
+        expect(sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'legacy-review'").get()).toMatchObject({
+          amount_native: 0, amount_usd_at_event: null, amount_status: "resolved",
+          amount_source: "historical_balance", amount_last_error_class: null, suppression_reason: null,
+        });
+        expect(sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = 'legacy-review'").get())
+          .toMatchObject({ status: "resolved", attempt_count: 1 });
+      } else {
+        expect(result.meta.changes).toBe(0);
+        expect(sqlite.prepare("SELECT * FROM blacklist_events WHERE id = 'legacy-review'").get()).toEqual(before);
+        expect(sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = 'legacy-review'").get()).toEqual(queueBefore);
+      }
+    },
+  );
+
   it.each(["event", "historical_balance", "derived", "unavailable"] as const)(
     "persists EURC mirror suppression only for event-time zero proof (%s)",
     async (amountSource) => {

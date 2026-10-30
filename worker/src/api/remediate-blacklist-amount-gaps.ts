@@ -29,6 +29,7 @@ import {
   type BlacklistRunBudget,
 } from "../lib/blacklist/run-budget";
 import { invalidateBlacklistDerivedCaches } from "../lib/blacklist-cache-invalidation";
+import type { ChainRpcConfig } from "../lib/chain-registry";
 
 const VALID_STABLECOINS = new Set<BlacklistStablecoin>(BLACKLIST_STABLECOINS);
 const RECOVERABLE_GAP_STATUSES = ["recoverable_pending", "provider_failed", "ambiguous"] as const;
@@ -78,12 +79,14 @@ export interface RemediateBlacklistAmountGapsRouteContext {
   db: D1Database;
   url: URL;
   request?: Request;
+  chainRpcs?: Map<string, ChainRpcConfig>;
 }
 
 export async function handleRemediateBlacklistAmountGapsTrusted({
   db,
   url,
   request,
+  chainRpcs,
 }: RemediateBlacklistAmountGapsRouteContext): Promise<Response> {
   return runTrustedAdminMutation(async () => {
     const body = await parseOptionalRequestJsonObject(request);
@@ -158,6 +161,7 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
       .prepare(
         `SELECT id, stablecoin, chain_id, event_type, address, tx_hash, block_number, timestamp, amount_status,
                 amount_attempt_count, amount_last_attempted_at, contract_address, config_key,
+                amount_last_error_class,
                 amount_native, amount_usd_at_event, amount_source, provenance_source, provenance_observed_at
          FROM blacklist_events
          WHERE ${conditions.join(" AND ")}
@@ -257,7 +261,13 @@ export async function handleRemediateBlacklistAmountGapsTrusted({
         etherscanApiKey: null,
         etherscanLimiter: limiter,
         runBudget,
+        chainRpcs,
       });
+      if (recovery.lastErrorClass === "runtime_budget" || recovery.lastErrorClass === "budget_exhausted") {
+        budgetExhausted = true;
+        skippedDueBudget = candidates.length - index;
+        break;
+      }
 
       if (recovery.amount == null) {
         outcomes.push("providerFailed");
