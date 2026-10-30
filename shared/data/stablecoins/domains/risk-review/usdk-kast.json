@@ -279,5 +279,77 @@
         "evidence": "At finalized Solana slot 439717137, extension program extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw resolved to ProgramData CK8fFmZLbHUVnCWsrc1kTFeEbgWgDbEtPsPysNgwBaTh, whose upgrade authority was the bare EOA 9QpF8a9TDM9DMiQ556bjEAyAx3WRunzW9HfiDcAPNyJW. This upgrade path can replace the extension's M-transfer-before-mint logic; no timelock or Safe threshold was established."
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDK has no external price feed. The Solana m_ext program wraps and unwraps $M at a fixed 1:1 ratio (no slippage, whitelisted unwrappers), and $M's USD value rests on M0's on-chain earning index plus validator-signed attestations of off-chain collateral held by permissioned minters. The pricing authority is therefore M0's internal, privileged protocol accounting rather than a market oracle, and no borrower or liquidation branch exists in the USDK path.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2-045 research sprint 2026-10-30 (batch 2; M0 protocol documentation)",
+      "rationale": "USDK is an M0 extension: mint and redemption convert one-for-one between USDK and $M through the extension program, so a single top-level conversion authority prices the coin and there is no borrower market or liquidation branch to review. The documentation states all swaps maintain the 1:1 peg and that wrap/unwrap expose no oracle account.",
+      "sources": [
+        {
+          "label": "M0 Extensions documentation: 1:1 extension backing and atomic SwapFacility conversion",
+          "url": "https://docs.m0.org/protocol/extensions"
+        },
+        {
+          "label": "M0 Solana documentation: m_ext wrap/unwrap instructions and 1:1 peg",
+          "url": "https://docs.m0.org/protocol/solana"
+        },
+        {
+          "label": "M0 minting and burning documentation: validator-attested collateral and permissioned minters",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-045 research sprint 2026-10-30 (batch 2; M0 protocol documentation)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "M0 Extensions documentation: 1:1 extension backing and atomic SwapFacility conversion",
+        "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "M0 Solana documentation: m_ext wrap/unwrap instructions and 1:1 peg",
+        "url": "https://docs.m0.org/protocol/solana"
+      },
+      {
+        "label": "M0 minting and burning documentation: validator-attested collateral and permissioned minters",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      }
+    ],
+    "paths": [
+      {
+        "id": "solana:extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw",
+        "chain": "solana",
+        "address": "extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-30",
+          "reviewer": "RS2-045 research sprint 2026-10-30 (batch 2; M0 protocol documentation)",
+          "confidence": "probable",
+          "rationale": "The deployed extension program is the sole USDK mint and unwrap path in the reviewed catalog entry; the M0 documentation defines wrap/unwrap as 1:1 conversion against a vault of $M and publishes no oracle account, price feed or liquidation entry point for the extension.",
+          "sources": [
+            {
+              "label": "M0 Extensions documentation: 1:1 extension backing and atomic SwapFacility conversion",
+              "url": "https://docs.m0.org/protocol/extensions"
+            },
+            {
+              "label": "M0 Solana documentation: m_ext wrap/unwrap instructions and 1:1 peg",
+              "url": "https://docs.m0.org/protocol/solana"
+            },
+            {
+              "label": "M0 minting and burning documentation: validator-attested collateral and permissioned minters",
+              "url": "https://docs.m0.org/protocol/minting-burning"
+            }
+          ]
+        }
+      }
+    ]
   }
 }

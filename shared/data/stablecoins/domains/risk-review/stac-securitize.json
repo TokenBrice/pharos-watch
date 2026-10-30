@@ -1,5 +1,48 @@
 {
   "id": "stac-securitize",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "STAC is a tokenized fund share of the Securitize Tokenized AAA CLO Fund. Its price is the fund's net asset value: valuation is determined inside the fund's own administration and valuation process and is delivered to Chronicle by custodians, fund administrators and other service providers, which Chronicle verifies and publishes onchain as Proof of Asset. Chronicle's publication is a verification and transport layer, not an independent valuation authority, and the issuer release names BNY as custodian of the fund's underlying assets and sub-adviser through BNY Investments without identifying an independent NAV calculation authority. STAC has no borrower market, no collateral-liquidation engine and no secondary price feed whose staleness or failure could impair a lending book. The reviewed price authority is therefore privileged internal fund NAV plus a single Chronicle publication path.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2-031 research sprint 2026-10-30",
+      "rationale": "The only price-sensitive input is the fund share net asset value used for primary subscription and redemption at NAV. Securitize issues STAC natively on Ethereum and Solana against fund shares and publishes no borrower market, collateral-health oracle, forced-liquidation path or other branch whose pricing would need a separate oracle review. The Chronicle Proof of Asset feed observed by the reviewed reserve adapter (consumer 0x9D77E4cA90E25114AFb24dF908f5918f572D958B, native-fund-share NAV scope) publishes the same top-level NAV, so the review stays top-level and no branch is applicable.",
+      "sources": [
+        {
+          "label": "Securitize/Chronicle Proof of Asset integration release (2026-02-05): Chronicle verifies fund holdings and pricing; BNY is custodian and sub-adviser",
+          "url": "https://investors.securitize.io/news/news-details/2026/Chronicle-Provides-Proof-of-Asset-Verification-for-Securitizes-Tokenized-AAA-CLO-Fund-Bringing-Institutional-Structured-Credit-On-Chain-02-05-2026/default.aspx"
+        },
+        {
+          "label": "Securitize Tokenized AAA CLO Fund page: tokenized fund share seeking income from AAA-rated CLOs",
+          "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-031 research sprint 2026-10-30",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Securitize/Chronicle Proof of Asset integration release (2026-02-05): independent verification of fund holdings and pricing provided by Chronicle; BNY serves as custodian and sub-adviser",
+        "url": "https://investors.securitize.io/news/news-details/2026/Chronicle-Provides-Proof-of-Asset-Verification-for-Securitizes-Tokenized-AAA-CLO-Fund-Bringing-Institutional-Structured-Credit-On-Chain-02-05-2026/default.aspx"
+      },
+      {
+        "label": "Chronicle Proof of Asset: asset information is delivered by custodians, fund administrators and service providers before onchain publication; the verification layer is separate from the issuer",
+        "url": "https://chroniclelabs.org/products/proof-of-asset"
+      },
+      {
+        "label": "Securitize Tokenized AAA CLO Fund product page (fund share, CLO portfolio)",
+        "url": "https://securitize.io/primary-market/Securitize-BNY-CLO-Fund"
+      },
+      {
+        "label": "Chronicle Proof of Asset dashboard for Securitize STAC (onchain NAV publication)",
+        "url": "https://chroniclelabs.org/dashboard/proof-of-asset/securitize-stac"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

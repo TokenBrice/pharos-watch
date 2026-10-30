@@ -2,27 +2,9 @@
   "id": "uty-xsy",
   "reserves": [
     {
-      "sourceKey": "accountable:xsy:deployment:ethereum",
-      "name": "Ethereum",
-      "pct": 44.757,
-      "risk": "high",
-      "assetClass": "other",
-      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
-      "riskFactors": [
-        "credit",
-        "counterparty",
-        "custody",
-        "liquidity",
-        "market",
-        "basis",
-        "concentration"
-      ],
-      "liquidityHorizon": "seven-days"
-    },
-    {
       "sourceKey": "accountable:xsy:deployment:base",
       "name": "Base",
-      "pct": 37.9162,
+      "pct": 73.14371777,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
@@ -40,7 +22,7 @@
     {
       "sourceKey": "accountable:xsy:deployment:avalanche",
       "name": "Avalanche",
-      "pct": 17.235,
+      "pct": 18.2941279,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
@@ -56,9 +38,9 @@
       "liquidityHorizon": "seven-days"
     },
     {
-      "sourceKey": "accountable:xsy:deployment:katana",
-      "name": "Katana",
-      "pct": 0.0505,
+      "sourceKey": "accountable:xsy:deployment:ethereum",
+      "name": "Ethereum",
+      "pct": 8.5076551,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
@@ -76,7 +58,25 @@
     {
       "sourceKey": "accountable:xsy:deployment:copper",
       "name": "Copper",
-      "pct": 0.0389,
+      "pct": 0.03973753,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:xsy:deployment:katana",
+      "name": "Katana",
+      "pct": 0.01228812,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
@@ -94,7 +94,133 @@
     {
       "sourceKey": "accountable:xsy:deployment:hyperliquid",
       "name": "Hyperliquid",
-      "pct": 0.0022,
+      "pct": 0.00233095,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:xsy:deployment:plasma",
+      "name": "Plasma",
+      "pct": 5.222e-05,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:xsy:deployment:bnb-smartchain",
+      "name": "Bnb_smartchain",
+      "pct": 4.9e-05,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:xsy:deployment:hyperevm",
+      "name": "Hyperevm",
+      "pct": 3.566e-05,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:xsy:deployment:arbitrum",
+      "name": "Arbitrum",
+      "pct": 2.22e-06,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:xsy:deployment:megaeth",
+      "name": "Megaeth",
+      "pct": 1.61e-06,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:xsy:deployment:monad",
+      "name": "Monad",
+      "pct": 1.53e-06,
+      "risk": "high",
+      "assetClass": "other",
+      "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
+      "riskFactors": [
+        "credit",
+        "counterparty",
+        "custody",
+        "liquidity",
+        "market",
+        "basis",
+        "concentration"
+      ],
+      "liquidityHorizon": "seven-days"
+    },
+    {
+      "sourceKey": "accountable:xsy:deployment:sei",
+      "name": "Sei",
+      "pct": 3.8e-07,
       "risk": "high",
       "assetClass": "other",
       "issuerOrObligor": "YieldPoint (XSY) managed strategy and undisclosed custody/venue counterparties",
@@ -111,8 +237,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-01",
-    "reviewer": "OpenAI Codex UTY reserve curation; Claude ODR-E9 location-bucket join repair",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-018 research sprint 2026-10-30",
     "confidence": "manual-review",
     "sources": [
       {
@@ -132,58 +258,115 @@
         "url": "https://accountable.xsy.fi:10443/dashboard"
       },
       {
+        "label": "Accountable cache mirror of the same reserves_split payload",
+        "url": "https://cache.accountable.capital/dashboard/xsy"
+      },
+      {
         "label": "Diagnostic maturity re-check by Sol curation campaign 2026-10-11 (G27UTY), observed 2026-10-11T08:42:39Z: current Accountable Base, Avalanche and Ethereum rows remain location/value buckets without complete instruments or hard maturity maxima; no reserve allocation or review-date refresh",
         "url": "https://cache.accountable.capital/dashboard/xsy"
+      },
+      {
+        "label": "RS2-018 2026-10-30T11:02Z read: reserves_split returned 13 positive location/custody buckets (USD 13,041,048.05 positive total, dashboard data.ts 2026-10-30T10:46:07.500Z, verifiability 100); the seven sub-cent buckets absent from the reviewed rows (Plasma, Bnb_smartchain, Hyperevm, Arbitrum, Megaeth, Monad, Sei) are carried below, Bybit is absent from the payload",
+        "url": "https://accountable.xsy.fi:10443/dashboard"
       }
     ],
-    "rationale": "Re-opened 2026-09-01 against the Accountable reserves_split payload (dashboard timestamp 2026-09-01T10:15:39Z, USD 13,837,236.09 across fourteen buckets). The prior 2026-08-28 curation covered Base, Ethereum, Avalanche and Copper only. Since then the bucket set moved: the production adapter rounds shares to one decimal and drops anything that rounds to 0.0, so Katana (USD 6,988.88, 0.0505%) crossed into the captured set while Copper (USD 5,379.64, 0.0389%) fell out of it. No reviewed row was named Katana, so the captured Katana exposure compiled with no assetClass and no failure domain. The composition is now curated from the raw source shares rather than the adapter's rounded output, and it covers every bucket down to Hyperliquid (0.0022%); the eight remaining buckets total USD 18.58, or 0.0002%, and are omitted as dust within the composition tolerance. Carrying Copper and Hyperliquid keeps a reviewed row available for the buckets that sit either side of the adapter's rounding threshold, so the same defect does not recur the next time one crosses it. These are location/custody or settlement buckets, not asset classes, so every row stays conservatively classified as assetClass other with the same YieldPoint (XSY) managed-strategy and undisclosed custody/venue-counterparty failure domain. YieldPoint's flow documentation says USDC is minted 1:1 and swept to a custodian, while XSY's public mechanics describe strategy modules and give long-spot/short-perpetuals only as examples; the sources do not publish the current strategy assets, retained USDC, hedge notionals, margin, venue balances, custody-provider shares, or liquidation buffers. No UTY sourceKeyMap is configured, so the reviewed rows intentionally match the live bucket names exactly and do not imply asset-level itemization.",
-    "compositionBasis": "Accountable reserves_split location/custody snapshot read 2026-09-01, taken as raw bucket shares of the USD 13,837,236.09 positive-bucket total rather than the live adapter's one-decimal rounding, interpreted with current XSY/YieldPoint flow, strategy, and risk disclosures",
-    "compositionAsOf": "2026-09-01",
+    "rationale": "Re-opened 2026-10-30 against the live Accountable reserves_split payload (dashboard data.ts 2026-10-30T10:46:07.500Z, verifiability 100, USD 13,041,048.05 across thirteen positive buckets). The prior 2026-09-01 curation carried six reviewed rows and treated eight sub-0.001% buckets as dust, but the live producer still emits those buckets, so seven captured exposures (Plasma, Bnb_smartchain, Hyperevm, Arbitrum, Megaeth, Monad, Sei) compiled with no admitted asset class and no failure domain; the 2026-09-01 composition also sat outside the 31-day plus 7-day reviewed-composition budget. The composition is now curated from the current raw bucket shares over the positive-bucket total: every bucket is carried, including the seven sub-cent ones, so no captured bucket can compile unstructured, and the weights follow the live book instead of the September split (Base 73.14371777% and Ethereum 8.50765510% now versus 37.9162% and 44.757% on 2026-09-01; Copper, Katana and Hyperliquid remain single-digit dust). Bybit is configured in sourceKeyMap but absent from the payload, so no row is claimed for it. These are location/custody or settlement buckets, not asset classes, so every row stays conservatively classified as assetClass other with the same YieldPoint (XSY) managed-strategy and undisclosed custody/venue-counterparty failure domain, and they remain intentionally unlinked. YieldPoint's flow documentation says USDC is minted 1:1 and swept to a custodian, while XSY's public mechanics describe strategy modules and give long-spot/short-perpetuals only as examples; the sources do not publish the current strategy assets, retained USDC, hedge notionals, margin, venue balances, custody-provider shares, or liquidation buffers. Bucket values are USD from the issuer-hosted Accountable feed; the shares are read as percentages of the positive-bucket total, not of supply.",
+    "compositionBasis": "Accountable reserves_split location/custody snapshot read 2026-10-30T11:02Z (payload timestamp 2026-10-30T10:46:07.500Z), taken as raw bucket shares of the USD 13,041,048.05 positive-bucket total, interpreted with current XSY/YieldPoint flow, strategy, and risk disclosures",
+    "compositionAsOf": "2026-10-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 99.9998% figure reflects that every published Accountable location envelope remains unitemized at asset level and is therefore unresolved for reserve composition; it does not assert that the managed strategy is absent. XSY and Accountable do not itemize the strategy's retained USDC, long/short positions, margin, venue balances, custody-provider allocation, or liquidation buffers within any location bucket. The residual 0.0002% is the eight sub-0.001% buckets omitted as dust.",
-    "knownUnknownExposurePct": 99.9998,
+    "knownUnknownExposure": "The 100% figure reflects that every published Accountable location envelope remains unitemized at asset level and is therefore unresolved for reserve composition; it does not assert that the managed strategy is absent. XSY and Accountable do not itemize the strategy's retained USDC, long/short positions, margin, venue balances, custody-provider allocation, or liquidation buffers within any location bucket.",
+    "knownUnknownExposurePct": 100.0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Ethereum",
-        "pct": 44.757,
-        "disposition": "insufficient-evidence",
-        "rationale": "Ethereum is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
         "reserveName": "Base",
-        "pct": 37.9162,
+        "pct": 73.14371777,
         "disposition": "insufficient-evidence",
         "rationale": "Base is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 2,
+        "reserveIndex": 1,
         "reserveName": "Avalanche",
-        "pct": 17.235,
+        "pct": 18.2941279,
         "disposition": "insufficient-evidence",
         "rationale": "Avalanche is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       },
       {
+        "reserveIndex": 2,
+        "reserveName": "Ethereum",
+        "pct": 8.5076551,
+        "disposition": "insufficient-evidence",
+        "rationale": "Ethereum is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
         "reserveIndex": 3,
+        "reserveName": "Copper",
+        "pct": 0.03973753,
+        "disposition": "insufficient-evidence",
+        "rationale": "Copper is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 4,
         "reserveName": "Katana",
-        "pct": 0.0505,
+        "pct": 0.01228812,
         "disposition": "insufficient-evidence",
         "rationale": "Katana is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       },
       {
-        "reserveIndex": 4,
-        "reserveName": "Copper",
-        "pct": 0.0389,
-        "disposition": "insufficient-evidence",
-        "rationale": "Copper is an Accountable custody/settlement bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
-      },
-      {
         "reserveIndex": 5,
         "reserveName": "Hyperliquid",
-        "pct": 0.0022,
+        "pct": 0.00233095,
         "disposition": "insufficient-evidence",
-        "rationale": "Hyperliquid is an Accountable venue/location bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+        "rationale": "Hyperliquid is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 6,
+        "reserveName": "Plasma",
+        "pct": 5.222e-05,
+        "disposition": "insufficient-evidence",
+        "rationale": "Plasma is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 7,
+        "reserveName": "Bnb_smartchain",
+        "pct": 4.9e-05,
+        "disposition": "insufficient-evidence",
+        "rationale": "Bnb_smartchain is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 8,
+        "reserveName": "Hyperevm",
+        "pct": 3.566e-05,
+        "disposition": "insufficient-evidence",
+        "rationale": "Hyperevm is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 9,
+        "reserveName": "Arbitrum",
+        "pct": 2.22e-06,
+        "disposition": "insufficient-evidence",
+        "rationale": "Arbitrum is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 10,
+        "reserveName": "Megaeth",
+        "pct": 1.61e-06,
+        "disposition": "insufficient-evidence",
+        "rationale": "Megaeth is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 11,
+        "reserveName": "Monad",
+        "pct": 1.53e-06,
+        "disposition": "insufficient-evidence",
+        "rationale": "Monad is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
+      },
+      {
+        "reserveIndex": 12,
+        "reserveName": "Sei",
+        "pct": 3.8e-07,
+        "disposition": "insufficient-evidence",
+        "rationale": "Sei is an Accountable location/custody bucket, not an asset class. The managed strategy's assets, retained USDC, hedge notionals, and venue balances are not itemized; custody, market, and basis uncertainty remain, so this row is intentionally non-linked rather than treated as a tracked stablecoin dependency."
       }
     ]
   },

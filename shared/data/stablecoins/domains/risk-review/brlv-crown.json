@@ -172,7 +172,10 @@
         "canonicalChain": "base",
         "controllerChain": "tempo",
         "controllerAddress": "0x06d804add7208437b10ece87306cc2aa6914c806",
-        "failureDomainKeys": ["protocol:crown-off-chain-relayer", "contract:tempo:0x06d804add7208437b10ece87306cc2aa6914c806"],
+        "failureDomainKeys": [
+          "protocol:crown-off-chain-relayer",
+          "contract:tempo:0x06d804add7208437b10ece87306cc2aa6914c806"
+        ],
         "observedBlock": 42696190,
         "sources": [
           {
@@ -611,8 +614,14 @@
       {
         "id": "brlv-tempo-tip20-admin",
         "label": "BRLV Tempo TIP-20 DEFAULT_ADMIN",
-        "routeRefs": ["tempo:0x20c000000000000000000000f4371867ae9754ce"],
-        "capabilities": ["admin", "bridge-mint", "rate-limit"],
+        "routeRefs": [
+          "tempo:0x20c000000000000000000000f4371867ae9754ce"
+        ],
+        "capabilities": [
+          "admin",
+          "bridge-mint",
+          "rate-limit"
+        ],
         "authorityType": "eoa",
         "controllerChain": "tempo",
         "controllerAddress": "0x6eebafd70486f03c17287673f08b79c696ee5f2e",
@@ -621,18 +630,36 @@
         "observedAt": "2026-10-05",
         "observedBlock": 42696190,
         "sources": [
-          {"label": "Official exact BRLV Tempo deployment", "url": "https://docs.crown-brlv.com/whitepaper.md"},
-          {"label": "TIP-20 role and supply-cap semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"},
-          {"label": "TIP-20 hasRole address-first ABI", "url": "https://raw.githubusercontent.com/tempoxyz/tempo/main/crates/contracts/src/precompiles/tip20.rs"},
-          {"label": "Pinned membership census and live reads at block 42696190", "url": "https://rpc.tempo.xyz"}
+          {
+            "label": "Official exact BRLV Tempo deployment",
+            "url": "https://docs.crown-brlv.com/whitepaper.md"
+          },
+          {
+            "label": "TIP-20 role and supply-cap semantics",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "TIP-20 hasRole address-first ABI",
+            "url": "https://raw.githubusercontent.com/tempoxyz/tempo/main/crates/contracts/src/precompiles/tip20.rs"
+          },
+          {
+            "label": "Pinned membership census and live reads at block 42696190",
+            "url": "https://rpc.tempo.xyz"
+          }
         ],
         "evidence": "At Tempo block 42696190/hash 0x26452fcea76e0e5b4de193d4e31cf9ef6f510d89570ec1a7a7838590a9c19477, creation-to-pin RoleMembershipUpdated/RoleAdminUpdated census still has four grants and no revocations/admin updates. This sole token DEFAULT_ADMIN remains a code-empty EOA; address-first hasRole confirms its role. All standard role admins remain DEFAULT_ADMIN. The token cap is 340282366920938463463374607431768211455 raw six-decimal units and can be raised/replaced by this administrator. Router source/counterpart and mint/burn correspondence are separately reviewed below; this EOA's independent ability to authorize another issuer remains an unbounded bridge authority, not a conservation guarantee."
       },
       {
         "id": "brlv-tempo-tip20-issuer",
         "label": "BRLV Tempo TIP-20 issuer and pause proxy",
-        "routeRefs": ["tempo:0x20c000000000000000000000f4371867ae9754ce"],
-        "capabilities": ["bridge-mint", "bridge-burn", "pause"],
+        "routeRefs": [
+          "tempo:0x20c000000000000000000000f4371867ae9754ce"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "pause"
+        ],
         "authorityType": "contract",
         "controllerChain": "tempo",
         "controllerAddress": "0x06d804add7208437b10ece87306cc2aa6914c806",
@@ -641,10 +668,22 @@
         "observedAt": "2026-10-05",
         "observedBlock": 42696190,
         "sources": [
-          {"label": "Official exact BRLV Tempo deployment", "url": "https://docs.crown-brlv.com/whitepaper.md"},
-          {"label": "TIP-20 issuer and pause semantics", "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"},
-          {"label": "Pinned membership census and current contract code", "url": "https://rpc.tempo.xyz"},
-          {"label": "Exact verified bridgedBRLVRouter implementation", "url": "https://contracts.tempo.xyz/v2/contract/4217/0x3b3f2e2aa07460a9ba95ffd06ad9597398bbbab7?fields=all"}
+          {
+            "label": "Official exact BRLV Tempo deployment",
+            "url": "https://docs.crown-brlv.com/whitepaper.md"
+          },
+          {
+            "label": "TIP-20 issuer and pause semantics",
+            "url": "https://tempo.xyz/developers/docs/protocol/tip20/spec"
+          },
+          {
+            "label": "Pinned membership census and current contract code",
+            "url": "https://rpc.tempo.xyz"
+          },
+          {
+            "label": "Exact verified bridgedBRLVRouter implementation",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0x3b3f2e2aa07460a9ba95ffd06ad9597398bbbab7?fields=all"
+          }
         ],
         "routeChecks": {
           "trustedPeerOrRemote": "Router canonicalDomain is 0xe8eb88c6847b62e777aa5059619780b9bdb9a0c545c067ac1486a4e01029e17e, matching Base gateway; mint requires that domain and a previously unused canonical transaction hash. The router does not verify Base receipts or enforce 18-to-6 amount conversion.",
@@ -656,12 +695,23 @@
       {
         "id": "brlv-tempo-router-default-admin",
         "label": "BRLV Tempo router DEFAULT_ADMIN and UPGRADE_ROLE manager",
-        "routeRefs": ["tempo:0x20c000000000000000000000f4371867ae9754ce"],
-        "capabilities": ["bridge-mint", "bridge-burn", "admin", "upgrade", "pause"],
+        "routeRefs": [
+          "tempo:0x20c000000000000000000000f4371867ae9754ce"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "admin",
+          "upgrade",
+          "pause"
+        ],
         "authorityType": "eoa",
         "controllerChain": "tempo",
         "controllerAddress": "0x239d4a24efa36a8987b86184c080ace26b3a8968",
-        "failureDomainKeys": ["eoa:tempo:0x239d4a24efa36a8987b86184c080ace26b3a8968", "protocol:crown-off-chain-relayer"],
+        "failureDomainKeys": [
+          "eoa:tempo:0x239d4a24efa36a8987b86184c080ace26b3a8968",
+          "protocol:crown-off-chain-relayer"
+        ],
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "not-applicable",
         "canRaiseCap": true,
@@ -669,10 +719,59 @@
         "observedAt": "2026-10-05",
         "observedBlock": 42696190,
         "sources": [
-          {"label": "Exact router access/UUPS source", "url": "https://contracts.tempo.xyz/v2/contract/4217/0x3b3f2e2aa07460a9ba95ffd06ad9597398bbbab7?fields=all"},
-          {"label": "Complete router role history and live role/code reads", "url": "https://rpc.tempo.xyz"}
+          {
+            "label": "Exact router access/UUPS source",
+            "url": "https://contracts.tempo.xyz/v2/contract/4217/0x3b3f2e2aa07460a9ba95ffd06ad9597398bbbab7?fields=all"
+          },
+          {
+            "label": "Complete router role history and live role/code reads",
+            "url": "https://rpc.tempo.xyz"
+          }
         ],
         "evidence": "Complete RoleGranted/RoleRevoked census from router creation block 22227651 through 42696190 identifies the sole DEFAULT_ADMIN. hasRole is true and code is empty. All role admins read DEFAULT_ADMIN; source _authorizeUpgrade requires UPGRADE_ROLE, which this EOA can grant immediately. Absence of a current upgrader does not remove this latent unbounded authority."
+      }
+    ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "BRLV is an ERC-20 wrapper of Crown's rebasing BRLY. There is no external market price feed in the documented issuance, redemption or rebase path: clients mint and redeem 1:1 at par through the issuer's KYC onboarding and off-chain reserve operations, and BRLY's daily rebase is set to an administered Threshold rate (a predefined fraction of CDI) gated by an automated collateralization-ratio check. The economically effective price is therefore issuer-administered rather than oracle-derived, and there is no borrower, collateral or liquidation branch that a feed could trigger. This review relies on the issuer's published architecture; token bytecode was not re-verified for this profile.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2-029 research sprint 2026-10-30",
+      "rationale": "BRLV has one price-sensitive path: the issuer's par mint/redemption and the BRLY rebase that redirects reserve accrual into the Rewards Pool. The whitepaper describes that rebase as the Threshold rate, a predefined fraction of the CDI rate, executed only when an automated check confirms the collateralization ratio exceeds 100 percent, and describes redemptions as issuer-side reserve liquidation followed by a bank transfer. No borrower debt, collateral ratio per position, liquidation auction or oracle-triggered branch exists, so there is no branch inventory to model; the administered rate authority is captured at the top-level profile.",
+      "sources": [
+        {
+          "label": "BRLV Whitepaper (last update March 2026; read 2026-10-30): BRLY rebase to the Threshold rate, automated >100% collateralization check, issuer KYC mint/redeem at 1 BRL, no price feed or liquidation mechanism",
+          "url": "https://docs.crown-brlv.com/whitepaper"
+        },
+        {
+          "label": "Crown BRLV transparency page (read 2026-10-30): 1:1 federal-bond backing, monthly attestations, daily-audit claim",
+          "url": "https://www.crown-brlv.com/transparencia/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-029 research sprint 2026-10-30",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "BRLV Whitepaper (last update March 2026; read 2026-10-30): BRLY rebase to the Threshold rate, automated >100% collateralization check, issuer KYC mint/redeem at 1 BRL, no price feed or liquidation mechanism",
+        "url": "https://docs.crown-brlv.com/whitepaper"
+      },
+      {
+        "label": "Crown BRLV transparency page (read 2026-10-30): 1:1 federal-bond backing, monthly attestations, daily-audit claim",
+        "url": "https://www.crown-brlv.com/transparencia/"
+      },
+      {
+        "label": "Crown platform terms of use and services (PT), reserve custody and virtual-asset supplier disclosures",
+        "url": "https://dfg4lo8c2lfcn.cloudfront.net/Crown_Termos_Plataforma_PT_db61e1ba28.pdf"
+      },
+      {
+        "label": "Crown monthly attestation, September 2026",
+        "url": "https://dfg4lo8c2lfcn.cloudfront.net/report_brlv_9_2026_b6d73237cb.pdf"
       }
     ]
   }

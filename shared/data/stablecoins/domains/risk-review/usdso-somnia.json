@@ -1,5 +1,60 @@
 {
   "id": "usdso-somnia",
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDso has no external price feed and no borrower-liquidation branch. The verified BrandedCustodian is an ERC-4626-style peg-stability module that mints and redeems the branded token against local frxUSD at a fixed decimal ratio: _convertToAssets is a pure mulDiv of the two token decimals and pricePerShare() only re-expresses 1e18 shares, while the admin levers are mint and redeem fees, the mint cap and ERC-20 recovery. The verified GeniusDollar token exposes no feed, NAV or price selector, and the verified CrossChainRouter transports exact quantities by redeeming to frxUSD, bridging through LayerZero RemoteHopV2 and re-minting on the destination chain, with quote()/quoteSend() returning native messaging fees rather than a price. USDso therefore inherits the frxUSD parent's dollar value at a deterministic conversion ratio.",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+      "rationale": "USDso pricing is top-level only and has no collateral or liquidation branch: the custodian converts shares to frxUSD at a fixed decimal ratio and the router moves exact amounts. The verified token, custodian and router implementations expose no price-feed, collateral-parameter, liquidation, backstop or shutdown function; the admin levers are fees, the mint cap, RELAYER_ROLE router mapping and RemoteHopV2 replacement, which change transfer terms rather than read a price. Inherited frxUSD reserve and custodian risk remains parent, control and bridge risk, not a USDso price branch.",
+      "sources": [
+        {
+          "label": "Frax BrandedCustodian documentation: ERC-4626-style 1:1 frxUSD peg-stability module with admin fees, mint cap and recovery only",
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+        },
+        {
+          "label": "Verified BrandedCustodian implementation on Somnia: fixed decimals conversion, no oracle or price-feed call",
+          "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+        },
+        {
+          "label": "Verified CrossChainRouter implementation source: no oracle, price, aggregator or TWAP reference",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "SprintRS2-001 research sprint 2026-10-30 (RS2-001)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Frax BrandedCustodian documentation: ERC-4626-style 1:1 frxUSD peg-stability module with admin fees, mint cap and recovery only",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+      },
+      {
+        "label": "Frax CrossChainRouter documentation: redeem-to-frxUSD, LayerZero transport, destination re-mint and native-fee quote",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/crossChainRouter"
+      },
+      {
+        "label": "Verified BrandedCustodian implementation on Somnia: fixed decimals conversion, no oracle or price-feed call",
+        "url": "https://explorer.somnia.network/api/v2/smart-contracts/0xd2478f5db285e7d4f1a260c9f142168124d02370"
+      },
+      {
+        "label": "Verified USDso GeniusDollar token implementation on Somnia: no feed, NAV or price selector",
+        "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x155384be16fa171e6d97e4136643a9ac31678d04"
+      },
+      {
+        "label": "Verified CrossChainRouter implementation source: no oracle, price, aggregator or TWAP reference",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbd8e690465e84e97075a89fb30c64d5c44e04ad5"
+      },
+      {
+        "label": "Somnia USDso product page: Frax-issued frxUSD infrastructure, zero-fee minting, LayerZero transport",
+        "url": "https://somnia.network/usdso-stablecoin"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

@@ -24,6 +24,41 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "MegaUSD's reviewed issuer surfaces publish no on-chain price oracle. The Terms of Service define minting at a notional one USDm per one U.S. dollar of accepted assets, an intended redemption at the same notional rate less fees for whitelisted Mint Users only, and state that third-party platform prices may fluctuate above or below $1. No borrower-liquidation engine consuming a USDm collateral price was identified in the reviewed issuer surfaces, so the reviewed pricing authority is the issuer's par process and reserve NAV rather than an external feed. A future third-party lending market using USDm as collateral would require its own branch review.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2-032 research sprint 2026-10-30 (oracle topology rereview)",
+      "rationale": "USDm is a permissioned par-mint/par-redeem instrument: the issuer's terms set the conversion rate and warn that third-party market prices may deviate. The reviewed issuer surfaces identify no external price feed, oracle consumer, or borrower-liquidation engine for USDm, so top-level issuer pricing is the only identified price path and no branch inventory is asserted. Absence of a disclosed oracle is the reviewed finding, not a claim that a private feed cannot exist.",
+      "sources": [
+        {
+          "label": "MegaUSD Terms of Service (last updated April 2026): par mint/redemption notional rate, fees, whitelisted Mint Users, third-party price deviation",
+          "url": "https://app.megausd.money/terms"
+        },
+        {
+          "label": "MegaUSD site: reserve composition of USDC and USDtb with BUIDL via Securitize",
+          "url": "https://www.megausd.money/"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-032 research sprint 2026-10-30 (oracle topology rereview)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "MegaUSD Terms of Service (last updated April 2026): par mint/redemption notional rate, fees, whitelisted Mint Users, third-party price deviation",
+        "url": "https://app.megausd.money/terms"
+      },
+      {
+        "label": "MegaUSD site: reserve composition of USDC and USDtb with BUIDL via Securitize",
+        "url": "https://www.megausd.money/"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USDM has canonical collateral/order issuance on Ethereum and a peripheral MegaETH LayerZero direct OFT representation. The route uses burn/debit on the source and mint/credit on the paired destination; it is not an external lock/mint route. The common 4-of-8 Safe controls both OFT proxies' bridge mint/burn, upgrades, peers, administration, and rate limits, while token-level arbitrary mint authority remains separately assessed under native Ethereum Mint Authority.",

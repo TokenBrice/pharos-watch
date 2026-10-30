@@ -1,5 +1,44 @@
 {
   "id": "usn-noon",
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "Noon publishes redemption-rate quotes rather than a market aggregate for the dollar token: Stork USNUSD_RR_CAPPED_1 (USN in USD, capped at 1.00) on EVM and Sui, Stork sUSNUSN_RR (sUSN in USN) on EVM and Sui, and Pragma SUSN/USD on Starknet. Each deployment depends on a single named provider; no secondary feed, failover, heartbeat, staleness bound or deviation guard is disclosed for any of them, and the USD leg is a hard cap at par rather than a validating cross-check.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2-035 research sprint 2026-10-30",
+      "rationale": "USN is a permissioned 1:1 mint/redeem dollar token with no borrower debt, collateral branch or liquidation engine; the only oracle surface the issuer publishes for it is the redemption-rate conversion quoted in the Contract Addresses & Oracles table. The profile is therefore a single top-level rate path, not loan-collateral branches.",
+      "sources": [
+        {
+          "label": "Noon docs - Contract Addresses & Oracles",
+          "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+        },
+        {
+          "label": "Noon docs - $USN & $sUSN",
+          "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-035 research sprint 2026-10-30",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Noon docs - Contract Addresses & Oracles (feed names, providers, addresses/keys, cap)",
+        "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
+      },
+      {
+        "label": "Noon docs - $USN & $sUSN (1:1 dollar design, staking relationship)",
+        "url": "https://docs.noon.capital/2.-usdusn-and-usdsusn/usdusn-and-usdsusn.md"
+      },
+      {
+        "label": "Noon USN Terms of Service (1:1 mint/redeem, no price-support obligation)",
+        "url": "https://docs.noon.capital/7.-terms-and-policies/asset-terms-usn-terms-of-service.md"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
