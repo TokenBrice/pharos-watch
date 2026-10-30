@@ -1,11 +1,9 @@
 import { z } from "zod";
 import {
-  V9AuthoredNegativeIncidentReviewSchema,
-  V9IssuerSurfaceIncidentReviewSchema,
+  V9AttributedNegativeIncidentReviewSchema,
   V9LaneScreeningRefSchema,
   V9ProviderIncidentReviewSchema,
   V9ProviderIncidentReviewScopeSchema,
-  V9RetirableNegativeIncidentReviewSchema,
   v9NegativeIncidentReviewTimeSec,
   type V9IncidentReviewRetirement,
   type V9LaneScreeningRef,
@@ -16,17 +14,8 @@ import { compareText } from "../../shared/lib/safety-score-v9/primitives";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../../shared/lib/safety-score-v9/evidence";
 import { ReviewEvidenceBuilder } from "../../shared/lib/safety-score-v9/review-evidence";
 
-/**
- * The asset-attributed reviewed record kinds. Legacy digest scope (with its
- * v10.38 retirement field) stays admitted until the authored-identity migration
- * lands; authored control and issuer-surface rows cross the same strict schemas.
- * Provider-wide reviews are fanned out per covered asset before expansion.
- */
-export const V9AttributedNegativeIncidentReviewSchema = z.union([
-  V9RetirableNegativeIncidentReviewSchema,
-  V9AuthoredNegativeIncidentReviewSchema,
-  V9IssuerSurfaceIncidentReviewSchema,
-]);
+/** The asset-attributed reviewed record kinds; the shared registry owns the union. */
+export { V9AttributedNegativeIncidentReviewSchema };
 export type V9AttributedNegativeIncidentReview = z.output<typeof V9AttributedNegativeIncidentReviewSchema>;
 
 /**

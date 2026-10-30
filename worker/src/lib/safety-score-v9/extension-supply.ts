@@ -62,6 +62,17 @@ export interface BuildSafetyScoreV9SupplyReviewOptions {
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
 }
 
+/**
+ * One built supply review plus the census packet outcomes that travelled with
+ * it. The review is hashed into the fact extension, so a diagnostic cannot live
+ * inside it; returning them together keeps a rejection reason out of the
+ * published bytes without retaining any state after the build returns.
+ */
+export interface SafetyScoreV9SupplyAdmission {
+  readonly review: SupplyReview | null;
+  readonly censusDiagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[];
+}
+
 export type SafetyScoreV9NullSupplyReviewOutcomeState =
   | "missing-profile"
   | "ambiguous-route-join"
@@ -692,36 +703,6 @@ const EMPTY_DEPLOYMENT_CENSUS_ADMISSION: DeploymentSupplyCensusAdmission = {
   diagnostics: [],
 };
 
-// Admission outcomes travel beside the review object instead of inside it: the
-// supply review is hashed into the fact extension, so a diagnostic must not
-// change its bytes. `extension-bridge` reads them for `.pipeline`.
-const DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS = new WeakMap<
-  SupplyReview,
-  readonly V9DeploymentSupplyCensusDiagnosticV1[]
->();
-// A rejected packet has no review object to hang its reasons on, and the asset
-// is exactly where a null review is diagnosed, so every admission is also kept
-// by asset id. Each build overwrites its own entry (including with an empty
-// list), the map is bounded by the active asset set, and only a run that built
-// this asset can read it.
-const DEPLOYMENT_SUPPLY_CENSUS_ASSET_DIAGNOSTICS = new Map<
-  string,
-  readonly V9DeploymentSupplyCensusDiagnosticV1[]
->();
-
-/**
- * Census outcomes for a review built this run; empty when none were recorded.
- * A null review reads the asset's own outcome, because a rejected packet never
- * produces a review to carry it.
- */
-export function deploymentSupplyCensusDiagnostics(
-  review: SupplyReview | null | undefined,
-  assetId?: string,
-): readonly V9DeploymentSupplyCensusDiagnosticV1[] {
-  if (review != null) return DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS.get(review) ?? [];
-  return assetId === undefined ? [] : DEPLOYMENT_SUPPLY_CENSUS_ASSET_DIAGNOSTICS.get(assetId) ?? [];
-}
-
 /**
  * Admits the fixed-input census packet (`safetyScoreV9DeploymentSupplyCensusById`)
  * as a reconciled per-deployment partition. Every bound must be current, carry
@@ -841,6 +822,33 @@ function sortDeploymentSupplyCensusDiagnostics(
 
 /**
  * Reconciles the exact captured per-chain circulating supply against the
+ * reviewed bridge-route rows and returns the census packet outcomes beside the
+ * review. A rejected packet never produces a review to carry its reasons, so
+ * callers that publish them read this one result instead of a module-level
+ * record keyed by asset; nothing outlives the request that built it.
+ */
+export function buildSafetyScoreV9SupplyAdmission(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  profile: BridgeRouteRiskProfile | undefined,
+  options: BuildSafetyScoreV9SupplyReviewOptions = {},
+): SafetyScoreV9SupplyAdmission {
+  const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
+  if (quarantine) throw quarantine;
+  const census = admitDeploymentSupplyCensus(
+    fixedInput,
+    assetId,
+    profile,
+    getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
+  );
+  return {
+    review: buildSupplyReview(fixedInput, assetId, profile, options, census),
+    censusDiagnostics: census.diagnostics,
+  };
+}
+
+/**
+ * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. A reviewed native-only chain can be attributed
  * without a within-chain share-class split; other non-unique joins stay unknown.
  */
@@ -850,22 +858,7 @@ export function buildSafetyScoreV9SupplyReview(
   profile: BridgeRouteRiskProfile | undefined,
   options: BuildSafetyScoreV9SupplyReviewOptions = {},
 ): SupplyReview | null {
-  const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
-  if (quarantine) throw quarantine;
-  const census = admitDeploymentSupplyCensus(
-    fixedInput,
-    assetId,
-    profile,
-    getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
-  );
-  // Recorded before the review is built: an asset whose review is null still
-  // reports the packet's own rejection reasons through its asset id.
-  DEPLOYMENT_SUPPLY_CENSUS_ASSET_DIAGNOSTICS.set(assetId, census.diagnostics);
-  const review = buildSupplyReview(fixedInput, assetId, profile, options, census);
-  if (review !== null && census.diagnostics.length > 0) {
-    DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS.set(review, census.diagnostics);
-  }
-  return review;
+  return buildSafetyScoreV9SupplyAdmission(fixedInput, assetId, profile, options).review;
 }
 
 function buildSupplyReview(

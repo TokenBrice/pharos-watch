@@ -28,8 +28,8 @@ import {
 import { compileNativeV3FactSet, coreFixture } from "@shared/lib/__tests__/safety-score-v9-facts.fixture-support";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import {
+  buildSafetyScoreV9SupplyAdmission,
   buildSafetyScoreV9SupplyReview,
-  deploymentSupplyCensusDiagnostics,
   safetyScoreV9RouteSupplyShare,
   V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW,
 } from "../safety-score-v9/extension-supply";
@@ -259,11 +259,12 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
       chains: { ethereum: boundaryPacket.conservation.aggregateSupplyUsd },
       packet: boundaryPacket,
     });
-    const review = buildSafetyScoreV9SupplyReview(
+    const { review: admitted, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(
       input,
       "census-boundary",
       profileWithRoutes([BOUNDARY_ROUTE]),
-    )!;
+    );
+    const review = admitted!;
     const rows = new Map(review.selectedBridgeRoutes.map((row) => [row.deploymentRouteKey, row]));
     expect(rows.get(BOUNDARY_ROUTE)).toMatchObject({ evidenceKind: "upper-bound", reviewState: "selected-reviewed" });
     expect(rows.get(BOUNDARY_ROUTE)!.supplyShare).toBeCloseTo(0.009999, 12);
@@ -271,7 +272,7 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
     // the partition reconciles to the whole without narrowing a sibling to zero.
     expect(rows.get("ambiguous-chain:census-boundary:ethereum")).toMatchObject({ reviewState: "unmatched" });
     expect(review.selectedBridgeRoutes.reduce((sum, row) => sum + row.supplyShare, 0)).toBeCloseTo(1, 9);
-    expect(deploymentSupplyCensusDiagnostics(review)).toEqual([]);
+    expect(censusDiagnostics).toEqual([]);
     // The bound is never a share a control can price directly.
     expect(safetyScoreV9RouteSupplyShare(review, BOUNDARY_ROUTE)).toBeNull();
 
@@ -330,13 +331,14 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
       aggregateUsd: boundaryPacket.conservation.aggregateSupplyUsd,
       chains: { ethereum: boundaryPacket.conservation.aggregateSupplyUsd },
     });
-    const review = buildSafetyScoreV9SupplyReview(
+    const { review: admitted, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(
       input,
       "census-boundary",
       profileWithRoutes([BOUNDARY_ROUTE]),
-    )!;
+    );
+    const review = admitted!;
     expect(review.selectedBridgeRoutes.some((row) => row.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(review)).toEqual([]);
+    expect(censusDiagnostics).toEqual([]);
 
     const { control, facts } = factsFromReview(review);
     expect(provenNullShareDeploymentBound(facts, control)).toBe(1);
@@ -351,7 +353,7 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
     expect(SafetyScoreV9DeploymentSupplyCensusSchema.parse(atBarPacket)).toEqual(atBarPacket);
     expect(atBarPacket.deployments[0]!.shareUpper).toBeGreaterThanOrEqual(0.01);
 
-    const review = buildSafetyScoreV9SupplyReview(
+    const { review: admitted, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(
       fixedInput({
         assetId: "census-boundary",
         clockSec: BOUNDARY_CLOCK_SEC,
@@ -361,10 +363,11 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
       }),
       "census-boundary",
       profileWithRoutes([BOUNDARY_ROUTE]),
-    )!;
+    );
+    const review = admitted!;
     // No reviewed escrow rule exists, so ≥1% never becomes a share or a bound.
     expect(review.selectedBridgeRoutes.some((row) => row.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(review)).toContainEqual({
+    expect(censusDiagnostics).toContainEqual({
       deploymentRouteKey: BOUNDARY_ROUTE,
       code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW,
     });
@@ -386,10 +389,11 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
       packet: recordedPacket,
     });
     const profile = profileWithRoutes(recordedRows.map((row) => row.routeId));
-    const expired = buildSafetyScoreV9SupplyReview(expiredInput, USDC_ASSET, profile)!;
+    const expiredAdmission = buildSafetyScoreV9SupplyAdmission(expiredInput, USDC_ASSET, profile);
+    const expired = expiredAdmission.review!;
     // The packet is still a valid generation; only its clock is past the window.
     expect(SafetyScoreV9DeploymentSupplyCensusSchema.parse(recordedPacket)).toEqual(recordedPacket);
-    expect(deploymentSupplyCensusDiagnostics(expired)).toEqual([
+    expect(expiredAdmission.censusDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:observation-stale" },
     ]);
     expect(expired.selectedBridgeRoutes.some((row) => row.evidenceKind === "upper-bound")).toBe(false);
@@ -417,10 +421,11 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
     });
     const profile = profileWithRoutes(recordedRows.map((row) => row.routeId));
     expect(SafetyScoreV9DeploymentSupplyCensusSchema.parse(recordedPacket)).toEqual(recordedPacket);
-    const withCensus = buildSafetyScoreV9SupplyReview(input, USDC_ASSET, profile)!;
+    const withCensusAdmission = buildSafetyScoreV9SupplyAdmission(input, USDC_ASSET, profile);
+    const withCensus = withCensusAdmission.review!;
     expect(recordedRows.every((row) => row.shareUpper >= 0.01)).toBe(true);
     expect(withCensus.selectedBridgeRoutes.some((row) => row.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(withCensus)).toEqual(
+    expect(withCensusAdmission.censusDiagnostics).toEqual(
       recordedRows
         .map((row) => row.routeId)
         .sort()
@@ -456,7 +461,7 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
     });
     // A breach is representable: declared totals are still the packet's own rows.
     expect(SafetyScoreV9DeploymentSupplyCensusSchema.parse(breach)).toEqual(breach);
-    const review = buildSafetyScoreV9SupplyReview(
+    const { review: admitted, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(
       fixedInput({
         assetId: "census-breach",
         clockSec: RECORDED_CLOCK_SEC,
@@ -466,9 +471,10 @@ describe("v10.38 deployment supply census admission (end to end)", () => {
       }),
       "census-breach",
       profileWithRoutes([`ethereum:0x${"d".repeat(40)}`]),
-    )!;
+    );
+    const review = admitted!;
     expect(review.selectedBridgeRoutes.some((row) => row.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(review)).toEqual([
+    expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:conservation-breach" },
       { deploymentRouteKey: BREACH_ROUTE, code: "census-rejected:conservation-breach" },
     ]);

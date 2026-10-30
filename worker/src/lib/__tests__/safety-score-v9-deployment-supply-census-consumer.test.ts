@@ -5,8 +5,7 @@ import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-eviden
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 import {
-  buildSafetyScoreV9SupplyReview,
-  deploymentSupplyCensusDiagnostics,
+  buildSafetyScoreV9SupplyAdmission,
   safetyScoreV9RouteSupplyShare,
   V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW,
 } from "../safety-score-v9/extension-supply";
@@ -102,14 +101,14 @@ function fixedInput(census: SafetyScoreV9DeploymentSupplyCensus | undefined): Sa
   } as unknown as SafetyScoreV9CompilerInput;
 }
 
-function review(census: SafetyScoreV9DeploymentSupplyCensus) {
-  return buildSafetyScoreV9SupplyReview(fixedInput(census), ASSET_ID, profile());
+function review(census: SafetyScoreV9DeploymentSupplyCensus | undefined) {
+  return buildSafetyScoreV9SupplyAdmission(fixedInput(census), ASSET_ID, profile());
 }
 
 describe("deployment supply census admission", () => {
   it("admits only sub-bar deployments as upper-bound rows and keeps the chain residual", () => {
-    const result = review(packet())!;
-    const byKey = new Map(result.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]));
+    const { review: result, censusDiagnostics } = review(packet());
+    const byKey = new Map(result!.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]));
     // 0.005 < 0.01 documents through the partition bound, never through a share.
     expect(byKey.get(ETH_ROUTE)).toMatchObject({ evidenceKind: "upper-bound", supplyShare: 0.005 });
     expect(byKey.get(BASE_ROUTE)).toMatchObject({ evidenceKind: "upper-bound", supplyShare: 0.001 });
@@ -126,15 +125,15 @@ describe("deployment supply census admission", () => {
       supplyShare: 0.2 - 0.001,
     });
     // The partition still reconciles to the whole.
-    const rowShare = result.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyShare, 0);
+    const rowShare = result!.selectedBridgeRoutes.reduce((sum, route) => sum + route.supplyShare, 0);
     expect(rowShare).toBeCloseTo(1, 9);
-    expect(deploymentSupplyCensusDiagnostics(result)).toEqual([
+    expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: ETH_SECOND_ROUTE, code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW },
     ]);
   });
 
   it("documents 0.009999 and requires the datum at exactly 0.01", () => {
-    const below = review(packet({
+    const { review: below } = review(packet({
       deployments: [row(ETH_ROUTE, 0.009999), row(ETH_SECOND_ROUTE, 0), row(BASE_ROUTE, 0.001)],
       conservation: {
         aggregateSupplyUsd: AGGREGATE_USD,
@@ -145,12 +144,12 @@ describe("deployment supply census admission", () => {
         rosterComplete: true,
         conserved: true,
       },
-    }))!;
-    const belowRows = new Map(below.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]));
+    }));
+    const belowRows = new Map(below!.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]));
     expect(belowRows.get(ETH_ROUTE)?.supplyShare).toBe(0.009999);
     expect(belowRows.get(ETH_ROUTE)?.supplyShare).toBeLessThan(0.01);
 
-    const atBar = review(packet({
+    const { review: atBar, censusDiagnostics: atBarDiagnostics } = review(packet({
       deployments: [row(ETH_ROUTE, 0.01), row(ETH_SECOND_ROUTE, 0), row(BASE_ROUTE, 0.001)],
       conservation: {
         aggregateSupplyUsd: AGGREGATE_USD,
@@ -161,17 +160,17 @@ describe("deployment supply census admission", () => {
         rosterComplete: true,
         conserved: true,
       },
-    }))!;
-    const atBarRows = new Map(atBar.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]));
+    }));
+    const atBarRows = new Map(atBar!.selectedBridgeRoutes.map((route) => [route.deploymentRouteKey, route]));
     expect(atBarRows.has(ETH_ROUTE)).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(atBar)).toContainEqual({
+    expect(atBarDiagnostics).toContainEqual({
       deploymentRouteKey: ETH_ROUTE,
       code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW,
     });
   });
 
   it("keeps a bound out of every control share join, deployment or global scope", () => {
-    const result = review(packet())!;
+    const { review: result } = review(packet());
     // No control can take a bound as its material supply share; the bound only
     // reaches the scorer through the reconciled partition.
     expect(safetyScoreV9RouteSupplyShare(result, ETH_ROUTE)).toBeNull();
@@ -181,22 +180,22 @@ describe("deployment supply census admission", () => {
 
   it("serves the one declared per-source census window, not the capture window", () => {
     const observedAtSec = CLOCK_SEC - 5_399;
-    const within = buildSafetyScoreV9SupplyReview(fixedInput(packet({
+    const { review: within, censusDiagnostics: withinDiagnostics } = review(packet({
       observedAtSec,
       deployments: [row(ETH_ROUTE, 0.005, observedAtSec - 60)],
-    })), ASSET_ID, profile())!;
-    expect(within.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(true);
-    expect(deploymentSupplyCensusDiagnostics(within)).not.toContainEqual({
+    }));
+    expect(within!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(true);
+    expect(withinDiagnostics).not.toContainEqual({
       deploymentRouteKey: null,
       code: "census-rejected:observation-stale",
     });
 
-    const beyond = buildSafetyScoreV9SupplyReview(fixedInput(packet({
+    const { review: beyond, censusDiagnostics: beyondDiagnostics } = review(packet({
       observedAtSec: CLOCK_SEC - 5_401,
       deployments: [row(ETH_ROUTE, 0.005, CLOCK_SEC - 5_401 - 60)],
-    })), ASSET_ID, profile())!;
-    expect(beyond.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(beyond)).toContainEqual({
+    }));
+    expect(beyond!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(beyondDiagnostics).toContainEqual({
       deploymentRouteKey: null,
       code: "census-rejected:observation-stale",
     });
@@ -205,9 +204,10 @@ describe("deployment supply census admission", () => {
   it("rejects an unbound census map and one built for another generation", () => {
     const bound = fixedInput(packet());
     const unbound = { ...bound, safetyScoreV9DeploymentSupplyCensusBinding: undefined };
-    const unboundReview = buildSafetyScoreV9SupplyReview(unbound, ASSET_ID, profile())!;
-    expect(unboundReview.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(unboundReview)).toEqual([
+    const { review: unboundReview, censusDiagnostics: unboundDiagnostics } =
+      buildSafetyScoreV9SupplyAdmission(unbound, ASSET_ID, profile());
+    expect(unboundReview!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(unboundDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:generation-unbound" },
     ]);
 
@@ -218,59 +218,59 @@ describe("deployment supply census admission", () => {
         sourceBaseInputGenerationId: `report-cards-input:v1:${"0".repeat(64)}`,
       },
     ]) {
-      const mismatched = buildSafetyScoreV9SupplyReview(
+      const { review: mismatched, censusDiagnostics: mismatchedDiagnostics } = buildSafetyScoreV9SupplyAdmission(
         { ...bound, safetyScoreV9DeploymentSupplyCensusBinding: binding },
         ASSET_ID,
         profile(),
-      )!;
-      expect(mismatched.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-      expect(deploymentSupplyCensusDiagnostics(mismatched)).toEqual([
+      );
+      expect(mismatched!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+      expect(mismatchedDiagnostics).toEqual([
         { deploymentRouteKey: null, code: "census-rejected:generation-mismatch" },
       ]);
     }
   });
 
   it("returns an expired bound to required with a named rejection", () => {
-    const result = review(packet({
+    const { review: result, censusDiagnostics } = review(packet({
       observedAtSec: CLOCK_SEC - 5_401,
       deployments: [row(ETH_ROUTE, 0.005, CLOCK_SEC - 5_461), row(ETH_SECOND_ROUTE, 0.37, CLOCK_SEC - 5_461),
         row(BASE_ROUTE, 0.001, CLOCK_SEC - 5_461)],
-    }))!;
-    expect(result.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(result)).toContainEqual({
+    }));
+    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toContainEqual({
       deploymentRouteKey: null,
       code: "census-rejected:observation-stale",
     });
     // The ordinary lane still publishes its own rows: nothing is carried forward.
-    expect(result.selectedBridgeRoutes.map((route) => route.deploymentRouteKey)).toEqual([
+    expect(result!.selectedBridgeRoutes.map((route) => route.deploymentRouteKey)).toEqual([
       `ambiguous-chain:${ASSET_ID}:ethereum`,
       BASE_ROUTE,
     ]);
   });
 
   it("refuses a packet that cannot claim conservation", () => {
-    const result = review(packet({
+    const { review: result, censusDiagnostics } = review(packet({
       conservation: {
         ...packet().conservation,
         rosterComplete: false,
         conserved: false,
       },
-    }))!;
-    expect(result.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(result)).toContainEqual({
+    }));
+    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toContainEqual({
       deploymentRouteKey: null,
       code: "census-rejected:roster-incomplete",
     });
   });
 
   it("leaves the replay lane byte-identical when no census packet is present", () => {
-    const withoutCensus = buildSafetyScoreV9SupplyReview(fixedInput(undefined), ASSET_ID, profile())!;
-    expect(withoutCensus.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(withoutCensus)).toEqual([]);
+    const { review: withoutCensus, censusDiagnostics } = review(undefined);
+    expect(withoutCensus!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toEqual([]);
   });
 
   it("forwards per-deployment packet rejections into the diagnostic band", () => {
-    const result = review(packet({
+    const { censusDiagnostics } = review(packet({
       deployments: [row(BASE_ROUTE, 0.001)],
       conservation: {
         aggregateSupplyUsd: AGGREGATE_USD,
@@ -282,8 +282,8 @@ describe("deployment supply census admission", () => {
         conserved: true,
       },
       rejected: [{ routeId: ETH_ROUTE, code: "census-rejected:observation-stale" }],
-    }))!;
-    expect(deploymentSupplyCensusDiagnostics(result)).toContainEqual({
+    }));
+    expect(censusDiagnostics).toContainEqual({
       deploymentRouteKey: ETH_ROUTE,
       code: "census-rejected:observation-stale",
     });
@@ -298,19 +298,19 @@ describe("deployment supply census admission", () => {
       ...base,
       aggregateCirculatingById: aggregate === undefined ? {} : { [ASSET_ID]: aggregate },
     } as SafetyScoreV9CompilerInput;
-    const result = buildSafetyScoreV9SupplyReview(input, ASSET_ID, profile())!;
-    expect(result.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(result)).toEqual([
+    const { review: result, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(input, ASSET_ID, profile());
+    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:read-unavailable" },
     ]);
   });
 
   it("keeps conservation-breach for a packet bounded against another denominator", () => {
-    const result = review(packet({
+    const { review: result, censusDiagnostics } = review(packet({
       conservation: { ...packet().conservation, aggregateSupplyUsd: AGGREGATE_USD * 2 },
-    }))!;
-    expect(result.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-    expect(deploymentSupplyCensusDiagnostics(result)).toEqual([
+    }));
+    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:conservation-breach" },
     ]);
   });
@@ -327,8 +327,11 @@ describe("deployment supply census admission", () => {
         registryFingerprint: "0".repeat(64),
       },
     } as SafetyScoreV9CompilerInput;
-    expect(buildSafetyScoreV9SupplyReview(input, ASSET_ID, profile())).toBeNull();
-    const bridge = adaptBridgeReview(meta, null, 0, new ReviewEvidenceBuilder(ASSET_ID, CLOCK_SEC), CLOCK_SEC);
+    const rejected = buildSafetyScoreV9SupplyAdmission(input, ASSET_ID, profile());
+    expect(rejected.review).toBeNull();
+    const bridge = adaptBridgeReview(
+      meta, null, 0, new ReviewEvidenceBuilder(ASSET_ID, CLOCK_SEC), CLOCK_SEC, undefined, rejected.censusDiagnostics,
+    );
     expect(bridge.review.diagnostics?.deploymentSupplyCensus).toEqual([
       { deploymentRouteKey: null, code: "census-rejected:generation-mismatch" },
     ]);
@@ -339,8 +342,11 @@ describe("deployment supply census admission", () => {
       chainCirculatingById: {},
       aggregateCirculatingById: {},
     } as SafetyScoreV9CompilerInput;
-    expect(buildSafetyScoreV9SupplyReview(cleared, ASSET_ID, profile())).toBeNull();
-    const noBand = adaptBridgeReview(meta, null, 0, new ReviewEvidenceBuilder(ASSET_ID, CLOCK_SEC), CLOCK_SEC);
+    const withoutPacket = buildSafetyScoreV9SupplyAdmission(cleared, ASSET_ID, profile());
+    expect(withoutPacket.review).toBeNull();
+    const noBand = adaptBridgeReview(
+      meta, null, 0, new ReviewEvidenceBuilder(ASSET_ID, CLOCK_SEC), CLOCK_SEC, undefined, withoutPacket.censusDiagnostics,
+    );
     expect(noBand.review.diagnostics?.deploymentSupplyCensus).toBeUndefined();
   });
 });
