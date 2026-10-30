@@ -88,9 +88,10 @@ export interface PegStabilityAssessment {
 }
 
 /**
- * Peg stability plus its observation coverage against the chain's full positive supply. A coin is observed
- * only when it has a usable price and a usable (finite, positive) peg reference; coins lacking a reference
- * stay in the denominator so missing-reference supply cannot inflate coverage.
+ * Peg stability plus its observation coverage against the supplied peg-referenced positive supply.
+ * NAV tokens are excluded by the caller (their price appreciates by design). A coin is observed
+ * only when it has a usable price and a usable (finite, positive) peg reference; coins lacking a
+ * reference stay in the denominator so missing-reference supply cannot inflate coverage.
  */
 export function assessPegStability(coins: readonly PegStabilityCandidate[]): PegStabilityAssessment {
   let eligibleSupplyUsd = 0;

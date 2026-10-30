@@ -5,7 +5,7 @@ import { selectBackfillCoins } from "../../src/lib/backfill-query";
 import { buildAdminJobSummary, noAdminTargetsResponse } from "../../src/lib/admin-job";
 import type { D1Database } from "@cloudflare/workers-types";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { buildBackfillDeleteStmt, loadIncompleteBackfillReplayWindow, loadSealedBackfillReplayConflicts } from "./backfill-depegs-window";
+import { buildBackfillDeleteStmt, loadDdrBackfillReplayConflicts, loadIncompleteBackfillReplayWindow } from "./backfill-depegs-window";
 import { parseOptionalDayWindow } from "../../src/lib/backfill-day-window";
 import type { BackfillReplayWindow } from "../../src/lib/backfill-day-window";
 import type { BackfillReplayPreview } from "./backfill-depegs-preview";
@@ -35,14 +35,21 @@ export async function applyBackfillEvents(
   replayWindow: BackfillReplayWindow | null,
   run?: BackfillRunInput,
 ): Promise<BackfillApplyResult> {
-  const sealedConflicts = await loadSealedBackfillReplayConflicts(db, meta.id, replayWindow);
+  const ddrConflicts = await loadDdrBackfillReplayConflicts(db, meta.id, replayWindow);
+  const sealedConflicts = ddrConflicts.filter((conflict) => conflict.publicPredictionId != null);
+  const formatConflicts = (conflicts: typeof ddrConflicts) => conflicts
+    .map((conflict) => `event ${conflict.eventId} / ${conflict.incidentKey}`)
+    .join(", ");
   if (sealedConflicts.length > 0) {
-    const conflictList = sealedConflicts
-      .map((conflict) => `event ${conflict.eventId} / ${conflict.incidentKey}`)
-      .join(", ");
     throw new Error(
-      `DDRv2 sealed repair required: backfill replay for ${meta.symbol} would delete sealed depeg_events (${conflictList}). ` +
+      `DDRv2 sealed repair required: backfill replay for ${meta.symbol} would delete sealed depeg_events (${formatConflicts(sealedConflicts)}). ` +
         "This endpoint does not consume append-only repair authorizations, lineage, or errata; use a dedicated DDRv2 repair endpoint before replaying this window.",
+    );
+  }
+  if (ddrConflicts.length > 0) {
+    throw new Error(
+      `DDR incident member replay refused: backfill replay for ${meta.symbol} would delete incident member depeg_events (${formatConflicts(ddrConflicts)}). ` +
+        "Incident event links are append-only, so the delete would leave dangling incident references and fail /api/depeg-events closed; narrow the replay window to exclude them.",
     );
   }
 

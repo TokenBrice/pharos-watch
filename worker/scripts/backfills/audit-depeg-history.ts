@@ -76,6 +76,12 @@ interface DdrSealedEventConflict {
   publicPredictionId: number;
 }
 
+interface DdrEventIncidentLink {
+  eventId: number;
+  incidentKey: string;
+  publicPredictionId: number | null;
+}
+
 interface AuditResult {
   /** Symbol-matching events with known qualifying supply when minSupply > 0. */
   totalMatching: number;
@@ -216,10 +222,10 @@ async function loadAllDepegEvents(db: D1Database): Promise<DepegRow[]> {
   return allEvents.results ?? [];
 }
 
-async function loadSealedDdrEventConflicts(
+async function loadDdrEventIncidentLinks(
   db: D1Database,
   eventIds: readonly number[],
-): Promise<DdrSealedEventConflict[]> {
+): Promise<DdrEventIncidentLink[]> {
   const uniqueIds = [...new Set(eventIds)].filter((id) => Number.isSafeInteger(id) && id > 0);
   if (uniqueIds.length === 0) return [];
 
@@ -230,18 +236,22 @@ async function loadSealedDdrEventConflicts(
               l.incident_key AS incident_key,
               p.id AS public_prediction_id
        FROM depeg_resolver_incident_event_links l
-       JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
+       LEFT JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
        WHERE l.event_id IN (${idClause.sql})
        ORDER BY l.event_id`,
     )
     .bind(...idClause.binds)
-    .all<{ event_id: number; incident_key: string; public_prediction_id: number }>();
+    .all<{ event_id: number; incident_key: string; public_prediction_id: number | null }>();
 
   return (rows.results ?? []).map((row) => ({
     eventId: row.event_id,
     incidentKey: row.incident_key,
-    publicPredictionId: row.public_prediction_id,
+    publicPredictionId: row.public_prediction_id ?? null,
   }));
+}
+
+function sealedDdrEventConflicts(links: readonly DdrEventIncidentLink[]): DdrSealedEventConflict[] {
+  return links.filter((link): link is DdrSealedEventConflict => link.publicPredictionId != null);
 }
 
 function ddrv2SealedRepairResponse(operation: string, conflicts: DdrSealedEventConflict[]): Response {
@@ -262,9 +272,35 @@ async function rejectSealedDdrEventMutation(
   eventIds: readonly number[],
   operation: string,
 ): Promise<Response | null> {
-  const conflicts = await loadSealedDdrEventConflicts(db, eventIds);
+  const conflicts = sealedDdrEventConflicts(await loadDdrEventIncidentLinks(db, eventIds));
   if (conflicts.length === 0) return null;
   return ddrv2SealedRepairResponse(operation, conflicts);
+}
+
+/**
+ * Incident event links are append-only, so deleting any member event (sealed or
+ * not) leaves a dangling incident reference that fails the public depeg
+ * projection closed for every reader.
+ */
+async function rejectDdrIncidentMemberDelete(
+  db: D1Database,
+  eventIds: readonly number[],
+  operation: string,
+): Promise<Response | null> {
+  const links = await loadDdrEventIncidentLinks(db, eventIds);
+  const sealedConflicts = sealedDdrEventConflicts(links);
+  if (sealedConflicts.length > 0) return ddrv2SealedRepairResponse(operation, sealedConflicts);
+  if (links.length === 0) return null;
+  return jsonResponse(
+    {
+      error: "DDR incident member delete refused",
+      message:
+        "Incident event links are append-only, so deleting a member event leaves a dangling incident reference and fails /api/depeg-events closed. No supported path retires an unsealed incident; leave these events in place.",
+      operation,
+      conflicts: links.map(({ eventId, incidentKey }) => ({ eventId, incidentKey })),
+    },
+    { status: 409, noStore: true },
+  );
 }
 
 async function assertNoSealedDdrEventMutation(
@@ -272,7 +308,7 @@ async function assertNoSealedDdrEventMutation(
   eventIds: readonly number[],
   operation: string,
 ): Promise<void> {
-  const conflicts = await loadSealedDdrEventConflicts(db, eventIds);
+  const conflicts = sealedDdrEventConflicts(await loadDdrEventIncidentLinks(db, eventIds));
   if (conflicts.length > 0) {
     throw new Ddrv2SealedRepairRequiredError(operation, conflicts);
   }
@@ -410,7 +446,7 @@ async function executeDirectDelete(
     });
   }
 
-  const sealedMutationResponse = await rejectSealedDdrEventMutation(
+  const sealedMutationResponse = await rejectDdrIncidentMemberDelete(
     db,
     toDelete.map((event) => event.id),
     "audit-depeg-history:direct-delete",
@@ -459,7 +495,7 @@ async function executeSyntheticSplitRepair(
     return jsonResponse(result);
   }
 
-  const sealedMutationResponse = await rejectSealedDdrEventMutation(
+  const sealedMutationResponse = await rejectDdrIncidentMemberDelete(
     db,
     paginatedGroups.flatMap((group) => group.map((event) => event.id)),
     "audit-depeg-history:synthetic-splits",

@@ -380,7 +380,7 @@ Registry edits and primary-evidence review belong to `docs/runbooks/depeg-artifa
 
 ### Operator runbook
 
-Reviewed artifact removal deploys suppression and live-overlap protection **before** deleting rows, then rebuilds PSI and preserves published URL redirects. Sealed DDR predictions require append-only repair instead of direct deletion. The command sequence, complete-id comparison and interruption handling are owned by `docs/runbooks/depeg-artifact-removal.md`.
+Reviewed artifact removal deploys suppression and live-overlap protection **before** deleting rows, then rebuilds PSI and preserves published URL redirects. Sealed DDR predictions require append-only repair instead of direct deletion; deletes and backfill replays refuse unsealed DDR incident members, whose append-only links would otherwise dangle and fail the public depeg list closed. The command sequence, complete-id comparison and interruption handling are owned by `docs/runbooks/depeg-artifact-removal.md`.
 
 ## Event Lifecycle
 

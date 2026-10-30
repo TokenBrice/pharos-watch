@@ -27,6 +27,11 @@ live-overlap dedupe.
 - No candidate event is linked to a sealed DDRv2 prediction. A sealed id is
   reported as a conflict and must go through the append-only repair path instead
   of a direct delete.
+- No candidate event is an unsealed DDR incident member. Incident event links
+  are append-only, so deleting a member leaves a dangling reference that fails
+  `/api/depeg-events` closed. Delete, split repair and backfill replay refuse
+  these ids (`DDR incident member ... refused`); no supported path retires an
+  unsealed incident, so leave the event in place.
 
 ## Sealed-event input corruption (retain history)
 
@@ -134,7 +139,8 @@ Run the commands below from the repository root with Wrangler authentication. Hi
    Schedule a maintenance window: the atomic import can briefly make D1 unavailable
    to the live Worker. A confirmed completed command's `deletedEvents` lists removed
    rows and `daysRecomputed` the PSI days repaired. `409` (`DDRv2 sealed repair
-   required`) lists sealed conflicts and the run must stop for those ids. `500`
+   required` or `DDR incident member delete refused`) lists the conflicting
+   ids and the run must stop for those ids. `500`
    or interruption requires reconciliation; do not infer rollback from a missing
    response. Follow [receipt cleanup](./one-shot-backfills.md#interruption-and-cleanup)
    before explicitly resuming; there is no HTTP replay reservation.
