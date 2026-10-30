@@ -40,6 +40,45 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "eEARN has no external price feed. The verified EmberVault implementation is a rate-based ERC-4626 share token: updateVaultRate(newRate) is callable only by the vault rate manager, bounded by rateUpdateInterval and maxRateChangePerUpdate, and every mint, redemption and totalAssets() conversion uses the stored rate. Pricing authority is therefore a privileged internal share rate posted by Ember's curator operator, with no borrower liquidation engine consuming it.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS093 research sprint 2026-10-29 (RS-093)",
+      "rationale": "The only price-sensitive authority is the vault share rate applied to deposits and redemptions. eEARN is a strategy vault over USDC with request-based withdrawals and no borrower collateral or liquidation path, so no per-branch oracle inventory applies.",
+      "sources": [
+        {
+          "label": "Ember core concepts: the curator's operator updates the vault rate on-chain at defined intervals",
+          "url": "https://learn.ember.so/ember-protocol/core-concepts"
+        },
+        {
+          "label": "Verified current EmberVault implementation: updateVaultRate gated by onlyRateManager and rate-based ERC-4626 conversions",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS093 research sprint 2026-10-29 (RS-093)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Ember core concepts: vault rate mechanism and the curator operator posting the rate on-chain",
+        "url": "https://learn.ember.so/ember-protocol/core-concepts"
+      },
+      {
+        "label": "Ember FAQs: share prices usually updated every Tuesday and Friday; withdrawals processed within the vault's specified period",
+        "url": "https://learn.ember.so/ember-protocol/faqs"
+      },
+      {
+        "label": "Verified current EmberVault implementation: no oracle interface; updateVaultRate, rateUpdateInterval and maxRateChangePerUpdate define the internal pricing path",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9b2e2eef7ffe1b15ca8c61e65538b51ca8977c7e"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
     "summary": "eEARN is issued natively as separate Ember vault-share tokens on Ethereum and Sui. On the Ethereum vault, bridgeAdapter() was zero at Ethereum block 25770499, so no live destination representation, peer, messenger, validator, or supply-conserving route is claimed; the verified vault nevertheless exposes configurable adapter-only bridgeMint/bridgeBurn functions, and its ProtocolConfig/admin and UUPS owner paths can authorize that dormant surface. This conservative opaque-or-unknown tier records latent bridge capability, not a claim that eEARN currently has a destination route.",

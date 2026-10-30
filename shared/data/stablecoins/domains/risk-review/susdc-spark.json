@@ -36,6 +36,45 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "spUSDC share value is calculated from Spark's internal chi/VSR accumulator, not an external price feed: the vault pushes assets only through deposit, mint, withdraw and redeem, and all four convert at shares * nowChi / RAY, where nowChi compounds vsr per second. SETTER_ROLE sets vsr inside a minVsr/maxVsr band, DEFAULT_ADMIN_ROLE sets the band against a hard MAX_VSR ceiling, changes the deposit cap, grants TAKER_ROLE and authorizes UUPS upgrades, and the Ethereum admin is recorded as 0x3300f198988e4c9c63f75df86de36421f06af8c4. The share price therefore follows a privileged internal rate and not an independent measure of realized strategy yield, and it keeps accruing while SLL-deployed assets sit outside the vault. Oracle exposure for this token is limited to that top-level conversion path; Ethereum, Avalanche and X Layer native vault authority, the USDC/USDT0 backing exposures and the SLL venue positions remain independently applicable elsewhere.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Research sprint RS-042 (2026-10-29)",
+      "rationale": "The savings wrapper has one rate-accumulated top-level share-conversion path and no borrower-collateral branch of its own. SLL strategy deployments are backing and liquidity exposures of the vault, not separate priced liquidation branches.",
+      "sources": [
+        {
+          "label": "Spark Vaults V2 formula, deployments, rate bounds and roles",
+          "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+        },
+        {
+          "label": "Spark Savings vault listing, backing and loss-waterfall architecture",
+          "url": "https://docs.spark.finance/products/spark-savings"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Research sprint RS-042 (2026-10-29)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Spark Vaults V2 formula, deployments, rate bounds and roles",
+        "url": "https://docs.spark.finance/dev/savings/spark-vaults-v2"
+      },
+      {
+        "label": "Spark Savings vault listing, backing and loss-waterfall architecture",
+        "url": "https://docs.spark.finance/products/spark-savings"
+      },
+      {
+        "label": "Verified Ethereum SparkVault implementation 0x1b992302652a92611dcd5090d1cb388c6377f455, resolved from the spUSDC proxy EIP-1967 slot at Ethereum block 26297000",
+        "url": "https://eth.blockscout.com/address/0x1b992302652a92611dcd5090d1cb388c6377f455"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "The tracked Ethereum, Avalanche and X Layer spUSDC deployments are local ERC-4626 USDC vaults behind upgradeable ERC-1967 UUPS proxies, not immutable clones or bridged spUSDC representations. The original October 1 Ethereum/Avalanche review remains unchanged. Verified the omitted X Layer native vault on 2026-10-20 against the official registry, exact implementation source and block 73621689; its upgrade authority belongs in Mint Authority. No manual supply share or executable redemption capacity is inferred.",

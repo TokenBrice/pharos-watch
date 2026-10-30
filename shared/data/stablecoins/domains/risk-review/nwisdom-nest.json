@@ -40,6 +40,45 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "nWISDOM is a Nest NAV-priced vault share. Its value is set by the vault's administrator valuation — issuer NAV for the underlying fund and receivable book — and published through Nest's own vault price and last-price-update APIs by the per-chain Nest accountant 0x53148dd65f29e7be36c40bb2125ef43885a4cd5b, with operations-applied onchain price-update bounds. It is not a borrower-collateral market with oracle-triggered liquidation.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS020 research sprint 2026-10-29 (RS-020)",
+      "rationale": "nWISDOM mints and redeems shares against the vault NAV, and the issuer's official price and last-price-update endpoints publish the vault valuation and per-chain accountant updates. That NAV/exchange-rate quote is a price-sensitive top-level authority, and the compiled oracle fact context records no borrower branches or collateral-ratio checks to inventory.",
+      "sources": [
+        {
+          "label": "Nest Vault Operations & Valuation: operations-managed NAV updates with onchain bounds",
+          "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+        },
+        {
+          "label": "Nest nWISDOM official vault price",
+          "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS020 research sprint 2026-10-29 (RS-020)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Nest Vault Operations & Valuation: NAV and price updates, onchain price bounds",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+      },
+      {
+        "label": "Nest nWISDOM current NAV price",
+        "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/price"
+      },
+      {
+        "label": "Nest nWISDOM current NAV price updates by chain and accountant",
+        "url": "https://api.nest.credit/v1/vaults/nest-wisdom-vault/last-price-update"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "nWISDOM has reviewed native issuance on Ethereum, Plume, and BNB Chain. Solana is a LayerZero OFT mint/burn representation of Plume-issued shares, not an independent native liability issuer: the issuer's archived guide routes Solana USDC through CCTP to mint on Plume before OFT delivery. The Solana 1-of-2 SPL mint/freeze authority, OFTStore admin, and immediate program upgrade path are preserved here. Complete peers, DVNs, limits, recovery, key custody and runtime materiality remain unresolved; the aggregate tier remains provisional.",

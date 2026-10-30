@@ -24,6 +24,52 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "summary": "USSD native issuance and redemption are fixed-par ERC-4626 flows through the BrandedCustodian, whose pinned Sonic deployment at block 81807857 (2026-10-29T19:18:56Z, hash 0x74c81ec5d85fa8a89af723d5646f34cbda9b6b11d2dd0751cdf48d5571820fba) returns asset() = frxUSD (0x80eede496655fb9047dd39d9f418d5483ed600df), totalAssets() = 923,023.884894993 frxUSD, mintFee() = 0, redeemFee() = 0 and mintCap() = uint256 max; oracle() and latestRoundData() revert. Sonic's USSD page describes minting at a 1:1 ratio with no minting fees, and the only on-chain USSD price source either issuer document publishes is a single Chainlink USSD/USD market feed on Sonic, listed apart from issuance, with further feeds promised as USSD expands.",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "RS-047 research sprint 2026-10-29",
+      "rationale": "USSD has no borrower debt, collateral-health ratio or liquidation branch. The custodian is an ERC-4626 peg-stability vault: deposits pull frxUSD and mint branded tokens, redemption burns the token for frxUSD, and the owner can set only fees and a mint cap. The published Chainlink USSD/USD feed serves external market pricing, not the native par conversion.",
+      "sources": [
+        {
+          "label": "Sonic docs: USSD backing, minting, redemption and price feeds",
+          "url": "https://docs.soniclabs.com/sonic/ussd"
+        },
+        {
+          "label": "Frax docs: BrandedCustodian ERC-4626 1:1 peg-stability vault",
+          "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RS-047 research sprint 2026-10-29",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Sonic docs: USSD",
+        "url": "https://docs.soniclabs.com/sonic/ussd"
+      },
+      {
+        "label": "Frax docs: Stablecoins as a Service (USSD branded instance)",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins"
+      },
+      {
+        "label": "Frax docs: BrandedCustodian (1:1 frxUSD redemption)",
+        "url": "https://docs.frax.com/fraxnet/branded-stablecoins/brandedCustodian"
+      },
+      {
+        "label": "Sonic pinned reads at block 81807857 (2026-10-29T19:18:56Z): custodian asset/totalAssets/mintFee/redeemFee/mintCap, no oracle accessor",
+        "url": "https://api-sonic-mainnet-archive.n.dwellir.com"
+      },
+      {
+        "label": "Chainlink USSD/USD feed listed by the issuer",
+        "url": "https://data.chain.link/feeds/sonic/sonic/ussd-usd"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "USSD has canonical native issuance on Sonic through the BrandedCustodian/BrandedFactory path. Ethereum, Base, Arbitrum, Optimism, and Scroll are Frax branded-token representations reached through CrossChainRouter redemption and LayerZero RemoteHop/FraxtalHop composition; their local custodians, factories, ProxyAdmin owners, router roles, Hop peers, five-DVN validation, executors, treasuries, pause, admin, and recovery surfaces are assessed here. CCTP v2 remains a secondary USDC redemption rail whose USSD conversion contract is unresolved.",

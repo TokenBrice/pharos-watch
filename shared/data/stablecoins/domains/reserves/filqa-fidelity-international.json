@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Commercial paper",
-      "pct": 44.5,
+      "pct": 40.5,
       "risk": "medium",
       "assetClass": "public-credit",
       "riskFactors": ["credit", "duration", "liquidity", "custody"],
@@ -11,7 +11,7 @@
     },
     {
       "name": "Certificates of deposit",
-      "pct": 31.3,
+      "pct": 28.9,
       "risk": "medium",
       "assetClass": "public-credit",
       "riskFactors": ["credit", "counterparty", "duration", "custody"],
@@ -19,7 +19,7 @@
     },
     {
       "name": "Time deposits",
-      "pct": 17.5,
+      "pct": 23.3,
       "risk": "low",
       "assetClass": "bank-deposit",
       "riskFactors": ["credit", "counterparty", "custody"],
@@ -27,7 +27,7 @@
     },
     {
       "name": "Cash",
-      "pct": 6.7,
+      "pct": 7.4,
       "risk": "low",
       "assetClass": "cash",
       "riskFactors": ["counterparty", "custody"],
@@ -35,8 +35,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-09",
-    "reviewer": "Sol curation campaign 2026-10-09 (W2L19Figure)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RS-033 research sprint 2026-10-29 (verified issuer factsheet)",
     "confidence": "verified",
     "sources": [
       {
@@ -56,46 +56,46 @@
         "url": "https://etherscan.io/address/0x54a4fc78431f9201824643e99bec891bb7462a1d#code"
       },
       {
-        "label": "Fidelity August 31, 2026 asset allocation and duration factsheet; recovered 2026-10-09T11:39:28Z",
+        "label": "Fidelity September 30, 2026 asset allocation and duration factsheet; observed 2026-10-29",
         "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
       },
       {
-        "label": "Recovered issuer August 31 factsheet text; observation 2026-10-09T11:39:28Z",
+        "label": "Recovered issuer September 30 factsheet text; observed 2026-10-29",
         "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
       }
     ],
-    "rationale": "Issuer factsheet dated August 31, 2026 reports commercial paper 44.5%, certificates of deposit 31.3%, time deposits 17.5% and cash 6.7% of total net assets, summing to 100% without normalization. It reports 52 positions and USD 46m whole-fund size, WAM 39 days and WAL 67 days. These averages are not maximum tenor. The exact Class 1 ACC identity is FILQ-A, ISIN KYG3R61G1088; Class 1 DIST is a separate claim. The Moody's Aaa-mf fund assessment is explicitly not a credit rating. Direct PDF access returned 403; the issuer document was recovered through its text mirror at 2026-10-09T11:39:28Z. Its August 31 portfolio date, not the mirror's October 9 HTTP timestamp or this review date, governs freshness. The observation is historical and outside the ordinary 31+7-day composition window on October 9; it supplies no current composition or independent token-to-fund financial assurance.",
-    "compositionBasis": "Published August 31, 2026 whole-fund asset-class percentages of total net assets",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "Issuer factsheet dated September 30, 2026 reports commercial paper 40.5%, certificates of deposit 28.9%, time deposits 23.3% and cash 7.4% of total net assets, totalling 100.1% as published; that rounding noise sits inside the approved 0.5-point composition tolerance and is reconciled mechanically, never hand-normalized. It reports 32 positions, USD 26m whole-fund size, WAM 41 days and WAL 73 days, and a Class 1 ACC NAV of 101.36. These averages are not maximum tenor. The exact Class 1 ACC identity is FILQ-A, ISIN KYG3R61G1088; Class 1 DIST is a separate claim. The Moody's Aaa-mf fund assessment is explicitly not a credit rating. The same issuer factsheet endpoint now serves the September 30, 2026 edition (published 2026-10-26T07:32Z), superseding the August 31 edition reviewed on 2026-10-09. Direct PDF access returned 403; the issuer document was recovered through its text mirror on 2026-10-29. The whole-fund asset-class percentages are not a token-level FILQ-A asset/liability reconciliation and do not prove 1:1 backing; the September 30 portfolio date, not the mirror's HTTP timestamp or this review date, governs freshness.",
+    "compositionBasis": "Published September 30, 2026 whole-fund asset-class percentages of total net assets",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "Security-level counterparties, current October composition and complete Class 1 ACC token-to-fund asset/liability reconciliation remain unavailable. August whole-fund size is not FILQ-A current token liabilities. Named custodians and auditors do not prove account-level custody allocation or financial assurance. The newly recovered August composition remains historical; no current backing or Exit capacity is inferred.",
+    "knownUnknownExposure": "Security-level counterparties and a complete Class 1 ACC token-to-fund asset/liability reconciliation remain unavailable. September 30 whole-fund size is not FILQ-A current token liabilities. Named custodians and auditors do not prove account-level custody allocation or financial assurance. No current backing, Exit capacity or 1:1 token claim is inferred beyond the published whole-fund composition.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Commercial paper",
-        "pct": 44.5,
+        "pct": 40.5,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Published off-chain money-market instrument category, not a tracked stablecoin."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Certificates of deposit",
-        "pct": 31.3,
+        "pct": 28.9,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Published off-chain negotiable deposit instrument category, not a tracked stablecoin."
       },
       {
         "reserveIndex": 2,
         "reserveName": "Time deposits",
-        "pct": 17.5,
+        "pct": 23.3,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Published off-chain bank deposit category, not a tracked stablecoin."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Cash",
-        "pct": 6.7,
+        "pct": 7.4,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Published off-chain cash category, not a tracked stablecoin."
       }

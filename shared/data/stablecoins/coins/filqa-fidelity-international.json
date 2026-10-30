@@ -11,7 +11,7 @@
     "rwa": true,
     "navToken": true
   },
-  "collateral": "Participating shares in Fidelity International Strategies Funds SPC's USD Digital Liquidity Fund SP. The August 31, 2026 whole-fund factsheet reports commercial paper 44.5%, certificates of deposit 31.3%, time deposits 17.5% and cash 6.7% of total net assets. Securitisations, asset-backed commercial paper and other money-market instruments are permitted; derivatives may hedge interest-rate or currency risk. J.P. Morgan SE Dublin Branch is depositary/custodian. These historical fund weights are not a current Class 1 ACC token-to-assets reconciliation.",
+  "collateral": "Participating shares in Fidelity International Strategies Funds SPC's USD Digital Liquidity Fund SP. The September 30, 2026 whole-fund factsheet reports commercial paper 40.5%, certificates of deposit 28.9%, time deposits 23.3% and cash 7.4% of total net assets. Securitisations, asset-backed commercial paper and other money-market instruments are permitted; derivatives may hedge interest-rate or currency risk. J.P. Morgan SE Dublin Branch is depositary/custodian. These historical fund weights are not a current Class 1 ACC token-to-assets reconciliation.",
   "pegMechanism": "Accumulating USD money-market share priced at daily NAV; normal valuation is at 21:00 UK time, with two valuation points only during a declared stressed market environment. On-chain investors exit by redemption through the transfer agent or Token Distributor: transfers of tokens are not accepted or recognized in the register. Usual market hours are 01:00 to 21:00 London on eligible weekdays; off-hours facilities depend on liquidity, and gates or suspension may apply.",
   "mechanismArchetype": "tbill",
   "mechanismArchetypeReview": {
@@ -55,7 +55,7 @@
       "url": "https://r.jina.ai/https://www.fidelityinternational.com/legal/documents/FISGF/en/pr.fisgf.en.xx.pdf"
     },
     {
-      "label": "August 31, 2026 fund composition and Class 1 ACC launch factsheet",
+      "label": "September 30, 2026 fund composition and Class 1 ACC launch factsheet",
       "url": "https://www.fidelityinternational.com/legal/documents/en/hffs.en.xx.6470869.pdf"
     },
     {
