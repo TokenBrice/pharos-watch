@@ -70,15 +70,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "8363c942119f6afb9e17f4ed11b772e36e0503ec16c7a4aab328757a4e0a6beb"
+      "sha256": "b3abf620847d87f7bb076b2444b0562cde1f7f35f40a498c67f7003da10ac0a9"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "4e45e9e29f8cd31b5a451bb2f662c238b42b902cf994558630a9e3d691a2f884"
+      "sha256": "575697d14401f120a7ae5d09815e0976df727c929658f6fefed811b17178184e"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "f7c2aa076fb2a827fbb34835274e584b48c5a8c0e4f3a247a3c0c9e6edaa5ce0"
+      "sha256": "a7683e9824c8d91c105ab9fb9408f76254fe837162cfc103983f31a1595264bd"
     },
     {
       "path": "shared/lib/api-endpoints/paths.ts",
@@ -726,7 +726,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/status-thresholds.ts",
-      "sha256": "a647c7ca1bd66d45fe24b619c5468a0aa56cf92765dda90da5d7e4a6cce7d418"
+      "sha256": "8d45e324ff5e57accacd5fc3803a7b828a38583886502336c408d924b42188d2"
     },
     {
       "path": "shared/lib/strongly-connected-components.ts",
@@ -806,7 +806,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/live-reserve-adapter-declarations.ts",
-      "sha256": "75d758490a3d198259f049dafe847611e4283b02627a36fa6d0e81f2045b5f37"
+      "sha256": "642c030ba8e75420bc5d3285bde0b9426c129f420e18c8ebfd63dfae305c7807"
     },
     {
       "path": "shared/types/live-reserve-adapter-policy.ts",
@@ -1166,7 +1166,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/reserve-feed-reviews.ts",
-      "sha256": "17145354355b6f3833510c1f2da49f97b4afdb52ebfbca81284e98a09c192bb7"
+      "sha256": "5e3080db092d6b52dbbdf5f7839eb85921dc75412a25edeb356534d8ccea14b4"
     },
     {
       "path": "worker/src/lib/safe-error-message.ts",
@@ -1351,7 +1351,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-28-block-26290416-shock-coverage.json.gz"
     }
   ],
-  "digest": "34d6b99a2c2da9c9fbda4fdc4e018685acad0bf0b0d885f6c1627eee1f8381b1"
+  "digest": "594a19db6d265c614d5d12a463399817a3a876cf2922384a06f75dd7af08e548"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
