@@ -124,14 +124,19 @@ export async function handleCommodityDetail(
   detail: DetailResponseHelpers,
 ): Promise<Response> {
   try {
-    const tokens = await detail.resolveTokensWithSupplyHistoryFallback(
+    const history = await detail.resolveTokensWithSupplyHistoryFallback(
       await fetchCommodityTokens(config),
       {
         emptyReason: "commodity-history-empty",
         staleReason: "commodity-history-stale",
       },
     );
-    return detail.createResponseFromResolvedTokens(tokens);
+    // An empty resolved history has no admitted provider or D1 observations: serve the
+    // retained detail generation or an unavailable error, never a 200 empty body.
+    if (history.tokens.length === 0) {
+      return detail.staleCacheOrError(502, `Historical detail data unavailable for stablecoin ${config.stablecoinId}`);
+    }
+    return detail.createResponseFromResolvedTokens(history);
   } catch (err) {
     logUpstreamException("commodity-detail", config.stablecoinId, err);
     const fallback = await detail.trySupplyHistoryFallback("commodity-upstream-failure");

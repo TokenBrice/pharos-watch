@@ -155,6 +155,25 @@ export interface ValuedNetFlow24h {
 }
 
 /**
+ * Builds the safe/risky cohorts over the whole classified roster. A classified
+ * coin with no published 24h net (pending admission, kill switch, or a missing
+ * flow row) is carried as an unbounded member; dropping it would publish its
+ * unknown flow as a measured zero and could prove an inactivity the omitted
+ * flow cannot support (R1/R2).
+ */
+export function buildFlightToQualityCohorts(
+  classification: { safeIds: ReadonlySet<string>; riskyIds: ReadonlySet<string> },
+  flowsById: ReadonlyMap<string, ValuedNetFlow24h>,
+): { safe: ValuedNetFlow24h[]; risky: ValuedNetFlow24h[] } {
+  const unbounded = (): ValuedNetFlow24h => ({
+    knownNetUsd: null,
+    valuation: { mintCompleteness: "unknown", burnCompleteness: "unknown" },
+  });
+  const cohort = (ids: ReadonlySet<string>) => [...ids].map((id) => flowsById.get(id) ?? unbounded());
+  return { safe: cohort(classification.safeIds), risky: cohort(classification.riskyIds) };
+}
+
+/**
  * Flight-to-quality over per-coin nets that may lack valuation. Exact when every
  * classified coin's 24h valuation is complete. Otherwise only a proven-inactive
  * decision survives: the proven net ranges already rule activation out. Any other

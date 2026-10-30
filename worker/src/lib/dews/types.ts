@@ -101,6 +101,12 @@ export interface DEWSInput {
   priceConfidence: string | null;
   prevPriceConfidence: string | null;
   price: number | null;
+  /**
+   * Historical reconstruction never reads a price. A `null` price otherwise
+   * carries live semantics (maximum concern), so callers that know the price
+   * family was not read must mark it unavailable instead of scoring it 100.
+   */
+  priceEvidenceUnavailable?: boolean;
   // Cross-source divergence
   pegRef: number;
   pegReferenceAvailable?: boolean;

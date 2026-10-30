@@ -1,10 +1,19 @@
+import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CIRCUIT_OPEN_THRESHOLD } from "@shared/lib/ops-limits";
+import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import type * as AbortModule from "../../lib/abort";
 import { CIRCUIT_SOURCE } from "../../lib/constants";
 import { DEFAULT_FETCH_RETRY_MAX_RESPONSE_BYTES } from "../../lib/fetch-retry";
-import { DETAIL_UPSTREAM_TIMEOUT_MS, type DetailResponseHelpers } from "../stablecoin-detail/shared";
+import {
+  createDetailResponseHelpers,
+  DETAIL_UPSTREAM_TIMEOUT_MS,
+  type DetailResponseHelpers,
+} from "../stablecoin-detail/shared";
 import {
   applyCuratedDetailAddress,
   DEFILLAMA_DETAIL_MAX_RESPONSE_BYTES,
@@ -504,5 +513,124 @@ describe("DefiLlama detail bounded materialization", () => {
     await vi.advanceTimersByTimeAsync(2 * DETAIL_UPSTREAM_TIMEOUT_MS);
     expect((await next).status).toBe(200);
     expect(fetch).toHaveBeenCalledTimes(2);
+  });
+});
+
+const detailFixtures = createLatestSchemaFixtureTracker();
+
+function storedDetailCircuitRecord(sqlite: DatabaseSync): { state: string; consecutiveFailures: number } | null {
+  const row = sqlite
+    .prepare("SELECT value FROM cache WHERE key = ?")
+    .get(`circuit:${CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL}`) as { value?: string } | undefined;
+  return row?.value ? JSON.parse(row.value) as { state: string; consecutiveFailures: number } : null;
+}
+
+describe("DefiLlama detail source circuit attribution", () => {
+  afterEach(() => {
+    detailFixtures.closeAll();
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+  });
+
+  it("does not report a source-wide provider outage when the local supply-history read fails", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { sqlite } = detailFixtures.open();
+
+    // The provider keeps returning valid history older than the 72-hour detail
+    // budget, so every refresh resolves it against the local supply_history
+    // table. That local read is the failing step: the first supply_history
+    // statement of each request rejects like a transient D1 overload.
+    let failNextSupplyHistoryRead = false;
+    const db = createSqliteD1(sqlite, {
+      onAll(sql) {
+        if (!failNextSupplyHistoryRead || !sql.includes("FROM supply_history")) return;
+        failNextSupplyHistoryRead = false;
+        throw new Error("D1_ERROR: D1 DB is overloaded");
+      },
+    });
+    const providerBody = {
+      price: 1,
+      tokens: [{ date: now - 5 * DAY_SECONDS, totalCirculatingUSD: { peggedUSD: 118_000_000_000 } }],
+    };
+    const fetch = mockFetch([{
+      match: "https://stablecoins.llama.fi/stablecoin/1",
+      respond: () => {
+        failNextSupplyHistoryRead = true;
+        return new Response(JSON.stringify(providerBody), { headers: { "Content-Type": "application/json" } });
+      },
+    }]);
+
+    for (let attempt = 0; attempt < CIRCUIT_OPEN_THRESHOLD; attempt += 1) {
+      await handleDefiLlamaDetail({
+        db,
+        stablecoinId: "usdt-tether",
+        llamaId: "1",
+        meta: { flags: { pegCurrency: "USD" } },
+      }, createDetailResponseHelpers({
+        db,
+        stablecoinId: "usdt-tether",
+        pegType: "peggedUSD",
+        cached: null,
+        execCtx: { waitUntil: (promise: Promise<unknown>) => { void promise; } } as unknown as ExecutionContext,
+      }));
+    }
+
+    // Every request consumed its injected local-read failure, so the failing
+    // step really was the D1 supply_history read and not the provider call.
+    expect(failNextSupplyHistoryRead).toBe(false);
+    fetch.assertAllRoutesUsed();
+
+    // The provider answered and parsed on every request, so /api/health must not
+    // report this as an open DefiLlama detail source-wide circuit.
+    expect({
+      state: storedDetailCircuitRecord(sqlite)?.state ?? "closed",
+      consecutiveFailures: storedDetailCircuitRecord(sqlite)?.consecutiveFailures ?? 0,
+    }).toEqual({ state: "closed", consecutiveFailures: 0 });
+  });
+
+  it("does not open the source-wide circuit for a parsed 200 with no history", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const { db, sqlite } = detailFixtures.open();
+    const pendingWrites: Promise<unknown>[] = [];
+    const execCtx = {
+      waitUntil: (promise: Promise<unknown>) => { pendingWrites.push(promise); },
+    } as unknown as ExecutionContext;
+    const helpersFor = (stablecoinId: string) => createDetailResponseHelpers({
+      db, stablecoinId, pegType: "peggedUSD", cached: null, execCtx,
+    });
+    mockFetch([
+      { match: "https://stablecoins.llama.fi/stablecoin/1", body: { tokens: [] } },
+      {
+        match: "https://stablecoins.llama.fi/stablecoin/118",
+        body: { price: 1, tokens: [{ date: now, circulating: { peggedUSD: 100 } }] },
+      },
+    ], { strictUrl: true });
+
+    // DefiLlama answers 200 with a schema-valid empty history: the documented
+    // empty-history fallback case. It is an asset-local data gap, not a provider outage.
+    for (let attempt = 0; attempt < CIRCUIT_OPEN_THRESHOLD; attempt += 1) {
+      const response = await handleDefiLlamaDetail(
+        { db, stablecoinId: "usdt-tether", llamaId: "1", meta: undefined },
+        helpersFor("usdt-tether"),
+      );
+      expect(response.status).toBe(502);
+    }
+
+    expect({
+      state: storedDetailCircuitRecord(sqlite)?.state ?? "closed",
+      consecutiveFailures: storedDetailCircuitRecord(sqlite)?.consecutiveFailures ?? 0,
+    }).toEqual({ state: "closed", consecutiveFailures: 0 });
+
+    // A source-wide breaker opened by id-local empties would deny fresh provider
+    // history to every other DefiLlama coin.
+    const healthy = await handleDefiLlamaDetail(
+      { db, stablecoinId: "gho-aave", llamaId: "118", meta: undefined },
+      helpersFor("gho-aave"),
+    );
+    expect(healthy.status).toBe(200);
+    expect(await healthy.json()).toMatchObject({
+      tokens: [{ date: now, circulating: { peggedUSD: 100 }, totalCirculating: { peggedUSD: 100 } }],
+    });
+    await Promise.all(pendingWrites);
   });
 });

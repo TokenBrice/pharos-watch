@@ -2123,3 +2123,142 @@ describe("handleYieldRankings", () => {
     expect(rebasedMove?.rankChangeAttribution?.driverContributions?.apy).toBeNull();
   });
 });
+
+describe("yield rankings pipeline-gap rank attribution", () => {
+  const NOW = Date.parse("2026-03-13T16:00:00Z") / 1000;
+
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1000);
+    loadActiveSafetyScoreIndexMock.mockReset();
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it("names the lost safety score, not an unchanged APY, as the driver", async () => {
+    const updatedAt = NOW - 30;
+    const identity = v9Identity(`report-cards:v9:${NOW}`);
+    const benchmark = {
+      key: "USD" as const,
+      label: "USD 3M T-Bill",
+      currency: "USD",
+      rate: 4.25,
+      recordDate: "2026-03-12",
+      fetchedAt: updatedAt,
+      ageSeconds: 30,
+      source: "fred-dgs3mo",
+      isFallback: false,
+      fallbackMode: null,
+      isProxy: false,
+    };
+    const payload: YieldRankingsResponse = {
+      rankings: [
+        // Previously rated #1 at 80/A; its APY is byte-identical to the served row.
+        makeYieldRanking({
+          id: "rated-coin", symbol: "RATE", name: "Rated Coin",
+          currentApy: 5.3, apy7d: 5.2, apy30d: 5.1, apyBase: 5.1,
+          yieldSource: "Source A", sourceTvlUsd: 1_000_000,
+          pharosYieldScore: 20, safetyScore: 80, safetyGrade: "A",
+          publishedRank: 1,
+          provenance: makeYieldProvenance({
+            sourceKey: "pool-a", sourceObservedAt: updatedAt, sourceAgeSeconds: 30,
+            benchmarkRecordDate: "2026-03-12",
+          }),
+        }),
+        makeYieldRanking({
+          id: "peer-coin", symbol: "PEER", name: "Peer Coin",
+          currentApy: 6.5, apy7d: 6.4, apy30d: 6.3, apyBase: 6.3,
+          yieldSource: "Source B", sourceTvlUsd: 2_000_000,
+          pharosYieldScore: 10, safetyScore: 40, safetyGrade: "NR",
+          publishedRank: 2,
+          provenance: makeYieldProvenance({
+            sourceKey: "pool-b", sourceObservedAt: updatedAt, sourceAgeSeconds: 30,
+            benchmarkRecordDate: "2026-03-12",
+          }),
+        }),
+      ],
+      riskFreeRate: 4.25,
+      benchmarks: { USD: benchmark },
+      scalingFactor: 8,
+      medianApy: 4.2,
+      updatedAt,
+      publication: {
+        generationId: `yield-${updatedAt}`,
+        updatedAt,
+        cutoffAt: updatedAt,
+        schemaVersion: 1,
+        status: "published",
+      },
+      provenance: {
+        selectionMethod: "confidence-weighted",
+        benchmark,
+        benchmarks: { USD: benchmark },
+        dlPools: { mode: "dex-cache", updatedAt, ageSeconds: 30, poolCount: 10, fallbackMode: null },
+        safetySnapshot: {
+          kind: "ok",
+          coverageRatio: 1,
+          coveredCount: 2,
+          trackedCount: 2,
+          reason: null,
+          source: "safety-score-v9-publication",
+          safetyScoreIdentity: identity,
+          publicationGenerationId: identity.publicationGenerationId,
+          methodologyVersion: identity.methodologyVersion,
+          publishedAt: updatedAt,
+        },
+      },
+    };
+    const db = makeCacheDb(payload, updatedAt);
+    // The live compact index quarantined the asset (pipeline gap: null score,
+    // null grade) while its peer stayed rated.
+    loadActiveSafetyScoreIndexMock.mockResolvedValueOnce({
+      kind: "v9",
+      snapshot: {
+        lifecycle: "active",
+        safetyScoreIdentity: identity,
+        methodology: { version: identity.methodologyVersion },
+        asOfSec: NOW,
+        updatedAt: NOW,
+        publicationHealth: {
+          schemaVersion: 2,
+          status: "current",
+          acceptedPublicationGenerationId: identity.publicationGenerationId,
+          acceptedAtSec: NOW,
+          attemptedAtSec: NOW,
+          heldSinceSec: null,
+          reasons: [],
+        },
+        completeness: { expectedCount: 2 },
+        cards: [
+          { id: "rated-coin", score: null, grade: null, ratingStatus: "pipeline-gap", partialEvidence: null },
+          { id: "peer-coin", score: 60, grade: "B", ratingStatus: "rated", partialEvidence: null },
+        ],
+      },
+    });
+
+    const body = await readJsonResponse<YieldRankingsResponse>(await handleYieldRankings(db), 200);
+    const rated = body.rankings.find((row) => row.id === "rated-coin");
+
+    expect(rated).toMatchObject({
+      currentApy: 5.3,
+      safetyScore: null,
+      safetyGrade: null,
+      safetyReason: "safety-snapshot-unavailable",
+      pharosYieldScore: null,
+      liveRank: 2,
+      provenance: { safetyProvenance: "safety-snapshot-unavailable" },
+    });
+
+    // The row's own served safety (unavailable) differs from the published 80/A,
+    // so the movement driver is `stablecoin-safety` — never `apy`, which would
+    // publish a positive causal claim from a failed safety read while its APY is unchanged.
+    expect(rated?.rankChangeAttribution).toMatchObject({
+      previousRank: 1,
+      rankDelta: -1,
+      primaryDriver: "stablecoin-safety",
+    });
+    expect(rated?.rankChangeAttribution?.driverContributions?.apy).toBeNull();
+  });
+});

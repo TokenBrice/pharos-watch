@@ -222,6 +222,7 @@ async function fetchAndNormalizeDefiLlamaDetail(
     return detail.staleCacheOrError(503, "DefiLlama detail circuit open");
   }
 
+  let normalized: z.infer<typeof DlDetailResponseSchema>;
   try {
     const result = await fetchTextWithRetry(
       `${DEFILLAMA_BASE}/stablecoin/${encodeURIComponent(config.llamaId)}`,
@@ -251,7 +252,6 @@ async function fetchAndNormalizeDefiLlamaDetail(
     }
 
     const upstreamBody = result.body;
-    let normalized: z.infer<typeof DlDetailResponseSchema>;
     try {
       normalized = normalizeDefiLlamaDetail(upstreamBody, config.meta);
     } catch (err) {
@@ -261,20 +261,33 @@ async function fetchAndNormalizeDefiLlamaDetail(
       if (fallback) return fallback;
       return detail.staleCacheOrError(502, `Invalid upstream data for stablecoin ${config.stablecoinId}`);
     }
+  } catch (err) {
+    await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
+    logUpstreamException("defillama-stablecoin-detail", config.stablecoinId, err);
+    const fallback = await detail.trySupplyHistoryFallback("defillama-exception");
+    if (fallback) return fallback;
+    return detail.staleCacheOrError(502, `Failed to fetch stablecoin ${config.stablecoinId}`);
+  }
 
+  // The provider answered and parsed. A schema-valid empty history is the documented
+  // asset-local fallback case, not a provider failure, so only fetch/parse outcomes
+  // move the source-wide circuit (R2).
+  await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, true);
+
+  try {
     const history = await detail.resolveTokensWithSupplyHistoryFallback(normalized.tokens, {
       emptyReason: "defillama-history-empty",
       staleReason: "defillama-history-stale",
     });
-    await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, normalized.tokens.length > 0);
     if (history.tokens.length === 0) {
       return detail.staleCacheOrError(502, `Historical detail data unavailable for stablecoin ${config.stablecoinId}`);
     }
     return detail.createResponseFromResolvedTokens(history, normalized);
   } catch (err) {
-    await recordOutcomeSafe(config.db, CIRCUIT_SOURCE.DL_STABLECOIN_DETAIL, false);
-    logUpstreamException("defillama-stablecoin-detail", config.stablecoinId, err);
-    const fallback = await detail.trySupplyHistoryFallback("defillama-exception");
+    // Local D1 history resolution is not an upstream failure: serve the retained cache
+    // without charging the source-wide provider circuit.
+    logUpstreamException("defillama-stablecoin-detail-history", config.stablecoinId, err);
+    const fallback = await detail.trySupplyHistoryFallback("defillama-history-read-failure");
     if (fallback) return fallback;
     return detail.staleCacheOrError(502, `Failed to fetch stablecoin ${config.stablecoinId}`);
   }

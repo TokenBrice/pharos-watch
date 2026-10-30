@@ -7,6 +7,7 @@ import { getLatestSuccessfulCronTimestampResult } from "../lib/api-freshness";
 import { buildMintBurnScope, getMintBurnConfigsForStablecoin } from "../lib/mint-burn-contracts";
 import { buildMintBurnSyncHealth } from "../lib/mint-burn-health-config";
 import {
+  buildFlightToQualityCohorts,
   computeGaugeScore,
   detectFlightToQualityFromValuedNets,
   getGaugeBand,
@@ -319,17 +320,16 @@ async function reconcileCachedAggregateSafetyResponse(
     if (!coins.success) {
       reason = "cached-flow-contract-invalid";
     } else {
-      const safe: ValuedNetFlow24h[] = [];
-      const risky: ValuedNetFlow24h[] = [];
+      const flowsById = new Map<string, ValuedNetFlow24h>();
       for (const coin of coins.data) {
-        const flow = {
+        flowsById.set(coin.stablecoinId, {
           knownNetUsd: coin.netFlow24hUsd,
           valuation: resolveMintBurnValuation(coin.valuation?.window24h),
-        };
-        if (source.classification.safeIds.has(coin.stablecoinId)) safe.push(flow);
-        else if (source.classification.riskyIds.has(coin.stablecoinId)) risky.push(flow);
+        });
       }
-      const ftq = detectFlightToQualityFromValuedNets({ safe, risky });
+      const ftq = detectFlightToQualityFromValuedNets(
+        buildFlightToQualityCohorts(source.classification, flowsById),
+      );
       payload.gauge = {
         ...payload.gauge,
         flightToQuality: ftq?.active ?? null,

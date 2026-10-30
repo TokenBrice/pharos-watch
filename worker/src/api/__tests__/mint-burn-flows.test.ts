@@ -552,8 +552,10 @@ describe("handleMintBurnFlows contract tests", () => {
     const res = await handleMintBurnFlows(db, new URL(`https://x/api/mint-burn-flows?hours=${hours}`));
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
     expect(body.gauge).toMatchObject({
-      flightToQuality: false,
-      flightIntensity: 0,
+      // The cached fixture publishes no coin flows, and both classified coins are
+      // unbounded cohort members: a recovered classification cannot prove inactivity.
+      flightToQuality: null,
+      flightIntensity: null,
       classificationSource: "safety-score-v9-publication",
       classificationReason: null,
       safetyScoreIdentity: snapshot.safetyScoreIdentity,

@@ -24,6 +24,7 @@ import {
 } from "../../lib/mint-burn-contracts";
 import { readMintBurnSyncStateBatch } from "../../lib/mint-burn-pipeline/sync-state";
 import {
+  buildFlightToQualityCohorts,
   computeFlowIntensity,
   FLOW_INTENSITY_MIN_DATA_DAYS,
   detectFlightToQualityFromValuedNets,
@@ -371,8 +372,7 @@ export function buildCoinSummaries(
   const coinAgg = aggregateHourlyRowsByStablecoin(data.hourly24hRows);
   const coins: CoinFlowSummary[] = [];
   const gaugeInputs: Array<{ intensity: number | null; mcap: number }> = [];
-  const safeFlows: ValuedNetFlow24h[] = [];
-  const riskyFlows: ValuedNetFlow24h[] = [];
+  const classifiedFlowsById = new Map<string, ValuedNetFlow24h>();
   let trackedMcapUsd = 0;
   let mcapUnavailableCoins = 0;
   let partialValuationInputs = 0;
@@ -427,10 +427,8 @@ export function buildCoinSummaries(
 
     if (gradeClassification) {
       const flow = { knownNetUsd: has24hWindow ? knownNetFlow24h : null, valuation: valuation24h };
-      if (gradeClassification.safeIds.has(id)) {
-        safeFlows.push(flow);
-      } else if (gradeClassification.riskyIds.has(id)) {
-        riskyFlows.push(flow);
+      if (gradeClassification.safeIds.has(id) || gradeClassification.riskyIds.has(id)) {
+        classifiedFlowsById.set(id, flow);
       }
     }
 
@@ -493,7 +491,9 @@ export function buildCoinSummaries(
   }
 
   const flightToQuality = gradeClassification
-    ? detectFlightToQualityFromValuedNets({ safe: safeFlows, risky: riskyFlows })
+    ? detectFlightToQualityFromValuedNets(
+        buildFlightToQualityCohorts(gradeClassification, classifiedFlowsById),
+      )
     : null;
 
   return {

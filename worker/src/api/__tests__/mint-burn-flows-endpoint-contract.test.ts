@@ -8,8 +8,12 @@ import { makeFlowHourlyRow } from "./mint-burn-flows.test-support";
 import { aggregateFlowCacheKey, perCoinFlowCacheKey } from "../../lib/mint-burn-flow-cache-keys";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getMintBurnConfigsForStablecoin } from "../../lib/mint-burn-contracts";
-import { mintBurnConfigKey } from "../../lib/mint-burn-pipeline/sync-state";
-import { syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
+import { mintBurnConfigKey, upsertMintBurnSyncState } from "../../lib/mint-burn-pipeline/sync-state";
+import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
+import { isGrandfatheredMintBurnConfig, syncMintBurnPublicationPolicy } from "../../lib/mint-burn-publication";
+import { detectFlightToQualityFromValuedNets } from "../../lib/mint-burn-scoring";
+import * as activeSafetyScoreSource from "../../lib/safety-score-index";
+import { makeWorkerReportCardsV9Response, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { ACTIVE_MINT_BURN_CONFIGS } from "../mint-burn-flows/aggregate";
 import { handleMintBurnEvents } from "../mint-burn-events";
 import type { MockD1Database } from "@shared/test-utils/mock-d1";
@@ -176,5 +180,112 @@ describe("handleMintBurnFlows contract tests", () => {
     await expect(res.json()).resolves.toEqual({
       error: "Stablecoins data not yet available",
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Flight-to-quality cohort completeness
+// ---------------------------------------------------------------------------
+
+const ftqRoster = [...ACTIVE_MINT_BURN_CONFIGS];
+const ftqSafeConfig = ftqRoster.find((config) => config.stablecoinId === "usdc-circle" && config.chain.chainId === "ethereum")!;
+const ftqRiskyConfig = ftqRoster.find((config) => config.stablecoinId === "dai-makerdao" && config.chain.chainId === "ethereum")!;
+// swanUSD's only configured leg is reviewed but has no durable 90-day baseline, so it
+// publishes as `pending-admission` and never enters `data.configs`.
+const ftqUnadmittedConfig = ftqRoster.find((config) => config.stablecoinId === "swanusd-swan")!;
+
+describe("aggregate flight-to-quality cohorts", () => {
+  const HOUR = 3_600;
+  const DAY = 86_400;
+  const end = Date.parse("2027-02-01T12:00:00Z") / 1000;
+
+  beforeEach(() => {
+    ACTIVE_MINT_BURN_CONFIGS.splice(0, ACTIVE_MINT_BURN_CONFIGS.length, ftqSafeConfig, ftqRiskyConfig, ftqUnadmittedConfig);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime((end + 60) * 1000);
+  });
+
+  afterEach(() => {
+    ACTIVE_MINT_BURN_CONFIGS.splice(0, ACTIVE_MINT_BURN_CONFIGS.length, ...ftqRoster);
+    fixtures.closeAll();
+    vi.restoreAllMocks();
+    vi.useRealTimers();
+  });
+
+  it("withholds the inactive verdict while a graded risky coin has no admitted 24h flow", async () => {
+    expect(isGrandfatheredMintBurnConfig(ftqSafeConfig)).toBe(true);
+    expect(isGrandfatheredMintBurnConfig(ftqRiskyConfig)).toBe(true);
+    expect(isGrandfatheredMintBurnConfig(ftqUnadmittedConfig)).toBe(false);
+
+    const { sqlite, db } = fixtures.open();
+    for (const [config, historyDays] of [[ftqSafeConfig, 90], [ftqRiskyConfig, 90], [ftqUnadmittedConfig, 31]] as const) {
+      const toBlock = config.startBlock + 3_000_000;
+      await upsertMintBurnSyncState(db, mintBurnConfigKey(config), toBlock, "monotonic-max", {
+        configKey: mintBurnConfigKey(config),
+        configFingerprint: mintBurnScanFingerprint(config),
+        chainId: config.chain.chainId,
+        fromBlock: config.startBlock,
+        toBlock,
+        fromTimestamp: end - historyDays * DAY,
+        toTimestamp: end,
+        finalizedBlock: toBlock,
+        acceptedAt: end,
+      });
+    }
+    const hourly = sqlite.prepare(`INSERT INTO mint_burn_hourly
+      (stablecoin_id, chain_id, hour_ts, mint_count, burn_count, mint_volume_usd, burn_volume_usd, net_flow_usd,
+       mint_unpriced_event_count, burn_unpriced_event_count)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 0, 0)`);
+    // Observed safe inflow is already past the +$100M activation threshold.
+    hourly.run("usdc-circle", "ethereum", end - HOUR, 1, 0, 150_000_000, 0, 150_000_000);
+    // The observed risky outflow is short of -$100M; the omitted risky coin is unbounded.
+    hourly.run("dai-makerdao", "ethereum", end - HOUR, 0, 1, 0, 20_000_000, -20_000_000);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run("stablecoins", JSON.stringify({
+      peggedAssets: [
+        { id: "usdc-circle", symbol: "USDC", circulating: { peggedUSD: 60_000_000_000 }, chainCirculating: { Ethereum: { current: 60_000_000_000 } } },
+        { id: "dai-makerdao", symbol: "DAI", circulating: { peggedUSD: 4_000_000_000 }, chainCirculating: { Ethereum: { current: 4_000_000_000 } } },
+      ],
+    }), end);
+
+    const snapshot = makeWorkerReportCardsV9Response({
+      updatedAt: end + 60,
+      cards: [
+        makeWorkerV9Card({ id: "usdc-circle", score: 82, grade: "A" }),
+        makeWorkerV9Card({ id: "dai-makerdao", score: 30, grade: "D" }),
+        // Rated risky, so it belongs in the risky cohort with an unknown net.
+        makeWorkerV9Card({ id: "swanusd-swan", score: 28, grade: "D" }),
+      ],
+    });
+    vi.spyOn(activeSafetyScoreSource, "loadActiveSafetyScoreIndex").mockResolvedValue({ kind: "v9", snapshot });
+
+    const response = await handleMintBurnFlows(db, new URL("https://api.test/api/mint-burn-flows"));
+    const body = MintBurnFlowsResponseSchema.parse(await response.json());
+
+    // Reachability: the risky coin's only leg is published as pending admission.
+    expect(body.publication).toMatchObject({ pendingAdmissionCount: 1 });
+    expect(body.publication?.legs).toContainEqual(expect.objectContaining({
+      stablecoinId: "swanusd-swan", chainId: "ethereum", status: "pending-admission",
+    }));
+    expect(body.coins.map((coin) => coin.stablecoinId).sort()).toEqual(["dai-makerdao", "usdc-circle"]);
+
+    const usdc = body.coins.find((coin) => coin.stablecoinId === "usdc-circle")!;
+    const dai = body.coins.find((coin) => coin.stablecoinId === "dai-makerdao")!;
+    expect(usdc.valuation?.window24h.completeness).toBe("complete");
+    expect(dai.valuation?.window24h.completeness).toBe("complete");
+    expect(usdc.netFlow24hUsd).toBe(150_000_000);
+    expect(dai.netFlow24hUsd).toBe(-20_000_000);
+
+    // Ground truth: the same observed nets cannot support an inactive verdict once
+    // the omitted graded coin is carried as an unbounded cohort member.
+    expect(detectFlightToQualityFromValuedNets({
+      safe: [{ knownNetUsd: 150_000_000, valuation: { mintCompleteness: "complete", burnCompleteness: "complete" } }],
+      risky: [
+        { knownNetUsd: -20_000_000, valuation: { mintCompleteness: "complete", burnCompleteness: "complete" } },
+        { knownNetUsd: null, valuation: { mintCompleteness: "unknown", burnCompleteness: "unknown" } },
+      ],
+    })).toBeNull();
+
+    // The omitted risky coin's outflow is unknown, so activation cannot be ruled out.
+    expect(body.gauge.flightToQuality).toBeNull();
   });
 });

@@ -16,6 +16,7 @@ import type {
   PersistedJsonDecodeReason,
   SourceFailure,
 } from "../lib/dews/contracts";
+import { malformedInputDegradesRun } from "../lib/dews/malformed-input";
 import { computeAndStoreDEWS } from "../lib/dews/service";
 import { getDexLiquidityTrendTolerances, selectLiquidityObservation, selectTrendBaseline } from "../lib/dex-liquidity-response";
 import type { DexHistoryRow } from "../lib/dex-liquidity-response";
@@ -107,7 +108,7 @@ async function buildRefreshPreview(db: D1Database): Promise<DewsRefreshPreview |
       stablecoinId: options.stablecoinId,
       updatedAt: options.updatedAt ?? null,
       reason: options.reason,
-      degradesRun: options.degradesRun,
+      degradesRun: malformedInputDegradesRun(options.degradesRun, options.stablecoinId),
     });
   };
 
@@ -440,6 +441,7 @@ async function handleHistoricalBacktest(db: D1Database): Promise<Response> {
         priceConfidence: null,
         prevPriceConfidence: null,
         price: null,
+        priceEvidenceUnavailable: true,
         pegRef: 1.0,
         dexPriceUsd: null,
         blacklistEvents24h: 0,
