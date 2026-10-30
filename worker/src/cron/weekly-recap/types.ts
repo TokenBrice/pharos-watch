@@ -71,7 +71,16 @@ export interface WeeklyInputData {
   safetyContext?: DigestSafetyContext;
   degradedSources?: string[];
   dailyDigests: { date: string; title: string; text: string; inputData: DigestInputData }[];
-  psiRange: { min: number; max: number; start: number; end: number; dominantBand: string };
+  psiRange: {
+    min: number;
+    max: number;
+    /** First/last readable edition scores; null when that edition did not observe PSI. */
+    start: number | null;
+    end: number | null;
+    observationDays: number;
+    /** Most frequent observed band; null below three PSI observations. */
+    dominantBand: string | null;
+  };
   mcapRange: { start: number | null; end: number | null; netChange: number | null; pctChange: number | null; unavailableReason?: string };
   /** Cross-day totals: null when the window did not observe every daily edition. */
   activeDepegObservationsThisWeek: number | null;
@@ -129,6 +138,8 @@ export interface WeeklyInputData {
 export interface WeeklyParsedRow {
   inputData: DigestInputData;
   date: string;
+  /** Exact edition timestamp; `date` is only its UTC day. */
+  generatedAt: number;
   title: string;
   text: string;
 }

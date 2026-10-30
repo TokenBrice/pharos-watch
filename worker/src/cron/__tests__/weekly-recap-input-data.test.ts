@@ -5,6 +5,7 @@ import type {
   DigestInputData,
   DigestSafetyContext,
 } from "@shared/types/digest";
+import type { DigestSafetyMapCapture } from "@shared/types/digest-safety-map-contract";
 import type {
   SafetyScoreV8PublicationIdentity,
   SafetyScoreV9PublicationIdentity,
@@ -506,6 +507,56 @@ describe("weekly recap canonical candidate aggregation", () => {
   });
 });
 
+describe("weekly recap comparison availability", () => {
+  it("withholds a market-cap change from a single complete core-universe observation", () => {
+    // The core-universe marker only appears on the last edition; the six
+    // earlier archived editions carry the legacy all-stablecoins universe.
+    const rows = Array.from({ length: 7 }, (_, index) => row(index, index === 6
+      ? { aggregateUniverse: "core-stablecoins-v1", totalMcapUsd: 302_000_000_000 }
+      : {}));
+    const weekly = buildWeeklyInputData(rows)!;
+
+    // One complete observation is zero comparison pairs: the weekly change is
+    // unobserved, not a measured flat week.
+    expect(weekly.mcapRange).toEqual({
+      start: null, end: null, netChange: null, pctChange: null,
+      unavailableReason: "insufficient-market-observations",
+    });
+    const prompt = buildWeeklyPrompt(weekly);
+    expect(prompt).toContain("Market cap: N/A (insufficient-market-observations)");
+    expect(prompt).not.toContain("+0.00%");
+  });
+
+  it("keeps the week's start and end PSI unavailable when those editions did not observe PSI", () => {
+    const psi = (score: number) => ({ score, band: "BEDROCK", components: { severity: 0, breadth: 0, trend: 0 } });
+    const complete = buildWeeklyInputData([90, 88, 89, 90, 91, 92, 93].map((score, index) => row(index, {
+      stabilityIndex: psi(score),
+    })))!;
+    expect(complete.psiRange).toMatchObject({ start: 90, end: 93, observationDays: 7 });
+
+    // PSI is unreadable on the first and last editions: the interior min/max
+    // remain known, but the window's opening and closing scores were never
+    // observed and must not be replaced by interior observations.
+    const degraded = buildWeeklyInputData([0, 1, 2, 3, 4, 5, 6].map((index) => row(index, {
+      stabilityIndex: index === 0 || index === 6 ? null : psi(88 + index),
+      ...(index === 0 || index === 6 ? { degradedSources: ["psi-unavailable"] } : {}),
+    })))!;
+    expect(degraded.psiRange).toMatchObject({
+      min: 89, max: 93, start: null, end: null, observationDays: 5, dominantBand: "BEDROCK",
+    });
+    const degradedPrompt = buildWeeklyPrompt(degraded);
+    expect(degradedPrompt).toContain("start: unavailable, end: unavailable");
+    expect(degradedPrompt).not.toContain("start: 89");
+
+    // Two observations cannot establish a dominant band.
+    const sparse = buildWeeklyInputData([0, 1, 2, 3, 4, 5, 6].map((index) => row(index, {
+      stabilityIndex: index === 2 || index === 3 ? psi(80 + index) : null,
+    })))!;
+    expect(sparse.psiRange).toMatchObject({ start: null, end: null, observationDays: 2, dominantBand: null });
+    expect(buildWeeklyPrompt(sparse)).toContain("Dominant band: unavailable");
+  });
+});
+
 const v9Identity: SafetyScoreV9PublicationIdentity = {
   model: "v9",
   schemaVersion: 1,
@@ -809,37 +860,39 @@ describe("weekly recap safety identity", () => {
     expect(prompt).not.toContain("Top grade transitions by mcap");
   });
 
+  const censusCapture: DigestSafetyMapCapture = {
+    imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-07-26",
+    freshness: "carried-forward",
+    ageDays: 2,
+    manifest: {
+      date: "2026-07-26",
+      asOfSec: 1_774_000_000,
+      renderedAtSec: 1_774_001_000,
+      edition: "daily",
+      bytes: { png: 1_000_000 },
+      mapSummary: {
+        date: "2026-07-26",
+        asOfSec: 1_774_000_000,
+        methodologyVersion: "v9.4",
+        gradedCount: 10,
+        notRatedCount: 2,
+        totalMcapUsd: 100_000_000_000,
+        floorMcapByTier: { a: 1_000_000, other: 100_000 },
+        tiers: [
+          { tier: "A", range: "90-100", count: 2, mcapUsd: 70_000_000_000, sharePct: 70, leaders: [{ symbol: "USDT", score: 95, mcapUsd: 60_000_000_000 }] },
+          { tier: "B", range: "80-89", count: 2, mcapUsd: 15_000_000_000, sharePct: 15, leaders: [] },
+          { tier: "C", range: "70-79", count: 2, mcapUsd: 8_000_000_000, sharePct: 8, leaders: [] },
+          { tier: "D", range: "60-69", count: 2, mcapUsd: 5_000_000_000, sharePct: 5, leaders: [] },
+          { tier: "F", range: "0-59", count: 2, mcapUsd: 2_000_000_000, sharePct: 2, leaders: [] },
+        ],
+      },
+    },
+  };
+
   it("places the latest capture-matched census and grade movers in one dated safety desk", () => {
     const rows = [0, 1, 2, 3, 4].map((index) => safetyRow(index, [], v9Identity));
     const latestInput = JSON.parse(rows[4]!.input_data) as DigestInputData;
-    latestInput.safetyMap = {
-      imageUrl: "https://pharos.watch/safety-scores/map.png?date=2026-07-26",
-      freshness: "carried-forward",
-      ageDays: 2,
-      manifest: {
-        date: "2026-07-26",
-        asOfSec: 1_774_000_000,
-        renderedAtSec: 1_774_001_000,
-        edition: "daily",
-        bytes: { png: 1_000_000 },
-        mapSummary: {
-          date: "2026-07-26",
-          asOfSec: 1_774_000_000,
-          methodologyVersion: "v9.4",
-          gradedCount: 10,
-          notRatedCount: 2,
-          totalMcapUsd: 100_000_000_000,
-          floorMcapByTier: { a: 1_000_000, other: 100_000 },
-          tiers: [
-            { tier: "A", range: "90-100", count: 2, mcapUsd: 70_000_000_000, sharePct: 70, leaders: [{ symbol: "USDT", score: 95, mcapUsd: 60_000_000_000 }] },
-            { tier: "B", range: "80-89", count: 2, mcapUsd: 15_000_000_000, sharePct: 15, leaders: [] },
-            { tier: "C", range: "70-79", count: 2, mcapUsd: 8_000_000_000, sharePct: 8, leaders: [] },
-            { tier: "D", range: "60-69", count: 2, mcapUsd: 5_000_000_000, sharePct: 5, leaders: [] },
-            { tier: "F", range: "0-59", count: 2, mcapUsd: 2_000_000_000, sharePct: 2, leaders: [] },
-          ],
-        },
-      },
-    };
+    latestInput.safetyMap = censusCapture;
     rows[4] = { ...rows[4]!, input_data: JSON.stringify(latestInput) };
 
     const weekly = buildWeeklyInputData(rows, [], available(v9Identity), SAFETY_PERIODS);
@@ -849,6 +902,39 @@ describe("weekly recap safety identity", () => {
     expect(prompt).toContain("Safety Map census (carried-forward, age 2 days; depicts 2026-07-26 UTC)");
     expect(prompt).toContain("Grade movers this week: none recorded");
     expect(prompt).not.toContain("Top grade transitions by mcap");
+  });
+
+  it("does not present a superseded-build census as the active Safety source", () => {
+    const supersededIdentity: SafetyScoreV9PublicationIdentity = {
+      ...v9Identity,
+      evaluationBuildDigest: "1".repeat(64),
+      publicationGenerationId: "report-cards:v9:prior",
+    };
+    const rows = [0, 1, 2, 3, 4, 5, 6].map((index) => safetyRow(index, [], supersededIdentity));
+    const latestInput = JSON.parse(rows[6]!.input_data) as DigestInputData;
+    latestInput.safetyMap = censusCapture;
+    rows[6] = { ...rows[6]!, input_data: JSON.stringify(latestInput) };
+
+    // The row is identity-incompatible: its authored copy is withheld and its
+    // Safety-derived census must not be attributed to the active source.
+    const weekly = buildWeeklyInputData(rows, [], available(v9Identity), SAFETY_PERIODS)!;
+    expect(weekly.dailyDigests[6]).toMatchObject({ title: "", text: "" });
+    expect(weekly.dailyDigests[6]?.inputData.safetyMap).toBeUndefined();
+
+    const prompt = buildWeeklyPrompt(weekly);
+    expect(prompt).toContain("Safety source: V9");
+    expect(prompt).not.toContain("Safety Map census");
+    expect(prompt).not.toContain("70.0% of known mapped supply");
+  });
+
+  it("keeps the census for an identity-compatible capture", () => {
+    const rows = [0, 1, 2, 3, 4, 5, 6].map((index) => safetyRow(index, [], v9Identity));
+    const latestInput = JSON.parse(rows[6]!.input_data) as DigestInputData;
+    latestInput.safetyMap = censusCapture;
+    rows[6] = { ...rows[6]!, input_data: JSON.stringify(latestInput) };
+
+    const weekly = buildWeeklyInputData(rows, [], available(v9Identity), SAFETY_PERIODS)!;
+    expect(buildWeeklyPrompt(weekly)).toContain("A tier: 2 coins, 70.0% of known mapped supply");
   });
 });
 
@@ -927,5 +1013,36 @@ describe("weekly recap retracted USG edition quarantine", () => {
     prior[2] = contaminated(2, EDITION_AT);
     const weekly = buildWeeklyInputData(current, prior)!;
     expect(weekly.degradedSources).toContain("mint-burn-pressure-quarantined-signal:usg-tangent:2026-10-24");
+  });
+});
+
+describe("weekly recap empty risk leaderboard", () => {
+  // A failed active-depeg query persists a null count and null signal keys;
+  // that is a failed read, not an observed zero.
+  const failedReadWeek = Array.from({ length: 7 }, (_, index) => row(index, {
+    activeDepegCount: null,
+    depegSignalKeys: { active: null, resolved: [] },
+    degradedSources: ["active-depegs-query"],
+  }));
+  const quietWeek = Array.from({ length: 7 }, (_, index) => row(index, {
+    depegSignalKeys: { active: [], resolved: [] },
+  }));
+
+  it("does not publish a failed-read week as an absence of risk signals", () => {
+    const weekly = buildWeeklyInputData(failedReadWeek)!;
+    expect(weekly.degradedSources).toContain("active-depegs-query");
+    expect(weekly.weeklySignals.riskLeaderboard).toEqual([]);
+
+    const prompt = buildWeeklyPrompt(weekly);
+    expect(prompt).toContain("Degraded inputs this week: active-depegs-query");
+    expect(prompt).not.toContain("No material risk signals reconstructed from daily inputs.");
+    expect(prompt).toContain("Risk leaderboard unavailable");
+  });
+
+  it("keeps the absence statement for an observed quiet week", () => {
+    const weekly = buildWeeklyInputData(quietWeek)!;
+    expect(weekly.degradedSources).toBeUndefined();
+    expect(weekly.weeklySignals.riskLeaderboard).toEqual([]);
+    expect(buildWeeklyPrompt(weekly)).toContain("No material risk signals reconstructed from daily inputs.");
   });
 });

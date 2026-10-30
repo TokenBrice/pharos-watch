@@ -286,11 +286,19 @@ export async function upsertGlobalAlertTypes(
   chatId: string,
   username: string | null,
   alertTypes: Set<string>,
-  options: { operationStatements?: D1PreparedStatement[] } = {},
+  options: {
+    operationStatements?: D1PreparedStatement[];
+    /** `undefined` preserves the stored step; explicit `null` clears it. */
+    depegWorseningBpsStep?: 100 | 250 | 500 | null;
+  } = {},
 ): Promise<void> {
   const nowSec = unixNow();
+  // A pending depeg-step write implies the depeg family regardless of whether
+  // the caller listed it in `alertTypes`.
+  const enablesDepeg = alertTypes.has("depeg") || options.depegWorseningBpsStep !== undefined;
+  const enablesAlert = TELEGRAM_ALERT_TYPES.some((type) => alertTypes.has(type)) || enablesDepeg;
   const statements = [
-    ...(TELEGRAM_ALERT_TYPES.some((type) => alertTypes.has(type))
+    ...(enablesAlert
       ? prepareTelegramFirstFollowStatements(db, { chatId, username, nowSec, feature: "global" })
       : []),
     prepareUpsertSubscriberRow(db, {
@@ -299,13 +307,23 @@ export async function upsertGlobalAlertTypes(
       nowSec,
       globalAlertBumps: {
         dews: alertTypes.has("dews") ? 1 : 0,
-        depeg: alertTypes.has("depeg") ? 1 : 0,
+        depeg: enablesDepeg ? 1 : 0,
         safety: alertTypes.has("safety") ? 1 : 0,
         launch: alertTypes.has("launch") ? 1 : 0,
         reserve: alertTypes.has("reserve") ? 1 : 0,
         freeze: alertTypes.has("freeze") ? 1 : 0,
       },
     }),
+    ...(options.depegWorseningBpsStep !== undefined
+      ? [
+          db.prepare(
+            `UPDATE telegram_subscribers
+                SET global_depeg_worsening_bps_step = ?,
+                    last_active_at = ?
+              WHERE chat_id = ?`,
+          ).bind(options.depegWorseningBpsStep, nowSec, chatId),
+        ]
+      : []),
   ];
   await executeAtomicBatch(db, appendTelegramOperationStatements(statements, options));
 }

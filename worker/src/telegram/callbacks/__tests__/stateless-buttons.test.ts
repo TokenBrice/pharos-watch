@@ -126,6 +126,22 @@ describe("bulk and forget confirmations", () => {
       .toEqual({ global_alert_depeg: 1, global_alert_safety: 1, global_alert_dews: 0 });
   });
 
+  it("stores the depeg step carried by a chat-wide subscribe confirmation", async () => {
+    const { sqlite, db } = fixtures.open();
+    await tap(db, `bulk:sa:2-250:${expiry}`);
+    expect(sqlite.prepare("SELECT global_alert_depeg, global_depeg_worsening_bps_step FROM telegram_subscribers").get())
+      .toEqual({ global_alert_depeg: 1, global_depeg_worsening_bps_step: 250 });
+  });
+
+  it("clears the stored global step on an explicit depeg-step off confirmation", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscribers (chat_id, created_at, last_active_at, global_alert_depeg, global_depeg_worsening_bps_step)
+      VALUES ('42', 1, 1, 1, 500)`);
+    await tap(db, `bulk:sa:2-0:${expiry}`);
+    expect(sqlite.prepare("SELECT global_alert_depeg, global_depeg_worsening_bps_step FROM telegram_subscribers").get())
+      .toEqual({ global_alert_depeg: 1, global_depeg_worsening_bps_step: null });
+  });
+
   it("rejects an expired button and does nothing on cancel", async () => {
     const { sqlite, db } = fixtures.open();
     const expired = await tap(db, `bulk:sa:6:${(NOW - 1).toString(36)}`);

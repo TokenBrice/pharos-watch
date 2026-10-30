@@ -392,16 +392,16 @@ Possible channel values include `"skipped: no-creds"` (Twitter), `"no-creds"` (T
 
 ### Data collection
 
-Reads the latest non-blocked, non-weekly edition per UTC date in two seven-day windows: current `[todayTs - 6d, scheduledAt]`, prior `[todayTs - 13d, todayTs - 6d)`, at most 14 rows. Future editions are excluded. Both windows share aggregation. Safety fields and authored copy enter the prompt only when comparable with the active weekly model/schema/methodology/policy/build.
+Reads the latest non-blocked, non-weekly edition per UTC date in two seven-day windows: current `[todayTs - 6d, scheduledAt]`, prior `[todayTs - 13d, todayTs - 6d)`, at most 14 rows. Future editions are excluded. Both windows share aggregation. Safety fields (including the dated Safety Map census) and authored copy enter the prompt only when comparable with the active weekly model/schema/methodology/policy/build. When an edition reports `degradedSources`, the prompt names them and does not describe an empty risk leaderboard as an absence of risk signals.
 
 | Metric | Derivation |
 |--------|-----------|
-| PSI range | Min, max, start, end scores + dominant band (most frequent) |
-| Market cap range | Start, end, net change, percentage change only from explicitly complete core-universe supply observations; otherwise unavailable |
+| PSI range | Min/max observed scores; start/end only when the window's first/last readable editions observed PSI, otherwise unavailable; dominant band is the most frequent observed band (null below three PSI observations). The prompt names observation-day coverage |
+| Market cap range | Start, end, net change, percentage change only from at least two explicitly complete core-universe supply observations; otherwise unavailable with a named reason |
 | Active depeg observations | Sum of `activeDepegCount` across all days; explicitly not described as unique events |
 | Unique depeg signals | Deduplicated full `depegSignalKeys` active/resolved identities collected before display filtering; unavailable if any edition lacks authoritative identities or a source read failed |
 | Top depeg signals | Active and resolved signals sorted by absolute market impact; when a daily display slice persisted fewer magnitudes than its uncapped census, the weekly signal header names the weakest edition's shown/total bound |
-| Weekly risk leaderboard | Unified ranking across depegs, DEWS, mint/burn pressure, blacklist, grade, yield, liquidity, and supply contraction. Depegs use live deviation when stored; active events predating the window are `carriedOver`, receive half severity, and render under **STANDING CONDITIONS** (one line each, never the headline). Only unsuppressed critical depegs **new this week** hard-pin the lead and outrank other signals |
+| Weekly risk leaderboard | Unified ranking across depegs, DEWS, mint/burn pressure, blacklist, grade, yield, liquidity, and supply contraction. Depegs use live deviation when stored; active events predating the declared edition window (`[todayTs - 6d, scheduledAt]`, independent of which editions are readable) are `carriedOver`, receive half severity, and render under **STANDING CONDITIONS** (one line each, never the headline). Only unsuppressed critical depegs **new this week** hard-pin the lead and outrank other signals |
 | Spike metrics | Worst PSI/gauge day and independent maximum absolute depeg bps/impact across all persisted observations, before leaderboard deduplication; a maximum over a daily display slice that persisted fewer events than its uncapped census carries the same shown/total active or recovered-event bound |
 | Supply signals | Biggest weekly movers and daily velocity reversals/acceleration/deceleration |
 | DEWS signals | Top band changes for presentation; max full ALERT+ mcap only when every daily edition has a complete supply census, otherwise unavailable. Sum full daily band-change counts as observations (not unique assets), unavailable if any edition lacks a count |

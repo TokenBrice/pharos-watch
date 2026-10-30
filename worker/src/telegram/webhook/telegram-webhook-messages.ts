@@ -176,6 +176,14 @@ function hasActiveFamily(row: SubscriptionRow): boolean {
   return describeAlertFamilies(row, { scope: "subscription", emptyLabel: "" }) !== "";
 }
 
+/** Only every live family explicitly marked off suppresses inheritance. */
+function hasOnlyMarkedOffFamilies(row: SubscriptionRow): boolean {
+  return TELEGRAM_LIVE_ALERT_TYPES.every((family) => {
+    const columns = TELEGRAM_ALERT_PERSISTENCE[family];
+    return row[columns.overrideColumn] === 1 && row[columns.subscriptionColumn] !== 1;
+  });
+}
+
 /** True when the chat follows nothing: no preset, no active coin, no global family. */
 export function followsNothing(input: Pick<ListMessageInput, "subscriber" | "subscriptions" | "presetSubscriptions">): boolean {
   const activePreset = input.presetSubscriptions.some((row) => row.alert_dews || row.alert_depeg || row.alert_safety);
@@ -190,8 +198,10 @@ export function describeFollows(input: ListMessageInput): string[] {
     lines.push(`<b>${escapeHtml(label)}</b> (preset, updates with market cap): ${escapeHtml(describePresetSubscriptionSettings(row))}`);
   }
   const sorted = sortSubscriptions(input.subscriptions);
-  const followed = sorted.filter(hasActiveFamily);
-  const muted = sorted.filter((row) => !hasActiveFamily(row));
+  // Bucket by the override markers, not raw enablement: an unmarked zero
+  // inherits preset/global routing and must not be reported as muted.
+  const followed = sorted.filter((row) => !hasOnlyMarkedOffFamilies(row));
+  const muted = sorted.filter(hasOnlyMarkedOffFamilies);
   const nowSec = input.nowSec ?? Math.floor(Date.now() / 1000);
   if (followed.length > 0) {
     const coins = followed.map((row) => `${formatCoinLabel(row.stablecoin_id)} (${describeSubscriptionSettings(row, nowSec)})`);

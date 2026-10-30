@@ -98,4 +98,25 @@ describe("Telegram delivery SLI rollup (delivery v2)", () => {
     expect(rollup.authoritativeTargetOutcomes.total).toBe(0);
     expect(rollup.detectionToPlan.quality).toBe("empty");
   });
+
+  it("keeps broadcast delivery rows out of every alert-family sub-rollup", async () => {
+    const { sqlite, db } = fixtures.open();
+    insertJob(sqlite, "broadcast:x", "broadcast", "done", NOW - 600);
+    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "1", kind: "broadcast", state: "pending", createdAt: NOW - 300 });
+    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "2", kind: "broadcast", state: "cancelled", createdAt: NOW - 400, doneAt: NOW - 400, reason: "subscriber_missing" });
+    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "3", kind: "broadcast", state: "failed", createdAt: NOW - 500, doneAt: NOW - 490, reason: "bad_request", errorClass: "bad_request", attempts: 1 });
+    insertDelivery(sqlite, { jobId: "broadcast:x", chatId: "4", kind: "broadcast", state: "unknown", createdAt: NOW - 500, doneAt: NOW - 480, reason: "ambiguous_send" });
+
+    const rollup = await loadTelegramDeliverySliRollup(db, { nowSec: NOW });
+
+    // The whole rollup is defined over alert-family jobs and their delivery
+    // rows, so every sub-rollup must agree an all-broadcast window is empty.
+    expect(rollup.authoritativeTargetOutcomes).toMatchObject({ total: 0, telegramAcceptanceRate: null });
+    expect(rollup.backlog).toMatchObject({ count: 0, oldestAgeSec: null, buckets: [] });
+    expect(rollup.preferenceChangeCancellations).toMatchObject({ count: 0, reasons: [] });
+    expect(rollup.observedTargetErrorReasons).toEqual({ reasons: [], truncated: false });
+    expect(rollup.executionUnknown).toMatchObject({ count: 0, oldestAgeSec: null, olderThan15mCount: 0 });
+    expect(rollup.deadLetters).toMatchObject({ count: 0, totalAttempts: 0, reasons: [], lastErrorReasons: [] });
+    expect(rollup.evidence.freshness).toBe("empty");
+  });
 });

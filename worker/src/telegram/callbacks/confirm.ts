@@ -51,9 +51,12 @@ export const handleBulkCallback: CallbackHandler = async (ctx) => {
   if (!(await requireAdminForMutatingCallback(ctx.db, ctx.botToken, ctx.cb, ctx.chatId))) return;
 
   if (subscribe) {
-    await upsertGlobalAlertTypes(ctx.db, ctx.chatId, callbackUsername(ctx.cb), subscribe.alertTypes);
+    await upsertGlobalAlertTypes(ctx.db, ctx.chatId, callbackUsername(ctx.cb), subscribe.alertTypes, {
+      depegWorseningBpsStep: subscribe.depegStep,
+    });
+    const step = subscribe.depegStep == null ? "" : ` Depeg worsening alerts fire at ${subscribe.depegStep} bps.`;
     await recordTelegramUsageEvent(ctx.db, { eventType: "subscribe", actionDetail: "all", outcome: "success" });
-    await reply(ctx, `Done. You get ${[...subscribe.alertTypes].join(", ")} alerts for every tracked coin.`, "callback_bulk");
+    await reply(ctx, `Done. You get ${[...subscribe.alertTypes].join(", ")} alerts for every tracked coin.${step}`, "callback_bulk");
   } else {
     await unsubscribeAll(ctx.db, ctx.chatId);
     await recordTelegramUsageEvent(ctx.db, { eventType: "unsubscribe", actionDetail: "all", outcome: "success" });
