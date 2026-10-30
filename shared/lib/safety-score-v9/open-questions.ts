@@ -500,6 +500,15 @@ class OpenEvidenceCounter implements V9OpenEvidenceCounter {
       },
       byCard,
     };
+    // finish seals the counter: only the cached public block is read afterward.
+    // Drop both source lookups and accumulators before publication finalization.
+    this.gapsById.clear();
+    this.authoredControlScopeByKey.clear();
+    this.questions.clear();
+    this.cardQuestions.clear();
+    this.documentationGapIds.clear();
+    this.documentationReasonDatums.clear();
+    this.cards.clear();
     return this.block;
   }
 

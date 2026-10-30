@@ -370,6 +370,7 @@ describe("Safety Score v9 documentation-only pillar annotation", () => {
     componentKey: "bridge-materiality:alpha",
   });
   const facts = asset({ gaps: [localGap, undocumentable] });
+  const localDocumentationGapIds = new Set(documentationGapIds(POLICY, facts).keys());
   const foreign = ["beta:gap:heredoc"];
 
   function pillars(...entries: Array<[V9DocumentationPillarWitness["pillar"], V9DocumentationPillarWitness["evidenceLevel"], (readonly string[])?]>): V9DocumentationPillarWitness[] {
@@ -380,14 +381,14 @@ describe("Safety Score v9 documentation-only pillar annotation", () => {
 
   it("lists a limited pillar whose every witness is documentation, including inherited ids", () => {
     expect(documentationOnlyLimitedPillars({
-      envelope: POLICY, asset: facts, foreignDocumentationGapIds: foreign,
+      envelope: POLICY, localDocumentationGapIds, foreignDocumentationGapIds: foreign,
       pillars: pillars(["control", "limited", [localGap.gapId]], ["exit", "limited", [...foreign]]),
     })).toEqual(["control", "exit"]);
   });
 
   it("never lists an empty witness list, a non-limited pillar, one non-documentation witness or an unresolved id", () => {
     expect(documentationOnlyLimitedPillars({
-      envelope: POLICY, asset: facts,
+      envelope: POLICY, localDocumentationGapIds,
       pillars: pillars(
         ["backing", "limited", []],
         ["exit", "adequate", [localGap.gapId]],
@@ -395,7 +396,7 @@ describe("Safety Score v9 documentation-only pillar annotation", () => {
       ),
     })).toEqual([]);
     expect(documentationOnlyLimitedPillars({
-      envelope: POLICY, asset: facts, foreignDocumentationGapIds: foreign,
+      envelope: POLICY, localDocumentationGapIds, foreignDocumentationGapIds: foreign,
       pillars: pillars(
         ["backing", "limited", [localGap.gapId, "gamma:gap:nowhere"]],
         ["control", "limited", [localGap.gapId, undocumentable.gapId]],

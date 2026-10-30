@@ -175,7 +175,7 @@ describe("Safety Score v9 documentation class — fail-closed card annotation", 
     const carriers = buildV9DocumentationCarriers({
       envelope: V9_CANDIDATE_POLICY_V1,
       gapIds,
-      cards: [{ asset: facts, pillars }],
+      cards: [{ assetId: facts.assetId, localDocumentationGapIds: new Set(collectV9DocumentationGapIds(V9_CANDIDATE_POLICY_V1, [facts]).keys()), pillars }],
       openEvidence,
     });
     return carriers.openEvidence.byCard.find((entry) => entry.id === facts.assetId)!;
@@ -256,7 +256,7 @@ describe("Safety Score v9 documentation class — fail-closed card annotation", 
     const carriers = buildV9DocumentationCarriers({
       envelope: V9_CANDIDATE_POLICY_V1,
       gapIds,
-      cards: [{ asset: facts, pillars: witnesses([["exit", "limited", []]]) }],
+      cards: [{ assetId: facts.assetId, localDocumentationGapIds: new Set(collectV9DocumentationGapIds(V9_CANDIDATE_POLICY_V1, [facts]).keys()), pillars: witnesses([["exit", "limited", []]]) }],
       openEvidence,
     });
     expect(carriers.causeGapIds).toEqual([...new Set([gap.gapId, inheritedGap.gapId])].sort());
