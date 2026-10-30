@@ -11,7 +11,7 @@
     "navToken": true
   },
   "collateral": "Tokenized fund shares in Securitize AAA CLO Tokenized Fund, Ltd., a BVI private fund investing substantially all assets in U.S. dollar-denominated AAA-rated CLO tranches, with BNY as custodian and BNY Investments as sub-advisor.",
-  "pegMechanism": "NAV-accreting tokenized private-fund share rather than a fixed $1 peg; eligible investors subscribe through Securitize with Ethereum-issued shares, KYC/AML and investor-qualification controls, and limited liquidity/no guaranteed secondary market.",
+  "pegMechanism": "NAV-accreting tokenized private-fund share, not a fixed $1 peg; eligible investors subscribe via Securitize, shares issued on Ethereum and Solana under KYC/AML and qualification controls, with limited liquidity and no guaranteed secondary market.",
   "mechanismArchetype": "rwa-credit-fund",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

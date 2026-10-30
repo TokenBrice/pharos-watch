@@ -8,7 +8,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "Short-term U.S. government Treasury bills, U.S. dollar deposits, and other cash equivalents held for USD1 holders by BitGo Bank & Trust, N.A.",
+  "collateral": "U.S. government money market fund shares, U.S. dollar deposits, and other cash equivalents held for USD1 holders by BitGo Bank & Trust, N.A.",
   "pegMechanism": "Direct 1:1 mint and redemption through BitGo Bank & Trust, N.A.; direct redemption is restricted to registered clients in Good Standing, while holders without a BitGo account rely on secondary markets",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "262",

@@ -8,7 +8,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "U.S. dollar deposits, short-duration U.S. government securities, and other high-quality liquid assets held in segregated custodial accounts at DBS Bank and Standard Chartered",
+  "collateral": "Government money-market fund shares, U.S. Treasury bills and bank deposits in segregated accounts at DBS Bank and Standard Chartered",
   "pegMechanism": "Direct 1:1 redemption for U.S. dollars through Paxos Digital Singapore for KYC-verified users; reserves fully segregated and held at custodian banks; EU issuance by Paxos Issuance Europe OY under MiCA",
   "mechanismArchetype": "fiat-cash",
   "llamaId": "286",

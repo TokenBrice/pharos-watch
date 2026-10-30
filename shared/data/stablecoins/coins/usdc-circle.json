@@ -524,5 +524,12 @@
       "coinType": "usdc"
     }
   },
-  "launchDate": "2018-09-26"
+  "launchDate": "2018-09-26",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "USDC on Noble is being discontinued",
+      "message": "Circle announced on 2026-09-10 that it is discontinuing USDC and CCTP V1 on Noble: Circle Mint minting stopped 2026-10-13, CCTP burn limits taper from 2026-10-31, and the USDC contract and CCTP routes pause 2027-01-12. Move USDC off Noble before then; after 2027-01-13 only manual Circle Help Center redemption of self-custodied balances is possible."
+    }
+  ]
 }
