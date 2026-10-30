@@ -61,14 +61,17 @@
 | `telegram-inactive-cleanup` | 7d | 14d O | watch | Bounded inactive-user cleanup allowed; partial execution does not claim all eligible users processed. |
 | `telegram-retention-cleanup` | 1d | 2d O | watch | Bounded retention/reconciliation allowed with residual backlog; no lost pending deliveries. |
 
-## Lane-witness freshness (v10.38)
+## Lane-witness freshness (v10.39)
 
-Safety Score incident evidence is authored research, not a cron lane. Certificate-based lane closure is not an evaluation input in v10.38 (it moves to v10.39), so this matrix adds no certificate row yet.
+Safety Score incident evidence is authored research plus one on-chain screening lane, not a cron lane.
 
-- A negative incident review is admissible only while the evaluation clock is at or after both `reviewedAt` and `windowEndSec`, and no more than 365 days past either (the reviewed-research budget). A date-only `reviewedAt` value admits after its UTC day ends; a timestamped value admits at its instant. A retired review keeps its provenance and contributes nothing.
-- The only lane witness consumed today is the authored control or deployment negative review. Provider and issuer-surface reviews are parsed and key-checked but close nothing in v10.38, so neither can refresh a lane's incident status.
-- A provider review's `laneScreeningRefs` are structural: one reference per covered lane, none on an uncovered route, and no certificate lookup. The policy key `semantic.evidence.laneIncidentCertificateMaxAgeSec` (2,592,000 seconds) is schema-validated but has no consumer, so no certificate freshness budget is enforced. A shadow screening cycle may produce certificates, but they are shadow observations: they are not coverage and must not be described as lane evidence.
-- When certificate admission lands, this section gains the screening cadence, the 30-day certificate budget and the emitter lookback floor together; none of those is an acceptance threshold today.
+v10.39 closes no lane yet, even with v2 certificates. FRNT Arbitrum/Base/Optimism are global-scope native facts, excluded by the deployment-scope router; FRNT Ethereum is already closed by an existing review. yUSD Ethereum lacks provider keys and an issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Scope is unchanged; the five-lane catalog is screening coverage, not closure authority.
+
+- Reviews admit after both `reviewedAt` and `windowEndSec`, expiring 365 days past either. Date-only reviews admit after their UTC day; timestamps admit at their instant. Retired rows keep provenance but grant nothing.
+- Deployment-scope closure requires current provider reviews per authored provider key (or the issuer surface for `rail: "issuer-operated"`), a current issuer-surface review naming the lane, and a current v2 certificate with contributor parity. Missing/v1 witnesses close nothing.
+- Join `(subjectDeploymentKey, screeningSetId)`; authored data names no certificate. The set digests subject, frozen policy, sorted contributors and emitter pins. Changed contributors/emitters/pins inherit no chain.
+- The 30-day `laneIncidentCertificateMaxAgeSec` budget is measured from pinned `windowEndSec`. Gapped, expired, future, malformed or failed reads leave the lane unknown and emit `lane-incident-certificate-<state>:<lane>` diagnostics (read failure: `lane-incident-certificates-unavailable:<reason>`). Producer lookback is at least 50,000 recent blocks, preferably 30 days, not an evaluation threshold.
+- OQ-1 checks every current disclosure of the provider key from earliest issuer/provider witness start through evaluation, including reviews not covering the lane and exposure after witness windows. Verifier compromise blocks without valid exposure-time config excluding compromised-only verification or deployment after finite exposure end. No observed exploit/current config is an exemption.
 
 ## Sign-off boundary
 

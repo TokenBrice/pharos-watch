@@ -34,11 +34,14 @@ function certificateRoute(options: {
   routeKey: string;
   certification: "exact-lower-bound" | "exact-complete";
   physicalResourceKeys: string[];
+  requestedNotionalUsd?: number;
 }) {
   const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
     .find((entry) => entry.identity.assetId === "susds-sky")!;
   const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
   const model = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels[review.modelId]!;
+  const requestedNotionalUsd = options.requestedNotionalUsd ?? 100_000;
+  const requestedRawInput = (BigInt(requestedNotionalUsd) * 10n ** BigInt(review.producer.inputDecimals)).toString();
   const certificate = makeExecutionCertificate();
   Object.assign(certificate, {
     modelId: review.modelId, identity: review.identity, holder: review.holder,
@@ -52,7 +55,7 @@ function certificateRoute(options: {
     decimals: review.producer.inputDecimals, observedAtSec: clockSec,
   });
   certificate.inputGenerationId = exitExecutionInputGenerationId(review.identity.assetId,
-    { requestedNotionalUsd: 100_000, maxCostBps: 200 }, certificate.inputReference);
+    { requestedNotionalUsd, maxCostBps: 200 }, certificate.inputReference);
   certificate.gates = model.requiredGates.map((gateId) => ({
     gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: clockSec, reason: null,
   }));
@@ -61,16 +64,17 @@ function certificateRoute(options: {
   // The reviewed model's decimals are 18, so the fixture's token-unit point and
   // outputs must be rewritten to the reviewed identity before admission.
   Object.assign(point, {
+    requestedNotionalUsd, executableUsd: requestedNotionalUsd,
     executionCostBps: 200, allInCostBps: 200,
-    requestedRawInput: "100000000000000000000000",
-    executedRawInput: "100000000000000000000000",
+    requestedRawInput,
+    executedRawInput: requestedRawInput,
     fees: [],
   });
   Object.assign(point.outputs[0]!, {
     assetKey: review.identity.outputAssetKeys[0],
     deployment: `${review.producer.chain}:${review.producer.outputToken}`,
     decimals: review.producer.outputDecimals, observedAtSec: clockSec,
-    rawUnits: "98000000000000000000000",
+    rawUnits: (BigInt(requestedNotionalUsd) * 98n * 10n ** BigInt(review.producer.outputDecimals) / 100n).toString(),
   });
   return {
     assetId: review.identity.assetId,
@@ -258,14 +262,15 @@ describe("exact physical rail precedence", () => {
       physicalResourceKeys: ["endpoint:fixture"], failureDomains: ["certified:fixture"],
     });
     const modeled = route({ routeKey: "modeled", physicalResourceKeys: ["endpoint:fixture"],
-      failureDomains: ["modeled:fixture"] });
+      capacityCurve: [{ requestedNotionalUsd: 100_000, maxCostBps: 200, executableUsd: 100_000,
+        completionRatio: 1, executionCostBps: 0 }], failureDomains: ["modeled:fixture"] });
     const request = selectV9ExitStressRequest(2_000_000, V9_CANDIDATE_POLICY_V1);
     const result = resolveV9DistinctExitCapacity([modeled, certified], request, V9_CANDIDATE_POLICY_V1);
     expect(result.includedRouteKeys).toEqual(["certificate"]);
     expect(result.valuedExecutableUsd).toBe(executableUsd);
     const otherRail = { ...modeled, routeKey: "other-rail", physicalResourceKeys: ["endpoint:other"] };
     expect(resolveV9DistinctExitCapacity([certified, otherRail], request, V9_CANDIDATE_POLICY_V1).valuedExecutableUsd)
-      .toBe(executableUsd + request.requestedNotionalUsd);
+      .toBe(executableUsd + 100_000);
     const expired = { ...certified, observationState: "stale" as const };
     expect(resolveV9DistinctExitCapacity([expired, modeled], request, V9_CANDIDATE_POLICY_V1).includedRouteKeys)
       .toContain(modeled.routeKey);
@@ -298,12 +303,13 @@ describe("exact physical rail precedence", () => {
   it("still lets a same-rail exact-complete certificate supersede the model", () => {
     const certificate = certificateRoute({
       routeKey: "certificate", certification: "exact-complete", physicalResourceKeys: ["rail:fixture"],
+      requestedNotionalUsd: 1_000_000,
     });
     const modeled = route({ physicalResourceKeys: ["rail:fixture"] });
     const request = selectV9ExitStressRequest(2_000_000, V9_CANDIDATE_POLICY_V1);
     const capacity = resolveV9DistinctExitCapacity([modeled, certificate.route], request, V9_CANDIDATE_POLICY_V1);
     expect(capacity.includedRouteKeys).toEqual(["certificate"]);
-    expect(capacity.valuedExecutableUsd).toBe(100_000);
+    expect(capacity.valuedExecutableUsd).toBe(1_000_000);
 
     const result = evaluateV9Exit({
       circulatingUsd: 2_000_000, assetId: certificate.assetId, clockSec: certificate.clockSec,
@@ -311,6 +317,51 @@ describe("exact physical rail precedence", () => {
     }, V9_CANDIDATE_POLICY_V1);
     expect(result.primaryRouteKey).toBe("certificate");
     expect(result.routes.find((entry) => entry.routeKey === "redemption:issuer")!.score).toBeNull();
+  });
+
+  it.each([
+    { name: "arcusdc-sized sub-ask receipt", measured: 4_250_000, claimed: 12_580_000, ask: 25_000_000, supersedes: false },
+    { name: "senrlusdv2-sized full-ask receipt", measured: 20_730_000, claimed: 44_590_000, ask: 20_730_000, supersedes: true },
+    { name: "one dollar below modeled capacity", measured: 4_250_000, claimed: 4_250_001, ask: 25_000_000, supersedes: false },
+    { name: "exact modeled capacity below ask", measured: 4_250_000, claimed: 4_250_000, ask: 25_000_000, supersedes: true },
+    { name: "above modeled capacity below ask", measured: 4_250_001, claimed: 4_250_000, ask: 25_000_000, supersedes: true },
+    { name: "above ask below modeled capacity", measured: 25_000_001, claimed: 30_000_000, ask: 25_000_000, supersedes: true },
+    { name: "lower bound covering ask", measured: 25_000_000, claimed: 12_580_000, ask: 25_000_000,
+      certification: "exact-lower-bound" as const, supersedes: false },
+    { name: "stale complete receipt covering ask", measured: 25_000_000, claimed: 12_580_000, ask: 25_000_000,
+      stale: true, supersedes: false },
+  ])("supersedes only measured coverage: $name", ({ measured, claimed, ask, supersedes,
+    certification = "exact-complete", stale = false }) => {
+    const certificate = certificateRoute({
+      routeKey: "certificate", certification, requestedNotionalUsd: measured, physicalResourceKeys: ["rail:fixture"],
+    });
+    if (stale) certificate.route.observationState = "stale";
+    const modeled = route({
+      routeKey: "modeled", physicalResourceKeys: ["rail:fixture"],
+      capacityCurve: [{ requestedNotionalUsd: Math.max(ask, claimed), maxCostBps: 200, executableUsd: claimed,
+        completionRatio: claimed / Math.max(ask, claimed), executionCostBps: 0 }],
+    });
+    const circulatingUsd = ask / 0.05;
+    const request = selectV9ExitStressRequest(circulatingUsd, V9_CANDIDATE_POLICY_V1);
+    const capacity = resolveV9DistinctExitCapacity([modeled, certificate.route], request, V9_CANDIDATE_POLICY_V1);
+    expect(capacity.includedRouteKeys.includes("modeled")).toBe(!supersedes);
+    expect(capacity.valuedExecutableUsd).toBe(supersedes ? Math.min(measured, ask)
+      : Math.min(stale ? claimed : Math.max(measured, claimed), ask));
+
+    const result = evaluateV9Exit({
+      circulatingUsd, assetId: certificate.assetId, clockSec: certificate.clockSec,
+      routes: [modeled, certificate.route],
+    }, V9_CANDIDATE_POLICY_V1);
+    const modeledTrace = result.routes.find((entry) => entry.routeKey === "modeled")!;
+    expect(modeledTrace.included).toBe(!supersedes);
+    if (supersedes) {
+      expect(modeledTrace.score).toBeNull();
+      expect(result.primaryRouteKey).toBe("certificate");
+    } else {
+      expect(modeledTrace.score).not.toBeNull();
+      expect(result.primaryRouteKey).toBe("modeled");
+    }
+    expect(result.diversificationBonus).toBe(0);
   });
 
   it("does not treat issuer identity as exact rail identity or independent capacity", () => {
@@ -835,10 +886,10 @@ describe("evaluateV9Exit", () => {
   });
 
   it.each([
-    { modelConfidence: "medium", modelFactor: 0.85, confidenceFactor: 0.85 },
-    { modelConfidence: "high", modelFactor: 1, confidenceFactor: 0.85 },
+    { modelConfidence: "medium", modelFactor: 0.865, confidenceFactor: 0.865 },
+    { modelConfidence: "high", modelFactor: 1, confidenceFactor: 0.865 },
     { modelConfidence: "low", modelFactor: 0.35, confidenceFactor: 0.35 },
-  ] as const)("prices admitted certificate cost monotonically with $modelConfidence model confidence", ({ modelConfidence, modelFactor, confidenceFactor }) => {
+  ] as const)("prices certificate credit by measured coverage and keeps a $modelConfidence review priced as reviewed", ({ modelConfidence, modelFactor, confidenceFactor }) => {
     const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
       .find((entry) => entry.identity.assetId === "susds-sky")!;
     const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
@@ -861,11 +912,8 @@ describe("evaluateV9Exit", () => {
         gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: clockSec, reason: null,
       }));
       const point = certificate.points[0]!;
-      // A complete measurement of this rail supersedes the duplicate model, so
-      // the certificate trace is the primary one whose confidence factors this
-      // test prices. A lower-bound certificate competes instead of superseding
-      // (see "keeps a higher-scoring model primary when the same-rail
-      // certificate is a lower bound").
+      // This receipt covers the duplicate model's full $100k claim even
+      // though the current ask is $1M, so the certificate stays primary.
       point.certification = "exact-complete";
       Object.assign(point, {
         executionCostBps, allInCostBps: executionCostBps,
@@ -894,14 +942,18 @@ describe("evaluateV9Exit", () => {
             requestedNotionalUsd: point.requestedNotionalUsd, maxCostBps: point.maxCostBps,
             executableUsd: point.executableUsd, completionRatio: 1, executionCostBps,
           }],
-        }), route({ routeKey: "modeled:duplicate", evidenceKind: "documented-terms" })],
+        }), route({ routeKey: "modeled:duplicate", evidenceKind: "documented-terms",
+          capacityCurve: [{ requestedNotionalUsd: 100_000, maxCostBps: 200,
+            executableUsd: 100_000, completionRatio: 1, executionCostBps: 0 }],
+        })],
       }, V9_CANDIDATE_POLICY_V1);
       expect(result.primaryRouteKey).toBe("redemption:issuer");
       expect(result.diversificationBonus).toBe(0);
       expect(result.routes.find((entry) => entry.routeKey === "modeled:duplicate")!.included).toBe(false);
       const primary = result.routes.find((entry) => entry.routeKey === "redemption:issuer")!;
       expect(primary.confidenceDimensions!.model.factor).toBe(modelFactor);
-      expect(primary.confidenceDimensions!.observation.factor).toBe(0.85);
+      // The fixture measures $100k of the $1M stress floor: 0.85 + 0.1 * 0.15.
+      expect(primary.confidenceDimensions!.observation.factor).toBe(0.865);
       expect(primary.confidenceFactor).toBe(confidenceFactor);
       return result.routes.find((entry) => entry.routeKey === "redemption:issuer")!;
     });
@@ -909,6 +961,30 @@ describe("evaluateV9Exit", () => {
     expect(traces[0]!.factorContributions!.cost!.score).toBeCloseTo(0.005, 6);
     expect(traces[1]!.components!.cost).toBe(0);
     expect(traces[1]!.score).toBeLessThanOrEqual(traces[0]!.score!);
+  });
+
+  it("scales certificate credit by the share of the current stress ask it measured", () => {
+    const lowerBound = certificateRoute({
+      routeKey: "certificate", certification: "exact-lower-bound", physicalResourceKeys: ["rail:fixture"],
+    });
+    const complete = certificateRoute({
+      routeKey: "certificate", certification: "exact-complete", physicalResourceKeys: ["rail:fixture"],
+    });
+    const factorAt = (subject: typeof lowerBound, circulatingUsd: number) => evaluateV9Exit({
+      circulatingUsd, assetId: subject.assetId, clockSec: subject.clockSec, routes: [subject.route],
+    }, V9_CANDIDATE_POLICY_V1).routes.find((entry) => entry.routeKey === "certificate")!.confidenceFactor;
+    // A lower bound measured none of the ask: it keeps the declared floor.
+    expect(factorAt(lowerBound, 2_000_000)).toBeCloseTo(0.85, 10);
+    // The fixture measured $100k against the $1M stress floor: 0.85 + 0.1 * 0.15.
+    expect(factorAt(complete, 2_000_000)).toBeCloseTo(0.85 + 0.1 * 0.15, 10);
+    // A larger ask shrinks the measured share without touching the certificate.
+    expect(factorAt(complete, 26_000_000)).toBeCloseTo(0.85 + (0.1 / 1.3) * 0.15, 10);
+    // A weak producer label is never lifted into the certificate credit (R2).
+    const lowLabel = { ...complete.route, observationConfidence: "low" as const };
+    expect(evaluateV9Exit({
+      circulatingUsd: 2_000_000, assetId: complete.assetId, clockSec: complete.clockSec, routes: [lowLabel],
+    }, V9_CANDIDATE_POLICY_V1).routes.find((entry) => entry.routeKey === "certificate")!.confidenceFactor)
+      .toBeCloseTo(0.6, 10);
   });
 
   it("retains non-certificate on-chain medium model confidence at 0.75", () => {

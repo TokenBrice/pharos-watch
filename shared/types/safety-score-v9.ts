@@ -1104,7 +1104,30 @@ const V9ExitPolicySchema = z
         low: z.number().finite().min(0).max(1),
       })
       .strict(),
-    exactCertificateModelConfidenceFactor: z.number().finite().min(0).max(1),
+    /**
+     * Confidence rows for an admitted execution certificate, interpolated by
+     * the fraction of the current stress ask its scored point measured.
+     * `exact-complete` at or above the ask earns the full row; anything below
+     * the ask scales toward `exact-lower-bound`, so supply drift cannot hand a
+     * partial measurement full credit and the certificate keeps the discount
+     * for the fraction it did not measure.
+     */
+    certificateConfidenceByCertification: z
+      .object({
+        "exact-complete": z
+          .object({
+            observationFactor: z.number().finite().min(0).max(1),
+            modelFactor: z.number().finite().min(0).max(1),
+          })
+          .strict(),
+        "exact-lower-bound": z
+          .object({
+            observationFactor: z.number().finite().min(0).max(1),
+            modelFactor: z.number().finite().min(0).max(1),
+          })
+          .strict(),
+      })
+      .strict(),
     observationConfidenceFactors: z
       .object({
         high: z.number().finite().min(0).max(1),

@@ -240,6 +240,37 @@
         "counterparty"
       ],
       "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "collateral-positions-api:crv",
+      "name": "CRV (Curve DAO Token)",
+      "pct": 0.028,
+      "risk": "very-high",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Curve DAO",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "concentration"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "sourceKey": "collateral-positions-api:sgg",
+      "name": "SGG (SWISSGRAMS GOLD)",
+      "pct": 0.016,
+      "risk": "high",
+      "assetClass": "tokenized-security",
+      "issuerOrObligor": "Swissgrams AG",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "counterparty",
+        "smart-contract",
+        "legal"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
@@ -282,9 +313,25 @@
       {
         "label": "Switzerlend LENDS token shareholder agreement, sections 1.4 and 10, accessed 2026-10-09",
         "url": "https://storage.googleapis.com/aktionariat/public/40880/100926f2-49f5-4958-ace3-ecaabeef4526/LENDS_TOKEN_Agreement.pdf"
+      },
+      {
+        "label": "Frankencoin collateral positions API: CRV and SGG positions, observed 2026-10-30T12:01:00Z",
+        "url": "https://api.frankencoin.com/ecosystem/collateral/positions/details"
+      },
+      {
+        "label": "Frankencoin challenges and auctions, accessed 2026-10-30",
+        "url": "https://docs.frankencoin.com/positions/auctions"
+      },
+      {
+        "label": "Swissgrams Gold token terms, last updated 2026-09-24, accessed 2026-10-30",
+        "url": "https://swissgrams.com/token-terms"
+      },
+      {
+        "label": "Canonical reserve asset risk map (CRV very-high), accessed 2026-10-30",
+        "url": "https://github.com/pharos-watch/pharos-watch/blob/main/shared/lib/reserve-asset-risk.ts"
       }
     ],
-    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. PAXG and XAUt remain exact tracked upstreams; other rows remain classified exogenous collateral. Supplemental LENDS duration research by Sol curation campaign 2026-10-09 (Lane48Initia), observed 2026-10-09T10:31:48Z, found no contractual maximum redemption tenor: section 1.4 of the issuer-linked shareholder agreement imposes no issuer repurchase duty, and section 10's 31 December 2033 agreement term can renew or end with replacement shares rather than repayment. The document retains an unfilled SHA contract reference and an older source-contract address, so no current whole-exposure maturity-applicability proof is asserted. This supplemental research changes neither the 2026-09-30 composition review nor the 2026-09-04 weights.",
+    "rationale": "Historical weights retain the 2026-09-04 active collateral capture valued through Frankencoin's CHF price mapping. At Ethereum block 26089449, ysyBOLD asset() returned the tracked yBOLD contract 0x9f4330700a36b29952869fac9b33f45eedd8a3d8, corroborating Yearn's current vault record. The held ysyBOLD vault-share intermediary is explicit while the canonical ybold-yearn collateral dependency and 0.1% historical share are retained. PAXG and XAUt remain exact tracked upstreams; other rows remain classified exogenous collateral. Supplemental LENDS duration research by Sol curation campaign 2026-10-09 (Lane48Initia), observed 2026-10-09T10:31:48Z, found no contractual maximum redemption tenor: section 1.4 of the issuer-linked shareholder agreement imposes no issuer repurchase duty, and section 10's 31 December 2033 agreement term can renew or end with replacement shares rather than repayment. The document retains an unfilled SHA contract reference and an older source-contract address, so no current whole-exposure maturity-applicability proof is asserted. This supplemental research changes neither the 2026-09-30 composition review nor the 2026-09-04 weights. Supplemental RS2-040 research by sprint agent RS2-040, observed 2026-10-30T12:01:00Z, added live collateral rows for CRV (Curve DAO Token) and SGG (SWISSGRAMS GOLD). Both are single Frankencoin v2 collateral positions in the same collateral-positions API (CRV position 0xC862bDC0417eC73980ee79AAE0eEFDEA68f88615, challengePeriod 43,200 s; SGG position 0x6a7FB6975f2F4DEfA6Df02b4ca4A768Bd02e7937, challengePeriod 172,800 s). CRV is the canonical Curve DAO governance token (canonical reserve risk tier very-high); SGG is the Swissgrams AG gold token whose token terms (last updated 2026-09-24) describe proportional co-ownership of vaulted coins. Neither row asserts a realized liquidity horizon: the auction terms publish no whole-position realization maximum, so liquidityHorizon stays unknown. This supplemental research changes neither the 2026-09-30 composition review nor the 2026-09-04 weights.",
     "compositionBasis": "Retained 2026-09-04 Frankencoin collateral balances and prices; ysyBOLD-to-yBOLD identity refreshed by fixed-block asset() read on 2026-09-30",
     "compositionAsOf": "2026-09-04",
     "scope": "full-composition",

@@ -134,12 +134,14 @@ function run(
   economics: Readonly<Record<string, AssetEconomics>>,
   options: {
     readonly clockSec?: number;
+    readonly observationClockSec?: number;
     readonly dependencies?: DeploymentSupplyCensusAssemblyDependencies;
     readonly chainRpcs?: Map<string, ChainRpcConfig>;
   } = {},
 ) {
   return observeSafetyScoreV9DeploymentSupplyCensusGeneration({
     fixedInput: fixtureFixedInput(assetIds, economics, options.clockSec ?? CLOCK),
+    observationClockSec: options.observationClockSec ?? options.clockSec ?? CLOCK,
     assetIds,
     chainRpcs: options.chainRpcs ?? new Map(),
     metaById: new Map(metas.map(meta => [meta.id, meta])),
@@ -222,7 +224,120 @@ function moveSupply(options: {
   })) as unknown) as DeploymentSupplyCensusNonEvmDependencies["fetchMoveFungibleAssetSupply"];
 }
 
+/** Minimal EVM dependencies: one `totalSupply()` per address at a fixed header. */
+function evmDeps(
+  supplies: Readonly<Record<string, bigint>>,
+  options: { readonly blockTimeSec?: number; readonly codeStatus?: "available" | "absent" } = {},
+): Partial<DeploymentSupplyCensusAssemblyDependencies["evm"]> {
+  return {
+    resolveClosestBlockAtOrBeforeTimestamp: async () => 100,
+    fetchEvmBlockHeader: async () => ({
+      number: 100, hash: `0x${"ab".repeat(32)}`, timestamp: options.blockTimeSec ?? CLOCK - 60,
+    }) as never,
+    fetchEvmCodeStatusAtBlock: async () => (options.codeStatus === "absent"
+      ? { status: "absent" as const }
+      : { status: "available" as const, code: "0x6000" as `0x${string}` }),
+    fetchEvmMulticall3Aggregate3AtBlock: async (
+      _chain: string | undefined,
+      calls: readonly { label: string; target: string; callData: string }[],
+    ) => calls.map(call => ({
+      label: call.label,
+      success: true,
+      returnData: `0x${(call.callData === "0x18160ddd"
+        ? supplies[call.target] ?? 0n
+        : 6n).toString(16).padStart(64, "0")}`,
+    })),
+    sha256Hex: async () => "f".repeat(64),
+  };
+}
+
 describe("deployment supply census assembly", () => {
+  it("pins a finalized non-EVM snapshot against the census clock, not the fixed-input clock", async () => {
+    const meta = fixtureMeta("cngn-compliant-naira", [{ chain: "solana", address: SOLANA_MINT }]);
+    const economics = {
+      "cngn-compliant-naira": { aggregateUsd: 1_000_000, chainUsd: { solana: 1_000_000 }, priceUsd: 1 },
+    };
+    // The lane runs later than the prepared input: the finalized anchor is
+    // observed after the fixed clock but before the census clock.
+    const dependencies = {
+      nonEvm: { fetchSafetyScoreV9SolanaRpc: solanaRpc({ blockTimeSec: CLOCK + 940 }) },
+    };
+
+    const late = await run(["cngn-compliant-naira"], [meta], economics, {
+      dependencies,
+      observationClockSec: CLOCK + 1_000,
+    });
+    const packet = late.censusById["cngn-compliant-naira"]!;
+    expect(packet.conservation).toMatchObject({ rosterComplete: true, conserved: true, aggregateSupplyUsd: 1_000_000 });
+    expect(packet.rejected).toEqual([]);
+    expect(packet.observedAtSec).toBe(CLOCK + 1_000);
+    expect(packet.deployments[0]!.pin).toMatchObject({ kind: "solana-finalized-slot", blockTimeSec: CLOCK + 940 });
+    expect(late.capturedAtSec).toBe(CLOCK + 1_000);
+
+    // The same read aged against the fixed-input clock is future-dated: that was
+    // the first-cycle failure, never a missing quantity.
+    const atInputClock = await run(["cngn-compliant-naira"], [meta], economics, { dependencies });
+    expect(atInputClock.censusById["cngn-compliant-naira"]!.rejected).toEqual([
+      { routeId: `solana:${SOLANA_MINT}`, code: "census-rejected:future-dated-pin" },
+    ]);
+  });
+
+  it("measures the EVM legs even when a non-EVM leg already rejected", async () => {
+    const evmRoute = `0x${"e".repeat(40)}`;
+    const meta = fixtureMeta("multi-leg", [
+      { chain: "ethereum", address: evmRoute },
+      { chain: "solana", address: SOLANA_MINT },
+    ]);
+    const generation = await run(["multi-leg"], [meta], {
+      "multi-leg": { aggregateUsd: 1_000_000, chainUsd: { ethereum: 400_000, solana: 600_000 }, priceUsd: 1 },
+    }, {
+      dependencies: {
+        evm: evmDeps({ [evmRoute]: 400_000_000_000n }, { codeStatus: "absent" }),
+        nonEvm: { fetchSafetyScoreV9SolanaRpc: solanaRpc({ blockTimeSec: CLOCK + 600 }) },
+      },
+    });
+
+    const packet = generation.censusById["multi-leg"]!;
+    // The packet stays rejected (a partial partition proves nothing), but the
+    // EVM leg was attempted and names its own failure instead of being skipped.
+    expect(packet.deployments).toEqual([]);
+    expect(packet.conservation.rosterComplete).toBe(false);
+    expect(packet.rejected).toEqual([
+      { routeId: `ethereum:${evmRoute}`, code: "census-rejected:missing-code-hash" },
+      { routeId: `solana:${SOLANA_MINT}`, code: "census-rejected:future-dated-pin" },
+    ]);
+  });
+
+  it("values a deployment with the peg reference when the NAV authority has no entry", async () => {
+    const evmRoute = `0x${"f".repeat(40)}`;
+    const meta = fixtureMeta("peg-priced", [{ chain: "ethereum", address: evmRoute }]);
+    const economics = {
+      "peg-priced": {
+        aggregateUsd: 1_000_000, chainUsd: { ethereum: 600_000 },
+        peg: { valueUsd: 1.02, asOf: CLOCK - 30 },
+      },
+    };
+    const generation = await run(["peg-priced"], [meta], economics, {
+      dependencies: { evm: evmDeps({ [evmRoute]: 500_000_000_000n }) },
+    });
+    const packet = generation.censusById["peg-priced"]!;
+    expect(packet.rejected).toEqual([]);
+    expect(packet.deployments[0]).toMatchObject({
+      referencePriceUsd: 1.02,
+      referencePriceObservedAtSec: CLOCK - 30,
+    });
+    expect(packet.deployments[0]!.shareUpper).toBeCloseTo(0.51, 12);
+
+    // Neither authority: the datum stays unavailable, never valued at 1.
+    const unpriced = await run(["peg-priced"], [meta], {
+      "peg-priced": { aggregateUsd: 1_000_000, chainUsd: { ethereum: 600_000 }, peg: null },
+    }, { dependencies: { evm: evmDeps({ [evmRoute]: 500_000_000_000n }) } });
+    expect(unpriced.censusById["peg-priced"]!.rejected).toEqual([
+      { routeId: `ethereum:${evmRoute}`, code: "census-rejected:reference-price-unavailable" },
+    ]);
+  });
+
+
   it("assembles the recorded EVM generation into one conserved packet with a deterministic id", async () => {
     const meta = fixtureMeta("usdc-circle", [
       { chain: "ethereum", address: EVM_ETHLIKE },

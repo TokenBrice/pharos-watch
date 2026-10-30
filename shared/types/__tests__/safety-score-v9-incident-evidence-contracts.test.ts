@@ -11,6 +11,7 @@ import {
   V9IssuerSurfaceIncidentReviewSchema,
   V9NegativeIncidentReviewSchema,
   V9ProviderIncidentReviewSchema,
+  V9ProviderIncidentDisclosureSchema,
   V9RetirableNegativeIncidentReviewSchema,
   V9LaneIncidentCertificateSchema,
   V9LaneIncidentScreeningResultSchema,
@@ -63,12 +64,8 @@ const PROVIDER_REVIEW = {
       { assetId: ASSET, routeId: ROUTE_BASE },
       { assetId: ASSET, routeId: ROUTE_ETHEREUM },
     ],
-    coveredControls: [{ assetId: ASSET, controlId: "fixture-dvn-set" }],
   },
-  laneScreeningRefs: [
-    { assetId: ASSET, routeId: ROUTE_BASE, certificateId: CERTIFICATE_ID_BASE },
-    { assetId: ASSET, routeId: ROUTE_ETHEREUM, certificateId: CERTIFICATE_ID },
-  ],
+  providerIncidents: [],
 } as const;
 
 const EMITTER = {
@@ -139,8 +136,11 @@ const CONTROL_FACT_V2 = { ...CONTROL_FACT, sourceGenerationId: "fixture-generati
 
 const CLOSURE_WITNESSES = {
   source: "provider-screening",
-  providerReviewId: "provider-review:layerzero:2026-10-07",
+  providerReviewIds: ["provider-review:layerzero:2026-10-07"],
   issuerSurfaceReviewId: "issuer-surface:fixture-asset:2026-10-07",
+  screeningSetId: "screening-set:fixture",
+  certificateId: CERTIFICATE_ID,
+  contributorControlIds: ["fixture-dvn-set"],
 } as const;
 
 const PROFILE = {
@@ -217,49 +217,48 @@ describe("retirement admission (M-5)", () => {
 
 describe("asset-wide issuer-surface review", () => {
   it("admits a dated asset-wide issuer surface naming its lanes", () => {
-    const scope = { kind: "issuer-surface", coveredRoutes: [ROUTE_BASE, ROUTE_ETHEREUM], coveredControls: ["fixture-dvn-set"] };
+    const scope = { kind: "issuer-surface", coveredRoutes: [ROUTE_BASE, ROUTE_ETHEREUM] };
     const parsed = V9IssuerSurfaceIncidentReviewSchema.parse({ ...REVIEW, scope });
     expect(parsed.scope.coveredRoutes).toEqual([ROUTE_BASE, ROUTE_ETHEREUM]);
+    expect(parsed.scope).not.toHaveProperty("coveredControls");
     for (const malformed of [
       { kind: "issuer-surface", coveredRoutes: [] },
-      { kind: "issuer-surface", coveredRoutes: [ROUTE_ETHEREUM], coveredControls: ["Fixture-DVN"] },
+      { kind: "issuer-surface", coveredRoutes: ["asset:fixture-asset"] },
+      { kind: "issuer-surface", coveredRoutes: [ROUTE_ETHEREUM], coveredControls: ["fixture-dvn-set"] },
       { kind: "issuer-surface", coveredRoutes: [ROUTE_ETHEREUM, ROUTE_ETHEREUM] },
       { kind: "control", routeId: ROUTE_ETHEREUM, controlId: "fixture-dvn-set" },
     ]) {
-      expect(V9IssuerSurfaceIncidentReviewSchema.safeParse({ ...REVIEW, scope: malformed }).success).toBe(false);
+      expect(V9IssuerSurfaceIncidentReviewSchema.safeParse({ ...REVIEW, scope: malformed }).success, JSON.stringify(malformed)).toBe(false);
     }
   });
 });
 
 describe("provider-wide incident review admission (M-6)", () => {
-  it("admits one provider record without an asset id that binds a certificate per covered lane", () => {
+  it("admits one provider record without an asset id that names its covered lanes", () => {
     const parsed = V9ProviderIncidentReviewSchema.parse(PROVIDER_REVIEW);
     expect(parsed.scope.coveredRoutes).toEqual([
       { assetId: ASSET, routeId: ROUTE_BASE },
       { assetId: ASSET, routeId: ROUTE_ETHEREUM },
     ]);
-    expect(parsed.laneScreeningRefs).toHaveLength(2);
+    expect(parsed.providerIncidents).toEqual([]);
     expect(parsed).not.toHaveProperty("assetId");
+    expect(parsed).not.toHaveProperty("laneScreeningRefs");
   });
 
   it("rejects a per-asset assetId on the provider record", () => {
     expect(V9ProviderIncidentReviewSchema.safeParse({ ...PROVIDER_REVIEW, assetId: ASSET }).success).toBe(false);
   });
 
-  it("refuses provider coverage without a lane screening certificate", () => {
-    const { laneScreeningRefs: _refs, ...withoutRefs } = PROVIDER_REVIEW;
-    expect(V9ProviderIncidentReviewSchema.safeParse(withoutRefs).success).toBe(false);
-    expect(V9ProviderIncidentReviewSchema.safeParse({ ...PROVIDER_REVIEW, laneScreeningRefs: [] }).success).toBe(false);
+  it("requires the provider incident search and rejects the removed coverage shapes", () => {
+    const { providerIncidents: _incidents, ...withoutIncidents } = PROVIDER_REVIEW;
+    expect(V9ProviderIncidentReviewSchema.safeParse(withoutIncidents).success).toBe(false);
     expect(V9ProviderIncidentReviewSchema.safeParse({
-      ...PROVIDER_REVIEW, laneScreeningRefs: PROVIDER_REVIEW.laneScreeningRefs.slice(1),
+      ...PROVIDER_REVIEW,
+      laneScreeningRefs: [{ assetId: ASSET, routeId: ROUTE_BASE, certificateId: CERTIFICATE_ID_BASE }],
     }).success).toBe(false);
     expect(V9ProviderIncidentReviewSchema.safeParse({
       ...PROVIDER_REVIEW,
-      laneScreeningRefs: [...PROVIDER_REVIEW.laneScreeningRefs, PROVIDER_REVIEW.laneScreeningRefs[0]],
-    }).success).toBe(false);
-    expect(V9ProviderIncidentReviewSchema.safeParse({
-      ...PROVIDER_REVIEW,
-      laneScreeningRefs: [{ assetId: ASSET, routeId: "arbitrum:0x3333333333333333333333333333333333333333", certificateId: CERTIFICATE_ID }],
+      scope: { ...PROVIDER_REVIEW.scope, coveredControls: [{ assetId: ASSET, controlId: "fixture-dvn-set" }] },
     }).success).toBe(false);
   });
 
@@ -269,10 +268,80 @@ describe("provider-wide incident review admission (M-6)", () => {
       { ...PROVIDER_REVIEW.scope, surface: "dvn" },
       { ...PROVIDER_REVIEW.scope, coveredRoutes: [] },
       { ...PROVIDER_REVIEW.scope, coveredRoutes: [PROVIDER_REVIEW.scope.coveredRoutes[1], PROVIDER_REVIEW.scope.coveredRoutes[1]] },
-      { ...PROVIDER_REVIEW.scope, coveredControls: [{ assetId: "another-asset", controlId: "fixture-dvn-set" }] },
-      { ...PROVIDER_REVIEW.scope, coveredControls: [{ assetId: ASSET, controlId: "Fixture-DVN" }] },
     ]) {
       expect(V9ProviderIncidentReviewSchema.safeParse({ ...PROVIDER_REVIEW, scope }).success, JSON.stringify(scope)).toBe(false);
+    }
+  });
+
+  it("blocks an unexempted verifier-compromise and admits a lane-level exemption", () => {
+    const disclosure = {
+      incidentKey: "kelpdao-dvn-2026-04-18",
+      class: "verifier-compromise",
+      surface: "dvn-set",
+      occurredAt: "2026-04-18",
+      exposureStartSec: REVIEW.windowStartSec,
+      exposureEndSec: REVIEW.windowStartSec + 86_400,
+      affectedRoutes: [],
+      sourceUrls: ["https://example.com/status"],
+      exemptions: [],
+    };
+    expect(V9ProviderIncidentReviewSchema.safeParse({ ...PROVIDER_REVIEW, providerIncidents: [disclosure] }).success).toBe(false);
+    expect(V9ProviderIncidentReviewSchema.safeParse({
+      ...PROVIDER_REVIEW,
+      providerIncidents: [{
+        ...disclosure,
+        exemptions: PROVIDER_REVIEW.scope.coveredRoutes.map((route) => ({
+          ...route, kind: "deployed-after-exposure",
+          creationTxHash: `0x${"1".repeat(64)}`, creationBlock: 300,
+          creationTimestampSec: REVIEW.windowStartSec + 2 * 86_400,
+        })),
+      }],
+    }).success).toBe(true);
+    // Only a verifier-compromise may carry exemptions, and a disclosed source must be cited.
+    expect(V9ProviderIncidentReviewSchema.safeParse({
+      ...PROVIDER_REVIEW,
+      providerIncidents: [{ ...disclosure, class: "route-local-exploit", exposureEndSec: null,
+        exemptions: [{ assetId: ASSET, routeId: ROUTE_BASE, kind: "deployed-after-exposure",
+          creationTxHash: `0x${"1".repeat(64)}`, creationBlock: 1, creationTimestampSec: 1 }] }],
+    }).success).toBe(false);
+    expect(V9ProviderIncidentReviewSchema.safeParse({
+      ...PROVIDER_REVIEW,
+      providerIncidents: [{ ...disclosure, sourceUrls: ["https://example.com/other"] }],
+    }).success).toBe(false);
+  });
+
+  it("validates exposure-time deployment and threshold proofs", () => {
+    const exemption = {
+      assetId: ASSET, routeId: ROUTE_ETHEREUM, kind: "threshold-excludes-compromised-verifier",
+      chain: "ethereum", blockNumber: 100, blockTimestampSec: 1500,
+      receiveLibrary: EMITTER_ADDRESS,
+      eids: [{ eid: 1, requiredDVNs: [OTHER_EMITTER_ADDRESS], optionalDVNs: [], optionalThreshold: 0 }],
+      configChangeLogSourceUrl: "https://example.com/logs",
+    };
+    const incident = {
+      incidentKey: "fixture-compromise", class: "verifier-compromise", surface: "dvn-set",
+      occurredAt: "2026-04-18", exposureStartSec: 1000, exposureEndSec: 2000,
+      compromisedVerifiers: [{ chain: "ethereum", address: EMITTER_ADDRESS }],
+      affectedRoutes: [], sourceUrls: ["https://example.com/logs"], exemptions: [exemption],
+    };
+    expect(V9ProviderIncidentDisclosureSchema.safeParse(incident).success).toBe(true);
+    const deployed = {
+      assetId: ASSET, routeId: ROUTE_ETHEREUM, kind: "deployed-after-exposure",
+      creationTxHash: `0x${"1".repeat(64)}`, creationBlock: 300, creationTimestampSec: 2001,
+    };
+    expect(V9ProviderIncidentDisclosureSchema.safeParse({ ...incident, exemptions: [deployed] }).success).toBe(true);
+    for (const invalid of [
+      { exemptions: [{ ...deployed, creationTimestampSec: 999 }] },
+      { exemptions: [{ ...deployed, creationTimestampSec: 2000 }] },
+      { exposureEndSec: null, exemptions: [deployed] },
+      { exemptions: [{ ...exemption, blockTimestampSec: 999 }] },
+      { exemptions: [{ ...exemption, blockTimestampSec: 2001 }] },
+      { exemptions: [{ ...exemption, chain: "base" }] },
+      { compromisedVerifiers: undefined },
+      { exemptions: [{ ...exemption, eids: [{ eid: 1, requiredDVNs: [EMITTER_ADDRESS], optionalDVNs: [], optionalThreshold: 0 }] }] },
+      { exemptions: [{ ...exemption, eids: [{ ...exemption.eids[0], optionalThreshold: 1 }] }] },
+    ]) {
+      expect(V9ProviderIncidentDisclosureSchema.safeParse({ ...incident, ...invalid }).success, JSON.stringify(invalid)).toBe(false);
     }
   });
 });
@@ -339,6 +408,22 @@ describe("authored bridge provider identity", () => {
     expect(parsed.protocols?.[0]).not.toHaveProperty("providerKey");
   });
 
+  it("rejects issuer-operated routes with third-party authorities", () => {
+    const route = {
+      id: ROUTE_ETHEREUM, destinationChain: "ethereum", contractAddress: ROUTE_ETHEREUM.split(":")[1],
+      protocol: "Fixture issuer", issuanceModel: "native-issuance", routeClass: "native",
+      riskTier: "single-chain-or-native", semantics: "native-mint", scope: "canonical",
+      reviewDisposition: "reviewed", observedAt: "2026-10-01",
+      sources: [{ label: "Issuer", url: "https://example.com/issuer" }], rail: "issuer-operated",
+    };
+    expect(BridgeRouteRiskProfileSchema.safeParse({ ...PROFILE, routes: [route] }).success).toBe(true);
+    for (const conflict of [{ providerKeys: ["layerzero"] }, { routeClass: "third-party" }]) {
+      const result = BridgeRouteRiskProfileSchema.safeParse({ ...PROFILE, routes: [{ ...route, ...conflict }] });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: ["routes", 0, "rail"] }));
+    }
+  });
+
   it("admits the shared provider key and surface vocabularies only", () => {
     expect(BridgeRouteRiskProfileSchema.safeParse({
       ...PROFILE,
@@ -356,33 +441,22 @@ describe("authored bridge provider identity", () => {
 });
 
 describe("incident coverage closure (M-8)", () => {
-  const refs = [{ controlId: "fixture-dvn-set", certificateId: CERTIFICATE_ID }];
-
-  it("requires all three witnesses for provider-screening", () => {
-    expect(V9IncidentCoverageSchema.safeParse({ ...CLOSURE_WITNESSES, certificateRefs: refs }).success).toBe(true);
+  it("requires every derived witness and no authored certificate reference", () => {
+    expect(V9IncidentCoverageSchema.safeParse(CLOSURE_WITNESSES).success).toBe(true);
+    // An issuer-operated rail has no provider review, so the list may be empty.
+    expect(V9IncidentCoverageSchema.safeParse({ ...CLOSURE_WITNESSES, providerReviewIds: [] }).success).toBe(true);
     for (const malformed of [
-      { source: "provider-screening", certificateRefs: refs },
-      { source: "provider-screening", providerReviewId: CLOSURE_WITNESSES.providerReviewId, certificateRefs: refs },
-      { source: "provider-screening", issuerSurfaceReviewId: CLOSURE_WITNESSES.issuerSurfaceReviewId, certificateRefs: refs },
-      { ...CLOSURE_WITNESSES },
-      { ...CLOSURE_WITNESSES, certificateRefs: [] },
-      { ...CLOSURE_WITNESSES, certificateRefs: [refs[0], refs[0]] },
-      { ...CLOSURE_WITNESSES, certificateRefs: [...refs, { controlId: "*", certificateId: CERTIFICATE_ID_BASE }] },
+      { ...CLOSURE_WITNESSES, providerReviewIds: undefined },
+      { ...CLOSURE_WITNESSES, issuerSurfaceReviewId: undefined },
+      { ...CLOSURE_WITNESSES, screeningSetId: undefined },
+      { ...CLOSURE_WITNESSES, certificateId: undefined },
+      { ...CLOSURE_WITNESSES, contributorControlIds: undefined },
+      { ...CLOSURE_WITNESSES, contributorControlIds: [] },
+      { ...CLOSURE_WITNESSES, certificateRefs: [{ controlId: "fixture-dvn-set", certificateId: CERTIFICATE_ID }] },
+      { ...CLOSURE_WITNESSES, source: "control" },
     ]) {
       expect(V9IncidentCoverageSchema.safeParse(malformed).success, JSON.stringify(malformed)).toBe(false);
     }
-  });
-
-  it("rejects closure witnesses on control and deployment coverage", () => {
-    for (const coverage of [
-      { source: "control", certificateRefs: refs },
-      { source: "control", providerReviewId: CLOSURE_WITNESSES.providerReviewId },
-      { source: "deployment", issuerSurfaceReviewId: CLOSURE_WITNESSES.issuerSurfaceReviewId },
-      { source: "provider+screening" },
-    ]) {
-      expect(V9IncidentCoverageSchema.safeParse(coverage).success).toBe(false);
-    }
-    expect(V9IncidentCoverageSchema.parse({ source: "control" })).toEqual({ source: "control" });
   });
 
   it("keeps coverage omitted when absent so current control facts stay byte-identical", () => {
@@ -392,24 +466,16 @@ describe("incident coverage closure (M-8)", () => {
   });
 
   it("binds exactly the fact's authored contributors", () => {
-    const valid = (authored: Record<string, unknown>, certificateRefs: readonly { controlId: string; certificateId: string }[]) =>
+    const valid = (authored: Record<string, unknown>, contributors: readonly string[]) =>
       V9DeploymentControlFactV2Schema.safeParse({
-        ...CONTROL_FACT_V2, ...authored, incidentCoverage: { ...CLOSURE_WITNESSES, certificateRefs },
+        ...CONTROL_FACT_V2, ...authored, incidentCoverage: { ...CLOSURE_WITNESSES, contributorControlIds: contributors },
       }).success;
-    const single = { authoredControlId: "fixture-one" };
-    expect(valid(single, [{ controlId: "fixture-one", certificateId: CERTIFICATE_ID }])).toBe(true);
-    expect(valid(single, [{ ...refs[0]! }])).toBe(false);
-    const aggregate = { authoredControlId: "*", authoredControlIds: ["fixture-a", "fixture-b"] };
-    const both = [
-      { controlId: "fixture-a", certificateId: CERTIFICATE_ID },
-      { controlId: "fixture-b", certificateId: CERTIFICATE_ID_BASE },
-    ];
-    expect(valid(aggregate, both)).toBe(true);
-    expect(valid(aggregate, both.slice(0, 1))).toBe(false);
-    expect(valid(aggregate, [{ controlId: "*", certificateId: CERTIFICATE_ID }])).toBe(false);
-    expect(valid({}, [{ controlId: "*", certificateId: CERTIFICATE_ID }])).toBe(true);
-    expect(valid({}, refs)).toBe(false);
-    expect(V9DeploymentControlFactV2Schema.safeParse({ ...CONTROL_FACT_V2, incidentCoverage: { ...CLOSURE_WITNESSES, certificateRefs: refs } }).success).toBe(false);
+    expect(valid({ authoredControlId: "fixture-one" }, ["fixture-one"])).toBe(true);
+    expect(valid({ authoredControlId: "fixture-one" }, ["fixture-dvn-set"])).toBe(false);
+    expect(valid({ authoredControlId: "*", authoredControlIds: ["fixture-a", "fixture-b"] }, ["fixture-b", "fixture-a"])).toBe(true);
+    expect(valid({ authoredControlId: "*", authoredControlIds: ["fixture-a", "fixture-b"] }, ["fixture-a"])).toBe(false);
+    expect(valid({}, ["*"])).toBe(true);
+    expect(valid({}, ["fixture-dvn-set"])).toBe(false);
   });
 });
 

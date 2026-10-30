@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Short-term U.S. Treasury bills",
-      "pct": 95.24,
+      "pct": 94.49,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -16,7 +16,7 @@
     },
     {
       "name": "Invesco USTB fund interests on Superstate",
-      "pct": 2.68,
+      "pct": 3.0,
       "risk": "low",
       "coinId": "ustb-superstate",
       "depType": "collateral",
@@ -31,7 +31,7 @@
     },
     {
       "name": "BlackRock BUIDL fund interests",
-      "pct": 2.08,
+      "pct": 2.06,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -43,60 +43,62 @@
         "smart-contract"
       ],
       "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "USD cash held in reserve accounts",
+      "pct": 0.42,
+      "risk": "very-low",
+      "assetClass": "cash",
+      "riskFactors": [
+        "custody"
+      ],
+      "liquidityHorizon": "unknown"
+    },
+    {
+      "name": "Fidelity Institutional Treasury-only money market balances",
+      "pct": 0.03,
+      "risk": "very-low",
+      "assetClass": "money-market-fund",
+      "issuerOrObligor": "Fidelity Investments",
+      "riskFactors": [
+        "custody",
+        "liquidity"
+      ],
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Rev_StbtMatrixdock batch64 primary-source review",
-    "confidence": "probable",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-029 research sprint 2026-10-30",
+    "confidence": "verified",
     "sources": [
       {
-        "label": "STBT January 2025 terms",
-        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
+        "label": "STBT Daily Asset Statement, settled holdings October 16 2026 (T-Bills Assets, Fund Assets, Cash Reserves, USTB Reserves); SHA-256 84e6b34119db3e19e2505885abb0687a49598462b03df6dd7eb7ccc45f4bc502; retrieved 2026-10-30",
+        "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/8V2Lm3"
       },
       {
-        "label": "Matrixdock reserve and rebasing disclosures",
+        "label": "Matrixdock STBT reserve and composition disclosures, retrieved 2026-10-30",
         "url": "https://www.matrixdock.com/stbt"
       },
       {
-        "label": "April 2026 settlement and fee update",
-        "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/announcements/stbt-custodian-and-conversion-fee-reduction-and-settlement-optimization.md"
+        "label": "Matrixdock issuer stats API (gross reserve category values and composition-of-STBT weights), retrieved 2026-10-30",
+        "url": "https://www.matrixdock.com/bond/anon/website/api/v1/stats"
+      },
+      {
+        "label": "STBT January 2025 terms and conditions",
+        "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
       },
       {
         "label": "Verified STBTv2 getLatestReserve issuer-feed implementation",
         "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xe7efc5060b6ad57b68f5911eca6c5cd1952da152"
-      },
-      {
-        "label": "STBT Daily Asset Statement 2026-10-08, recovered through the pinned on-chain document roster; SHA-256 c05e73d1e17d03907bca9de23e9057a1d6b27d9dd48932f2ad42b5dbd8baa80e",
-        "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/54ERjq"
-      },
-      {
-        "label": "Issuer stats API, undated composition-of-STBT column retrieved 2026-10-15",
-        "url": "https://www.matrixdock.com/bond/anon/website/api/v1/stats"
-      },
-      {
-        "label": "Ethereum reserve feed and document roster pin, block 26197400, 2026-10-15T10:45:11Z",
-        "url": "https://api-ethereum-mainnet.n.dwellir.com"
-      },
-      {
-        "label": "STBT Daily Asset Statement 2026-10-16, recovered from the 818-document roster at Ethereum block 26235000; SHA-256 84e6b34119db3e19e2505885abb0687a49598462b03df6dd7eb7ccc45f4bc502; reviewed 2026-10-20",
-        "url": "https://app.matrixdock.com/bond/anon/website/api/v1/doc-download/8V2Lm3"
       }
     ],
-    "rationale": "Issuer dashboard and stats API retrieved 2026-10-15 attribute 95.24% of STBT to Treasury bills, 2.68% to USTB and 2.08% to BUIDL. These are the published rounded composition-of-STBT liability-allocation weights, not the separately published gross-reserve percentages. Surplus USTB and bank cash are not assigned fabricated holder weights. The October 8 statement identifies USTB as the Invesco Short Duration US Government Securities Fund on the Superstate platform. These undated dashboard weights do not close the common-clock reserve-composition gap.",
-    "compositionBasis": "Undated rounded issuer dashboard and stats API composition-of-STBT column, retrieved 2026-10-15; no reserve observation date inferred",
+    "rationale": "The issuer's Daily Asset Statement for settled holdings of October 16 2026 is a dated, whole-book document: it lists every reserve category the issuer reports (U.S. Treasury bills, BUIDL fund units, USTB portfolio units, USD cash reserves and Fidelity Treasury-only money market balances) with units and market values. Dividing each category's statement market value by the statement's stated total for all assets (USD 22,454,002.51 on the T-bill page, plus USD 489,483.69 BUIDL, USD 713,286.81 USTB and USD 99,220.69 cash) gives 94.49% Treasury bills, 3.00% USTB, 2.06% BUIDL, 0.42% USD cash and 0.03% Treasury-only money market, summing to 100.00%. This replaces the previously undated composition-of-STBT liability-allocation weights (95.24/2.68/2.08), which were computed on a different denominator and could not close a common-clock composition gap. The composition is gross reserve assets, so the small surplus over STBT supply (issuer stats API: reserve NAV 22,873,412.20 vs supply 22,662,915.23 on retrieval) is represented inside these weights rather than as an unclassified residual. The statement is issuer self-reported with no independent assurance (coin level attestorTier remains self) and no named assurance firm; verification covers arithmetic and document identity, not third-party attestation.",
+    "compositionBasis": "Matrixdock Daily Asset Statement, settled holdings of 2026-10-16 with the cash-reserve balance stated for 10/17/2026; category market values divided by the statement's total for all assets. Gross reserve book, not the undated composition-of-STBT liability-allocation column.",
+    "compositionAsOf": "2026-10-17",
     "scope": "full-composition",
-    "knownUnknownExposure": "The retained October 8 partial observation remains historical. Source recovery on 2026-10-20 found 818 on-chain documents at Ethereum block 26235000 (2026-10-20T16:29:47Z; hash 0x765073d1dc62c2afdd6ea04101782546a26c62333b8ac413b2a4f733024fffa2). The newest Daily_Asset_Statement_261016.pdf resolves to URI 8V2Lm3, last modified 2026-10-17T07:14:11Z; downloaded SHA-256 84e6b34119db3e19e2505885abb0687a49598462b03df6dd7eb7ccc45f4bc502 exactly matches getDocument. Treasury holdings and Fidelity sweep are dated October 16; bank cash is dated October 17; BUIDL/USTB screenshots are undated. Gross disclosed rows total $23,755,993.50, versus pinned getLatestReserve $23,748,940.72, a $7,052.78 difference exactly equal to the sweep balances. The statement warns of Treasury valuation/NAV timing differences but does not identify sweep exclusion or reconcile a common-close whole book. Current dashboard liability weights 95.26% Treasury bills, 2.66% USTB and 2.08% BUIDL remain undated and distinct from gross reserves. Both dated partial observations retain null wholeAssetDenominator; no compositionAsOf, normalized holder weights or independent reserve-to-liability assurance is inferred.",
+    "knownUnknownExposure": "None asserted as unlisted: the statement's four reserve categories plus the Treasury-only money market balance account for the whole reported book. Unrealized gains and accrued interest are carried inside the statement market values, and the small reserve surplus over token supply is left inside the categories rather than being reassigned holder weights. No independent attestation of the holdings was retrieved; the FallbackReserveFeed remains the only on-chain reserve reference.",
     "knownUnknownExposurePct": 0,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 0,
-        "reserveName": "Short-term U.S. Treasury bills",
-        "pct": 95.24,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "U.S. Treasury bills are exogenous sovereign securities, not tracked stablecoins."
-      }
-    ],
     "observations": [
       {
         "scopeId": "matrixdock:stbt:daily-asset-statement:2026-10-08",
@@ -217,7 +219,7 @@
         "url": "https://2505056629-files.gitbook.io/~/files/v0/b/gitbook-x-prod.appspot.com/o/spaces%2FZx9GNWaNV9JB3JZlW74D%2Fuploads%2FzHip8cJaP5aud3KfdVud%2FSTBT%20Token%C2%A0Terms%20and%20Conditions.pdf?alt=media&token=79d5fd49-deae-41b4-a809-9e1afaa02f32"
       }
     ],
-    "uncertainty": "Terms §8 place reserves in affiliate bank/broker accounts separate from operating accounts; an intercompany note gives Prometheus a security interest. Holders remain unsecured Prometheus creditors without bank/broker relationships or asset ownership. Underlying brokers/banks and their safeguards are unnamed; affiliate asset reuse is expressly permitted.",
+    "uncertainty": "Terms \u00a78 place reserves in affiliate bank/broker accounts separate from operating accounts; an intercompany note gives Prometheus a security interest. Holders remain unsecured Prometheus creditors without bank/broker relationships or asset ownership. Underlying brokers/banks and their safeguards are unnamed; affiliate asset reuse is expressly permitted.",
     "knownUnknownExposurePct": 100
   }
 }

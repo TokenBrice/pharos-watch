@@ -17,7 +17,7 @@ import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/po
 import type { ContagionShock } from "@shared/types/contagion";
 import { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture, parseSafetyScoreV9SourceAdmissionBaseline, type SafetyScoreV9SourceAdmissionBaseline } from "../src/lib/safety-score-v9/publication-replay-capture";
+import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture, parseSafetyScoreV9ReplayLaneScreening, parseSafetyScoreV9SourceAdmissionBaseline, type SafetyScoreV9SourceAdmissionBaseline } from "../src/lib/safety-score-v9/publication-replay-capture";
 import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
 import { resolveDependencyScenarioEvaluatorSource } from "./lib/dependency-scenario-source";
 import { parseSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
@@ -252,8 +252,9 @@ async function main(): Promise<void> {
   const source = values.publication ? ReportCardsV9ReaderResponseSchema.parse(JSON.parse(readFileSync(resolve(values.publication as string), "utf8"))) : null;
   const admission = "sourceAdmissionBaseline" in capture ? parseSafetyScoreV9SourceAdmissionBaseline(capture.sourceAdmissionBaseline, fixedInput.clockSec) : undefined;
   const transferMaterialityGeneration = capture.transferMaterialityGeneration == null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration);
-  // v3 accepted captures forward their prior accepted baseline so measured-route quarantine reproduces.
-  let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), ...(admission === undefined ? {} : { sourceAdmissionBaseline: admission?.baseline ?? null }), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
+  const laneScreening = capture.laneScreening == null ? capture.laneScreening : parseSafetyScoreV9ReplayLaneScreening(capture.laneScreening);
+  // Accepted captures retain both the prior baseline and exact lane witnesses.
+  let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, laneScreening, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), ...(admission === undefined ? {} : { sourceAdmissionBaseline: admission?.baseline ?? null }), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
   const candidate = replay.pipeline.candidate;
   let publishedById: Map<string, ReplayCard> | null = null;
   if (source) {

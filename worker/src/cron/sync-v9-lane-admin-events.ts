@@ -14,6 +14,7 @@ import { fetchEvmBlockHeaderAtTag, type EvmBlockHeader } from "../lib/evm-rpc";
 import {
   LANE_ADMIN_EVENT_DEFAULT_LOG_PAGE_BLOCKS,
   LANE_ADMIN_EVENT_MAX_LOG_PAGES,
+  LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
   LaneScreeningDeadlineError,
   screenLaneAdminEvents,
   type LaneAdminEventEmitter,
@@ -21,6 +22,7 @@ import {
 } from "../lib/safety-score-v9/bridge-lane-admin-events";
 import {
   loadLaneIncidentCertificates,
+  laneIncidentCertificateScreeningSetId,
   persistLaneIncidentCertificates,
 } from "../lib/safety-score-v9/lane-incident-certificate-store";
 
@@ -80,6 +82,7 @@ export interface LaneScreeningDescriptor {
   emitters: readonly LaneAdminEventEmitter[];
   /** Bootstrap range length (blocks) when the lane has no certificate yet. */
   lookbackBlocks: number;
+  provenance: { controlIds: readonly string[] };
 }
 
 export const LaneScreeningAttemptSchema = z
@@ -352,7 +355,13 @@ export async function syncV9LaneAdminEvents(
   let certificateStates: Map<string, string>;
   let certifiedToBlock: Map<string, number>;
   try {
-    const states = await loadLaneIncidentCertificates(db, laneKeys, { nowSec, signal });
+    const states = await loadLaneIncidentCertificates(db, descriptors.map((descriptor) => ({
+      deploymentKey: descriptor.subjectDeploymentKey,
+      screeningSetId: laneIncidentCertificateScreeningSetId({
+        ...descriptor, contributorControlIds: descriptor.provenance.controlIds,
+        screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
+      }),
+    })), { nowSec, signal });
     certificateStates = new Map();
     certifiedToBlock = new Map();
     for (const key of laneKeys) {
@@ -518,7 +527,9 @@ export async function syncV9LaneAdminEvents(
 
     const certificate: V9LaneIncidentCertificate = result.certificate;
     try {
-      const persisted = await persistLaneIncidentCertificates(db, [certificate], nowSec, signal);
+      const persisted = await persistLaneIncidentCertificates(db, [{
+        certificate, contributorControlIds: descriptor.provenance.controlIds,
+      }], nowSec, signal);
       written += persisted.written;
       pruned += persisted.pruned;
     } catch {

@@ -7,7 +7,7 @@ const PUBLIC_FACTOR_LABELS: Readonly<Record<string, string>> = {
   assuranceAndReconciliation: "assurance and reconciliation",
   liquidityHorizon: "reserve liquidity horizon",
   maturityDaysMax: "maximum reserve maturity",
-  incidentState: "incident status",
+  incidentState: "control incident status",
   authorityIdentity: "authority identity",
   economicLossScope: "economic loss scope",
   materialSupplyShare: "share of circulating supply",

@@ -102,6 +102,7 @@ export type SafetyScoreV9DeploymentSupplyCensusShadowReason =
   | "deployment-supply-census-window-insufficient"
   | "deployment-supply-census-generation-fresh"
   | "deployment-supply-census-cohort-empty"
+  | "deployment-supply-census-projection-missing"
   | "deployment-supply-census-aborted"
   | "deployment-supply-census-capture-failed";
 
@@ -249,7 +250,7 @@ function censusShadowOutcome(
  * connections, and it can never convert a published attribution run into an
  * error.
  */
-async function runDeploymentSupplyCensusShadow(input: {
+export async function runDeploymentSupplyCensusShadow(input: {
   db: D1Database;
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionSource>;
   chainRpcs?: Map<string, ChainRpcConfig>;
@@ -289,6 +290,16 @@ async function runDeploymentSupplyCensusShadow(input: {
   }
   try {
     const censusSource = deploymentSupplyCensusSourceView(input.fixedInput);
+    if (censusSource === null) {
+      // R5: a projection-less source has no population data (aggregate, chain
+      // rows, prices). Measuring the attribution allowlist instead reported
+      // `cohort-empty` for a population the lane never saw.
+      return censusShadowOutcome({
+        status: "skipped",
+        reason: "deployment-supply-census-projection-missing",
+        remainingMs,
+      });
+    }
     const expectedCensusIdentity = {
       registryFingerprint: input.fixedInput.registryFingerprint,
       baseInputGenerationId: input.fixedInput.baseInputGenerationId,
@@ -356,7 +367,15 @@ async function runDeploymentSupplyCensusShadow(input: {
         aggregateCirculatingById: censusSource.aggregateCirculatingById,
         chainCirculatingById: censusSource.chainCirculatingById,
         navPriceById: censusSource.navPriceById,
+        pegDataById: Object.fromEntries(Object.entries(censusSource.pegReferenceById).map(
+          ([assetId, reference]) => [assetId, { pegReference: reference }],
+        )),
       },
+      // The instant this lane actually reads the chains: pins resolve at or
+      // before it, and the bound is aged by the next publication against its
+      // own (later) clock. Never the prepare clock: a finalized Solana snapshot
+      // cannot be rewound to it.
+      observationClockSec: Math.floor(Date.now() / 1_000),
       assetIds: cohortAssetIds,
       chainRpcs: input.chainRpcs,
       dwellirNative: input.dwellirNative,

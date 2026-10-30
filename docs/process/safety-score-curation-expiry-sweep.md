@@ -578,6 +578,16 @@ counterfactual report.
 | Measurement | The closing worklist, pre-expiry list, and counterfactual report come from one fresh capture replayed with its own `clockSec`. |
 
 
+## Incident-review renewals (v10.39)
+
+A provider or issuer-surface review expires on the reviewed-research budget (365 days from
+`reviewedAt`/`windowEndSec`). Renew it only from a fresh primary search of the same surfaces;
+never date-bump, never shorten the window to exclude a known event, and never drop a provider
+incident another current review of the same provider discloses. Lane certificates are runtime
+D1 rows joined at evaluation and do not appear in this calendar: an expired or gapped chain
+simply stops closing its lane. A `verifier-compromise` exemption is point-in-time evidence
+bound to the disclosed exposure and is re-earned, not renewed.
+
 ## Artifact hygiene
 
 For manual runs, keep captures, replays, worklists, the full missing-data registry, and
