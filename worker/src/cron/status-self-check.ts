@@ -726,6 +726,10 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     internalExternalDiscrepancy,
   } = await collectStatusSelfCheckProbes(db, now, options);
 
+  // The probe phase can span minutes (serial 10s timeouts). Grade freshness
+  // against the read clock that actually observes the producers; using the
+  // run-start clock rejects outputs published during the probes as future.
+  const assessedAt = Math.floor(Date.now() / 1000);
   const sampleCount = probes.length;
   const bootstrapMisses = probes.filter((probe) => probe.bootstrapMiss === true);
   const { passCount, failCount, latencySummary, status: probeStatus, transportStatus, semanticStatus } = computeProbeStats(probes);
@@ -781,8 +785,8 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
   }, () => failedOutputs.add("status_probe_runs"));
 
   await options.reportProgress?.({ stage: "raw-status" });
-  const raw = await computeRawStatus(db, now);
-  const persistedStatus = await reconcileStatusState(db, now, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
+  const raw = await computeRawStatus(db, assessedAt);
+  const persistedStatus = await reconcileStatusState(db, assessedAt, raw.rawOverallStatus, raw.confidence, raw.causes.overall,
     () => failedOutputs.add("status_state"));
   const { effectiveStatus, persistenceSucceeded: statusPersistenceSucceeded } = persistedStatus;
   const cloudflareD1StatusBindings = options.cloudflareD1StatusBindings
@@ -795,10 +799,10 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
       : undefined);
   await options.reportProgress?.({ stage: "status-supplements" });
   const [publicHealthAssessment, supplements] = await Promise.all([
-    assessPublicHealth(db, now, { logPrefix: "status-self-check" }),
+    assessPublicHealth(db, assessedAt, { logPrefix: "status-self-check" }),
     loadStatusSupplements(
       db,
-      now,
+      assessedAt,
       raw.crons,
       options.coingeckoApiKey,
       cloudflareD1StatusBindings,
@@ -806,19 +810,19 @@ export async function runStatusSelfCheck(db: D1Database, options: StatusSelfChec
     ),
   ]);
   await options.reportProgress?.({ stage: "snapshot-publication" });
-  const publicHealthBody = buildPublicHealthResponse(publicHealthAssessment, now);
-  const publicStatus = await reconcilePublicStatusState(db, now, publicHealthBody,
+  const publicHealthBody = buildPublicHealthResponse(publicHealthAssessment, assessedAt);
+  const publicStatus = await reconcilePublicStatusState(db, assessedAt, publicHealthBody,
     () => failedOutputs.add("status_state:public"));
   if (!publicStatus.persistenceSucceeded) failedOutputs.add("status_state:public");
-  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, now, raw, { supplements });
-  const publicHealthSnapshotPersistenceSucceeded = await writeStatusPublicHealthSnapshot(db, now,
+  const rawSnapshotPersistenceSucceeded = await writeStatusRawSnapshot(db, assessedAt, raw, { supplements });
+  const publicHealthSnapshotPersistenceSucceeded = await writeStatusPublicHealthSnapshot(db, assessedAt,
     { ...publicHealthBody, ...publicStatus.projection }, publicHealthAssessment.statusExcludingCacheFreshness,
     publicHealthAssessment.statusExcludingCacheEvidence);
-  const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, now);
+  const discrepancyObserved = hasDivergence(effectiveStatus, probeSummary, assessedAt);
 
-  const discrepancyState = await updateDiscrepancyObservation(db, now, discrepancyObserved, hasProbeFailure,
+  const discrepancyState = await updateDiscrepancyObservation(db, assessedAt, discrepancyObserved, hasProbeFailure,
     () => failedOutputs.add("status_discrepancy_state"));
-  const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, now, discrepancyState.consecutiveDivergent);
+  const discrepancy = buildDiscrepancy(effectiveStatus, probeSummary, assessedAt, discrepancyState.consecutiveDivergent);
   if (!probePersistenceSucceeded) failedOutputs.add("status_probe_runs");
   if (!statusPersistenceSucceeded) failedOutputs.add("status_state");
   if (!rawSnapshotPersistenceSucceeded) failedOutputs.add("status:raw-snapshot:v1");

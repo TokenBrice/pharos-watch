@@ -273,5 +273,5 @@ export async function captureClSourcePools<T extends ClSourcePoolCandidate>(inpu
       balances: tokenRows.map((token) => token.balance),
     });
   }
-  return { pools, blockNumber };
+  return { pools, blockNumber, stateBlockHash: header.hash };
 }

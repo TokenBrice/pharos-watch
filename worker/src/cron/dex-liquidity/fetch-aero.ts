@@ -195,13 +195,16 @@ async function fetchAeroSlipstreamChain(
       options,
     });
     if (capture.pools.length === 0) continue;
+    // The tier and symbol reads must observe the same confirmed state as the
+    // pool/balance capture; a numeric block tag can resolve a reorged view.
+    const pinnedOptions = { ...options, stateBlockHash: capture.stateBlockHash };
     const tickSpacings = [...new Set(capture.pools.map((pool) => pool.parameter))];
     const fees = await multicallAtBlock(chain, tickSpacings.map((tickSpacing) => ({
       label: `fee-${tickSpacing}`,
       target: factory,
       callData: encodeFunctionData({ abi: FACTORY_ABI, functionName: "tickSpacingToFee", args: [tickSpacing] }),
-    })), capture.blockNumber, options, "tick-spacing-fees");
-    const symbols = await readSymbols(chain, capture.pools.flatMap((pool) => pool.tokens.map((token) => token.address)), capture.blockNumber, options);
+    })), capture.blockNumber, pinnedOptions, "tick-spacing-fees");
+    const symbols = await readSymbols(chain, capture.pools.flatMap((pool) => pool.tokens.map((token) => token.address)), capture.blockNumber, pinnedOptions);
     for (const pool of capture.pools) {
       const feeBps = aeroBaseFeeBps(decodeStagedMulticallResult<number>(fees.get(`fee-${pool.parameter}`), FACTORY_ABI, "tickSpacingToFee"));
       pools.push({

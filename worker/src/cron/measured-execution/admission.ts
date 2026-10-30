@@ -807,12 +807,15 @@ export function estimateAdmissionRotationCycles(
 export function resolveMeasuredExecutionCronStatus(input: {
   attemptedFailureCount: number;
   deferredCount: number;
+  /** Coin cohorts admission can never measure inside one rotation. */
+  oversizedCoinCount?: number;
   admissionRotationCycles: number | null;
   cursorWriteStatus: "not-needed" | "written" | "write-failed";
   maxAdmissionRotationCycles?: number;
 }): "ok" | "degraded" {
   return (
     input.attemptedFailureCount > 0 ||
+    (input.oversizedCoinCount ?? 0) > 0 ||
     input.admissionRotationCycles === null ||
     input.admissionRotationCycles > (input.maxAdmissionRotationCycles ?? MAX_ADMISSION_ROTATION_CYCLES) ||
     input.cursorWriteStatus === "write-failed" ||

@@ -14,7 +14,6 @@ import {
 
 const OBSERVED_POOLS_REASON = "At least one eligible direct-token pool was observed";
 const VERIFIED_NO_POOLS_REASON = "A provider completed the direct-token query with no eligible pool";
-const DEGRADED_PROVIDER_REASON = "A completed direct-token provider response was schema-degraded";
 
 export interface DexCensusAttemptSignals {
   observedPoolCount: number;
@@ -66,7 +65,14 @@ export function resolveDexCensusAttempt(
     };
   }
   if (signals.providerDegraded) {
-    return { attemptResult: "provider_outage", legacyReason: DEGRADED_PROVIDER_REASON };
+    // A degraded check means the provider answered but its census is not
+    // exhaustive (scope limit or rejected rows), never that the provider is in
+    // outage. Keep it out of the outage bucket so the published reason matches
+    // what was read.
+    return {
+      attemptResult: "provider_non_exhaustive",
+      legacyReason: DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
+    };
   }
   if (signals.providerCount === 0) {
     return { attemptResult: "unsupported_scope", legacyReason: DEX_DISCOVERY_UNSUPPORTED_SCOPE_REASON };

@@ -139,13 +139,18 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
   let amountRepair: RepairStageOutcome = REPAIR_OK;
   let tronOrderRepair: RepairStageOutcome = REPAIR_OK;
   let tronAmountRepair: RepairStageOutcome = REPAIR_OK;
+  let debtRepair: RepairStageOutcome = REPAIR_OK;
 
   // Historical amount repair and Tron freeze-amount replay are maintenance work.
   // They run only after every admissible event source has had its turn. A short,
   // separately capped tail window lets the durable repair queue make progress
   // after scan-budget exhaustion without taking time away from event scans.
   const scanBudgetExhausted = blacklistRuntimeBudgetReached(runBudget);
-  if (etherscanCircuitAllowed && !blacklistRuntimeBudgetReached(maintenanceRunBudget)) {
+  if (
+    etherscanCircuitAllowed &&
+    !blacklistRuntimeBudgetReached(maintenanceRunBudget) &&
+    !blacklistSubrequestBudgetReached(maintenanceRunBudget)
+  ) {
     try {
       amountBackfill = await backfillAmounts(
         db,
@@ -173,7 +178,11 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     etherscanCircuitSkips++;
     logWorkerEventArgs("handler", "warn", "[sync-blacklist] Etherscan circuit open, skipping EVM amount backfill");
   } else {
-    amountRepair = skippedRepair("maintenance-budget-exhausted");
+    amountRepair = skippedRepair(
+      blacklistRuntimeBudgetReached(maintenanceRunBudget)
+        ? "maintenance-budget-exhausted"
+        : "subrequest-budget-exhausted",
+    );
   }
 
   // Tron freeze amounts need TronGrid only, so the replay tail runs even when the
@@ -224,10 +233,21 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     }
   }
   if (!blacklistRuntimeBudgetReached(maintenanceRunBudget) && !blacklistSubrequestBudgetReached(maintenanceRunBudget)) {
-    await reconcileCurrentBalanceDebt(db, {
-      etherscanApiKey, drpcApiKey, trongridApiKey, etherscanLimiter, tronLimiter,
-      runBudget: maintenanceRunBudget, signal, chainRpcs,
-    }, { etherscanAllowed: etherscanCircuitAllowed, tronGridAllowed: tronGridCircuitAllowed });
+    try {
+      await reconcileCurrentBalanceDebt(db, {
+        etherscanApiKey, drpcApiKey, trongridApiKey, etherscanLimiter, tronLimiter,
+        runBudget: maintenanceRunBudget, signal, chainRpcs,
+      }, { etherscanAllowed: etherscanCircuitAllowed, tronGridAllowed: tronGridCircuitAllowed });
+    } catch (err) {
+      debtRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
+      logWorkerEventArgs("handler", "warn", "[sync-blacklist] Current-balance debt reconciliation failed:", err);
+    }
+  } else {
+    debtRepair = skippedRepair(
+      blacklistRuntimeBudgetReached(maintenanceRunBudget)
+        ? "maintenance-budget-exhausted"
+        : "subrequest-budget-exhausted",
+    );
   }
   const subrequestBudgetReached = blacklistSubrequestBudgetReached(runBudget);
   runtimeBudgetHit ||= counters.currentBalanceCacheCounters.budgetExhausted;
@@ -300,6 +320,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
     ...(amountRepair.outcome === "failed" ? ["blacklist-evm-amount-repair-failed"] : []),
     ...(tronOrderRepair.outcome === "failed" ? ["blacklist-tron-order-repair-failed"] : []),
     ...(tronAmountRepair.outcome === "failed" ? ["blacklist-tron-amount-repair-failed"] : []),
+    ...(debtRepair.outcome === "failed" ? ["blacklist-current-balance-debt-repair-failed"] : []),
   ];
   const status: SyncBlacklistResult["status"] =
     scanStatus === "ok" && failureReasons.length > 0 ? "degraded" : scanStatus;
@@ -405,6 +426,8 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         tronOrderBlocksAttempted: tronOrderBackfill?.blocksAttempted ?? null,
         tronOrderPositionsResolved: tronOrderBackfill?.positionsResolved ?? null,
         tronOrderBlocksDeferred: tronOrderBackfill?.blocksDeferred ?? null,
+        currentBalanceDebtOutcome: debtRepair.outcome,
+        currentBalanceDebtReason: debtRepair.reason,
         maintenanceRuntimeBudgetMs: SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS,
         runtimeBudgetReached: runtimeBudgetHit,
         subrequestBudgetReached,

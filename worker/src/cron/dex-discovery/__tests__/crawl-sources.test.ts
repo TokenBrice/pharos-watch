@@ -966,7 +966,7 @@ describe("crawlCoin DexScreener hardening", () => {
     expect(recordOutcome).toHaveBeenCalledWith(expect.anything(), CIRCUIT_SOURCE.CG_ONCHAIN, true);
     expect(result.deploymentOutcomes[0]).toMatchObject({
       outcome: "provider_inaccessible",
-      reason: "A completed direct-token provider response was schema-degraded",
+      reason: "Provider census is not exhaustive for this chain",
     });
   });
 

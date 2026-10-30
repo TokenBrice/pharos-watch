@@ -70,8 +70,9 @@ describe("DEX census attempt state machine", () => {
       attemptResult: "provider_non_exhaustive",
       legacyReason: DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
     });
-    expect(resolveDexCensusAttempt(signals({ providerDegraded: true }))).toMatchObject({
-      attemptResult: "provider_outage",
+    expect(resolveDexCensusAttempt(signals({ providerDegraded: true }))).toEqual({
+      attemptResult: "provider_non_exhaustive",
+      legacyReason: DEX_DISCOVERY_NON_EXHAUSTIVE_CENSUS_REASON,
     });
   });
 

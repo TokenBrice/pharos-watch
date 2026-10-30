@@ -1121,6 +1121,71 @@ describe("syncBlacklist", () => {
       expect(backfillAmounts).not.toHaveBeenCalled();
     });
 
+    it("skips EVM repair with subrequest-budget-exhausted when the shared budget refused it", async () => {
+      emptyOk();
+      vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockImplementation(
+        async (_evmChainId, _contract, _topic, _apiKey, _fromBlock, toBlock, _depth, _limiter, budget) => {
+          budget.count = budget.limit;
+          return { logs: [], complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: 0 };
+        },
+      );
+      const result = await syncBlacklist(buildTestOpts({ db: makeDb() }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(meta.subrequestBudgetReached).toBe(true);
+      expect(meta.tronAmountRepairOutcome).toBe("skipped");
+      expect(meta.tronAmountRepairReason).toBe("subrequest-budget-exhausted");
+      // The EVM lane was refused for the same reason; it must not report an
+      // observed empty repair queue (R2).
+      expect(meta.amountRepairOutcome).toBe("skipped");
+      expect(meta.amountRepairReason).toBe("subrequest-budget-exhausted");
+      expect(meta.amountRepairAttempted).toBeNull();
+      expect(backfillAmounts).not.toHaveBeenCalled();
+    });
+
+    it("degrades instead of rejecting when the current-balance debt lane throws", async () => {
+      const db = mockD1([
+        ...emptyBlacklistAggregateTables(),
+        { match: "FROM cache AS debt", rows: [], throwError: new Error("D1_ERROR: internal error; reference = overloaded") },
+        { match: "blacklist_sync_state", rows: [] },
+        { match: "blacklist_events", rows: [] },
+      ]);
+      emptyOk();
+      vi.mocked(fetchEvmLogsForTopicWithCompleteness).mockResolvedValueOnce(
+        completeEtherscanLogs([
+          {
+            address: "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48",
+            topics: [
+              "0xffa4e6181777692565cf28528fc88fd1516ea86b56da075235fa575af6a4b855",
+              "0x000000000000000000000000abcdef1234567890abcdef1234567890abcdef12",
+            ],
+            data: "0x",
+            blockNumber: "0x1312d00",
+            timeStamp: "0x6670a780",
+            transactionHash: "0x" + "ab".repeat(32),
+            logIndex: "0x0",
+          },
+        ]),
+      );
+      const nowSec = Math.floor(Date.now() / 1000);
+
+      const result = await syncBlacklist(buildTestOpts({ db }));
+      const meta = JSON.parse(result.metadata);
+
+      expect(result.status).toBe("degraded");
+      expect(result.itemCount).toBe(1);
+      const reasons = meta.reasons as string[];
+      expect(reasons).toContain("blacklist-current-balance-debt-repair-failed");
+      expect(meta.reason).toBe("blacklist-current-balance-debt-repair-failed");
+      expect(meta.currentBalanceDebtOutcome).toBe("failed");
+      expect(meta.currentBalanceDebtReason).toBe("repair-threw");
+      // The completed scan's evidence and confirmed output clock survive the tail failure.
+      expect(meta.configsAttempted).toBe(CONTRACT_CONFIGS.length);
+      expect(meta.configsSucceeded).toBe(CONTRACT_CONFIGS.length);
+      expect(meta.rowsWritten).toBe(1);
+      expect(meta.outputPublishedAt).toBe(nowSec);
+    });
+
     it("preserves scan reason first and lists publication and repair failures together", async () => {
       const db = mockD1([
         ...emptyBlacklistAggregateTables(),

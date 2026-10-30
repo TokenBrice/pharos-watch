@@ -592,19 +592,32 @@ describe("measured execution overflow admission", () => {
     ).toBe(2);
   });
 
-  it("surfaces an oversized coin group and continues admitting later groups", () => {
-    const admission = admitTargetsWithinBudget(
-      [
-        target("coin-a", 100_000, "coin-a-1"),
-        target("coin-a", 100_000, "coin-a-2"),
-        target("coin-b", 100_000),
-      ],
-      { maxEstimatedRpcRequests: 11 },
-    );
+  it("surfaces an oversized coin group, continues admitting later groups, and degrades the run", () => {
+    const targets = [
+      target("coin-a", 100_000, "coin-a-1"),
+      target("coin-a", 100_000, "coin-a-2"),
+      target("coin-b", 100_000),
+    ];
+    const admission = admitTargetsWithinBudget(targets, { maxEstimatedRpcRequests: 11 });
 
     expect(admission.oversizedCoinIds).toEqual(["coin-a"]);
     expect([...admission.oversized]).toEqual(["target-coin-a-1", "target-coin-a-2"]);
     expect([...admission.admitted]).toEqual(["target-coin-b"]);
+
+    // The same cohort already names the condition in run metadata; the cron
+    // verdict must degrade instead of publishing the run as healthy.
+    const admissionRotationCycles = estimateAdmissionRotationCycles(
+      targets,
+      { maxEstimatedRpcRequests: 11 },
+    );
+    expect(admissionRotationCycles).toBe(1);
+    expect(resolveMeasuredExecutionCronStatus({
+      attemptedFailureCount: 0,
+      deferredCount: admission.deferred.size - admission.oversized.size,
+      oversizedCoinCount: admission.oversizedCoinIds.length,
+      admissionRotationCycles,
+      cursorWriteStatus: "not-needed",
+    })).toBe("degraded");
   });
 
   it("keeps durable budget deferral healthy while degrading actionable or non-durable gaps", () => {

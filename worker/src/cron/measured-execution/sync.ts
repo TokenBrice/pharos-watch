@@ -1086,6 +1086,7 @@ async function syncDexMeasuredExecutionLane(
     ],
     reason: retention.error ? "retention-cleanup-failed"
       : failureSummary.scoreEligibleBlockingFailureCount > 0 ? "quote-failures"
+        : oversizedCoinIds.length > 0 ? "admission-coin-group-oversized"
         : cursorWriteStatus === "write-failed" ? "admission-cursor-write-failed"
           : budgetDeferredCount > 0 && cursorWriteStatus !== "written" ? "admission-cursor-not-persisted"
             : admissionRotationCycles === null || admissionRotationCycles > maxAdmissionRotationCycles
@@ -1120,6 +1121,7 @@ async function syncDexMeasuredExecutionLane(
       : resolveMeasuredExecutionCronStatus({
           attemptedFailureCount: failureSummary.scoreEligibleBlockingFailureCount,
           deferredCount: budgetDeferredCount,
+          oversizedCoinCount: oversizedCoinIds.length,
           admissionRotationCycles,
           maxAdmissionRotationCycles,
           cursorWriteStatus,

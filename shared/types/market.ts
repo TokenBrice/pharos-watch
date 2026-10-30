@@ -373,7 +373,7 @@ export type LiquidityCoverageClass = z.infer<typeof LiquidityCoverageClassSchema
 /**
  * Why a published LiquidityScore is null (NR). The `activity-*` codes are the
  * DEC-19 volume-activity outcomes decided by `resolveVolumeActivityComponent`;
- * `no-retained-pools` marks a placeholder row with no DEX pool; the publisher
+ * `no-retained-pools` marks a placeholder or scored row that retained no pool; the publisher
  * adds `invalid-coverage-evidence` when it quarantines a row's coverage.
  */
 export const LiquidityScoreUnavailableReasonSchema = z.enum([

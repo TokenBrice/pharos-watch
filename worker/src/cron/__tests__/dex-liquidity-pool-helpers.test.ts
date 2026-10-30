@@ -105,7 +105,8 @@ describe("dex-liquidity pool helpers", () => {
     expect(computeDurabilityScore(rich, 0.9, 0.8)).toBe(90);
 
     const zeroLiquidity = computeLiquidityScore(withCompleteVolume(empty), 41);
-    expect(zeroLiquidity.score).toBe(8);
+    expect(zeroLiquidity.score).toBeNull();
+    expect(zeroLiquidity.unavailableReason).toBe("no-retained-pools");
     expect(zeroLiquidity.components).toEqual({
       tvlDepth: 0,
       volumeActivity: 0,
