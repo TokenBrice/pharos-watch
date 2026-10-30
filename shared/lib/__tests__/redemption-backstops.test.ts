@@ -36,6 +36,23 @@ describe("getRedemptionBackstopConfig", () => {
     }
   });
 
+  it("withholds BRZ's unrevalidated historical 1% fee and full-supply terms", () => {
+    const config = getRedemptionBackstopConfig("brz-transfero")!;
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+    expect(config.costModel).toMatchObject({
+      kind: "dynamic-or-unclear",
+      confidence: "undisclosed-reviewed",
+      feeModelKind: "undisclosed-reviewed",
+    });
+    expect(config.costModel).not.toHaveProperty("feeBps");
+    expect(config.v9RouteReviewTerms).toMatchObject({
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost", "settlement"],
+      reviewedAt: "2026-10-14",
+    });
+    expect(resolveV9RedemptionRouteCostBpsAtNotional(config, 1_000_000)).toBeNull();
+  });
+
   it.each([
     ["spusd-soulpeg", "asset:susdc-soulpeg"],
   ])("does not relabel %s's untracked receipt or successor as a priced stablecoin", (id, output) => {

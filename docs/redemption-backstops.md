@@ -262,7 +262,7 @@ Config cloning uses native `structuredClone` on data-only configs at registry in
 
 `RedemptionBackstopConfigSchema` owns scalar bounds; the registry audit renders each canonical issue as `schema-validation` with its field path, without a second scalar diagnostic. Contextual adapter/observer identity, numeric daily-limit prose, documentation-support ratchets, source-AST overwrite detection and manifest completeness remain separate checks. Unused-live-telemetry policy rows remain exported and audited; only consumed runtime policy kinds need private indexes.
 
-The public registry import lives in `shared/lib/redemption-backstops.ts`. The actual config inventory is split by route family under `shared/lib/redemption-backstop-configs/` to keep review and change scopes small.
+The public registry import lives in `shared/lib/redemption-backstops.ts`. The actual config inventory is split by route family under `shared/lib/redemption-backstop-configs/` to keep review and change scopes small. The live producer cohort is the configured routes of active stablecoins; frozen, pre-launch, quarantined and delisted configs remain archive history and are excluded from the sync and live rows.
 
 Family ownership follows the modeled holder endpoint, not issuer branding: opaque asynchronous burn/attest/release belongs to `queue-redeem`, and inventory-dependent on-chain swaps to `psm-swap`, including whitelisted cohorts. Preserve the reviewed access, execution, payout and gap facts when correcting family ownership; do not falsify them to satisfy a family constraint. Such corrections can change route diagnostics and require replay.
 

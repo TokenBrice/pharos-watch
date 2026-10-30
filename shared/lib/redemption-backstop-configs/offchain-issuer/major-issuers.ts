@@ -588,18 +588,40 @@ export const MAJOR_ISSUER_OFFCHAIN_CONFIGS: Record<string, RedemptionBackstopCon
   },
   "brz-transfero": {
     ...issuerBase,
-    ...reviewedDirectRedemptionSupplyFull,
-    costModel: fixedFee(100, "Transfero documents a 1% redemption fee in Brazil"),
+    capacityModel: { kind: "unquantified" },
+    settlementModel: "days",
+    reviewedAt: "2026-10-14",
+    v9RouteReviewTerms: {
+      scoringDisposition: "bounded-terms-gap",
+      missingScoringFields: ["capacity", "cost", "settlement"],
+      rationale:
+        "The 2026-10-14 route-evidence review found the current regulated-partner claim lacks operative eligibility, complete fees, funded capacity and completed payout: the October 13 issuer page did not revalidate the historical 100-bps/full-supply terms, and the support tariff redirects to sign-in. Days is a diagnostic category only, not a completed-payout guarantee.",
+      reviewedAt: "2026-10-14",
+      docs: [
+        sourceRef("Transfero BRZ stablecoin (reviewed 2026-10-13)", "https://transfero.com/brz-stablecoin", ["route", "access"]),
+      ],
+    },
+    costModel: undisclosedReviewedFee(
+      "Transfero's historical materials describe a 1% redemption fee in Brazil, but the 2026-10-14 review did not revalidate that tariff as current and the support fee page redirects to sign-in",
+    ),
     docs: [
       sourceRefRouteCapacityAccess(
         "Transfero BRZ stablecoin",
         "https://transferopayments.zendesk.com/hc/en-001/articles/42892203357587-BRZ-The-Brazilian-Real-BRL-Stablecoin",
       ),
       sourceRef(
-        "BRZ deposit and withdrawal fees",
+        "Transfero BRZ page (reviewed 2026-10-13)",
+        "https://transfero.com/brz-stablecoin",
+        ["route", "access"],
+      ),
+      sourceRef(
+        "BRZ deposit and withdrawal fees (support tariff redirects to sign-in; reviewed 2026-10-14)",
         "https://brz.zendesk.com/hc/pt-br/articles/1500009567522-Quais-os-limites-e-taxas-para-dep%C3%B3sito-e-retirada",
         ["route", "fees", "access", "settlement"],
       ),
+    ],
+    notes: [
+      "Fee, capacity and settlement terms reviewed 2026-10-14: the current claim lacks operative eligibility, complete fees, funded capacity and completed payout. The historical 100-bps/1%-fee and full-supply terms were not revalidated as current, so Pharos publishes no current numeric fee or capacity bound.",
     ],
   },
   "ylds-figure": {
