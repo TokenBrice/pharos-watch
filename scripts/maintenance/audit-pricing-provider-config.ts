@@ -6,8 +6,6 @@ import {
   COINBASE_PRODUCTS,
   CEX_PROVIDER_AUDIT_CONFIG,
   KRAKEN_MARKETS,
-  REDSTONE_PROVIDER_AUDIT_CONFIG,
-  REDSTONE_SYMBOL_CONFIG,
 } from "@shared/lib/pricing-provider-config";
 
 export interface AuditSection {
@@ -205,41 +203,6 @@ export async function auditCoinbase(fetchImpl: FetchLike = fetch): Promise<Audit
   };
 }
 
-export async function auditRedstone(fetchImpl: FetchLike = fetch): Promise<AuditSection> {
-  const missing: string[] = [];
-  const notes: string[] = [];
-  const batchSize = 12;
-
-  for (let i = 0; i < REDSTONE_SYMBOL_CONFIG.length; i += batchSize) {
-    const batch = REDSTONE_SYMBOL_CONFIG.slice(i, i + batchSize);
-    const symbolsParam = batch.map((config) => config.apiSymbol).join(",");
-    const payload = await fetchJson<Record<string, unknown>>(
-      `${REDSTONE_PROVIDER_AUDIT_CONFIG.metadataUrl}?symbols=${encodeURIComponent(symbolsParam)}&provider=redstone-primary-prod`,
-      fetchImpl,
-    );
-    if (!isRecord(payload)) {
-      throw new Error("redstone metadata shape drift: expected root object");
-    }
-    for (const config of batch) {
-      if (!(config.apiSymbol in payload)) {
-        missing.push(config.metaSymbol);
-      }
-    }
-  }
-
-  if (missing.length > 0) {
-    notes.push("Missing symbols were absent from the live RedStone snapshot payload");
-  }
-
-  return {
-    provider: "redstone",
-    ok: missing.length === 0,
-    checked: REDSTONE_SYMBOL_CONFIG.length,
-    missing,
-    notes,
-  };
-}
-
 export async function auditOptionalSourceShapes(
   input: {
     fetchImpl?: FetchLike;
@@ -307,7 +270,7 @@ export async function runPricingProviderAudit(
 ): Promise<AuditSection[]> {
   const fetchImpl = options.fetchImpl ?? fetch;
   const sections: AuditSection[] = [];
-  for (const audit of [auditBinance, auditKraken, auditBitstamp, auditCoinbase, auditRedstone]) {
+  for (const audit of [auditBinance, auditKraken, auditBitstamp, auditCoinbase]) {
     sections.push(await audit(fetchImpl));
   }
   if (options.liveSourceShapes) {

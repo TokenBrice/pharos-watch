@@ -15,7 +15,6 @@ export const PRICE_SOURCE_HEALTH_BUCKET_KEYS = [
   "kraken",
   "bitstamp",
   "coinbase",
-  "redstone",
   "kava-pricefeed",
   "mento-fpmm",
   "mento-broker",

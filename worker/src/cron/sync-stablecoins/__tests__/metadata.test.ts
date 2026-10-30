@@ -488,7 +488,7 @@ describe("stablecoins pricing metadata", () => {
         return { id: asset.id, name: asset.name, symbol: asset.symbol, price: null, priceSource: "missing", priceConfidence: null, circulating };
       }
       if (asset.id === "usdy-ondo-finance") {
-        return { id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "redstone", priceConfidence: "single-source", circulating };
+        return { id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "chainlink-nav", priceConfidence: "single-source", circulating };
       }
       return { id: asset.id, name: asset.name, symbol: asset.symbol, price: 1, priceSource: "coingecko", priceConfidence: "high", circulating };
     });

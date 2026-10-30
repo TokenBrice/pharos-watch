@@ -15,7 +15,7 @@ Eligible CoinGecko-detail supply may attach a banded on-chain share partition wh
 
 Pharos separates critical publication from best-effort corroboration:
 
-1. **15-minute publication** runs the full primary consensus: DefiLlama and CoinGecko, the curated CoinGecko ticker and CEX lanes, RedStone, Curve on-chain/oracle, reserve NAV telemetry, promoted DEX observations, and the post-consensus pool challenge. Registered authoritative overrides then run before publication.
+1. **15-minute publication** runs the full primary consensus: DefiLlama and CoinGecko, the curated CoinGecko ticker and CEX lanes, Curve on-chain/oracle, reserve NAV telemetry, promoted DEX observations, and the post-consensus pool challenge. Registered authoritative overrides then run before publication.
 2. **Hourly corroboration** runs after the existing `:09` status-check chain, ahead of the `:15` publication. This avoids the previous full publication-cycle wait after `:00` publication without putting provider requests on the primary path or extending source TTLs. It requires a valid published cache to build its cohort; unavailable or malformed cache reads leave the prior staging untouched. Fallback probes restore curated provider identifiers, contract overrides, and NAV hints omitted from public rows before enrichment. Original missing-price identity survives probe price clearing so bounded provider searches prioritize recovery over low-depth corroboration. It runs `enrichMissingPrices()` and the explicitly enabled exact-address provider against only the latest missing or low-depth rows. It stages actual fetched observations in `price:corroboration-observations:v1` for a later publication to revalidate, separately from ordinary `price_cache` replay provenance. Each hourly attempt also persists a bounded `price-corroboration` cron event with the scheduled slot, Worker version, resolution counts and provider status/error classes. Admin status exposes it as `sync-stablecoins.latestEvent` when it is the newest event; newer critical slot events take precedence. Provider URLs, credentials, response bodies and raw error messages are excluded. DexScreener diagnostics distinguish failed requests from successful empty or price-ineligible responses; circuit and price-admission rules are unchanged. The same 15-minute price-observation refresh also re-observes the rows whose published price comes from the exact-address lane, because those quotes live for a single publication window and are never replayable from `price_cache`; a row that lane prices, or any row still missing a price, gets a fresh exact-address observation each slot instead of waiting for the next hourly collection.
 
 The `:09/:24/:39/:54` refresh also reruns eligible DefiLlama contract and Jupiter fallbacks with separate 25-second envelopes, without changing admission or source TTLs. Refreshed quotes keep fallback confidence and cannot become trusted inherited parents; a child's publication time never refreshes its parent observation.
@@ -33,7 +33,7 @@ USDFC is included in the reviewed CoinGecko low-volume fallback cohort. Its exac
 
 ## Versioning
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.62`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-pricing-pipeline -->`v6.63`<!-- GENERATED-END: methodology-version-pricing-pipeline -->
 - **Canonical version module:** `shared/lib/methodology-versions/registry.ts`
 - **Public changelog route:** `/methodology/pricing-pipeline-changelog/`
 - **Longform methodology section:** `/methodology/#pricing-pipeline-methodology`
@@ -63,7 +63,7 @@ The effective observation clock is the earlier of book retrieval and parent upst
 
 ## Primary Consensus
 
-`fetchPrimaryPrices()` combines DefiLlama intake, CoinGecko, curated exchange tickers, RedStone, Curve, reserve NAV and promoted DEX observations in the critical 15-minute depeg-protective path, then applies pool challenge. Registered protocol/NAV overrides may replace that result afterward. Missing-price fallback/exact-address requests remain outside this invocation: broad corroboration is hourly; short-lived contract, Jupiter, exact-address and exact-DEX quotes refresh quarter-hourly.
+`fetchPrimaryPrices()` combines DefiLlama intake, CoinGecko, curated exchange tickers, Curve, reserve NAV and promoted DEX observations in the critical 15-minute depeg-protective path, then applies pool challenge. Registered protocol/NAV overrides may replace that result afterward. Missing-price fallback/exact-address requests remain outside this invocation: broad corroboration is hourly; short-lived contract, Jupiter, exact-address and exact-DEX quotes refresh quarter-hourly.
 
 CoinMarketCap fallback is outside primary consensus. [Fallback enrichment](process/pricing-pipeline-appendix.md#fallback-enrichment) owns exact-slug/category matching, targeted chain/address identity and verified-cache admission.
 
@@ -87,7 +87,6 @@ Outcome bookkeeping and shared DEX read-clock handling follow the [implementatio
 | Kraken spot | 2 | `worker/src/lib/cex-tickers.ts` | Explicit-pair venue input with alias-safe symbol mapping. |
 | Bitstamp spot | 1 | `worker/src/lib/cex-tickers.ts` | Lower-weight all-tickers corroboration venue. |
 | Coinbase spot | 2 | `worker/src/lib/cex-tickers.ts` | Per-symbol venue input. |
-| RedStone | 1 | `worker/src/lib/redstone.ts` | Fresh exact-case oracle symbols with venue-agreement gating and solo retry recovery. |
 | Curve on-chain and crvUSD oracle | 3 | `worker/src/lib/curve-onchain.ts` | Configured pool routes plus the crvUSD PriceAggregator oracle. |
 | Chainlink/Superstate/JPMorgan reserve NAV telemetry | 3 | `reserve_composition` | Matched fresh reserve snapshots, with fresh/static FX conversion for non-USD NAVs. |
 | Promoted DEX protocol lanes | 2–3 | `worker/src/lib/depeg-helpers.ts` | Per-protocol observations from `dex_prices`; each lane must agree with a hard source or an independent promoted DEX lane, and the aggregate is withheld once an overlapping protocol candidate passes registry, freshness, price and TVL checks, even when every lane then fails corroboration. |
@@ -100,7 +99,7 @@ Curve USDT-reference pools first value USDT through its existing USDC anchor. US
 
 Promoted DEX corroboration is candidate-scoped. A hard-source match admits only the agreeing protocol lane, while DEX-only corroboration requires an independent protocol lane within the existing divergence threshold. Divergent siblings are excluded with `lacked_corroboration` telemetry rather than inheriting another lane's evidence.
 
-The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry and pool-challenge lanes protect depeg detection within publication. Exact-address transport remains detached; CoinGecko Onchain is the sole retained adapter and requires explicit allowlisting. Retired source registry keys, including `pyth`, remain renderable for historical provenance but cannot contribute live observations.
+The primary CEX, ticker, oracle, promoted-DEX, reserve-telemetry and pool-challenge lanes protect depeg detection within publication. Exact-address transport remains detached; CoinGecko Onchain is the sole retained adapter and requires explicit allowlisting. Retired source registry keys, including `pyth` and `redstone`, remain renderable for historical provenance but cannot contribute live observations.
 
 The current exact-address lane also requires a configured CoinGecko key and canonical deployment identity. It targets missing prices or below-target source depth under its existing freshness, liquidity and request-budget gates; hourly corroboration and slot-level refresh neither bypass admission nor renew an old observation. Public source tables name only this adapter. DexScreener exact-pool enrichment/refresh is a separate live fallback, not the retired DexScreener address-provider adapter; retired adapters belong in the canonical pricing release history, not the active inventory.
 
@@ -166,7 +165,7 @@ Before any pool-challenge divergence or replacement decision, protocol-level cha
 Replacement retains diagnostic candidates but discards their pre-replacement prices; only `pool-tvl-weighted` contributes, with the oldest contributing clock and `local_fetch` provenance.
 
 If the selected primary price is a severe fixed-peg downside and at least two live candidate sources independently
-corroborate that downside by source family, including at least one depeg-authoritative source such as RedStone or Curve on-chain, pool challenge can still
+corroborate that downside by source family, including at least one depeg-authoritative source such as Curve on-chain, pool challenge can still
 downgrade confidence but cannot replace the selected price with a DEX pool median. The same candidate corroboration
 also satisfies the temporal-jump guard when the previous trusted price was near peg. This keeps near-peg or stale DEX
 liquidity from erasing a corroborated severe depeg while preserving the normal challenge behavior for weak,
@@ -176,7 +175,7 @@ Promotion consumes protocol aggregates; pool challenges consume dedicated challe
 
 Dead or explicitly blocked DEX ids, including Bunni and its chain-scoped variants, are filtered upstream and cannot contribute challenger pools, promoted DEX bridge sources, or pool-challenge replacement marks.
 
-This catches weak-source agreement derived from small pools while larger pools show a depeg. Exemption is registry-owned: a selected cluster containing a hard market/oracle/protocol source is not pool-challenged; RedStone does not require additional multi-venue agreement for that exemption.
+This catches weak-source agreement derived from small pools while larger pools show a depeg. Exemption is registry-owned: a selected cluster containing a hard market/oracle/protocol source is not pool-challenged.
 
 ---
 

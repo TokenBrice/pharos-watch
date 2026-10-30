@@ -129,11 +129,11 @@ export function PricingPipelineMethodologySection({
                 ),
               },
               {
-                title: "Oracles",
+                title: "Reserve NAV",
                 subtitle: (
                   <>
-                    <span className="md:hidden">RS (w1)</span>
-                    <span className="hidden md:inline"><span>RedStone (w1)</span></span>
+                    <span className="md:hidden">CL/SS/JPM (w3)</span>
+                    <span className="hidden md:inline"><span>Chainlink / Superstate</span><br /><span>JPMorgan (w3)</span></span>
                   </>
                 ),
               },
@@ -192,7 +192,6 @@ export function PricingPipelineMethodologySection({
                 ["Kraken", "2", "CEX", "Explicit pair mapping with alias-safe response handling"],
                 ["Bitstamp", "1", "CEX", "Lower-weight corroboration via the all-tickers endpoint"],
                 ["Coinbase", "2", "CEX", "Per-symbol spot prices"],
-                ["RedStone", "1", "Oracle", "Per-venue breakdown; requires at least 2 venues and 60% agreement"],
                 ["Curve on-chain", "3", "On-chain", <>StableSwap implied prices via explicit direct, one-hop, and opt-in chained-hop <code className="text-xs">get_dy()</code> routes</>],
                 ["Curve oracle", "3", "On-chain", <>Additional primary-consensus voice for <code className="text-xs">crvusd-curve</code></>],
                 ["DEX pools", "1", "On-chain", "Aggregate DEX voice, withheld once an overlapping protocol DEX candidate passes registry, freshness, price and TVL checks, even if corroboration later fails; the reviewed VUSD route may enter primary publication at the existing $250K UI floor while remaining soft and non-depeg-authoritative"],

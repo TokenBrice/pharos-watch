@@ -504,69 +504,6 @@ describe("fetchPrimaryPrices", () => {
     expect(stats.attempted).toBe(1);
   });
 
-  it("uses exact-case RedStone symbols and recovers batch-dropped results with solo retry", async () => {
-    const assets = [
-      makePeggedAsset({ id: "usde-ethena", name: "Ethena USDe", symbol: "USDe", geckoId: "ethena-usde" }),
-      makePeggedAsset({ id: "fxusd-f-x-protocol", name: "fxUSD", symbol: "fxUSD", geckoId: "fxusd" }),
-    ];
-
-    const fetchMock = installPrimaryPriceRoutes({
-      "coins.llama.fi": { body: { coins: {} } },
-      coingecko: { body: {} },
-      "api.redstone.finance": (url) => url.includes("symbols=USDe%2CfxUSD")
-        ? {
-            body: {
-              USDe: {
-                value: 1.0003,
-                source: { curve: 1.0003, uniswap: 1.0002 },
-                timestamp: Date.now(),
-              },
-            },
-          }
-        : {
-            body: {
-              fxUSD: {
-                value: 0.9997,
-                source: { curve: 0.9997, chainlink: 0.9998 },
-                timestamp: Date.now(),
-              },
-            },
-          },
-    });
-
-    const db = makeTestDb();
-    const { results, stats } = await fetchPrimaryPrices(assets, db);
-
-    expect(fetchMock).toHaveBeenCalledWith(expect.stringContaining("symbols=USDe%2CfxUSD"), expect.any(Object));
-    expect(results.get("usde-ethena")?.source).toBe("redstone");
-    expect(results.get("usde-ethena")?.confidence).toBe("single-source");
-    expect(results.get("fxusd-f-x-protocol")?.source).toBe("redstone");
-    expect(results.get("fxusd-f-x-protocol")?.price).toBeCloseTo(0.9997, 4);
-    expect(stats.singleSource).toBe(2);
-  });
-
-  it("excludes single-venue RedStone prices from primary consensus", async () => {
-    const assets = [makePeggedAsset({
-      id: "usde-ethena",
-      name: "Ethena USDe",
-      symbol: "USDe",
-      geckoId: "ethena-usde",
-    })];
-
-    installPrimaryPriceRoutes({
-      coingecko: { body: {} },
-      "api.redstone.finance": {
-        body: { USDe: { value: 1.0003, source: { curve: 1.0003 }, timestamp: Date.now() } },
-      },
-    });
-
-    const db = makeTestDb();
-    const { results, stats } = await fetchPrimaryPrices(assets, db);
-
-    expect(results.size).toBe(0);
-    expect(stats.attempted).toBe(1);
-    expect(stats.singleSource).toBe(0);
-  });
 });
 
 describe("applyResolvedPrice", () => {
@@ -589,5 +526,4 @@ describe("applyResolvedPrice", () => {
     expect(asset.priceUpdatedAt).toBe(1000);
     expect(asset.consensusSources).toEqual(["cmc"]);
   });
-
 });

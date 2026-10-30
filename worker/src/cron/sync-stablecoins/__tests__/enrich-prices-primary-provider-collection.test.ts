@@ -92,10 +92,10 @@ describe("critical publication provider collection", () => {
     vi.restoreAllMocks();
   });
 
-  it("keeps all ten primary provider circuits in the 15-minute plan", async () => {
+  it("keeps all nine primary provider circuits in the 15-minute plan", async () => {
     await buildPrimaryPricePlan([TEST_ASSET], {} as D1Database);
 
-    expect(shouldAttemptFetch).toHaveBeenCalledTimes(10);
+    expect(shouldAttemptFetch).toHaveBeenCalledTimes(9);
     expect(vi.mocked(shouldAttemptFetch).mock.calls.map(([, source]) => source)).toEqual([
       CIRCUIT_SOURCE.CG_PRICES,
       CIRCUIT_SOURCE.CG_TICKER,
@@ -103,7 +103,6 @@ describe("critical publication provider collection", () => {
       CIRCUIT_SOURCE.KRAKEN_PRICES,
       CIRCUIT_SOURCE.BITSTAMP_PRICES,
       CIRCUIT_SOURCE.COINBASE_PRICES,
-      CIRCUIT_SOURCE.REDSTONE_PRICES,
       CIRCUIT_SOURCE.CURVE_ONCHAIN,
       CIRCUIT_SOURCE.CURVE_ORACLE,
       CIRCUIT_SOURCE.HIVE_MARKET,

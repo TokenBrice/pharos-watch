@@ -446,8 +446,9 @@ describe("circuit-breaker", () => {
     });
   });
 
-  it("does not list the retired Pyth provider circuit", () => {
+  it("does not list retired provider circuits", () => {
     expect(listActiveCircuitSources()).not.toContain("pyth-prices");
+    expect(listActiveCircuitSources()).not.toContain("redstone-prices");
   });
 
   it("excludes retained DefiLlama confirmation state from active public outages", () => {

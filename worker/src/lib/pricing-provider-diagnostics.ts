@@ -24,7 +24,6 @@ export type PricingProviderDiagnosticSource =
   | "birdeye-address"
   | "coingecko-onchain-address"
   | "geckoterminal"
-  | "redstone"
   | "curve-onchain"
   | "curve-oracle"
   | "dex-promoted"

@@ -92,30 +92,6 @@ describe("audit-pricing-provider-config", () => {
           { id: "HONEY-USD", status: "online" },
         ]);
       }
-      if (href.includes("redstone")) {
-        return jsonResponse({
-          ALUSD: {},
-          aUSD: {},
-          CETES: {},
-          DAI: {},
-          EUROC: {},
-          eUSD: {},
-          FDUSD: {},
-          FRAX: {},
-          frxUSD: {},
-          GHO: {},
-          HONEY: {},
-          LUSD: {},
-          PYUSD: {},
-          USD1: {},
-          USDC: {},
-          USDT: {},
-          USDe: {},
-          XAUt: {},
-          crvUSD: {},
-          fxUSD: {},
-        });
-      }
       return new Response("not found", { status: 404 });
     });
 
