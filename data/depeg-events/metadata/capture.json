@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
-  "captureId": "sha256:92716e6f4db9f54075a32ddd515e0a5de32fa06b02cbbb0283e8df3b4f1541c5",
-  "observationStartedAtISO": "2026-10-17T23:57:51.608Z",
-  "observedAtISO": "2026-10-17T23:58:10.527Z",
+  "captureId": "sha256:3be536f9806ec9f4751f7f27eb3e34c126de37fd21112c1b662ff7cf6109fcd0",
+  "observationStartedAtISO": "2026-10-30T21:18:44.272Z",
+  "observedAtISO": "2026-10-30T21:18:59.089Z",
   "sourceUrl": "https://api.pharos.watch/api/depeg-events",
-  "methodologyVersionLabel": "v6.34",
-  "eventCount": 34301,
-  "apiTotal": 34301
+  "methodologyVersionLabel": "v6.38",
+  "eventCount": 34368,
+  "apiTotal": 34367
 }

@@ -23452,28 +23452,6 @@
     "slug": "gusd-2020-08-13-up-39269"
   },
   {
-    "id": 88717,
-    "stablecoinId": "idrt-rupiah-token",
-    "symbol": "IDRT",
-    "pegType": "peggedIDR",
-    "direction": "above",
-    "peakDeviationBps": 7026,
-    "startedAt": 1597276800,
-    "endedAt": 1597363200,
-    "startPrice": 1.7026464039410176,
-    "peakPrice": 1.7026464039410176,
-    "recoveryPrice": 0.9940651452960366,
-    "pegReference": 1,
-    "source": "backfill",
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "constituentEventCount": 1,
-    "slug": "idrt-2020-08-13"
-  },
-  {
     "id": 26250,
     "stablecoinId": "dai-makerdao",
     "symbol": "DAI",

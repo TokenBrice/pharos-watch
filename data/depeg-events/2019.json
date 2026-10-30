@@ -6380,28 +6380,6 @@
     "slug": "susd-2019-10-04-down"
   },
   {
-    "id": 42626,
-    "stablecoinId": "susd-synthetix",
-    "symbol": "SUSD",
-    "pegType": "peggedUSD",
-    "direction": "above",
-    "peakDeviationBps": 9504,
-    "startedAt": 1570165217,
-    "endedAt": 1570172530,
-    "startPrice": 1.9503983931818119,
-    "peakPrice": 1.9503983931818119,
-    "recoveryPrice": 1.0094267125351013,
-    "pegReference": 1,
-    "source": "backfill",
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "constituentEventCount": 1,
-    "slug": "susd-2019-10-04-up-42626"
-  },
-  {
     "id": 88693,
     "stablecoinId": "idrt-rupiah-token",
     "symbol": "IDRT",

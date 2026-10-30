@@ -24926,28 +24926,6 @@
     "slug": "cadc-2023-06-21"
   },
   {
-    "id": 60486,
-    "stablecoinId": "uusd-youves",
-    "symbol": "UUSD",
-    "pegType": "peggedUSD",
-    "direction": "above",
-    "peakDeviationBps": 8890,
-    "startedAt": 1687302086,
-    "endedAt": 1687305679,
-    "startPrice": 1.8890331894642174,
-    "peakPrice": 1.8890331894642174,
-    "recoveryPrice": 1.00122449615205,
-    "pegReference": 1,
-    "source": "backfill",
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "constituentEventCount": 1,
-    "slug": "uusd-2023-06-20"
-  },
-  {
     "id": 46039,
     "stablecoinId": "lusd-liquity",
     "symbol": "LUSD",

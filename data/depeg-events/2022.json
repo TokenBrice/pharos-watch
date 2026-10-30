@@ -3146,28 +3146,6 @@
     "slug": "iron-2022-12-10-down-76531"
   },
   {
-    "id": 89231,
-    "stablecoinId": "eurc-circle",
-    "symbol": "EURC",
-    "pegType": "peggedEUR",
-    "direction": "below",
-    "peakDeviationBps": -9499,
-    "startedAt": 1670630400,
-    "endedAt": 1670889600,
-    "startPrice": 0.050057451091451086,
-    "peakPrice": 0.050057451091451086,
-    "recoveryPrice": 0.9990469087997629,
-    "pegReference": 1,
-    "source": "backfill",
-    "confirmationSources": null,
-    "pendingReason": null,
-    "closeReason": null,
-    "priceCoverage": null,
-    "provenance": null,
-    "constituentEventCount": 1,
-    "slug": "eurc-2022-12-10"
-  },
-  {
     "id": 60136,
     "stablecoinId": "uusd-youves",
     "symbol": "UUSD",
