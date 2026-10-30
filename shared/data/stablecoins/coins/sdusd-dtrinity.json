@@ -65,6 +65,7 @@
   ],
   "launchDate": "2025-10-13",
   "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
   "mechanismArchetypeReview": {
     "disposition": "resolved",
     "reviewedAt": "2026-10-30",
