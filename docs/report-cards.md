@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.36`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.37`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v8, API wrapper v9 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity; domain `safety-score-v9.evaluation-build.v2` hashes reviewed JSON data by its stable parsed value, so formatting/key-order-only edits do not, while executable sources stay byte-hashed. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -61,8 +61,6 @@ Verified worse facts score lower than unresolved ones: an opaque controller prov
 
 Rated cards are **Provisional** at **>50% unknown-constant scoring weight**. Optional `provisional: true` / `unknownPricedWeightShare` are absent otherwise and on older archives. Sum original pillar weights × effective C/U component/subfactor weights, including controlling paths and a priced missing third pillar; exclude measured adversity, excluded factors and verified pool-less supply. Label only: no score/grade/availability change or new ±1 boundary hold.
 
-Whole-liability attribution (WS04-A08) and independent ordinary bridge clocks (WS04-A09) remain deferred. Current supply denominators, aggregate fallback, bridge applicability, route clocks and mint scope stand; any later clock change must preserve admitted active incidents.
-
 XRPL liabilities bind the validated ledger hash/true close time. Pending proof is role-specific: escrow support grants no independent-liability eligibility. Missing/rejected reads prove no zero pending supply.
 
 Exit selects the best admissible singleton/independent pair. Same-resource alternatives remain selectable but gain no diversification and share at most their maximum executable capacity; stale/diagnostic rows reserve no resources.
@@ -88,6 +86,8 @@ Shared-chain/bridge losses remain proportional, never caps. Evaluated quality wi
 Shared-chain maturity charges require a date-admitted authored failing gate. Pending, unreviewed/missing, expired-passing or dead/non-supporting citation reviews remain Pharos-side **U diagnostics**, retaining measured exposure but adding no synthetic scored gap or chain charge. Authored failures retain proportional losses. There is no new below-5% deployment floor.
 
 Public U means “Unresolved”, including researched but inconclusive evidence; machine keys/scoring are unchanged.
+
+Documentation gaps are a policy determination, not a fourth cause, and change no evidence level: a limited pillar reads "limited · documentation gaps only" only when every `limitingCauseGapIds` entry resolves to a documentation gap ([class](process/report-cards-appendix.md#documentation-class-v1037)).
 
 Headlines follow score-matching binding Control components/credited Exit routes. Humanized labels/rounded display preserve machine identity/precision. Active deployment-incident headlines need **≥0.5 directly attributed points**, unless compromised authority binds Control. Detailed losses remain; inherited risk uses parent limits. Unwired freshness is **not assessed**, never publication time.
 

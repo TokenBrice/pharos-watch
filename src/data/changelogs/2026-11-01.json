@@ -4,7 +4,7 @@
     "to": "2026-11-01"
   },
   "headline": "Safety Score counts each open question once, and /coverage/ publishes the three numbers behind each grade.",
-  "fieldNotes": "Most of the week's Safety Score work went into one question: what is missing, and who is responsible? The publication now counts each open question once at the asset that roots it, splits the total into open questions, not disclosed by issuers and documentation gaps, and refuses to print a zero when a publication predates the counts. Nothing about scoring changed.",
+  "fieldNotes": "Most of the week's Safety Score work went into one question: what is missing, and who is responsible? The publication now counts each open question once at the asset that roots it, splits the total into open questions, not disclosed by issuers and documentation gaps, and refuses to print a zero when a publication predates the counts. Documentation gaps now carry policy reasons, a fail-closed card label and a durable lapse. No score moved.",
   "summary": [
     {
       "label": "Open-question counts",
@@ -19,6 +19,16 @@
       "href": "/api/"
     },
     {
+      "label": "Documentation gaps",
+      "tag": "coverage",
+      "description": "A policy-owned documentation class now marks the open questions whose resolution cannot materially move a score, under six published reasons and two strict bars. Pricing, causes, caps and evidence levels stay byte-identical, and a card reads \"limited · documentation gaps only\" only when every limiting witness is documentation."
+    },
+    {
+      "label": "Missing-data registry v3",
+      "tag": "infra",
+      "description": "The curation registry gains documentation and issuer bands, keys its questions through the shared counting authority, and drops a supplement only when every obligation it carries is already a compiled task, so the worklist shows 72 supplements instead of 469 on the current capture."
+    },
+    {
       "label": "Scores dataset v2",
       "tag": "infra",
       "description": "The scores dataset display projection carries the same totals with their semantics, plus a machine-readable reason when a generation predates them, so missing counts never read as zero."
@@ -30,28 +40,28 @@
     }
   ],
   "stats": {
-    "totalCommits": 343
+    "totalCommits": 360
   },
   "commits": [
+    { "hash": "3fed1765", "message": "feat(safety-score): publish documentation counts and documentation-only annotations" },
+    { "hash": "3c1a7d02", "message": "test(safety-score): pin the documentation-class invariants and fail-closed annotation" },
+    { "hash": "71318c26", "message": "feat(registry): dedupe registry supplements against compiled tasks" },
+    { "hash": "3aec22f3", "message": "feat(safety-score): project documentation carriers and documentation-only limited pillars" },
     { "hash": "d7186223", "message": "fix(coverage): give every open-evidence owner a distinct rail swatch" },
     { "hash": "a38c1418", "message": "test(safety-score): prove restatement aliases are score-neutral at the exit pillar" },
     { "hash": "a47d31b7", "message": "fix(safety-score): let provider-wide reviews omit assetId in the authored envelope" },
     { "hash": "28f2ae27", "message": "docs(coverage): document the open-evidence counting and API contract" },
     { "hash": "57bff3ed", "message": "fix(safety-score): finalize the open-evidence contract per contract review" },
+    { "hash": "5cc9369d", "message": "test(safety-score): read the asset score from the trace in the exit-coverage invariant" },
+    { "hash": "ad826a70", "message": "fix(safety-score): gate durable custody lapse on the retention flag alone" },
+    { "hash": "0d779691", "message": "refactor(safety-score): drop per-reason retention from the documentation policy block" },
     { "hash": "3dd33696", "message": "fix(safety-score): tighten incident-review contracts per contract review" },
     { "hash": "c666a424", "message": "refactor(safety-score): single authority for documentation retention and thresholds" },
     { "hash": "c7a1ad5b", "message": "fix(safety-score): serve every archived report8 snapshot through the historical schema" },
-    { "hash": "eb95a75d", "message": "fix(safety-score): alias source-less restatements to their compiled gaps" },
-    { "hash": "93afd377", "message": "feat(safety-score): mirror the documentation-only annotation into the detail projection" },
-    { "hash": "75951a3d", "message": "feat(safety-score): publish openEvidence in publication schema 8 and API envelope 9" },
-    { "hash": "9ae51bae", "message": "fix(datasets): accept scores-latest projection v2 in the preview and SEO checks" },
-    { "hash": "4ce94376", "message": "feat(safety-score): count open evidence once per question at its root asset" },
-    { "hash": "3d29dd5c", "message": "feat(coverage): show the three open-evidence numbers on /coverage/" },
-    { "hash": "a863f2ae", "message": "feat(safety-score): emit authored bridge control identities for question keys" },
-    { "hash": "0f9f4fe7", "message": "feat(datasets): carry open-evidence totals in the scores-latest display projection v2" },
-    { "hash": "1b2b6a94", "message": "feat(safety-score): add inert incident-review evidence contracts" },
-    { "hash": "b7d5a3df", "message": "feat(safety-score): freeze the open-evidence publication contract (schema 8, API 9)" },
-    { "hash": "d93d1073", "message": "feat(safety-score): add documentation-class vocabulary and optional policy schema" },
-    { "hash": "70b0fe35", "message": "data(xgz): correct GoldZip page after issuer review" }
+    { "hash": "3c3fc45a", "message": "refactor(curation): key registry questions through the shared open-questions authority" },
+    { "hash": "89f48318", "message": "test(safety-score): pin exit and backing documentation-class invariants" },
+    { "hash": "6ec31640", "message": "feat(curation): missing-data registry schema 3 with documentation and issuer bands" },
+    { "hash": "30afb5a4", "message": "feat(safety-scores): annotate pillars limited only by documentation gaps" },
+    { "hash": "eb95a75d", "message": "fix(safety-score): alias source-less restatements to their compiled gaps" }
   ]
 }

@@ -591,11 +591,11 @@ function policyWithDocumentation(documentation: unknown): unknown {
 }
 
 describe("documentation-class policy", () => {
-  it("stays optional for the counting train and binds an authored block into the digest", () => {
-    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation).toBeUndefined();
+  it("binds the authored block into the digest", () => {
+    expect(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation).toEqual(documentationFixture());
     const loaded = loadV9MethodologyPolicy(policyWithDocumentation(documentationFixture()));
     expect(loaded.policy.semantic.evidence.documentation).toEqual(documentationFixture());
-    expect(loaded.semanticDigest).not.toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
+    expect(loaded.semanticDigest).toBe(V9_CANDIDATE_POLICY_V1.semanticDigest);
   });
 
   it.each([
