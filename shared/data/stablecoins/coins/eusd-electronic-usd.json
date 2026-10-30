@@ -2,12 +2,12 @@
   "id": "eusd-electronic-usd",
   "name": "Electronic Dollar",
   "symbol": "EUSD",
-  "oneLiner": "EUSD is a Reserve Protocol RToken backed by a basket of yield-bearing Aave and Compound USDC/USDT lending positions, with RSR stakers as first-loss buffer.",
+  "oneLiner": "EUSD is a Reserve Protocol RToken backed by yield-bearing Aave, Compound and Morpho vaults holding USDC, USDT and PYUSD, with RSR first-loss buffer.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Diversified basket of yield-bearing stablecoin derivatives: Aave V3 USDC, Compound V3 USDC, and Compound V3 USDT; RSR stakers provide first-loss overcollateralization",
+  "collateral": "Yield-bearing basket: Static Aave USDT, Compound V3 USDC, Gauntlet Prime and Frontier Morpho vaults, Sentora PYUSD; RSR stakers absorb first loss",
   "pegMechanism": "Permissionless 1:1 mint and redemption against underlying collateral basket; RSR stakers absorb first losses in case of collateral default; basket rebalances via Dutch/batch auctions",
   "llamaId": "106",
   "detailProvider": "defillama",

@@ -87,5 +87,12 @@
       }
     }
   },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Arbitrum wind-down approved (AIP-124)",
+      "message": "Alchemix AIP-124 passed, deprecating alAsset bridging and winding down v3 on Arbitrum; execution steps unannounced. alUSD stays live on Ethereum and Optimism."
+    }
+  ],
   "launchDate": "2021-02-27"
 }
