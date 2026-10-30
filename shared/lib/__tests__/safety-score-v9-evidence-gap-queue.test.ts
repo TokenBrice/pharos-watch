@@ -1,13 +1,19 @@
 import { describe, expect, it } from "vitest";
 import policyAsset from "@shared/data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { compileV9FactSetV3 } from "@shared/lib/safety-score-v9/compile";
-import { buildV9EvidenceGapQueue, parseV9EvidenceGapQueue } from "@shared/lib/safety-score-v9/evidence-gap-queue";
+import {
+  buildV9EvidenceGapQueue,
+  isV9DocumentationGapEntry,
+  parseV9EvidenceGapQueue,
+  v9ResearchedTerminalReviewState,
+} from "@shared/lib/safety-score-v9/evidence-gap-queue";
 import { loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { createV9FactGapV3 } from "@shared/lib/safety-score-v9/reasons";
 
 import {
-  V9EvidenceGapQueueV2Schema,
+  V9EvidenceGapQueueV3Schema,
 } from "@shared/types/safety-score-v9-evidence-queue";
+import { V9DocumentationReasonSchema } from "@shared/types/safety-score-v9";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-fact-primitives";
 import { factStatuses, V9FactStatusV2Schema, type V9FactSetCoreV3, type V9FactStatusV2 } from "@shared/types/safety-score-v9-facts";
 import { compileNativeV3FactSet, coreFixture } from "./safety-score-v9-facts.fixture-support";
@@ -283,6 +289,46 @@ function factSetV3WithResponsibility(responsibility: V9EvidenceResponsibility) {
   return compileV9FactSetV3(core);
 }
 
+/**
+ * Alpha from the shared fixture retains an exit route, so the DEX coverage
+ * label is admitted (the zero-route veto stays untouched). The gap is appended
+ * where the producer emits it, so the rest of alpha's census stays intact.
+ */
+function coverageLabelFactSetCore(): V9FactSetCoreV3 {
+  const compiled = compileNativeV3FactSet(coreFixture());
+  const { v9FactSetDigest: _digest, ...core } = structuredClone(compiled) as unknown as V9FactSetCoreV3 & {
+    v9FactSetDigest: string;
+  };
+  const asset = core.assets.find((candidate) => candidate.assetId === "alpha")!;
+  const gapId = "alpha:gap:exit-portfolio-coverage";
+  asset.gaps.push(createV9FactGapV3({
+    gapId,
+    reasonCode: "incomplete-dex-route-coverage",
+    ownerDomain: "exit",
+    policyRuleId: "v9.exit.same-notional-route",
+    observationState: "bounded-unknown",
+    responsibility: "unresearched",
+    path: { kind: "local-component", componentKey: "exit-portfolio-coverage" },
+    message: "Reviewed DEX execution-capability pools do not all carry score-eligible exact route observations.",
+    evidenceRefIds: [],
+    causeScope: {
+      pillar: "exit",
+      componentKey: "exit-portfolio-coverage",
+      factorKey: null,
+      routeKey: null,
+      exposureId: null,
+      requiredDatum: "dex-route-coverage",
+    },
+  }));
+  asset.exitStatus = {
+    applicability: { state: "required", policyRuleId: "v9.exit.same-notional-route", rationale: null, gapId: null },
+    observationState: "bounded-unknown",
+    evidenceRefIds: [asset.evidence[0]!.evidenceId],
+    gapIds: [gapId],
+  };
+  return core;
+}
+
 describe("Safety Score v9 evidence-gap queue", () => {
   it("matches every nested status location against an independent structural census", () => {
     const asset: V9FactSetCoreV3["assets"][number] =
@@ -425,8 +471,9 @@ describe("Safety Score v9 evidence-gap queue", () => {
     );
     const queue = buildV9EvidenceGapQueue({ factSet, policy: loadV9MethodologyPolicy(policyAsset) });
 
-    expect(V9EvidenceGapQueueV2Schema.parse(queue)).toEqual(queue);
+    expect(V9EvidenceGapQueueV3Schema.parse(queue)).toEqual(queue);
     expect(queue).toMatchObject({
+      schemaVersion: 4,
       purpose: "evidence-work-queue-not-release-gate",
       status: "work-required",
       facts: {
@@ -535,6 +582,8 @@ describe("Safety Score v9 evidence-gap queue", () => {
         action: "collect-evidence",
         cause: "U",
         evidenceRefIds: [EVIDENCE.evidenceId],
+        documentation: null,
+        reviewState: null,
       });
       expect(queue.entries[0]!.materiality).toEqual(
         materialSupplyShare === null
@@ -631,7 +680,7 @@ describe("Safety Score v9 evidence-gap queue", () => {
         controlKeys: [controlKey],
       },
     });
-    expect(V9EvidenceGapQueueV2Schema.parse(queue)).toEqual(queue);
+    expect(V9EvidenceGapQueueV3Schema.parse(queue)).toEqual(queue);
   });
 
   it("leaves bridgeJoin null on a gap that is not bridge-scoped", () => {
@@ -684,5 +733,84 @@ describe("Safety Score v9 evidence-gap queue", () => {
       policyBindingIssues: [],
       action: "collect-evidence",
     });
+  });
+
+  it("flags a DEX coverage label as documentation and keeps the datum counted and addressable", () => {
+    const core = coverageLabelFactSetCore();
+    const inputGapCount = core.assets.reduce((total, asset) => total + asset.gaps.length, 0);
+    const queue = buildV9EvidenceGapQueue({
+      factSet: compileV9FactSetV3(core),
+      policy: loadV9MethodologyPolicy(policyAsset),
+    });
+    const entry = queue.entries.find((candidate) => candidate.gapId === "alpha:gap:exit-portfolio-coverage")!;
+
+    expect(entry.documentation).toEqual({
+      class: "documentation",
+      reason: "coverage-label",
+      policyRef: "semantic.evidence.documentation.reasons.coverage-label",
+      threshold: null,
+    });
+    expect(isV9DocumentationGapEntry(entry)).toBe(true);
+    expect(entry.reviewState).toBeNull();
+    // Documentation work leaves the default drain, never the queue: the datum
+    // keeps its address and priority and the census still counts it.
+    expect(queue.entries).toContain(entry);
+    expect(entry.priority).toBeGreaterThan(0);
+    expect(queue.summary.gapCount).toBe(inputGapCount);
+    expect(queue.summary.documentationGapCount).toBe(queue.entries.filter(isV9DocumentationGapEntry).length);
+    expect(queue.summary.documentationReasonCounts.map((row) => row.reason)).toEqual([
+      ...V9DocumentationReasonSchema.options,
+    ]);
+    expect(queue.summary.documentationReasonCounts.find((row) => row.reason === "coverage-label")!.count).toBe(1);
+    expect(queue.summary.documentationReasonCounts.reduce((total, row) => total + row.count, 0)).toBe(
+      queue.summary.documentationGapCount,
+    );
+    expect(queue.summary.researchedTerminalGapCount).toBe(0);
+  });
+
+  it("dates the issuer researched-terminal recheck one research horizon after the proof's review", () => {
+    const maxAgeSec = loadV9MethodologyPolicy(policyAsset).policy.semantic.evidence.evidenceExpiry
+      .reviewedResearchMaxAgeSec;
+    expect(maxAgeSec).toBe(31_536_000);
+    const proof = {
+      cause: "C" as const,
+      classificationId: "fixture:issuer-nondisclosure",
+      assertion: "researched-nondisclosure" as const,
+      reviewedAt: "2026-10-03T00:00:00Z",
+      reviewer: "fixture",
+      searchedSurfaces: ["https://issuer.example/terms"],
+      rationale: "The issuer does not publish the required datum.",
+      sources: [{
+        url: "https://issuer.example/terms",
+        observedAt: "2026-10-03T00:00:00Z",
+        datumAsOf: null,
+        location: "Terms",
+        excerpt: "The required datum is not published.",
+        assertion: "The required datum is not published.",
+      }],
+      evidenceRefIds: ["evidence:research"],
+    };
+
+    expect(v9ResearchedTerminalReviewState(proof, maxAgeSec)).toEqual({
+      state: "researched-terminal",
+      reviewedAtSec: Date.parse("2026-10-03T00:00:00Z") / 1_000,
+      recheckAtSec: Date.parse("2026-10-03T00:00:00Z") / 1_000 + 31_536_000,
+      trigger: "cause-proof-expiry",
+    });
+    // A date-only review keeps the same UTC-day pin, and a non-issuer proof
+    // stays in the default drain.
+    expect(v9ResearchedTerminalReviewState(
+      { ...proof, reviewedAt: "2026-10-03" },
+      maxAgeSec,
+    )?.recheckAtSec).toBe(Date.parse("2026-10-03T00:00:00Z") / 1_000 + 31_536_000);
+    expect(v9ResearchedTerminalReviewState(
+      { cause: "B", classificationId: "fixture", assertion: "required-data-public", reviewedAt: "2026-10-03T00:00:00Z",
+        reviewer: "fixture", sources: proof.sources, evidenceRefIds: ["evidence:research"] },
+      maxAgeSec,
+    )).toBeNull();
+    expect(v9ResearchedTerminalReviewState(
+      { cause: "U", reason: "not-yet-researched", evidenceRefIds: [] },
+      maxAgeSec,
+    )).toBeNull();
   });
 });

@@ -10,7 +10,7 @@ import { makeReportCardsV9Card, makeReportCardsV9PartialCard, makeReportCardsV9P
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC } from "../../lib/api-freshness-age";
-import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9CurrentResponseSchema } from "\@shared/types/report-cards-v9-current";
 import { ReportCardsV9DetailResponseSchema } from "@shared/types/report-cards-v9-projections";
 import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";

@@ -128,6 +128,30 @@ describe("canonical selector snapshot recomputation", () => {
     expect(reportCardsFetch?.headers[SITE_DATA_PROXY_SECRET_HEADER.toLowerCase()]).toBe("test-secret");
   });
 
+  it("recomputes the same verified snapshot from a report9 publication", async () => {
+    mockFetch(
+      [...canonicalPayloads(makeReportCardsV9Response({ cards: [makeV9Card({ id: "usdc-circle" })] }))]
+        .map(([path, body]) => ({
+          match: `https://site-api.pharos.watch${path}`,
+          body,
+        })),
+      { requireMatch: true, strictUrl: true },
+    );
+
+    const output = await recomputeVerifiedSelectorSnapshot(
+      input,
+      new Request("https://pharos.watch/selector-snapshot", { method: "POST" }),
+      {
+        SITE_API_ORIGIN: "https://site-api.pharos.watch",
+        SITE_API_SHARED_SECRET: "test-secret",
+      },
+      1_700_000_000_000,
+    );
+
+    expect(output.provenance).toBe("pharos-verified");
+    expect(output.recommended.map((coin) => coin.id)).toEqual(["usdc-circle"]);
+  });
+
   it("retains stale-200 supply evidence through canonical recomputation, KV storage and replay", async () => {
     const payloads = canonicalPayloads();
     const freshness = {

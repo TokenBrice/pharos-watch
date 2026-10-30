@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SafetyScoreV9CurrentResponseSchema } from "../safety-score-v9-public";
+import { SafetyScoreV9CurrentResponseSchema } from "../safety-score-v9-publication-response";
 import { explainSafetyScoreV9PillarFreshness, SafetyScoreV9PillarFreshnessSchema } from "../safety-score-v9-public-facts";
 import { currentResponse } from "./safety-score-v9-public.test-support";
 

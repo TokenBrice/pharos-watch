@@ -37,6 +37,7 @@ import {
   projectV9ExitEvaluationRoute,
   resolveV9ExitSupplySizing,
   type V9ExitEvaluationResult,
+  type V9ExitRouteTrace,
 } from "./exit";
 import {
   V9_LEGACY_RESPONSIBILITY_BY_REASON,
@@ -685,6 +686,86 @@ function diagnosticOptionalExitGapIds(asset: V9AssetFactsV3, result: V9ExitEvalu
   }));
 }
 
+/** Structural slice of a compiled asset the restatement aliases need. */
+export interface V9ExitRestatementRouteFacts {
+  readonly routeKey: string;
+  readonly factorStatuses?: {
+    readonly output?: { readonly gapIds: readonly string[] } | undefined;
+  } | undefined;
+}
+
+export interface V9ExitRestatementAssetFacts {
+  readonly exitStatus: { readonly gapIds: readonly string[] };
+  readonly exitRoutes: readonly V9ExitRestatementRouteFacts[];
+}
+
+export interface V9DependencyRestatementAssetFacts {
+  readonly dependencies: { readonly status: { readonly gapIds: readonly string[] } };
+}
+
+/**
+ * A source-less exit restatement names the compiled route question it restates
+ * instead of standing as a separate obligation. Only an unambiguous exact gap
+ * is reused — the excluded route's own output-factor gap for an unresolved
+ * output, and the exit status' own same-code U gap for a reviewed profile that
+ * explains the missing runtime. Ambiguity returns no alias, so the restatement
+ * keeps counting rather than borrowing an unrelated root.
+ */
+export function v9ExitOutputRestatementAliasGapIds(
+  asset: Pick<V9ExitRestatementAssetFacts, "exitRoutes">,
+  traces: readonly Pick<V9ExitRouteTrace, "routeKey" | "exclusionReason">[],
+): readonly string[] {
+  const gapIds = uniqueSorted(
+    traces
+      .filter((trace) => trace.exclusionReason === "unresolved-exit-output")
+      .flatMap(
+        (trace) =>
+          asset.exitRoutes.find((route) => route.routeKey === trace.routeKey)
+            ?.factorStatuses?.output?.gapIds ?? [],
+      ),
+  );
+  return gapIds.length === 1 ? gapIds : [];
+}
+
+export function v9ProfileRestatementAliasGapIds(
+  asset: Pick<V9ExitRestatementAssetFacts, "exitStatus">,
+  code: V9ReasonCode,
+  gapIndex: V9EvaluationGapIndex,
+): readonly string[] {
+  const gapIds = uniqueSorted(
+    asset.exitStatus.gapIds.filter((gapId) => {
+      const gap = gapIndex.byId.get(gapId);
+      return (
+        gap !== undefined &&
+        gap.reasonCode === code &&
+        gap.causeProof.cause === "U"
+      );
+    }),
+  );
+  return gapIds.length === 1 ? gapIds : [];
+}
+
+export function v9DependencyGraphRestatementAliasGapIds(
+  asset: Pick<V9DependencyRestatementAssetFacts, "dependencies">,
+  gapIndex: V9EvaluationGapIndex,
+): readonly string[] {
+  // The graph diagnostic restates the asset's own retained dependency
+  // question. Reference that exact U-owned gap rather than counting a second
+  // obligation; a C-owned or ambiguous gap stays its own fact so the
+  // restatement never borrows an unrelated root.
+  const gapIds = uniqueSorted(
+    asset.dependencies.status.gapIds.filter((gapId) => {
+      const gap = gapIndex.byId.get(gapId);
+      return (
+        gap !== undefined &&
+        gap.ownerDomain === "dependency" &&
+        gap.causeProof.cause === "U"
+      );
+    }),
+  );
+  return gapIds.length === 1 ? gapIds : [];
+}
+
 function exitPillar(
   asset: V9AssetFactsV3,
   result: V9ExitEvaluationResult,
@@ -866,6 +947,9 @@ function exitPillar(
                 path,
                 `Reviewed ${profileFactKeys.join(" and ")} evidence exists, but no score-eligible runtime route is compiled.`,
                 responsibility,
+                undefined,
+                undefined,
+                v9ProfileRestatementAliasGapIds(asset, code, gapIndex),
               ),
               // The reviewed-profile diagnostic is not the cause of the charged
               // runtime uncertainty. Keep its actual admitted gap witnesses too.
@@ -882,7 +966,15 @@ function exitPillar(
               causalGaps.map((gap) => gap.gapId),
               code,
               V9_LEGACY_RESPONSIBILITY_BY_REASON[code],
-            );
+            ).map((reason) => {
+              // `exit:unresolved-exit-output` restates the excluded route's own
+              // output question. Attach that exact compiled gap as a cause
+              // reference only; path, cause, owner and treatment stay put.
+              const aliasGapIds: readonly string[] = causalGaps.length === 0 && code === "unresolved-exit-output"
+                ? v9ExitOutputRestatementAliasGapIds(asset, result.routes)
+                : [];
+              return aliasGapIds.length === 0 ? reason : { ...reason, causeGapIds: [...aliasGapIds] };
+            });
       }),
     ),
     structuralSignals: [],
@@ -1317,6 +1409,9 @@ function dependencyReasons(
         "dependency:graph",
         undefined,
         "method-unsupported",
+        undefined,
+        undefined,
+        v9DependencyGraphRestatementAliasGapIds(asset, gapIndex),
       ),
     );
   }

@@ -355,14 +355,19 @@
           "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018",
           "solana:CYB6WRi2YuV4Ui6q1dieP5Raev6ah7qftGsQAxJiZo8f"
         ],
-        "capabilities": ["admin"],
+        "capabilities": [
+          "admin"
+        ],
         "controllerChain": "ethereum",
         "controllerAddress": "0x44835bbba9d40deda9b64858095ecfb2693c9449",
         "label": "syrupUSDG Ethereum CCIP escrow owner",
         "authorityType": "timelock",
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
-        "failureDomainKeys": ["controller:ethereum:0x44835bbba9d40deda9b64858095ecfb2693c9449", "bridge:chainlink-ccip"],
+        "failureDomainKeys": [
+          "controller:ethereum:0x44835bbba9d40deda9b64858095ecfb2693c9449",
+          "bridge:chainlink-ccip"
+        ],
         "observedAt": "2026-10-15",
         "observedBlock": 26197300,
         "sources": [
@@ -422,22 +427,41 @@
       },
       {
         "id": "arbitrum-ccip-pool-owner",
-        "routeRefs": ["arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"],
-        "capabilities": ["admin"],
+        "routeRefs": [
+          "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"
+        ],
+        "capabilities": [
+          "admin"
+        ],
         "controllerChain": "arbitrum",
         "controllerAddress": "0x8a89770722c84b60ce02989aedb22ac4791f8c7f",
         "label": "syrupUSDG arbitrum CCIP pool owner",
         "authorityType": "timelock",
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
-        "failureDomainKeys": ["controller:arbitrum:0x8a89770722c84b60ce02989aedb22ac4791f8c7f", "bridge:chainlink-ccip"],
+        "failureDomainKeys": [
+          "controller:arbitrum:0x8a89770722c84b60ce02989aedb22ac4791f8c7f",
+          "bridge:chainlink-ccip"
+        ],
         "observedAt": "2026-10-15",
         "observedBlock": 515037637,
         "sources": [
-          {"label": "Exact directory pool binding", "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"},
-          {"label": "Verified RBACTimelock owner and bypass semantics", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x8a89770722c84b60ce02989aedb22ac4791f8c7f"},
-          {"label": "Verified bypasser ManyChainMultiSig", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xf4c257b5c6c526d56367a602e87b1932d13e67cb"},
-          {"label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: complete owner role census, bypass config and live registry", "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"}
+          {
+            "label": "Exact directory pool binding",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Verified RBACTimelock owner and bypass semantics",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x8a89770722c84b60ce02989aedb22ac4791f8c7f"
+          },
+          {
+            "label": "Verified bypasser ManyChainMultiSig",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xf4c257b5c6c526d56367a602e87b1932d13e67cb"
+          },
+          {
+            "label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: complete owner role census, bypass config and live registry",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
         ],
         "evidence": "At Arbitrum block 515037637 (2026-10-15T10:52:40Z), full enumerable census confirms ADMIN self; PROPOSER 0x69b798425cfff3ae962f6118fd6d6646c829a8c5, 0x5972428082b6e1b6670014cf373b3e42b42aef13 and 0x0cff501cdb93e72221231ca5b6b1a3321a338b14; EXECUTOR 0x36af00c67605a4891c065d54d1ab5af877197a6a; CANCELLER those proposers, 0x4ea3f791511d35aa859455bd60af526537040bb3 and 0xf4c257b5c6c526d56367a602e87b1932d13e67cb; BYPASSER solely 0xf4c257b5c6c526d56367a602e87b1932d13e67cb. Ordinary getMinDelay() is now 10800 seconds, superseding the old 86400 observation; ADMIN/BYPASSER execute without that delay. Bypasser owner() is this timelock, pendingOwner() zero and full getConfig() retains 69 leaves, 32 groups and root quorum 3. Live TokenAdminRegistry 0x39ae1032cf4b334a1ed41cdd0833bdd7c7e7751e also identifies this timelock as syrupUSDG administrator, zero pending administrator and the authored pool mapping. No conventional Safe quorum, signer-custody or complete execution certificate is inferred."
       },
@@ -474,23 +498,45 @@
       },
       {
         "id": "ink-ccip-pool-owner",
-        "routeRefs": ["ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018"],
-        "capabilities": ["admin"],
+        "routeRefs": [
+          "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018"
+        ],
+        "capabilities": [
+          "admin"
+        ],
         "controllerChain": "ink",
         "controllerAddress": "0x13ac97663d19ff20fe467bfa580748505e664beb",
         "label": "syrupUSDG ink CCIP pool owner",
         "authorityType": "timelock",
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
-        "failureDomainKeys": ["controller:ink:0x13ac97663d19ff20fe467bfa580748505e664beb", "bridge:chainlink-ccip"],
+        "failureDomainKeys": [
+          "controller:ink:0x13ac97663d19ff20fe467bfa580748505e664beb",
+          "bridge:chainlink-ccip"
+        ],
         "observedAt": "2026-10-15",
         "observedBlock": 58563029,
         "sources": [
-          {"label": "Exact directory pool binding", "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"},
-          {"label": "Verified RBACTimelock owner and bypass semantics", "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x13ac97663d19ff20fe467bfa580748505e664beb"},
-          {"label": "First verified ManyChainMultiSig bypasser", "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x8d9001df517fd5f88d8bbb8efed5b08de174386e"},
-          {"label": "Second verified ManyChainMultiSig bypasser", "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x3237c0d7b58bec8dc17f00103b784bd6678f789e"},
-          {"label": "Ink block 58563029, 2026-10-15T10:50:40Z: complete owner role census and both bypass configs", "url": "https://api-ink-mainnet.n.dwellir.com"}
+          {
+            "label": "Exact directory pool binding",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Verified RBACTimelock owner and bypass semantics",
+            "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x13ac97663d19ff20fe467bfa580748505e664beb"
+          },
+          {
+            "label": "First verified ManyChainMultiSig bypasser",
+            "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x8d9001df517fd5f88d8bbb8efed5b08de174386e"
+          },
+          {
+            "label": "Second verified ManyChainMultiSig bypasser",
+            "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0x3237c0d7b58bec8dc17f00103b784bd6678f789e"
+          },
+          {
+            "label": "Ink block 58563029, 2026-10-15T10:50:40Z: complete owner role census and both bypass configs",
+            "url": "https://api-ink-mainnet.n.dwellir.com"
+          }
         ],
         "evidence": "At Ink block 58563029 (2026-10-15T10:50:40Z), full enumerable census confirms ADMIN self; PROPOSER 0x9c65f4bf2da23892345505eb92823e0ec30018a6 and 0x26d3681dfc9e4c8c79cfbf461adec8a21d5d73c5; EXECUTOR 0x3b1efc61edba80b02d79819a088f7d795df789c2; CANCELLER both proposers, both bypassers, 0xaa2b6500981c8a05b7a391c526ff0dd77ab8748f and 0x06fc836cf9839b1cd891c440a0a45242da6ae1c9; BYPASSER 0x8d9001df517fd5f88d8bbb8efed5b08de174386e and 0x3237c0d7b58bec8dc17f00103b784bd6678f789e. Ordinary getMinDelay() remains 10800 seconds; ADMIN/BYPASSER bypass delay and blocked functions. Both bypassers' owner() is this timelock, pendingOwner() is zero and full getConfig() retains 69 leaves and distinct 32-group trees with root quorum 3. No simple Safe quorum or human-independence credit is inferred. Complete lane/validator execution remains unresolved."
       },
@@ -527,22 +573,41 @@
       },
       {
         "id": "robinhood-ccip-pool-owner",
-        "routeRefs": ["robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7"],
-        "capabilities": ["admin"],
+        "routeRefs": [
+          "robinhood:0x40858070814a57fdf33a613ae84fe0a8b4a874f7"
+        ],
+        "capabilities": [
+          "admin"
+        ],
         "controllerChain": "robinhood",
         "controllerAddress": "0xf09afe78d3c7d359b334d7cb88995751f7ec5e13",
         "label": "syrupUSDG robinhood CCIP pool owner",
         "authorityType": "timelock",
         "timelockDelaySec": 0,
         "modulesOrGuardsStatus": "unknown",
-        "failureDomainKeys": ["controller:robinhood:0xf09afe78d3c7d359b334d7cb88995751f7ec5e13", "bridge:chainlink-ccip"],
+        "failureDomainKeys": [
+          "controller:robinhood:0xf09afe78d3c7d359b334d7cb88995751f7ec5e13",
+          "bridge:chainlink-ccip"
+        ],
         "observedAt": "2026-10-15",
         "observedBlock": 89167787,
         "sources": [
-          {"label": "Exact directory pool binding", "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"},
-          {"label": "Verified RBACTimelock owner and bypass semantics", "url": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0xf09afe78d3c7d359b334d7cb88995751f7ec5e13"},
-          {"label": "Bypasser ManyChainMultiSig verified source retrieved 2026-10-11 by Sol curation campaign 2026-10-11 (C32UTY); runtime correspondence and current config ownership not established", "url": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x0cff501cdb93e72221231ca5b6b1a3321a338b14"},
-          {"label": "Robinhood block 89167787, 2026-10-15T10:52:57Z: complete owner role census and bypass config/ownership", "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"}
+          {
+            "label": "Exact directory pool binding",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
+          },
+          {
+            "label": "Verified RBACTimelock owner and bypass semantics",
+            "url": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0xf09afe78d3c7d359b334d7cb88995751f7ec5e13"
+          },
+          {
+            "label": "Bypasser ManyChainMultiSig verified source retrieved 2026-10-11 by Sol curation campaign 2026-10-11 (C32UTY); runtime correspondence and current config ownership not established",
+            "url": "https://robinhoodchain.blockscout.com/api/v2/smart-contracts/0x0cff501cdb93e72221231ca5b6b1a3321a338b14"
+          },
+          {
+            "label": "Robinhood block 89167787, 2026-10-15T10:52:57Z: complete owner role census and bypass config/ownership",
+            "url": "https://api-robinhood-mainnet-archive.n.dwellir.com"
+          }
         ],
         "evidence": "At Robinhood block 89167787 (2026-10-15T10:52:57Z), full enumerable census confirms ADMIN self; PROPOSER 0x76a443768a5e3b8d1aed0105fc250877841deb40; EXECUTOR 0x3c23e6fb09064e9a64829fa8fee27ad19a27bfa9; CANCELLER proposer, 0x70003d849a20e33997fea69bbc8a366d6ab0e131 and 0x0cff501cdb93e72221231ca5b6b1a3321a338b14; BYPASSER solely 0x0cff501cdb93e72221231ca5b6b1a3321a338b14. Ordinary getMinDelay() remains 10800 seconds; ADMIN/BYPASSER bypass it. Bypasser owner() is this timelock, pendingOwner() zero and full getConfig() retains 69 leaves and a 32-group tree with root quorum 3. Previously retrieved verified ManyChainMultiSig source describes nested signatures and nonce-ordered raw target calls; the fresh configuration does not establish runtime/source correspondence, independent humans or an execution-complete certificate."
       },
@@ -610,39 +675,69 @@
       },
       {
         "id": "arbitrum-maple-token-admin",
-        "routeRefs": ["arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"],
-        "capabilities": ["admin"],
+        "routeRefs": [
+          "arbitrum:0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"
+        ],
+        "capabilities": [
+          "admin"
+        ],
         "controllerChain": "arbitrum",
         "controllerAddress": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
         "label": "syrupUSDG Arbitrum Maple token-role administrator",
         "authorityType": "timelock",
         "modulesOrGuardsStatus": "unknown",
-        "failureDomainKeys": ["issuer:maple"],
+        "failureDomainKeys": [
+          "issuer:maple"
+        ],
         "observedAt": "2026-10-15",
         "observedBlock": 515037637,
         "sources": [
-          {"label": "Maple exact-product Arbitrum Token Admin disclosure", "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"},
-          {"label": "Verified Arbitrum BurnMintERC20 role semantics", "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"},
-          {"label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: token admin role and separate registry mapping", "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"}
+          {
+            "label": "Maple exact-product Arbitrum Token Admin disclosure",
+            "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"
+          },
+          {
+            "label": "Verified Arbitrum BurnMintERC20 role semantics",
+            "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0xe1b0dc5a21b10f1634fbfbe9976fba2ee2e1c762"
+          },
+          {
+            "label": "Arbitrum block 515037637, 2026-10-15T10:52:40Z: token admin role and separate registry mapping",
+            "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
         ],
         "evidence": "Pinned hasRole(DEFAULT_ADMIN_ROLE, this governor) is true. Verified BurnMintERC20 lets that role grant/revoke MINTER_ROLE and BURNER_ROLE and setCCIPAdmin; maxSupply() is zero (no token-level maximum). The token's getCCIPAdmin() is instead 0xdd2d33f35d4d46c5ec6e6351907964a6ecd49ec9, a registration getter that has no other special powers in verified code. Live TokenAdminRegistry administrator is 0x8a89770722c84b60ce02989aedb22ac4791f8c7f and its pool mapping matches the authored pool, so Maple's Token Admin label does not identify the live registry administrator. This chain-local GovernorTimelock's default delay/window are 259200/172800 seconds; full role history, per-function execution and custody remain unresolved. Ethereum governor signers are not copied onto this deployment."
       },
       {
         "id": "ink-maple-token-admin",
-        "routeRefs": ["ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018"],
-        "capabilities": ["admin"],
+        "routeRefs": [
+          "ink:0xebe9ed66efe0948d0c1b72b0157fc17733667018"
+        ],
+        "capabilities": [
+          "admin"
+        ],
         "controllerChain": "ink",
         "controllerAddress": "0x2efff88747eb5a3ff00d4d8d0f0800e306c0426b",
         "label": "syrupUSDG Ink Maple token-role administrator",
         "authorityType": "timelock",
         "modulesOrGuardsStatus": "unknown",
-        "failureDomainKeys": ["issuer:maple"],
+        "failureDomainKeys": [
+          "issuer:maple"
+        ],
         "observedAt": "2026-10-15",
         "observedBlock": 58563029,
         "sources": [
-          {"label": "Maple exact-product Ink Token Admin disclosure", "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"},
-          {"label": "Verified Ink BurnMintERC20 role semantics", "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0xebe9ed66efe0948d0c1b72b0157fc17733667018"},
-          {"label": "Ink block 58563029, 2026-10-15T10:50:40Z: current admin role and CCIP getter", "url": "https://api-ink-mainnet.n.dwellir.com"}
+          {
+            "label": "Maple exact-product Ink Token Admin disclosure",
+            "url": "https://docs.maple.finance/integrate/crosschain/syrupusd-crosschain.md"
+          },
+          {
+            "label": "Verified Ink BurnMintERC20 role semantics",
+            "url": "https://explorer.inkonchain.com/api/v2/smart-contracts/0xebe9ed66efe0948d0c1b72b0157fc17733667018"
+          },
+          {
+            "label": "Ink block 58563029, 2026-10-15T10:50:40Z: current admin role and CCIP getter",
+            "url": "https://api-ink-mainnet.n.dwellir.com"
+          }
         ],
         "evidence": "Pinned hasRole(DEFAULT_ADMIN_ROLE, this governor) is true and getCCIPAdmin() returns this address. Verified BurnMintERC20 lets the admin grant/revoke MINTER_ROLE and BURNER_ROLE and setCCIPAdmin; maxSupply() is zero (no token-level maximum). The authored pool retains both mint/burn roles. This chain-local GovernorTimelock's default delay/window are 259200/172800 seconds; complete governor role history, registry configuration, per-function execution and custody remain unresolved. The identical Ethereum address is a separate chain deployment and supplies no signer or execution proof for Ink."
       }
@@ -652,20 +747,16 @@
         "controlRef": "ethereum-ccip-escrow",
         "question": "Fresh Ethereum block 26197300 identifies every enumerable escrow-owner role, the immediate bypasser and its full nested config/owner. Which runtime/source correspondence, configuration-replacement authorization, router/RMN-validator, live rate-limit/pause/upgrade and historical/replacement-pool execution paths complete the entire lane census? The owner/config cycle and arbitrary-call source alone do not prove a complete execution certificate.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-15",
-        "reviewer": "Rev_SyrupusdgMaple",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "label": "ethereum block 26300237, 2026-10-29T18:37:11Z: escrow owner()=0x44835bbba9d40deda9b64858095ecfb2693c9449 (unchanged); re-read 2026-10-29",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Chainlink CCIP syrupUSDG directory accessed 2026-10-29: five networks unchanged (Ethereum LockRelease 0x120391E1..2543, Arbitrum 0x5355..b75f, Ink 0x376d..A91F, Robinhood 0x01FA..725C, Solana BurnMint H1w3zL4y..ZD11 v1.6.2); no owner/validator/signer census published",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
-          },
-          {
-            "label": "Pinned Ethereum escrow owner and ADMIN/BYPASSER census at block 26155000 (2026-10-09T12:57:47Z); observed 2026-10-10T23:38:10Z",
-            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
-          },
-          {
-            "label": "Ethereum escrow owner and bypass MCM owner/full nested config/pendingOwner at block 26162000, hash 0x063085f1059ae473860f4e88dbb5ba903e3440b3f0b92c4082716ab6fbae2987, timestamp 2026-10-10T12:21:35Z; observed 2026-10-11T01:02:48Z by Sol curation campaign 2026-10-11 (C32UTY)",
-            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
           }
         ]
       },
@@ -673,11 +764,11 @@
         "controlRef": "solana-syrupusdg-mint-authority",
         "question": "Which PDA/program and upgrade/admin execution paths control the live SPL mint and freeze authorities and directory pool account H1w3zL4yJKqHXut3dHvFQVCbjmYt5DZ3ioZcZrYZZD11?",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-02",
-        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
         "sources": [
           {
-            "label": "Chainlink exact syrupUSDG deployments and pools",
+            "label": "Chainlink CCIP syrupUSDG directory accessed 2026-10-29: Solana pool H1w3zL4yJKqHXut3dHvFQVCbjmYt5DZ3ioZcZrYZZD11 still the listed BurnMint pool v1.6.2; no PDA/upgrade-authority disclosure",
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/syrupUSDG"
           },
           {

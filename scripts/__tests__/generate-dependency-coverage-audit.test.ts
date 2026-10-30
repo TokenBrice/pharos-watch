@@ -7,6 +7,7 @@ import {
   makeReportCardsV9Card,
   makeReportCardsV9PartialCard,
   makeReportCardsV9Pillars,
+  makeReportCardsV9ArchivedResponse,
   makeReportCardsV9Response,
   type ReportCardsV9ResponseFixturePreset,
 } from "@shared/test-utils/report-cards-v9";
@@ -73,6 +74,7 @@ function reportCardFixture(input: {
   cards: ReportCardInput[];
   dependencyGraph: { edges: ReportCardEdgeInput[] };
   methodologyVersion?: string;
+  version?: "report9";
 }) {
   const scoreById = new Map(input.cards.map((card) => [card.id, card.score ?? card.overallScore ?? null]));
   const cards = input.cards
@@ -142,7 +144,8 @@ function reportCardFixture(input: {
       methodologyVersion: input.methodologyVersion ?? SAFETY_SCORE_METHODOLOGY_VERSION,
     },
   };
-  return makeReportCardsV9Response(preset, () => makeReportCardsV9Card(), { cards });
+  const makeResponse = input.version === "report9" ? makeReportCardsV9Response : makeReportCardsV9ArchivedResponse;
+  return makeResponse(preset, () => makeReportCardsV9Card(), { cards });
 }
 
 const activeCoins: StablecoinMeta[] = [
@@ -307,9 +310,14 @@ describe("generate-dependency-coverage-audit", () => {
   });
 
   it("keeps absent legacy provenance unknown and rejects malformed provided provenance", () => {
-    const audit = buildDependencyCoverageAudit({
-      activeCoins, reportCards: reportCardFixture({ cards: [{ id: "usdc-circle", score: 80 }], dependencyGraph: { edges: [] } }),
+    const reportCards = reportCardFixture({ cards: [{ id: "usdc-circle", score: 80 }], dependencyGraph: { edges: [] } });
+    const audit = buildDependencyCoverageAudit({ activeCoins, reportCards });
+    const nextAudit = buildDependencyCoverageAudit({
+      activeCoins,
+      reportCards: reportCardFixture({ cards: [{ id: "usdc-circle", score: 80 }], dependencyGraph: { edges: [] }, version: "report9" }),
     });
+    expect(nextAudit.summary).toEqual(audit.summary);
+    expect(nextAudit.provenance).toEqual(audit.provenance);
     const legacy = JSON.parse(JSON.stringify(audit));
     delete legacy.provenance;
     const report = reconcileDependencyGraph(legacy, null);

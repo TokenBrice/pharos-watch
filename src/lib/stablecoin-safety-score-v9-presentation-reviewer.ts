@@ -1,4 +1,4 @@
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { SafetyScoreV9CurrentCard, V9QualityPillar } from "@shared/types";
 import {
   exitReasonFallback,
   pillarBreakdown,
@@ -11,7 +11,10 @@ import {
   uniqueSafetyScoreV9Messages,
   type StablecoinSafetyScoreV9Component,
 } from "@/lib/stablecoin-safety-score-v9-presentation-helpers";
-import { SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS } from "@/lib/safety-score-v9-labels";
+import {
+  SAFETY_SCORE_V9_DOCUMENTATION_ONLY_LIMITED_SUFFIX,
+  SAFETY_SCORE_V9_EVIDENCE_LEVEL_DESCRIPTIONS,
+} from "@/lib/safety-score-v9-labels";
 import { readV9PricedUnknown, type V9PricedUnknown } from "@/lib/safety-score-v9-consumers";
 
 const PILLARS = [
@@ -39,8 +42,14 @@ export interface StablecoinSafetyScoreV9Presentation {
   primaryReasons: string[];
 }
 
+/**
+ * `documentationOnlyLimited` is the card's server-computed annotation from
+ * `openEvidence.byCard[]`; this presentation never derives it from witnesses.
+ * Absent or unlisted pillars keep the plain evidence summary (fail closed).
+ */
 export function buildStablecoinSafetyScoreV9Presentation(
   card: SafetyScoreV9CurrentCard,
+  documentationOnlyLimited?: readonly V9QualityPillar[],
 ): StablecoinSafetyScoreV9Presentation {
   const hasIncompleteDexCoverage = card.scoreTrace.evidenceResponsibility.summaries.some(
     (summary) => summary.reasonCodes?.includes("incomplete-dex-route-coverage"),
@@ -58,9 +67,14 @@ export function buildStablecoinSafetyScoreV9Presentation(
         : isUnknownSafetyScoreV9Value(pillar.freshness)
         ? evidenceLevel
         : `${evidenceLevel} · ${humanizeSafetyScoreV9Value(pillar.freshness).toLowerCase()}`;
-      const evidenceSummary = key === "exit" && hasIncompleteDexCoverage
+      const withDexCoverage = key === "exit" && hasIncompleteDexCoverage
         ? `${baseEvidenceSummary} · partial DEX coverage`
         : baseEvidenceSummary;
+      // Membership alone carries the server's fail-closed verdict; the client
+      // never re-derives it from witnesses or other card fields (R5).
+      const evidenceSummary = documentationOnlyLimited?.includes(key) === true
+        ? `${withDexCoverage} · ${SAFETY_SCORE_V9_DOCUMENTATION_ONLY_LIMITED_SUFFIX}`
+        : withDexCoverage;
       return {
         key,
         label,

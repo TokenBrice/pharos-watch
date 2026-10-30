@@ -3,7 +3,10 @@ import { gzipSync } from "node:zlib";
 import { describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { countV9EvidenceObligations } from "@shared/types/safety-score-v9-public-evidence-facts";
-import { HistoricalTypedReportCardsV9ResponseSchema, ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import { HistoricalResolvedReportCardsV9ResponseSchema, HistoricalTypedReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9-current";
+import { ReportCardsV9AcceptedResponseSchema } from "@shared/types/report-cards-v9-accepted";
+import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
 import { handleSnapshotCoin, handleSnapshotDay } from "../snapshot";
 import historicalSnapshot from "./fixtures/snapshot-2026-10-07-v10.09.json";
 
@@ -69,6 +72,25 @@ function historicalTypedSnapshot() {
   return envelope;
 }
 
+/** Modeled 10.29–10.36 archive: report8 resolved cards with no open-evidence block. */
+function historicalResolvedSnapshot(version = "10.30") {
+  const envelope = structuredClone(historicalSnapshot);
+  // Report8 archives predate both the block and the report9-only reason key.
+  const { openEvidence: _liveBlock, openEvidenceUnavailableReason: _liveReason, ...report } =
+    structuredClone(makeWorkerReportCardsV9Response());
+  // The imported JSON fixture infers literal archive types; the archive row is
+  // re-parsed at request time, so this modeled payload is a fixture shape only.
+  envelope.reportCards = {
+    ...report,
+    schemaVersion: 8,
+    methodology: { ...report.methodology, version },
+    safetyScoreIdentity: { ...report.safetyScoreIdentity, methodologyVersion: version },
+  } as unknown as typeof envelope.reportCards;
+  envelope.methodologyVersions.reportCard = version;
+  envelope.safetyScoreIdentity = envelope.reportCards.safetyScoreIdentity;
+  return envelope;
+}
+
 describe("historical snapshot recorded safety contracts", () => {
   it("serves real-shaped 10.09/report7 bytes and ETag without upgrading counts or routes", async () => {
     const { row, payload } = snapshotRow();
@@ -76,6 +98,21 @@ describe("historical snapshot recorded safety contracts", () => {
     const response = await handleSnapshotDay(database(row), historicalSnapshot.snapshotDate);
     expect(response.status).toBe(200);
     expect(response.headers.get("ETag")).toBe(`"${row.content_hash}"`);
+    expect(await response.text()).toBe(payload);
+  });
+
+  it("serves a report9 archived snapshot byte-for-byte", async () => {
+    const envelope = structuredClone(historicalSnapshot);
+    const reportCards = makeWorkerReportCardsV9Response();
+    Object.assign(envelope, {
+      reportCards,
+      safetyScoreIdentity: reportCards.safetyScoreIdentity,
+    });
+    envelope.methodologyVersions.reportCard = reportCards.methodology.version;
+    expect(ReportCardsV9AcceptedResponseSchema.safeParse(reportCards).success).toBe(true);
+    const { row, payload } = snapshotRow(envelope as unknown as typeof historicalSnapshot);
+    const response = await handleSnapshotDay(database(row), envelope.snapshotDate);
+    expect(response.status).toBe(200);
     expect(await response.text()).toBe(payload);
   });
 
@@ -131,6 +168,25 @@ describe("historical snapshot recorded safety contracts", () => {
     const { row } = snapshotRow(envelope);
     expect((await handleSnapshotDay(database(row), envelope.snapshotDate)).status).toBe(500);
   });
+
+  it.each(["10.29", "10.30", "10.37"])(
+    "serves every archived 10.29+ report8 snapshot through the resolved historical schema (%s)", async version => {
+      const envelope = historicalResolvedSnapshot(version);
+      expect(HistoricalResolvedReportCardsV9ResponseSchema.safeParse(envelope.reportCards).success).toBe(true);
+      expect(ReportCardsV9ResponseSchema.safeParse(envelope.reportCards).success).toBe(false);
+      const { row, payload } = snapshotRow(envelope);
+      const day = await handleSnapshotDay(database(row), envelope.snapshotDate);
+      expect(day.status).toBe(200);
+      expect(day.headers.get("ETag")).toBe(`"${row.content_hash}"`);
+      expect(await day.text()).toBe(payload);
+      const coin = await handleSnapshotCoin(database(row), envelope.snapshotDate, envelope.reportCards.cards[0]!.id);
+      expect(coin.status).toBe(200);
+      expect(await coin.json()).toMatchObject({
+        safetyScoreIdentity: envelope.safetyScoreIdentity,
+        scores: { reportCard: envelope.reportCards.cards[0] },
+      });
+    });
+
 
   it("does not accept witness summaries under the 10.10 accounting contract", async () => {
     const envelope = structuredClone(historicalSnapshot);

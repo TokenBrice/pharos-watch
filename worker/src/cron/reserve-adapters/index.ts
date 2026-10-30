@@ -91,6 +91,7 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "moc-doc": lazyAdapter(() => import("./moc-doc").then((mod) => mod.fetchMocDocReserves)),
   "moc-v3-buckets": lazyAdapter(() => import("./usdrif-rif").then((mod) => mod.fetchUsdrifRifReserves)),
   "money-llamma": lazyAdapter(() => import("./money-llamma").then((mod) => mod.fetchMoneyReserves)),
+  "monolith-lender": lazyAdapter(() => import("./monolith-lender").then((mod) => mod.fetchMonolithLenderReserves)),
   "nest-vault-positions": lazyAdapter(() => import("./nest-vault-positions").then((mod) => mod.fetchNestVaultPositionsReserves)),
   "origin-vault-balances": lazyAdapter(() => import("./origin-vault-balances").then((mod) => mod.fetchOriginVaultBalancesReserves)),
   "parallelizer-balances": lazyAdapter(() => import("./parallelizer-balances").then((mod) => mod.fetchParallelizerBalancesReserves)),
