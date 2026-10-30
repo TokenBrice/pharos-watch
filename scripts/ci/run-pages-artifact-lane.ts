@@ -1,13 +1,14 @@
 #!/usr/bin/env node
 
 import { spawnSync } from "node:child_process";
-import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync } from "node:fs";
+import { appendFileSync, cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { runDirectCli } from "../lib/cli-args.mjs";
 import { PAGES_RELEASE_DATA_ARCHIVE, PAGES_RELEASE_DATA_PATHS, preparePagesReleaseData, overlayPagesReleaseData, replayPagesDetailSnapshots, type PagesReleaseDataAcquisitionResult } from "../lib/pages-release-data.mts";
 import { GENERATED_ARTIFACT_REGISTRY } from "../lib/automation-registry.mjs";
+import { DEPEG_LEDGER_CAPTURE_RELATIVE_PATH, depegLedgerCaptureId } from "../lib/depeg-ledger-capture.ts";
 
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 export const PAGES_PREVIOUS_SITEMAP_URL = "https://stablecoin-dashboard.pages.dev/sitemap.xml";
@@ -21,6 +22,38 @@ const RESTORED_PATHS = [...new Set<string>([
     .filter((artifact) => artifact.buildLifecycle === "post-refresh")
     .flatMap((artifact) => artifact.outputPaths),
 ])];
+
+/**
+ * A committed `/depeg/<slug>/` 301 is a reviewed archive retirement: the
+ * shrink-approved sync drops the slug and the next release refresh never
+ * restores it. Retained release data predates the retirement, so drop those
+ * replayed entries (re-sealing the capture identity) instead of building pages
+ * that link redirect sources.
+ */
+export function dropRetiredDepegEventEntries(repoRoot: string): string[] {
+  const retired = new Set(readFileSync(join(repoRoot, "public/_redirects"), "utf8").split("\n")
+    .map((line) => /^\/depeg\/([^/\s]+)\/?\s+\S+\s+301$/.exec(line.trim())?.[1])
+    .filter((slug): slug is string => slug != null));
+  if (retired.size === 0) return [];
+  const dataDir = join(repoRoot, "data/depeg-events");
+  const dropped = new Set<string>();
+  let eventCount = 0;
+  for (const name of readdirSync(dataDir).filter((file) => /^(\d{4}|index)\.json$/.test(file))) {
+    const entries = JSON.parse(readFileSync(join(dataDir, name), "utf8")) as unknown;
+    if (!Array.isArray(entries)) continue;
+    const kept = entries.filter((entry: { slug?: string }) => !retired.has(entry.slug ?? ""));
+    if (name !== "index.json") eventCount += kept.length;
+    if (kept.length === entries.length) continue;
+    for (const entry of entries as { slug?: string }[]) if (entry.slug && retired.has(entry.slug)) dropped.add(entry.slug);
+    writeFileSync(join(dataDir, name), `${JSON.stringify(kept, null, 2)}\n`);
+  }
+  if (dropped.size > 0) {
+    const capturePath = join(dataDir, DEPEG_LEDGER_CAPTURE_RELATIVE_PATH);
+    const capture = JSON.parse(readFileSync(capturePath, "utf8")) as Record<string, unknown>;
+    writeFileSync(capturePath, `${JSON.stringify({ ...capture, captureId: depegLedgerCaptureId(dataDir), eventCount }, null, 2)}\n`);
+  }
+  return [...dropped].sort();
+}
 
 export function scrubPagesBuildEnvironment(env: Partial<NodeJS.ProcessEnv>): NodeJS.ProcessEnv {
   return {
@@ -103,14 +136,17 @@ export async function runPagesArtifactLane({ repoRoot = REPO_ROOT, acquireReleas
     const result: PagesArtifactResult = retained
       ? { dataStatus: "release-snapshot", artifactName: retained.name }
       : { dataStatus: "degraded-data" };
+    let retiredDepegSlugs: string[] = [];
     if (retained) {
       overlayPagesReleaseData(repoRoot, retained.archive, join(temporary, "overlay"), false);
+      retiredDepegSlugs = dropRetiredDepegEventEntries(repoRoot);
       // Only validated trusted-main release data may waive wall-clock age.
       env.PHAROS_PAGES_REPLAY = "1";
     }
     report("## Pages artifact input provenance");
     report(`- Data status: \`${result.dataStatus}\``);
     if (retained) report(`- Release artifact: \`${retained.name}\``);
+    if (retiredDepegSlugs.length > 0) report(`- Retired depeg slugs dropped from the replay: ${retiredDepegSlugs.length}`);
     else report("- Reason: `pages-artifact-data-unavailable`; committed snapshots + offline detail bootstrap. All artifact gates remain required; empty detail lanes are weaker size evidence, not realistic release-data proof.");
     command("compile-input", "npm", ["run", "generated:compile-input"]);
     // This generator-owned bootstrap is always offline, before replay. It also
