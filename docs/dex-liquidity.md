@@ -124,7 +124,7 @@ Where `qualityAdjustedTvl` applies mechanism and balance-health multipliers to r
 
 Exact Curve metapool joins use retained, base-pool-excluded TVL for both numerator and denominator. Balance evidence must be complete and carry the same notional scope: a full-pool ratio cannot weight excluded-pool TVL. Incomplete captures and scope mismatches omit measured balance diagnostics, publish `balanceMeasured: false`, contribute no measured-balance TVL to scoring or source-family telemetry, and use the existing unmeasured neutral fallback without inventing a replacement ratio. With a scope-matched ratio 0.5, $2M retained TVL and multiplier 0.85 yield about $601,041 quality TVL (30.05% retention, Pool Quality 23), never a $3.005M full-pool numerator.
 
-Missing measured-balance and organic TVL weights remain `null` through storage readers, the API and snapshots; a successfully measured zero remains numeric `0`. Aggregate balance/organic ratios include a member only when both its ratio and independent measured-TVL weight are available. A partial-measured card with no balance weight reports coverage unavailable, never 0%.
+Missing measured-balance and organic TVL weights remain `null` through storage readers, the API and snapshots; a successfully measured zero remains numeric `0`. Aggregate balance/organic ratios include a member only when both its ratio and independent measured-TVL weight are available. The stored locked-liquidity average counts every pool carrying a measurement in its TVL denominator, including a measured `0%`; only a population with no measurement reports `null`. A partial-measured card with no balance weight reports coverage unavailable, never 0%.
 
 #### Durability Sub-Component Weights
 

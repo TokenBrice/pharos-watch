@@ -214,7 +214,7 @@ export function rebuildMetricsFromPools(
     }
 
     const lockedLiquidityPct = getPoolExtraNumber(pool.extra, "lockedLiquidityPct");
-    if (lockedLiquidityPct != null && lockedLiquidityPct > 0) {
+    if (lockedLiquidityPct != null) {
       lockedLiqWeightedSum += pool.tvlUsd * (lockedLiquidityPct / 100);
       totalTvlForLocked += pool.tvlUsd;
     }

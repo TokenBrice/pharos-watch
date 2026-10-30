@@ -45,6 +45,7 @@ const phaseFixtures = vi.hoisted(() => {
         dexProjects: new Set<string>(),
         protocolTvlCaps: new Map<string, number>(),
         curvePayloads: [],
+        curveFailedChains: [],
         graphApiKey: "graph-key",
         dlYieldsAvailable: true,
         dlProtocolsAvailable: true,
@@ -310,6 +311,7 @@ import {
   publishStablecoinScoreTargets,
   loadCurrentDexScoringGenerationId,
 } from "../dex-liquidity/scoring";
+import { logCronRun } from "../../lib/cron-logger";
 import { persistScores, writeHistoricalSnapshots } from "../dex-liquidity/persistence";
 import { publishDexPriceChallengerSnapshots } from "../dex-liquidity/challenger-publish";
 import { buildSymbolLookups } from "../dex-liquidity/pool-helpers";
@@ -525,6 +527,7 @@ describe("dex liquidity scoring stage cycle", () => {
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [],
+      curveFailedChains: [],
       graphApiKey: "graph-key",
       dlYieldsAvailable: true,
       dlProtocolsAvailable: false,
@@ -554,6 +557,38 @@ describe("dex liquidity scoring stage cycle", () => {
     expect(writeHistoricalSnapshots).not.toHaveBeenCalled();
   });
 
+  it("records the failed critical source as the stage degraded reason", async () => {
+    phaseFixtures.reset({ primary: {
+      pools: [],
+      rawPoolCount: 0,
+      poolRejections: [],
+      dexProjects: new Set<string>(),
+      protocolTvlCaps: new Map<string, number>(),
+      curvePayloads: [],
+      curveFailedChains: [],
+      graphApiKey: "graph-key",
+      dlYieldsAvailable: true,
+      dlProtocolsAvailable: false,
+    } });
+
+    const result = await stageDexLiquidityScoring(db, "graph-key");
+
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}").reason).toBe("defillama-protocols-unavailable");
+    const fixture = createLatestSchemaSqlite();
+    try {
+      await logCronRun(fixture.db, "sync-dex-liquidity-stage", async () => result);
+      const run = fixture.sqlite
+        .prepare("SELECT status, degraded_reason FROM cron_runs WHERE job = ?")
+        .get("sync-dex-liquidity-stage") as
+          | { status: string; degraded_reason: string | null }
+          | undefined;
+      expect(run).toEqual({ status: "degraded", degraded_reason: "defillama-protocols-unavailable" });
+    } finally {
+      fixture.sqlite.close();
+    }
+  });
+
   it("returns degraded when DL fails but Curve succeeds", async () => {
     vi.mocked(fetchDataSources).mockResolvedValueOnce({
       pools: [],
@@ -562,6 +597,7 @@ describe("dex liquidity scoring stage cycle", () => {
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [{ data: { poolData: [] } }],
+      curveFailedChains: [],
       graphApiKey: "graph-key",
       dlYieldsAvailable: false,
       dlProtocolsAvailable: false,
@@ -648,6 +684,7 @@ describe("dex liquidity scoring stage cycle", () => {
       dexProjects: new Set<string>(["curve"]),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [{ data: { poolData: [] } }],
+      curveFailedChains: [],
       graphApiKey: "graph-key",
       dlYieldsAvailable: false,
       dlProtocolsAvailable: true,
@@ -804,6 +841,7 @@ describe("dex liquidity scoring stage cycle", () => {
       phaseFixtures.current.scores.tvlStabilityMap,
       undefined,
       phaseFixtures.current.scores.diagnostics.routeRemovalEvidence,
+      phaseFixtures.current.scores.retainedPoolsByStablecoin,
     );
     expect(metadata.sourceCoverage?.qualityDriftSeverity).toBe("none");
     expect(metadata.sourceCoverage?.qualityDriftFlags).toEqual([]);
@@ -913,6 +951,7 @@ describe("dex liquidity scoring stage cycle", () => {
       dexProjects: new Set(["scale-dex"]),
       protocolTvlCaps: new Map(),
       curvePayloads: [],
+      curveFailedChains: [],
       graphApiKey: "graph-key",
       dlYieldsAvailable: true,
       dlProtocolsAvailable: true,
@@ -979,6 +1018,7 @@ describe("dex liquidity scoring stage cycle", () => {
       dexProjects: new Set(["memory-dex"]),
       protocolTvlCaps: new Map<string, number>(),
       curvePayloads: [],
+      curveFailedChains: [],
       graphApiKey: "graph-key",
       dlYieldsAvailable: true,
       dlProtocolsAvailable: true,
@@ -1314,6 +1354,7 @@ describe("dex liquidity scoring stage cycle", () => {
       dexProjects: new Set<string>(),
       protocolTvlCaps: new Map<string, number>([["curve", 50]]),
       curvePayloads: [],
+      curveFailedChains: [],
       graphApiKey: "graph-key",
       dlYieldsAvailable: true,
       dlProtocolsAvailable: true,

@@ -590,6 +590,59 @@ describe("dex-liquidity scoring", () => {
     expect(globalAgg.chainTvl.base).toBe(130_000);
   });
 
+  describe("locked-liquidity TVL-weighted average", () => {
+    function cgPool(poolId: string, tvlUsd: number, lockedLiquidityPct: number): PoolEntry {
+      return {
+        poolId,
+        project: "uniswap-v3",
+        chain: "ethereum",
+        symbol: "USDC-USDT",
+        tvlUsd,
+        volumeUsd1d: tvlUsd / 2,
+        volumeUsd7d: tvlUsd * 3.5,
+        poolType: "cg-cl-5bp",
+        source: "cg_onchain",
+        extra: { lockedLiquidityPct },
+        volumeReading: {
+          volume24hUsd: tvlUsd / 2,
+          volume7dUsd: tvlUsd * 3.5,
+          observedAtSec: SCORING_CLOCK_SEC - 60,
+        },
+      };
+    }
+
+    async function scoreLockedPools(pools: PoolEntry[]) {
+      const graph = initSourcePoolGraph("usdt-tether", "USDT");
+      graph.pools = pools;
+      const { scores } = await computeStablecoinScores(
+        makeQueryDb([
+          { match: "FROM dex_liquidity_history", all: [] },
+          { match: "FROM surface_publication_generations", all: [] },
+        ]),
+        new Map([["usdt-tether", graph]]),
+        new Map(),
+        undefined,
+        SCORING_CLOCK_SEC,
+      );
+      return scores.get("usdt-tether")?.lockedLiqPct;
+    }
+
+    it("keeps a measured 0% pool in the denominator instead of weighting only the positive pool", async () => {
+      // (0 * $1,000,000 + 0.50 * $1,000) / $1,001,000 = 0.0004995... -> 0.0005.
+      expect(await scoreLockedPools([
+        cgPool("ethereum:0xunlocked", 1_000_000, 0),
+        cgPool("ethereum:0xhalf-locked", 1_000, 50),
+      ])).toBe(0.0005);
+    });
+
+    it("publishes a measured zero, not unavailable, when every retained pool reports 0% locked", async () => {
+      expect(await scoreLockedPools([
+        cgPool("ethereum:0xunlocked-a", 1_000_000, 0),
+        cgPool("ethereum:0xunlocked-b", 250_000, 0),
+      ])).toBe(0);
+    });
+  });
+
   it("excludes inactive tracked metrics from scores, retained pools, and global aggregates", async () => {
     const db = makeQueryDb([
       { match: "FROM dex_liquidity_history", all: [] },

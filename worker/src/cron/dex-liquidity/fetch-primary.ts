@@ -434,6 +434,7 @@ export async function fetchDataSources(
 
   // DeFiLlama bodies are consumed before Curve opens its bounded request batch.
   let curvePayloads: (CurveApiPayload | null)[];
+  let curveFailedChains: string[];
   const curveCircuitAllowed = await shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API);
 
   if (curveCircuitAllowed) {
@@ -449,8 +450,8 @@ export async function fetchDataSources(
       return result;
     });
     curvePayloads = curveResults.map((result) => result?.body ?? null);
-    const curveSuccess = curvePayloads.some((payload) => payload != null);
-    await recordOutcome(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API, curveSuccess);
+    curveFailedChains = CURVE_CHAINS.filter((_, index) => curvePayloads[index] == null);
+    await recordOutcome(db, CIRCUIT_SOURCE.CURVE_LIQUIDITY_API, curveFailedChains.length === 0);
   } else {
     logWorkerEvent({
       scope: "lib",
@@ -460,6 +461,8 @@ export async function fetchDataSources(
       message: "Curve liquidity API circuit open; skipping Curve pool data",
     });
     curvePayloads = CURVE_CHAINS.map(() => null);
+    // The circuit skipped the fan-out; nothing was read, so no chain failed.
+    curveFailedChains = [];
   }
 
   // Only abort if BOTH DL sources AND Curve all failed (truly catastrophic)
@@ -480,6 +483,7 @@ export async function fetchDataSources(
     dexProjects,
     protocolTvlCaps,
     curvePayloads,
+    curveFailedChains,
     graphApiKey,
     dlYieldsAvailable,
     dlProtocolsAvailable,

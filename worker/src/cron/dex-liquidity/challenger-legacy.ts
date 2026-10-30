@@ -10,6 +10,16 @@ interface LegacyDexPoolSource {
   tvl: number;
 }
 
+interface LegacyChallengerPoolRow {
+  poolId?: unknown;
+  chain?: unknown;
+  protocol?: unknown;
+  sourceFamily?: unknown;
+  priceUsd?: unknown;
+  tvlUsd?: unknown;
+  priceObservedAt?: unknown;
+}
+
 type LegacyJsonDecodeReason = "missing" | "json-parse-failed" | "invalid-shape";
 
 function decodeLegacyJsonArray<T>(
@@ -17,7 +27,7 @@ function decodeLegacyJsonArray<T>(
   options: {
     stablecoinId: string;
     source: "dex_liquidity" | "dex_prices";
-    context: "dex_liquidity.top_pools_json" | "dex_prices.price_sources_json";
+    context: "dex_liquidity.top_pools_json" | "dex_liquidity.challenger_pools_json" | "dex_prices.price_sources_json";
     updatedAt: number;
   },
 ): T[] | null {
@@ -61,33 +71,73 @@ export async function loadLegacyDexPoolChallengers(
   const cutoffSec = nowSec - maxAgeSec;
   const rows = await db
     .prepare(
-      `SELECT stablecoin_id, top_pools_json, updated_at
+      `SELECT stablecoin_id, top_pools_json, challenger_pools_json, updated_at
          FROM dex_liquidity
          WHERE stablecoin_id != '__global__'
-           AND top_pools_json IS NOT NULL
+           AND (top_pools_json IS NOT NULL OR challenger_pools_json IS NOT NULL)
            AND updated_at >= ?
            AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}`,
     )
     .bind(cutoffSec)
-    .all<{ stablecoin_id: string; top_pools_json: string; updated_at: number }>();
+    .all<{
+      stablecoin_id: string;
+      top_pools_json: string | null;
+      challenger_pools_json: string | null;
+      updated_at: number;
+    }>();
 
   for (const row of rows.results ?? []) {
-    const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
-      row.top_pools_json,
-      {
-        stablecoinId: row.stablecoin_id,
-        source: "dex_liquidity",
-        context: "dex_liquidity.top_pools_json",
-        updatedAt: row.updated_at,
-      },
-    );
-    if (pools == null) {
-      continue;
-    }
-    if (!Array.isArray(pools) || pools.length === 0) continue;
-
     const qualifying: DexPriceChallengerLoadRow[] = [];
-    for (const pool of pools) {
+    if (row.challenger_pools_json != null) {
+      const stored = decodeLegacyJsonArray<LegacyChallengerPoolRow>(
+        row.challenger_pools_json,
+        {
+          stablecoinId: row.stablecoin_id,
+          source: "dex_liquidity",
+          context: "dex_liquidity.challenger_pools_json",
+          updatedAt: row.updated_at,
+        },
+      );
+      for (const pool of stored ?? []) {
+        const price = typeof pool.priceUsd === "number" ? pool.priceUsd : Number(pool.priceUsd);
+        const tvlUsd = typeof pool.tvlUsd === "number" ? pool.tvlUsd : Number(pool.tvlUsd);
+        if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
+        qualifying.push({
+          stablecoinId: row.stablecoin_id,
+          poolId: typeof pool.poolId === "string" ? pool.poolId : "",
+          chain: typeof pool.chain === "string" ? pool.chain : "unknown",
+          protocol: typeof pool.protocol === "string" ? pool.protocol : "unknown",
+          sourceFamily: typeof pool.sourceFamily === "string" && pool.sourceFamily.length > 0
+            ? pool.sourceFamily
+            : "legacy-challenger-pools",
+          priceUsd: price,
+          tvlUsd,
+          snapshotAt: row.updated_at,
+          publishedAt: row.updated_at,
+          priceObservedAt: typeof pool.priceObservedAt === "number" && Number.isFinite(pool.priceObservedAt)
+            ? pool.priceObservedAt
+            : null,
+        });
+      }
+    }
+
+    // Rows written before the challenger projection existed keep the historical
+    // display-slice fallback rather than losing legacy evidence entirely.
+    if (qualifying.length === 0 && row.top_pools_json != null) {
+      const pools = decodeLegacyJsonArray<Array<{ project?: unknown; chain?: unknown; tvlUsd?: unknown; price?: unknown; poolId?: unknown }>[number]>(
+        row.top_pools_json,
+        {
+          stablecoinId: row.stablecoin_id,
+          source: "dex_liquidity",
+          context: "dex_liquidity.top_pools_json",
+          updatedAt: row.updated_at,
+        },
+      );
+      if (pools == null) {
+        continue;
+      }
+      if (!Array.isArray(pools) || pools.length === 0) continue;
+      for (const pool of pools) {
         const price = typeof pool.price === "number" ? pool.price : Number(pool.price);
         const tvlUsd = typeof pool.tvlUsd === "number" ? pool.tvlUsd : Number(pool.tvlUsd);
         if (!Number.isFinite(price) || price <= 0 || !Number.isFinite(tvlUsd) || tvlUsd < minPoolTvlUsd) continue;
@@ -102,7 +152,9 @@ export async function loadLegacyDexPoolChallengers(
           snapshotAt: row.updated_at,
           publishedAt: row.updated_at,
         });
+      }
     }
+
     if (qualifying.length > 0) {
       challengersByStablecoin.set(row.stablecoin_id, qualifying);
       topPoolCoins.add(row.stablecoin_id);

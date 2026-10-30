@@ -43,7 +43,7 @@ import { buildKnownPoolAddresses, buildCurveLookups, fetchDataSources } from "..
 import { logWorkerEvent } from "../../../lib/structured-log";
 import { buildPoolFingerprint } from "../pool-helpers";
 import { buildPoolIdentity, getIdentityDedupReason } from "../pool-identity";
-import { CURVE_CHAINS } from "../constants";
+import { CURVE_API_BASE, CURVE_API_CHAIN_PATHS, CURVE_CHAINS } from "../constants";
 import { CURVE_DOLA_SUSDE_COMPOSITE_POOL_ADDRESS,
 CURVE_LUSD_3CRV_METAPOOL_ADDRESS,
 CURVE_NXUSD_COMPOSITE_POOL_ADDRESS,
@@ -120,6 +120,13 @@ describe("primary identity census", () => {
     expect(conflicting.derivedKeyCounts.size).toBe(0);
   });
 });
+
+function curveChainFromUrl(url: string): string | null {
+  const prefix = `${CURVE_API_BASE}/`;
+  if (!url.startsWith(prefix)) return null;
+  const path = url.slice(prefix.length);
+  return CURVE_CHAINS.find((chain) => (CURVE_API_CHAIN_PATHS[chain] ?? chain) === path) ?? null;
+}
 
 function mockDlYieldsSuccess(curveResponse: (() => Promise<{ response: Response; body: unknown } | null>) | null = async () => ({ response: new Response("", { status: 200 }), body: { data: { poolData: [] } } })) {
   vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
@@ -211,6 +218,36 @@ describe("fetchDataSources", () => {
     expect(result).not.toBeNull(); // DL is still up
     expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(expect.anything(), "curve-liquidity-api", false);
     expect(result!.dlYieldsAvailable).toBe(true);
+  });
+
+  it("names the Curve chains whose per-chain read failed instead of claiming a complete fan-out", async () => {
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url: string | URL | Request) => {
+      const urlStr = typeof url === "string" ? url : url instanceof URL ? url.toString() : url.url;
+      if (urlStr.includes("yields.llama.fi")) {
+        return { response: new Response("", { status: 200 }), body: { data: FAKE_DL_POOLS } };
+      }
+      if (urlStr.includes("api.llama.fi/protocols")) {
+        return { response: new Response("", { status: 200 }), body: [] };
+      }
+      const chain = curveChainFromUrl(urlStr);
+      if (chain === null) throw new Error(`unexpected fetch ${urlStr}`);
+      return chain === "ethereum"
+        ? { response: new Response("", { status: 200 }), body: { data: { poolData: [] } } }
+        : null;
+    });
+
+    const result = await fetchDataSources(null, createMockDb(), PRIMARY_POOL_LOOKUPS);
+
+    expect(result).not.toBeNull();
+    expect(result!.curveFailedChains).toEqual(CURVE_CHAINS.filter((chain) => chain !== "ethereum"));
+    // A fan-out is successful only when every leg answered, so a persistent
+    // per-chain outage can open the shared circuit instead of being reset by
+    // the one chain that still works.
+    expect(vi.mocked(recordOutcome)).toHaveBeenCalledWith(
+      expect.anything(),
+      "curve-liquidity-api",
+      false,
+    );
   });
 
   it("returns null when both DL and Curve fail (catastrophic)", async () => {

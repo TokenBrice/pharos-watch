@@ -137,6 +137,22 @@ export function selectDexPriceChallengerRowsFromPools(
   return selectedPools;
 }
 
+/**
+ * Non-display challenger projection persisted on the current/run rows. It uses
+ * the same TVL-bounded membership as the v2 publication so the legacy fallback
+ * does not depend on the display-oriented top-10 top_pools_json slice.
+ */
+export function buildStoredChallengerPoolsJson(
+  stablecoinId: string,
+  pools: PoolEntry[],
+  minPoolTvlUsd: number,
+): string | null {
+  const rows = selectDexPriceChallengerRowsFromPools(stablecoinId, pools, minPoolTvlUsd);
+  return rows.length === 0
+    ? null
+    : JSON.stringify(rows.map(({ stablecoinId: _stablecoinId, ...row }) => row));
+}
+
 export async function publishDexPriceChallengerSnapshots(
   db: D1Database,
   input: {

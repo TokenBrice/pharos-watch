@@ -99,6 +99,31 @@ describe("Sui shadow diagnostic price preflight and reasons", () => {
     expect(SuiClmmShadowHistorySchema.safeParse({ schemaVersion: "sui-clmm-shadow-v1", samples: [historical] }).success).toBe(true);
   });
 
+  it("counts and names a pool whose in-flight read the runtime fence aborted", async () => {
+    // Compress the collector's wall-clock fence: the read is still stopped by
+    // the same AbortSignal.timeout path production uses, after one request.
+    const realTimeout = AbortSignal.timeout.bind(AbortSignal);
+    vi.spyOn(AbortSignal, "timeout").mockImplementation((ms) => realTimeout(Math.min(ms, 150)));
+    vi.spyOn(globalThis, "fetch").mockImplementation((_input, init) => new Promise<Response>((_resolve, reject) => {
+      const signal = init?.signal;
+      if (!(signal instanceof AbortSignal)) return reject(new Error("sui-test-fetch-signal-missing"));
+      signal.addEventListener("abort", () => reject(signal.reason), { once: true });
+    }));
+
+    const summary = await collectSuiClmmShadowQuotes({
+      db: database([asset(rows[0].stablecoin_id)], rows.slice(0, 1)),
+      env,
+    });
+
+    expect(summary).toMatchObject({
+      attempted: 1, persisted: 0, failed: 1, requests: 1, budgetExhausted: false,
+      reason: "sui-runtime-fence-exceeded", scoreEligible: false,
+    });
+    expect(summary.persisted + summary.failed).toBe(summary.attempted);
+    expect(summary.failures).toHaveLength(1);
+    expect(summary.failures[0]?.startsWith(`${rows[0].pool_id}:sui-`)).toBe(true);
+  }, 5_000);
+
   it("retains bounded first/last reason codes through cron metadata compaction", async () => {
     vi.spyOn(stateReader, "fetchSuiClmmCapture")
       .mockRejectedValueOnce(new Error("sui-grpc-http-404"))

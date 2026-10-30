@@ -62,7 +62,8 @@ The DEX bridge and the pool challenge now deliberately read from different stora
 
 - `dex_prices.price_sources_json`: one aggregate per protocol, used for primary-price promotion
 - `dex_price_challenger_heads_v2` + publication-keyed `dex_price_challenger_payloads_v2`: accepted immutable individual challenger membership, selected from the full retained DEX pool set with protocol-first diversity and bounded price-evidence TVL coverage. Retained v1 snapshots are read only before a coin has a v2 head; old tables otherwise remain rollback storage.
-- `dex_liquidity.top_pools_json`: display-oriented top pools for UI detail, no longer the canonical challenger source
+- `dex_liquidity.challenger_pools_json`: the same TVL-bounded challenger projection stored with each publication for the legacy fallback; `NULL` on rows written before it existed
+- `dex_liquidity.top_pools_json`: display-oriented top pools for UI detail, no longer the canonical challenger source; the legacy fallback reads it only when a row has no challenger projection
 
 ## Provider-Specific Normalization
 

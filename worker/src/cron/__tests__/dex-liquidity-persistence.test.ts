@@ -143,7 +143,7 @@ function makeDb(options: {
 
 
 
-const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 31;
+const DEX_LIQUIDITY_RUN_ROW_BIND_COUNT = 32;
 
 function extractDexLiquidityRunRows(statements: readonly PreparedStatementWithMeta[]): unknown[][] {
   const rows: unknown[][] = [];
@@ -342,6 +342,7 @@ describe("dex-liquidity persistence", () => {
       JSON.stringify({ curve: 100_000, "uniswap-v3": 23_456 }),
       JSON.stringify({ Ethereum: 100_000, Base: 23_456 }),
       JSON.stringify(metrics.topPools),
+      null,
       78,
       0.2222,
       12.34,
@@ -389,6 +390,7 @@ describe("dex-liquidity persistence", () => {
       null,
       null,
       null,
+      null,
       0,
       null,
       expect.any(String),
@@ -406,7 +408,7 @@ describe("dex-liquidity persistence", () => {
     expect(JSON.parse(String(usdcPlaceholder?.[7]))).toMatchObject({
       "24h": { completeness: "complete", partialGrossUsd: null, measuredPoolCount: 0, volumeCoverage: null },
     });
-    expect(JSON.parse(String(usdcPlaceholder?.[21]))).toMatchObject({
+    expect(JSON.parse(String(usdcPlaceholder?.[22]))).toMatchObject({
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "unknown",
@@ -433,6 +435,7 @@ describe("dex-liquidity persistence", () => {
       4,
       JSON.stringify({ curve: 200_000 }),
       JSON.stringify({ ethereum: 300_000 }),
+      null,
       null,
       null,
       null,
@@ -497,7 +500,7 @@ describe("dex-liquidity persistence", () => {
     const row = extractDexLiquidityRunRows(
       getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
     ).find((candidate) => candidate[1] === meta.id);
-    expect(JSON.parse(String(row?.[21]))).toMatchObject({
+    expect(JSON.parse(String(row?.[22]))).toMatchObject({
       exitRouteObservations: [],
       exitRouteObservationCoverage: {
         status: "populated",
@@ -575,7 +578,7 @@ describe("dex-liquidity persistence", () => {
       const row = extractDexLiquidityRunRows(
         getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
       ).find((candidate) => candidate[1] === meta.id);
-      const details = JSON.parse(String(row?.[21]));
+      const details = JSON.parse(String(row?.[22]));
       expect(details.dexDeploymentCensus).toMatchObject({
         state,
         generationId: buildDexLiquidityPublicationGenerationId(quoteSourceAtSec),
@@ -608,7 +611,7 @@ describe("dex-liquidity persistence", () => {
         })), new Map(), { asOfSec: readCompletedAtSec, maxOutcomeAgeSec: 172_800 });
         expect(supply).toMatchObject({ unknownSupplyUsd: 100, unknownSupplyRatio: 1 });
       }
-      expect(row?.[30]).toBe(quoteSourceAtSec);
+      expect(row?.[31]).toBe(quoteSourceAtSec);
       expect(deploymentOutcomeRows.every((outcome) => outcome.observed_at === observedAtSec)).toBe(true);
       expect(db.getHistory().filter(({ sql }) => sql.includes("FROM dex_deployment_outcomes"))).toHaveLength(1);
     },
@@ -669,7 +672,7 @@ describe("dex-liquidity persistence", () => {
     const row = extractDexLiquidityRunRows(
       getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
     ).find((candidate) => candidate[1] === meta.id);
-    expect(JSON.parse(String(row?.[21]))).toMatchObject({
+    expect(JSON.parse(String(row?.[22]))).toMatchObject({
       exitRouteObservationCoverage: {
         status: "unknown",
         retainedPoolCount: 0,
@@ -839,7 +842,7 @@ describe("dex-liquidity persistence", () => {
     const currentRow = extractDexLiquidityRunRows(
       getPreparedBatchStatements("INSERT OR REPLACE INTO dex_liquidity_run_rows"),
     ).find((row) => row[1] === "usdt-tether");
-    const currentRoute = JSON.parse(String(currentRow?.[21])).exitRouteObservations[0].routeId;
+    const currentRoute = JSON.parse(String(currentRow?.[22])).exitRouteObservations[0].routeId;
     const historyRoute = vi.mocked(executeAtomicBatch).mock.calls
       .flatMap(([, statements]) => statements as PreparedStatementWithMeta[])
       .filter((statement) => statement.sql.includes("INSERT INTO dex_liquidity_history"))
@@ -1058,6 +1061,73 @@ describe("dex-liquidity persistence", () => {
         state: "published", written_row_count: 7, current_row_count: 7,
         created_at: now - 100, published_at: now - 50, failed_at: null, failure_reason: null,
       });
+    } finally {
+      fixtures.closeAll();
+    }
+  });
+
+  it("persists the TVL-bounded challenger projection beyond the display top-10 slice", async () => {
+    const fixtures = createLatestSchemaFixtureTracker();
+    try {
+      const { sqlite, db } = fixtures.open();
+      const actual = await vi.importActual<typeof DbModule>("../../lib/db");
+      vi.mocked(batchExecute).mockImplementation(actual.batchExecute);
+      vi.mocked(executeAtomicBatch).mockImplementation(actual.executeAtomicBatch);
+      const now = 1_800_000_000;
+      const livePools = Array.from({ length: 10 }, (_, index) => makePool({
+        poolId: `base:live-${index}`,
+        project: `live-dex-${index}`,
+        chain: "base",
+        tvlUsd: 300_000,
+        volumeUsd1d: 600_000 - index * 10_000,
+        price: 0.9995,
+        priceObservedAt: now - 60,
+        source: "dl",
+        volumeReading: { volume24hUsd: 600_000 - index * 10_000, volume7dUsd: null, observedAtSec: now - 60 },
+      }));
+      const dormant = makePool({
+        poolId: "base:aero-dormant",
+        project: "aerodrome-slipstream",
+        chain: "base",
+        poolType: "aerodrome-slipstream",
+        tvlUsd: 50_000_000,
+        volumeUsd1d: null,
+        volumeUsd7d: null,
+        price: 0.9,
+        priceObservedAt: now - 60,
+        source: "direct_api",
+        volumeReading: { volume24hUsd: null, volume7dUsd: null, observedAtSec: now - 60 },
+      });
+      const graph = initSourcePoolGraph("usdt-tether", "USDT");
+      graph.pools = [...livePools, dormant];
+      const result = await computeStablecoinScores(db, new Map([["usdt-tether", graph]]), new Map(), undefined, now);
+      await persistScores(
+        db,
+        result.scoredMetrics,
+        result.scores,
+        result.globalAgg,
+        now,
+        result.tvlStabilityMap,
+        undefined,
+        undefined,
+        result.retainedPoolsByStablecoin,
+      );
+
+      const row = sqlite.prepare(`SELECT top_pools_json, challenger_pools_json
+        FROM dex_liquidity WHERE stablecoin_id = 'usdt-tether'`).get() as {
+        top_pools_json: string;
+        challenger_pools_json: string;
+      };
+      // The display projection is volume-ranked and capped at ten rows.
+      expect(JSON.parse(row.top_pools_json).map((pool: { poolId: string }) => pool.poolId)).not.toContain(dormant.poolId);
+      expect(JSON.parse(row.challenger_pools_json)).toEqual(expect.arrayContaining([
+        expect.objectContaining({
+          poolId: dormant.poolId,
+          protocol: "aerodrome-slipstream",
+          priceUsd: 0.9,
+          tvlUsd: 50_000_000,
+        }),
+      ]));
     } finally {
       fixtures.closeAll();
     }

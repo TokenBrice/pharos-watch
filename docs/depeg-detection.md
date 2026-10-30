@@ -297,7 +297,7 @@ Age checks:
 - Uses the same freshness / minimum-TVL guardrail family as the depeg helper layer
 - Counts as confirmation only when **at least two distinct protocol/source-family groups** reach the full trigger threshold in the same direction, **or** a single qualifying pool with `>= $5M` TVL does so, and the confirming groups are at least as numerous as the groups contradicting the pending direction (opposite-direction or back inside the bar). Multiple same-protocol pools from the same source family count as one group.
 - The single-high-TVL exception replaces only the two-group minimum, never the opposing-group vote: one confirming group can be unopposed or tied with one opposing group, but cannot confirm against two opposing groups.
-- Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely
+- Non-fatal: missing challenger tables or incomplete published snapshots fall back through the helper's legacy path and still yield `null`/`false` safely. That path reads the stored TVL-bounded challenger projection; only rows without one use the display-oriented `top_pools_json` slice.
 - Persisted confirmation keys use `pool:<protocol>:<sourceFamily>`.
 
 ### Decision Matrix
