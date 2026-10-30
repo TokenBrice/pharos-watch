@@ -4,7 +4,8 @@ import { mkdirSync, mkdtempSync, readFileSync, rmSync, symlinkSync, writeFileSyn
 import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
-import { pagesArtifactEnvironment, runPagesArtifactLane } from "../ci/run-pages-artifact-lane.ts";
+import { dropRetiredDepegEventEntries, pagesArtifactEnvironment, runPagesArtifactLane } from "../ci/run-pages-artifact-lane.ts";
+import { depegLedgerCaptureId } from "../lib/depeg-ledger-capture.ts";
 import { PAGES_RELEASE_DATA_ARCHIVE, createPagesReleaseDataArchive, isPagesReleaseDataMember, mergeDatasetAliases, overlayPagesReleaseData, selectPagesReleaseArtifacts } from "../lib/pages-release-data.mts";
 
 const spawn = vi.hoisted(() => vi.fn());
@@ -213,5 +214,37 @@ describe("Pages release data archive", () => {
 
   it("rejects missing alias blocks instead of replacing candidate configuration", () => {
     expect(() => mergeDatasetAliases("/auth /login 301", aliases("2026-10-07"))).toThrow(/missing.*alias block/);
+  });
+});
+
+describe("dropRetiredDepegEventEntries", () => {
+  it("drops replayed depeg entries retired by a committed 301 and re-seals the capture", () => {
+    const root = mkdtempSync(join(tmpdir(), "pharos-retired-depeg-"));
+    try {
+      const dataDir = join(root, "data/depeg-events");
+      mkdirSync(join(dataDir, "metadata"), { recursive: true });
+      mkdirSync(join(root, "public"), { recursive: true });
+      writeFileSync(join(root, "public/_redirects"), [
+        "/depeg/eurs-2026-04-19/ /stablecoin/eurs-stasis/ 301",
+        "/depeg/eurs-2026-04-19 /stablecoin/eurs-stasis/ 301",
+        "/depeg-old/* /depeg/ 301",
+        "",
+      ].join("\n"));
+      const entries = [{ slug: "eurs-2026-04-19" }, { slug: "usdc-2023-03-11" }];
+      writeFileSync(join(dataDir, "2026.json"), `${JSON.stringify(entries, null, 2)}\n`);
+      writeFileSync(join(dataDir, "2023.json"), `${JSON.stringify([{ slug: "usdt-2023-06-15" }], null, 2)}\n`);
+      writeFileSync(join(dataDir, "index.json"), `${JSON.stringify(entries, null, 2)}\n`);
+      writeFileSync(join(dataDir, "metadata/capture.json"), `${JSON.stringify({ captureId: "sha256:stale", eventCount: 3 })}\n`);
+
+      expect(dropRetiredDepegEventEntries(root)).toEqual(["eurs-2026-04-19"]);
+      expect(JSON.parse(readFileSync(join(dataDir, "2026.json"), "utf8"))).toEqual([{ slug: "usdc-2023-03-11" }]);
+      expect(JSON.parse(readFileSync(join(dataDir, "index.json"), "utf8"))).toEqual([{ slug: "usdc-2023-03-11" }]);
+      expect(JSON.parse(readFileSync(join(dataDir, "metadata/capture.json"), "utf8"))).toEqual({
+        captureId: depegLedgerCaptureId(dataDir),
+        eventCount: 2,
+      });
+    } finally {
+      rmSync(root, { recursive: true, force: true });
+    }
   });
 });
