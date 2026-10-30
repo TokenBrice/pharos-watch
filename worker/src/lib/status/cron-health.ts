@@ -91,6 +91,19 @@ const CRON_HISTORY_ROWS_PER_JOB = 10;
 // Upper bound on one attempt's duration (scheduled invocations stop well within an hour).
 const CRON_OUTPUT_LOOKBACK_DURATION_SLACK_SEC = 3_600;
 const NEUTRAL_CRON_RUN_STATUS = "skipped_neutral";
+// Skips record no executed attempt. Lease-held, duplicate and already-running
+// skips must not stand in for the latest required attempt, hide a fresh error,
+// reset the two-run error streak, or consume the two-row required retention.
+const SKIPPED_CRON_RUN_STATUSES = [
+  NEUTRAL_CRON_RUN_STATUS,
+  "skipped_locked",
+  "skipped_duplicate",
+  "skipped_running",
+] as const;
+const SKIPPED_CRON_RUN_STATUS_SET: ReadonlySet<string> = new Set(SKIPPED_CRON_RUN_STATUSES);
+function isExecutedCronRunStatus(status: string): boolean {
+  return !SKIPPED_CRON_RUN_STATUS_SET.has(status);
+}
 /** Minimum progress age before a leased in-flight run reads stale. */
 export const CRON_IN_FLIGHT_STALE_FLOOR_SEC = 300;
 // D1's compound SELECT term limit is lower than upstream SQLite's default.
@@ -124,12 +137,15 @@ const PROVEN_SATISFIED_NEUTRAL_SKIP_SQL_FILTER = `status = '${NEUTRAL_CRON_RUN_S
       }), 0)
     ELSE 0
   END`;
+const REQUIRED_CRON_RUN_SQL_FILTER = `status NOT IN (${
+  SKIPPED_CRON_RUN_STATUSES.map((status) => `'${status}'`).join(", ")
+})`;
 
 type CronHistoryQueryMode = "display" | "latest-required" | "latest-proven-satisfied";
 
 const CRON_HISTORY_MODE_SQL_FILTER: Readonly<Record<CronHistoryQueryMode, string>> = {
   display: "",
-  "latest-required": `AND status != '${NEUTRAL_CRON_RUN_STATUS}'`,
+  "latest-required": `AND ${REQUIRED_CRON_RUN_SQL_FILTER}`,
   // Only a fresh readback can satisfy availability, so bound the index range
   // scan to the job's freshness window.
   "latest-proven-satisfied": `AND started_at >= ? AND ${PROVEN_SATISFIED_NEUTRAL_SKIP_SQL_FILTER}`,
@@ -373,7 +389,7 @@ async function fetchCronHistoryRows(
     const rows = batchResults.flat();
     const requiredCounts = new Map<string, number>();
     for (const row of rows) {
-      if (parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS) {
+      if (isExecutedCronRunStatus(parseCronRunStatus(row.status))) {
         requiredCounts.set(row.job, (requiredCounts.get(row.job) ?? 0) + 1);
       }
     }
@@ -400,7 +416,7 @@ async function fetchCronHistoryRows(
           .bind(...jobBatch)
           .all<CronHistoryRow>();
         return (result.results ?? []).filter((row) => jobSet.has(row.job)
-          && parseCronRunStatus(row.status) !== NEUTRAL_CRON_RUN_STATUS);
+          && isExecutedCronRunStatus(parseCronRunStatus(row.status)));
       })),
       Promise.all(chunkArray(jobsMissingProvenSkip, CRON_HISTORY_QUERY_JOB_BATCH_SIZE).map(async (jobBatch) => {
         const jobSet = new Set(jobBatch);
@@ -808,9 +824,9 @@ export async function loadCronHealth(
     const parsedStatus = parseCronRunStatus(row.status);
     // Keep the two required attempts independently of the display bound.
     // Fresh proven readback remains attributable when newer than the attempt.
-    const requiredRunCount = runs.reduce((count, run) => count + Number(run.status !== NEUTRAL_CRON_RUN_STATUS), 0);
+    const requiredRunCount = runs.reduce((count, run) => count + Number(isExecutedCronRunStatus(run.status)), 0);
     if (runs.length < CRON_HISTORY_ROWS_PER_JOB
-      || (parsedStatus !== NEUTRAL_CRON_RUN_STATUS && requiredRunCount < 2)
+      || (isExecutedCronRunStatus(parsedStatus) && requiredRunCount < 2)
       || (parsedStatus === NEUTRAL_CRON_RUN_STATUS && requiredRunCount === 0
         && isProvenSatisfiedNeutralSkipReason(parsedMeta?.reason)
         && !runs.some((run) => isProvenSatisfiedNeutralSkipReason(run.metadata?.reason)))) {
@@ -861,9 +877,10 @@ export async function loadCronHealth(
     const inFlightFresh = inFlight != null && progressTimestampReason == null
       && progressUpdatedAt?.ageSeconds != null && progressUpdatedAt.ageSeconds <= Math.max(CRON_IN_FLIGHT_STALE_FLOOR_SEC, interval);
     const isFresh = isFreshCronRun(lastRun, now, interval);
-    const requiredRuns = runs.filter((run) => run.status !== NEUTRAL_CRON_RUN_STATUS);
-    const latestRequiredRun = requiredRuns[0] ?? null;
-    const latestRequiredRunFresh = isFreshCronRun(latestRequiredRun, now, interval);
+    const nonNeutralRuns = runs.filter((run) => run.status !== NEUTRAL_CRON_RUN_STATUS);
+    const executedRuns = nonNeutralRuns.filter((run) => isExecutedCronRunStatus(run.status));
+    const latestExecutedRun = executedRuns[0] ?? null;
+    const latestExecutedRunFresh = isFreshCronRun(latestExecutedRun, now, interval);
     const hasFreshOk = historyResult.freshOkOutputJobs?.has(job) === true
       || runs.some((run) => run.status === "ok" && hasFreshOutput(job, run, now, interval));
     // A neutral skip whose machine-readable reason proves the period's
@@ -879,12 +896,11 @@ export async function loadCronHealth(
     const satisfiedRun = runs.find((run) => run.status === NEUTRAL_CRON_RUN_STATUS
       && isProvenSatisfiedNeutralSkipReason(run.metadata?.reason));
     const periodSatisfiedSinceRequiredAttempt = isFreshCronRun(satisfiedRun, now, interval)
-      && (latestRequiredRun == null || satisfiedRun.startedAt >= latestRequiredRun.startedAt);
+      && (latestExecutedRun == null || satisfiedRun.startedAt >= latestExecutedRun.startedAt);
     const hasFreshConfirmedOutput = historyResult.freshOutputJobs?.has(job) === true;
-    const requiredAttemptCompleted = latestRequiredRun?.status === "ok" || latestRequiredRun?.status === "degraded"
-      || latestRequiredRun?.status === "skipped_locked";
-    const hasFreshRequiredAvailability = latestRequiredRunFresh && requiredAttemptCompleted
-      && (hasFreshOutput(job, latestRequiredRun, now, interval) || hasFreshConfirmedOutput);
+    const latestExecutedAttemptCompleted = latestExecutedRun?.status === "ok" || latestExecutedRun?.status === "degraded";
+    const hasFreshRequiredAvailability = latestExecutedRunFresh && latestExecutedAttemptCompleted
+      && (hasFreshOutput(job, latestExecutedRun, now, interval) || hasFreshConfirmedOutput);
     const availabilityHealthyFromLastRun =
       isFresh &&
       lastRun != null &&
@@ -900,7 +916,7 @@ export async function loadCronHealth(
     // must not stay healthy forever. Critical-tier crons always require real
     // availability evidence.
     const watchBootstrap =
-      requiredRuns.length === 0 &&
+      nonNeutralRuns.length === 0 &&
       runs.length <= 1 &&
       statusImpact === "watch";
     // A failed history read proves nothing about the job (rule R2): publish an
@@ -923,16 +939,18 @@ export async function loadCronHealth(
     if (
       !telemetryUnknown
       && ((lastRun?.status === "degraded" && isFresh)
-        || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS && latestRequiredRun?.status === "degraded" && latestRequiredRunFresh))
+        || (lastRun != null && !isExecutedCronRunStatus(lastRun.status)
+          && latestExecutedRun?.status === "degraded" && latestExecutedRunFresh))
     ) {
       degradedCronRuns++;
       cronFindingJobs.degraded.push(job);
     }
     const latestErrorRunFresh =
       (lastRun?.status === "error" && isFresh)
-      || (lastRun?.status === NEUTRAL_CRON_RUN_STATUS
-        && latestRequiredRun?.status === "error"
-        && latestRequiredRunFresh
+      || (lastRun != null
+        && !isExecutedCronRunStatus(lastRun.status)
+        && latestExecutedRun?.status === "error"
+        && latestExecutedRunFresh
         && !periodSatisfiedSinceRequiredAttempt);
     if (!telemetryUnknown && latestErrorRunFresh && !inFlightFresh) {
       cronErrorCount++;
@@ -950,9 +968,9 @@ export async function loadCronHealth(
       // only 2+ consecutive escalate to `stale`.
       if (
         statusImpact === "critical"
-        && requiredRuns.length >= 2
-        && requiredRuns[0]?.status === "error"
-        && requiredRuns[1]?.status === "error"
+        && executedRuns.length >= 2
+        && executedRuns[0]?.status === "error"
+        && executedRuns[1]?.status === "error"
       ) {
         availabilityImpactingConsecutiveCronErrors++;
         cronFindingJobs.availabilityImpactingConsecutiveErrors.push(job);

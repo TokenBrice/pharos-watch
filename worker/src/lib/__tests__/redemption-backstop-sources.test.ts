@@ -474,7 +474,11 @@ describe("buildRedemptionBackstopEntry", () => {
         routeStatusReason: "Same wrapper's redemption pause observed onchain",
       } }),
     });
-    expect(entry).toMatchObject({ routeStatus: "paused", routeStatusSource: "onchain", feeBps: null, immediateCapacityUsd: null });
+    expect(entry).toMatchObject({
+      routeStatus: "paused", routeStatusSource: "onchain", resolutionState: "impaired",
+      score: null, feeBps: null, immediateCapacityUsd: null,
+    });
+    expect(entry.capsApplied).toContain("live-route-status-impairment");
     expect(entry.routeStatusReason).toBe("Same wrapper's redemption pause observed onchain");
   });
 
