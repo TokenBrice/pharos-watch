@@ -83,8 +83,6 @@ export const DWELLIR_CHAINS: readonly DwellirChainEntry[] = [
   // 2026-10-28: non-zero year-old BRZ state; deployment Transfer windows empty.
   // Finalized returns genesis, so the tag is treated as unsupported.
   { chainId: "chiliz", host: "api-chiliz-mainnet-archive", evmChainId: 88888, stateHistory: "archive", logsHistory: "none", finalizedTagUnsupported: true, verifiedAt: "2026-10-28" },
-  // Non-zero year-old IDRX state and non-empty early-mint/year-old 10k logs.
-  { chainId: "lisk", host: "api-lisk-mainnet", evmChainId: 1135, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, verifiedAt: "2026-10-28" },
   // Non-zero year-old USDC state; 10k logs include its deployment Transfer.
   { chainId: "viction", host: "api-viction-mainnet", evmChainId: 88, stateHistory: "archive", logsHistory: "full", maxLogBlockSpan: 10_000, finalizedTagUnsupported: true, verifiedAt: "2026-10-28" },
 ];

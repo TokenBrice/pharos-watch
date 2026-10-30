@@ -375,7 +375,7 @@ describe("tracked stablecoin metadata", () => {
       "asusdf-astherus", "sfrxusd-frax", "usdso-somnia", "savusd-avant",
       "sdai-gnosis", "cusdo-openeden", "usd3-3jane", "steakeurcv-steakhouse",
       "sreusd-resupply", "musd-metamask", "syusd-aegis", "sbold-k3-capital",
-      "ybold-yearn", "fxsave-f-x-protocol", "usdn-noble", "susn-noon",
+      "ybold-yearn", "fxsave-f-x-protocol", "susn-noon",
       "syzusd-yuzu", "usdsc-startale", "ctusd-citrea", "wm-m0",
       "usdnr-nerona", "usdr-rise", "mantrausd-mantra", "susdat-saturn",
       "pusd-plume", "wsrusd-reservoir", "srusd-reservoir",

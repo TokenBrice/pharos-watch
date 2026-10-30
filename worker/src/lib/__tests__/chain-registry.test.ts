@@ -207,7 +207,7 @@ describe("buildChainRpcs", () => {
     expect(logScanRpcEndpoints(admitted).slice(1)).toEqual(logScanRpcEndpoints(baseline));
   });
 
-  it.each(["chiliz", "lisk", "viction"])("keeps new %s coverage supplemental without a registry incumbent", (chainId) => {
+  it.each(["chiliz", "viction"])("keeps new %s coverage supplemental without a registry incumbent", (chainId) => {
     expect(buildChainRpcs(ALCHEMY_KEY, DRPC_KEY).has(chainId)).toBe(false);
     const admitted = buildChainRpcs(ALCHEMY_KEY, DRPC_KEY, { dwellirApiKey: DWELLIR_KEY }).get(chainId);
     expect(admitted?.endpoints).toHaveLength(1);
@@ -296,7 +296,7 @@ describe("buildChainRpcs", () => {
   it("keeps every excluded chain supplemental", () => {
     const chainRpcs = buildChainRpcs(undefined, undefined, { dwellirApiKey: DWELLIR_KEY });
 
-    for (const chainId of ["hyperevm", "xdc", "flow", "chiliz", "lisk", "viction"]) {
+    for (const chainId of ["hyperevm", "xdc", "flow", "chiliz", "viction"]) {
       const config = chainRpcs.get(chainId);
       expect(config, chainId).toBeDefined();
       expect(hasRegistryRpc(config), chainId).toBe(false);

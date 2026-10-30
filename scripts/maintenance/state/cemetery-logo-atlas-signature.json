@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "bebc8bca89c53d06cab061ca653c88a222bcfa90740913d832ce5153226d07e9",
+  "inputSha256": "47a8a6acbc6e179d776921f47ca48e57e8fc12926e088687caef6d02e5df3842",
   "image": {
-    "sha256": "842394aa2c421a4468f0ac566095bfaa5dee4116056d25161d00e03e618352a3",
-    "bytes": 142728,
+    "sha256": "984cb7ed1633776a60d7fcf348d6247a305220c5b20c3d8c73fa215738a4941c",
+    "bytes": 144680,
     "width": 798,
     "height": 698
   },
@@ -429,6 +429,11 @@
     {
       "logo": "/logos/cemetery/usdn.png",
       "sha256": "a5d71c26ead8199777ad4af3d7beae70ae8c12ff009b8cf78b144b1968b6d234",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/282-usdn.png",
+      "sha256": "1bdd4cfecce8b062d745a27a897c3e12555eabe5d318c99022064365d73b1196",
       "kernel": "lanczos3"
     },
     {
@@ -925,6 +930,10 @@
     {
       "id": "usdn-neutrino-usd-2022-04",
       "logo": "/logos/cemetery/usdn.png"
+    },
+    {
+      "id": "usdn-noble",
+      "logo": "/logos/282-usdn.png"
     },
     {
       "id": "usdp-usdp-stablecoin-2023-06",

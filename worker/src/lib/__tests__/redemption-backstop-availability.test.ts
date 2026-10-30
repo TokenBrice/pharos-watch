@@ -339,14 +339,14 @@ describe("loadSevereActiveDepegAvailabilityMap", () => {
     },
   );
 
-  it("attributes Noble impairment to its direct wM payout, not downstream USDC", async () => {
+  it("attributes RISE impairment to its direct wM payout, not downstream USDC", async () => {
     const now = 1_780_000_000;
     const db = mockD1Strict([activeDepegQuery([{
       stablecoin_id: "wm-m0", direction: "below", started_at: now - 3600,
     }])]);
     const result = await loadSevereActiveDepegAvailabilityMap(db, REVIEW_DATE,
       observations([["wm-m0", -3000]]), { metadataById: new Map(), now });
-    expect(result.get("usdn-noble")).toMatchObject({
+    expect(result.get("usdr-rise")).toMatchObject({
       routeStatus: "degraded", outputImpairedDependencyId: "wm-m0", outputImpairedShare: 1,
     });
   });

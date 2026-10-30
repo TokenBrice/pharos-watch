@@ -27,6 +27,9 @@ export const KRAKEN_MARKETS = [
   { symbol: "USDC", requestPair: "USDCUSD", responseKeys: ["USDCUSD"] },
   { symbol: "USDS", requestPair: "USDSUSD", responseKeys: ["USDSUSD"] },
   { symbol: "USDT", requestPair: "USDTUSD", responseKeys: ["USDTUSD", "USDTZUSD"] },
+  // 2026-10-30: Kraken's online XAUT/USD book is the Tether Gold token in
+  // CoinGecko's xaut-tether ticker set, mirroring PAXG's hard-market voice.
+  { symbol: "XAUT", requestPair: "XAUTUSD", responseKeys: ["XAUTUSD"] },
 ] as const;
 
 export const BITSTAMP_MARKETS = [

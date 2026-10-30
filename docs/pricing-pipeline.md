@@ -114,7 +114,7 @@ USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh 
 
 ### Nominal-reference recovery boundary
 
-`protocol-par` is a nominal reference, never an observed market quote. The current nominal routes are Bima USBD, Quill USDQ (`usdq-quill`, not Quantoz USDQ), Mento XOFm, Mento ZARm and the M0 extensions KAST USDK (`usdk-kast`) and Noble USDN (`usdn-noble`) on M0's reviewed 1:1 USDC redemption routes. `isObservedPrice()` rejects both the nominal observation mode and any composite source containing `protocol-par`; a fresh sync timestamp does not make parity observed.
+`protocol-par` is a nominal reference, never an observed market quote. The current nominal routes are Bima USBD, Quill USDQ (`usdq-quill`, not Quantoz USDQ), Mento XOFm, Mento ZARm and the M0 extension KAST USDK (`usdk-kast`) on M0's reviewed 1:1 USDC redemption route. `isObservedPrice()` rejects both the nominal observation mode and any composite source containing `protocol-par`; a fresh sync timestamp does not make parity observed.
 
 Primary collection already includes assets with retained DEX rows or protocol-source observations, independent of their incumbent price. Each registered promoted protocol lane must pass its existing freshness policy, the $50,000 per-lane TVL floor and candidate-scoped 50-bps corroboration from a hard source or a different DEX source family. One protocol on two chains is not independent corroboration. Admission to primary consensus is distinct from nominal-reference precedence: even an independently corroborated DEX-only consensus remains `confirm_required`, because promoted DEX lanes are not depeg-authoritative.
 

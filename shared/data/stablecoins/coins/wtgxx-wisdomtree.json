@@ -119,9 +119,9 @@
   "launchDate": "2023-11-07",
   "status": "quarantined",
   "listingStatusReview": {
-    "changedAt": "2026-07-15",
-    "reviewBy": "2026-10-30",
-    "reason": "2026-09-30 review: price and Chainlink NAV resolve, but CoinGecko market cap and circulating supply are zero and DefiLlama has no list row. Multi-chain supply is unreconciled; issuer-confirmed Stellar shares have no runtime reader.",
+    "changedAt": "2026-10-30",
+    "reviewBy": "2026-11-29",
+    "reason": "2026-10-30 review: CoinGecko supply and market cap remain zero and DefiLlama has no stablecoin row. Seven-chain supply reconciles to 660.8M shares, but CoinGecko total supply is 75.8M higher and Stellar has no runtime reader.",
     "source": {
       "label": "WisdomTree Stellar identity accessed 2026-09-30",
       "url": "https://stellar.wisdomtree.com/.well-known/stellar.toml"

@@ -223,36 +223,6 @@
         ]
       },
       {
-        "id": "lisk:0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
-        "destinationChain": "lisk",
-        "contractAddress": "0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
-        "protocol": "Bantu AMTP / cNGN issuer bridge",
-        "issuanceModel": "bridge-representation",
-        "routeClass": "canonical",
-        "riskTier": "issuer-native-lock-mint",
-        "semantics": "lock-mint",
-        "scope": "peripheral",
-        "reviewDisposition": "reviewed",
-        "reviewNote": "Conservative representation classification matching the reviewed destination architecture: the cNGN FAQ and Bantu Foundation case study establish Bantu as the native source of truth with destination deployments minted through the issuer's lock-and-mint bridge, and the issuer's contract registry lists this Lisk deployment as a supported mainnet network. At Lisk block 36,929,627 on 2026-09-05, name() and symbol() returned cNGN with 6 decimals and live supply, and owner() returned 0xffb0fa0d0be7c95dfe66cf59e24f4e2b56d650c6. The Lisk-specific AMTP adapter, peers, and burn/lock reconciliation remain undisclosed, so this route is scoreable as a representation while its exact bridge implementation remains an evidence gap.",
-        "mappingVersion": "bridge-route-facts-v2",
-        "observedAt": "2026-09-05",
-        "observedBlock": 36929627,
-        "sources": [
-          {
-            "label": "cNGN contract addresses",
-            "url": "https://docs.cngn.co/guides/contract-addresses"
-          },
-          {
-            "label": "Bantu Foundation cNGN case study",
-            "url": "https://bantufoundation.org/case-studies/cngn"
-          },
-          {
-            "label": "cNGN Lisk explorer",
-            "url": "https://blockscout.lisk.com/token/0xC7aB2C35Ea37236e644C24A4E4a1911c082887c0"
-          }
-        ]
-      },
-      {
         "id": "assetchain:0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
         "destinationChain": "assetchain",
         "contractAddress": "0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
@@ -675,53 +645,6 @@
           }
         ],
         "evidence": "The reviewed Bantu Foundation case study and cNGN bridge API establish the Bantu AMTP lock-and-mint delivery architecture, and the six route rows identify the destination delivery contracts. The 2026-08-28 review found no primary source that discloses current AMTP validator/attestor membership, peer/remote bindings, rate-limit authority, or adapter identities. Polygon and Celo 2-of-2 Safe plus AdminOperations controls resolve destination cap administration, but those delivery and cap-admin identities cannot stand in for the AMTP validation domain; this common validation control remains unknown. Reclassified 2026-09-01 under AUTHORITY-LADDER 9.46: the controlling party for this control is the external Bantu AMTP validator/attestor validation quorum itself, a rotating protocol-scoped operator set with no single controllerAddress to record. Its authority model is therefore validator-quorum, known but weak, graded no higher than a named issuer backend and never above a named multisig, rather than unknown. The unresolved roster, quorum, override and peer facts recorded above are unchanged; only the authority classification moved."
-      },
-      {
-        "id": "cngn-lisk-owner-safe",
-        "label": "cNGN Lisk destination representation owner Safe",
-        "routeRefs": [
-          "lisk:0xc7ab2c35ea37236e644c24a4e4a1911c082887c0"
-        ],
-        "capabilities": [
-          "bridge-mint",
-          "admin"
-        ],
-        "controllerChain": "lisk",
-        "controllerAddress": "0xffb0fa0d0be7c95dfe66cf59e24f4e2b56d650c6",
-        "failureDomainKeys": [
-          "safe:lisk:0xffb0fa0d0be7c95dfe66cf59e24f4e2b56d650c6"
-        ],
-        "authorityType": "safe",
-        "threshold": 2,
-        "signerCount": 2,
-        "safe": {
-          "owners": [
-            "0x7493c024aa7cc32cd87d265c7158dfa9e30ffc2f",
-            "0x98cf8488fe12879ad6a99ddbbb7a2c8c122f178a"
-          ],
-          "threshold": 2,
-          "observedBlock": 38055293,
-          "source": "onchain"
-        },
-        "canRaiseCap": true,
-        "capDescription": "The Safe owns AdminOperations 0xd7dc1fb7e1d7fad9a61c12f77647b4e26e852d8d. Its verified Admin2 implementation permits the owner to assign an authorized minter an arbitrary uint256 mintAmount; the token requires that exact amount and revokes authorization after minting. This is destination authorization, not a native Bantu supply cap.",
-        "observedAt": "2026-10-01",
-        "observedBlock": 38055293,
-        "sources": [
-          {
-            "label": "cNGN official deployment registry",
-            "url": "https://docs.cngn.co/guides/contract-addresses"
-          },
-          {
-            "label": "Lisk verified Cngn3 implementation",
-            "url": "https://blockscout.lisk.com/api/v2/smart-contracts/0x50a1b2d9583cc12daaed29c91c2e767e4316fefd"
-          },
-          {
-            "label": "Lisk verified Admin2 implementation",
-            "url": "https://blockscout.lisk.com/api/v2/smart-contracts/0x86f1afdf772b85b2034fa06939391b60c4e55003"
-          }
-        ],
-        "evidence": "Pinned Lisk block 38055293: owner() of both the official token and AdminOperations returned this Safe. getOwners() returned the two listed consortium signers and getThreshold() returned 2. The token EIP-1967 implementation was 0x50a1b2d9583cc12daaed29c91c2e767e4316fefd; storage slot 207 identified AdminOperations, whose implementation was 0x86f1afdf772b85b2034fa06939391b60c4e55003. Verified mint() checks canMint and mintAmount, and verified addMintAmount(address,uint256) is onlyOwner with no numeric maximum. AMTP validator, peer and reserve reconciliation evidence remains unresolved."
       },
       {
         "id": "cngn-assetchain-owner-safe",

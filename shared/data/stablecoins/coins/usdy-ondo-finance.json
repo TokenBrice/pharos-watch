@@ -168,5 +168,12 @@
     "yieldSource": "Ondo T-bill fund",
     "yieldType": "nav-appreciation"
   },
-  "launchDate": "2023-08-03"
+  "launchDate": "2023-08-03",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Aptos and Noble minting discontinued",
+      "message": "Ondo discontinued USDY minting on Aptos and Noble on 2026-09-08; Osmosis and Mantra IBC holders are affected. Under 1,000 USDY can exit via third-party liquidity until 2026-12-07; 1,000+ can bridge or redeem at NAV until 2027-09-08."
+    }
+  ]
 }

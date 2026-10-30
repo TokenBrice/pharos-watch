@@ -453,6 +453,31 @@ describe("fetchKrakenPrices", () => {
     expect(outcome.value.size).toBe(1);
   });
 
+  it("requests the exact Tether Gold market and prefers its bid/ask midpoint", async () => {
+    const requestedUrls: string[] = [];
+    mockFetch([{
+      match: (request) => {
+        requestedUrls.push(request.url);
+        return true;
+      },
+      body: {
+        error: [],
+        result: {
+          // Live XAUTUSD ticker shape observed 2026-10-30.
+          XAUTUSD: { a: ["3906.10000"], b: ["3906.00000"], c: ["3905.00000"] },
+        },
+      },
+    }]);
+
+    const outcome = await fetchKrakenPrices(["XAUT"]);
+
+    expect(KRAKEN_KNOWN_SYMBOLS).toContain("XAUT");
+    expect(requestedUrls).toEqual(["https://api.kraken.com/0/public/Ticker?pair=XAUTUSD"]);
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.get("XAUT")).toBeCloseTo(3906.05, 8);
+    expect(outcome.value.size).toBe(1);
+  });
+
   it("requests Wyoming FRNT's exact USD book and uses its bid/ask instead of the last trade", async () => {
     const requestedUrls: string[] = [];
     mockFetch([{

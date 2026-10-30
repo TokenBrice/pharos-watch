@@ -65,7 +65,7 @@
     {
       "type": "danger",
       "title": "Multi-jurisdiction sanctions exposure",
-      "message": "A7A5 and related infrastructure are subject to major sanctions risk. OFAC designated Grinex and A7-linked entities in August 2025, and the A7A5 token, issuer network, and venues such as Grinex/TengriCoin have also been targeted by EU and UK sanctions actions tied to Russian sanctions-evasion infrastructure."
+      "message": "A7A5 is a blocked asset: OFAC designated its issuer Old Vector LLC on 2025-08-14 and the A7 Network on 2026-10-01, calling A7A5 a blocked token; the EU bans transactions in it and the UK sanctioned its issuer and venues."
     }
   ]
 }

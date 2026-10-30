@@ -32,6 +32,7 @@ import {
 import { formatDuration, formatPrice } from "@shared/lib/format";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { classifyDepegClosure, DEPEG_RECOVERY_CLOSE_REASONS } from "@shared/lib/depeg-closure";
+import { getPegTaxonomyByCurrency, getPegTaxonomyByType } from "@shared/lib/peg-taxonomy";
 
 const PEAK_WORSENED_CACHE_KEY = "tape-projector:peak-worsened-seen";
 
@@ -53,6 +54,18 @@ interface DepegSourceRow {
 
 function coinSourceUrl(coinId: string): string {
   return `/stablecoin/${encodeURIComponent(coinId)}/#peg-history`;
+}
+
+/**
+ * `depeg_events.peg_type` stores the canonical peg type (`peggedUSD`);
+ * `tape_events.peg_currency` and the public peg filter use the peg currency
+ * (`USD`). Resolve through the shared registry so an unknown type stays null
+ * instead of leaking an unfilterable value into the column.
+ */
+function pegCurrencyForType(pegType: string): string | null {
+  return getPegTaxonomyByType(pegType)?.currency
+    ?? getPegTaxonomyByCurrency(pegType.replace(/^pegged/i, ""))?.currency
+    ?? null;
 }
 
 function classCursorKey(variant: "opened" | "resolved"): string {
@@ -155,7 +168,7 @@ async function projectDepegByVariant(
       endsAt: row.ended_at != null ? row.ended_at * 1000 : null,
       coinId: row.stablecoin_id,
       issuerId: deriveIssuerId(row.stablecoin_id),
-      pegCurrency: row.peg_type,
+      pegCurrency: pegCurrencyForType(row.peg_type),
       chain: null,
       title,
       summary,
@@ -299,7 +312,7 @@ export async function projectDepegPeakWorsened(
         endsAt: null,
         coinId: row.stablecoin_id,
         issuerId: deriveIssuerId(row.stablecoin_id),
-        pegCurrency: row.peg_type,
+        pegCurrency: pegCurrencyForType(row.peg_type),
         chain: null,
         title: `${row.symbol} depeg peak worsened (${sign}${absBps} bps)`,
         summary: `Deviation widened to ${sign}${absBps} bps from ${sign}${prevAbsBps} bps.`,

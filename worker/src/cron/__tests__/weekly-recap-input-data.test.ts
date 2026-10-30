@@ -253,6 +253,64 @@ describe("weekly recap canonical candidate aggregation", () => {
     expect(buildWeeklyInputData(rows)?.spikeMetrics.maxDepeg).toMatchObject({ symbol: "COIN", bps: 900, kind: "resolved" });
   });
 
+  it("bounds the weekly depeg maximum by the weakest daily persisted-magnitude census", () => {
+    // Each edition persists the eight highest-ranked magnitudes against a
+    // census of nine open events; the ninth ($2M micro-cap, 4200 bps) ranks
+    // below the daily display slice and never reaches a stored topDepegs row.
+    const ranked = [
+      { stablecoinId: "usd-alpha", symbol: "ALPHA", bps: -2100, mcapUsd: 500_000_000 },
+      { stablecoinId: "usd-bravo", symbol: "BRAVO", bps: -1800, mcapUsd: 450_000_000 },
+      { stablecoinId: "usd-charlie", symbol: "CHARLIE", bps: -1500, mcapUsd: 400_000_000 },
+      { stablecoinId: "usd-delta", symbol: "DELTA", bps: -1200, mcapUsd: 350_000_000 },
+      { stablecoinId: "usd-echo", symbol: "ECHO", bps: -900, mcapUsd: 300_000_000 },
+      { stablecoinId: "usd-foxtrot", symbol: "FOXTROT", bps: -700, mcapUsd: 250_000_000 },
+      { stablecoinId: "usd-golf", symbol: "GOLF", bps: -500, mcapUsd: 200_000_000 },
+      { stablecoinId: "usd-hotel", symbol: "HOTEL", bps: -400, mcapUsd: 150_000_000 },
+    ];
+    const topDepegs = ranked.map((event) => ({ ...event, startedAt: START_SEC }));
+    const activeKeys = [
+      ...ranked,
+      { stablecoinId: "usd-nano", symbol: "NANO", bps: -4200, mcapUsd: 2_000_000 },
+    ].map((event) => `${event.stablecoinId}:${START_SEC}:active`);
+    const week = (activeDepegCount: number, includeNano: boolean) => Array.from({ length: 7 }, (_, index) => row(index, {
+      activeDepegCount,
+      depegSignalKeys: { active: includeNano ? activeKeys : activeKeys.slice(0, ranked.length), resolved: [] },
+      topDepegs,
+    }));
+
+    const bounded = buildWeeklyInputData(week(9, true))!;
+    expect(bounded.activeDepegObservationsThisWeek).toBe(63);
+    expect(bounded.uniqueDepegSignalsThisWeek).toBe(9);
+    expect(bounded.spikeMetrics.maxDepeg).toMatchObject({ symbol: "ALPHA", bps: 2100 });
+    const boundedPrompt = buildWeeklyPrompt(bounded);
+    expect(boundedPrompt.split("\n").find((line) => line.includes("Worst depeg by bps")))
+      .toMatch(/8 of 9 active depeg events on 2026-08-14/);
+    expect(boundedPrompt).toContain("Top depeg signals by absolute market impact (magnitudes for 8 of 9 active depeg events on 2026-08-14)");
+
+    // A persisted slice that covers the census is a complete-population maximum.
+    const complete = buildWeeklyInputData(week(8, false))!;
+    expect(complete.spikeMetrics.depegObservationBounds).toEqual([]);
+    expect(buildWeeklyPrompt(complete)).toContain("Worst depeg by bps: 2026-08-14 ALPHA, 2100 bps");
+  });
+
+  it("bounds the weekly depeg maximum by the recovered-event census before threshold filtering", () => {
+    const resolvedDepegs = [{
+      stablecoinId: "usd-nano", symbol: "NANO", startedAt: START_SEC, peakBps: -4200, mcapUsd: 2_000_000, durationHours: 4,
+    }];
+    const rows = Array.from({ length: 7 }, (_, index) => row(index, {
+      // Three recovered events, but the daily mcap/peak filters persist one.
+      resolvedDepegCount: 3,
+      resolvedDepegs,
+      depegSignalKeys: { active: [], resolved: ["a", "b", "c"].map((id) => `${id}:${START_SEC}:resolved`) },
+    }));
+    const weekly = buildWeeklyInputData(rows)!;
+    expect(weekly.spikeMetrics.depegObservationBounds).toEqual([
+      { kind: "resolved", shown: 1, total: 3, date: "2026-08-14" },
+    ]);
+    expect(buildWeeklyPrompt(weekly).split("\n").find((line) => line.includes("Worst depeg by bps")))
+      .toMatch(/1 of 3 recovered depeg events on 2026-08-14/);
+  });
+
   it("rejects malformed grade transitions while preserving comparable valid transitions", () => {
     const identity = {
       model: "v8" as const, schemaVersion: 1 as const, methodologyVersion: "8.17",

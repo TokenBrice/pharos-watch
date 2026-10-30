@@ -349,8 +349,8 @@ describe("generate-reserve-coverage-audit", () => {
     },
   );
 
-  it("keeps the tGBP, USDXL and USDN suspensions non-executable and due from the November 20 UTC boundary", () => {
-    const ids = ["tgbp-tokenised", "usdxl-last", "usdn-noble"];
+  it("keeps the tGBP and USDXL suspensions non-executable and due from the November 20 UTC boundary", () => {
+    const ids = ["tgbp-tokenised", "usdxl-last"];
     const dormantAt = (generatedAt: string) => new Map(
       buildReserveCoverageAudit({ generatedAt }).configCensus.dormantConfigs
         .filter((row) => ids.includes(row.coinId))

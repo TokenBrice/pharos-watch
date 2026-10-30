@@ -3,7 +3,6 @@ import usdcCircleCoin from "@shared/data/stablecoins/coins/usdc-circle.json";
 import usdtTetherCoin from "@shared/data/stablecoins/coins/usdt-tether.json";
 import usdeEthenaCoin from "@shared/data/stablecoins/coins/usde-ethena.json";
 import brzTransferoCoin from "@shared/data/stablecoins/coins/brz-transfero.json";
-import idrxIdrxCoin from "@shared/data/stablecoins/coins/idrx-idrx.json";
 import { DWELLIR_CHAINS, dwellirRpcUrl } from "@shared/lib/dwellir-chains";
 import { buildAlchemyRpcUrl, buildChainRpcs } from "../../chain-registry";
 import { getPublicRpcUrl } from "../../public-rpc-registry";
@@ -20,7 +19,6 @@ const COIN_BY_ID: Record<string, { contracts?: readonly { chain?: string; addres
   "usdt-tether": usdtTetherCoin,
   "usde-ethena": usdeEthenaCoin,
   "brz-transfero": brzTransferoCoin,
-  "idrx-idrx": idrxIdrxCoin,
 };
 
 function target(chainId: string): RpcParityTarget {
@@ -46,7 +44,7 @@ describe("rpc parity targets", () => {
       .map((entry) => entry.chainId)).toEqual(["arbitrum", "robinhood"]);
     expect(RPC_PARITY_TARGETS.filter((entry) => entry.latestStateProbe === "state-bracket")
       .map((entry) => entry.chainId)).toEqual(["xdc"]);
-    expect(RPC_PARITY_TARGETS.filter((entry) => entry.latestStateProbe === "multicall3-block-number")).toHaveLength(37);
+    expect(RPC_PARITY_TARGETS.filter((entry) => entry.latestStateProbe === "multicall3-block-number")).toHaveLength(36);
   });
 
   it("tracks a contract that the named coin lists on that chain", () => {
@@ -80,7 +78,6 @@ describe("rpc parity targets", () => {
     ["robinhood", "https://robinhood-rpc.publicnode.com"],
     ["arc", "https://arc-rpc.publicnode.com"],
     ["chiliz", "https://rpc.ankr.com/chiliz"],
-    ["lisk", "https://rpc.api.lisk.com"],
     ["viction", "https://rpc.viction.xyz"],
   ])("keeps %s's reviewed comparator keyless and independent of consumer routing", (chainId, url) => {
     const chainRpcs = buildChainRpcs("parity-test-alchemy-key", "parity-test-drpc-key");

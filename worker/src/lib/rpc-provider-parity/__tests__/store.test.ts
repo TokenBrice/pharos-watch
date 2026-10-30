@@ -88,7 +88,7 @@ describe("rpc parity store merging", () => {
     expect(row?.runs[0].atSec).toBe(NOW_SEC + 5 * 3600);
   });
 
-  it("fits seven days of the forty-chain two-hour rotation without byte pruning", () => {
+  it("fits seven days of the full-roster two-hour rotation without byte pruning", () => {
     let row: RpcParityStoreRow | null = null;
     let seed = 1_234_567;
     const runCount = WEEK_SEC / 7200;
@@ -112,7 +112,7 @@ describe("rpc parity store merging", () => {
       expect(merged.droppedOldest).toBe(0);
       row = merged.row;
     }
-    expect(row?.chains).toHaveLength(40);
+    expect(row?.chains).toHaveLength(RPC_PARITY_TARGETS.length);
     expect(row?.runs).toHaveLength(runCount);
     expect(row?.gateRuns).toHaveLength(runCount);
     const encoded = encodeRpcParityStoreRow(row!);
@@ -604,7 +604,7 @@ describe("rpc parity store wire form", () => {
       chains: RPC_PARITY_TARGETS.map((target) => target.chainId),
       comparators: [], dwellirHosts: [], runs: runs.slice(0, -1), latest: {},
     }, runs[runs.length - 1], { nowSec: NOW_SEC }).row;
-    expect(row.chains).toHaveLength(40);
+    expect(row.chains).toHaveLength(RPC_PARITY_TARGETS.length);
     expect(encodeRpcParityStoreRow(row).length).toBeLessThan(RPC_PARITY_MAX_ROW_BYTES);
     const decoded = decodeRpcParityStoreRow(encodeRpcParityStoreRow(row));
     expect(decoded?.gateRuns).toHaveLength(RPC_PARITY_RETENTION_RUNS);
@@ -612,7 +612,7 @@ describe("rpc parity store wire form", () => {
     expect(row.runs.length).toBeGreaterThanOrEqual(RPC_PARITY_GATE_MIN_RUNS);
     expect(row.runs.length).toBeLessThanOrEqual(RPC_PARITY_RETENTION_RUNS);
     expect(decoded?.runs).toHaveLength(row.runs.length);
-    expect(decoded?.runs[row.runs.length - 1]?.samples[39].calls).toEqual(runs[167].samples[39].calls);
+    expect(decoded?.runs[row.runs.length - 1]?.samples[RPC_PARITY_TARGETS.length - 1].calls).toEqual(runs[167].samples[RPC_PARITY_TARGETS.length - 1].calls);
     expect(decoded?.runs[0].atSec).toBe(runs[RPC_PARITY_RETENTION_RUNS - row.runs.length].atSec);
   });
 

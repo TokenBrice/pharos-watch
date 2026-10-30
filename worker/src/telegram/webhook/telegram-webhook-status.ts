@@ -64,7 +64,7 @@ export interface StatusForCoin {
     /** True only when `updatedAt` is within the DEWS DEX-liquidity budget. */
     current: boolean;
   } | null;
-  liquidityUnavailableReason?: "invalid-coverage-evidence" | null;
+  liquidityUnavailableReason?: "invalid-coverage-evidence" | "unobserved-liquidity" | null;
   yield: {
     currentApy: number;
     apy30d: number;
@@ -220,7 +220,11 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
   let liquidityUnavailableReason: StatusForCoin["liquidityUnavailableReason"] = null;
   if (liquidityRow) {
     try {
-      normalizeDexLiquidityEvidence({ ...liquidityRow, stablecoin_id: stablecoinId });
+      const evidence = normalizeDexLiquidityEvidence({ ...liquidityRow, stablecoin_id: stablecoinId });
+      // A placeholder row with zero TVL is unobserved, not a $0 publication.
+      if (evidence.liquidityEvidenceClass === "unobserved") {
+        liquidityUnavailableReason = "unobserved-liquidity";
+      }
     } catch {
       liquidityUnavailableReason = "invalid-coverage-evidence";
     }

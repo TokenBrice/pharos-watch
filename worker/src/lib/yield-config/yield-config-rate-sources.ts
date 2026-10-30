@@ -147,7 +147,6 @@ export const RATE_DERIVED_CONFIGS: RateDerivedConfig[] = [
   { stablecoinId: "cgusd-cygnus-finance", spreadBps: 35, label: "T-bill proxy (net of 0.35% protocol fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "ylds-figure", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "mtbill-midas", spreadBps: 0, label: "T-bill proxy", benchmarkOverrideKey: "USD_EFFR" },
-  { stablecoinId: "usdn-noble", spreadBps: 0, label: "M0 T-bill rebase proxy", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "ousg-ondo-finance", spreadBps: 50, label: "T-bill proxy (net of 0.50% fee)", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "susd-solayer", spreadBps: 0, label: "T-bill proxy", benchmarkOverrideKey: "USD_EFFR" },
   { stablecoinId: "benji-franklin-templeton", spreadBps: 20, label: "T-bill proxy (net of 0.20% fee)", benchmarkOverrideKey: "USD_EFFR" },

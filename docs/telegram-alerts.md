@@ -37,7 +37,7 @@ Ingress flood admission precedes action-specific D1 work; callbacks share the pe
 
 Bare `/status` is a chat card and `/status <ticker>` is a coin card; each value shows its own age and nothing carries a freshness verdict. Coin-card ages follow the `updated N ago` pattern, unavailable values say so, and model and generation identifiers are never shown.
 
-Supply and DEX liquidity are labelled by age on the coin card (`Supply: <value> (updated N ago)`); `Supply: unavailable` appears when the stablecoins publication, the asset or its current peg buckets are unavailable. An explicit observed zero supply remains `$0`. The alert context still applies its own supply/DEX budgets.
+Supply and DEX liquidity are labelled by age on the coin card (`Supply: <value> (updated N ago)`); `Supply: unavailable` appears when the stablecoins publication, the asset or its current peg buckets are unavailable. An explicit observed zero supply remains `$0`; an unobserved DEX placeholder row is unavailable, never `DEX liquidity $0`, so only positive observed TVL is published. The alert context still applies its own supply/DEX budgets.
 
 Flow freshness is a distinct **context tolerance**, not a claim about `/api/mint-burn-flows` endpoint freshness. `shared/lib/api-freshness.ts` owns `TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC` (six hours), used by the `/status` loader and alert context. At exactly six hours flow remains eligible as context; beyond it alerts omit the optional flow segment. Endpoint freshness remains governed separately by `API_FRESHNESS_MAX_AGE_SEC`; PSI/DEWS incident canaries use the independent four-hour `CANARY_INCIDENT_MAX_AGE_SEC` policy. None of these context disclosures changes primary alert eligibility.
 

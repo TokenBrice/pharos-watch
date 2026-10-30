@@ -241,7 +241,7 @@ describe("lane screening emitter inventory loader", () => {
       summary: { lanes: number; covered: number; inventory: { pilotLanes: number; uncoveredEvents: string[] } };
       pilot: unknown[];
     };
-    expect(artifact.summary.lanes).toBe(543);
+    expect(artifact.summary.lanes).toBe(542);
     expect(artifact.summary.inventory.pilotLanes).toBe(5);
     expect(artifact.pilot).toHaveLength(5);
     expect(artifact.summary.covered).toBe(5);

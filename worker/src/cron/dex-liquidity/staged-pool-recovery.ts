@@ -262,7 +262,14 @@ export async function captureClSourcePools<T extends ClSourcePoolCandidate>(inpu
     if (!Number.isFinite(tvlUsd) || tvlUsd <= 0) continue;
     pools.push({
       candidate: row.candidate, parameter: row.parameter, price, tvlUsd,
-      tokens: tokenRows.map((token, index) => ({ address: token.address, symbol: token.symbol, decimals: token.decimals, priceUsd: index === 0 ? price0 : price1 })),
+      tokens: tokenRows.map((token, index) => ({
+        address: token.address,
+        symbol: token.symbol,
+        decimals: token.decimals,
+        // `tracked-positive` values every leg from its own tracked primary:
+        // that reference values the pool but is never an observation of it.
+        priceUsd: input.valuation === "tracked-positive" ? undefined : index === 0 ? price0 : price1,
+      })),
       balances: tokenRows.map((token) => token.balance),
     });
   }

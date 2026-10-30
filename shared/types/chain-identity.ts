@@ -147,9 +147,10 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   icon:           { name: "ICON",            explorerUrl: "https://tracker.icon.community",               evmChainId: null,     type: "other", logoPath: "/chains/icon.png"           },
   archway:        { name: "Archway",         explorerUrl: "https://www.mintscan.io/archway",              evmChainId: null,     type: "other", logoPath: "/chains/archway.png"        },
   havah:          { name: "Havah",           explorerUrl: "https://scan.havah.io",                        evmChainId: null,     type: "other", logoPath: "/chains/havah.png"          },
-  // U3 registrations for verified live deployments: cNGN on Lisk (1135) and
-  // Asset Chain (42420), BRZ on Chiliz (88888). Chain IDs and explorers were
-  // confirmed against each chain's official RPC and documentation. No
+  // U3 registrations for verified deployments: Asset Chain (42420) and Chiliz
+  // (88888). Lisk (1135) remains a known identity after the 2026-10-31 chain
+  // shutdown. Chain IDs and explorers were confirmed against each chain's
+  // official RPC and documentation. No
   // `providers` block: no token-pool provider registration was sourced for
   // these chains, so their deployments read "no registered token-pool
   // provider supports this chain" rather than claiming a query that cannot

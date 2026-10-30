@@ -40,11 +40,26 @@ export interface WeeklyRiskLeaderboardSignal {
   suppressReason?: string;
 }
 
+export interface WeeklyDepegObservationBound {
+  kind: "active" | "resolved";
+  /** Persisted magnitudes in the weakest daily edition. */
+  shown: number;
+  /** That edition's uncapped event census. */
+  total: number;
+  date: string;
+}
+
 export interface WeeklySpikeMetrics {
   minPsi: { date: string; score: number; band: string } | null;
   minGauge: { date: string; score: number } | null;
   maxDepeg: SpikeDepeg | null;
   maxDepegImpact: SpikeDepeg | null;
+  /**
+   * Daily display-slice bounds behind the depeg maxima and signal lists: for
+   * each event kind, the edition whose persisted magnitudes covered the fewest
+   * of its uncapped census. Empty when every edition covered its census.
+   */
+  depegObservationBounds: WeeklyDepegObservationBound[];
 }
 
 export interface WeeklyInputData {

@@ -284,14 +284,6 @@ describe("DEX deployment outcomes", () => {
     expect(outcomes).toContainEqual(
       expect.objectContaining({
         stablecoinId: "cngn-compliant-naira",
-        chain: "lisk",
-        address: "0xc7ab2c35ea37236e644c24a4e4a1911c082887c0",
-        providers: [],
-      }),
-    );
-    expect(outcomes).toContainEqual(
-      expect.objectContaining({
-        stablecoinId: "cngn-compliant-naira",
         chain: "assetchain",
         address: "0x7923c0f6fa3d1ba6eafcaedaad93e737fd22fc4f",
         providers: [],

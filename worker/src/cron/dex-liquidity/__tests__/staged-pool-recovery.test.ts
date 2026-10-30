@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { encodeFunctionResult, parseAbi } from "viem/utils";
+import { convertToGtNewPools } from "../../../lib/dex-api-common";
 import { captureClSourcePools, loadStagedPoolRecoveryRows, sqrtRatioToSpotPrice } from "../staged-pool-recovery";
 
 const rpc = vi.hoisted(() => ({
@@ -110,5 +111,41 @@ describe("captureClSourcePools", () => {
     const result = await capture();
     if (failure !== "valid") expect(result.pools).toEqual([]);
     else expect(result.pools).toMatchObject([{ price: 1, tvlUsd: 3, balances: [1, 2], tokens: [{ priceUsd: 1 }, { priceUsd: 1 }] }]);
+  });
+
+  it("values tracked-positive recovery from its references without republishing them as pool prices", async () => {
+    rpc.fetchEvmMulticall3Aggregate3AtBlock.mockResolvedValueOnce([
+      receipt("factory", "factory", factory),
+      receipt("token0", "token0", token0), receipt("token1", "token1", token1),
+      receipt("fee", "fee", 100), receipt("slot0", "slot0", [1n << 96n, 0]),
+      receipt("token-0-decimals", "decimals", 6), receipt("token-1-decimals", "decimals", 6),
+      receipt("token-0-balance", "balanceOf", 1_000_000n * 10n ** 6n),
+      receipt("token-1-balance", "balanceOf", 2_000_000n * 10n ** 6n),
+    ]).mockResolvedValueOnce([receipt("membership", "getPool", pool)]);
+    const chainAddressToId = new Map([
+      [`ethereum:${token0}`, "usdc-circle"],
+      [`ethereum:${token1}`, "usdt-tether"],
+    ]);
+    // USDC's trusted primary reads 1.02 while the pool still quotes both legs
+    // at 1:1: the references value the pool, but its own primary is not
+    // evidence of what the pool says.
+    const trackedStablecoinPrices = new Map([["usdc-circle", 1.02], ["usdt-tether", 1]]);
+    const result = await captureClSourcePools({
+      chain: "ethereum", factoryAddress: factory, candidates: [{ poolAddress: pool, expectedTokens: new Set([token0, token1]) }],
+      parameterName: "fee", maxParameter: 1_000_000, valuation: "tracked-positive",
+      chainAddressToId, trackedStablecoinPrices, options: {},
+    });
+    expect(result.pools[0]!.tvlUsd).toBeCloseTo(3_020_000, 6);
+    expect(result.pools[0]!.tokens.map((token) => token.priceUsd)).toEqual([undefined, undefined]);
+
+    const captured = result.pools[0]!;
+    const shapedPrices = convertToGtNewPools([{
+      source: "aerodrome-slipstream", chain: "ethereum", poolAddress: captured.candidate.poolAddress,
+      poolType: "aerodrome-slipstream-unknown-fee", tokens: captured.tokens, price: captured.price,
+      tvlUsd: captured.tvlUsd, volume24hUsd: null, feeRate: null, tickSpacing: captured.parameter,
+      balances: captured.balances,
+    }], chainAddressToId, new Map(), undefined, trackedStablecoinPrices).get("usdc-circle")?.map((entry) => entry.price) ?? [];
+    expect(shapedPrices).toHaveLength(1);
+    expect(shapedPrices[0]).toBeCloseTo(1, 6);
   });
 });

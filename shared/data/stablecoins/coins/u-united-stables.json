@@ -8,7 +8,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Variable reserve mix of cash, U.S. Treasury bills, and fiat-referenced stablecoins approved by United Stables.",
+  "collateral": "Variable mix of cash and cash equivalents, tokenised Treasury fund units, stablecoins and Binance RWUSD.",
   "pegMechanism": "Issuer-managed minting against eligible assets and redemption for issuer-selected cash or stablecoins, restricted to approved Mint Users. Ethereum/BSC token owners can mint without a reserve-oracle check; Chainlink publishes aggregate reserve data.",
   "proofOfReserves": {
     "type": "real-time",

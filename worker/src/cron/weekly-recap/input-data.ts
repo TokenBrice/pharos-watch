@@ -685,6 +685,33 @@ function collectWeeklyTopSignals(parsed: WeeklyParsedRow[]): WeeklyTopSignals {
   };
 }
 
+/**
+ * The daily collector persists only its display slices (top active magnitudes,
+ * filtered top recovered rows) while the same rows carry the uncapped census.
+ * A weekly depeg maximum is therefore a slice maximum unless each edition
+ * persisted a magnitude for every event it observed; return the weakest such
+ * edition per kind so the prompt can disclose the shown/total bound (ADR-34).
+ */
+function collectDepegObservationBounds(parsed: WeeklyParsedRow[]): WeeklySpikeMetrics["depegObservationBounds"] {
+  const bounds: WeeklySpikeMetrics["depegObservationBounds"] = [];
+  for (const kind of ["active", "resolved"] as const) {
+    let weakest: WeeklySpikeMetrics["depegObservationBounds"][number] | null = null;
+    for (const day of parsed) {
+      const total = kind === "active" ? day.inputData.activeDepegCount : day.inputData.resolvedDepegCount;
+      if (total == null) continue;
+      const shown = kind === "active"
+        ? day.inputData.topDepegs?.length ?? 0
+        : day.inputData.resolvedDepegs?.length ?? 0;
+      if (shown >= total) continue;
+      if (weakest == null || total - shown > weakest.total - weakest.shown) {
+        weakest = { kind, shown, total, date: day.date };
+      }
+    }
+    if (weakest) bounds.push(weakest);
+  }
+  return bounds;
+}
+
 function buildWeeklySpikeMetrics(parsed: WeeklyParsedRow[], allDepegObservations: WeeklyDepegSignal[]): WeeklySpikeMetrics {
   const psiObservations = parsed
     .map((d) =>
@@ -730,6 +757,7 @@ function buildWeeklySpikeMetrics(parsed: WeeklyParsedRow[], allDepegObservations
     minGauge: minByScore(gaugeObservations),
     maxDepeg: toSpikeDepeg(maxDepegByBps),
     maxDepegImpact: toSpikeDepeg(maxDepegByImpact),
+    depegObservationBounds: collectDepegObservationBounds(parsed),
   };
 }
 

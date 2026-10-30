@@ -29,7 +29,7 @@ describe("reviewed registry provenance identity", () => {
     const eagerIncidents = buildIncidentRuntime(V9AuthoredIncidentRegistryEnvelopeSchema.parse(incidents));
     expect(SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST).toBe(eagerIncidents.digest);
     // Deliberate incident curation rotates this independent full-file pin.
-    expect(eagerIncidents.digest).toBe("e651ca0a8931b0d85d4265936b42f8dd09d2ec1802d347686fb22dab36d2d928");
+    expect(eagerIncidents.digest).toBe("b85a678276f342b7473c195cd80c425d1dcc3fb669a04f64e7a6ff6843cc79c8");
     expect(SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.mechanism-review-overlays.v1", overlays: SafetyScoreV9MechanismReviewOverlayFileSchema.parse(mechanism) })));
     expect(computeSafetyScoreV9ReviewedTransferFactsDigest()).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.reviewed-transfer-overlays.v1", schemaVersion: 1, reviews: SafetyScoreV9ReviewedTransferFileSchema.parse(transfer).reviews.sort((a, b) => compareText(a.assetId, b.assetId)) })));
   });

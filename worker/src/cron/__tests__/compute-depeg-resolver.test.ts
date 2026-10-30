@@ -378,6 +378,35 @@ describe("computeDepegResolver", () => {
     expect(payload.rows).toEqual([]);
   });
 
+  it("publishes an unavailable lineage instead of a zero-size corpus when no training history was read", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    const { stores } = storesFor();
+    const db = resolverDb([]);
+
+    const result = await computeDepegResolver({
+      db,
+      ddrRunId: "ddr:quarter-hour:1779984600:empty-board",
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      storeContracts: stores,
+    });
+    const payload = readDdrSnapshotPayload(db);
+
+    expect(result.status ?? "ok").toBe("ok");
+    expect(payload.rows).toEqual([]);
+    // No active confirmed depeg means `loadDdrContext` never runs, so the
+    // four-year training corpus is never read. R1: that unread corpus size is
+    // unavailable, not a zero-incident calibration corpus.
+    expect(payload._meta.lineage).toBeNull();
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      incidentCount: null,
+      quarantinedCoins: null,
+    });
+  });
+
   it.each([
     [false, true, "stablecoins-cache-unsafe"],
     [true, false, "depeg-pipeline-unhealthy"],
@@ -551,6 +580,7 @@ describe("computeDepegResolver", () => {
     const payload = readDdrSnapshotPayload(db);
     expect(payload._meta.degraded).toBe(true);
     expect(payload._meta.degradedReason).toBe("stablecoins-cache-unsafe");
+    expect(payload._meta.lineage).toBeNull();
     expect(payload.rows).toEqual([]);
   });
 
