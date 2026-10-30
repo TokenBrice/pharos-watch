@@ -197,9 +197,10 @@ describe("proven-zero repair queue", () => {
   it("closes proved zeroes without re-enqueuing them as legacy derived zeroes", async () => {
     const sqlite = new DatabaseSync(":memory:");
     try {
-      sqlite.exec(`CREATE TABLE blacklist_events(id, event_type, amount_source, amount_native, amount_status, provenance_source);
+      sqlite.exec(`CREATE TABLE blacklist_events(id, event_type, amount_source, amount_native, amount_status, provenance_source,
+          amount_last_error_class, suppression_reason, chain_id DEFAULT 'tron');
         CREATE TABLE blacklist_amount_repair_queue(event_id PRIMARY KEY, status, priority, reason, available_at, created_at, updated_at, last_error_class, completed_at);
-        INSERT INTO blacklist_events VALUES
+        INSERT INTO blacklist_events(id, event_type, amount_source, amount_native, amount_status, provenance_source) VALUES
           ('zero', 'blacklist', 'derived', 0, 'resolved', 'trongrid-transfer-replay-zero'),
           ('cli-zero', 'blacklist', 'derived', 0, 'resolved', 'trongrid-transfer-replay-zero:hash'),
           ('legacy', 'blacklist', 'derived', 0, 'resolved', NULL);

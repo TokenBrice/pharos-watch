@@ -7,7 +7,7 @@ import {
   type RateLimitedFetch,
   budgetExhausted,
 } from "../evm-logs";
-import { fetchEtherscanProxyHex, fetchJsonRpcHexAtUrl } from "../evm-rpc";
+import { fetchEtherscanProxyHex, fetchJsonRpcHexAtUrl, parseUint256Hex } from "../evm-rpc";
 import { getChainRpc, hasRegistryRpc, registryRpcEndpoints, type ChainRpcConfig } from "../chain-registry";
 import { fetchJsonWithRetry } from "../fetch-retry";
 import { rethrowIfAborted, throwIfAborted } from "../abort";
@@ -18,44 +18,47 @@ import {
 } from "../tron-address";
 import { DRPC_NETWORK } from "@shared/lib/drpc";
 
+interface EvmBalanceOptions {
+  deadlineMs?: number;
+  onProviderAttempt?: (provider: "drpc" | "chain_rpc" | "etherscan") => void;
+  maxRetries?: number;
+}
+
 async function fetchEvmBalanceAtTag(
   evmChainId: number,
   contractAddress: string,
   address: string,
-  tag: string,
+  blockNumberOrTag: number | "latest",
   apiKey: string | null,
   rateLimit: RateLimitedFetch,
-  decimals: number,
   budget: SubrequestBudget,
-  signal?: AbortSignal,
-): Promise<number | null> {
-  if (budgetExhausted(budget)) return null;
-
+  signal: AbortSignal | undefined,
+  options: EvmBalanceOptions,
+): Promise<bigint | null> {
+  if (!apiKey) return null;
   const data = encodeBalanceOfCallData(address);
-  const blockNumberOrTag = tag === "latest" ? "latest" : Number.parseInt(tag, 16);
-  if (typeof blockNumberOrTag === "number" && !Number.isFinite(blockNumberOrTag)) {
-    logWorkerEventArgs("lib", "warn", `[sync-blacklist] fetchEvmBalanceAtTag: invalid block tag "${tag}", returning null`);
-    return null;
-  }
 
   try {
-    budget.count++;
-    const result = await rateLimit(async () => fetchEtherscanProxyHex({
-      evmChainId,
-      action: "eth_call",
-      to: contractAddress,
-      data,
-      blockNumberOrTag,
-      apiKey,
-      signal,
-      timeoutMs: 10_000,
-    }));
-
-    if (!result) {
-      return null;
-    }
-
-    return decimalNumberFromBigInt(BigInt(result), decimals);
+    const result = await rateLimit(async () => {
+      throwIfAborted(signal);
+      const remainingMs = options.deadlineMs == null ? 10_000 : options.deadlineMs - Date.now();
+      if (budgetExhausted(budget) || remainingMs <= 0) return null;
+      budget.count++;
+      options.onProviderAttempt?.("etherscan");
+      return fetchEtherscanProxyHex({
+        evmChainId,
+        action: "eth_call",
+        to: contractAddress,
+        data,
+        blockNumberOrTag,
+        apiKey,
+        signal,
+        timeoutMs: Math.min(10_000, remainingMs),
+        deadlineMs: options.deadlineMs,
+        maxRetries: options.maxRetries ?? 0,
+      });
+    });
+    return parseUint256Hex(result);
   } catch (e) {
     rethrowIfAborted(e, signal);
     logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchEvmBalanceAtTag failed:", e);
@@ -71,11 +74,13 @@ async function fetchBalanceViaDrpc(
   address: string,
   blockNumberOrTag: number | "latest",
   drpcApiKey: string,
-  decimals: number,
   budget: SubrequestBudget,
-  signal?: AbortSignal,
-): Promise<number | null> {
-  if (budgetExhausted(budget)) return null;
+  signal: AbortSignal | undefined,
+  options: EvmBalanceOptions,
+): Promise<bigint | null> {
+  throwIfAborted(signal);
+  const remainingMs = options.deadlineMs == null ? 10_000 : options.deadlineMs - Date.now();
+  if (budgetExhausted(budget) || remainingMs <= 0) return null;
 
   const network = DRPC_NETWORK[chainId];
   if (!network) return null;
@@ -85,17 +90,19 @@ async function fetchBalanceViaDrpc(
 
   try {
     budget.count++;
+    options.onProviderAttempt?.("drpc");
     const result = await fetchJsonRpcHexAtUrl(
       `https://lb.drpc.org/ogrpc?network=${network}&dkey=${drpcApiKey}`,
       "eth_call",
       [{ to: contractAddress, data }, blockTag],
       {
         signal,
-        timeoutMs: 10_000,
+        timeoutMs: Math.min(10_000, remainingMs),
+        deadlineMs: options.deadlineMs,
+        maxRetries: options.maxRetries ?? 0,
       },
     );
-    if (!result) return null;
-    return decimalNumberFromBigInt(BigInt(result), decimals);
+    return parseUint256Hex(result);
   } catch (e) {
     rethrowIfAborted(e, signal);
     logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchBalanceViaDrpc failed:", e);
@@ -108,12 +115,11 @@ async function fetchBalanceViaChainRpc(
   contractAddress: string,
   address: string,
   blockNumberOrTag: number | "latest",
-  decimals: number,
   budget: SubrequestBudget,
-  signal?: AbortSignal,
-  chainRpcs?: Map<string, ChainRpcConfig>,
-): Promise<number | null> {
-  if (budgetExhausted(budget)) return null;
+  signal: AbortSignal | undefined,
+  chainRpcs: Map<string, ChainRpcConfig> | undefined,
+  options: EvmBalanceOptions,
+): Promise<bigint | null> {
   if (!chainRpcs) return null;
 
   const rpc = getChainRpc(chainRpcs, chainId);
@@ -125,20 +131,25 @@ async function fetchBalanceViaChainRpc(
   const urls = registryRpcEndpoints(rpc).filter((endpoint) => endpoint.operator !== "dwellir").map((endpoint) => endpoint.url);
 
   for (const rpcUrl of urls) {
-    if (budgetExhausted(budget)) return null;
+    throwIfAborted(signal);
+    const remainingMs = options.deadlineMs == null ? 10_000 : options.deadlineMs - Date.now();
+    if (budgetExhausted(budget) || remainingMs <= 0) return null;
     try {
       budget.count++;
+      options.onProviderAttempt?.("chain_rpc");
       const result = await fetchJsonRpcHexAtUrl(
         rpcUrl,
         "eth_call",
         [{ to: contractAddress, data }, blockTag],
         {
           signal,
-          timeoutMs: 10_000,
+          timeoutMs: Math.min(10_000, remainingMs),
+          deadlineMs: options.deadlineMs,
+          maxRetries: options.maxRetries ?? 0,
         },
       );
-      if (!result) continue;
-      return decimalNumberFromBigInt(BigInt(result), decimals);
+      const raw = parseUint256Hex(result);
+      if (raw != null) return raw;
     } catch (e) {
       rethrowIfAborted(e, signal);
       logWorkerEventArgs("lib", "warn", "[sync-blacklist] fetchBalanceViaChainRpc failed:", e);
@@ -148,6 +159,60 @@ async function fetchBalanceViaChainRpc(
   return null;
 }
 
+export async function fetchEvmTokenBalanceRaw(
+  config: ContractEventConfig,
+  address: string,
+  blockNumberOrTag: number | "latest",
+  etherscanApiKey: string | null,
+  drpcApiKey: string | null,
+  rateLimit: RateLimitedFetch,
+  budget: SubrequestBudget,
+  signal?: AbortSignal,
+  chainRpcs?: Map<string, ChainRpcConfig>,
+  options: EvmBalanceOptions = {},
+): Promise<bigint | null> {
+  if (config.chain.evmChainId == null) return null;
+  if (blockNumberOrTag !== "latest" && (!Number.isSafeInteger(blockNumberOrTag) || blockNumberOrTag < 0)) return null;
+
+  // Transport fallback is shared; the caller retains historical/snapshot evidence semantics.
+  if (drpcApiKey) {
+    const drpcAmount = await fetchBalanceViaDrpc(
+      config.chain.chainId,
+      config.contractAddress,
+      address,
+      blockNumberOrTag,
+      drpcApiKey,
+      budget,
+      signal,
+      options,
+    );
+    if (drpcAmount != null) return drpcAmount;
+  }
+
+  const rpcAmount = await fetchBalanceViaChainRpc(
+    config.chain.chainId,
+    config.contractAddress,
+    address,
+    blockNumberOrTag,
+    budget,
+    signal,
+    chainRpcs,
+    options,
+  );
+  if (rpcAmount != null) return rpcAmount;
+
+  return fetchEvmBalanceAtTag(
+    config.chain.evmChainId,
+    config.contractAddress,
+    address,
+    blockNumberOrTag,
+    etherscanApiKey,
+    rateLimit,
+    budget,
+    signal,
+    options,
+  );
+}
 
 export async function fetchEvmTokenBalance(
   config: ContractEventConfig,
@@ -160,46 +225,11 @@ export async function fetchEvmTokenBalance(
   signal?: AbortSignal,
   chainRpcs?: Map<string, ChainRpcConfig>,
 ): Promise<number | null> {
-  if (config.chain.evmChainId == null) return null;
-
-  // Transport fallback is shared; the caller retains historical/snapshot evidence semantics.
-  if (drpcApiKey) {
-    const drpcAmount = await fetchBalanceViaDrpc(
-      config.chain.chainId,
-      config.contractAddress,
-      address,
-      blockNumberOrTag,
-      drpcApiKey,
-      config.decimals,
-      budget,
-      signal,
-    );
-    if (drpcAmount != null) return drpcAmount;
-  }
-
-  const rpcAmount = await fetchBalanceViaChainRpc(
-    config.chain.chainId,
-    config.contractAddress,
-    address,
-    blockNumberOrTag,
-    config.decimals,
-    budget,
-    signal,
-    chainRpcs,
+  const raw = await fetchEvmTokenBalanceRaw(
+    config, address, blockNumberOrTag, etherscanApiKey, drpcApiKey, rateLimit, budget, signal, chainRpcs,
+    { maxRetries: 1 },
   );
-  if (rpcAmount != null) return rpcAmount;
-
-  return fetchEvmBalanceAtTag(
-    config.chain.evmChainId,
-    config.contractAddress,
-    address,
-    blockNumberOrTag === "latest" ? "latest" : "0x" + blockNumberOrTag.toString(16),
-    etherscanApiKey,
-    rateLimit,
-    config.decimals,
-    budget,
-    signal,
-  );
+  return raw == null ? null : decimalNumberFromBigInt(raw, config.decimals);
 }
 
 type TronAccountResponse = {

@@ -8,7 +8,6 @@ import { YIELD_ADAPTER_MANIFEST } from "../../lib/yield-config/yield-config";
 import { RATE_DERIVED_CONFIGS } from "../../lib/yield-config/yield-config-rate-sources";
 import { YIELD_POOL_MAP } from "../../lib/yield-config/yield-config-pools";
 import { YIELD_VARIANT_MAP } from "../../lib/yield-config/yield-config-variants";
-import { YIELD_WEIGHTED_POOL_GROUPS } from "../../lib/yield-config/yield-config-weighted-pools";
 import {
   YieldAdapterManifestResponseSchema,
   type YieldAdapterManifestResponse,
@@ -123,13 +122,7 @@ describe("handleYieldAdapterManifest", () => {
 
     expect(body.entries.some((entry) => entry.stablecoinId === "cetes-etherfuse")).toBe(false);
 
-    expect(
-      body.entries.find((entry) =>
-        entry.stablecoinId === "sdusd-dtrinity" &&
-        entry.family === "defillama" &&
-        entry.sourceKey === YIELD_WEIGHTED_POOL_GROUPS["sdusd-dtrinity"].sourceKey
-      ),
-    ).toBeTruthy();
+    expect(body.entries.some((entry) => entry.stablecoinId === "sdusd-dtrinity")).toBe(false);
   });
 
   it("keeps disabled and runtime-resolved strategies from pretending to be joinable history keys", async () => {

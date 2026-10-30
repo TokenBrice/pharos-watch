@@ -378,7 +378,7 @@ describe("tracked stablecoin metadata", () => {
       "ybold-yearn", "fxsave-f-x-protocol", "usdn-noble", "susn-noon",
       "syzusd-yuzu", "usdsc-startale", "ctusd-citrea", "wm-m0",
       "usdnr-nerona", "usdr-rise", "mantrausd-mantra", "susdat-saturn",
-      "pusd-plume", "sdusd-dtrinity", "wsrusd-reservoir", "srusd-reservoir",
+      "pusd-plume", "wsrusd-reservoir", "srusd-reservoir",
       "xgld-unitas", "syrupusdc-maple", "syrupusdt-maple", "yousd-yield-optimizer",
       "zys-zephyr-protocol", "autousd-auto-finance", "eearn-ember", "dusd-dialectic",
       "yusd-yieldfi", "said-gaib", "apyusd-apyx", "stusd-stoneyield",

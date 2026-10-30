@@ -302,15 +302,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "dusd-dtrinity",
-      "address": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "eurau-allunity",
       "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
       "decimals": 6,

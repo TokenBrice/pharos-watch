@@ -204,6 +204,8 @@ export async function processFetchedBlacklistRows(
     rows: newRows,
     config: options.config,
     etherscanApiKey: options.etherscanApiKey,
+    drpcApiKey: options.drpcApiKey,
+    chainRpcs: options.chainRpcs,
     etherscanLimiter: options.etherscanLimiter,
     runBudget: options.runBudget,
     signal: options.signal,
