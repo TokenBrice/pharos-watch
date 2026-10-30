@@ -7,6 +7,9 @@ import {
 } from "@shared/lib/report-cards-fixed-input-identity";
 import type { DexDeploymentSupplyCoverage } from "../report-cards-fixed-input";
 import type { StablecoinData } from "@shared/types/market";
+import type { StablecoinMeta } from "@shared/types/core";
+import type { PegSummaryCoin } from "@shared/types/peg";
+import { PROTOCOL_REDEEM_SOURCE } from "../authoritative-price-sources/helpers";
 import { summarizeCollateralDriftFromLiveReserveMap } from "../collateral-drift";
 import type { StablecoinsCacheLoadResult } from "../stablecoins-cache";
 import { derivePegAnalyticsSnapshot } from "../peg-analytics";
@@ -200,6 +203,52 @@ function captureLenderBookOutcomes(
   return captured;
 }
 
+type PegWrapperMeta = Pick<StablecoinMeta, "variantOf" | "variantKind" | "pegReferenceId" | "flags">;
+
+/**
+ * Reviewed 1:1 wrappers publish the tracked parent's admitted current peg
+ * observation instead of a nominal reference.
+ *
+ * A `pure-wrapper` is a fixed-unit claim on its parent, so the parent's
+ * observed market deviation is the wrapper's own deviation: inheriting it
+ * measures the claim and never turns par into an observation. The lane is one
+ * hop, fail-closed, and applies only when both rows exist in this capture, the
+ * parent row is currently observed against the same non-blank peg type, and
+ * the child row was published as an explicit current-price failure. Anything
+ * else leaves the row exactly as the producer published it, so a missing peg
+ * fact keeps its cause-A reason (`peg-nominal-reference-only` /
+ * `peg-current-price-unavailable`) instead of gaining an unproved value.
+ */
+export function inheritPureWrapperPegObservations(
+  pegDataById: ReadonlyMap<string, PegSummaryCoin>,
+  metaById: ReadonlyMap<string, PegWrapperMeta>,
+): Map<string, PegSummaryCoin> {
+  const rows = new Map(pegDataById);
+  for (const [assetId, row] of pegDataById) {
+    const meta = metaById.get(assetId);
+    if (!meta || meta.flags.navToken === true || meta.variantKind !== "pure-wrapper") continue;
+    // The registry relationship is the review that makes a 1:1 price claim:
+    // both fields must agree on one active parent.
+    const parentId = meta.pegReferenceId;
+    if (parentId === undefined || parentId === assetId || meta.variantOf !== parentId) continue;
+    if (row.currentDeviationBps !== null || row.currentPriceUnavailable !== true || row.pegScore === null) continue;
+    const parent = pegDataById.get(parentId);
+    if (!parent || parent.currentDeviationBps === null || parent.currentPriceUnavailable === true) continue;
+    if (parent.pegReference == null || row.pegType === "" || parent.pegType === "" ||
+        row.pegType !== parent.pegType || row.pegCurrency !== parent.pegCurrency) continue;
+    const { currentPriceUnavailable: _unavailable, nominalPriceReference: _nominal, ...rest } = row;
+    rows.set(assetId, {
+      ...rest,
+      pegType: parent.pegType,
+      currentDeviationBps: parent.currentDeviationBps,
+      pegReference: parent.pegReference,
+      priceSource: PROTOCOL_REDEEM_SOURCE,
+      priceObservedAtMode: parent.priceObservedAtMode ?? "upstream",
+    });
+  }
+  return rows;
+}
+
 /**
  * Captures the exact native V9 scoring input straight from its producers.
  *
@@ -356,7 +405,9 @@ export async function buildNativeSafetyScoreV9Capture(
   // backing compiler reads it.
   const { fallbackCoins: liveToFallbackCoins } = summarizeCollateralDriftFromLiveReserveMap(liveReserveMap);
 
-  const pegDataById = Object.fromEntries(nonNavPegDataById);
+  const pegDataById = Object.fromEntries(
+    inheritPureWrapperPegObservations(nonNavPegDataById, ACTIVE_META_BY_ID),
+  );
   const input = normalizeNativeV9Input({
     schemaVersion: 4,
     captureKind: "native-v9-inputs",
