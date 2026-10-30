@@ -86,6 +86,7 @@ interface ChainAccumulator {
     pegType: string | undefined;
     safetyScore: number | null;
     backing: BackingType | undefined;
+    navToken: boolean;
     prevDay: number | null;
     prevWeek: number | null;
     prevMonth: number | null;
@@ -190,6 +191,7 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
         pegType: asset.pegType,
         safetyScore: safetyScores[asset.id] ?? null,
         backing: meta?.flags?.backing,
+        navToken: meta?.flags?.navToken === true,
         prevDay: data.circulatingPrevDay ?? null,
         prevWeek: data.circulatingPrevWeek ?? null,
         prevMonth: data.circulatingPrevMonth ?? null,
@@ -270,13 +272,17 @@ export function aggregateChains(input: ChainAggregatorInput): ChainsResponse {
       }
     }
 
-    // Peg stability: every positive-supply coin enters the coverage denominator; coins without a peg
-    // reference stay unobserved rather than disappearing from the factor's universe.
-    const pegAssessment = assessPegStability(acc.coins.map((c) => ({
-      price: c.price,
-      pegRef: getPegReference(c.pegType, pegRates, TRACKED_META_BY_ID.get(c.id)?.commodityOunces),
-      supplyUsd: c.supplyUsd,
-    })));
+    // Peg stability: NAV tokens are excluded from peg deviation and its coverage universe
+    // because their price appreciates by design (docs/classification.md). Every other
+    // positive-supply coin enters the coverage denominator; coins without a peg reference
+    // stay unobserved rather than disappearing from the factor's universe.
+    const pegAssessment = assessPegStability(acc.coins
+      .filter((c) => !c.navToken)
+      .map((c) => ({
+        price: c.price,
+        pegRef: getPegReference(c.pegType, pegRates, TRACKED_META_BY_ID.get(c.id)?.commodityOunces),
+        supplyUsd: c.supplyUsd,
+      })));
 
     // Quality
     const qualityCoins = acc.coins.map((c) => ({

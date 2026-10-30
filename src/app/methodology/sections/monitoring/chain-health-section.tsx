@@ -38,10 +38,11 @@ const CHAIN_HEALTH_FACTORS = [
   </> },
   { id: "pegStability", label: "Peg Stability", weight: PEG_STABILITY_WEIGHT, meaning: <>
     Supply-weighted average of observed per-coin peg proximity: max(0, 100&nbsp;&minus;&nbsp;deviationBps/5).
-    Missing prices or peg references receive no imputed score. Zero observed supply makes this factor NR;
-    partial coverage shows the observed-only factor and full-positive-supply coverage. The composite is
-    published when peg coverage is complete or at least {PEG_COVERAGE_COMPOSITE_MIN_PCT}% of chain supply,
-    and stays NR below that share; an unobserved share that small can move the composite by at most{" "}
+    Flagged NAV tokens are excluded because their price appreciates by design. Missing prices or peg
+    references receive no imputed score. Zero observed supply makes this factor NR; partial coverage
+    shows the observed-only factor and peg-referenced coverage. The composite is published when peg
+    coverage is complete or at least {PEG_COVERAGE_COMPOSITE_MIN_PCT}% of chain supply, and stays NR
+    below that share; an unobserved share that small can move the composite by at most{" "}
     {MAX_UNOBSERVED_COMPOSITE_SHIFT} point, and it remains disclosed beside the score.
   </> },
   { id: "backingDiversity", label: "Backing Diversity", weight: BACKING_DIVERSITY_WEIGHT, meaning: <>

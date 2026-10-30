@@ -613,6 +613,49 @@ describe("aggregateChains", () => {
     expect(mixed.healthBand).toBeNull();
   });
 
+  it("excludes NAV tokens from peg deviation and its coverage universe", () => {
+    const navAsset = {
+      id: "usdy-ondo-finance",
+      symbol: "USDY",
+      name: "Ondo US Dollar Yield",
+      price: 1.15,
+      priceSource: "coingecko",
+      priceObservedAtMode: "upstream",
+      pegType: "peggedUSD",
+      chainCirculating: { ethereum: { current: 900_000_000 } },
+    };
+    const ethereum = aggregateChains(makeInput({
+      peggedAssets: [
+        {
+          id: "usdc-circle", symbol: "USDC", name: "USD Coin", price: 1,
+          priceSource: "coingecko", priceObservedAtMode: "upstream", pegType: "peggedUSD",
+          chainCirculating: { ethereum: { current: 26_000_000_000 } },
+        },
+        navAsset,
+      ],
+      safetyScores: { "usdc-circle": 88, "usdy-ondo-finance": 85 },
+    })).chains.find((chain) => chain.id === "ethereum")!;
+    // USDY's appreciated NAV price is not a peg deviation and its supply is not observed peg evidence.
+    expect(ethereum.healthFactors.pegStability).toBe(100);
+    expect(ethereum.pegStabilityCoverage).toMatchObject({
+      status: "complete", observedSupplyUsd: 26_000_000_000, observedScore: 100,
+    });
+    expect(ethereum.healthScore).not.toBeNull();
+
+    const plume = aggregateChains(makeInput({
+      peggedAssets: [{
+        ...navAsset,
+        chainCirculating: { plume: { current: 120_000_000 } },
+      }],
+      safetyScores: { "usdy-ondo-finance": 85 },
+    })).chains.find((chain) => chain.id === "plume")!;
+    // No pegged supply was observed: the factor is NR, never a fabricated 0 (a 100% depeg).
+    expect(plume.healthFactors.pegStability).toBeNull();
+    expect(plume.pegStabilityCoverage?.status).toBe("unavailable");
+    expect(plume.healthScore).toBeNull();
+    expect(plume.healthBand).toBeNull();
+  });
+
   it("publishes the composite at 95%+ partial peg coverage and withholds it below (DEC-04 owner threshold)", () => {
     const withUnpriced = (observedUsd: number, unpricedUsd: number) => aggregateChains(makeInput({
       peggedAssets: [

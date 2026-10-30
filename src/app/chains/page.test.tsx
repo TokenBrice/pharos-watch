@@ -19,7 +19,7 @@ describe("ChainsPage", () => {
     expect(html).not.toContain("tracked deployment");
 
     expect(html).toContain("Where stablecoin supply lives, how concentrated it is, and which chains are moving.");
-    expect(html).toContain("Chain Health methodology 1.7");
+    expect(html).toContain("Chain Health methodology 1.8");
     expect(html).toContain("Chains FAQ");
     expect(html).toContain("What is the Chain Health Score?");
     expect(html).toContain('"@type":"FAQPage"');

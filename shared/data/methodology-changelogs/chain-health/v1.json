@@ -1,5 +1,20 @@
 [
   {
+    "version": "1.8",
+    "title": "NAV tokens excluded from peg deviation",
+    "date": "2026-10-30",
+    "effectiveAt": 1793318400,
+    "summary": "Chain Health excludes flagged NAV tokens from the peg-stability factor and its coverage universe, matching the shared NAV vocabulary: their price appreciates by design and is not a peg deviation.",
+    "impact": [
+      "Coins with `flags.navToken` no longer score against a $1 peg reference and their supply is no longer counted as observed peg evidence",
+      "NAV supply still contributes to chain supply totals, concentration, quality and backing diversity; only the peg factor and pegStabilityCoverage exclude it",
+      "A chain whose only holdings are NAV-priced now publishes a null peg factor and NR composite instead of a fabricated 100% depeg",
+      "Non-NAV coins retain the existing peg factor math, coverage denominator, 95% composite gate, factor weights and bands"
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "1.7",
     "title": "Composite published at 95% peg coverage",
     "date": "2026-09-28",

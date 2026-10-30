@@ -2,7 +2,7 @@
 
 Chain Health Score is the 0-100 composite used by `GET /api/chains`, `/chains/`, and `/chains/[chain]/` to summarize the quality and concentration of stablecoin supply on each supported chain.
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-chain-health -->`v1.7`<!-- GENERATED-END: methodology-version-chain-health -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-chain-health -->`v1.8`<!-- GENERATED-END: methodology-version-chain-health -->
 - **Runtime source:** `shared/lib/chains/health.ts` (the canonical implementation; no compatibility shim is retained)
 - **Version source:** `shared/lib/methodology-versions/registry.ts` (shared constants: `shared/lib/methodology-versions/constants.ts`)
 - **API source:** `worker/src/api/chains.ts`
@@ -43,7 +43,7 @@ The weighted total is rounded to the nearest integer only after the [quality](#n
 | `quality` | 30% | fresh accepted Safety Score publication | Supply-weighted average over rated supply only; [Not-Rated Policy](#not-rated-policy) owns admission. |
 | `chainEnvironment` |    20% | L2BEAT snapshot first, then `shared/lib/chains/index.ts` resilience tier | Matched L2BEAT scaling projects use `40%` stage score plus `60%` average risk sentiment across Sequencer Failure, State Validation, Data Availability, Exit Window, and Proposer Failure. Unmatched chains fall back to tier `1 -> 100`, tier `2 -> 60`, tier `3 -> 20`. |
 | `concentration`    |    20% | chain supply shares                                                      | `100 * (1 - HHI)`. A single dominant coin scores `0`; an even N-way split approaches `100 * (1 - 1/N)`.                                                                                                                                                                  |
-| `pegStability` | 20% | cached prices + peg rates | Observed-supply-weighted proximity from `deriveDepegSignal(...)`; [Peg Coverage](#peg-coverage) owns denominator and composite admission. |
+| `pegStability` | 20% | cached prices + peg rates | Observed-supply-weighted proximity from `deriveDepegSignal(...)`; flagged NAV tokens are excluded; [Peg Coverage](#peg-coverage) owns denominator and composite admission. |
 | `backingDiversity` |    10% | active stablecoin backing flags                                          | Normalized Shannon entropy across the two active backing cohorts: `rwa-backed` and `crypto-backed`. Coins without backing metadata are excluded.                                                                                                                         |
 
 ## Not-Rated Policy
@@ -52,20 +52,20 @@ Supply without a published Safety Score contributes to neither numerator nor den
 
 ## Peg Coverage
 
-Every chain row carries `pegStabilityCoverage`, computed by `assessPegStability(...)` in `shared/lib/chains/health.ts` against the chain's **full positive supply** (every coin on the chain, including coins with no peg reference, so missing-reference supply cannot inflate coverage):
+Every chain row carries `pegStabilityCoverage`, computed by `assessPegStability(...)` in `shared/lib/chains/health.ts` against the chain's **positive supply excluding flagged NAV tokens** (every other coin on the chain, including coins with no peg reference, so missing-reference supply cannot inflate coverage):
 
 | Field                     | Meaning                                                                                                  |
 | ------------------------- | -------------------------------------------------------------------------------------------------------- |
 | `status`                  | `complete` (every coin observed), `partial` (some observed), `unavailable` (no observation at all)       |
 | `observedSupplyUsd`       | Supply with a usable price and a usable (finite, positive) peg reference                                 |
-| `eligibleSupplyUsd`       | Full positive chain supply (the coverage denominator)                                                    |
+| `eligibleSupplyUsd`       | Positive chain supply excluding flagged NAV tokens (the coverage denominator)                           |
 | `coverage`                | `observedSupplyUsd / eligibleSupplyUsd`                                                                  |
 | `noUsablePriceSupplyUsd`  | Supply with a usable reference but no usable price                                                       |
 | `noPegReferenceSupplyUsd` | Supply without a usable peg reference                                                                    |
 | `neutralImputedSupplyUsd` | Always `0` for v1.6+ producers; retained to interpret pre-v1.6 cached payloads that used neutral `50` |
 | `observedScore`           | Supply-weighted peg proximity over observed supply only; `null` when nothing was observed                |
 
-Zero observed peg supply makes the factor and composite NR. Partial observation publishes `observedScore`, but the composite requires `coverage >= 0.95` (`PEG_COVERAGE_COMPOSITE_MIN`). With peg weight 0.20, the at-most-5% unobserved share bounds the peg-factor difference to 5 points and the composite difference to 1 point; missing supply is never imputed. Nominal par supply stays in the denominator, not the observed numerator. Legacy payloads retain their methodology labels and `neutralImputedSupplyUsd` compatibility field; they are not restamped as observed-only results.
+Coins flagged `flags.navToken` are excluded from both the numerator and denominator: their price appreciates by design rather than tracking a peg. Zero observed peg supply makes the factor and composite NR. Partial observation publishes `observedScore`, but the composite requires `coverage >= 0.95` (`PEG_COVERAGE_COMPOSITE_MIN`). With peg weight 0.20, the at-most-5% unobserved share bounds the peg-factor difference to 5 points and the composite difference to 1 point; missing supply is never imputed. Nominal par supply stays in the denominator, not the observed numerator. Legacy payloads retain their methodology labels and `neutralImputedSupplyUsd` compatibility field; they are not restamped as observed-only results.
 
 Activation requires observed nullable-compatible Worker/Pages readiness; rollback is limited to that pair. Verify methodology, coverage, factor and composite together after standard cache revalidation. Error/degraded responses remain `no-store`, and deployment never renews source clocks.
 
