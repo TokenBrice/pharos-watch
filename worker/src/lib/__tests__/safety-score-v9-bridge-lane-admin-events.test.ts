@@ -29,7 +29,7 @@ const CODE_OAPP = "0x6001";
 const CODE_ENDPOINT = "0x6002";
 const CLOCK = 1_793_294_244;
 const FINALIZED_NUMBER = 1_000;
-const FROZEN_POLICY_DIGEST = "478eb230aaca355bd8aae7b1546981d49dafee819f5049ebd51ceecceac6c8c3";
+const FROZEN_POLICY_DIGEST = "1140d33cfdafa7e85b863a7d40686f17409b85f60ec444c8e187d4ee27f127ab";
 const word = (value: bigint): `0x${string}` => `0x${value.toString(16).padStart(64, "0")}`;
 const quantity = (value: number): string => `0x${value.toString(16)}`;
 const runtimeSha = (code: string): string => sha256HexFromBytes(decodeEvmHexBytes(code)!);

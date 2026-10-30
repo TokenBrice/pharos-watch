@@ -1,259 +1,256 @@
-import { mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join, resolve } from "node:path";
+import { readFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { afterAll, describe, expect, it } from "vitest";
+import { describe, expect, it } from "vitest";
 import {
-  LANE_EMITTER_BOOTSTRAP_LOOKBACK_BLOCKS,
-  buildLaneEmitterDescriptors,
   deriveLaneEmitterDescriptors,
-  loadLaneControlRecords,
-  parseRuntimeIdentity,
+  LANE_EMITTER_MINIMUM_LOOKBACK_BLOCKS,
+  loadLaneScreeningEmitterInventory,
   type LaneControlRecord,
+  type LaneEmitterInputs,
+  type LaneScreeningEmitterInventory,
 } from "../build-data/generate-safety-score-v9-lane-emitter-descriptors";
-import { V9_LANE_ADMIN_EVENT_FAMILY_VALUES } from "../../shared/types/safety-score-v9-incidents";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 const ARTIFACT_PATH = resolve(ROOT, "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json");
-const CONTROLLER = "0x1111111111111111111111111111111111111111";
-const OTHER_CONTROLLER = "0x2222222222222222222222222222222222222222";
-const ROUTE = "ethereum:0x3333333333333333333333333333333333333333";
-const SECOND_ROUTE = "base:0x4444444444444444444444444444444444444444";
-const HASH = "a".repeat(64);
-const OTHER_HASH = "b".repeat(64);
-const DECODED_IDENTITY = `sha256-decoded-runtime-bytes:${HASH}`;
 
-function control(overrides: Partial<LaneControlRecord> = {}): LaneControlRecord {
+const HASH = "a".repeat(64);
+const SUBJECT = "ethereum:0x1111111111111111111111111111111111111111";
+const TOKEN = "0x1111111111111111111111111111111111111111";
+const POOL = "0x2222222222222222222222222222222222222222";
+
+function bridgeControl(overrides: Partial<LaneControlRecord> = {}): LaneControlRecord {
   return {
     recordKind: "bridge-control",
     assetId: "fixture-asset",
     controlId: "fixture-control",
-    routeRefs: [ROUTE],
+    routeRefs: [SUBJECT],
     controllerChain: "ethereum",
-    controllerAddress: CONTROLLER,
+    controllerAddress: POOL,
     runtimeIdentity: null,
     ...overrides,
   };
 }
 
-function derive(records: readonly LaneControlRecord[]) {
-  return deriveLaneEmitterDescriptors({ records, sidecars: { riskReview: 1, mintAuthority: 0 } });
+function emitter(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+  return {
+    address: TOKEN,
+    chain: "ethereum",
+    role: "route-deployment",
+    label: "Fixture token",
+    runtimeIdentity: `sha256-decoded-runtime-bytes:${HASH}`,
+    observedBlock: 1_000,
+    observedAt: "2026-10-30T07:12:47Z",
+    abiBasis: {
+      kind: "verified-source",
+      chain: "ethereum",
+      address: TOKEN,
+      runtimeIdentity: `sha256-decoded-runtime-bytes:${HASH}`,
+      verifiedSourceUrl: "https://etherscan.io/address/0x1111111111111111111111111111111111111111#code",
+    },
+    adminEvents: ["OwnershipTransferred", "Upgraded"],
+    sources: [{ label: "fixture", url: "https://etherscan.io/address/0x1111111111111111111111111111111111111111#code" }],
+    ...overrides,
+  };
 }
 
-function uncoveredReason(runtimeIdentity: string | null): string {
-  return derive([control({ runtimeIdentity })]).noReviewedEmitter[0]!.reason;
+function inventory(lanes: readonly Record<string, unknown>[] = [{
+  subjectDeploymentKey: SUBJECT,
+  assetIds: ["fixture-asset"],
+  rail: "chainlink-ccip",
+  contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
+  emitters: [emitter()],
+}]): LaneScreeningEmitterInventory {
+  return {
+    schemaVersion: 1,
+    reviewedAt: "2026-10-30",
+    policy: {},
+    lookbackBlocksByChain: { ethereum: LANE_EMITTER_MINIMUM_LOOKBACK_BLOCKS },
+    lanes: lanes as unknown as LaneScreeningEmitterInventory["lanes"],
+  };
 }
 
-describe("lane emitter descriptors", () => {
-  it("admits a route lane whose controller has a decoded-bytes runtime pin", () => {
-    const artifact = derive([control({ runtimeIdentity: DECODED_IDENTITY })]);
+function derive(overrides: {
+  records?: readonly LaneControlRecord[];
+  inventory?: LaneScreeningEmitterInventory;
+} = {}) {
+  const input: LaneEmitterInputs = {
+    records: overrides.records ?? [bridgeControl()],
+    sidecars: { riskReview: 1, mintAuthority: 0 },
+    inventory: overrides.inventory ?? inventory(),
+  };
+  return deriveLaneEmitterDescriptors(input);
+}
 
-    expect(artifact.descriptors).toEqual([{
-      subjectDeploymentKey: ROUTE,
-      emitters: [{
-        address: CONTROLLER,
-        expectedRuntimeCodeSha256: HASH,
-        families: [...V9_LANE_ADMIN_EVENT_FAMILY_VALUES],
-      }],
-      lookbackBlocks: LANE_EMITTER_BOOTSTRAP_LOOKBACK_BLOCKS,
-      provenance: {
-        assetIds: ["fixture-asset"],
-        controlIds: ["fixture-control"],
-        pins: [{
-          emitterAddress: CONTROLLER,
-          recordKind: "bridge-control",
-          assetId: "fixture-asset",
-          controlId: "fixture-control",
-        }],
-      },
+describe("lane emitter descriptor admission", () => {
+  it("admits a lane whose inventory maps every contributor to a pinned, ABI-covered emitter", () => {
+    const artifact = derive();
+    expect(artifact.summary.covered).toBe(1);
+    expect(artifact.descriptors).toHaveLength(1);
+    const descriptor = artifact.descriptors[0]!;
+    expect(descriptor.subjectDeploymentKey).toBe(SUBJECT);
+    expect(descriptor.emitters).toEqual([{
+      address: TOKEN,
+      expectedRuntimeCodeSha256: HASH,
+      families: ["OwnershipTransferred", "Upgraded"],
     }]);
-    expect(artifact.summary).toMatchObject({ lanes: 1, covered: 1, noReviewedEmitter: 0 });
+    expect(descriptor.lookbackBlocks).toBe(LANE_EMITTER_MINIMUM_LOOKBACK_BLOCKS);
+    expect(descriptor.provenance.controlIds).toEqual(["fixture-control"]);
+    expect(descriptor.provenance.contributors).toEqual([{ controlId: "fixture-control", emitterAddresses: [TOKEN] }]);
+    expect(descriptor.provenance.emitters[0]).toMatchObject({ address: TOKEN, role: "route-deployment" });
+    expect(descriptor.provenance.reviewedAt).toBe("2026-10-30");
   });
 
-  it("lists a route lane with no reviewed controller pin as no-reviewed-emitter", () => {
-    const artifact = derive([control({ controllerChain: null, controllerAddress: null })]);
-
-    expect(artifact.descriptors).toEqual([]);
+  it("keeps every reviewed lane without an inventory record closed", () => {
+    const artifact = derive({ inventory: inventory([]) });
+    expect(artifact.summary.covered).toBe(0);
     expect(artifact.noReviewedEmitter).toEqual([{
-      subjectDeploymentKey: ROUTE,
-      reason: "missing-runtime-identity",
+      subjectDeploymentKey: SUBJECT,
+      reason: "no-reviewed-inventory",
       assetIds: ["fixture-asset"],
       controlIds: ["fixture-control"],
-      unpinnedControlIds: ["fixture-control"],
     }]);
   });
 
-  it("keeps an unlabelled digest out of the catalog and preserves it as the migration witness", () => {
-    const artifact = derive([control({ runtimeIdentity: `sha256:${HASH}` })]);
-
-    expect(artifact.descriptors).toEqual([]);
-    expect(artifact.noReviewedEmitter[0]).toMatchObject({
-      subjectDeploymentKey: ROUTE,
-      reason: "runtime-identity-domain-unlabelled",
-      reviewedRuntimeIdentities: [`sha256:${HASH}`],
+  it("closes a lane whose emitter ABI has an admin event outside the frozen vocabulary", () => {
+    const artifact = derive({
+      inventory: inventory([{
+        subjectDeploymentKey: SUBJECT,
+        assetIds: ["fixture-asset"],
+        rail: "chainlink-ccip",
+        contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
+        emitters: [emitter({ adminEvents: ["OwnershipTransferred", "UnreviewedAdminEvent"] })],
+      }]),
     });
-  });
-
-  it("classifies every authored runtime-identity form it cannot admit", () => {
-    expect(parseRuntimeIdentity(DECODED_IDENTITY, CONTROLLER)).toEqual({ state: "decoded", sha256: HASH });
-    expect(uncoveredReason(null)).toBe("missing-runtime-identity");
-    expect(uncoveredReason(`sha256:rpc-hex-text:${HASH}`)).toBe("runtime-identity-text-encoded");
-    expect(uncoveredReason(`sha256-rpc-code-text:${HASH}`)).toBe("runtime-identity-text-encoded");
-    expect(uncoveredReason(`keccak256:0x${"c".repeat(64)}`)).toBe("runtime-identity-non-sha256");
-    expect(uncoveredReason(`ethereum:${OTHER_CONTROLLER}`)).toBe("runtime-identity-binds-other-address");
-    expect(uncoveredReason(`ethereum:${OTHER_CONTROLLER}; runtime-sha256:${HASH}`))
-      .toBe("runtime-identity-binds-other-address");
-    expect(uncoveredReason(`proxy sha256:${HASH}; implementation ${OTHER_CONTROLLER} sha256:${OTHER_HASH}`))
-      .toBe("runtime-identity-domain-unlabelled");
-    expect(uncoveredReason("0x")).toBe("runtime-identity-without-sha256");
-  });
-
-  it("refuses a lane when one contributing control has no pinned controller", () => {
-    const artifact = derive([
-      control({ runtimeIdentity: DECODED_IDENTITY }),
-      control({ controlId: "second-control", controllerChain: null, controllerAddress: null }),
-    ]);
-
-    expect(artifact.descriptors).toEqual([]);
+    expect(artifact.summary.covered).toBe(0);
     expect(artifact.noReviewedEmitter[0]).toMatchObject({
-      subjectDeploymentKey: ROUTE,
-      reason: "partial-emitter-runtime-identity",
-      controlIds: ["fixture-control", "second-control"],
+      reason: "abi-not-covered",
+      uncoveredEvents: ["UnreviewedAdminEvent"],
+    });
+    expect(artifact.summary.inventory.uncoveredEvents).toEqual(["UnreviewedAdminEvent"]);
+  });
+
+  it("closes a lane when a reviewed contributor has no mapped emitter", () => {
+    const artifact = derive({
+      records: [bridgeControl(), bridgeControl({ controlId: "second-control", routeRefs: [SUBJECT] })],
+      inventory: inventory([{
+        subjectDeploymentKey: SUBJECT,
+        assetIds: ["fixture-asset"],
+        rail: "chainlink-ccip",
+        contributors: [
+          { controlId: "fixture-control", emitterAddresses: [TOKEN] },
+          { controlId: "second-control", emitterAddresses: ["0x3333333333333333333333333333333333333333"] },
+        ],
+        emitters: [emitter()],
+      }]),
+    });
+    expect(artifact.noReviewedEmitter[0]).toMatchObject({
+      reason: "contributor-without-emitter",
       unpinnedControlIds: ["second-control"],
     });
-    expect(artifact.summary.noReviewedEmitterByReason["partial-emitter-runtime-identity"]).toBe(1);
   });
 
-  it("uses a mint-control pin as the emitter identity for a matching bridge controller", () => {
-    const artifact = derive([
-      control({ routeRefs: [ROUTE], runtimeIdentity: null }),
-      control({
-        recordKind: "mint-control",
-        assetId: "fixture-mint",
-        controlId: "minter",
-        routeRefs: [],
-        runtimeIdentity: DECODED_IDENTITY,
-      }),
-    ]);
-
-    expect(artifact.descriptors).toHaveLength(1);
-    expect(artifact.descriptors[0]!.provenance).toEqual({
-      assetIds: ["fixture-asset"],
-      controlIds: ["fixture-control"],
-      pins: [{
-        emitterAddress: CONTROLLER,
-        recordKind: "mint-control",
-        assetId: "fixture-mint",
-        controlId: "minter",
-      }],
+  it("closes a lane whose contributor set disagrees with the reviewed controls", () => {
+    const artifact = derive({
+      inventory: inventory([{
+        subjectDeploymentKey: SUBJECT,
+        assetIds: ["fixture-asset"],
+        rail: "chainlink-ccip",
+        contributors: [{ controlId: "unreviewed-control", emitterAddresses: [TOKEN] }],
+        emitters: [emitter()],
+      }]),
     });
-  });
-
-  it("refuses a controller whose records carry different decoded pins", () => {
-    const artifact = derive([
-      control({ runtimeIdentity: DECODED_IDENTITY }),
-      control({ controlId: "second-control", runtimeIdentity: `sha256-decoded-runtime-bytes:${OTHER_HASH}` }),
-    ]);
-
-    expect(artifact.descriptors).toEqual([]);
     expect(artifact.noReviewedEmitter[0]).toMatchObject({
-      subjectDeploymentKey: ROUTE,
-      reason: "runtime-identity-hash-conflict",
+      reason: "contributor-mismatch",
+      unpinnedControlIds: ["fixture-control"],
     });
   });
 
-  it("emits one lane per governed route and drops non-EVM routes", () => {
-    const artifact = derive([
-      control({ routeRefs: [ROUTE, SECOND_ROUTE], controllerChain: "ethereum", runtimeIdentity: DECODED_IDENTITY }),
-      control({ routeRefs: [`solana:${"4".repeat(44)}`], controllerChain: "solana", controllerAddress: "4kw74JZfQSg7wtvZc5h2Guozayb3UUzNiuy8eZUEcqPj" }),
-    ]);
-
-    expect(artifact.descriptors.map((row) => row.subjectDeploymentKey)).toEqual([SECOND_ROUTE, ROUTE]);
-    expect(artifact.summary.lanesNonEvm).toBe(1);
-    expect(artifact.summary.controls.routeRefs).toEqual({ total: 3, nonEvm: 1, malformed: 0 });
+  it("refuses an emitter pin outside the decoded-runtime domain", () => {
+    const artifact = derive({
+      inventory: inventory([{
+        subjectDeploymentKey: SUBJECT,
+        assetIds: ["fixture-asset"],
+        rail: "chainlink-ccip",
+        contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
+        emitters: [emitter({ runtimeIdentity: `sha256:${HASH}` })],
+      }]),
+    });
+    expect(artifact.noReviewedEmitter[0]?.reason).toBe("emitter-pin-not-decoded");
   });
 
-  it("normalizes a checksummed route and controller into one lane", () => {
-    const artifact = derive([
-      control({
-        routeRefs: [`ethereum:0x${"AB".repeat(20)}`],
-        controllerAddress: `0x${"CD".repeat(20)}`,
-        runtimeIdentity: DECODED_IDENTITY,
-      }),
-      control({
-        routeRefs: [`ethereum:0x${"ab".repeat(20)}`],
-        controllerAddress: `0x${"cd".repeat(20)}`,
-        assetId: "fixture-second",
-      }),
-    ]);
+  it("refuses a lane whose per-chain lookback is below the 50,000-block floor", () => {
+    const artifact = derive({
+      inventory: {
+        ...inventory(),
+        lookbackBlocksByChain: { ethereum: LANE_EMITTER_MINIMUM_LOOKBACK_BLOCKS - 1 },
+      },
+    });
+    expect(artifact.noReviewedEmitter[0]?.reason).toBe("lookback-below-floor");
+  });
 
-    expect(artifact.summary.lanes).toBe(1);
-    expect(artifact.descriptors[0]!.subjectDeploymentKey).toBe(`ethereum:0x${"ab".repeat(20)}`);
-    expect(artifact.descriptors[0]!.emitters[0]!.address).toBe(`0x${"cd".repeat(20)}`);
+  it("deduplicates and validates emitters per lane", () => {
+    const artifact = derive({
+      inventory: inventory([{
+        subjectDeploymentKey: SUBJECT,
+        assetIds: ["fixture-asset"],
+        rail: "chainlink-ccip",
+        contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
+        emitters: [emitter(), emitter({ address: TOKEN.toUpperCase().replace("0X", "0x") as `0x${string}` })],
+      }]),
+    });
+    expect(artifact.noReviewedEmitter[0]?.reason).toBe("invalid-inventory-lane");
+  });
+
+  it("rejects a chain mismatch between the lane and an emitter", () => {
+    const artifact = derive({
+      inventory: inventory([{
+        subjectDeploymentKey: SUBJECT,
+        assetIds: ["fixture-asset"],
+        rail: "chainlink-ccip",
+        contributors: [{ controlId: "fixture-control", emitterAddresses: [TOKEN] }],
+        emitters: [emitter({ chain: "arbitrum" })],
+      }]),
+    });
+    expect(artifact.noReviewedEmitter[0]?.reason).toBe("invalid-inventory-lane");
+  });
+
+  it("reproduces the same bytes for the same input", () => {
+    const first = JSON.stringify(derive());
+    const second = JSON.stringify(derive());
+    expect(second).toBe(first);
   });
 });
 
-describe("lane emitter descriptor generator input", () => {
-  const tempRoots: string[] = [];
-  afterAll(() => {
-    for (const root of tempRoots) rmSync(root, { recursive: true, force: true });
+describe("lane screening emitter inventory loader", () => {
+  it("loads the reviewed pilot inventory", () => {
+    const loaded = loadLaneScreeningEmitterInventory(ROOT);
+    expect(loaded.reviewedAt).toBe("2026-10-30");
+    expect(loaded.lanes).toHaveLength(5);
+    expect(loaded.lanes.flatMap((lane) => lane.emitters)).toHaveLength(11);
+    for (const lane of loaded.lanes) {
+      for (const record of lane.contributors) {
+        expect(record.emitterAddresses.length).toBeGreaterThan(0);
+      }
+    }
   });
 
-  it("reads bridge route refs and mint pins from the reviewed sidecars", () => {
-    const root = mkdtempSync(join(tmpdir(), "lane-emitter-"));
-    tempRoots.push(root);
-    const riskReviewDir = resolve(root, "shared/data/stablecoins/domains/risk-review");
-    const mintAuthorityDir = resolve(root, "shared/data/stablecoins/domains/mint-authority");
-    mkdirSync(riskReviewDir, { recursive: true });
-    mkdirSync(mintAuthorityDir, { recursive: true });
-    writeFileSync(resolve(riskReviewDir, "fixture-a.json"), JSON.stringify({
-      id: "fixture-a",
-      bridgeRouteRisk: {
-        controls: [
-          {
-            id: "fixture-control",
-            routeRefs: [ROUTE],
-            controllerChain: "ethereum",
-            controllerAddress: CONTROLLER,
-            executionScope: { pin: { runtimeIdentity: DECODED_IDENTITY } },
-          },
-          { id: "no-controller", routeRefs: [SECOND_ROUTE] },
-        ],
-      },
-    }));
-    writeFileSync(resolve(mintAuthorityDir, "fixture-b.json"), JSON.stringify({
-      id: "fixture-b",
-      mintAuthority: {
-        controls: [{
-          label: "minter",
-          chain: "base",
-          address: OTHER_CONTROLLER,
-          weightedQuorum: { pin: { runtimeIdentity: `sha256:${HASH}` } },
-        }],
-      },
-    }));
-
-    const loaded = loadLaneControlRecords(root);
-    expect(loaded.sidecars).toEqual({ riskReview: 1, mintAuthority: 1 });
-    expect(loaded.records.map((row) => [row.recordKind, row.routeRefs, row.controllerChain, row.runtimeIdentity])).toEqual([
-      ["bridge-control", [ROUTE], "ethereum", DECODED_IDENTITY],
-      ["bridge-control", [SECOND_ROUTE], null, null],
-      ["mint-control", [], "base", `sha256:${HASH}`],
-    ]);
-
-    const artifact = buildLaneEmitterDescriptors(root);
-    expect(artifact.summary).toMatchObject({ lanes: 2, covered: 1, noReviewedEmitter: 1 });
-    expect(artifact.descriptors[0]!.subjectDeploymentKey).toBe(ROUTE);
-    expect(artifact.noReviewedEmitter[0]).toMatchObject({ subjectDeploymentKey: SECOND_ROUTE, reason: "missing-runtime-identity" });
+  it("keeps the committed descriptor artifact in step with the reviewed inventory", () => {
+    const artifact = JSON.parse(readFileSync(ARTIFACT_PATH, "utf8")) as {
+      summary: { lanes: number; covered: number; inventory: { pilotLanes: number; uncoveredEvents: string[] } };
+      pilot: unknown[];
+    };
+    expect(artifact.summary.lanes).toBe(543);
+    expect(artifact.summary.inventory.pilotLanes).toBe(5);
+    expect(artifact.pilot).toHaveLength(5);
+    expect(artifact.summary.covered).toBe(5);
+    expect(artifact.pilot.every((lane) => lane.admission.admitted)).toBe(true);
+    expect(artifact.summary.inventory.uncoveredEvents).toEqual([]);
   });
 
-  it("reproduces the committed artifact byte for byte with a consistent summary", () => {
-    const artifact = buildLaneEmitterDescriptors(ROOT);
-    const committed = readFileSync(ARTIFACT_PATH, "utf8");
-
-    expect(`${JSON.stringify(artifact)}\n`).toBe(committed);
-    expect(artifact.summary.covered + artifact.summary.noReviewedEmitter).toBe(artifact.summary.lanes);
-    expect(Object.values(artifact.summary.noReviewedEmitterByReason).reduce((sum, count) => sum + count, 0))
-      .toBe(artifact.summary.noReviewedEmitter);
+  it("regenerates the committed artifact deterministically", () => {
+    const output = execFileSync("node", ["--import", "tsx", resolve(ROOT, "scripts/build-data/generate-safety-score-v9-lane-emitter-descriptors.ts"), "--check"], { encoding: "utf8" });
+    expect(output).toContain("current");
   });
 });

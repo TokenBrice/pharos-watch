@@ -445,6 +445,7 @@ export const GENERATED_ARTIFACT_REGISTRY = [
     sourcePaths: [
       "shared/data/stablecoins/domains/risk-review/**",
       "shared/data/stablecoins/domains/mint-authority/**",
+      "shared/data/safety-score-v9/lane-screening-emitter-inventory-v1.json",
       "shared/types/chain-identity.ts",
       "shared/types/deployment-id.ts",
       "shared/types/safety-score-v9-incidents.ts",
