@@ -36,6 +36,22 @@ regexTarget = "match"
 regexes = ['''^(?:[a-z0-9]+(?:-[a-z0-9]+)*:)+[1-9A-HJ-NP-Za-km-z]{32,44}"$''']
 paths = ['''(?:^|/)shared/data/stablecoins/domains/(?:risk-review|mint-authority)/[^/]+\.json$''']
 
+# Incident-review identities embed an asset slug and a hex digest. The gldt-gold-dao
+# slug starts with GitLab's deploy-token prefix, and slugs containing "token"
+# (tgbp-tokenised, eurot-token-teknoloji) trip generic-api-key on the digest that
+# follows them. Match only those identifier spans, only in the generated incident-review
+# key migration, so a credential anywhere else in that file stays detectable.
+[[allowlists]]
+description = "Asset-slug incident-review identifiers in the generated key migration are not credentials"
+targetRules = ["gitlab-deploy-token", "generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = [
+  '''^gldt-gold-dao-[0-9a-f]{11}$''',
+  '''^[a-z0-9-]*token[a-z0-9-]*:[0-9a-f]{20}"$''',
+]
+paths = ['''(?:^|/)shared/data/safety-score-v9/incident-review-key-migration-v1\.generated\.json$''']
+
 # Repo-relative source paths are not credentials. CI gates that enumerate route roots
 # (`src/app/api`, `src/app/funding`, ...) otherwise trip the generic-api-key rule on
 # their own configuration constants.
