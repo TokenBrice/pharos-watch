@@ -125,6 +125,11 @@
       "chain": "arc",
       "address": "0xbef5f6d51cb62b58e6a8f77868681825c6fe21c1",
       "decimals": 6
+    },
+    {
+      "chain": "optimism",
+      "address": "0xdcb612005417dc906ff72c87df732e5a90d49e11",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-top",

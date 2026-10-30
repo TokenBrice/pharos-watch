@@ -96,6 +96,11 @@
       "chain": "bsc",
       "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
       "decimals": 6
+    },
+    {
+      "chain": "stellar",
+      "address": "CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI",
+      "decimals": 4
     }
   ],
   "custodyModel": "institutional-regulated",

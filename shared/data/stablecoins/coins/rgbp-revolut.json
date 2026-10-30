@@ -9,7 +9,7 @@
     "governance": "centralized"
   },
   "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal",
-  "pegMechanism": "Pre-launch fiat-reserve stablecoin proposal designed to maintain 1:1 value with Pound Sterling; FCA sandbox testing remains pre-authorisation, with contracts, redemption terms, and reserve reports pending",
+  "pegMechanism": "Pre-launch fiat-reserve stablecoin proposal designed to maintain 1:1 value with Pound Sterling; FCA sandbox testing remains pre-authorisation, with redemption terms and reserve reports pending",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
@@ -32,6 +32,13 @@
   },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8407f7245dbb72e1570fdee4fecb267dd3edbb0d",
+      "decimals": 6
+    }
+  ],
   "status": "pre-launch",
   "announcedDate": "2026-02",
   "expectedLaunchDate": "2027",

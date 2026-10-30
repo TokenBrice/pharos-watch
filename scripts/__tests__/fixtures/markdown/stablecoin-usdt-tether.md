@@ -129,6 +129,7 @@ Under the route Pharos reviewed on Apr 16, 2026, customers the issuer has verifi
 | tempo | `0x20C00000000000000000000014f22CA97301EB73` | 6 |
 | rootstock | `0x779dED0C9e1022225F8e0630b35A9B54Be713736` | 6 |
 | hedera | `0x00000000000000000000000000000000009Ce723` | 6 |
+| liquid | `ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2` | 8 |
 
 ## Public snapshots
 

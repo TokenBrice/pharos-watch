@@ -105,6 +105,11 @@
       "chain": "aptos",
       "address": "0x50038be55be5b964cfa32cf128b5cf05f123959f286b4cc02b86cafd48945f89",
       "decimals": 6
+    },
+    {
+      "chain": "tempo",
+      "address": "0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24",
+      "decimals": 6
     }
   ],
   "governanceQuality": "regulated-entity",

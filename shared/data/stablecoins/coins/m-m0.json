@@ -124,6 +124,21 @@
       "chain": "monad",
       "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
       "decimals": 6
+    },
+    {
+      "chain": "rise",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
+    },
+    {
+      "chain": "fluent",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
+    },
+    {
+      "chain": "0g",
+      "address": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+      "decimals": 6
     }
   ],
   "custodyModel": "unknown",

@@ -152,6 +152,11 @@
       "chain": "cardano",
       "address": "25c5de5f5b286073c593edfd77b48abc7a48e5a4f3d4cd9d428ff9355059555344",
       "decimals": 6
+    },
+    {
+      "chain": "xlayer",
+      "address": "0x87b4a8176b3df6b71e26cc095edcaf4db07506b4",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-top",

@@ -9,7 +9,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "The four authored TBILL deployments are reviewed as independent native-issuance routes: Ethereum and Arbitrum OpenEdenVaultV5 vaults, the Solana Token-2022 mint, and the XRPL TBL issuer. No public bridge contract, representation token, lockbox, adapter, relay, validator/DVN, rate limit, or burn-before-mint route was identified in the reviewed primary sources, so no bridge controls are authored. Whether OpenEden operates an off-chain issuer-native burn/mint service remains unresolved and is not asserted by this profile.",
+    "summary": "The five authored TBILL deployments are reviewed as independent native-issuance routes: Ethereum and Arbitrum OpenEdenVaultV5 vaults, the BNB Chain TBILL Vault, the Solana Token-2022 mint, and the XRPL TBL issuer. No public bridge contract, representation token, lockbox, adapter, relay, validator/DVN, rate limit, or burn-before-mint route was identified in the reviewed primary sources, so no bridge controls are authored. Whether OpenEden operates an off-chain issuer-native burn/mint service remains unresolved and is not asserted by this profile.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "manual-review",
@@ -125,6 +125,35 @@
           {
             "label": "XRPL validated JSON-RPC",
             "url": "https://xrplcluster.com"
+          }
+        ]
+      },
+      {
+        "id": "bsc:0x5b4681f0d7a01b817675f25892d3ad73572fd1d9",
+        "destinationChain": "bsc",
+        "contractAddress": "0x5b4681f0d7a01b817675f25892d3ad73572fd1d9",
+        "protocol": "OpenEden TBILL native BNB Chain vault",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "OpenEden's TBILL smart-contract page lists this exact BNB Chain address as the TBILL Vault alongside a dedicated price oracle, KYC manager and the tbill-v3-prod-bnb subgraph, the same issuer-operated vault architecture as the reviewed Ethereum and Arbitrum deployments; BscScan shows a live verified BEP-20 proxy and DefiLlama coin metadata reports 18 decimals (2026-10-30). No bridge pool, adapter or representation contract was identified. Vault controller roles and limits were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "OpenEden TBILL smart contract addresses (BNB Chain vault)",
+            "url": "https://docs.openeden.com/tbill/smart-contract-addresses"
+          },
+          {
+            "label": "TBILL on BscScan (verified 2026-10-30)",
+            "url": "https://bscscan.com/address/0x5b4681F0d7A01B817675F25892D3Ad73572FD1D9"
+          },
+          {
+            "label": "DefiLlama coin metadata for the BNB Chain TBILL deployment (18 decimals)",
+            "url": "https://coins.llama.fi/prices/current/bsc:0x5b4681F0d7A01B817675F25892D3Ad73572FD1D9"
           }
         ]
       }

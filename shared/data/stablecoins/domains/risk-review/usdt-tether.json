@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "USDT has issuer-native deployments on Tether-supported protocols and third-party representations on other networks. This review confirms only the contracts listed in Tether's supported-protocol registry as native issuance; USDT0 and every other unverified route remain conservatively unresolved at deployment level. 2026-07-20 cohort dc-1 pass: resolved the flagged non-native route controls with on-chain reads (token identity + controller/owner); see per-row reviewNote evidence. 2026-07-20 cohort cur-1 pass: resolved the five remaining unresolved routes (Sui Bridge, Injective Peggy, Corn USDT0, Katana Vault Bridge, HyperCore USDT0) from chain, LCD and explorer reads; see per-row reviewNote evidence.",
+    "summary": "USDT has issuer-native deployments on Tether-supported protocols and third-party representations on other networks. This review confirms only the contracts listed in Tether's supported-protocol registry as native issuance; USDT0 and other representation routes are classified at deployment level; provider screening and controls remain separate. 2026-07-20 cohort dc-1 pass: resolved the flagged non-native route controls with on-chain reads (token identity + controller/owner); see per-row reviewNote evidence. 2026-07-20 cohort cur-1 pass: resolved the five remaining unresolved routes (Sui Bridge, Injective Peggy, Corn USDT0, Katana Vault Bridge, HyperCore USDT0) from chain, LCD and explorer reads; see per-row reviewNote evidence.",
     "reviewedAt": "2026-07-20",
     "reviewer": "Kimi P2 control cohort dc-1 (lead usdt-tether); V9 Phase 3 curation lane cur-1",
     "confidence": "verified",
@@ -1677,6 +1677,35 @@
           {
             "label": "HashScan - USDT0",
             "url": "https://hashscan.io/mainnet/token/0.0.10282787"
+          }
+        ]
+      },
+      {
+        "id": "liquid:ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2",
+        "destinationChain": "liquid",
+        "contractAddress": "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2",
+        "protocol": "Tether native USDT",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tether's supported-protocols page lists this exact Liquid asset id as its USDt integration path, and Blockstream's Liquid API resolves it as Tether USD (precision 8) with issuer entity tether.to, a live reissuance token and issuance at block 365526 (2026-10-30). Tether issues and reissues the asset directly on Liquid; no bridge contract or representation wrapper exists on this chain. Issuer key custody and reissuance controls were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Tether supported protocols and integration guidelines (Liquid USDt asset id)",
+            "url": "https://tether.to/en/supported-protocols/"
+          },
+          {
+            "label": "Blockstream Liquid asset API (Tether USD, precision 8, verified 2026-10-30)",
+            "url": "https://blockstream.info/liquid/api/asset/ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2"
+          },
+          {
+            "label": "Tether transparency (Liquid net circulation)",
+            "url": "https://tether.to/en/transparency/"
           }
         ]
       }

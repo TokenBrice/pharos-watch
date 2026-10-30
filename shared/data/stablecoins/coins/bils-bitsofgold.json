@@ -39,6 +39,13 @@
   },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "contracts": [
+    {
+      "chain": "solana",
+      "address": "CDxFUPSRK4dC68jWV7SCPezU1vNYXz87Y6fjhhRvsuhd",
+      "decimals": 6
+    }
+  ],
   "status": "pre-launch",
   "announcedDate": "2024-03",
   "expectedLaunchDate": "2026",

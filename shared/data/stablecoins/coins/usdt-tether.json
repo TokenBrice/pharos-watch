@@ -318,6 +318,11 @@
       "chain": "hedera",
       "address": "0x00000000000000000000000000000000009Ce723",
       "decimals": 6
+    },
+    {
+      "chain": "liquid",
+      "address": "ce091c998b83c78bb71a632313ba3760f1763d9cfcffae02258ffa9865a37bd2",
+      "decimals": 8
     }
   ],
   "tradedContracts": [

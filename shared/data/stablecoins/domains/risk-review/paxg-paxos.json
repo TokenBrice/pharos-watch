@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
-    "summary": "PAXG has reviewed issuer-native deployments on Ethereum and Solana. At Ethereum block 26095800 the LayerZero adapter retains owner 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b, implementation 0xc54ca36efe594e4c774ba8463adf67ba3de1236f, and SupplyController capacity 13,320 PAXG with 0.155 PAXG-per-second refill. endpoint() and the configured peers(30168) value are observed, while the complete DVN/validator configuration and burn/mint conservation remain unresolved. Solana mint-authority attribution is confirmed by the finalized multisig read, but bridge authorization is still assessed conservatively as opaque-or-unknown.",
+    "summary": "PAXG has reviewed issuer-native deployments on Ethereum, Solana, and Base; KPMG's September 2026 examination counts 235 Base PAXG among redeemable tokens. At Ethereum block 26095800 the LayerZero adapter retains owner 0x3af3e85f4f97de7ad0f000b724fb77fe5ffc024b, implementation 0xc54ca36efe594e4c774ba8463adf67ba3de1236f, and SupplyController capacity 13,320 PAXG with 0.155 PAXG-per-second refill. endpoint() and the configured peers(30168) value are observed, while the complete DVN/validator configuration and burn/mint conservation remain unresolved. Solana mint-authority attribution is confirmed by the finalized multisig read, but bridge authorization is still assessed conservatively as opaque-or-unknown.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex FIX-09 mint-bridge-boundary migration",
     "confidence": "manual-review",
@@ -129,6 +129,35 @@
           {
             "label": "PAXG Solana mint on Solscan",
             "url": "https://solscan.io/token/5GgRAEmv8ZxF2PR5hY72Qs5x1bnQ6UK2RbTPoqJ3wSwW"
+          }
+        ]
+      },
+      {
+        "id": "base:0xe904aea5e1b110c9174728fa2effc8aed19e98ef",
+        "destinationChain": "base",
+        "contractAddress": "0xe904aea5e1b110c9174728fa2effc8aed19e98ef",
+        "protocol": "Paxos PAXG native Base deployment",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Base Blockscout resolves this exact contract as Paxos Gold (PAXG), 18 decimals, an EIP-1967 AdminUpgradeabilityProxy over a verified implementation named PAXG in Paxos's AdminUpgradeabilityProxy architecture (2026-10-30). KPMG's September 30, 2026 PAXG redemption-assets examination reconciles 435,306 redeemable PAXG including 235 on Base against allocated gold, so Base supply is issuer-recognized native issuance rather than a third-party bridge representation. No bridge mint path or controller review exists for this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "KPMG PAXG Redemption Assets Report - September 30, 2026",
+            "url": "https://framerusercontent.com/assets/uwWybrLRlgkC4vexP3yLyrQVeV0.pdf"
+          },
+          {
+            "label": "PAXG on Base Blockscout (identity, proxy and implementation, verified 2026-10-30)",
+            "url": "https://base.blockscout.com/token/0xe904AEA5E1b110c9174728fA2efFc8aeD19E98Ef"
+          },
+          {
+            "label": "PAXG Base proxy verified source (AdminUpgradeabilityProxy, 2026-10-30)",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0xe904aea5e1b110c9174728fa2effc8aed19e98ef"
           }
         ]
       }
