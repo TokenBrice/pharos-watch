@@ -77,6 +77,61 @@
 /depeg/usn-2026-02-14-up-49237/ /stablecoin/usn-noon/ 301
 /depeg/usn-2026-02-14-up-49237 /stablecoin/usn-noon/ 301
 
+# Reviewed removal of DGLD, EURS, IDRT and USDX price-feed artifacts
+# (2026-10-30): bad upstream price prints with no economic trade at the stored
+# deviation. The coin page remains the canonical surface.
+/depeg/dgld-2026-02-23-down-24473/ /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-23-down-24473 /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-23-down-25107/ /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-23-down-25107 /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-23-up-24479/ /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-23-up-24479 /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-23-up-25108/ /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-23-up-25108 /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-24/ /stablecoin/dgld-gold-token-sa/ 301
+/depeg/dgld-2026-02-24 /stablecoin/dgld-gold-token-sa/ 301
+/depeg/eurs-2026-03-10-down/ /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-03-10-down /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-03-20-down/ /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-03-20-down /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-03-22-down-88050/ /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-03-22-down-88050 /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-03-22-down-88052/ /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-03-22-down-88052 /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-04-19/ /stablecoin/eurs-stasis/ 301
+/depeg/eurs-2026-04-19 /stablecoin/eurs-stasis/ 301
+/depeg/idrt-2026-03-13/ /stablecoin/idrt-rupiah-token/ 301
+/depeg/idrt-2026-03-13 /stablecoin/idrt-rupiah-token/ 301
+/depeg/idrt-2026-03-14/ /stablecoin/idrt-rupiah-token/ 301
+/depeg/idrt-2026-03-14 /stablecoin/idrt-rupiah-token/ 301
+/depeg/usdx-2026-03-18/ /stablecoin/usdx-hex-trust/ 301
+/depeg/usdx-2026-03-18 /stablecoin/usdx-hex-trust/ 301
+/depeg/usdx-2026-03-19-down-87890/ /stablecoin/usdx-hex-trust/ 301
+/depeg/usdx-2026-03-19-down-87890 /stablecoin/usdx-hex-trust/ 301
+/depeg/usdx-2026-03-19-down-87899/ /stablecoin/usdx-hex-trust/ 301
+/depeg/usdx-2026-03-19-down-87899 /stablecoin/usdx-hex-trust/ 301
+
+# The 2026-10-30 gold-unit replay rewrote CGO and KAU backfill event ids; the
+# recomputed episodes live on the coin page, so old slugs do not map by date.
+/depeg/cgo-2026-01-27/ /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-01-27 /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-01-29-up-68651/ /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-01-29-up-68651 /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-01-29-up-68652/ /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-01-29-up-68652 /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-01-30-up-68653/ /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-01-30-up-68653 /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-02-02-down-68658/ /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-02-02-down-68658 /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-02-02-down-68659/ /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-02-02-down-68659 /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-02-05-down-68671/ /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-02-05-down-68671 /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-02-05-up/ /stablecoin/cgo-comtech/ 301
+/depeg/cgo-2026-02-05-up /stablecoin/cgo-comtech/ 301
+/depeg/kau-2026-02-14/ /stablecoin/kau-kinesis/ 301
+/depeg/kau-2026-02-14 /stablecoin/kau-kinesis/ 301
+
 # MiCA tracker moved to Compliance; /compliance/ is canonical.
 /mica/ /compliance/ 301
 /mica /compliance/ 301
