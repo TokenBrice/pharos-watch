@@ -525,6 +525,7 @@
         "destinationChain": "ethereum",
         "contractAddress": "0xbe370ad45d44eb45174c4ec60b88839fef32c077",
         "protocol": "APACX native CDP issuance (DaiJoin/Vat)",
+        "rail": "issuer-operated",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "single-chain-or-native",

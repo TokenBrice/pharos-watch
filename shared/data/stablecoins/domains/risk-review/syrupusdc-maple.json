@@ -168,6 +168,7 @@
         "canonicalChain": "ethereum",
         "contractAddress": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
         "protocol": "Maple",
+        "rail": "issuer-operated",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "single-chain-or-native",
