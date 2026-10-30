@@ -445,7 +445,7 @@ describe("usdai-proof-of-reserves adapter", () => {
   it("falls back to amount weights when the payload no longer publishes share values", () => {
     const result = adaptUsdAiProofOfReserves([
       { type: "TBILL", name: "PYUSD", chain: 42161, amount: "9440" },
-      { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, amount: "560" },
+      { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, amount: "560", remainingAmount: "560" },
     ]);
 
     expect(result.slices).toEqual([
@@ -467,7 +467,7 @@ describe("usdai-proof-of-reserves adapter", () => {
   it("falls back to amount weights when shares are partial and marks coverage as degraded", () => {
     const result = adaptUsdAiProofOfReserves([
       { type: "TBILL", name: "PYUSD", chain: 42161, share: "944000000000000000", amount: "9440" },
-      { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, share: "30000000000000000", amount: "560" },
+      { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, share: "30000000000000000", amount: "560", remainingAmount: "560" },
     ]);
 
     expect(result.slices).toEqual([
@@ -483,6 +483,27 @@ describe("usdai-proof-of-reserves adapter", () => {
     expect(result.metadata).toMatchObject({
       apiEntryCount: 2,
       weightingBasis: "amount",
+    });
+  });
+
+  it("weights the amount fallback by remaining principal and drops undisbursed pipeline", () => {
+    const result = adaptUsdAiProofOfReserves([
+      { type: "TBILL", name: "PYUSD", chain: 42161, amount: "9440" },
+      { type: "DEAL", name: "NVIDIA B300 [9]", chain: 42161, amount: "560", remainingAmount: "400" },
+      { type: "DEAL", name: "B300 [170]", chain: 42161, amount: "1000" },
+    ]);
+
+    expect(result.slices).toEqual([
+      { sourceKey: "usdai-proof-of-reserves:pyusd", name: "PYUSD (PayPal USD)", pct: expect.closeTo(9440 / 9840 * 100, 10), risk: "low", coinId: "pyusd-paypal", depType: "collateral" },
+      { sourceKey: "usdai-proof-of-reserves:deal", name: "GPU-backed infrastructure loans (NVIDIA hardware)", pct: expect.closeTo(400 / 9840 * 100, 10), risk: "high" },
+    ]);
+    expect(result.warnings).toContainEqual(
+      expect.objectContaining({ code: "usdai-amount-weight-rows-excluded", effect: "degraded" }),
+    );
+    expect(result.metadata).toMatchObject({
+      weightingBasis: "amount",
+      dealCount: 1,
+      excludedAmountModeDealCount: 1,
     });
   });
 

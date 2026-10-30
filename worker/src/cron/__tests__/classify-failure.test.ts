@@ -100,6 +100,12 @@ const CASES: Case[] = [
     lastError: "HTTP 429 rate limit",
     expected: "upstream-http",
   },
+  {
+    name: "hyphenated transport status",
+    reason: "adapter-exception",
+    lastError: "primary:http-json: initia-wrapper-vault: no reviewed Initia LCD endpoint answered (https://rest.initia.xyz: http-502)",
+    expected: "upstream-http",
+  },
 
   // network
   {

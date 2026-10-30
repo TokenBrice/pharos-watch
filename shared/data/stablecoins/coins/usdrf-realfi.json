@@ -20,6 +20,13 @@
     { "label": "Reserve Attestation", "url": "https://docs.realfi.co/resources/reserve-attestation" },
     { "label": "Audit Reports", "url": "https://docs.realfi.co/resources/audit-reports" }
   ],
+  "contracts": [
+    {
+      "chain": "cardano",
+      "address": "7d9e4a0ee1a3f5d5ff8159ea91a83310cf2795ee7a87170c7aea05ae55534472",
+      "decimals": 6
+    }
+  ],
   "status": "pre-launch",
   "launchDate": "2026-10-01",
   "launchPhase": "launched",

@@ -4,6 +4,18 @@
   "symbol": "VNDC",
   "brand": "Jade Labs",
   "oneLiner": "VNDC is Jade Labs's VND-denominated token, now disclosed as VNDC 2.0 backed by USDT/USDC pools under issuer and investigation risk.",
+  "status": "frozen",
+  "frozenAt": "2026-03-23",
+  "obituary": {
+    "causeOfDeath": "regulatory",
+    "deathDate": "2026-03-23",
+    "recordedAt": "2026-10-30",
+    "epitaph": "Criminal case ended the ONUS issuer",
+    "obituary": "Vietnam's Ministry of Public Security opened a criminal case on 2026-03-23 against the founders and operators of the ONUS exchange, who created and sold VNDC, ONUS and HNG to investors. The issuer platform goonus.io now returns HTTP 404 and vndc.io serves an unrelated site, leaving no published redemption channel.",
+    "peakMcap": 57089903,
+    "sourceUrl": "https://bocongan.gov.vn/bai-viet/triet-pha-duong-day-su-dung-mang-may-tinh-mang-vien-thong-phuong-tien-dien-tu-chiem-doat-tai-san-tren-linh-vuc-1774533373",
+    "sourceLabel": "Ministry of Public Security ONUS/VNDC case announcement, 2026-03-26"
+  },
   "flags": {
     "backing": "crypto-backed",
     "pegCurrency": "VND",
@@ -58,23 +70,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "institutional-unregulated",
   "governanceQuality": "single-entity",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "vndc-jade-labs",
-    "display": {
-      "url": "https://vndc.io/",
-      "label": "Jade Labs / VNDC issuer disclosure"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "polygon",
-        "rpcMode": "public-rpc"
-      }
-    }
-  },
   "notices": [
     {
       "type": "danger",
@@ -109,11 +104,5 @@
         "url": "https://goonus.io/en/"
       }
     ]
-  },
-  "status": "quarantined",
-  "listingStatusReview": {
-    "changedAt": "2026-07-15",
-    "reviewBy": "2026-08-15",
-    "reason": "Temporarily withheld because permitted runtime sources do not provide a positive circulating supply or market cap."
   }
 }

@@ -4,6 +4,7 @@
   "symbol": "USDKG",
   "oneLiner": "USDKG is Gold Dollar's gold-backed dollar token; the issuer has announced termination and offers holders email-based exchange for fiat or USDT.",
   "marketAvailability": "legacy-or-wind-down",
+  "windDownAnnouncedAt": "2026-10-05",
   "windDownSourceUrl": "https://www.usdkg.com/",
   "status": "frozen",
   "frozenAt": "2026-10-19",

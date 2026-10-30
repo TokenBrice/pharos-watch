@@ -2,27 +2,17 @@
   "id": "iusd-initia",
   "reserves": [
     {
-      "name": "Agora AUSD bridged via LayerZero",
+      "name": "iUSD collateral (unmeasured)",
       "pct": 100,
-      "risk": "low",
-      "coinId": "ausd-agora",
-      "depType": "wrapper",
-      "assetClass": "stablecoin",
-      "issuerOrObligor": "Agora AUSD and the Initia LayerZero AUSD0 OFT",
-      "riskFactors": [
-        "counterparty",
-        "smart-contract",
-        "liquidity",
-        "custody"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "initia-wrapper-vault:ausd"
+      "risk": "high",
+      "assetClass": "other",
+      "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-08-29",
-    "reviewer": "OpenAI Codex reserve review 2026-08-29",
-    "confidence": "verified",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "OpenAI Codex reserve review 2026-08-29; post-halt reclassification 2026-10-30",
+    "confidence": "manual-review",
     "sources": [
       {
         "label": "Initia iUSD FAQ",
@@ -55,14 +45,30 @@
       {
         "label": "Agora AUSD reserve report - May 31, 2026",
         "url": "https://files.buildwithfern.com/agora.docs.buildwithfern.com/938a11767a399cc2cfd2a15efc4cdfab65a53e59402e61c9e166b5354b5c9673/docs/assets/2026%20May%20-%20Agora%20Dollar%20Reserve%20Report.pdf"
+      },
+      {
+        "label": "Initia Foundation: iUSD collateral restoration (2026-10-28)",
+        "url": "https://x.com/initiaFDN/status/2115345150369038598"
+      },
+      {
+        "label": "Initia: restart Monday 2026-11-02 (2026-10-30)",
+        "url": "https://x.com/initia/status/2116087208688099687"
       }
     ],
-    "rationale": "Re-reviewed 2026-08-29. Initia's FAQ says iUSD is backed 1:1 by Agora AUSD and that supply expands on deposits and contracts on withdrawals. At interwoven-1 block 21248472 (hash oLp2oqBrLNW+e3Jbsmn+wta6wc9+Qum61EFE+Flexgo=; 2026-08-29T18:49:43.399544346Z), the current iUSD metadata object 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e has supply 2,511,330.584682 (6 decimals), and the bank supply endpoint reports the same amount. A pinned primary_fungible_store::balance view for owner vault object 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a and AUSD0 metadata 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef returns exactly 2,511,330.584682 AUSD0. AUSD0 total supply is 2,511,333.142661, leaving only 2.557979 AUSD0 outside the iUSD vault. The direct reserve is therefore one 100% AUSD0/AUSD wrapper position linked to ausd-agora; the upstream AUSD reserve composition is inherited and not duplicated as child slices.",
+    "rationale": "Re-reviewed 2026-08-29. Initia's FAQ says iUSD is backed 1:1 by Agora AUSD and that supply expands on deposits and contracts on withdrawals. At interwoven-1 block 21248472 (hash oLp2oqBrLNW+e3Jbsmn+wta6wc9+Qum61EFE+Flexgo=; 2026-08-29T18:49:43.399544346Z), the current iUSD metadata object 0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e has supply 2,511,330.584682 (6 decimals), and the bank supply endpoint reports the same amount. A pinned primary_fungible_store::balance view for owner vault object 0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a and AUSD0 metadata 0x8078cf9fee50e15069402e9d1d9db70b28fc0d5197d79e8a2b41e2ade432efef returns exactly 2,511,330.584682 AUSD0. AUSD0 total supply is 2,511,333.142661, leaving only 2.557979 AUSD0 outside the iUSD vault. Initia reports iUSD collateral held AUSD0, Noble USDC and WETH; shares unmeasured since the 2026-10-23 halt.",
     "compositionBasis": "Pinned Initia primary_fungible_store::balance and bank-supply reads at interwoven-1 block 21248472, plus official iUSD/AUSD and LayerZero documentation",
-    "compositionAsOf": "2026-08-29",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No unidentified direct reserve asset remains in the iUSD wrapper: the pinned vault balance equals the complete iUSD supply in AUSD0 at the reviewed block. AUSD reserve composition and bridge/custody risks remain upstream facts on the linked ausd-agora record.",
-    "knownUnknownExposurePct": 0
+    "scope": "classification-only",
+    "knownUnknownExposure": "Unmeasured: Initia reports iUSD collateral held AUSD0, Noble USDC and WETH, drained on 2026-10-23.",
+    "knownUnknownExposurePct": 100,
+    "nonLinkDispositions": [
+      {
+        "reserveIndex": 0,
+        "reserveName": "iUSD collateral (unmeasured)",
+        "pct": 100,
+        "disposition": "insufficient-evidence",
+        "rationale": "Initia reports collateral held AUSD0, Noble USDC and WETH; shares unmeasured since the 2026-10-23 halt."
+      }
+    ]
   },
   "custodyProfile": {
     "providers": [

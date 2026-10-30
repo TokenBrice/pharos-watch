@@ -1,4 +1,5 @@
 import { DEPEG_CONFIRMATION_SUPPLY_THRESHOLD, DEPEG_DEX_PROTOCOL_CORROBORATION_MIN, DEPEG_EVENT_MIN_SUPPLY_USD, DEPEG_EXTREME_MOVE_BPS, DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
+import type { DepegPrimaryTrust } from "@shared/types/core";
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
 import { advanceDepegPriceCoverage } from "@shared/lib/depeg-price-coverage";
@@ -62,7 +63,7 @@ interface DecisionContext {
   recoveryThreshold: number;
   pegRef: number;
   supply: number;
-  primaryTrust: "authoritative" | "confirm_required";
+  primaryTrust: DepegPrimaryTrust;
   dexRow: DexPriceRow | undefined;
   dexAbsBps: number | null;
   dexDirectionProtocolCount: number;
@@ -311,7 +312,14 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
   const trackedCoinId = asset.id;
   const price = asset.price;
   const primaryTrust = classifyPrimaryDepegTrust(asset, now);
-  if (primaryTrust === "unusable" || price == null || typeof price !== "number" || isNaN(price) || price <= 0) {
+  // A native-domain open row's deciding evidence is its admitted native quote; a
+  // nominal or otherwise unusable USD primary must not freeze that row.
+  const nativeRowHasOwnEvidence =
+    existing != null && isNativePegEvent(existing) && input.nativePegQuote != null;
+  if (
+    price == null || typeof price !== "number" || isNaN(price) || price <= 0 ||
+    (primaryTrust === "unusable" && !nativeRowHasOwnEvidence)
+  ) {
     return { kind: "skip", decision: emptyDecision(trackedCoinId, { kind: "unavailable", reason: "primary-unusable" }) };
   }
 
@@ -407,7 +415,7 @@ function deriveDecisionContext(input: DepegAssetDecisionInput): DecisionContextD
     primaryTrust === "authoritative" ||
     hasFreshMultiSourcePrimaryAgreement(asset, now);
   const reasonFlags: PendingDepegReasonFlag[] = ["confirmation-window"];
-  if (rawAbsBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
+  if (primaryTrust !== "unusable" && rawAbsBps >= DEPEG_EXTREME_MOVE_BPS) reasonFlags.push("extreme-move");
   if (tieredMarketCapRequiresConfirmation) reasonFlags.push("large-cap");
   if (primaryTrust === "confirm_required") reasonFlags.push("low-confidence");
   const pendingReason: PendingDepegReason = buildPendingReason(reasonFlags);
@@ -783,7 +791,12 @@ export function decideDepegAsset(input: DepegAssetDecisionInput): DepegAssetDeci
   }
   // A usable context is an observation, not proof of recovery or of a trusted event.
   const observed: DepegObservationOutcome = { kind: "observed" };
-  const nativeVeto = applyNativeQuoteVeto(ctx, input.existing);
+  // The native-quote veto protects the USD primary path. A native-domain row is
+  // decided by its own native quote, so it must still reach the existing-event
+  // peak, direction and recovery rules.
+  const nativeVeto = input.existing != null && isNativePegEvent(input.existing)
+    ? null
+    : applyNativeQuoteVeto(ctx, input.existing);
   if (nativeVeto) return withPriceCoverage({ ...nativeVeto, observation: observed }, input, ctx);
 
   const nativeOpening = input.existing ? null : decideNewNativePegDepeg(ctx);

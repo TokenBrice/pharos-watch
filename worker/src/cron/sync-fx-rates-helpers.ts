@@ -306,22 +306,52 @@ export class FxSyncRunState {
       cadence,
       getPerUsd,
     } = input;
+    const skippedOlderPegKeys: string[] = [];
 
     for (const [currency, pegKey] of mappings) {
+      const prevRate = this.prevRates[pegKey];
+      const incumbentUpdatedAt = this.prevState?.sourceUpdatedAtByPeg[pegKey] ?? null;
+      if (
+        sourceUpdatedAt != null &&
+        incumbentUpdatedAt != null &&
+        incumbentUpdatedAt > 0 &&
+        sourceUpdatedAt < incumbentUpdatedAt &&
+        typeof prevRate === "number" &&
+        Number.isFinite(prevRate) &&
+        prevRate > 0
+      ) {
+        // A source payload older than the incumbent observation never replaces
+        // the fresher per-peg generation (ADR-33); keep its value and clock.
+        this.usableRates[pegKey] = prevRate;
+        this.inheritPrevious(pegKey);
+        skippedOlderPegKeys.push(pegKey);
+        continue;
+      }
+
       const perUsd = getPerUsd(currency);
       if (typeof perUsd === "number" && Number.isFinite(perUsd) && perUsd > 0) {
         const rate = invertUnitsPerUsd(perUsd);
         if (this.validateRate(pegKey, rate, this.prevRates[pegKey])) {
           this.usableRates[pegKey] = rate;
           this.markLive(pegKey, sourceUpdatedAt, cadence, sourceDate);
-        } else if (this.prevRates[pegKey]) {
-          this.usableRates[pegKey] = this.prevRates[pegKey]!;
-          this.inheritPrevious(pegKey);
+        } else {
+          // A rejected live value may only be recovered from a cadence-valid
+          // original observation; a stale incumbent is not live coverage (ADR-29).
+          this.ensureCachedRate(pegKey, currency, { requireCadenceValid: true });
         }
-      } else if (includeMissingPrevious && this.prevRates[pegKey]) {
-        this.usableRates[pegKey] = this.prevRates[pegKey]!;
+      } else if (includeMissingPrevious && prevRate) {
+        this.usableRates[pegKey] = prevRate;
         this.inheritPrevious(pegKey);
       }
+    }
+
+    if (skippedOlderPegKeys.length > 0) {
+      this.recordCronEvent({
+        eventType: "older-fx-observation-skipped",
+        severity: "info",
+        message: "Kept the fresher incumbent FX observations over an older source payload.",
+        metadata: { pegKeys: skippedOlderPegKeys, sourceUpdatedAt },
+      });
     }
   }
 

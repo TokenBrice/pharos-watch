@@ -2,7 +2,7 @@
   "id": "stkgho-umbrella-aave",
   "name": "Aave Umbrella stkGHO",
   "symbol": "stkGHO.v1",
-  "oneLiner": "stkGHO is Aave Umbrella's slashable safety-module staking receipt over GHO; depositors earn Umbrella rewards and absorb GHO deficits via automated slashing.",
+  "oneLiner": "stkGHO is Aave Umbrella's slashable safety-module staking receipt over GHO; Aave has sunset the GHO Umbrella market and rewards are off.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -80,5 +80,7 @@
       }
     }
   },
+  "windDownAnnouncedAt": "2026-06-16",
+  "windDownSourceUrl": "https://governance.aave.com/t/arfc-umbrella-parameter-update-target-liquidity-and-emission-optimization/25154",
   "launchDate": "2025-06-05"
 }

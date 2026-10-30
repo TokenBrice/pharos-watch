@@ -108,6 +108,25 @@ describe("tokenized issuer route evidence boundaries", () => {
     expect(resolveReviewedRouteSuspension(config, "redemption:usdr-stablr:offchain-issuer", reviewedClock)).toBeUndefined();
   });
 
+  it("admits USDR's exact reviewed suspension only after the review day and at its route identity", () => {
+    const config = getRedemptionBackstopConfig("usdr-stablr")!;
+    expect(RedemptionBackstopConfigSchema.safeParse(config).success).toBe(true);
+    expect(config.routeStatus).toBe("suspended");
+    expect(config.routeSuspension).toMatchObject({
+      routeId: "redemption:usdr-stablr:offchain-issuer",
+      suspendedAt: "2026-08-25",
+      reviewedAt: "2026-10-30",
+    });
+    // The issuer's August 25, 2026 recovery update owns the as-of date.
+    expect(config.routeSuspension?.sources[0]?.quote).toContain(
+      "minting and redemption of EURR and USDR remain temporarily suspended",
+    );
+    const reviewedClockSec = Date.UTC(2026, 9, 30) / 1_000 + 86_400;
+    expect(resolveReviewedRouteSuspension(config, "redemption:usdr-stablr:offchain-issuer", reviewedClockSec - 1)).toBeUndefined();
+    expect(resolveReviewedRouteSuspension(config, "redemption:usdr-stablr:offchain-issuer", reviewedClockSec)).toBeDefined();
+    expect(resolveReviewedRouteSuspension(config, "redemption:eurr-stablr:offchain-issuer", reviewedClockSec)).toBeUndefined();
+  });
+
   it("leaves rwaUSDi cost and liquidity-class completion unbounded", () => {
     const config = getRedemptionBackstopConfig("rwausdi-multipli")!;
     expect(config.costModel.confidence).toBe("undisclosed-reviewed");

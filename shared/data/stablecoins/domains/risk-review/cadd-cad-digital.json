@@ -22,7 +22,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "CADD is natively issued on both Ethereum and Base by the same issuer role graph; neither deployment is a representation of the other. The eight AccessControl roles decoded from RoleGranted logs are held by identical addresses on both chains, and the same MINTER_ROLE holder 0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9 was confirmed on both at 2026-08-18. No CCIP router, LayerZero endpoint, Wormhole manager or any other adapter holds MINTER_ROLE on Base, and Base mints are overwhelmingly unpaired with Ethereum burns, so no contract conserves supply across the two chains. The June 2026 Baker Tilly WM CSAE 3000 report attests CADD in Circulation as the total supply across Base, Tempo and Ethereum against a single pooled trust reserve, so Base liabilities are covered at the aggregate level rather than left unreconciled. No bridge control carries the claim; cross-chain moves are manual issuer operations, not transported supply.",
+    "summary": "CADD is natively issued on Ethereum, Base, Solana, and Tempo; none of the reviewed deployments is a representation of another. On Ethereum and Base, the eight AccessControl roles decoded from RoleGranted logs are held by identical addresses, and the same MINTER_ROLE holder 0x4b37dd8b672ba9f738d888e43ecfaf946cdcadd9 was confirmed on both at 2026-08-18. No CCIP router, LayerZero endpoint, Wormhole manager or any other adapter holds MINTER_ROLE on Base, and Base mints are overwhelmingly unpaired with Ethereum burns, so no contract conserves supply across those two chains. The June 2026 Baker Tilly WM CSAE 3000 report attests CADD in Circulation as the total supply across Base, Tempo and Ethereum against a single pooled trust reserve, so Base liabilities are covered at the aggregate level rather than left unreconciled; the Solana SPL mint and Tempo TIP-20 deployment are separate issuer mint surfaces, and no cross-chain conservation is asserted for them. No bridge control carries the claim; cross-chain moves are manual issuer operations, not transported supply.",
     "reviewedAt": "2026-08-18",
     "reviewer": "Codex mint/bridge boundary reopened verification",
     "confidence": "manual-review",
@@ -143,6 +143,64 @@
           {
             "label": "CADD Base public RPC",
             "url": "https://base-rpc.publicnode.com"
+          }
+        ]
+      },
+      {
+        "id": "solana:Az9eyxEaiZD9AX4j5nP19Cm79eyfNriTuddMSQmLNEBm",
+        "destinationChain": "solana",
+        "contractAddress": "Az9eyxEaiZD9AX4j5nP19Cm79eyfNriTuddMSQmLNEBm",
+        "protocol": "CADD (CAD Digital native issuance on Solana)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tetra's supported-blockchain page publishes this exact Solana mint at 6 decimals, Solscan shows the live Token-2022 mint with 82,999.13615 supply and 43 holders, and CoinGecko's Solana platform metadata matches the mint and decimals (2026-10-30). No bridge mint or representation contract is involved; this is a separate issuer mint surface. Solana mint and freeze authorities were not reviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Tetra supported blockchains and contract addresses (Solana mint)",
+            "url": "https://tetradg.com/supported-blockchains/"
+          },
+          {
+            "label": "CADD on Solscan (Token-2022 mint, verified 2026-10-30)",
+            "url": "https://solscan.io/token/Az9eyxEaiZD9AX4j5nP19Cm79eyfNriTuddMSQmLNEBm"
+          },
+          {
+            "label": "CoinGecko cad-digital platform metadata (Solana entry, 6 decimals)",
+            "url": "https://api.coingecko.com/api/v3/coins/cad-digital?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000d65b4808c85dbb81",
+        "destinationChain": "tempo",
+        "contractAddress": "0x20c000000000000000000000d65b4808c85dbb81",
+        "protocol": "CADD (CAD Digital native issuance on Tempo TIP-20)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tempo's official mainnet token list carries this exact TIP-20 CADD at 6 decimals, and explore.tempo.xyz shows an active TIP-20 'CAD Digital' token with DEFAULT_ADMIN, ISSUER (mint) and PAUSE roles alongside a native mint/burn interface (2026-10-30). The issuer's FAQ names Tempo as a supported network, so this is an issuer-native TIP-20 issuance surface, not a bridge representation. Role holders and supply were not reviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Tempo mainnet token list (CAD Digital TIP-20 entry)",
+            "url": "https://tokenlist.tempo.xyz/list/4217"
+          },
+          {
+            "label": "CADD TIP-20 on Tempo explorer (roles and native mint, verified 2026-10-30)",
+            "url": "https://explore.tempo.xyz/address/0x20c000000000000000000000d65b4808c85dbb81"
+          },
+          {
+            "label": "Tetra CADD FAQ (supported networks)",
+            "url": "https://tetradg.com/cadd-stablecoin/"
           }
         ]
       }

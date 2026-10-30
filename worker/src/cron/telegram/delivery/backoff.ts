@@ -57,12 +57,27 @@ export async function setTelegramGlobalBackoff(db: D1Database, notBeforeAt: numb
   }
 }
 
-export async function readTelegramGlobalBackoff(db: D1Database, nowSec: number): Promise<number | null> {
+/**
+ * A gate read distinguishes "no gate" from "the gate could not be read":
+ * collapsing the latter into the former would send into an active flood window.
+ */
+export type TelegramGlobalBackoffRead =
+  | { state: "absent" }
+  | { state: "active"; until: number }
+  | { state: "unavailable" };
+
+export async function readTelegramGlobalBackoff(
+  db: D1Database,
+  nowSec: number,
+): Promise<TelegramGlobalBackoffRead> {
   try {
     const cached = await getCache(db, TELEGRAM_GLOBAL_BACKOFF_CACHE_KEY);
-    if (!cached) return null;
+    if (!cached) return { state: "absent" };
     const parsed = Number(cached.value);
-    return Number.isFinite(parsed) && parsed > nowSec ? Math.floor(parsed) : null;
+    if (!Number.isFinite(parsed)) return { state: "unavailable" };
+    return parsed > nowSec
+      ? { state: "active", until: Math.floor(parsed) }
+      : { state: "absent" };
   } catch {
     logTelegramEvent({
       level: "warn",
@@ -70,7 +85,7 @@ export async function readTelegramGlobalBackoff(db: D1Database, nowSec: number):
       action: "read-global-backoff",
       module: "telegram-pending-backoff",
     });
-    return null;
+    return { state: "unavailable" };
   }
 }
 

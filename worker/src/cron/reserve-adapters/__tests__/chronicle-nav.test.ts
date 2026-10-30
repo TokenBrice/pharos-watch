@@ -16,7 +16,8 @@ const BUIDL_I_TOKEN = "0x6a9da2d710bb9b700acde7cb81f10f1ff8c89041";
 const NOW_SEC = 1_786_700_000;
 
 // Chronicle's 2026-09-09 per-chain supply table (dashboard), minus the
-// non-EVM Solana/Aptos rows the adapter omits by design.
+// non-EVM Solana/Aptos rows the adapter omits by design. Tempo was added later
+// (17,154,815.86 supply read 2026-10-30).
 const BUIDL_CHAIN_SUPPLIES: Record<string, bigint> = {
   [`ethereum:${BUIDL_TOKEN}`]: 212_032_317_000000n,
   [`ethereum:${BUIDL_I_TOKEN}`]: 674_037_423_700100n,
@@ -25,6 +26,7 @@ const BUIDL_CHAIN_SUPPLIES: Record<string, bigint> = {
   "arbitrum:0xa6525ae43edcd03dc08e775774dcabd3bb925872": 8_561_075_000000n,
   "avalanche:0x53fc82f14f009009b440a706e31c9021e1196a2f": 564_502_370_000000n,
   "polygon:0x2893ef551b6dd69f661ac00f11d93e5dc5dc0e99": 4_525_095_000000n,
+  "tempo:0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24": 17_154_815_860_000n,
 };
 
 const BUIDL_EVM_SUPPLY_RAW = Object.values(BUIDL_CHAIN_SUPPLIES).reduce((sum, value) => sum + value, 0n);
@@ -101,7 +103,7 @@ describe("chronicle-nav BUIDL binding", () => {
       supplyReadComplete: true,
       supplyCoverageComplete: false,
     });
-    expect(result.metadata?.supplyContributions).toHaveLength(7);
+    expect(result.metadata?.supplyContributions).toHaveLength(8);
     // Non-EVM deployments (solana, aptos) are omitted by design and surfaced
     // as an info warning, never as a silent completeness claim.
     expectWarnings(result, ["por-supply-chain-omitted"]);

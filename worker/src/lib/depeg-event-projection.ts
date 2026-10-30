@@ -1,5 +1,6 @@
 import { logWorkerEventArgs } from "./structured-log";
 import type { DepegEvent } from "@shared/types/market";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { type DepegRow, rowToDepegEvent } from "./depeg-helpers";
 import { isMissingTableError } from "./db";
 import { toErrorMessage } from "@shared/lib/error-utils";
@@ -28,6 +29,9 @@ interface ActiveIncidentProjectionRow {
   first_started_at: number | null;
   first_start_price: number | null;
   first_peg_reference: number | null;
+  first_source?: string | null;
+  first_peg_type?: string | null;
+  first_quote_mode?: string | null;
   constituent_event_count: number | null;
   references_valid: number;
 }
@@ -36,6 +40,8 @@ interface ActiveIncidentProjection {
   startedAt: number;
   startPrice: number | null;
   pegReference: number | null;
+  /** First constituent's quote domain; null when its reference cannot classify one. */
+  nativePeg: boolean | null;
   constituentEventCount: number;
 }
 
@@ -69,6 +75,9 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
       (typeof row.first_start_price === "number" && Number.isFinite(row.first_start_price) && row.first_start_price >= 0)) ||
     !(row.first_peg_reference === null ||
       (typeof row.first_peg_reference === "number" && Number.isFinite(row.first_peg_reference) && row.first_peg_reference > 0)) ||
+    !(row.first_source == null || typeof row.first_source === "string") ||
+    !(row.first_peg_type == null || typeof row.first_peg_type === "string") ||
+    !(row.first_quote_mode == null || typeof row.first_quote_mode === "string") ||
     typeof row.constituent_event_count !== "number" ||
     !Number.isSafeInteger(row.constituent_event_count) ||
     row.constituent_event_count <= 0
@@ -82,6 +91,14 @@ function normalizeActiveIncidentProjection(row: ActiveIncidentProjectionRow): [n
       startedAt: row.first_started_at,
       startPrice: row.first_start_price,
       pegReference: row.first_peg_reference,
+      nativePeg: row.first_peg_reference == null
+        ? null
+        : isNativePegEvent({
+          source: row.first_source ?? undefined,
+          peg_type: row.first_peg_type ?? undefined,
+          peg_reference: row.first_peg_reference,
+          quote_mode: row.first_quote_mode ?? null,
+        }),
       constituentEventCount: row.constituent_event_count,
     },
   ];
@@ -95,6 +112,9 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
           incidents.first_started_at,
           first_event.start_price AS first_start_price,
           first_event.peg_reference AS first_peg_reference,
+          first_event.source AS first_source,
+          first_event.peg_type AS first_peg_type,
+          first_provenance.quote_mode AS first_quote_mode,
           COUNT(DISTINCT links.event_id) AS constituent_event_count,
           CASE WHEN first_event.id IS NOT NULL AND current_event.id IS NOT NULL
             AND MAX(CASE WHEN links.event_id = incidents.first_event_id THEN 1 ELSE 0 END) = 1
@@ -104,6 +124,8 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
          FROM depeg_resolver_incidents incidents
          LEFT JOIN depeg_events first_event
            ON first_event.id = incidents.first_event_id
+         LEFT JOIN depeg_event_provenance first_provenance
+           ON first_provenance.event_id = first_event.id
          LEFT JOIN depeg_events current_event
            ON current_event.id = incidents.current_event_id
          LEFT JOIN depeg_resolver_incident_event_links links
@@ -112,13 +134,17 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
            ON linked_event.id = links.event_id
         WHERE incidents.incident_state = 'active'${activeStablecoinFilter}
         GROUP BY incidents.incident_key, incidents.current_event_id, incidents.first_started_at,
-                 first_event.start_price, first_event.peg_reference
+                 first_event.start_price, first_event.peg_reference,
+                 first_event.source, first_event.peg_type, first_provenance.quote_mode
        UNION ALL
        SELECT
           alias.current_event_id,
           canonical.first_started_at,
           first_event.start_price AS first_start_price,
           first_event.peg_reference AS first_peg_reference,
+          first_event.source AS first_source,
+          first_event.peg_type AS first_peg_type,
+          first_provenance.quote_mode AS first_quote_mode,
           COUNT(DISTINCT links.event_id) AS constituent_event_count,
           1 AS references_valid
          FROM depeg_resolver_incidents alias
@@ -126,6 +152,8 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
            ON canonical.incident_key = alias.superseded_by_incident_key
          JOIN depeg_events first_event
            ON first_event.id = canonical.first_event_id
+         LEFT JOIN depeg_event_provenance first_provenance
+           ON first_provenance.event_id = first_event.id
          JOIN depeg_events alias_current_event
            ON alias_current_event.id = alias.current_event_id
          LEFT JOIN depeg_resolver_incident_event_links links
@@ -135,7 +163,8 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
           AND alias.current_event_id != canonical.current_event_id
           AND alias.current_event_id != canonical.first_event_id${aliasStablecoinFilter}
         GROUP BY alias.current_event_id, canonical.first_started_at,
-                 first_event.start_price, first_event.peg_reference`;
+                 first_event.start_price, first_event.peg_reference,
+                 first_event.source, first_event.peg_type, first_provenance.quote_mode`;
 }
 
 /** Raw fragment clocks remain intact; public pagination uses the projected onset. */
@@ -194,18 +223,46 @@ export async function loadActiveIncidentProjections(
   }
 }
 
+/** Backfilled rows carry their structured quote domain in the public provenance JSON. */
+function rowQuoteMode(row: DepegRow): string | null {
+  if (row.provenance_json == null) return null;
+  try {
+    const parsed = JSON.parse(row.provenance_json) as { quoteMode?: unknown } | null;
+    return parsed != null && typeof parsed === "object" && typeof parsed.quoteMode === "string"
+      ? parsed.quoteMode
+      : null;
+  } catch {
+    return null;
+  }
+}
+
 export function rowToPublicDepegEvent(
   row: DepegRow,
   projections: Map<number, ActiveIncidentProjection>,
 ): DepegEvent {
   const projection = projections.get(row.id);
   if (!projection) return { ...rowToDepegEvent(row), constituentEventCount: 1 };
+  // The onset clock is domain-free, but a first constituent's start price and
+  // reference are not: publishing a native-domain onset against a USD-domain
+  // peak (or the reverse) yields a pair whose implied deviation cannot be the
+  // stored one. Keep the row's own price pair when the domains differ.
+  const currentNativePeg = isNativePegEvent({
+    source: row.source,
+    peg_type: row.peg_type,
+    peg_reference: row.peg_reference,
+    quote_mode: rowQuoteMode(row),
+  });
+  const sameQuoteDomain = projection.nativePeg == null || projection.nativePeg === currentNativePeg;
   return {
     ...rowToDepegEvent({
       ...row,
       started_at: projection.startedAt,
-      start_price: projection.startPrice ?? row.start_price,
-      peg_reference: projection.pegReference ?? row.peg_reference,
+      ...(sameQuoteDomain
+        ? {
+            start_price: projection.startPrice ?? row.start_price,
+            peg_reference: projection.pegReference ?? row.peg_reference,
+          }
+        : {}),
     }),
     constituentEventCount: projection.constituentEventCount,
   };

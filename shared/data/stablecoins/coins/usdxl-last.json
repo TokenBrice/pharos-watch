@@ -8,7 +8,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "Position-backed synthetic dollar minted against blue-chip overcollateralized positions on HypurrFi's Aave V3 fork on HyperEVM, with protocol-owned liquidity and stablecoin reserves including USDT0 supporting secondary liquidity. Eligible borrow collateral includes HYPE and HYPE LSTs, bridged BTC, and ETH.",
-  "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns the synthetic dollar. Holders can also burn HyperEVM USDXL through the GSM to receive USDT0 at the configured rate, subject to available liquidity, fees and swap-freeze or seizure controls; no full-supply redemption guarantee is established.",
+  "pegMechanism": "Users open overcollateralized CDP-style borrows on HypurrFi and mint USDXL against their position; repayment burns it. The HyperEVM GSM is two-way at the configured rate: depositing USDT0 mints USDXL and burning USDXL returns USDT0, subject to liquidity, fees and swap-freeze or seizure controls; no full-supply redemption guarantee.",
   "mechanismArchetype": "cdp",
   "implementationLaunchDate": "2025-03-22",
   "mechanismArchetypeReview": {
@@ -54,13 +54,6 @@
     {
       "label": "Verified GSMWithHyFiPool implementation",
       "url": "https://sourcify.dev/server/v2/contract/999/0xdc6ed7834f8693fc2691e1b70ea0ccec557c8f26?fields=sources,abi,compilation"
-    }
-  ],
-  "notices": [
-    {
-      "type": "info",
-      "title": "Liquidity-limited USDT0 redemption",
-      "message": "HypurrFi's live USDXL app advertises burning USDXL for USDT0 through the GSM, while its agent reference still says direct redemption is not enabled. The exact HyperEVM GSM source and a 2026-10-11 pinned identity read support the on-chain route, without establishing current same-notional capacity or an all-in fee bound."
     }
   ],
   "contracts": [

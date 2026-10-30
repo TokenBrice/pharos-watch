@@ -100,10 +100,10 @@
   ],
   "milestones": [
     {
-      "date": "2026-01-15",
+      "date": "2026-01-27",
       "type": "announcement",
-      "title": "USDF launches as first Coinbase Custom Stablecoin",
-      "description": "Flipcash's USDF is the first stablecoin issued through Coinbase's stablecoin-as-a-service platform, backed 1:1 by USDC.",
+      "title": "Coinbase enables USDF for operational testing",
+      "description": "Coinbase enabled USDF for operational testing only; trading, deposits, and withdrawals were unavailable.",
       "sourceUrl": "https://finance.yahoo.com/news/coinbase-experiments-flipcash-usdf-rolls-055734489.html"
     },
     {

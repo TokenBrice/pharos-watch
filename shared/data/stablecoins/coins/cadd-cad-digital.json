@@ -75,6 +75,16 @@
       "chain": "base",
       "address": "0x16f93ebc5320c89efc8701577efe49d14a276a06",
       "decimals": 18
+    },
+    {
+      "chain": "solana",
+      "address": "Az9eyxEaiZD9AX4j5nP19Cm79eyfNriTuddMSQmLNEBm",
+      "decimals": 6
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000d65b4808c85dbb81",
+      "decimals": 6
     }
   ],
   "custodyModel": "institutional-regulated",

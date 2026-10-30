@@ -3354,7 +3354,9 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     sourceOriginClass: "issuer-attested",
     preferredFreshnessMode: "verified",
     sharedSourceMode: "none",
-    configValidation: CONFIG_COLLATERAL_V1,
+    // v2: venue-qualified lending row identities (Kamino / Kamino fixed-rate /
+    // Loopscale) replace the retired "USDG (Lending)" umbrella labels.
+    configValidation: CONFIG_COLLATERAL_V1_V2,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: {
       // Dated Schedule of Assets snapshots; the observed 2026-08-14 snapshot

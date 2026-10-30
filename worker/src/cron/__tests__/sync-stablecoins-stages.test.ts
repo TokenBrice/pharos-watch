@@ -372,6 +372,24 @@ describe("sync-stablecoins stage helpers", () => {
     expect(summary.stale).toBe(true);
   });
 
+  it("counts a frozen republication as identical when only this run's priceSyncedAt advances", () => {
+    const observedAt = 1_700_000_000;
+    const previous = Array.from({ length: 60 }, (_, i) => ({
+      id: `coin-${i}`,
+      price: 1,
+      priceObservedAt: observedAt,
+      priceUpdatedAt: observedAt,
+      priceSyncedAt: observedAt,
+      priceSource: "defillama",
+      priceConfidence: "single-source",
+    }));
+    const current = previous.map((row) => ({ ...row, priceSyncedAt: observedAt + 900 }));
+
+    const summary = computePriceStalenessSummary(previous as never[], current as never[]);
+
+    expect(summary).toEqual({ compared: 60, identical: 60, stale: true });
+  });
+
   it("does not count same-price rows as stale when observation metadata advances", () => {
     const previous = Array.from({ length: 60 }, (_, i) => ({
       id: `coin-${i}`,

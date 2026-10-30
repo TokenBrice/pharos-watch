@@ -13,12 +13,12 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "47a8a6acbc6e179d776921f47ca48e57e8fc12926e088687caef6d02e5df3842",
+  "inputSha256": "5362d40077095a0492775d510af0cd30c8ba5c518e03d131d70739dfdfbe0264",
   "image": {
-    "sha256": "984cb7ed1633776a60d7fcf348d6247a305220c5b20c3d8c73fa215738a4941c",
-    "bytes": 144680,
+    "sha256": "da892f6a6ae6a4932698e93108704925588ec627544ed0f4f249f475b7ad4867",
+    "bytes": 148848,
     "width": 798,
-    "height": 698
+    "height": 748
   },
   "sources": [
     {
@@ -49,6 +49,11 @@
     {
       "logo": "/logos/cemetery/bean.png",
       "sha256": "dbf71a6694605e9496f163e7433a1ecc133ebe84ac7f80de4cd165adf7531765",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/bib01-backed.png",
+      "sha256": "081c768ee420289ad6b378516f85a6698649879751657de753de391e6acf249f",
       "kernel": "lanczos3"
     },
     {
@@ -347,6 +352,11 @@
       "kernel": "lanczos3"
     },
     {
+      "logo": "/logos/silk-shade-protocol.webp",
+      "sha256": "d12070249d9d545c164cfb846c124c2ca8e056f818b64973e622a6af5de45435",
+      "kernel": "lanczos3"
+    },
+    {
       "logo": "/logos/cemetery/star.png",
       "sha256": "d4eb1f61ac51695f987d368a8d8f42c824edd9dd1e6d82a15f74b4f2521f84f6",
       "kernel": "lanczos3"
@@ -537,6 +547,11 @@
       "kernel": "lanczos3"
     },
     {
+      "logo": "/logos/vndc-jade-labs.png",
+      "sha256": "4ddba0890016838f603f877f02b074a9c44941b3532be899d02309dcf687c3cb",
+      "kernel": "lanczos3"
+    },
+    {
       "logo": "/logos/cemetery/volt.png",
       "sha256": "8bc24507b3ac9805374621e416c1db710b4588a99f62dcf4cd717419722e30c7",
       "kernel": "lanczos3"
@@ -554,6 +569,11 @@
     {
       "logo": "/logos/xai-silo-finance.svg",
       "sha256": "096d47a2e3140735ee02dc3c77c66c7bf7c22164aa6fea8e12b48c7eae76350a",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/cg-xnk.png",
+      "sha256": "0cbf04ac08f9d910e7d26ab36e9e328015a1f57ca55417d81365365241467b75",
       "kernel": "lanczos3"
     },
     {
@@ -610,6 +630,10 @@
     {
       "id": "bean-beanstalk-v1-2022-04",
       "logo": "/logos/cemetery/bean.png"
+    },
+    {
+      "id": "bib01-backed",
+      "logo": "/logos/bib01-backed.png"
     },
     {
       "id": "bnusd-balanced",
@@ -856,6 +880,10 @@
       "logo": "/logos/cemetery/seur.png"
     },
     {
+      "id": "silk-shade-protocol",
+      "logo": "/logos/silk-shade-protocol.webp"
+    },
+    {
       "id": "star-preon-star-2024-06",
       "logo": "/logos/cemetery/star.png"
     },
@@ -1016,6 +1044,10 @@
       "logo": "/logos/cemetery/vai.png"
     },
     {
+      "id": "vndc-jade-labs",
+      "logo": "/logos/vndc-jade-labs.png"
+    },
+    {
       "id": "volt-volt-protocol-2022-08",
       "logo": "/logos/cemetery/volt.png"
     },
@@ -1030,6 +1062,10 @@
     {
       "id": "xai-silo-finance",
       "logo": "/logos/xai-silo-finance.svg"
+    },
+    {
+      "id": "xnk-kinka",
+      "logo": "/logos/cg-xnk.png"
     },
     {
       "id": "xtusd-xt",

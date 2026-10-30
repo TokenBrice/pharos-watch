@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:5941156bbb8737757ef1da93acba7141e1a05d20cbbca8b793e412033c7340ac",
+  "sourceChecksum": "sha256:ce859062404acc9a008657575a23debdf22a40694bc60dbc9a561f5b478154dc",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,7 +16,7 @@
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:f9497eef6478ddd99d7a78ce963b7fafcc42c1905c1a945f98247a9b39c9e7b5",
+      "checksum": "sha256:da570527ebc7cafd9122544121179dadb418757133eb8b418560eb84fc25a97f",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     },
     {
@@ -26,7 +26,7 @@
     }
   ],
   "recordsOrderedBy": "deathDate descending by year, month, then day (a month-precision date sorts as the start of its month, after that month's day-precision rows; an unparseable date sorts last), then peakMcapUsd descending (rows without a peak after rows with one), then symbol ascending, then id ascending (symbol and id compared by UTF-16 code unit)",
-  "rowCount": 119,
+  "rowCount": 123,
   "updatedAt": "2026-10-30",
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
@@ -59,6 +59,39 @@
     "recordedAt": "UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded."
   },
   "rows": [
+    {
+      "id": "xnk-kinka",
+      "name": "Kinka",
+      "symbol": "XNK",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/cg-xnk.png",
+      "pegCurrency": "GOLD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-10-30",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 2656954,
+      "epitaph": "Gold token wound up with its issuer",
+      "obituary": "unbanked (TSE 8746) resolved on 2026-10-16 to abolish its crypto business and dissolve Kinka (BVI) Ltd., the XNK issuer, by 2027-03-31. The Ethereum buyback and bullion-exchange window closed at 2026-10-30 17:00 JST, and the issuer scheduled all recovered XNK plus the never-sold Cardano supply for burning in October 2026.",
+      "sourceUrl": "https://www.release.tdnet.info/inbs/140120261016552360.pdf",
+      "sourceLabel": "unbanked TDnet disclosure, 2026-10-16",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x722a89f1b925fe41883978219c2176aecc7d6699",
+          "decimals": 18
+        },
+        {
+          "chain": "cardano",
+          "address": "2c5c6ca6f993e198bc9ac859ffb624dd291ec50b4d361544bd01e3ac584e4b",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/xnk-kinka/",
+      "mechanismArchetype": "commodity-claim",
+      "recordedAt": "2026-10-30"
+    },
     {
       "id": "dusd-dtrinity",
       "name": "dTRINITY dUSD",
@@ -129,6 +162,11 @@
           "chain": "fraxtal",
           "address": "0x58acc2600835211dcb5847c5fa422791fd492409",
           "decimals": 6
+        },
+        {
+          "chain": "sonic",
+          "address": "0x41a5477364bf60d8936b90310fecfda79593304e",
+          "decimals": 18
         }
       ],
       "pharosUrl": "https://pharos.watch/stablecoin/sdusd-dtrinity/",
@@ -162,6 +200,34 @@
       "pharosUrl": "https://pharos.watch/stablecoin/usdv-solomon/",
       "mechanismArchetype": "synthetic-delta-neutral",
       "recordedAt": "2026-10-29"
+    },
+    {
+      "id": "silk-shade-protocol",
+      "name": "SILK",
+      "symbol": "SILK",
+      "llamaId": "113",
+      "logoUrl": "https://pharos.watch/logos/silk-shade-protocol.webp",
+      "pegCurrency": "VAR",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-10-15",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 6385913,
+      "epitaph": "Wound down with Shade Protocol",
+      "obituary": "Shade Protocol entered maintenance mode on 2026-06-18 and listed SILK among the products it began winding down, naming 2026-10-15 for the full shutdown. The protocol reopened SILK state on 2026-07-10 only so holders could repay and exit, and announced no successor token.",
+      "sourceUrl": "https://forum.shadeprotocol.io/t/the-road-to-feather/593",
+      "sourceLabel": "Shade Protocol 'The Road to Feather' wind-down announcement",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "secret",
+          "address": "secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/silk-shade-protocol/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-10-30"
     },
     {
       "id": "usdkg-gold-dollar",
@@ -908,7 +974,7 @@
       "deathDatePrecision": "month",
       "peakMcapUsd": 22400000,
       "epitaph": "The game-chain dollar stepped aside for bridged USDC",
-      "obituary": "WEMIX transitioned its USD stablecoin activity from WEMIX$ to USDC.e, withdrawing Foundation liquidity from WEMIX$ pools and ending swap support across WEMIX.Fi and WEMIX PLAY in April 2026. Holders retained a conversion route through the WEMIX$ Module and a longer claim window for discontinued liquidity pools, but the ecosystem's active dollar rail became USDC.e. Pharos freezes WEMIX$ as the retired native stablecoin while keeping its residual supply and history available in the archive.",
+      "obituary": "WEMIX transitioned its USD stablecoin activity from WEMIX$ to USDC.e, withdrawing Foundation liquidity from WEMIX$ pools and ending swap support across WEMIX.Fi and WEMIX PLAY in April 2026. Holders' WEMIX$ became eqWEMIX$, exchangeable 1:1 for USDC.e in the WEMIX$ Module; WEMIX$ can no longer be exchanged, and pool withdrawals run to 2027-03-05. Pharos freezes WEMIX$ as the retired native stablecoin while keeping its residual supply and history available in the archive.",
       "sourceUrl": "https://www.wemix.com/news/wemix30-usd-stablecoin-transition-plan-5cfef91c838e",
       "sourceLabel": "WEMIX3.0 USD stablecoin transition plan",
       "archivedDataAvailable": true,
@@ -972,6 +1038,44 @@
       "pharosUrl": "https://pharos.watch/stablecoin/usnd-nerite/",
       "mechanismArchetype": "cdp",
       "recordedAt": "2026-05-10"
+    },
+    {
+      "id": "vndc-jade-labs",
+      "name": "VNDC",
+      "symbol": "VNDC",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/vndc-jade-labs.png",
+      "pegCurrency": "VND",
+      "causeOfDeath": "regulatory",
+      "causeLabel": "Regulatory",
+      "deathDate": "2026-03-23",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 57089903,
+      "epitaph": "Criminal case ended the ONUS issuer",
+      "obituary": "Vietnam's Ministry of Public Security opened a criminal case on 2026-03-23 against the founders and operators of the ONUS exchange, who created and sold VNDC, ONUS and HNG to investors. The issuer platform goonus.io now returns HTTP 404 and vndc.io serves an unrelated site, leaving no published redemption channel.",
+      "sourceUrl": "https://bocongan.gov.vn/bai-viet/triet-pha-duong-day-su-dung-mang-may-tinh-mang-vien-thong-phuong-tien-dien-tu-chiem-doat-tai-san-tren-linh-vuc-1774533373",
+      "sourceLabel": "Ministry of Public Security ONUS/VNDC case announcement, 2026-03-26",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x1f3f677ecc58f6a1f9e2cf410df4776a8546b5de",
+          "decimals": 0
+        },
+        {
+          "chain": "polygon",
+          "address": "0xd0076d7e57aac42ec3f9d6e7c604d04a5b7030fa",
+          "decimals": 0
+        },
+        {
+          "chain": "bsc",
+          "address": "0xa276dc434a366c62ef010585b3885d0c85154389",
+          "decimals": 0
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/vndc-jade-labs/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-10-30"
     },
     {
       "id": "usr-resolv",
@@ -1057,6 +1161,69 @@
       "pharosUrl": "https://pharos.watch/cemetery/#eura-angle-eura-2026-03",
       "mechanismArchetype": "fiat-cash",
       "recordedAt": "2026-03-10"
+    },
+    {
+      "id": "bib01-backed",
+      "name": "Backed IB01 Treasury Bond 0-1yr",
+      "symbol": "bIB01",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/bib01-backed.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-03",
+      "deathDatePrecision": "month",
+      "peakMcapUsd": 18960097,
+      "epitaph": "Backed retired its first token line",
+      "obituary": "Backed announced in March 2026 that it was consolidating onto xStocks and would gradually wind down the bToken line, including bIB01, by the end of 2026. New bIB01 issuance is closed and the issuer still supports redemption for existing holders.",
+      "sourceUrl": "https://backed.fi/news-updates/the-future-is-xstocks-upgrading-btokens",
+      "sourceLabel": "Backed bToken wind-down announcement",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "decimals": 18
+        },
+        {
+          "chain": "base",
+          "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "decimals": 18
+        },
+        {
+          "chain": "bsc",
+          "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "decimals": 18
+        },
+        {
+          "chain": "polygon",
+          "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "decimals": 18
+        },
+        {
+          "chain": "arbitrum",
+          "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "decimals": 18
+        },
+        {
+          "chain": "gnosis",
+          "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "decimals": 18
+        },
+        {
+          "chain": "avalanche",
+          "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "decimals": 18
+        },
+        {
+          "chain": "fantom",
+          "address": "0xca30c93b02514f86d5c86a6e375e3a330b435fb5",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/bib01-backed/",
+      "mechanismArchetype": "tbill",
+      "recordedAt": "2026-10-30"
     },
     {
       "id": "usda-angle-usda-2026-03",
@@ -1602,6 +1769,39 @@
       "recordedAt": "2026-02-11"
     },
     {
+      "id": "ist-agoric",
+      "name": "Inter Stable Token",
+      "symbol": "IST",
+      "llamaId": "135",
+      "logoUrl": "https://pharos.watch/logos/135-ist.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2025-07-01",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": null,
+      "epitaph": "Inter Protocol sunset by governance",
+      "obituary": "In April 2025 a governance proposal to sunset Inter Protocol cited declining market appetite for decentralized stablecoins, rising operational complexity and costs, and a refocus on Agoric's Orchestration work and the BLD token. Agoric's on-chain signaling Proposal 93 passed on May 1, 2025, starting a planned 60-day wind-down: no new vault openings or IST minting, a liquidation fee set to zero so vault users could repay IST and reclaim collateral, and weekly liquidation-ratio increases to close any remaining vaults. The sunset concluded on July 1, 2025. Pharos keeps IST as a frozen archive because the former vault and PSM dollar stablecoin no longer operates as an active mintable protocol asset.",
+      "sourceUrl": "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787",
+      "sourceLabel": "Agoric community sunset proposal",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "agoric",
+          "address": "uist",
+          "decimals": 6
+        },
+        {
+          "chain": "osmosis",
+          "address": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/ist-agoric/",
+      "mechanismArchetype": "cdp",
+      "recordedAt": "2026-06-21"
+    },
+    {
       "id": "float-float-protocol-2025-07",
       "name": "Float Protocol",
       "symbol": "FLOAT",
@@ -1627,39 +1827,6 @@
       "pharosUrl": "https://pharos.watch/cemetery/#float-float-protocol-2025-07",
       "mechanismArchetype": "algorithmic",
       "recordedAt": "2026-03-25"
-    },
-    {
-      "id": "ist-agoric",
-      "name": "Inter Stable Token",
-      "symbol": "IST",
-      "llamaId": "135",
-      "logoUrl": "https://pharos.watch/logos/135-ist.png",
-      "pegCurrency": "USD",
-      "causeOfDeath": "abandoned",
-      "causeLabel": "Abandoned",
-      "deathDate": "2025-06-26",
-      "deathDatePrecision": "day",
-      "peakMcapUsd": null,
-      "epitaph": "Inter Protocol sunset by governance",
-      "obituary": "In April 2025 a governance proposal to sunset Inter Protocol cited declining market appetite for decentralized stablecoins, rising operational complexity and costs, and a refocus on Agoric's Orchestration work and the BLD token. Agoric's on-chain signaling Proposal 93 passed on May 1, 2025, starting a planned 60-day wind-down: no new vault openings or IST minting, a liquidation fee set to zero so vault users could repay IST and reclaim collateral, and weekly liquidation-ratio increases to close any remaining vaults. The sunset process completed on June 26, 2025. Pharos keeps IST as a frozen archive because the former vault and PSM dollar stablecoin no longer operates as an active mintable protocol asset.",
-      "sourceUrl": "https://community.agoric.com/t/sunset-inter-protocol-and-begin-wind-down-process/787",
-      "sourceLabel": "Agoric community sunset proposal",
-      "archivedDataAvailable": true,
-      "contracts": [
-        {
-          "chain": "agoric",
-          "address": "uist",
-          "decimals": 6
-        },
-        {
-          "chain": "osmosis",
-          "address": "ibc/92BE0717F4678905E53F4E45B2DED18BC0CB97BF1F8B6A25AFEDF3D5A879B4D5",
-          "decimals": 6
-        }
-      ],
-      "pharosUrl": "https://pharos.watch/stablecoin/ist-agoric/",
-      "mechanismArchetype": "cdp",
-      "recordedAt": "2026-06-21"
     },
     {
       "id": "jpyc-jpyc-v1",

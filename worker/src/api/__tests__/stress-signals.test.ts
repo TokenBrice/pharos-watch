@@ -573,7 +573,7 @@ describe("handleStressSignals contract tests", () => {
         computed_at: nowSec,
       },
       {
-        stablecoin_id: "busd0-usual",
+        stablecoin_id: "tbill-openeden",
         score: 25,
         band: "WATCH",
         signals_json: signalsJson,
@@ -595,7 +595,7 @@ describe("handleStressSignals contract tests", () => {
       computedCount: number;
     };
     expect(body.signals).toHaveProperty("usdt-tether");
-    expect(body.signals).not.toHaveProperty("busd0-usual");
+    expect(body.signals).not.toHaveProperty("tbill-openeden");
     expect(body.signals).not.toHaveProperty("bfusd-binance");
     expect(body.eligibleCount).toBe(ACTIVE_IDS.size);
     expect(body.computedCount).toBe(1);

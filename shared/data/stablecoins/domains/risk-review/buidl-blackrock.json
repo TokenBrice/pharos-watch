@@ -14,7 +14,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "BUIDL has issuer-native Securitize share classes on all eight tracked chains. Wormhole supplies an external validated messaging layer for issuer-controlled burn-and-reissue transfers; it does not create wrapped representations or control ordinary local issuance.",
+    "summary": "BUIDL has issuer-native Securitize share classes on the reviewed tracked chains, including Tempo. Wormhole provides external messaging for issuer-controlled burn-and-reissue transfers, not wrapped representations or local issuance; no Wormhole lane for Tempo was identified.",
     "reviewedAt": "2026-07-13",
     "reviewer": "Codex bridge route review",
     "confidence": "verified",
@@ -274,6 +274,35 @@
           {
             "label": "Wormhole and Securitize native transfer architecture",
             "url": "https://wormhole.com/blog/securitize-announces-the-live-deployment-of-wormhole-enabling-tokenized"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24",
+        "destinationChain": "tempo",
+        "contractAddress": "0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24",
+        "protocol": "Securitize",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Tempo and Securitize's 2026-07-28 announcement states BUIDL is available on Tempo through Securitize tokenization and transfer-agent infrastructure, and GeckoTerminal resolves this exact Tempo token to BlackRock's BUIDL at 6 decimals (17,154,815.86 supply read 2026-10-30). The token is a locally issued Securitize share class, not a wrapped representation. No Wormhole or other external messaging lane for Tempo was identified, so the route is recorded as issuer-native local minting; cross-chain transfer machinery remains unreviewed.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Tempo: BUIDL expansion announcement (2026-07-28)",
+            "url": "https://tempo.xyz/blog/tempo-expands-onchain-yield-offering-with-blackrocks-buidl-fund"
+          },
+          {
+            "label": "BUIDL on Tempo token metadata (accessed 2026-10-30)",
+            "url": "https://api.geckoterminal.com/api/v2/networks/tempo/tokens/0xb5ff12bd8010baef823d1bfa2ce6bdc0109cbb24"
+          },
+          {
+            "label": "CoinGecko BUIDL platform metadata (tempo entry, accessed 2026-10-30)",
+            "url": "https://api.coingecko.com/api/v3/coins/blackrock-usd-institutional-digital-liquidity-fund?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false"
           }
         ]
       }

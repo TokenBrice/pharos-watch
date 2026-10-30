@@ -81,7 +81,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "M0 has one native issuer on Ethereum; all other authored deployments, including Solana, are bridge representations. M Portals use Ethereum hub lock/release and spoke mint/burn; current Portal V2 documentation lists Wormhole, Hyperlane, and LayerZero bridge adapters, while the Solana Portal uses Wormhole NTT. The Solana 1-of-2 inbound mint multisig and Portal program upgrade EOA are route-scoped Bridge Risk controls, not native M mint authority; the remaining EVM route machinery stays represented by the reviewed route inventory.",
+    "summary": "M0 has one native issuer on Ethereum; its other reviewed deployments, including Solana, are bridge representations. M Portals use Ethereum hub lock/release and spoke mint/burn; current Portal V2 documentation lists Wormhole, Hyperlane, and LayerZero bridge adapters, while the Solana Portal uses Wormhole NTT. The Solana 1-of-2 inbound mint multisig and Portal program upgrade EOA are route-scoped Bridge Risk controls, not native M mint authority; the remaining EVM route machinery stays represented by the reviewed route inventory.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex mint-bridge-boundary migration",
     "confidence": "verified",
@@ -596,6 +596,117 @@
           {
             "label": "M0 documentation",
             "url": "https://docs.m0.org/"
+          }
+        ]
+      },
+      {
+        "id": "rise:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "sourceChain": "ethereum",
+        "destinationChain": "rise",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "rise",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "M0's deployment reference lists RISE Spoke Portal 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (SpokePortal) with the LayerZero bridge adapter, and the RISE explorer API resolves this exact token as M by M0 at 6 decimals (4,197,089.709767 supply read 2026-10-30). M is minted and burned by the spoke Portal against Ethereum hub lock/release, so this is a bridge representation, not native issuance. Adapter peers, DVN set and rate limits were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:rise:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "M0 platform deployment addresses",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 Portal V2 architecture",
+            "url": "https://docs.m0.org/protocol/portal-v2"
+          },
+          {
+            "label": "M by M0 on RISE explorer API (verified 2026-10-30)",
+            "url": "https://explorer.risechain.com/api/v2/tokens/0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b"
+          }
+        ]
+      },
+      {
+        "id": "fluent:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "sourceChain": "ethereum",
+        "destinationChain": "fluent",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "fluent",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "M0's deployment reference lists Fluent Spoke Portal 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (SpokePortal) with the Hyperlane bridge adapter, and the Fluent explorer API resolves this exact token as M by M0 at 6 decimals (1,293,081.647227 supply read 2026-10-30). M is minted and burned by the spoke Portal against Ethereum hub lock/release, so this is a bridge representation, not native issuance. Adapter peers, ISM and rate limits were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:fluent:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "M0 platform deployment addresses",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 Portal V2 architecture",
+            "url": "https://docs.m0.org/protocol/portal-v2"
+          },
+          {
+            "label": "M by M0 on Fluent explorer API (verified 2026-10-30)",
+            "url": "https://fluentscan.xyz/api/v2/tokens/0x866A2BF4E572CbcF37D5071A7a58503Bfb36be1b"
+          }
+        ]
+      },
+      {
+        "id": "0g:0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "sourceChain": "ethereum",
+        "destinationChain": "0g",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b",
+        "protocol": "M0 Portal (burn-mint cross-chain representation of Ethereum-native M)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "controllerChain": "0g",
+        "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "M0's deployment reference lists 0G Spoke Portal 0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd (SpokePortal) with Wormhole, Hyperlane and LayerZero bridge adapters, and lists the same immutable M token address used on the other reviewed spokes. M is minted and burned by the spoke Portal against Ethereum hub lock/release, so this is a bridge representation, not native issuance. The 0G explorer API was unavailable during this review; adapter peers, DVN/ISM configuration and rate limits were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:m0-portal",
+          "contract:0g:0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd"
+        ],
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "M0 platform deployment addresses (0G section, accessed 2026-10-30)",
+            "url": "https://docs.m0.org/resources/addresses/m0-platform"
+          },
+          {
+            "label": "M0 Portal V2 architecture",
+            "url": "https://docs.m0.org/protocol/portal-v2"
+          },
+          {
+            "label": "M0 0G SpokePortal address (linked explorer page)",
+            "url": "https://chainscan.0g.ai/address/0xD925C84b55E4e44a53749fF5F2a5A13F63D128fd"
           }
         ]
       }

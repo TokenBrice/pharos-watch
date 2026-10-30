@@ -12,13 +12,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-10-30",
     "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
-        "label": "BHR México reasonable-assurance report - June 26, 2026",
-        "url": "https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf"
+        "label": "BHR México reasonable-assurance report - October 26, 2026",
+        "url": "https://api.etherfuse.com/statement/attestation/66199909-b7ce-4539-ab08-2b132cb648e3.pdf"
       },
       {
         "label": "Etherfuse attestation history",
@@ -29,9 +29,9 @@
         "url": "https://app.etherfuse.com/bonds/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
       }
     ],
-    "rationale": "BHR México's June 26, 2026 reasonable-assurance examination reports MXN 98,013,671.28 of CETES reserve assets against MXN 92,643,402.94 of token value in circulation, a 105.80% reserve ratio. The PDF displays rounded custody balances of MXN 90,668,464 at BBVA, MXN 4,652,218 at BASE, and MXN 2,692,990 at Actinver; those rounded components sum one peso above the displayed rounded total.",
+    "rationale": "BHR México's October 26, 2026 reasonable-assurance examination reports MXN 84,182,484.42 of CETES reserve assets against MXN 80,154,613.09 of token value in circulation, a 105.03% reserve ratio. The PDF displays rounded custody balances of MXN 76,714,597 at BBVA, MXN 4,733,808 at BASE, and MXN 2,734,079 at Actinver; those rounded components sum exactly to the displayed rounded total.",
     "compositionBasis": "Pinned BHR México assets-and-liabilities reasonable-assurance examination",
-    "compositionAsOf": "2026-06-26",
+    "compositionAsOf": "2026-10-26",
     "scope": "full-composition",
     "knownUnknownExposure": "The reserve asset class, liability value, and brokerage balances are disclosed; individual CETES security identifiers and maturities are not itemized.",
     "knownUnknownExposurePct": 0,
@@ -50,38 +50,38 @@
       {
         "name": "Banco Bilbao Vizcaya Argentaria, S.A.",
         "role": "custodian",
-        "sharePct": 92.5059,
+        "sharePct": 91.1289,
         "jurisdiction": "Mexico"
       },
       {
         "name": "Casa de Bolsa BASE",
         "role": "custodian",
-        "sharePct": 4.7465,
+        "sharePct": 5.6233,
         "jurisdiction": "Mexico"
       },
       {
         "name": "Grupo Financiero Actinver, S.A. de C.V.",
         "role": "custodian",
-        "sharePct": 2.7476,
+        "sharePct": 3.2478,
         "jurisdiction": "Mexico"
       }
     ],
     "segregation": "segregated",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-10-30",
     "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
       {
-        "label": "BHR México reasonable-assurance report - June 26, 2026",
-        "url": "https://api.etherfuse.com/statement/attestation/17c87b1d-cf91-4661-99be-b54cc1510cac.pdf"
+        "label": "BHR México reasonable-assurance report - October 26, 2026",
+        "url": "https://api.etherfuse.com/statement/attestation/66199909-b7ce-4539-ab08-2b132cb648e3.pdf"
       },
       {
         "label": "Etherfuse CETES Stablebond disclosure",
         "url": "https://app.etherfuse.com/bonds/CETES7CKqqKQizuSN6iWQwmTeFRjbJR6Vw2XRKfEDR8f"
       }
     ],
-    "uncertainty": "The pinned report names the three financial institutions and confirms segregated reserve accounts. Shares are normalized from the three rounded balances, whose sum is one peso above the displayed rounded total. The disclosures do not establish bankruptcy remoteness or rehypothecation terms."
+    "uncertainty": "The pinned report names the three financial institutions and confirms segregated reserve accounts. Shares are normalized from the three rounded balances, whose sum equals the displayed rounded total. The disclosures do not establish bankruptcy remoteness or rehypothecation terms."
   }
 }

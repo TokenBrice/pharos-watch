@@ -120,11 +120,11 @@ Pool Quality measures the venue quality retention ratio: the fraction of total T
 
 `poolQuality = min(100, max(0, (qualityAdjustedTvl / totalTvlUsd - 0.15) / 0.65 * 100))`
 
-Where `qualityAdjustedTvl` applies mechanism and balance-health multipliers to raw TVL, and `totalTvlUsd` is the pre-adjustment sum across all pools. Pair quality is already reflected upstream in `effectiveTvl` and the pool-stress diagnostics, but it is not part of this retention-ratio component. The linear rescaling maps the 15–80% retention range to 0–100, so a pool set retaining 15% or less of its raw TVL after quality adjustment scores 0, and one retaining 80% or more scores 100.
+Where `qualityAdjustedTvl` applies mechanism and balance-health multipliers to raw TVL, and `totalTvlUsd` is the pre-adjustment sum across all pools. Pair quality is already reflected upstream in `effectiveTvl` and the pool-stress diagnostics, but it is not part of this retention-ratio component. The linear rescaling maps the 15–80% retention range to 0–100: ≤15% adjusted retention scores 0 and ≥80% scores 100.
 
 Exact Curve metapool joins use retained, base-pool-excluded TVL for both numerator and denominator. Balance evidence must be complete and carry the same notional scope: a full-pool ratio cannot weight excluded-pool TVL. Incomplete captures and scope mismatches omit measured balance diagnostics, publish `balanceMeasured: false`, contribute no measured-balance TVL to scoring or source-family telemetry, and use the existing unmeasured neutral fallback without inventing a replacement ratio. With a scope-matched ratio 0.5, $2M retained TVL and multiplier 0.85 yield about $601,041 quality TVL (30.05% retention, Pool Quality 23), never a $3.005M full-pool numerator.
 
-Missing measured-balance and organic TVL weights remain `null` through storage readers, the API and snapshots; a successfully measured zero remains numeric `0`. Aggregate balance/organic ratios include a member only when both its ratio and independent measured-TVL weight are available. A partial-measured card with no balance weight reports coverage unavailable, never 0%.
+Missing measured balance/organic TVL weights stay `null` through storage, API and snapshots; a measured zero stays numeric `0`. Aggregate ratios include a member only with both its ratio and measured-TVL weight. Locked-liquidity averages count every measured pool, including `0%`, and are `null` only when none is measured. A partial-measured card without a balance weight reports coverage unavailable, never 0%.
 
 #### Durability Sub-Component Weights
 

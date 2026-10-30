@@ -13,6 +13,8 @@ import {
   assignSharedDispatchState,
   buildDispatchSnapshotState,
   loadDispatchSourceData,
+  readPresetFailureCount,
+  writePresetFailureCount,
 } from "./dispatch-telegram-state";
 import {
   activeTelegramEventFamilies,
@@ -115,9 +117,13 @@ export async function dispatchTelegramAlerts(
   let alertJobId: string | null = null;
   let alertFamilies: string[] = [];
   let eventless = false;
+  // Both flags describe committed evidence: the seed write and the eventless
+  // baseline rewrite each publish only after their batch resolves.
+  let snapshotSeedCommitted = false;
   await isolate("alert-detection", undefined, async () => {
     if (mustSeedSnapshots) {
       await writeSnapshots(db, currentSnapshots);
+      snapshotSeedCommitted = true;
     } else {
       const { events, changeLogStatements } = await buildTelegramDispatchEvents(
         db, sourceData, snapshotState, getSymbol, signal,
@@ -133,8 +139,8 @@ export async function dispatchTelegramAlerts(
           .map((entry) => prepareCacheUpsert(db, { ...entry, updatedAt: nowSec })),
       ];
       if (summary.total === 0) {
-        eventless = true;
         await executeAtomicBatch(db, baselineStatements, { signal });
+        eventless = true;
       } else {
         // A crash re-detects the same events and re-derives the same job id.
         const spec = await buildTelegramAlertJobSpec({
@@ -162,9 +168,28 @@ export async function dispatchTelegramAlerts(
     suppressedDuplicate: 0,
     jobsReady: 0,
     jobsFailedClosed: 0,
+    presetQueryFailures: 0,
+    presetResolutionFailures: 0,
     jobsCancelled: 0,
     cappedRows: 0,
   }, () => fanOutPlanningTelegramJobs(db, nowSec, { signal, softDeadlineAtMs }));
+  // Durable evidence for /api/status.telegramBot.presetQueryFailures: add the
+  // failures this completed stage attributed, or clear them on a clean run. A
+  // fan-out stage that threw names itself in planningErrors and leaves the
+  // prior count untouched.
+  const presetRunFailures = fanout.presetQueryFailures + fanout.presetResolutionFailures;
+  if (!planningErrors.some((error) => error.startsWith("fanout:"))) {
+    const priorPresetFailures = await readPresetFailureCount(db);
+    // A failed read is unknown, not zero: leave the durable count untouched.
+    if (priorPresetFailures != null) {
+      const nextPresetFailures = presetRunFailures > 0
+        ? priorPresetFailures + presetRunFailures
+        : 0;
+      if (nextPresetFailures !== priorPresetFailures) {
+        await writePresetFailureCount(db, nextPresetFailures);
+      }
+    }
+  }
   await reportCronProgress(reportProgress, {
     stage: "fanout-built",
     message: "Fanned out Telegram jobs",
@@ -224,13 +249,14 @@ export async function dispatchTelegramAlerts(
     retryQueued: drain?.retried ?? 0,
     executionUnknown: drain?.unknown ?? 0,
     dropped: (drain?.failed ?? 0) + (drain?.cancelled ?? 0),
-    droppedPermanentFailure: drain?.failed ?? 0,
+    droppedPermanentFailure: drain?.failedPermanent ?? 0,
+    droppedMaxAttemptsFallback: drain?.failedMaxAttempts ?? 0,
     deferred: drain?.deferred ?? 0,
     rateLimited: drain?.globalBackoffUntil != null,
     retryAfterSec: drain?.globalBackoffUntil != null ? Math.max(0, drain.globalBackoffUntil - nowSec) : null,
   };
   const result = buildDispatchResult({
-    snapshotSeeded: mustSeedSnapshots,
+    snapshotSeeded: snapshotSeedCommitted,
     chatsWithActiveSnooze: sourceData.chatsWithActiveSnooze,
     eventOverrides: { ...eventOverrides, freeze: freeze.observed },
     pendingLifecycle: { drainResult, expiredCount: sweep.expired, pendingEnqueued: fanout.deliveriesPlanned },
@@ -245,7 +271,9 @@ export async function dispatchTelegramAlerts(
       ...(eventless ? { eventlessFastPath: true } : {}),
       subscribersNotified: drain?.acceptedChats ?? 0,
       suppressedSafetyChangesAtSeed,
-      presetFailure: fanout.jobsFailedClosed > 0,
+      presetQueryFailures: fanout.presetQueryFailures,
+      presetResolutionFailures: fanout.presetResolutionFailures,
+      presetFailure: presetRunFailures > 0,
       cappedAtLimit: fanout.jobsFailedClosed > 0 || drain?.stoppedReason === "deadline",
     },
   });

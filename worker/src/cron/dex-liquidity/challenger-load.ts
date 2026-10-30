@@ -25,7 +25,7 @@ async function hasLegacyCandidatesWithoutSnapshots(
     `SELECT stablecoin_id
      FROM dex_liquidity
      WHERE stablecoin_id != '__global__'
-       AND top_pools_json IS NOT NULL
+       AND (top_pools_json IS NOT NULL OR challenger_pools_json IS NOT NULL)
        AND updated_at >= ?
        AND ${DEX_LIQUIDITY_PUBLISHED_ROW_FILTER}
        AND NOT EXISTS (

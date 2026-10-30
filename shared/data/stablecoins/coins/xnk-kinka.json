@@ -3,6 +3,17 @@
   "name": "Kinka",
   "symbol": "XNK",
   "oneLiner": "XNK is Kinka's gold-backed commodity token, with each token representing one troy ounce of 99.99% Japanese-brand gold bullion held with Loomis vaulting.",
+  "status": "frozen",
+  "frozenAt": "2026-10-30",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-10-30",
+    "epitaph": "Gold token wound up with its issuer",
+    "obituary": "unbanked (TSE 8746) resolved on 2026-10-16 to abolish its crypto business and dissolve Kinka (BVI) Ltd., the XNK issuer, by 2027-03-31. The Ethereum buyback and bullion-exchange window closed at 2026-10-30 17:00 JST, and the issuer scheduled all recovered XNK plus the never-sold Cardano supply for burning in October 2026.",
+    "peakMcap": 2656954,
+    "sourceUrl": "https://www.release.tdnet.info/inbs/140120261016552360.pdf",
+    "sourceLabel": "unbanked TDnet disclosure, 2026-10-16"
+  },
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
@@ -81,15 +92,6 @@
   "governanceQuality": "single-entity",
 
   "launchDate": "2024-02-21",
-  "status": "delisted",
-  "listingStatusReview": {
-    "changedAt": "2026-08-18",
-    "reason": "Issuer notice dated 2026-08-18 announces final exchange trading suspensions and sets 2026-10-30 buyback and gold-exchange request deadlines.",
-    "source": {
-      "label": "Kinka Gold issuer delisting and wind-down notice",
-      "url": "https://kinka-gold.com/"
-    }
-  },
   "windDownAnnouncedAt": "2026-08-18",
   "windDownSourceUrl": "https://kinka-gold.com/"
 }

@@ -115,7 +115,7 @@ describe("conservation compatibility schema", () => {
 });
 
 describe("getMintBurnReconciliation verified conservation", () => {
-  it.each(["busd0-usual", "tbill-openeden"])("excludes inactive %s just like the producer", async (id) => {
+  it.each(["tbill-openeden"])("excludes inactive %s just like the producer", async (id) => {
     expect(MINT_BURN_CONFIGS.some((config) => config.stablecoinId === id)).toBe(true);
     expect(ACTIVE_IDS.has(id)).toBe(false);
     const result = await reconcile({ id });

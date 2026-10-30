@@ -4,7 +4,7 @@
     "mintPath": "permissioned-minter",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "At Ethereum block 26098754, three modules can mint USDU: the curator-operated Morpho USDU adapter and two permissionless SwapBridgeMorphoV1 modules accepting USDC or USDT into ERC-4626 vaults. The token itself remains module-gated; users can invoke the approved swap modules. Historical expired modules retain burn rights, and the uncapped Morpho/curator issuance path remains adverse.",
+    "summary": "At Ethereum block 26132890, four modules can mint USDU: the curator Morpho adapter, two permissionless SwapBridgeMorphoV1 swap modules, and the CurveSeedAdapterV1 FxSwap seeding adapter. The token itself remains module-gated; users can invoke the approved swap modules. Historical expired modules retain burn rights, and the uncapped Morpho/curator issuance path remains adverse.",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -336,6 +336,28 @@
           }
         ],
         "evidence": "At Ethereum block 26098754, stable() returned the tracked USDU token, coin() returned canonical USDT, vault() returned 0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9 and checkValidModule was true. mintCap() returned 100000e18, totalAssets() returned 1003271000000000000 and totalMinted() returned 1000000000000000000. Source uses _mintWithCap for principal, uncapped _mint for fees and surplus, and atomic vault.withdraw for swapOut."
+      },
+      {
+        "label": "USDU CurveSeedAdapterV1 FxSwap seeder",
+        "role": "direct-minter",
+        "authorityType": "contract",
+        "directMintAbility": "direct",
+        "chain": "ethereum",
+        "address": "0x6bc3f741263561d1ad826a4e18e316127721e0ff",
+        "canRaiseCap": "unknown",
+        "observedAt": "2026-10-06",
+        "observedBlock": 26132890,
+        "sources": [
+          {
+            "label": "USDU CurveSeedAdapterV1",
+            "url": "https://eth.blockscout.com/address/0x6bc3f741263561d1ad826a4e18e316127721e0ff"
+          },
+          {
+            "label": "USDU modules",
+            "url": "https://usdu.finance/modules/"
+          }
+        ],
+        "evidence": "At Ethereum block 26132890, four modules can mint USDU: the curator Morpho adapter, two permissionless SwapBridgeMorphoV1 swap modules, and the CurveSeedAdapterV1 FxSwap seeding adapter."
       }
     ],
     "economicCapSemantics": "unbounded",
@@ -344,7 +366,7 @@
     "review": {
       "evidence": "At Ethereum block 25295203 the USDU token's curator/guardian/module model was established (curator = 0x9fe66037c44236c87d9ac8345f489b4413fdff06, no guardian set, mintModule/burnModule gated to whitelisted modules). 2026-07-20 follow-up: full SetModule/SubmitModule event enumeration from block 0 found 9 historical module approvals, of which exactly five are currently valid (checkValidModule = true): 0xfb46481a9819e068af0eb64a2c2824fcecaaaa45, 0x8f36bbee57acb4857cb97898020b529969fdf221, 0x77cbb2f180f55dd2916bfc78f879a2c2de37f638, 0x5febefd5aecfefb3352c5edd49d634b1456c4bd7, 0x397fb4a34757ac180c0841b26131f25040e2e50b. The curator DAO proxy resolves to a standard Aragon OSx DAO implementation (0x58c1f7bc62bb63fb137bc8f6d8ea6321a0501d29): module approvals execute through the Aragon permission framework rather than a single EOA. Blockscout's verified direct Stablecoin source exposes the module-gated mint path and curator/guardian transitions, but no proxy or upgrader path; fixed-block EIP-1967 implementation, admin, and beacon slots were zero at Ethereum block 25573280.. Economic-posture fields reviewed 2026-08-15: the curator can approve replacement mint adapters without an evidenced independent timelock, while the issuer backing API does not establish whole-supply reconciliation and no prudential supervisor or independent attestor is evidenced. Wave 2 external research reviewed 2026-08-15: USDU's public backing-snapshot API continuously exposes total backing, complete USDU supply, and Curve, TermMax, and Morpho adapter balances for its sole Ethereum deployment; this establishes issuer-operated whole-supply reconciliation, while no independent reserve attestor or prudential supervisor is documented. Verified MorphoAdapterV1_2 source records totalMinted on deposit/redeem and compares its own vault claim with that ledger on reconcile(); both verified SwapBridgeMorphoV1 sources also track their own mint/burn liability and opportunistic revenue reconciliation. No token-specific prudential regime or independent whole-liability attestation was established on the searched transparency and protocol-minting surfaces; supervision is unknown, not positively absent. Original review start, block pins, economic cap semantics and authority facts are preserved. The incomplete backing/supply displays establish neither insolvency nor a measured collateral shortfall.",
       "reviewer": "P2 mint-free cohort; Sol economic-posture batch 2026-08-15; Sol Wave 2 external research 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-10-30",
       "sources": [
         {
           "label": "USDU token (Blockscout)",

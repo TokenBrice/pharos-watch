@@ -61,11 +61,15 @@ describe("stablecoin variants", () => {
         ],
       },
     });
+    // The 2026-10-23 Initia halt left the AUSD0/Noble USDC/WETH collateral
+    // unmeasured, so the sidecar withholds the wrapper link while the serial
+    // variant claim and dependency derivation stand.
     expect(iusd.reserves).toContainEqual(
       expect.objectContaining({
         pct: 100,
-        coinId: "ausd-agora",
-        depType: "wrapper",
+        name: "iUSD collateral (unmeasured)",
+        risk: "high",
+        assetClass: "other",
       }),
     );
     expect(deriveEffectiveDependencies(iusd)).toEqual([

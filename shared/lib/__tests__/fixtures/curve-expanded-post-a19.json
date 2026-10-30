@@ -376,6 +376,34 @@
       "maxHopDepth": 2
     },
     {
+      "stablecoinId": "usd3-3jane",
+      "poolAddress": "0x7BA89Bc658c07569cfa6d7947adAA80181a24568",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 18,
+      "outputDecimals": 6,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "frxusd-frax"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 2
+    },
+    {
+      "stablecoinId": "susde-ethena",
+      "poolAddress": "0x744793B5110f6ca9cC7CDfe1CE16677c3Eb192ef",
+      "inputIndex": 0,
+      "outputIndex": 1,
+      "inputDecimals": 18,
+      "outputDecimals": 18,
+      "chain": "ethereum",
+      "hop": {
+        "viaStablecoinId": "dola-inverse-finance"
+      },
+      "routeType": "chained-hop",
+      "maxHopDepth": 3
+    },
+    {
       "stablecoinId": "lusd-liquity",
       "poolAddress": "0xEd279fDD11cA84bEef15AF5D39BB4d4bEE23F0cA",
       "inputIndex": 2,

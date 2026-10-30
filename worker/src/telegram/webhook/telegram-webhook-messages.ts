@@ -137,6 +137,16 @@ export function buildUnsubscribeSuccessMessage(coins: ResolvedCoin[], options: U
   return escapeHtml(lines.join("\n"));
 }
 
+/** A coin with no direct row is not removed; a preset may still cover it. */
+export function buildUnsubscribeNoopMessage(coins: ResolvedCoin[]): string {
+  const symbols = [...new Set(coins.map((coin) => coin.symbol))].sort((a, b) => a.localeCompare(b));
+  const lines = symbols.length > 0
+    ? [`Not followed directly: ${symbols.join(", ")}.`, "Nothing was removed."]
+    : ["Nothing was removed."];
+  lines.push("Preset follows are unchanged. See /list for this chat's direct follows.");
+  return escapeHtml(lines.join("\n"));
+}
+
 export function buildSubscriptionSummaryMessage(
   header: string,
   subscriptions: SubscriptionRow[],

@@ -65,7 +65,7 @@
       "date": "2026-02-02",
       "type": "regulatory",
       "title": "Brazil stablecoin FX-classification regime takes effect",
-      "description": "BCB resolutions classifying stablecoin transactions as foreign-exchange operations enter force; Itau's launch timing remains contingent on the final Consulta Publica 111 framework, especially around self-custody and bank-issuer permissions.",
+      "description": "Regime in force; Itau's launch timing remains contingent on the Consulta Publica 111 framework.",
       "sourceUrl": "https://www.coindesk.com/markets/2025/04/03/brazil-s-largest-bank-itau-unibanco-mulls-its-own-stablecoin"
     },
     {
@@ -76,10 +76,16 @@
       "sourceUrl": "https://www.coindesk.com/policy/2026/05/02/brazil-s-central-bank-bans-stablecoin-and-crypto-settlement-in-cross-border-payments"
     },
     {
+      "date": "2026-06-30",
+      "type": "partnership",
+      "title": "Itau named among 140+ businesses signed up to use Open USD",
+      "sourceUrl": "https://joinopenstandard.com/blog/introducing-open-usd"
+    },
+    {
       "date": "2026-09-21",
       "type": "milestone",
       "title": "Itaú digital-assets head reiterates watchful stance; no own-stablecoin decision",
-      "description": "Guto Antunes told BitNotícias that Itaú's crypto client base grew 252 percent since the December 2024 retail expansion and that the bank is closely tracking tokenization and stablecoins as potential enablers of new payment models, while arguing at Blockchain.RIO on August 12 that stablecoins and tokenized deposits need an equilibrium rather than full migration. The Drex pilot has ended; no issuance decision, peg choice, ticker, or date has been announced.",
+      "description": "Guto Antunes told BitNotícias that Itaú's crypto client base grew 252 percent since the December 2024 retail expansion and that the bank is closely tracking tokenization and stablecoins as potential enablers of new payment models. The Drex pilot has ended; no issuance decision, peg choice, ticker, or date has been announced.",
       "sourceUrl": "https://bitnoticias.com.br/noticias/exclusivo-clientes-cripto-do-itau-aumentaram-252-e-banco-prepara-novidades"
     }
   ]

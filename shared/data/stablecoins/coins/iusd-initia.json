@@ -95,6 +95,11 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "iusd-initia",
+    "suspended": {
+      "reason": "Initia L1 halted 2026-10-23; rest.initia.xyz returns HTTP 404 and only AUSD0 of the issuer's three iUSD collateral assets is read",
+      "since": "2026-10-23",
+      "reviewBy": "2026-11-20"
+    },
     "display": {
       "url": "https://rest.initia.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=move%2F6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
       "label": "Initia LCD — iusd-vault AUSD0 balance vs iUSD supply"
@@ -115,13 +120,23 @@
         "coinId": "ausd-agora",
         "depType": "wrapper"
       }
+    },
+    "suspended": {
+      "reason": "Initia L1 halted 2026-10-23 after a MoveVM exploit; iUSD collateral (AUSD0/Noble USDC/WETH) short up to 1.4M AUSD0 / 1.08M USDC / 105 ETH pending foundation top-up; resume after the 2026-11-02 restart and an on-chain backing re-read",
+      "since": "2026-10-23",
+      "reviewBy": "2026-11-03"
     }
   },
   "notices": [
     {
+      "type": "danger",
+      "title": "Initia L1 halted; iUSD collateral short",
+      "message": "On 2026-10-23 a MoveVM script-cache exploit minted unbacked balances on Initia; L1 and rollups were halted at 15:41:30 UTC. The Initia Foundation approved topping up the iUSD collateral (Noble USDC, WETH, AUSD0) up to 1.08M USDC / 105 ETH / 1.4M AUSD0, to be executed after reconciliation and restored before the planned 2026-11-02 restart. Pharos' last successful vault read (2026-10-29T04:14:20Z) came from the halted chain and is not a current backing observation; no redemption is possible while the chain is down."
+    },
+    {
       "type": "warning",
-      "title": "New chain, no published proof-of-reserves for the wrapper",
-      "message": "iUSD lives on Initia, a recently launched Move-based Cosmos L1 with limited operational history. Initia has not yet published a dedicated transparency feed for the AUSD-backed iUSD wrapper; reserve trust currently inherits from Agora's published AUSD attestations plus the LayerZero bridge endpoint. Redemption to USD ultimately routes back through the AUSD bridge to Agora."
+      "title": "Initia halted 2026-10-23; iUSD transfers paused",
+      "message": "Initia halted its L1 and rollups on 2026-10-23 after a MoveVM exploit, so iUSD transfers and redemption stay paused; restart is planned for 2026-11-02. The Initia Foundation has approved funds to restore the iUSD collateral shortfall, but they are not yet transferred."
     }
   ]
 }

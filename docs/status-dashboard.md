@@ -317,7 +317,7 @@ Subject to a successful history read, cron availability is healthy when:
   `2 * expectedIntervalSec`. That output can come from an earlier attempt: cadence reuse and
   `already_written_today` do not erase it or renew its clock. Control-plane jobs instead accept a fresh
   `ok`/`degraded` observation, or
-- A fresh `skipped_neutral` attempt inherits such evidence from the latest required successful or locked run, or
+- A fresh `skipped_neutral` attempt inherits such evidence from the latest executed successful run, or
 - Last run status is `skipped_neutral` whose `metadata.reason` is in `PROVEN_SATISFIED_NEUTRAL_SKIP_REASONS`
   (`shared/lib/cron-jobs.ts`: `same_day_snapshot_exists`, `weekly-recap-exists`) — the skip follows a
   successful precheck read of the period's write-once artifact. Quarter-hourly daily-snapshot admission

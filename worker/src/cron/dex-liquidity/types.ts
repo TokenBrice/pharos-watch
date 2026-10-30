@@ -383,6 +383,8 @@ export interface DataSources {
   /** DL protocol slug -> observed total TVL; bounds fallback admission, never scales raw pool TVL. */
   protocolTvlCaps: Map<string, number>;
   curvePayloads: (CurveApiPayload | null)[];
+  /** Curve chains whose per-chain read returned no payload this run. Empty when the circuit skipped the fan-out. */
+  curveFailedChains: string[];
   graphApiKey: string | null;
   dlYieldsAvailable: boolean;
   dlProtocolsAvailable: boolean;

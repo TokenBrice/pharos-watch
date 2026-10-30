@@ -37,7 +37,7 @@ import {
 import { buildDexLiquidityPublicationGenerationId, persistScores, writeHistoricalSnapshots } from "./persistence";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import { isPreferredDirectApiPool, type DexApiPool } from "../../lib/dex-api-common";
-import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
+import { CIRCUIT_SOURCE, POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { buildDirectApiPoolIdentity } from "./direct-source-helpers";
 import {
   buildAuthoritativeStagedPoolConfirmationIndex,
@@ -248,14 +248,18 @@ export async function stageDexLiquidityScoring(
   const cursorPersistence = await acknowledgeDexSourcePagination(db, ctx.pendingPaginationUpdates ?? []);
   const targetEnrichment = boundTelemetryEntries(poolState.targetEnrichment ?? [], 64, 8_192);
   const qualityReasons = getDexLiquiditySourceQualityReasons(scoringSourceState);
+  const degradedReason = cursorPersistence.failures.length > 0
+    ? "pagination-cursor-acknowledgement-failed"
+    : scoringSourceState.criticalSourceFailures.length > 0
+      ? `${scoringSourceState.criticalSourceFailures[0]}-unavailable`
+      : materialPoolRejections
+        ? "pool-rejection-material"
+        : stored.retention.error
+          ? "stage-retention-failed"
+          : null;
 
   return {
-    status: scoringSourceState.criticalSourceFailures.length > 0 ||
-      materialPoolRejections ||
-      stored.retention.error ||
-      cursorPersistence.failures.length > 0
-      ? "degraded"
-      : "ok",
+    status: degradedReason == null ? "ok" : "degraded",
     itemCount,
     metadata: JSON.stringify({
       ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
@@ -271,7 +275,7 @@ export async function stageDexLiquidityScoring(
       payloadBytes: stored.payloadBytes,
       retention: stored.retention,
       cursorPersistence,
-      ...(cursorPersistence.failures.length > 0 ? { reason: "pagination-cursor-acknowledgement-failed" } : {}),
+      ...(degradedReason != null ? { reason: degradedReason } : {}),
       rowsRead: scoringSourceState.primaryRawPoolCount,
       failedSources: scoringSourceState.failedSources,
       degradedSources: scoringSourceState.degradedSources ?? [],
@@ -462,7 +466,12 @@ function buildDexLiquidityScoringSourceState(
     failedSources: sourceState.failedSources,
     criticalSourceFailures: sourceState.criticalSourceFailures,
     fallbackSignals: sourceState.fallbackSignals,
-    degradedSources: sourceState.directApiPhase.degradedSources,
+    degradedSources: [
+      ...sourceState.directApiPhase.degradedSources,
+      ...sourceState.dataSources.curveFailedChains.map(
+        (chain) => `${CIRCUIT_SOURCE.CURVE_LIQUIDITY_API}:${chain}`,
+      ),
+    ],
     uniV3CandidateCarryForward: sourceState.subgraphEnrichment.uniV3CandidateCarryForward,
     uniswapV4CandidateCarryForward: sourceState.subgraphEnrichment.uniswapV4CandidateCarryForward,
     subgraphFailures: sourceState.subgraphEnrichment.subgraphFailures,
@@ -1199,6 +1208,7 @@ async function persistDexLiquidityScoreState(
           scoreState.tvlStabilityMap,
           ctx.signal,
           scoreState.diagnostics.routeRemovalEvidence,
+          scoreState.retainedPoolsByStablecoin,
         ),
       3,
       ctx.signal,

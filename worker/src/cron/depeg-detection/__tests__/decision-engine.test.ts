@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { PegAssetBase, StablecoinMeta } from "@shared/types/core";
 import { DEPEG_MAX_CONTINUOUS_OBSERVATION_GAP_SEC } from "@shared/lib/depeg-closure";
+import { PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { makeDepegRow } from "../../../test-helpers/__shared/fixtures";
 import { decideDepegAsset } from "../decision-engine";
 import type { DepegDetectionRow } from "../types";
@@ -574,6 +575,66 @@ describe("decideDepegAsset", () => {
       {
         level: "warn",
         message: "[depeg] Kept BRZ open despite primary recovery: primary=0bps but BRL quote=200bps",
+      },
+    ]);
+  });
+
+  it("recovers a native-domain row from its native quote under a nominal USD primary", () => {
+    const meta = PSI_ELIGIBLE_META_BY_ID.get("zarm-mento");
+    if (!meta) throw new Error("zarm-mento must remain a PSI-eligible catalog member");
+
+    // zarm-mento publishes reviewed ZAR par as `protocol-par` /
+    // `nominal_reference` whenever no trusted market quote is admitted, so its
+    // USD primary is unusable for depeg truth; the admitted ZAR quote decides
+    // the native-domain row (docs/depeg-detection.md#three-state-paths).
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        id: "zarm-mento",
+        symbol: "ZARm",
+        pegType: "peggedZAR",
+        price: 0.0552,
+        priceSource: "protocol-par",
+        priceConfidence: null,
+        priceObservedAt: null,
+        priceUpdatedAt: null,
+        priceObservedAtMode: "nominal_reference",
+        circulating: { celo: 2_000_000 },
+      }),
+      meta,
+      existing: makeExistingEvent({
+        id: 7,
+        stablecoin_id: "zarm-mento",
+        symbol: "ZARm",
+        peg_type: "peggedZAR",
+        direction: "below",
+        peak_deviation_bps: -400,
+        started_at: 1_750_000_900 - 3_600,
+        start_price: 0.96,
+        peak_price: 0.96,
+        peg_reference: 1,
+        recovery_first_seen_at: 1_750_000_900 - 1_000,
+        recovery_last_seen_at: 1_750_000_900 - 450,
+      }),
+      pegRates: { peggedZAR: 0.0552 },
+      pegRateSources: { peggedZAR: "fx" },
+      pegRateCounts: { peggedZAR: 4 },
+      nativePegQuote: {
+        stablecoinId: "zarm-mento",
+        geckoId: "celo-south-african-rand",
+        pegCurrency: "ZAR",
+        price: 0.999,
+        updatedAt: 1_750_000_840,
+      },
+    });
+
+    expect(decision.commands).toEqual([
+      {
+        type: "close-event",
+        id: 7,
+        endedAt: 1_750_000_900,
+        recoveryPrice: 0.999,
+        closeReason: "recovered-native",
       },
     ]);
   });
@@ -1252,6 +1313,49 @@ describe("decideDepegAsset", () => {
         peakPrice: 0.97,
       },
     ]);
+  });
+
+  it("updates a native-peg event peak when the USD primary is inside the trigger threshold", () => {
+    // The USD primary is -99 bps against the 0.191895 BRL reference (inside the
+    // 150 bps non-USD trigger), while the admitted BRZ/BRL quote is -500 bps in
+    // the existing direction. The native domain, not the USD primary, decides
+    // the peak (docs/depeg-detection.md#three-state-paths, Path A).
+    const decision = decideDepegAsset({
+      now: 1_750_000_900,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.19,
+        pegType: "peggedREAL",
+      }),
+      meta: brlMeta,
+      existing: makeExistingEvent({
+        direction: "below",
+        peak_deviation_bps: -242,
+        start_price: 0.9758,
+        peak_price: 0.9758,
+        peg_reference: 1,
+      }),
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.95,
+        updatedAt: 1_750_000_840,
+      },
+    });
+
+    expect(decision.observation).toEqual({ kind: "observed" });
+    expect(decision.seenEventIds).toEqual([7]);
+    expect(decision.commands).toContainEqual({
+      type: "update-peak",
+      id: 7,
+      peakDeviationBps: -500,
+      peakPrice: 0.95,
+    });
   });
 
   it("keeps an existing event open when a high-TVL pool challenger contradicts primary recovery", () => {

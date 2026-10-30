@@ -39,6 +39,13 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "single-entity",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x610f0e33b0a6b3802ff29d3cf6bbd9a0acf784ed",
+      "decimals": 6
+    }
+  ],
   "status": "pre-launch",
   "announcedDate": "2026-01-27",
   "launchPhase": "launching-soon",

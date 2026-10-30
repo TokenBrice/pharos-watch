@@ -2,7 +2,7 @@
   "id": "mmev-midas",
   "name": "Midas mMEV",
   "symbol": "mMEV",
-  "oneLiner": "Midas's NAV-accreting liquid-yield token wraps market-neutral DeFi; RockawayX manages it since February 2026 (formerly MEV Capital); it tracks NAV, not $1 peg.",
+  "oneLiner": "Midas's NAV-accreting market-neutral DeFi token was discontinued on May 10, 2026; issuer directed holders to withdraw or reinvest in mROX; NAV, not $1.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -110,6 +110,16 @@
     "yieldSource": "Midas mMEV strategy NAV",
     "yieldType": "nav-appreciation"
   },
+  "marketAvailability": "legacy-or-wind-down",
+  "windDownAnnouncedAt": "2026-04-09",
+  "windDownSourceUrl": "https://x.com/midasrwa/status/2042271637014528033",
+  "notices": [
+    {
+      "type": "info",
+      "title": "mMEV wound down; redeem in mROX",
+      "message": "Midas discontinued mMEV on 10 May 2026 to avoid redundancy with mROX and told holders to withdraw and reinvest in mROX. Redemptions still settle; the token is not frozen."
+    }
+  ],
   "launchDate": "2025-02-04",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

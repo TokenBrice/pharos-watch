@@ -120,7 +120,7 @@ describe("cron availability retains independently confirmed publication evidence
     { status: "ok", age: 172_801, healthy: false },
     { status: "degraded", age: 12_000, healthy: false },
     { status: "ok", age: null, healthy: false },
-  ] as const)("retains the locked-run requirement for older ok output ($status/$age)", async ({ status, age, healthy }) => {
+  ] as const)("recovers executed output behind a locked-skip display window ($status/$age)", async ({ status, age, healthy }) => {
     const fixture = fixtures.open();
     const job = "snapshot-public-dataset";
     if (age != null) insertRun(fixture, job, age, status, 1, { outputPublishedAt: NOW - age });
@@ -128,7 +128,10 @@ describe("cron availability retains independently confirmed publication evidence
 
     const cron = (await loadCronHealth(fixture.db, NOW)).crons[job];
     expect(cron.runs[0]?.status).toBe("skipped_locked");
-    expect(cron.runs).toHaveLength(10);
+    // Locked skips are not required attempts: the two-row required-attempt
+    // lookup appends the executed attempt behind the skip-filled display window.
+    expect(cron.runs).toHaveLength(age == null ? 10 : 11);
+    expect(cron.runs[cron.runs.length - 1]?.status).toBe(age == null ? "skipped_locked" : status);
     expect(cron.healthy).toBe(healthy);
   });
 

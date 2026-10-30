@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "decentralized"
   },
-  "collateral": "wETH, wstETH, weETH, and SCR in overcollateralized CDP markets on Scroll",
+  "collateral": "wETH, wstETH and weETH CDP markets on Scroll; SCR branch shut down",
   "pegMechanism": "Overcollateralized CDP with user-set interest rates and direct on-chain redemption for underlying collateral; Stability Pools absorb liquidations per collateral market",
   "mechanismArchetype": "cdp",
   "llamaId": "228",

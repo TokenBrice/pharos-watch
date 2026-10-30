@@ -27,6 +27,8 @@ The script prints two artifacts:
 - A new entry to append to `shared/data/stablecoins/frozen-snapshots.json`.
 - A patch to apply to the coin's existing per-coin source file at `shared/data/stablecoins/coins/<id>.json`.
 
+If `/api/stablecoins` no longer serves the coin, the snapshot is built from its newest `/api/supply-history` row (`range=all`) plus registry identity, labelled `supplySource: "supply-history"`, and `capturedAt` is that observation date rather than the run clock. Price is not observed there, so the row keeps `price: null` with `priceSource: "missing"` and the archive renders it unavailable, never `$0`.
+
 ### 2. Apply the JSON edits
 
 - Append the snapshot entry to `frozen-snapshots.json`.

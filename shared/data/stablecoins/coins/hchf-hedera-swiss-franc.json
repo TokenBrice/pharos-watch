@@ -70,5 +70,12 @@
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "custodyModel": "onchain",
   "governanceQuality": "immutable-code",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "HCHF allowance-sweep exploit",
+      "message": "HLiquity's immutable HCHFToken wrapper (0.0.6070122) inherits an ungated transferFrom, so a bot sweeps any approved HCHF allowance within seconds; 10 holders lost 5,907.60 HCHF since July 2026. Transfers and Stability Pool exits are safe; redeem only as one atomic batch."
+    }
+  ],
   "launchDate": "2024-06-05"
 }

@@ -93,7 +93,7 @@ describe("cemetery dataset schema 1.1", () => {
     expect(dataset.fields.recordedAt).toContain("overrides");
     for (const [id, recordedAt, frozenAt] of [
       ["dusd-fluid", "2026-09-04", "2024-04-22"],
-      ["ist-agoric", "2026-06-21", "2025-06-26"],
+      ["ist-agoric", "2026-06-21", "2025-07-01"],
     ]) {
       expect(dataset.rows.find((row) => row.id === id)?.recordedAt).toBe(recordedAt);
       expect(FROZEN_STABLECOINS.find((coin) => coin.id === id)?.frozenAt).toBe(frozenAt);

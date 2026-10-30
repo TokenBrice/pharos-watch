@@ -318,7 +318,10 @@ describe("handleTelegramWebhook", () => {
       throw new Error("Expected at least one frozen stablecoin fixture");
     }
 
-    const db = makeTelegramWebhookDb([{ match: "DELETE FROM telegram_subscriptions", rows: [] }]);
+    const db = makeTelegramWebhookDb(
+      [{ match: "DELETE FROM telegram_subscriptions", rows: [] }],
+      { subscriptions: [{ stablecoin_id: frozen.id }] },
+    );
     await handleTelegramWebhook(db, makeWebhookRequest(123, `/unsubscribe ${frozen.id}`), "test-secret", "bot-token");
 
     expect(db.getHistory().find((entry) => entry.sql.includes("DELETE FROM telegram_subscriptions"))?.binds).toEqual([

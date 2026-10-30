@@ -41,7 +41,7 @@ describe("depeg OG independent source availability", () => {
     const calls = vi.mocked(satoriStandalone).mock.calls;
     const element = calls[calls.length - 1][0] as ReactElement<{ data: DepegCardData }>;
     expect(element.type).toBe(DepegCard);
-    expect(element.props.data.dewsDistribution).toEqual(observed ? { danger: 0, alert: 0, warning: 0, normal: 1 } : null);
+    expect(element.props.data.dewsDistribution).toEqual(observed ? { danger: 0, alert: 0, warning: 0, watch: 0, normal: 1 } : null);
     expect(element.props.data.newToday).toBe(observed ? 0 : null);
     const markup = renderToStaticMarkup(element);
     if (observed) expect(markup).not.toContain("DEWS source unavailable");

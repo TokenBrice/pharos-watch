@@ -32,7 +32,7 @@
   "status": "pre-launch",
   "announcedDate": "2026-03",
   "launchPhase": "launching-soon",
-  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026. HSBC named the token HSBC RedCoin on September 30 2026 and launched it on October 23 2026 under the ticker RCHKD, available on PayMe by HSBC (3.3M users) for peer-to-peer and merchant payments, with HSBC Digital Assets Custody providing safekeeping. HSBC plans to add wallet functionality to the HSBC HK Mobile Banking App and tokenized investment subscriptions later in 2026. 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts. HSBC now publishes issuer-reported circulation and reserve figures. Pharos keeps RCHKD in pre-launch until public on-chain issuance and a verifiable price and supply path exist.",
+  "launchPhaseDetail": "HKMA-licensed stablecoin issuer FRS02, effective April 10 2026. HSBC named the token HSBC RedCoin on September 30 2026 and launched it on October 23 2026 under the ticker RCHKD, available on PayMe by HSBC (3.3M users) for peer-to-peer and merchant payments, with HSBC Digital Assets Custody providing safekeeping. HSBC plans to add wallet functionality to the HSBC HK Mobile Banking App and tokenized investment subscriptions later in 2026. 1:1 backed by HKD-denominated high-quality liquid assets in segregated accounts. HSBC now publishes issuer-reported circulation and reserve figures; its 27 October 2026 daily update showed HK$81.4 million outstanding against HK$82.4 million of cash reserves. Pharos keeps RCHKD in pre-launch until public on-chain issuance and a verifiable price and supply path exist.",
   "featuredContent": [
     {
       "type": "blog",
@@ -89,6 +89,13 @@
       "title": "HSBC RedCoin (RCHKD) launches on PayMe",
       "description": "HSBC made HSBC RedCoin, ticker RCHKD, available on PayMe by HSBC from October 23 2026 under its HKMA stablecoin issuer licence, with HSBC Digital Assets Custody providing safekeeping. HSBC plans to add stablecoin wallet functionality to the HSBC HK Mobile Banking App later in 2026. The release names no blockchain and gives no circulation or reserve figures.",
       "sourceUrl": "https://www.about.hsbc.com.hk/news-and-media/hsbc-redcoin-launches-today"
+    },
+    {
+      "date": "2026-10-27",
+      "type": "milestone",
+      "title": "HSBC daily disclosure shows HK$81.4 million RedCoin outstanding against HK$82.4 million of cash reserves",
+      "description": "HSBC's daily stablecoin disclosure reported HK$81,425,493.24 of RedCoin outstanding and HK$82,425,493.24 of reserve assets, all held as cash, with the circulating total up HK$80,157,394.18 over seven days. The figures are issuer-reported and unaudited; the first independent reserve audit is expected after Q4 2026, and RCHKD still runs on HSBC's private permissioned ledger with no public price or supply lane.",
+      "sourceUrl": "https://www.hsbc.com.hk/stablecoins/"
     }
   ],
   "dateHistory": [

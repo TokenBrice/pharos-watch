@@ -352,8 +352,7 @@ export function computePriceStalenessSummary(
       .filter((asset) => asset.price != null && typeof asset.price === "number" && asset.price > 0)
       .map((asset) => [asset.id, {
         price: asset.price as number,
-        observedAt: asset.priceObservedAt ?? asset.priceUpdatedAt ?? null,
-        syncedAt: asset.priceSyncedAt ?? null,
+        observedAt: asset.priceObservedAt ?? null,
         source: asset.priceSource ?? null,
         confidence: asset.priceConfidence ?? null,
       }]),
@@ -367,15 +366,16 @@ export function computePriceStalenessSummary(
     if (previous == null || asset.price == null || typeof asset.price !== "number" || asset.price <= 0) continue;
 
     compared++;
-    const currentObservedAt = asset.priceObservedAt ?? asset.priceUpdatedAt ?? null;
-    const currentSyncedAt = asset.priceSyncedAt ?? null;
+    const currentObservedAt = asset.priceObservedAt ?? null;
     const currentSource = asset.priceSource ?? null;
     const currentConfidence = asset.priceConfidence ?? null;
+    // Only an upstream observation clock proves a new price. `priceSyncedAt`
+    // and the post-enrichment `priceUpdatedAt` are this run's application
+    // stamps: every carried-forward price is re-stamped before this check, so
+    // comparing them would make a frozen feed look freshly observed.
     const hasNewerObservation =
       (currentObservedAt != null && previous.observedAt != null && currentObservedAt > previous.observedAt) ||
-      (currentObservedAt != null && previous.observedAt == null) ||
-      (currentSyncedAt != null && previous.syncedAt != null && currentSyncedAt > previous.syncedAt) ||
-      (currentSyncedAt != null && previous.syncedAt == null);
+      (currentObservedAt != null && previous.observedAt == null);
     const hasFreshMetadata =
       hasNewerObservation ||
       currentSource !== previous.source ||

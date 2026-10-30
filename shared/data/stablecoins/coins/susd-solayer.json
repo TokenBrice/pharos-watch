@@ -62,5 +62,14 @@
     "yieldSource": "Solayer sUSD T-bill yield",
     "yieldType": "rebase"
   },
+  "windDownAnnouncedAt": "2026-07-22",
+  "windDownSourceUrl": "https://x.com/solayer_labs/status/2080010441087222114",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Issuer sunsetting sUSD",
+      "message": "Solayer announced on 2026-07-22 that sUSD is being sunset: deposits closed 2026-08-01, yield accrual ended 2026-09-30, self-serve withdrawal ends 2026-12-31, then manual processing."
+    }
+  ],
   "launchDate": "2024-10-28"
 }

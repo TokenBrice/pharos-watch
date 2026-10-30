@@ -1,4 +1,5 @@
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
+import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
 import { rowPriceCoverage, serializeDepegPriceCoverage, type DepegRow } from "../../lib/depeg-helpers";
 import { mergeDepegIntervals } from "@shared/lib/peg-utils";
 import type { DepegDiagnostic, DepegPersistenceCommand } from "./types";
@@ -33,6 +34,29 @@ export function shouldCloseOrphanedDepeg(
   if (iteratedTrackedIds.has(coinId)) return false;
   if (frozenIds.has(coinId)) return false;
   return true;
+}
+
+// Same-domain references are refreshed from the same live rates, so they agree
+// well inside this bound; a domain mix or a drifted peak-time reference does not.
+const DUPLICATE_PEAK_REFERENCE_TOLERANCE = 0.01;
+
+/**
+ * A duplicate's peak is a price/bps pair measured against that row's own quote
+ * domain and reference. Copying it onto a keeper with a different domain or a
+ * different reference publishes a deviation the keeper's own fields cannot
+ * reproduce (native peak over a USD reference, or a peak-era commodity/peer
+ * median over an onset-latched reference).
+ */
+function isPeakComparable(keeper: DepegRow, dupe: DepegRow): boolean {
+  if (isNativePegEvent(keeper) !== isNativePegEvent(dupe)) return false;
+  const keeperReference = keeper.peg_reference;
+  const dupeReference = dupe.peg_reference;
+  if (
+    !Number.isFinite(keeperReference) || keeperReference <= 0 ||
+    !Number.isFinite(dupeReference) || dupeReference <= 0
+  ) return false;
+  return Math.abs(keeperReference - dupeReference)
+    <= Math.max(keeperReference, dupeReference) * DUPLICATE_PEAK_REFERENCE_TOLERANCE;
 }
 
 export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRepairResult {
@@ -88,8 +112,9 @@ export function buildDuplicateOpenEventRepair(openRows: DepegRow[]): DuplicateRe
       for (let i = 1; i < rows.length; i++) {
         const dupe = rows[i];
         if (!dupe) continue;
-        // Absorb worse peak deviation into the same-direction keeper only.
-        if (Math.abs(dupe.peak_deviation_bps) > Math.abs(keeper.peak_deviation_bps)) {
+        // Absorb worse peak deviation into the same-direction keeper only when
+        // both rows price the same quote domain and reference scale.
+        if (isPeakComparable(keeper, dupe) && Math.abs(dupe.peak_deviation_bps) > Math.abs(keeper.peak_deviation_bps)) {
           keeper.peak_deviation_bps = dupe.peak_deviation_bps;
           keeper.peak_price = dupe.peak_price;
         }

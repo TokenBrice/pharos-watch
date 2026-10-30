@@ -366,7 +366,12 @@ export async function buildRedemptionBackstopEntry(
   const routeStatusReason = mergedRouteStatus.routeStatusReason;
   const routeStatusReviewedAt = mergedRouteStatus.routeStatusReviewedAt;
 
-  if (mergedRouteStatus.impaired && (resolutionState === "resolved" || options.routeAvailability != null)) {
+  const liveRouteStatusImpaired = !routeSuspension && liveRouteStatus != null
+    && liveRouteStatus.routeStatus !== "open"
+    && liveRouteStatus.routeStatus !== "unknown";
+  if (mergedRouteStatus.impaired && (
+    resolutionState === "resolved" || options.routeAvailability != null || liveRouteStatusImpaired
+  )) {
     resolutionState = "impaired";
     score = null;
     const translatedCaps = mergedRouteStatus.capsApplied.map((cap) =>

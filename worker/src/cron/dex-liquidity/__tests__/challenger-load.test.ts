@@ -1,8 +1,14 @@
 import { afterEach, describe, expect, it } from "vitest";
+import { DEX_FRESHNESS_SEC } from "@shared/lib/depeg-config";
 import { loadPublishedDexPoolChallengers } from "../challenger-load";
 import { mockD1, type MockD1Database } from "@shared/test-utils/mock-d1";
 import { loaderFixtures, loaderScenario } from "./challenger-load.test-support";
 import { loadDexPoolChallengers } from "../../../lib/depeg-helpers";
+import { POOL_CHALLENGE_MIN_TVL } from "../../../lib/constants";
+import { buildStoredChallengerPoolsJson } from "../challenger-publish";
+import { filterRetainedPools } from "../scoring-helpers";
+import type { PoolEntry } from "../types";
+import { scorePoolGraph } from "./scoring-test-builders";
 
 afterEach(() => loaderFixtures.closeAll());
 
@@ -365,6 +371,101 @@ describe("challenger load", () => {
         publishedAt: 100,
       }),
     ]);
+  });
+
+  it("keeps a qualifying large pool with no observed 24h flow when the published challenger snapshot is stale", async () => {
+    const { sqlite, db } = loaderFixtures.open();
+    const nowSec = 1_700_000_000;
+    const staleSnapshotAt = nowSec - DEX_FRESHNESS_SEC - 60;
+    const pool = (
+      overrides: Partial<PoolEntry> & Pick<PoolEntry, "poolId" | "project" | "chain" | "tvlUsd">,
+    ): PoolEntry => ({
+      symbol: "USDC/USDT",
+      volumeUsd1d: 500_000,
+      volumeUsd7d: 3_500_000,
+      poolType: "balancer-stable",
+      source: "dl",
+      price: 1,
+      priceObservedAt: nowSec - 60,
+      priceSource: "dl",
+      ...overrides,
+    });
+
+    // Ten live pools with measured 24h flow outrank the dormant pool in the
+    // display projection's volume ordering.
+    const livePools = Array.from({ length: 10 }, (_, index) => pool({
+      poolId: `base:0xlive${index}`,
+      project: `live-dex-${index}`,
+      chain: "Base",
+      tvlUsd: 300_000,
+      volumeUsd1d: 600_000 - index * 10_000,
+      price: 0.9995,
+    }));
+    // Direct Aero state carries no trailing volume: null (unobserved), never a
+    // measured zero. This is the largest retained pool and its quote is
+    // depegged, so the >= $5M pool-challenger rule must still see it.
+    const dormantPool = pool({
+      poolId: "base:0xaero-dormant",
+      project: "aerodrome-slipstream",
+      chain: "Base",
+      tvlUsd: 50_000_000,
+      volumeUsd1d: null,
+      volumeUsd7d: null,
+      poolType: "aerodrome-slipstream",
+      source: "direct_api",
+      price: 0.9,
+      priceSource: "direct_api",
+    });
+
+    // Retention, scoring and persistence projections are the production path:
+    // scoring keeps filterRetainedPools -> rebuildMetricsFromPools and persists
+    // the uncapped TVL-bounded challenger projection, not the display slice.
+    const retainedPools = filterRetainedPools([...livePools, dormantPool]);
+    expect(retainedPools.map((entry) => entry.poolId)).toContain(dormantPool.poolId);
+    const metrics = scorePoolGraph({
+      stablecoinId: "coin-a",
+      symbol: "COINA",
+      pools: retainedPools,
+    });
+
+    sqlite.prepare(
+      `INSERT INTO dex_liquidity
+         (stablecoin_id, symbol, total_tvl_usd, pool_count, top_pools_json,
+          challenger_pools_json, updated_at)
+       VALUES ('coin-a', 'COINA', ?, ?, ?, ?, ?)`,
+    ).run(
+      53_000_000,
+      11,
+      JSON.stringify(metrics.topPools.map(({ volumeReading: _volumeReading, ...entry }) => entry)),
+      buildStoredChallengerPoolsJson("coin-a", retainedPools, POOL_CHALLENGE_MIN_TVL),
+      nowSec - 60,
+    );
+    sqlite.prepare(
+      `INSERT INTO dex_price_challenger_publications_v2
+         (publication_id, generation_id, snapshot_at, published_at, sealed)
+       VALUES (1, 'liquidity', ?, ?, 1)`,
+    ).run(staleSnapshotAt, staleSnapshotAt + 30);
+    sqlite.prepare(
+      `INSERT INTO dex_price_challenger_heads_v2
+         (stablecoin_id, publication_id, has_rows, source_coverage_complete)
+       VALUES ('coin-a', 1, 1, 1)`,
+    ).run();
+
+    const challengers = await loadDexPoolChallengers(
+      db,
+      POOL_CHALLENGE_MIN_TVL,
+      DEX_FRESHNESS_SEC,
+      nowSec,
+    );
+
+    expect(challengers.get("coin-a")).toEqual(expect.arrayContaining([
+      expect.objectContaining({
+        protocol: "aerodrome-slipstream",
+        chain: "Base",
+        price: 0.9,
+        tvlUsd: 50_000_000,
+      }),
+    ]));
   });
 
   it("surfaces a missing mandatory challenger snapshot table", async () => {

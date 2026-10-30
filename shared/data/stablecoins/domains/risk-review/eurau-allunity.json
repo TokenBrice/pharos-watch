@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "All eight authored EURAU contract rows remain issuer-native issuance lanes, not bridge representations. The live customer-facing cross-chain path is AllUnity’s documented mapping bridge (issuer burns source EURAU and mints destination EURAU to a registered wallet). The Oct 2025 Chainlink CCIP/CCT partnership is still announced, not registered: TokenAdminRegistry 1.5.0 getPool(EURAU)=0 on Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, and Tempo as of 2026-08-18, and no pool holds MINTER_ROLE/BURNER_ROLE. Do not treat destination supply as a lock/mint representation of a single canonical chain.",
+    "summary": "All nine authored EURAU contract rows remain issuer-native issuance lanes, not bridge representations, including the Stellar SEP-41 contract. The live customer-facing cross-chain path is AllUnity’s documented mapping bridge (issuer burns source EURAU and mints destination EURAU to a registered wallet). The Oct 2025 Chainlink CCIP/CCT partnership is still announced, not registered: TokenAdminRegistry 1.5.0 getPool(EURAU)=0 on Ethereum, Base, Arbitrum, Optimism, Polygon, BSC, and Tempo as of 2026-08-18, and no pool holds MINTER_ROLE/BURNER_ROLE. Do not treat destination supply as a lock/mint representation of a single canonical chain.",
     "reviewedAt": "2026-08-18",
     "reviewer": "orchestrator follow-up 2026-08-18 (W03 tier decision)",
     "confidence": "manual-review",
@@ -271,6 +271,35 @@
           {
             "label": "EURAU on bsc explorer (verified 2026-07-20)",
             "url": "https://bscscan.com/address/0x4933a85b5b5466fbaf179f72d3de273c287ec2c2"
+          }
+        ]
+      },
+      {
+        "id": "stellar:CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI",
+        "destinationChain": "stellar",
+        "contractAddress": "CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI",
+        "protocol": "AllUnity native EURAU (Stellar SEP-41)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "AllUnity's Stellar announcement and EURAU product page list Stellar as a live SEP-41 lane, StellarExpert shows this exact Soroban contract deployed on mainnet with 95 invocations and no errors, and CoinGecko's Stellar platform metadata reports 4 decimals (2026-10-30). The contract is issuer-deployed native Soroban issuance, not a bridged representation. Stellar admin keys and supply were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "AllUnity: EURAU launches on Stellar (13 April 2026)",
+            "url": "https://allunity.com/news/eurau-launches-on-the-stellar-network"
+          },
+          {
+            "label": "EURAU on StellarExpert (contract identity, verified 2026-10-30)",
+            "url": "https://api.stellar.expert/explorer/public/contract/CB44W727WSLHPXJ47A6DHF5D34RKWSOZAMEDXO3CF5TEEEQ2ZX4V3VRI"
+          },
+          {
+            "label": "CoinGecko allunity-eur platform metadata (Stellar entry, 4 decimals)",
+            "url": "https://api.coingecko.com/api/v3/coins/allunity-eur?localization=false&tickers=false&market_data=false&community_data=false&developer_data=false&sparkline=false"
           }
         ]
       }

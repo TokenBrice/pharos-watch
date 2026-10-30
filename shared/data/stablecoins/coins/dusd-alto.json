@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "On-chain collateral and fixed-price issuance routes on Ethereum. The current issuer snapshot lists active mint markets for frxUSD, wstETH, WETH, rETH, sUSDe and syrupUSDC. Historical isolated borrow/mint markets and USDC/frxUSD peg-stability routes remain distinct mechanisms; current limits and fees require contract review.",
+  "collateral": "On-chain collateral and fixed-price issuance routes on Ethereum. The current issuer snapshot lists active mint markets for frxUSD, wstETH, WETH, rETH, sUSDe and syrupUSDC; a live Convex credit line mints DUSD against a frxUSD/DUSD Curve LP. Deprecated markets and peg-stability routes differ; limits and fees need review.",
   "pegMechanism": "Collateralized mint markets create new DUSD; borrow markets redistribute existing DUSD. The documented public USDC PSM quotes 1:1 before a 0.20% fee in either direction and a 5M-USDC exposure cap, with redemption limited by actual USDC inventory. An Owner Multisig controls parameter changes through a timelock; a separate emergency multisig can freeze swaps.",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",

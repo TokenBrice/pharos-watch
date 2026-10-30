@@ -2053,5 +2053,123 @@
         }
       ]
     }
+  },
+  {
+    "id": "xnk-kinka",
+    "capturedAt": "2026-09-04T00:00:00.000Z",
+    "peggedAssetRow": {
+      "id": "xnk-kinka",
+      "name": "Kinka",
+      "symbol": "XNK",
+      "pegType": "peggedGOLD",
+      "pegMechanism": "rwa-backed",
+      "price": null,
+      "priceSource": "missing",
+      "supplySource": "supply-history",
+      "circulating": {
+        "peggedGOLD": 1934664.5262234402
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": []
+    }
+  },
+  {
+    "id": "silk-shade-protocol",
+    "capturedAt": "2026-10-30T16:58:58.143Z",
+    "peggedAssetRow": {
+      "id": "silk-shade-protocol",
+      "name": "SILK",
+      "symbol": "SILK",
+      "geckoId": "silk-bcec1136-561c-4706-a42c-8b67d0d7f7d2",
+      "pegType": "peggedVAR",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "priceConfidence": null,
+      "priceUpdatedAt": null,
+      "priceObservedAt": null,
+      "priceObservedAtMode": null,
+      "priceSyncedAt": null,
+      "consensusSources": [],
+      "agreeSources": [],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedVAR": 0
+      },
+      "circulatingPrevDay": {
+        "peggedVAR": 0
+      },
+      "circulatingPrevWeek": {
+        "peggedVAR": 0
+      },
+      "circulatingPrevMonth": {
+        "peggedVAR": 0
+      },
+      "chainCirculating": {
+        "Secret": {
+          "current": 0,
+          "circulatingPrevDay": 0,
+          "circulatingPrevWeek": 0,
+          "circulatingPrevMonth": 0
+        }
+      },
+      "chains": [
+        "Secret"
+      ],
+      "contracts": [
+        {
+          "chain": "secret",
+          "address": "secret1fl449muk5yq8dlad7a22nje4p5d2pnsgymhjfd",
+          "decimals": 6
+        }
+      ]
+    }
+  },
+  {
+    "id": "bib01-backed",
+    "capturedAt": "2026-09-16T00:00:00.000Z",
+    "peggedAssetRow": {
+      "id": "bib01-backed",
+      "name": "Backed IB01 Treasury Bond 0-1yr",
+      "symbol": "bIB01",
+      "pegType": "peggedUSD",
+      "pegMechanism": "rwa-backed",
+      "price": null,
+      "priceSource": "missing",
+      "supplySource": "supply-history",
+      "circulating": {
+        "peggedUSD": 18960097.471922677
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": []
+    }
+  },
+  {
+    "id": "vndc-jade-labs",
+    "capturedAt": "2025-12-09T00:00:00.000Z",
+    "peggedAssetRow": {
+      "id": "vndc-jade-labs",
+      "name": "VNDC",
+      "symbol": "VNDC",
+      "pegType": "peggedVND",
+      "pegMechanism": "crypto-backed",
+      "price": null,
+      "priceSource": "missing",
+      "supplySource": "supply-history",
+      "circulating": {
+        "peggedVND": 54603183.1248958
+      },
+      "circulatingPrevDay": {},
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {},
+      "chains": []
+    }
   }
 ]

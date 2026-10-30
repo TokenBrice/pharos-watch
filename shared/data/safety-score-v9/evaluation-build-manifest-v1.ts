@@ -34,7 +34,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json",
-      "sha256": "1a2eaea36749e87fc26a69d14514d1e10e1c6de188f66e42d80b38444efd621b"
+      "sha256": "6c40456d7e2d600a0e3165adca39377dd7f0bcfab811bd0a28c425dc3d5a2144"
     },
     {
       "path": "shared/data/safety-score-v9/lane-screening-emitter-inventory-v1.json",
@@ -78,15 +78,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "b1849977f5b98110e7a4714356d26a2c21b1fb223074e349925417691c06dd9c"
+      "sha256": "725539d0ee15a47e190c74202d0285d60756955edb50dfa4a1ca6f6306f260a5"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "026007ec4d1d1806bc42a702a6b286949a5f2fb42f2c2613010c6c1ff622ab18"
+      "sha256": "b7cc328f30247e6146dc28720341da8f829ab90cdaab0ffdc3daa6718eba91a4"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "8bfaacdea8c2eea47c2d871f936782df2bfc3112efd5b15ea382b81eb97636d9"
+      "sha256": "c6ee648adc0f28c9ac96be98ef8a6d0e076993640f44a54bdf6c7791b397a808"
     },
     {
       "path": "shared/lib/abort-signals.ts",
@@ -374,7 +374,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
-      "sha256": "a5e9db822fd4d833851a89fd257d779f6febe4b4a4eac2c01de9d04b2e132815"
+      "sha256": "ae558cf205f36924f03e8f167254fe10be073d92d5cb766f3fa96a2a239a25bb"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/shared.ts",
@@ -798,7 +798,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/chain-identity.ts",
-      "sha256": "d946bf72199c2c4d79fc65e93925c35317f876444092fb7e8743aa3af7b9125b"
+      "sha256": "46e9cbc7243e6e348780cd7e2d8badb72473bef27383db577d656f3fde144e85"
     },
     {
       "path": "shared/types/coin-projection.ts",
@@ -846,7 +846,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/live-reserve-adapter-declarations.ts",
-      "sha256": "642c030ba8e75420bc5d3285bde0b9426c129f420e18c8ebfd63dfae305c7807"
+      "sha256": "0b5bb043ac1387a80e274c8ab710ae379c6c8d1042f138c8925c27dc0303f70e"
     },
     {
       "path": "shared/types/live-reserve-adapter-policy.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "a3868f7b3c8f100b33e3d62de09665d2eb43d5a0c52ddffa9007de046b17a3e1"
+  "digest": "42a1ba49f070a4f23ffcf91a4e1538133f17b81d43206cd8dcbccbbfd9857a2c"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

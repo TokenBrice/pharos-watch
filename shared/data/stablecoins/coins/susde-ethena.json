@@ -165,6 +165,11 @@
       "chain": "aptos",
       "address": "0xb30a694a344edee467d9f82330bbe7c3b89f440a1ecd2da1f3bca266560fce69",
       "decimals": 6
+    },
+    {
+      "chain": "monad",
+      "address": "0x211cc4dd073734da055fbf44a2b4667d5e5fe5d2",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

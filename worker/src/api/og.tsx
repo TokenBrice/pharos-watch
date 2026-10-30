@@ -655,13 +655,15 @@ async function handleDepegOg(db: D1Database): Promise<Response> {
     db.prepare("SELECT COUNT(*) as count FROM depeg_events WHERE started_at > ?")
       .bind(oneDayAgo).first<{ count: number }>(),
   ]);
-  const dewsDistribution = { danger: 0, alert: 0, warning: 0, normal: 0 };
+  const dewsDistribution = { danger: 0, alert: 0, warning: 0, watch: 0, normal: 0 };
   for (const row of stressRows.results ?? []) {
     switch (row.band) {
       case "DANGER": dewsDistribution.danger++; break;
       case "ALERT": dewsDistribution.alert++; break;
       case "WARNING": dewsDistribution.warning++; break;
-      default: dewsDistribution.normal++;
+      case "WATCH": dewsDistribution.watch++; break;
+      case "CALM": dewsDistribution.normal++; break;
+      // An unpublished band is not a calm observation; leave it uncounted.
     }
   }
   const cacheAge = assessFreshnessTimestamp(now, stablecoins.updatedAt);

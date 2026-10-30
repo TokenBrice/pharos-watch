@@ -146,7 +146,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Celo native EURm is the canonical route; Monad is a Wormhole NTT burn/mint representation. Mento's official NTT configuration sets nominal 500,000 EURm inbound and outbound limits per peer, and the common 4-of-6 migration Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 can administer the Celo and Monad NTT manager/transceiver contracts. These are nominal configured limits, not live remaining-capacity reads. The residual Ethereum and Polygon supply is legacy Optics-bridged cEUR (token owner is the Optics BridgeRouter, verified on-chain), and the Solana supply is legacy Allbridge cEUR (mint authority verified). Pinned totalSupply reads on 2026-07-21 establish 2,073,193.841739276070272578 unique EURm/cEUR claims: 1,688,715.972819276070272578 in the Celo canonical supply, including the backing of legacy lock-mint representations, plus 384,477.868920000000000000 on the Monad NTT burn-mint deployment. Monad therefore carries 18.54519636% of unique claims, so the chain:monad common-mode exposure is attributed and remains above the 10% materiality threshold.",
+    "summary": "Celo native EURm is the canonical route; Monad is a Wormhole NTT burn/mint representation. Mento's official NTT configuration sets nominal 500,000 EURm inbound and outbound limits per peer, and the common 4-of-6 migration Safe 0x58099B74F4ACd642Da77b4B7966b4138ec5Ba458 can administer the Celo and Monad NTT manager/transceiver contracts. These are nominal configured limits, not live remaining-capacity reads. The residual Ethereum supply and the separate legacy Polygon row remain legacy Optics-bridged cEUR (token owner is the Optics BridgeRouter, verified on-chain), the Solana supply is legacy Allbridge cEUR (mint authority verified), and Polygon also carries a reviewed issuer-native Mento EURm spoke. Pinned totalSupply reads on 2026-07-21 establish 2,073,193.841739276070272578 unique EURm/cEUR claims: 1,688,715.972819276070272578 in the Celo canonical supply, including the backing of legacy lock-mint representations, plus 384,477.868920000000000000 on the Monad NTT burn-mint deployment; the Polygon Mento spoke adds 47,479.96067519 EURm read on 2026-10-30. Monad remains above the 10% materiality threshold of the combined unique claims, so the chain:monad common-mode exposure stays attributed.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-4 (lead dai-makerdao); SOL-KEYSTONE supply attribution (2026-07-21); Codex boundary correction 2026-08-16",
     "confidence": "verified",
@@ -398,6 +398,35 @@
         "failureDomainKeys": [
           "protocol:allbridge",
           "contract:solana:BTb346DSozfTScyDt1q26YLz1Drs1PwBWeSqHBJDF8wW"
+        ]
+      },
+      {
+        "id": "polygon:0x4d502d735b4c574b487ed641ae87ceae884731c7",
+        "destinationChain": "polygon",
+        "contractAddress": "0x4d502d735b4c574b487ed641ae87ceae884731c7",
+        "protocol": "Mento EURm native Polygon spoke",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Mento's analytics API places polygon EURm at this exact address in the live EURm/USDm FPMM pool, and Polygon Blockscout resolves it as Mento Euro (EURm), 18 decimals, 47,479.96067519 supply, a StableTokenSpoke proxy initialized under the same Mento governance Safe that owns canonical Celo EURm (2026-10-30). This is issuer-controlled native minting on Polygon, distinct from the legacy Optics-bridged cEUR row; it is not a representation of Celo supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Mento analytics reserve API (polygon EURm and EURm/USDm FPMM, accessed 2026-10-30)",
+            "url": "https://mento-analytics-api-12390052758.us-central1.run.app/api/v2/reserve"
+          },
+          {
+            "label": "Mento Euro on Polygon Blockscout (token metadata, verified 2026-10-30)",
+            "url": "https://polygon.blockscout.com/api/v2/tokens/0x4D502d735B4C574B487Ed641ae87cEaE884731C7"
+          },
+          {
+            "label": "Mento EURm StableTokenSpoke proxy on Polygon Blockscout (verified 2026-10-30)",
+            "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0x4D502d735B4C574B487Ed641ae87cEaE884731C7"
+          }
         ]
       }
     ]

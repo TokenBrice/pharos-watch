@@ -4,6 +4,8 @@
   "symbol": "USR",
   "oneLiner": "USR was Resolv Labs's delta-neutral synthetic dollar; it was frozen in 2026 after an EOA-minter exploit produced 80M unbacked tokens and depegged the asset.",
   "status": "frozen",
+  "windDownAnnouncedAt": "2026-05-26",
+  "windDownSourceUrl": "https://resolv.xyz/blog/resolv-path-forward",
   "frozenAt": "2026-04-27",
   "obituary": {
     "causeOfDeath": "counterparty-failure",

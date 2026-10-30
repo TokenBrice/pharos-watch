@@ -2,61 +2,36 @@
   "id": "nwisdom-nest",
   "reserves": [
     {
-      "sourceKey": "nest-vault-positions:credit-vaults",
-      "name": "Nest private and structured credit vaults",
-      "pct": 98.8,
+      "sourceKey": "nest-vault-positions:unknown",
+      "name": "nUSDR liquid balance",
+      "pct": 99.678,
       "risk": "high",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "WisdomTree Private Credit and Alternative Income Fund",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "counterparty",
-        "custody",
-        "legal",
-        "market"
-      ],
-      "liquidityHorizon": "seven-days"
+      "assetClass": "other"
     },
     {
-      "sourceKey": "nest-vault-positions:nav-residual",
-      "name": "Nest NAV reconciliation residual",
-      "pct": 1,
-      "risk": "high"
-    },
-    {
-      "sourceKey": "nest-vault-positions:usdc",
-      "name": "Liquid USDC balances",
-      "pct": 0.1,
+      "sourceKey": "nest-vault-positions:usdt",
+      "name": "Liquid USDT balances",
+      "pct": 0.265,
       "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "liquidityHorizon": "immediate"
-    },
-    {
-      "sourceKey": "nest-vault-positions:pusd",
-      "name": "pUSD liquid balance",
-      "pct": 0.1,
-      "risk": "high",
-      "coinId": "pusd-plume",
+      "coinId": "usdt-tether",
       "depType": "collateral",
       "assetClass": "stablecoin",
       "liquidityHorizon": "immediate"
     },
     {
-      "sourceKey": "nest-vault-positions:usdt",
-      "name": "Liquid USDT balances",
-      "pct": 0,
-      "risk": "low",
-      "coinId": "usdt-tether",
+      "sourceKey": "nest-vault-positions:pusd",
+      "name": "pUSD liquid balance",
+      "pct": 0.057,
+      "risk": "high",
+      "coinId": "pusd-plume",
       "depType": "collateral",
       "assetClass": "stablecoin",
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-29",
-    "reviewer": "SprintRS020 research sprint 2026-10-29 (RS-020) pUSD asset-class recheck; prior review Sol unknown-resolver wave 2026-10-07 (RESERVE_2)",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Live-adapter composition refresh 2026-10-30 from the Nest positions API.",
     "confidence": "verified",
     "sources": [
       {
@@ -74,28 +49,25 @@
       {
         "label": "Plume USD documentation: 1:1 USDC-backed stablecoin, no protocol fees (observed 2026-10-29)",
         "url": "https://docs.plume.org/plume/tokens/plume-usd"
+      },
+      {
+        "label": "Nest nWISDOM vault transparency page, read 2026-10-30",
+        "url": "https://app.plume.org/vaults/nest-wisdom-vault"
       }
     ],
-    "rationale": "An October 1, 2026 recheck of the exact nWISDOM positions API identifies xCRDYX, nTBILL and liquid stablecoin balances. WisdomTree issuer disclosure corroborates CRDYX exposure to publicly traded alternative-credit investment vehicles. The Nest available-vault directory fetched on that date does not list nWISDOM or verify the earlier four-day redemption estimate. The September 21 composition percentages and NAV reconciliation residual remain historical observations pending dated liability/asset reconciliation; the current API balances do not identify the residual or legal recovery waterfall. On 2026-10-07, the exact vault 0x29bf22381a5811dec89dc7b46a5ce57ad02c0240 positions API lists USDC, USDT/USDT0 and pUSD in liquidAssets with no pending transactions. Immediate liquidity describes only these scoped idle token categories, consistent with the issuer's on-chain liquid-reserve mechanics; it is not a bank USD, bridge unwind, whole-vault or stressed-settlement guarantee. The added keyed zero-percent USDT metadata row makes no assertion about its live weight and does not refresh the historical composition or classify the NAV residual. A 2026-10-29 classification-only recheck sets the pUSD liquid-balance slice assetClass to stablecoin from the issuer's 1:1 USDC backing disclosure; no slice weight, composition date or NAV residual is re-reviewed by that change.",
-    "compositionBasis": "Live Nest positions and vault documentation, with the adapter's NAV reconciliation residual retained explicitly",
-    "compositionAsOf": "2026-09-21",
+    "rationale": "On 2026-10-30 the nWISDOM positions API lists nUSDR as the dominant liquid asset with xCRDYX and nTBILL at zero, and the vault page lists CRDYX below 0.01% and liquid assets at 100%. nUSDR has no disclosed obligor, claim, maturity or realization terms, so it stays an unidentified residual; settled positions reconcile to the published NAV within $0.01.",
+    "compositionBasis": "Nest positions API read 2026-10-30; settled positions compared with the published NAV",
+    "compositionAsOf": "2026-10-30",
     "scope": "full-composition",
-    "knownUnknownExposure": "The WisdomTree CRDYX position is identified and classified. The adapter's 1% NAV reconciliation residual is not attributed to an asset, obligor, custody account, receivable, or valuation adjustment by the reviewed primary sources.",
-    "knownUnknownExposurePct": 1,
+    "knownUnknownExposure": "The nUSDR (Nest USD Receivable) position has no disclosed obligor, enforceable claim, maturity or realization terms.",
+    "knownUnknownExposurePct": 99.678,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
-        "reserveName": "Nest private and structured credit vaults",
-        "pct": 98.8,
-        "disposition": "untracked-exogenous-asset",
-        "rationale": "The position is a fund share in WisdomTree's private credit and alternative income strategy, not a tracked stablecoin dependency."
-      },
-      {
-        "reserveIndex": 1,
-        "reserveName": "Nest NAV reconciliation residual",
-        "pct": 1,
+        "reserveName": "nUSDR liquid balance",
+        "pct": 99.678,
         "disposition": "insufficient-evidence",
-        "rationale": "The adapter quantifies the residual, but the positions API and vault documentation do not identify what asset, claim, or valuation adjustment it represents."
+        "rationale": "No public disclosure establishes nUSDR's legal obligor, claim, maturity or realization terms."
       }
     ]
   }

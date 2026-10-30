@@ -9,6 +9,7 @@ import {
   mockShouldAttemptFetch,
   readCacheValue,
   resetDispatchTelegramAlertsTest,
+  scriptTelegramDeliveries,
   telegramDeliveryTranscript,
   type CronProgressUpdate,
   type DispatchHarness,
@@ -163,6 +164,50 @@ describe("dispatchTelegramAlerts", () => {
     expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_jobs").get()).toEqual({ count: 0 });
   });
 
+  it("publishes a retry-ceiling drop as a max-attempts fallback, not a permanent failure", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const harness = createDispatchHarness();
+    harness.seed({ subscribers: [{ chatId: "12345", lastActiveAt: now }] });
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_jobs (job_id, kind, payload_json, state, created_at, expires_at)
+       VALUES ('broadcast:queued', 'broadcast', '{}', 'ready', ?, ?)`,
+    ).run(now, now + 3600);
+    // Nineteen prior retryable attempts are all that separate this row from the
+    // defensive 20-attempt ceiling; it is still comfortably inside the 2 h TTL.
+    harness.sqlite.prepare(
+      `INSERT INTO telegram_deliveries (
+         job_id, kind, chat_id, audience, body, body_hash, state, attempts,
+         next_attempt_at, expires_at, created_at
+       ) VALUES ('broadcast:queued', 'broadcast', '12345', 'notice', 'queued notice', 'h', 'pending', 19, ?, ?, ?)`,
+    ).run(now, now + 2 * 60 * 60, now - 19 * 5 * 60);
+    // A transient 429 with a short Retry-After, the ordinary way a row walks
+    // the retry schedule to the ceiling.
+    scriptTelegramDeliveries({
+      ok: false,
+      blocked: false,
+      retryable: true,
+      permanentFailure: false,
+      statusCode: 429,
+      errorClass: "rate_limit",
+      delivery: "retryable_failure",
+      retryAfterSec: 1,
+    });
+
+    const metadata = JSON.parse((await dispatchTelegramAlerts(harness.db, "bot-token")).metadata);
+
+    // The row really did exhaust transient retries rather than hit a permanent
+    // Telegram rejection.
+    expect(
+      harness.sqlite
+        .prepare("SELECT state, attempts, reason FROM telegram_deliveries WHERE chat_id = '12345'")
+        .get(),
+    ).toEqual({ state: "failed", attempts: 20, reason: "max_attempts" });
+
+    expect(metadata.pendingDropped).toBe(1);
+    expect(metadata.pendingDroppedMaxAttemptsFallback).toBe(1);
+    expect(metadata.pendingDroppedPermanentFailure).toBe(0);
+  });
+
   describe("roll-up transitions commit with their baselines", () => {
     function seedDewsDeescalation(harness: DispatchHarness) {
       const now = Math.floor(Date.now() / 1000);
@@ -279,6 +324,61 @@ describe("dispatchTelegramAlerts", () => {
         prepare: () => ({ bind: () => ({}) }),
       }), entries).length;
       expect(changeLogStatements + 7 + 1 + 1).toBeLessThanOrEqual(D1_BATCH_SIZE);
+    });
+  });
+
+  // A failed snapshot write is isolated and named in deliveryV2.planningErrors,
+  // so the same metadata must not also claim the write-back it did not commit
+  // (docs/telegram-alerts.md#first-run--stale-snapshot-behavior).
+  describe("snapshot write evidence", () => {
+    it("does not report snapshotSeeded when the seed batch failed", async () => {
+      const harness = createDispatchHarness();
+      harness.sqlite.exec(
+        `CREATE TRIGGER fail_seed_write BEFORE INSERT ON cache
+         BEGIN SELECT RAISE(ABORT, 'cache write unavailable'); END`,
+      );
+
+      const failed = await dispatchTelegramAlerts(harness.db, "bot-token");
+      const failedMetadata = JSON.parse(failed.metadata);
+
+      expect(failed.status).toBe("degraded");
+      expect(failedMetadata.deliveryV2.planningErrors).toEqual([expect.stringMatching(/^alert-detection:/)]);
+      // The seed batch wrote nothing, so the run did not reseed.
+      expect(harness.sqlite.prepare("SELECT COUNT(*) AS count FROM cache").get()).toEqual({ count: 0 });
+      expect(failedMetadata.snapshotSeeded).toBe(false);
+
+      // The flag tracks the committed write, not the seed branch: a retry reseeds.
+      harness.sqlite.exec("DROP TRIGGER fail_seed_write");
+      const recovered = await dispatchTelegramAlerts(harness.db, "bot-token");
+      expect(JSON.parse(recovered.metadata).snapshotSeeded).toBe(true);
+      expect(readCacheValue(harness.sqlite, "alert:depeg-snapshot")).not.toBeNull();
+    });
+
+    it("does not report the eventless fast path when its baseline batch failed", async () => {
+      const now = Math.floor(Date.now() / 1000);
+      const harness = createDispatchHarness();
+      harness.seed({
+        dews: [{ stablecoinId: "usdc-circle", score: 12, band: "CALM" }],
+        cache: defaultDispatchCaches(),
+      });
+      seedDispatchSnapshots(harness, {
+        dews: { "usdc-circle": "CALM" },
+        safety: { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" } },
+        safetySource: { "usdc-circle": { grade: "B", score: 78, methodologyVersion: "7.09" } },
+        updatedAt: now - 60,
+      });
+      harness.sqlite.exec(
+        `CREATE TRIGGER fail_baseline_write BEFORE UPDATE ON cache WHEN NEW.key = 'alert:depeg-snapshot'
+         BEGIN SELECT RAISE(ABORT, 'cache write unavailable'); END`,
+      );
+
+      const failed = await dispatchTelegramAlerts(harness.db, "bot-token");
+      const failedMetadata = JSON.parse(failed.metadata);
+
+      expect(failed.status).toBe("degraded");
+      expect(failedMetadata.deliveryV2.planningErrors).toEqual([expect.stringMatching(/^alert-detection:/)]);
+      // The fast path includes rewriting the baselines; this run did not complete it.
+      expect(failedMetadata.eventlessFastPath).not.toBe(true);
     });
   });
 });

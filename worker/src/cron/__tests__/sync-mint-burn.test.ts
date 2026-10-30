@@ -102,7 +102,8 @@ vi.mock("../../lib/mint-burn-contracts", async () => {
 
 import { syncMintBurn } from "../sync-mint-burn";
 import { MintBurnRun } from "../mint-burn/run";
-import { mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
+import { getMintBurnFinalizedHead, mintBurnAlchemyEndpoint } from "../../lib/mint-burn-pipeline/rpc";
+import { mintBurnScanFingerprint } from "../../lib/mint-burn-pipeline/scan-coverage";
 import { syncMintBurnConfig } from "../mint-burn/sync-config";
 import { MINT_BURN_CONFIGS } from "../../lib/mint-burn-contracts";
 import { batchExecute } from "../../lib/db";
@@ -433,6 +434,57 @@ describe("syncMintBurn", () => {
     expect(result.newLastBlock).toBeNull();
   });
 
+  it("withholds the scan proof when a decodable non-dust log has a malformed event identity", async () => {
+    const db = makeDb();
+    const config = MINT_BURN_CONFIGS[0]!;
+    const malformedBlock = 21_910_000;
+    vi.mocked(fetchAlchemyLogs)
+      .mockResolvedValueOnce({
+        logs: [{ ...makeMintLog({ blockNumber: malformedBlock }), logIndex: "0x" }],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      })
+      .mockResolvedValueOnce({
+        logs: [],
+        complete: true,
+        scannedToBlock: 21_960_000,
+        calls: 1,
+        maxDepth: 0,
+      });
+
+    const result = await syncMintBurnConfig({
+      db,
+      config,
+      key: USDT_CONFIG_KEY,
+      tier: "critical",
+      fromBlock: 21_900_000,
+      scanTo: 21_960_000,
+      chainHead: 22_000_000,
+      rpcEndpoints: [mintBurnAlchemyEndpoint("https://eth-mainnet.g.alchemy.com/v2/")],
+      configBudgetLimit: 200,
+      runTimestamp: 1_718_650_752,
+      priceContext: {
+        priceObservations: new Map([["usdt-tether", { price: 1, observedAt: 1_718_650_752, source: "binance", observedAtMode: "local_fetch" }]]),
+        priceHistory: new Map(),
+      },
+      chainTimestampCache: new Map(),
+      txContextCache: new Map(),
+      affectedHours: new Map(),
+    });
+
+    // The mint was observed, decodable and above dust; only its event id could not
+    // be formed. No row and no decode quarantine accounts for it.
+    expect(result.summary.rowsRead).toBe(1);
+    expect(result.summary.rowsDropped).toBe(1);
+    expect(result.summary.rowsDroppedDecode).toBe(0);
+    // An uncompensated dropped event cannot certify exhaustive coverage of the range.
+    expect(result.newLastBlock).toBeNull();
+    expect(result.scanCoverage).toBeUndefined();
+    expect(result.summary.advanceReason).not.toBe("full-success-empty");
+  });
+
   it("keeps an undecodable quarantined log unproved and retryable", async () => {
     const config = MINT_BURN_CONFIGS[0]!;
     const failedBlock = 21_910_000;
@@ -576,6 +628,57 @@ describe("syncMintBurn", () => {
     expect(bucket.get(hourTs)).toEqual({ mint_count: 2, mint_volume_usd: 100000, mint_unpriced_event_count: 0 });
     expect(JSON.parse(retry.metadata).rowsIgnored).toBe(1);
     expect(JSON.parse(retry.metadata).retention.eventRows.deletedRows).toBe(2);
+  });
+
+  it("keeps a reactivation-pending leg's mid-hour prefix protected from retention", async () => {
+    const { sqlite, db } = sqliteFixtures.open();
+    const actualDb = await vi.importActual<typeof DbModule>("../../lib/db");
+    vi.mocked(batchExecute).mockImplementation(actualDb.batchExecute);
+    seedMintBurnAdmissions(sqlite, MINT_BURN_CONFIGS);
+    const nowSec = Math.floor(Date.now() / 1000);
+    const hourTs = Math.floor((nowSec - 9 * 86_400) / 3600) * 3600;
+    const cursorBlock = 21_950_123;
+    const config = MINT_BURN_CONFIGS[0]!;
+    const fingerprint = mintBurnScanFingerprint(config);
+    // Re-enabled after an operator pause: the prior admission survives, the leg is
+    // pending-admission with `reactivation-pending` until its frontier is fresh.
+    sqlite.prepare(`INSERT INTO mint_burn_publication_policy (id, disabled_keys, paused_keys, updated_at)
+      VALUES (1, '[]', ?, ?)`)
+      .run(JSON.stringify([USDT_CONFIG_KEY]), nowSec - 86_400);
+    sqlite.prepare("INSERT INTO mint_burn_sync_state (config_key, last_block) VALUES (?, ?)")
+      .run(USDT_CONFIG_KEY, cursorBlock);
+    // The catch-up cursor stopped mid-hour: the scanned prefix is priced and
+    // materialized while the rest of this >8-day-old hour is still unscanned.
+    sqlite.prepare(`INSERT INTO mint_burn_scan_coverage
+      (config_key, config_fingerprint, chain_id, from_block, to_block, from_timestamp,
+       to_timestamp, finality_tag, finalized_block, accepted_at)
+      VALUES (?, ?, 'ethereum', ?, ?, ?, ?, 'finalized', ?, ?)`)
+      .run(USDT_CONFIG_KEY, fingerprint, cursorBlock - 1000, cursorBlock,
+        hourTs - 1800, hourTs + 1800, cursorBlock + 1000, hourTs + 1800);
+    sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, tx_hash, block_number,
+       timestamp, explorer_tx_url)
+      VALUES ('prefix-event', 'usdt-tether', 'USDT', 'ethereum', 'mint', 12.5, 12.5, '0xfeed', ?,
+        ?, 'https://etherscan.io/tx/0xfeed')`)
+      .run(cursorBlock - 10, hourTs + 10);
+    sqlite.prepare(`INSERT INTO mint_burn_hourly
+      (stablecoin_id, chain_id, hour_ts, mint_count, mint_volume_usd, mint_unpriced_event_count)
+      VALUES ('usdt-tether', 'ethereum', ?, 1, 12.5, 0)`).run(hourTs);
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("tape-projector:cursor:mint_burn.large_flow", String(nowSec), nowSec);
+    // No finalized head, so this run cannot re-scan the leg and can only prune.
+    vi.mocked(getMintBurnFinalizedHead).mockResolvedValue(null);
+
+    const result = await new MintBurnRun(db, "alchemy-key", { lane: "critical" }).execute();
+    const metadata = JSON.parse(result.metadata);
+
+    expect(metadata.publication.legs).toContainEqual(expect.objectContaining({
+      configKey: USDT_CONFIG_KEY, status: "pending-admission", reason: "reactivation-pending",
+    }));
+    expect(metadata.retention.error).toBeNull();
+    expect(metadata.retention.eventRows.deletedRows).toBe(0);
+    expect(sqlite.prepare("SELECT id FROM mint_burn_events ORDER BY id").all())
+      .toEqual([{ id: "prefix-event" }]);
   });
 
   it("prioritizes critical configs even when rotation starts with extended", async () => {

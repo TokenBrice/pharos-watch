@@ -57,19 +57,23 @@
       {
         "chain": "celo",
         "address": "0xaeb865bca93ddc8f47b8e29f40c5399ce34d0c58",
-        "label": "Celo Validators (XOFm authorized minter)",
+        "label": "Celo ValidatorsProxy (XOFm minter slot)",
         "role": "direct-minter",
         "authorityType": "contract",
-        "directMintAbility": "direct",
+        "directMintAbility": "none",
         "observedAt": "2026-10-01",
         "observedBlock": 78937958,
         "sources": [
           {
             "label": "XOFm verified StableTokenV2 implementation",
             "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x434563b0604be100f04b7ae485bcafe3c9d8850e"
+          },
+          {
+            "label": "Celo Validators implementation (ValidatorsProxy target)",
+            "url": "https://celo.blockscout.com/api/v2/smart-contracts/0x13B0B89F3242f815C1FC6C9CF56e1Ab5aEA4dC58"
           }
         ],
-        "evidence": "At Celo block 78937958, XOFm validators() returned this address and exchange() was zero. StableTokenV2 explicitly includes validators in onlyMinter. This records the configured token-level authorization, not a verified external key threshold, operational issuance policy, or collateral cap."
+        "evidence": "At Celo block 78937958, XOFm validators() returned this address; exchange() was zero. Implementation 0x13b0b89f3242f815c1fc6c9cf56e1ab5aea4dc58 only mints Registry StableToken (USDm) to the calling EpochManager, so it cannot mint XOFm as deployed."
       },
       {
         "chain": "celo",

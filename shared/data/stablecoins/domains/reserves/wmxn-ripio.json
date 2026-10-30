@@ -17,8 +17,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-09-30",
-    "reviewer": "OpenAI Codex reserve source review",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "OpenAI Codex reserve source review; supply-coverage re-review 2026-10-30",
     "confidence": "probable",
     "sources": [
       {
@@ -34,7 +34,7 @@
         "url": "https://www.ripio.com/en/wfiat"
       }
     ],
-    "rationale": "The June 30, 2026 certification reconciles 968,789 outstanding wMXN across seven chains to MXN2,086,193.01 in a Mexican bank account and certifies full local-currency backing. Pablo Eduardo Soto signed the certification on July 28, 2026 for SLD y Asociados S.A. The engagement expressly does not constitute an audit or review and expresses no professional opinion. The bank and account terms remain undisclosed, and the collateral surplus is unexplained. The official wFIAT attestation index serves this report as its latest wMXN evidence on September 30, 2026; the 92-day-old balance date remains outside the live adapter's 33-day freshness ceiling.",
+    "rationale": "June 30, 2026 certification: 968,789 wMXN outstanding across seven chains against MXN2,086,193.01 in an undisclosed Mexican bank account, signed by Pablo Eduardo Soto for SLD y Asociados S.A. on July 28, 2026; it is not an audit or review. Outstanding supply is now 12,363,203.69 wMXN (2026-10-30 CoinGecko, matching the 2026-10-19 on-chain read), so the certified surplus describes June 30 only and no longer reflects current coverage. The balance date remains outside the 33-day freshness ceiling.",
     "compositionBasis": "Independent public accountant certification of wMXN collateral as of June 30, 2026",
     "compositionAsOf": "2026-06-30",
     "scope": "full-composition",

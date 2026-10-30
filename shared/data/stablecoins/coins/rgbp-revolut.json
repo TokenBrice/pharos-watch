@@ -1,15 +1,15 @@
 {
   "id": "rgbp-revolut",
   "name": "Revolut GBP Stablecoin",
-  "symbol": "RGBP",
-  "oneLiner": "RGBP is Revolut's pre-launch GBP stablecoin proposal targeting 1:1 fiat backing, being tested under the UK FCA Regulatory Sandbox ahead of authorisation.",
+  "symbol": "GBPR",
+  "oneLiner": "GBPR is Revolut's pre-launch GBP stablecoin proposal targeting 1:1 fiat backing, being tested under the UK FCA Regulatory Sandbox ahead of authorisation.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GBP",
     "governance": "centralized"
   },
   "collateral": "Planned GBP-denominated reserve assets for Revolut's FCA Regulatory Sandbox GBP stablecoin proposal",
-  "pegMechanism": "Pre-launch fiat-reserve stablecoin proposal designed to maintain 1:1 value with Pound Sterling; FCA sandbox testing remains pre-authorisation, with contracts, redemption terms, and reserve reports pending",
+  "pegMechanism": "Pre-launch fiat-reserve stablecoin proposal designed to maintain 1:1 value with Pound Sterling; FCA sandbox testing remains pre-authorisation, with redemption terms and reserve reports pending",
   "mechanismArchetype": "fiat-cash",
   "detailProvider": "defillama",
   "links": [
@@ -32,11 +32,18 @@
   },
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "contracts": [
+    {
+      "chain": "ethereum",
+      "address": "0x8407f7245dbb72e1570fdee4fecb267dd3edbb0d",
+      "decimals": 6
+    }
+  ],
   "status": "pre-launch",
   "announcedDate": "2026-02",
   "expectedLaunchDate": "2027",
   "launchPhase": "announced",
-  "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026, dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries, though the 40% unremunerated-reserve requirement remains under review. On June 2 2026 the House of Lords Financial Services Regulation Committee urged the BoE to scrap individual holding limits entirely and reconsider that 40% floor. On June 22 2026 the BoE published its final policy statement and draft rules: individual holding limits are scrapped in favour of a temporary per-coin issuance cap (initially ~£40bn / $50bn), the short-dated-UK-T-bill reserve share rises to 70% with the remainder held at the BoE and no yield paid to holders, and par redemption within 24 hours is required; a Code of Practice consultation runs to September 22 2026, with rules finalised by end-2026 and regulated sterling stablecoins operating from 2027. On August 26 2026 Revolut shipped the first token of its stablecoin programme: the euro-denominated EURR, on Ethereum, issued by Bridge Building S.A. (Stripe's Bridge) under MiCA rather than by a Revolut entity. That establishes Revolut's working issuance template as a third-party regulated issuer relationship, though it carries no direct read-through to sterling: EURR could ship because MiCA is in force, whereas RGBP remains blocked on a UK regime whose Code of Practice consultation runs to September 22 2026 and whose rules are not finalised until end-2026. The June 30 2026 BoE/FCA joint approach sets the FCA regime start at October 25 2027, with systemic issuers transferring to BoE prudential oversight on HM Treasury recognition.",
+  "launchPhaseDetail": "Selected as one of four firms for FCA Regulatory Sandbox stablecoin cohort (Feb 25); testing began Q1 2026; full UK banking licence granted Mar 11, but GBP stablecoin would be issued from Revolut Ltd (e-money entity), not Revolut Bank UK, per BoE proposed rule on subsidiary issuance; Head of UK Policy Rory Tanner outlined proposition to House of Lords (Mar 25), flagging UK→India remittance corridor as priority use case; ticker not publicly confirmed; the Bank of England softened its stance in May 2026, dropping the £20k individual holding cap in favour of aggregate issuer caps (revised draft rules due June 2026) and signalling banks may issue branded coins via ring-fenced subsidiaries, though the 40% unremunerated-reserve requirement remains under review. On June 2 2026 the House of Lords Financial Services Regulation Committee urged the BoE to scrap individual holding limits entirely and reconsider that 40% floor. On June 22 2026 the BoE published its final policy statement and draft rules: individual holding limits are scrapped in favour of a temporary per-coin issuance cap (initially ~£40bn / $50bn), the short-dated-UK-T-bill reserve share rises to 70% with the remainder held at the BoE and no yield paid to holders, and par redemption within 24 hours is required; a Code of Practice consultation runs to September 22 2026, with rules finalised by end-2026 and regulated sterling stablecoins operating from 2027. On August 26 2026 Revolut shipped the first token of its stablecoin programme: the euro-denominated EURR, on Ethereum, issued by Bridge Building S.A. (Stripe's Bridge) under MiCA rather than by a Revolut entity. That establishes Revolut's working issuance template as a third-party regulated issuer relationship, though it carries no direct read-through to sterling: EURR could ship because MiCA is in force, whereas GBPR remains blocked on a UK regime whose Code of Practice consultation runs to September 22 2026 and whose rules are not finalised until end-2026. The June 30 2026 BoE/FCA joint approach sets the FCA regime start at October 25 2027, with systemic issuers transferring to BoE prudential oversight on HM Treasury recognition.",
   "featuredContent": [
     {
       "type": "article",
@@ -121,7 +128,7 @@
       "date": "2026-08-26",
       "type": "milestone",
       "title": "Revolut ships its first stablecoin in euro (EURR), with no sterling equivalent announced",
-      "description": "Revolut launches EURR on Ethereum under MiCA, issued by Bridge Building S.A. rather than a Revolut entity, phased to Denmark, Poland, and Portugal. The launch demonstrates Revolut's issuance model is a third-party regulated-issuer relationship, but no GBP token was announced. RGBP remains gated on the UK regime, whose Code of Practice consultation runs to September 22 2026 with rules finalised by end-2026.",
+      "description": "Revolut launches EURR on Ethereum under MiCA, issued by Bridge Building S.A. rather than a Revolut entity, phased to Denmark, Poland, and Portugal. The launch demonstrates Revolut's issuance model is a third-party regulated-issuer relationship, but no GBP token was announced. GBPR remains gated on the UK regime, whose Code of Practice consultation runs to September 22 2026 with rules finalised by end-2026.",
       "sourceUrl": "https://www.fintechfutures.com/blockchain-crypto-digital-assets/revolut-launches-euro-backed-stablecoin-eurr"
     },
     {

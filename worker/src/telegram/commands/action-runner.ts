@@ -18,6 +18,7 @@ import {
   buildPresetUnsubscribeSummaryMessage,
   buildPresetUnavailableMessage,
   buildSubscriptionSummaryMessage,
+  buildUnsubscribeNoopMessage,
   buildUnsubscribeSuccessMessage,
 } from "../webhook/telegram-webhook-messages";
 import { applySubscribeIntent, applyUnsubscribeIntent } from "../store/presets";
@@ -122,12 +123,30 @@ export async function runFollowCommand(
   }
 }
 
+/** The requested coins that currently have a direct row for this chat. */
+async function loadDirectlyFollowedCoins(
+  db: D1Database,
+  chatId: string,
+  coins: readonly ResolvedCoin[],
+): Promise<ResolvedCoin[]> {
+  if (coins.length === 0) return [];
+  const rows = await loadSubscriptionsByIds(db, chatId, coins.map((coin) => coin.id));
+  const followedIds = new Set(rows.map((row) => row.stablecoin_id));
+  return coins.filter((coin) => followedIds.has(coin.id));
+}
+
 async function applyFollowRequest(
   ctx: WebhookCommandContext,
   coins: readonly ResolvedCoin[],
   request: FollowRequest,
 ): Promise<string> {
   const coinIds = coins.map((coin) => coin.id);
+  // Presets are never copied into direct rows, so only a coin with an existing
+  // direct row can be removed by this command. The reply reports that removal
+  // evidence rather than the requested tickers.
+  const removedCoins = request.kind === "unsubscribe"
+    ? await loadDirectlyFollowedCoins(ctx.db, ctx.chatId, coins)
+    : [];
   const resolvedPresets = request.presetIds.length > 0
     ? await resolveTelegramPresetTargets(ctx.db, request.presetIds)
     : null;
@@ -172,9 +191,15 @@ async function applyFollowRequest(
   });
 
   if (request.kind === "unsubscribe") {
-    return request.presetIds.length > 0
-      ? buildPresetUnsubscribeSummaryMessage([...coins], { presetIds: request.presetIds, presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID })
-      : buildUnsubscribeSuccessMessage([...coins]);
+    if (request.presetIds.length > 0) {
+      return buildPresetUnsubscribeSummaryMessage(removedCoins, {
+        presetIds: request.presetIds,
+        presetLabelById: TELEGRAM_PRESET_LABEL_BY_ID,
+      });
+    }
+    return removedCoins.length > 0
+      ? buildUnsubscribeSuccessMessage(removedCoins)
+      : buildUnsubscribeNoopMessage([...coins]);
   }
   const subscriptions = await loadSubscriptionsByIds(ctx.db, ctx.chatId, coinIds);
   return request.presetIds.length > 0

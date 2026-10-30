@@ -2,6 +2,7 @@ import { describe, expect, it, beforeEach, vi } from "vitest";
 import type * as IndependentAssurance from "../independent-assurance";
 import { getReserveAdapter } from "../index";
 import { fetchIndependentAssuranceReserves } from "../independent-assurance";
+import { USDGO_INDEPENDENT_ASSURANCE_PROFILE } from "../usdgo-transparency";
 import { runAdapter, type AdapterNetworkSpec } from "./reserve-adapter.test-support";
 
 const REPORT_TIMESTAMP = 1_788_220_799;
@@ -48,6 +49,15 @@ beforeEach(() => {
       collateralizationRatio: 1_248_950_562 / 1_244_426_424,
       details: { assurance: { reportUrl: "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf" } },
     },
+  });
+});
+
+describe("usdgo-transparency profile classification", () => {
+  it("names the STBXX fund that the CUSIP identifies, not the Financial Square series", () => {
+    expect(USDGO_INDEPENDENT_ASSURANCE_PROFILE.classifications.stbxx).toMatchObject({
+      name: "Goldman Sachs STBXX (CUSIP 38151N205)",
+      issuerOrObligor: "Goldman Sachs Stablecoin Reserves Fund",
+    });
   });
 });
 

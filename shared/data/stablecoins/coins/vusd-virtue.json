@@ -42,13 +42,20 @@
   "custodyModel": "onchain",
   "governanceQuality": "single-entity",
   "launchDate": "2025-07-14",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "August 2026 oracle exploit; protocol relaunched October 19",
+      "message": "On 28 August 2026 an attacker took control of all fourteen Switchboard IOTA oracle signing keys, reported $10,000,000 per IOTA, and minted 4,942,737.62 VUSD against 1.027 IOTA of collateral, reducing protocol-wide backing to 8.0%. The manipulated feed then triggered 47 liquidation events across 45 users and the protocol was frozen. Virtue relaunched on 19 October 2026 with a peg stability module that mints VUSD 1:1 against USDT0. The attacker-held VUSD has not been burned. Sources: Virtue post-incident report https://x.com/Virtue_Money/article/2094074502447825150 and the 19 October relaunch update https://x.com/Virtue_Money."
+    }
+  ],
   "status": "quarantined",
   "listingStatusReview": {
-    "changedAt": "2026-09-24",
-    "reason": "Native VUSD is an IOTA Move coin no configured supply-probe family can read, and reviewed aggregates refuse a partial roster; the IOTA EVM leg is not a defensible circulating figure. CoinGecko stale since 2026-08-15; re-source a native-IOTA supply reader.",
-    "reviewBy": "2026-10-24",
+    "changedAt": "2026-10-30",
+    "reason": "Native IOTA Move supply remains unreadable and the IOTA EVM leg is not defensible; CoinGecko's last quote was 2026-08-15 (76 days stale on 2026-10-30), and the 2026-10-19 USDT0 PSM relaunch adds no admitted lane. Re-source a native supply reader.",
+    "reviewBy": "2026-11-29",
     "source": {
-      "label": "CoinGecko page for Virtue USD (last updated 2026-08-15)",
+      "label": "CoinGecko page for Virtue USD (last updated 2026-08-15; checked 2026-10-30)",
       "url": "https://www.coingecko.com/en/coins/virtue-usd"
     }
   }

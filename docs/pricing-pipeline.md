@@ -96,7 +96,7 @@ Outcome bookkeeping and shared DEX read-clock handling follow the [implementatio
 
 Reserve NAV/supply share configuration-bound successful evidence, independent fetch/source-age checks and trusted FX, never nominal $1. JPMorgan requires current issuer-class/latest-attempt linkage; Chainlink/Superstate may retain current success after a failed attempt. [Decoder and valuation details](process/pricing-pipeline-appendix.md#primary-collection-bookkeeping) own adapter policies and unavailable-evidence handling.
 
-Curve USDT-reference pools first value USDT through its existing USDC anchor. USAT, Quantoz USDQ and sUSDS multiply their pool ratios by the admitted USDT USD quote; DOLA explicitly permits the two-dependency DOLA -> sUSDS -> USDT path. Missing or stale dependencies withhold the quote, and the oldest contributing observation dates the result.
+Curve USDT-reference pools first value USDT through its existing USDC anchor. USAT, Quantoz USDQ and sUSDS multiply their pool ratios by the admitted USDT USD quote; DOLA explicitly permits the two-dependency DOLA -> sUSDS -> USDT path. sUSDe's DOLA pool reuses that path, USD3's frxUSD pool the existing frxUSD -> crvUSD route; sUSDe's raw ratio is not multiplied by the ERC-4626 rate because its vault rate is internal. Missing or stale dependencies withhold the quote, and the oldest contributing observation dates the result.
 
 Promoted DEX corroboration is candidate-scoped. A hard-source match admits only the agreeing protocol lane, while DEX-only corroboration requires an independent protocol lane within the existing divergence threshold. Divergent siblings are excluded with `lacked_corroboration` telemetry rather than inheriting another lane's evidence.
 
@@ -106,9 +106,7 @@ The current exact-address lane also requires a configured CoinGecko key and cano
 
 Both exact-address callers share one enabled predicate, a flat target list and a scalar circuit outcome. The comma-separated allowlist remains explicit opt-in; no candidates recover successfully, blocked or unattempted work stays neutral, and an answered 404 is an unindexed deployment rather than a provider outage.
 
-Kraken's curated `SOFIDUSD` market supplies SoFiUSD's hard-market quote through the existing batched ticker request, corroborating the contract-verified CoinGecko `sofiusd` identity. SoFiUSD has no nominal-par override: admitted observed consensus publishes through ordinary validation. Kraken's bid/ask midpoint keeps its local-fetch clock, and CoinGecko agreement does not upgrade it to single-source depeg authority. Failed or absent quotes stay unavailable rather than publishing par; provider registration alone is not a published observation.
-
-Frontier Stable Token quotes the curated Kraken `FRNTUSD` bid/ask market in that batch; missing responses stay unavailable.
+Kraken's curated `SOFIDUSD`, `FRNTUSD`, `CASHUSD` and `USDGOUSD` books supply those assets' hard-market quotes. SoFiUSD has no nominal-par override; admitted consensus uses ordinary validation. Midpoints keep local-fetch clocks and never become single-source depeg authority; absent or stale quotes stay unavailable, never par, and registration alone is not a published observation. [Kraken exact markets](process/pricing-pipeline-appendix.md#provider-specific-normalization) own identity joins and failure detail.
 
 USDY uses `detailProvider: "coingecko"` so its supplemental lane admits a fresh CoinGecko price and market cap without a live DefiLlama row; an admitted row's primary supply still wins. USYC, reUSD, USP and USD3 (on-chain roster supply) follow it after DefiLlama's 2026-10-14 delisting.
 

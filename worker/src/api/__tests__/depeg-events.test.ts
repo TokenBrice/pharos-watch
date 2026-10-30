@@ -116,6 +116,48 @@ describe("handleDepegEvents", () => {
     })]);
   });
 
+  it.each([
+    { label: "live native heuristic", source: "live", quoteMode: null },
+    { label: "backfilled native provenance", source: "backfill", quoteMode: "native-peg" },
+  ])("keeps the current row's price pair when the first constituent uses another quote domain ($label)", async ({ source, quoteMode }) => {
+    const { sqlite, db } = fixtures.open();
+    const key = `ddr2:${"c".repeat(32)}`;
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at,
+       start_price, peak_price, peg_reference, source)
+      VALUES (?, 'pht-pht', 'PHT', 'peggedPHP', 'below', ?, ?, ?, ?, ?, ?)`);
+    // First constituent: USD-domain quote (USD/PHP reference).
+    insertEvent.run(101, -400, 1_700_000_000, 0.0162, 0.0162, 0.016472576, "live");
+    // Current constituent: native PHP-domain quote with reference 1.
+    insertEvent.run(102, -159, 1_700_001_000, 0.9844, 0.9841, 1, source);
+    if (quoteMode != null) {
+      sqlite.prepare(`INSERT INTO depeg_event_provenance
+        (event_id, source_kind, quote_mode, public_json, created_at, updated_at)
+        VALUES (102, 'backfill', ?, ?, 1700001000, 1700001000)`)
+        .run(quoteMode, JSON.stringify({ quoteMode }));
+    }
+    for (const id of [101, 102]) {
+      sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+        (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1700002000)`).run(key, id);
+    }
+    sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'pht-pht', 'PHP', 'below', 101, 102, 1700000000, 1700001000, 400, ?, 1700000000, 1700001000)`)
+      .run(key, "d".repeat(64));
+
+    const res = await handleDepegEvents(db, new URL("https://x/api/depeg-events?active=true&stablecoin=pht-pht"));
+    const body = await readJsonResponse(res, 200) as { events: Array<Record<string, unknown>>; total: number };
+    expect(body.total).toBe(1);
+    expect(body.events).toEqual([expect.objectContaining({
+      id: 102,
+      startedAt: 1_700_000_000,
+      startPrice: 0.9844,
+      pegReference: 1,
+      constituentEventCount: 2,
+    })]);
+  });
+
   it("keeps canonical active identity distinct from closed same-coin episodes", async () => {
     const { sqlite, db } = seedIncident(101, 102, [101, 102]);
     for (const [id, reason] of [[103, "recovered-primary"], [104, "coverage-lost-supply"], [105, "superseded-direction"]] as const) {

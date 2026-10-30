@@ -47,6 +47,11 @@
       "chain": "fraxtal",
       "address": "0x58acc2600835211dcb5847c5fa422791fd492409",
       "decimals": 6
+    },
+    {
+      "chain": "sonic",
+      "address": "0x41a5477364bf60d8936b90310fecfda79593304e",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

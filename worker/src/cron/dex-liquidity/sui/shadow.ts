@@ -154,7 +154,15 @@ export async function collectSuiClmmShadowQuotes(input: { db: D1Database; env: D
   }
   let examined = 0;
   for (const row of window.selected) {
-    if (signal.aborted || budget.remainingRequests <= 0) { summary.reason ??= "sui-rpc-budget-exhausted"; summary.budgetExhausted = true; break; }
+    if (signal.aborted || budget.remainingRequests <= 0) {
+      if (budget.remainingRequests <= 0) {
+        summary.reason ??= "sui-rpc-budget-exhausted";
+        summary.budgetExhausted = true;
+      } else {
+        summary.reason = "sui-runtime-fence-exceeded";
+      }
+      break;
+    }
     examined++;
     summary.attempted++;
     try {
@@ -191,9 +199,10 @@ export async function collectSuiClmmShadowQuotes(input: { db: D1Database; env: D
       const reason = error instanceof Error ? /^sui-[a-z0-9-]+/.exec(error.message)?.[0]?.slice(0, 180) ?? "sui-shadow-observation-failed" : "sui-shadow-observation-failed";
       summary.reason ??= reason;
       summary.lastFailureReason = reason;
-      if (signal.aborted || budget.remainingRequests <= 0) { summary.budgetExhausted = true; break; }
       summary.failed++;
       summary.failures.push(`${row.pool_id}:${error instanceof Error && error.message.startsWith("sui-") ? error.message.slice(0, 180) : reason}`);
+      if (budget.remainingRequests <= 0) { summary.budgetExhausted = true; break; }
+      if (signal.aborted) { summary.reason = "sui-runtime-fence-exceeded"; break; }
     }
   }
   throwIfAborted(input.signal);

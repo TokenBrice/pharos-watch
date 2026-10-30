@@ -85,7 +85,7 @@ describe("formatConsolidatedMessage", () => {
         pegReference: 1,
       },
     ] }));
-    expect(msg).toContain("▼ <b>USDC</b> depeg deepened to 2.6% below $1.00 ($0.9740)\nWas 1.2% at the last alert");
+    expect(msg).toContain("▼ <b>USDC</b> depeg deepened to 2.6% below $1.00 ($0.9740)\nWas 1.2% at the previous check");
   });
 
 });

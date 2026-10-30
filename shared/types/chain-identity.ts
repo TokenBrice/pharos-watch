@@ -114,6 +114,7 @@ export const CHAIN_META: Record<string, ChainMeta> = {
   hedera:    { name: "Hedera",    explorerUrl: "https://hashscan.io",              evmChainId: null,  type: "other", logoPath: "/chains/hedera.png"    },
   polkadot:  { name: "Polkadot",  explorerUrl: "https://polkadot.subscan.io",     evmChainId: null,  type: "other", logoPath: "/chains/polkadot.png"  },
   xrpl:      { name: "XRP Ledger",explorerUrl: "https://xrpscan.com",             evmChainId: null,  type: "other", logoPath: "/chains/xrpl.png"      },
+  liquid:    { name: "Liquid",    explorerUrl: "https://blockstream.info/liquid", evmChainId: null,  type: "other", logoPath: ""                       },
   xpr:       { name: "XPR Network",explorerUrl: "https://explorer.xprnetwork.org", evmChainId: null,  type: "other", logoPath: "/chains/xpr.png"       },
   kava:      { name: "Kava",     explorerUrl: "https://kavascan.com",             evmChainId: 2222,  type: "evm",   logoPath: "/chains/kava.png",      nativeDenomRail: { ledgerChainId: "kava_2222-10", bech32Prefix: "kava" }, providers: { coingecko: "kava", dexscreener: "kava", geckoTerminal: "kava" } },
   tezos:     { name: "Tezos",   explorerUrl: "https://tzkt.io",                  evmChainId: null,  type: "other", logoPath: "/chains/tezos.png"     },

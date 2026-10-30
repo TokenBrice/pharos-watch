@@ -335,6 +335,47 @@ describe("telegram delivery v2 queue", () => {
     expect(gated.stoppedReason).toBe("global-backoff");
   });
 
+  it("fails closed without sending when the global backoff gate cannot be read", async () => {
+    const { sqlite, db } = setup();
+    addSubscriber(sqlite, "1");
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("telegram:global-send-backoff-until", String(NOW + 600), NOW - 30);
+    await enqueueTelegramJob(db, job("broadcast:gate-unreadable", [
+      { chatId: "1", body: "hello", audience: "notice" },
+    ]));
+    const sendMessage = vi.fn(async () => ok);
+
+    const result = await drainTelegramDeliveries(
+      faulty(db, { prepare: /FROM cache WHERE key = \?/ }),
+      "token",
+      { nowSec: () => NOW, sendMessage },
+    );
+
+    // The durable gate may still be active; an unreadable gate is not "no gate".
+    expect(result.stoppedReason).toBe("global-backoff-unreadable");
+    expect(result.sent).toBe(0);
+    expect(sendMessage).not.toHaveBeenCalled();
+    expect(rows(sqlite).map((row) => [row.state, row.attempts])).toEqual([["pending", 0]]);
+    expect(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get("telegram:global-send-backoff-until"))
+      .toEqual({ value: String(NOW + 600) });
+  });
+
+  it("fails closed without sending when the global backoff gate is corrupt", async () => {
+    const { sqlite, db } = setup();
+    addSubscriber(sqlite, "1");
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("telegram:global-send-backoff-until", "not-a-timestamp", NOW - 30);
+    await enqueueTelegramJob(db, job("broadcast:gate-corrupt", [
+      { chatId: "1", body: "hello", audience: "notice" },
+    ]));
+    const sendMessage = vi.fn(async () => ok);
+
+    const result = await drainTelegramDeliveries(db, "token", { nowSec: () => NOW, sendMessage });
+
+    expect(result.stoppedReason).toBe("global-backoff-unreadable");
+    expect(sendMessage).not.toHaveBeenCalled();
+  });
+
   it("gates on chat state: forgotten chats cancel, snoozes defer, coin snoozes cancel, quiet hours send silently", async () => {
     const { sqlite, db } = setup();
     addSubscriber(sqlite, "10", { alert_snooze_until_ts: NOW + 900 });

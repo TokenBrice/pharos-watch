@@ -779,6 +779,28 @@ describe("runSelector — universal properties", () => {
     );
   });
 
+  it("names normalized score components as indices instead of publishing them as raw readings", () => {
+    const input = makeInput({
+      profile: "yield",
+      depegTolerance: "zero",
+      exitSpeed: "1h",
+      composability: "high",
+      horizon: "lt24h",
+    });
+    const out = runSelector(input, buildFixtureData(), FIXTURE_DATASET);
+    // Both shortlisted rows carry the transformed yield-variance slot among
+    // their top score drivers: raw 30-day variance 0.2/0.4, index 95/90.
+    for (const id of ["usds-sky", "usdt-tether"]) {
+      const rec = out.recommended.find((entry) => entry.id === id);
+      expect(rec, `${id} must stay on the yield shortlist`).toBeDefined();
+      const variance = rec!.components.find((component) => component.key === "yieldVariance");
+      expect(variance?.rawValue).not.toBe(variance?.normalizedValue);
+      expect(rec!.whyText).toContain(`APY stability ${Math.round(variance!.normalizedValue!)}`);
+      // The 0-100 index must not be restated as the observed APY variance.
+      expect(rec!.whyText).not.toContain("APY variance");
+    }
+  });
+
   it("preserves reachable bluechip missing-data policy", () => {
     const base = buildFixtureData().rows.get("usds-sky");
     expect(base).toBeDefined();

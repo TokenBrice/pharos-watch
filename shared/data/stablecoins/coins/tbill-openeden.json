@@ -66,6 +66,11 @@
       "amountEncoding": {
         "kind": "xrpl-issued-currency"
       }
+    },
+    {
+      "chain": "bsc",
+      "address": "0x5b4681f0d7a01b817675f25892d3ad73572fd1d9",
+      "decimals": 18
     }
   ],
   "custodyModel": "institutional-top",

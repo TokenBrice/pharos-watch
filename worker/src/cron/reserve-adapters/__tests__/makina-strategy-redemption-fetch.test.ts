@@ -205,4 +205,24 @@ describe("fetchMakinaStrategyReserves redemption telemetry", () => {
     expect(result.warnings?.map((warning) => warning.code)).toContain("makina-redemption-telemetry-unavailable");
     expect(network.rpcCalls.some((call) => call.data.startsWith(CONVERT_TO_ASSETS_SELECTOR))).toBe(false);
   });
+
+  it("keeps the same-run Machine AUM anchor when the redeemer implementation drifts", async () => {
+    const networkSpec = capturedPostRedeemNetwork({
+      [`${MAKINA_BEACON}:0x5c60da1b`]: UNRELATED_ADDRESS,
+    });
+    const { result } = await runAdapter("makina-strategy", "dusd-dialectic", { network: networkSpec, nowSec: 1791307011 });
+
+    expect(result.slices.length).toBeGreaterThan(0);
+    expect(result.metadata?.redemption).toBeUndefined();
+    expect(result.warnings?.map(({ code }) => code)).toContain("makina-redemption-telemetry-unavailable");
+    expect(result.metadata?.details).toMatchObject({
+      onchainMachineAumUsd: 1895417.733106,
+      onchainMachineAumDiffPct: expect.any(Number),
+      onchainMachineAccountingTimestamp: 1791278999,
+      onchainMachineAccountingBlock: 26134765,
+      reconciliationKind: "allocation-net-value-equals-onchain-machine-aum",
+      reconciliationAumUsd: 1895417.733106,
+    });
+    expect(result.metadata?.sourceTimestamp).toBeLessThanOrEqual(1791278999);
+  });
 });

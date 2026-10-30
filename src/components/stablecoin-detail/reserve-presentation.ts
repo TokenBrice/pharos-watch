@@ -243,6 +243,24 @@ export function buildReserveCompositionNote(reserves: ReserveResult | null): str
     && reserves.metadata.sharedBookAssetIds.includes("usds-sky")) {
     notes.push("Composition covers the shared Sky/Maker balance sheet backing DAI and USDS; shared totals are not additive across these assets.");
   }
+  const compositionScope = reserves.metadata?.details?.compositionScope;
+  if (compositionScope === "gross-assets") {
+    const formatUsd = (value: number) => new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+    const denominator = reserves.metadata?.details?.compositionDenominatorUsd;
+    const liabilities = reserves.metadata?.totalLiabilitiesUsd;
+    const denominatorNote = typeof denominator === "number" && Number.isFinite(denominator) && denominator > 0
+      ? ` (${formatUsd(denominator)})`
+      : "";
+    const liabilitiesNote = typeof liabilities === "number" && Number.isFinite(liabilities) && liabilities > 0
+      ? `; ${formatUsd(liabilities)} of protocol financing debt is excluded and shown separately`
+      : "";
+    notes.push(`Composition shares are of gross assets${denominatorNote}${liabilitiesNote}.`);
+  }
   const referenceNavUsd = reserves.metadata?.referenceNavUsd;
   if (typeof referenceNavUsd === "number" && Number.isFinite(referenceNavUsd) && referenceNavUsd > 0) {
     const formattedNav = new Intl.NumberFormat("en-US", {

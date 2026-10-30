@@ -12,6 +12,7 @@ export interface DepegCardData {
     danger: number;
     alert: number;
     warning: number;
+    watch: number;
     normal: number;
   } | null;
   // New fields
@@ -29,6 +30,7 @@ export interface DepegCardData {
 const DANGER_HEX = THREAT_BAND_HEX.DANGER;
 const ALERT_HEX = THREAT_BAND_HEX.ALERT;
 const WARNING_HEX = THREAT_BAND_HEX.WARNING;
+const WATCH_HEX = THREAT_BAND_HEX.WATCH;
 const NORMAL_HEX = THREAT_BAND_HEX.CALM;
 
 /** Get color based on deviation severity */
@@ -152,6 +154,7 @@ export function DepegCard({ data }: { data: DepegCardData }) {
               { label: "DANGER", count: data.dewsDistribution?.danger ?? "—", color: DANGER_HEX },
               { label: "ALERT", count: data.dewsDistribution?.alert ?? "—", color: ALERT_HEX },
               { label: "WARNING", count: data.dewsDistribution?.warning ?? "—", color: WARNING_HEX },
+              { label: "WATCH", count: data.dewsDistribution?.watch ?? "—", color: WATCH_HEX },
               { label: "NORMAL", count: data.dewsDistribution?.normal ?? "—", color: NORMAL_HEX },
             ] as const
           ).map((band) => (

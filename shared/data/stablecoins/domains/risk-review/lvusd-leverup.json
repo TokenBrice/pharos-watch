@@ -16,9 +16,9 @@
         "url": "https://leverup.gitbook.io/docs/liquidity-layer/lvusd-stablecoin"
       }
     ],
-    "evidence": "Historical 2026-07-30 review of the sole tracked Monad lvUSD deployment 0xfd44b35139ae53fff7d8f2a9869c503d987f00d1 identified blackList(address), updateBlackList(address,bool) gated by only operator, and owner-controlled setOperator(address), establishing a direct token-level holder-freeze surface. At Monad block 109550480 on 2026-10-01, owner() and issuer() still resolved to the VMMV engine 0x135951057cfccca7e8ef87ee41318d670f723f68, which was owned by the 3-of-5 Safe 0xf9bd99a8e5be72adf687b304ed0e0234e0ebccba; operator() now returned 0x9f61b30f5607f71ad9e5288c8d9b648da9076eb4, rather than the zero operator observed in July. A current blacklister is therefore appointed under the historically verified operator gate. This read does not enumerate all currently blacklisted holders or establish when the operator changed. The July token-code review found no separate pause selector. Upstream Circle USDC collateral freezes remain a separate inherited reserve exposure, not the lvUSD token control path.",
+    "evidence": "Historical 2026-07-30 review of the sole tracked Monad lvUSD deployment 0xfd44b35139ae53fff7d8f2a9869c503d987f00d1 identified blackList(address), updateBlackList(address,bool) gated by only operator, and owner-controlled setOperator(address), establishing a direct token-level holder-freeze surface. At Monad block 109550480 on 2026-10-01, owner() and issuer() still resolved to the VMMV engine 0x135951057cfccca7e8ef87ee41318d670f723f68, which was owned by the 3-of-5 Safe 0xf9bd99a8e5be72adf687b304ed0e0234e0ebccba; operator() now returned 0x9f61b30f5607f71ad9e5288c8d9b648da9076eb4, rather than the zero operator observed in July. MonadScan shows that operator is a plain EOA (no contract code); one key can blacklist. This read does not enumerate all currently blacklisted holders or establish when the operator changed. The July token-code review found no separate pause selector. Upstream Circle USDC collateral freezes remain a separate inherited reserve exposure, not the lvUSD token control path.",
     "reviewer": "Grok T34 wave-2 unknown reduction",
-    "reviewedAt": "2026-07-30"
+    "reviewedAt": "2026-10-30"
   },
   "oracleRisk": {
     "tier": "opaque-or-unknown",

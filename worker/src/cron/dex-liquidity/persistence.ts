@@ -16,11 +16,13 @@ import { rethrowIfAborted, throwIfAborted } from "../../lib/abort";
 import { batchExecute, executeAtomicBatch, prepareMultiRowInsertStatements } from "../../lib/db";
 import { writeFreshnessSentinel } from "../../lib/db-cache";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
+import { POOL_CHALLENGE_MIN_TVL } from "../../lib/constants";
 import { logWorkerEvent } from "../../lib/structured-log";
 import { tryParseJson } from "../../lib/json-parse";
 import { createDexGenerationStore } from "./generation-store";
 import type { LiquidityMetrics, FullScoreResult, GlobalAgg } from "./types";
 import { summarizeRetainedPoolVolume } from "./scoring-helpers";
+import { buildStoredChallengerPoolsJson } from "./challenger-publish";
 import { DEX_VOLUME_OBSERVATION_MAX_AGE_SEC } from "@shared/lib/dex-volume-availability";
 import { toErrorMessage } from "@shared/lib/error-utils";
 import {
@@ -62,6 +64,7 @@ const DEX_LIQUIDITY_ROW_COLUMNS = [
   "protocol_tvl_json",
   "chain_tvl_json",
   "top_pools_json",
+  "challenger_pools_json",
   "liquidity_score",
   "concentration_hhi",
   "avg_pool_stress",
@@ -706,6 +709,7 @@ export async function persistScores(
   tvlStabilityMap: ReadonlyMap<string, number>,
   signal?: AbortSignal,
   routeRemovalEvidence?: Map<string, DexRouteRemovalEvidence>,
+  retainedPoolsByStablecoin?: ReadonlyMap<string, LiquidityMetrics["topPools"]>,
 ): Promise<PersistScoresResult> {
   let placeholderCount = 0;
   let orphanRowsDeleted = 0;
@@ -930,6 +934,7 @@ export async function persistScores(
         });
       }
 
+      const retainedPools = retainedPoolsByStablecoin?.get(id);
       await queueRunRow([
         generationId,
         id,
@@ -943,6 +948,7 @@ export async function persistScores(
         JSON.stringify(m.chainTvl),
         // `volumeReading` is producer-internal raw evidence (aged readings included); never published.
         JSON.stringify(m.topPools.map(({ volumeReading: _volumeReading, ...pool }) => pool)),
+        retainedPools == null ? null : buildStoredChallengerPoolsJson(id, retainedPools, POOL_CHALLENGE_MIN_TVL),
         sr.score,
         sr.hhi,
         sr.avgStress,
@@ -1009,6 +1015,7 @@ export async function persistScores(
           null,
           null,
           null,
+          null,
           0,
           null,
           buildDexPlaceholderScoreDetailsJson({
@@ -1043,6 +1050,7 @@ export async function persistScores(
       globalAgg.chainCount,
       JSON.stringify(globalAgg.protocolTvl),
       JSON.stringify(globalAgg.chainTvl),
+      null,
       null,
       null,
       null,

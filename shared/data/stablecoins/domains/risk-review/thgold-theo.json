@@ -4,8 +4,8 @@
     "reviewedStatus": "possible",
     "sources": [
       {
-        "label": "thGOLD product page (early access, no published contract)",
-        "url": "https://theo.xyz/thgold"
+        "label": "Theo thGOLD documentation (deployed contract and controls)",
+        "url": "https://docs.theo.xyz/products/thgold-and-thslvr"
       },
       {
         "label": "Theo thGOLD documentation (undergoing updates)",
@@ -16,8 +16,8 @@
         "url": "https://docs.theo.xyz/products/thbill.md"
       }
     ],
-    "evidence": "thGOLD has no published token contract as of 2026-09-29, so no holder-transfer surface exists to review; the verdict is possible rather than no because Theo's live products are centrally administered with gated access (thBILL pauses transfers through an emergency role under a timelock, and thUSD mints and redeems through a whitelist), making transfer or access controls likely once thGOLD deploys. The verdict will be re-reviewed at launch against the deployed contract.",
+    "evidence": "thGOLD is deployed on Ethereum at 0x610F0E33b0A6b3802ff29D3Cf6bBd9A0ACF784ed (MetalToken, 6 decimals, created 2026-09-15, verified ERC-1967 proxy, listed on Theo's addresses page). Theo documents no pause, blacklist, transfer fee or transfer hook, so holders transfer freely; the verdict stays possible because the Timelock can upgrade the implementation. Mint is gated to the 4-of-6 Operator Safe.",
     "reviewer": "Pharos risk review",
-    "reviewedAt": "2026-09-29"
+    "reviewedAt": "2026-10-30"
   }
 }

@@ -229,6 +229,64 @@ describe("loadCronHealth — availabilityImpactingConsecutiveCronErrors", () => 
     } finally { sqlite.close(); }
   });
 
+  it.each([
+    { freshOkOutput: false, healthy: false },
+    { freshOkOutput: true, healthy: true },
+  ])("keeps fresh errors countable behind a lease-locked skip (fresh ok output: $freshOkOutput)", async ({ freshOkOutput, healthy }) => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO cron_runs (job, started_at, duration_ms, status, error, item_count, metadata, degraded_reason)
+         VALUES (?, ?, 100, ?, ?, ?, ?, ?)`,
+      );
+      const job = "sync-stablecoins";
+      if (freshOkOutput) insert.run(job, NOW - 1_800, "ok", null, 1, null, null);
+      insert.run(job, NOW - 1_200, "error", "provider request failed", 0, JSON.stringify({ reason: "source-failure" }), "source-failure");
+      insert.run(job, NOW - 600, "error", "provider request failed", 0, JSON.stringify({ reason: "source-failure" }), "source-failure");
+      // A contending invocation lost the lease; no progress row proves recovery.
+      insert.run(job, NOW - 60, "skipped_locked", null, 0, JSON.stringify({ reason: "lease-locked" }), "lease-locked");
+
+      const snapshot = await loadCronHealth(db, NOW);
+
+      expect(snapshot.cronErrorCount).toBe(1);
+      expect(snapshot.availabilityImpactingCronErrors).toBe(1);
+      expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(1);
+      expect(snapshot.cronFindingJobs.availabilityImpactingErrors).toContain(job);
+      expect(snapshot.cronFindingJobs.availabilityImpactingConsecutiveErrors).toContain(job);
+      expect(snapshot.crons[job].runs.map((run) => run.status)).toEqual([
+        "skipped_locked",
+        "error",
+        "error",
+        ...(freshOkOutput ? ["ok"] : []),
+      ]);
+      expect(snapshot.crons[job].healthy).toBe(healthy);
+    } finally { sqlite.close(); }
+  });
+
+  it("recovers executed errors behind a locked-skip display window", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      const insert = sqlite.prepare(
+        `INSERT INTO cron_runs (job, started_at, duration_ms, status, error, item_count, metadata, degraded_reason)
+         VALUES (?, ?, 100, ?, ?, 0, ?, ?)`,
+      );
+      const job = "sync-stablecoins";
+      insert.run(job, NOW - 1_200, "error", "provider request failed", JSON.stringify({ reason: "source-failure" }), "source-failure");
+      insert.run(job, NOW - 600, "error", "provider request failed", JSON.stringify({ reason: "source-failure" }), "source-failure");
+      for (let index = 0; index < 12; index++) {
+        insert.run(job, NOW - 400 + index, "skipped_locked", null, JSON.stringify({ reason: "lease-locked" }), "lease-locked");
+      }
+
+      const snapshot = await loadCronHealth(db, NOW);
+      const runs = snapshot.crons[job].runs;
+
+      expect(runs.filter((run) => run.status === "skipped_locked")).toHaveLength(10);
+      expect(runs.filter((run) => run.status === "error")).toHaveLength(2);
+      expect(snapshot.cronErrorCount).toBe(1);
+      expect(snapshot.availabilityImpactingConsecutiveCronErrors).toBe(1);
+    } finally { sqlite.close(); }
+  });
+
   it("excludes retired Workflow history from current health", async () => {
     const job = "compute-safety-score-v9-workflow";
     const rows = seedWithOverrides(NOW, [

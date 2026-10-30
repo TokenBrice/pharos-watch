@@ -67,7 +67,7 @@ export async function updateEventClassifications(
   rows: MintBurnRow[],
   options: MintBurnPersistenceOptions = {},
 ): Promise<ClassificationUpdateCounters> {
-  // Any burn row gets its classification written unconditionally; mint rows
+  // Any burn row participates in the classification write; mint rows
   // only participate when the classifier produced a non-standard flow_type.
   const needsUpdate = rows.filter(
     (row) => row.direction === "burn" || row.flow_type !== "standard",
@@ -79,10 +79,15 @@ export async function updateEventClassifications(
 
   const stmts = needsUpdate.map((row) =>
     db.prepare(
+      // `atomic_roundtrip` is a transaction-group classification: a replay that
+      // observes only one side cannot revoke it, because the peer may be absent
+      // from this batch. Only a group-wide sweep, the reviewed classification
+      // rules or the operator reverse pass may change it.
       `UPDATE mint_burn_events
-       SET burn_type = ?, burn_review_reason = ?, flow_type = ?
+       SET burn_type = ?, burn_review_reason = ?,
+           flow_type = CASE WHEN ? = 'standard' AND flow_type = 'atomic_roundtrip' THEN flow_type ELSE ? END
        WHERE id = ?`,
-    ).bind(row.burn_type, row.burn_review_reason, row.flow_type, row.id),
+    ).bind(row.burn_type, row.burn_review_reason, row.flow_type, row.flow_type, row.id),
   );
   let rowsUpdated = 0;
   const standardStmts: D1PreparedStatement[] = [];

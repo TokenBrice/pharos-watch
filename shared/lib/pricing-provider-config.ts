@@ -7,6 +7,9 @@ export const BINANCE_MARKETS: readonly {
 ] as const;
 
 export const KRAKEN_MARKETS = [
+  // 2026-10-30: Kraken's CASH/USD book is the Solana CASH mint Phantom documents
+  // for Kraken deposits; CoinGecko's `cash-4` ticker set includes this exact market.
+  { symbol: "CASH", requestPair: "CASHUSD", responseKeys: ["CASHUSD"] },
   { symbol: "DAI", requestPair: "DAIUSD", responseKeys: ["DAIUSD"] },
   { symbol: "EURC", requestPair: "EURCUSD", responseKeys: ["EURCUSD"] },
   // Kraken's FRNT/USD book is the same Wyoming token listed by CoinGecko;
@@ -25,6 +28,9 @@ export const KRAKEN_MARKETS = [
   { symbol: "TGBP", requestPair: "TGBPUSD", responseKeys: ["TGBPUSD"] },
   { symbol: "USD1", requestPair: "USD1USD", responseKeys: ["USD1USD"] },
   { symbol: "USDC", requestPair: "USDCUSD", responseKeys: ["USDCUSD"] },
+  // 2026-10-30: Kraken lists OSL/Anchorage USDGO as USDGO/USD; CoinGecko's `usdgo`
+  // ticker set includes this exact market, whose online bid/ask outlives CG's last trade.
+  { symbol: "USDGO", requestPair: "USDGOUSD", responseKeys: ["USDGOUSD"] },
   { symbol: "USDS", requestPair: "USDSUSD", responseKeys: ["USDSUSD"] },
   { symbol: "USDT", requestPair: "USDTUSD", responseKeys: ["USDTUSD", "USDTZUSD"] },
   // 2026-10-30: Kraken's online XAUT/USD book is the Tether Gold token in

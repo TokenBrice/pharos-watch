@@ -390,6 +390,40 @@ describe("syncStablecoins", () => {
     expect(writes.map((write) => write.key)).toContain("stablecoins:invalid-last");
   });
 
+  it("blocks a frozen feed whose observation clocks do not advance", async () => {
+    const data = makeDlResponse(60);
+    const now = Math.floor(Date.now() / 1000);
+    // The prior generation's observation clock is one cadence old; the frozen
+    // republication must not look new just because this run re-stamps it.
+    const previous = JSON.stringify({
+      peggedAssets: data.peggedAssets.map((asset) => ({
+        id: asset.id,
+        price: 1,
+        priceSource: "defillama",
+        priceConfidence: "single-source",
+        priceUpdatedAt: now - 900,
+        priceObservedAt: now - 900,
+        priceSyncedAt: now - 900,
+      })),
+    });
+    const staleDb = makeSyncDb([{ match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [{ value: previous, updated_at: now - 8 * 3600 }], first: { value: previous, updated_at: now - 8 * 3600 } }]);
+    const writes = trackCacheWrites(staleDb);
+    mockFetchWithRetry(defaultSyncRoutes(data));
+
+    const result = await syncStablecoins(staleDb);
+    const metadata = JSON.parse(result.metadata ?? "{}");
+
+    expect(result.status).toBe("degraded");
+    expect(metadata).toMatchObject({
+      stalenessWarning: true,
+      staleWriteBlocked: true,
+      cacheWriteMode: "no-write",
+      downstreamSafe: false,
+    });
+    expect(metadata.priceStaleness?.identical).toBe(metadata.priceStaleness?.compared);
+    expect(writes.map((write) => write.key)).not.toContain("stablecoins");
+  });
+
   it("blocks stale publication, aborts during the staleness check, and backfills supply history", async () => {
     const data = makeDlResponse(60);
     const now = Math.floor(Date.now() / 1000);

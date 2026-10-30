@@ -211,12 +211,15 @@ describe("adaptChainlinkNavResponse", () => {
 
   it("reports NAV and observed token supply with timestamped valuation evidence", () => {
     const result = adaptChainlinkNavResponse(
-      { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239 },
+      { navPerToken: 1_119_000n, navDecimals: 6, totalSupply: 500_000_000n, tokenDecimals: 6, roundId: 384n, updatedAt: 1773405239, chain: "ethereum", tokenAddress: params.tokenAddress },
       params,
     );
     // NAV = 1.119, Supply = 500
     expect(result.metadata?.navPerToken).toBe("1.119");
     expect(result.metadata?.totalSupplyFormatted).toBe("500");
+    // The supply read is one deployment, never the token's cross-chain total.
+    expect(result.metadata?.totalSupplyChain).toBe("ethereum");
+    expect(result.metadata?.totalSupplyTokenAddress).toBe(params.tokenAddress);
     expect(result.metadata?.freshnessMode).toBe("verified");
     expect(result.metadata?.sourceTimestamp).toBe(1773405239);
     expect(result.metadata?.redemption).toMatchObject({

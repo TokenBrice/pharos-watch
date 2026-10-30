@@ -31,15 +31,21 @@
   ],
   "governanceQuality": "immutable-code",
   "status": "pre-launch",
-  "announcedDate": "2026-07",
-  "expectedLaunchDate": "2026-Q4",
+  "announcedDate": "2025-12",
+  "expectedLaunchDate": "2027-Q1",
+  "dateHistory": [
+    {
+      "date": "2026-Q4",
+      "setOn": "2026-10-30"
+    }
+  ],
   "launchPhase": "auditing",
-  "launchPhaseDetail": "Built by the Reflexer team as a successor to RAI, combining Liquity's redemption floor and Stability Pool with a RAI-style controller pinned to $1. Docs and the introductory post went live 2026-07-21 and describe a finished mainnet deployment configuration for seven collateral branches, but no contract addresses are published (the deployed-addresses registry and the RDToken FAQ entry both read TBD), the core repository is private, and the audits reference page states external security audits are in progress with audit-targeted commits still to be tagged. RAI Dollar was selected for the Ethereum Foundation Audit Subsidy Program on 2026-08-04, with the team describing the subsidy as funding independent audits ahead of a public testnet and launch. Pharos holds RD at auditing until audit reports, a public testnet, or mainnet addresses are published.",
+  "launchPhaseDetail": "Built by the Reflexer team as a successor to RAI, combining Liquity's redemption floor and Stability Pool with a RAI-style controller pinned to $1. Docs and the introductory post went live 2026-07-21 and describe a finished mainnet deployment configuration for seven collateral branches, but no contract addresses are published (the deployed-addresses registry and the RDToken FAQ entry both read TBD), the core repository is private, and the audits reference page states external security audits are in progress with audit-targeted commits still to be tagged. RAI Dollar was selected for the Ethereum Foundation Audit Subsidy Program on 2026-08-04, with the team describing the subsidy as funding independent audits ahead of a public testnet and launch. A public Sepolia testnet is live; Pharos holds RD at auditing until audit reports or mainnet launch.",
   "milestones": [
     {
       "date": "2026-07-21",
       "type": "announcement",
-      "title": "RAI Dollar announced with public docs and introductory post",
+      "title": "Public docs and blog post launch",
       "description": "Reflexer's team introduced RD as an immutable, $1-targeting CDP stablecoin on Ethereum with no governance, admin keys, or upgrade path, combining Liquity redemptions and Stability Pool with a RAI-style rate and par controller. Borrowers can opt a trove into Redemption Shield, paying a surcharge on the branch rate so that the trove is skipped by redemptions outside branch shutdown; unshielded troves on the same branch receive a rate discount, both set from the branch's shield share on one immutable curve. Bad debt left after a branch shutdown is repaid by routing three flows into the shut-down branch until the debt is cleared, with no vote or treasury: 50% of the MOAI-staker share of system-wide interest, the redemption fees from every healthy branch (normally retained), and a 0.5% bad-debt surcharge on redemptions; the team describes MOAI stakers as the protocol's risk capital and says Stability Pool and LP stakers are not diluted.",
       "sourceUrl": "https://docs.raidollar.tech/blog/introducing-rai-dollar"
     },

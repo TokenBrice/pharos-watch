@@ -120,5 +120,12 @@
       "risk": "low"
     }
   },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Operated by ORIGYN DAO",
+      "message": "Gold DAO's Chapter 2.0 (SNS proposal 317) moved GLDT to ORIGYN, which now runs the ledger and swap canisters after proposal 403 (4 October 2026)."
+    }
+  ],
   "launchDate": "2024-10-30"
 }

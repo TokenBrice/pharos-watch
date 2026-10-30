@@ -57,7 +57,7 @@
   },
   "liveReservesConfig": {
     "adapter": "onre-holdings-csv",
-    "version": 1,
+    "version": 2,
     "semantics": "collateral-mix",
     "breakerScope": "onyc-onre",
     "display": {

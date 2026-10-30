@@ -42,7 +42,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "PYUSD has four issuer-backed native deployments on Ethereum, Arbitrum, Solana, and Stellar. All other authored EVM/Tron expansion is PYUSD0 omnichain representation minted by Stargate Hydra (LayerZero) adapters or NativeOFT machinery. The canonical Ethereum OFTWrapper's bridge mint/burn, owner, peer, and rate-limit powers are assessed as a separate Bridge Risk control, while native issuer controls remain in Mint Authority. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",
+    "summary": "PYUSD has five issuer-backed native deployments (Ethereum, Arbitrum, Solana, Stellar, X Layer). Reviewed EVM/Tron expansion is PYUSD0 omnichain representation from Stargate Hydra (LayerZero) adapters or NativeOFT. The canonical Ethereum OFTWrapper's bridge mint/burn, owner, peer, and rate-limit powers are assessed as a separate Bridge Risk control, while native issuer controls remain in Mint Authority. Because the extended route surface includes external interoperability validation, Pharos scores the multichain route as external validated network risk.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex bridge route review; Kimi P2 control cohort dc-7 (lead pyusd-paypal); migration FIX2-14",
     "confidence": "verified",
@@ -746,6 +746,35 @@
           {
             "label": "Wanchain active Storeman group ID API",
             "url": "https://bridge-api.wanchain.org/api/smgID"
+          }
+        ]
+      },
+      {
+        "id": "xlayer:0x87b4a8176b3df6b71e26cc095edcaf4db07506b4",
+        "destinationChain": "xlayer",
+        "contractAddress": "0x87b4a8176b3df6b71e26cc095edcaf4db07506b4",
+        "protocol": "Paxos / PayPal",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Paxos's PYUSD mainnet address table lists this exact X Layer token together with a Paxos SupplyControl contract at 0x22474b19cee9131879619644e970a1127969c99e, i.e. issuer-operated mint/burn on X Layer rather than a bridge mint. OKLink shows live PYUSD transfers and GeckoTerminal reports 6 decimals and 2,015,116.843316 supply (2026-10-30). SupplyControl roles, limits and incident state were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Paxos PYUSD mainnet addresses (X Layer token and SupplyControl)",
+            "url": "https://docs.paxos.com/guides/stablecoin/pyusd/mainnet"
+          },
+          {
+            "label": "PYUSD on OKLink X Layer (live transfers, verified 2026-10-30)",
+            "url": "https://www.oklink.com/x-layer/token/0x87b4a8176B3Df6b71e26CC095edcAf4Db07506B4"
+          },
+          {
+            "label": "GeckoTerminal X Layer PYUSD token metadata (accessed 2026-10-30)",
+            "url": "https://api.geckoterminal.com/api/v2/networks/x-layer/tokens/0x87b4a8176b3df6b71e26cc095edcaf4db07506b4"
           }
         ]
       }

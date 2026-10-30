@@ -121,6 +121,40 @@ describe("/subscribe and /unsubscribe", () => {
     expect(buttonsFromMarkup(vi.mocked(ctx.replyToChatWithMarkup).mock.calls[0]![1].replyMarkup)[0]?.callback_data)
       .toBe(`bulk:ua:${(NOW + 900).toString(36)}`);
   });
+
+  it("does not claim a removal when the coin is only covered by a followed preset", async () => {
+    const { sqlite, db } = fixtures.open();
+    // A preset follow is never copied into direct rows; /unsubscribe USDC
+    // therefore removes nothing while the preset keeps USDC's alerts.
+    sqlite.exec(`INSERT INTO telegram_preset_subscriptions
+      (chat_id, preset_id, alert_dews, alert_depeg, alert_safety, created_at, updated_at)
+      VALUES ('42', 'usd-top25', 1, 1, 0, 1, 1)`);
+    const ctx = makeCommandContext(db);
+
+    await handleUnsubscribe(ctx, "USDC");
+
+    expect(sqlite.prepare("SELECT stablecoin_id FROM telegram_subscriptions").all()).toEqual([]);
+    expect(sqlite.prepare("SELECT preset_id FROM telegram_preset_subscriptions").all())
+      .toEqual([{ preset_id: "usd-top25" }]);
+    const reply = vi.mocked(ctx.replyToChat).mock.calls.map(([message]) => message).join("\n");
+    expect(reply).not.toMatch(/Removed \d+ coin subscriptions?/i);
+    expect(reply).toContain("Not followed directly: USDC");
+  });
+
+  it("does not claim a removal on a repeated /unsubscribe", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.exec(`INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews, alert_depeg)
+      VALUES ('42', 'usdc-circle', 1, 1)`);
+
+    await handleUnsubscribe(makeCommandContext(db), "USDC");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 0 });
+
+    const second = makeCommandContext(db);
+    await handleUnsubscribe(second, "USDC");
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM telegram_subscriptions").get()).toEqual({ count: 0 });
+    expect(vi.mocked(second.replyToChat).mock.calls.map(([message]) => message).join("\n"))
+      .not.toMatch(/Removed \d+ coin subscriptions?/i);
+  });
 });
 
 describe("/start onboarding", () => {
