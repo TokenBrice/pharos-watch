@@ -272,13 +272,22 @@ export function failedPublicationCoverageRow(
 export function buildEffectiveIncidentByKey(incidents: readonly DdrCanonicalIncident[]): Map<string, DdrCanonicalIncident> {
   const byKey = new Map(incidents.map((incident) => [incident.incidentKey, incident]));
   const effective = new Map(byKey);
+  // The effective entry only replaces the source event, so re-reading its
+  // `startedAt` would compare every later alias against the canonical's own
+  // start and let array order pick the tail. Track the selected tail instead.
+  const bestByCanonical = new Map<string, { startedAt: number; currentEventId: number }>();
 
   for (const alias of incidents) {
     if (alias.incidentState !== "superseded" || !alias.supersededByIncidentKey) continue;
     const canonical = byKey.get(alias.supersededByIncidentKey);
     if (!canonical || canonical.incidentState === "superseded") continue;
-    const existing = effective.get(canonical.incidentKey) ?? canonical;
-    if (alias.startedAt <= existing.startedAt && alias.currentEventId <= existing.currentEventId) continue;
+    const best = bestByCanonical.get(canonical.incidentKey)
+      ?? { startedAt: canonical.startedAt, currentEventId: canonical.currentEventId };
+    if (alias.startedAt <= best.startedAt && alias.currentEventId <= best.currentEventId) continue;
+    bestByCanonical.set(canonical.incidentKey, {
+      startedAt: alias.startedAt,
+      currentEventId: alias.currentEventId,
+    });
     effective.set(canonical.incidentKey, {
       ...canonical,
       eventId: alias.currentEventId,

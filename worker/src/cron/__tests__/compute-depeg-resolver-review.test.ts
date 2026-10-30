@@ -730,6 +730,76 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(0);
   });
 
+  it("follows the newest superseded duplicate tail whatever order the store returns", async () => {
+    const originalStartedAt = STARTED_AT;
+    const lockedAt = originalStartedAt + 86_400;
+    const olderTailStartedAt = lockedAt + 2 * 86_400;
+    const newestTailStartedAt = lockedAt + 5 * 86_400;
+    const canonical = makeReviewIncident({
+      incidentKey: "ddr2:canonical-duplicate-tails",
+      eventId: 43,
+      startedAt: originalStartedAt,
+      eligibleAt: lockedAt,
+      incidentState: "active",
+      supersededByIncidentKey: null,
+      lockState: {
+        eligibleAt: lockedAt,
+        deferralCount: 1,
+        lastDeferralReason: "cache stale",
+        lastState: "lock_deferred",
+      },
+    });
+    const olderAlias = makeReviewIncident({
+      incidentKey: "ddr2:older-duplicate-tail",
+      eventId: 88,
+      startedAt: olderTailStartedAt,
+      eligibleAt: olderTailStartedAt + 86_400,
+      incidentState: "superseded",
+      supersededByIncidentKey: canonical.incidentKey,
+    });
+    const newestAlias = makeReviewIncident({
+      incidentKey: "ddr2:newest-duplicate-tail",
+      eventId: 90,
+      startedAt: newestTailStartedAt,
+      eligibleAt: newestTailStartedAt + 86_400,
+      incidentState: "superseded",
+      supersededByIncidentKey: canonical.incidentKey,
+    });
+    const db = reviewDb([
+      eventRow({ id: 43, started_at: originalStartedAt }),
+      eventRow({ id: 88, started_at: olderTailStartedAt, ended_at: olderTailStartedAt + 3_600, recovery_price: 1 }),
+      eventRow({ id: 90, started_at: newestTailStartedAt }),
+    ]);
+
+    // Store order is `ORDER BY first_started_at DESC`, so later duplicates
+    // arrive before the canonical incident; every permutation must select the
+    // newest tail (event 90) instead of the last one iterated.
+    for (const order of [
+      [newestAlias, olderAlias, canonical],
+      [olderAlias, newestAlias, canonical],
+      [canonical, olderAlias, newestAlias],
+    ]) {
+      const stores = durableStores({
+        loadCanonicalIncidents: vi.fn(async () => order),
+      });
+      const snapshot = await buildDepegResolverReviewSnapshot(db, newestTailStartedAt + 3_600, undefined, {
+        storeContracts: stores,
+      });
+      const row = snapshot.rows.find((entry) => entry.incidentKey === canonical.incidentKey);
+
+      expect(row).toMatchObject({
+        kind: "coverage",
+        eventId: 90,
+        currentEventId: 90,
+        sourceEventState: "active",
+        actualOutcome: "still_open",
+        predictionState: "lock_deferred",
+        coverageCause: "active_lock_deferred",
+      });
+      expect(snapshot.summary.headline.missedLockRecoveredCount).toBe(0);
+    }
+  });
+
   it("classifies v2 missed-lock coverage at lock boundaries and after deferrals close", async () => {
     const incidents = [
       makeReviewIncident({ incidentKey: "ddr2:eq-recovered", eventId: 1, startedAt: STARTED_AT, eligibleAt: ELIGIBLE_AT }),

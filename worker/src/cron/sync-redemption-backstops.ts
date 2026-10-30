@@ -214,7 +214,12 @@ export async function syncRedemptionBackstops(
     liquidityStale = true;
   } else {
     const ageSec = now - latestUpdatedAt;
-    if (ageSec > DEX_LIQUIDITY_FRESHNESS_SEC) {
+    if (ageSec < 0) {
+      // A generation clock ahead of this run (skew, restored or backfilled
+      // publication) cannot be evidence that the generation is current.
+      logWorkerEventArgs("handler", "warn", `[sync-redemption-backstops] Liquidity data is future-dated (ahead: ${-ageSec}s)`);
+      liquidityStale = true;
+    } else if (ageSec > DEX_LIQUIDITY_FRESHNESS_SEC) {
       logWorkerEventArgs("handler", "warn", `[sync-redemption-backstops] Liquidity data is stale (age: ${ageSec}s)`);
       liquidityStale = true;
     }

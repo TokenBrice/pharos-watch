@@ -7,20 +7,23 @@ import type * as Quoter from "../quoter-v2";
 import type * as Registry from "../registry";
 import type * as CryptoSwap from "../curve-cryptoswap";
 import { makeMeasuredTarget } from "@shared/test-utils/measured-execution.test-support";
-import type { DexMeasuredQuoteOutcome } from "../persistence";
+import { DEX_MEASURED_EMPTY_POOL_REPROBE_SEC, type DexMeasuredQuoteOutcome } from "../persistence";
+import { UNISWAP_V4_ADAPTER_PROFILE_ID } from "../uniswap-v4";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeV3Target } from "./measured-execution.test-support";
 import { syncDexMeasuredExecution, syncDexShadowMeasuredExecution } from "../sync";
 
 const mocks = vi.hoisted(() => ({
   load: vi.fn(), publish: vi.fn(), block: vi.fn(), header: vi.fn(), verify: vi.fn(), bindings: vi.fn(), quotes: vi.fn(), cryptoVerify: vi.fn(),
+  quarantines: vi.fn(),
 }));
 vi.mock("../persistence", async (importOriginal) => ({
   ...await importOriginal<typeof Persistence>(),
   loadLatestPublishedDexMeasuredTargets: mocks.load,
   publishDexMeasuredQuoteGeneration: mocks.publish,
   loadLatestPublishedDexShadowMeasuredTargets: mocks.load,
-  loadPositiveEmptyPoolQuarantines: vi.fn(async () => new Map()),
+  loadPositiveEmptyPoolQuarantines: mocks.quarantines,
   publishDexShadowMeasuredQuoteGeneration: mocks.publish,
   pruneDexMeasuredExecutionGenerations: vi.fn(async () => ({ deleted: 0 })),
 }));
@@ -54,6 +57,7 @@ vi.mock("../curve-cryptoswap", async (importOriginal) => ({
 
 beforeEach(() => {
   mocks.load.mockReset();
+  mocks.quarantines.mockReset().mockResolvedValue(new Map());
   mocks.block.mockReset().mockResolvedValue(null);
   mocks.header.mockReset().mockResolvedValue(null);
   mocks.verify.mockReset().mockResolvedValue({ ok: true, codeHash: `0x${"ab".repeat(32)}` });
@@ -180,6 +184,57 @@ describe("measured EVM source-header admission", () => {
     })]);
     expect(result.status).toBe("degraded");
     expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({ failedCount: 1, attemptedFailureCount: 1 });
+  });
+});
+
+describe("positively empty pool quarantine reuse", () => {
+  const now = 1_790_000_000;
+
+  it("matches a raw V4 PoolId proof against the target's chain-scoped identity", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const rawPoolId = `0x${"11".repeat(32)}`;
+    const target = makeV3Target({
+      adapterProfileId: UNISWAP_V4_ADAPTER_PROFILE_ID,
+      protocol: "uniswap-v4",
+      poolId: `ethereum:${rawPoolId}`,
+      capturedAt: now - 600,
+    });
+    // The persisted proof names the bare 32-byte PoolId; the target stores the
+    // chain-scoped key, so the hold predicate must compare them in one space.
+    expect(canonicalExitRouteAssetKey(target.chain, rawPoolId)).toBe(target.poolId);
+    mocks.load.mockResolvedValue(catalog([target]));
+    mocks.quarantines.mockResolvedValue(new Map([[target.targetId, {
+      adapterProfileId: target.adapterProfileId,
+      targetId: target.targetId,
+      emptyPoolObservation: {
+        observedAtSec: now - 1_800,
+        sourceQuoteGenerationId: "empty-generation",
+        blockNumber: 25_618_353,
+        poolId: rawPoolId,
+        liquidity: "0",
+        sqrtPriceX96: "0",
+      },
+      reprobeEligibleAtSec: now - 1_800 + DEX_MEASURED_EMPTY_POOL_REPROBE_SEC,
+      reused: false,
+    }]]));
+
+    const result = await syncDexMeasuredExecution(makeNoopD1(), new Map());
+
+    expect(mocks.block).not.toHaveBeenCalled();
+    expect(mocks.publish.mock.calls[0]![0].outcomes).toEqual([expect.objectContaining({
+      status: "failed",
+      failureReason: "pool-uninitialized-or-empty",
+      observedThisRun: false,
+      rawPayload: expect.objectContaining({
+        reused: true,
+        emptyPoolObservation: expect.objectContaining({ poolId: rawPoolId, observedAtSec: now - 1_800 }),
+      }),
+    })]);
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      quarantinedEmptyPoolCount: 1,
+      attemptedFailureCount: 0,
+      positiveEmptyPoolCount: 1,
+    });
   });
 });
 

@@ -66,7 +66,9 @@ export async function buildAlertContextLines(
     const parts: string[] = [];
     const card = safety?.snapshot[id];
     const liq = liquidityResult.get(id);
-    if (card) {
+    // A pipeline-gap card carries a null grade: omit the segment rather than
+    // render the unavailable rating as a value.
+    if (card?.grade != null) {
       parts.push(
         `Safety ${card.grade}${card.score != null ? ` ${card.score}` : ""}`,
       );

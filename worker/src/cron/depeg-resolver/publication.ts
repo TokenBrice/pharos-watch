@@ -56,15 +56,24 @@ export async function sealEligibleLocks(input: {
   activeEventById: Map<number, DdrEventDbRow>;
   incidentsByEventId: Map<number, DdrCanonicalIncident>;
   existingSealed: DdrSealedPublicPrediction[];
+  /** Promoted events whose `depeg_pending_outcomes` clock could not be read this run. */
+  confirmationTimingUnknownEventIds: ReadonlySet<number>;
   nowSec: number;
   ddrRunId: string;
   runAt: number;
-}): Promise<{ sealed: DdrSealedPublicPrediction[]; lockedCount: number; noCallCount: number; pendingCount: number }> {
+}): Promise<{
+  sealed: DdrSealedPublicPrediction[];
+  lockedCount: number;
+  noCallCount: number;
+  pendingCount: number;
+  confirmationSealSkippedCount: number;
+}> {
   const sealed = [...input.existingSealed];
   const sealedByKey = sealedByIncident(sealed);
   let lockedCount = 0;
   let noCallCount = 0;
   let pendingCount = 0;
+  let confirmationSealSkippedCount = 0;
 
   for (const row of input.rows) {
     const sourceEvent = input.activeEventById.get(row.eventId);
@@ -101,6 +110,15 @@ export async function sealEligibleLocks(input: {
         backstopDelaySec: backstop.delaySec,
       });
       pendingCount += 1;
+      continue;
+    }
+
+    // The promoted event's confirmation clock decides `late_confirmation`, and
+    // a sealed prediction is immutable. When that read failed, leave the
+    // incident unfrozen instead of sealing a default timeliness verdict; the
+    // next run with a readable clock seals it.
+    if (input.confirmationTimingUnknownEventIds.has(row.eventId)) {
+      confirmationSealSkippedCount += 1;
       continue;
     }
 
@@ -143,7 +161,7 @@ export async function sealEligibleLocks(input: {
     else lockedCount += 1;
   }
 
-  return { sealed, lockedCount, noCallCount, pendingCount };
+  return { sealed, lockedCount, noCallCount, pendingCount, confirmationSealSkippedCount };
 }
 
 export async function loadErrataForSealedPredictions(input: {

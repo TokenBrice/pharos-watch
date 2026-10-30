@@ -179,6 +179,33 @@ describe("loadTrackedStablecoinMaps", () => {
     expect(stablecoinPriceById.has("susn-noon")).toBe(false);
   });
 
+  it("rejects a future-dated guarded NAV price for a navToken", async () => {
+    loadStablecoinsCache.mockResolvedValue({
+      kind: "ok",
+      updatedAt: NOW_SEC,
+      payload: {
+        peggedAssets: [
+          makeAsset({
+            id: "susn-noon",
+            price: 1.2241,
+            priceSource: "protocol-redeem",
+            priceConfidence: "high",
+            agreeSources: ["protocol-redeem"],
+            // Provider clock an hour ahead of the DEX stage clock: a negative
+            // age is not freshness for this lane or its provenance fence.
+            priceObservedAt: NOW_SEC + 3_600,
+            priceUpdatedAt: NOW_SEC + 3_600,
+          }),
+        ],
+      },
+    });
+
+    const { stablecoinPriceById, stablecoinPriceProvenanceById } = await loadTrackedStablecoinMaps({} as D1Database, NOW_SEC);
+
+    expect(stablecoinPriceProvenanceById.has("susn-noon")).toBe(false);
+    expect(stablecoinPriceById.has("susn-noon")).toBe(false);
+  });
+
   it("does not admit a protocol-redeem price for a non-navToken", async () => {
     loadStablecoinsCache.mockResolvedValue({
       kind: "ok",

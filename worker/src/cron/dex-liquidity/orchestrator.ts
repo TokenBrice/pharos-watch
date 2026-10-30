@@ -65,8 +65,8 @@ import {
 import { analyzeDexLiquidityPostScoring } from "./orchestrator-analysis";
 import {
   buildDexLiquidityCronMetadata,
+  dexLiquidityDegradedReason,
   getDexLiquiditySourceQualityReasons,
-  isDexLiquidityDegraded,
 } from "./orchestrator-metadata";
 import {
   buildPancakeMeasuredExecutionTargets,
@@ -1319,7 +1319,7 @@ function buildDexLiquidityCronResult(
   scoreState: DexLiquidityScoreState,
   persistenceState: DexLiquidityPersistenceState,
 ): CronResult {
-  const degraded = isDexLiquidityDegraded({
+  const degradedReason = dexLiquidityDegradedReason({
     criticalSourceFailures: sourceState.criticalSourceFailures,
     poolRejections: poolState.poolRejections,
     analysis: scoreState.analysis,
@@ -1329,7 +1329,7 @@ function buildDexLiquidityCronResult(
   });
 
   return {
-    status: degraded ? "degraded" : "ok",
+    status: degradedReason == null ? "ok" : "degraded",
     itemCount: scoreState.scoreResults.size,
     metadata: JSON.stringify(
       buildDexLiquidityCronMetadata({
@@ -1337,6 +1337,7 @@ function buildDexLiquidityCronResult(
         poolState,
         scoreState,
         persistenceState,
+        degradedReason,
       }),
     ),
   };

@@ -19,28 +19,37 @@ export function getDexLiquiditySourceQualityReasons(sourceState: Pick<DexLiquidi
   ])];
 }
 
-export function isDexLiquidityDegraded(params: {
+/**
+ * R4: the bounded machine-readable cause of a degraded run. Also the single
+ * authority for the status predicate, so a published `degraded` status and its
+ * `metadata.reason` can never disagree.
+ */
+export function dexLiquidityDegradedReason(params: {
   criticalSourceFailures: string[];
   poolRejections?: PoolProcessingRejection[];
   analysis: DexLiquidityPostScoreAnalysis;
   persistence: PersistScoresResult;
   dexPriceDiagnostics?: DexPricePersistenceDiagnostics;
   historicalSnapshot: HistoricalSnapshotWriteResult;
-}): boolean {
-  return (
-    params.criticalSourceFailures.length > 0 ||
-    hasMaterialPoolRejections(params.poolRejections) ||
-    !params.analysis.previousCoverageBaselineAvailable ||
-    params.analysis.requiredBaselineUnavailable ||
-    params.analysis.nearCoverageGuard ||
-    params.analysis.nearValueGuard ||
-    params.analysis.nearMajorCoverageGuard ||
-    params.persistence.orphanCleanupFailed ||
-    params.persistence.retention?.error != null ||
-    params.dexPriceDiagnostics?.retention?.error != null ||
-    params.historicalSnapshot.writeFailed ||
-    params.historicalSnapshot.retentionPruneFailed
-  );
+}): string | null {
+  if (params.criticalSourceFailures.length > 0) return "critical-source-failures";
+  if (hasMaterialPoolRejections(params.poolRejections)) return "material-pool-rejections";
+  if (!params.analysis.previousCoverageBaselineAvailable) return "previous-coverage-baseline-unavailable";
+  if (params.analysis.requiredBaselineUnavailable) return "required-baseline-unavailable";
+  if (params.analysis.nearCoverageGuard) return "near-coverage-guard";
+  if (params.analysis.nearValueGuard) return "near-value-guard";
+  if (params.analysis.nearMajorCoverageGuard) return "near-major-coverage-guard";
+  if (params.persistence.orphanCleanupFailed) return "orphan-cleanup-failed";
+  if (params.persistence.retention?.error != null || params.dexPriceDiagnostics?.retention?.error != null) {
+    return "retention-prune-failed";
+  }
+  if (params.historicalSnapshot.writeFailed) return "historical-snapshot-write-failed";
+  if (params.historicalSnapshot.retentionPruneFailed) return "historical-snapshot-retention-prune-failed";
+  return null;
+}
+
+export function isDexLiquidityDegraded(params: Parameters<typeof dexLiquidityDegradedReason>[0]): boolean {
+  return dexLiquidityDegradedReason(params) !== null;
 }
 
 export function buildDexLiquidityCronMetadata(params: {
@@ -73,6 +82,8 @@ export function buildDexLiquidityCronMetadata(params: {
     dexPriceDiagnostics: DexPricePersistenceDiagnostics;
     historicalSnapshot: HistoricalSnapshotWriteResult;
   };
+  /** `dexLiquidityDegradedReason` for the same state; null/absent for an okay run. */
+  degradedReason?: string | null;
 }): Record<string, unknown> {
   const { sourceState, poolState, scoreState } = params;
   const { persistence, historicalSnapshot, challengerPublication, dexPriceDiagnostics } = params.persistenceState;
@@ -84,7 +95,8 @@ export function buildDexLiquidityCronMetadata(params: {
   ])];
   return {
     ...(persistence.skippedReason === "required-baseline-read-failed"
-      ? { reason: "required-baseline-read-failed" } : {}),
+      ? { reason: "required-baseline-read-failed" }
+      : params.degradedReason != null ? { reason: params.degradedReason } : {}),
     ...(qualityReasons.length > 0 ? { quality: { reasons: qualityReasons } } : {}),
     rowsRead: sourceState.primaryRawPoolCount,
     rowsWritten: persistence.skipped || persistence.skippedReason === "liquidity-cadence-reuse"

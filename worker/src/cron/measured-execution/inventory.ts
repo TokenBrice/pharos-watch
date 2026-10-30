@@ -294,10 +294,15 @@ function resolveClImpliedOutputPrice(input: {
   inputIndex: number;
   inputPrice: number;
   outputPrice: number | null;
+  /** Counter-asset id when the output resolves to a tracked stablecoin. */
+  outputStablecoinId: string | undefined;
   rejectionEvent: string;
   source: string;
 }): number | null {
   if (input.outputPrice != null) return input.outputPrice;
+  // A tracked counter-asset needs its own admitted reference: a pool-implied
+  // price would size the quote against the same pool it is measured on.
+  if (input.outputStablecoinId != null) return null;
   if (input.candidate.carriedFromSnapshot) return null;
   const spotInputPerOutput =
     input.inputIndex === 0 ? input.candidate.token0Price : input.candidate.token1Price;
@@ -385,6 +390,7 @@ function buildClMeasuredExecutionTarget(
       input.stablecoinPriceById,
       input.capturedAt,
     ),
+    outputStablecoinId,
     rejectionEvent:
       adapter.protocol === "uniswap-v3"
         ? "univ3_implied_reference_rejected"
@@ -531,6 +537,7 @@ export function buildUniswapV4MeasuredExecutionTarget(input: {
       input.stablecoinPriceById,
       input.capturedAt,
     ),
+    outputStablecoinId,
     rejectionEvent: "uniswap_v4_implied_reference_rejected",
     source: "uniswap-v4",
   });

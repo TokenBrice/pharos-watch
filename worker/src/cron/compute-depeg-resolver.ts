@@ -13,6 +13,7 @@ import {
   applyConfirmationTimes,
   ensureCanonicalIncidentsForEvents,
   loadPendingPromotionConfirmationTimes,
+  maybePendingPromotedEvent,
   recordConfirmedSeenOpportunities,
   recordSystemHealthDeferrals,
   type QuarantinedIncidentEvent,
@@ -216,6 +217,7 @@ export async function computeDepegResolver(
   let v2LockedNoCalls = 0;
   let v2ConfirmedSeen = 0;
   let v2ConfirmationTimingError: string | null = null;
+  let v2ConfirmationSealSkipped = 0;
   let v2ErrataLoadError: string | null = null;
   let v2PublicationAttempted = false;
   let v2PublicationSucceeded = false;
@@ -278,6 +280,11 @@ export async function computeDepegResolver(
   const confirmationTiming = await loadPendingPromotionConfirmationTimes(db, activeRows);
   v2ConfirmationTimingError = confirmationTiming.error;
   applyConfirmationTimes(incidentsByEventId, confirmationTiming.byEventId);
+  // A failed promotion-clock read leaves those incidents' confirmation time
+  // unknown, not absent: they stay unsealed this run (R2).
+  const confirmationTimingUnknownEventIds = confirmationTiming.error == null
+    ? new Set<number>()
+    : new Set(activeRows.filter(maybePendingPromotedEvent).map((row) => row.id));
 
   if (activeRows.length > 0) {
     throwIfAborted(options.signal);
@@ -316,6 +323,7 @@ export async function computeDepegResolver(
     activeEventById,
     incidentsByEventId,
     existingSealed: publicationState.sealed,
+    confirmationTimingUnknownEventIds,
     nowSec,
     ddrRunId: options.ddrRunId,
     runAt: options.runAt,
@@ -323,6 +331,7 @@ export async function computeDepegResolver(
   v2LockedPredictions = lockResult.lockedCount;
   v2LockedNoCalls = lockResult.noCallCount;
   v2PendingLocks = lockResult.pendingCount;
+  v2ConfirmationSealSkipped = lockResult.confirmationSealSkippedCount;
 
   const refreshedPublicationState = await loadSealedAndPublicationState({ stores: storeContracts, db, incidentKeys: activeIncidentKeys });
   const errataState = await loadErrataForSealedPredictions({
@@ -385,6 +394,7 @@ export async function computeDepegResolver(
       v2LockedNoCalls,
       v2ConfirmedSeen,
       v2ConfirmationTimingError,
+      v2ConfirmationSealSkipped,
       v2PublicationAttempted,
       v2PublicationSucceeded,
       v2PublicationError,

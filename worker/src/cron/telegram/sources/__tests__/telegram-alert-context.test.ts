@@ -18,7 +18,7 @@ vi.mock("../../../../lib/alert-safety-source-cache", () => ({
 }));
 
 function safetyAssessment(
-  snapshot: Record<string, { grade: string; score: number | null; methodologyVersion: string | null }>,
+  snapshot: Record<string, { grade: string | null; score: number | null; methodologyVersion: string | null }>,
   state: "ok" | "stale" = "ok",
 ) {
   return {
@@ -115,6 +115,31 @@ describe("buildAlertContextLines", () => {
     const context = await buildAlertContextLines(db, ["usdc-circle"]);
 
     expect(context.get("usdc-circle") ?? "").not.toContain("Safety");
+  });
+
+  it("omits a pipeline-gap safety grade instead of rendering it as a value", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    // A schema-valid pipeline-gap row: the envelope still carries the card with
+    // a null grade, so the absent rating must not reach the Context line.
+    mocks.loadActiveAlertSafetySourceAssessment.mockResolvedValueOnce(
+      safetyAssessment({ "usdc-circle": { grade: null, score: null, methodologyVersion: "9.0" } }),
+    );
+    const db = makeNoopD1({
+      prepare: vi.fn(() => ({
+        bind: () => ({
+          all: async () => ({
+            results: [{ stablecoin_id: "usdc-circle", liquidity_score: 72, total_tvl_usd: 5_000_000, updated_at: nowSec }],
+          }),
+        }),
+      })),
+    });
+
+    const context = await buildAlertContextLines(db, ["usdc-circle"]);
+
+    const line = context.get("usdc-circle") ?? "";
+    expect(line).not.toContain("Safety");
+    expect(line).not.toContain("null");
+    expect(line).toContain("Liquidity 72, DEX TVL");
   });
 
   it("omits safety context when the alert source is not ok", async () => {

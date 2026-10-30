@@ -39,7 +39,11 @@ function pendingPromotionKey(input: {
   return `${input.stablecoin_id}\u0000${input.peg_type}\u0000${input.direction}\u0000${input.started_at}`;
 }
 
-function maybePendingPromotedEvent(row: DdrEventDbRow): boolean {
+/**
+ * Events whose durable promotion clock lives in `depeg_pending_outcomes`.
+ * Their confirmation time is required evidence for the lock-timing verdict.
+ */
+export function maybePendingPromotedEvent(row: DdrEventDbRow): boolean {
   return row.pending_reason != null || row.confirmation_sources != null;
 }
 

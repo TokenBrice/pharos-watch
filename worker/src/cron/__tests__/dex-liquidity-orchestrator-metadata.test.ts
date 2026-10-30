@@ -1,7 +1,12 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { getCronQualityReasons } from "@shared/lib/cron-quality-reasons";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 
-import { buildDexLiquidityCronMetadata } from "../dex-liquidity/orchestrator-metadata";
+import { logCronRun, type CronResult } from "../../lib/cron-logger";
+import {
+  buildDexLiquidityCronMetadata,
+  dexLiquidityDegradedReason,
+} from "../dex-liquidity/orchestrator-metadata";
 import { initLiquidityFallbackCounters } from "../dex-liquidity/pool-helpers";
 import type { DexLiquidityPostScoreAnalysis } from "../dex-liquidity/orchestrator-analysis";
 import type { DexPricePersistenceDiagnostics } from "../dex-liquidity/scoring";
@@ -114,4 +119,93 @@ describe("dex liquidity cron metadata", () => {
     });
   });
 
+  function analysisState(overrides: Partial<DexLiquidityPostScoreAnalysis> = {}): DexLiquidityPostScoreAnalysis {
+    return {
+      previousCoverageBaselineAvailable: true,
+      requiredBaselineUnavailable: false,
+      nearCoverageGuard: false,
+      nearValueGuard: false,
+      nearMajorCoverageGuard: false,
+      sourceCoverage: metadataParams().scoreState.analysis.sourceCoverage,
+      ...overrides,
+    } as DexLiquidityPostScoreAnalysis;
+  }
+
+  function degradedReasonFor(
+    params: Parameters<typeof buildDexLiquidityCronMetadata>[0],
+    analysis: DexLiquidityPostScoreAnalysis,
+  ): string | null {
+    return dexLiquidityDegradedReason({
+      criticalSourceFailures: [],
+      poolRejections: params.poolState.poolRejections,
+      analysis,
+      persistence: params.persistenceState.persistence,
+      dexPriceDiagnostics: params.persistenceState.dexPriceDiagnostics,
+      historicalSnapshot: params.persistenceState.historicalSnapshot,
+    });
+  }
+
+  it("names the bounded cause of every degraded run (R4)", async () => {
+    const cases: Array<{
+      expected: string;
+      analysis?: DexLiquidityPostScoreAnalysis;
+      mutate?: (params: Parameters<typeof buildDexLiquidityCronMetadata>[0]) => void;
+    }> = [
+      {
+        expected: "material-pool-rejections",
+        mutate: (params) => {
+          params.poolState.poolRejections = [
+            { reason: "invalid-pool-identity", poolIds: ["0xfeed"], count: 1, tvlUsd: 12_500 },
+          ];
+        },
+      },
+      { expected: "near-value-guard", analysis: analysisState({ nearValueGuard: true }) },
+      {
+        expected: "orphan-cleanup-failed",
+        mutate: (params) => Object.assign(params.persistenceState.persistence, { orphanRowsDeleted: 6, orphanCleanupFailed: true }),
+      },
+      {
+        expected: "historical-snapshot-write-failed",
+        mutate: (params) => Object.assign(params.persistenceState.historicalSnapshot, { snapshotRowsWritten: 0, writeFailed: true }),
+      },
+    ];
+
+    for (const testCase of cases) {
+      vi.spyOn(console, "warn").mockImplementation(() => {});
+      try {
+        const params = metadataParams();
+        testCase.mutate?.(params);
+        const analysis = testCase.analysis ?? analysisState();
+        const degradedReason = degradedReasonFor(params, analysis);
+        expect(degradedReason).toBe(testCase.expected);
+
+        // Mirrors `buildDexLiquidityCronResult`: the status predicate and the
+        // published reason come from the same state.
+        const result: CronResult = {
+          status: "degraded",
+          itemCount: params.scoreState.scoreResults.size,
+          metadata: JSON.stringify(buildDexLiquidityCronMetadata({ ...params, degradedReason })),
+        };
+        const fixture = createLatestSchemaSqlite();
+        try {
+          await logCronRun(fixture.db, "sync-dex-liquidity", async () => result);
+          const row = fixture.sqlite
+            .prepare("SELECT status, degraded_reason FROM cron_runs WHERE job = ?")
+            .get("sync-dex-liquidity") as { status: string; degraded_reason: string | null } | undefined;
+          expect(row).toEqual({ status: "degraded", degraded_reason: testCase.expected });
+        } finally {
+          fixture.sqlite.close();
+        }
+      } finally {
+        vi.restoreAllMocks();
+      }
+    }
+  });
+
+  it("keeps an okay run reasonless", () => {
+    const params = metadataParams();
+    const degradedReason = degradedReasonFor(params, analysisState());
+    expect(degradedReason).toBeNull();
+    expect(buildDexLiquidityCronMetadata({ ...params, degradedReason })).not.toHaveProperty("reason");
+  });
 });

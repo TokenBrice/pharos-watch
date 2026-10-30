@@ -16,6 +16,7 @@ import { createCronResult } from "../../lib/cron-result";
 import { fetchEvmBlockHeader, fetchEvmBlockNumber } from "../../lib/evm-rpc";
 import { assessFreshnessTimestamp } from "../../lib/api-freshness-age";
 import { toErrorMessage } from "@shared/lib/error-utils";
+import { canonicalExitRouteAssetKey } from "@shared/types/exit-route-identity";
 import { readDexSourcePaginationState, writeDexSourcePaginationState } from "../dex-liquidity/source-pagination-state";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import {
@@ -469,8 +470,11 @@ async function syncDexMeasuredExecutionLane(
   for (const target of targetGeneration.targets) {
     if (policyExcluded.has(target.targetId)) continue;
     const proof = retainedEmpty.get(target.targetId);
+    // The proof stores the raw V4 PoolId while the target carries the
+    // chain-scoped identity, so compare in the target's identity space.
     if (proof && proof.adapterProfileId === target.adapterProfileId
-      && proof.emptyPoolObservation.poolId.toLowerCase() === target.poolId.toLowerCase()
+      && canonicalExitRouteAssetKey(target.chain, proof.emptyPoolObservation.poolId)
+        === canonicalExitRouteAssetKey(target.chain, target.poolId)
       && proof.emptyPoolObservation.observedAtSec <= startedAt && startedAt < proof.reprobeEligibleAtSec) {
       heldEmpty.set(target.targetId, { ...proof, reused: true });
     }
