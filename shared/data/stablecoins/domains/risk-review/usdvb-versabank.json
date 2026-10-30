@@ -10,10 +10,14 @@
       {
         "label": "Reviewed primary evidence",
         "url": "https://www.versabank.com/wp-content/uploads/2026/09/VB-Q326-MDA-vF.pdf"
+      },
+      {
+        "label": "VersaBank 2026-10-15 release (SEC Exhibit 99.1)",
+        "url": "https://www.sec.gov/Archives/edgar/data/1690639/000106299326005358/exhibit99-1.htm"
       }
     ],
-    "evidence": "Bank-managed wallet access/control and BSA/OFAC pilot objectives support a custodial restriction expectation. No USDVB-specific selective freeze/seizure implementation is published.",
+    "evidence": "Pre-launch, no deployment or published implementation. The 2026-10-15 release says VersaBank's technology can 'freeze, seize and burn' tokenized deposits regulators deem illegal.",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-    "reviewedAt": "2026-10-02"
+    "reviewedAt": "2026-10-30"
   }
 }

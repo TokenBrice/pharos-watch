@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Pharos batch64 review (Rev_SparkusdtbcSpark)",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Pharos batch64 review (Rev_SparkusdtbcSpark); 2026-10-30 re-pin",
     "confidence": "verified",
     "sources": [
       {
@@ -41,13 +41,13 @@
         "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
       },
       {
-        "label": "Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z); accounting, roles, gates, fees, runtime and complete market census",
+        "label": "Ethereum block 26307006 (hash 0x16736d45..., timestamp 2026-10-30T17:16:11.000Z); accounting totals",
         "url": "https://ethereum-rpc.publicnode.com"
       }
     ],
-    "rationale": "Pinned Ethereum block 26197390 (hash 0x7b440503cf5ab984190e71b6363dc024da6e6944ed5cf22073f6eca2a26092de, timestamp 2026-10-15T10:43:11.000Z): totalSupply=76314545914654098613391774 (18 decimals), totalAssets=77544999649970 (6-decimal USDT), convertToAssets(10^18)=1016123 USDT base units. Idle USDT=0; sole adapter 0xef4cb7e87f212f128f0b24cf35861e52b3c78a6a realAssets equals vault totalAssets at this pin. At this pin only, the four expectedSupplyAssets sum to the vault denominator 77544999649970: sUSDS=7678890857988 (9.9024964764%), wstETH=46289560215238 (59.6938041449%), WBTC=23576548519424 (30.4036993047%), cbBTC=57320 (0.0000000739%). This observed reconciliation is not an invariant: VaultV2 can cap recognized accrual through maxRate. All four adapter positions have zero borrow shares and zero posted collateral. These are lender receivables, not borrower collateral held by the vault or guaranteed USDT realization. No independent financial assurance, guaranteed realization horizon or enforceable insolvency priority is inferred.",
+    "rationale": "Ethereum block 26307006 (0x16736d451d60ab1f0e8eefc69b4e00722fb0a908bd246f6cc4a8d0c08202c339, 2026-10-30T17:16:11Z): totalAssets=833760194905 USDT base units (833,760.19 USDT), totalSupply=819227377334870908045393 shares, idle USDT=0. The block-26197390 totals (77,544,999.65 USDT) and its market-share split are superseded; re-read all four market positions before republishing any percentage. These are lender receivables, not borrower collateral held by the vault or guaranteed USDT realization.",
     "compositionBasis": "Exact-vault operational position accounting; no independent financial assurance or legal segregation is inferred",
-    "compositionAsOf": "2026-10-15",
+    "compositionAsOf": "2026-10-30",
     "scope": "full-composition",
     "knownUnknownExposure": "No unresolved composition-link dispositions remain within the immediate position accounting denominator. This does not establish stressed realization, enforceable priority or independently reconciled ultimate backing; those protections remain unproven. Underlying issuer and protocol risk remains serial, and whole-book custody uncertainty is recorded separately in custodyProfile.",
     "knownUnknownExposurePct": 0

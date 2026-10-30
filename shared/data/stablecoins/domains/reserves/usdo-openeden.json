@@ -4,69 +4,61 @@
     {
       "sourceKey": "openeden-usdo:tbill",
       "name": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-      "pct": 78.95194721,
+      "pct": 93.75726776,
       "risk": "very-low",
       "assetClass": "tokenized-security",
       "issuerOrObligor": "OpenEden Digital and United States Treasury",
-      "riskFactors": ["duration", "liquidity", "custody", "counterparty", "smart-contract"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "sourceKey": "openeden-usdo:buidl",
-      "name": "BlackRock BUIDL (tokenized money market fund)",
-      "pct": 9.64028307,
-      "risk": "low",
-      "coinId": "buidl-blackrock",
-      "depType": "collateral",
-      "assetClass": "fund-share",
-      "issuerOrObligor": "BlackRock USD Institutional Digital Liquidity Fund",
-      "riskFactors": ["credit", "liquidity", "custody", "counterparty", "smart-contract"],
+      "riskFactors": [
+        "duration",
+        "liquidity",
+        "custody",
+        "counterparty",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
       "sourceKey": "openeden-usdo:rlusd",
       "name": "Ripple USD (RLUSD) cash-equivalent buffer",
-      "pct": 8.62380556,
+      "pct": 5.9810923,
       "risk": "low",
       "coinId": "rlusd-ripple",
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Ripple USD issuer and its reserve custodians",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
-      "liquidityHorizon": "one-day"
-    },
-    {
-      "sourceKey": "openeden-usdo:vbill",
-      "name": "VanEck VBILL (tokenized U.S. T-bill fund)",
-      "pct": 2.63169331,
-      "risk": "low",
-      "coinId": "vbill-vaneck",
-      "depType": "collateral",
-      "assetClass": "tokenized-security",
-      "issuerOrObligor": "VanEck and United States Treasury",
-      "riskFactors": ["duration", "liquidity", "custody", "counterparty", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "one-day"
     },
     {
       "sourceKey": "openeden-usdo:usdc",
       "name": "USDC redemption buffer",
-      "pct": 0.15227084,
+      "pct": 0.26163994,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
       "assetClass": "stablecoin",
       "issuerOrObligor": "Circle Internet Financial, Inc.",
-      "riskFactors": ["counterparty", "custody", "liquidity", "smart-contract"],
+      "riskFactors": [
+        "counterparty",
+        "custody",
+        "liquidity",
+        "smart-contract"
+      ],
       "liquidityHorizon": "immediate"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-07",
-    "reviewer": "RegistryActivation RS7-01 issuer inventory review",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RegistryActivation RS7-01 issuer inventory review; USDO issuer-API refresh 2026-10-30",
     "confidence": "verified",
     "sources": [
       {
-        "label": "OpenEden USDO reserve composition API (source 2026-10-07T08:00:19.096Z; accessed 2026-10-07T20:47:18.580729Z)",
+        "label": "OpenEden USDO reserve composition API (source 2026-10-30T08:00:18.551Z; accessed 2026-10-30)",
         "url": "https://prod-gw.openeden.com/usdo/sys/reserve-composition-last"
       },
       {
@@ -86,9 +78,9 @@
         "url": "https://basescan.org/address/0x5218Ebeb96bD2bAFe21F9b143f5672552629ba79"
       }
     ],
-    "rationale": "Issuer API source 2026-10-07T08:00:19.096Z, accessed 2026-10-07T20:47:18.580729Z, reports $15,537,989.483383574 reserves and 15,275,117.334802557 USDO with a 101.7209% ratio. Positive constituents normalize to TBILL 78.95194721%, BUIDL 9.64028307%, RLUSD 8.62380556%, VBILL 2.63169331%, and USDC 0.15227084%. USYC, BENJI, pending-USDC and uAmount are observed zero and create no positive holdings. The ratio reconciles only reported usdoAmount, not every queued claim; pendingReserverAssetsRedeem and gap fields are unresolved context, not additional inventory. This is issuer accounting, not independent financial assurance or proof of redemption openness. Chainlink feed coverage measured 2026-10-19: Chainlink's Base feed directory lists the usdo-por feed (proxy 0x5218ebeb96bd2bafe21f9b143f5672552629ba79) with reserve asset U.S. Treasury Bills and porSource Wallet Address Manager. At Base block 52817725 its latestRoundData answer was 14,188,778.570757 (18 decimals), updated 2026-10-19T00:03:33Z. The issuer API snapshot dated 2026-10-19T08:00:18.584Z reported $15,556,010.22 reserves against 15,256,774.83 USDO; TBILL ($12,252,338.73), BUIDL ($1,499,432.10) and VBILL ($409,325.00) total $14,161,095.83, and the RLUSD and USDC buffer $1,394,914.39. The feed answer therefore sits below USDO supply and close to the Treasury-fund holdings alone, consistent with a feed that excludes the stablecoin buffer; it is not a full-basket reserve figure and should not be read as a reserve-to-supply ratio.",
+    "rationale": "Issuer API source 2026-10-30T08:00:18.551Z reports $14,815,300.739121802 reserves and 14,522,836.657558644 USDO with a 102.0138% ratio. Positive constituents normalize to TBILL 93.75726776%, RLUSD 5.9810923%, and USDC 0.26163994%. BUIDL and VBILL are observed zero and create no positive holdings; USYC, BENJI, pending-USDC and uAmount are also zero. The ratio reconciles only reported usdoAmount, not every queued claim; pendingReserverAssetsRedeem and gap fields are unresolved context, not additional inventory. This is issuer accounting, not independent financial assurance or proof of redemption openness. Chainlink feed coverage measured 2026-10-19: Chainlink's Base feed directory lists the usdo-por feed (proxy 0x5218ebeb96bd2bafe21f9b143f5672552629ba79) with reserve asset U.S. Treasury Bills and porSource Wallet Address Manager. At Base block 52817725 its latestRoundData answer was 14,188,778.570757 (18 decimals), updated 2026-10-19T00:03:33Z. The issuer API snapshot dated 2026-10-19T08:00:18.584Z reported $15,556,010.22 reserves against 15,256,774.83 USDO; TBILL ($12,252,338.73), BUIDL ($1,499,432.10) and VBILL ($409,325.00) total $14,161,095.83, and the RLUSD and USDC buffer $1,394,914.39. The feed answer therefore sits below USDO supply and close to the Treasury-fund holdings alone, consistent with a feed that excludes the stablecoin buffer; it is not a full-basket reserve figure and should not be read as a reserve-to-supply ratio.",
     "compositionBasis": "OpenEden issuer reserve API asset values normalized by total reserve assets",
-    "compositionAsOf": "2026-10-07",
+    "compositionAsOf": "2026-10-30",
     "scope": "full-composition",
     "knownUnknownExposure": "All positive reserve components reported by the issuer API are identified.",
     "knownUnknownExposurePct": 0,
@@ -96,7 +88,7 @@
       {
         "reserveIndex": 0,
         "reserveName": "OpenEden TBILL tokens (tokenized U.S. T-bills)",
-        "pct": 78.95194721,
+        "pct": 93.75726776,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The TBILL reserve token is identified by issuer documentation but is outside the active tracked stablecoin set."
       }

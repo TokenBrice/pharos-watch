@@ -139,13 +139,17 @@
       {
         "name": "Copper Markets (Switzerland) AG ($472,573.22 of BTC, USDT and USDC at 2026-09-30)",
         "role": "other"
+      },
+      {
+        "name": "Clear Street (U.S. broker-dealer; custodies USDh reserve securities such as STRC)",
+        "role": "custodian"
       }
     ],
     "segregation": "unknown",
     "bankruptcyRemoteness": "unknown",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-09-30",
-    "reviewer": "Sol final D/F independent verification 2026-10-02 (VDf1)",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Sol final D/F independent verification 2026-10-02 (VDf1); Clear Street integration re-review 2026-10-30",
     "confidence": "probable",
     "sources": [
       {
@@ -155,6 +159,10 @@
       {
         "label": "Hermetica USDh backing design",
         "url": "https://docs.hermetica.fi/usdh/how-it-works/backing"
+      },
+      {
+        "label": "Hermetica integrates Clear Street (2026-10-05)",
+        "url": "https://blog.hermetica.fi/p/hermetica-integrates-clear-street"
       }
     ],
     "uncertainty": "The September 30, 2026 report identifies $472,573.22 at Copper and $0.00 at Ceffu, plus the new Ethereum Settlement Wallet 0x1046a6AD45B60264c83A4b93F6D2c6078C73c1d5, Stacks Redeeming Reserve and Reserve Fund. Copper Markets (Switzerland) AG signs a scoped off-exchange custody balance attestation covering aggregate BTC, USDT and USDC, not whole-protocol liabilities or legal holder safeguards. The settlement wallet contains $1,396,969.74 of STRCx credit-instrument backing, but its remaining assets, the Copper asset split and Stacks Redeeming Reserve contents are unitemized. Wallet key control, account-level segregation, insolvency terms and rehypothecation protections remain unknown. Current composition and latest report both use September 30; custody unknowns remain separately charged.",

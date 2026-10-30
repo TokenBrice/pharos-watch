@@ -35,9 +35,9 @@
     "branchModel": "multi-branch",
     "branchApplicability": {
       "disposition": "branches-required",
-      "reviewedAt": "2026-07-14",
-      "reviewer": "Codex Safety Score V9 ORCL curation",
-      "rationale": "At Ethereum block 25531915, the on-chain Market Registry returned seven mint markets and five borrow markets, all with nonzero debt. All twelve are retained as isolated oracle/liquidation branches, including mETH and tBTC mint markets omitted by Alto's public snapshot: both were frozen for new activity but debt-bearing and liquidation-active. The separate USDC and frxUSD USM/PSM deployments exchange at administrator-configured fixed-price strategies and create no borrower-owned collateral position, collateral-ratio test, or liquidation path, so they are reviewed as not applicable to the branch inventory.",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "Codex Safety Score V9 ORCL curation; post-Refresh inventory check 2026-10-30",
+      "rationale": "At Ethereum block 25531915 the Market Registry returned seven mint and five borrow markets, all debt-bearing, including frozen mETH and tBTC. All twelve are now Deprecated; the issuer's live set is eight Refresh markets (rETH, frxUSD, wstETH, WETH, sUSDe and syrupUSDC mints, sUSDe and syrupUSDC borrows) with new oracles, unreviewed here. The fixed-price USDC and frxUSD USM/PSM deployments create no borrower position or liquidation path and are not applicable.",
       "sources": [
         {
           "label": "Alto live protocol snapshot",

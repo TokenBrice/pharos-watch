@@ -49,7 +49,7 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-15",
+    "reviewedAt": "2026-10-30",
     "reviewer": "Rev_UsdfcSecuredFinance",
     "confidence": "verified",
     "sources": [
@@ -101,7 +101,7 @@
             "chain": "filecoin"
           }
         ],
-        "fallbackBehavior": "Primary timeout is 16 hours. Failed or invalid responses or a more-than-doubled/halved price trigger fallback checks; returning to the primary generally requires agreement within 5%. If both feeds fail, the last good price remains usable for 48 hours after storage, then price-sensitive operations revert. The PriceFeed owner, the recorded Safe at the pin, can replace both oracle addresses.",
+        "fallbackBehavior": "Primary timeout 16 hours; failed, invalid or more-than-doubled/halved prices trigger fallback checks; primary return needs 5% agreement. Opening a Trove, increasing debt or withdrawing collateral needs a primary price; fallback or last good prices still allow adding collateral and repaying debt. Last good price expires 48 hours after storage. PriceFeed owner Safe can replace both oracles.",
         "observedAt": "2026-10-15",
         "observedBlock": 6458485,
         "collateralParameters": [

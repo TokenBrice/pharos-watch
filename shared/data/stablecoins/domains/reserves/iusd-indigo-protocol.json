@@ -30,20 +30,21 @@
       "liquidityHorizon": "immediate"
     },
     {
-      "name": "USDCx/USDM-collateral iUSD CDP debt and other indexer-uncovered issuance",
+      "name": "USDrf/USDCx PSM collateral and other indexer-uncovered issuance",
       "pct": 3.3796,
       "risk": "high",
       "assetClass": "other",
-      "issuerOrObligor": "USDCx (IOG xReserve bridge of Circle USDC), USDM (Moneta), and Indigo Protocol CDP vaults",
+      "issuerOrObligor": "USDrf (RealFi), USDCx (IOG xReserve bridge of Circle USDC), and Indigo PSM",
       "riskFactors": [
         "smart-contract",
-        "counterparty"
+        "counterparty",
+        "liquidity"
       ],
       "liquidityHorizon": "unknown"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-29",
+    "reviewedAt": "2026-10-30",
     "reviewer": "RS-075 Indigo indexer reserve recompute 2026-10-29",
     "confidence": "verified",
     "sources": [
@@ -72,7 +73,7 @@
     "compositionBasis": "Indigo analytics iUSD CDP index and Koios iUSD supply fetched 2026-10-29; indexed minted debt attributed by collateral branch, with residual retained",
     "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "The 45,383.138882 iUSD difference between policy supply and indexed CDP debt is not attributed by a shared snapshot. Indigo mint transactions and validator balances show USDCx/USDM collateral paths, but no current public endpoint reconciles those balances to individual iUSD CDPs or a peg-stability module.",
+    "knownUnknownExposure": "The 45,383.138882 iUSD residual is not attributed to individual CDPs; Indigo's PSM identifies it as peg-stability collateral, led by USDrf.",
     "knownUnknownExposurePct": 3.3796,
     "nonLinkDispositions": [
       {
@@ -91,10 +92,10 @@
       },
       {
         "reserveIndex": 2,
-        "reserveName": "USDCx/USDM-collateral iUSD CDP debt and other indexer-uncovered issuance",
+        "reserveName": "USDrf/USDCx PSM collateral and other indexer-uncovered issuance",
         "pct": 3.3796,
         "disposition": "basket-needs-split",
-        "rationale": "The current indexer omits the residual, while Indigo's public mint evidence and validator balances show USDCx/USDM paths. No current endpoint attributes the residual to individual CDPs or a peg-stability module, so no constituent link or finer split is asserted."
+        "rationale": "Indigo's PSM holds the residual, led by USDrf; the indexer does not attribute it to individual CDPs, so no constituent link is asserted."
       }
     ]
   }

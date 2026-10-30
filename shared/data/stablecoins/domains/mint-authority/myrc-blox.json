@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "MYRC uses OZ AccessControl on EVM chains. On Ethereum, MINTER_ROLE and DEFAULT_ADMIN_ROLE are held by a 2-of-3 Gnosis Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 (Safe v1.3.0 L2, no modules/guard). All role grants confirmed via RoleGranted event scan. The Ethereum MYRC token is a non-proxy immutable ERC-20 (EIP-1967 implementation and admin slots are zero; verified source has no upgrade surface).",
+    "summary": "MYRC uses OZ AccessControl on EVM chains. On Ethereum, MINTER_ROLE, DEFAULT_ADMIN_ROLE and POLICE_ROLE (address freeze) are held by a 2-of-3 Gnosis Safe 0xcca0793222422e8ac1dd48db1aa691f9d360a1c2 (Safe v1.3.0 L2, no modules/guard). All roles confirmed via RoleGranted scan. The Ethereum MYRC token is a non-proxy immutable ERC-20 (EIP-1967 slots zero; verified source has no upgrade surface).",
     "upgradeability": {
       "model": "immutable",
       "canChangeMintLogic": false,
@@ -64,7 +64,7 @@
             "url": "https://etherscan.io/address/0xbed7d999f1d71ac70c263f64c7c7e009d691be2e"
           }
         ],
-        "evidence": "At Ethereum block 25295023, hasRole(MINTER_ROLE, 0xcca0793...) = true. RoleGranted event scan (Blockscout getLogs, topic0=0x2f8788...) confirms MINTER_ROLE + DEFAULT_ADMIN_ROLE granted to 0xcca0793... at block 17970681; a second DEFAULT_ADMIN grant to 0xe16f1d... was later revoked (RoleRevoked confirmed). getOwners() on 0xcca0793... = [0x76b7d8..., 0xb4bc50..., 0xa35acdb...]; getThreshold() = 2. modules() returned sentinel only (no modules). masterCopy slot = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe v1.3.0)."
+        "evidence": "At Ethereum block 25295023, hasRole(MINTER_ROLE, 0xcca0793...) = true. RoleGranted event scan (Blockscout getLogs, topic0=0x2f8788...) confirms DEFAULT_ADMIN, MINTER and POLICE_ROLE granted to 0xcca0793... at block 18032249; a later DEFAULT_ADMIN grant to 0xe16f1d... was revoked. getOwners() on 0xcca0793... = [0x76b7d8..., 0xb4bc50..., 0xa35acdb...]; getThreshold() = 2. modules() returned sentinel only (no modules). masterCopy slot = 0x41675c099f32341bf84bfc5382af534df5c7461a (Safe v1.3.0)."
       },
       {
         "chain": "solana",
@@ -117,7 +117,7 @@
     "review": {
       "evidence": "MYRC Ethereum uses OZ AccessControl (non-enumerable). MINTER_ROLE confirmed held by 2-of-3 Safe 0xcca0793... via hasRole at block 25295023 and corroborated by RoleGranted event log. Safe has 3 signers, threshold 2, no modules, no guard. Arbitrum/Base deploy same implementation (same bytecode); ARB deployer 0xdae4932... does NOT hold MINTER_ROLE, consistent with safe-based role management applied post-deploy on all chains. Solana correction 2026-10-01: the off-curve mint/freeze authority is the immutable Squads v4 vault at index 0 of multisig 96eSyXBfZiDmGVgU5VcGxQuoCsWcxXpNQeaG7ECWaraA, verified at finalized slot 452347437. Current voting threshold is 2-of-4 across seven total members; configuration authority is zero and timelock is zero. The prior keypair assertion was incorrect. Human signer identity and operational custody remain undisclosed. Mint-tier review (2026-07-15): Tommy Ung & Partners PLT issued monthly reserve attestations through 2025-11-30, but the expected subsequent monthly reports are absent as of 2026-07-15; current recurring reconciliation is therefore not established. Securities Commission Malaysia's public register does not establish Blox as a prudential stablecoin issuer. Reconciliation review (2026-08-08): the monthly reports the 2026-07-15 pass recorded as absent after 2025-11-30 do exist, published under cdn.blox.my/attestations. Tommy Ung & Partners PLT (AF 002378), Chartered Accountants Malaysia, issue ISAE 3000 (Revised) reasonable-assurance opinions that MYR-denominated assets held equal or exceed MYRC in circulation - verified for 2025-11-30 (831,090.83 MYRC) and 2026-06-30 (2,217,790.25 MYRC, signed 2026-07-21), with reports present for every month probed in between. Recurring third-party reconciliation is therefore established. Supervision stays non-prudential: Blox's own product term sheet states MYRC does not constitute electronic money or a payment instrument unless and until Blox obtains Bank Negara Malaysia approval. Economic-posture fields reviewed 2026-08-15: issuer-controlled direct mint or immediate minter-administration paths are economically unbounded; existing whole-supply periodic reconciliation and independent attestation evidence remain supported.",
       "reviewer": "Codex SOL-V mint-tier research; Sol economic-posture batch 2026-08-15",
-      "reviewedAt": "2026-08-15",
+      "reviewedAt": "2026-10-30",
       "sources": [
         {
           "label": "Blox docs",
