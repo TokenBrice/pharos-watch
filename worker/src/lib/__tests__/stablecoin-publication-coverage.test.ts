@@ -30,13 +30,14 @@ afterEach(() => fixtures.closeAll());
 const QUARANTINED_NIGHT_WATCH_OMISSIONS = [
   "benji-franklin-templeton",
   "wtgxx-wisdomtree",
-  "busd0-usual",
   "tbill-openeden",
   "cetes-etherfuse",
   "jusd-jusd-stable-token",
   "vndc-jade-labs",
   // sofid-sofi left this list on 2026-09-29: CoinGecko market cap and the
   // DefiLlama 430 row restored a positive supply path, so it is active again.
+  // busd0-usual left this list on 2026-10-30: CoinGecko usd0-liquid-bond
+  // restored a positive price and market cap, so it is active again.
   "gramg-token-teknoloji",
   "grams-token-teknoloji",
 ] as const;

@@ -50,7 +50,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).toHaveProperty("hourly");
     expect(Array.isArray(body.coins)).toBe(true);
     expect(body).not.toHaveProperty("stablecoinId");
-    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 134, pendingAdmissionCount: 2 });
+    expect(parsed.data?.publication).toMatchObject({ legsScope: "non-admitted", admittedCount: 135, pendingAdmissionCount: 2 });
     expect(parsed.data?.publication?.legs.every((leg) => leg.status !== "admitted")).toBe(true);
     const cached = (db as MockD1Database).getHistory().find((entry) => entry.sql.includes("INSERT INTO cache")
       && entry.binds[0] === aggregateFlowCacheKey(24));
@@ -74,7 +74,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(body).not.toHaveProperty("gauge");
   });
 
-  it.each(["busd0-usual", "tbill-openeden"])("retains quarantined %s history after the cron policy write", async (id) => {
+  it.each(["tbill-openeden"])("retains quarantined %s history after the cron policy write", async (id) => {
     const { db, sqlite } = fixtures.open();
     const config = getMintBurnConfigsForStablecoin(id)[0];
     const hour = Math.floor(nowSec / 3600) * 3600 - 3600;
@@ -100,7 +100,7 @@ describe("handleMintBurnFlows contract tests", () => {
     expect(events).toMatchObject({ total: 1, events: [expect.objectContaining({ id: "historical" })] });
   });
 
-  it.each(["busd0-usual", "tbill-openeden"])("keeps disabled %s detail available without exposing stored hourly values", async (id) => {
+  it.each(["tbill-openeden"])("keeps disabled %s detail available without exposing stored hourly values", async (id) => {
     const { sqlite, db } = fixtures.open();
     const configs = getMintBurnConfigsForStablecoin(id);
     sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,

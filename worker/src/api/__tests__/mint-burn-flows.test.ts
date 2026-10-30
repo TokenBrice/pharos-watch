@@ -168,7 +168,7 @@ describe("handleMintBurnFlows contract tests", () => {
       nowSec: now,
       rows: {
         hourly: [{
-          stablecoin_id: "busd0-usual",
+          stablecoin_id: "tbill-openeden",
           chain_id: "ethereum",
           hour_ts: now - 3600,
           mint_count: 1,
@@ -181,8 +181,8 @@ describe("handleMintBurnFlows contract tests", () => {
       stablecoinsCache: {
         value: JSON.stringify({
           peggedAssets: [{
-            id: "busd0-usual",
-            symbol: "bUSD0",
+            id: "tbill-openeden",
+            symbol: "TBILL",
             circulating: { peggedUSD: 100_000_000 },
           }],
         }),
@@ -192,7 +192,7 @@ describe("handleMintBurnFlows contract tests", () => {
 
     const res = await handleMintBurnFlows(inactiveDb, new URL("https://x/api/mint-burn-flows"));
     const body = MintBurnFlowsResponseSchema.parse(await readJsonResponse(res, 200));
-    expect(body.coins.some((coin) => coin.stablecoinId === "busd0-usual")).toBe(false);
+    expect(body.coins.some((coin) => coin.stablecoinId === "tbill-openeden")).toBe(false);
     expect(body.hourly.some((row) => row.netFlowUsd === 5_000_000)).toBe(false);
   });
 

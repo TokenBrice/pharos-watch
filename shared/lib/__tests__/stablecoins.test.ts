@@ -370,7 +370,7 @@ describe("tracked stablecoin metadata", () => {
       "sdai-sky", "senpyusdmain-sentora", "senpyusdprimev2-sentora", "senpyusdpst-sentora",
       "senpyusdmwin-sentora", "susdf-falcon", "aa-falconx-mev-capital", "steakusdg-steakhouse",
       "syrupusdg-maple", "senrlusdv2-sentora", "sxsrlusd-sentora", "susdd-tron-dao-reserve",
-      "susdai-usd-ai", "sgho-aave", "stkgho-umbrella-aave", "stcusd-cap",
+      "susdai-usd-ai", "busd0-usual", "sgho-aave", "stkgho-umbrella-aave", "stcusd-cap",
       "susdx-axis", "scrvusd-curve", "sfrax-frax", "sdola-inverse-finance",
       "asusdf-astherus", "sfrxusd-frax", "usdso-somnia", "savusd-avant",
       "sdai-gnosis", "cusdo-openeden", "usd3-3jane", "steakeurcv-steakhouse",
