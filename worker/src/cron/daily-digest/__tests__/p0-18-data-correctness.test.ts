@@ -2,9 +2,12 @@ import { describe, expect, it } from "vitest";
 import { mockTapeD1, tapeInsertBindsForType } from "../../../lib/tape-projectors/__tests__/test-support";
 import { projectFreezeBlocked } from "../../../lib/tape-projectors/freeze";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import type { DigestInputData } from "@shared/types/digest";
 import { makeCollectorCtx } from "../../__tests__/daily-digest.test-support";
 import { collectBlacklistActivity } from "../collectors-market";
 import { collectHistoricalContext } from "../collectors-history";
+import { buildUserPrompt } from "../prompt";
 
 const NOW = 1_800_000_000;
 
@@ -111,5 +114,73 @@ describe("P0-18 daily digest data correctness", () => {
     );
     expect(noPrecedent.value?.psiPrecedent).toBeNull();
     expect(noPrecedent.degradedReasons).toEqual([]);
+  });
+
+  it("scopes the PSI record-low window to the core-universe precedent search", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const DAY_SECONDS = 86_400;
+    // 2026-07-15T00:00:00Z: new daily digests start carrying aggregateUniverse.
+    const CORE_UNIVERSE_CUTOVER = 1_784_073_600;
+    // 2026-10-30T00:00:00Z: fixed "today" for the digest run.
+    const TODAY = 1_793_318_400;
+    const DAYS_SINCE_CUTOVER = (TODAY - CORE_UNIVERSE_CUTOVER) / DAY_SECONDS;
+    const insertDigest = (generatedAt: number, input: Record<string, unknown>) => {
+      sqlite
+        .prepare(
+          `INSERT INTO daily_digest (generated_at, digest_text, input_data, digest_title, digest_extended, digest_meta)
+           VALUES (?, ?, ?, ?, ?, ?)`,
+        )
+        .run(generatedAt, "seed edition", JSON.stringify(input), "Seed edition", "Seed extended", '{"type":"daily"}');
+    };
+    try {
+      // Enough archived PSI days for historicalContext to be admitted (>30).
+      for (let daysAgo = 0; daysAgo < 40; daysAgo += 1) {
+        sqlite
+          .prepare(
+            `INSERT INTO stability_index (computed_at, score, band, components, input_snapshot, methodology_version)
+             VALUES (?, ?, ?, ?, ?, ?)`,
+          )
+          .run(TODAY - daysAgo * DAY_SECONDS, 85, "STEADY", "{}", "{}", "3.0");
+      }
+      // The pre-cutover archive holds a lower PSI (70) than today's 75, but the
+      // precedent query only searches core-marked rows, so it cannot see it.
+      insertDigest(CORE_UNIVERSE_CUTOVER - 5 * DAY_SECONDS, {
+        stabilityIndex: { score: 70, band: "TREMOR", components: { severity: 24, breadth: 6, trend: 0 } },
+      });
+      for (let index = 0; index < 7; index += 1) {
+        insertDigest(CORE_UNIVERSE_CUTOVER + (index + 1) * 7 * DAY_SECONDS, {
+          aggregateUniverse: "core-stablecoins-v1",
+          stabilityIndex: { score: 80 + index, band: "STEADY", components: { severity: 12, breadth: 4, trend: 0 } },
+        });
+      }
+
+      const ctx = makeCollectorCtx(db);
+      ctx.nowSec = TODAY;
+      ctx.todayTs = TODAY;
+      const historical = await collectHistoricalContext(ctx, 75, "STEADY", TODAY, null);
+      expect(historical.value).toBeDefined();
+
+      const digestInput: DigestInputData = {
+        totalMcapUsd: 0,
+        mcap7dDelta: null,
+        activeDepegCount: 0,
+        biggestSupplyChange: null,
+        topDepegs: [],
+        stabilityIndex: { score: 75, band: "STEADY", components: { severity: 12, breadth: 4, trend: -2 } },
+        yesterdayIndex: { score: 78, band: "STEADY" },
+        historicalContext: historical.value,
+      };
+      const prompt = buildUserPrompt(digestInput);
+      const claimLine = prompt
+        .split("\n")
+        .find((line) => line.toLowerCase().includes("lowest since digest tracking began"));
+      expect(claimLine).toBeDefined();
+      const windowMatch = /(\d+) days?/.exec(claimLine!.split("Current")[0] ?? "");
+      expect(windowMatch).not.toBeNull();
+      // The claim may not span pre-cutover editions the comparison never read.
+      expect(Number(windowMatch?.[1])).toBeLessThanOrEqual(DAYS_SINCE_CUTOVER);
+    } finally {
+      sqlite.close();
+    }
   });
 });

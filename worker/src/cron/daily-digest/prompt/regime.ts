@@ -47,6 +47,10 @@ export function classifyRegime(data: DigestInputData): DigestRegime {
   const unsuppressedActiveDepegs = data.topDepegs.filter((depeg) => !depeg.suppressReason).length;
   const gaugeScore = data.mintBurnFlows?.gaugeScore;
   const gaugeRegime = gaugeScore == null ? null : classifyGaugeRegime(gaugeScore);
+  // An unavailable classification is a fail-closed placeholder, not an
+  // observed inactive read: the same record renders as "unavailable" in the
+  // prompt and risk tape, so it cannot certify the optimistic end here.
+  const ftqUnavailable = data.mintBurnFlows?.classificationSource === "unavailable";
   const ftqActive = data.mintBurnFlows?.flightToQuality.active ?? false;
   const alertPlus = (data.dewsStress?.bandCounts.alert ?? 0)
     + (data.dewsStress?.bandCounts.warning ?? 0)
@@ -69,12 +73,15 @@ export function classifyRegime(data: DigestInputData): DigestRegime {
     return "WATCHFUL";
   }
   // Unsized incidents remain observed; withholding their detail is not calm.
-  if (data.activeDepegCount == null || (data.activeDepegCount > 0 && data.topDepegs.length === 0)) {
+  // `topDepegs` is both size-filtered and display-capped, so any counted event
+  // missing from it means a detail row was withheld (or a fresh incident was
+  // pushed out by the cap).
+  if (data.activeDepegCount == null || data.activeDepegCount > data.topDepegs.length) {
     return "WATCHFUL";
   }
   // A regime-critical collector that could not read did not observe calm:
   // an unavailable input never publishes the optimistic end of the scale.
-  const inputsUnavailable = REGIME_CRITICAL_DEGRADED_SOURCES.some(
+  const inputsUnavailable = ftqUnavailable || REGIME_CRITICAL_DEGRADED_SOURCES.some(
     (source) => data.degradedSources?.includes(source) ?? false,
   );
   return inputsUnavailable ? "WATCHFUL" : "CALM";

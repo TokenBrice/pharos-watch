@@ -4,7 +4,7 @@ import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { CORE_PSI_ELIGIBLE_IDS } from "@shared/lib/psi-eligible";
 import { PSI_METHODOLOGY_VERSION } from "@shared/lib/methodology-versions/constants";
 import { round1 } from "@shared/lib/math";
-import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
+import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import type { CronResult } from "../lib/cron-logger";
 import { createCronResult } from "../lib/cron-result";
 import { getPriceCache } from "../lib/db-cache";
@@ -23,7 +23,7 @@ import { decodeNativeEventQuote, NATIVE_EVENT_QUOTE_CACHE_PREFIX } from "../lib/
 type PsiActiveDepegRow = NativeEventPriceEvidence & { stablecoin_id: string; current_native_quote: string | null };
 
 const REPLAY_PRICE_CACHE_TTL_SEC = 6 * 60 * 60;
-const DEWS_STRESS_MAX_AGE_SEC = CRON_INTERVALS["compute-dews"] * 2;
+const DEWS_STRESS_MAX_AGE_SEC = DEWS_GENERATION_CONSUMER_MAX_AGE_SEC;
 const DEWS_STRESS_BANDS = new Set(["ALERT", "WARNING", "DANGER"]);
 
 export async function computeAndStoreStabilityIndex(db: D1Database, signal?: AbortSignal): Promise<CronResult> {

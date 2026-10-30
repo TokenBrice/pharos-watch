@@ -24,6 +24,7 @@ import {
   type SafetyScoresResult,
 } from "./collectors-shared";
 import { unwrapStressSignalsEnvelope } from "@shared/lib/stress-signals-envelope";
+import { DEWS_GENERATION_CONSUMER_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { loadPublishedStressSignalGeneration } from "../../lib/stress-signals-current-rows";
 import { logWorkerEvent } from "../../lib/structured-log";
 
@@ -189,6 +190,22 @@ export async function collectDewsStress(
         job: "daily-digest",
         message: "Published DEWS generation unavailable",
         metadata: { reason: publishedDews.reason },
+      });
+      return collectorResult(undefined, degradedReasons);
+    }
+    // The digest is a current-only consumer: an accepted generation past the
+    // shared DEWS budget is unavailable, not today's distribution. Without this
+    // gate a stalled compute-dews republished an arbitrarily old generation as
+    // current and compared it with yesterday's snapshot as a "last 24h" change.
+    if (ctx.nowSec - publishedDews.computedAt > DEWS_GENERATION_CONSUMER_MAX_AGE_SEC) {
+      degradedReasons.push("dews-published-generation");
+      logWorkerEvent({
+        scope: "lib",
+        level: "error",
+        event: "daily_digest.dews_generation_stale",
+        job: "daily-digest",
+        message: "Published DEWS generation past the consumer budget",
+        metadata: { computedAt: publishedDews.computedAt, ageSec: ctx.nowSec - publishedDews.computedAt },
       });
       return collectorResult(undefined, degradedReasons);
     }

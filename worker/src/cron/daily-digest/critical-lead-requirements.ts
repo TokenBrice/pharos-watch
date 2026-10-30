@@ -3,6 +3,7 @@ import { isCriticalDepegRisk } from "@shared/lib/digest-risk";
 import { computeLeadStreak, decideCriticalLeadSeverity } from "@shared/lib/digest-lead-policy";
 import type { DigestLeadRequirement } from "./lead-requirements";
 import { comparableDepegs } from "./digest-evidence";
+import { activeDepegEditorialCandidateId } from "./editorial-candidates";
 
 function severityBpsOf(depeg: DigestInputData["topDepegs"][number]): number {
   return depeg.currentBps ?? depeg.bps;
@@ -39,8 +40,12 @@ export function buildCriticalDailyLeadRequirements(
   if (!criticalDepeg) return undefined;
 
   const symbol = criticalDepeg.symbol.toUpperCase();
+  // Candidate ids embed the coin identity; a same-symbol sibling can rank
+  // earlier (artifact risk precedes impact), so bind the requirement to the
+  // critical coin's own id rather than whichever candidate prints that symbol.
+  const criticalCandidateId = activeDepegEditorialCandidateId(criticalDepeg);
   const candidate = (inputData.editorialCandidates ?? []).find((entry) =>
-    entry.kind === "depeg" && !entry.suppressReason && entry.symbols.some((candidateSymbol) => candidateSymbol.toUpperCase() === symbol)
+    entry.kind === "depeg" && !entry.suppressReason && entry.id === criticalCandidateId
   );
   if (!candidate) return undefined;
 

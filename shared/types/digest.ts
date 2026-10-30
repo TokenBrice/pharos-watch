@@ -398,12 +398,16 @@ export interface DigestInputData {
     topEvents: { symbol: string; chain: string; type: "blacklist" | "destroy"; amountUsd: number | null }[];
   };
   supplyVelocity?: {
+    /** Present on current captures; archived rows keep the symbol-only shape. */
+    stablecoinId?: string;
     coin: string;
     change1d: number;
     change7d: number;
     signal: string;
   }[];
   supplyChanges7d?: {
+    /** Present on current captures; archived rows keep the symbol-only shape. */
+    stablecoinId?: string;
     coin: string;
     change7d: number;
   }[];
@@ -485,7 +489,7 @@ export interface DigestInputData {
       lastSeenBand: string;
     } | null;
     psiBandStreak: number;
-    /** How many days of digest history exist (from first digest to today) */
+    /** Days from the first core-universe digest to today: the window the PSI precedent query reads. */
     digestTrackingDays: number;
     supplyMoverContext: {
       allTimeHighMcap: number;

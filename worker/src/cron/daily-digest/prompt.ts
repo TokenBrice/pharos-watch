@@ -74,9 +74,11 @@ export function buildUserPrompt(
   lines.push(
     "",
     "Supporting evidence:",
-    data.supplyCoverage?.complete === true
-      ? `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`
-      : `Known stablecoin market-cap subtotal: ${formatCurrency(data.totalMcapUsd)}; supply coverage ${data.supplyCoverage ? `${data.supplyCoverage.observedCount} observed, ${data.supplyCoverage.unavailableCount} unavailable` : "unverified"}. Do not describe this as the complete market total.`,
+    data.supplyCoverage?.observedCount === 0
+      ? "Total stablecoin market cap: unavailable (supply-current-unavailable)"
+      : data.supplyCoverage?.complete === true
+        ? `Total stablecoin market cap: ${formatCurrency(data.totalMcapUsd)}`
+        : `Known stablecoin market-cap subtotal: ${formatCurrency(data.totalMcapUsd)}; supply coverage ${data.supplyCoverage ? `${data.supplyCoverage.observedCount} observed, ${data.supplyCoverage.unavailableCount} unavailable` : "unverified"}. Do not describe this as the complete market total.`,
     mcap7dDelta == null
       ? "7-day market cap change: unavailable (no-7d-comparison-pairs)"
       : `7-day market cap change: ${mcap7dDelta >= 0 ? "+" : ""}${formatCurrency(mcap7dDelta)} (${mcap7dPct})${mcap7dCoverage}`,
@@ -135,7 +137,7 @@ export function buildUserPrompt(
         lines.push(
           `Context: last below ${score} on ${precedentDate}, ${psiPrecedent.lastSeenDaysAgo} days ago${trackingWindow}. Current ${band} streak: ${psiBandStreak} days.`,
         );
-      } else if (!psiPrecedent) {
+      } else if (!psiPrecedent && digestTrackingDays > 0) {
         lines.push(
           `Context: lowest since Digest tracking began${trackingWindow}. Current ${band} streak: ${psiBandStreak} days.`,
         );
@@ -417,10 +419,17 @@ export function buildSafetyMapCensusLines(
 function pushDailySafetyDeskLines(lines: string[], data: DigestInputData): void {
   const censusLines = buildSafetyMapCensusLines(data.safetyMap, data.safetyContext);
   const transitions = data.safetyContext?.status === "available" ? data.gradeTransitions ?? [] : [];
-  if (censusLines.length === 0 && transitions.length === 0) return;
+  // A failed 48h drain persists explicit incomplete accounting; it is not an
+  // observed empty census and must not be rendered as "none recorded".
+  const accounting = data.safetyContext?.status === "available" ? data.gradeTransitionAccounting : undefined;
+  if (censusLines.length === 0 && transitions.length === 0 && accounting?.complete !== false) return;
   lines.push("", "Safety desk:", ...censusLines);
   if (transitions.length === 0) {
-    lines.push("  Grade movers (last 48h): none recorded. Do not infer tier crossings from the census.");
+    if (accounting?.complete === false) {
+      lines.push(`  Grade movers (last 48h): unavailable (${accounting.reason}). Do not infer tier crossings from the census.`);
+    } else {
+      lines.push("  Grade movers (last 48h): none recorded. Do not infer tier crossings from the census.");
+    }
     return;
   }
   lines.push("  Grade movers (last 48h; sole per-coin mover source):");

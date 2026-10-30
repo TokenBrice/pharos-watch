@@ -476,6 +476,22 @@ describe("market and risk collectors", () => {
     // The same withheld net without a complete 24h window means the flow evidence itself is missing.
     const unscanned = await withheld({ ...coins[2], netFlow24hUsd: null, valuation: partialValuation, coverage: coverage(false) });
     expect(unscanned.degradedReasons).toEqual(["mint-burn-ftq:flow-window-unavailable"]);
+    expect(unscanned.value).toMatchObject({
+      classificationSource: "unavailable",
+      classificationReason: "flow-window-unavailable",
+      flightToQuality: { active: false, safeNetUsd: 0, riskyNetUsd: 0 },
+    });
+    // The fail-closed placeholder is not an observed inactive read: the same
+    // record renders FTQ as unavailable in the prompt and risk tape, so the
+    // regime cannot publish CALM from it (ADR-28/R1, ADR-29/R2).
+    expect(classifyRegime({
+      ...BASE_DIGEST_INPUT,
+      activeDepegCount: 0,
+      topDepegs: [],
+      stabilityIndex: { score: 88, band: "STEADY", components: { severity: 2, breadth: 1, trend: 0 } },
+      mintBurnFlows: unscanned.value,
+      degradedSources: unscanned.degradedReasons,
+    })).not.toBe("CALM");
   });
   it.each([
     ["USG idle inventory burn", 3_860_000, 3_860_000, false],
@@ -885,6 +901,26 @@ describe("history and DEWS collectors", () => {
     const partial = await collectDewsStress(ctxFor(tables));
     expect(partial.value).toBeUndefined();
     expect(partial.degradedReasons).toContain("dews-published-generation");
+  });
+  it("withholds an accepted DEWS generation past the shared consumer budget", async () => {
+    // compute-dews runs every 30 minutes; a generation older than two
+    // producer intervals means the pointer stopped advancing. The digest is a
+    // current-only consumer, so the old generation is unavailable rather than
+    // "today's" distribution or a last-24h change count.
+    const at = Math.floor(Date.now() / 1000) - 26 * 3600;
+    const rows = ["usdt-tether", "usdc-circle"].map((id) => ({ stablecoin_id: id, score: 12, band: "CALM", signals_json: "{}", computed_at: at }));
+    const result = await collectDewsStress(ctxFor(makePublishedDewsTables(rows)));
+
+    expect(result.value).toBeUndefined();
+    expect(result.degradedReasons).toContain("dews-published-generation");
+    expect(classifyRegime({
+      ...BASE_DIGEST_INPUT,
+      activeDepegCount: 0,
+      topDepegs: [],
+      stabilityIndex: { score: 95, band: "BEDROCK", components: { severity: 0, breadth: 0, trend: 0 } },
+      dewsStress: result.value,
+      degradedSources: result.degradedReasons,
+    })).toBe("WATCHFUL");
   });
   it.each([false, true])("keeps the full DEWS census independent of five displayed coins (missing supply: %s)", async (missingSupply) => {
     const at = Math.floor(Date.now() / 1000) - 600;
