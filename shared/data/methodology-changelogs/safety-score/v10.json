@@ -3,7 +3,7 @@
     "version": "10.38",
     "title": "Evidence-method admission and stable incident identity",
     "date": "2026-10-30",
-    "effectiveAt": 1793329200,
+    "effectiveAt": 1793350800,
     "summary": "Methodology 10.38 admits the evidence methods its scoring code already reads: ERC-4626 clamped executions publish as exact lower bounds, reference-price legs carry a 7,200-second evaluation-lag margin, chain-supply evidence ages against per-source ceilings, and a pinned deployment supply census can bound a deployment's share below 1%, a bound both the documentation class and the Control scorer read. Incident reviews move to authored stable identity; certificate-based lane closure is not part of this release. Weights, thresholds and pillar arithmetic are unchanged.",
     "impact": [
       "ERC-4626 lower-bound admission (PF-A1a/PF-A1b). A request above the vault's issued shares keeps the stress units as requestedRawInput, records the clamp in the canonical attempt and emits erc4626-request-exceeds-issued-shares; executableUsd is the served fraction of the ask and the certificate can only be exact-lower-bound, never exact-complete. Admission compares exact units only for exact-complete: a certified lower bound in (0, expected] is admitted and zero is rejected by the certificate schema. A failed totalSupply read stays erc4626-read-unavailable and a simulated zero stays a diagnostic zero, never a clamp-to-zero success. Only an exact-complete same-rail certificate supersedes a modelled route; a lower-bound certificate competes on route score instead, and a shared physical rail is still valued once.",

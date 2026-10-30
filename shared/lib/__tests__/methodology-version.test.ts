@@ -568,7 +568,7 @@ describe("methodology registry", () => {
   it("activates v10.38 evidence-method admission at its own release boundary", () => {
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.38")!;
     expect(release).toMatchObject({
-      version: "10.38", date: "2026-10-30", effectiveAt: 1_793_329_200, reconstructed: false, commits: [],
+      version: "10.38", date: "2026-10-30", effectiveAt: 1_793_350_800, reconstructed: false, commits: [],
     });
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.37");
     expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.38");
