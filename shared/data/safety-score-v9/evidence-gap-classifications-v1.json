@@ -13819,8 +13819,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:06Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "reviewedAt": "2026-10-30T21:45:00Z",
+      "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
       "sourcesRefs": [
         "source:42a653d03689a893a78f7e17"
       ],
@@ -13848,8 +13848,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:06Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "reviewedAt": "2026-10-30T21:45:00Z",
+      "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
       "sourcesRefs": [
         "source:42a653d03689a893a78f7e17"
       ],
@@ -13877,8 +13877,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:06Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "reviewedAt": "2026-10-30T21:45:00Z",
+      "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
       "sourcesRefs": [
         "source:42a653d03689a893a78f7e17"
       ],
@@ -13906,8 +13906,8 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-03T23:02:06Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R09)",
+      "reviewedAt": "2026-10-30T21:45:00Z",
+      "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
       "sourcesRefs": [
         "source:42a653d03689a893a78f7e17"
       ],
@@ -67322,11 +67322,11 @@
     {
       "id": "source:42a653d03689a893a78f7e17",
       "value": {
-        "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-        "observedAt": "2026-10-03T22:57:25Z",
-        "datumAsOf": "2026-08-31",
+        "url": "https://learn.anchorage.com/09.30.26_USDGO-Stablecoin-Attestation-Report-signed.pdf",
+        "observedAt": "2026-10-30T21:40:00Z",
+        "datumAsOf": "2026-09-30",
         "location": "Schedule II pp.5-6, cash, BUIDL and MMF rows",
-        "excerpt": "|a.|38151N205|N/A|$99,693,768|",
+        "excerpt": "|a.|38151N205|N/A|$99,987,265|",
         "assertion": "Attestation identifies MMF CUSIPs, demand-deposit cash and BUIDL shares, but gives no finite maximum maturityDaysMax for any held reserve instrument. Underlying portfolio WAM/mandates are not held-share maxima."
       }
     },

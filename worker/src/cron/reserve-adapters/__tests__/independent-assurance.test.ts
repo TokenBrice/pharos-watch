@@ -526,7 +526,7 @@ describe("independent-assurance manifest framework", () => {
   it("still fails closed when the USDGO family has two reports for the reviewed latest date", async () => {
     const fixture = "usdgo-transparency.html";
     const ambiguous = indexFixture(fixture) +
-      '<a href="https://learn.anchorage.com/08.31.26_USDGO-Stablecoin-Attestation-Report-revised.pdf">Aug revised</a>';
+      '<a href="https://learn.anchorage.com/09.30.26_USDGO-Stablecoin-Attestation-Report-revised.pdf">Sep revised</a>';
     await expect(
       verifyFixtureIndex("USDGO", USDGO_INDEPENDENT_ASSURANCE_PROFILE, fixture, ambiguous),
     ).rejects.toThrow("reviewed report URL is missing or duplicated");

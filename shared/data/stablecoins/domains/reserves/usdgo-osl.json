@@ -4,7 +4,7 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:stbxx",
       "name": "Goldman Sachs STBXX (CUSIP 38151N205)",
-      "pct": 7.982203,
+      "pct": 8.390349,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Goldman Sachs Stablecoin Reserves Fund",
@@ -20,7 +20,7 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:jltxx",
       "name": "JPMorgan JLTXX (CUSIP 46655R119)",
-      "pct": 53.987682,
+      "pct": 44.069459,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "JPMorgan OnChain Liquidity-Token Money Market Fund",
@@ -36,7 +36,7 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:buidl",
       "name": "BUIDL (BlackRock USD Institutional Digital Liquidity Fund)",
-      "pct": 37.034727,
+      "pct": 43.260761,
       "risk": "low",
       "coinId": "buidl-blackrock",
       "depType": "collateral",
@@ -53,7 +53,7 @@
     {
       "sourceKey": "usdgo-transparency:usdgo:cash",
       "name": "Cash at FDIC-insured depository institutions",
-      "pct": 0.995389,
+      "pct": 4.279431,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "issuerOrObligor": "Undisclosed major commercial banks",
@@ -66,13 +66,13 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (FixInv5)",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Anchorage USDGO Reserve Report - August 31, 2026",
-        "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+        "label": "Anchorage USDGO Reserve Report - September 30, 2026",
+        "url": "https://learn.anchorage.com/09.30.26_USDGO-Stablecoin-Attestation-Report-signed.pdf"
       },
       {
         "label": "Anchorage USDGO reserve attestations",
@@ -91,9 +91,9 @@
         "url": "https://www.usdgo.com/en/transparency"
       }
     ],
-    "rationale": "The August 31 USDGO Reserve Report discloses $99,693,768 STBXX, $674,279,453 JLTXX, $462,545,429 BUIDL and $12,431,912 cash, totaling $1,248,950,562. These dated balances normalize to the curated percentages, rounded to six decimals. The issuer's September 29 dashboard snapshot remains a newer issuer observation for the live adapter, but has no corresponding independent examination in the issuer's report index; this curated composition remains aligned to the August 31 examination.",
-    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of August 31, 2026; Schedule II balances normalized by $1,248,950,562 total reserve assets.",
-    "compositionAsOf": "2026-08-31",
+    "rationale": "The September 30 USDGO Reserve Report discloses $99,987,265 STBXX, $525,173,013 JLTXX, $515,535,803 BUIDL and $50,997,715 cash, totaling $1,191,693,796. These dated balances normalize to the curated percentages, rounded to six decimals.",
+    "compositionBasis": "Deloitte examination of the USDGO Reserve Report as of September 30, 2026; Schedule II balances normalized by $1,191,693,796 total reserve assets.",
+    "compositionAsOf": "2026-09-30",
     "scope": "full-composition",
     "knownUnknownExposure": "The report discloses the two money market fund CUSIPs; their names are verified against the fund managers' product pages. Underlying fund portfolios and account-level custodians remain outside the report's disclosed scope.",
     "knownUnknownExposurePct": 0
@@ -109,13 +109,13 @@
     "segregation": "segregated",
     "bankruptcyRemoteness": "structured",
     "rehypothecation": "unknown",
-    "reviewedAt": "2026-10-01",
-    "reviewer": "Sol curation pass 2026-10-01 (CurA21USDGO)",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Armada curation 2026-10-30 (USDGO September attestation)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Anchorage USDGO Reserve Report - August 31, 2026",
-        "url": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf"
+        "label": "Anchorage USDGO Reserve Report - September 30, 2026",
+        "url": "https://learn.anchorage.com/09.30.26_USDGO-Stablecoin-Attestation-Report-signed.pdf"
       },
       {
         "label": "USDGO transparency page (names reserve fund issuers, accessed 2026-07-17)",
@@ -130,6 +130,6 @@
         "url": "https://am.jpmorgan.com/us/en/asset-management/adv/products/jpmorgan-onchain-liquidity-token-money-market-fund-token-class-46655r119"
       }
     ],
-    "uncertainty": "The August report confirms segregated, unencumbered fiduciary trust accounts for token holders and Anchorage's self-custody of $462,545,429 BUIDL on Solana. It identifies 9yGxs2pSFFBZhJVrwRAgbKHaLQnuHa7BpmCRsHuzG968, but does not name the banks holding $12,431,912 cash or the money market funds' account-level custodians. Anchorage's provider share is not disclosed; no 100% custody allocation is assumed. A standing rehypothecation policy and report-time wallet balances remain unverified."
+    "uncertainty": "The September report confirms segregated, unencumbered fiduciary trust accounts for token holders and Anchorage's self-custody of $515,535,803 BUIDL on Solana. It identifies 9yGxs2pSFFBZhJVrwRAgbKHaLQnuHa7BpmCRsHuzG968, but does not name the banks holding $50,997,715 cash or the money market funds' account-level custodians. Anchorage's provider share is not disclosed; no 100% custody allocation is assumed. A standing rehypothecation policy and report-time wallet balances remain unverified."
   }
 }

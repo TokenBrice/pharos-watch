@@ -3,13 +3,13 @@
   "product": "USDGO",
   "profile": "usdgo-v1",
   "officialIndexUrl": "https://www.anchorage.com/platform/usdgo-reserve-attestations",
-  "reportUrl": "https://learn.anchorage.com/08.31.26_USDGO_Stablecoin_Attestation_Report%20(FINAL)%20signed_9.28.26.pdf",
-  "reportSha256": "945b496e7048c34da46494d6eeea0ded8ba8e026911d56d1552d5d92fa1c9429",
-  "reportByteLength": 415018,
-  "reportDate": "2026-08-31",
-  "reportAsOf": "2026-08-31T23:59:59Z",
+  "reportUrl": "https://learn.anchorage.com/09.30.26_USDGO-Stablecoin-Attestation-Report-signed.pdf",
+  "reportSha256": "503a33d90e8b9179ceb487320ddd5141ac671db0dc518cfcfc1750930265b989",
+  "reportByteLength": 411720,
+  "reportDate": "2026-09-30",
+  "reportAsOf": "2026-09-30T23:59:59Z",
   "reportTimeZone": "UTC",
-  "reportIssuedAt": "2026-09-28T23:59:00Z",
+  "reportIssuedAt": "2026-10-26T23:59:00Z",
   "attestor": "Deloitte & Touche LLP",
   "engagement": "Independent accountant's examination under AICPA attestation standards",
   "conclusion": "unmodified",
@@ -18,38 +18,48 @@
     {
       "code": "cash",
       "label": "Cash",
-      "amount": "12431912"
+      "amount": "50997715"
     },
     {
       "code": "buidl",
       "label": "BUIDL at fair value",
-      "amount": "462545429"
+      "amount": "515535803"
     },
     {
       "code": "stbxx",
       "label": "STBXX money market fund (CUSIP 38151N205)",
-      "amount": "99693768"
+      "amount": "99987265"
     },
     {
       "code": "jltxx",
       "label": "JLTXX money market fund (CUSIP 46655R119)",
-      "amount": "674279453"
+      "amount": "525173013"
     }
   ],
   "liabilities": [
     {
       "code": "solana",
       "label": "Solana USDGO redeemable tokens",
-      "amount": "1244426424"
+      "amount": "1186633294"
+    },
+    {
+      "code": "morph",
+      "label": "Morph USDGO redeemable tokens",
+      "amount": "83"
+    },
+    {
+      "code": "ethereum",
+      "label": "Ethereum USDGO redeemable tokens",
+      "amount": "185"
     }
   ],
-  "reportedAssetTotal": "1248950562",
-  "computedAssetTotal": "1248950562",
-  "reportedLiabilityTotal": "1244426424",
+  "reportedAssetTotal": "1191693796",
+  "computedAssetTotal": "1191693796",
+  "reportedLiabilityTotal": "1186633562",
   "extraction": {
     "tool": "Poppler pdftotext -layout",
-    "parserVersion": "26.08.0",
-    "normalizedTextSha256": "13acf59fa37ab59f0e1b444ecbed58b4d1af8abbcb66ae6116a2854618de5482",
+    "parserVersion": "26.10.0",
+    "normalizedTextSha256": "718e35c53b26b82c244e8667a304aa9f9296161179c1a0c528ea9510e137c3cd",
     "pageCount": 7
   },
   "assuranceTier": "independent-assurance"
