@@ -21,6 +21,7 @@ import {
   projectSugarPoolPage,
   projectSugarTokens,
 } from "../fetch-slipstream";
+import { convertToGtNewPools, extractPriceObservations } from "../../../lib/dex-api-common";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
 import { makeChainRpcs } from "../../../test-helpers/chain-rpc-fixtures.test-support";
 
@@ -144,7 +145,7 @@ describe("fetchSlipstreamPools", () => {
     vi.restoreAllMocks();
   });
 
-  function mockSugarPage(poolFee: bigint) {
+  function mockSugarPage(poolFee: bigint, reserve = 50n) {
     vi.mocked(fetchEvmCallHexAtBlock)
       .mockResolvedValueOnce(encodeFunctionResult({
         abi: ABI,
@@ -170,10 +171,10 @@ describe("fetchSlipstreamPools", () => {
           // has a tiny raw ratio that used to truncate to zero.
           sqrt_ratio: (1n << 96n) / 1_000_000n,
           token0: "0x00000000000000000000000000000000000000bb",
-          reserve0: 50_000000000000000000n,
+          reserve0: reserve * 10n ** 18n,
           staked0: 0n,
           token1: "0x00000000000000000000000000000000000000cc",
-          reserve1: 50_000_000n,
+          reserve1: reserve * 10n ** 6n,
           staked1: 0n,
           gauge: "0x0000000000000000000000000000000000000000",
           gauge_liquidity: 0n,
@@ -255,16 +256,51 @@ describe("fetchSlipstreamPools", () => {
           address: "0x00000000000000000000000000000000000000bb",
           symbol: "CADC",
           decimals: 18,
-          priceUsd: 1,
         },
         {
           address: "0x00000000000000000000000000000000000000cc",
           symbol: "USDC",
           decimals: 6,
-          priceUsd: 1,
         },
       ],
     });
+    // A tracked side's own primary is a valuation reference, not pool evidence.
+    expect(result.pools[0]!.tokens.map((token) => token.priceUsd)).toEqual([undefined, undefined]);
+  });
+
+  it("derives Slipstream price evidence from the pool spot, not the tracked primary", async () => {
+    mockSugarPage(1n, 600_000n);
+    const chainAddressToId = new Map([
+      ["base:0x00000000000000000000000000000000000000bb", "cadc-cad-coin"],
+      ["base:0x00000000000000000000000000000000000000cc", "usdc-circle"],
+    ]);
+    // The pool still quotes 1 CADC = 1 USDC while CADC's trusted primary reads
+    // 1.02; the pool-implied CADC price is therefore 1.00, not the 1.02
+    // primary it used to republish as its own observation.
+    const trackedStablecoinPrices = new Map([["cadc-cad-coin", 1.02], ["usdc-circle", 1]]);
+
+    const result = await fetchSlipstreamPools("aerodrome-slipstream", chainAddressToId, new Map(), trackedStablecoinPrices);
+
+    expect(result.pools).toHaveLength(1);
+    const shapedPrices = convertToGtNewPools(
+      result.pools,
+      chainAddressToId,
+      new Map(),
+      undefined,
+      trackedStablecoinPrices,
+    ).get("cadc-cad-coin")?.map((entry) => entry.price) ?? [];
+    expect(shapedPrices).toHaveLength(1);
+    expect(shapedPrices[0]).toBeCloseTo(1, 6);
+
+    const observationPrices = extractPriceObservations(
+      result.pools,
+      chainAddressToId,
+      new Map(),
+      undefined,
+      trackedStablecoinPrices,
+    ).get("cadc-cad-coin")?.map((observation) => observation.price) ?? [];
+    expect(observationPrices).toHaveLength(1);
+    expect(observationPrices[0]).toBeCloseTo(1, 6);
   });
 
   it("publishes the neutral bucket and no fee rate when pool_fee is out of range", async () => {

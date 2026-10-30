@@ -425,13 +425,16 @@ export async function fetchSlipstreamPools(
             address: token0.token_address,
             symbol: token0.symbol,
             decimals: token0.decimals,
-            priceUsd: token0PriceUsd,
+            // A tracked side's USD value is a reference, not an observation of
+            // this pool; leave it unset so price evidence comes from the spot
+            // price and the other side's reference.
+            priceUsd: stable0.status === "matched" ? undefined : token0PriceUsd,
           },
           {
             address: token1.token_address,
             symbol: token1.symbol,
             decimals: token1.decimals,
-            priceUsd: token1PriceUsd,
+            priceUsd: stable1.status === "matched" ? undefined : token1PriceUsd,
           },
         ],
         price: finalSpotPrice,
