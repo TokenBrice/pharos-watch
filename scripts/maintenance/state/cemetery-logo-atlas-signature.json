@@ -13,10 +13,10 @@
     0.7152,
     0.0722
   ],
-  "inputSha256": "61db206a428a61b272ee2ebcf41d39baed8c633ca4d96feaf983225c0ce5a872",
+  "inputSha256": "bebc8bca89c53d06cab061ca653c88a222bcfa90740913d832ce5153226d07e9",
   "image": {
-    "sha256": "fd170fc93b99f9e841bbc41e41be651c3261fb28b616645797ddaa8498d0a88f",
-    "bytes": 138810,
+    "sha256": "842394aa2c421a4468f0ac566095bfaa5dee4116056d25161d00e03e618352a3",
+    "bytes": 142728,
     "width": 798,
     "height": 698
   },
@@ -119,6 +119,11 @@
     {
       "logo": "/logos/cemetery/dsd.png",
       "sha256": "6261ca2697b10a37a608872cf7f7ed9943eee028d3751c4e37b0037d2d9a438f",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/dusd-dtrinity.png",
+      "sha256": "30e91604efb678d0e19369f0cbf0f7460fdb38e4a61ef8af6895c4bcc6f73e6b",
       "kernel": "lanczos3"
     },
     {
@@ -329,6 +334,11 @@
     {
       "logo": "/logos/cemetery/rsv.png",
       "sha256": "750144d7f2fcee78d06b7076b68d53413846815b32dd29e51617cbb9b9833d48",
+      "kernel": "lanczos3"
+    },
+    {
+      "logo": "/logos/sdusd-dtrinity.svg",
+      "sha256": "e64b8c161f4e2480fde9f0b4b9758928aab71b4a7769dbd0dd901577de35e27c",
       "kernel": "lanczos3"
     },
     {
@@ -653,6 +663,10 @@
       "logo": "/logos/cemetery/dsd.png"
     },
     {
+      "id": "dusd-dtrinity",
+      "logo": "/logos/dusd-dtrinity.png"
+    },
+    {
       "id": "dusd-fluid",
       "logo": "/logos/dusd-fluid.png"
     },
@@ -827,6 +841,10 @@
     {
       "id": "rsv-reserve-2023-03",
       "logo": "/logos/cemetery/rsv.png"
+    },
+    {
+      "id": "sdusd-dtrinity",
+      "logo": "/logos/sdusd-dtrinity.svg"
     },
     {
       "id": "seur-synthetix-seur-2024-07",
