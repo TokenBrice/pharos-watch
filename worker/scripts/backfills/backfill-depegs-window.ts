@@ -1,10 +1,11 @@
 import type { D1Database, D1PreparedStatement } from "@cloudflare/workers-types";
 import { buildReplayWindow, MAX_BACKFILL_REPLAY_CONTEXT_DAYS, type BackfillReplayWindow } from "../../src/lib/backfill-day-window";
 
-export interface DdrSealedBackfillConflict {
+export interface DdrBackfillReplayConflict {
   eventId: number;
   incidentKey: string;
-  publicPredictionId: number;
+  /** Null for an unsealed incident member. */
+  publicPredictionId: number | null;
 }
 
 
@@ -87,10 +88,11 @@ export function backfillEpisodeCoveredByLiveEvent(
   return episode.startedAt <= liveEnd && liveRow.started_at <= episodeEnd;
 }
 
-const SEALED_EVENT_DELETE_GUARD = ` AND id NOT IN (
+// Incident event links are append-only: a deleted member event, sealed or not,
+// leaves a dangling incident reference.
+const INCIDENT_MEMBER_DELETE_GUARD = ` AND id NOT IN (
   SELECT l.event_id
   FROM depeg_resolver_incident_event_links l
-  JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
 )`;
 
 export function buildBackfillDeleteStmt(
@@ -108,22 +110,22 @@ export function buildBackfillDeleteStmt(
     sql += " AND started_at <= ?";
     binds.push(replayWindow.compareEndSec);
   }
-  sql += SEALED_EVENT_DELETE_GUARD;
+  sql += INCIDENT_MEMBER_DELETE_GUARD;
   return db.prepare(sql).bind(...binds);
 }
 
-export async function loadSealedBackfillReplayConflicts(
+export async function loadDdrBackfillReplayConflicts(
   db: D1Database,
   stablecoinId: string,
   replayWindow: BackfillReplayWindow | null,
-): Promise<DdrSealedBackfillConflict[]> {
+): Promise<DdrBackfillReplayConflict[]> {
   let sql = `
     SELECT e.id AS event_id,
            l.incident_key AS incident_key,
            p.id AS public_prediction_id
     FROM depeg_events e
     JOIN depeg_resolver_incident_event_links l ON l.event_id = e.id
-    JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
+    LEFT JOIN depeg_resolver_public_predictions p ON p.incident_key = l.incident_key
     WHERE e.stablecoin_id = ?
       AND e.source = 'backfill'`;
   const binds: unknown[] = [stablecoinId];
@@ -142,12 +144,12 @@ export async function loadSealedBackfillReplayConflicts(
   const rows = await db.prepare(sql).bind(...binds).all<{
     event_id: number;
     incident_key: string;
-    public_prediction_id: number;
+    public_prediction_id: number | null;
   }>();
 
   return (rows.results ?? []).map((row) => ({
     eventId: row.event_id,
     incidentKey: row.incident_key,
-    publicPredictionId: row.public_prediction_id,
+    publicPredictionId: row.public_prediction_id ?? null,
   }));
 }

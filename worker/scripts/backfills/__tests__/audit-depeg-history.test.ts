@@ -277,6 +277,66 @@ describe("handleAuditDepegHistory method safety", () => {
     }
   });
 
+  it.each([
+    {
+      title: "refuses direct deletes of unsealed DDR incident members",
+      query: "?delete=1", additionalReads: [], eventId: 1,
+      operation: "audit-depeg-history:direct-delete",
+      mutationSqlFragments: ["DELETE FROM depeg_events"],
+    },
+    {
+      title: "refuses synthetic split repairs that would delete unsealed DDR incident members",
+      query: "?repair=synthetic-splits",
+      additionalReads: ["FROM depeg_events ORDER BY stablecoin_id, started_at"], eventId: 2,
+      operation: "audit-depeg-history:synthetic-splits",
+      mutationSqlFragments: ["UPDATE depeg_events SET started_at", "DELETE FROM depeg_events WHERE id = ?"],
+    },
+  ])("$title", async ({ query, additionalReads, eventId, operation, mutationSqlFragments }) => {
+    const rows = makeSyntheticSplitRows();
+    const incidentKey = "ddr2:1234567890abcdef1234567890ab";
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      ...additionalReads.map((match) => ({ match, rows })),
+      {
+        match: "FROM depeg_resolver_incident_event_links l",
+        rows: [{ event_id: eventId, incident_key: incidentKey, public_prediction_id: null }],
+      },
+    ]) as MockD1Database;
+    const req = makeApiRequest(`/api/audit-depeg-history${query}`, {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const body = (await readJsonResponse(res, 409)) as { error: string; operation: string; conflicts: unknown[] };
+    expect(body.error).toBe("DDR incident member delete refused");
+    expect(body.operation).toBe(operation);
+    expect(body.conflicts).toEqual([{ eventId, incidentKey }]);
+    for (const mutationSqlFragment of mutationSqlFragments) {
+      expect(db.getHistory().some((entry) => entry.sql.includes(mutationSqlFragment))).toBe(false);
+    }
+  });
+
+  it("still nulls contradictory recovery prices on unsealed DDR incident members", async () => {
+    const rows = makeContradictoryRecoveryRows();
+    const db = mockD1([
+      { match: "FROM depeg_events WHERE ended_at IS NOT NULL ORDER BY started_at", rows },
+      {
+        match: "FROM depeg_resolver_incident_event_links l",
+        rows: [{ event_id: 21, incident_key: "ddr2:1234567890abcdef1234567890ab", public_prediction_id: null }],
+      },
+      { match: "UPDATE depeg_events SET recovery_price = NULL WHERE id = ?", rows: [] },
+    ]) as MockD1Database;
+    const req = makeApiRequest("/api/audit-depeg-history?repair=contradictory-recovery-price", {
+      adminKey: "secret",
+      method: "POST",
+    });
+
+    const res = await handleAuditDepegHistoryTrusted({ db, url: makeApiUrl(req.url), request: req });
+    const body = (await readJsonResponse(res, 200)) as { repairedEventCount: number };
+    expect(body.repairedEventCount).toBe(1);
+  });
+
   it("returns a clear 500 when direct delete recompute commit fails", async () => {
     const rows = makeSyntheticSplitRows();
     const db = mockD1([

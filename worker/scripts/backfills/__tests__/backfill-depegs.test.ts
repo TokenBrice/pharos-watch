@@ -113,6 +113,25 @@ describe("handleBackfillDepegs", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
   });
 
+  it("blocks backfill replays that would delete unsealed DDR incident members", async () => {
+    const db = mockD1([
+      {
+        match: "FROM depeg_events e",
+        rows: [{
+          event_id: 102,
+          incident_key: "ddr2:1234567890abcdef1234567890ab",
+          public_prediction_id: null,
+        }],
+      },
+    ]) as MockD1Database;
+
+    await expect(
+      applyBackfillEvents(db, { id: "brla-brla-digital", symbol: "BRLA" }, [], null),
+    ).rejects.toThrow("DDR incident member replay refused");
+
+    expect(db.getHistory().some((entry) => entry.sql.includes("DELETE FROM depeg_events"))).toBe(false);
+  });
+
   it("records complete replay runs and inserts provenance for backfill rows", async () => {
     const db = mockD1([
       { match: "FROM depeg_events e", rows: [] },
