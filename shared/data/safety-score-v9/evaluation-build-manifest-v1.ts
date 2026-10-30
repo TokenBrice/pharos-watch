@@ -1254,7 +1254,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "worker/src/lib/safety-score-v9/bridge-lane-admin-events.ts",
-      "sha256": "69ab82ddc3fee37522b96f0a2473f88059c5bcc25b2ed53c0e94a7541df657d7"
+      "sha256": "481d0c4a177e975c76dd817bec4a2fe1b9c4ef4da677963275f8683dbe6da3a7"
     },
     {
       "path": "worker/src/lib/safety-score-v9/candidate.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "95467a17a6ebf41d7dc9a1ee53209f4481b29780b3a0faaddda0d107f666bb7e"
+  "digest": "46a0cbdbe6bf75962940ed9a54f6bd64359c1418ffffe2625abe1c9c1f8ee3c8"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

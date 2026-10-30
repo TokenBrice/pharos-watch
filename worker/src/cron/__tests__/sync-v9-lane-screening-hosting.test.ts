@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
 import type { LaneScreeningDescriptor } from "../sync-v9-lane-admin-events";
-import { runV9LaneScreeningShadowPhase } from "../sync-v9-supply-attribution";
+import { LANE_SCREENING_SETTLE_RESERVE_MS, runV9LaneScreeningShadowPhase } from "../sync-v9-supply-attribution";
 
 const db = {} as never;
 const signal = new AbortController().signal;
@@ -31,14 +31,14 @@ describe("hosted lane screening phase", () => {
     expect(run).not.toHaveBeenCalled();
   });
 
-  it("runs after the publication budget with the slot deadline and journals the counts", async () => {
+  it("runs after publication with a settlement reserve and journals the counts", async () => {
     const run = vi.fn().mockResolvedValue({
       status: "ok",
       itemCount: 1,
-      metadata: {
+      metadata: JSON.stringify({
         catalog: 1, candidates: 1, attempted: 1, admitted: 1, failed: 0,
         certificatesWritten: 1, deadlineExhausted: false,
-      },
+      }),
     });
     const outcome = await runV9LaneScreeningShadowPhase({
       db, signal, executionWindow: window, options: { descriptors: [descriptor()], run },
@@ -48,7 +48,7 @@ describe("hosted lane screening phase", () => {
     expect(calledDb).toBe(db);
     expect(chainRpcs).toBeInstanceOf(Map);
     expect(calledSignal).toBe(signal);
-    expect(options).toEqual({ descriptors: [descriptor()], deadlineMs });
+    expect(options).toEqual({ descriptors: [descriptor()], deadlineMs: deadlineMs - LANE_SCREENING_SETTLE_RESERVE_MS });
     expect(outcome).toMatchObject({
       status: "published", reason: "lane-screening-completed", catalog: 1,
       attempted: 1, admitted: 1, certificatesWritten: 1,
@@ -61,6 +61,16 @@ describe("hosted lane screening phase", () => {
       db, signal, executionWindow: window, options: { descriptors: [descriptor()], run },
     });
     expect(outcome).toMatchObject({ status: "failed", reason: "lane-screening-failed", code: "D1Error" });
+  });
+
+  it("keeps settlement headroom instead of admitting a phase with only its request minimum", async () => {
+    const run = vi.fn();
+    const outcome = await runV9LaneScreeningShadowPhase({
+      db, signal, executionWindow: { deadlineMs: Date.now() + 70_000 } as never,
+      options: { descriptors: [descriptor()], run },
+    });
+    expect(outcome).toMatchObject({ status: "skipped", reason: "lane-screening-window-insufficient" });
+    expect(run).not.toHaveBeenCalled();
   });
 
   it("skips without a slot window and when the window is nearly spent", async () => {

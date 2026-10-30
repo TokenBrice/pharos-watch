@@ -15,6 +15,7 @@ import {
   LANE_ADMIN_EVENT_DEFAULT_LOG_PAGE_BLOCKS,
   LANE_ADMIN_EVENT_MAX_LOG_PAGES,
   LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
+  LaneScreeningDeadlineError,
   screenLaneAdminEvents,
   type LaneAdminEventEmitter,
   type LaneAdminEventScreeningTarget,
@@ -90,10 +91,11 @@ export const LaneScreeningAttemptSchema = z
     attemptedAtSec: z.number().int().nonnegative(),
     fromBlock: z.number().int().nonnegative(),
     toBlock: z.number().int().nonnegative(),
-    outcome: z.enum(["admitted", "failed", "store-error"]),
+    outcome: z.enum(["admitted", "failed", "store-error", "deferred"]),
     certificateId: z.string().min(1).max(256).optional(),
     failureReason: z.enum(V9_LANE_SCREENING_FAILURE_REASON_VALUES).optional(),
     detail: z.string().min(1).max(MAX_DETAIL_LENGTH).optional(),
+    reason: z.literal("deadline").optional(),
     consecutiveFailures: z.number().int().nonnegative(),
   })
   .strict()
@@ -105,10 +107,17 @@ export const LaneScreeningAttemptSchema = z
       if (attempt.certificateId == null) {
         ctx.addIssue({ code: "custom", path: ["certificateId"], message: "An admitted attempt names its certificate" });
       }
-      if (attempt.failureReason != null) {
-        ctx.addIssue({ code: "custom", path: ["failureReason"], message: "An admitted attempt carries no failure reason" });
+      if (attempt.failureReason != null || attempt.reason != null) {
+        ctx.addIssue({ code: "custom", path: ["failureReason"], message: "An admitted attempt carries no failure or deferral reason" });
       }
       return;
+    }
+    if (attempt.outcome === "deferred") {
+      if (attempt.reason !== "deadline" || attempt.failureReason != null || attempt.consecutiveFailures !== 0) {
+        ctx.addIssue({ code: "custom", path: ["reason"], message: "A deferred attempt names deadline without failure backoff" });
+      }
+    } else if (attempt.reason != null) {
+      ctx.addIssue({ code: "custom", path: ["reason"], message: "Only a deferred attempt carries a deferral reason" });
     }
     if (attempt.certificateId != null) {
       ctx.addIssue({ code: "custom", path: ["certificateId"], message: "A non-admitted attempt carries no certificate" });
@@ -128,6 +137,7 @@ export type LaneScreeningDeferralReason =
   | "certificate-coverage-gap"
   | "certificate-malformed"
   | "certificate-future-window"
+  | "deadline"
   | "current";
 
 export interface LaneScreeningDeferral {
@@ -136,11 +146,11 @@ export interface LaneScreeningDeferral {
 }
 
 /** Machine reasons a lane produced no certificate in this invocation. */
-export type LaneScreeningOutcomeReason = V9LaneScreeningFailureReason | "certificate-store-write-failed" | "rpc-unavailable";
+export type LaneScreeningOutcomeReason = V9LaneScreeningFailureReason | "certificate-store-write-failed" | "rpc-unavailable" | "deadline";
 
 export interface LaneScreeningLaneOutcome {
   subjectDeploymentKey: string;
-  outcome: "admitted" | "failed";
+  outcome: "admitted" | "failed" | "deferred";
   reason?: LaneScreeningOutcomeReason;
   detail?: string;
   fromBlock?: number;
@@ -157,7 +167,7 @@ export interface SyncLaneAdminEventsOptions {
   refreshIntervalSec?: number;
   failureBackoffSec?: number;
   timeoutMs?: number;
-  /** Absolute wall-clock deadline; no new lane starts after it. */
+  /** Absolute RPC deadline; no new lane or batch starts without one request's budget. */
   deadlineMs?: number;
 }
 
@@ -235,7 +245,7 @@ export function selectLaneScreeningCandidates(input: {
         continue;
       }
     }
-    if (attempt && input.nowSec < attempt.attemptedAtSec + refreshIntervalSec) {
+    if (attempt && attempt.outcome !== "deferred" && input.nowSec < attempt.attemptedAtSec + refreshIntervalSec) {
       deferred.push({ subjectDeploymentKey: key, reason: "not-due" });
       continue;
     }
@@ -287,7 +297,7 @@ export function planLaneScreeningWindow(input: {
 }
 
 function nextConsecutiveFailures(attempt: LaneScreeningAttempt | undefined): number {
-  return attempt && attempt.outcome !== "admitted" ? attempt.consecutiveFailures + 1 : 1;
+  return attempt && (attempt.outcome === "failed" || attempt.outcome === "store-error") ? attempt.consecutiveFailures + 1 : 1;
 }
 
 async function readAttempts(
@@ -399,10 +409,23 @@ export async function syncV9LaneAdminEvents(
   let pruned = 0;
   let deadlineExhausted = false;
 
+  const deferDeadline = async (key: string, window = { fromBlock: 0, toBlock: 0 }) => {
+    deadlineExhausted = true;
+    const attempt: LaneScreeningAttempt = {
+      subjectDeploymentKey: key, attemptedAtSec: nowSec, ...window,
+      outcome: "deferred", reason: "deadline", consecutiveFailures: 0,
+    };
+    await setCacheIfNewer(db, laneScreeningAttemptCacheKey(key), JSON.stringify(attempt), nowSec, signal);
+    attempts.set(key, attempt);
+    deferred.push({ subjectDeploymentKey: key, reason: "deadline" });
+    outcomes.push({ subjectDeploymentKey: key, outcome: "deferred", reason: "deadline", ...window });
+  };
+
   for (const descriptor of candidates) {
     if (attempted >= laneCap) break;
-    if (options.deadlineMs !== undefined && Date.now() >= options.deadlineMs) {
-      deadlineExhausted = true;
+    if (options.deadlineMs !== undefined && options.deadlineMs - Date.now() < timeoutMs) {
+      attempted += 1;
+      await deferDeadline(descriptor.subjectDeploymentKey);
       break;
     }
     throwIfAborted(signal);
@@ -414,12 +437,18 @@ export async function syncV9LaneAdminEvents(
         finalizedHead = await fetchEvmBlockHeaderAtTag(chainId, "finalized", {
           chainRpcs,
           signal,
-          timeoutMs,
+          timeoutMs: Math.min(timeoutMs, options.deadlineMs === undefined ? timeoutMs : options.deadlineMs - Date.now()),
+          deadlineMs: options.deadlineMs,
         });
       } catch {
         finalizedHead = null;
       }
       finalizedHeads.set(chainId, finalizedHead);
+    }
+    if (options.deadlineMs !== undefined && Date.now() >= options.deadlineMs) {
+      attempted += 1;
+      await deferDeadline(key);
+      break;
     }
     if (!finalizedHead) {
       attempted += 1;
@@ -457,12 +486,20 @@ export async function syncV9LaneAdminEvents(
       toBlock: window.toBlock,
       emitters: descriptor.emitters,
     };
-    const result = await screenLaneAdminEvents(target, {
-      chainRpcs,
-      signal,
-      timeoutMs,
-      observedAtSec: nowSec,
-    });
+    let result;
+    try {
+      result = await screenLaneAdminEvents(target, {
+        chainRpcs,
+        signal,
+        timeoutMs,
+        deadlineMs: options.deadlineMs,
+        observedAtSec: nowSec,
+      });
+    } catch (error) {
+      if (!(error instanceof LaneScreeningDeadlineError)) throw error;
+      await deferDeadline(key, window);
+      break;
+    }
     if (result.outcome === "failed") {
       failed += 1;
       const attempt: LaneScreeningAttempt = {

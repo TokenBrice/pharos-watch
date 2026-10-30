@@ -469,7 +469,14 @@ export interface SafetyScoreV9LaneScreeningShadowOptions {
   run?: typeof syncV9LaneAdminEvents;
 }
 
-/** No lane starts with less slot budget than this; the phase can only shrink. */
+/**
+ * Match V9_EXECUTION_WINDOW_POLICY.publication's 15s settlement allowance
+ * (25s admission = 10s usable + 15s reserve): two bounded 5s persistence
+ * operations plus 5s cron/lease settlement, not a measured persistence p99.
+ */
+export const LANE_SCREENING_SETTLE_RESERVE_MS = 15_000;
+
+/** The phase needs this much usable budget after its settlement reserve. */
 const LANE_SCREENING_MINIMUM_REMAINING_MS = 60_000;
 
 export async function runV9LaneScreeningShadowPhase(input: {
@@ -481,7 +488,7 @@ export async function runV9LaneScreeningShadowPhase(input: {
 }): Promise<SafetyScoreV9LaneScreeningShadowOutcome> {
   const remainingMs = input.executionWindow === undefined
     ? null
-    : input.executionWindow.deadlineMs - Date.now();
+    : input.executionWindow.deadlineMs - LANE_SCREENING_SETTLE_RESERVE_MS - Date.now();
   const base = {
     catalog: 0,
     candidates: null,
@@ -508,11 +515,11 @@ export async function runV9LaneScreeningShadowPhase(input: {
   try {
     const result = await run(input.db, input.chainRpcs ?? new Map(), input.signal, {
       descriptors,
-      deadlineMs: input.executionWindow.deadlineMs,
+      deadlineMs: input.executionWindow.deadlineMs - LANE_SCREENING_SETTLE_RESERVE_MS,
     });
-    // CronResult metadata is a bounded scalar/record map; keep the reads typed so a
-    // changed producer shape cannot leak an unchecked value into the journal.
-    const metadata: Record<string, unknown> = isRecord(result.metadata) ? result.metadata : {};
+    // CronResult serializes metadata; admit only its bounded record fields.
+    const parsedMetadata: unknown = result.metadata === undefined ? {} : JSON.parse(result.metadata);
+    const metadata: Record<string, unknown> = isRecord(parsedMetadata) ? parsedMetadata : {};
     const metric = (key: string): number | null =>
       typeof metadata[key] === "number" ? metadata[key] as number : null;
     return {

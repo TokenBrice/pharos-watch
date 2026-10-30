@@ -1,5 +1,8 @@
 import { DatabaseSync } from "node:sqlite";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { sha256HexFromBytes } from "@shared/lib/sha256";
+import * as evmRpc from "../../lib/evm-rpc";
+import { laneScreeningAttemptCacheKey } from "../sync-v9-lane-admin-events";
 import {
   createSupplyAttributionJournalV1,
 } from "@shared/lib/safety-score-v9-supply-attribution-journal";
@@ -119,6 +122,58 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
 
   afterEach(() => {
     vi.useRealTimers();
+  });
+
+  it("returns the attribution status and screening journal before a mid-lane host guard deadline", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const source = censusSourceFixture();
+      const nowSec = source.clockSec + 60;
+      vi.setSystemTime(nowSec * 1_000);
+      insertSourceInput(sqlite, source);
+      mocks.capture.mockResolvedValue({
+        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
+      });
+      const head = { number: 100_000, timestamp: nowSec - 60, hash: `0x${"a".repeat(64)}` as `0x${string}` };
+      vi.spyOn(evmRpc, "fetchEvmBlockHeaderAtTag").mockResolvedValue(head);
+      vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockResolvedValue(head);
+      vi.spyOn(evmRpc, "usableCcipRpcEndpoints").mockReturnValue([{
+        url: "https://rpc.example", operator: "public", maxLogBlockSpan: 10_000,
+        keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full",
+      }]);
+      vi.spyOn(evmRpc, "fetchEvmRpcBatchDetailed").mockImplementation(async (_chain, calls) => {
+        vi.setSystemTime(Date.now() + 9_000);
+        return {
+          results: calls.map(call => call.method === "eth_getCode" ? "0x6000"
+            : call.method === "eth_getLogs" ? []
+            : { number: call.params[0], timestamp: `0x${(nowSec - 60).toString(16)}`, hash: head.hash }),
+          errors: [],
+        };
+      });
+      const deadlineMs = Date.now() + 100_000;
+      const lane = "ethereum:0x1111111111111111111111111111111111111111";
+      const result = await syncSafetyScoreV9SupplyAttribution(
+        db, new Map([["ethereum", { chainId: "ethereum", chainName: "Ethereum", type: "evm", endpoints: [], explorerUrl: "" }]]),
+        undefined, { slotStartedAtSec: nowSec, deadlineMs, minimumRemainingMs: 60_000 }, undefined,
+        { metaById: new Map() },
+        { descriptors: [{
+          subjectDeploymentKey: lane, lookbackBlocks: 100_000,
+          emitters: [{ address: "0x1111111111111111111111111111111111111111",
+            expectedRuntimeCodeSha256: sha256HexFromBytes(new Uint8Array([0x60, 0])), families: ["Paused"] }],
+          provenance: { controlIds: ["fixture-owner"] },
+        }] },
+      );
+      // This suite uses synchronous SQLite and RPC clock advances, so assert the
+      // strict guard boundary directly rather than replacing the window wrapper.
+      expect(Date.now()).toBeLessThan(deadlineMs - 15_000);
+      expect(result.status).toBe("ok");
+      expect(JSON.parse(result.metadata!)).toMatchObject({
+        laneScreening: { status: "published", deadlineExhausted: true, attempted: 1, certificatesWritten: 0 },
+      });
+      const attempt = sqlite.prepare("SELECT value FROM cache WHERE key=?")
+        .get(laneScreeningAttemptCacheKey(lane)) as { value: string };
+      expect(JSON.parse(attempt.value)).toMatchObject({ outcome: "deferred", reason: "deadline" });
+    } finally { vi.restoreAllMocks(); sqlite.close(); }
   });
 
   it.each([
