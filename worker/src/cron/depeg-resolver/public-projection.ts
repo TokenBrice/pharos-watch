@@ -508,7 +508,7 @@ function buildPublicRows(input: {
 
 export function buildDiagnosticSnapshot(input: {
   rows: DdrRow[];
-  lineage: DdrLineage;
+  lineage: DdrLineage | null;
   nowSec: number;
 }): DdrDiagnosticResponse {
   return {
@@ -535,7 +535,7 @@ export function buildDdrResponse(input: {
   firstPublication: DdrFirstPublicationMembership[];
   manifest: DdrPublicationManifest | null;
   errata: DdrPredictionErratum[];
-  lineage: DdrLineage;
+  lineage: DdrLineage | null;
   nowSec: number;
 }): DdrResponse {
   const publicPredictionRows = input.sealed

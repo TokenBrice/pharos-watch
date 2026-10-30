@@ -5,7 +5,6 @@ import { getCache, setCache } from "../lib/db-cache";
 import { syncDdrRepairDebtTasks } from "../lib/repair-tasks";
 import { loadDepegResolverSnapshot, writeDepegResolverSnapshot } from "../lib/depeg-resolver-snapshot-cache";
 import {
-  emptyDdrLineage,
   loadActiveConfirmedEvents,
   loadDdrContext,
   loadPolicyUniverseEvents,
@@ -41,7 +40,7 @@ export type { ComputeDepegResolverV2Options } from "./depeg-resolver/types";
 function emptyDegradedPublicSnapshot(input: {
   nowSec: number;
   reason: string;
-  lineage: DdrLineage;
+  lineage: DdrLineage | null;
 }): DdrResponse {
   const snapshot = buildDdrResponse({
     candidateRows: [],
@@ -62,7 +61,7 @@ async function degradedPublicSnapshotFromCache(input: {
   db: D1Database;
   nowSec: number;
   reason: string;
-  lineage: DdrLineage;
+  lineage: DdrLineage | null;
 }): Promise<DdrResponse> {
   let cached: Awaited<ReturnType<typeof loadDepegResolverSnapshot>>;
   try {
@@ -153,7 +152,7 @@ async function persistDegradedArtifacts(input: {
   db: D1Database;
   nowSec: number;
   reason: string;
-  lineage: DdrLineage;
+  lineage: DdrLineage | null;
   signal?: AbortSignal;
   storeContracts: NonNullable<ComputeDepegResolverV2Options["storeContracts"]>;
 }): Promise<DepegResolverReviewArtifacts> {
@@ -207,7 +206,9 @@ export async function computeDepegResolver(
   await alertNewQuarantinedEvents(db, quarantinedEvents);
 
   let rows: DdrRow[] = [];
-  let lineage: DdrLineage = emptyDdrLineage(nowSec);
+  // Null until `loadDdrContext` actually reads the training corpus: the empty
+  // board and degraded paths never read it, so its size is unavailable (R1).
+  let lineage: DdrLineage | null = null;
   let activeEventById = new Map(activeRows.map((row) => [row.id, row]));
   let v2LockDeferrals = 0;
   let v2PendingLocks = 0;
@@ -375,8 +376,8 @@ export async function computeDepegResolver(
       assessmentWriteCount: reviewArtifacts.assessmentWriteCount,
       reviewRows: reviewArtifacts.reviewRows,
       ...reviewArtifactMetadata(reviewArtifacts),
-      incidentCount: lineage?.incidentCount ?? 0,
-      quarantinedCoins: lineage?.quarantinedCoins ?? 0,
+      incidentCount: lineage?.incidentCount ?? null,
+      quarantinedCoins: lineage?.quarantinedCoins ?? null,
       v2PolicyUniverseEvents: policyUniverseEventCount,
       v2CanonicalIncidents: new Set([...incidentsByEventId.values()].map((incident) => incident.incidentKey)).size,
       v2PendingLocks,

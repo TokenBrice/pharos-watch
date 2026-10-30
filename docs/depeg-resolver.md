@@ -390,5 +390,6 @@ The runtime-neutral reviewer lives in `shared/lib/depeg-resolver-review/`, with 
 `worker/src/cron/depeg-resolver/context.ts` owns bounded context reads:
 - Supply starts at `min(min(active startedAt) - 7d, nowSec - 30d)` with two earlier rows per coin, preserving all four nearest-earlier lookup targets and the two-observation guard without a post-target fallback.
 - Training history applies audit eligibility before `HISTORICAL_ROW_CAP`; retained promotion/assessment severity samples remain available, while raw training rows are released after incident grouping. Still-open audit-eligible events are a second bounded read (`OPEN_TRAINING_ROW_CAP = 500`) for Stage 2 censoring; the closed-row cap alone sets `trainingRowsTruncated`.
+- Lineage is published only from a completed context load: an empty board or a degraded run publishes `_meta.lineage: null`, never a fabricated zero-size corpus.
 - DEX liquidity history starts at the earlier of `nowSec - 32d` and eight days before the earliest active onset within the 120-day onset lookback (`resolveDexHistoryWindowStart`), so the K5 onset baseline is readable without widening reads for very old events.
 - Whole-cohort reads and V9 card parsing still consume isolate memory; bounded reads are not proof of a memory-limit incident or of operational headroom.

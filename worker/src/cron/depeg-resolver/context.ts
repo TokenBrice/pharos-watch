@@ -103,17 +103,6 @@ function measuredVolume24h(storedUsd: number | null, availabilityJson: string | 
   return readStoredDexVolumeWindow(storedUsd, parseDexVolumeAvailabilityRecord(availabilityJson), "24h").measuredUsd;
 }
 
-export function emptyDdrLineage(nowSec: number): DdrLineage {
-  return {
-    trainingWindow: { start: nowSec - TRAINING_WINDOW_SEC, end: nowSec },
-    eventCount: 0,
-    incidentCount: 0,
-    coinCount: 0,
-    quarantinedCoins: 0,
-    trainingRowsTruncated: false,
-  };
-}
-
 async function queryRows<T>(label: string, query: () => Promise<{ results?: T[] }>): Promise<QueryRowsResult<T>> {
   try {
     // Transient "D1 DB is overloaded" spikes were converting whole DDR runs

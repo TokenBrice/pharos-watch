@@ -4,7 +4,6 @@ import { loadDepegResolverReviewSnapshot } from "../../../lib/depeg-resolver-rev
 import { ensureIncident, insertOpenEvent, withSqliteD1 } from "../../../lib/__tests__/depeg-resolver-ddrv2-store.test-support";
 import { persistDepegResolverReviewArtifacts } from "../persistence";
 import { buildDiagnosticSnapshot } from "../public-projection";
-import { emptyDdrLineage } from "../context";
 import { DEFAULT_DDR_V2_STORE_CONTRACTS } from "../storage-adapters";
 import { makeDdrResolverRow } from "../../__tests__/depeg-public-projection.test-support";
 import { NOW_SEC } from "./depeg-resolver.test-support";
@@ -19,7 +18,7 @@ afterEach(() => {
 function diagnostic() {
   return buildDiagnosticSnapshot({
     rows: [makeDdrResolverRow({ eventId: 42, ageSec: 3600, startedAt: NOW_SEC - 3600 })],
-    lineage: emptyDdrLineage(NOW_SEC), nowSec: NOW_SEC,
+    lineage: null, nowSec: NOW_SEC,
   });
 }
 

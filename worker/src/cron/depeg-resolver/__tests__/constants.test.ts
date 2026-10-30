@@ -7,7 +7,7 @@ import {
   DEX_LIQUIDITY_MAX_AGE_SEC,
   TRAINING_WINDOW_SEC,
 } from "../constants";
-import { buildCurrentDeviationMap, emptyDdrLineage } from "../context";
+import { buildCurrentDeviationMap } from "../context";
 import { buildDiagnosticSnapshot, buildDdrResponse } from "../public-projection";
 import { resolveDdrIncidents } from "../incident-resolution";
 import { activeInput, loadedContext, mockResolverD1, NOW_SEC, stablecoinsCache } from "./depeg-resolver.test-support";
@@ -30,7 +30,14 @@ describe("resolver source-owned time budgets", () => {
   });
 
   it("carries the training window and publication TTL into diagnostic and public snapshots", () => {
-    const lineage = emptyDdrLineage(NOW_SEC);
+    const lineage = {
+      trainingWindow: { start: NOW_SEC - TRAINING_WINDOW_SEC, end: NOW_SEC },
+      eventCount: 0,
+      incidentCount: 0,
+      coinCount: 0,
+      quarantinedCoins: 0,
+      trainingRowsTruncated: false,
+    };
     expect(lineage.trainingWindow).toEqual({ start: NOW_SEC - TRAINING_WINDOW_SEC, end: NOW_SEC });
     const diagnostic = buildDiagnosticSnapshot({ rows: [], lineage, nowSec: NOW_SEC });
     const published = buildDdrResponse({ candidateRows: [], incidentsByEventId: new Map(), sealed: [], firstPublication: [],
