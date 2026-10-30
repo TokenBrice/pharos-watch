@@ -1,4 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import {
+  SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MAX_AGE_SEC,
+  createSafetyScoreV9DeploymentSupplyCensusGeneration,
+  writeSafetyScoreV9DeploymentSupplyCensusGeneration,
+} from "../safety-score-v9/deployment-supply-census-store";
+import type { SafetyScoreV9DeploymentSupplyCensus } from "@shared/types/safety-score-v9-deployment-supply-census";
 import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
@@ -872,6 +880,109 @@ describe("Safety Score V9 chain-supply ceilings (v10.38)", () => {
   });
 });
 
+describe("Supply attribution shadow census projection", () => {
+  const CENSUS_TOKEN = `0x${"d".repeat(40)}`;
+
+  function censusPacket(): SafetyScoreV9DeploymentSupplyCensus {
+    const supply = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+    const shareUpper = 1 / XAUT_AGGREGATE_SUPPLY_USD;
+    return {
+      model: "deployment-supply-census-v1",
+      observedAtSec: OBSERVED_AT_SEC,
+      deployments: [{
+        routeId: `ethereum:${CENSUS_TOKEN}`,
+        chainId: "ethereum",
+        tokenAddress: CENSUS_TOKEN,
+        readKind: "evm-total-supply",
+        pin: {
+          kind: "evm-header",
+          blockNumber: 20_000_000,
+          blockHash: `0x${"b".repeat(64)}`,
+          blockTimeSec: OBSERVED_AT_SEC - 60,
+          runtimeCodeSha256: "a".repeat(64),
+        },
+        decimals: 6,
+        totalSupplyRaw: "1000000",
+        referencePriceUsd: 1,
+        referencePriceObservedAtSec: OBSERVED_AT_SEC - 30,
+        supplyUsdUpper: 1,
+        shareUpper,
+        evidenceKind: "upper-bound",
+      }],
+      conservation: {
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        measuredSupplyUsd: 1,
+        measuredShareSum: shareUpper,
+        relativeTolerance: supply.conservationRelativeTolerance,
+        absoluteToleranceUsd: supply.conservationAbsoluteToleranceUsd,
+        rosterComplete: true,
+        conserved: true,
+      },
+      rejected: [],
+    };
+  }
+
+  it("carries the admitted census map and its provenance, and adds no key when absent", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(OBSERVED_AT_SEC * 1_000);
+    const uuid = vi.spyOn(crypto, "randomUUID")
+      .mockReturnValue("00000000-0000-4000-8000-000000000000");
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockResolvedValue({
+      status: "rejected",
+      rejectionCode: "deployment-state-unavailable",
+      failedRouteId: null,
+    });
+    const withCensus = createLatestSchemaSqlite();
+    const withoutCensus = createLatestSchemaSqlite();
+    try {
+      const generation = createSafetyScoreV9DeploymentSupplyCensusGeneration({
+        schemaVersion: 1,
+        kind: "safety-score-v9-deployment-supply-census-generation",
+        sourceBaseInputGenerationId: xautFixedInput().baseInputGenerationId,
+        registryFingerprint: xautFixedInput().registryFingerprint,
+        capturedAtSec: OBSERVED_AT_SEC,
+        censusById: { "xaut-tether": censusPacket() },
+      });
+      await writeSafetyScoreV9DeploymentSupplyCensusGeneration(withCensus.db, generation);
+
+      const carried = await captureSafetyScoreV9SupplyAttribution(
+        xautFixedInput(),
+        chainRpcs(),
+        undefined,
+        { clockMode: "source", db: withCensus.db },
+      );
+      expect(carried.deploymentSupplyCensusById).toEqual({ "xaut-tether": censusPacket() });
+      expect(carried.deploymentSupplyCensus).toEqual({
+        state: "ok",
+        generationId: generation.generationId,
+        capturedAtSec: OBSERVED_AT_SEC,
+        maxAgeSec: SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MAX_AGE_SEC,
+        excluded: [],
+      });
+
+      const absent = await captureSafetyScoreV9SupplyAttribution(
+        xautFixedInput(), chainRpcs(), undefined, { clockMode: "source", db: withoutCensus.db },
+      );
+      const storeless = await captureSafetyScoreV9SupplyAttribution(
+        xautFixedInput(), chainRpcs(), undefined, { clockMode: "source" },
+      );
+      expect("deploymentSupplyCensusById" in absent).toBe(false);
+      expect("deploymentSupplyCensus" in absent).toBe(false);
+      // The absent case carries the same fixed-input surface as before the
+      // store read existed: no census keys and no other shape change.
+      const structural = (capture: typeof absent) => stableJsonStringifyV1({
+        ...capture, journalRecords: [], performanceById: {},
+      });
+      expect(Object.keys(absent).sort()).toEqual(Object.keys(storeless).sort());
+      expect(structural(absent)).toBe(structural(storeless));
+    } finally {
+      uuid.mockRestore();
+      withCensus.sqlite.close();
+      withoutCensus.sqlite.close();
+      vi.useRealTimers();
+    }
+  });
+});
 describe("Supply attribution complete-provider precedence", () => {
   it("requires every wM chain, including observed-zero legs, before skipping its census", () => {
     const assetId = "wm-m0";

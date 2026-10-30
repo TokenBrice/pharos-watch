@@ -47,6 +47,12 @@ import type { SafetyScoreV9SupplyAttributionGeneration } from "./supply-attribut
 import { createSupplyAttributionPerformance, type SupplyAttributionPhase, type SupplyAttributionPerformance } from "./supply-attribution-diagnostics";
 import { loadSupplyAttributionJournalByIdV1 } from "./supply-attribution-journal-store";
 import {
+  readSafetyScoreV9DeploymentSupplyCensus,
+  type SafetyScoreV9DeploymentSupplyCensusExclusion,
+  type SafetyScoreV9DeploymentSupplyCensusReadResult,
+} from "./deployment-supply-census-store";
+import type { SafetyScoreV9DeploymentSupplyCensusById } from "@shared/types/safety-score-v9-deployment-supply-census";
+import {
   aggregateSupplyUsd,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_SOURCE_ID_BY_ASSET,
@@ -56,11 +62,22 @@ type V9SupplyAttributionById = SafetyScoreV9CompilerInput["safetyScoreV9SupplyAt
 
 export const SUPPLY_ATTRIBUTION_STALE_REFERENCE_REASON = "supply-attribution-input-stale-for-reference";
 
+/** Per-asset capture-admission decision retained in the cron metadata. */
+export type SafetyScoreV9SupplyAttributionCaptureAdmission = {
+  deferredAssetIds: string[];
+  sourceStaleAssetIds: string[];
+  sourceClockSec: number;
+  admissionClockSec: number;
+  captureMarginSec: number;
+  referencePriceMaxAgeSec: number;
+  referenceObservedAtSecById: Record<string, number>;
+};
+
 export function supplyAttributionCaptureAdmission(
   fixedInput: Readonly<SafetyScoreV9SupplyAttributionInput>,
   admissionClockSec: number,
   assetDeadlineMs = admissionClockSec * 1_000 + SUPPLY_ATTRIBUTION_CAPTURE_BUDGET.assetTimeoutMs,
-) {
+): SafetyScoreV9SupplyAttributionCaptureAdmission {
   // Admission runs at the child's start; its deadline covers journal reads too.
   const captureMarginSec = Math.max(0, Math.ceil(assetDeadlineMs / 1_000 - admissionClockSec));
   const referencePriceMaxAgeSec = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.referencePriceMaxAgeSec;
@@ -79,6 +96,25 @@ export function supplyAttributionCaptureAdmission(
     captureMarginSec, referencePriceMaxAgeSec, referenceObservedAtSecById };
 }
 
+/**
+ * Provenance published beside the borrowed census map so no reader can treat a
+ * missing or aged-out generation as "no deployments". `excluded` names stored
+ * packets the store refused to serve at the capture clock.
+ */
+export interface SafetyScoreV9SupplyAttributionDeploymentSupplyCensusProvenance {
+  state: "ok" | "missing" | "invalid";
+  generationId: string | null;
+  capturedAtSec: number | null;
+  /**
+   * The generation identity the borrowed map is bound to, so a carrier never
+   * has to re-read the store to prove which input it names (SA-FIX F2).
+   */
+  registryFingerprint: string | null;
+  sourceBaseInputGenerationId: string | null;
+  maxAgeSec: number;
+  excluded: readonly SafetyScoreV9DeploymentSupplyCensusExclusion[];
+}
+
 export interface SafetyScoreV9SupplyAttributionCapture {
   attributionById: V9SupplyAttributionById;
   captureClockSec: number;
@@ -87,7 +123,15 @@ export interface SafetyScoreV9SupplyAttributionCapture {
   diagnosticsById?: Record<string, SupplyAttributionAttemptDiagnostic[]>;
   failureReasonById?: Record<string, SupplyAttributionCaptureFailureReason>;
   performanceById?: Record<string, SupplyAttributionPerformance>;
-  admissionById?: Record<string, ReturnType<typeof supplyAttributionCaptureAdmission>>;
+  admissionById?: Record<string, SafetyScoreV9SupplyAttributionCaptureAdmission>;
+  /**
+   * The v10.38 fixed-input projection (`safetyScoreV9DeploymentSupplyCensusById`).
+   * Present only when SA-1's store serves admitted packets at the capture clock;
+   * absent leaves this capture byte-identical to the attribution-only shape.
+   * Shadow data: nothing here reaches scoring until v10.38 admits it (SA-3).
+   */
+  deploymentSupplyCensusById?: SafetyScoreV9DeploymentSupplyCensusById;
+  deploymentSupplyCensus?: SafetyScoreV9SupplyAttributionDeploymentSupplyCensusProvenance;
 }
 
 export interface SafetyScoreV9SupplyAttributionCaptureOptions {
@@ -366,6 +410,48 @@ async function runSupplyAttributionAssetCapture(input: {
 }
 
 /**
+ * Borrows SA-1's admitted census generation for the v10.38 fixed-input
+ * projection. Shadow only: a missing, invalid or empty generation adds nothing,
+ * so the capture stays byte-identical to the attribution-only shape, and a
+ * failed store read is unavailable, never an empty census.
+ */
+async function readDeploymentSupplyCensusForCapture(input: {
+  db: D1Database;
+  clockSec: number;
+  signal?: AbortSignal;
+}): Promise<{
+  byId: SafetyScoreV9DeploymentSupplyCensusById;
+  provenance: SafetyScoreV9SupplyAttributionDeploymentSupplyCensusProvenance;
+} | null> {
+  let read: SafetyScoreV9DeploymentSupplyCensusReadResult;
+  try {
+    read = await readSafetyScoreV9DeploymentSupplyCensus(input.db, {
+      clockSec: input.clockSec,
+      signal: input.signal,
+    });
+  } catch (error) {
+    // A shadow-generation read failure cannot fail the attribution capture.
+    rethrowIfAborted(error, input.signal);
+    return null;
+  }
+  if (read.state !== "ok") return null;
+  const byId = read.byId;
+  if (Object.keys(byId).length === 0) return null;
+  return {
+    byId,
+    provenance: {
+      state: read.state,
+      generationId: read.generationId,
+      capturedAtSec: read.capturedAtSec,
+      registryFingerprint: read.registryFingerprint,
+      sourceBaseInputGenerationId: read.sourceBaseInputGenerationId,
+      maxAgeSec: read.maxAgeSec,
+      excluded: read.excluded,
+    },
+  };
+}
+
+/**
  * Captures V9-only supply attribution without mutating the public stablecoin
  * row or the V8 chain map used by exact replay.
  */
@@ -553,6 +639,17 @@ export async function captureSafetyScoreV9SupplyAttribution(
     }
   }
 
+  // Borrow the shadow census generation at the capture clock. It rides beside
+  // `attributionById` only: the attribution generation never admits it, so
+  // v10.38 alone can turn a census bound into scoring evidence.
+  const deploymentSupplyCensus = options.db === undefined
+    ? null
+    : await readDeploymentSupplyCensusForCapture({
+        db: options.db,
+        clockSec: captureClockSec,
+        signal,
+      });
+
   return {
     attributionById,
     captureClockSec,
@@ -562,6 +659,12 @@ export async function captureSafetyScoreV9SupplyAttribution(
     failureReasonById,
     performanceById,
     admissionById,
+    ...(deploymentSupplyCensus === null
+      ? {}
+      : {
+          deploymentSupplyCensusById: deploymentSupplyCensus.byId,
+          deploymentSupplyCensus: deploymentSupplyCensus.provenance,
+        }),
   };
 }
 
