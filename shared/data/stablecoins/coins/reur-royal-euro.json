@@ -69,6 +69,13 @@
   "collateralQuality": "rwa",
   "custodyModel": "institutional-regulated",
   "governanceQuality": "regulated-entity",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Issuer status: launch preparation",
+      "message": "RCOINS Registry (2026-08-28) lists REUR as launch preparation with production addresses to be published; the tracked deployments are not issuer-confirmed as current production."
+    }
+  ],
 
   "launchDate": "2026-02-11",
   "priceBasis": "contractual-par",

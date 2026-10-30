@@ -3,8 +3,8 @@
   "name": "Magic Internet Money",
   "symbol": "MIM",
   "status": "frozen",
-  "windDownAnnouncedAt": "2026-06-24",
-  "windDownSourceUrl": "https://abracadabra.money/",
+  "windDownAnnouncedAt": "2026-09-29",
+  "windDownSourceUrl": "https://snapshot.org/#/abracadabrabymerlinthemagician.eth/proposal/0x75596fc0bf2d86573de1754f4c8cf1228a4795ffa48ce47013cedb1daf2ae23e",
   "frozenAt": "2026-07-26",
   "obituary": {
     "causeOfDeath": "liquidity-drain",
@@ -125,6 +125,11 @@
       "type": "warning",
       "title": "Severe depeg and unexplained DAO treasury transfers",
       "message": "MIM remained severely depegged as of July 15, 2026. On July 14, Abracadabra-controlled Ethereum and Arbitrum Safes moved roughly $8.3M of treasury assets at then-current prices, including about 2,142 ETH/WETH to a Binance-tagged deposit address and about $4.30M of USDC/USDT to an unlabeled address that immediately forwarded the funds. The Ethereum Safe had also sold 500,000 MIM into Curve on June 8 and 11 for about $489,000. Pharos found no public explanation from Abracadabra as of July 15. These facts do not establish theft, and treasury assets are not MIM's direct cauldron collateral, but the transfers reduce the DAO's transparent onchain treasury backstop while destination control remains unknown."
+    },
+    {
+      "type": "danger",
+      "title": "Insolvent; disputed wind-down vote",
+      "message": "A 2026-09-29 wind-down proposal put actionable backing near four cents per MIM and SPELL at no accounting value until MIM debt is served. The 2026-10-15 revote missed the space's 3B SPELL quorum, so Snapshot lists it rejected while the proposer claims passage under a self-set 30% threshold."
     }
   ]
 }

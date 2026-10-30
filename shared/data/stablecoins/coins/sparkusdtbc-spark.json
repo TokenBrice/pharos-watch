@@ -82,7 +82,7 @@
       }
     ]
   },
-  "collateral": "USDT-denominated Morpho lending positions through a MorphoMarketV1AdapterV2, collateralized by wstETH, WBTC, sUSDS and a negligible cbBTC position; not directly held borrower collateral.",
+  "collateral": "USDT-denominated Morpho lending positions through a MorphoMarketV1AdapterV2, collateralized mainly by sUSDS with a small cbBTC position; not directly held borrower collateral.",
   "pegMechanism": "Deposit USDT to mint ERC-4626 lending-vault shares. Accrued lending interest increases USDT per share; ordinary redemption burns shares for idle USDT and available liquidity from the selected adapter's wstETH/USDT market. Borrower defaults, collateral liquidation and vault fees affect share value. VaultV2 maxWithdraw/maxRedeem always return zero as conservative underestimates, not measured exit capacity; force-deallocation is a separate path subject to underlying liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "detailProvider": "coingecko",
   "contracts": [

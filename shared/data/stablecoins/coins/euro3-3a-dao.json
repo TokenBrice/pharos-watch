@@ -5,7 +5,9 @@
   "name": "EURO3",
   "symbol": "EURO3",
   "brand": "3A DAO",
-  "oneLiner": "EURO3 is 3A DAO's overcollateralized euro stablecoin, minted on Polygon and Linea against whitelisted crypto and stablecoin collateral in user-owned vaults.",
+  "oneLiner": "EURO3 was 3A DAO's overcollateralized euro stablecoin on Polygon and Linea, wound down in 2024 when the 3A lending protocol closed.",
+  "windDownAnnouncedAt": "2024-09-30",
+  "windDownSourceUrl": "https://medium.com/@3aDAO/phasing-out-euro3-lending-f5869a3498a8",
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -29,7 +31,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "Whitelisted crypto and stablecoin collateral in 3A Vaults on Polygon and Linea, including USDC.e, DAI, WETH/ETH, USDT, WBTC, wstETH, and other wrapped or yield-bearing assets depending on chain",
-  "pegMechanism": "Overcollateralized vault minting and redemption: users mint EURO3 loans against approved collateral, repay debt to burn EURO3, and can redeem EURO3 against vault collateral when the protocol's redemption conditions are met",
+  "pegMechanism": "Overcollateralized vault minting and redemption, phased out by 3A DAO in 2024: no new EURO3 loans after 2024-10-01, vaults closed and the app discontinued 2024-11-30.",
   "links": [
     {
       "label": "Website",
@@ -425,5 +427,12 @@
         }
       ]
     }
-  }
+  },
+  "notices": [
+    {
+      "type": "danger",
+      "title": "EURO3 lending wound down in 2024",
+      "message": "3A DAO announced on 30 September 2024 that it was phasing out EURO3 and the 3A lending protocol on Polygon and Linea: no new loans from 1 October 2024, vaults open for redemption from 14 October 2024, and all remaining vaults closed and the lending web app discontinued on 30 November 2024."
+    }
+  ]
 }

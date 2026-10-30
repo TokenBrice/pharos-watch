@@ -97,6 +97,11 @@
       "type": "warning",
       "title": "Active strategy, not par stablecoin",
       "message": "nBASIS runs a basis-trade strategy whose value drifts with funding-rate performance. It is closer in profile to Midas mRe7YIELD than to a 1:1 stablecoin, and Pharos lists it because its primary reference is the U.S. dollar."
+    },
+    {
+      "type": "info",
+      "title": "Arc-only issuance",
+      "message": "Nest now issues and redeems nBASIS only on Arc (chainId 5042) against USDC; positions on earlier chain deployments are preserved and viewable on Plume Vaults."
     }
   ],
   "launchDate": "2025-05-14"

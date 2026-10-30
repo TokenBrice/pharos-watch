@@ -120,8 +120,8 @@
   "notices": [
     {
       "type": "warning",
-      "title": "New chain, no published proof-of-reserves for the wrapper",
-      "message": "iUSD lives on Initia, a recently launched Move-based Cosmos L1 with limited operational history. Initia has not yet published a dedicated transparency feed for the AUSD-backed iUSD wrapper; reserve trust currently inherits from Agora's published AUSD attestations plus the LayerZero bridge endpoint. Redemption to USD ultimately routes back through the AUSD bridge to Agora."
+      "title": "Initia halted 2026-10-23; iUSD transfers paused",
+      "message": "Initia halted its L1 and rollups on 2026-10-23 after a MoveVM exploit, so iUSD transfers and redemption stay paused; restart is planned for 2026-11-02. The Initia Foundation has approved funds to restore the iUSD collateral shortfall, but they are not yet transferred."
     }
   ]
 }

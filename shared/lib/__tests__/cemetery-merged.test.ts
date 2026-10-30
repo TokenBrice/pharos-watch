@@ -129,7 +129,7 @@ describe("buildMergedCemetery", () => {
 
   it.each([
     ["dusd-fluid", "2026-09-04", "2024-04-22"],
-    ["ist-agoric", "2026-06-21", "2025-06-26"],
+    ["ist-agoric", "2026-06-21", "2025-07-01"],
   ])("separates %s cemetery entry date from the preserved freeze date", (id, recordedAt, frozenAt) => {
     expect(merged.find((entry) => entry.id === id)?.recordedAt).toBe(recordedAt);
     expect(FROZEN_STABLECOINS.find((coin) => coin.id === id)?.frozenAt).toBe(frozenAt);

@@ -54,6 +54,11 @@
       "type": "warning",
       "title": "Contract-priced private credit",
       "message": "CoinGecko reports a live $1 price and market cap but zero 24h volume; Pharos treats this as a par-valued private-credit note rather than a liquid stablecoin."
+    },
+    {
+      "type": "info",
+      "title": "All tokens burned",
+      "message": "All PC0000033 tokens were burned on 2026-10-12; zkSync now reports zero supply and zero holders."
     }
   ],
   "priceBasis": "contractual-par",

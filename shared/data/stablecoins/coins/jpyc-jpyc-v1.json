@@ -5,6 +5,8 @@
   "oneLiner": "JPYC v1 is the legacy prepaid-payment yen token series from JPYC Inc., predating the funds-transfer-token migration to the current JPYC contracts.",
   "marketAvailability": "legacy-or-wind-down",
   "status": "frozen",
+  "windDownAnnouncedAt": "2025-05-23",
+  "windDownSourceUrl": "https://corporate.jpyc.co.jp/news/posts/prepaid-important-notice",
   "frozenAt": "2026-07-11",
   "flags": {
     "backing": "rwa-backed",

@@ -50,8 +50,8 @@
   "notices": [
     {
       "type": "warning",
-      "title": "Winding down",
-      "message": "FlowBank SA (former reserve partner) declared bankruptcy in June 2024. Anchored Coins has since restructured collateral so that 100% of circulating AEUR is now backed at Swissquote Bank SA; bankruptcy proceedings no longer affect coverage. The issuer is winding down stablecoin operations to comply with MiCAR (which requires EU licensing for EUR issuers) and will not resume new AEUR issuance; AEUR was delisted from Binance EEA in March 2025. Redemptions continue (minimum 250,000 AEUR threshold for direct primary-market redemption)."
+      "title": "Wind-down complete",
+      "message": "FlowBank SA (former reserve partner) declared bankruptcy in June 2024. Anchored Coins has restructured collateral so that 100% of circulating AEUR is backed 1:1 at Swissquote Bank SA. The issuer is winding down to comply with MiCAR and will not resume issuance; AEUR was delisted from Binance EEA in March 2025. The final redemption window closed 29 October 2026 and the AEUR Token Terms were terminated 30 October 2026; remaining holders will be settled 1:1 in another EUR stablecoin. AEUR is no longer redeemable and has no value."
     }
   ],
   "launchDate": "2023-07-19",
