@@ -118,9 +118,9 @@
   "launchDate": "2021-04-06",
   "status": "quarantined",
   "listingStatusReview": {
-    "changedAt": "2026-07-15",
-    "reviewBy": "2026-10-30",
-    "reason": "2026-09-30 review: price resolves, but CoinGecko market cap and circulating supply are zero and DefiLlama has no list row. A complete, supply-conserving multi-chain route remains unproven; Aptos and Stellar have no runtime supply reader.",
+    "changedAt": "2026-10-30",
+    "reviewBy": "2026-11-29",
+    "reason": "2026-10-30 review: CoinGecko supply and market cap remain zero and DefiLlama has no stablecoin row. Multi-chain supply now reconciles ($756.54m across eight chains, Aptos 0), but Stellar ($527.82m) still has no runtime supply reader.",
     "source": {
       "label": "BENJI Stellar supply observed 2026-09-30",
       "url": "https://horizon.stellar.org/assets?asset_code=BENJI&asset_issuer=GBHNGLLIE3KWGKCHIKMHJ5HVZHYIK7WTBE4QF5PLAKL4CJGSEU7HZIW5"
