@@ -17,6 +17,7 @@ export const AXIS_TRANSPARENCY_URL = "https://app.axis.to/transparency?tab=asset
 const KEY = "axis-issuer-classes";
 const PUSH_MARKER = "self.__next_f.push(";
 const FLIGHT_MAX_CHARS = 4_000_000;
+// eslint-disable-next-line security/detect-unsafe-regex -- anchored fixed-width ISO-8601 shape; every group has a fixed or bounded width, so no ambiguous backtracking path.
 const ISO_DATETIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(?:\.\d{1,9})?(?:Z|[+-]\d{2}:\d{2})$/;
 /** The issuer publishes asset-class values and the whole-book total. Category sums and the
  *  same-day timeline point are dollar roundings of one accounting point, not a second book;
@@ -278,7 +279,7 @@ function readSourceTimestamp(lastUpdated: string, nowSec: number): number {
 
 export function adaptAxisIssuerClasses(html: string, nowSec: number): AdapterResult {
   const dashboard = parseDashboard(findInitialDashboard(extractFlightText(html)));
-  const { overview, dashboard_details: details, reserves_history: history } = dashboard;
+  const { overview, dashboard_details: details } = dashboard;
   const classes = details.asset_classes;
   const total = classes.total;
   if (!Number.isFinite(nowSec)) throw new Error(`${KEY}: adapter clock is not finite`);

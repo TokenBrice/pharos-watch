@@ -140,6 +140,7 @@ function readReviewedRoster(params: Record<string, unknown> | undefined): Review
     const chain = typeof record.chain === "string" ? record.chain.trim().toLowerCase() : "";
     if (chain.length === 0) throw new Error(`${ADAPTER_KEY}: custody roster entry ${index} has no chain`);
     const token = normalizeEvmAddress(typeof record.token === "string" ? record.token : null);
+    // eslint-disable-next-line security/detect-possible-timing-attacks -- roster token is a public ERC-20 contract address, not a secret.
     if (token == null) throw new Error(`${ADAPTER_KEY}: custody roster entry ${index} has an invalid token`);
     const custodian = normalizeEvmAddress(
       typeof record.custodian === "string" ? record.custodian : null,

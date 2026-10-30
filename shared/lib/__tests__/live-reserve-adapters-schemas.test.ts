@@ -325,7 +325,13 @@ describe("LiveReservesConfigSchema adapter policy validation", () => {
     "krwq-custodian": {
       sourceOriginClass: "onchain-observation", preferredFreshnessMode: "verified", validation: unknownDashboard,
     },
-    "megausd-custody": issuerDashboard,
+    "megausd-custody": {
+      ...issuerDashboard,
+      provenance: {
+        status: "staged",
+        rationale: "Issuer transparency JSON is geo-gated from Worker egress; it is retained only as MegaUSD roster discovery inside megausd-custody-onchain and no catalog coin binds this adapter.",
+      },
+    },
     "reserve-protocol-dtf": { ...onchain, preferredFreshnessMode: "not-applicable", redemptionTelemetry: directTelemetry },
     "superstate-liquidity": {
       ...singleBucket, preferredFreshnessMode: "verified", configValidation: config("single-asset", 1),
