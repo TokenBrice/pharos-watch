@@ -1,11 +1,50 @@
 import { describe, expect, it } from "vitest";
-import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
+import type { SafetyScoreV9CurrentCard, V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import type { V9EvidenceResponsibility } from "@shared/types/safety-score-v9-facts";
+import { COVERAGE_GAP_OWNER_SWATCH_CLASSES } from "@shared/lib/classification";
+import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES } from "@shared/types/safety-score-v9-vocabulary";
 import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-score-v9";
 import {
   buildDataCoverageModel,
   describeDataCoverageHoldCauses,
+  describeIssuerReview,
 } from "@/lib/safety-score-data-coverage";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+
+const REVIEWED_AT_SEC = Date.parse("2026-10-03T00:00:00Z") / 1000;
+const EARLIER_REVIEWED_AT_SEC = Date.parse("2026-09-28T00:00:00Z") / 1000;
+const NO_SCORING_PATH_LABEL = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation!.reasons.find(
+  (entry) => entry.reason === "no-scoring-path",
+)!.publicLabel;
+
+function makeOpenEvidence(overrides: Partial<V9OpenEvidence> = {}): V9OpenEvidence {
+  return {
+    semantics: "open-question-v1",
+    totals: { questions: 5, open: 3, issuer: 2, documentation: 0, obligations: 9 },
+    owners: [{ responsibility: "unresearched", questions: 3, obligations: 6 }],
+    reasons: [
+      { code: "missing-reserve-composition", bucket: "issuer", questions: 2, obligations: 3 },
+      { code: "unresolved-control-identity", bucket: "open", questions: 3, obligations: 6 },
+    ],
+    documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+    issuer: {
+      questions: 2,
+      assets: 1,
+      oldestReviewedAtSec: REVIEWED_AT_SEC,
+      newestReviewedAtSec: REVIEWED_AT_SEC,
+    },
+    byCard: [
+      {
+        id: "aaa-one",
+        openBucketQuestionsCarried: 3,
+        inheritedOpenBucketQuestionsCarried: 0,
+        openBucketObligationsCarried: 6,
+        documentationObligationsCarried: 0,
+      },
+    ],
+    ...overrides,
+  };
+}
 
 function withGaps(
   card: SafetyScoreV9CurrentCard,
@@ -52,49 +91,232 @@ describe("buildDataCoverageModel", () => {
     expect(buildDataCoverageModel(undefined)).toBeNull();
   });
 
+  it("copies the three server-computed buckets instead of re-deriving them", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "aaa-one" })],
+      openEvidence: makeOpenEvidence(),
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.openEvidence).toEqual({
+      semantics: "open-question-v1",
+      questions: 5,
+      open: 3,
+      issuer: 2,
+      documentation: 0,
+      obligations: 9,
+      documentationDatums: 0,
+      documentationFacts: 0,
+      issuerReview: {
+        oldestReviewedAtSec: REVIEWED_AT_SEC,
+        newestReviewedAtSec: REVIEWED_AT_SEC,
+      },
+    });
+    expect(model.gapOwners).toEqual([
+      expect.objectContaining({
+        responsibility: "unresearched",
+        questions: 3,
+        obligations: 6,
+        share: 1,
+      }),
+    ]);
+    expect(model.reasons.map((reason) => [reason.bucket, reason.code, reason.count])).toEqual([
+      ["open", "unresolved-control-identity", 3],
+      ["issuer", "missing-reserve-composition", 2],
+    ]);
+  });
+
+  it("renders unavailable, never zero, when the payload predates open evidence", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "aaa-one" })],
+    });
+    expect(response.openEvidence).toBeNull();
+    expect(response.openEvidenceUnavailableReason).toBe("publication-predates-open-evidence");
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.openEvidence).toBeNull();
+    expect(model.gapOwners).toEqual([]);
+    expect(model.reasons).toEqual([]);
+    // Card-level assessments stay readable; only the question counts are unavailable.
+    expect(model.assetCount).toBe(1);
+    expect(model.inputsEvaluated).toBe(8);
+  });
+
   it("labels unresearched responsibility Unresolved and explains inconclusive research", () => {
     const response = makeReportCardsV9Response({
-      cards: [
-        withGaps(makeV9Card(), [
-          { responsibility: "unresearched", factCount: 1, criticalFactCount: 0, reasonCodes: [] },
-        ]),
-      ],
+      cards: [makeV9Card({ id: "aaa-one" })],
+      openEvidence: makeOpenEvidence({
+        totals: { questions: 1, open: 1, issuer: 0, documentation: 0, obligations: 1 },
+        owners: [{ responsibility: "unresearched", questions: 1, obligations: 1 }],
+        reasons: [{ code: "unresolved-control-identity", bucket: "open", questions: 1, obligations: 1 }],
+        issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+      }),
     });
 
     expect(buildDataCoverageModel(response)!.gapOwners).toContainEqual(expect.objectContaining({
       responsibility: "unresearched",
       label: "Unresolved",
       detail: "No admissible evidence settles this input yet: it is unresearched or was researched without a conclusive source. This is not a claim of issuer silence.",
-      count: 1,
+      questions: 1,
     }));
   });
 
-  it("reconciles completeness, inputs, and open gaps across cards", () => {
+  it("partitions the headline open bucket by owner and names the mixed remainder", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "aaa-one" })],
+      openEvidence: makeOpenEvidence({
+        totals: { questions: 6, open: 6, issuer: 0, documentation: 0, obligations: 12 },
+        owners: [
+          { responsibility: "producer-failed", questions: 4, obligations: 8 },
+          { responsibility: "mixed", questions: 2, obligations: 4 },
+        ],
+        reasons: [{ code: "missing-runtime-route-evidence", bucket: "open", questions: 6, obligations: 12 }],
+        issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+      }),
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.gapOwners.map((owner) => [owner.responsibility, owner.questions])).toEqual([
+      ["producer-failed", 4],
+      ["mixed", 2],
+    ]);
+    expect(model.gapOwners.find((owner) => owner.responsibility === "mixed")).toMatchObject({
+      label: "Several owners",
+    });
+    expect(model.gapOwners.reduce((sum, owner) => sum + owner.share, 0)).toBe(1);
+  });
+
+  it("maps the Pharos-owned classes to their existing reader labels", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "aaa-one" })],
+      openEvidence: makeOpenEvidence({
+        totals: { questions: 5, open: 5, issuer: 0, documentation: 0, obligations: 9 },
+        owners: ([
+          { responsibility: "published-evidence-expired", questions: 2, obligations: 4 },
+          { responsibility: "public-data-uncurated", questions: 1, obligations: 2 },
+          { responsibility: "integration-missing", questions: 2, obligations: 3 },
+        ] satisfies V9OpenEvidence["owners"]).sort((left, right) =>
+          V9_PUBLIC_EVIDENCE_RESPONSIBILITIES.indexOf(left.responsibility) -
+          V9_PUBLIC_EVIDENCE_RESPONSIBILITIES.indexOf(right.responsibility)),
+        reasons: [],
+        issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+      }),
+    });
+
+    const labels = Object.fromEntries(
+      buildDataCoverageModel(response)!.gapOwners.map((owner) => [owner.responsibility, owner.label]),
+    );
+
+    expect(labels).toEqual({
+      "integration-missing": "Pharos has not integrated it yet",
+      "published-evidence-expired": "Published evidence is out of date",
+      "public-data-uncurated": "Awaiting curation",
+    });
+  });
+
+  it("gives every owner bucket a distinct static swatch", () => {
+    const responsibilities = [
+      "issuer-undisclosed",
+      "integration-missing",
+      "producer-failed",
+      "method-unsupported",
+      "published-evidence-expired",
+      "unresearched",
+      "public-data-uncurated",
+      "mixed",
+    ] as const;
+    const swatches = responsibilities.map(
+      (responsibility) => COVERAGE_GAP_OWNER_SWATCH_CLASSES[responsibility],
+    );
+
+    expect(swatches.every(Boolean)).toBe(true);
+    expect(new Set(swatches).size).toBe(responsibilities.length);
+  });
+
+  it("labels reasons in plain English and groups them by server bucket", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "aaa-one" })],
+      openEvidence: makeOpenEvidence(),
+    });
+
+    const reasons = buildDataCoverageModel(response)!.reasons;
+
+    expect(reasons.map((reason) => reason.label)).toEqual([
+      "Controlling entity not identified",
+      "Reserve composition not published",
+    ]);
+    expect(reasons.every((reason) => reason.countUnit === "questions")).toBe(true);
+    expect(reasons.every((reason) => !reason.label.includes("-"))).toBe(true);
+  });
+
+  it("inventories documentation reasons in datums, after the question buckets", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "aaa-one" })],
+      openEvidence: makeOpenEvidence({
+        totals: { questions: 4, open: 3, issuer: 0, documentation: 1, obligations: 265 },
+        documentation: {
+          questions: 1,
+          datums: 256,
+          facts: 250,
+          reasons: [{ reason: "no-scoring-path", datums: 256 }],
+        },
+        reasons: [{ code: "unresolved-control-identity", bucket: "open", questions: 3, obligations: 6 }],
+        byCard: [
+          {
+            id: "aaa-one",
+            openBucketQuestionsCarried: 3,
+            inheritedOpenBucketQuestionsCarried: 0,
+            openBucketObligationsCarried: 6,
+            documentationObligationsCarried: 256,
+          },
+        ],
+        issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+      }),
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.reasons.at(-1)).toEqual({
+      code: "no-scoring-path",
+      bucket: "documentation",
+      label: NO_SCORING_PATH_LABEL,
+      questions: null,
+      count: 256,
+      countUnit: "datums",
+    });
+    expect(model.openEvidence).toMatchObject({ documentation: 1, documentationDatums: 256 });
+  });
+
+  it("keeps a critical obligation count separate from the reason inventory", () => {
     const response = makeReportCardsV9Response({
       cards: [
         withGaps(makeV9Card({ id: "aaa-one" }), [
           {
-            responsibility: "issuer-undisclosed",
-            factCount: 3,
+            responsibility: "unresearched",
+            factCount: 2,
             criticalFactCount: 1,
             reasonCodes: ["missing-reserve-composition"],
           },
         ]),
-        withGaps(makeV9Card({ id: "bbb-two" }), [
-          {
-            responsibility: "issuer-undisclosed",
-            factCount: 2,
-            criticalFactCount: 0,
-            reasonCodes: ["missing-reserve-composition"],
-          },
-          {
-            responsibility: "producer-failed",
-            factCount: 4,
-            criticalFactCount: 0,
-            reasonCodes: ["missing-runtime-route-evidence"],
-          },
-        ]),
       ],
+      openEvidence: makeOpenEvidence({
+        reasons: [{ code: "unresolved-control-identity", bucket: "open", questions: 3, obligations: 6 }],
+      }),
+    });
+
+    const model = buildDataCoverageModel(response)!;
+
+    expect(model.criticalGapCount).toBe(1);
+    expect(model.reasons.map((reason) => reason.code)).toEqual(["unresolved-control-identity"]);
+  });
+
+  it("reconciles completeness and evaluated inputs across cards", () => {
+    const response = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "aaa-one" }), makeV9Card({ id: "bbb-two" })],
+      openEvidence: makeOpenEvidence(),
     });
 
     const model = buildDataCoverageModel(response)!;
@@ -109,206 +331,11 @@ describe("buildDataCoverageModel", () => {
       { key: "control", label: "Econ. control", count: 2 },
     ]);
     expect(model.inputsEvaluated).toBe(16);
-    expect(model.openGapCount).toBe(9);
-    expect(model.criticalGapCount).toBe(1);
     expect(model.backingObservedCount).toBe(2);
     expect(model.backingKnownCount).toBe(2);
   });
 
-  it("counts expired published evidence as a Pharos-owned coverage gap", () => {
-    const response = makeReportCardsV9Response({
-      cards: [
-        withGaps(makeV9Card({ id: "aaa-one" }), [
-          {
-            responsibility: "published-evidence-expired",
-            factCount: 3,
-            criticalFactCount: 0,
-            reasonCodes: ["missing-latest-assurance-report"],
-          },
-        ]),
-      ],
-    });
-
-    const model = buildDataCoverageModel(response)!;
-
-    expect(model.openGapCount).toBe(3);
-    expect(model.gapOwners).toContainEqual(expect.objectContaining({
-      responsibility: "published-evidence-expired",
-      count: 3,
-    }));
-    expect(model.gapTypes).toContainEqual({
-      code: "missing-latest-assurance-report",
-      label: "No current attestation or audit",
-      assetCount: 1,
-    });
-  });
-
-  it("counts gap types by affected assets and labels them in plain English", () => {
-    const response = makeReportCardsV9Response({
-      cards: [
-        withGaps(makeV9Card({ id: "aaa-one" }), [
-          {
-            responsibility: "issuer-undisclosed",
-            factCount: 1,
-            criticalFactCount: 0,
-            reasonCodes: ["missing-reserve-composition", "missing-access-review"],
-          },
-        ]),
-        withGaps(makeV9Card({ id: "bbb-two" }), [
-          {
-            responsibility: "issuer-undisclosed",
-            factCount: 1,
-            criticalFactCount: 0,
-            reasonCodes: ["missing-reserve-composition"],
-          },
-        ]),
-      ],
-    });
-
-    const model = buildDataCoverageModel(response)!;
-
-    expect(model.gapTypes[0]).toEqual({
-      code: "missing-reserve-composition",
-      label: "Reserve composition not published",
-      assetCount: 2,
-    });
-    expect(model.gapTypes[1]!.assetCount).toBe(1);
-    expect(model.gapTypes.every((gap) => !gap.label.includes("-"))).toBe(true);
-  });
-
-  it("keeps measured findings out of the missing-input inventory", () => {
-    // `peg-supply-floor-withheld` stands in for every measured-adverse code,
-    // including the v9.04 addition `peg-price-unavailable-adverse-history`:
-    // the module's headline, bar and inventory all cover missing data only, so
-    // a measured peg finding must never read as an input we failed to collect.
-    const response = makeReportCardsV9Response({
-      cards: [
-        withGaps(makeV9Card({ id: "aaa-one" }), [
-          {
-            responsibility: "measured-adverse",
-            factCount: 4,
-            criticalFactCount: 0,
-            reasonCodes: ["peg-supply-floor-withheld"],
-          },
-          {
-            responsibility: "method-unsupported",
-            factCount: 1,
-            criticalFactCount: 0,
-            reasonCodes: ["missing-runtime-route-evidence"],
-          },
-        ]),
-      ],
-    });
-
-    const model = buildDataCoverageModel(response)!;
-
-    expect(model.gapTypes.map((gap) => gap.code)).toEqual(["missing-runtime-route-evidence"]);
-    expect(model.openGapCount).toBe(1);
-    expect(model.gapOwners.map((owner) => owner.responsibility)).toEqual(["method-unsupported"]);
-  });
-
-  it("labels a bounded mechanism review neutrally on whether the review happened", () => {
-    // Methodology 9.451: most carriers of this code are adjudicated
-    // non-disclosures — the review IS complete and found the issuer publishes
-    // nothing — so a label claiming the review is incomplete was false for
-    // them. The gap's own message carries which shape it is.
-    const response = makeReportCardsV9Response({
-      cards: [
-        withGaps(makeV9Card({ id: "aaa-one" }), [
-          {
-            responsibility: "issuer-undisclosed",
-            factCount: 3,
-            criticalFactCount: 0,
-            reasonCodes: ["bounded-mechanism-review"],
-          },
-        ]),
-      ],
-    });
-
-    const model = buildDataCoverageModel(response)!;
-
-    expect(model.gapTypes).toEqual([
-      { code: "bounded-mechanism-review", label: "A mechanism detail is unresolved", assetCount: 1 },
-    ]);
-    expect(model.gapTypes[0]!.label).not.toMatch(/incomplete|not reviewed/i);
-    expect(model.gapOwners[0]).toMatchObject({
-      responsibility: "issuer-undisclosed",
-      count: 3,
-    });
-    expect(model.openGapCount).toBe(3);
-  });
-
-  it("counts an asset once when one reason code is split across two owners", () => {
-    // v9.04 reclassification: the DEX exit codes are producer-failed for some
-    // gaps and method-unsupported for others, so a single asset can raise the
-    // same code under two summaries.
-    const response = makeReportCardsV9Response({
-      cards: [
-        withGaps(makeV9Card({ id: "aaa-one" }), [
-          {
-            responsibility: "producer-failed",
-            factCount: 1,
-            criticalFactCount: 0,
-            reasonCodes: ["missing-runtime-route-evidence"],
-          },
-          {
-            responsibility: "method-unsupported",
-            factCount: 2,
-            criticalFactCount: 0,
-            reasonCodes: ["missing-runtime-route-evidence"],
-          },
-        ]),
-      ],
-    });
-
-    const model = buildDataCoverageModel(response)!;
-
-    expect(model.gapTypes).toEqual([
-      {
-        code: "missing-runtime-route-evidence",
-        label: "No live exit-route observation",
-        assetCount: 1,
-      },
-    ]);
-    expect(model.openGapCount).toBe(3);
-  });
-
-  it("names the reclassified inputs by what is absent rather than by fault", () => {
-    const response = makeReportCardsV9Response({
-      cards: [
-        withGaps(makeV9Card({ id: "aaa-one" }), [
-          {
-            responsibility: "method-unsupported",
-            factCount: 3,
-            criticalFactCount: 0,
-            reasonCodes: [
-              "incomplete-dex-route-coverage",
-              "missing-runtime-route-evidence",
-              "unreviewed-dependency-relationships",
-            ],
-          },
-        ]),
-      ],
-    });
-
-    const model = buildDataCoverageModel(response)!;
-
-    expect(
-      Object.fromEntries(model.gapTypes.map((gap) => [gap.code, gap.label])),
-    ).toEqual({
-      "incomplete-dex-route-coverage": "DEX exit routes not fully covered",
-      "missing-runtime-route-evidence": "No live exit-route observation",
-      "unreviewed-dependency-relationships": "Dependency relationships not reconciled with reserves",
-    });
-    expect(model.gapOwners[0]).toMatchObject({
-      responsibility: "method-unsupported",
-      label: "No supported method",
-      detail: "No method can measure this input for this asset yet. Nothing upstream failed.",
-    });
-    expect(model.gapTypes.every((gap) => !/fail/i.test(gap.label))).toBe(true);
-  });
-
-  it("counts gaps carried by not-rated cards", () => {
+  it("counts critical gaps carried by not-rated cards without evaluating inputs", () => {
     const notRated = withGaps(
       makeV9Card({
         id: "ccc-three",
@@ -336,18 +363,39 @@ describe("buildDataCoverageModel", () => {
       ],
     );
     const model = buildDataCoverageModel(
-      makeReportCardsV9Response({ cards: [notRated] }),
+      makeReportCardsV9Response({
+        cards: [notRated],
+        openEvidence: makeOpenEvidence({
+          totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 7 },
+          owners: [],
+          reasons: [],
+          issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+        }),
+      }),
     )!;
 
     expect(model.notRatedCount).toBe(1);
-    expect(model.openGapCount).toBe(7);
     expect(model.criticalGapCount).toBe(2);
+    expect(model.openEvidence?.obligations).toBe(7);
     // NR cards publish no component breakdowns.
     expect(model.inputsEvaluated).toBe(0);
   });
 
   it("reports no hold when the publication is current", () => {
     expect(buildDataCoverageModel(makeReportCardsV9Response())!.hold).toBeNull();
+  });
+});
+
+describe("describeIssuerReview", () => {
+  it("dates a single review and a review window without re-dating it", () => {
+    expect(describeIssuerReview({
+      oldestReviewedAtSec: REVIEWED_AT_SEC,
+      newestReviewedAtSec: REVIEWED_AT_SEC,
+    })).toBe("Reviewed Oct 3, 2026; the issuer does not publish this datum.");
+    expect(describeIssuerReview({
+      oldestReviewedAtSec: EARLIER_REVIEWED_AT_SEC,
+      newestReviewedAtSec: REVIEWED_AT_SEC,
+    })).toBe("Reviewed Sep 28, 2026 – Oct 3, 2026; the issuer does not publish this datum.");
   });
 });
 

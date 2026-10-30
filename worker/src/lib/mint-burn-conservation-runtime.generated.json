@@ -907,6 +907,27 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "swanusd-swan",
+      "address": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+      "decimals": 18,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
+      }
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "syrupusdc-maple",
       "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
       "decimals": 6,

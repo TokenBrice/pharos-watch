@@ -1,5 +1,4 @@
-import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
-import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9BrowserResponseSchema, type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { ReportCardsV9TableResponseSchema, type ReportCardsV9TableResponse, type ReportCardsV9TableCard } from "@shared/types/report-cards-v9-projections";
 import { projectV9TableCard } from "@shared/lib/report-cards-v9-projections";
 import type {
@@ -100,7 +99,7 @@ export function resolveV9ConsumerResponse(
   input: unknown,
   expectedIdentity: V9ConsumerIdentity,
 ): V9ConsumerResult<V9ConsumerResponse> {
-  const parsed = ReportCardsV9CurrentResponseSchema.safeParse(input);
+  const parsed = ReportCardsV9BrowserResponseSchema.safeParse(input);
   if (!parsed.success) return { status: "unavailable", reason: "invalid-v9-response" };
   if (!safetyScoreV9IdentitiesMatch(parsed.data.safetyScoreIdentity, expectedIdentity)) {
     return { status: "unavailable", reason: "identity-mismatch" };

@@ -22,6 +22,28 @@ describe("CI workflow scope", () => {
     ]));
   });
 
+  it("gates new stablecoin admissions once on the prepared workspace against the frozen base", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; uses?: string; run?: string; env?: Record<string, string> }> }>;
+    };
+    const steps = workflow.jobs.prepare.steps;
+    const gate = steps.findIndex((step) => step.name === "Check new-asset evidence packet");
+    // The receipt is bound to the post-addition registry fingerprint, so the
+    // gate must run after npm ci + bootstrap:generated inside setup-workspace.
+    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    // One invocation per PR: restored validation shards never re-run the gate.
+    expect(steps.filter((step) => step.run?.includes("check:new-asset-evidence-packet"))).toHaveLength(1);
+    expect(steps[gate].env).toEqual({
+      PR_BASE_SHA: "${{ github.event.pull_request.base.sha }}",
+      NEW_ASSET_GATE_OVERRIDE: "${{ contains(github.event.pull_request.labels.*.name, 'new-asset-gate-override') }}",
+    });
+    // The owner label is the only path to `--override`; it never bypasses a
+    // missing receipt or a counted mint-authority gap.
+    expect(steps[gate].run?.match(/--override/g)).toHaveLength(1);
+    expect(steps[gate].run)
+      .toContain('if [[ "${NEW_ASSET_GATE_OVERRIDE}" == "true" ]]; then args+=(--override); fi');
+  });
+
   it("feeds nightly Lighthouse trusted retained release data with a token confined to acquisition", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/nightly-validation.yml")) as {
       jobs: Record<string, {
@@ -523,6 +545,54 @@ describe("CI workflow scope", () => {
       EXPECTED_HEAVY_WORKER_VERSION: "${{ needs.deploy-worker.outputs.heavy_worker_version }}",
       OBSERVED_HEAVY_WORKER_VERSION: "${{ steps.verify-heavy-identity.outputs.worker_version }}",
     });
+  });
+
+  it("keeps the curation expiry sweep process-only with sentinel verdicts and by-week renewal views", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/curation-expiry-sweep.yml")) as {
+      permissions?: Record<string, string>;
+      jobs: Record<string, {
+        permissions?: Record<string, string>;
+        steps: Array<{
+          id?: string; name?: string; run?: string; uses?: string;
+          with?: Record<string, unknown>; env?: Record<string, string>; "timeout-minutes"?: number;
+        }>;
+      }>;
+    };
+    const job = workflow.jobs.sweep;
+    const steps = job.steps;
+    const sentinels = steps.find((step) => step.id === "sentinels")!;
+    const renewals = steps.find((step) => step.id === "renewals")!;
+    const calendar = steps.find((step) => step.id === "calendar")!;
+    const issue = steps.find((step) => step.run?.includes("gh issue edit"))!;
+    const commands = steps.map((step) => step.run ?? "").join("\n");
+
+    // Process-only: the sweep may maintain its own issue, never the repository or the ledger.
+    expect(workflow.permissions).toEqual({ contents: "read" });
+    expect(job.permissions).toEqual({ contents: "read", issues: "write" });
+    expect(commands).not.toMatch(/\bgit push\b/);
+    expect(commands).not.toMatch(/\bgh pr (create|merge|edit|close)\b/);
+    expect(commands).not.toContain("ledger-append");
+    expect(issue.run).toContain("gh issue edit");
+
+    // The sentinel verdicts read the same ledger the applier writes and the registry this sweep regenerates.
+    expect(sentinels.run).toContain("worker/scripts/check-safety-score-v9-ledger-sentinels.ts");
+    expect(sentinels.run).toContain("--registry agents/sweep/missing-data-registry.json");
+    expect(sentinels.run).toContain("--ledger .github/artifacts/safety-score-missing-data-reviewed-ledger.json");
+    expect(sentinels.run).toContain("--replay agents/sweep/replay.json");
+    expect(sentinels.run).toContain("--markdown agents/sweep/sentinel-resolutions.md");
+    expect(steps.indexOf(steps.find((step) => step.id === "registry")!)).toBeLessThan(steps.indexOf(sentinels));
+
+    // By-week views: the 14-day renewal section and the program-horizon calendar artifact.
+    expect(renewals.run).toContain("--days 14 --by-week");
+    expect(calendar.run).toContain('--horizon "$RENEWAL_HORIZON" --by-week');
+    expect(calendar.env?.RENEWAL_HORIZON).toBe("2027-01-19");
+    expect(steps.indexOf(sentinels)).toBeLessThan(steps.indexOf(renewals));
+    expect(steps.indexOf(renewals)).toBeLessThan(steps.indexOf(calendar));
+
+    // Each new read is deadline-bounded inside the 40-minute job and rides the 30-day artifact.
+    for (const step of [sentinels, renewals, calendar]) expect(step["timeout-minutes"]).toBe(10);
+    const upload = steps.find((step) => step.id === "snapshots")!;
+    expect(upload.with?.path).toBe("agents/sweep/");
   });
 
 });

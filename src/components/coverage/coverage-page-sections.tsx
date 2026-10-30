@@ -214,7 +214,8 @@ export function CoverageSafetyScoreDataCard({
           Score input coverage
         </CardTitle>
         <CardDescription className="max-w-3xl leading-relaxed">
-          What the current Safety Score publication evaluated, and which inputs remain open.
+          What the current Safety Score publication evaluated, and how its open questions split
+          between research, issuer non-disclosure and documentation gaps.
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">

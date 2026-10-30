@@ -27,7 +27,7 @@ describe("canonical V9 report-card cache", () => {
     mockLoadPublicationHealth.mockReset();
   });
 
-  it("projects the evaluator publication into the active report-v8 contract", () => {
+  it("projects the current publication into the report9 envelope with its open-evidence block", () => {
     const publication = makeWorkerSafetyScoreV9Publication();
     const health = makeReportCardsV9Response().publicationHealth;
 
@@ -35,12 +35,27 @@ describe("canonical V9 report-card cache", () => {
       projectSafetyScoreV9PublicationToPublicSnapshot(publication, health),
     ).toMatchObject({
       model: "v9",
-      schemaVersion: 8,
+      schemaVersion: 9,
+      openEvidence: publication.openEvidence,
+      openEvidenceUnavailableReason: null,
       lifecycle: "active",
       safetyScoreIdentity: {
         publicationGenerationId: publication.publicationGenerationId,
       },
     });
+  });
+
+  it("publishes a machine-readable reason for a retained schema-7 generation instead of zeros", () => {
+    const { openEvidence: _absent, ...previous } = makeWorkerSafetyScoreV9Publication();
+    expect(previous).not.toHaveProperty("openEvidence");
+    const health = makeReportCardsV9Response().publicationHealth;
+    const snapshot = projectSafetyScoreV9PublicationToPublicSnapshot(
+      { ...previous, schemaVersion: 7 },
+      health,
+    );
+    expect(snapshot.schemaVersion).toBe(9);
+    expect(snapshot.openEvidence).toBeNull();
+    expect(snapshot.openEvidenceUnavailableReason).toBe("publication-predates-open-evidence");
   });
 
 

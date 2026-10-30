@@ -1,6 +1,7 @@
 import { createServer } from "node:http";
 import {
   makeReportCardsV9Card,
+  makeReportCardsV9ArchivedResponse,
   makeReportCardsV9Response,
 } from "@shared/test-utils/report-cards-v9";
 import { makeStablecoin } from "@shared/test-utils/stablecoin";
@@ -43,42 +44,51 @@ export function withSafetyMapAdverseAttribution(
   };
 }
 
-export function makeSafetyMapReportCardsResponse({
-  cards,
-  fixtureId,
-  methodologyVersion,
-  defaultUpdatedAt,
-  asOfSec,
-}: {
+interface SafetyMapReportCardsArgs {
   cards: SafetyScoreV9CurrentCard[];
   fixtureId: string;
   methodologyVersion: string;
   defaultUpdatedAt: number;
   asOfSec: number;
-}) {
-  return makeReportCardsV9Response(
-    {
-      safetyScoreIdentity: {
-        model: "v9" as const,
-        schemaVersion: 1 as const,
-        methodologyVersion,
-        policyId: "safety-score-v9",
-        policyDigest: "a".repeat(64),
-        evaluationBuildDigest: "b".repeat(64),
-        baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
-        publicationGenerationId: fixtureId,
-      },
-      defaultUpdatedAt,
-      asOfSec,
-      source: {
-        candidateId: `safety-score-v9:v1:${fixtureId}`,
-        factSetDigest: "c".repeat(64),
-        resultDigest: "d".repeat(64),
-        sourceGenerations: { reportCards: "fixture" },
-      },
+}
+
+function safetyMapReportCardsPreset({ fixtureId, methodologyVersion, defaultUpdatedAt, asOfSec }: SafetyMapReportCardsArgs) {
+  return {
+    safetyScoreIdentity: {
+      model: "v9" as const,
+      schemaVersion: 1 as const,
+      methodologyVersion,
+      policyId: "safety-score-v9",
+      policyDigest: "a".repeat(64),
+      evaluationBuildDigest: "b".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+      publicationGenerationId: fixtureId,
     },
+    defaultUpdatedAt,
+    asOfSec,
+    source: {
+      candidateId: `safety-score-v9:v1:${fixtureId}`,
+      factSetDigest: "c".repeat(64),
+      resultDigest: "d".repeat(64),
+      sourceGenerations: { reportCards: "fixture" },
+    },
+  };
+}
+
+export function makeSafetyMapReportCardsResponse(args: SafetyMapReportCardsArgs) {
+  return makeReportCardsV9Response(
+    safetyMapReportCardsPreset(args),
     () => makeReportCardsV9Card(),
-    { cards },
+    { cards: args.cards },
+  );
+}
+
+/** Same fixture data on the report9 wire; proves the map reader admits both. */
+export function makeSafetyMapReportCardsNextResponse(args: SafetyMapReportCardsArgs) {
+  return makeReportCardsV9ArchivedResponse(
+    safetyMapReportCardsPreset(args),
+    () => makeReportCardsV9Card(),
+    { cards: args.cards },
   );
 }
 

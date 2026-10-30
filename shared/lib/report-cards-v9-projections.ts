@@ -94,9 +94,12 @@ export function projectV9Detail(
   const neighborhood = neighborhoodCards === undefined
     ? snapshot.cards.filter(card => members.has(card.id)).map(projectV9DetailNeighborhoodCard)
     : neighborhoodCards.filter(card => members.has(card.id));
+  const documentationOnlyLimited = snapshot.openEvidence?.byCard
+    .find(entry => entry.id === coinId)?.documentationOnlyLimited;
   return ReportCardsV9DetailResponseSchema.parse({
     ...envelope(snapshot), projection: "detail", coinId,
     cards: [resolveV9PublicWitnessTexts(selected)], neighborhood,
+    ...(documentationOnlyLimited === undefined ? {} : { documentationOnlyLimited }),
     ...(snapshot.pillarFreshness === undefined ? {} : { pillarFreshness: {
       dexMaxAgeSec: snapshot.pillarFreshness.dexMaxAgeSec,
       dexObservedAtSec: [snapshot.pillarFreshness.dexObservedAtSec[snapshot.cards.indexOf(selected)]!],

@@ -4,7 +4,7 @@
     "mintPath": "wrapped-or-variant-inherited",
     "authorityPosture": "partially-bounded-admin",
     "confidence": "verified",
-    "summary": "Mint Authority covers only canonical Ethereum sUSN issuance and its inherited USN collateral dependency. Shares mint against deposited USN; the reviewed MinterHandlerV2 and 3-of-6 Noon admin Safe bound the inherited collateral path, while the Ethereum wrapper is a transparent proxy whose ProxyAdmin is governed by a 48-hour timelock owned by that Safe. The armed, expiry-free upgrade operation scheduled 2026-06-10 was cancelled on 2026-10-12, after a separately scheduled upgrade to implementation 0xef2ea425 executed on 2026-10-01, so no upgrade operation is pending and the 48-hour delay now binds wrapper logic changes; the same Safe separately holds instant no-timelock vault powers (pause, withdrawal-handler replacement, whitelist grants, token rescue, blacklist-role self-grant). Cross-chain lock/unlock, Hyperlane messaging, destination representations, and bridge administration are scored only under bridgeRouteRisk.",
+    "summary": "Mint Authority covers only canonical Ethereum sUSN issuance and its inherited USN dependency. Shares mint against deposited USN; inherited order and direct mints are per-block and per-day limited, but mintAndRebase has no aggregate cap and DEFAULT_ADMIN_ROLE now sits with a Safe-owned 4-hour timelock, while the Ethereum wrapper's ProxyAdmin is governed by a 48-hour timelock owned by that Safe. The armed, expiry-free upgrade operation scheduled 2026-06-10 was cancelled on 2026-10-12, after a separately scheduled upgrade to implementation 0xef2ea425 executed on 2026-10-01, so no upgrade operation is pending and the 48-hour delay now binds wrapper logic changes; the same Safe separately holds instant vault powers (pause, withdrawal-handler replacement, whitelist grants, token rescue, blacklist-role self-grant). Cross-chain lock/unlock, Hyperlane messaging, destination representations and bridge administration are scored only under bridgeRouteRisk.",
     "inheritedFrom": "usn-noon",
     "upgradeability": {
       "model": "transparent-proxy",
@@ -64,7 +64,7 @@
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-19",
         "observedBlock": 26227599,
-        "capDescription": "Transparent proxy; upgrade path: ProxyAdmin (0x1908284b) → owner 0xe5e412c → owner Safe 0x1ea169. Wrapper owner() also returns the same 3/6 Safe. The dormant upgrade to implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7 (scheduled 2026-06-10) was cancelled on 2026-10-12 and no other operation is pending, so a wrapper logic change now requires a fresh schedule and the full 48-hour delay.",
+        "capDescription": "Transparent proxy; upgrade path: ProxyAdmin (0x1908284b) → owner 0xe5e412c → owner Safe 0x1ea169. Wrapper owner() also returns the same 3/5 Safe. The dormant upgrade to implementation 0xb9E5B8d826939580db142faBA61FcdEA9AAca6E7 (scheduled 2026-06-10) was cancelled on 2026-10-12 and no other operation is pending, so a wrapper logic change now requires a fresh schedule and the full 48-hour delay.",
         "sources": [
           {
             "label": "sUSN proxy (Etherscan)",
@@ -93,16 +93,16 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Inherited USN MinterHandlerV2 minting is bounded by the parent USN handler's per-block/per-day and whitelist controls, which Noon admin controls can update.",
+        "capDescription": "Inherited USN MinterHandlerV2 order and direct mints are limited per block and per day, but mintAndRebase has only a 25,000 USN per-call cap and no aggregate limit; limit changes require its DEFAULT_ADMIN_ROLE, held by a Safe-owned 4-hour timelock since block 26175472.",
         "sources": [
           {
             "label": "MinterHandlerV2 implementation",
             "url": "https://sourcify.dev/server/v2/contract/1/0xb91b361ebe4022bb62df0651bdd09b21209ac058?fields=sources"
           }
         ],
-        "observedAt": "2026-07-14",
-        "observedBlock": 25530462,
-        "evidence": "Inherited from the reviewed usn-noon mintAuthority. Verified MinterHandlerV2 source enforces per-block, per-day, whitelisted-user, and collateral checks; the handler itself does not hold DEFAULT_ADMIN_ROLE."
+        "observedAt": "2026-10-29",
+        "observedBlock": 26299805,
+        "evidence": "Inherited from the reviewed usn-noon mintAuthority. Verified MinterHandlerV2 source enforces the per-block limit on order and direct mints, the per-day limit on directMint, the whitelisted order.user and collateral lists, and the per-call rebaseLimit; the collateral check is skipped for self-signed orders, mintAndRebase has no per-block, per-day or aggregate accounting, and the handler itself does not hold DEFAULT_ADMIN_ROLE. Re-read 2026-10-29 at block 26299805: mintLimitPerBlock and directMintLimitPerDay are 10,000,000 USN and rebaseLimit is 25,000 USN; DEFAULT_ADMIN_ROLE is held by the Safe-owned 4-hour GenericTimelockV2 0x398dCDdae394198E6f81d6d8f827CF93b60fB5AE, and MINTER_ROLE by the Safe and by zero-code account 0x3769FEb4Bc0bfd6Fa94982B7dC5CBb0E567f76AE, which has sent all 44 MintAndRebase calls since its block 25989464 grant."
       },
       {
         "chain": "ethereum",
@@ -114,7 +114,7 @@
         "role": "minter-admin",
         "authorityType": "safe",
         "directMintAbility": "cap-limited",
-        "capDescription": "Inherited MinterHandlerV2 limits: at Ethereum block 26095806, mintLimitPerBlock() and directMintLimitPerDay() each returned 10000000000000000000000000 USN base units (18 decimals). These are mutable transaction/window limits, not a hard economic supply cap; this Safe retains DEFAULT_ADMIN_ROLE and can raise them.",
+        "capDescription": "Inherited MinterHandlerV2 limits: at Ethereum block 26299805, mintLimitPerBlock() and directMintLimitPerDay() each returned 10000000000000000000000000 USN base units (18 decimals) and rebaseLimit() returned 25000e18. These are mutable transaction/window limits, not a hard supply cap, and mintAndRebase has no aggregate limit; this whitelisted Safe can self-sign zero-collateral orders, and cap changes require the Safe-owned 4-hour GenericTimelockV2.",
         "canRaiseCap": true,
         "modulesOrGuardsStatus": "none-detected",
         "failureDomainKeys": [
@@ -124,36 +124,43 @@
         "bypassSurfaces": [
           "Vault pause(), setWithdrawalHandler, whitelistAccount grants, rescueToken, and a self-granted BLACKLIST_MANAGER_ROLE followed by blacklistAccount all execute instantly with no timelock; pausing the vault blocks new unstake requests, and neither pause nor blacklist has ever been used to date.",
           "The WithdrawalHandler's setWithdrawPeriod enforces no minimum or maximum and the claim check reads the live value, so a change applies retroactively to withdrawal requests already in flight; the parameter is bounded only by the 48-hour GenericTimelock that has held the handler admin role since 2026-07-28, and that timelock's own ownership transfer is not timelocked. 7 of the 8 historical changes, including three 0-second windows, were direct calls that bypassed the timelock, the last one 46 minutes before the Safe renounced the handler admin role.",
-          "Three of this Safe's six owner keys (0xe45Bb0D3cC77702E1310BB621c59c778304A42D0, 0x09CE2d1C37772F7fF666B6447a66a5EBd2833799, 0x8B3641db7737fFab752718fcc772161eC09FaD01) are also owners of the 4-of-5 Noon collateral Safe; that overlap equals this Safe's threshold, so those three keys alone form a valid admin quorum for every power above."
+          "Three of this Safe's five owner keys (0xe45Bb0D3cC77702E1310BB621c59c778304A42D0, 0x09CE2d1C37772F7fF666B6447a66a5EBd2833799, 0x8B3641db7737fFab752718fcc772161eC09FaD01) are also owners of the 4-of-5 Noon collateral Safe; that overlap equals this Safe's threshold, so those three keys alone form a valid admin quorum for every power above."
         ],
         "threshold": 3,
-        "signerCount": 6,
+        "signerCount": 5,
         "safe": {
           "owners": [
             "0x5eF8aa9cb6b2dEDCd02509058cf99d3d44d023c3",
             "0xe45Bb0D3cC77702E1310BB621c59c778304A42D0",
             "0x09CE2d1C37772F7fF666B6447a66a5EBd2833799",
             "0x0057f25088B450170229D78b5700ED735c7cc722",
-            "0xe8241FACB568E4c880490e8Ab4E015F2572e6976",
             "0x8B3641db7737ffab752718fcc772161eC09FaD01"
           ],
           "threshold": 3,
           "enabledModules": [],
           "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732Dc9E303f09fCEf3a7388Ad10A83459Ec99",
-          "observedBlock": 25530462,
-          "observedAt": "2026-07-14",
+          "fallbackHandler": "0x3EfCBb83A4A7AfcB4F68D501E2c2203a38be77f4",
+          "observedBlock": 26300327,
+          "observedAt": "2026-10-29",
           "source": "safe-api"
         },
-        "observedAt": "2026-09-22",
-        "observedBlock": 26036288,
+        "observedAt": "2026-10-29",
+        "observedBlock": 26299805,
         "sources": [
           {
             "label": "Noon admin Safe API",
             "url": "https://api.safe.global/tx-service/eth/api/v1/safes/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f/"
+          },
+          {
+            "label": "Noon admin Safe RemovedOwner log, block 26246910 (2026-10-22)",
+            "url": "https://eth.blockscout.com/address/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f?tab=logs"
+          },
+          {
+            "label": "Verified USN SelectiveTimelock source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x064eEd122668fe5031068B7f42B82396A576997A"
           }
         ],
-        "evidence": "The parent USN review confirms this 3-of-6 Safe holds MinterHandlerV2 MINTER_ROLE and DEFAULT_ADMIN_ROLE, so it can execute bounded mints and change the handler's limits. Current Safe reads show six owners, threshold 3, no enabled modules, and a zero guard. Re-derived 2026-09-22 at block 26036288: on-chain getThreshold()/getOwners() still return 3-of-6, and the Safe remains the vault's DEFAULT_ADMIN_ROLE holder and owner() while no account holds the vault's BLACKLIST_MANAGER_ROLE, so the Safe must self-grant that role before blacklisting, an instant untimelocked step. The Safe also owns the USN token directly, whose owner-only pause() and blacklistAccount(address) carry no timelock and can freeze the USN claim leg of an sUSN withdrawal after its 7-day wait."
+        "evidence": "The parent USN review confirms this 3-of-5 Safe holds MinterHandlerV2 MINTER_ROLE, so it can self-sign zero-collateral orders up to the per-block limit and call mintAndRebase without an aggregate limit. Current Safe reads show five owners, threshold 3, no enabled modules, and a zero guard. Re-read 2026-10-29 at block 26300327: getThreshold()/getOwners() return 3-of-5; RemovedOwner at block 26246910 (2026-10-22, tx 0xd307a019...) dropped 0xe8241FACB568E4c880490e8Ab4E015F2572e6976. The Safe remains the vault's DEFAULT_ADMIN_ROLE holder and owner(), and no account holds the vault's BLACKLIST_MANAGER_ROLE, so the Safe must self-grant that role before blacklisting, an instant untimelocked step. The handler's DEFAULT_ADMIN_ROLE is no longer held by this Safe: it moved to the Safe-owned 4-hour GenericTimelockV2 0x398dCDdae394198E6f81d6d8f827CF93b60fB5AE at block 26175472. USN.owner() is now the Safe-owned SelectiveTimelock 0x064eEd122668fe5031068B7f42B82396A576997A, whose pause and blacklistAccount selectors keep a zero-second delay and can still freeze the USN claim leg of an sUSN withdrawal after its 7-day wait."
       },
       {
         "chain": "ethereum",
@@ -219,7 +226,7 @@
           "url": "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d"
         },
         {
-          "label": "Current sUSN implementation source",
+          "label": "sUSN implementation source 0xebbcbc66 (2026-08 review)",
           "url": "https://sourcify.dev/server/v2/contract/1/0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d?fields=sources,abi,metadata"
         },
         {
@@ -243,9 +250,9 @@
           "url": "https://etherscan.io/tx/0x9c16bcd0d9aa0d68457e5bc15fd157e1e475f2981940e6c07639f4ef5713f07e"
         }
       ],
-      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-6 admin Safe. At Ethereum block 25771191, its transparent proxy resolved to current implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. The current implementation adds PausableUpgradeable and a 48-hour stuck-message correction flow; these cross-chain transfer-rail capabilities are reviewed under bridgeRouteRisk and are not independent issuer mint paths. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths. Local sUSN supply is deposit-gated, and live ERC-4626 accounting covers all wrapper shares through Accountable without a named prudential supervisor. Adverse re-review on 2026-09-22 at block 26036288 corrects the earlier unqualified 48-hour-upgrade claim: the upgrade timelock still holds the armed, expiry-free operation scheduled 2026-06-10 that would install vault implementation 0xb9E5B8...a6e7, so replacing wrapper mint logic currently requires no notice at all until that operation is executed or cancelled. The admin Safe separately holds instant, no-timelock powers over the vault (pause, which blocks new unstake requests; setWithdrawalHandler; whitelist grants; rescueToken; self-grant of BLACKLIST_MANAGER_ROLE followed by blacklistAccount) and over USN, whose owner-only pause and blacklistAccount can freeze the USN claim leg of a withdrawal after its 7-day wait. The WithdrawalHandler's withdrawPeriod is unbounded in both directions: setWithdrawPeriod enforces no minimum or maximum, the claim check reads the live value so a change applies retroactively to requests already in flight, and the only bound is the 48-hour GenericTimelock that became handler admin on 2026-07-28. 7 of the 8 historical changes, including three 0-second windows, were direct calls that bypassed the timelock, and that timelock's own ownership transfer is not timelocked. Three of the admin Safe's six owner keys are shared with the 4-of-5 collateral Safe, matching the admin threshold, so those keys alone form a valid admin quorum. D14 review of Sourcify-verified StakingVaultOFTUpgradeableHyperlane implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d: native deposit/mint uses inherited ERC4626Upgradeable._deposit, transferring USN before _mint(receiver,shares). rebase transfers underlying without creating shares. Both _credit and Hyperlane handle unlock existing vault-held shares via _update(address(this),recipient,amount); the administrative stuck-message repair likewise requires sufficient locked balance and transfers rather than mints. No wrapper-local privileged share mint or new share-minter grant exists. Inherited MinterHandlerV2 and Safe limit powers issue parent USN and travel through the serial-claim dependency edge, not a second sUSN charge. The armed proxy upgrade is retained as upgrade risk, not a D14 trigger. Re-read 2026-10-19 at Ethereum block 26227599: the vault proxy now resolves to implementation 0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15 via a timelocked upgrade scheduled 2026-09-28 and executed 2026-10-01, and the armed 2026-06-10 operation was cancelled on 2026-10-12, so no upgrade is pending and the 48-hour delay binds wrapper logic changes; the D14 cap-semantics review above was performed on the prior implementation 0xebbcbc66. Source-scope correction reviewed 2026-10-22: Withdraw continuous reconciliation and attestation-only supervision from this sUSN authority review. The earlier assertion that Accountable covers all wrapper shares is not established by a cited sUSN-specific whole-liability reconciliation or examiner report; parent USN reserve/supply assurance does not establish the sUSN share and withdrawal-liability perimeter or its independent admin authority. The cited implementation and deposit gating establish local issuance mechanics, not the claimed independent assurance. The original review start, authority and implementation observations, and all evidence clocks are unchanged.",
-      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB)",
-      "reviewedAt": "2026-10-03"
+      "evidence": "The sUSN wrapper mints only against deposited USN and inherits the parent MinterHandlerV2 plus Noon 3-of-5 admin Safe. At Ethereum block 25771191, its transparent proxy resolved to current implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d and ProxyAdmin 0x190828...bd81; the ProxyAdmin owner was a verified 172800-second timelock owned by the same Safe. The current implementation adds PausableUpgradeable and a 48-hour stuck-message correction flow; these cross-chain transfer-rail capabilities are reviewed under bridgeRouteRisk and are not independent issuer mint paths. Non-Ethereum contracts are reviewed as third-party bridge representations, not independent issuer mint paths. Local sUSN supply is deposit-gated, and live ERC-4626 accounting covers all wrapper shares through Accountable without a named prudential supervisor. Adverse re-review on 2026-09-22 at block 26036288 corrects the earlier unqualified 48-hour-upgrade claim: the upgrade timelock still holds the armed, expiry-free operation scheduled 2026-06-10 that would install vault implementation 0xb9E5B8...a6e7, so replacing wrapper mint logic currently requires no notice at all until that operation is executed or cancelled. The admin Safe separately holds instant, no-timelock powers over the vault (pause, which blocks new unstake requests; setWithdrawalHandler; whitelist grants; rescueToken; self-grant of BLACKLIST_MANAGER_ROLE followed by blacklistAccount) and over USN, whose pause and blacklistAccount selectors keep a zero-second delay through the parent's SelectiveTimelock and can freeze the USN claim leg of a withdrawal after its 7-day wait. The WithdrawalHandler's withdrawPeriod is unbounded in both directions: setWithdrawPeriod enforces no minimum or maximum, the claim check reads the live value so a change applies retroactively to requests already in flight, and the only bound is the 48-hour GenericTimelock that became handler admin on 2026-07-28. 7 of the 8 historical changes, including three 0-second windows, were direct calls that bypassed the timelock, and that timelock's own ownership transfer is not timelocked. Three of the admin Safe's five owner keys are shared with the 4-of-5 collateral Safe, matching the admin threshold, so those keys alone form a valid admin quorum. D14 review of Sourcify-verified StakingVaultOFTUpgradeableHyperlane implementation 0xebbcbc6672683e1956125e7c5e89e14ceac8cd3d: native deposit/mint uses inherited ERC4626Upgradeable._deposit, transferring USN before _mint(receiver,shares). rebase transfers underlying without creating shares. Both _credit and Hyperlane handle unlock existing vault-held shares via _update(address(this),recipient,amount); the administrative stuck-message repair likewise requires sufficient locked balance and transfers rather than mints. No wrapper-local privileged share mint or new share-minter grant exists. Inherited MinterHandlerV2 limit powers, now exercised through the parent handler's Safe-owned 4-hour timelock, issue parent USN and travel through the serial-claim dependency edge, not a second sUSN charge. The armed proxy upgrade is retained as upgrade risk, not a D14 trigger. Re-read 2026-10-19 at Ethereum block 26227599: the vault proxy now resolves to implementation 0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15 via a timelocked upgrade scheduled 2026-09-28 and executed 2026-10-01, and the armed 2026-06-10 operation was cancelled on 2026-10-12, so no upgrade is pending and the 48-hour delay binds wrapper logic changes; the D14 cap-semantics review above was performed on the prior implementation 0xebbcbc66. Source-scope correction reviewed 2026-10-22: Withdraw continuous reconciliation and attestation-only supervision from this sUSN authority review. The earlier assertion that Accountable covers all wrapper shares is not established by a cited sUSN-specific whole-liability reconciliation or examiner report; parent USN reserve/supply assurance does not establish the sUSN share and withdrawal-liability perimeter or its independent admin authority. The cited implementation and deposit gating establish local issuance mechanics, not the claimed independent assurance. The original review start, authority and implementation observations, and all evidence clocks are unchanged. Parent-control re-read 2026-10-29 at Ethereum block 26299805: USN.owner() is the Safe-owned SelectiveTimelock 0x064eEd122668fe5031068B7f42B82396A576997A; setAdmin and configuration selectors carry 86400-second delays, pause/blacklist remain zero-delay. MinterHandlerV2 caps are unchanged at 10,000,000 per block, 10,000,000 direct per day and 25,000 per mintAndRebase with no aggregate mintAndRebase limit, DEFAULT_ADMIN_ROLE is held by the Safe-owned 4-hour GenericTimelockV2 0x398dCDdae394198E6f81d6d8f827CF93b60fB5AE, and zero-code account 0x3769FEb4Bc0bfd6Fa94982B7dC5CBb0E567f76AE holds MINTER_ROLE alongside the Safe and has sent all 44 MintAndRebase calls since its block 25989464 grant. The sUSN vault's own DEFAULT_ADMIN_ROLE and owner() remain the 3-of-5 Safe, RemovedOwner having dropped one key at block 26246910 on 2026-10-22.",
+      "reviewer": "Sol v10.02 D14/D29 sweep (U8SafeRootedFloorB); Claude Noon feedback re-review 2026-10-29 (DeepSeek lane B); Pharos review fixes 2026-10-29 (DeepSeek lane E)",
+      "reviewedAt": "2026-10-29"
     }
   }
 }

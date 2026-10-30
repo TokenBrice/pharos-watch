@@ -6,6 +6,7 @@ import { AdmittedProviderRowExclusionSchema } from "./safety-score-v9-supply-att
 import {
   V9_AUTHORITY_SHARE_ROUNDOFF_LIMIT,
   V9AssetPremiumKindSchema,
+  V9DocumentationReasonSchema,
   V9QualityPillarSchema,
   V9ReasonCodeSchema,
 } from "./safety-score-v9";
@@ -255,14 +256,49 @@ const SafetyScoreV9EvidenceResponsibilityItemSchema = z
     factCount: z.number().int().nonnegative().optional().describe("Defaults to zero"),
     criticalFactCount: z.number().int().nonnegative().optional().describe("Defaults to zero"),
     reasonCodes: z.array(V9ReasonCodeSchema).optional().describe("Defaults to no reason codes"),
+    documentationFactCount: z.number().int().nonnegative().optional().describe("Documentation-classed facts inside factCount; omitted means none"),
   })
   .strict()
   .superRefine((summary, ctx) => {
     if ((summary.criticalFactCount ?? 0) > (summary.factCount ?? 0)) {
       issue(ctx, ["criticalFactCount"], "V9 critical responsibility count cannot exceed its fact count");
     }
+    if ((summary.documentationFactCount ?? 0) > (summary.factCount ?? 0)) {
+      issue(ctx, ["documentationFactCount"], "V9 documentation count cannot exceed its fact count");
+    }
     if (summary.reasonCodes !== undefined && !isUniqueSorted(summary.reasonCodes)) {
       issue(ctx, ["reasonCodes"], "V9 responsibility reason codes must be unique and sorted");
+    }
+  });
+
+/**
+ * Additive T2 documentation-class carrier. Optional so T1 payloads and archived
+ * traces parse unchanged; facts keep their published tuple. A card's
+ * documentation gaps are reconstructed from its gap table intersected with the
+ * publication-level `documentationCauseGaps`; this block never republishes ids.
+ */
+const SafetyScoreV9DocumentationEvidenceSchema = z
+  .object({
+    semantics: z.literal("documentation-class-v1"),
+    totalFactCount: z.number().int().nonnegative(),
+    criticalFactCount: z.literal(0),
+    summaries: z.array(
+      z
+        .object({
+          reason: V9DocumentationReasonSchema,
+          factCount: z.number().int().nonnegative(),
+        })
+        .strict(),
+    ),
+  })
+  .strict()
+  .superRefine((documentation, ctx) => {
+    if (documentation.summaries.reduce((sum, row) => sum + row.factCount, 0) > documentation.totalFactCount) {
+      issue(ctx, ["summaries"], "Documentation reason counts cannot exceed its fact total");
+    }
+    const reasons = documentation.summaries.map((row) => row.reason);
+    if (new Set(reasons).size !== reasons.length) {
+      issue(ctx, ["summaries"], "Documentation reason rows must be unique");
     }
   });
 
@@ -292,6 +328,7 @@ const SafetyScoreV9EvidenceResponsibilityTraceBaseSchema = z.object({
   facts: z.array(SafetyScoreV9EvidenceResponsibilityFactSchema),
   factPathPrefixes: canonicalTextArray().optional().describe("No interned fact prefixes when omitted"),
   summaries: z.array(SafetyScoreV9EvidenceResponsibilityItemSchema).length(RESPONSIBILITIES.length),
+  documentation: SafetyScoreV9DocumentationEvidenceSchema.optional(),
 }).strict();
 
 function evidenceResponsibilityTraceSchema(accounting: "witnesses" | "obligations") {

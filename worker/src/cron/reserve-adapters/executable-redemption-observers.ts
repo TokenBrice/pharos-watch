@@ -220,7 +220,7 @@ const NOON_SUSN = {
   assetAddress: "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
   assetDecimals: 18,
   sourceUrls: [
-    "https://docs.noon.capital/built-for-high-yields/our-stablecoin-usn-and-susn/minting-and-redemption",
+    "https://docs.noon.capital/2.-usdusn-and-usdsusn/mint-and-redeem.md",
     "https://etherscan.io/address/0xe24a3dc889621612422a64e6388927901608b91d#readContract",
     "https://etherscan.io/address/0x0dabc0d9b270c9b0c4c77aaceaa712b56d0f9178#readContract",
     "https://eth.blockscout.com/api/v2/smart-contracts/0xef2ea4250b7ce4d0aa9ca70607ecef278c6eab15",

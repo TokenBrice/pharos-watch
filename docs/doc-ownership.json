@@ -83,6 +83,8 @@
         "shared/data/failure-scenario-documents.json",
         "shared/data/failure-scenarios/**",
         "scripts/ci/check-failure-scenarios.ts",
+        "scripts/ci/check-new-asset-evidence-packet.ts",
+        ".github/artifacts/new-asset-evidence-packet/**",
         "scripts/maintenance/approve-failure-scenario.ts",
         "scripts/maintenance/verify-failure-scenarios.ts",
         ".codex/skills/scenario-verification/**",
@@ -108,6 +110,15 @@
           "local": [
             { "path": "docs/process/adding-a-stablecoin.md", "anchor": "6b-editorial-summary" },
             { "path": "docs/editorial-style.md", "anchor": "registers-by-surface" }
+          ]
+        },
+        {
+          "sources": [
+            "scripts/ci/check-new-asset-evidence-packet.ts",
+            ".github/artifacts/new-asset-evidence-packet/**"
+          ],
+          "local": [
+            { "path": "docs/process/adding-a-stablecoin.md", "anchor": "additionevidence-handoff-packet" }
           ]
         }
       ],
@@ -1218,7 +1229,7 @@
         { "path": "docs/architecture.md", "anchor": "adr-37" },
         "docs/tape-page.md",
         {"path": "docs/process/safety-score-equivalence-harness.md", "anchor": "when-to-use-it"},
-        "docs/process/safety-score-curation-expiry-sweep.md",
+        {"path": "docs/process/safety-score-curation-expiry-sweep.md", "anchor": "1-capture-the-current-production-input"},
         "docs/process/safety-score-v9-readiness.md",
         "docs/process/shock-coverage-refresh.md",
         "docs/process/report-cards-evidence-log.md"
@@ -1427,6 +1438,13 @@
         {
           "sources": ["functions/_site-data/**", "functions/lib/site-api-env.ts"],
           "required": [{ "path": "docs/process/worker-infrastructure-appendix.md", "anchor": "site-data-auth" }]
+        },
+        {
+          "sources": ["scripts/ci/check-new-asset-evidence-packet.ts"],
+          "local": [
+            { "path": "docs/testing.md", "anchor": "pr-outcomes-and-transport" },
+            { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
+          ]
         }
       ],
       "background": [{ "path": "docs/testing.md", "anchor": "ci-pipeline" }, { "path": "docs/testing.md", "anchor": "critical-coverage-gate" }, { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" }, { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }, {"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", { "path": "docs/runbooks/workflow-incidents.md", "runbook": { "label": "Workflow failure triage", "kind": "symptom" } }],

@@ -15,6 +15,120 @@ const agentProtocol = {
   editPolicy: "Registry edit-policy instruction.",
 };
 
+function bandFixture(reasons, missingItems) {
+  const replay = {
+    pipeline: {
+      candidate: { cards: [{ id: "alpha", ratingStatus: "rated", grade: "B", score: 75 }] },
+      evaluatedSet: {
+        assets: [{
+          assetId: "alpha",
+          stressState: { exitPortfolio: { circulatingUsd: 1_000_000 } },
+          scoreInput: {
+            pillars: { backing: { reasons: [] }, exit: { reasons: [] }, control: { reasons } },
+            peg: { reasons: [] },
+            dependencyReasons: [],
+          },
+          backing: { archetype: "fiat-cash", contributions: [] },
+        }],
+      },
+    },
+  };
+  const registry = {
+    agentProtocol,
+    summary: { stablecoinCount: 1, warnings: [] },
+    stablecoins: [{ assetId: "alpha", missingItems }],
+  };
+  return { replay, registry };
+}
+
+const reason = (code, gapIds, path = "control:alpha") => ({ code, path, causeGapIds: gapIds });
+const registryRow = (gapId, claimGroupId, cause = "C") => ({ gapId, claimGroupId, cause, reasonCode: "unresolved-control-identity" });
+
+describe("Safety Score v9 curation worklist bands", () => {
+  it("hides documentation-class items from the default streams and lists them only under the explicit band", () => {
+    const docGap = "alpha:gap:economic-control:custody";
+    const { replay, registry } = bandFixture(
+      [reason("unresolved-control-identity", [docGap])],
+      [registryRow(docGap, "DEPLOYMENT_CONTROLS:alpha")],
+    );
+    const documentationGaps = new Map([[docGap, { reason: "no-scoring-path" }]]);
+
+    const defaultMarkdown = renderCurationWorklist(replay, registry, "capture.json", { documentationGaps });
+    expect(defaultMarkdown).not.toContain("| CTRL-alpha |");
+    expect(defaultMarkdown).toContain("Documentation-class items are not in the streams: **1** hidden");
+
+    const explicitMarkdown = renderCurationWorklist(replay, registry, "capture.json", {
+      includeDocumentation: true,
+      documentationGaps,
+    });
+    expect(explicitMarkdown).toContain("## DOC — Documentation class, non-scoring (1)");
+    expect(explicitMarkdown).toContain("| CTRL-alpha | CTRL |");
+    expect(explicitMarkdown).toContain("no-scoring-path");
+    expect(explicitMarkdown).not.toContain("Documentation-class items are not in the streams");
+  });
+
+  it("keeps a mixed item in the streams with only its required codes and causes", () => {
+    const docGap = "alpha:gap:economic-control:custody";
+    const requiredGap = "alpha:gap:economic-control:mint";
+    const { replay, registry } = bandFixture(
+      [
+        reason("unresolved-control-identity", [docGap]),
+        reason("missing-mint-authority", [requiredGap], "economic-control:mint"),
+      ],
+      [registryRow(docGap, "DEPLOYMENT_CONTROLS:alpha"), registryRow(requiredGap, "MINT_AUTHORITY:alpha")],
+    );
+
+    const markdown = renderCurationWorklist(replay, registry, "capture.json", {
+      documentationGaps: new Map([[docGap, { reason: "immaterial-deployment" }]]),
+    });
+    expect(markdown).toContain("| ☐ | CTRL-alpha |");
+    expect(markdown).toContain("missing-mint-authority");
+    expect(markdown).not.toContain("unresolved-control-identity");
+    expect(markdown).toContain("C: alpha:gap:economic-control:mint");
+    expect(markdown).not.toContain(`C: ${docGap}`);
+  });
+
+  it("drops parked claim groups from every band while the rest of the asset stays visible", () => {
+    const parkedGap = "alpha:gap:economic-control:custody";
+    const { replay, registry } = bandFixture(
+      [
+        reason("unresolved-control-identity", [parkedGap]),
+        reason("missing-reserve-composition", ["alpha:gap:reserve:composition"], "reserve"),
+      ],
+      [registryRow(parkedGap, "DEPLOYMENT_CONTROLS:alpha"), registryRow("alpha:gap:reserve:composition", "RESERVE_COMPOSITION:alpha")],
+    );
+
+    const markdown = renderCurationWorklist(replay, registry, "capture.json", {
+      includeDocumentation: true,
+      documentationGaps: new Map([[parkedGap, { reason: "no-scoring-path" }]]),
+      parkedClaimGroups: new Set(["DEPLOYMENT_CONTROLS:alpha"]),
+    });
+    expect(markdown).not.toContain("CTRL-alpha");
+    expect(markdown).toContain("| ☐ | RESV-alpha |");
+    expect(markdown).toContain("Parked claim groups are hidden from every band: **1** groups (1 open reasons)");
+    expect(markdown).not.toContain("Documentation-class, non-scoring (1)");
+  });
+
+  it("keeps gap-less and partially documented reasons in the default streams (fail closed)", () => {
+    const docGap = "alpha:gap:economic-control:custody";
+    const { replay, registry } = bandFixture(
+      [
+        { code: "unresolved-control-identity", path: "control:alpha" },
+        reason("missing-mint-authority", [docGap, "alpha:gap:economic-control:authority"], "economic-control:mint"),
+      ],
+      [registryRow(docGap, "DEPLOYMENT_CONTROLS:alpha"), registryRow("alpha:gap:economic-control:authority", "MINT_AUTHORITY:alpha")],
+    );
+
+    const markdown = renderCurationWorklist(replay, registry, "capture.json", {
+      documentationGaps: new Map([[docGap, { reason: "no-scoring-path" }]]),
+      parkedClaimGroups: new Set(["DEPLOYMENT_CONTROLS:alpha"]),
+    });
+    expect(markdown).toContain("| ☐ | CTRL-alpha |");
+    expect(markdown).toContain("unresolved-control-identity");
+    expect(markdown).toContain("missing-mint-authority");
+  });
+});
+
 describe("Safety Score v9 curation worklist routing", () => {
 
   it("fails closed when a reason has no typed curation disposition", () => {

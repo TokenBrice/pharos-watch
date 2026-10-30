@@ -51,7 +51,7 @@ describe("Exposure mode", () => {
     render(<DependencyExposureResults result={computeDependencyExposure(data, roots)} publication={data} roots={roots} options={[]} inspectedId={null} onInspect={() => {}} networkUpdated={false} held={false} />);
     const table = screen.getByRole("table");
     expect(within(table).getByText(/Pipeline gap · fewer than two pillars available/)).toBeTruthy();
-    expect(within(table).getByText("Backing and Exit excluded · pipeline gap")).toBeTruthy();
+    expect(within(table).getByText("Backing and Exit excluded · data pipeline unavailable")).toBeTruthy();
     expect(within(table).getByText(/Exit excluded.*awaiting curation/)).toBeTruthy();
     expect(screen.getByRole("heading", { level: 3 }).textContent).toContain("$400.00 (known supply only)");
     expect(within(table).queryByText("NR")).toBeNull();

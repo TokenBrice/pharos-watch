@@ -37,6 +37,6 @@ describe("ERC-4626 deployment parity", () => {
   it("preserves every NAV deployment triple, trust flag and route order", () => {
     expect(navConfigs).toHaveLength(48);
     expect(navConfigs[47]).toMatchObject({ id: "sgho-aave", parentId: "gho-aave", chain: "ethereum" });
-    expect(digest(navConfigs.slice(0, 47))).toBe("5b28106f43d24b183c300b9943240abc4158063a22e8b33ae7a7cc1b9d7c54b2");
+    expect(digest(navConfigs.slice(0, 47))).toBe("dc9a073d4fc7e465115ae645063e8ce71aaba7690d256021c2fcc83d70750677");
   });
 });

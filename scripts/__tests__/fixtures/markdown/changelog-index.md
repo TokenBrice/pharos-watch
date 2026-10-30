@@ -6,6 +6,20 @@ description: "Weekly release notes for Pharos."
 
 # Changelog
 
+<a id="week-2026-11-01"></a>
+<a id="2026-11-01"></a>
+
+## 2026-10-26 to 2026-11-01
+
+Safety Score counts each open question once, and /coverage/ publishes the three numbers behind each grade.
+
+- **Open-question counts**: /coverage/ now opens with three server-counted numbers: open questions, not disclosed by issuers, and documentation gaps. Each is counted once at its root asset, and an older publication reads as unavailable, never zero.
+- **Report-cards API 9**: The report-cards API gains an additive openEvidence block with the same three totals, owner and reason rows, the issuer review window and per-card rows. Scores, grades and evidence levels stay untouched.
+- **Documentation gaps**: A policy-owned documentation class now marks the open questions whose resolution cannot materially move a score, under six published reasons and two strict bars. Pricing, causes, caps and evidence levels stay byte-identical, and a card reads "limited · documentation gaps only" only when every limiting witness is documentation.
+- **Missing-data registry v3**: The curation registry gains documentation and issuer bands, keys its questions through the shared counting authority, and drops a supplement only when every obligation it carries is already a compiled task, so the worklist shows 72 supplements instead of 469 on the current capture.
+- **Scores dataset v2**: The scores dataset display projection carries the same totals with their semantics, plus a machine-readable reason when a generation predates them, so missing counts never read as zero.
+- **Plainer gap language**: A cause-A pillar gap now reads "data pipeline unavailable" rather than implying an issuer omission, and one shared vocabulary names all three buckets on the page and in its explanations.
+
 <a id="week-2026-10-25"></a>
 <a id="2026-10-25"></a>
 
@@ -23,24 +37,10 @@ DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve 
 - **Launched, awaiting data**: A new pre-launch phase marks coins issued on-chain that lack admissible market data: six live coins and newly added swanUSD. /upcoming/ lists them apart from upcoming launches; USDB and VCRED are delisted.
 - **Cron and integrity sweep**: Missed or abandoned cron slots get one catch-up run and non-price lanes slow to owner-approved cadences. A correctness sweep ships across nine methodologies, and sponsor Dwellir now serves native reads first.
 
-<a id="week-2026-10-18"></a>
-<a id="2026-10-18"></a>
-
-## 2026-10-12 to 2026-10-18
-
-Safety Score reaches 10.22 with Morpho lender books as Backing, and the site adopts one product grammar.
-
-- **Safety Score 10.22**: Releases 10.18 to 10.22 ship. 10.18 activates Redemption 4.5 and Liquidity 6.95, 10.19 adds Morpho lender collateral books to Backing, and 10.22 admits mechanism evidence at exact UTC pins.
-- **One product grammar**: Type, headers and chrome unify; semantic state colours and one chart theme replace hand-coded scales. The home becomes an instrument cluster, coin pages lead with answer, action and evidence, and /learn/ retires.
-- **Scene-based maps**: /chains/ becomes Harbor, a countable isometric scene, and the dependency hairball gives way to a layered Watershed view, both built on a scene kit extracted from the Cemetery.
-- **Public status page**: Status is rebuilt around components and incidents, cron causes name the jobs behind them, and healthy work no longer reports as failure. The ops admin now answers whether anyone needs to act.
-- **Share cards and Safety Map**: Share cards render from live data instead of stale screenshots, the Safety Map poster is redrawn for feed-scale legibility, and the Safety Scores page shows supply-weighted grades.
-- **Evidence corrections**: 64 batch listings are refined to primary sources, VGBP is re-admitted, DOLA's reserve, backstop and freeze evidence is corrected after the Inverse review, and a cUSD-cap failure scenario is approved.
-- **RPC and feed repairs**: Dwellir becomes primary for Ethereum state, Arbitrum logs, Polygon, Tempo and Plasma, Uniswap v4 discovery is restored, and USDai, Frankencoin, SBC and BRLV feeds are repaired.
-- **Worker memory and tests**: The V9 publication Workflow retires, publication admits once under the Worker heap, and memory kills are observed. About 4,500 low-value test cases and the pre-push receipt mandate are removed.
-
 ## Monthly archives
 
+- [November 2026](https://pharos.watch/changelog/archive/2026-11/)
+  - [2026-11-01: Safety Score counts each open question once, and /coverage/ publishes the three numbers behind each grade.](https://pharos.watch/changelog/archive/2026-11/#week-2026-11-01)
 - [October 2026](https://pharos.watch/changelog/archive/2026-10/)
   - [2026-10-25: DDR v5 condemns a coin only on terminal evidence, and Safety Score ships twelve releases to 10.34.](https://pharos.watch/changelog/archive/2026-10/#week-2026-10-25)
   - [2026-10-18: Safety Score reaches 10.22 with Morpho lender books as Backing, and the site adopts one product grammar.](https://pharos.watch/changelog/archive/2026-10/#week-2026-10-18)

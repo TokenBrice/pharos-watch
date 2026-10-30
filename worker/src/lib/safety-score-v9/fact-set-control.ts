@@ -24,6 +24,7 @@ import {
 } from "./fact-set-context";
 import { compileReviewedControlScope, effectiveAuthoritySignatureRequirement, weightedReviewIsCurrent, sortV1005ProcessDiagnostics } from "@shared/lib/safety-score-v9/control-scope";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { DEPLOYMENT_MATERIAL_SHARE_THRESHOLD } from "./extension-shared";
 import { v9AccessClaimGraphStatuses } from "@shared/types/safety-score-v9-access-lookthrough";
 import { computeSafetyScoreV9ReserveExposureKey } from "./fact-set-schema";
@@ -33,6 +34,47 @@ type ExtensionControlOverlay = Extract<
   NonNullable<AssetExtension["controlReview"]>,
   { state: "reviewed-controls" }
 >["controls"][number];
+
+/**
+ * Durable lapse (PLAN §4.2, contract C1): a lapsed custody-only scoped
+ * question stays a `stale` factor gap carrying its authored review date
+ * instead of disappearing at the 90-day window. The activation switch is the
+ * single authority (OP-R0 S-1 removed the per-reason `retention` field);
+ * listing the `no-scoring-path` reason keeps the gate tied to the documented
+ * reason vocabulary.
+ */
+const RETAIN_EXPIRED_CUSTODY_QUESTIONS = (() => {
+  const documentation = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation;
+  return documentation?.retainExpiredScopedQuestions === true &&
+    documentation.reasons.some((entry) => entry.reason === "no-scoring-path");
+})();
+
+/**
+ * The producer marks a retained lapsed custody question with its subject and
+ * no `scopedQuestionFresh`, and binds the question's own review as research
+ * evidence under `control:<key>:keyCustody`. Read that evidence back rather
+ * than inventing a date; absent or non-stale evidence keeps today's behavior.
+ */
+function retainedExpiredCustodyEvidence(
+  context: AssetBuildContext,
+  control: ExtensionControlOverlay,
+): { evidenceRefIds: string[]; reviewedAtSec: number } | null {
+  if (
+    !RETAIN_EXPIRED_CUSTODY_QUESTIONS ||
+    control.scopedQuestionFresh === true ||
+    control.scopedQuestionSubject !== "key-custody-independence"
+  ) return null;
+  const componentKey = `control:${control.controlKey}:keyCustody`;
+  if (!context.asset.componentEvidence.some((row) => row.componentKey === componentKey)) return null;
+  const evidenceRefIds = componentResearchEvidence(context, componentKey).filter(
+    (evidenceId) => context.evidence.get(evidenceId)?.freshness.state === "stale",
+  );
+  if (evidenceRefIds.length === 0) return null;
+  return {
+    evidenceRefIds,
+    reviewedAtSec: Math.max(...evidenceRefIds.map((evidenceId) => context.evidence.get(evidenceId)!.observedAtSec)),
+  };
+}
 
 export function buildControls(context: AssetBuildContext): {
   controlStatus: V9FactStatusV2;
@@ -151,6 +193,21 @@ export function buildControls(context: AssetBuildContext): {
           evidenceRefIds: evidenceIds,
           causeScope: { pillar: "control", componentKey: `control:${control.controlKey}`, factorKey,
             routeKey: null, exposureId: control.scope === "deployment" ? control.deploymentKey : null, requiredDatum: factorKey },
+        }).status;
+      }
+      // A lapsed custody question is documentation, not resolution: keep the
+      // authored review date as stale evidence instead of dropping the datum.
+      const retainedCustody = retainedExpiredCustodyEvidence(context, control);
+      if (retainedCustody !== null && factorStatuses.keyCustody === undefined) {
+        const reviewedAt = new Date(retainedCustody.reviewedAtSec * 1_000).toISOString().slice(0, 10);
+        factorStatuses.keyCustody = missingLocalFact(context, {
+          componentKey: `control:${control.controlKey}:keyCustody`, reasonCode: "unresolved-control-identity",
+          ownerDomain: "control", responsibility: "unresearched", policyRuleId: "v9.control.review",
+          message: `Human independence or approval policy for independently identified control ${control.controlKey} remains unresolved; its question reviewed ${reviewedAt} lapsed outside the scoped-question freshness window and is retained as stale documentation.`,
+          observationState: "stale",
+          evidenceRefIds: retainedCustody.evidenceRefIds,
+          causeScope: { pillar: "control", componentKey: `control:${control.controlKey}`, factorKey: "keyCustody",
+            routeKey: null, exposureId: control.scope === "deployment" ? control.deploymentKey : null, requiredDatum: "keyCustody" },
         }).status;
       }
       return {

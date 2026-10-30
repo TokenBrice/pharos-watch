@@ -586,12 +586,16 @@
         {
           "controlRef": "ethereum:0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1",
           "subject": "execution-scope",
-          "question": "The EIP-7702 signing account can execute arbitrary calls. Outstanding delegations, EntryPoint paths, future root reauthorization and mutable downstream permissions are not exhaustively enumerated. This is an allocator-scoped execution-closure uncertainty, not evidence of arbitrary native share issuance by immutable VaultV2. Exact human key custody, signer independence and controller-specific incident absence remain unresolved.",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "VaultConventionArbiter",
+          "question": "The EIP-7702 signing account can execute arbitrary calls. Outstanding delegations, EntryPoint paths, future root reauthorization and mutable downstream permissions are not exhaustively enumerated. This is an allocator-scoped execution-closure uncertainty, not evidence of arbitrary native share issuance by immutable VaultV2. Exact human key custody, signer independence and controller-specific incident absence remain unresolved. Fresh re-read at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z: 0x13de0cee0b83562cbfd46682e10ffa4e3c5090e1 still designates EIP-7702 delegated code 0x63c0c19a282a1b52b07dd5a65b58948a07dae32b, the already-reviewed arbitrary-call executor, and remains isAllocator=true on the exact vault; 0xc4ba4e822c420452fe2bab93211208d3ccbd79d3 and 0x74d1672d0b90f6e7c322dec9d5396ff6ace61618 still have no code; the vault still reports owner 0xe8c9c99ecad0686a14a00d8521c572281e938008, curator 0x9e396de3312d373b87f9bd8763fb48184b42aac0 and adapterRegistry 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e.",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Sentora RLUSD Main exact vault",
+              "label": "Exact vault, allocator and controller reads at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z",
+              "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Exact vault",
               "url": "https://app.morpho.org/ethereum/vault/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
             },
             {
@@ -599,32 +603,20 @@
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf"
             },
             {
-              "label": "Exact current MorphoMarketV1AdapterV2 source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
+              "label": "Verified EIP-7702 root arbitrary-call executor source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"
             },
             {
               "label": "Morpho Vault V2 accounting and redemption mechanics",
               "url": "https://docs.morpho.org/learn/concepts/vault-v2/"
             },
             {
-              "label": "Ethereum RPC, block 26197000, 2026-10-15T09:24:59Z",
-              "url": "https://api-ethereum-mainnet.n.dwellir.com"
-            },
-            {
-              "label": "Morpho exact-vault portfolio API",
-              "url": "https://api.morpho.org/graphql"
+              "label": "Exact current MorphoMarketV1AdapterV2 source",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3c6eab22cfc03fc32ad1bf836f2f886a5015dfff"
             },
             {
               "label": "Sentora Terms of Use, June 2026, sections 4.3 and 21.4",
               "url": "https://sentora.com/legal/terms-of-use"
-            },
-            {
-              "label": "Exact RegistryList verified source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e"
-            },
-            {
-              "label": "Verified EIP-7702 root arbitrary-call executor source",
-              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63c0c19a282a1b52b07dd5a65b58948a07dae32b"
             }
           ]
         }
