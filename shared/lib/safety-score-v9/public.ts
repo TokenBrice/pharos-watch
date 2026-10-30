@@ -1649,13 +1649,10 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
   };
 }
 
-/** One evaluated card's compiled facts and the pillar witnesses it published. */
+/** One evaluated card's classified local gaps and unchanged pillar witnesses. */
 export interface V9DocumentationCarrierCard {
-  /**
-   * Compiled V3 facts. Set `admittedExitRouteKeys` from the evaluated Exit
-   * routes when they exist: without it route-scoped diagnostics stay required.
-   */
-  readonly asset: V9DocumentationAssetFacts;
+  readonly assetId: string;
+  readonly localDocumentationGapIds: ReadonlySet<string>;
   readonly pillars: readonly V9DocumentationPillarWitness[];
 }
 
@@ -1708,12 +1705,12 @@ export function buildV9DocumentationCarriers(input: V9DocumentationCarrierInput)
   for (const card of input.cards) {
     const listed = documentationOnlyLimitedPillars({
       envelope: input.envelope,
-      asset: card.asset,
+      localDocumentationGapIds: card.localDocumentationGapIds,
       pillars: card.pillars,
       foreignDocumentationGapIds: foreign.keys(),
     });
     if (listed.length > 0) {
-      documentationOnlyLimited.set(card.asset.assetId, [...listed].sort(compareText));
+      documentationOnlyLimited.set(card.assetId, [...listed].sort(compareText));
     }
   }
   let annotated = input.openEvidence;

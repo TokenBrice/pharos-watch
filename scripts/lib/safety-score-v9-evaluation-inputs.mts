@@ -214,6 +214,7 @@ export const V9_SCORE_EVALUATOR_SOURCE_PATHS = [
   "shared/types/safety-score-v9-backing.ts",
   "shared/types/safety-score-v9-causes.ts",
   "shared/types/safety-score-v9-control-scope.ts",
+  "shared/types/safety-score-v9-deployment-supply-census.ts",
   "shared/types/safety-score-v9-fact-input-primitives.ts",
   "shared/types/safety-score-v9-fact-primitives.ts",
   "shared/types/safety-score-v9-facts.ts",

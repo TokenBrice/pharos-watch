@@ -621,11 +621,13 @@ function backingPillar(
     appendBoundedComponent(row);
     for (const factor of row.factors ?? []) appendBoundedComponent(factor, row.effectiveScoringWeight);
   }
+  const excludedBackingComponentKeys = result.contributions.flatMap((row) => [
+    ...(row.scoringDisposition === "excluded-pipeline" || row.scoringDisposition === "excluded-uncurated" ? [row.componentKey] : []),
+    ...(row.factors ?? []).filter((factor) => factor.scoringDisposition === "excluded-pipeline" || factor.scoringDisposition === "excluded-uncurated").map((factor) => factor.componentKey),
+    ...(row.excludedComponentKeys ?? []),
+  ]);
   return {
-    ...pillarCauseMetadata(result, gapIndex, result.contributions.flatMap((row) => [
-      ...(row.scoringDisposition === "excluded-pipeline" || row.scoringDisposition === "excluded-uncurated" ? [row.componentKey] : []),
-      ...(row.factors ?? []).filter((factor) => factor.scoringDisposition === "excluded-pipeline" || factor.scoringDisposition === "excluded-uncurated").map((factor) => factor.componentKey),
-    ]), result.contributions),
+    ...pillarCauseMetadata(result, gapIndex, excludedBackingComponentKeys, result.contributions),
     score: result.score,
     ...reasonClassifiedEvidence(result.score, evidenceReasons, "strong", result.aggregationDisposition !== "included"),
     reasons: canonicalReasons([...reasons, ...boundedComponents.map((component) => component.reason)]),

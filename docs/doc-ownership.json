@@ -1094,6 +1094,7 @@
         "scripts/maintenance/publish-safety-score-map.ts",
         ".github/workflows/safety-map-refresh.yml",
         "functions/__tests__/safety-map-png.test.ts",
+        "scripts/ci/check-incident-review-keys.ts",
         "docs/digest-pipeline.md",
         "docs/mint-authority-scoring.md",
         "docs/process/report-cards-appendix.md",
@@ -1219,6 +1220,12 @@
           "contract": [
             { "path": "docs/report-cards.md", "anchor": "api" },
             { "path": "docs/report-cards.md", "anchor": "consumers" }
+          ]
+        },
+        {
+          "sources": ["scripts/ci/check-incident-review-keys.ts"],
+          "local": [
+            { "path": "docs/process/report-cards-appendix.md", "anchor": "incident-review-authoring-and-research" }
           ]
         }
       ],

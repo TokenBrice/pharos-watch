@@ -365,7 +365,7 @@ describe("methodology registry", () => {
   });
 
   it("retains the archive-free attribution release and aligns current Safety policy identity", () => {
-    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.37");
+    expect(SAFETY_SCORE_METHODOLOGY_VERSION).toBe("10.38");
     expect(SAFETY_SCORE_POLICY.releaseVersion).toBe(SAFETY_SCORE_METHODOLOGY_VERSION);
     const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.23")!;
     expect(release).toMatchObject({
@@ -563,6 +563,20 @@ describe("methodology registry", () => {
     expect(impact).toContain("One evidence level, unchanged");
     expect(impact).toContain("Zero declared movers, measured not assumed");
     expect(impact).toContain("re-date effectiveAt at release");
+  });
+
+  it("activates v10.38 evidence-method admission at its own release boundary", () => {
+    const release = SAFETY_SCORE_METHODOLOGY_CHANGELOG.find((candidate) => candidate.version === "10.38")!;
+    expect(release).toMatchObject({
+      version: "10.38", date: "2026-10-30", effectiveAt: 1_793_354_400, reconstructed: false, commits: [],
+    });
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt - 1)).toBe("10.37");
+    expect(getMethodologyVersionAt("safety-score", release.effectiveAt)).toBe("10.38");
+    const impact = release.impact.join(" ");
+    expect(impact).toContain("exact-lower-bound");
+    expect(impact).toContain("evaluationLagSec");
+    expect(impact).toContain("chainSupplyMaxAgeBySource");
+    expect(impact).toContain("Deployment supply census");
   });
 
   it("discloses the v10.35 asset-local measured-route expiry and bounded DEX capture admission", () => {

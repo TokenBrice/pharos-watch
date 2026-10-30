@@ -136,6 +136,18 @@ describe("exact-request execution certificate admission", () => {
     expect(admitExitExecutionCertificate({ certificate: makeExecutionCertificate(), envelope: V9_CANDIDATE_POLICY_V1, assetId: "fixture-dollar", clockSec: executionClockSec, inputGenerationId: "other", observationGenerationId: "other", request: { requestedNotionalUsd: 100_000, maxCostBps: 200 }, reviews: [executionReview] })).toMatchObject({ state: "unavailable", reason: "execution-generation-mismatch" });
   });
 
+  it("admits a below-request lower bound but keeps exact-complete at the exact units", () => {
+    const certificate = makeExecutionCertificate();
+    Object.assign(certificate.points[0]!, { requestedRawInput: "99999999999", executedRawInput: "99999999999" });
+    expect(admission(certificate)).toMatchObject({ state: "observed", point: { requestedRawInput: "99999999999", certification: "exact-lower-bound" } });
+    certificate.points[0]!.certification = "exact-complete";
+    expect(admission(certificate)).toMatchObject({ state: "unavailable", reason: "execution-input-units-mismatch" });
+    const zero = makeExecutionCertificate();
+    Object.assign(zero.points[0]!, { requestedRawInput: "0", executedRawInput: "0", executableUsd: 0, fees: [], reason: "observed-no-execution" });
+    zero.points[0]!.outputs[0]!.rawUnits = "0";
+    expect(admission(zero)).toMatchObject({ state: "unavailable", reason: "execution-certificate-invalid" });
+  });
+
   it("refuses unproven settlement, future reviews and issuer non-disclosure", () => {
     const certificate = makeExecutionCertificate(); certificate.settlement.maximumCompletionSec = null;
     expect(admission(certificate)).toMatchObject({ state: "unavailable", reason: "execution-settlement-unproven" });

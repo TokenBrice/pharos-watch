@@ -22,6 +22,18 @@ describe("CI workflow scope", () => {
     ]));
   });
 
+  it("checks incident review keys once on the prepared PR workspace", () => {
+    const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
+      jobs: Record<string, { steps: Array<{ name?: string; uses?: string; run?: string }> }>;
+    };
+    const steps = workflow.jobs.prepare.steps;
+    const gate = steps.findIndex((step) => step.name === "Check incident review keys");
+    expect(gate).toBeGreaterThan(steps.findIndex((step) => step.uses === "$/.github/actions/setup-workspace"));
+    // One invocation per PR: restored validation shards never re-run the gate.
+    expect(steps.filter((step) => step.run?.includes("check:incident-review-keys"))).toHaveLength(1);
+    expect(steps[gate].run).toBe("npm run check:incident-review-keys");
+  });
+
   it("gates new stablecoin admissions once on the prepared workspace against the frozen base", () => {
     const workflow = parseYaml(readRepoFile(".github/workflows/pull-request-checks.yml")) as {
       jobs: Record<string, { steps: Array<{ name?: string; uses?: string; run?: string; env?: Record<string, string> }> }>;

@@ -30,8 +30,9 @@ import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, resolveExitExecutionBoundPoint, validateExitExecutionModelReviews } from "@shared/lib/safety-score-v9/exit-execution";
 import reviewedExecutionModels from "@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json";
 import { canonicalV9ExecutionCostKey } from "@shared/types/safety-score-v9-fact-primitives";
-import { v9EvidenceResponsibilityForCauseProof } from "@shared/types/safety-score-v9-causes";
-import { findRedemptionReserveQuarantine, redemptionReserveQuarantineScope } from "./redemption-reserve-quarantine";
+import {
+  findRedemptionReserveQuarantine, redemptionReserveQuarantineScope, resolveRedemptionReserveQuarantineCause,
+} from "./redemption-reserve-quarantine";
 import { reserveBackedRedemptionRouteMaxAgeSec } from "./redemption-route-freshness";
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
 import { hasUsableRedemptionCapacityObservation } from "./extension-routes";
@@ -63,6 +64,7 @@ import {
   assertKnownComponentEvidenceCurrent,
   stableFailureDomains,
   createRuntimeGapVerdict,
+  evidenceGapClassificationsFor,
   type AssetBuildContext,
 } from "./fact-set-context";
 
@@ -842,7 +844,10 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     ? redemptionReserveQuarantineScope(context.asset.assetId, generationId, config.routeFamily) : null;
   const quarantine = quarantineScope
     ? findRedemptionReserveQuarantine(context.fixedInput.pipelineGapByAssetId, context.asset.assetId, quarantineScope) : undefined;
-  let unavailableRail: { routeId: string; routeFamily: V9ExitRouteFactV2["routeFamily"]; evidenceId: string; capacityGapId: string } | null = null;
+  let unavailableRail: {
+    routeId: string; routeFamily: V9ExitRouteFactV2["routeFamily"];
+    evidenceIds: readonly string[]; capacityGapId: string;
+  } | null = null;
   if (
     redemption?.provider === "reserve-sync-metadata" &&
     redemption.resolutionState === "missing-capacity" &&
@@ -864,21 +869,28 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
         reason: "Captured redemption resolutionState is missing-capacity for an open live-direct telemetry rail." },
     }, context.fixedInput.clockSec));
     const message = "The configured live-only redemption route has unavailable capacity telemetry.";
-    unavailableRail = { routeId, routeFamily: "protocol-redemption", evidenceId, capacityGapId: routeGap(context, routeKey, "capacity", "missing",
+    unavailableRail = { routeId, routeFamily: "protocol-redemption", evidenceIds: [evidenceId], capacityGapId: routeGap(context, routeKey, "capacity", "missing",
       "missing-runtime-route-evidence", "producer-failed", message, [evidenceId]) };
   } else if (quarantine && quarantineScope && !routes.some((route) => route.lane === "redemption")) {
     const routeKey = quarantineScope.routeKey!;
-    const evidenceId = addEvidence(context, quarantine.evidence);
+    // Authored nondisclosure may carry the rail to the issuer cause; every other
+    // shape keeps the captured producer-failed proof and its rejection reason.
+    const cause = resolveRedemptionReserveQuarantineCause({
+      assetId: context.asset.assetId, scope: quarantineScope, asOfSec: context.fixedInput.clockSec,
+      captured: quarantine, authoredClassifications: evidenceGapClassificationsFor(context.asset.assetId),
+    });
+    if (cause.diagnostics) context.causeResolutionDiagnostics.push(...cause.diagnostics);
+    const evidenceIds = cause.evidenceReferences.map((reference) => addEvidence(context, reference));
     unavailableRail = {
       routeId: `redemption:${context.asset.assetId}:${config!.routeFamily}`,
       routeFamily: config!.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
-      evidenceId,
+      evidenceIds,
       capacityGapId: addGap(context, createV9FactGapV3({
         gapId: `${context.asset.assetId}:gap:route:${routeKey}:capacity`,
         reasonCode: "missing-runtime-route-evidence", ownerDomain: "exit", policyRuleId: "v9.exit.same-notional-route",
-        observationState: "missing", responsibility: v9EvidenceResponsibilityForCauseProof(quarantine.verdict.proof),
-        path: optionalExitV9Path(routeKey), message: quarantine.evidence.rejection!.reason,
-        evidenceRefIds: [evidenceId], causeScope: quarantineScope, causeProof: quarantine.verdict.proof,
+        observationState: "missing", responsibility: cause.responsibility,
+        path: optionalExitV9Path(routeKey), message: cause.message,
+        evidenceRefIds: evidenceIds, causeScope: quarantineScope, causeProof: cause.causeProof,
       })),
     };
   } else if (
@@ -904,7 +916,7 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     unavailableRail = {
       routeId,
       routeFamily: config.routeFamily === "offchain-issuer" ? "issuer-redemption" : "protocol-redemption",
-      evidenceId,
+      evidenceIds: [evidenceId],
       capacityGapId: routeGap(context, routeKey, "capacity", "missing",
         "missing-runtime-route-evidence", "unresearched",
         "The reviewed redemption channel has no admitted same-notional capacity observation; an empty DEX census does not establish its exhaustion.",
@@ -912,18 +924,18 @@ export function buildRoutes(context: AssetBuildContext, supply: V9AssetFactsV3["
     };
   }
   if (unavailableRail) {
-    const { routeId, routeFamily, evidenceId, capacityGapId } = unavailableRail;
+    const { routeId, routeFamily, evidenceIds, capacityGapId } = unavailableRail;
     const routeKey = canonicalV9RouteKey("redemption", generationId, routeId);
     const status = createV9FactStatus({
       applicability: requiredV9Applicability("v9.exit.same-notional-route"),
       observationState: "missing",
-      evidenceRefIds: [evidenceId],
+      evidenceRefIds: evidenceIds,
       gapIds: [capacityGapId],
     });
     const costGapId = routeGap(context, routeKey, "cost", "bounded-unknown", "missing-same-notional-route",
       "unresearched", "No current same-notional cost datum is established for the unavailable rail.", []);
     const costStatus = createV9FactStatus({ applicability: requiredV9Applicability("v9.exit.route-factors"),
-      observationState: "bounded-unknown", gapIds: [costGapId], evidenceRefIds: [evidenceId] });
+      observationState: "bounded-unknown", gapIds: [costGapId], evidenceRefIds: evidenceIds });
     routes.push({
       routeKey, routeId, lane: "redemption", sourceGenerationId: generationId,
       routeFamily,

@@ -101,6 +101,13 @@ const betaDatum = datum("beta", "bridge-meta:small", "incidentState");
 const beta = assetFacts("beta", [control("bridge-meta:small", 0.005)], [betaDatum]);
 const gamma = assetFacts("gamma", [], []);
 
+function classifiedCard(asset: V9DocumentationAssetFacts) {
+  return {
+    assetId: asset.assetId,
+    localDocumentationGapIds: new Set(collectV9DocumentationGapIds(POLICY, [asset]).keys()),
+  };
+}
+
 describe("Safety Score v9 documentation carriers", () => {
   it("annotates only documentation-only limited pillars and leaves the rest of the block untouched", () => {
     const gapIds = collectV9DocumentationGapIds(POLICY, [alpha, beta]);
@@ -109,15 +116,15 @@ describe("Safety Score v9 documentation carriers", () => {
     const block = evidence([card("alpha", 1), card("beta", 1), card("gamma", 0)]);
     const cards: V9DocumentationCarrierCard[] = [
       {
-        asset: alpha,
+        ...classifiedCard(alpha),
         pillars: [
           witness("backing", "strong", [smallDatum.gapId]),
           witness("control", "limited", [smallDatum.gapId]),
           witness("exit", "limited", []),
         ],
       },
-      { asset: beta, pillars: [witness("control", "limited", [betaDatum.gapId])] },
-      { asset: gamma, pillars: [witness("backing", "limited", [])] },
+      { ...classifiedCard(beta), pillars: [witness("control", "limited", [betaDatum.gapId])] },
+      { ...classifiedCard(gamma), pillars: [witness("backing", "limited", [])] },
     ];
     const carriers = buildV9DocumentationCarriers({ envelope: POLICY, gapIds, cards, openEvidence: block });
 
@@ -141,7 +148,7 @@ describe("Safety Score v9 documentation carriers", () => {
       envelope: POLICY,
       gapIds,
       cards: [{
-        asset: alpha,
+        ...classifiedCard(alpha),
         pillars: [
           // One non-documentation witness (0.02 share is at or above the 1% bar).
           witness("backing", "limited", [largeDatum.gapId]),
@@ -167,7 +174,7 @@ describe("Safety Score v9 documentation carriers", () => {
     const carriers = buildV9DocumentationCarriers({
       envelope: POLICY,
       gapIds,
-      cards: [{ asset: alpha, pillars: [witness("control", "limited", [betaDatum.gapId])] }],
+      cards: [{ ...classifiedCard(alpha), pillars: [witness("control", "limited", [betaDatum.gapId])] }],
       openEvidence: evidence([card("alpha", 1)]),
     });
     expect(carriers.documentationOnlyLimited.get("alpha")).toEqual(["control"]);
@@ -177,7 +184,7 @@ describe("Safety Score v9 documentation carriers", () => {
     const localOnly = buildV9DocumentationCarriers({
       envelope: POLICY,
       gapIds: new Map(),
-      cards: [{ asset: alpha, pillars: [witness("control", "limited", [smallDatum.gapId])] }],
+      cards: [{ ...classifiedCard(alpha), pillars: [witness("control", "limited", [smallDatum.gapId])] }],
       openEvidence: evidence([card("alpha", 1)]),
     });
     expect(localOnly.causeGapIds).toEqual([]);
@@ -186,7 +193,7 @@ describe("Safety Score v9 documentation carriers", () => {
     const undocumented = buildV9DocumentationCarriers({
       envelope: POLICY,
       gapIds: new Map(),
-      cards: [{ asset: alpha, pillars: [witness("control", "limited", [largeDatum.gapId])] }],
+      cards: [{ ...classifiedCard(alpha), pillars: [witness("control", "limited", [largeDatum.gapId])] }],
       openEvidence: evidence([card("alpha", 1)]),
     });
     expect(undocumented.documentationOnlyLimited.size).toBe(0);
@@ -194,7 +201,7 @@ describe("Safety Score v9 documentation carriers", () => {
     const absent = buildV9DocumentationCarriers({
       envelope: POLICY,
       gapIds: collectV9DocumentationGapIds(POLICY, [alpha]),
-      cards: [{ asset: alpha, pillars: [witness("control", "limited", [smallDatum.gapId])] }],
+      cards: [{ ...classifiedCard(alpha), pillars: [witness("control", "limited", [smallDatum.gapId])] }],
       openEvidence: evidence([]),
     });
     expect(absent.documentationOnlyLimited.get("alpha")).toEqual(["control"]);

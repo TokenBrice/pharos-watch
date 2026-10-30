@@ -23,6 +23,8 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   accountable: lazyAdapter(() => import("./accountable").then((mod) => mod.fetchAccountableReserves)),
   "agora-independent-assurance": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
   "anchorage-independent-assurance": lazyAdapter(() => import("./independent-assurance").then((mod) => mod.fetchIndependentAssuranceAdapter)),
+  "axis-issuer-classes": lazyAdapter(() =>
+    import("./axis-issuer-classes").then((mod) => mod.fetchAxisIssuerClassesReserves)),
   "anzen-usdz": lazyAdapter(() => import("./anzen-usdz").then((mod) => mod.fetchAnzenUsdzReserves)),
   "astherus-earn-wrapper": lazyAdapter(() => import("./astherus-earn-wrapper").then((mod) => mod.fetchAstherusEarnWrapperReserves)),
   "attestation-pdf-index": lazyAdapter(() => import("./attestation-pdf-index").then((mod) => mod.fetchAttestationPdfIndexReserves)),
@@ -83,6 +85,8 @@ export const LIVE_RESERVE_ADAPTER_FETCHERS: Record<LiveReserveAdapterKey, Adapte
   "makina-strategy": lazyAdapter(() => import("./makina-strategy").then((mod) => mod.fetchMakinaStrategyReserves)),
   "matrixdock-frs": lazyAdapter(() => import("./matrixdock-frs").then((mod) => mod.fetchMatrixdockFrsReserves)),
   "megausd-custody": lazyAdapter(() => import("./custody-inventory").then((mod) => mod.fetchCustodyInventoryReserves)),
+  "megausd-custody-onchain": lazyAdapter(() =>
+    import("./megausd-custody-onchain").then((mod) => mod.fetchMegausdCustodyOnchainReserves)),
   mento: lazyAdapter(() => import("./mento").then((mod) => mod.fetchMentoReserves)),
   "moc-doc": lazyAdapter(() => import("./moc-doc").then((mod) => mod.fetchMocDocReserves)),
   "moc-v3-buckets": lazyAdapter(() => import("./usdrif-rif").then((mod) => mod.fetchUsdrifRifReserves)),

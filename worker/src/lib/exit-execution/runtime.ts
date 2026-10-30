@@ -66,11 +66,14 @@ export async function observeReviewedExitExecutionRoutes(args: {
       if (cache?.kind === "ok") {
         const input = cache.payload.peggedAssets.find((asset) => asset.id === args.assetId);
         const output = cache.payload.peggedAssets.find((asset) => asset.id === review.identity.outputAssetKeys[0]);
-        if (!inputReference && input?.price && input.priceObservedAt != null && isObservedPrice(input)) inputReference = {
+        // A future-dated price is not an observed reference: the evaluator
+        // would fail-close it on `futureSkewSec`, so capturing it only burns a
+        // certificate that can never be admitted.
+        if (!inputReference && input?.price && input.priceObservedAt != null && input.priceObservedAt <= args.clockSec && isObservedPrice(input)) inputReference = {
           assetKey: args.assetId, deployment: review.identity.deployment, rawUnits: "0", decimals: review.producer.inputDecimals,
           unitValueUsd: input.price, expectedUnitValueUsd: input.price, sourceId: input.priceSource!, sourceGenerationId: `stablecoins:${cache.updatedAt}`, observedAtSec: input.priceObservedAt,
         };
-        if (!outputReference && output?.price && output.priceObservedAt != null && isObservedPrice(output)) {
+        if (!outputReference && output?.price && output.priceObservedAt != null && output.priceObservedAt <= args.clockSec && isObservedPrice(output)) {
           let expectedUnitValueUsd = output.pegType === "peggedUSD" ? 1 : null;
           let fxObservedAtSec: number | null = null;
           if (output.pegType === "peggedEUR") {
@@ -96,13 +99,21 @@ export async function observeReviewedExitExecutionRoutes(args: {
       }
       const isVault = review.producer.kind === "erc4626-instant";
       const externalShares = review.producer.kind === "erc4626-instant" ? review.producer.externalShareToken : undefined;
-      const refreshInputFromOutput = isVault && !externalShares &&
-        (!inputReference || (inputReference.observedAtSec <= args.clockSec &&
-          args.clockSec - inputReference.observedAtSec > policy.priceMaxAgeSec)) &&
-        !!outputReference && outputReference.observedAtSec <= args.clockSec &&
-        args.clockSec - outputReference.observedAtSec <= policy.priceMaxAgeSec;
-      if (!outputReference || (!inputReference && !refreshInputFromOutput)) {
-        failures.push({ modelId: review.modelId, reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue;
+      // Capture only asserts freshness now; the generation evaluates later. A leg
+      // inside `priceMaxAgeSec` here can age past it before evaluation, so the
+      // capture margin withholds it earlier and names the binding leg.
+      const capturePriceMaxAgeSec = policy.priceMaxAgeSec - (policy.evaluationLagSec ?? 0);
+      const outputFresh = !!outputReference && args.clockSec - outputReference.observedAtSec <= capturePriceMaxAgeSec;
+      const inputFresh = !!inputReference && args.clockSec - inputReference.observedAtSec <= capturePriceMaxAgeSec;
+      // A vault without an external share token re-derives a stale share price
+      // from pinned NAV and the fresh output leg instead of admitting the old leg.
+      const refreshInputFromOutput = isVault && !externalShares && outputFresh && !inputFresh &&
+        !!outputReference && outputReference.observedAtSec <= args.clockSec;
+      if (!outputReference || !outputFresh) {
+        failures.push({ modelId: review.modelId, reason: outputReference ? "execution-price-leg-stale:output" : "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue;
+      }
+      if (!inputFresh && !refreshInputFromOutput) {
+        failures.push({ modelId: review.modelId, reason: inputReference ? "execution-price-leg-stale:input" : "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue;
       }
       const observed = isVault
         // Only the canonical request is published/admitted. Bounded fallback

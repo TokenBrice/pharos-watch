@@ -515,7 +515,11 @@ function supersededModeledRoutes(
     if (!route.executionModelId || !route.executionCertificate || !route.scoreEligible ||
       route.observationState !== "known" || !route.outputResolved || routeExclusionReason(route, envelope) !== null) return false;
     const point = resolveExitExecutionBoundPoint(route.executionCertificate, request);
-    return point !== null && point.certification !== "diagnostic";
+    // Only a full measurement of the rail at the ask contradicts a model. A
+    // lower bound proves at least its amount and competes on route score
+    // instead of erasing a same-rail modelled route (v10.38 M4); overlapping
+    // resources are still valued once by the max merge below.
+    return point !== null && point.certification === "exact-complete";
   });
   const superseded = new Set<string>();
   for (const route of routes) {

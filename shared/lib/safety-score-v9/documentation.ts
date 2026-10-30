@@ -287,7 +287,8 @@ export interface V9DocumentationPillarWitness {
 
 export interface V9DocumentationOnlyPillarsInput {
   readonly envelope: V9ValidatedPolicyEnvelope;
-  readonly asset: V9DocumentationAssetFacts;
+  /** Classified once at the owner, after evaluated route admission is known. */
+  readonly localDocumentationGapIds: ReadonlySet<string>;
   readonly pillars: readonly V9DocumentationPillarWitness[];
   /**
    * Inherited (`foreignCauseGaps`) ids already classified at their owner asset,
@@ -308,7 +309,7 @@ export function documentationOnlyLimitedPillars(
   input: V9DocumentationOnlyPillarsInput,
 ): readonly V9QualityPillar[] {
   assertV9ValidatedPolicyEnvelope(input.envelope);
-  const local = documentationGapIds(input.envelope, input.asset);
+  const local = input.localDocumentationGapIds;
   const foreign = input.foreignDocumentationGapIds === undefined ? null : new Set(input.foreignDocumentationGapIds);
   const listed: V9QualityPillar[] = [];
   for (const witness of input.pillars) {

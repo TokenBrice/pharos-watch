@@ -246,13 +246,22 @@ interface ReportCandidate {
   text: string;
 }
 
+/** A report link on the official index that the profile cannot date. */
+export interface UndatedIndexReportCandidate {
+  reportUrl: string;
+  label: string;
+}
+
 interface VerifiedIndependentAssuranceArtifact {
   manifest: IndependentAssuranceManifest;
   sourceTimestamp: number;
   responseUrl: string;
   byteLength: number;
   newerUnreviewedReport?: NewerUnreviewedReport | null;
+  undatedIndexReportCandidates?: UndatedIndexReportCandidate[];
 }
+
+export const UNDATED_INDEX_REPORT_CANDIDATE_WARNING_CODE = "undated-index-report-candidate";
 
 /**
  * A newer report on the official index is not reviewed evidence. The pinned
@@ -268,6 +277,24 @@ export function newerUnreviewedReportWarning(
   return reserveDegradedWarning(
     NEWER_UNREVIEWED_REPORT_WARNING_CODE,
     `${adapterKey}: newer unreviewed report${identity ? ` ${identity}` : ""} on official index; publishing the reviewed ${manifest.reportDate} report pending review`,
+  );
+}
+
+/**
+ * An index entry that cannot be dated proves no newer artifact, so the
+ * hash-verified reviewed report still publishes. The warning names the
+ * unresolved entry so the unknown is visible and queued for renewal review;
+ * the snapshot stays degraded until it is dated or reviewed.
+ */
+export function undatedIndexReportCandidateWarning(
+  adapterKey: string,
+  manifest: Pick<IndependentAssuranceManifest, "reportDate">,
+  candidate: UndatedIndexReportCandidate,
+): LiveReserveWarning {
+  const label = candidate.label ? ` "${candidate.label}"` : "";
+  return reserveDegradedWarning(
+    UNDATED_INDEX_REPORT_CANDIDATE_WARNING_CODE,
+    `${adapterKey}: undated report candidate ${candidate.reportUrl}${label} on official index; publishing the reviewed ${manifest.reportDate} report and queuing the candidate for review`,
   );
 }
 
@@ -395,6 +422,7 @@ export async function verifyIndependentAssuranceReport(args: {
   assertAllowedHost(args.manifest.reportUrl, args.reportHosts, "reviewed PDF");
   const html = await fetchIndexHtml(args.indexUrl, args.indexHost, args.profile, args.signal, args.ctx);
   let newerUnreviewedReport: NewerUnreviewedReport | null = null;
+  let undatedIndexReportCandidates: UndatedIndexReportCandidate[] = [];
   if (args.profile.verifyIndexJson) {
     newerUnreviewedReport = await args.profile.verifyIndexJson(html, args.manifest, args.signal, args.ctx) ?? null;
   } else {
@@ -405,22 +433,50 @@ export async function verifyIndependentAssuranceReport(args: {
     if (typeof prepared !== "string") newerUnreviewedReport = prepared.newerUnreviewedReport;
     const candidates = collectReportCandidates(discoveryHtml, args.indexUrl, args.profile);
     const manifestUrl = normalizeUrl(args.manifest.reportUrl, args.indexUrl);
-    const exact = candidates.filter((candidate) => candidate.url === manifestUrl);
     const datedCandidates = candidates.map((candidate) => ({
       ...candidate,
       date: args.profile.reportDateFromCandidate(candidate.url, candidate.text),
     }));
-    const ambiguousDate = datedCandidates.some((candidate) => candidate.date == null);
+    const isRlusdPolicy = args.profile.adapterName === RLUSD_INDEPENDENT_ASSURANCE_PROFILE.adapterName;
+    const undatedCandidates = datedCandidates.filter((candidate) => candidate.date == null);
+    // Only RLUSD scopes dating to the reviewed candidate (owner decision,
+    // PLAN §4.5); every other profile keeps any undated entry fatal, and names
+    // the ambiguity before the reviewed-artifact checks.
+    if (!isRlusdPolicy && undatedCandidates.length > 0) {
+      throw new Error("independent-assurance: ambiguous report date on official index");
+    }
+    // The reviewed artifact alone is evidence. It must be present exactly once,
+    // must not share the reviewed period with another entry, and must date to
+    // that period; every other entry is discovery signal only.
+    const reviewedCandidates = datedCandidates.filter((candidate) => candidate.url === manifestUrl);
+    const duplicateReviewedDate = datedCandidates.some(
+      (candidate) => candidate.url !== manifestUrl && candidate.date === args.manifest.reportDate,
+    );
+    if (reviewedCandidates.length !== 1 || duplicateReviewedDate) {
+      throw new Error("independent-assurance: reviewed report URL is missing or duplicated on official index");
+    }
+    const reviewedCandidate = reviewedCandidates[0]!;
+    if (reviewedCandidate.date !== args.manifest.reportDate) {
+      throw new Error(
+        `independent-assurance: reviewed report date ${reviewedCandidate.date ?? "unresolved"} does not match the reviewed manifest ${args.manifest.reportDate}`,
+      );
+    }
+    if (undatedCandidates.length > 0) {
+      // An undated non-reviewed link cannot be shown newer, so the fully proven
+      // reviewed artifact still publishes degraded and each candidate is queued
+      // for review.
+      const byUrl = new Map<string, UndatedIndexReportCandidate>();
+      for (const candidate of undatedCandidates) {
+        if (!byUrl.has(candidate.url)) {
+          byUrl.set(candidate.url, { reportUrl: candidate.url, label: candidate.text.trim() });
+        }
+      }
+      undatedIndexReportCandidates = [...byUrl.values()];
+    }
     const latestDate = datedCandidates.reduce<string | null>(
       (latest, candidate) => (candidate.date != null && (latest == null || candidate.date > latest) ? candidate.date : latest),
       null,
     );
-    const reviewedDateCandidates = datedCandidates.filter((candidate) => candidate.date === args.manifest.reportDate);
-    if (ambiguousDate || exact.length !== 1 || reviewedDateCandidates.length !== 1 || reviewedDateCandidates[0]?.url !== manifestUrl) {
-      throw new Error(
-        `independent-assurance: ${ambiguousDate ? "ambiguous report date" : "reviewed report URL is missing or duplicated"} on official index`,
-      );
-    }
     if (!newerUnreviewedReport && latestDate != null && latestDate > args.manifest.reportDate) {
       newerUnreviewedReport = { reportDate: latestDate, reportUrl: datedCandidates.find((candidate) => candidate.date === latestDate)!.url };
     }
@@ -434,7 +490,7 @@ export async function verifyIndependentAssuranceReport(args: {
     signal: args.signal,
     ctx: args.ctx,
   });
-  return { ...artifact, newerUnreviewedReport };
+  return { ...artifact, newerUnreviewedReport, undatedIndexReportCandidates };
 }
 
 /**
@@ -452,6 +508,7 @@ export function buildIndependentAssuranceReserveResult(args: {
   sourceTimestamp: number;
   adapterKey?: string;
   newerUnreviewedReport?: NewerUnreviewedReport | null;
+  undatedIndexReportCandidates?: readonly UndatedIndexReportCandidate[];
 }): AdapterResult {
   const { slices, manifest, reconciliation, verifiedResponseUrl, verifiedByteLength, sourceTimestamp } = args;
 
@@ -500,6 +557,9 @@ export function buildIndependentAssuranceReserveResult(args: {
   const warnings: LiveReserveWarning[] = [];
   if (args.newerUnreviewedReport) {
     warnings.push(newerUnreviewedReportWarning(args.adapterKey ?? "independent-assurance", manifest, args.newerUnreviewedReport));
+  }
+  for (const candidate of args.undatedIndexReportCandidates ?? []) {
+    warnings.push(undatedIndexReportCandidateWarning(args.adapterKey ?? "independent-assurance", manifest, candidate));
   }
   if (roundingDifferences.length > 0) {
     warnings.push(reserveInfoWarning(
@@ -621,6 +681,7 @@ export async function fetchIndependentAssuranceReserves(
     sourceTimestamp: artifact.sourceTimestamp,
     adapterKey: profile.adapterName,
     newerUnreviewedReport: artifact.newerUnreviewedReport,
+    undatedIndexReportCandidates: artifact.undatedIndexReportCandidates,
   });
 }
 

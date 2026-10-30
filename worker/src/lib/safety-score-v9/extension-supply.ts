@@ -16,11 +16,17 @@ import type { V9ExtensionRegistryMeta } from "./extension-shared";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import {
   safetyScoreV9ChainRows,
+  safetyScoreV9DeploymentSupplyCensusMaxAgeSec,
   safetyScoreV9SupplyAttributionExpectedAssetIds,
   SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS,
 } from "./supply-attribution";
 import { normalizeReviewedDeploymentAddress, reviewedSupplyRouteKind, reviewedEconomicDeploymentAttributionValidationError, hasCompleteEligibleProviderSupply, REVIEWED_ECONOMIC_SUPPLY_PLANS, REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES, REVIEWED_SUPPLY_ATTRIBUTION_ENVELOPE } from "./supply-attribution-contract";
 import { ReviewedProviderRowExclusionSchema } from "@shared/types/safety-score-v9-supply-attribution";
+import {
+  deploymentSupplyCensusRejectionCode,
+  type V9DeploymentSupplyCensusRejectionReason,
+} from "@shared/types/safety-score-v9-deployment-supply-census";
+import type { V9DeploymentSupplyCensusDiagnosticV1 } from "@shared/types/safety-score-v9-facts";
 import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 import {
   exactInputBoundTransferMaterialityPacket,
@@ -54,6 +60,17 @@ const INDEPENDENT_LIABILITY_SUPPLY_ASSET_ID_SET = new Set(
 export interface BuildSafetyScoreV9SupplyReviewOptions {
   meta?: V9ExtensionRegistryMeta;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+}
+
+/**
+ * One built supply review plus the census packet outcomes that travelled with
+ * it. The review is hashed into the fact extension, so a diagnostic cannot live
+ * inside it; returning them together keeps a rejection reason out of the
+ * published bytes without retaining any state after the build returns.
+ */
+export interface SafetyScoreV9SupplyAdmission {
+  readonly review: SupplyReview | null;
+  readonly censusDiagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[];
 }
 
 export type SafetyScoreV9NullSupplyReviewOutcomeState =
@@ -657,6 +674,180 @@ function admittedProviderRowExclusions(
 }
 
 /**
+ * A row the deployment supply census proved below the documentation bar may be
+ * admitted as an upper bound (`PLAN §4.6`). At or above the bar the bound is not
+ * proof of immateriality, so the share datum stays required: the consumer emits
+ * the PLAN outcome code instead of a rejection.
+ */
+export const V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW =
+  "deployment-supply-share-requires-reviewed-escrow" as const;
+
+/** Strict bar (share units) for admitting a census row as a documentation bound. */
+export const DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE =
+  (V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation?.documentationImmaterialSharePct ?? 0) / 100;
+
+interface AdmittedDeploymentCensusRow {
+  readonly routeId: string;
+  readonly route: NonNullable<BridgeRouteRiskProfile["routes"]>[number];
+  readonly supplyUsd: number;
+  readonly supplyShare: number;
+}
+
+interface DeploymentSupplyCensusAdmission {
+  readonly byChain: ReadonlyMap<string, readonly AdmittedDeploymentCensusRow[]>;
+  readonly diagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[];
+}
+
+const EMPTY_DEPLOYMENT_CENSUS_ADMISSION: DeploymentSupplyCensusAdmission = {
+  byChain: new Map(),
+  diagnostics: [],
+};
+
+/**
+ * Admits the fixed-input census packet (`safetyScoreV9DeploymentSupplyCensusById`)
+ * as a reconciled per-deployment partition. Every bound must be current, carry
+ * the consumer's own aggregate denominator, and prove the deployment below the
+ * documentation bar; the rest of the chain keeps an ambiguous residual so no
+ * unmeasured sibling is narrowed to a false zero. Rejections are named, never a
+ * partial packet: an expired or missing bound leaves every datum required.
+ */
+function admitDeploymentSupplyCensus(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  profile: BridgeRouteRiskProfile | undefined,
+  aggregateUsd: number | null,
+): DeploymentSupplyCensusAdmission {
+  const packet = fixedInput.safetyScoreV9DeploymentSupplyCensusById?.[assetId];
+  if (packet === undefined) return EMPTY_DEPLOYMENT_CENSUS_ADMISSION;
+  const diagnostics: V9DeploymentSupplyCensusDiagnosticV1[] = packet.rejected.map((rejection) => ({
+    deploymentRouteKey: rejection.routeId,
+    code: rejection.code,
+  }));
+  const reject = (reason: V9DeploymentSupplyCensusRejectionReason, routeId: string | null = null): void => {
+    diagnostics.push({ deploymentRouteKey: routeId, code: deploymentSupplyCensusRejectionCode(reason) });
+  };
+  const rejected = (): DeploymentSupplyCensusAdmission => ({
+    byChain: new Map(),
+    diagnostics: sortDeploymentSupplyCensusDiagnostics(diagnostics),
+  });
+  // F2: a packet is only evidence for the generation it was built against. An
+  // unbound map and a map captured under another registry or compiler base
+  // generation are rejected by name; neither may bound a row under this roster.
+  const binding = fixedInput.safetyScoreV9DeploymentSupplyCensusBinding;
+  if (binding === undefined) {
+    reject("generation-unbound");
+    return rejected();
+  }
+  if (binding.registryFingerprint !== fixedInput.registryFingerprint ||
+    binding.sourceBaseInputGenerationId !== fixedInput.baseInputGenerationId) {
+    reject("generation-mismatch");
+    return rejected();
+  }
+  // R3: a bound carries its own clock. There is no carry-forward and no
+  // re-dating, so a packet past the census observation window returns every
+  // deployment to required on the next capture.
+  if (packet.observedAtSec > fixedInput.clockSec) {
+    reject("future-dated-pin");
+    return rejected();
+  }
+  if (fixedInput.clockSec - packet.observedAtSec > safetyScoreV9DeploymentSupplyCensusMaxAgeSec()) {
+    reject("observation-stale");
+    return rejected();
+  }
+  if (!packet.conservation.rosterComplete) {
+    reject("roster-incomplete");
+    return rejected();
+  }
+  if (!packet.conservation.conserved) {
+    reject("conservation-breach");
+    return rejected();
+  }
+  // R4: the reason names the exact failed read. No usable aggregate
+  // denominator on this asset is an unavailable read, not a conservation
+  // mismatch: the packet's own conservation was checked above.
+  if (aggregateUsd === null || aggregateUsd <= 0) {
+    reject("read-unavailable");
+    return rejected();
+  }
+  // The producer bounded each share against its own aggregate. Shares are only
+  // comparable to this review's rows when both name the same denominator.
+  const toleranceUsd = packet.conservation.absoluteToleranceUsd +
+    packet.conservation.relativeTolerance * Math.max(packet.conservation.aggregateSupplyUsd, aggregateUsd);
+  if (Math.abs(packet.conservation.aggregateSupplyUsd - aggregateUsd) > toleranceUsd) {
+    reject("conservation-breach");
+    return rejected();
+  }
+  const reviewedRoutes = new Map(
+    (profile?.routes ?? [])
+      .filter((route) => route.reviewDisposition === "reviewed")
+      .map((route) => [route.id, route] as const),
+  );
+  const byChain = new Map<string, AdmittedDeploymentCensusRow[]>();
+  for (const row of packet.deployments) {
+    const route = reviewedRoutes.get(row.routeId);
+    const chain = routeChain(row.routeId);
+    if (route === undefined || chain === null) {
+      // Only a reviewed exact route can carry a bound (R1/R4).
+      reject("route-unreviewed", row.routeId);
+      continue;
+    }
+    if (!(row.shareUpper < DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE)) {
+      // ≥ bar: no reviewed escrow rule or exact read exists, so the datum stays
+      // required (SA-7: zero admissible escrow rules today).
+      diagnostics.push({
+        deploymentRouteKey: row.routeId,
+        code: V9_DEPLOYMENT_SUPPLY_SHARE_REQUIRES_REVIEWED_ESCROW,
+      });
+      continue;
+    }
+    byChain.set(chain, [
+      ...(byChain.get(chain) ?? []),
+      { routeId: row.routeId, route, supplyUsd: row.supplyUsdUpper, supplyShare: row.shareUpper },
+    ]);
+  }
+  return { byChain, diagnostics: sortDeploymentSupplyCensusDiagnostics(diagnostics) };
+}
+
+function sortDeploymentSupplyCensusDiagnostics(
+  diagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[],
+): V9DeploymentSupplyCensusDiagnosticV1[] {
+  const unique = new Map<string, V9DeploymentSupplyCensusDiagnosticV1>();
+  for (const diagnostic of diagnostics) {
+    unique.set(`${diagnostic.deploymentRouteKey ?? "*"}:${diagnostic.code}`, diagnostic);
+  }
+  return [...unique.entries()]
+    .sort(([left], [right]) => compareText(left, right))
+    .map(([, diagnostic]) => diagnostic);
+}
+
+/**
+ * Reconciles the exact captured per-chain circulating supply against the
+ * reviewed bridge-route rows and returns the census packet outcomes beside the
+ * review. A rejected packet never produces a review to carry its reasons, so
+ * callers that publish them read this one result instead of a module-level
+ * record keyed by asset; nothing outlives the request that built it.
+ */
+export function buildSafetyScoreV9SupplyAdmission(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  profile: BridgeRouteRiskProfile | undefined,
+  options: BuildSafetyScoreV9SupplyReviewOptions = {},
+): SafetyScoreV9SupplyAdmission {
+  const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
+  if (quarantine) throw quarantine;
+  const census = admitDeploymentSupplyCensus(
+    fixedInput,
+    assetId,
+    profile,
+    getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
+  );
+  return {
+    review: buildSupplyReview(fixedInput, assetId, profile, options, census),
+    censusDiagnostics: census.diagnostics,
+  };
+}
+
+/**
  * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. A reviewed native-only chain can be attributed
  * without a within-chain share-class split; other non-unique joins stay unknown.
@@ -667,8 +858,16 @@ export function buildSafetyScoreV9SupplyReview(
   profile: BridgeRouteRiskProfile | undefined,
   options: BuildSafetyScoreV9SupplyReviewOptions = {},
 ): SupplyReview | null {
-  const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
-  if (quarantine) throw quarantine;
+  return buildSafetyScoreV9SupplyAdmission(fixedInput, assetId, profile, options).review;
+}
+
+function buildSupplyReview(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  profile: BridgeRouteRiskProfile | undefined,
+  options: BuildSafetyScoreV9SupplyReviewOptions,
+  census: DeploymentSupplyCensusAdmission,
+): SupplyReview | null {
   providerRowExclusionRegistry.getAll(assetId);
   const economicPacket = fixedInput.safetyScoreV9SupplyAttributionById?.[assetId];
   if (economicPacket?.model === "reviewed-economic-deployment-partition-v1") {
@@ -723,11 +922,15 @@ export function buildSafetyScoreV9SupplyReview(
     SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_ASSET_IDS.includes(assetId);
   // Every reviewed census lane requires a complete provider fallback. A
   // rejected dedicated census must not certify its original positive subtotal.
-  const totalUsd = requiresExhaustiveProviderSupply
-    ? getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {})
+  // An admitted deployment census is itself exhaustive (conserved, complete
+  // roster, same aggregate), so it supplies its own denominator.
+  const aggregateUsd = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
+  const censusAdmitted = census.byChain.size > 0;
+  const totalUsd = censusAdmitted || requiresExhaustiveProviderSupply
+    ? aggregateUsd
     : chains.reduce((sum, chain) => sum + chainRows[chain]!.current, 0);
   if (chains.length === 0 || totalUsd === null || totalUsd <= 0 ||
-    (requiresExhaustiveProviderSupply && !hasCompleteEligibleProviderSupply(fixedInput, assetId, options.meta ?
+    (!censusAdmitted && requiresExhaustiveProviderSupply && !hasCompleteEligibleProviderSupply(fixedInput, assetId, options.meta ?
       { contracts: options.meta.contracts, bridgeRouteRisk: profile } : undefined))) return null;
 
   const routes = profile?.routes ?? [];
@@ -784,6 +987,46 @@ export function buildSafetyScoreV9SupplyReview(
       // receive an independent subthreshold exemption.
       unknownUsd += supplyUsd;
       uncanonicalizedUsd += supplyUsd;
+      continue;
+    }
+    const chainCensus = census.byChain.get(chain);
+    if (chainCensus !== undefined) {
+      // Census-admitted deployments are exact-keyed upper bounds; everything
+      // this packet did not measure on the chain stays in one ambiguous
+      // residual row. The residual is subtracted from the chain total exactly
+      // once, so a measured deployment never absorbs its siblings' supply and
+      // an unmeasured sibling is never narrowed to a false zero (R4).
+      const chainSupplyShare = supplyUsd / totalUsd;
+      let admittedUsd = 0;
+      let admittedShare = 0;
+      for (const entry of chainCensus) {
+        selectedBridgeRoutes.push({
+          deploymentRouteKey: entry.routeId,
+          supplyUsd: entry.supplyUsd,
+          supplyShare: entry.supplyShare,
+          reviewState: "selected-reviewed",
+          reviewedRouteKind: reviewedSupplyRouteKind(entry.route, profile),
+          evidenceKind: "upper-bound",
+        });
+        admittedUsd += entry.supplyUsd;
+        admittedShare += entry.supplyShare;
+        for (const key of entry.route.failureDomainKeys?.length ? entry.route.failureDomainKeys : [entry.routeId]) {
+          failureDomains.push({ kind: "bridge-route", key });
+        }
+      }
+      const residualUsd = Math.max(0, supplyUsd - admittedUsd);
+      const residualShare = Math.max(0, chainSupplyShare - admittedShare);
+      if (residualUsd > 0 || residualShare > 0) {
+        const deploymentRouteKey = `${V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX}${assetId}:${chain}`;
+        unknownUsd += residualUsd;
+        selectedBridgeRoutes.push({
+          deploymentRouteKey,
+          supplyUsd: residualUsd,
+          supplyShare: residualShare,
+          reviewState: "unmatched",
+        });
+        failureDomains.push({ kind: "bridge-route", key: deploymentRouteKey });
+      }
       continue;
     }
     const chainRoutes = routesByChain.get(chain) ?? [];
@@ -896,11 +1139,18 @@ export function buildSafetyScoreV9SupplyReview(
   return exclusions?.length ? { ...review, providerRowExclusions: exclusions } : review;
 }
 
-/** Supply share reconciled to one reviewed route row, for control materiality. */
+/**
+ * Supply share reconciled to one reviewed route row, for control materiality.
+ * A census `upper-bound` row is not a share: it must never become a control's
+ * `materialSupplyShare` (PLAN §4.6). The bound reaches the scorer through the
+ * reconciled partition (`provenNullShareDeploymentBound`), which keeps the
+ * datum null and the documentation classifier's evidence kind honest.
+ */
 export function safetyScoreV9RouteSupplyShare(review: SupplyReview | null, deploymentRouteKey: string): number | null {
   if (review === null) return null;
   const route = review.selectedBridgeRoutes.find((candidate) => candidate.deploymentRouteKey === deploymentRouteKey);
-  return route?.supplyShare ?? null;
+  if (route === undefined || route.evidenceKind === "upper-bound") return null;
+  return route.supplyShare;
 }
 
 function buildReviewedEconomicDeploymentSupplyReview(

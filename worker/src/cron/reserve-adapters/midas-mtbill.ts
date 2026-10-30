@@ -34,7 +34,14 @@ const IPFS_GATEWAY_TIMEOUT_MS = 5_000;
 // immutable, so a hit is re-verified against this run's registry root, never trusted.
 const CHECKPOINT_FILE_CACHE_KEY = "midas-mtbill:save-checkpoint-file";
 const CheckpointFileCacheSchema = z.object({ cid: z.string(), gzipBase64: z.string() }).strict();
-const HISTORICAL_URL = "https://api-prod.midas.app/api/transparency/by-timestamp";
+// Reviewed historical composition sources. The registry checkpoint authenticates
+// the signed aggregate; these rows are unsigned, so a mirror is read only after
+// review and only when listed here. Selecting a listed URL is coin config;
+// adding one is a reviewed code change (never caller-supplied).
+const HISTORICAL_SOURCE_URLS = [
+  "https://api-prod.midas.app/api/transparency/by-timestamp",
+] as const;
+const DEFAULT_HISTORICAL_SOURCE_URL = HISTORICAL_SOURCE_URLS[0];
 const COMPRESSED_CAP = 128 * 1024;
 const DECOMPRESSED_CAP = 1024 * 1024;
 const MILLION = 1_000_000;
@@ -100,9 +107,47 @@ const SignedBookSchema = z.object({
   }).strict(),
   assets: exactBook, equity: exactBook, liabilities: z.object({}).strict(),
 }).strict();
+// Reviewed params shape: the registered declaration must mirror this schema.
+const MidasMtbillParamsSchema = z.object({ historicalSourceUrl: z.string().optional() }).strict();
 
 function fail(reason: string): never {
   throw new Error(`midas-mtbill:${reason}`);
+}
+
+interface HistoricalSourceSelection {
+  url: string;
+  source: "reviewed-default" | "reviewed-params";
+}
+
+function hostOf(value: string): string {
+  try {
+    return new URL(value).hostname.toLowerCase() || "empty-host";
+  } catch {
+    return "unparseable-url";
+  }
+}
+
+function selectHistoricalSourceUrl(params: Record<string, unknown> | undefined): HistoricalSourceSelection {
+  const parsed = MidasMtbillParamsSchema.safeParse(params ?? {});
+  if (!parsed.success) fail("historical-source-params-invalid: adapter params invalid.historicalSourceUrl: expected an optional string");
+  const selected = parsed.data.historicalSourceUrl;
+  if (selected == null) return { url: DEFAULT_HISTORICAL_SOURCE_URL, source: "reviewed-default" };
+  if (!(HISTORICAL_SOURCE_URLS as readonly string[]).includes(selected)) {
+    fail(`historical-source-url-not-allowlisted: adapter params invalid.historicalSourceUrl host=${hostOf(selected)}`);
+  }
+  return { url: selected, source: "reviewed-params" };
+}
+
+async function readHistoricalComposition(url: string, signal: AbortSignal, ctx?: AdapterContext): Promise<unknown> {
+  try {
+    return await fetchJsonWithRetry<unknown>(url, signal, 5_000, ctx, { maxResponseBytes: DECOMPRESSED_CAP, redirect: "manual" });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    // A 403 from the reviewed official host is the observed egress block. Naming
+    // it keeps the attempt reason machine-readable; no snapshot or clock exists.
+    if (/^HTTP 403(?: |$)/.test(message)) throw new Error(`midas-mtbill:source-egress-blocked: ${message}`);
+    throw error;
+  }
 }
 
 export class MidasIpfsGatewayError extends Error {
@@ -422,16 +467,18 @@ export async function fetchMidasMtbillReserves(
 ): Promise<AdapterResult> {
   const input = config.inputs.primary;
   if (coin.id !== "mtbill-midas" || config.version !== 2 || input.kind !== "onchain-evm" || input.chain !== "ethereum"
-    || input.rpcMode !== "public-rpc" || (config.params != null && Object.keys(config.params).length > 0)
+    || input.rpcMode !== "public-rpc"
     || !coin.contracts?.some(({ chain, address }) => chain === "ethereum" && address.toLowerCase() === TOKEN)) fail("save-config-identity");
+  // Resolve the reviewed source before any read so an unlisted URL costs no request.
+  const historicalSource = selectHistoricalSourceUrl(config.params);
   const nowSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
   const { sourceAgeBudgetSec } = resolveLiveReserveSourceAgeBudget(config.scoring?.maxSourceAgeSec,
     LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS["midas-mtbill"].validation.maxSourceAgeSec, 172_800);
   const registry = await readMidasMtbillCheckpoint(signal, ctx);
   active(signal, ctx);
   const checkpoint = decodeMidasMtbillCheckpoint(registry, nowSec, sourceAgeBudgetSec);
-  const url = `${HISTORICAL_URL}?token=mTBILL&timestamp=${encodeURIComponent(checkpoint.timestamp)}`;
-  const historical = await fetchJsonWithRetry<unknown>(url, signal, 5_000, ctx, { maxResponseBytes: DECOMPRESSED_CAP, redirect: "manual" });
+  const url = `${historicalSource.url}?token=mTBILL&timestamp=${encodeURIComponent(checkpoint.timestamp)}`;
+  const historical = await readHistoricalComposition(url, signal, ctx);
   active(signal, ctx);
   const result = adaptMidasMtbillPortfolio(historical, checkpoint);
   const recheck = await runAdapterIo(ctx, "midas-save-pin-recheck", () => fetchEvmBlockHeader("ethereum", registry.pin.number, { signal, chainRpcs: ctx?.chainRpcs, timeoutMs: 5_000 }));
@@ -444,6 +491,8 @@ export async function fetchMidasMtbillReserves(
     authorizedPublisher: registry.authorized, attestationHash: registry.hash, attestationCid: registry.cid,
     registryPublishedAt: registry.publishedAt, documentJsonSha256: registry.jsonDigest, compressedBytes: registry.compressedBytes,
     attestationFileSource: registry.fileSource,
+    historicalSourceUrl: historicalSource.url, historicalSourceHost: hostOf(historicalSource.url),
+    historicalSourceUrlSource: historicalSource.source,
     historicalUrl: url, historicalResponseCanonicalSha256: canonicalDigest(historical),
     publisherAuthentication: "authorized-registry-publication", signatureValidation: "canonical-signed-content-digest",
   } } };

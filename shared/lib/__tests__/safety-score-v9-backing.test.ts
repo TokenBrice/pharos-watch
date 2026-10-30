@@ -121,6 +121,23 @@ describe("v10.01 cause-aware reserve quality", () => {
     expect(result.structuralReasons.filter(entry => entry.kind === "unsafe-backing")).toEqual([]);
   });
 
+  it.each(["A", "B"] as const)("names the %s obligor facet the concentration aggregate drops from a priced row", (cause) => {
+    const gap = factorGap("obligorConcentration", cause);
+    const priced = exposure({ key: "xusdc", weight: 0.999, issuer: "bank:circle", custodian: "bank:circle" });
+    const dust = { ...exposure({ key: "xpyusd", weight: 0.001 }), issuerOrObligorKey: null, failureDomains: [],
+      factorStatuses: { obligorConcentration: { ...knownStatus("captured-position"),
+        observationState: "missing" as const, gapIds: [gap.gapId] } } };
+    const result = evaluateV9ReserveExposures(asset([priced, dust], [gap]), V9_CANDIDATE_POLICY_V1);
+    const concentration = result.contributions.find(entry => entry.componentKey === "reserve:concentration")!;
+    // The priced row keeps the aggregate scored, so nothing else can name the
+    // excluded facet and partial evidence would claim a componentless exclusion.
+    expect(concentration.score).not.toBeNull();
+    expect(concentration).toMatchObject({
+      causeGapIds: [gap.gapId],
+      excludedComponentKeys: ["reserve:xpyusd:obligorConcentration"],
+    });
+  });
+
   it("preserves identified concentration when an independent remainder has unknown obligor research", () => {
     const known = exposure({ key: "known", weight: 0.6, issuer: "bank:a", custodian: "bank:a" });
     const remainder = exposure({ key: "gold", weight: 0.4, issuer: "bank:b", custodian: "bank:b" });

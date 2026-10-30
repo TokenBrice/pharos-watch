@@ -686,51 +686,24 @@ function projectCandidatePublicationFacts(
 const DOCUMENTATION_PILLARS = ["backing", "exit", "control"] as const;
 
 /**
- * Documentation-classification state of one publication attempt: the compiled
- * classifier facts, the union map every carrier reads, the per-card witnesses
- * the annotation needs, and the open-question counter bound to that map.
+ * Documentation-classification state of one publication attempt: the union map
+ * every carrier reads, compact per-card witnesses, and the counter bound to it.
  */
 interface DocumentationState {
-  facts: Map<string, V9DocumentationAssetFacts>;
   gapIds: Map<string, V9DocumentationClassification>;
   cards: V9DocumentationCarrierCard[];
   counter: V9OpenEvidenceCounter;
 }
 
-/** The compiled V3 fields the documentation classifier reads, without the rest of the graph. */
-function documentationAssetFacts(assets: CompiledV9FactSetV3["assets"]): V9DocumentationAssetFacts[] {
-  return assets.map((asset) => ({
-    assetId: asset.assetId,
-    archetype: asset.archetype,
-    controlStatus: asset.controlStatus,
-    controls: asset.controls,
-    gaps: asset.gaps,
-    supply: asset.supply,
-    economicControlReview: asset.economicControlReview,
-    reserveExposures: asset.reserveExposures,
-    exitRoutes: asset.exitRoutes,
-  }));
-}
-
 function createDocumentationState(assets: CompiledV9FactSetV3["assets"]): DocumentationState {
-  const facts = new Map(documentationAssetFacts(assets).map((asset) => [asset.assetId, asset]));
   const gapIds = new Map<string, V9DocumentationClassification>();
   return {
-    facts,
     gapIds,
     cards: [],
     // Every carrier reads this one advancing union, so a gap classifies
     // identically in the count, the trace and the card annotation.
-    counter: createV9OpenEvidenceCounter([...facts.values()], (gap) => gapIds.get(gap.gapId)?.reason ?? null),
+    counter: createV9OpenEvidenceCounter(assets, (gap) => gapIds.get(gap.gapId)?.reason ?? null),
   };
-}
-
-function documentationFactsFor(state: DocumentationState, assetId: string): V9DocumentationAssetFacts {
-  const facts = state.facts.get(assetId);
-  if (facts === undefined) {
-    throw new Error(`Safety Score v9 documentation carriers require compiled facts for ${assetId}`);
-  }
-  return facts;
 }
 
 /**
@@ -743,30 +716,34 @@ function registerDocumentationAsset(
   state: DocumentationState,
   envelope: V9ValidatedPolicyEnvelope,
   asset: V9EvaluatedAsset,
+  facts: V9DocumentationAssetFacts,
 ): void {
   const admittedExitRouteKeys = new Set<string>();
   for (const route of asset.exit.routes) if (route.included) admittedExitRouteKeys.add(route.routeKey);
   const enriched: V9DocumentationAssetFacts = {
-    ...documentationFactsFor(state, asset.assetId),
+    ...facts,
     admittedExitRouteKeys,
   };
-  state.facts.set(asset.assetId, enriched);
+  const localDocumentationGapIds = new Set<string>();
   for (const [gapId, classification] of collectV9DocumentationGapIds(envelope, [enriched])) {
+    localDocumentationGapIds.add(gapId);
     state.gapIds.set(gapId, classification);
   }
-}
-
-/** Feed one evaluated card to the counter and keep the witnesses its annotation reads. */
-function countDocumentationCard(state: DocumentationState, asset: V9EvaluatedAsset): void {
-  state.counter.add(asset);
+  // Keep only classified ids and witnesses, not the evaluator's current shard.
   state.cards.push({
-    asset: documentationFactsFor(state, asset.assetId),
+    assetId: asset.assetId,
+    localDocumentationGapIds,
     pillars: DOCUMENTATION_PILLARS.map((pillar) => ({
       pillar,
       evidenceLevel: asset.scoreInput.pillars[pillar].evidenceLevel,
       limitingCauseGapIds: asset.scoreInput.pillars[pillar].limitingCauseGapIds,
     })),
   });
+}
+
+/** Count after registration so inherited gaps use the advancing owner union. */
+function countDocumentationCard(state: DocumentationState, asset: V9EvaluatedAsset): void {
+  state.counter.add(asset);
 }
 
 /** Trusted runtime entrypoint for an already normalized exact input. */
@@ -920,17 +897,18 @@ function buildSafetyScoreV9CandidatePipeline(
         evaluatedSet = evaluateValidatedV9FactSet(compiledFacts!, policy);
         // Classify the whole cohort before the first card is counted, so even an
         // inherited (foreign) witness resolves at its owner.
-        for (const asset of evaluatedSet.assets) registerDocumentationAsset(documentation, policy, asset);
+        const factsById = new Map(compiledFacts!.assets.map((asset) => [asset.assetId, asset]));
+        for (const asset of evaluatedSet.assets) registerDocumentationAsset(documentation, policy, asset, factsById.get(asset.assetId)!);
         for (const asset of evaluatedSet.assets) countDocumentationCard(documentation, asset);
         publication = publishEvaluatedCandidate();
       } else {
         const projector = createSafetyScoreV9ResponseProjector();
         const factOwner = { factSet: compiledFacts };
         compiledFacts = null;
-        const projected = evaluateValidatedV9FactSetForPublication(factOwner, policy, (asset) => {
+        const projected = evaluateValidatedV9FactSetForPublication(factOwner, policy, (asset, facts) => {
           // Register before counting or projecting: route-scoped diagnostics need
           // this asset's Exit admission, and the trace reads the same union.
-          registerDocumentationAsset(documentation, policy, asset);
+          registerDocumentationAsset(documentation, policy, asset, facts);
           countDocumentationCard(documentation, asset);
           projector.project(publicProjectionInput(asset));
           publicationFacts.displayByAssetId.delete(asset.assetId);

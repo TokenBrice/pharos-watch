@@ -5,6 +5,10 @@ import { V9EvidenceResponsibilitySchema } from "./safety-score-v9-fact-primitive
 import { BRIDGE_ROUTE_RISK_TIER_VALUES, ORACLE_RISK_TIER_VALUES } from "./core";
 import { issue, ScoreSchema } from "./safety-schema-primitives";
 import { V9SupplyAttributionPolicySchema } from "./safety-score-v9-supply-attribution";
+import {
+  SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MODEL,
+  V9DeploymentSupplyCensusPolicySchema,
+} from "./safety-score-v9-deployment-supply-census";
 import { ExitExecutionModelPolicySchema } from "./exit-route";
 
 import { V9ExactControlPolicySchema } from "./safety-score-v9-control-scope";
@@ -653,6 +657,9 @@ const V9EvidencePolicySchema = z
     // Optional so the counting train parses a policy without the documentation
     // class; the T2 train authors the block. Absent classifies nothing.
     documentation: V9DocumentationPolicySchema.optional(),
+    // U4: a lane incident certificate closes nothing after this age from its
+    // pinned window end (30 days, matching the execution-review renewal rhythm).
+    laneIncidentCertificateMaxAgeSec: z.number().int().positive(),
     evidenceExpiry: z
       .object({
         reviewedResearchMaxAgeSec: z.number().int().positive(),
@@ -671,6 +678,45 @@ const V9EvidencePolicySchema = z
       .strict(),
   })
   .strict();
+
+/** Source id of provider chain-circulating rows; its ceiling may never widen past the default plus carry window. */
+export const V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID = "report-cards-chain-circulating" as const;
+
+/**
+ * v10.38 per-source chain-supply ceiling (PF-B3). The pre-v10.38 window is the
+ * two-part default; a listed source replaces it with one ceiling. Provider rows
+ * and census bounds stay at the documented default-plus-carry ceiling, and no
+ * lane may raise it (S-13, S-14).
+ */
+export const V9ChainSupplyMaxAgeBySourcePolicySchema = z
+  .strictObject({
+    defaultMaxAgeSec: z.number().int().positive(),
+    carryForwardExtraSec: z.number().int().nonnegative(),
+    maxAgeSecBySource: z.record(z.string().min(1), z.number().int().positive()),
+  })
+  .strict()
+  .superRefine((policy, ctx) => {
+    const documentedWindowSec = policy.defaultMaxAgeSec + policy.carryForwardExtraSec;
+    const cappedSources = [
+      V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID,
+      SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MODEL,
+    ] as const;
+    for (const sourceId of cappedSources) {
+      const maxAgeSec = policy.maxAgeSecBySource[sourceId];
+      if (maxAgeSec === undefined) {
+        issue(ctx, ["maxAgeSecBySource", sourceId], `${sourceId} rows must declare their ceiling`);
+      } else if (maxAgeSec > documentedWindowSec) {
+        issue(
+          ctx,
+          ["maxAgeSecBySource", sourceId],
+          `${sourceId} ceiling cannot exceed the default plus carry window`,
+        );
+      }
+    }
+  });
+export type V9ChainSupplyMaxAgeBySourcePolicy = z.output<
+  typeof V9ChainSupplyMaxAgeBySourcePolicySchema
+>;
 
 const V9BackingSignalRuleSchema = z
   .object({
@@ -978,9 +1024,23 @@ const V9ControlPolicySchema = z
   })
   .strict();
 
+/**
+ * A2 capture margin: a capture admits a price leg only while
+ * `age <= priceMaxAgeSec - evaluationLagSec`, so publication lag cannot age a
+ * certificate past `priceMaxAgeSec` between capture and evaluation. The margin
+ * narrows the price window; it never widens `priceMaxAgeSec`.
+ */
+const V9ExitExecutionModelPolicySchema = ExitExecutionModelPolicySchema.extend({
+  evaluationLagSec: z.number().int().nonnegative().optional(),
+}).superRefine((model, ctx) => {
+  if (model.evaluationLagSec !== undefined && model.evaluationLagSec >= model.priceMaxAgeSec) {
+    issue(ctx, ["evaluationLagSec"], "Evaluation-lag margin must stay inside the price window");
+  }
+});
+
 const V9ExitPolicySchema = z
   .object({
-    executionModels: z.record(z.string().min(1), ExitExecutionModelPolicySchema),
+    executionModels: z.record(z.string().min(1), V9ExitExecutionModelPolicySchema),
     stressRequest: z
       .object({
         notionalGridUsd: z.array(z.number().finite().positive()).min(1),
@@ -1172,7 +1232,13 @@ const V9MethodologySemanticSchema = z
     formula: V9FormulaPolicySchema,
     evidence: V9EvidencePolicySchema,
     materiality: V9MaterialityPolicySchema,
-    supplyAttribution: V9SupplyAttributionPolicySchema,
+    // v10.38 keys: the producer admission surface ships in one versioned
+    // addition while the base vocabulary stays owned by the supply-attribution
+    // schema.
+    supplyAttribution: V9SupplyAttributionPolicySchema.extend({
+      chainSupplyMaxAgeBySource: V9ChainSupplyMaxAgeBySourcePolicySchema,
+      deploymentSupplyCensus: V9DeploymentSupplyCensusPolicySchema,
+    }),
     accessLookthrough: V9AccessLookthroughPolicySchema,
     backing: V9BackingPolicySchema,
     exit: V9ExitPolicySchema,

@@ -9,8 +9,13 @@ import {
   V9ReviewedIncidentRegistryEnvelopeSchema,
   V9ReviewedIncidentSchema,
   V9NegativeIncidentReviewSchema,
+  V9NegativeIncidentReviewScopeSchema,
+  V9AuthoredNegativeIncidentReviewScopeSchema,
+  V9IssuerSurfaceIncidentReviewScopeSchema,
+  V9ProviderIncidentReviewScopeSchema,
+  V9IncidentReviewRetirementSchema,
+  V9LaneScreeningRefSchema,
   v9NegativeIncidentReviewTimeSec,
-  type V9NegativeIncidentReview,
   type V9ControlIncident,
   type V9ReviewedIncident,
 } from "@shared/types/safety-score-v9-incidents";
@@ -21,18 +26,100 @@ import {
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
 
-const NegativeIncidentRuntimeSchema = z.object({
+/**
+ * Admitted review scopes: the pre-migration digest scope, authored control
+ * identity, the asset-wide issuer surface and provider scope. Provider and
+ * issuer-surface witnesses are admitted (a fan-out row keeps its per-lane
+ * certificate references) but close no control in v10.38; the
+ * provider-screening closure is v10.39 work (OP-IR ruling 5), so unknown kinds
+ * stay rejected.
+ */
+const NegativeIncidentRuntimeScopeSchema = z.union([
+  V9NegativeIncidentReviewScopeSchema,
+  V9AuthoredNegativeIncidentReviewScopeSchema,
+  V9IssuerSurfaceIncidentReviewScopeSchema,
+  V9ProviderIncidentReviewScopeSchema,
+]);
+export type AuthoredControlReviewScope = Extract<
+  z.output<typeof V9AuthoredNegativeIncidentReviewScopeSchema>,
+  { kind: "control" }
+>;
+
+export const NegativeIncidentRuntimeSchema = z.object({
   reviewId: V9NegativeIncidentReviewSchema.shape.reviewId,
   assetId: V9NegativeIncidentReviewSchema.shape.assetId,
-  scope: V9NegativeIncidentReviewSchema.shape.scope,
+  scope: NegativeIncidentRuntimeScopeSchema,
+  // Absent until a review is retired; a retired row keeps its provenance and is
+  // never routing input or evidence again (design §3.2), so it is not deleted.
+  retired: V9IncidentReviewRetirementSchema.optional(),
+  // Provider scope only: one reference per covered lane, carried through the
+  // IR-1b fan-out. v10.38 parses them and closes nothing; certificate admission
+  // is v10.39's provider-screening rule.
+  laneScreeningRefs: z.array(V9LaneScreeningRefSchema).min(1).optional(),
   reviewedAt: V9NegativeIncidentReviewSchema.shape.reviewedAt,
   windowStartSec: V9NegativeIncidentReviewSchema.shape.windowStartSec,
   windowEndSec: V9NegativeIncidentReviewSchema.shape.windowEndSec,
   // [contentSha256, url] in the build-time builder's sorted-source index order.
   sources: z.array(z.tuple([Sha256Schema, z.string().url().nullable()])).min(1),
-}).strict();
+}).strict().superRefine((review, ctx) => {
+  const scope = review.scope;
+  if (scope.kind === "control" && !("controlKey" in scope)) {
+    if (scope.controlId === undefined && scope.controlIds === undefined) {
+      ctx.addIssue({ code: "custom", path: ["scope"], message: "An authored incident review requires controlId or controlIds" });
+    }
+    if (scope.controlId !== undefined && scope.controlIds !== undefined) {
+      ctx.addIssue({ code: "custom", path: ["scope", "controlIds"], message: "An authored identity names one control id or an aggregate id set, never both" });
+    }
+    if (scope.controlIds !== undefined && scope.routeId === undefined) {
+      ctx.addIssue({ code: "custom", path: ["scope", "routeId"], message: "An aggregate authored identity requires the route it belongs to" });
+    }
+    if (scope.controlIds?.includes("*")) {
+      ctx.addIssue({ code: "custom", path: ["scope", "controlIds"], message: "An aggregate identity lists concrete control ids, not the lane wildcard" });
+    }
+    if (scope.controlId === "*" && scope.routeId === undefined) {
+      ctx.addIssue({ code: "custom", path: ["scope", "routeId"], message: "A lane-wide authored identity requires the route it belongs to" });
+    }
+  }
+  if (review.laneScreeningRefs !== undefined && scope.kind !== "provider") {
+    ctx.addIssue({ code: "custom", path: ["laneScreeningRefs"], message: "Only provider reviews bind lane screening references" });
+  }
+  if (scope.kind === "provider") {
+    if (review.laneScreeningRefs === undefined) {
+      ctx.addIssue({ code: "custom", path: ["laneScreeningRefs"], message: "A provider review requires a lane screening certificate per covered route" });
+    } else {
+      const coveredLanes = new Set(scope.coveredRoutes.map((ref) => `${ref.assetId}\u0000${ref.routeId}`));
+      const referencedLanes = new Set<string>();
+      const keys = review.laneScreeningRefs.map((ref) => `${ref.assetId}\u0000${ref.routeId}\u0000${ref.certificateId}`);
+      if (new Set(keys).size !== keys.length) {
+        ctx.addIssue({ code: "custom", path: ["laneScreeningRefs"], message: "Lane screening references must be unique" });
+      }
+      for (const [index, ref] of review.laneScreeningRefs.entries()) {
+        const lane = `${ref.assetId}\u0000${ref.routeId}`;
+        if (!coveredLanes.has(lane)) {
+          ctx.addIssue({ code: "custom", path: ["laneScreeningRefs", index, "routeId"], message: "Lane screening references may only name covered routes" });
+        }
+        referencedLanes.add(lane);
+      }
+      for (const route of scope.coveredRoutes) {
+        if (!referencedLanes.has(`${route.assetId}\u0000${route.routeId}`)) {
+          ctx.addIssue({ code: "custom", path: ["laneScreeningRefs"], message: `Provider review lane ${route.assetId}|${route.routeId} requires a lane screening certificate reference` });
+        }
+      }
+    }
+  }
+  if (review.retired !== undefined) {
+    const retiredSec = v9NegativeIncidentReviewTimeSec(review.retired.reviewedAt);
+    if (retiredSec < v9NegativeIncidentReviewTimeSec(review.reviewedAt)) {
+      ctx.addIssue({ code: "custom", path: ["retired", "reviewedAt"], message: "Retirement cannot predate the review it retires" });
+    }
+  }
+});
 type NegativeIncidentRuntime = z.infer<typeof NegativeIncidentRuntimeSchema>;
-type NegativeIncidentScope = Pick<V9NegativeIncidentReview, "assetId" | "scope" | "reviewedAt" | "windowEndSec">;
+type NegativeIncidentScope = Pick<
+  NegativeIncidentRuntime,
+  "reviewId" | "assetId" | "scope" | "reviewedAt" | "windowEndSec" | "retired" | "laneScreeningRefs"
+>;
+export type { NegativeIncidentRuntime, NegativeIncidentScope };
 const { digest, ...runtimeEnvelope } = incidentRuntimeAsset;
 const incidentEnvelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(runtimeEnvelope);
 export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = Sha256Schema.parse(digest);
@@ -49,7 +136,11 @@ const NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID = createReviewedAssetRegistry({
   rows: incidentEnvelope.negativeReviews ?? [],
   schema: NegativeIncidentRuntimeSchema,
   path: "incidentReviews.negativeReviews",
-  keyOf: (row) => typeof row.reviewId === "string" ? row.reviewId : undefined,
+  // A provider-wide review fans out to one row per covered asset with the same
+  // authored reviewId, so identity is (assetId, reviewId), never reviewId alone.
+  keyOf: (row) => typeof row.reviewId === "string" && typeof row.assetId === "string"
+    ? `${row.assetId}\u0000${row.reviewId}`
+    : undefined,
   keyPath: "reviewId",
 });
 
@@ -60,6 +151,97 @@ function negativeIncidentReviewIsCurrent(review: NegativeIncidentScope, clockSec
     clockSec - review.windowEndSec <= V9_REVIEW_EVIDENCE_MAX_AGE_SEC;
 }
 
+/**
+ * Authored identity is carried by the control fact itself (`authoredControlId` /
+ * `authoredControlIds`, contract C3 + IR-0). The fields are read structurally so
+ * a build that predates that producer still admits legacy digest rows; a control
+ * without them has digest `controlKey` as its only identity and an authored
+ * review never claims it (fail-closed, no digest fallback).
+ */
+interface AuthoredControlIdentityCarrier {
+  authoredControlId?: unknown;
+  authoredControlIds?: unknown;
+}
+
+function authoredControlIdSet(control: ControlOverlay): readonly string[] | null {
+  // The carrier fields land on the shared control fact base with IR-0 (T1).
+  const carrier = control as unknown as AuthoredControlIdentityCarrier;
+  const single = carrier.authoredControlId;
+  const merged = carrier.authoredControlIds;
+  if (merged !== undefined) {
+    if (single !== "*" || !Array.isArray(merged) || merged.length < 2 ||
+        !merged.every((value): value is string => typeof value === "string")) return null;
+    return merged;
+  }
+  return typeof single === "string" && single.length > 0 && single !== "*" ? [single] : null;
+}
+
+function sameControlIdSet(left: readonly string[], right: readonly string[]): boolean {
+  if (left.length !== right.length) return false;
+  const sortedLeft = [...left].sort(compareText);
+  const sortedRight = [...right].sort(compareText);
+  return sortedLeft.every((id, index) => id === sortedRight[index]);
+}
+
+/**
+ * A lane-wide (`"*"`) authored review speaks for the route-level fact that has no
+ * authored control inventory: the route fallback (`bridge-meta:` digest form).
+ * Merged lanes name their exact contributor set instead, so an added control is
+ * uncovered and cannot inherit an old review.
+ */
+function laneLevelControlMatches(control: ControlOverlay, assetId: string, routeId: string): boolean {
+  return control.controlKind === "bridge" && control.scope === "deployment" &&
+    control.deploymentKey === routeId && authoredControlIdSet(control) === null &&
+    control.controlKey.startsWith(`bridge-meta:${assetId}:`);
+}
+
+/**
+ * Authored identity is `(assetId, routeId, controlId | controlIds | "*")` plus the
+ * asset-local mint form `(assetId, controlId)`; it resolves only against the
+ * control's own authored tuple. There is no fallback to a digest or to another
+ * form, so a colliding legacy digest cannot reattach a review to a different
+ * control. This is the semantic definition IR-5's CI orphan check mirrors over
+ * authored metadata (the gate cannot import this module); keep them in step.
+ */
+export function authoredControlScopeMatches(
+  scope: AuthoredControlReviewScope,
+  control: ControlOverlay,
+  assetId: string,
+): boolean {
+  if (scope.routeId !== undefined && scope.routeId !== control.deploymentKey) return false;
+  const coveredIds = scope.controlIds ??
+    (scope.controlId !== undefined && scope.controlId !== "*" ? [scope.controlId] : null);
+  if (coveredIds === null) {
+    return scope.routeId !== undefined && laneLevelControlMatches(control, assetId, scope.routeId);
+  }
+  const factIds = authoredControlIdSet(control);
+  if (factIds === null) return false;
+  // Identity without a route is asset-local (mint/upgrade inventory).
+  if (scope.routeId === undefined && control.deploymentKey !== `asset:${assetId}`) return false;
+  return sameControlIdSet(coveredIds, factIds);
+}
+
+function negativeReviewCoversControl(
+  review: NegativeIncidentScope,
+  control: ControlOverlay,
+  assetId: string,
+): boolean {
+  const scope = review.scope;
+  switch (scope.kind) {
+    case "control":
+      return "controlKey" in scope
+        ? scope.controlKey === control.controlKey
+        : authoredControlScopeMatches(scope, control, assetId);
+    case "deployment":
+      return scope.deploymentKey === control.deploymentKey && scope.controlKinds.includes(control.controlKind);
+    // A provider or issuer-surface witness closes nothing in v10.38; the
+    // provider-screening closure is v10.39 work (OP-IR ruling 5).
+    case "provider":
+    case "issuer-surface":
+      return false;
+  }
+}
+
 export function getSafetyScoreV9NegativeIncidentReviews(
   assetId: string,
   clockSec: number,
@@ -68,7 +250,7 @@ export function getSafetyScoreV9NegativeIncidentReviews(
     throw new Error("Safety Score v9 negative incident-review clock must be finite and non-negative");
   }
   return NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID.getAll(assetId).filter((review) =>
-    negativeIncidentReviewIsCurrent(review, clockSec));
+    review.retired === undefined && negativeIncidentReviewIsCurrent(review, clockSec));
 }
 
 /** Rebuilds the build-time evidence rows; each key embeds its sorted-source index. */
@@ -91,6 +273,8 @@ export function addSafetyScoreV9NegativeIncidentEvidence(
   reviews: readonly NegativeIncidentRuntime[],
 ): void {
   for (const review of reviews) {
+    // Retirement keeps the row for provenance but removes it from evidence.
+    if (review.retired !== undefined) continue;
     const bindings = evidence.bindings.get("control") ?? new Set<string>();
     for (const row of negativeIncidentReviewEvidence(review)) {
       evidence.evidence.set(row.evidenceKey, row);
@@ -107,7 +291,15 @@ function controlIncidentMatchesScope(incident: V9ControlIncident, control: Contr
       (incident.scope.kind === "control" && incident.scope.controlKey === control.controlKey));
 }
 
-/** Independent negative research never erases real history or grants knowledge to another scope. */
+/**
+ * Independent negative research never erases real history or grants knowledge to
+ * another scope. Reviews resolve by stable authored identity (asset, route,
+ * control id set); legacy digest rows keep their exact-key matching until the
+ * review-key migration rewrites them, and retired rows resolve nothing. v10.38
+ * closes only through the digest and authored control identities: a provider or
+ * issuer-surface witness is parsed but never sets `incidentState` (the
+ * provider-screening closure is v10.39 work, OP-IR ruling 5).
+ */
 export function routeSafetyScoreV9NegativeIncidentReviews(
   controls: ControlOverlay[],
   assetId: string,
@@ -122,10 +314,9 @@ export function routeSafetyScoreV9NegativeIncidentReviews(
     if (incidents.some((incident) => incident.assetId === assetId && incident.domain === "control" &&
         controlIncidentMatchesScope(incident, control))) return control;
     const reviewed = reviews.some((review) => review.assetId === assetId &&
+      review.retired === undefined &&
       negativeIncidentReviewIsCurrent(review, clockSec) &&
-      (review.scope.kind === "control"
-        ? review.scope.controlKey === control.controlKey
-        : review.scope.deploymentKey === control.deploymentKey && review.scope.controlKinds.includes(control.controlKind)));
+      negativeReviewCoversControl(review, control, assetId));
     return reviewed ? { ...control, incidentState: "none" as const } : control;
   });
 }

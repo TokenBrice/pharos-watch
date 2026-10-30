@@ -93,7 +93,7 @@ import {
   buildSafetyScoreV9RouteReviews,
 } from "./extension-routes";
 import {
-  buildSafetyScoreV9SupplyReview,
+  buildSafetyScoreV9SupplyAdmission,
 } from "./extension-supply";
 import {
   normalizeSafetyScoreV9CompilerInput,
@@ -1112,6 +1112,11 @@ function adaptMintControl(
   const globalControl: ControlOverlay = {
     controlKey,
     deploymentKey: `asset:${assetId}`,
+    // Authored identity (IR-1a/IR-2b/IR-5, contract C3): incident reviews bind
+    // the mint-authority label, never the digest payload, so re-deriving
+    // `controlKey` (address, refs, role) cannot orphan a reviewed closure. Every
+    // path/deployment row below inherits it from this base.
+    authoredControlId: control.label,
     ...(control.controllerAssetId ? { controllerAssetId: control.controllerAssetId } : {}),
     controlKind,
     scope: "global",
@@ -2686,7 +2691,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           });
         }
         admissionPath = "supplyReview";
-        const supplyReview = buildSafetyScoreV9SupplyReview(
+        const supplyAdmission = buildSafetyScoreV9SupplyAdmission(
           fixedInput,
           assetId,
           meta.bridgeRouteRisk,
@@ -2695,6 +2700,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
             transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
           },
         );
+        const supplyReview = supplyAdmission.review;
         const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
         const deployedChainCount = Object.keys(chainRows).length;
         admissionPath = "economicControlReview.mint";
@@ -2712,6 +2718,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           reviewEvidence,
           clockSec,
           chainRows,
+          supplyAdmission.censusDiagnostics,
         );
         admissionPath = "controlReview";
         const incidentControlRoute = routeSafetyScoreV9ControlIncidents(

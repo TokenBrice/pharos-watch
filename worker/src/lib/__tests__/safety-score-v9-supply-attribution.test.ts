@@ -1,4 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
+import {
+  SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MAX_AGE_SEC,
+  createSafetyScoreV9DeploymentSupplyCensusGeneration,
+  writeSafetyScoreV9DeploymentSupplyCensusGeneration,
+} from "../safety-score-v9/deployment-supply-census-store";
+import type { SafetyScoreV9DeploymentSupplyCensus } from "@shared/types/safety-score-v9-deployment-supply-census";
 import { chainRpcs } from "./safety-score-v9-supply-observation.test-support";
 import type { ReportCardsFixedInput } from "../report-cards-fixed-input";
 import wmRiskReview from "@shared/data/stablecoins/domains/risk-review/wm-m0.json";
@@ -50,11 +58,23 @@ import { captureSafetyScoreV9SupplyAttribution } from "../safety-score-v9/supply
 import {
   safetyScoreV9SupplyAttributionExpectedAssetIds,
   safetyScoreV9ChainRows,
+  safetyScoreV9ChainSupplyMaxAgeSec,
+  safetyScoreV9ChainSupplyMaxAgeSecForSource,
   safetyScoreV9ChainSupplyObservedAtSec,
+  safetyScoreV9ChainSupplySourceId,
+  SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
+  SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID,
 } from "../safety-score-v9/supply-attribution";
+import type { SafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import { V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID } from "@shared/types/safety-score-v9";
 import { createSafetyScoreV9SupplyAttributionGeneration } from "../safety-score-v9/supply-attribution-generation";
 import { buildSafetyScoreV9SupplyReview } from "../safety-score-v9/extension-supply";
-import { deriveXautRepresentationGroupSupplyAttribution } from "../safety-score-v9/xaut-supply-attribution-contract";
+import {
+  deriveXautRepresentationGroupSupplyAttribution,
+  XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC,
+  XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+} from "../safety-score-v9/xaut-supply-attribution-contract";
 import { makeXautObservation } from "../../test-helpers/v9-fixed-input";
 import { createSupplyAttributionPerformance, emitSupplyAttributionDiagnostic } from "../safety-score-v9/supply-attribution-diagnostics";
 import { compactCronMetadataForPersistence } from "../cron-metadata-persistence";
@@ -761,6 +781,212 @@ describe("Safety Score V9 Centrifuge burn/mint supply attribution", () => {
   });
 });
 
+describe("Safety Score V9 chain-supply ceilings (v10.38)", () => {
+  const ceilings = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.chainSupplyMaxAgeBySource;
+  const defaultCeilingSec = ceilings.defaultMaxAgeSec + ceilings.carryForwardExtraSec;
+
+  function sourceIdOf(attribution: unknown, assetId = "alpha"): string {
+    return safetyScoreV9ChainSupplySourceId({
+      safetyScoreV9SupplyAttributionById: attribution === undefined ? {} : { [assetId]: attribution },
+    } as unknown as SafetyScoreV9CompilerInput, assetId);
+  }
+
+  function maxAgeOf(
+    attribution: unknown,
+    assetId = "alpha",
+    declaredMaxAgeSec: number | null = 1800,
+  ): number | null {
+    return safetyScoreV9ChainSupplyMaxAgeSec({
+      clockSec: OBSERVED_AT_SEC,
+      aggregateCirculatingById: {},
+      chainCirculatingById: {},
+      safetyScoreV9SupplyAttributionById: { [assetId]: attribution },
+    } as unknown as SafetyScoreV9CompilerInput, assetId, declaredMaxAgeSec);
+  }
+
+  it("keeps provider chain-circulating rows at the default-plus-carry ceiling", () => {
+    // The policy schema caps the provider entry at default + carry (S-13), so
+    // the invariant is expressed through the policy values, not a code literal.
+    expect(ceilings.maxAgeSecBySource[V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID]).toBe(defaultCeilingSec);
+    expect(defaultCeilingSec).toBe(5_400);
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID)).toBe(
+      defaultCeilingSec,
+    );
+    // A source clock that declares a narrower window cannot tighten a listed
+    // source: one ceiling replaces the two-part default.
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID, 900)).toBe(
+      defaultCeilingSec,
+    );
+    expect(sourceIdOf(undefined)).toBe(V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID);
+    expect(maxAgeOf(undefined)).toBe(defaultCeilingSec);
+  });
+
+  it("fails an unlisted source closed to the policy default window", () => {
+    for (const sourceId of [
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID,
+      "unlisted-future-lane",
+    ]) {
+      expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(sourceId), sourceId).toBe(defaultCeilingSec);
+    }
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource("unlisted-future-lane", null)).toBe(defaultCeilingSec);
+  });
+
+  it("lets an unlisted source clock tighten the default window but never widen it", () => {
+    const sourceId = SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID;
+    const declaredNarrowSec = 900;
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(sourceId, declaredNarrowSec)).toBe(
+      declaredNarrowSec + ceilings.carryForwardExtraSec,
+    );
+    expect(safetyScoreV9ChainSupplyMaxAgeSecForSource(sourceId, 30 * 86_400)).toBe(defaultCeilingSec);
+  });
+
+  it("resolves every attribution model to the source id its ceiling is keyed by", () => {
+    expect(sourceIdOf({ model: "canonical-lock-mint-partition-v1" })).toBe(
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
+    );
+    expect(sourceIdOf({ model: "canonical-lock-mint-group-partition-v2" })).toBe(
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_LOCK_MINT_SOURCE_ID,
+    );
+    expect(sourceIdOf({ model: "reviewed-deployment-unit-partition-v1" })).toBe(
+      SAFETY_SCORE_V9_CHAIN_SUPPLY_REVIEWED_DEPLOYMENT_SOURCE_ID,
+    );
+    expect(sourceIdOf({ model: "reviewed-economic-deployment-partition-v1" })).toBe(
+      V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.journalSourceId,
+    );
+  });
+
+  it("keeps per-asset lane admission windows ahead of the generic source ceiling", () => {
+    const supplyPolicy = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+    // A reviewed economic partition is admitted inside its own pin window, so
+    // its evidence cannot borrow the wider generic ceiling.
+    expect(maxAgeOf({
+      model: "reviewed-economic-deployment-partition-v1",
+      deployments: [{ chainId: "ethereum" }],
+    })).toBe(supplyPolicy.observationMaxAgeSec);
+    expect(maxAgeOf({
+      model: "reviewed-economic-deployment-partition-v1",
+      deployments: [{ chainId: "ethereum" }, { chainId: "optimism" }],
+    })).toBe(supplyPolicy.observationMaxAgeSec + supplyPolicy.finalityMarginSecByChainId.optimism!);
+    // XAUT's finalized observation keeps its one-hour window, carried or not.
+    expect(maxAgeOf({ model: "canonical-lock-mint-group-partition-v2" }, "xaut-tether")).toBe(
+      XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC,
+    );
+    expect(maxAgeOf({
+      model: "canonical-lock-mint-group-partition-v2",
+      carriedForwardFromGenerationId: "gen-prior",
+    }, "xaut-tether")).toBe(XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC);
+    expect(XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC).toBeLessThan(defaultCeilingSec);
+  });
+});
+
+describe("Supply attribution shadow census projection", () => {
+  const CENSUS_TOKEN = `0x${"d".repeat(40)}`;
+
+  function censusPacket(): SafetyScoreV9DeploymentSupplyCensus {
+    const supply = V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution;
+    const shareUpper = 1 / XAUT_AGGREGATE_SUPPLY_USD;
+    return {
+      model: "deployment-supply-census-v1",
+      observedAtSec: OBSERVED_AT_SEC,
+      deployments: [{
+        routeId: `ethereum:${CENSUS_TOKEN}`,
+        chainId: "ethereum",
+        tokenAddress: CENSUS_TOKEN,
+        readKind: "evm-total-supply",
+        pin: {
+          kind: "evm-header",
+          blockNumber: 20_000_000,
+          blockHash: `0x${"b".repeat(64)}`,
+          blockTimeSec: OBSERVED_AT_SEC - 60,
+          runtimeCodeSha256: "a".repeat(64),
+        },
+        decimals: 6,
+        totalSupplyRaw: "1000000",
+        referencePriceUsd: 1,
+        referencePriceObservedAtSec: OBSERVED_AT_SEC - 30,
+        supplyUsdUpper: 1,
+        shareUpper,
+        evidenceKind: "upper-bound",
+      }],
+      conservation: {
+        aggregateSupplyUsd: XAUT_AGGREGATE_SUPPLY_USD,
+        measuredSupplyUsd: 1,
+        measuredShareSum: shareUpper,
+        relativeTolerance: supply.conservationRelativeTolerance,
+        absoluteToleranceUsd: supply.conservationAbsoluteToleranceUsd,
+        rosterComplete: true,
+        conserved: true,
+      },
+      rejected: [],
+    };
+  }
+
+  it("carries the admitted census map and its provenance, and adds no key when absent", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(OBSERVED_AT_SEC * 1_000);
+    const uuid = vi.spyOn(crypto, "randomUUID")
+      .mockReturnValue("00000000-0000-4000-8000-000000000000");
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockResolvedValue({
+      status: "rejected",
+      rejectionCode: "deployment-state-unavailable",
+      failedRouteId: null,
+    });
+    const withCensus = createLatestSchemaSqlite();
+    const withoutCensus = createLatestSchemaSqlite();
+    try {
+      const generation = createSafetyScoreV9DeploymentSupplyCensusGeneration({
+        schemaVersion: 1,
+        kind: "safety-score-v9-deployment-supply-census-generation",
+        sourceBaseInputGenerationId: xautFixedInput().baseInputGenerationId,
+        registryFingerprint: xautFixedInput().registryFingerprint,
+        capturedAtSec: OBSERVED_AT_SEC,
+        censusById: { "xaut-tether": censusPacket() },
+      });
+      await writeSafetyScoreV9DeploymentSupplyCensusGeneration(withCensus.db, generation);
+
+      const carried = await captureSafetyScoreV9SupplyAttribution(
+        xautFixedInput(),
+        chainRpcs(),
+        undefined,
+        { clockMode: "source", db: withCensus.db },
+      );
+      expect(carried.deploymentSupplyCensusById).toEqual({ "xaut-tether": censusPacket() });
+      expect(carried.deploymentSupplyCensus).toEqual({
+        state: "ok",
+        generationId: generation.generationId,
+        capturedAtSec: OBSERVED_AT_SEC,
+        // SA-FIX F2: the provenance names the input the map is bound to, so no
+        // carrier has to re-read the store to prove which generation it holds.
+        registryFingerprint: xautFixedInput().registryFingerprint,
+        sourceBaseInputGenerationId: xautFixedInput().baseInputGenerationId,
+        maxAgeSec: SAFETY_SCORE_V9_DEPLOYMENT_SUPPLY_CENSUS_MAX_AGE_SEC,
+        excluded: [],
+      });
+
+      const absent = await captureSafetyScoreV9SupplyAttribution(
+        xautFixedInput(), chainRpcs(), undefined, { clockMode: "source", db: withoutCensus.db },
+      );
+      const storeless = await captureSafetyScoreV9SupplyAttribution(
+        xautFixedInput(), chainRpcs(), undefined, { clockMode: "source" },
+      );
+      expect("deploymentSupplyCensusById" in absent).toBe(false);
+      expect("deploymentSupplyCensus" in absent).toBe(false);
+      // The absent case carries the same fixed-input surface as before the
+      // store read existed: no census keys and no other shape change.
+      const structural = (capture: typeof absent) => stableJsonStringifyV1({
+        ...capture, journalRecords: [], performanceById: {},
+      });
+      expect(Object.keys(absent).sort()).toEqual(Object.keys(storeless).sort());
+      expect(structural(absent)).toBe(structural(storeless));
+    } finally {
+      uuid.mockRestore();
+      withCensus.sqlite.close();
+      withoutCensus.sqlite.close();
+      vi.useRealTimers();
+    }
+  });
+});
 describe("Supply attribution complete-provider precedence", () => {
   it("requires every wM chain, including observed-zero legs, before skipping its census", () => {
     const assetId = "wm-m0";

@@ -93,19 +93,35 @@
   },
   "launchDate": "2026-02-09",
   "liveReservesConfig": {
-    "adapter": "megausd-custody",
+    "adapter": "megausd-custody-onchain",
     "version": 1,
     "semantics": "collateral-mix",
     "breakerScope": "usdm-mega",
     "display": {
       "url": "https://app.megausd.money/",
-      "label": "MegaUSD Transparency"
+      "label": "MegaUSD custodian balances (Ethereum, pinned block)"
     },
     "inputs": {
       "primary": {
-        "kind": "http-json",
-        "url": "https://app.megausd.money/api/transparency/backing-and-supply/current"
+        "kind": "onchain-evm",
+        "chain": "ethereum",
+        "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "rosterReviewedAt": "2026-10-29T18:25:11Z",
+      "roster": [
+        { "chain": "ethereum", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "custodian": "0xE0406beE6D58bCd7C1cA78191b6fde9CA060F6f2", "assetKey": "usdc" },
+        { "chain": "ethereum", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "custodian": "0x343c18B0f1710B65cE33A7CE720b5D540215d343", "assetKey": "usdc" },
+        { "chain": "ethereum", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "custodian": "0x01b3AfeBdA3ED0E55feDb10DAdA5eF8Dbe8f8d0C", "assetKey": "usdc" },
+        { "chain": "ethereum", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "custodian": "0x99F97f2822478f71e6ea8BD872e61DF10aE19ccd", "assetKey": "usdc" },
+        { "chain": "ethereum", "token": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48", "custodian": "0xF6a4347Fe4F2c8D7228d3d53ab8e0d0cFC507DDC", "assetKey": "usdc" },
+        { "chain": "ethereum", "token": "0xC139190F447e929f090Edeb554D95AbB8b18aC1C", "custodian": "0xE0406beE6D58bCd7C1cA78191b6fde9CA060F6f2", "assetKey": "usdtb" },
+        { "chain": "ethereum", "token": "0xC139190F447e929f090Edeb554D95AbB8b18aC1C", "custodian": "0x343c18B0f1710B65cE33A7CE720b5D540215d343", "assetKey": "usdtb" },
+        { "chain": "ethereum", "token": "0xC139190F447e929f090Edeb554D95AbB8b18aC1C", "custodian": "0x01b3AfeBdA3ED0E55feDb10DAdA5eF8Dbe8f8d0C", "assetKey": "usdtb" },
+        { "chain": "ethereum", "token": "0xC139190F447e929f090Edeb554D95AbB8b18aC1C", "custodian": "0x99F97f2822478f71e6ea8BD872e61DF10aE19ccd", "assetKey": "usdtb" },
+        { "chain": "ethereum", "token": "0xC139190F447e929f090Edeb554D95AbB8b18aC1C", "custodian": "0xF6a4347Fe4F2c8D7228d3d53ab8e0d0cFC507DDC", "assetKey": "usdtb" }
+      ]
     }
   }
 }

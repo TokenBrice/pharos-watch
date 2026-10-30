@@ -2,11 +2,12 @@ import { beforeEach, afterEach, describe, expect, it, vi } from "vitest";
 import { decodeFunctionData, encodeAbiParameters, parseAbi, parseAbiParameters, toFunctionSelector } from "viem/utils";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { ExitExecutionCertificate, ExitExecutionModelReview } from "@shared/types/exit-route";
+import { ExitExecutionRequestPointSchema } from "@shared/types/exit-route";
 import { observeErc4626InstantExit } from "../exit-execution/erc4626-instant";
 import { observeReviewedExitExecutionRoutes } from "../exit-execution/runtime";
 import { evaluateV9Exit, projectV9ExitEvaluationRoute, selectV9ExitStressRequest, resolveV9ExitCapacityAtRequest } from "@shared/lib/safety-score-v9/exit";
 import { admitExitExecutionCertificate, exitExecutionInputGenerationId, exitExecutionReviewDigest, resolveExitExecutionBoundPoint } from "@shared/lib/safety-score-v9/exit-execution";
-import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { loadV9CandidateMethodologyPolicy, loadV9MethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
 import { getRedemptionBackstopConfig, validateRedemptionOutputIdentity } from "@shared/lib/redemption-backstops";
 import { RedemptionBackstopConfigSchema } from "@shared/lib/redemption-backstop-configs/schema";
 import { resolveCapacityBasis, resolveRedemptionCapacity } from "../redemption-backstop/capacity";
@@ -28,6 +29,7 @@ const MULTICALL = parseAbi(["function aggregate3((address target,bool allowFailu
 const state = vi.hoisted(() => ({ liquidity: 1_000_000_000_000_000n, idleLiquidity: null as bigint | null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
   feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null as bigint | null,
   deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false,
+  totalSupply: 1_000_000_000_000_000n, totalSupplyReadFails: false,
   feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }));
 const word = (value: bigint) => `0x${value.toString(16).padStart(64, "0")}` as `0x${string}`;
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
@@ -66,7 +68,7 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
             return { success: succeeds, returnData: succeeds ? word(state.grossReturn ? executed : received) : "0x" as `0x${string}` };
           }
           if (innerSelector === toFunctionSelector("totalSupply()")) return {
-            success: true, returnData: word(1_000_000_000_000_000n + (redeemed ? state.feeShares + state.unexplainedSupplyDelta - (state.escrowOnly ? 0n : executed) : 0n)),
+            success: true, returnData: word(state.totalSupply + (redeemed ? state.feeShares + state.unexplainedSupplyDelta - (state.escrowOnly ? 0n : executed) : 0n)),
           };
           if (innerSelector === toFunctionSelector("balanceOf(address)")) {
             const owner = BigInt("0x" + entry.callData.slice(10, 74));
@@ -87,10 +89,11 @@ vi.mock("../evm-rpc", async (importOriginal) => ({
         continue;
       }
       const quotedMaximum = (state.optimisticMax || shares < state.liquidity ? shares : state.liquidity) * state.maxBps / 10_000n;
+      if (selector === toFunctionSelector("totalSupply()") && state.totalSupplyReadFails) { errors.push({ index }); results.push(undefined); continue; }
       const values: Record<string, bigint> = {
         [toFunctionSelector("asset()")]: state.identity ? 3n : 2n,
         [toFunctionSelector("decimals()")]: 6n,
-        [toFunctionSelector("totalSupply()")]: 1_000_000_000_000_000n,
+        [toFunctionSelector("totalSupply()")]: state.totalSupply,
         [toFunctionSelector("balanceOf(address)")]: tx.to === TOKEN ? state.idleLiquidity ?? state.liquidity : state.override === "ignored" ? 0n : shares,
         [toFunctionSelector("maxRedeem(address)")]: state.nonBinding ? 0n : quotedMaximum,
         [toFunctionSelector("maxWithdraw(address)")]: state.nonBinding ? 0n : quotedMaximum,
@@ -119,7 +122,8 @@ const outputReference = { ...inputReference, assetKey: "fixture-underlying", dep
 const args = { review, inputReference, outputReference, requests: [{ requestedNotionalUsd: 100_000, maxCostBps: 200 }] };
 beforeEach(() => { Object.assign(state, { liquidity: 1_000_000_000_000_000n, idleLiquidity: null, rejectPartial: false, feeBps: 0n, grossPreview: false, grossReturn: false, escrowOnly: false, maxBps: 10_000n, paused: false, override: "supported", identity: false, code: false, realizedMismatch: false, redeemFails: false, nonBinding: false, reorg: false, headers: 0,
   deferIlliquid: false, optimisticMax: false, corruptOnlyFunded: false,
-  feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null, feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
+  feeShares: 0n, unexplainedSupplyDelta: 0n, feeRecipientDelta: null, feeGetter: "feeRecipient", feeRecipient: 3n, feeGetterChanged: false, feeBalanceFails: false, holderBurnMismatch: false, inverseOffset: 0n, outputDust: 0n,
+  totalSupply: 1_000_000_000_000_000n, totalSupplyReadFails: false }); vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
 afterEach(() => vi.useRealTimers());
 
 describe("reviewed synchronous ERC4626 exact execution", () => {
@@ -182,6 +186,82 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     const point = (await observeErc4626InstantExit(args)).points[0]!;
     expect(point).toMatchObject({ executableUsd: 40_000, executedRawInput: "40000000000", certification: "exact-lower-bound", reason: "erc4626-liquidity-limited" });
     expect(point.executableUsd / point.requestedNotionalUsd).toBe(0.4);
+  });
+  it("clamps an ask larger than the issued supply to a measured lower bound of the stress ask", async () => {
+    state.totalSupply = 50_000_000_000n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({
+      requestedNotionalUsd: 100_000, requestedRawInput: "100000000000",
+      executedRawInput: "50000000000", executableUsd: 50_000,
+      certification: "exact-lower-bound", reason: "erc4626-request-clamped-to-issued-shares",
+      outputs: [{ rawUnits: "50000000000" }],
+      canonicalAttempt: {
+        outcome: "completed", requestedRawInput: "50000000000",
+        shareBalanceBefore: "50000000000", shareBalanceAfter: "0",
+        totalSupplyBefore: "50000000000", totalSupplyAfter: "0",
+      },
+    });
+    // The certificate carries the clamped request in units but never reports
+    // the clamped completion ratio as if the stress ask itself had executed.
+    expect(point.executableUsd).not.toBe(point.requestedNotionalUsd);
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
+  it("leaves a request at the issued supply unchanged and certifies it complete", async () => {
+    state.totalSupply = 100_000_000_000n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({
+      requestedRawInput: "100000000000", executedRawInput: "100000000000",
+      executableUsd: 100_000, certification: "exact-complete", reason: null,
+      canonicalAttempt: { outcome: "completed", requestedRawInput: "100000000000" },
+    });
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
+  it("names liquidity rather than the clamp when the vault serves less than its whole issuance", async () => {
+    state.totalSupply = 50_000_000_000n; state.liquidity = 20_000_000_000n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({
+      requestedRawInput: "100000000000", executedRawInput: "20000000000",
+      executableUsd: 20_000, certification: "exact-lower-bound", reason: "erc4626-liquidity-limited",
+      canonicalAttempt: { outcome: "reverted", requestedRawInput: "50000000000" },
+    });
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
+  it("keeps a vault with no issued shares fail-closed instead of certifying a clamped zero", async () => {
+    state.totalSupply = 0n;
+    const point = (await observeErc4626InstantExit(args)).points[0]!;
+    expect(point).toMatchObject({
+      requestedNotionalUsd: 100_000, requestedRawInput: "100000000000",
+      executedRawInput: "0", executableUsd: 0, outputs: [],
+      certification: "diagnostic", reason: "erc4626-request-exceeds-issued-shares",
+    });
+    expect(ExitExecutionRequestPointSchema.safeParse(point).success).toBe(true);
+  });
+  it("fails closed when the issued-supply read is unavailable", async () => {
+    state.totalSupplyReadFails = true;
+    await expect(observeErc4626InstantExit(args)).rejects.toThrow("erc4626-read-unavailable");
+  });
+  it("admits a clamped vault measurement as a sub-request lower bound at the stress notional", async () => {
+    const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
+    state.totalSupply = 50_000_000_000n;
+    const produced = await observeReviewedExitExecutionRoutes({
+      assetId: "fixture-vault", circulatingUsd: 1_000_000, clockSec: CLOCK,
+      reviews: [review], inputReference, outputReference, envelope,
+    });
+    expect(produced.failures).toEqual([]);
+    const observation = produced.observations[0]!;
+    expect(observation).toMatchObject({
+      scoreEligible: true, requestedNotionalUsd: 1_000_000, executableUsd: 50_000, completionRatio: 0.05,
+      executionCertificate: {
+        settlement: { maximumCompletionSec: 0 },
+        points: [{ certification: "exact-lower-bound", reason: "erc4626-request-clamped-to-issued-shares" }],
+      },
+    });
+    const request = selectV9ExitStressRequest(1_000_000, envelope)!;
+    expect(resolveV9ExitCapacityAtRequest(
+      observation.capacityCurve!.map(point => ({ ...point, executionCostBps: point.executionCostBps! })), request,
+    )).toMatchObject({ requestedNotionalUsd: 1_000_000, executableUsd: 50_000, completionRatio: 0.05 });
+    // The measured capacity is the issuance actually burned, not the stress ask.
+    expect(observation.executableUsd).toBeLessThan(observation.requestedNotionalUsd);
   });
   it("records paused or withdrawal-disabled zero completion with a machine reason", async () => {
     state.paused = true;
@@ -395,9 +475,58 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(certificate.points[0]!.certification).toBe("exact-complete");
     const staleOutput = { ...freshOutput, observedAtSec: CLOCK - 72 * 3600 };
     expect((await observeReviewedExitExecutionRoutes({ ...call, outputReference: staleOutput })).failures)
-      .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-stale", responsibility: "producer-failed" });
+      .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-leg-stale:output", responsibility: "producer-failed" });
     const changedOutput = await observeReviewedExitExecutionRoutes({ ...call, outputReference: { ...freshOutput, sourceGenerationId: "different-output-generation" } });
     expect(changedOutput.observations[0]!.executionCertificate!.inputGenerationId).not.toBe(certificate.inputGenerationId);
+  });
+  it("withholds a price leg that cannot stay fresh until evaluation and names the binding leg", async () => {
+    const envelope = loadV9CandidateMethodologyPolicy(CLOCK);
+    const model = envelope.policy.semantic.exit.executionModels["erc4626-instant"]!;
+    const margin = model.priceMaxAgeSec - model.evaluationLagSec!;
+    const call = { assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, reviews: [review], envelope };
+    const atMargin = await observeReviewedExitExecutionRoutes({ ...call,
+      inputReference: { ...inputReference, observedAtSec: CLOCK - margin },
+      outputReference: { ...outputReference, observedAtSec: CLOCK - margin } });
+    expect(atMargin.failures).toEqual([]);
+    expect(atMargin.observations).toHaveLength(1);
+    const staleOutput = await observeReviewedExitExecutionRoutes({ ...call,
+      inputReference, outputReference: { ...outputReference, observedAtSec: CLOCK - margin - 1 } });
+    expect(staleOutput).toMatchObject({
+      observations: [],
+      failures: [{ modelId: "erc4626-instant", reason: "execution-price-leg-stale:output", responsibility: "producer-failed" }],
+    });
+    // A custodian share token cannot re-derive its leg, so a stale share leg binds.
+    const custodianReview = { ...review, producer: { ...review.producer,
+      externalShareToken: {
+        address: "0x0000000000000000000000000000000000000012", codeSha256: sha256Hex("0x6000"),
+        identitySelector: "0x12345678", primaryRedemptionRouteId: "redemption:fixture-vault:stablecoin-redeem",
+        nativeUsdFeed: { address: "0x0000000000000000000000000000000000000013", codeSha256: sha256Hex("0x6000"), maxAgeSec: 3600 },
+      } } } as ExitExecutionModelReview;
+    const staleInput = await observeReviewedExitExecutionRoutes({ ...call, reviews: [custodianReview],
+      inputReference: { ...inputReference, observedAtSec: CLOCK - margin - 1 }, outputReference });
+    expect(staleInput).toMatchObject({
+      observations: [],
+      failures: [{ modelId: "erc4626-instant", reason: "execution-price-leg-stale:input", responsibility: "producer-failed" }],
+    });
+    // A vault without a custodian token re-derives its share leg instead of admitting the stale one.
+    const refreshed = await observeReviewedExitExecutionRoutes({ ...call,
+      inputReference: { ...inputReference, observedAtSec: CLOCK - margin - 1 }, outputReference });
+    expect(refreshed.failures).toEqual([]);
+    expect(refreshed.observations[0]!.executionCertificate!.inputReference).toMatchObject({
+      sourceId: "erc4626-nav:observed-price", observedAtSec: CLOCK,
+    });
+  });
+  it("reads the capture margin from the policy rather than a fixed evaluation lag", async () => {
+    const policy = structuredClone(loadV9CandidateMethodologyPolicy(CLOCK).policy);
+    policy.semantic.exit.executionModels["erc4626-instant"]!.evaluationLagSec = 0;
+    const envelope = loadV9MethodologyPolicy(policy, CLOCK);
+    const result = await observeReviewedExitExecutionRoutes({
+      assetId: "fixture-vault", circulatingUsd: 210_000_000, clockSec: CLOCK, reviews: [review], envelope,
+      inputReference: { ...inputReference, observedAtSec: CLOCK - 10_801 },
+      outputReference: { ...outputReference, observedAtSec: CLOCK - 10_801 },
+    });
+    expect(result.failures).toEqual([]);
+    expect(result.observations).toHaveLength(1);
   });
   it("derives an absent share reference only from reviewed pinned NAV and a fresh underlying price", async () => {
     const cache: StablecoinsCacheLoadOk = {
@@ -417,10 +546,10 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       assetKey: "fixture-vault", deployment: review.identity.deployment, decimals: 6,
       unitValueUsd: 0.99, expectedUnitValueUsd: 0.99, sourceId: "erc4626-nav:coingecko", observedAtSec: CLOCK,
     });
-    for (const observedAt of [CLOCK - 18_001, CLOCK + 1]) {
+    for (const [observedAt, reason] of [[CLOCK - 18_001, "execution-price-leg-stale:output"], [CLOCK + 1, "execution-price-reference-unavailable"]] as const) {
       cache.payload.peggedAssets[1]!.priceObservedAt = observedAt;
       expect((await observeReviewedExitExecutionRoutes(call))).toMatchObject({
-        observations: [], failures: [{ reason: "execution-price-reference-unavailable" }],
+        observations: [], failures: [{ reason }],
       });
     }
     cache.payload.peggedAssets[1]!.priceObservedAt = CLOCK;

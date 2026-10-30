@@ -76,6 +76,11 @@ jobs:
         env:
           PR_BASE_SHA: ${{ github.event.pull_request.base.sha }}
         run: npm run test:pr -- --base=$PR_BASE_SHA --plan-out=.tmp/pr-test-plan.json
+      - name: Check incident review keys
+        # Data check lane, run once per PR instead of per validation shard:
+        # reads only the committed reviews, the migration artefact and the
+        # authoring metadata, so there is no generated input and no network.
+        run: npm run check:incident-review-keys
       - name: Check new-asset evidence packet
         # One invocation on the prepared workspace, never per validation shard:
         # the receipt is bound to the post-addition registry fingerprint, so the

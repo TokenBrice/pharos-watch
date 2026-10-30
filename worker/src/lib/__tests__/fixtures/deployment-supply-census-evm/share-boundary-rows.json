@@ -1,0 +1,47 @@
+{
+  "policy": {
+    "documentationImmaterialSharePct": 1,
+    "strict": "<"
+  },
+  "thresholdShare": 0.01,
+  "documents": {
+    "routeId": "ethereum:fixture",
+    "chainId": "ethereum",
+    "tokenAddress": "0x1111111111111111111111111111111111111111",
+    "readKind": "evm-total-supply",
+    "pin": {
+      "kind": "evm-header",
+      "blockNumber": 100,
+      "blockHash": "0xabababababababababababababababababababababababababababababababab",
+      "blockTimeSec": 1793300178,
+      "runtimeCodeSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "decimals": 6,
+    "totalSupplyRaw": "9999000000",
+    "referencePriceUsd": 1000,
+    "referencePriceObservedAtSec": 1793300178,
+    "supplyUsdUpper": 9999000.000000019,
+    "shareUpper": 0.009999000000000018,
+    "evidenceKind": "upper-bound"
+  },
+  "required": {
+    "routeId": "ethereum:fixture",
+    "chainId": "ethereum",
+    "tokenAddress": "0x1111111111111111111111111111111111111111",
+    "readKind": "evm-total-supply",
+    "pin": {
+      "kind": "evm-header",
+      "blockNumber": 100,
+      "blockHash": "0xabababababababababababababababababababababababababababababababab",
+      "blockTimeSec": 1793300178,
+      "runtimeCodeSha256": "0000000000000000000000000000000000000000000000000000000000000000"
+    },
+    "decimals": 6,
+    "totalSupplyRaw": "10000000000",
+    "referencePriceUsd": 1000,
+    "referencePriceObservedAtSec": 1793300178,
+    "supplyUsdUpper": 10000000.000000019,
+    "shareUpper": 0.01000000000000002,
+    "evidenceKind": "upper-bound"
+  }
+}
