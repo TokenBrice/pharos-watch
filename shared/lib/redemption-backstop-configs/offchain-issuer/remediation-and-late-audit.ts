@@ -69,9 +69,11 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     costModel: {
       ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee"),
       feeBpsMax: 45,
+      // Published as an additive per-redemption charge, not a minimum.
+      feeComponents: [{ currency: "USD", terms: { flatAmount: 100 } }],
     },
     docs: [
-      sourceRefRouteCapacityFees("Kinesis fees", "https://kinesis.money/about-us/fees/"),
+      sourceRefRouteCapacityFees("Kinesis fees (re-read 2026-10-30)", "https://kinesis.money/about-us/fees/"),
       sourceRef(
         "Kinesis physical redemption guide",
         "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver-bullion",
@@ -130,9 +132,11 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
     costModel: {
       ...documentedVariableFee("KAU: 0.45% + $100 + delivery fee; KAG: 0.45% + $100 + delivery fee"),
       feeBpsMax: 45,
+      // Published as an additive per-redemption charge, not a minimum.
+      feeComponents: [{ currency: "USD", terms: { flatAmount: 100 } }],
     },
     docs: [
-      sourceRefRouteCapacityFees("Kinesis fees", "https://kinesis.money/about-us/fees/"),
+      sourceRefRouteCapacityFees("Kinesis fees (re-read 2026-10-30)", "https://kinesis.money/about-us/fees/"),
       sourceRef(
         "Kinesis physical redemption guide",
         "https://support.kinesis.money/hc/en-gb/articles/12439302237085-How-to-redeem-physical-gold-and-silver-bullion",
@@ -280,10 +284,26 @@ export const REMEDIATION_AND_LATE_AUDIT_OFFCHAIN_CONFIGS: Record<string, Redempt
   "usdr-stablr": {
     ...issuerBase,
     ...reviewedDirectRedemptionSupplyFull,
+    routeStatus: "suspended",
+    reviewedAt: "2026-10-30",
+    routeSuspension: {
+      routeId: "redemption:usdr-stablr:offchain-issuer",
+      channel: "StablR direct issuer minting and redemption",
+      suspendedAt: "2026-08-25",
+      reason:
+        "The issuer's August 25, 2026 recovery update confirms EURR and USDR minting and redemption remained temporarily suspended following the May 2026 cybersecurity incident. This is the source-confirmed suspension-as-of date, not a claim about its original onset; no newer issuer reopening evidence was established in the 2026-10-30 review.",
+      reviewer: "Pharos",
+      reviewedAt: "2026-10-30",
+      sources: [{
+        url: "https://stablr.com/insights/notification-update-25-08-2026",
+        quote: "As a precaution, minting and redemption of EURR and USDR remain temporarily suspended.",
+      }],
+    },
     costModel: fixedFee(0, "StablR docs state qualified businesses can onramp and offramp USDR at no additional cost"),
     docs: [
       sourceRefRouteCapacityFees("What is USDR", "https://docs.stablr.com/docs/what-is-eurr-copy"),
       sourceRefRouteCapacity("StablR overview", "https://docs.stablr.com/docs/overview"),
+      sourceRef("StablR recovery update (rendered 25 August 2026; reviewed 2026-10-30)", "https://stablr.com/insights/notification-update-25-08-2026", ["route", "access"]),
     ],
   },
   "pgold-pleasing": {

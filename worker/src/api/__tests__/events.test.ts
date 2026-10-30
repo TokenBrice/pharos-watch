@@ -407,6 +407,30 @@ describe("handleEvents", () => {
     expect(res.status).toBe(400);
   });
 
+  it.each([
+    ["USD", ["depeg-usd", "lifecycle-usd"]],
+    ["EUR", ["depeg-eur"]],
+    // `peggedREAL` and `peggedBRL` both mean BRL; the lifecycle row stores the code.
+    ["BRL", ["depeg-brl", "depeg-brl-alias", "lifecycle-brl"]],
+  ])("matches every stored spelling of the %s peg under one currency filter", async (currency, expectedIds) => {
+    // Legacy depeg rows persisted the DefiLlama peg type; lifecycle rows store
+    // the canonical code. One currency filter must reach both without a rewrite.
+    const db = eventDb([
+      makeRow({ id: 1, event_id: "depeg-usd", source_row_id: "depeg-usd", peg_currency: "peggedUSD" }),
+      makeRow({ id: 2, event_id: "depeg-eur", source_row_id: "depeg-eur", coin_id: "ceur-celo", peg_currency: "peggedEUR" }),
+      makeRow({ id: 3, event_id: "lifecycle-usd", source_row_id: "lifecycle-usd", type: "lifecycle.tracked.frozen", peg_currency: "USD" }),
+      makeRow({ id: 4, event_id: "depeg-brl", source_row_id: "depeg-brl", coin_id: "brla-brla-digital", peg_currency: "peggedBRL" }),
+      makeRow({ id: 5, event_id: "depeg-brl-alias", source_row_id: "depeg-brl-alias", coin_id: "brla-brla-digital", peg_currency: "peggedREAL" }),
+      makeRow({ id: 6, event_id: "lifecycle-brl", source_row_id: "lifecycle-brl", type: "lifecycle.tracked.frozen", peg_currency: "BRL" }),
+    ]);
+    const body = TapeEventsResponseSchema.parse(await readJsonResponse(
+      await handleEvents(db, new URL(`https://x/api/events?pegCurrency=${currency}&includeTotal=true`)),
+      200,
+    ));
+    expect(body.events.map((event) => event.id).sort()).toEqual(expectedIds);
+    expect(body.total).toBe(expectedIds.length);
+  });
+
   it("rejects unknown typed coin, peg-currency, and chain filters before querying", async () => {
     for (const query of [
       "coin=not-a-stablecoin",

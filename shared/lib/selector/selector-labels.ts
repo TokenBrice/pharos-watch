@@ -35,6 +35,12 @@ const SELECTOR_EXCLUSION_REASON_LABELS: Readonly<Record<ExclusionReason, string>
   "coverage-too-thin": "coverage",
 };
 
+/**
+ * Labels for `buildWhyText`, which prints each component's normalized 0-100
+ * index. A transformed slot must therefore be named by its index ("APY
+ * stability"), never by the raw metric it was derived from ("APY variance"):
+ * the printed number is the index, not the observed reading.
+ */
 const SELECTOR_COMPONENT_PROSE_LABELS: Readonly<Record<WeightKey, string>> = {
   safetyOverall: "safety",
   resilience: "Backing",
@@ -43,16 +49,16 @@ const SELECTOR_COMPONENT_PROSE_LABELS: Readonly<Record<WeightKey, string>> = {
   pegStabilityLive: "live peg stability",
   pegScoreNow: "current PegScore",
   decentralization: "Economic Control",
-  dewsInverted: "stress",
+  dewsInverted: "stress resilience",
   bluechip: "bluechip alignment",
-  supplyLog: "supply depth",
+  supplyLog: "market depth score",
   pharosYieldScore: "Pharos Yield Score",
-  excessApy: "excess APY",
-  yieldVariance: "APY variance",
+  excessApy: "net yield score",
+  yieldVariance: "APY stability",
   liquidity: "liquidity",
-  sourceRiskInverted: "source risk",
+  sourceRiskInverted: "source risk resilience",
   effectiveExit: "Exit",
-  liquidityDiversification: "liquidity diversification",
+  liquidityDiversification: "liquidity diversification score",
 };
 
 const SELECTOR_COMPONENT_SCORE_LABELS: Readonly<Record<WeightKey, string>> = {

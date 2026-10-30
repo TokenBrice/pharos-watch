@@ -162,7 +162,8 @@ describe("selector snapshot contract", () => {
       }
     }
     // Captured from the pre-schema hand guards, not calculated by the new parser.
-    expect(sha256Hex(JSON.stringify(sids))).toBe("6a40642f03672f308cc270fd402f183fa6df9738bd9d222620b4daadb5ccb680");
+    // Re-baselined when selector-v2.10/v2.11 joined the retained replay matrix.
+    expect(sha256Hex(JSON.stringify(sids))).toBe("4a07ecf749411896d548af780a929b99910f5c0fd9e3fc9314f3b962f15c6dd9");
   });
 
   it.each([12, 13])("runs the safety gate before projection at JSON depth %i", (depth) => {

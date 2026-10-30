@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { resolveCapacitySemantics } from "../redemption-backstop-confidence";
 import { getRedemptionBackstopConfig, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstops";
-import { resolveDefaultHolderEligibility } from "../redemption-backstop-configs/shared";
+import { resolveDefaultHolderEligibility, resolveRedemptionCostBpsAtNotional } from "../redemption-backstop-configs/shared";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "../../data/coverage-dispositions/redemption-coverage-dispositions";
 
 describe("getRedemptionBackstopConfig", () => {
@@ -76,6 +76,18 @@ describe("getRedemptionBackstopConfig", () => {
     expect(config.v9RouteReviewTerms?.missingScoringFields).toEqual(["capacity", "settlement", "cost"]);
     expect(config.outputAssets).toBeUndefined();
   });
+
+  it.each(["kau-kinesis", "kag-kinesis"])(
+    "prices %s's published 0.45%% + $100 schedule as an additive flat at every cost-scenario notional",
+    (stablecoinId) => {
+      const config = getRedemptionBackstopConfig(stablecoinId)!;
+      // $1,000: $4.50 + $100 = 1,045 bps; $10,000: $45 + $100 = 145 bps;
+      // $1,000,000: $4,500 + $100 = 46 bps.
+      expect(resolveRedemptionCostBpsAtNotional(config.costModel, 1_000)).toBeCloseTo(1_045, 6);
+      expect(resolveRedemptionCostBpsAtNotional(config.costModel, 10_000)).toBeCloseTo(145, 6);
+      expect(resolveRedemptionCostBpsAtNotional(config.costModel, 1_000_000)).toBeCloseTo(46, 6);
+    },
+  );
 
   it("records only YieldFi's ordinary yUSD rail as suspended without renewing historical terms", () => {
     const config = getRedemptionBackstopConfig("yusd-yieldfi")!;

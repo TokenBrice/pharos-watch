@@ -501,6 +501,39 @@ describe("derivePegAnalyticsSnapshot", () => {
     );
   });
 
+  it("anchors a fuzzy curated launchDate at the latest day of its stated period", async () => {
+    const now = Math.floor(Date.UTC(2026, 9, 30) / 1000);
+    const clock = vi.spyOn(Date, "now").mockReturnValue(now * 1000);
+    const real = await vi.importActual<typeof PegScoreModule>("@shared/lib/peg-score");
+    const coin = STABLECOINS_MOCK[0] as { launchDate?: string };
+    const launchDate = coin.launchDate;
+    coin.launchDate = "2023-06";
+    // Late supply/price coverage must not replace the curated launch month.
+    vi.mocked(getFirstSeenDates).mockResolvedValue(new Map([["usdt-tether", 1_743_120_000]]));
+    try {
+      await vi.mocked(coinTrackingStart).withImplementation(real.coinTrackingStart, async () => {
+        const snapshot = await derivePegAnalyticsSnapshot(db, {
+          peggedAssets: [makeStablecoin({ id: "usdt-tether", price: 1 })],
+          methodologyAsOf: now - 60,
+        });
+        const launchEndSec = Date.UTC(2023, 5, 30) / 1000;
+        expect(vi.mocked(coinTrackingStart)).toHaveBeenCalledWith(
+          expect.any(Array),
+          expect.any(Number),
+          launchEndSec,
+        );
+        expect(snapshot.pegDataById.get("usdt-tether")?.historyCoverage).toMatchObject({
+          startedAt: launchEndSec,
+          source: "asset-age",
+          status: "assumed",
+        });
+      });
+    } finally {
+      coin.launchDate = launchDate;
+      clock.mockRestore();
+    }
+  });
+
   it("uses an audited replay coverage start instead of pre-coverage asset age", async () => {
     const coin = STABLECOINS_MOCK[0] as typeof STABLECOINS_MOCK[0] & {
       pegScoreCoverage?: { startDate: string };

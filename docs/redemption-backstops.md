@@ -290,6 +290,8 @@ DEX observations, separately identified issuer routes and execution certificates
 
 **EURR, reviewed October 7, 2026.** The StablR direct issuer channel is source-confirmed suspended **as of June 24, 2026**. The rendered publisher date, not the URL's `2025` suffix, owns that date; it is an as-of boundary, not an invented incident onset. Missing or severe market quotes do not reopen the selected channel. Other routes and lifecycle retain their separate evidence.
 
+**USDR, reviewed October 30, 2026.** The StablR direct issuer channel is source-confirmed suspended **as of August 25, 2026**, when the issuer's recovery update still reported minting and redemption of EURR and USDR temporarily suspended after the May 2026 cybersecurity incident. That date is the notice's as-of boundary, not an inferred onset; the separately reviewed EURR channel keeps its own record.
+
 
 ### Output-key identity contract
 

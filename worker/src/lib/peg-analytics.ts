@@ -8,6 +8,7 @@ import {
   PEG_SCORE_LOOKBACK_SEC,
 } from "@shared/lib/peg-score";
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
+import { fuzzyDateRange } from "@shared/lib/classification/resolve-implementation-launch-date";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import type { DepegEvent, StablecoinData } from "@shared/types/market";
@@ -38,9 +39,26 @@ export interface PegAnalyticsSnapshot {
   pegDataById: Map<string, PegSummaryCoin>;
 }
 
-function parseLaunchDateSec(dateText: string | undefined): number | null {
+/**
+ * Audited replay coverage is a strict day-precision contract; an invalid value
+ * is unavailable rather than falling back to a fuzzy interpretation.
+ */
+function parseAuditedCoverageStartSec(dateText: string | undefined): number | null {
   if (!isValidIsoDateOnly(dateText)) return null;
   const parsedSec = parseIsoDateOrUtcInstantSec(dateText);
+  return Number.isFinite(parsedSec) ? parsedSec : null;
+}
+
+/**
+ * Curated launch dates may be fuzzy (`YYYY`, `YYYY-MM`, `YYYY-Qn`, `YYYY-Hn`).
+ * Anchor at the latest day of the stated period so the inferred history window
+ * is conservative rather than claiming months the source does not establish.
+ */
+function parseLaunchDateSec(dateText: string | undefined): number | null {
+  if (!dateText) return null;
+  const range = fuzzyDateRange(dateText);
+  if (!range) return null;
+  const parsedSec = parseIsoDateOrUtcInstantSec(range.end);
   return Number.isFinite(parsedSec) ? parsedSec : null;
 }
 
@@ -52,7 +70,7 @@ function resolveTrackingAnchor(
   firstObservedAtSec: number | undefined,
   fourYearsAgoSec: number,
 ): { trackingStart: number | null; coverage: PegHistoryCoverage | null } {
-  const auditedCoverageStart = parseLaunchDateSec(meta.pegScoreCoverage?.startDate);
+  const auditedCoverageStart = parseAuditedCoverageStartSec(meta.pegScoreCoverage?.startDate);
   const launchStart = parseLaunchDateSec(meta.launchDate);
   const anchor = auditedCoverageStart ?? launchStart ?? firstObservedAtSec ?? null;
   const trackingStart = coinTrackingStart(events, fourYearsAgoSec, anchor);

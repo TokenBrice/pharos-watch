@@ -185,10 +185,15 @@ export function formatDepegResolvedLine(e: DepegResolved): string {
   return `${headline}\nOff peg for ${duration} · worst point ${formatBpsPercent(e.peakDeviationBps)} from peg${evidence}${formatContextLine(e.contextLine)}`;
 }
 
+/**
+ * `previousDeviationBps` is the prior dispatch run's observed peak, not the
+ * deviation this chat was last alerted at, so the line names that observation
+ * instead of claiming alert provenance the dispatcher does not track.
+ */
 export function formatDepegWorseningLine(e: DepegWorsening): string {
   const glyph = DEPEG_DIRECTION_GLYPH[e.direction];
   const peg = formatPrice(e.pegReference, e.priceCurrency, 2);
-  return `${glyph} <b>${escapeHtml(e.symbol)}</b> depeg deepened to ${depegOffsetPhrase(e.currentDeviationBps, e.direction, peg)} (${formatPrice(e.price, e.priceCurrency)})\nWas ${formatBpsPercent(e.previousDeviationBps)} at the last alert${formatContextLine(e.contextLine)}`;
+  return `${glyph} <b>${escapeHtml(e.symbol)}</b> depeg deepened to ${depegOffsetPhrase(e.currentDeviationBps, e.direction, peg)} (${formatPrice(e.price, e.priceCurrency)})\nWas ${formatBpsPercent(e.previousDeviationBps)} at the previous check${formatContextLine(e.contextLine)}`;
 }
 
 /** Plain-language gloss for each Safety Score pillar, shared by alerts and /why. */

@@ -1,3 +1,4 @@
+import { getPegTaxonomyByCurrency } from "@shared/lib/peg-taxonomy";
 import { batchExecute, executeAtomicBatch } from "./db";
 import { D1_BATCH_SIZE } from "./constants";
 import { getCache, setCache } from "./db-cache";
@@ -208,6 +209,25 @@ export interface TapeEventQueryResult {
   total: number | null;
 }
 
+/**
+ * `tape_events.peg_currency` historically stores either the canonical
+ * `PegCurrency` (lifecycle/cemetery rows) or the source's DefiLlama peg type
+ * (depeg rows written before the projectors normalized their input). A currency
+ * filter must match every spelling the taxonomy admits for the requested
+ * currency so stored rows stay reachable without rewriting them.
+ */
+function pegCurrencyFilterValues(currency: string): string[] {
+  const entry = getPegTaxonomyByCurrency(currency);
+  if (!entry) return [currency];
+  const values = [
+    entry.currency,
+    ...(entry.currencyAliases ?? []),
+    ...(entry.canonicalPegType ? [entry.canonicalPegType] : []),
+    ...(entry.pegTypeAliases ?? []),
+  ];
+  return [...new Set(values)];
+}
+
 function buildWhereClause(
   filters: TapeEventQueryFilters,
   cursor: { ts: number; id: number } | null,
@@ -233,8 +253,9 @@ function buildWhereClause(
     bindings.push(...filters.coinIds);
   }
   if (filters.pegCurrency) {
-    conditions.push("peg_currency = ?");
-    bindings.push(filters.pegCurrency);
+    const pegValues = pegCurrencyFilterValues(filters.pegCurrency);
+    conditions.push(`peg_currency IN (${pegValues.map(() => "?").join(", ")})`);
+    bindings.push(...pegValues);
   }
   if (filters.chain) {
     conditions.push("chain = ?");

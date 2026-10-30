@@ -722,10 +722,60 @@ describe("depeg OG handler aggregation", () => {
     expect((await loadStressSignalCurrentRows(db, now, options)).results).toEqual([current]);
     expect((await loadStressSignalCurrentRowForCoin(db, current.stablecoin_id, now, options))?.band).toBe("WARNING");
     const aggregate = await captureDepegData(db);
-    expect(aggregate.dewsDistribution).toEqual({ danger: 0, alert: 0, warning: 1, normal: 0 });
+    expect(aggregate.dewsDistribution).toEqual({ danger: 0, alert: 0, warning: 1, watch: 0, normal: 0 });
     await handleOg(db, "/api/og/stablecoin/usdt-tether");
     const element = vi.mocked(satoriStandalone).mock.calls[vi.mocked(satoriStandalone).mock.calls.length - 1]?.[0] as React.ReactElement<{ data: StablecoinCardData }>;
     expect(element.props.data.dewsBand).toBe("WARNING");
+  });
+
+  it("keeps WATCH as its own published DEWS band instead of counting it NORMAL", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const completedAt = now - 60;
+    // One published row per canonical band (docs/dews.md#threat-bands).
+    const rows = [
+      { stablecoin_id: "usdt-tether", score: 88, band: "DANGER", signals_json: "{}", computed_at: completedAt },
+      { stablecoin_id: "usdc-circle", score: 64, band: "WARNING", signals_json: "{}", computed_at: completedAt },
+      { stablecoin_id: "dai-makerdao", score: 40, band: "ALERT", signals_json: "{}", computed_at: completedAt },
+      { stablecoin_id: "usds-sky", score: 22, band: "WATCH", signals_json: "{}", computed_at: completedAt },
+      { stablecoin_id: "frax-frax", score: 4, band: "CALM", signals_json: "{}", computed_at: completedAt },
+    ];
+    const pointer = {
+      key: "dews:published-generation",
+      updated_at: completedAt,
+      value: JSON.stringify({
+        updatedAt: completedAt,
+        source: "compute-dews",
+        publishStatus: "published",
+        coverageVersion: 2,
+        expectedRowCount: rows.length,
+        stablecoinIdsDigest: buildDewsStablecoinIdsDigest(rows.map((row) => row.stablecoin_id)),
+      }),
+    };
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          pointer,
+          {
+            key: "stablecoins",
+            value: JSON.stringify({
+              peggedAssets: [makeAsset({ id: "usds-sky", priceObservedAt: now - 30, priceUpdatedAt: now - 30 })],
+            }),
+            updated_at: now - 30,
+          },
+        ],
+      },
+      { match: "pharos:stress-signals:latest-all", rows },
+      { match: "stability_index_samples", rows: [], first: null },
+      { match: "peak_deviation_bps", rows: [] },
+      { match: "ended_at IS NOT NULL", rows: [] },
+      { match: "COUNT(*) as count", rows: [], first: { count: 0 } },
+    ]);
+
+    const data = await captureDepegData(db);
+    expect(data.dewsDistribution).toEqual({ danger: 1, alert: 1, warning: 1, watch: 1, normal: 1 });
+    const markup = renderToStaticMarkup(<DepegCard data={data} />);
+    expect(markup).toContain("WATCH");
   });
 
   it("uses fresh live peg observations independently of the DEWS and incident cohorts", async () => {
@@ -1143,7 +1193,7 @@ describe("og cards render through satori", () => {
         psiBand: "BEDROCK",
         coinsAtPeg: 380,
         totalCoins: 401,
-        dewsDistribution: { danger: 2, alert: 5, warning: 12, normal: 382 },
+        dewsDistribution: { danger: 2, alert: 5, warning: 12, watch: 34, normal: 348 },
         activeDepegs: [
           { symbol: "XAUM", name: "Matrixdock Gold", deviationBps: -312 },
           { symbol: "EURS", name: "STASIS EURO", deviationBps: 145 },

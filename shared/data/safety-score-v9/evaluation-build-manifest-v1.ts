@@ -374,7 +374,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/remediation-and-late-audit.ts",
-      "sha256": "a5e9db822fd4d833851a89fd257d779f6febe4b4a4eac2c01de9d04b2e132815"
+      "sha256": "ae558cf205f36924f03e8f167254fe10be073d92d5cb766f3fa96a2a239a25bb"
     },
     {
       "path": "shared/lib/redemption-backstop-configs/offchain-issuer/shared.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "a3868f7b3c8f100b33e3d62de09665d2eb43d5a0c52ddffa9007de046b17a3e1"
+  "digest": "43f9853d7a6f901e7ba3a2d4d0e95baa3e681c8268fdba5a6d491934bcab6b24"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

@@ -188,8 +188,47 @@ describe("dispatchTelegramAlerts", () => {
 
     expect(metadata.eventsDetected.depegWorsening).toBe(1);
     expect(telegramDeliveryTranscript[0]?.html).toContain("depeg deepened to 59.4% below $1.00 ($0.4060)");
-    expect(telegramDeliveryTranscript[0]?.html).toContain("Was 38.0% at the last alert");
+    expect(telegramDeliveryTranscript[0]?.html).toContain("Was 38.0% at the previous check");
     expect(telegramDeliveryTranscript[0]?.html).not.toContain("$0.9884");
+  });
+
+  it("does not call an unalerted intermediate peak the chat's last alert", async () => {
+    const harness = createDispatchHarness();
+    seedDispatchSnapshots(harness);
+    harness.seed({
+      depegs: [{
+        stablecoinId: "usdc-circle", symbol: "USDC", direction: "below",
+        peakDeviationBps: 510, startPrice: 0.949, peakPrice: 0.949,
+      }],
+      subscribers: [{ chatId: "12345" }],
+      subscriptions: [{
+        chatId: "12345", stablecoinId: "usdc-circle", alerts: { depeg: true }, depegWorseningBpsStep: 500,
+      }],
+    });
+
+    // 5.1% opens the 500 bps bucket: the chat is alerted at 5.1%.
+    await dispatchTelegramAlerts(harness.db, "bot-token");
+    expect(telegramDeliveryTranscript).toHaveLength(1);
+    expect(telegramDeliveryTranscript[0]?.html).toContain("5.1% below $1.00");
+
+    // 9.9% stays inside the same bucket: not alerted, but the snapshot baseline advances.
+    vi.advanceTimersByTime(300_000);
+    harness.sqlite
+      .prepare("UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE stablecoin_id = ?")
+      .run(990, 0.901, "usdc-circle");
+    await dispatchTelegramAlerts(harness.db, "bot-token");
+    expect(telegramDeliveryTranscript).toHaveLength(1);
+
+    // 10.1% crosses the next bucket. 9.9% was observed but never sent to this
+    // chat, so the message must not present it as the last alerted deviation.
+    vi.advanceTimersByTime(300_000);
+    harness.sqlite
+      .prepare("UPDATE depeg_events SET peak_deviation_bps = ?, peak_price = ? WHERE stablecoin_id = ?")
+      .run(1010, 0.899, "usdc-circle");
+    await dispatchTelegramAlerts(harness.db, "bot-token");
+    expect(telegramDeliveryTranscript).toHaveLength(2);
+    expect(telegramDeliveryTranscript[1]?.html).toContain("depeg deepened to 10.1% below $1.00");
+    expect(telegramDeliveryTranscript[1]?.html).not.toContain("last alert");
   });
 
   it("suppresses fresh global depeg alerts below the configured bps step", async () => {
