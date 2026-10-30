@@ -111,6 +111,20 @@ export interface DeploymentSupplyCensusAssemblyInput {
     }
   >;
   readonly assetIds: readonly string[];
+  /**
+   * The instant this run observes the chains. Pins resolve at or before it, pin
+   * and price age are measured against it, and every packet and the generation
+   * carry it as `observedAtSec`.
+   *
+   * It is not the fixed-input clock: the census runs in the 30-minute
+   * attribution slot, which is later than the prepare clock the source carries,
+   * and a finalized Solana snapshot cannot be rewound to that earlier instant.
+   * Ageing a run-time snapshot against the prepare clock rejected every non-EVM
+   * leg `future-dated-pin` (2026-10-30 first cycle). The bound is aged by the
+   * consumer against the clock of the publication that reads it, which is later
+   * than this instant (bound window 5,400 s).
+   */
+  readonly observationClockSec: number;
   readonly chainRpcs: Map<string, ChainRpcConfig>;
   readonly dwellirNative?: DwellirNativeCapability;
   readonly signal?: AbortSignal;
@@ -687,7 +701,10 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
 ): Promise<SafetyScoreV9DeploymentSupplyCensusGeneration> {
   throwIfAborted(input.signal);
   const fixedInput = input.fixedInput;
-  const clockSec = fixedInput.clockSec;
+  const observationClockSec = input.observationClockSec;
+  if (!Number.isSafeInteger(observationClockSec) || observationClockSec < 0) {
+    throw new Error("Deployment supply census observation clock must be a nonnegative integer");
+  }
   const metaById = input.metaById ?? ACTIVE_META_BY_ID;
   const assetIds = [...new Set(input.assetIds)].sort(compareCodeUnits);
   if (assetIds.length > DEPLOYMENT_SUPPLY_CENSUS_MAX_ASSETS) {
@@ -767,7 +784,7 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
       read = await observeDeploymentSupplyCensusNonEvmChain({
         chainId,
         targets,
-        scoringClockSec: clockSec,
+        scoringClockSec: observationClockSec,
         chainRpcs: input.chainRpcs,
         ...(input.dwellirNative === undefined ? {} : { dwellirNative: input.dwellirNative }),
         ...(input.signal === undefined ? {} : { signal: input.signal }),
@@ -795,7 +812,7 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
       }
       const entry = accumulator.entries.find(candidate => candidate.routeId === target.routeId);
       if (entry === undefined || accumulator.aggregateSupplyUsd === null) continue;
-      const priceIssue = priceRejection(clockSec, accumulator.referencePrice);
+      const priceIssue = priceRejection(observationClockSec, accumulator.referencePrice);
       if (priceIssue !== null || accumulator.referencePrice === null) {
         addRejection(accumulator.rejected, target.routeId, priceIssue ?? "reference-price-unavailable");
         continue;
@@ -812,9 +829,11 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
   const evmChainIds = new Set<string>();
   const evmTargetsByAssetId = new Map<string, DeploymentSupplyCensusReadTarget[]>();
   for (const accumulator of readable) {
-    // A failed non-EVM leg already rejects this packet; do not spend EVM
-    // budget on siblings whose partition can never be admitted.
-    if (accumulator.rejected.size > 0) continue;
+    // Legs are independent: a failed non-EVM read must not suppress the EVM
+    // half. The packet is still rejected wholesale (a partial partition proves
+    // nothing), but `rejected[]` names every failed leg instead of only the
+    // first, and an EVM-only defect stays visible on assets that also carry a
+    // Solana or Move route.
     const evmEntries = accumulator.entries.filter(entry => entry.readKind === "evm-total-supply");
     if (evmEntries.length === 0) continue;
     evmTargetsByAssetId.set(accumulator.assetId, evmEntries.map(entry => entry.target));
@@ -826,7 +845,7 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
     try {
       pins = await resolveDeploymentSupplyCensusEvmPins({
         chainIds: [...evmChainIds].sort(compareCodeUnits),
-        scoringClockSec: clockSec,
+        scoringClockSec: observationClockSec,
         chainRpcs: input.chainRpcs,
         ...(input.signal === undefined ? {} : { signal: input.signal }),
         ...(input.deadlineMs === undefined ? {} : { deadlineMs: input.deadlineMs }),
@@ -846,7 +865,7 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
     try {
       census = await observeDeploymentSupplyCensusEvm({
         targets: evmTargets,
-        scoringClockSec: clockSec,
+        scoringClockSec: observationClockSec,
         aggregateSupplyUsd: accumulator.aggregateSupplyUsd!,
         chainSupplyUsdByChainId: accumulator.chainSupplyUsdByChainId,
         referencePrices: new Map(evmTargets.map(target => [target.routeId, accumulator.referencePrice])),
@@ -875,7 +894,7 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
 
   const censusById: SafetyScoreV9DeploymentSupplyCensusById = {};
   for (const assetId of [...accumulators.keys()].sort(compareCodeUnits)) {
-    censusById[assetId] = assemblePacket(accumulators.get(assetId)!, clockSec);
+    censusById[assetId] = assemblePacket(accumulators.get(assetId)!, observationClockSec);
   }
 
   return createSafetyScoreV9DeploymentSupplyCensusGeneration({
@@ -883,7 +902,7 @@ export async function observeSafetyScoreV9DeploymentSupplyCensusGeneration(
     kind: "safety-score-v9-deployment-supply-census-generation",
     sourceBaseInputGenerationId: fixedInput.baseInputGenerationId,
     registryFingerprint: fixedInput.registryFingerprint,
-    capturedAtSec: clockSec,
+    capturedAtSec: observationClockSec,
     censusById,
   });
 }

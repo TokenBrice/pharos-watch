@@ -248,9 +248,19 @@ export async function resolveDeploymentSupplyCensusEvmPins(
         const blockNumber = await dependencies.resolveClosestBlockAtOrBeforeTimestamp(
           chainId, input.scoringClockSec, { blockTimestampByNumber: new Map() }, options,
         );
-        const header = blockNumber === null
-          ? null
+        // A bracketing search can fail for reasons that are not the clock's: a
+        // non-archive endpoint prunes the exponential walk-back, a probe is
+        // rate-limited, or the probe budget runs out (fraxtal at the 2026-10-30
+        // first cycle). The chain's own `finalized` header is a real, hashed,
+        // timestamped block the chain guarantees is behind the tip, so use it
+        // when the search cannot bracket. `anchorRejection` still refuses a
+        // future-dated or aged header. Never fall back to `latest`.
+        let header = blockNumber === null
+          ? await dependencies.fetchEvmBlockHeader(chainId, "finalized", options)
           : await dependencies.fetchEvmBlockHeader(chainId, blockNumber, options);
+        if (header === null && blockNumber !== null) {
+          header = await dependencies.fetchEvmBlockHeader(chainId, "finalized", options);
+        }
         if (timeout.isTimedOut() || header === null) return;
         const anchor: DeploymentSupplyCensusEvmChainAnchor = {
           blockNumber: header.number, blockHash: header.hash, blockTimeSec: header.timestamp,
