@@ -34,7 +34,7 @@
   },
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
-    "summary": "sGHO share-to-GHO conversion uses a yield index accrued at the target rate set through YIELD_MANAGER_ROLE, rather than a balance-derived ERC-4626 ratio. At Ethereum block 26097120, targetRate() was 450 basis points, and the Aave Level-1 Executor retained DEFAULT_ADMIN_ROLE controlling that role. D11 therefore identifies a wrapper-local discretionary price-relevant input. Parent GHO collateral-oracle exposure remains separate; no external feed or liquidation engine is inferred for the wrapper.",
+    "summary": "sGHO share-to-GHO conversion uses a yield index accrued at the target rate set through YIELD_MANAGER_ROLE, rather than a balance-derived ERC-4626 ratio. At Ethereum block 26097120, targetRate() was 450 basis points, set via the sGhoSteward, callable only by the Risk Council Safe. D11 therefore identifies a wrapper-local discretionary price-relevant input. Parent GHO collateral-oracle exposure remains separate; no external feed or liquidation engine is inferred for the wrapper.",
     "role": "coin-price-feed",
     "branchModel": "single-path",
     "branchApplicability": {

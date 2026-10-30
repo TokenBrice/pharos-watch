@@ -45,15 +45,23 @@
         "directMintAbility": "cap-limited",
         "canRaiseCap": false,
         "modulesOrGuardsStatus": "not-applicable",
-        "capDescription": "Global debt limit 8,723,000 USDX (8723000000000 usdx base units, conversion factor 6) plus 10 per-collateral debt limits and liquidation ratios enforced by x/cdp.",
+        "capDescription": "Global debt limit 0 USDX and 0 on all 10 collateral types since proposal #222 executed 2026-10-05, so no new CDP issuance; liquidation ratios enforced by x/cdp.",
         "failureDomainKeys": [
           "module:kava:cdp"
         ],
         "observedAt": "2026-10-05",
-        "observedBlock": 22881000,
+        "observedBlock": 22888000,
         "sources": [
           {
-            "label": "Height-22881000 CDP params (matching grpc height metadata)",
+            "label": "Height-22888000 CDP params (zero debt limits after proposal #222)",
+            "url": "https://api.data.kava.io/kava/cdp/v1beta1/params"
+          },
+          {
+            "label": "Kava gov proposal #222 (passed, voting end 2026-10-05T17:14:52Z)",
+            "url": "https://api.data.kava.io/cosmos/gov/v1/proposals/222"
+          },
+          {
+            "label": "Height-22881000 CDP params (pre-#222, matching grpc height metadata)",
             "url": "https://kava-api.polkachu.com/kava/cdp/v1beta1/params"
           },
           {
@@ -73,7 +81,7 @@
             "url": "https://docs.kava.io/docs/cosmos/modules/cdp/"
           }
         ],
-        "evidence": "At Kava height 22881000, block time 2026-10-05T06:34:48.917398596Z, x-cosmos-block-height queries returned matching grpc-metadata-x-cosmos-block-height. CDP module account kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp has minter/burner permissions; debt_param denom usdx has conversion factor 6, GlobalDebtLimit is 8723000000000 base units, and 10 collateral parameter sets impose separate debt ceilings and collateralization ratios. Running source commit 686d591443a1de7c5566bc7d92faf5b56743f25f checks collateral and debt limits before AddCdp/AddPrincipal minting. Bound deployment is the authored native bank rail kava:usdx, not the Osmosis receipt."
+        "evidence": "At Kava height 22881000, block time 2026-10-05T06:34:48.917398596Z, x-cosmos-block-height queries returned matching grpc-metadata-x-cosmos-block-height. CDP module account kava1wq9ts6l7atfn45ryxrtg4a2gwegsh3xha9e6rp has minter/burner permissions; debt_param denom usdx has conversion factor 6, GlobalDebtLimit is 8723000000000 base units, and 10 collateral parameter sets impose separate debt ceilings and collateralization ratios. Running source commit 686d591443a1de7c5566bc7d92faf5b56743f25f checks collateral and debt limits before AddCdp/AddPrincipal minting. At height 22888000, 27 minutes after proposal #222's voting end, GlobalDebtLimit and all 10 collateral debt limits read 0 while the liquidation ratios were retained. Bound deployment is the authored native bank rail kava:usdx, not the Osmosis receipt."
       },
       {
         "chain": "kava",

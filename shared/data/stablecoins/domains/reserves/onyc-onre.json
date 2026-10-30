@@ -13,7 +13,7 @@
         "liquidity",
         "custody"
       ],
-      "liquidityHorizon": "one-day"
+      "liquidityHorizon": "unknown"
     },
     {
       "sourceKey": "onre-holdings-csv:usdg",

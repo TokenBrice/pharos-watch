@@ -130,7 +130,7 @@
             "url": "https://raw.githubusercontent.com/m0-foundation/solana-m-extensions/b69d1f8d8be34f34aaac4d1060cec37f81dba0af/programs/m_ext/src/instructions/wrap.rs"
           }
         ],
-        "evidence": "At finalized Solana slot 439716935, USDK mintAuthority=C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 was the off-curve PDA derived from extension program extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw with seeds=[\"mint_authority\"]. The official wrap instruction requires a configured wrap authority and transfers M into the extension vault before PDA minting. The extension global account and Token-2022 metadata identify the same bare EOA as administrator/extension authority; USDK freeze authority 7Ahg145ZRP5LASPjAphRcHoR1UgvLjbZR5MP1j3dPpFr is null/uninitialized, and metadataPointer, confidentialTransfer, and transferHook authorities point to the same EOA."
+        "evidence": "At finalized Solana slot 439716935, USDK mintAuthority=C9eLDmptrnMxFb5QB3J4QuRFYjZFba7393ncm9cM7ot7 was the off-curve PDA derived from extension program extaykYu5AQcDm3qZAbiDN3yp6skqn6Nssj7veUUGZw with seeds=[\"mint_authority\"]. The official wrap instruction requires a configured wrap authority and transfers M into the extension vault before PDA minting. The extension global account and Token-2022 metadata identify the same bare EOA as administrator/extension authority; USDK freeze authority 7Ahg145ZRP5LASPjAphRcHoR1UgvLjbZR5MP1j3dPpFr is set, and metadataPointer, confidentialTransfer, and transferHook authorities point to the same EOA."
       },
       {
         "id": "usdk-solana-portal",

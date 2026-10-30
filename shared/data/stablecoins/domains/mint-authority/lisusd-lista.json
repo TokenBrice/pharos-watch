@@ -4,7 +4,7 @@
     "mintPath": "user-collateralized-governed",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "lisUSD uses Maker-style wards() authorization with roles 1 = minter, 2 = manager, and 3 = admin. The 24-hour timelock is the hardcoded DEFAULT_ADMIN and owns the ProxyAdmin for the token and HayJoin; onlyAdmin also admits wards with role 3, whose complete membership is not established by the historical probe list. The manager Safe remains 3-of-6, and its role 2 can set the supply cap and update the domain separator, but cannot mint.",
+    "summary": "lisUSD uses Maker-style wards(): role 1 mints, 2 manages, 3 admins. The CDP wind-down sets Vat.Line() = 0 and whitelists deposits, so new borrowing reverts and HayJoin (role 1) mints no new CDP debt; the 24h timelock is DEFAULT_ADMIN, a role-1 ward, and owns the ProxyAdmin. The 3-of-6 manager Safe (role 2) sets only the supply cap and domain separator, never minting. onlyAdmin also admits role-3 wards of unverified membership.",
     "mintIncidents": [
       {
         "date": "2022-12-02",

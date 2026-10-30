@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-adverse",
     "confidence": "verified",
-    "summary": "GGBR is minted exclusively through the GoldfishTokenFactory contract (MINT_OPERATOR_ROLE + DEFAULT_ADMIN held by a single issuer EOA). The GoldfishToken contract itself is administered by a 2-of-3 Safe that controls setMinterContract() and UUPS upgrades. Redemptions burn through the same factory.",
+    "summary": "GGBR is minted exclusively through the GoldfishTokenFactory (MINT_OPERATOR_ROLE + DEFAULT_ADMIN held by a single issuer EOA). Token DEFAULT_ADMIN and SUPPLY_MANAGER roles moved to a TimelockController (172800s delay) proposed by the 2-of-3 Safe. Redemptions burn through the same factory.",
     "upgradeability": {
       "model": "uups",
       "proxyAddresses": [
@@ -14,20 +14,21 @@
         "0x35fef16fea897dd6ca2e28041dbfb8d56e2978d6"
       ],
       "adminAddresses": [
-        "0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
+        "0xe7a2eb2ad0a168ec287c5dec64b333adafa587c5"
       ],
       "canChangeMintLogic": true,
-      "controlRef": "GoldfishToken admin Safe — upgrade and minterContract rotation",
-      "observedAt": "2026-10-01",
-      "observedBlock": 26095795,
+      "delaySec": 172800,
+      "controlRef": "GoldfishToken TimelockController — admin and cap",
+      "observedAt": "2026-10-19",
+      "observedBlock": 26224768,
       "sources": [
         {
           "label": "GoldfishToken implementation source",
           "url": "https://eth.blockscout.com/address/0x35fef16fea897dd6ca2e28041dbfb8d56e2978d6"
         },
         {
-          "label": "GoldfishToken admin Safe",
-          "url": "https://etherscan.io/address/0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
+          "label": "GoldfishToken DEFAULT_ADMIN TimelockController",
+          "url": "https://eth.blockscout.com/address/0xe7a2eb2ad0a168ec287c5dec64b333adafa587c5"
         }
       ]
     },
@@ -38,14 +39,14 @@
         "authorityType": "eoa",
         "directMintAbility": "direct",
         "canRaiseCap": "unknown",
-        "capDescription": "At Ethereum block 26,097,123, maxSupply is 1,000,000,000 GGBR. Both ordinary issuance and staking-reward issuance enter the token mint() guard. The factory EOA has factory mint and upgrade roles but neither the token SUPPLY_MANAGER_ROLE nor token DEFAULT_ADMIN_ROLE. Its broad indirect cap capability remains unknown; no protective cap credit is inferred. The token Safe holds SUPPLY_MANAGER_ROLE and can increase the ceiling without posting more backing. The asset-wide economic cap remains unbounded.",
+        "capDescription": "At Ethereum block 26,097,123, maxSupply is 1,000,000,000 GGBR. Both ordinary issuance and staking-reward issuance enter the token mint() guard. The factory EOA has factory mint and upgrade roles but neither the token SUPPLY_MANAGER_ROLE nor token DEFAULT_ADMIN_ROLE. Its broad indirect cap capability remains unknown; no protective cap credit is inferred. The token Safe can no longer raise the ceiling; SUPPLY_MANAGER_ROLE moved to the timelock. The asset-wide economic cap remains unbounded.",
         "bypassSurfaces": [
           "Factory DEFAULT_ADMIN_ROLE can upgrade its UUPS minting implementation.",
           "Factory mintStakingRewards accepts the configured StakeMyGold contract in addition to the issuer MINT_OPERATOR_ROLE path."
         ],
         "observedAt": "2026-10-01",
         "observedBlock": 26095795,
-        "evidence": "At Ethereum block 26,095,795 on 2026-10-01, minterContract() returns factory 0x765c0af86952604f1576ca3b5beb75420d75ff62, whose EIP-1967 implementation is 0x05a106559954a372baad1af06fe644f8c4796ed1. hasRole(MINT_OPERATOR_ROLE, 0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4) and hasRole(DEFAULT_ADMIN_ROLE, the same EOA) return true. Verified factory code allows its DEFAULT_ADMIN to authorize UUPS upgrades and exposes an additional mintStakingRewards path through stakingContract 0xd0a21f885e53f53b0947f8699677c09dae32523b. The EOA does not hold the token's SUPPLY_MANAGER_ROLE; cap changes require that role, which the recorded token Safe holds. These calls do not enumerate all role holders.",
+        "evidence": "At Ethereum block 26,095,795 on 2026-10-01, minterContract() returns factory 0x765c0af86952604f1576ca3b5beb75420d75ff62, whose EIP-1967 implementation is 0x05a106559954a372baad1af06fe644f8c4796ed1. hasRole(MINT_OPERATOR_ROLE, 0xd22d50e306b439015a5b01be65bb8e7ebc0bc2f4) and hasRole(DEFAULT_ADMIN_ROLE, the same EOA) return true. Verified factory code allows its DEFAULT_ADMIN to authorize UUPS upgrades and exposes an additional mintStakingRewards path through stakingContract 0xd0a21f885e53f53b0947f8699677c09dae32523b. The EOA does not hold the token's SUPPLY_MANAGER_ROLE; cap changes require that role, which the timelock holds. These calls do not enumerate all role holders.",
         "sources": [
           {
             "label": "GoldfishToken on Etherscan",
@@ -64,43 +65,26 @@
         ]
       },
       {
-        "label": "GoldfishToken admin Safe — upgrade and minterContract rotation",
+        "label": "GoldfishToken TimelockController — admin and cap",
         "role": "proxy-admin",
-        "authorityType": "safe",
+        "authorityType": "timelock",
         "directMintAbility": "can-authorize",
         "canRaiseCap": true,
-        "capDescription": "The token Safe holds SUPPLY_MANAGER_ROLE and may increase maxSupply through setMaxSupply; the current 1,000,000,000-GGBR technical ceiling is therefore mutable. Its token DEFAULT_ADMIN_ROLE also controls UUPS upgrades and minterContract rotation.",
-        "threshold": 2,
-        "signerCount": 3,
-        "modulesOrGuardsStatus": "none-detected",
-        "safe": {
-          "owners": [
-            "0x69e91940154bbdbabca6ca0b0ec3cb2a59aebf2b",
-            "0xdfbb0b971a9f1915a083d5555ce20a36dd0b7aeb",
-            "0x19a1fd04761c9a0b873bec440caf02ab0dba056e"
-          ],
-          "threshold": 2,
-          "enabledModules": [],
-          "guard": "0x0000000000000000000000000000000000000000",
-          "fallbackHandler": "0xfd0732dc9e303f09fcef3a7388ad10a83459ec99",
-          "version": "1.4.1",
-          "observedBlock": 26095795,
-          "observedAt": "2026-10-01",
-          "source": "onchain"
-        },
-        "evidence": "At Ethereum block 26,095,795 on 2026-10-01, token hasRole(DEFAULT_ADMIN_ROLE, Safe 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4) and hasRole(SUPPLY_MANAGER_ROLE, the same Safe) return true. RPC confirms the three recorded owners, threshold 2, version 1.4.1, no enabled modules, zero guard, and the recorded fallback handler. The token's implementation remains 0x35fef16fea897dd6ca2e28041dbfb8d56e2978d6; its verified code restricts setMinterContract and UUPS _authorizeUpgrade to DEFAULT_ADMIN and setMaxSupply to SUPPLY_MANAGER_ROLE.",
+        "timelockDelaySec": 172800,
+        "capDescription": "The TimelockController holds SUPPLY_MANAGER_ROLE and DEFAULT_ADMIN_ROLE; after 172800 seconds it may raise maxSupply, rotate minterContract and upgrade the token. The 2-of-3 Safe is its sole proposer and holds FREEZER_ROLE.",
+        "evidence": "At Ethereum blocks 26,112,974-26,113,087 on 2026-10-03, DEFAULT_ADMIN_ROLE and SUPPLY_MANAGER_ROLE were granted to TimelockController 0xe7a2eb2ad0a168ec287c5dec64b333adafa587c5 and revoked from Safe 0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4; no later role events through block 26,307,534. getMinDelay is 172800s and the Safe is the sole proposer. Verified token code restricts setMinterContract and UUPS _authorizeUpgrade to DEFAULT_ADMIN and setMaxSupply to SUPPLY_MANAGER_ROLE.",
         "sources": [
           {
-            "label": "GoldfishToken admin Safe (Etherscan)",
-            "url": "https://etherscan.io/address/0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
+            "label": "GoldfishToken DEFAULT_ADMIN TimelockController (Blockscout)",
+            "url": "https://eth.blockscout.com/address/0xe7a2eb2ad0a168ec287c5dec64b333adafa587c5"
           }
         ],
         "chain": "ethereum",
-        "address": "0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4",
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095795,
+        "address": "0xe7a2eb2ad0a168ec287c5dec64b333adafa587c5",
+        "observedAt": "2026-10-19",
+        "observedBlock": 26224768,
         "failureDomainKeys": [
-          "safe:ethereum:0xd0022c3ed6a11bf6791ba2c9d0b394021a6096e4"
+          "contract:ethereum:0xe7a2eb2ad0a168ec287c5dec64b333adafa587c5"
         ]
       }
     ],

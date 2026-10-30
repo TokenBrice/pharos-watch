@@ -26,7 +26,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Arbitrum is PGOLD's only native issuance chain. Ethereum and Pharos are Chainlink CCIP burn/mint representations sourced from the Arbitrum LockReleaseTokenPool, while ApeChain is a LayerZero OFT representation backed by the Arbitrum OFT Adapter. The external message-validation, pool, adapter, and representation-admin surfaces support the aggregate external-lock-mint tier.",
+    "summary": "Arbitrum is PGOLD's only native issuance chain. Ethereum and Pharos are Chainlink CCIP burn/mint representations from the Arbitrum LockReleaseTokenPool; ApeChain is a LayerZero OFT from the Arbitrum OFT Adapter, issuer-deprecated in June 2026. The external message-validation, pool, adapter, and representation-admin surfaces support the aggregate external-lock-mint tier.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Codex PGOLD bridge-route correction",
     "confidence": "verified",

@@ -19,8 +19,8 @@ const ADAPTER_KEY = "quantoz-transparency";
 const MIN_RESERVE_RATIO_PCT = 99.5;
 const MAX_PUBLISHED_NUMBER_FIELD_LENGTH = 128;
 /**
- * The transparency cards publish whole-number percentages (`Cash 33%`,
- * `Government bonds 66%`) and no absolute amount per category, so each of the N
+ * The transparency cards publish whole-number percentages (`Cash 30%`,
+ * `Government bonds 70%`) and no absolute amount per category, so each of the N
  * allocation categories can carry up to half a point of rounding error and a
  * genuine 100% split can still sum to 100 ± N × 0.5. Quantoz shows N = 2, so
  * 99/101 is rounding while anything wider is a real inconsistency in the

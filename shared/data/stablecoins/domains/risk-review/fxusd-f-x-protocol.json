@@ -369,6 +369,20 @@
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
           }
         ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000850e533bd762b72c",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c000000000000000000000850e533bd762b72c",
+        "protocol": "LayerZero V2 OFT Adapter route",
+        "issuanceModel": "unknown",
+        "routeClass": "unknown",
+        "riskTier": "opaque-or-unknown",
+        "semantics": "unknown",
+        "scope": "unknown",
+        "reviewDisposition": "unresolved",
+        "reviewNote": "Issuer lists Ethereum OFTAdapter 0x06013f99... and Tempo OFTAdapter 0xd87bbc92...; controller and role unverified."
       }
     ],
     "controls": [

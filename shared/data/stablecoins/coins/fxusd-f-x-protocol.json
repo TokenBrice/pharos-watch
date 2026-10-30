@@ -38,6 +38,11 @@
       "chain": "base",
       "address": "0x55380fe7a1910dff29a47b622057ab4139da42c5",
       "decimals": 18
+    },
+    {
+      "chain": "tempo",
+      "address": "0x20c000000000000000000000850e533bd762b72c",
+      "decimals": 6
     }
   ],
   "liveReservesConfig": {
