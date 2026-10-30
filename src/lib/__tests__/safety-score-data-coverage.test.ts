@@ -9,9 +9,13 @@ import {
   describeDataCoverageHoldCauses,
   describeIssuerReview,
 } from "@/lib/safety-score-data-coverage";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 
 const REVIEWED_AT_SEC = Date.parse("2026-10-03T00:00:00Z") / 1000;
 const EARLIER_REVIEWED_AT_SEC = Date.parse("2026-09-28T00:00:00Z") / 1000;
+const NO_SCORING_PATH_LABEL = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation!.reasons.find(
+  (entry) => entry.reason === "no-scoring-path",
+)!.publicLabel;
 
 function makeOpenEvidence(overrides: Partial<V9OpenEvidence> = {}): V9OpenEvidence {
   return {
@@ -278,8 +282,7 @@ describe("buildDataCoverageModel", () => {
     expect(model.reasons.at(-1)).toEqual({
       code: "no-scoring-path",
       bucket: "documentation",
-      // T1 has no documentation policy block yet; the label degrades visibly.
-      label: "No scoring path",
+      label: NO_SCORING_PATH_LABEL,
       questions: null,
       count: 256,
       countUnit: "datums",
