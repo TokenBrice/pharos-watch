@@ -42,6 +42,12 @@ import { buildResourcePressure } from "../lib/cron-resource-pressure";
 import { ECONOMIC_SUPPLY_BODY_CAPS } from "../lib/safety-score-v9/economic-supply-observer";
 import { safetyScoreV9SupplyAttributionExpectedAssetIds } from "../lib/safety-score-v9/supply-attribution";
 import { compareCodeUnits } from "@shared/lib/compare";
+import { isRecord } from "@shared/lib/type-guards";
+import laneEmitterDescriptors from "@shared/data/safety-score-v9/lane-emitter-descriptors-v1.generated.json";
+import {
+  syncV9LaneAdminEvents,
+  type LaneScreeningDescriptor,
+} from "./sync-v9-lane-admin-events";
 import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { SUPPLY_ATTRIBUTION_DEPLOYMENT_SUPPLY_CENSUS_BUDGET } from "@shared/lib/safety-score-v9-supply-attribution-journal";
 import {
@@ -447,6 +453,117 @@ export async function runDeploymentSupplyCensusShadow(input: {
   }
 }
 
+export type SafetyScoreV9LaneScreeningShadowReason =
+  | "lane-screening-aborted"
+  | "lane-screening-slot-window-unavailable"
+  | "lane-screening-window-insufficient"
+  | "lane-screening-no-descriptors"
+  | "lane-screening-completed"
+  | "lane-screening-failed";
+
+/**
+ * Per-run journal of the hosted lane-screening phase. The phase is a serialized
+ * shadow consumer of the reviewed emitter catalog: it runs after the
+ * attribution generation is published, writes certificates to the IR-3b store
+ * and never changes this job's status, scoring input or cache rows.
+ */
+export type SafetyScoreV9LaneScreeningShadowOutcome = {
+  status: "published" | "skipped" | "failed";
+  reason: SafetyScoreV9LaneScreeningShadowReason;
+  catalog: number;
+  candidates: number | null;
+  attempted: number | null;
+  admitted: number | null;
+  failed: number | null;
+  certificatesWritten: number | null;
+  deadlineExhausted: boolean | null;
+  remainingMs: number | null;
+  code?: string;
+};
+
+export interface SafetyScoreV9LaneScreeningShadowOptions {
+  /** Reviewed catalog override (tests, replays); production reads the generated artifact. */
+  descriptors?: readonly LaneScreeningDescriptor[];
+  /** Test seam for the producer; production uses the default implementation. */
+  run?: typeof syncV9LaneAdminEvents;
+}
+
+/**
+ * Match V9_EXECUTION_WINDOW_POLICY.publication's 15s settlement allowance
+ * (25s admission = 10s usable + 15s reserve): two bounded 5s persistence
+ * operations plus 5s cron/lease settlement, not a measured persistence p99.
+ */
+export const LANE_SCREENING_SETTLE_RESERVE_MS = 15_000;
+
+/** The phase needs this much usable budget after its settlement reserve. */
+const LANE_SCREENING_MINIMUM_REMAINING_MS = 60_000;
+
+export async function runV9LaneScreeningShadowPhase(input: {
+  db: D1Database;
+  chainRpcs?: Map<string, ChainRpcConfig>;
+  signal?: AbortSignal;
+  executionWindow?: V9ExecutionWindow;
+  options?: SafetyScoreV9LaneScreeningShadowOptions;
+}): Promise<SafetyScoreV9LaneScreeningShadowOutcome> {
+  const remainingMs = input.executionWindow === undefined
+    ? null
+    : input.executionWindow.deadlineMs - LANE_SCREENING_SETTLE_RESERVE_MS - Date.now();
+  const base = {
+    catalog: 0,
+    candidates: null,
+    attempted: null,
+    admitted: null,
+    failed: null,
+    certificatesWritten: null,
+    deadlineExhausted: null,
+    remainingMs,
+  };
+  if (input.signal?.aborted) return { ...base, status: "skipped", reason: "lane-screening-aborted" };
+  if (input.executionWindow === undefined) {
+    return { ...base, status: "skipped", reason: "lane-screening-slot-window-unavailable" };
+  }
+  if (remainingMs !== null && remainingMs < LANE_SCREENING_MINIMUM_REMAINING_MS) {
+    return { ...base, status: "skipped", reason: "lane-screening-window-insufficient" };
+  }
+  const descriptors = input.options?.descriptors
+    ?? (laneEmitterDescriptors.descriptors as unknown as readonly LaneScreeningDescriptor[]);
+  if (descriptors.length === 0) {
+    return { ...base, status: "skipped", reason: "lane-screening-no-descriptors" };
+  }
+  const run = input.options?.run ?? syncV9LaneAdminEvents;
+  try {
+    const result = await run(input.db, input.chainRpcs ?? new Map(), input.signal, {
+      descriptors,
+      deadlineMs: input.executionWindow.deadlineMs - LANE_SCREENING_SETTLE_RESERVE_MS,
+    });
+    // CronResult serializes metadata; admit only its bounded record fields.
+    const parsedMetadata: unknown = result.metadata === undefined ? {} : JSON.parse(result.metadata);
+    const metadata: Record<string, unknown> = isRecord(parsedMetadata) ? parsedMetadata : {};
+    const metric = (key: string): number | null =>
+      typeof metadata[key] === "number" ? metadata[key] as number : null;
+    return {
+      status: result.status === "ok" || result.status === "degraded" ? "published" : "skipped",
+      reason: "lane-screening-completed",
+      catalog: metric("catalog") ?? descriptors.length,
+      candidates: metric("candidates"),
+      attempted: metric("attempted"),
+      admitted: metric("admitted"),
+      failed: metric("failed"),
+      certificatesWritten: metric("certificatesWritten"),
+      deadlineExhausted: typeof metadata.deadlineExhausted === "boolean" ? metadata.deadlineExhausted : null,
+      remainingMs,
+    };
+  } catch (error) {
+    // A shadow failure is journalled, never allowed to revoke the published generation.
+    return {
+      ...base,
+      status: "failed",
+      reason: "lane-screening-failed",
+      code: error instanceof Error && error.name ? error.name.slice(0, 160) : "Error",
+    };
+  }
+}
+
 export async function syncSafetyScoreV9SupplyAttribution(
   db: D1Database,
   chainRpcs?: Map<string, ChainRpcConfig>,
@@ -454,6 +571,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
   executionWindow?: V9ExecutionWindow,
   dwellirNative?: DwellirNativeCapability,
   censusOptions?: SafetyScoreV9DeploymentSupplyCensusShadowOptions,
+  laneScreeningOptions?: SafetyScoreV9LaneScreeningShadowOptions,
 ): Promise<CronResult> {
   const startedAtSec = Math.floor(Date.now() / 1_000);
   throwIfAborted(signal);
@@ -681,11 +799,24 @@ export async function syncSafetyScoreV9SupplyAttribution(
     ...(settlement ? [settlement] : []),
   ], { chunkSize: 2, signal });
   const cacheWrite = { written: changes > 0 };
+  // Hosted shadow lane screening (OP-IR §5c / OPS-CRON growth-free hosting): a
+  // serialized phase after the publication write, so it can only spend the
+  // slot's remaining wall budget and never delays or reorders the attribution
+  // generation. It adds no connection-budget entry: it runs one JSON-RPC batch
+  // at a time inside this job's declared 3-connection peak, and its outcome is
+  // journalled without changing the host status or any scoring input.
+  const laneScreening = await runV9LaneScreeningShadowPhase({
+    db,
+    chainRpcs,
+    signal,
+    executionWindow,
+    options: laneScreeningOptions,
+  });
   if (!cacheWrite.written) {
     return createCronResult({
       status: "skipped_neutral",
       itemCount: 0,
-      metadata: { stage: "publication", reason: "newer-generation-present", generationId: generation.generationId },
+      metadata: { stage: "publication", reason: "newer-generation-present", generationId: generation.generationId, laneScreening },
       productivity: {
         productive: false,
         reason: "newer-supply-attribution-generation-present",
@@ -721,6 +852,7 @@ export async function syncSafetyScoreV9SupplyAttribution(
       latencySummary: { assets: capture.performanceById ?? {} },
       resourcePressure,
       deploymentSupplyCensus,
+      laneScreening,
       ...(qualityReasons.length ? { quality: {
         reason: qualityReasons[0], reasons: qualityReasons,
         sources: { bootstrapProgressAssetIds: progress, diagnosticRejectedAssetIds: diagnosticRejected, blockingRejectedAssetIds },

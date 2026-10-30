@@ -411,6 +411,41 @@ export const V9_LANE_ADMIN_EVENT_FAMILY_VALUES = [
   "DefaultReceiveLibrarySet",
   "SendLibrarySet",
   "ReceiveLibrarySet",
+  // CCIP TokenPool chain/peer configuration and TokenPool admin surface
+  // (Chainlink BurnMintTokenPool verified ABI, 2026-10-30).
+  "AllowListAdd",
+  "AllowListRemove",
+  "ChainAdded",
+  "ChainConfigured",
+  "ChainRemoved",
+  "ConfigChanged",
+  "OwnershipTransferRequested",
+  "RateLimitAdminSet",
+  "RemotePoolAdded",
+  "RemotePoolRemoved",
+  "RouterUpdated",
+  // FrontierERC20F (FRNT) access, rescue, freeze and role administration
+  // (verified ABI, 2026-10-30).
+  "AccessRegistryUpdated",
+  "ContractUriUpdated",
+  "GasTokenSalvaged",
+  "MintedToFrozen",
+  "RoleAdminChanged",
+  "TokenSalvaged",
+  "TokensRecovered",
+  "TransferredToFrozen",
+  // YieldFi YToken and BridgeCCIP administrator, fee, yield and lockbox
+  // configuration (verified ABI, 2026-10-30).
+  "AdministratorSet",
+  "FeeSet",
+  "GasFeeSet",
+  "ManagerSet",
+  "Rescue",
+  "VestingPeriodSet",
+  "YieldSet",
+  "SetAdministrator",
+  "SetLockbox",
+  "SetToken",
 ] as const;
 export type V9LaneAdminEventFamily = (typeof V9_LANE_ADMIN_EVENT_FAMILY_VALUES)[number];
 export const V9LaneAdminEventFamilySchema = z.enum(V9_LANE_ADMIN_EVENT_FAMILY_VALUES);
