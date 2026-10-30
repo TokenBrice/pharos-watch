@@ -147,14 +147,21 @@ export function buildWeeklyPrompt(
       `  Lowest Bank Run Gauge day: ${data.spikeMetrics.minGauge.date}, ${round1(data.spikeMetrics.minGauge.score)}`,
     );
   }
+  // A maximum over the daily display slices must name the census it omitted,
+  // never present the slice maximum as the observed population (ADR-34).
+  const depegMagnitudeBound = data.spikeMetrics.depegObservationBounds.length > 0
+    ? ` (magnitudes for ${data.spikeMetrics.depegObservationBounds
+        .map((bound) => `${bound.shown} of ${bound.total} ${bound.kind === "active" ? "active" : "recovered"} depeg events on ${bound.date}`)
+        .join("; ")})`
+    : "";
   if (data.spikeMetrics.maxDepeg) {
     lines.push(
-      `  Worst depeg by bps: ${data.spikeMetrics.maxDepeg.date} ${data.spikeMetrics.maxDepeg.symbol}, ${data.spikeMetrics.maxDepeg.bps} bps, ${formatCurrency(data.spikeMetrics.maxDepeg.mcapUsd)} mcap`,
+      `  Worst depeg by bps: ${data.spikeMetrics.maxDepeg.date} ${data.spikeMetrics.maxDepeg.symbol}, ${data.spikeMetrics.maxDepeg.bps} bps, ${formatCurrency(data.spikeMetrics.maxDepeg.mcapUsd)} mcap${depegMagnitudeBound}`,
     );
   }
   if (data.spikeMetrics.maxDepegImpact) {
     lines.push(
-      `  Largest depeg market impact: ${data.spikeMetrics.maxDepegImpact.date} ${data.spikeMetrics.maxDepegImpact.symbol}, impact ${data.spikeMetrics.maxDepegImpact.impactScore}, ${data.spikeMetrics.maxDepegImpact.bps} bps`,
+      `  Largest depeg market impact: ${data.spikeMetrics.maxDepegImpact.date} ${data.spikeMetrics.maxDepegImpact.symbol}, impact ${data.spikeMetrics.maxDepegImpact.impactScore}, ${data.spikeMetrics.maxDepegImpact.bps} bps${depegMagnitudeBound}`,
     );
   }
 
@@ -228,7 +235,7 @@ export function buildWeeklyPrompt(
 
   lines.push("", "Weekly Signals (synthesize from this, do not merely recap daily copy):");
   if (data.weeklySignals.topDepegSignals.length > 0) {
-    lines.push("  Top depeg signals by absolute market impact:");
+    lines.push(`  Top depeg signals by absolute market impact${depegMagnitudeBound}:`);
     for (const signal of data.weeklySignals.topDepegSignals) {
       const suppression = signal.suppressReason ? ` | suppress: ${signal.suppressReason}` : "";
       const critical = signal.critical ? " | critical" : "";
