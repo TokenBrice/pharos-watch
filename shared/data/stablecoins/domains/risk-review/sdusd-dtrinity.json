@@ -64,6 +64,45 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "sdUSD is an ERC-4626 receipt whose conversion value is vault accounting over dUSD supplied to dLEND, and dUSD's own price is hard-coded at $1 inside dLEND, so no external feed prices sdUSD or dUSD directly. dLEND borrower collateral is valued through the issuer-published feed set: the dTRINITY USD Oracle Aggregator (Ethereum 0xC40f4303505320F782972ad4756eD2A7390a9d9C, Fraxtal 0xFA7560956807d95DCeF22990DdD92e38DbAf5cDd) over Chainlink market feeds on Ethereum, Api3 market and fundamental feeds on Fraxtal, and issuer fundamental feeds for yield-bearing collateral. Collateral mispricing or liquidation bad debt transmits to sdUSD NAV. The inventory is exact and dated, but feed heartbeats, deviation thresholds, fallback ordering and a single-feed failure bound are not published.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS035 research sprint 2026-10-29 (RS-035)",
+      "rationale": "sdUSD is excluded as dLEND collateral and holds no borrower positions or liquidation engine of its own; its only pricing path is ERC-4626 share accounting over dLEND-supplied dUSD. The dLEND collateral feeds are the parent dUSD's valuation authority and are already reviewed under dUSD's oracle profile, so they are recorded here as the inherited top-level feed set instead of being declared sdUSD-specific borrower branches.",
+      "sources": [
+        {
+          "label": "dTRINITY published oracle feed inventory with aggregator and per-market addresses (Ethereum, Fraxtal, Katana), retrieved 2026-10-29",
+          "url": "https://docs.dtrinity.org/security/oracle-integrations"
+        },
+        {
+          "label": "dTRINITY dLEND price-oracle methodology: Api3, Chainlink, issuer direct feeds, dUSD hard-coded at $1, composite feeds for yield-bearing collateral",
+          "url": "https://docs.dtrinity.org/protocol-components/dlend"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS035 research sprint 2026-10-29 (RS-035)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "dTRINITY published oracle feed inventory with aggregator and per-market addresses, retrieved 2026-10-29",
+        "url": "https://docs.dtrinity.org/security/oracle-integrations"
+      },
+      {
+        "label": "dTRINITY dLEND price-oracle methodology, dUSD hard-coded pricing and composite feeds",
+        "url": "https://docs.dtrinity.org/protocol-components/dlend"
+      },
+      {
+        "label": "dTRINITY sdUSD vault: permissionless atomic unstaking and dUSD supplied into dLEND",
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "sdUSD is a chain-isolated dSTAKE ERC-4626 receipt on Ethereum and Fraxtal. Official dTRINITY documentation states that these deployments are non-fungible across chains and cannot be natively bridged. Users can swap into intermediary assets before bridging and swap back on the destination chain; that is not an sdUSD bridge mint path.",

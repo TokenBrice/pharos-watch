@@ -33,6 +33,33 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "Superstate prices USTB from fund NAV per share computed by its NAV Calculation Agent partner: the USTB Continuous Price Oracle extrapolates from the two newest NAV/S checkpoints to serve atomic subscriptions and redemptions, and Chainlink publishes the daily USTB/USCC NAV/S on Ethereum at 0x289B5036cd942e619E1Ee48670F98d214E745AAC, with a Pyth USTB feed on Solana. The issuer publishes these feed identities and the mechanism, and no borrower liquidation engine consumes a collateral price.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Research shard RS-017 (2026-10-29)",
+      "rationale": "USTB subscriptions and redemptions settle at fund NAV/S relayed on-chain; the reviewed oracles publish that NAV rather than valuing borrower collateral, and no borrower branch or liquidation price is evidenced, so the review is top-level only.",
+      "sources": [
+        {
+          "label": "Superstate smart contracts: continuous price oracle, Chainlink USTB oracle and Pyth USTB oracle; accessed 2026-10-29",
+          "url": "https://docs.superstate.com/investors/smart-contracts"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Research shard RS-017 (2026-10-29)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Superstate smart contracts: continuous price oracle, Chainlink USTB oracle and Pyth USTB oracle; accessed 2026-10-29",
+        "url": "https://docs.superstate.com/investors/smart-contracts"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Superstate's current fund documentation identifies the same USTB fund-share claim issued on Ethereum, Plume and Solana, with subscriptions and tokenization available on all three. The issuer explicitly defines the Ethereum-Plume bridge as burning source tokens and delivering the specified destination tokens, not retaining canonical USTB in escrow; Solana bridging is unsupported and cross-chain relocation requires redemption and a new purchase. This exhaustive native/direct-burn roster supports complete transfer-census eligibility without a bridge escrow plan. Plume remains a conservatively modeled bridge representation, with issuer-controlled destination minting, pause, peer configuration and upgrade powers unchanged; no external validator, DVN, rate-limit committee or timelock is credited. Book-entry fund shares are not an additional registered token deployment.",

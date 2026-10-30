@@ -31,5 +31,65 @@
     "evidence": "FreezeWatch re-review 2026-10-19 at Ethereum block 26224775 (Unix 1792390631). mGLOBAL 0x7433806912eae67919e66aea853d46fa0aef98a8 is an ERC1967 proxy whose implementation slot is 0xd22be883b7194ac2d1751bf8e6e4962d87f2f75a (Midas mGLOBAL), with accessControl()=0x0312A9D1Ff2372DDEdCBB21e4B6389aFc919aC4B, name()='Midas Fasanara Global', paused()=false and totalSupply=33,317,410.38028632. The verified inherited stack enforces both lists in _beforeTokenTransfer: mTokenPermissioned requires M_GLOBAL_GREENLISTED_ROLE on both from and to for non-mint/burn transfers, and mToken calls _onlyNotBlacklisted on both sides against BLACKLISTED_ROLE. The controlling roles have current members: hasRole(M_GLOBAL_GREENLISTED_ROLE 0x49a1…0acc, 0x0461bd693cae49be9d030e5c212e080f9c78b846)=true and hasRole(BLACKLIST_OPERATOR_ROLE 0x2fdc…89ff, 0x081bb8ad7f452f916991c17fdfa64d4a25153169)=true, while DEFAULT_ADMIN_ROLE is held by 0xb60842e9dabcd1c52e354ac30e82a97661cb7e89 and 0xd4195cf4df289a4748c1a7b6ddbe770e27ba1227. Because the issuer/operator can de-list a greenlisted holder and can add any holder to the blacklist, reviewedStatus is true.",
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "mGLOBAL is an issuer NAV-accreting tokenized certificate, not a market-priced asset. Midas documents the mToken NAV as strategy-manager-provided, internally reviewed and fee-adjusted by Midas, and co-signed by at least two Midas reviewers before it is pushed onchain to the mGLOBAL/USD Oracle Feed, where deviation bounds, heartbeat freshness, and hardcoded price limits gate its use by the issuance and redemption contracts. Third-party oracle networks (Chainlink, Pyth) are documented only for payment-token pricing; the certificate's own valuation authority is internal. This review classifies the documented fund-level pricing authority, not updater-key independence, signer collusion resistance, or downstream lending integrations that consume the feed.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "RS-095 research sprint 2026-10-29 (Midas NAV pricing review)",
+      "rationale": "mGLOBAL represents a managed private-credit fund share whose mint and redemption pricing come from the issuer NAV. No borrower market liquidates against the token, so the fund-level NAV authority applies without oracle branches; lending markets that accept mGLOBAL are integrations, not the certificate's pricing mechanism.",
+      "sources": [
+        {
+          "label": "Midas Oracle Architecture: NAV verified by Midas, pushed to the Oracle Feed with deviation checks, Datafeed heartbeat and boundary validation; accessed 2026-10-29",
+          "url": "https://docs.midas.app/transparency/oracle-architecture"
+        },
+        {
+          "label": "Midas Smart Contracts Registry: mGLOBAL/USD Oracle on Ethereum; accessed 2026-10-29",
+          "url": "https://docs.midas.app/resources/smart-contracts-registry"
+        }
+      ]
+    },
+    "paths": [
+      {
+        "id": "mglobal-usd-oracle",
+        "chain": "ethereum",
+        "address": "0x66Aa9fcD63DF74e1f67A9452E6E59Fbc67f75E38",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "RS-095 research sprint 2026-10-29 (Midas NAV pricing review)",
+          "confidence": "probable",
+          "rationale": "The published mGLOBAL/USD Oracle contract on Ethereum is the onchain carrier of the issuer-validated NAV; the pricing authority is internal (strategy manager valuation plus Midas review), not an external market feed.",
+          "sources": [
+            {
+              "label": "Midas Smart Contracts Registry: mGLOBAL/USD Oracle 0x66Aa9fcD63DF74e1f67A9452E6E59Fbc67f75E38; accessed 2026-10-29",
+              "url": "https://docs.midas.app/resources/smart-contracts-registry"
+            }
+          ]
+        }
+      }
+    ],
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RS-095 research sprint 2026-10-29 (Midas NAV pricing review)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas Oracle Architecture: strategy-manager NAV, Midas validation and two-co-signer review, Oracle Feed deviation and Datafeed freshness checks, third-party oracles only for payment tokens; accessed 2026-10-29",
+        "url": "https://docs.midas.app/transparency/oracle-architecture"
+      },
+      {
+        "label": "Midas Pricing of the mToken: NAV formula, NAV update cadence varying by product, market-disruption pausing of valuation and redemptions; accessed 2026-10-29",
+        "url": "https://docs.midas.app/transparency/pricing-of-the-mtoken"
+      },
+      {
+        "label": "Midas Smart Contracts Registry: mGLOBAL/USD Oracle 0x66Aa9fcD63DF74e1f67A9452E6E59Fbc67f75E38 on Ethereum; accessed 2026-10-29",
+        "url": "https://docs.midas.app/resources/smart-contracts-registry"
+      }
+    ]
   }
 }

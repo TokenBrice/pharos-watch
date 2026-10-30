@@ -24,6 +24,57 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "The legacy inALPHA share price is a stored exchange rate, not an external market feed. Verified Ethereum source for the exact vault accountant 0xa65E054d2d9f7a9789065e0A6381132EFbD41A90 (AccountantWithRateProviders, immutable vault 0x64Ab176C545bb85EcA75d53c3Ffcb361dEafb855) shows getRate() returning accountantState.exchangeRate, and the only writer is the Auth-gated updateExchangeRate(uint96), which is bounded by allowedExchangeRateChangeUpper/Lower and pauses the contract when a move exceeds the bounds or arrives before the minimum update delay. Blockscout logs show an operator key 0x450545F4cC7425DDe582091a7fe9E63471Af1045 pushing 964007 -> 959091 -> 954200 on 2026-02-23 (last update block 24521103, 2026-02-23T17:32:59Z), and Nest's own API serves the same 0.9542 rate with updatedAt 1771867995 on chains 1 and 98866. No external price feed is consumed for the coin rate; the NAV is set by Nest operations under on-chain bounds and has not moved since February 2026. A pinned read at Ethereum block 26300432 (2026-10-29T19:16:23Z) returns getRate() = 954200, vault() = 0x64ab176c545bb85eca75d53c3ffcb361deafb855 and owner() = 0xa08a0dc480bd60d1d56c8eec6c722125eafea982, the same Nest Safe that owns the vault.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "RS-050 evidence-gap research (oracle profile)",
+      "rationale": "The legacy inALPHA BoringVault has no borrower market, collateral ratio, liquidation or bad-debt path: mint and redeem pricing consume the accountant exchange rate, so there is no liquidation-branch inventory to review. The single pricing path is the privileged accountant update reviewed here.",
+      "sources": [
+        {
+          "label": "Verified accountant source: getRate() returns the stored exchangeRate and updateExchangeRate is Auth-gated with bounds (read 2026-10-29)",
+          "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa65e054d2d9f7a9789065e0a6381132efbd41a90"
+        },
+        {
+          "label": "ExchangeRateUpdated and bound-update logs for the exact accountant (read 2026-10-29)",
+          "url": "https://eth.blockscout.com/api/v2/addresses/0xa65e054d2d9f7a9789065e0a6381132efbd41a90/logs"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RS-050 evidence-gap research (oracle profile)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Verified accountant source: getRate() returns the stored exchangeRate and updateExchangeRate is Auth-gated with bounds (read 2026-10-29)",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xa65e054d2d9f7a9789065e0a6381132efbd41a90"
+      },
+      {
+        "label": "ExchangeRateUpdated logs: last update 964007 -> 959091 -> 954200 at block 24521103 (2026-02-23T17:32:59Z)",
+        "url": "https://eth.blockscout.com/api/v2/addresses/0xa65e054d2d9f7a9789065e0a6381132efbd41a90/logs"
+      },
+      {
+        "label": "updateExchangeRate(954200) transaction signed by operator 0x450545F4cC7425DDe582091a7fe9E63471Af1045 at block 24521103",
+        "url": "https://eth.blockscout.com/api/v2/transactions/0x01b82f5f005f2762c3314744a7ebe649db9e34bfa9151d1248c61e279a64bac9"
+      },
+      {
+        "label": "Pinned Ethereum block 26300432 (2026-10-29T19:16:23Z): accountant getRate() = 954200, vault() = 0x64ab…b855, owner() = 0xa08a0dc4…982",
+        "url": "https://eth.blockscout.com/block/26300432"
+      },
+      {
+        "label": "Nest API last-price-update: price 0.9542, updatedAt 1771867995 on chains 1 and 98866 (read 2026-10-29)",
+        "url": "https://api.nest.credit/v1/vaults/nest-alpha-lp-vault/last-price-update"
+      },
+      {
+        "label": "Nest Vault Operations & Valuation: routine NAV updates are handled by Nest operations and accepted only within on-chain bounds",
+        "url": "https://docs.nest.credit/about/vault-operations-and-valuation"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "opaque-or-unknown",
     "summary": "Ethereum and Plume each host a reviewed inALPHA BoringVault native-issuance deployment at 0x64ab176c545bb85eca75d53c3ffcb361deafb855 under the same Nest 3-of-6 Safe and the current authorized Teller 0x20428f901a50ec69f5a2b56d313491cc686fafff; these native issuance facts remain in Mint Authority. Nest's official materials describe LayerZero OFT share movement for legacy BoringVaults and the inALPHA config records that route type and peers, but no live inALPHA NestVaultOFT/NestShareOFT address pair or current delegate, upgrade admin, peer, DVN/ULN, executor, pause, or rate-limit state is identified. No bridge representation or controller is invented; the bridge tier remains opaque-or-unknown pending reconciliation of the exact route.",
