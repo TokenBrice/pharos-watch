@@ -424,25 +424,31 @@ function assessLane(
  * expired, gapped, future-dated, missing and malformed rows never become a
  * positive incident claim and are never re-dated on read.
  */
+export interface LaneIncidentCertificateReadTarget {
+  deploymentKey: string;
+  screeningSetId: string;
+}
+
 export async function loadLaneIncidentCertificate(
   db: D1Database,
-  deploymentKey: string,
+  target: LaneIncidentCertificateReadTarget,
   options: LoadLaneIncidentCertificateOptions,
 ): Promise<LaneIncidentCertificateRead> {
-  const results = await loadLaneIncidentCertificates(db, [deploymentKey], options);
-  const result = results.get(deploymentKey);
-  if (!result) throw new Error(`Lane incident certificate read dropped lane ${deploymentKey}`);
+  const results = await loadLaneIncidentCertificates(db, [target], options);
+  const result = results.get(target.deploymentKey);
+  if (!result) throw new Error(`Lane incident certificate read dropped lane ${target.deploymentKey}`);
   return result;
 }
 
 export async function loadLaneIncidentCertificates(
   db: D1Database,
-  deploymentKeys: readonly string[],
+  targets: readonly LaneIncidentCertificateReadTarget[],
   options: LoadLaneIncidentCertificateOptions,
 ): Promise<Map<string, LaneIncidentCertificateRead>> {
   throwIfAborted(options.signal);
   assertClock(options.nowSec);
-  const lanes = [...new Set(deploymentKeys)].sort(compareText);
+  const expectedSets = new Map(targets.map((target) => [target.deploymentKey, target.screeningSetId]));
+  const lanes = [...expectedSets.keys()].sort(compareText);
   const maxAgeSec = resolveLaneIncidentCertificateMaxAgeSec(options.policy, options.nowSec);
   const results = new Map<string, LaneIncidentCertificateRead>();
   if (lanes.length === 0) return results;
@@ -463,6 +469,7 @@ export async function loadLaneIncidentCertificates(
       continue;
     }
     if (!requested.has(parsed.deploymentKey)) continue;
+    if (parsed.screeningSetId !== expectedSets.get(parsed.deploymentKey)) continue;
     const laneKeys = keysByLane.get(parsed.deploymentKey);
     if (laneKeys) laneKeys.push(key);
     else keysByLane.set(parsed.deploymentKey, [key]);

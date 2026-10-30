@@ -22,10 +22,10 @@ import {
   type SafetyScoreV9BridgeJoinDiagnostic,
 } from "./candidate";
 import {
-  listLaneIncidentCertificateHeads,
   loadLaneIncidentCertificates,
 } from "./lane-incident-certificate-store";
 import type { LaneIncidentCertificateView } from "./extension-incidents";
+import { loadReviewedLaneEmitterCatalog } from "./lane-emitter-catalog";
 import {
   assessV9Publication,
   expiredMeasuredExitAssetIdsFromRoutes,
@@ -759,18 +759,23 @@ export async function runSafetyScoreV9Publication(
     // hand only `current` chains to the compiler. A failed read closes nothing
     // (fail closed) and names itself in the publication warnings.
     const laneIncidentCertificates = new Map<string, LaneIncidentCertificateView>();
-    const laneCertificateWarnings: string[] = [];
+    const { descriptors: laneEmitterDescriptors, reasons: laneCertificateWarnings } = loadReviewedLaneEmitterCatalog();
     try {
-      const heads = await listLaneIncidentCertificateHeads(input.db, { signal: publicationSignal });
-      const reads = await loadLaneIncidentCertificates(input.db, [...new Set(heads.map((head) => head.deploymentKey))], {
+      const reads = await loadLaneIncidentCertificates(input.db, laneEmitterDescriptors.map((descriptor) => ({
+        deploymentKey: descriptor.subjectDeploymentKey, screeningSetId: descriptor.screeningSetId,
+      })), {
         nowSec: fixedInput.clockSec,
         signal: publicationSignal,
       });
       for (const [deploymentKey, read] of reads) {
-        if (read.state !== "current") continue;
+        if (read.state !== "current") {
+          laneCertificateWarnings.push(`lane-incident-certificate-${read.state}:${deploymentKey}`);
+          continue;
+        }
         laneIncidentCertificates.set(deploymentKey, { screeningSetId: read.screeningSetId, certificate: read.certificate });
       }
     } catch (error) {
+      if (publicationSignal.aborted) throw error;
       laneIncidentCertificates.clear();
       laneCertificateWarnings.push(`lane-incident-certificates-unavailable:${toErrorMessage(error).slice(0, 120)}`);
     }
@@ -780,6 +785,7 @@ export async function runSafetyScoreV9Publication(
       transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
       measuredExitExpiry: { routes: preparedInput.expiredRoutes, acceptedPublication },
       laneIncidentCertificates,
+      laneEmitterDescriptors,
     });
     preparedInput.owner.reload = releasedPublicationInput;
     // Grade hysteresis (10.26) is applied before assessment and journaling so
@@ -906,10 +912,7 @@ export async function runSafetyScoreV9Publication(
       try {
         replayCaptureValue = (await buildSafetyScoreV9PublicationReplayCapture(
           publication, preparedInput.replay!(), input.transferMaterialityGeneration ?? null, acceptedPublication,
-          // M6: the certificate views this compile actually read. Descriptors
-          // are still empty until the descriptor input is wired (M4); that one
-          // argument is the handoff point for the descriptor variable.
-          { certificates: laneIncidentCertificates, descriptors: [] },
+          { certificates: laneIncidentCertificates, descriptors: laneEmitterDescriptors },
         )).value;
       } catch (error) {
         if (error instanceof SafetyScoreV9ReplayCaptureIdentityError) throw error;

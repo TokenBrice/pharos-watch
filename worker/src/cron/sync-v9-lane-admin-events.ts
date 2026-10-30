@@ -14,12 +14,14 @@ import { fetchEvmBlockHeaderAtTag, type EvmBlockHeader } from "../lib/evm-rpc";
 import {
   LANE_ADMIN_EVENT_DEFAULT_LOG_PAGE_BLOCKS,
   LANE_ADMIN_EVENT_MAX_LOG_PAGES,
+  LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
   screenLaneAdminEvents,
   type LaneAdminEventEmitter,
   type LaneAdminEventScreeningTarget,
 } from "../lib/safety-score-v9/bridge-lane-admin-events";
 import {
   loadLaneIncidentCertificates,
+  laneIncidentCertificateScreeningSetId,
   persistLaneIncidentCertificates,
 } from "../lib/safety-score-v9/lane-incident-certificate-store";
 
@@ -343,7 +345,13 @@ export async function syncV9LaneAdminEvents(
   let certificateStates: Map<string, string>;
   let certifiedToBlock: Map<string, number>;
   try {
-    const states = await loadLaneIncidentCertificates(db, laneKeys, { nowSec, signal });
+    const states = await loadLaneIncidentCertificates(db, descriptors.map((descriptor) => ({
+      deploymentKey: descriptor.subjectDeploymentKey,
+      screeningSetId: laneIncidentCertificateScreeningSetId({
+        ...descriptor, contributorControlIds: descriptor.provenance.controlIds,
+        screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
+      }),
+    })), { nowSec, signal });
     certificateStates = new Map();
     certifiedToBlock = new Map();
     for (const key of laneKeys) {

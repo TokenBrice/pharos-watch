@@ -421,7 +421,9 @@ this section records only what v10.38 admits.
 - The runtime registry keys a row by `(assetId, reviewId)`. A provider-wide review is
   authored once per provider and fanned out at build time to one row per covered asset
   while keeping its `reviewId`; every authored lane must survive the fan-out.
-- v10.39 makes the provider and issuer-surface witnesses active for bridge lanes. Closure
+- v10.39 activates closure only for the five reviewed CCIP pilot lanes (FRNT Ethereum,
+  Arbitrum, Base, Optimism; yUSD Ethereum), after the first post-deploy screening cycle
+  writes admitted v2 certificates. Missing or v1 certificates close nothing. Closure
   needs all of: one current provider review per provider key the route authors (or the
   issuer-surface review alone when the route metadata declares `rail: "issuer-operated"`),
   a current issuer-surface review naming the lane, contributor parity between the lane

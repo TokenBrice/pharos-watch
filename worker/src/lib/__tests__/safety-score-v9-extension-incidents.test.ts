@@ -17,6 +17,8 @@ import {
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
+import { laneIncidentCertificateScreeningSetId } from "../safety-score-v9/lane-incident-certificate-store";
+import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "../safety-score-v9/bridge-lane-admin-events";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
@@ -351,7 +353,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
     )).toThrow();
   });
 
-  const POLICY_DIGEST = "c".repeat(64);
+  const POLICY_DIGEST = LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST;
   const EMITTER = `0x${"e".repeat(40)}`;
 
   function laneCertificate(overrides: Partial<Record<string, unknown>> = {}) {
@@ -385,6 +387,8 @@ describe("Safety Score v9 authored incident-review identity", () => {
     });
   }
 
+  const SET_ID = laneIncidentCertificateScreeningSetId({ ...laneCertificate(), contributorControlIds: ["alpha"] });
+
   function descriptor(overrides: Partial<Record<string, unknown>> = {}) {
     return {
       schemaVersion: 1 as const,
@@ -392,7 +396,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
       assetId: "fixture",
       contributorControlIds: ["alpha"],
       screeningPolicyDigest: POLICY_DIGEST,
-      screeningSetId: "set-1",
+      screeningSetId: SET_ID,
       emitters: [{ address: EMITTER, reviewedRuntimePin: `sha256-decoded-runtime-bytes:${"a".repeat(64)}`, families: ["OwnershipTransferred" as const] }],
       ...overrides,
     };
@@ -405,10 +409,26 @@ describe("Safety Score v9 authored incident-review identity", () => {
   }> = {}) {
     return {
       descriptors: (overrides.descriptors ?? [descriptor()]) as never,
-      certificates: (overrides.certificates ?? new Map([[ROUTE_A, { screeningSetId: "set-1", certificate: laneCertificate() }]])) as never,
+      certificates: (overrides.certificates ?? new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate() }]])) as never,
       routes: (overrides.routes ?? new Map([[ROUTE_A, { rail: null, providerKeys: ["layerzero"] }]])) as never,
     };
   }
+
+  it("rejects forged sets, stale policy, changed pins and widened emitter families", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    for (const altered of [
+      descriptor({ screeningSetId: "v1-foreign-set" }),
+      descriptor({ screeningPolicyDigest: "c".repeat(64) }),
+      descriptor({ emitters: [{ ...descriptor().emitters[0], reviewedRuntimePin: `sha256-decoded-runtime-bytes:${"b".repeat(64)}` }] }),
+      descriptor({ emitters: [{ ...descriptor().emitters[0], families: ["OwnershipTransferred", "Upgraded"] }] }),
+    ]) {
+      const inputs = closureInputs({ descriptors: [altered],
+        certificates: new Map([[ROUTE_A, { screeningSetId: altered.screeningSetId,
+          certificate: laneCertificate({ screeningPolicyDigest: altered.screeningPolicyDigest }) }]]) });
+      expect(routeSafetyScoreV9NegativeIncidentReviews(
+        [target], "fixture", NEGATIVE_CLOCK_SEC, [providerRow(), issuerRow()], [], inputs)[0]).toBe(target);
+    }
+  });
 
   it("closes only with all three witnesses and writes derived coverage", () => {
     const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
@@ -421,7 +441,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
       source: "provider-screening",
       providerReviewIds: ["provider-review"],
       issuerSurfaceReviewId: "issuer-review",
-      screeningSetId: "set-1",
+      screeningSetId: SET_ID,
       certificateId: expect.any(String),
       contributorControlIds: ["alpha"],
     });
@@ -453,13 +473,13 @@ describe("Safety Score v9 authored incident-review identity", () => {
       [closureInputs({ certificates: new Map() }), [provider, issuer]],
       [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: "set-2", certificate: laneCertificate() }]]) }), [provider, issuer]],
       // A material-event certificate.
-      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: "set-1", certificate: laneCertificate({
+      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate({
         finding: "material-event",
         materialEvents: [{ address: EMITTER, family: "OwnershipTransferred", transactionHash: `0x${"2".repeat(64)}`, blockNumber: 150, logIndex: 0 }],
         eventCounts: { OwnershipTransferred: 1 },
       }) }]]) }), [provider, issuer]],
       // An expired certificate (window end older than the policy budget).
-      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: "set-1", certificate: laneCertificate({
+      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate({
         windowStartSec: NEGATIVE_CLOCK_SEC - 4_000_000,
         windowEndSec: NEGATIVE_CLOCK_SEC - 3_000_000,
         observedAtSec: NEGATIVE_CLOCK_SEC - 3_000_000,

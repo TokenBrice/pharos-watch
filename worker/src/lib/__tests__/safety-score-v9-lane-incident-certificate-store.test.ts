@@ -75,6 +75,12 @@ function chain(): V9LaneIncidentCertificate[] {
   ];
 }
 
+function target() {
+  return { deploymentKey: LANE, screeningSetId: laneIncidentCertificateScreeningSetId({
+    ...chain()[0], contributorControlIds: ["fixture-owner"],
+  }) };
+}
+
 function expectCurrent(read: LaneIncidentCertificateRead) {
   expect(read.state).toBe("current");
   if (read.state !== "current") throw new Error(`Expected a current lane certificate, got ${read.state}`);
@@ -82,6 +88,16 @@ function expectCurrent(read: LaneIncidentCertificateRead) {
 }
 
 describe("lane incident certificate store", () => {
+  it("selects only the requested set even when a foreign set has a newer head", async () => {
+    const { db } = fixtures.open();
+    const [current] = chain();
+    const foreign = { ...chain()[1], screeningPolicyDigest: "f".repeat(64), toBlock: 999 };
+    await persistLaneIncidentCertificates(db, [current, foreign].map((certificate) => ({
+      certificate, contributorControlIds: ["fixture-owner"],
+    })), NOW);
+    expect(expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).certificate).toEqual(current);
+    expect((await loadLaneIncidentCertificate(db, { ...target(), screeningSetId: "0".repeat(64) }, { nowSec: NOW })).state).toBe("missing");
+  });
   it("round trips one certificate as a canonical cache row", async () => {
     const { db, sqlite } = fixtures.open();
     const [first] = chain();
@@ -97,7 +113,7 @@ describe("lane incident certificate store", () => {
     expect(row.updated_at).toBe(NOW);
     expect(JSON.parse(row.value)).toEqual(first);
 
-    const read = expectCurrent(await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW }));
+    const read = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }));
     expect(read.certificate).toEqual(first);
     expect(read.coveredFromSec).toBe(NOW - 4_000);
     expect(read.coveredThroughSec).toBe(NOW - 3_000);
@@ -110,7 +126,7 @@ describe("lane incident certificate store", () => {
     const [first, second] = chain();
     await persistLaneIncidentCertificates(db, [first, second].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
 
-    const read = expectCurrent(await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW }));
+    const read = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }));
     expect(read.certificate).toEqual(second);
     expect(read.coveredFromSec).toBe(NOW - 4_000);
     expect(read.coveredThroughSec).toBe(NOW - 2_000);
@@ -128,7 +144,7 @@ describe("lane incident certificate store", () => {
     });
     await persistLaneIncidentCertificates(db, [first, afterGap].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
 
-    const read = await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW });
+    const read = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW });
     expect(read.state).toBe("coverage-gap");
     if (read.state !== "coverage-gap") throw new Error(`Expected a coverage gap, got ${read.state}`);
     expect(read.gapFromBlock).toBe(200);
@@ -152,10 +168,10 @@ describe("lane incident certificate store", () => {
     await persistLaneIncidentCertificates(db, [only].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
     const before = sqlite.prepare("SELECT value, updated_at FROM cache").get();
 
-    const atBoundary = expectCurrent(await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW, policy }));
+    const atBoundary = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW, policy }));
     expect(atBoundary.expiresAtSec).toBe(NOW);
 
-    const expired = await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW + 1, policy });
+    const expired = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW + 1, policy });
     expect(expired.state).toBe("expired");
     if (expired.state !== "expired") throw new Error(`Expected expiry, got ${expired.state}`);
     expect(expired.expiredBySec).toBe(1);
@@ -178,9 +194,9 @@ describe("lane incident certificate store", () => {
     });
     await persistLaneIncidentCertificates(db, [only].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
 
-    expect(expectCurrent(await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW })).expiresAtSec)
+    expect(expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).expiresAtSec)
       .toBe(NOW);
-    expect((await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW + 1 })).state).toBe("expired");
+    expect((await loadLaneIncidentCertificate(db, target(), { nowSec: NOW + 1 })).state).toBe("expired");
   });
 
   it("fails a lane closed on a malformed stored row", async () => {
@@ -195,13 +211,13 @@ describe("lane incident certificate store", () => {
     const insert = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
 
     insert.run(key, JSON.stringify({ schemaVersion: 1 }), NOW);
-    const invalidSchema = await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW });
+    const invalidSchema = await loadLaneIncidentCertificate(db, target(), { nowSec: NOW });
     expect(invalidSchema.state).toBe("malformed-row");
     if (invalidSchema.state !== "malformed-row") throw new Error(`Expected malformed row, got ${invalidSchema.state}`);
     expect(invalidSchema.cacheKey).toBe(key);
 
     sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run("{not json", key);
-    expect((await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW })).state).toBe("malformed-row");
+    expect((await loadLaneIncidentCertificate(db, target(), { nowSec: NOW })).state).toBe("malformed-row");
   });
 
   it("throws when the D1 read fails instead of reporting a clean lane", async () => {
@@ -210,7 +226,7 @@ describe("lane incident certificate store", () => {
       rows: [],
       throwError: new Error("d1 unavailable"),
     }]);
-    await expect(loadLaneIncidentCertificate(db, LANE, { nowSec: NOW }))
+    await expect(loadLaneIncidentCertificate(db, target(), { nowSec: NOW }))
       .rejects.toThrow("d1 unavailable");
   });
 
@@ -232,7 +248,7 @@ describe("lane incident certificate store", () => {
     const [first] = chain();
     await persistLaneIncidentCertificates(db, [first].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
 
-    const reads = await loadLaneIncidentCertificates(db, [LANE, OTHER_LANE], { nowSec: NOW });
+    const reads = await loadLaneIncidentCertificates(db, [target(), { ...target(), deploymentKey: OTHER_LANE }], { nowSec: NOW });
     expect(reads.get(LANE)?.state).toBe("current");
     expect(reads.get(OTHER_LANE)).toEqual({ state: "missing", deploymentKey: OTHER_LANE });
   });
@@ -252,7 +268,7 @@ describe("lane incident certificate store", () => {
       if (index >= LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP) expect(result.pruned).toBe(1);
     }
 
-    const read = expectCurrent(await loadLaneIncidentCertificate(db, LANE, { nowSec: NOW }));
+    const read = expectCurrent(await loadLaneIncidentCertificate(db, target(), { nowSec: NOW }));
     expect(read.windowCount).toBe(LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP);
     expect(read.coveredFromSec).toBe(windows[2]?.windowStartSec);
     expect(read.certificate).toEqual(windows[windows.length - 1]);

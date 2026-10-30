@@ -30,6 +30,8 @@ import {
 } from "./extension-shared";
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewed-registry";
+import { laneIncidentCertificateScreeningSetId } from "./lane-incident-certificate-store";
+import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "./bridge-lane-admin-events";
 
 /**
  * Admitted review scopes: the pre-migration digest scope, authored control
@@ -341,6 +343,25 @@ function laneIncidentClosureWitnesses(
   const certificate = read.certificate;
   if (certificate.subjectDeploymentKey !== routeId) return null;
   if (certificate.screeningPolicyDigest !== descriptor.screeningPolicyDigest) return null;
+  if (descriptor.screeningPolicyDigest !== LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST) return null;
+  const descriptorEmitters = descriptor.emitters.map((emitter) => ({
+    address: emitter.address,
+    expectedRuntimeCodeSha256: emitter.reviewedRuntimePin.slice("sha256-decoded-runtime-bytes:".length),
+  }));
+  const identity = {
+    subjectDeploymentKey: routeId,
+    contributorControlIds: descriptor.contributorControlIds,
+    screeningPolicyDigest: descriptor.screeningPolicyDigest,
+  };
+  if (laneIncidentCertificateScreeningSetId({ ...identity, emitters: descriptorEmitters }) !== descriptor.screeningSetId ||
+      laneIncidentCertificateScreeningSetId({ ...identity, emitters: certificate.emitters }) !== read.screeningSetId) return null;
+  if (descriptor.emitters.length !== certificate.emitters.length ||
+      descriptor.emitters.some((emitter) => {
+        const screened = certificate.emitters.find((row) => row.address === emitter.address);
+        return screened === undefined ||
+          emitter.reviewedRuntimePin !== `sha256-decoded-runtime-bytes:${screened.expectedRuntimeCodeSha256}` ||
+          emitter.families.some((family) => !screened.families.includes(family));
+      })) return null;
   if (certificate.finding !== "no-material-admin-event") return null;
   if (certificate.windowEndSec > clockSec || certificate.observedAtSec > clockSec) return null;
   if (clockSec - certificate.windowEndSec > LANE_INCIDENT_CERTIFICATE_MAX_AGE_SEC) return null;

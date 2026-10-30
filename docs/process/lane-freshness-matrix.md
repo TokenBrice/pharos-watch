@@ -65,11 +65,13 @@
 
 Safety Score incident evidence is authored research plus one on-chain screening lane, not a cron lane.
 
+The reviewed catalog admits only five CCIP pilot lanes: FRNT on Ethereum, Arbitrum, Base and Optimism, and yUSD on Ethereum. Closure requires the first post-deploy screening cycle's v2 certificates and all current review witnesses; v1 certificates and missing certificates close nothing.
+
 - A negative incident review is admissible only while the evaluation clock is at or after both `reviewedAt` and `windowEndSec`, and no more than 365 days past either (the reviewed-research budget). A date-only `reviewedAt` value admits after its UTC day ends; a timestamped value admits at its instant. A retired review keeps its provenance and contributes nothing.
 - A bridge lane closes (`incidentState: "none"`) only through the three-witness rule: one current provider review per provider key the route authors (or the issuer-surface review when the route's metadata says `rail: "issuer-operated"`), a current issuer-surface review naming the lane, and the newest admitted certificate for the descriptor's screening set with contributor parity against the fact's authored control ids.
 - Certificates are joined at evaluation by `(subjectDeploymentKey, screeningSetId)`; authored data names no certificate. The screening set is the digest of the subject, the frozen screening policy, the sorted contributor ids and the emitter runtime pins, so a changed contributor, emitter or pin starts a new chain.
 - The 30-day budget (`semantic.evidence.laneIncidentCertificateMaxAgeSec`, 2,592,000 seconds) is enforced on the newest certificate's pinned `windowEndSec`; a gap in the contiguous block chain, an expired window, a future window, a malformed row or a failed read leaves the lane `unknown`. The producer's lookback floor (at least 50,000 recent blocks, preferably 30 days, per chain) is a screening-plan requirement, not an evaluation threshold.
-- A `verifier-compromise` whose exposure intersects a provider review's window blocks every covered lane unless the lane carries a point-in-time exemption; no observed exploit is an exemption (OQ-1). A current verification config never exempts.
+- A `verifier-compromise` intersecting either issuer or provider witness window blocks closure without a valid point-in-time exemption. Deployment must postdate a finite exposure end; config pins must fall inside the exposure and exclude compromised-only verification. The absence of an observed exploit is not an exemption (OQ-1); current configuration is not historical proof.
 
 ## Sign-off boundary
 
