@@ -36,6 +36,41 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "nOPAL is a Nest vault share whose per-token value is the protocol's own vault accounting: the issuer's price endpoint serves nav, price and totalSupply for the vault, and the issuer documents returns accruing into the nOPAL token price rather than being distributed. No external aggregated market feed and no borrower liquidation branch consumes an nOPAL price; the underlying sleeve values are manager-reported and reach the share price through issuer accounting.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2-009 research sprint 2026-10-30 (batch 2)",
+      "rationale": "Vault share pricing is the only price-sensitive authority for nOPAL: deposits and redemptions settle at the protocol's NAV per share. nOPAL holders have no borrower debt or liquidation market, so the branches-required case does not apply and the single top-level path is sufficient.",
+      "sources": [
+        {
+          "label": "Nest available vaults, nOPAL detail",
+          "url": "https://docs.nest.credit/about/available-vaults"
+        },
+        {
+          "label": "Nest published nOPAL vault price payload",
+          "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/price"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-009 research sprint 2026-10-30 (batch 2)",
+    "confidence": "limited",
+    "sources": [
+      {
+        "label": "Nest available vaults, nOPAL detail",
+        "url": "https://docs.nest.credit/about/available-vaults"
+      },
+      {
+        "label": "Nest published nOPAL vault price payload",
+        "url": "https://api.nest.credit/v1/vaults/nest-opal-vault/price"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
     "summary": "nOPAL has four reviewed independent native-issuance routes on Ethereum, Plume, BSC, and Plasma, plus reviewed LayerZero OFT representations on Solana, World Chain, and Avalanche. The issuer registry and explorer records identify the exact deployments. Structured controls record the Solana OFT mint-authority/program-admin path and World Chain/Avalanche bridge-mint, peer-configuration, and upgrade paths. Complete LayerZero DVN configuration, controller key custody, route limits, and recovery remain undisclosed. Arc ownership and selected current role/authorization paths are pinned, including direct enter/exit/manage alternatives to the owner timelock; Arc issuance-versus-representation accounting, full authority closure and incident state remain unresolved.",

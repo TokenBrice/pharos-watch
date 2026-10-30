@@ -1,28 +1,37 @@
 {
   "id": "susdai-usd-ai",
   "oracleRisk": {
-    "tier": "opaque-or-unknown",
+    "tier": "privileged-internal-pricing",
     "role": "coin-price-feed",
-    "summary": "The canonical StakedUSDai1.14 source derives share prices from internal USDai balances, base yield and LoanRouter principal/accrual accounting, with optimistic deposit and conservative redemption valuation. totalShares includes local supply, bridgedSupply and pending redemptions. No external market-price feed is read by those share-conversion functions. Issuer documentation describes rule-based loan NAV and offchain agent/default record responsibilities. The complete deployed LoanRouter, escrow and default-recording authority chain has not been established sufficiently to classify the whole price authority as oracleless or privileged internal pricing. This is unresolved research, not issuer non-disclosure; existing bridge and mint controls remain independently applicable.",
-    "reviewedAt": "2026-10-22",
-    "reviewer": "Pharos v10.30 oracle/control primary-source research",
-    "confidence": "limited",
+    "branchModel": "single-path",
+    "summary": "sUSDai share pricing is the protocol's own formula-based NAV rather than an external market feed: the deposit share price uses optimistic NAV and the redemption share price conservative NAV over unallocated USDai plus recorded loan principal and accrual, and the issuer states no service provider may revalue outside the disclosed methodology. The issuer names a protocol-side Price Oracle plus the loan router, deposit timelock and timelock controller on the Arbitrum hub. Price inputs are privileged protocol state (loan terms, recorded principal, USDai yield), so the authority is internal pricing, with no borrower liquidation branch and no secondary-market price source.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2-009 research sprint 2026-10-30 (batch 2)",
+      "rationale": "sUSDai has one price-sensitive authority: the vault share price used to stake and unstake against USDai. There is no borrower debt, collateral factor or liquidation market consuming an sUSDai price, so no branch rows apply. The published NAV formula and the absence of any external feed in the documented conversion path make the authority a single internal pricing path; what remains outside this review is who administers loan terms, which the mint-authority controls own.",
+      "sources": [
+        {
+          "label": "USD.AI technical overview, share pricing NAV section",
+          "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview.md"
+        },
+        {
+          "label": "USD.AI published contract addresses including the hub Price Oracle",
+          "url": "https://docs.usd.ai/technical-overview/contract-addresses"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-009 research sprint 2026-10-30 (batch 2)",
+    "confidence": "probable",
     "sources": [
       {
-        "label": "Arbitrum canonical proxy, explorer implementation resolution retrieved 2026-10-22",
-        "url": "https://arbiscan.io/address/0x0b2b2b2076d95dda7817e785989fe353fe955ef9#code"
-      },
-      {
-        "label": "Verified StakedUSDai1.14 source and bundled position managers",
-        "url": "https://arbitrum.blockscout.com/api/v2/smart-contracts/0x4637193852df85b7ac05dd052b187460d81551f6"
-      },
-      {
-        "label": "Issuer technical NAV methodology and position-manager roles",
+        "label": "USD.AI technical overview, share pricing NAV and position managers",
         "url": "https://docs.usd.ai/technical-overview/technical-protocol-overview.md"
       },
       {
-        "label": "Issuer offchain agent, default and authoritative-record responsibilities",
-        "url": "https://docs.usd.ai/borrower/onchain-offchain-interplay.md"
+        "label": "USD.AI contract addresses: price oracle, loan router, deposit timelock",
+        "url": "https://docs.usd.ai/technical-overview/contract-addresses"
       }
     ]
   },
