@@ -17,7 +17,6 @@ import {
   V9LaneScreeningRefSchema,
   v9NegativeIncidentReviewTimeSec,
   type V9ControlIncident,
-  type V9IncidentReviewRetirement,
   type V9ReviewedIncident,
 } from "@shared/types/safety-score-v9-incidents";
 import type { V9AdmittedHolderLossEvent } from "@shared/types/safety-score-v9-incidents";
