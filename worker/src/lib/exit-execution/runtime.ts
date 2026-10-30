@@ -187,7 +187,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
       if (admission.state === "unavailable") failures.push({ modelId: review.modelId, reason: admission.reason, responsibility: admission.responsibility === "method-unsupported" ? "method-unsupported" : "producer-failed" });
     } catch (error) {
       if (args.signal?.aborted) throw error;
-      failures.push({ modelId: review.modelId, reason: error instanceof Error ? error.message : "execution-producer-failed", responsibility: "producer-failed",
+      failures.push({ modelId: review.modelId, reason: error instanceof Error && error.message ? error.message : "execution-producer-failed", responsibility: "producer-failed",
         ...(error instanceof Erc4626CanonicalAttemptError ? { canonicalAttempt: error.canonicalAttempt } : {}) });
     }
   }
