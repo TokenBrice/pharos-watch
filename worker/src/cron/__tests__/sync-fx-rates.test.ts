@@ -406,6 +406,93 @@ describe("syncFxRates", () => {
   });
 
 
+  it("does not count a rejected secondary quote's stale previous value as live fallback coverage", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const staleAt = nowSec - 10 * 86_400;
+    const previousRates = makeCompleteFxRates();
+    const usd = Object.fromEntries(
+      [...Object.entries(PRIMARY_CURRENCY_TO_PEG), ...Object.entries(SECONDARY_FX_CURRENCY_TO_PEG)]
+        .map(([currency, pegKey]) => [currency.toLowerCase(), 1 / previousRates[pegKey]]),
+    );
+    // ARS devalues 1400 -> 1000 units per USD: a 40% move in the USD-per-ARS
+    // reference, above the 20% prior-value bound.
+    usd.ars = 1000;
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      datedCdn: "unavailable",
+      cdn: { body: { date: "2025-06-15", usd } },
+      pages: { body: { date: "2025-06-15", usd } },
+      gold: "omit",
+      silver: "omit",
+    }));
+
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, staleAt),
+      previousMeta: makeCacheRow(makeFxRatesMeta(previousRates, {
+        usableSyncAt: staleAt,
+        updatedAt: staleAt,
+        cadence: "calendar-daily",
+        date: "2025-06-05",
+      }), staleAt),
+    });
+
+    const result = await syncFxRates(db);
+
+    const metadata = JSON.parse(result.metadata ?? "{}");
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("partial-live-fallback-coverage");
+    expect(metadata.sources.fawazahmed0).toBe("partial");
+    const cachedRates = JSON.parse(String(findCacheWrite(db, "fx-rates")?.binds[1] ?? "{}")) as Record<string, number>;
+    // The rejected quote is not admitted live, and the ten-day-old cached value
+    // is not a cadence-valid observation that could stand in as live coverage.
+    expect(cachedRates.peggedARS).toBe(previousRates.peggedARS);
+  });
+
+  it("does not count an out-of-bounds quote's stale previous value as live fallback coverage", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const previousRates = makeCompleteFxRates();
+    const previousMeta = makeFxRatesMeta(previousRates, {
+      usableSyncAt: nowSec - 900,
+      updatedAt: nowSec - 900,
+      cadence: "calendar-daily",
+      date: "2025-06-15",
+    });
+    // AED stopped publishing three days ago, so its previous value is not a
+    // cadence-valid observation for this run.
+    previousMeta.sourceUpdatedAtByPeg.peggedAED = nowSec - 3 * 86_400;
+    previousMeta.sourceDateByPeg.peggedAED = "2025-06-12";
+    const usd = Object.fromEntries(
+      [...Object.entries(PRIMARY_CURRENCY_TO_PEG), ...Object.entries(SECONDARY_FX_CURRENCY_TO_PEG)]
+        .map(([currency, pegKey]) => [currency.toLowerCase(), 1 / previousRates[pegKey]]),
+    );
+    // 2.5 AED per USD is 0.4 USD per AED, outside the [0.25, 0.3] peg bound.
+    usd.aed = 2.5;
+    mockFetch(fxMirrors({
+      frankfurter: "unavailable",
+      secondary: "omit",
+      cdn: { body: { date: "2025-06-15", usd } },
+      gold: "omit",
+      silver: "omit",
+    }));
+
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 900),
+      previousMeta: makeCacheRow(previousMeta, nowSec - 900),
+    });
+
+    const result = await syncFxRates(db);
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as { reason?: string; sources: Record<string, string> };
+    expect(result.status).toBe("degraded");
+    expect(metadata.reason).toBe("partial-live-fallback-coverage");
+    expect(metadata.sources.fawazahmed0).toBe("partial");
+    const persistedMeta = JSON.parse(String(findCacheWrite(db, "fx-rates-meta")?.binds[1] ?? "{}")) as {
+      sources: Record<string, string>;
+    };
+    expect(persistedMeta.sources.fawazahmed0).toBe("partial");
+  });
+
   it("uses ExchangeRate-API as a live full-set fallback when frankfurter and the secondary mirrors are unavailable", async () => {
     const exchangeRateUpdatedAt = Math.floor(Date.parse("2025-06-15T00:02:31Z") / 1000);
 
@@ -623,6 +710,79 @@ describe("syncFxRates", () => {
       sourceDateByPeg: Record<string, string | null>;
     };
     expect(cachedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
+  });
+
+  it("keeps the fresher incumbent secondary generation when the only due mirror returns an older payload", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const previousRates = makeCompleteFxRates();
+    const primaryUpdatedAt = Math.floor(Date.parse("2025-06-13T16:00:00Z") / 1000);
+    const secondaryUpdatedAt = Math.floor(Date.parse("2025-06-15T05:00:00Z") / 1000);
+    // jsdelivr and the dated package succeeded a minute ago, so their six-hour
+    // TTLs keep them out of this run; pages.dev last succeeded seven hours ago
+    // and is the only mirror re-read. The persisted generation itself holds a
+    // fresh 2025-06-15 observation from those earlier mirror reads.
+    const previousMeta = makeCacheRow({
+      ...makeFxRatesMeta(previousRates, { usableSyncAt: nowSec - 60, updatedAt: nowSec - 60 }),
+      sourceUpdatedAtByPeg: Object.fromEntries([
+        ...Object.values(PRIMARY_CURRENCY_TO_PEG).map((pegKey) => [pegKey, primaryUpdatedAt]),
+        ...Object.values(SECONDARY_FX_CURRENCY_TO_PEG).map((pegKey) => [pegKey, secondaryUpdatedAt]),
+      ]),
+      sourceCadenceByPeg: Object.fromEntries([
+        ...Object.values(PRIMARY_CURRENCY_TO_PEG).map((pegKey) => [pegKey, "business-daily"]),
+        ...Object.values(SECONDARY_FX_CURRENCY_TO_PEG).map((pegKey) => [pegKey, "calendar-daily"]),
+      ]),
+      sourceDateByPeg: Object.fromEntries([
+        ...Object.values(PRIMARY_CURRENCY_TO_PEG).map((pegKey) => [pegKey, "2025-06-13"]),
+        ...Object.values(SECONDARY_FX_CURRENCY_TO_PEG).map((pegKey) => [pegKey, "2025-06-15"]),
+      ]),
+      sourceLastSuccessAtBySource: {
+        "secondary:jsdelivr": nowSec - 60,
+        "secondary:jsdelivr-versioned": nowSec - 60,
+        "secondary:pages.dev": nowSec - 7 * 3600,
+        metals: nowSec - 60,
+        chainlink: nowSec - 60,
+        openExchangeRates: nowSec - 60,
+      },
+    }, nowSec - 60);
+    mockFetch(fxMirrors({
+      secondary: "omit",
+      cdn: "omit",
+      datedCdn: "omit",
+      pages: { body: secondaryBody({ cnh: 7.31, aed: 3.67 }, { date: "2025-06-13" }) },
+      gold: "omit",
+      silver: "omit",
+      openExchange: "omit",
+    }));
+
+    const db = makeFxRatesDb({
+      previousRates: makeCacheRow(previousRates, nowSec - 60),
+      previousMeta,
+    });
+
+    const result = await syncFxRates(db);
+    expect(result.status).toBeUndefined();
+
+    // A mirror carrying a 2025-06-13 snapshot must not replace the fresher
+    // 2025-06-15 observation the generation already holds.
+    const ratesWrite = findCacheWrite(db, "fx-rates");    const persistedRates = JSON.parse(String(ratesWrite?.binds[1] ?? "{}")) as Record<string, number>;
+    expect(persistedRates.peggedCNH).toBe(previousRates.peggedCNH);
+    expect(persistedRates.peggedAED).toBe(previousRates.peggedAED);
+    const metaWrite = findCacheWrite(db, "fx-rates-meta");
+    const persistedMeta = JSON.parse(String(metaWrite?.binds[1] ?? "{}")) as {
+      sourceDateByPeg: Record<string, string | null>;
+    };
+    expect(persistedMeta.sourceDateByPeg.peggedCNH).toBe("2025-06-15");
+    expect(persistedMeta.sourceDateByPeg.peggedAED).toBe("2025-06-15");
+    expect(findCacheWrite(db, "cron:event:sync-fx-rates:older-fx-observation-skipped")).toBeDefined();
+
+    const state = hydrateFxRateState(
+      { value: String(ratesWrite?.binds[1]), updatedAt: nowSec },
+      { value: String(metaWrite?.binds[1]), updatedAt: nowSec },
+    );
+    expect(state).not.toBeNull();
+    // The published FX reference stays fresh instead of flipping to stale for
+    // every calendar-daily peg until the next mirror TTL expiry.
+    expect(buildFxCacheStatus(state!, 1800, nowSec).cacheStatus.sourceStatus).toBe("fresh");
   });
 
   it("overlays fresh Chainlink reference feeds when they agree with current references", async () => {
