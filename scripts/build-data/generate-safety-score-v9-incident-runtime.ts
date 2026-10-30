@@ -26,7 +26,6 @@ const REVIEW_TABLES = { sources: "sourceObservations", searchedSurfaces: "search
 
 // Issuer-surface routes are plain ids; provider lanes are authored refs.
 const providerLaneKey = reviewedRegistryTupleKey("assetId", "routeId");
-const providerControlKey = reviewedRegistryTupleKey("assetId", "controlId");
 
 export function buildIncidentRuntime(value: unknown) {
   const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(value);
@@ -49,8 +48,6 @@ export function buildIncidentRuntime(value: unknown) {
     // authored order must not become part of the build identity.
     "negativeReviews.*.scope.controlIds": reviewedRegistryTextKey,
     "negativeReviews.*.scope.coveredRoutes": (row: unknown) => typeof row === "string" ? row : providerLaneKey(row),
-    "negativeReviews.*.scope.coveredControls": (row: unknown) => typeof row === "string" ? row : providerControlKey(row),
-    "negativeReviews.*.laneScreeningRefs": reviewedRegistryTupleKey("assetId", "routeId", "certificateId"),
   });
   return { schemaVersion: 1, digest: reviewedRegistryEnvelopeDigest("safety-score-v9.incident-reviews.v1", "payload", canonical),
     incidents: envelope.incidents.map((row) => V9ReviewedIncidentSchema.parse(row)),

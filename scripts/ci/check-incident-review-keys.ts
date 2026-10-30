@@ -11,14 +11,12 @@
  *
  * The check reads the authoring metadata directly (the same three directories
  * the review-key migration generator compiles from) and reuses its authored
- * candidate map, so route/control identity has one derivation. Lane screening
- * certificates are D1 runtime state (IR-3b stores no committed artifact), so
- * `laneScreeningRefs` are checked structurally and per covered lane. A reference
- * must name a certificate an actual read produced: the `lane-cert-pending:`
- * placeholder form and its siblings resolve nowhere yet would read as coverage,
- * so they are rejected with a machine-readable finding. Certificate admission
- * (freshness, finding, contributor set) is the v10.39 provider-screening rule,
- * not a v10.38 gate.
+ * candidate map, so route/control identity has one derivation. Certificate
+ * admission is evaluation-time (IR-1b store, joined by subject + screening set),
+ * so authored data may name no certificate at all: `laneScreeningRefs` and
+ * `coveredControls` are removed shapes and are rejected here. A provider review
+ * must carry its `providerIncidents` disclosures, and every disclosed provider
+ * incident must survive a renewal (cross-review consistency per providerKey).
  */
 
 import { existsSync, readFileSync, readdirSync } from "node:fs";
@@ -33,8 +31,8 @@ import {
   V9AuthoredControlReviewScopeSchema,
   V9IncidentReviewRetirementSchema,
   V9IssuerSurfaceIncidentReviewScopeSchema,
-  V9LaneScreeningRefSchema,
   V9NegativeIncidentReviewScopeSchema,
+  V9ProviderIncidentDisclosureSchema,
   V9ProviderIncidentReviewScopeSchema,
 } from "../../shared/types/safety-score-v9-incidents";
 import { normalizeDeploymentId } from "../../shared/types/deployment-id";
@@ -46,12 +44,12 @@ const ROOT = fileURLToPath(new URL("../../", import.meta.url));
 export const INCIDENT_REVIEWS_PATH = "shared/data/safety-score-v9/incident-reviews-v1.json";
 
 /**
- * Placeholder markers that have appeared in authored lane references, as
- * `-`/`.`/`:`-delimited segments. `lane-cert-pending:<chain>:…` is the known
- * form; the others are the same claim in different words. A certificate id that
- * carries one names a promise, not a pinned read, and resolves nowhere.
+ * Authored shapes that were removed in v10.39. `laneScreeningRefs` bound a
+ * certificate id (now joined at evaluation) and `coveredControls` narrowed the
+ * issuer/provider witness (contributor parity is the descriptor's job). An
+ * authored row carrying either is written against the old contract.
  */
-const PLACEHOLDER_CERTIFICATE_SEGMENT = /(?:^|[-.:])(?:pending|placeholder|tbd|todo|to-be-authored|unresolved)(?:[-.:]|$)/u;
+const REMOVED_COVERAGE_KEYS = ["laneScreeningRefs", "coveredControls"] as const;
 
 const COINS_DIR = "shared/data/stablecoins/coins";
 const RISK_REVIEW_DIR = "shared/data/stablecoins/domains/risk-review";
@@ -100,9 +98,10 @@ const ReviewIdentityRowSchema = z
     assetId: CanonicalKeySchema.optional(),
     scope: ReviewScopeSchema,
     reviewedAt: CanonicalTextSchema,
+    windowStartSec: z.number().int().nonnegative().safe().optional(),
     windowEndSec: z.number().int().nonnegative().safe(),
     retired: V9IncidentReviewRetirementSchema.optional(),
-    laneScreeningRefs: z.array(V9LaneScreeningRefSchema).min(1).optional(),
+    providerIncidents: z.array(V9ProviderIncidentDisclosureSchema).optional(),
   })
   .passthrough();
 type ReviewIdentityRow = z.output<typeof ReviewIdentityRowSchema>;
@@ -284,11 +283,6 @@ function resolveReviewScope(
           return { ok: false, detail: `covered route ${routeId} is not a reviewed route of ${assetId}` };
         }
       }
-      for (const controlId of scope.coveredControls ?? []) {
-        if (!isAssetLocalControl(inventory, controlId)) {
-          return { ok: false, detail: `covered control ${controlId} is not a compiled control of ${assetId}` };
-        }
-      }
       return { ok: true, detail: "" };
     }
     case "provider": {
@@ -297,13 +291,6 @@ function resolveReviewScope(
         if (inventory === undefined) return { ok: false, detail: `covered asset ${route.assetId} has no control metadata` };
         if (!inventory.routeIds.has(normalizeDeploymentId(route.routeId))) {
           return { ok: false, detail: `covered route ${route.assetId}|${route.routeId} is not a reviewed route` };
-        }
-      }
-      for (const control of scope.coveredControls ?? []) {
-        const inventory = inventoryByAsset.get(control.assetId);
-        if (inventory === undefined) return { ok: false, detail: `covered asset ${control.assetId} has no control metadata` };
-        if (!isAssetLocalControl(inventory, control.controlId)) {
-          return { ok: false, detail: `covered control ${control.assetId}|${control.controlId} is not a compiled control` };
         }
       }
       return { ok: true, detail: "" };
@@ -438,6 +425,21 @@ export function checkIncidentReviewKeys(root: string): IncidentReviewKeyReport {
   }
   const reviews: ReviewIdentityRow[] = [];
   for (const [index, raw] of envelope.negativeReviews.entries()) {
+    if (raw !== null && typeof raw === "object") {
+      const row = raw as Record<string, unknown>;
+      const reviewId = typeof row.reviewId === "string" ? row.reviewId : null;
+      for (const key of REMOVED_COVERAGE_KEYS) {
+        if (key in row) {
+          emit("coverage-field-removed", reviewId,
+            `${key} was removed in v10.39: certificates are joined at evaluation and contributor parity is the descriptor's`);
+        }
+      }
+      const scope = row.scope;
+      if (scope !== null && typeof scope === "object" && "coveredControls" in scope) {
+        emit("coverage-field-removed", reviewId,
+          "scope.coveredControls was removed in v10.39: contributor parity is the descriptor's, not a narrowing list");
+      }
+    }
     const parsed = ReviewIdentityRowSchema.safeParse(raw);
     if (!parsed.success) {
       emit("review-schema", null, `negativeReviews[${index}]: ${parsed.error.issues.map((issue) => issue.message).join("; ")}`);
@@ -528,34 +530,31 @@ export function checkIncidentReviewKeys(root: string): IncidentReviewKeyReport {
       emit("migration-state", reviewId, `${scope.kind} review is '${migrationRow.applied}' in the migration artefact`);
     }
 
-    if (scope.kind === "provider") {
-      if (review.laneScreeningRefs === undefined) {
-        emit("coverage-ref-missing", reviewId, "provider review carries no lane screening references");
-      } else {
-        const coveredLanes = new Set(
-          scope.coveredRoutes.map((route) => `${route.assetId}\u0000${normalizeDeploymentId(route.routeId)}`),
-        );
-        const referencedLanes = new Set<string>();
-        for (const ref of review.laneScreeningRefs) {
-          const lane = `${ref.assetId}\u0000${normalizeDeploymentId(ref.routeId)}`;
-          if (PLACEHOLDER_CERTIFICATE_SEGMENT.test(ref.certificateId)) {
-            emit("coverage-ref-placeholder", reviewId,
-              `lane screening reference ${ref.assetId}|${ref.routeId} names placeholder certificate ${ref.certificateId}`);
-          }
-          if (!coveredLanes.has(lane)) {
-            emit("coverage-ref-lane", reviewId, `lane screening reference ${ref.assetId}|${ref.routeId} is not a covered route`);
-          }
-          referencedLanes.add(lane);
-        }
-        for (const lane of coveredLanes) {
-          if (!referencedLanes.has(lane)) {
-            emit("coverage-ref-missing", reviewId, `covered lane ${lane.replace("\u0000", "|")} has no certificate reference`);
-          }
-        }
-      }
+    if (scope.kind === "provider" && review.providerIncidents === undefined) {
+      emit("provider-incidents-missing", reviewId,
+        "provider review carries no providerIncidents array (an empty array means searched and none found)");
     }
 
     if (migrationRow !== undefined) checkStableId(review, migrationRow, seenStableIds, emit);
+  }
+
+  // A renewal must not silently drop a provider event another current review of
+  // the same provider discloses (OP-IR ruling 2).
+  const disclosuresByProvider = new Map<string, Map<string, string>>();
+  for (const review of reviews) {
+    if (review.retired !== undefined || review.scope.kind !== "provider") continue;
+    const disclosed = disclosuresByProvider.get(review.scope.providerKey) ?? new Map<string, string>();
+    for (const incident of review.providerIncidents ?? []) disclosed.set(incident.incidentKey, review.reviewId);
+    disclosuresByProvider.set(review.scope.providerKey, disclosed);
+  }
+  for (const review of reviews) {
+    if (review.retired !== undefined || review.scope.kind !== "provider") continue;
+    const own = new Set((review.providerIncidents ?? []).map((incident) => incident.incidentKey));
+    for (const [incidentKey, owner] of disclosuresByProvider.get(review.scope.providerKey) ?? []) {
+      if (owner === review.reviewId || own.has(incidentKey)) continue;
+      emit("provider-incident-omitted", review.reviewId,
+        `${incidentKey} is disclosed by ${owner} for ${review.scope.providerKey} but missing here`);
+    }
   }
 
   for (const row of migration.rows) {

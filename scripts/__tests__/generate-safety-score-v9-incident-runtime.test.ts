@@ -96,10 +96,6 @@ function providerScope(overrides: Record<string, unknown> = {}) {
       { assetId: ASSET_B, routeId: ROUTE_BASE },
       { assetId: ASSET_A, routeId: ROUTE_ETH },
     ],
-    coveredControls: [
-      { assetId: ASSET_B, controlId: "z-dvn-set" },
-      { assetId: ASSET_A, controlId: "a-dvn-set" },
-    ],
     ...overrides };
 }
 
@@ -110,10 +106,7 @@ function providerRow(overrides: Record<string, unknown> = {}) {
     reviewedAt: REVIEWED_AT, reviewer: "Fixture reviewer",
     windowStartSec: WINDOW_END_SEC - 86_400, windowEndSec: WINDOW_END_SEC,
     conclusion: "no-known-incident",
-    laneScreeningRefs: [
-      { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
-      { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
-    ],
+    providerIncidents: [],
     ...overrides };
 }
 
@@ -239,17 +232,11 @@ describe("incident runtime projection", () => {
     expect(rows.map((row) => row.assetId)).toEqual([ASSET_B, ASSET_A]);
     expect(rows.map((row) => row.reviewId)).toEqual(["provider:layerzero:fixture", "provider:layerzero:fixture"]);
     expect(rows[0]!.scope).toEqual({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
-      coveredRoutes: [{ assetId: ASSET_B, routeId: ROUTE_BASE }],
-      coveredControls: [{ assetId: ASSET_B, controlId: "z-dvn-set" }] });
+      coveredRoutes: [{ assetId: ASSET_B, routeId: ROUTE_BASE }] });
     expect(rows[1]!.scope).toEqual({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
-      coveredRoutes: [{ assetId: ASSET_A, routeId: ROUTE_ETH }],
-      coveredControls: [{ assetId: ASSET_A, controlId: "a-dvn-set" }] });
-    expect(rows[0]!.laneScreeningRefs).toEqual([
-      { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
-    ]);
-    expect(rows[1]!.laneScreeningRefs).toEqual([
-      { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
-    ]);
+      coveredRoutes: [{ assetId: ASSET_A, routeId: ROUTE_ETH }] });
+    expect(rows[0]).not.toHaveProperty("laneScreeningRefs");
+    expect(rows[0]).not.toHaveProperty("coveredControls");
     expect(rows[0]).not.toHaveProperty("sources");
 
     const runtime = buildIncidentRuntime(referencedEnvelope([providerRow()]));
@@ -262,24 +249,15 @@ describe("incident runtime projection", () => {
     expect(() => projectNegativeIncidentReview(withEvidence(providerRow()))).toThrow();
   });
 
-  it("fails closed on provider coverage it cannot witness", () => {
-    const withoutRefs: Record<string, unknown> = { ...providerRow() };
-    delete withoutRefs.laneScreeningRefs;
-    expect(() => fanOutProviderIncidentReview(withoutRefs)).toThrow();
-
+  it("fails closed on provider coverage it cannot admit", () => {
+    expect(() => buildIncidentRuntime(referencedEnvelope([providerRow({ providerIncidents: undefined })])))
+      .toThrow(/providerIncidents/);
     expect(() => buildIncidentRuntime(referencedEnvelope([providerRow({
-      laneScreeningRefs: [{ assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" }],
-    })]))).toThrow(/requires a lane screening certificate reference/);
+      laneScreeningRefs: [{ assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "lane-cert-pending:ethereum" }],
+    })]))).toThrow();
     expect(() => buildIncidentRuntime(referencedEnvelope([providerRow({
-      laneScreeningRefs: [
-        { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
-        { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
-        { assetId: ASSET_A, routeId: "polygon:0x3333333333333333333333333333333333333333", certificateId: "cert:extra" },
-      ],
-    })]))).toThrow(/only name covered routes/);
-    expect(() => fanOutProviderIncidentReview(providerRow({
-      scope: providerScope({ coveredControls: [{ assetId: "fixture-third", controlId: "x-dvn" }] }),
-    }))).toThrow(/must resolve to its covered assets/);
+      scope: providerScope({ coveredControls: [{ assetId: ASSET_A, controlId: "a-dvn-set" }] }),
+    })]))).toThrow();
     expect(() => buildIncidentRuntime(referencedEnvelope([{ ...providerRow(), assetId: ASSET_A }])))
       .toThrow(/must not name an asset/);
   });
@@ -303,15 +281,7 @@ describe("incident runtime projection", () => {
             { assetId: ASSET_A, routeId: ROUTE_ETH },
             { assetId: ASSET_B, routeId: ROUTE_BASE },
           ],
-          coveredControls: [
-            { assetId: ASSET_A, controlId: "a-dvn-set" },
-            { assetId: ASSET_B, controlId: "z-dvn-set" },
-          ],
         }),
-        laneScreeningRefs: [
-          { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
-          { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
-        ],
       }),
       authoredRow({ scope: { controlIds: ["a-upgrade", "z-admin"] } }),
       issuerRow({ scope: { coveredRoutes: [ROUTE_BASE, ROUTE_ETH] } }),
@@ -320,7 +290,7 @@ describe("incident runtime projection", () => {
     expect(buildIncidentRuntime(shuffled).digest).toBe(runtime.digest);
     expect(buildIncidentRuntime(shuffled).negativeReviews).toEqual(runtime.negativeReviews);
     expect(buildIncidentRuntime(referencedEnvelope([
-      providerRow({ scope: providerScope({ coveredControls: [{ assetId: ASSET_A, controlId: "a-dvn-set" }] }) }),
+      providerRow({ scope: providerScope({ coveredRoutes: [{ assetId: ASSET_A, routeId: ROUTE_ETH }] }) }),
     ])).digest).not.toBe(buildIncidentRuntime(referencedEnvelope([providerRow()])).digest);
   });
 

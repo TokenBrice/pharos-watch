@@ -61,14 +61,15 @@
 | `telegram-inactive-cleanup` | 7d | 14d O | watch | Bounded inactive-user cleanup allowed; partial execution does not claim all eligible users processed. |
 | `telegram-retention-cleanup` | 1d | 2d O | watch | Bounded retention/reconciliation allowed with residual backlog; no lost pending deliveries. |
 
-## Lane-witness freshness (v10.38)
+## Lane-witness freshness (v10.39)
 
-Safety Score incident evidence is authored research, not a cron lane. Certificate-based lane closure is not an evaluation input in v10.38 (it moves to v10.39), so this matrix adds no certificate row yet.
+Safety Score incident evidence is authored research plus one on-chain screening lane, not a cron lane.
 
 - A negative incident review is admissible only while the evaluation clock is at or after both `reviewedAt` and `windowEndSec`, and no more than 365 days past either (the reviewed-research budget). A date-only `reviewedAt` value admits after its UTC day ends; a timestamped value admits at its instant. A retired review keeps its provenance and contributes nothing.
-- The only lane witness consumed today is the authored control or deployment negative review. Provider and issuer-surface reviews are parsed and key-checked but close nothing in v10.38, so neither can refresh a lane's incident status.
-- A provider review's `laneScreeningRefs` are structural: one reference per covered lane, none on an uncovered route, and no certificate lookup. The policy key `semantic.evidence.laneIncidentCertificateMaxAgeSec` (2,592,000 seconds) is schema-validated but has no consumer, so no certificate freshness budget is enforced. A shadow screening cycle may produce certificates, but they are shadow observations: they are not coverage and must not be described as lane evidence.
-- When certificate admission lands, this section gains the screening cadence, the 30-day certificate budget and the emitter lookback floor together; none of those is an acceptance threshold today.
+- A bridge lane closes (`incidentState: "none"`) only through the three-witness rule: one current provider review per provider key the route authors (or the issuer-surface review when the route's metadata says `rail: "issuer-operated"`), a current issuer-surface review naming the lane, and the newest admitted certificate for the descriptor's screening set with contributor parity against the fact's authored control ids.
+- Certificates are joined at evaluation by `(subjectDeploymentKey, screeningSetId)`; authored data names no certificate. The screening set is the digest of the subject, the frozen screening policy, the sorted contributor ids and the emitter runtime pins, so a changed contributor, emitter or pin starts a new chain.
+- The 30-day budget (`semantic.evidence.laneIncidentCertificateMaxAgeSec`, 2,592,000 seconds) is enforced on the newest certificate's pinned `windowEndSec`; a gap in the contiguous block chain, an expired window, a future window, a malformed row or a failed read leaves the lane `unknown`. The producer's lookback floor (at least 50,000 recent blocks, preferably 30 days, per chain) is a screening-plan requirement, not an evaluation threshold.
+- A `verifier-compromise` whose exposure intersects a provider review's window blocks every covered lane unless the lane carries a point-in-time exemption; no observed exploit is an exemption (OQ-1). A current verification config never exempts.
 
 ## Sign-off boundary
 

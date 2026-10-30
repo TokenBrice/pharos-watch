@@ -234,16 +234,16 @@ describe("incident review keys pass on migrated rows", () => {
             providerKey: "layerzero",
             surface: "dvn-set",
             coveredRoutes: [{ assetId: ASSET, routeId: ROUTE }],
-            coveredControls: [{ assetId: ASSET, controlId: "alpha-owner" }],
           },
           reviewedAt: "2026-10-22",
+          windowStartSec: 1000,
           windowEndSec: 7000,
-          laneScreeningRefs: [{ assetId: ASSET, routeId: ROUTE, certificateId: CERTIFICATE_ID }],
+          providerIncidents: [],
         },
         {
           reviewId: "review-issuer",
           assetId: ASSET,
-          scope: { kind: "issuer-surface", coveredRoutes: [ROUTE], coveredControls: ["alpha-owner"] },
+          scope: { kind: "issuer-surface", coveredRoutes: [ROUTE] },
           reviewedAt: "2026-10-22",
           windowEndSec: 8000,
         },
@@ -447,8 +447,20 @@ describe("incident review keys enforce stable ids", () => {
   });
 });
 
-describe("incident review coverer references", () => {
-  const provider = (laneScreeningRefs: unknown[] | undefined): unknown => ({
+describe("incident review authored coverage shapes", () => {
+  const EMAIL = "https://example.com/status";
+  const disclosure = (incidentKey: string): unknown => ({
+    incidentKey,
+    class: "verifier-compromise",
+    surface: "dvn-set",
+    occurredAt: "2026-04-18",
+    exposureStartSec: 1000,
+    exposureEndSec: 2000,
+    affectedRoutes: [],
+    sourceUrls: [EMAIL],
+    exemptions: [],
+  });
+  const provider = (overrides: Record<string, unknown> = {}): unknown => ({
     reviewId: "review-provider",
     scope: {
       kind: "provider",
@@ -457,36 +469,52 @@ describe("incident review coverer references", () => {
       coveredRoutes: [{ assetId: ASSET, routeId: ROUTE }],
     },
     reviewedAt: "2026-10-22",
+    windowStartSec: 1000,
     windowEndSec: 9000,
-    ...(laneScreeningRefs === undefined ? {} : { laneScreeningRefs }),
+    providerIncidents: [],
+    ...overrides,
   });
 
-  it("rejects a provider review without lane screening references", () => {
-    const dir = fixtureRoot({ reviews: [provider(undefined)], rows: [] });
-    expect(codes(dir)).toEqual(["coverage-ref-missing"]);
+  it("requires a provider review to record its provider incident search", () => {
+    const dir = fixtureRoot({ reviews: [provider({ providerIncidents: undefined })], rows: [] });
+    expect(codes(dir)).toEqual(["provider-incidents-missing"]);
   });
 
-  it("rejects a screening reference that names an uncovered lane", () => {
+  it("rejects the removed lane screening reference shape", () => {
     const dir = fixtureRoot({
-      reviews: [provider([{ assetId: ASSET, routeId: "base:0x3333333333333333333333333333333333333333", certificateId: CERTIFICATE_ID }])],
-      rows: [],
-    });
-    expect(codes(dir)).toEqual(expect.arrayContaining(["coverage-ref-lane", "coverage-ref-missing"]));
-  });
-
-  it.each([
-    `lane-cert-pending:ethereum:0x1111111111111111111111111111111111111111:100-200:${"a".repeat(64)}`,
-    "lane-cert-tbd:ethereum",
-    "certificate-placeholder",
-  ])("rejects the placeholder certificate id %s", (certificateId) => {
-    const dir = fixtureRoot({
-      reviews: [provider([{ assetId: ASSET, routeId: ROUTE, certificateId }])],
+      reviews: [provider({ laneScreeningRefs: [{ assetId: ASSET, routeId: ROUTE, certificateId: "lane-cert" }] })],
       rows: [],
     });
     const report = checkIncidentReviewKeys(dir);
-    expect(report.findings.map((finding) => finding.code)).toEqual(["coverage-ref-placeholder"]);
-    expect(report.findings[0]).toMatchObject({ reviewId: "review-provider" });
-    expect(report.findings[0]!.detail).toContain(certificateId);
+    expect(report.findings.map((finding) => finding.code)).toEqual(["coverage-field-removed"]);
+    expect(report.findings[0]!.detail).toContain("laneScreeningRefs");
+  });
+
+  it("rejects a narrowed coveredControls list on an issuer row", () => {
+    const dir = fixtureRoot({
+      reviews: [{
+        reviewId: "review-issuer",
+        assetId: ASSET,
+        scope: { kind: "issuer-surface", coveredRoutes: [ROUTE], coveredControls: ["alpha-owner"] },
+        reviewedAt: "2026-10-22",
+        windowEndSec: 8000,
+      }],
+      rows: [],
+    });
+    expect(codes(dir)).toEqual(expect.arrayContaining(["coverage-field-removed", "review-schema"]));
+  });
+
+  it("fails a renewal that drops an incident another review of the provider discloses", () => {
+    const dir = fixtureRoot({
+      reviews: [
+        provider({ reviewId: "review-provider-old", providerIncidents: [disclosure("kelpdao-dvn")] }),
+        provider({ reviewId: "review-provider-new", providerIncidents: [] }),
+      ],
+      rows: [],
+    });
+    const report = checkIncidentReviewKeys(dir);
+    expect(report.findings.map((finding) => finding.code)).toEqual(["provider-incident-omitted"]);
+    expect(report.findings[0]).toMatchObject({ reviewId: "review-provider-new" });
   });
 });
 

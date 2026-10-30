@@ -104,16 +104,27 @@ export type V9AuthoredNegativeIncidentReviewScope = z.output<typeof V9AuthoredNe
 
 /**
  * Asset-wide issuer surface (U5): the issuer's own announcements/status surface,
- * dated once per asset and naming every lane it speaks to. It is the required
- * third witness for asset-specific contributors; it never substitutes for a
- * provider review or an exact-lane certificate, and an added lane is uncovered
- * until a fresh review names it.
+ * dated once per asset and naming every bridge route it speaks to. It is the
+ * required issuer witness for asset-specific contributors and, on an
+ * issuer-operated rail, the rail witness too (OQ-2); it never substitutes for an
+ * exact-lane certificate, and an added lane is uncovered until a fresh review
+ * names it. Route-level only (OP-IR ruling 4): contributor completeness is the
+ * fact's authored control-id set matched against the lane descriptor, so
+ * `coveredControls` is not a second narrowing authority. `asset:<id>` keys are
+ * rejected because issuer rows never close mint or upgrade controls.
  */
 export const V9IssuerSurfaceIncidentReviewScopeSchema = z
   .object({
     kind: z.literal("issuer-surface"),
-    coveredRoutes: canonicalArrayBy(DeploymentIdSchema, (routeId) => routeId, 1, "covered route"),
-    coveredControls: canonicalArrayBy(CanonicalKeySchema, (controlId) => controlId, 1, "covered control").optional(),
+    coveredRoutes: canonicalArrayBy(
+      DeploymentIdSchema.refine(
+        (routeId) => !routeId.startsWith("asset:"),
+        "Issuer-surface rows cover bridge routes; asset:<id> identities are not lanes",
+      ),
+      (routeId) => routeId,
+      1,
+      "covered route",
+    ),
   })
   .strict();
 export type V9IssuerSurfaceIncidentReviewScope = z.output<typeof V9IssuerSurfaceIncidentReviewScopeSchema>;
@@ -127,22 +138,13 @@ export const V9ProviderReviewRouteRefSchema = z
   .strict();
 export type V9ProviderReviewRouteRef = z.output<typeof V9ProviderReviewRouteRefSchema>;
 
-/** One narrowed contributor in a provider-wide review. */
-export const V9ProviderReviewControlRefSchema = z
-  .object({
-    assetId: CanonicalKeySchema,
-    controlId: CanonicalKeySchema,
-  })
-  .strict();
-export type V9ProviderReviewControlRef = z.output<typeof V9ProviderReviewControlRefSchema>;
-
 /**
  * Provider scope is provider-wide, not per asset: one review id is authored once
- * per provider and names the `(assetId, routeId)` lanes it speaks to. It is
- * admissible only for provider-owned verification surfaces and only together
- * with a lane screening certificate per covered route, so a provider review
- * alone never closes a control. Asset-specific admin/upgrade/peer/bridge-mint
- * capabilities are never covered by provider fan-out.
+ * per provider and names the `(assetId, routeId)` lanes it speaks to. It
+ * witnesses only the rail; asset-specific absence is the exact-lane certificate
+ * plus the issuer surface, so a provider review alone never closes a control.
+ * Contributor completeness is the fact's authored control-id set against the
+ * lane descriptor, never a narrowed `coveredControls` list.
  */
 export const V9ProviderIncidentReviewScopeSchema = z
   .object({
@@ -155,12 +157,6 @@ export const V9ProviderIncidentReviewScopeSchema = z
       1,
       "covered route",
     ),
-    coveredControls: canonicalArrayBy(
-      V9ProviderReviewControlRefSchema,
-      (ref) => `${ref.assetId}\u0000${ref.controlId}`,
-      1,
-      "covered control",
-    ).optional(),
   })
   .strict();
 export type V9ProviderIncidentReviewScope = z.output<typeof V9ProviderIncidentReviewScopeSchema>;
@@ -175,15 +171,98 @@ export const V9IncidentReviewRetirementSchema = z
   .strict();
 export type V9IncidentReviewRetirement = z.output<typeof V9IncidentReviewRetirementSchema>;
 
-/** Binds one covered asset lane to the admitted screening certificate for its exact deployment. */
-export const V9LaneScreeningRefSchema = z
+/** Lowercase 0x-prefixed 32-byte and 20-byte EVM literals, shared by disclosures and certificates. */
+const EvmBytes32Schema = z.string().regex(/^0x[0-9a-f]{64}$/u, "Expected a lowercase 0x-prefixed 32-byte value");
+const EvmAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/u, "Expected a lowercase 0x-prefixed 20-byte address");
+
+/** OP-IR ruling 2 incident classes; only `verifier-compromise` can exempt a lane. */
+export const V9_PROVIDER_INCIDENT_CLASS_VALUES = [
+  "verifier-compromise",
+  "route-local-exploit",
+  "third-party-app-exploit",
+  "remediated-vulnerability",
+] as const;
+export type V9ProviderIncidentClass = (typeof V9_PROVIDER_INCIDENT_CLASS_VALUES)[number];
+export const V9ProviderIncidentClassSchema = z.enum(V9_PROVIDER_INCIDENT_CLASS_VALUES);
+
+/**
+ * One lane-level exemption from a `verifier-compromise` exposure interval. Both
+ * kinds are point-in-time evidence, never a current configuration:
+ * `deployed-after-exposure` proves the lane did not exist during the exposure;
+ * `threshold-excludes-compromised-verifier` is a pinned read of the effective
+ * verification config plus pinned log evidence that it did not change.
+ */
+export const V9ProviderIncidentDeployedAfterExposureExemptionSchema = z
   .object({
     assetId: CanonicalKeySchema,
     routeId: DeploymentIdSchema,
-    certificateId: CanonicalKeySchema,
+    kind: z.literal("deployed-after-exposure"),
+    creationTxHash: EvmBytes32Schema,
+    creationBlock: z.number().int().nonnegative().safe(),
+    creationTimestampSec: UnixSecondsSchema,
   })
   .strict();
-export type V9LaneScreeningRef = z.output<typeof V9LaneScreeningRefSchema>;
+
+export const V9ProviderIncidentThresholdExemptionSchema = z
+  .object({
+    assetId: CanonicalKeySchema,
+    routeId: DeploymentIdSchema,
+    kind: z.literal("threshold-excludes-compromised-verifier"),
+    chain: CanonicalKeySchema,
+    blockNumber: z.number().int().nonnegative().safe(),
+    blockTimestampSec: UnixSecondsSchema,
+    receiveLibrary: EvmAddressSchema,
+    eids: canonicalArrayBy(
+      z.object({
+        eid: z.number().int().nonnegative().safe(),
+        requiredDVNs: canonicalArrayBy(EvmAddressSchema, (address) => address, 1, "required DVN"),
+        optionalDVNs: canonicalArrayBy(EvmAddressSchema, (address) => address, 0, "optional DVN"),
+        optionalThreshold: z.number().int().nonnegative().safe(),
+      }).strict(),
+      (row) => String(row.eid),
+      1,
+      "inbound eid",
+    ),
+    configChangeLogSourceUrl: z.string().url(),
+  })
+  .strict();
+
+export const V9ProviderIncidentExemptionSchema = z.discriminatedUnion("kind", [
+  V9ProviderIncidentDeployedAfterExposureExemptionSchema,
+  V9ProviderIncidentThresholdExemptionSchema,
+]);
+export type V9ProviderIncidentExemption = z.output<typeof V9ProviderIncidentExemptionSchema>;
+
+/**
+ * A provider security incident the review read, recorded on the review itself
+ * (OP-IR ruling 2). An empty `providerIncidents` array means "searched, none
+ * found"; it is never provenance for a skipped search.
+ */
+export const V9ProviderIncidentDisclosureSchema = z
+  .object({
+    incidentKey: CanonicalKeySchema,
+    class: V9ProviderIncidentClassSchema,
+    surface: z.enum(BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES),
+    occurredAt: StrictIsoDateSchema,
+    exposureStartSec: UnixSecondsSchema,
+    exposureEndSec: UnixSecondsSchema.nullable(),
+    compromisedVerifiers: canonicalArrayBy(
+      z.object({ chain: CanonicalKeySchema, address: EvmAddressSchema }).strict(),
+      (row) => `${row.chain}\u0000${row.address}`,
+      1,
+      "compromised verifier",
+    ).optional(),
+    affectedRoutes: canonicalArrayBy(V9ProviderReviewRouteRefSchema, (ref) => `${ref.assetId}\u0000${ref.routeId}`, 0, "affected route"),
+    sourceUrls: canonicalArrayBy(z.string().url(), (url) => url, 1, "disclosure source"),
+    exemptions: canonicalArrayBy(
+      V9ProviderIncidentExemptionSchema,
+      (exemption) => `${exemption.assetId}\u0000${exemption.routeId}`,
+      0,
+      "lane exemption",
+    ),
+  })
+  .strict();
+export type V9ProviderIncidentDisclosure = z.output<typeof V9ProviderIncidentDisclosureSchema>;
 
 const V9NegativeIncidentReviewObjectSchema = z.object({
   reviewId: CanonicalKeySchema,
@@ -193,6 +272,17 @@ const V9NegativeIncidentReviewObjectSchema = z.object({
   reviewer: CanonicalTextSchema,
   windowStartSec: z.number().int().nonnegative().safe(),
   windowEndSec: z.number().int().nonnegative().safe(),
+  /**
+   * Control domain only (OP-IR ruling 1): no known control-domain incident on the
+   * named scope inside the window. The control domain is what can set
+   * `incidentState`: compromise of a key, signer, verifier or admin;
+   * unauthorized or unbacked mint, release or burn; theft or escrow drain; stuck
+   * or lost supply; an unauthorized upgrade, peer or verification-config change;
+   * and a pause or suspension still current at `reviewedAt`. Operational, peg and
+   * wrapper events are disclosed in `searchedSurfaces[].finding` and `sources`,
+   * never concluded; a resolved in-window operational incident without integrity
+   * failure qualifies with citation.
+   */
   conclusion: z.literal("no-known-incident"),
   searchedSurfaces: z.array(z.object({
     kind: V9IncidentReviewSurfaceKindSchema,
@@ -333,45 +423,74 @@ export type V9IssuerSurfaceIncidentReview = z.output<typeof V9IssuerSurfaceIncid
 /**
  * Provider-wide `no-known-incident` review: one record per provider, authored
  * without an asset id, naming the `(assetId, routeId)` lanes it covers. IR-1b
- * fans it out to one runtime row per covered asset. It is a separate record kind
- * until the incident runtime admits it (consumer slice IR-1a): every covered
- * lane must bind at least one admitted lane screening certificate, so a provider
- * review can never assert absence on its own.
+ * fans it out to one runtime row per covered asset. It witnesses only the rail:
+ * closure still needs the issuer surface and an exact-lane certificate, so a
+ * provider review never asserts asset-specific absence on its own. Certificates
+ * are joined at evaluation time by `(subjectDeploymentKey, screeningSetId)`
+ * (OP-IR ruling 5b), never named here.
+ *
+ * `providerIncidents` records every provider security incident the window read
+ * (ruling 2). An empty array means searched and none found; a
+ * `verifier-compromise` whose exposure intersects the window blocks every
+ * covered lane it could have satisfied unless that lane carries a point-in-time
+ * exemption (OQ-1).
  */
 const V9ProviderIncidentReviewObjectSchema = V9NegativeIncidentReviewObjectSchema
   .omit({ assetId: true, scope: true })
   .extend({
     scope: V9ProviderIncidentReviewScopeSchema,
     retired: V9IncidentReviewRetirementSchema.optional(),
-    laneScreeningRefs: canonicalArrayBy(
-      V9LaneScreeningRefSchema,
-      (ref) => `${ref.assetId}\u0000${ref.routeId}\u0000${ref.certificateId}`,
-      1,
-      "lane screening reference",
+    providerIncidents: canonicalArrayBy(
+      V9ProviderIncidentDisclosureSchema,
+      (incident) => incident.incidentKey,
+      0,
+      "provider incident",
     ),
   })
   .strict();
 
+/** Exposure intervals intersect when they overlap the review's search window. */
+export function v9ProviderExposureIntersectsWindow(
+  incident: Pick<V9ProviderIncidentDisclosure, "exposureStartSec" | "exposureEndSec">,
+  windowStartSec: number,
+  windowEndSec: number,
+): boolean {
+  return incident.exposureStartSec <= windowEndSec &&
+    (incident.exposureEndSec === null || incident.exposureEndSec >= windowStartSec);
+}
+
 export const V9ProviderIncidentReviewSchema = V9ProviderIncidentReviewObjectSchema.superRefine((review, ctx) => {
   validateNegativeIncidentReview(review, ctx);
   const coveredLanes = new Set(review.scope.coveredRoutes.map((ref) => `${ref.assetId}\u0000${ref.routeId}`));
-  const referencedLanes = new Set<string>();
-  for (const [index, ref] of review.laneScreeningRefs.entries()) {
-    const lane = `${ref.assetId}\u0000${ref.routeId}`;
-    if (!coveredLanes.has(lane)) {
-      issue(ctx, ["laneScreeningRefs", index, "routeId"], "Lane screening references may only name covered routes");
+  const sourceUrls = new Set(review.sources.map((source) => source.url));
+  for (const [index, incident] of review.providerIncidents.entries()) {
+    for (const [sourceIndex, url] of incident.sourceUrls.entries()) {
+      if (!sourceUrls.has(url)) {
+        issue(ctx, ["providerIncidents", index, "sourceUrls", sourceIndex], "A provider-incident source must be one of the review's sources");
+      }
     }
-    referencedLanes.add(lane);
-  }
-  for (const route of review.scope.coveredRoutes) {
-    if (!referencedLanes.has(`${route.assetId}\u0000${route.routeId}`)) {
-      issue(ctx, ["laneScreeningRefs"], `Provider review lane ${route.assetId}|${route.routeId} requires a lane screening certificate reference`);
+    for (const [exemptionIndex, exemption] of incident.exemptions.entries()) {
+      if (incident.class !== "verifier-compromise") {
+        issue(ctx, ["providerIncidents", index, "exemptions"], "Only a verifier-compromise can carry lane exemptions");
+      }
+      if (!coveredLanes.has(`${exemption.assetId}\u0000${exemption.routeId}`)) {
+        issue(ctx, ["providerIncidents", index, "exemptions", exemptionIndex, "routeId"], "An exemption may only name a covered lane");
+      }
     }
-  }
-  const coveredAssets = new Set(review.scope.coveredRoutes.map((ref) => ref.assetId));
-  for (const [index, control] of (review.scope.coveredControls ?? []).entries()) {
-    if (!coveredAssets.has(control.assetId)) {
-      issue(ctx, ["scope", "coveredControls", index, "assetId"], "Covered controls must belong to a covered asset");
+    if (incident.class !== "verifier-compromise") {
+      for (const [routeIndex, affected] of incident.affectedRoutes.entries()) {
+        if (coveredLanes.has(`${affected.assetId}\u0000${affected.routeId}`)) {
+          issue(ctx, ["providerIncidents", index, "affectedRoutes", routeIndex, "routeId"], `${incident.class} must not name a covered lane: an affected lane is excluded from coverage`);
+        }
+      }
+      continue;
+    }
+    if (!v9ProviderExposureIntersectsWindow(incident, review.windowStartSec, review.windowEndSec)) continue;
+    const exempt = new Set(incident.exemptions.map((exemption) => `${exemption.assetId}\u0000${exemption.routeId}`));
+    for (const route of review.scope.coveredRoutes) {
+      if (!exempt.has(`${route.assetId}\u0000${route.routeId}`)) {
+        issue(ctx, ["providerIncidents", index, "exemptions"], `Covered lane ${route.assetId}|${route.routeId} is exposed to ${incident.incidentKey} and needs a point-in-time exemption or removal from coverage`);
+      }
     }
   }
 });
@@ -431,9 +550,6 @@ export const V9_LANE_SCREENING_FAILURE_REASON_VALUES = [
   "read-budget-exhausted",
 ] as const;
 export type V9LaneScreeningFailureReason = (typeof V9_LANE_SCREENING_FAILURE_REASON_VALUES)[number];
-
-const EvmBytes32Schema = z.string().regex(/^0x[0-9a-f]{64}$/u, "Expected a lowercase 0x-prefixed 32-byte value");
-const EvmAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/u, "Expected a lowercase 0x-prefixed 20-byte address");
 
 /**
  * One contract whose logs the certificate read. `runtimeCodeSha256` is the code
@@ -584,6 +700,47 @@ export const V9LaneIncidentScreeningResultSchema = z.discriminatedUnion("outcome
   }).strict(),
 ]);
 export type V9LaneIncidentScreeningResult = z.output<typeof V9LaneIncidentScreeningResultSchema>;
+
+/**
+ * One screened contract in a lane descriptor: the address, the reviewed
+ * decoded-runtime pin (`sha256-decoded-runtime-bytes:<64 lowercase hex>`) and the
+ * admin-event families its verified ABI can emit (OP-IR ruling 5c). The
+ * descriptor is the reviewed emitter inventory of a whole lane, so a certificate
+ * can only exist for emitters the reviewer enumerated.
+ */
+export const V9LaneDescriptorEmitterSchema = z
+  .object({
+    address: EvmAddressSchema,
+    reviewedRuntimePin: z
+      .string()
+      .regex(/^sha256-decoded-runtime-bytes:[0-9a-f]{64}$/u, "Expected a sha256-decoded-runtime-bytes:<64 hex> runtime pin"),
+    families: canonicalArrayBy(V9LaneAdminEventFamilySchema, (family) => family, 1, "emitted family"),
+  })
+  .strict();
+export type V9LaneDescriptorEmitter = z.output<typeof V9LaneDescriptorEmitterSchema>;
+
+/**
+ * The reviewed screening descriptor of one bridge lane (IR-3d). `subjectDeploymentKey`
+ * is the route deployment, never its controller. `contributorControlIds` is the
+ * fact's authored control-id set (or `["*"]` for a fact without authored ids), so
+ * adding a control makes the descriptor's screening set differ and old
+ * certificates inherit nothing. `screeningSetId` is the digest the certificate
+ * store keys rows by (policy digest, contributors and emitter pins); IR-1c joins
+ * certificates on `(subjectDeploymentKey, screeningSetId)` and never on an
+ * authored id.
+ */
+export const V9LaneEmitterDescriptorSchema = z
+  .object({
+    schemaVersion: z.literal(1),
+    subjectDeploymentKey: DeploymentIdSchema,
+    assetId: CanonicalKeySchema,
+    contributorControlIds: canonicalArrayBy(CanonicalTextSchema, (controlId) => controlId, 1, "contributor control id"),
+    screeningPolicyDigest: Sha256Schema,
+    screeningSetId: CanonicalKeySchema,
+    emitters: canonicalArrayBy(V9LaneDescriptorEmitterSchema, (emitter) => emitter.address, 1, "lane emitter"),
+  })
+  .strict();
+export type V9LaneEmitterDescriptor = z.output<typeof V9LaneEmitterDescriptorSchema>;
 // The domain vocabulary is validated by the `z.literal("…")` discriminants
 // on the incident union below, so a parallel enum would be a second source of
 // truth for the same list. Derive the exported type from the union instead.

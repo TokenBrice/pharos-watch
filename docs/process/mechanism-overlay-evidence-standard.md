@@ -420,23 +420,28 @@ this section records only what v10.38 admits.
   contributor set, and an authored review never falls back to a digest key.
 - The runtime registry keys a row by `(assetId, reviewId)`. A provider-wide review is
   authored once per provider and fanned out at build time to one row per covered asset
-  while keeping its `reviewId`; every authored lane, control and reference must survive
-  the fan-out.
-- Provider and issuer-surface reviews are parsed, schema-checked and key-checked, and
-  **close nothing in v10.38**: no router branch lets either scope set
-  `incidentState: "none"`, and the evaluator emits no `incidentCoverage` provenance.
-  Certificate-based lane closure — provider review plus issuer-surface review plus an
-  exact-lane admin-event certificate per contributor — is **not active** in v10.38; it is
-  v10.39 work after the incident-review rulings. The policy's
-  `semantic.evidence.laneIncidentCertificateMaxAgeSec` budget and a provider review's
-  `laneScreeningRefs` are therefore not admission inputs here: the refs must be
-  structurally complete (one per covered lane, all on covered routes), and nothing reads a
-  certificate's existence, freshness, finding or screened contributors.
-- Authored data never carries a certificate placeholder. `npm run check:incident-review-keys`
-  rejects any `laneScreeningRefs.certificateId` whose `-`/`.`/`:`-delimited segments contain
-  `pending`, `placeholder`, `tbd`, `todo`, `to-be-authored` or `unresolved`; the known
-  `lane-cert-pending:` form names a read that has not happened, and an unresolvable
-  reference is worse than no reference because it reads as coverage.
+  while keeping its `reviewId`; every authored lane must survive the fan-out.
+- v10.39 makes the provider and issuer-surface witnesses active for bridge lanes. Closure
+  needs all of: one current provider review per provider key the route authors (or the
+  issuer-surface review alone when the route metadata declares `rail: "issuer-operated"`),
+  a current issuer-surface review naming the lane, contributor parity between the lane
+  descriptor and the fact's authored control ids, and the newest admitted certificate for
+  `(subjectDeploymentKey, screeningSetId)` with `no-material-admin-event`, a contiguous
+  block chain and a pinned window end within `semantic.evidence.laneIncidentCertificateMaxAgeSec`.
+  The capability gate is gone: a provider review witnesses only the rail.
+- Certificate identifiers are never authored. `laneScreeningRefs` and `coveredControls`
+  are removed shapes; `npm run check:incident-review-keys` rejects either, rejects an
+  `asset:<id>` route on an issuer row, and rejects a provider renewal that drops an incident
+  another current review of the same provider discloses.
+- A provider review carries a required `providerIncidents` array (empty = searched, none
+  found). A `verifier-compromise` whose exposure intersects the review window requires a
+  point-in-time exemption for every covered lane (deployed after the exposure, or a pinned
+  verification-config read that excludes the compromised verifier); no observed exploit and
+  no current DVN configuration exempt a lane. Other classes must not name a covered lane,
+  and only `verifier-compromise` carries exemptions.
+- `incidentCoverage` on a compiled fact is derived provenance written by the router
+  (`provider-screening`: provider review ids, the issuer-surface review id, the screening
+  set, the certificate id and the contributor ids), never authored input.
 - A review is admitted only when the evaluation clock is at or after both `reviewedAt` and
   `windowEndSec`, and no more than 365 days past either (the policy's reviewed-research
   budget). A date-only `reviewedAt` is admitted after its UTC day ends; a timestamp is

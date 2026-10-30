@@ -22,6 +22,11 @@ import {
   type SafetyScoreV9BridgeJoinDiagnostic,
 } from "./candidate";
 import {
+  listLaneIncidentCertificateHeads,
+  loadLaneIncidentCertificates,
+} from "./lane-incident-certificate-store";
+import type { LaneIncidentCertificateView } from "./extension-incidents";
+import {
   assessV9Publication,
   expiredMeasuredExitAssetIdsFromRoutes,
   projectExpiredMeasuredExitRoutes,
@@ -750,11 +755,31 @@ export async function runSafetyScoreV9Publication(
     const previousHealth = acceptedState.health;
 
     beginPhase("compile", "compile");
+    // v10.39 lane closure inputs: read every admitted certificate chain once and
+    // hand only `current` chains to the compiler. A failed read closes nothing
+    // (fail closed) and names itself in the publication warnings.
+    const laneIncidentCertificates = new Map<string, LaneIncidentCertificateView>();
+    const laneCertificateWarnings: string[] = [];
+    try {
+      const heads = await listLaneIncidentCertificateHeads(input.db, { signal: publicationSignal });
+      const reads = await loadLaneIncidentCertificates(input.db, [...new Set(heads.map((head) => head.deploymentKey))], {
+        nowSec: fixedInput.clockSec,
+        signal: publicationSignal,
+      });
+      for (const [deploymentKey, read] of reads) {
+        if (read.state !== "current") continue;
+        laneIncidentCertificates.set(deploymentKey, { screeningSetId: read.screeningSetId, certificate: read.certificate });
+      }
+    } catch (error) {
+      laneIncidentCertificates.clear();
+      laneCertificateWarnings.push(`lane-incident-certificates-unavailable:${toErrorMessage(error).slice(0, 120)}`);
+    }
     const pipeline = buildSafetyScoreV9PublicationFromOwnedInput({
       fixedInputOwner: preparedInput.owner,
       publishedAtSec: fixedInput.clockSec,
       transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
       measuredExitExpiry: { routes: preparedInput.expiredRoutes, acceptedPublication },
+      laneIncidentCertificates,
     });
     preparedInput.owner.reload = releasedPublicationInput;
     // Grade hysteresis (10.26) is applied before assessment and journaling so
@@ -909,7 +934,7 @@ export async function runSafetyScoreV9Publication(
       journal: { status: "skipped", reason: "post-commit-interrupted", rows: 0 },
       captureArchive: { status: "skipped", reason: "post-commit-interrupted" },
       publicMaterialization: { status: "skipped", reason: "post-commit-interrupted" },
-      warnings: [], postCommitFailure: null, phaseElapsedMs, subphaseElapsedMs, abortCause: null,
+      warnings: laneCertificateWarnings, postCommitFailure: null, phaseElapsedMs, subphaseElapsedMs, abortCause: null,
       phaseTimingBasis: "workers-io-boundary-attributed",
     };
     const persisted = await persistSafetyScoreV9Publication(input.db, {
