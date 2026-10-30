@@ -425,6 +425,41 @@ describe("pinned EVM chain reads", () => {
     expect(resolveBlock).toHaveBeenCalledTimes(1);
   });
 
+  it("pins on the chain's finalized header when the bracket search cannot resolve", async () => {
+    // A pruned or rate-limited endpoint cannot bracket the observation clock;
+    // the chain's own finalized header is a real hashed block behind the tip.
+    const header = vi.fn(async (_chain: unknown, block: unknown) => (block === "finalized"
+      ? { number: 99, hash: `0x${"cd".repeat(32)}`, timestamp: CLOCK - 300 }
+      : null));
+    const pins = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: [ETHEREUM],
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, {
+      resolveClosestBlockAtOrBeforeTimestamp: async () => null,
+      fetchEvmBlockHeader: header as unknown as DeploymentSupplyCensusEvmDependencies["fetchEvmBlockHeader"],
+    });
+    expect(pins.get(ETHEREUM)).toEqual({
+      kind: "pinned",
+      anchor: { blockNumber: 99, blockHash: `0x${"cd".repeat(32)}`, blockTimeSec: CLOCK - 300 },
+    });
+    expect(header.mock.calls.map(([, block]) => block)).toEqual(["finalized"]);
+
+    const future = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: [ETHEREUM],
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, {
+      resolveClosestBlockAtOrBeforeTimestamp: async () => null,
+      // A finalized header that still postdates the observation clock is
+      // future-dated, never silently re-dated to the clock.
+      fetchEvmBlockHeader: (async () => ({
+        number: 100, hash: `0x${"ef".repeat(32)}`, timestamp: CLOCK + 1,
+      })) as unknown as DeploymentSupplyCensusEvmDependencies["fetchEvmBlockHeader"],
+    });
+    expect(future.get(ETHEREUM)).toEqual({ kind: "rejected", reason: "future-dated-pin" });
+  });
+
   it("keeps one multicall request per 64 calls at the policy batch cap", async () => {
     const requests: number[] = [];
     const dependencies = evmDependencies();

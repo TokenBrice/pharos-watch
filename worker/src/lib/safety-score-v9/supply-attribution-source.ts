@@ -46,6 +46,14 @@ const DeploymentSupplyCensusProjectionSchema = z
     aggregateCirculatingById: AggregateCirculatingByIdSchema,
     chainCirculatingById: ChainCirculatingByIdSchema,
     navPriceById: NavPriceByIdSchema,
+    // The peg reference of the compiler input's `pegDataById`, the census's one
+    // fallback unit value when the economic-supply NAV authority has no entry
+    // (135 of 392 assets). Only usable rows travel: absence means unavailable,
+    // never 1.
+    pegReferenceById: z.record(z.string(), z.strictObject({
+      valueUsd: z.number().finite().positive(),
+      asOf: z.number().int().nonnegative(),
+    })),
   });
 
 const SafetyScoreV9SupplyAttributionSourceSchema = z
@@ -138,6 +146,13 @@ export function buildSafetyScoreV9SupplyAttributionSource(
         const price = input.navPriceById?.[assetId];
         return price ? [[assetId, price] as const] : [];
       }))),
+      pegReferenceById: sortedRecord(Object.fromEntries(censusAssetIds.flatMap(assetId => {
+        const pegReference = input.pegDataById?.[assetId]?.pegReference;
+        if (pegReference === null || pegReference === undefined) return [];
+        if (!Number.isFinite(pegReference.valueUsd) || pegReference.valueUsd <= 0 ||
+          !Number.isSafeInteger(pegReference.asOf) || pegReference.asOf < 0) return [];
+        return [[assetId, { valueUsd: pegReference.valueUsd, asOf: pegReference.asOf }] as const];
+      }))),
     },
   });
 }
@@ -148,26 +163,21 @@ export interface SafetyScoreV9DeploymentSupplyCensusSourceView {
   readonly aggregateCirculatingById: SafetyScoreV9SupplyAttributionSource["aggregateCirculatingById"];
   readonly chainCirculatingById: SafetyScoreV9SupplyAttributionSource["chainCirculatingById"];
   readonly navPriceById: SafetyScoreV9SupplyAttributionSource["navPriceById"];
+  readonly pegReferenceById: Record<string, { readonly valueUsd: number; readonly asOf: number }>;
 }
 
 /**
- * Selects the population the census enumerates. A source that predates the
- * projection (frozen replay captures) keeps the attribution cohort; production
- * sources carry the whole active registry.
+ * Selects the population the census enumerates. `null` means the source carries
+ * no projection: a source that predates the census schema has no population
+ * data at all, so the lane must skip by name
+ * (`deployment-supply-census-projection-missing`) instead of measuring the
+ * 10-asset attribution allowlist — that fallback made a projection-less source
+ * indistinguishable from a gap-free population (2026-10-30 incident).
  */
 export function deploymentSupplyCensusSourceView(
   source: Readonly<SafetyScoreV9SupplyAttributionSource>,
-): SafetyScoreV9DeploymentSupplyCensusSourceView {
-  const projection = source.censusProjection;
-  if (projection === undefined) {
-    return {
-      activeAssetIds: source.activeAssetIds,
-      aggregateCirculatingById: source.aggregateCirculatingById,
-      chainCirculatingById: source.chainCirculatingById,
-      navPriceById: source.navPriceById,
-    };
-  }
-  return projection;
+): SafetyScoreV9DeploymentSupplyCensusSourceView | null {
+  return source.censusProjection ?? null;
 }
 
 export function serializeSafetyScoreV9SupplyAttributionSource(

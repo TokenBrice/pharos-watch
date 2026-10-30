@@ -741,9 +741,11 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
   const censusById = generation?.deploymentSupplyCensusById;
   const censusBinding = generation?.deploymentSupplyCensusBinding;
   // The generation carries the projection and its binding as one unit (the
-  // payload schema refuses either alone), so the consumer can never admit a
-  // packet against the wrong registry/base generation. An absent census stays
-  // absent: never `{}`, which would claim a measured-empty census.
+  // payload schema refuses either alone). An absent census stays absent: never
+  // `{}`, which would claim a measured-empty census. The pair travels only when
+  // the carrier generation is ADMITTED (below): a map from a generation this
+  // input refuses must not bound a row, and the binding names the carrier's
+  // own capture tuple, not this input's base generation.
   const censusFields =
     censusById === undefined || censusBinding === undefined
       ? {}
@@ -751,12 +753,16 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
           safetyScoreV9DeploymentSupplyCensusById: censusById,
           safetyScoreV9DeploymentSupplyCensusBinding: censusBinding,
         };
-  const withCarry = (applied: SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"]) => {
+  const withCarry = (
+    applied: SafetyScoreV9CompilerInput["safetyScoreV9SupplyAttributionById"],
+    fields: Partial<Pick<SafetyScoreV9CompilerInput,
+      "safetyScoreV9DeploymentSupplyCensusById" | "safetyScoreV9DeploymentSupplyCensusBinding">> = censusFields,
+  ) => {
     const carried = carryForwardSupplyAttribution(fixedInput, lastAdmitted, applied);
     return {
       fixedInput: {
         ...fixedInput,
-        ...censusFields,
+        ...fields,
         safetyScoreV9SupplyAttributionById: { ...applied, ...carried.attributionById },
       },
       carriedForwardAssetIds: carried.assetIds,
@@ -766,7 +772,7 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     return {
       status: "unavailable",
       generationId: null,
-      ...(lastAdmitted ? withCarry({}) : { fixedInput: { ...withoutSupplyAttribution(fixedInput), ...censusFields }, carriedForwardAssetIds: [] }),
+      ...(lastAdmitted ? withCarry({}, {}) : { fixedInput: withoutSupplyAttribution(fixedInput), carriedForwardAssetIds: [] }),
       reason: "generation-missing",
     };
   }
@@ -779,7 +785,7 @@ export function applySafetyScoreV9SupplyAttributionGeneration(
     return {
       status: "incompatible",
       generationId: generation.generationId,
-      ...(lastAdmitted ? withCarry({}) : { fixedInput: { ...withoutSupplyAttribution(fixedInput), ...censusFields }, carriedForwardAssetIds: [] }),
+      ...(lastAdmitted ? withCarry({}, {}) : { fixedInput: withoutSupplyAttribution(fixedInput), carriedForwardAssetIds: [] }),
       reason: compatibilityReason,
     };
   }
