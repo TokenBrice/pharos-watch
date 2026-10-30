@@ -7,6 +7,7 @@ import {
   toDexMeasuredExecutionPublicProfile,
   validateDexMeasuredExecutionProfile,
   type DexMeasuredExecutionProfile,
+  type DexMeasuredExecutionValidationReason,
 } from "@shared/types/measured-execution";
 import type { DexExecutionCapabilityGate } from "@shared/types/market";
 import type { PoolEntry } from "../dex-liquidity/types";
@@ -119,13 +120,19 @@ type LoadedDexMeasuredQuote = LoadedDexMeasuredQuoteEvidence["byTargetId"] exten
   ? T
   : never;
 
-function gate(reason: DexExecutionCapabilityGate["reason"]): DexExecutionCapabilityGate {
-  return { family: "measured-execution", reason };
+function gate(
+  reason: DexExecutionCapabilityGate["reason"],
+  validationIssues?: readonly DexMeasuredExecutionValidationReason[],
+): DexExecutionCapabilityGate {
+  return { family: "measured-execution", reason,
+    ...(reason === "invalid-observation" && validationIssues?.length
+      ? { validationIssues: [...new Set(validationIssues)] } : {}) };
 }
 
 export function applyDexMeasuredExecutionGate(
   pool: PoolEntry,
   reason: DexExecutionCapabilityGate["reason"],
+  validationIssues?: readonly DexMeasuredExecutionValidationReason[],
 ): void {
   pool.extra = { ...(pool.extra ?? {}) };
   if (pool.extra.ammExecutionModel) {
@@ -134,7 +141,7 @@ export function applyDexMeasuredExecutionGate(
     }
     return;
   }
-  pool.extra.executionCapabilityGate = gate(reason);
+  pool.extra.executionCapabilityGate = gate(reason, validationIssues);
 }
 
 function increment(record: Record<string, number>, reason: string): void {
@@ -562,7 +569,11 @@ export function joinDexMeasuredExecutionEvidence(input: {
         delete pool.extra.measuredExecutions;
         delete pool.extra.measuredExecutionProfiles;
         pool.extra.measuredExecutionPhysicalPoolId = packetTargets[0]!.poolId;
-        const failPacket = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
+        const failPacket = (
+          reason: DexExecutionCapabilityGate["reason"],
+          detail?: string,
+          validationIssues?: readonly DexMeasuredExecutionValidationReason[],
+        ) => {
           pool.extra!.measuredExecutionDiagnostics = packetTargets.map((target) => ({
             adapterProfileId: target.adapterProfileId,
             targetId: target.targetId,
@@ -572,7 +583,7 @@ export function joinDexMeasuredExecutionEvidence(input: {
           for (const target of packetTargets) {
             increment(diagnostics.failuresByReason, `${target.adapterProfileId}:${reason}`);
           }
-          applyDexMeasuredExecutionGate(pool, reason);
+          applyDexMeasuredExecutionGate(pool, reason, validationIssues);
         };
         const packetPolicyValid =
           packetTargets.length === 2 &&
@@ -616,8 +627,8 @@ export function joinDexMeasuredExecutionEvidence(input: {
           );
           continue;
         }
-        const issues = packet.flatMap(({ target, quote, profile }) => [
-          ...validateDexMeasuredExecutionProfile({
+        const packetIssues = packet.map(({ target, quote, profile }) => ({
+          generic: validateDexMeasuredExecutionProfile({
             profile,
             quotedTarget: quote!.quotedTarget,
             currentTarget: target,
@@ -625,10 +636,12 @@ export function joinDexMeasuredExecutionEvidence(input: {
             expectedQuoteGenerationId: quote!.quoteGenerationId,
             nowSec: input.nowSec,
           }),
-          ...deploymentIssues(profile!),
-        ]);
+          adapter: deploymentIssues(profile!),
+        }));
+        const genericIssues = packetIssues.flatMap(({ generic }) => generic);
+        const issues = packetIssues.flatMap(({ generic, adapter }) => [...generic, ...adapter]);
         if (issues.length > 0) {
-          failPacket(mapValidationGate(issues), issues.join(","));
+          failPacket(mapValidationGate(issues), issues.join(","), genericIssues);
           continue;
         }
         const profiles = packet.map(({ profile }) => profile!);
@@ -671,8 +684,12 @@ export function joinDexMeasuredExecutionEvidence(input: {
       delete pool.extra.measuredExecution;
       delete pool.extra.measuredExecutionProfile;
       pool.extra.measuredExecutionPhysicalPoolId = target.poolId;
-      const fail = (reason: DexExecutionCapabilityGate["reason"], detail?: string) => {
-        applyDexMeasuredExecutionGate(pool, reason);
+      const fail = (
+        reason: DexExecutionCapabilityGate["reason"],
+        detail?: string,
+        validationIssues?: readonly DexMeasuredExecutionValidationReason[],
+      ) => {
+        applyDexMeasuredExecutionGate(pool, reason, validationIssues);
         pool.extra!.measuredExecutionDiagnostic = {
           adapterProfileId: target.adapterProfileId,
           targetId: target.targetId,
@@ -709,7 +726,7 @@ export function joinDexMeasuredExecutionEvidence(input: {
       const adapterIssues = deploymentIssues(profile);
       const issues = [...genericIssues, ...adapterIssues];
       if (issues.length > 0) {
-        fail(mapValidationGate(issues), issues.join(","));
+        fail(mapValidationGate(issues), issues.join(","), genericIssues);
         continue;
       }
       pool.extra.measuredExecution = toDexMeasuredExecutionPublicProfile(profile, {

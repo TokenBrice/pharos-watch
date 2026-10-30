@@ -85,6 +85,61 @@ import { seedGeneration } from "./persistence.test-support";
 
 
 describe("measured execution join activation", () => {
+  it("keeps identity-mismatch issue codes in exit coverage after releasing join proofs", () => {
+    const { measuredTarget, profile } = makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]);
+    const currentTarget = {
+      ...measuredTarget,
+      tokenIn: { ...measuredTarget.tokenIn, decimals: measuredTarget.tokenIn.decimals + 1 },
+    };
+    const pool = makeJoinPool(currentTarget);
+    const diagnostics = joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([[measuredTarget.stablecoinId, [pool]]]),
+      evidence: {
+        quoteGenerationId: profile.quoteGenerationId, targetGenerationId: profile.targetGenerationId,
+        publishedAt: 1_060,
+        byTargetId: new Map([[measuredTarget.targetId, makeJoinQuote(measuredTarget, profile)]]),
+      },
+      nowSec: 1_060,
+    });
+    expect(diagnostics).toMatchObject({ measuredCount: 0, gatedCount: 1 });
+    expect(pool.extra?.executionCapabilityGate?.reason).toBe("invalid-observation");
+    releaseDexMeasuredExecutionProofFields([pool]);
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: measuredTarget.stablecoinId, retainedPools: [pool], observedAt: 1_060,
+    });
+    expect(result.observations).toEqual([]);
+    expect(result.coverage.unsupportedPoolCount).toBe(1);
+    expect(result.coverage.unsupportedReasons).toEqual({
+      "executionCapabilityGate:measured-execution:invalid-observation": 1,
+      "invalidMeasuredExecution:identity-mismatch": 1,
+    });
+  });
+  it("counts repeated atomic-direction validation issues once per unsupported physical pool", () => {
+    const { targets, profiles } = makeCurve3PoolPacket();
+    const pool = makeJoinPool(targets[0]!, { project: "curve",
+      extra: { measuredExecutionTargets: targets } });
+    const diagnostics = joinDexMeasuredExecutionEvidence({
+      poolsByStablecoin: new Map([[targets[0]!.stablecoinId, [pool]]]),
+      evidence: { quoteGenerationId: profiles[0]!.quoteGenerationId,
+        targetGenerationId: profiles[0]!.targetGenerationId, publishedAt: 1_060,
+        byTargetId: new Map(targets.map((target, index) => [
+          target.targetId, makeJoinQuote(target, { ...profiles[index]!,
+            tokenIn: { ...profiles[index]!.tokenIn, symbol: "changed-snapshot-label" } }),
+        ])) },
+      nowSec: 1_060,
+    });
+    expect(diagnostics).toMatchObject({ measuredCount: 0, gatedCount: 2 });
+    releaseDexMeasuredExecutionProofFields([pool]);
+    const result = buildP4DexExitRouteObservations({
+      stablecoinId: targets[0]!.stablecoinId, retainedPools: [pool], observedAt: 1_060,
+    });
+    expect(result.observations).toEqual([]);
+    expect(result.coverage.unsupportedPoolCount).toBe(1);
+    expect(result.coverage.unsupportedReasons).toEqual({
+      "executionCapabilityGate:measured-execution:invalid-observation": 1,
+      "invalidMeasuredExecution:target-snapshot-mismatch": 1,
+    });
+  });
   it.each(makeFlatProvenanceCases(makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]).profile))(
     "publishes only allowlisted $name provenance through the join", ({ proofs, provenance }) => {
       const { measuredTarget, profile } = makeV3LkgRoute([[1_000, 1_000], [100_000, 99_000]]);
