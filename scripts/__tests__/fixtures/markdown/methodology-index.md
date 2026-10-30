@@ -454,6 +454,8 @@ The blacklist tracker monitors issuer-controlled freeze, blocklist, account-paus
 
 Events are normalized by chain, stablecoin, action type, native amount, USD amount, and amount-status provenance. Recoverable amount gaps are queued for repair, while permanently unavailable rows remain auditable without polluting public aggregates.
 
+Amountless EVM freezes and releases require complete same-block transfers to reconcile exactly with balances before and after the block. Replaying transfers before the target log proves its amount; ambiguous positions, negative intermediate balances and failed reconciliation leave it unavailable. Recovered zero cannot trigger EURC mirror suppression, which requires emitted event-time zero. Previously unproved EVM freeze and release amounts receive bounded re-review without changing suppressed history or destroy-event proof.
+
 Frozen-total summaries use last-known successful freeze-ledger snapshots. New snapshots are contract/config scoped so same-symbol deployments do not overwrite each other; legacy rows can fall back to older address identity until remediated.
 
 FreezeWatch uses the reviewed four-status model: Yes, Possible, Upstream and No. Measure each deployment against the material-supply threshold (currently 10%); never aggregate sub-threshold deployments. Measure missing shares before treating unresolved deployments as material. Yes requires a current arbitrary-holder-targeting power, including enforced allowlists/sanctions oracles, active exit gates or arbitrary-holder burns. An admin able to assign denylist state directly to a victim already has that power.

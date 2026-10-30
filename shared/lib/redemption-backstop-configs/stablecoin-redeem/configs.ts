@@ -612,24 +612,6 @@ const RAW_STABLECOIN_REDEEM_BACKSTOP_CONFIGS: Record<string, RedemptionBackstopC
       "Fresh ERC-4626 reserve telemetry reads the vault's idle DOLA balance as current direct wrapper capacity; if the live snapshot is unavailable, the route is left unrated instead of using the prior full-supply model.",
     ],
   }),
-  "sdusd-dtrinity": defineReviewedStablecoinRedeemConfig("2026-06-10", {
-    outputAssets: ["dusd-dtrinity"],
-    capacityModel: { kind: "reserve-sync-metadata" },
-    executionModel: "rules-based-nav",
-    totalScoreCap: 70,
-    costModel: documentedVariableFee(
-      "dTRINITY docs state dSTAKE has no staking fee and unstaking incurs up to 10 bps retained by the vault for remaining sdUSD holders.",
-      "formula",
-    ),
-    docs: [
-      sourceRefFull("dTRINITY sdUSD docs", "https://docs.dtrinity.org/protocol-components/sdusd"),
-    ],
-    notes: [
-      "Modeled route is the permissionless atomic sdUSD wrapper exit into dUSD; the output is pinned explicitly to the tracked dUSD asset.",
-      "Config-level cap reflects that unwrapping to dUSD does not by itself guarantee a full stablecoin exit; dUSD's own redemption capacity remains separately bounded.",
-      "Fresh ERC-4626 reserve telemetry pins the Ethereum token/router/strategy identities, reads the exact active withdrawal set, and bounds direct capacity by dLEND maxWithdraw plus dUSD available liquidity. It fails closed instead of treating the token's idle dUSD balance or full supply as executable.",
-    ],
-  }),
   "sfrxusd-frax": defineStablecoinRedeemConfig({
     outputAssets: ["frxusd-frax"],
     capacityModel: { kind: "reserve-sync-metadata", basis: "live-direct-telemetry" },

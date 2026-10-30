@@ -1822,5 +1822,172 @@
         }
       ]
     }
+  },
+  {
+    "id": "dusd-dtrinity",
+    "capturedAt": "2026-10-30T07:20:22.558Z",
+    "peggedAssetRow": {
+      "id": "dusd-dtrinity",
+      "name": "dTRINITY USD",
+      "symbol": "dUSD",
+      "geckoId": "dtrinity-usd",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 0.9987278126376897,
+      "priceSource": "coingecko",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1793344586,
+      "priceObservedAt": 1793344586,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1793344546,
+      "consensusSources": [
+        "coingecko"
+      ],
+      "agreeSources": [
+        "coingecko"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 1307172.5461885023
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 1307172.5461885023
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 1307172.5461885023
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 1388896.2881078336
+      },
+      "chainCirculating": {
+        "Ethereum": {
+          "current": 846070.3424331081,
+          "circulatingPrevDay": 846070.3424331081,
+          "circulatingPrevWeek": 846070.3424331081,
+          "circulatingPrevMonth": 846070.3424331081
+        },
+        "Sonic": {
+          "current": 210971.0706447603,
+          "circulatingPrevDay": 210971.0706447603,
+          "circulatingPrevWeek": 210971.0706447603,
+          "circulatingPrevMonth": 210971.0706447603
+        },
+        "Ronin": {
+          "current": 4.552845832230827,
+          "circulatingPrevDay": 4.552845832230827,
+          "circulatingPrevWeek": 4.552845832230827,
+          "circulatingPrevMonth": 4.552845832230827
+        },
+        "Katana": {
+          "current": 119305.84335884359,
+          "circulatingPrevDay": 119305.84335884359,
+          "circulatingPrevWeek": 119305.84335884359,
+          "circulatingPrevMonth": 201029.63195481032
+        },
+        "Fraxtal": {
+          "current": 130820.73690595813,
+          "circulatingPrevDay": 130820.73690595813,
+          "circulatingPrevWeek": 130820.73690595813,
+          "circulatingPrevMonth": 130820.69022932246
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Sonic",
+        "Fraxtal",
+        "Katana",
+        "Ronin"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+          "decimals": 18
+        },
+        {
+          "chain": "fraxtal",
+          "address": "0x788d96f655735f52c676a133f4dfc53cec614d4a",
+          "decimals": 6
+        },
+        {
+          "chain": "katana",
+          "address": "0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+          "decimals": 18
+        },
+        {
+          "chain": "sonic",
+          "address": "0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
+          "decimals": 18
+        }
+      ]
+    }
+  },
+  {
+    "id": "sdusd-dtrinity",
+    "capturedAt": "2026-10-30T07:20:23.667Z",
+    "peggedAssetRow": {
+      "id": "sdusd-dtrinity",
+      "name": "dTRINITY Staked dUSD",
+      "symbol": "sdUSD",
+      "geckoId": "dtrinity-staked-dusd",
+      "pegType": "peggedUSD",
+      "pegMechanism": "crypto-backed",
+      "price": 1.0230959820720205,
+      "priceSource": "coingecko",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1793344586,
+      "priceObservedAt": 1793344586,
+      "priceObservedAtMode": "upstream",
+      "priceSyncedAt": 1793344546,
+      "consensusSources": [
+        "coingecko"
+      ],
+      "agreeSources": [
+        "coingecko"
+      ],
+      "supplySource": "coingecko-fallback",
+      "supplyObservedAt": 1793344547,
+      "chainPartition": {
+        "basis": "onchain-share",
+        "observedAt": 1793344579,
+        "onchainUsd": 308649.8279770584,
+        "ratio": 0.973165128120951,
+        "admission": "retained"
+      },
+      "circulating": {
+        "peggedUSD": 317160.79733869946
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 343594.4629806303
+      },
+      "circulatingPrevWeek": {},
+      "circulatingPrevMonth": {},
+      "chainCirculating": {
+        "Ethereum": {
+          "chainId": "ethereum",
+          "current": 284642.4023191681
+        },
+        "Fraxtal": {
+          "chainId": "fraxtal",
+          "current": 32518.39501953135
+        }
+      },
+      "chains": [
+        "Ethereum",
+        "Fraxtal"
+      ],
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+          "decimals": 18
+        },
+        {
+          "chain": "fraxtal",
+          "address": "0x58acc2600835211dcb5847c5fa422791fd492409",
+          "decimals": 6
+        }
+      ]
+    }
   }
 ]

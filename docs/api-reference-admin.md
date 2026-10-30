@@ -674,9 +674,9 @@ A transport timeout assigned less than the full eight-second request budget is a
 
 ### `POST /api/remediate-blacklist-amount-gaps`
 
-Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. Default candidate selection excludes Tron before applying the row limit; explicit `chainId=tron` returns `400` without reading or updating events. Tron event-time amounts require the scheduled confirmed transfer-replay lane or the guarded evidence-based CLI in [Blacklist sync](./runbooks/blacklist-sync.md#event-and-coverage-rules), not this EVM receipt-recovery route. EVM amountless events remain unavailable with `event_time_unproven`; neither preceding-block balances nor unbound burn transfers prove the amount at the target log position. An unavailable amount cannot trigger EURC mirror-zero suppression. Existing amounts and suppressed history are not blindly rewritten.
+Admin-only bounded remediation endpoint for recoverable **EVM** blacklist rows. Candidate selection excludes Tron before the row limit; explicit `chainId=tron` returns `400` without event reads/writes. Tron amounts use the separate [transfer-replay lane](./runbooks/blacklist-sync.md#event-and-coverage-rules). Amountless EVM freezes/releases require complete same-block transfers to reconcile exactly with balances bracketing that block, then replay before the target log. Success uses `historical_balance`; proof failures are terminal `event_time_unreconciled`, provider failures retry. Recovered zero cannot trigger EURC mirror suppression. Existing amounts and suppressed history are not blindly rewritten; automatic legacy `event_time_unproven` re-review belongs to scheduled repair, outside this route's gap-only selection.
 
-Event-amount remediation does not hydrate chain RPC endpoints or require a dRPC key: emitted destroy amounts use Etherscan receipt evidence, while unproved amountless events remain unavailable. Independent current-balance snapshots retain their own RPC provider configuration.
+Event-amount remediation hydrates chain RPC endpoints and uses the existing historical-balance provider stack, with optional dRPC. Emitted destroy amounts retain Etherscan receipt evidence. Independent current-balance snapshots keep their own evidence rules.
 
 **Authentication:** same admin auth as other ops endpoints.
 

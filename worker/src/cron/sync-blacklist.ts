@@ -150,7 +150,11 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         etherscanLimiter,
         maintenanceRunBudget,
         signal,
-        scanBudgetExhausted ? { maxRows: BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT } : undefined,
+        {
+          ...(scanBudgetExhausted ? { maxRows: BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT } : {}),
+          drpcApiKey,
+          chainRpcs,
+        },
       );
       runtimeBudgetHit ||= amountBackfill.runtimeBudgetReached;
       amountRepair = measuredRepair(amountBackfill.runtimeBudgetReached);

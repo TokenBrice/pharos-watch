@@ -3,6 +3,9 @@
   "name": "dTRINITY Staked dUSD",
   "symbol": "sdUSD",
   "oneLiner": "sdUSD is dTRINITY's yield-bearing dUSD vault receipt; staked dUSD is supplied into dLEND and the share price accrues lending yield.",
+  "marketAvailability": "legacy-or-wind-down",
+  "status": "frozen",
+  "frozenAt": "2026-10-30",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -49,32 +52,6 @@
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
   "governanceQuality": "wrapper",
-  "liveReservesConfig": {
-    "adapter": "erc4626-single-asset",
-    "version": 1,
-    "semantics": "single-asset",
-    "breakerScope": "sdusd-dtrinity",
-    "display": {
-      "url": "https://docs.dtrinity.org/protocol-components/sdusd",
-      "label": "dTRINITY sdUSD"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "alchemy"
-      }
-    },
-    "params": {
-      "slice": {
-        "name": "dLEND dUSD deposits",
-        "risk": "high",
-        "coinId": "dusd-dtrinity",
-        "depType": "wrapper",
-        "expectedAssetAddress": "0x07fff99e1664d9b116fbc158c0e99785f81ca236"
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "dTRINITY dStake (sdUSD)",
     "yieldType": "lending-vault"
@@ -86,5 +63,28 @@
       "message": "sdUSD unstaking depends on available dUSD liquidity in dLEND; when utilization is high, holders may need to wait for borrowers to repay or sell sdUSD on secondary markets."
     }
   ],
-  "launchDate": "2025-10-13"
+  "launchDate": "2025-10-13",
+  "mechanismArchetype": "protocol-position",
+  "archetypeOverride": true,
+  "mechanismArchetypeReview": {
+    "disposition": "resolved",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Claude freeze review 2026-10-30",
+    "rationale": "sdUSD is a dSTAKE vault share over dUSD supplied into dLEND: NAV accrues lending yield and unstaking depends on idle dLEND liquidity. That is a lending-position claim, not dUSD's reserve-backed mint and redemption.",
+    "sources": [
+      {
+        "label": "dTRINITY sdUSD docs",
+        "url": "https://docs.dtrinity.org/protocol-components/sdusd"
+      }
+    ]
+  },
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-10-29",
+    "epitaph": "A savings vault that closed with its lending market",
+    "obituary": "sdUSD was dTRINITY's staked dUSD receipt: deposits were supplied into dLEND and the share price accrued lending yield. It ended with its protocol. On October 29, 2026 dTRINITY announced it would sunset, discontinuing Curve rewards for the dUSD and sdUSD pools along with dLEND interest rebates. Holders can unstake only when dLEND has idle liquidity, which returns as dUSD borrowers repay; sharply higher borrowing rates while liquidity is low were meant to drive that deleveraging. About $317K of sdUSD remained outstanding at capture.",
+    "peakMcap": 546431,
+    "sourceUrl": "https://x.com/dTRINITY_DeFi/status/2115908296821653978",
+    "sourceLabel": "dTRINITY: Sunsetting dTRINITY"
+  }
 }

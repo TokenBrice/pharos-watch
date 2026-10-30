@@ -3,6 +3,9 @@
   "name": "dTRINITY dUSD",
   "symbol": "dUSD",
   "oneLiner": "dUSD is dTRINITY's USD stablecoin minted 1:1 against yield-bearing reserve stablecoins, with Curve AMOs and stability operations defending the peg.",
+  "marketAvailability": "legacy-or-wind-down",
+  "status": "frozen",
+  "frozenAt": "2026-10-30",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
@@ -68,5 +71,14 @@
         "url": "https://docs.dtrinity.org"
       }
     ]
+  },
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-10-29",
+    "epitaph": "Subsidized borrowing that ran out of runway",
+    "obituary": "dTRINITY launched dUSD in December 2024 as the debt asset of its subsidized lending market, minting it 1:1 against whitelisted reserve stablecoins and supporting the peg with Curve AMO and buyback operations. On October 29, 2026 the team announced it would sunset the protocol, saying it needed more capital to keep building, including defences against AI-enabled security threats, and could not raise it in the current market. The protocol kept operating for an orderly wind-down: redemption fees fell to 10 bps, dLEND interest rebates, Curve rewards and the points program ended, AMO liquidity was to be phased out, and the planned TRIN token was cancelled. Holders exit by redeeming reserve assets or selling on Curve; borrowers must repay before lenders and stakers can fully withdraw. About 1.31M dUSD remained outstanding at capture.",
+    "peakMcap": 1839044,
+    "sourceUrl": "https://x.com/dTRINITY_DeFi/status/2115908296821653978",
+    "sourceLabel": "dTRINITY: Sunsetting dTRINITY"
   }
 }

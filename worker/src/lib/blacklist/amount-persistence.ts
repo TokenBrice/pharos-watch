@@ -5,6 +5,7 @@ import { shouldSuppressAsMirrorZero } from "./shared";
 const SELECTED_AMOUNT_STATE_COLUMNS = [
   "amount_native", "amount_usd_at_event", "amount_source", "amount_status",
   "amount_attempt_count", "amount_last_attempted_at",
+  "amount_last_error_class",
   "provenance_source", "provenance_observed_at", "contract_address", "config_key",
 ] as const;
 
@@ -109,14 +110,24 @@ export function buildRecoveredBlacklistAmountPersistence(
     input.amount,
     input.amountSource,
   );
-  const targetStatus = suppressed ? "permanently_unavailable" : input.amountStatus;
+  const legacyReview = options.selectedState?.amount_status === "permanently_unavailable"
+    && options.selectedState.amount_last_error_class === "event_time_unproven"
+    && input.config.chain.type === "evm"
+    && (input.eventType === "blacklist" || input.eventType === "unblacklist")
+    && input.amountSource === "historical_balance"
+    && input.amountStatus === "resolved";
+  const targetStatus = suppressed || (options.selectedState?.amount_status === "permanently_unavailable" && !legacyReview)
+    ? "permanently_unavailable" : input.amountStatus;
+  const permanentGuard = legacyReview
+    ? "(amount_status != 'permanently_unavailable' OR (amount_last_error_class = 'event_time_unproven' AND event_type IN ('blacklist', 'unblacklist') AND chain_id != 'tron'))"
+    : "amount_status != 'permanently_unavailable'";
   const statement = db
     .prepare(
       `UPDATE blacklist_events
        SET amount_native = ?,
            amount_usd_at_event = ?,
            amount_source = ?,
-           amount_status = CASE WHEN amount_status = 'permanently_unavailable' THEN amount_status ELSE ? END,
+           amount_status = ?,
            suppression_reason = COALESCE(suppression_reason, ?),
            contract_address = COALESCE(contract_address, ?),
            config_key = COALESCE(config_key, ?),
@@ -126,7 +137,7 @@ export function buildRecoveredBlacklistAmountPersistence(
            amount_last_provider = ?,
            provenance_source = COALESCE(?, provenance_source),
            provenance_observed_at = COALESCE(?, provenance_observed_at)
-       WHERE id = ?${unresolvedAmountGuard(options)}${selectedAmountGuard(options)}`,
+       WHERE id = ? AND ${permanentGuard}${unresolvedAmountGuard(options)}${selectedAmountGuard(options)}`,
     )
     .bind(
       input.amount,

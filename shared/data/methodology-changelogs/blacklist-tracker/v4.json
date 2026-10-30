@@ -1,5 +1,20 @@
 [
   {
+    "version": "4.62",
+    "title": "Reconciled event-time amounts for EVM freezes",
+    "date": "2026-10-30",
+    "effectiveAt": 1793318400,
+    "summary": "Amountless EVM freezes and releases can recover their event-time balance when complete same-block transfers reconcile exactly with historical balances bracketing the block.",
+    "impact": [
+      "Recovery uses raw integer balances at the ends of the preceding and event blocks, verifies every affected-account Transfer against the closing balance, then replays only transfers before the canonical freeze or release log. Missing identity, negative intermediate balances and unreconciled evidence leave the amount unavailable.",
+      "Proven amounts use the existing historical_balance source. A measured zero remains zero but cannot trigger EURC mirror suppression, which still requires emitted event-time zero. Destroy events retain their unambiguous emitted-amount path.",
+      "Unsuppressed legacy EVM freeze/release rows marked event_time_unproven receive automatic bounded re-review without a migration or operator action. They remain permanently unavailable outside missing-amount gap statuses until proof resolves them; provider failures retry within the cap and proof failures become terminal.",
+      "Historical non-USD valuation still requires an event-attributed quote. Current-balance snapshots, suppressed history, exposure classifications and scan cadence are unchanged."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "4.61",
     "title": "Unobserved freeze-exposed value stays unavailable",
     "date": "2026-10-27",
