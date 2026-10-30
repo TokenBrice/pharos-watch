@@ -1,5 +1,8 @@
 import { z } from "zod";
 import {
+  V9AuthoredIncidentRegistryEnvelopeSchema,
+  V9ReviewedIncidentRegistryEnvelopeSchema,
+  V9ReviewedIncidentSchema,
   V9AttributedNegativeIncidentReviewSchema,
   V9ProviderIncidentDisclosureSchema,
   V9ProviderIncidentReviewSchema,
@@ -13,6 +16,14 @@ import { isRecord } from "../../shared/lib/type-guards";
 import { compareText } from "../../shared/lib/safety-score-v9/primitives";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../../shared/lib/safety-score-v9/evidence";
 import { ReviewEvidenceBuilder } from "../../shared/lib/safety-score-v9/review-evidence";
+import {
+  canonicalizeReviewedRegistryDigest,
+  expandReviewedRegistryReferences,
+  reviewedRegistryDigestKey,
+  reviewedRegistryEnvelopeDigest,
+  reviewedRegistryTextKey,
+  reviewedRegistryTupleKey,
+} from "../../shared/lib/safety-score-v9/reviewed-registry";
 
 /** The asset-attributed reviewed record kinds; the shared registry owns the union. */
 export { V9AttributedNegativeIncidentReviewSchema };
@@ -169,4 +180,37 @@ export function projectProviderIncidentRow(value: Record<string, unknown>): Proj
 /** Provider-wide rows are the only review kind without a top-level authored asset id. */
 export function isProviderReview(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && isRecord(value.scope) && value.scope.kind === "provider";
+}
+
+const REVIEW_TABLES = { sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations" } as const;
+
+// Issuer-surface routes are plain ids; provider lanes are authored refs.
+const providerLaneKey = reviewedRegistryTupleKey("assetId", "routeId");
+
+export function buildIncidentRuntime(value: unknown) {
+  const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(value);
+  // A provider-wide review becomes one asset-attributed row per covered asset
+  // before reference expansion; every row the expander sees carries its asset.
+  const rows = authored.negativeReviews.flatMap((row) =>
+    isProviderReview(row) ? fanOutProviderIncidentReview(row) : [row]);
+  const envelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(expandReviewedRegistryReferences(
+    { ...authored, negativeReviews: rows }, "negativeReviews", REVIEW_TABLES));
+  const reviews = envelope.negativeReviews ?? [];
+  const canonical = canonicalizeReviewedRegistryDigest(envelope, {
+    incidents: reviewedRegistryDigestKey("incidentId"),
+    "incidents.*.primarySources": reviewedRegistryDigestKey("url"),
+    "incidents.*.remediation.sources": reviewedRegistryDigestKey("url"),
+    "incidents.*.posture.controlKinds": reviewedRegistryTextKey,
+    negativeReviews: reviewedRegistryDigestKey("reviewId"),
+    "negativeReviews.*.sources": reviewedRegistryDigestKey("url"),
+    "negativeReviews.*.scope.controlKinds": reviewedRegistryTextKey,
+    // Authored identity arrays are canonical sets, not ordered prose: their
+    // authored order must not become part of the build identity.
+    "negativeReviews.*.scope.controlIds": reviewedRegistryTextKey,
+    "negativeReviews.*.scope.coveredRoutes": (row: unknown) => typeof row === "string" ? row : providerLaneKey(row),
+  });
+  return { schemaVersion: 1, digest: reviewedRegistryEnvelopeDigest("safety-score-v9.incident-reviews.v1", "payload", canonical),
+    incidents: envelope.incidents.map((row) => V9ReviewedIncidentSchema.parse(row)),
+    negativeReviews: reviews.map((row) =>
+      isProviderReview(row) ? projectProviderIncidentRow(row) : projectNegativeIncidentReview(row)) };
 }

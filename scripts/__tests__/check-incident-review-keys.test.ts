@@ -11,7 +11,6 @@ import {
 const ASSET = "alpha-fixture";
 const ROUTE = "ethereum:0x1111111111111111111111111111111111111111";
 const MINT_KEY = `mint-meta:${ASSET}:0123456789abcdef0123`;
-const CERTIFICATE_ID = `lane-cert:ethereum:0x1111111111111111111111111111111111111111:100-200:${"a".repeat(64)}`;
 
 interface FixtureOptions {
   reviews?: unknown[];

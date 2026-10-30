@@ -1,13 +1,13 @@
 import { describe, expect, it } from "vitest";
 import source from "../../shared/data/safety-score-v9/incident-reviews-v1.json";
 import {
+  buildIncidentRuntime,
   fanOutProviderIncidentReview,
   isProviderReview,
   projectNegativeIncidentReview,
   V9AttributedNegativeIncidentReviewSchema,
 } from "../lib/safety-score-v9-incident-runtime";
 import { readFileSync } from "node:fs";
-import { buildIncidentRuntime } from "../build-data/generate-safety-score-v9-incident-runtime";
 import { expandReviewedRegistryReferences } from "../../shared/lib/safety-score-v9/reviewed-registry";
 import {
   V9AuthoredIncidentRegistryEnvelopeSchema,
