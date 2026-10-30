@@ -1104,7 +1104,30 @@ const V9ExitPolicySchema = z
         low: z.number().finite().min(0).max(1),
       })
       .strict(),
-    exactCertificateModelConfidenceFactor: z.number().finite().min(0).max(1),
+    /**
+     * Confidence priced by what an admitted execution certificate proves.
+     * `exact-complete` measured the whole stress ask, so it is priced at
+     * parity with the fully confident model it confirms; `exact-lower-bound`
+     * proves only its served fraction and keeps the certificate discount.
+     * Certification class already owns same-rail supersession, so it owns this
+     * too instead of the producer's flat `medium` label.
+     */
+    certificateConfidenceByCertification: z
+      .object({
+        "exact-complete": z
+          .object({
+            observationFactor: z.number().finite().min(0).max(1),
+            modelFactor: z.number().finite().min(0).max(1),
+          })
+          .strict(),
+        "exact-lower-bound": z
+          .object({
+            observationFactor: z.number().finite().min(0).max(1),
+            modelFactor: z.number().finite().min(0).max(1),
+          })
+          .strict(),
+      })
+      .strict(),
     observationConfidenceFactors: z
       .object({
         high: z.number().finite().min(0).max(1),

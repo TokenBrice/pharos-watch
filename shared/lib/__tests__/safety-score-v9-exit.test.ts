@@ -835,10 +835,10 @@ describe("evaluateV9Exit", () => {
   });
 
   it.each([
-    { modelConfidence: "medium", modelFactor: 0.85, confidenceFactor: 0.85 },
-    { modelConfidence: "high", modelFactor: 1, confidenceFactor: 0.85 },
+    { modelConfidence: "medium", modelFactor: 1, confidenceFactor: 1 },
+    { modelConfidence: "high", modelFactor: 1, confidenceFactor: 1 },
     { modelConfidence: "low", modelFactor: 0.35, confidenceFactor: 0.35 },
-  ] as const)("prices admitted certificate cost monotonically with $modelConfidence model confidence", ({ modelConfidence, modelFactor, confidenceFactor }) => {
+  ] as const)("prices an exact-complete certificate at parity and keeps a $modelConfidence review priced as reviewed", ({ modelConfidence, modelFactor, confidenceFactor }) => {
     const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
       .find((entry) => entry.identity.assetId === "susds-sky")!;
     const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
@@ -901,7 +901,7 @@ describe("evaluateV9Exit", () => {
       expect(result.routes.find((entry) => entry.routeKey === "modeled:duplicate")!.included).toBe(false);
       const primary = result.routes.find((entry) => entry.routeKey === "redemption:issuer")!;
       expect(primary.confidenceDimensions!.model.factor).toBe(modelFactor);
-      expect(primary.confidenceDimensions!.observation.factor).toBe(0.85);
+      expect(primary.confidenceDimensions!.observation.factor).toBe(1);
       expect(primary.confidenceFactor).toBe(confidenceFactor);
       return result.routes.find((entry) => entry.routeKey === "redemption:issuer")!;
     });
@@ -909,6 +909,31 @@ describe("evaluateV9Exit", () => {
     expect(traces[0]!.factorContributions!.cost!.score).toBeCloseTo(0.005, 6);
     expect(traces[1]!.components!.cost).toBe(0);
     expect(traces[1]!.score).toBeLessThanOrEqual(traces[0]!.score!);
+  });
+
+  it("prices a lower-bound certificate below the same-rail model it competes with", () => {
+    const lowerBound = certificateRoute({
+      routeKey: "certificate", certification: "exact-lower-bound", physicalResourceKeys: ["rail:fixture"],
+    });
+    const complete = certificateRoute({
+      routeKey: "certificate", certification: "exact-complete", physicalResourceKeys: ["rail:fixture"],
+    });
+    const evaluate = (subject: typeof lowerBound) => evaluateV9Exit({
+      circulatingUsd: 2_000_000, assetId: subject.assetId, clockSec: subject.clockSec, routes: [subject.route],
+    }, V9_CANDIDATE_POLICY_V1).routes.find((entry) => entry.routeKey === "certificate")!;
+    const lowerTrace = evaluate(lowerBound);
+    const completeTrace = evaluate(complete);
+    // A lower bound proves only its served fraction, so it keeps the discount.
+    expect(lowerTrace.confidenceDimensions).toMatchObject({
+      observation: { factor: 0.85 }, model: { factor: 0.85 },
+    });
+    expect(lowerTrace.confidenceFactor).toBe(0.85);
+    // A complete measurement is priced at parity with the model it confirms.
+    expect(completeTrace.confidenceDimensions).toMatchObject({
+      observation: { factor: 1 }, model: { factor: 1 },
+    });
+    expect(completeTrace.confidenceFactor).toBe(1);
+    expect(completeTrace.score).toBeCloseTo(lowerTrace.score! / 0.85, 6);
   });
 
   it("retains non-certificate on-chain medium model confidence at 0.75", () => {

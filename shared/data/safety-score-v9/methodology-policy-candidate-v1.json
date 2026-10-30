@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.38",
+  "releaseVersion": "10.40",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -901,7 +901,10 @@
         "medium": 0.75,
         "low": 0.35
       },
-      "exactCertificateModelConfidenceFactor": 0.85,
+      "certificateConfidenceByCertification": {
+        "exact-complete": { "observationFactor": 1, "modelFactor": 1 },
+        "exact-lower-bound": { "observationFactor": 0.85, "modelFactor": 0.85 }
+      },
       "observationConfidenceFactors": {
         "high": 1,
         "medium": 0.85,
