@@ -174,8 +174,31 @@ export interface LaneAdminEventScreeningOptions {
   chainRpcs: Map<string, ChainRpcConfig>;
   signal?: AbortSignal;
   timeoutMs?: number;
+  /** Absolute producer deadline, inherited by every RPC retry and fallback. */
+  deadlineMs?: number;
   /** Producer clock; must be at or after the pinned window end. */
   observedAtSec?: number;
+}
+
+/** Execution deferral, not an evidence failure or scoring reason. */
+export class LaneScreeningDeadlineError extends Error {
+  constructor() {
+    super("lane-screening-deadline");
+    this.name = "LaneScreeningDeadlineError";
+  }
+}
+
+function requestTimeoutMs(options: { timeoutMs: number; deadlineMs?: number }): number {
+  if (options.deadlineMs === undefined) return options.timeoutMs;
+  const remainingMs = options.deadlineMs - Date.now();
+  // Do not begin another batch without room for one full request. The RPC
+  // helper still clips each retry/fallback to the absolute remaining budget.
+  if (remainingMs < options.timeoutMs) throw new LaneScreeningDeadlineError();
+  return Math.min(options.timeoutMs, remainingMs);
+}
+
+function throwIfDeadlineExhausted(deadlineMs: number | undefined): void {
+  if (deadlineMs !== undefined && Date.now() >= deadlineMs) throw new LaneScreeningDeadlineError();
 }
 
 interface ParsedLog {
@@ -253,17 +276,22 @@ function rpcErrorReason(error: { code?: number; message?: string }): V9LaneScree
 async function readBatch(
   chainId: string,
   calls: readonly EvmRpcBatchCall[],
-  options: { chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; timeoutMs: number; observedHeadBlock: number },
+  options: { chainRpcs: Map<string, ChainRpcConfig>; signal?: AbortSignal; timeoutMs: number; deadlineMs?: number; observedHeadBlock: number },
 ): Promise<EvmRpcBatchDetailedResult | null> {
+  const timeoutMs = requestTimeoutMs(options);
   try {
-    return await fetchEvmRpcBatchDetailed(chainId, calls, {
+    const result = await fetchEvmRpcBatchDetailed(chainId, calls, {
       chainRpcs: options.chainRpcs,
       signal: options.signal,
-      timeoutMs: options.timeoutMs,
+      timeoutMs,
+      deadlineMs: options.deadlineMs,
       observedHeadBlock: options.observedHeadBlock,
     });
+    throwIfDeadlineExhausted(options.deadlineMs);
+    return result;
   } catch (error) {
     rethrowIfAborted(error, options.signal);
+    throwIfDeadlineExhausted(options.deadlineMs);
     return null;
   }
 }
@@ -364,13 +392,16 @@ export async function screenLaneAdminEvents(
   const resolved = resolveTarget(target);
   const { chainId, subjectDeploymentKey, fromBlock, toBlock, emitters, screenedFamilies } = resolved;
   const timeoutMs = options.timeoutMs ?? 10_000;
-  const readOptions = { chainRpcs: options.chainRpcs, signal: options.signal, timeoutMs };
+  const readOptions = { chainRpcs: options.chainRpcs, signal: options.signal, timeoutMs, deadlineMs: options.deadlineMs };
 
   const chain = options.chainRpcs.get(chainId);
   if (!chain || chain.type !== "evm") return failedResult(subjectDeploymentKey, "unsupported-chain", observedAtSec, `chain:${chainId}`);
 
   throwIfAborted(options.signal);
-  const finalized = await fetchEvmBlockHeader(chainId, "finalized", readOptions);
+  const finalized = await fetchEvmBlockHeader(chainId, "finalized", {
+    ...readOptions, timeoutMs: requestTimeoutMs(readOptions),
+  });
+  throwIfDeadlineExhausted(options.deadlineMs);
   if (!finalized) return failedResult(subjectDeploymentKey, "rpc-unavailable", observedAtSec, "finalized-head-unavailable");
   if (toBlock > finalized.number) {
     return failedResult(subjectDeploymentKey, "non-finalized-head", observedAtSec, `to-block:${toBlock}>finalized:${finalized.number}`);
@@ -498,6 +529,7 @@ export async function screenLaneAdminEvents(
     return failedResult(subjectDeploymentKey, "read-budget-exhausted", observedAtSec, "log-read-budget");
   }
 
+  throwIfDeadlineExhausted(options.deadlineMs);
   const eventCounts: Partial<Record<V9LaneAdminEventFamily, number>> = {};
   for (const family of screenedFamilies) eventCounts[family] = 0;
   for (const log of logs) eventCounts[log.family] = (eventCounts[log.family] ?? 0) + 1;
