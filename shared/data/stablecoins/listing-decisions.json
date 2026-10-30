@@ -286,7 +286,7 @@
     "tryb-bilira": "core-stablecoin",
     "xaut-tether": "core-stablecoin",
     "xgld-unitas": "stablecoin-variant",
-    "xnk-kinka": "excluded",
+    "xnk-kinka": "core-stablecoin",
     "paxg-paxos": "core-stablecoin",
     "gldy-streamex": "stable-value-investment",
     "kau-kinesis": "core-stablecoin",

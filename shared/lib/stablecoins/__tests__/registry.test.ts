@@ -49,7 +49,7 @@ describe("registry universes", () => {
     }
     // The 2026-09-24 coverage review's runtime holds must stay out of the active
     // publication contract while remaining readable detail records.
-    for (const id of ["hlusd-hela", "vusd-virtue", "luausd-lumi-finance", "bib01-backed"]) {
+    for (const id of ["hlusd-hela", "vusd-virtue", "luausd-lumi-finance"]) {
       expect(isQuarantinedId(id)).toBe(true);
       expect(ACTIVE_IDS.has(id)).toBe(false);
       expect(READABLE_IDS.has(id)).toBe(true);

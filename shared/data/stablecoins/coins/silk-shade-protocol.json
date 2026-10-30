@@ -3,15 +3,19 @@
   "name": "SILK",
   "symbol": "SILK",
   "brand": "Shade Protocol",
-  "status": "quarantined",
-  "listingStatusReview": {
-    "changedAt": "2026-08-18",
-    "reason": "CoinGecko/DefiLlama circulating supply for SILK has been invalid (about 12x understated) since 2026-08-05; owner decision of 2026-08-18 withholds SILK until a source recovers. Recheck 2026-10-19: CoinGecko stale since 2026-08-17; DefiLlama marks SILK dead from 2026-09-01.",
-    "reviewBy": "2026-11-19",
-    "source": {
-      "label": "DefiLlama stablecoin detail for SILK (deadFrom 2026-09-01)",
-      "url": "https://stablecoins.llama.fi/stablecoin/113"
-    }
+  "status": "frozen",
+  "windDownAnnouncedAt": "2026-06-18",
+  "windDownSourceUrl": "https://forum.shadeprotocol.io/t/the-road-to-feather/593",
+  "frozenAt": "2026-10-15",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-10-15",
+    "recordedAt": "2026-10-30",
+    "epitaph": "Wound down with Shade Protocol",
+    "obituary": "Shade Protocol entered maintenance mode on 2026-06-18 and listed SILK among the products it began winding down, naming 2026-10-15 for the full shutdown. The protocol reopened SILK state on 2026-07-10 only so holders could repay and exit, and announced no successor token.",
+    "peakMcap": 6385913,
+    "sourceUrl": "https://forum.shadeprotocol.io/t/the-road-to-feather/593",
+    "sourceLabel": "Shade Protocol 'The Road to Feather' wind-down announcement"
   },
   "oneLiner": "SILK is Shade Protocol's basket-pegged stable on Secret Network, tracking a GDP-weighted currency basket and overcollateralized through ShadeLend CDP vaults.",
   "flags": {

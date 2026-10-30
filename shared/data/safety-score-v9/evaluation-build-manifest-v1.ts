@@ -78,15 +78,15 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/data/stablecoins/coins.generated.json",
-      "sha256": "b1849977f5b98110e7a4714356d26a2c21b1fb223074e349925417691c06dd9c"
+      "sha256": "e35958279036c7fd2e6d97e044434118bdad44919a92839c5e1bbd160c435e6c"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-full.generated.json",
-      "sha256": "026007ec4d1d1806bc42a702a6b286949a5f2fb42f2c2613010c6c1ff622ab18"
+      "sha256": "8f36a9eb769808a33c9fe9b6925e51eee7b22a9c389e7dae03c2a598236c6e22"
     },
     {
       "path": "shared/data/stablecoins/coins.worker-runtime.generated.json",
-      "sha256": "8bfaacdea8c2eea47c2d871f936782df2bfc3112efd5b15ea382b81eb97636d9"
+      "sha256": "78f97c7b45863ec1ef23d157f4800656e2e20c8936074909c8f04d84c1ffb240"
     },
     {
       "path": "shared/lib/abort-signals.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "43f9853d7a6f901e7ba3a2d4d0e95baa3e681c8268fdba5a6d491934bcab6b24"
+  "digest": "b7fa1e016775daf00c06392e70c9f9c523637223a9508ac26d3c953144cbd3aa"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
