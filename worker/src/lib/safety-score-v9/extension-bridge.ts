@@ -13,6 +13,7 @@ import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedSupplyRouteKind } from "./suppl
 import type {
   V9BridgeJoinDiagnosticsV1,
   V9BridgeSupplyRouteJoinV1,
+  V9DeploymentSupplyCensusDiagnosticV1,
   V9FailureDomainRef,
 } from "@shared/types/safety-score-v9-facts";
 import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/core";
@@ -33,7 +34,6 @@ import {
 } from "./extension-shared";
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
-  deploymentSupplyCensusDiagnostics,
   DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE,
   safetyScoreV9RouteSupplyShare,
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
@@ -879,6 +879,7 @@ function buildBridgeJoinDiagnostics(
   bridgeClaimControls: readonly ControlOverlay[],
   applicabilityBranch: V9BridgeJoinDiagnosticsV1["applicabilityBranch"],
   unprovenRouteJoins: readonly V9BridgeSupplyRouteJoinV1[] = [],
+  censusDiagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[] = [],
 ): V9BridgeJoinDiagnosticsV1 {
   const routeCountByChain = new Map<string, number>();
   for (const route of profileRoutes) {
@@ -940,10 +941,7 @@ function buildBridgeJoinDiagnostics(
     unprovenRouteJoins: [...unprovenRouteJoins],
     // Optional on the wire: only a run that actually admitted or rejected a
     // census packet records the band (byte-identical absence otherwise).
-    ...(() => {
-      const censusDiagnostics = deploymentSupplyCensusDiagnostics(supplyReview);
-      return censusDiagnostics.length === 0 ? {} : { deploymentSupplyCensus: [...censusDiagnostics] };
-    })(),
+    ...(censusDiagnostics.length === 0 ? {} : { deploymentSupplyCensus: [...censusDiagnostics] }),
   };
 }
 
@@ -954,6 +952,12 @@ export function adaptBridgeReview(
   evidence: ReviewEvidenceBuilder,
   clockSec: number,
   chainRows?: BridgeJoinChainRows,
+  /**
+   * The census packet outcomes returned by `buildSafetyScoreV9SupplyAdmission`
+   * for this asset. A rejected packet yields no supply review to carry them, so
+   * they travel beside it and are never retained module-side.
+   */
+  censusDiagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[] = [],
 ): {
   review: NonNullable<ExtensionAsset["economicControlReview"]>["bridge"];
   controls: ControlOverlay[];
@@ -1009,6 +1013,8 @@ export function adaptBridgeReview(
           supplyReview,
           [],
           "applicable",
+          [],
+          censusDiagnostics,
         ),
       },
       controls: [],
@@ -1357,6 +1363,8 @@ export function adaptBridgeReview(
           // not-applicable bridge review, so recording unproven rows here would
           // report a failure that no proof ever asks about.
           "native-only-not-applicable",
+          [],
+          censusDiagnostics,
         ),
       },
       controls,
@@ -1377,6 +1385,7 @@ export function adaptBridgeReview(
         bridgeClaimControls,
         "applicable",
         buildUnprovenRouteJoins(meta.id, supplyReview, controls),
+        censusDiagnostics,
       ),
     },
     controls,

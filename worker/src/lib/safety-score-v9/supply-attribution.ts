@@ -2,6 +2,7 @@ import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { supplyAttributionPinMaxAgeSec, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { V9_CHAIN_SUPPLY_PROVIDER_SOURCE_ID } from "@shared/types/safety-score-v9";
+import { deploymentSupplyCensusMaxAgeSec } from "@shared/types/safety-score-v9-deployment-supply-census";
 import type { SafetyScoreV9CompilerInput } from "./native-input";
 import { XAUT_ASSET_ID, XAUT_SUPPLY_ATTRIBUTION_CARRY_FORWARD_MAX_AGE_SEC, XAUT_SUPPLY_ATTRIBUTION_MAX_AGE_SEC } from "./xaut-supply-attribution-contract";
 import { getCirculatingRawOrNull } from "@shared/lib/supply";
@@ -90,14 +91,14 @@ export const SAFETY_SCORE_V9_CHAIN_SUPPLY_DEPLOYMENT_CENSUS_SOURCE_ID = "deploym
 
 /**
  * Evaluation-time ceiling for one census bound (PLAN §4.6 R3, OP-R0 S-14).
- * A bound is admitted only while its own `observedAtSec` sits inside the census
- * observation window (`semantic.supplyAttribution.observationMaxAgeSec`); it
- * never inherits the chain-supply carry-forward, because an expired bound must
- * return the deployment's datums to required on the next capture — no
- * carry-forward, no re-dating.
+ * The store and the consumer read the one declared per-source chain-supply
+ * ceiling for `deployment-supply-census-v1`, so a packet the store serves is
+ * never rejected only because this lane used a narrower window. An expired
+ * bound still returns the deployment's datums to required on the next capture:
+ * there is no carry-forward and no re-dating.
  */
 export function safetyScoreV9DeploymentSupplyCensusMaxAgeSec(): number {
-  return V9_CANDIDATE_POLICY_V1.policy.semantic.supplyAttribution.observationMaxAgeSec;
+  return deploymentSupplyCensusMaxAgeSec();
 }
 
 /**

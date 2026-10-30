@@ -1,5 +1,7 @@
 # Safety Score V9 Curation-Expiry Sweep
 
+> **Agent navigation** — Grep the heading you need instead of reading wholesale: [1. Capture the current production input](#1-capture-the-current-production-input) · [2. Replay the capture at HEAD](#2-replay-the-capture-at-head) · [3. Generate the worklist](#3-generate-the-worklist) · [4. Add the 10-day pre-expiry queue](#4-add-the-10-day-pre-expiry-queue) · [4a. Generate and drain the typed missing-data registry](#4a-generate-and-drain-the-typed-missing-data-registry) · [4b. Renew before the boundary, then check and book the ledger sentinels](#4b-renew-before-the-boundary-then-check-and-book-the-ledger-sentinels) · [5. Check the live-withheld counterfactual](#5-check-the-live-withheld-counterfactual) · [6. Close the weekly sweep](#6-close-the-weekly-sweep) · Artifact hygiene · Related.
+
 Run this sweep weekly to refresh the evidence-curation queue before reviewed reserve
 evidence loses admission. With the default 10-day lookahead, the preventive queue
 re-evaluates the applicable source-strength, freshness, and whole-asset denominator
@@ -12,14 +14,17 @@ entire sweep; do not combine worklists or dates from different producer cycles.
 The sweep is also automated: `.github/workflows/curation-expiry-sweep.yml` runs this
 procedure every Tuesday at 05:45 UTC (and on manual dispatch) with the deploy
 pipeline's Cloudflare credentials. It updates or creates the "Safety Score curation
-expiry sweep" issue with registry counts, all five generator statuses and the full
-artifact link before live-withheld/expiry/Dependencies/Backing excerpts. Its complete
+expiry sweep" issue with registry counts, all eight generator statuses and the full
+artifact link before the renewals, ledger-sentinel, live-withheld/expiry and
+Dependencies/Backing excerpts. Its complete
 body, including truncation marker and run footer, is capped at 60,000 UTF-8 bytes
 without splitting characters. All reports, logs, capture and replay (including partial
-outputs) are retained together in a 30-day run/attempt artifact. Replay and each of the four
-reports have separate timed workflow steps and status outputs. The live-withheld
-step has a 15-minute ceiling inside the unchanged 25-minute job budget, leaving
-time for issue/artifact publication when that report times out. Missing status
+outputs) are retained together in a 30-day run/attempt artifact. Replay and each of the
+seven downstream reports have separate workflow steps and status outputs; the issue's
+`Command status` and `Process status` lines name all eight. The sentinel check, the
+14-day renewal view and the renewal calendar each have a 10-minute ceiling; the
+live-withheld step has a 25-minute ceiling inside the unchanged 40-minute job budget,
+leaving time for issue/artifact publication when that report times out. Missing status
 outputs count as failures. Generator failures fail the run, but green
 generation does not attest cache freshness.
 Draining complete queues stays operator work — follow the steps below.
@@ -103,6 +108,15 @@ An item is cleared only when its reason code disappears from a fresh replay-gene
 worklist. Do not hand-edit generated rows, date-bump a review without re-verifying its
 composition, or hide an unresolved evidence gap by changing confidence.
 
+Two classes stay out of the default streams but never out of the registry. Rows whose
+witnesses are all documentation-class gaps (policy `semantic.evidence.documentation`,
+§4a) are counted in the stream table and listed only when `--include-documentation`
+appends the non-scoring `DOC` band. Claim groups parked by the reviewed ledger's churn
+rule are hidden from every band; the worklist reads the ledger from `--ledger` (default
+`.github/artifacts/safety-score-missing-data-reviewed-ledger.json`). Neither exclusion
+closes a fact: a documentation row re-enters the streams when its classification no
+longer holds, and a parked group returns to them only after a ledger `unpark`.
+
 A standing-structure composition — one with no dated composition report, whose structure
 was re-verified from current primary sources — may be re-dated only when its rows carry
 conservative (high) risk tiers, so re-dating cannot improve the score through favorable
@@ -152,7 +166,8 @@ Reserve columns: asset ID, evaluated-set circulating USD (largest first), curate
 `compositionAsOf`, age in days, collateral links, and adapter state (`none` or
 `silent-this-cycle`). Queue these assets for reserve research even without a current
 `RESV`/`DEP` row. A later live snapshot removes the asset; it does not make this
-cycle's missing snapshot live.
+cycle's missing snapshot live. The by-UTC-week renewal views and the renewal SLA are in
+[§4b](#4b-renew-before-the-boundary-then-check-and-book-the-ledger-sentinels).
 
 ## 4a. Generate and drain the typed missing-data registry
 
@@ -179,8 +194,9 @@ The census has three disjoint buckets from the replay's admitted completeness:
 Their sum reconciles to the full census and `ratingStatusCounts`. A pipeline gap's
 null grade is neither a rating nor economic NR; do not infer rateability from `grade !== "NR"`.
 
-Registry schema 2 stores each distinct path-scoped context once per stablecoin in
-`currentFactContexts`. Resolve a task's context with
+Registry schema 3 keeps the schema-2 context dedupe: each distinct path-scoped
+context is stored once per stablecoin in `currentFactContexts`. Resolve a task's
+context with
 `stablecoin.currentFactContexts[task.currentFactContextRef]`; an explicit `null`
 still means no context was available. Different tasks of one work type may reference
 different contexts. Task IDs, claim groups, routing, evidence and disappearance
@@ -188,13 +204,93 @@ sentinels are unchanged. Regenerate older registry artifacts rather than expecti
 the removed per-task `currentFactContext` field. Do not re-inline whole-asset
 surfaces into every task: that makes serialized size quadratic in task count and
 can exceed V8's single-string limit. The reviewed ledger remains separate input
-to human review, not embedded registry data.
+to human review, not embedded registry data. Schema 3 adds the documentation band,
+per-root dust residuals, question keys, the issuer researched-terminal review state and
+the deduplicated score-projection rows described next.
 
 The Markdown worklist is a compatibility renderer over this typed routing contract;
 it owns no reason-code classifier. The pre-expiry view likewise calls production's
 exported `resolveReviewedReserveAdmission()` result instead of copying reserve-admission
 rules. The packet carries the selected source references through evidence construction,
 including expired named-report history; it is asset-local and never stored in `preparedById`.
+
+**Documentation band.** A row whose witnesses cannot move a published score carries
+`documentation: {class: "documentation", reason, policyRef, threshold}`; every other row
+carries `null`. The classifier is `shared/lib/safety-score-v9/documentation.ts`, reading
+policy `semantic.evidence.documentation`: six reasons in `reasonOrder` precedence
+(`no-scoring-path`, `unknown-scores-as-no-credit`, `unscored-diagnostic`,
+`coverage-label`, `immaterial-deployment`, `reserve-dust`), with the two bar reasons
+taking their strict `<` percentage from `documentationImmaterialSharePct` and
+`reserveDustBookSharePct`. The class is derived from facts the evaluator already reads,
+and no scoring module may import it: it changes no `evidenceLevel`,
+`limitedEvidenceCauses`, `limitingCauseGapIds`, reason treatment, cause, responsibility,
+binding, cap, mixture weight or gap identity. An absent policy block, a non-open
+obligation, an unresolvable owning control or exposure, a null share, a global or reserve
+claim, a materiality-binding control, a route-scoped diagnostic on a route the evaluator
+did not admit, or a datum that alone gates a pillar all classify as `null` (fail closed).
+
+Each item also publishes `questionKey` (root-scoped; `null` for supplements and cause-D
+rows) and `reviewState` (the issuer researched-terminal band: `{state, reviewedAtSec,
+recheckAtSec}`, with `recheckAtSec = reviewedAt` plus the policy's
+`reviewedResearchMaxAgeSec`, currently 365 days). The two bands partition the queue:
+documentation wins, so a documentation row never joins the issuer band. A
+researched-terminal row leaves the default drain for a dated recheck; its original
+`reviewedAt` is preserved and never re-dated.
+
+A root's 3f reserve-dust exposures keep their own `taskId`s and publish one visible
+residual (`documentationResiduals[]` on the root card) with `questionKey`,
+`rootAssetId`, `bucket`, `bookShare`/`bookSharePct`, `thresholdBookSharePct`,
+`exposureKeys[]`, `datumGapIds[]`, `datumTaskIds[]` and `datumCount`. The merged residual
+is documentation only while its total stays below
+`reserveDustResidualMaxBookSharePct`; above that bar it is an open question. The residual
+never subtracts work: the datum rows keep their band and their task IDs.
+
+`summary` partitions without subtracting: `documentationItemCount`,
+`documentationDatumCount` (compiled-fact rows only), `documentationQuestionCount`
+(deduped root-scoped keys), `documentationReasonCounts` (all six reasons in vocabulary
+order), `documentationResidualCount`, `documentationResidualDatumCount`,
+`documentationOpenResidualCount` and `researchedTerminalItemCount`. `openItemCount`
+keeps every datum, banded or not.
+
+Drain documentation rows as documentation, never as score work. They close only when a
+fresh replay stops classifying the datum — the threshold stops holding, the control
+becomes binding, the route is admitted, or the composition becomes structured. Never
+date-bump a custody question: with `retainExpiredScopedQuestions` on, a
+`key-custody-independence` question older than 90 days
+(`V9_SCOPED_QUESTION_MAX_AGE_SEC`) stays published as a `stale` `keyCustody` factor gap
+carrying its authored `reviewedAt`, not the capture clock; its evidence is that
+question's own review, and its cause, evidence level and score do not change. Retention
+off restores the previous drop-at-90-days behavior. Custody is the only reason backed by
+an expiring scoped question; every other reason is re-derived from its live predicate on
+each capture.
+
+The publication also annotates the derived-only case per card:
+`openEvidence.byCard[].documentationOnlyLimited` lists `backing`/`control`/`exit`,
+sorted. A pillar is listed only when it is `limited`, its `limitingCauseGapIds` is
+non-empty, and every witness resolves locally or through `foreignCauseGaps` to a
+documentation gap. A non-limited pillar, an empty witness list, one non-documentation or
+unresolved witness, or a mix of documentation and unresolved ids keeps the pillar plain
+"limited". The annotation creates no evidence level and no `displayEvidence` or
+`scoringEvidenceLevel`: it is derived from the unchanged witnesses and cannot move a
+score, grade, premium, cap, cause or binding.
+
+**Score-projection dedupe.** Each `scoreProjectionGaps[]` row publishes the causal
+obligations it resolves (`causalGapIds`), the obligations no compiled task covers
+(`uncoveredCauseGapIds`), `coverageBasis` (`causal-gaps`, or the `work-type` fallback for
+a row with no resolvable causal identity), `coveredByTaskIds` (compiled tasks of every
+carried gap id, across work types, plus the supplement when one exists) and
+`supplementalTaskId`/`requiresSupplementalTask`. The all-obligations rule is the
+authority: a supplement is added only when at least one obligation has no compiled task,
+or, for a row with no causal identity, when no compiled fact task of its exact work type
+exists. Coverage by another work type removes a supplement; a mixed or uncovered
+obligation set keeps it, so dedupe never hides independent work. `summary` publishes
+`scoreProjectionCauseGapCount`, `scoreProjectionWorkTypeFallbackCount`,
+`scoreProjectionSupplementRemovedCount` and
+`scoreProjectionSupplementKeptForUncoveredCount`; read `uncoveredCauseGapIds` before
+calling a removed supplement safe. The replay artifact must carry
+`pipeline.evaluatedSet.assets[]` — pillar `reasons[]` (`code`, optional `cause`,
+`causeGapIds`, `sourceGapId`) and Exit `routes[].scoringDisposition` — and the registry
+fails closed when the evaluated set cannot supply the reasons it reads.
 
 Mechanism overlays and component reviews use their actual evidence pin, never the capture clock. Date-only reviews wait until the next UTC midnight and temporarily re-attribute the same-day admission gap `method-unsupported`; exact UTC timestamps admit at that instant, not earlier. Both retain the 365-day expiry from the original review start (`worker/src/lib/safety-score-v9/extension-mechanism.ts`).
 
@@ -243,16 +339,143 @@ Finish every reviewed claim group as exactly one of:
   (producer deployed in shadow; awaiting first production observation). The
   intermediate state never replaces the three-outcome decision itself.
 
-Append the decision to
-`.github/artifacts/safety-score-missing-data-reviewed-ledger.json`. Each
-entry uses the field roster declared in that file and links the stable claim-group and
-task IDs to evidence, sentinels, review trigger, and `factsClosed`. Never remove an old
-decision when a task disappears or returns; append another decision. This ledger is
-authored review provenance and is not replaced when the generated registry refreshes.
+Append the decision through the ledger CLI (`ledger-append`), the single append
+path to `.github/artifacts/safety-score-missing-data-reviewed-ledger.json`:
+
+```bash
+npx tsx scripts/maintenance/ledger-append.ts --decisions <decisions.json> --write
+```
+
+Each entry uses the `decisionFields` roster declared in that file and links the stable
+claim-group and task IDs to evidence, sentinels, review trigger, and `factsClosed`. The
+CLI validates the roster and the current work-type/resolution-mode vocabulary, rejects
+duplicates, requires at least one sentinel on a defer, and refuses a fourth identical
+trailing outcome unless that group's recorded trigger demonstrably fired
+(`--trigger-fired <claimGroupId>`) or its latest decision carries `unpark` evidence. It
+previews unless `--write`; `--dry-run` is the explicit preview alias and conflicts with
+`--write`. Never remove an old decision when a task disappears or returns; append another
+decision. This ledger is authored review provenance and is not replaced when the
+generated registry refreshes.
 
 The full registry remains a credentialed maintenance artifact from the fresh
 production capture. The sweep does not commit an aggregate snapshot or open a
 snapshot PR; the issue and retained registry artifact are its outputs.
+
+## 4b. Renew before the boundary, then check and book the ledger sentinels
+
+The same replay also drives the renewal clock. Two by-UTC-week views call the production
+resolvers of §4; both are optional flags on the existing CLI, and the default report
+stays byte-identical:
+
+```bash
+npm run safety-score-v9:expiry-queue -- --replay "${replay}" --days 14 --by-week
+npm run safety-score-v9:expiry-queue -- --replay "${replay}" \
+  --horizon 2027-01-19 --by-week --output agents/sweep/expiry-queue-calendar.md
+```
+
+`--horizon D` means expiring **before** D's UTC midnight (`[clock, D)`); the named date
+is excluded. It must be a real UTC date after the capture clock, and it conflicts with
+`--days` (exit 2). `--by-week` groups upcoming rows by UTC Monday; these are calendar
+weeks, not design action weeks, so 01-01…01-03 land in the 2026-12-28 week. `Renew by`
+is the effective boundary date minus the documented 14-day lead time
+(`RENEWAL_LEAD_TIME_DAYS`); only execution reviews, scoped control questions and the
+supply-attribution families (plan, partition, row exclusion, native single route) carry
+a lead-time class today, and every other family renders `—` until an owner assigns one.
+Curated reserve compositions are not week-bucketed: their boundary stays owned by
+`resolveReviewedReserveAdmission()` and they remain in the reserve queue under the same
+window. Keep the horizon calendar a 30-day artifact, never the issue body.
+
+**Renewal SLA.** Every score-eligible record whose boundary falls before 2027-01-19 is
+renewed from current primary sources, or listed as an issuer wait with a date or event
+trigger, within 48 hours of the sweep. A renewal re-verifies its evidence and writes its
+own `reviewedAt`; an unchanged fact still needs a new dated source, and a composition
+renewal re-verifies the composition. No date-bumps. Missing issuer evidence lapses
+fail-closed and is listed, never softened or hidden by confidence changes. The
+`DEP`/`RESV` drain and the live-withheld review stay the priority lanes.
+
+**Incident reviews renew by stable identity.** Provider and issuer-surface negative
+incident reviews renew on the policy's `reviewedResearchMaxAgeSec` budget (365 days):
+the runtime currentness check (`negativeIncidentReviewIsCurrent()` in
+`worker/src/lib/safety-score-v9/extension-incidents.ts`) admits a review only while the
+clock is at or past both `reviewedAt` and `windowEndSec` and no further than that budget
+from either, and the review's research evidence carries the same `maxAgeSec`. A renewal
+row is keyed by the review's stable identity — `reviewId`, or the colon-form
+`stableReviewId` from the incident-review key migration — never by a legacy control
+digest: a metadata control change rotates the digest, so the review is re-authored under
+its authored `(assetId, routeId, controlId|controlIds)` identity, and a `retired` row
+renews nothing and never returns. Review windows follow the standing evidence contract:
+the window starts at the lane's first activity, `windowEndSec` is one pinned instant no
+later than `reviewedAt`, and an in-window operational incident is enumerated in the
+finding rather than written as a negative. The v10.38 train ships this identity and its migration only;
+certificate admission and provider/issuer lane closure (IR-1c) are v10.39, so the v10.38
+sweep must not demand a certificate closure or read its absence as a failed renewal. Once
+certificate admission lands, certificates roll with each screening cycle and exemptions
+are point-in-time and bound to the disclosed exposure: neither is a renewal row.
+
+**Ledger sentinels.** Check the reviewed ledger against the regenerated registry from the
+same capture:
+
+```bash
+NODE_OPTIONS=--max-old-space-size=12288 npx --no-install tsx \
+  worker/scripts/check-safety-score-v9-ledger-sentinels.ts \
+  --registry "${registry}" \
+  --ledger .github/artifacts/safety-score-missing-data-reviewed-ledger.json \
+  --replay "${replay}" \
+  --output agents/sweep/sentinel-resolutions.json \
+  --markdown agents/sweep/sentinel-resolutions.md
+```
+
+The checker is report-only. It emits one row per claim group's latest appended decision
+(greatest `reviewedAt`; ties to the later row) with `verdict`
+(`closed`/`still-open`/`replaced-adversely`/`unverifiable`), a machine `reason`, a
+separate `admission` axis (`verified`/`failed`/`not-applicable`/`unverifiable`),
+`asOfSec`, `openItemCount` and the ledger decision index. `closed` requires every
+machine-checkable sentinel absent, no adverse or successor match and no decisive block; a
+narrative-only decision, an absent or unrated/quarantined asset, an unavailable registry
+binding, or a capture that predates the decision is `unverifiable`, never closed.
+`--replay` is the evidence gate: the artifact records `closureEvidence:
+replay-verified`, the registry identity fingerprint and the registry bytes' `sha256`, and
+the run fails when the binding does not match. Exit 0 means "report produced"; verdicts
+are findings, not bookings, and the workflow appends nothing to the ledger. A `closed`
+group with residual open items is legitimate (the decision is scope-limited); its row
+carries `taskIds.closed` and the registry-derived `factsClosed`.
+
+Booking is an operator PR with the sentinel-closure applier (`apply-sentinel-closures`). It
+verifies the artifact's `registrySha256`, `closureEvidence: replay-verified`, identity
+fingerprint, per-row `ledgerDecisionIndex` and the live ledger decision count, then
+re-derives every sentinel and `factsClosed` from the registry itself. It previews by
+default and appends only with `--write`:
+
+```bash
+npx tsx scripts/maintenance/apply-sentinel-closures.ts \
+  --resolutions agents/sweep/sentinel-resolutions.json \
+  --registry agents/sweep/missing-data-registry.json --write
+```
+
+| Checker row | Applier action |
+| --- | --- |
+| `closed` + `admission: verified` (structured-pending-production) | promote; every sentinel absent |
+| `closed` + `admission: not-applicable` | promote; every sentinel absent |
+| `still-open` + reason `sentinels-partially-absent` + `not-applicable` | partial promote; carries the open sentinels |
+| `still-open` + `admission: failed` | skip `spp-admission-failed` (wait state; **no reject**) |
+| `still-open` (other reasons), `replaced-adversely`, `unverifiable` | skip `verdict-not-bookable` |
+| admission axis inconsistent with the ledger's `deferState` | skip `spp-state-mismatch` |
+
+The applier refuses an artifact without replay evidence
+(`closure-evidence-insufficient`), a stale decision index or count (`stale-ledger-basis`),
+and any sentinel it can still find. Its reason rule is deliberately stricter than the
+checker's successor rule, so a `closed` row may still skip as `sentinel-still-open`:
+fail-closed, never a wrong booking, and the preview books fewer groups than the `closed`
+headline. Approve the PR only after the preview names every skipped row. Never copy the
+reviewer's `factsClosed`; the applier derives it.
+
+All ledger writes go through the same `ledger-append.ts` rules: append-only history,
+duplicate rejection, atomic write, optimistic SHA concurrency and the churn park rule.
+The latest decision per group is the greatest `reviewedAt`, ties to the later append (the
+checker uses the same selection). A fourth identical trailing outcome is rejected without
+`unpark`, and `unpark` is not part of the decision-field roster. Parked groups leave the
+default worklist streams but stay in the registry and in the sentinel check; list them
+with the ledger's park state instead of deleting or re-opening them.
 
 ## 5. Check the live-withheld counterfactual
 
@@ -322,8 +545,8 @@ error still exits nonzero. A shard's all-failed result is judged only after merg
 so one empty/unassessable partition cannot discard successful sibling partitions.
 Production evaluator and quarantine semantics are unchanged. Keep failed assets open
 for an owner investigation; never interpret their absence from grade drops as feed
-health. Do not raise the unchanged 15-minute step ceiling to mask a regression.
-Acceptance requires one completed post-merge scheduled sweep with all five generator
+health. Do not raise the unchanged 25-minute step ceiling to mask a regression.
+Acceptance requires one completed post-merge scheduled sweep with all eight generator
 statuses successful, plus the issue and registry artifact.
 A local replay or manual dispatch alone does not close scheduled-run acceptance.
 
@@ -350,6 +573,8 @@ counterfactual report.
 | Pre-expiry review | Every listed composition was refreshed, received a live snapshot, or has a documented blocker before its applicable production admission bound closes. |
 | Live-withheld review | Each high-supply grade-drop row has a reviewed fallback path, a current producer action, or a documented blocker/escalation in the sweep issue. |
 | Missing-data registry | Every reviewed claim group has a promote/reject/defer ledger entry; promoted facts count only after their exact sentinel disappears on a fresh production replay. |
+| Renewal calendar | Every boundary before 2027-01-19 has a renewed record, a live snapshot, or a dated issuer wait; no record moved by a date-bump. |
+| Ledger sentinels | Every `closed` group is booked through the applier PR or carries a recorded blocker; no `spp-admission-failed` row was booked as a reject. |
 | Measurement | The closing worklist, pre-expiry list, and counterfactual report come from one fresh capture replayed with its own `clockSec`. |
 
 

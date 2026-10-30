@@ -1214,13 +1214,13 @@ function evaluateV9FactSetRead(
   factSetRead: V9WorkingFactSetRead,
   envelope: V9ValidatedPolicyEnvelope,
   interventions: V9SetEvaluationInterventions | undefined,
-  onAssetProjected: (asset: V9EvaluatedAsset) => void,
+  onAssetProjected: (asset: V9EvaluatedAsset, facts: V9AssetFactsV3) => void,
 ): Readonly<V9ProjectedEvaluatedSet>;
 function evaluateV9FactSetRead(
   factSetRead: V9WorkingFactSetRead,
   envelope: V9ValidatedPolicyEnvelope,
   interventions?: V9SetEvaluationInterventions,
-  onAssetProjected?: (asset: V9EvaluatedAsset) => void,
+  onAssetProjected?: (asset: V9EvaluatedAsset, facts: V9AssetFactsV3) => void,
 ): Readonly<V9EvaluatedSet | V9ProjectedEvaluatedSet> {
   assertV9ValidatedPolicyEnvelope(envelope);
   let factSet: V9EvaluationFactSetRead["factSet"] | null = factSetRead.factSet!;
@@ -1367,7 +1367,7 @@ function evaluateV9FactSetRead(
     if (projection) {
       const evaluated = evaluatedById.get(assetId)!;
       projection.assets.set(assetId, evaluatedAssetDigestPayload(evaluated));
-      projection.project(evaluated);
+      projection.project(evaluated, asset);
       for (const upstreamId of projection.upstreams.get(assetId)!) {
         const remaining = projection.remainingReaders.get(upstreamId)! - 1;
         projection.remainingReaders.set(upstreamId, remaining);
@@ -1466,7 +1466,7 @@ export function evaluateValidatedV9FactSet(
 export function evaluateValidatedV9FactSetForPublication(
   owner: { factSet: CompiledV9FactSetV3 | null },
   envelope: V9ValidatedPolicyEnvelope,
-  project: (asset: V9EvaluatedAsset) => void,
+  project: (asset: V9EvaluatedAsset, facts: V9AssetFactsV3) => void,
 ): Readonly<V9ProjectedEvaluatedSet> {
   assertV9FactSetCompiledInProcess(owner.factSet!);
   const read: V9WorkingFactSetRead = {

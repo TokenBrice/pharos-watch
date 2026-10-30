@@ -61,6 +61,15 @@
 | `telegram-inactive-cleanup` | 7d | 14d O | watch | Bounded inactive-user cleanup allowed; partial execution does not claim all eligible users processed. |
 | `telegram-retention-cleanup` | 1d | 2d O | watch | Bounded retention/reconciliation allowed with residual backlog; no lost pending deliveries. |
 
+## Lane-witness freshness (v10.38)
+
+Safety Score incident evidence is authored research, not a cron lane. Certificate-based lane closure is not an evaluation input in v10.38 (it moves to v10.39), so this matrix adds no certificate row yet.
+
+- A negative incident review is admissible only while the evaluation clock is at or after both `reviewedAt` and `windowEndSec`, and no more than 365 days past either (the reviewed-research budget). A date-only `reviewedAt` value admits after its UTC day ends; a timestamped value admits at its instant. A retired review keeps its provenance and contributes nothing.
+- The only lane witness consumed today is the authored control or deployment negative review. Provider and issuer-surface reviews are parsed and key-checked but close nothing in v10.38, so neither can refresh a lane's incident status.
+- A provider review's `laneScreeningRefs` are structural: one reference per covered lane, none on an uncovered route, and no certificate lookup. The policy key `semantic.evidence.laneIncidentCertificateMaxAgeSec` (2,592,000 seconds) is schema-validated but has no consumer, so no certificate freshness budget is enforced. A shadow screening cycle may produce certificates, but they are shadow observations: they are not coverage and must not be described as lane evidence.
+- When certificate admission lands, this section gains the screening cadence, the 30-day certificate budget and the emitter lookback floor together; none of those is an acceptance threshold today.
+
 ## Sign-off boundary
 
 Owner review must approve any proposed tolerance before it becomes an executable acceptance threshold. In particular, the reserve cohort completion SLO, extended mint/burn cycle verdict, DEX source-to-consumer identity and V9 held-publication component are separate contracts, not reasons to extend current cron age budgets. Runtime changes must update their source authority and this draft together. Incident assessment uses [literal terminal/output evidence](../scripts.md#worker-incident-evidence-and-status-profile), not a count of every non-`ok` row labeled “degraded”.

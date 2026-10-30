@@ -987,23 +987,38 @@ describe("identifyDeadCuratedPins", () => {
   });
 
   it("reports the absent legs of a weighted pool group and the ones still present", () => {
-    const [stablecoinId, group] = Object.entries(YIELD_WEIGHTED_POOL_GROUPS)[0];
-    const pins = identifyDeadCuratedPins(
-      [makeDlYieldPool({
-        pool: group.poolIds[0],
-        project: group.expectedProject,
-        symbol: group.expectedSymbol,
-      })],
-      { publishedStablecoinIds: new Set() },
-    );
+    // The registry is empty since sdUSD was frozen; exercise the walk with a synthetic group.
+    const stablecoinId = "weighted-test-coin";
+    const group = {
+      sourceKey: "defillama-weighted:test",
+      poolIds: ["weighted-test-pool-a", "weighted-test-pool-b"],
+      yieldSource: "Test weighted vault",
+      yieldType: "lending-vault" as const,
+      expectedProject: "test-project",
+      expectedSymbol: "TESTV",
+      expectedChainsByPoolId: { "weighted-test-pool-a": "ethereum", "weighted-test-pool-b": "fraxtal" },
+    };
+    YIELD_WEIGHTED_POOL_GROUPS[stablecoinId] = group;
+    try {
+      const pins = identifyDeadCuratedPins(
+        [makeDlYieldPool({
+          pool: group.poolIds[0],
+          project: group.expectedProject,
+          symbol: group.expectedSymbol,
+        })],
+        { publishedStablecoinIds: new Set() },
+      );
 
-    expect(pins.find((pin) => pin.registry === "weighted-pool-group" && pin.stablecoinId === stablecoinId))
-      .toMatchObject({
-        missingPoolIds: group.poolIds.slice(1),
-        presentPoolIds: [group.poolIds[0]],
-        reasons: ["missing-pool"],
-        coverage: "coverage-outage",
-      });
+      expect(pins.find((pin) => pin.registry === "weighted-pool-group" && pin.stablecoinId === stablecoinId))
+        .toMatchObject({
+          missingPoolIds: group.poolIds.slice(1),
+          presentPoolIds: [group.poolIds[0]],
+          reasons: ["missing-pool"],
+          coverage: "coverage-outage",
+        });
+    } finally {
+      delete YIELD_WEIGHTED_POOL_GROUPS[stablecoinId];
+    }
   });
 });
 

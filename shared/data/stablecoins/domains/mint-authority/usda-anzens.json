@@ -124,13 +124,17 @@
       "scopedQuestions": [
         {
           "controlRef": "Anzens issuance backend",
-          "question": "What authorization semantics does the PlutusV2 policy assign to the visible reference configuration, and what threshold is independently reproducible? Re-fetched on 2026-10-01, mint c11effdaa66d31b7ed95c1cec5716490391baed46cdc144d28d336b218eced8f at Cardano block 14008131 still references b91c80748190c7280be0a41da2b80fd9690af6e174bca2e388476f8eea200b86#0. Its datum contains key hashes b2136f4e… and 57dc15b1… and the integer 1, but constructor-to-signature semantics and any cold 3-of-7 policy remain unverified without independently reproduced script semantics.",
+          "question": "What authorization semantics does the PlutusV2 policy assign to the visible reference configuration, and what threshold is independently reproducible? Re-fetched on 2026-10-01, mint c11effdaa66d31b7ed95c1cec5716490391baed46cdc144d28d336b218eced8f at Cardano block 14008131 still references b91c80748190c7280be0a41da2b80fd9690af6e174bca2e388476f8eea200b86#0. Its datum contains key hashes b2136f4e… and 57dc15b1… and the integer 1. Re-read 2026-10-29 against Koios tip block 14132352 (block_time 1793299020 = 2026-10-29T18:37:00Z): the issuer policy is still the immutable PlutusV2 script and the same mint transaction c11effda… (absolute slot 199214753) is returned; the reference-config datum bytes and constructor-to-signature semantics were not re-derived, so any cold 3-of-7 policy remains unverified without independently reproduced script semantics.",
           "subject": "authority-semantics",
-          "reviewedAt": "2026-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (CurB43scrvUSD)",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "Koios tx_info: USDA mint c11effda… at block 14008131 with reference config b91c8074…#0",
+              "label": "Koios tip block 14132352 at 2026-10-29T18:37:00Z (rollback-safe read)",
+              "url": "https://api.koios.rest/api/v1/tip"
+            },
+            {
+              "label": "Koios tx_info re-read 2026-10-29: USDA mint c11effda… at absolute slot 199214753",
               "url": "https://api.koios.rest/api/v1/tx_info"
             },
             {

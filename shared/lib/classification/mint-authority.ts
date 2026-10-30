@@ -16,7 +16,8 @@ function hasActiveMultisigMintControl(summary: MintAuthorityCoverageSummary): bo
   return (summary.controls ?? []).some(
     (control) =>
       (control.authorityType === "safe" || control.authorityType === "multisig") &&
-      control.directMintAbility !== "none",
+      control.directMintAbility !== "none" &&
+      (control.directMintAbility !== "parameter-only" || control.canRaiseCap === true),
   );
 }
 

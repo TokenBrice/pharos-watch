@@ -392,14 +392,6 @@ export const REVIEWED_LIVE_RESERVE_SOURCE_NOTES: Record<string, LiveReserveSourc
     scoreGradePlausible: false,
     note: "Require a coherent complete USM and mint-market collateral/liability census with noncircular LP/credit valuation. Borrow-market DUSD supply is not external backing; a fresh generatedAt cannot cure missing reserve scope or an invalid ledger checkpoint.",
   },
-  "dusd-dtrinity": {
-    sourceUrl: "https://docs.dtrinity.org/protocol-components/dusd",
-    sourceQuality: "weak-proof",
-    expectedAdapterFamily: "chain-isolated dTRINITY liability, collateral and AMO/LP reader",
-    freshnessEvidence: "Reviewed 2026-10-07: docs separate nonfungible Ethereum/Fraxtal/Katana deployments and deployed AMOs. The tracked Sonic perimeter remains unresolved; earlier decoded vault observations remain historical.",
-    scoreGradePlausible: false,
-    note: "Require exact per-deployment liabilities and complete noncircular deployed AMO/LP look-through. Idle vault totals omit AMOs; pooling isolated branches or substituting an Ethereum book for Sonic would misstate the tracked reserve perimeter.",
-  },
   "zkusd-goal3": {
     sourceUrl: "https://explorer.zksync.io/address/0xfc7e56298657b002b3e656400e746b7212912757",
     sourceQuality: "not-plausible",

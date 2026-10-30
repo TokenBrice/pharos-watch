@@ -40,6 +40,7 @@ import {
   loadPreviousStablecoinsById,
   mergeSupplementalLastKnownGood,
   restoreMissingTrackedAssets,
+  withholdUnclockedCarriedSupply,
   type CronResult,
   type PreviousStablecoinsCacheState,
   type TrackedCoverageRestoreResult,
@@ -463,6 +464,16 @@ export async function loadStablecoinsIntake(
       },
     });
   }
+  if (supplementalResolution.unclockedRestoreIds.length > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "supplemental-carry-forward-unclocked",
+      message: "Supplemental supply carry refused: the prior observation names no clock; publishing unavailable supply",
+      metadata: { unclockedRestoreIds: supplementalResolution.unclockedRestoreIds },
+    });
+  }
   if (supplementalResolution.expiredRestoreIds.length > 0) {
     logWorkerEvent({
       scope: "lib",
@@ -570,6 +581,20 @@ export async function loadStablecoinsIntake(
     chainRpcs: input.chainRpcs,
     signal: input.signal,
   });
+
+  // B2 final admission: a carried supply value is published only with the clock
+  // of the read that produced it. Anything else is withheld, never re-dated.
+  const unclockedCarriedIds = withholdUnclockedCarriedSupply(assets);
+  if (unclockedCarriedIds.length > 0) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "supply-carry-forward-unclocked-withheld",
+      message: "Withheld carried supply that names no observation clock; publishing unavailable supply",
+      metadata: { withheldIds: unclockedCarriedIds },
+    });
+  }
 
   await reportStablecoinsStage(input.reportProgress, "intake", "Loaded DefiLlama stablecoin intake", {
     itemsDone: assets.length,

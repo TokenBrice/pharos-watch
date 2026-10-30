@@ -26,6 +26,30 @@ export const SUPPLY_ATTRIBUTION_CAPTURE_BUDGET = Object.freeze({
   wallTimeoutMs: 180_000,
   publicationReserveMs: 15_000,
 });
+
+/**
+ * Shadow `deployment-supply-census-v1` lane hosted by the same isolated
+ * supply-attribution slot (PLAN §4.6; `docs/worker-and-api-limits.md#
+ * connection-budget-operating-assumption`).
+ *
+ * The census starts only after the attribution capture has settled, so the
+ * slot's outbound peak stays at the three-connection attribution maximum
+ * instead of summing two three-connection lanes to the platform's six.
+ *
+ * The cohort is stable, not rotating: SA-1's store replaces the cohort
+ * wholesale, and a packet may not outlive `observationMaxAgeSec`, so a
+ * rotating slice would silently drop the assets it did not measure this run.
+ * Selection instead keeps the registry-derived deployment-heavy prefix within
+ * both caps, which is the population the census exists for.
+ */
+export const SUPPLY_ATTRIBUTION_DEPLOYMENT_SUPPLY_CENSUS_BUDGET = Object.freeze({
+  /** Stable cohort: the attribution/journal asset ceiling, not a top-96 selector. */
+  cohortAssets: SUPPLY_ATTRIBUTION_JOURNAL_FIXED_INPUT_MAX_ASSETS,
+  /** Run cap shared with `TRANSFER_MATERIALITY_CAPTURE_BUDGET.maxDeploymentsPerRun`. */
+  cohortDeployments: 256,
+  /** Never start the shadow lane without this much inherited slot time left. */
+  minimumRemainingMs: 60_000,
+});
 export const WM_SUPPLY_ATTRIBUTION_MAX_POST_CLOCK_SEC = 120;
 
 export const SupplyAttributionJournalIdSchema = z

@@ -823,6 +823,7 @@ function appendReserveConcentrationContribution(params: {
   let includedShare = 0, boundedShare = 0, unidentifiedShare = 0;
   let boundedQuality = 0, unidentifiedQuality = 0;
   const causeGapIds: string[] = [];
+  const excludedComponentKeys: string[] = [];
   const causes: NonNullable<V9BackingContribution["cause"]>[] = [];
   for (const row of contributions.filter(entry => entry.source === "reserve-exposure")) {
     const exposure = asset.reserveExposures.find(entry => `reserve:${entry.exposureKey}` === row.componentKey);
@@ -833,11 +834,21 @@ function appendReserveConcentrationContribution(params: {
     const status = exposure?.factorStatuses?.obligorConcentration ?? exposure?.status;
     const unknown = exposure === undefined || (!exempt && (exposure.issuerOrObligorKey === null ||
       status?.observationState !== "known" || status.applicability.state === "unresolved"));
-    const attribution = row.scoringDisposition === "excluded-pipeline" || row.scoringDisposition === "excluded-uncurated" || exposure === undefined
+    const rowExcluded = row.scoringDisposition === "excluded-pipeline" || row.scoringDisposition === "excluded-uncurated";
+    const attribution = rowExcluded || exposure === undefined
       ? { cause: row.cause ?? "U", causeGapIds: row.causeGapIds ?? [] }
       : v9BackingStatusCause(status!, gapIndex, unknown);
     if (attribution.cause !== null) { causes.push(attribution.cause); causeGapIds.push(...attribution.causeGapIds); }
-    if (attribution.cause === "A" || attribution.cause === "B") continue;
+    if (attribution.cause === "A" || attribution.cause === "B") {
+      // A whole-row exclusion is already named by the row's own component key.
+      // The obligor facet lives only on this aggregate, so an A/B exclusion on
+      // an otherwise priced row has no other owner: name the facet here or the
+      // published partial evidence claims an exclusion with no component.
+      if (!rowExcluded && exposure !== undefined) {
+        excludedComponentKeys.push(`reserve:${exposure.exposureKey}:obligorConcentration`);
+      }
+      continue;
+    }
     includedShare += row.normalizedWeight;
     if (unknown) {
       boundedShare += row.normalizedWeight;
@@ -866,6 +877,7 @@ function appendReserveConcentrationContribution(params: {
     provenance: null, evidenceRefIds: uniqueSorted(asset.reserveStatus.evidenceRefIds),
     failureDomains: canonicalDomains(domainGroups.map((group) => group.domain)), upstreamAssetId: null,
     cause, causeGapIds: uniqueSorted(causeGapIds), wholeAssetWeight: null,
+    ...(excludedComponentKeys.length === 0 ? {} : { excludedComponentKeys: uniqueSorted(excludedComponentKeys) }),
     effectiveScoringWeight: concentration === null ? 0 : backing.reserve.concentrationWeight,
     scoringDisposition: concentration === null ? cause === "B" ? "excluded-uncurated" : "excluded-pipeline"
       : cause === "C" || cause === "U" ? "bounded-uncertainty" : cause === "D" ? "measured-adverse" : "included",

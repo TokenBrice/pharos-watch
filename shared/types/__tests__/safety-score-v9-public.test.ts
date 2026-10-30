@@ -2,15 +2,19 @@ import { describe, expect, it } from "vitest";
 import {
   SafetyScoreV9CurrentCardSchema,
   SafetyScoreV9CurrentCardBaseSchema,
+  type SafetyScoreV9CurrentCard,
+} from "../safety-score-v9-public";
+import {
   SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9PreviousResponseSchema,
   SafetyScoreV9ResponseSchema,
+} from "../safety-score-v9-publication-response";
+import {
   V9OpenEvidenceByCardSchema,
   V9OpenQuestionBucketSchema,
   V9QuestionKeySchema,
-  type SafetyScoreV9CurrentCard,
   type V9OpenEvidence,
-} from "../safety-score-v9-public";
+} from "../safety-score-v9-open-evidence";
 import { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 import { SafetyScoreV9AccessPostureSchema } from "../safety-score-v9-public-facts";
 import { SafetyScoreV9HistoricalScoreTraceSchema, SafetyScoreV9ScoreTraceSchema } from "../safety-score-v9-public-trace";

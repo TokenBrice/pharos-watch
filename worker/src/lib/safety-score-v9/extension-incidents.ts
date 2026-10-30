@@ -17,7 +17,6 @@ import {
   V9LaneScreeningRefSchema,
   v9NegativeIncidentReviewTimeSec,
   type V9ControlIncident,
-  type V9IncidentReviewRetirement,
   type V9ReviewedIncident,
 } from "@shared/types/safety-score-v9-incidents";
 import type { V9AdmittedHolderLossEvent } from "@shared/types/safety-score-v9-incidents";
@@ -30,8 +29,10 @@ import { createReviewedAssetRegistry } from "@shared/lib/safety-score-v9/reviewe
 /**
  * Admitted review scopes: the pre-migration digest scope, authored control
  * identity, the asset-wide issuer surface and provider scope. Provider and
- * issuer-surface witnesses are admitted here but close no control in this slice
- * (IR-1c owns their certificate/coverage rule), so unknown kinds stay rejected.
+ * issuer-surface witnesses are admitted (a fan-out row keeps its per-lane
+ * certificate references) but close no control in v10.38; the
+ * provider-screening closure is v10.39 work (OP-IR ruling 5), so unknown kinds
+ * stay rejected.
  */
 const NegativeIncidentRuntimeScopeSchema = z.union([
   V9NegativeIncidentReviewScopeSchema,
@@ -39,8 +40,7 @@ const NegativeIncidentRuntimeScopeSchema = z.union([
   V9IssuerSurfaceIncidentReviewScopeSchema,
   V9ProviderIncidentReviewScopeSchema,
 ]);
-type NegativeIncidentRuntimeScope = z.output<typeof NegativeIncidentRuntimeScopeSchema>;
-type AuthoredControlReviewScope = Extract<
+export type AuthoredControlReviewScope = Extract<
   z.output<typeof V9AuthoredNegativeIncidentReviewScopeSchema>,
   { kind: "control" }
 >;
@@ -52,8 +52,9 @@ export const NegativeIncidentRuntimeSchema = z.object({
   // Absent until a review is retired; a retired row keeps its provenance and is
   // never routing input or evidence again (design §3.2), so it is not deleted.
   retired: V9IncidentReviewRetirementSchema.optional(),
-  // Provider scope only: the exact-lane certificates that make a provider
-  // witness bindable. IR-1c enforces their freshness and coverage.
+  // Provider scope only: one reference per covered lane, carried through the
+  // IR-1b fan-out. v10.38 parses them and closes nothing; certificate admission
+  // is v10.39's provider-screening rule.
   laneScreeningRefs: z.array(V9LaneScreeningRefSchema).min(1).optional(),
   reviewedAt: V9NegativeIncidentReviewSchema.shape.reviewedAt,
   windowStartSec: V9NegativeIncidentReviewSchema.shape.windowStartSec,
@@ -86,21 +87,22 @@ export const NegativeIncidentRuntimeSchema = z.object({
     if (review.laneScreeningRefs === undefined) {
       ctx.addIssue({ code: "custom", path: ["laneScreeningRefs"], message: "A provider review requires a lane screening certificate per covered route" });
     } else {
-      const coveredRoutes = new Set(scope.coveredRoutes);
-      const referencedRoutes = new Set<string>();
-      const keys = review.laneScreeningRefs.map((ref) => `${ref.routeId}\u0000${ref.certificateId}`);
+      const coveredLanes = new Set(scope.coveredRoutes.map((ref) => `${ref.assetId}\u0000${ref.routeId}`));
+      const referencedLanes = new Set<string>();
+      const keys = review.laneScreeningRefs.map((ref) => `${ref.assetId}\u0000${ref.routeId}\u0000${ref.certificateId}`);
       if (new Set(keys).size !== keys.length) {
         ctx.addIssue({ code: "custom", path: ["laneScreeningRefs"], message: "Lane screening references must be unique" });
       }
       for (const [index, ref] of review.laneScreeningRefs.entries()) {
-        if (!coveredRoutes.has(ref.routeId)) {
+        const lane = `${ref.assetId}\u0000${ref.routeId}`;
+        if (!coveredLanes.has(lane)) {
           ctx.addIssue({ code: "custom", path: ["laneScreeningRefs", index, "routeId"], message: "Lane screening references may only name covered routes" });
         }
-        referencedRoutes.add(ref.routeId);
+        referencedLanes.add(lane);
       }
-      for (const routeId of scope.coveredRoutes) {
-        if (!referencedRoutes.has(routeId)) {
-          ctx.addIssue({ code: "custom", path: ["laneScreeningRefs"], message: `Provider review route ${routeId} requires a lane screening certificate reference` });
+      for (const route of scope.coveredRoutes) {
+        if (!referencedLanes.has(`${route.assetId}\u0000${route.routeId}`)) {
+          ctx.addIssue({ code: "custom", path: ["laneScreeningRefs"], message: `Provider review lane ${route.assetId}|${route.routeId} requires a lane screening certificate reference` });
         }
       }
     }
@@ -115,7 +117,7 @@ export const NegativeIncidentRuntimeSchema = z.object({
 type NegativeIncidentRuntime = z.infer<typeof NegativeIncidentRuntimeSchema>;
 type NegativeIncidentScope = Pick<
   NegativeIncidentRuntime,
-  "assetId" | "scope" | "reviewedAt" | "windowEndSec" | "retired"
+  "reviewId" | "assetId" | "scope" | "reviewedAt" | "windowEndSec" | "retired" | "laneScreeningRefs"
 >;
 export type { NegativeIncidentRuntime, NegativeIncidentScope };
 const { digest, ...runtimeEnvelope } = incidentRuntimeAsset;
@@ -134,7 +136,11 @@ const NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID = createReviewedAssetRegistry({
   rows: incidentEnvelope.negativeReviews ?? [],
   schema: NegativeIncidentRuntimeSchema,
   path: "incidentReviews.negativeReviews",
-  keyOf: (row) => typeof row.reviewId === "string" ? row.reviewId : undefined,
+  // A provider-wide review fans out to one row per covered asset with the same
+  // authored reviewId, so identity is (assetId, reviewId), never reviewId alone.
+  keyOf: (row) => typeof row.reviewId === "string" && typeof row.assetId === "string"
+    ? `${row.assetId}\u0000${row.reviewId}`
+    : undefined,
   keyPath: "reviewId",
 });
 
@@ -191,11 +197,13 @@ function laneLevelControlMatches(control: ControlOverlay, assetId: string, route
 
 /**
  * Authored identity is `(assetId, routeId, controlId | controlIds | "*")` plus the
- * asset-local mint form `(assetId, controlId)`. Only exact identity matches; there
- * is no fallback to a digest or to another form, so a colliding legacy digest
- * cannot reattach a review to a different control.
+ * asset-local mint form `(assetId, controlId)`; it resolves only against the
+ * control's own authored tuple. There is no fallback to a digest or to another
+ * form, so a colliding legacy digest cannot reattach a review to a different
+ * control. This is the semantic definition IR-5's CI orphan check mirrors over
+ * authored metadata (the gate cannot import this module); keep them in step.
  */
-function authoredControlScopeMatches(
+export function authoredControlScopeMatches(
   scope: AuthoredControlReviewScope,
   control: ControlOverlay,
   assetId: string,
@@ -226,8 +234,8 @@ function negativeReviewCoversControl(
         : authoredControlScopeMatches(scope, control, assetId);
     case "deployment":
       return scope.deploymentKey === control.deploymentKey && scope.controlKinds.includes(control.controlKind);
-    // A provider or issuer-surface witness closes nothing on its own: the
-    // certificate freshness and per-contributor coverage rule is IR-1c's.
+    // A provider or issuer-surface witness closes nothing in v10.38; the
+    // provider-screening closure is v10.39 work (OP-IR ruling 5).
     case "provider":
     case "issuer-surface":
       return false;
@@ -287,7 +295,10 @@ function controlIncidentMatchesScope(incident: V9ControlIncident, control: Contr
  * Independent negative research never erases real history or grants knowledge to
  * another scope. Reviews resolve by stable authored identity (asset, route,
  * control id set); legacy digest rows keep their exact-key matching until the
- * review-key migration rewrites them, and retired rows resolve nothing.
+ * review-key migration rewrites them, and retired rows resolve nothing. v10.38
+ * closes only through the digest and authored control identities: a provider or
+ * issuer-surface witness is parsed but never sets `incidentState` (the
+ * provider-screening closure is v10.39 work, OP-IR ruling 5).
  */
 export function routeSafetyScoreV9NegativeIncidentReviews(
   controls: ControlOverlay[],

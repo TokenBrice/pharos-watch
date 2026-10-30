@@ -49,8 +49,8 @@ function reconciledSupplyPartition(
 }
 
 // Upper bound for a null-share deployment control's supply share, proven by a
-// reconciled partition. A row keyed by the control's exact deployment bounds
-// that deployment alone (an exact share, or a census `upper-bound` row); the
+// reconciled partition. Rows keyed by the control's exact deployment (split
+// rows summed) bound that deployment alone (an exact share, or a census `upper-bound` row); the
 // chain's unsplit ambiguous row bounds only the deployments the partition did
 // not measure, so a measured sibling never absorbs its chain's residual and an
 // unmeasured sibling is never narrowed to a false zero.
@@ -61,8 +61,8 @@ export function provenNullShareDeploymentBound(
   if (control.economicLossScope !== "deployment" || control.materialSupplyShare !== null) return null;
   const rows = reconciledSupplyPartition(facts);
   if (rows === null) return null;
-  const exactRow = rows.find((route) => route.deploymentRouteKey === control.deploymentKey);
-  if (exactRow !== undefined) return exactRow.supplyShare;
+  const exactRows = rows.filter((route) => route.deploymentRouteKey === control.deploymentKey);
+  if (exactRows.length > 0) return exactRows.reduce((sum, route) => sum + route.supplyShare, 0);
   const separator = control.deploymentKey.indexOf(":");
   const chain = separator > 0 ? resolveChainId(control.deploymentKey.slice(0, separator)) : null;
   const ambiguousChainKey = chain === null ? null : `${V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX}${facts.assetId}:${chain}`;

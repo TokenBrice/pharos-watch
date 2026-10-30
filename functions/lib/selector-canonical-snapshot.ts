@@ -17,10 +17,8 @@ import {
   type StablecoinListResponse,
   type StressSignalsAllResponse,
 } from "@shared/types/market";
-import {
-  ReportCardsV9CurrentResponseSchema,
-  type ReportCardsV9CurrentResponse,
-} from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
+import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
 import { YieldRankingsResponseSchema, type YieldRankingsResponse } from "@shared/types/yield";
 import { resolveSiteApiOrigin, type SiteDataProxyEnv } from "./site-api-env";
 import { fetchUpstreamProxy } from "./upstream-proxy";
@@ -94,7 +92,7 @@ async function loadCanonicalSelectorSources(request: Request, env: SelectorCanon
       request,
       env,
       API_PATHS.reportCardsV9(),
-      ReportCardsV9CurrentResponseSchema,
+      ReportCardsV9ReaderResponseSchema,
     ),
     fetchCanonicalSource<StressSignalsAllResponse>(
       request,

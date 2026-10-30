@@ -2,9 +2,11 @@ import { describe, expect, it } from "vitest";
 import {
   HistoricalResolvedReportCardsV9ResponseSchema,
   REPORT_CARDS_V9_RESPONSE_SCHEMA_VERSION,
+} from "../report-cards-v9";
+import {
   ReportCardsV9CurrentResponseSchema,
   type ReportCardsV9Response,
-} from "../report-cards-v9";
+} from "../report-cards-v9-current";
 import { ReportCardsV9DetailResponseSchema } from "../report-cards-v9-projections";
 import { projectV9Detail } from "../../lib/report-cards-v9-projections";
 import type { V9OpenEvidence } from "../safety-score-v9-public";

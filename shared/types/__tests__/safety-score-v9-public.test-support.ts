@@ -1,5 +1,5 @@
 import type { z } from "zod";
-import type { SafetyScoreV9CurrentResponseSchema } from "../safety-score-v9-public";
+import type { SafetyScoreV9CurrentResponseSchema } from "../safety-score-v9-publication-response";
 import type { SafetyScoreV9BreakdownsSchema } from "../safety-score-v9-public-breakdowns";
 import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES as EVIDENCE_RESPONSIBILITIES } from "../safety-score-v9-vocabulary";
 

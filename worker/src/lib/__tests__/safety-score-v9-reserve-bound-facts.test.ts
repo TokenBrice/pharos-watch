@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ReserveBoundedFactSchema, type ReserveBoundedFact } from "@shared/types/reserve-bounded-facts";
 import { makeV9FixedInput, makeV9TwoAssetFixedInput } from "../../test-helpers/v9-fixed-input";
 import { buildSafetyScoreV9BaselineExtension, type V9ExtensionRegistryMeta } from "../safety-score-v9/extension";
@@ -16,6 +16,16 @@ import { V9FactSetCoreV3Schema } from "@shared/types/safety-score-v9-facts";
 import { compileV9FactSetV3, safeParseV9AssetFactsV3 } from "@shared/lib/safety-score-v9/compile";
 import { computeV9FactSetDigest, computeValidatedV9FactSetDigest, parseCompiledV9FactSetV3 } from "@shared/lib/safety-score-v9/facts";
 import { findV9ReserveBoundFactorStatusIssues } from "@shared/lib/safety-score-v9/reserve-bound-facts";
+
+// The selection tests below run at fixed historical clocks against the OUSD and
+// STAC authored rows. Freeze those two rows so routine renewals of the live
+// authority cannot move their review dates past the tests' clocks.
+vi.mock("@shared/data/safety-score-v9/reserve-bound-facts-v1.json", async (importOriginal) => {
+  const actual = (await importOriginal<{ default: { assets: Record<string, unknown[]> } }>()).default;
+  // vi.mock factories are hoisted above module imports, so the fixture cannot be a static import here.
+  const frozen = (await import("./fixtures/reserve-bound-facts-selection.json")).default;
+  return { default: { ...actual, assets: { ...actual.assets, ...frozen } } };
+});
 
 function factorBound(kind: "contractual-maturity-maximum" | "observed-portfolio-maturity" | "currently-liquid-fraction" | "stressed-realization-bound", overrides: Record<string, unknown> = {}): ReserveBoundedFact {
   const envelope = research();

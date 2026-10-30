@@ -4,7 +4,7 @@ function methodologyLabel(version: string): string {
   return `v${version}`;
 }
 
-export const BLACKLIST_TRACKER_METHODOLOGY_VERSION = "4.61";
+export const BLACKLIST_TRACKER_METHODOLOGY_VERSION = "4.62";
 export const BLACKLIST_TRACKER_METHODOLOGY_VERSION_LABEL = methodologyLabel(BLACKLIST_TRACKER_METHODOLOGY_VERSION);
 export const BLACKLIST_TRACKER_METHODOLOGY_CHANGELOG_PATH = "/methodology/blacklist-tracker-changelog/";
 
@@ -32,7 +32,7 @@ export const MINT_BURN_FLOW_METHODOLOGY_VERSION = "6.31";
 export const MINT_BURN_FLOW_METHODOLOGY_VERSION_LABEL = methodologyLabel(MINT_BURN_FLOW_METHODOLOGY_VERSION);
 export const MINT_BURN_FLOW_METHODOLOGY_CHANGELOG_PATH = "/methodology/mint-burn-flow-changelog/";
 
-export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.61";
+export const PRICING_PIPELINE_METHODOLOGY_VERSION = "6.62";
 export const PRICING_PIPELINE_METHODOLOGY_VERSION_LABEL = methodologyLabel(PRICING_PIPELINE_METHODOLOGY_VERSION);
 export const PRICING_PIPELINE_METHODOLOGY_CHANGELOG_PATH = "/methodology/pricing-pipeline-changelog/";
 

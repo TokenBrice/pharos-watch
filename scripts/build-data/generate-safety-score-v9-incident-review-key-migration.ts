@@ -1,50 +1,69 @@
 #!/usr/bin/env node
 /**
- * IR-2a — deterministic digest-key -> authored-identity migration for negative
- * incident reviews (PLAN §4.7, ImplIncidentReviews §3.2).
+ * IR-2a/IR-2b — deterministic digest-key -> authored-identity migration for
+ * negative incident reviews (PLAN §4.7, ImplIncidentReviews §3.2).
  *
- * The authored registry stores `scope.controlKey` as a compiler-chosen digest:
- * `bridge-meta:<asset>:<digest>` or `mint-meta:<asset>:<digest>`. Every digest
- * names an authored payload (`{controlIds, routeId}`, a bare deployment id, or
- * a mint control), so this generator recomputes the candidate keys from the
- * authoring metadata and emits one row per review with the stable
- * `(assetId, routeId, controlId|controlIds[])` identity that IR-2b writes back.
+ * The authored registry stored `scope.controlKey` as a compiler-chosen digest.
+ * Every digest names an authored payload (`{controlIds, routeId}`, a single
+ * `{controlId, routeId}`, a bare route id, or a mint control), so this generator
+ * recomputes the candidate keys from the authoring metadata and emits one row
+ * per review with the stable authored identity that IR-2b writes back.
  *
- * Determinism: reviews x metadata x the adjudication table below. The
- * adjudication table exists only for the 23 orphan digests measured in
- * ImplIncidentReviews §2.3 — 11 ambiguous collisions (the digest matches an
- * authored payload the compiled inventory no longer exposes) and 12
- * unresolvable digests. They are retired instead of auto-reattached: silent
- * reattachment is unsafe for collisions, and any new closure would move scores
- * in a migration that PLAN §4.7 requires to be 0 movers. An unadjudicated
- * digest that matches nothing fails closed.
+ * Application rules (confirmed with IR-1a/IR-1b, 2026-10-29):
+ * - route fallback (`bridge-control-key.v1`) -> `{routeId, controlId: "*"}`;
+ * - structured single control (`structured-bridge-control-key.v1`) and any
+ *   one-id aggregate -> `{routeId, controlId: <id>}`;
+ * - merged aggregate (>1 ids) -> `{routeId, controlIds: [...]}`;
+ * - mint rows stay on the legacy `controlKey`: no producer sets
+ *   `authoredControlId` on mint facts yet, so an authored mint scope would
+ *   resolve nothing and regress 59 closures;
+ * - the 23 measured orphan digests are retired with an explicit reason and keep
+ *   their legacy scope (a retired row routes and evidences nothing);
+ * - deployment-scope rows keep `deploymentKey` identity;
+ * - `reviewId` is never rewritten: evidence source ids embed it, so keeping it
+ *   holds evidence identity stable while the scope bytes change.
  */
-import { readFileSync, readdirSync } from "node:fs";
+import { readFileSync, writeFileSync, readdirSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { normalizeDeploymentId } from "../../shared/types/deployment-id";
 import { compareText, domainDigest } from "../../shared/lib/safety-score-v9/primitives";
 import { CanonicalKeySchema } from "../../shared/types/safety-schema-primitives";
-import { V9AuthoredIncidentRegistryEnvelopeSchema } from "../../shared/types/safety-score-v9-incidents";
+import {
+  V9AuthoredIncidentRegistryEnvelopeSchema,
+  type V9AuthoredNegativeIncidentReviewScope,
+  type V9NegativeIncidentReviewScope,
+} from "../../shared/types/safety-score-v9-incidents";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { parseStrictCliArgs } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
+export const INCIDENT_REVIEWS_PATH = "shared/data/safety-score-v9/incident-reviews-v1.json";
 export const INCIDENT_REVIEW_KEY_MIGRATION_PATH =
   "shared/data/safety-score-v9/incident-review-key-migration-v1.generated.json";
+export const REVIEW_KEY_MIGRATION_RETIRED_AT = "2026-10-29";
+export const REVIEW_KEY_MIGRATION_REVIEWER = "IR-2b review-key migration 2026-10-29";
 
 export type IncidentReviewMigrationResolution =
-  | "lane-aggregate"
   | "lane"
+  | "control"
+  | "lane-aggregate"
   | "mint-control"
   | "deployment"
   | "retired";
 
+/** How the migration row applies to the authored registry. */
+export type IncidentReviewMigrationApplication =
+  | "authored"
+  | "unchanged"
+  | "retired"
+  | "legacy-blocked";
+
 export interface IncidentReviewAuthoredIdentity {
   readonly assetId: string;
-  readonly routeId: string | null;
-  readonly controlId: string | null;
+  readonly routeId?: string;
+  readonly controlId?: string;
   readonly controlIds?: readonly string[];
 }
 
@@ -58,17 +77,18 @@ export interface IncidentReviewKeyMigrationRow {
   readonly digestMatch: boolean;
   /** An authored payload exists but is not exposed by the compiled inventory. */
   readonly collidesWithCurrentCandidate: boolean;
+  readonly applied: IncidentReviewMigrationApplication;
   readonly reason: string;
   /**
    * IR-1b's `CanonicalKeySchema` rejects `|`, so the stable id proposal is
-   * colon-separated: `bridge:<asset>:<routeId>:<controlId|lane>:<windowEndSec>`.
-   * Mint/deployment/retired rows keep the already-canonical legacy reviewId.
+   * colon-separated. Review ids are not rewritten in this migration; this
+   * column states the format IR-2b/IR-5 must use if a rewrite is ever made.
    */
   readonly stableReviewId: string;
 }
 
 export interface IncidentReviewKeyMigrationArtifact {
-  readonly schemaVersion: 1;
+  readonly schemaVersion: 2;
   readonly generatedFrom: {
     readonly reviews: string;
     readonly metadata: string;
@@ -76,11 +96,32 @@ export interface IncidentReviewKeyMigrationArtifact {
   };
   readonly counts: Record<IncidentReviewMigrationResolution, number> & {
     readonly total: number;
+    readonly mapped: number;
     readonly orphans: number;
     readonly collisions: number;
+    readonly authoredApplied: number;
+    readonly legacyBlocked: number;
+    readonly digestKeysRemaining: number;
   };
   readonly rows: readonly IncidentReviewKeyMigrationRow[];
 }
+
+/**
+ * The authored envelope admits reviews before reference expansion, so its rows
+ * are intentionally loose: `scope` is a `.passthrough()` object and every other
+ * field is `unknown`. The migration reads only the pre-expansion row fields and
+ * the admitted scope shapes — the legacy digest, the authored control tuple and
+ * the unchanged deployment scope — so it narrows the parsed rows to that view
+ * instead of re-validating them (the expansion admits the strict schemas).
+ */
+type IncidentReviewMigrationScope = V9NegativeIncidentReviewScope | V9AuthoredNegativeIncidentReviewScope;
+
+type IncidentReviewMigrationSourceRow = {
+  readonly reviewId: string;
+  readonly assetId: string;
+  readonly windowEndSec: number;
+  readonly scope: IncidentReviewMigrationScope;
+};
 
 interface BridgeRouteMetadata {
   readonly id: string;
@@ -109,29 +150,24 @@ interface AssetControlMetadata {
 
 type AuthoredCandidate =
   | { readonly resolution: "lane"; readonly routeId: string }
+  | { readonly resolution: "control"; readonly routeId: string; readonly controlId: string }
   | { readonly resolution: "lane-aggregate"; readonly routeId: string; readonly controlIds: readonly string[] }
-  | { readonly resolution: "mint-control"; readonly label: string };
+  | { readonly resolution: "mint-control"; readonly label: string; readonly routeId?: string };
 
 interface OrphanAdjudication {
   readonly collision: boolean;
   readonly reason: string;
 }
 
-/**
- * The 23 orphan digests measured in ImplIncidentReviews §2.3 (7 assets). Both
- * classes are retired: the 11 collisions because no deterministic rule can
- * prove the review named the payload the digest now hits, the 12 unresolvable
- * because no authored payload exists at all. Re-authoring is IR-2b's explicit
- * per-row decision from the review's own dated sources, not a migration default.
- */
 const COLLISION_REASON =
   "legacy digest matches an authored route payload that the current compiled inventory no longer exposes " +
   "(compiler form drift/pooling); silent reattachment is the ambiguous-collision case, so the row is retired " +
-  "pending IR-2b re-authoring against the exact lane";
+  "instead of guessed";
 const UNRESOLVABLE_REASON =
   "legacy digest matches no authored route/control payload in the current metadata; the row is retired " +
-  "pending IR-2b re-authoring from the review's own dated sources";
+  "pending re-authoring from the review's own dated sources";
 
+/** The 23 orphan digests measured in ImplIncidentReviews §2.3 (7 assets). */
 export const INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS: Readonly<Record<string, OrphanAdjudication>> = {
   "bridge-meta:xaut-tether:284ba273ecdb59273a55": { collision: true, reason: COLLISION_REASON },
   "bridge-meta:xaut-tether:4d4db4969a662d733c2c": { collision: true, reason: COLLISION_REASON },
@@ -158,6 +194,19 @@ export const INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS: Readonly<Record<string, Orpha
   "bridge-meta:gldon-ondo:aa4f8cd10fdfe386155a": { collision: false, reason: UNRESOLVABLE_REASON },
 };
 
+/**
+ * Mint controls whose compiled fact is deployment-scoped rather than the
+ * asset-local `asset:<assetId>` row. IR-1d emits `authoredControlId` on both
+ * forms; an asset-local scope only matches the asset row, so these rows must
+ * name the compiled deploymentKey. The map mirrors the compiled inventory of
+ * the 2026-10-29 capture (1 of 59 mint-review controls; the reviewed supply
+ * partition is runtime data, not metadata) and IR-5's CI check revalidates every
+ * authored scope against a fresh compile.
+ */
+export const MINT_DEPLOYMENT_SCOPED_ROUTES: Readonly<Record<string, string>> = {
+  "usdsm-stable-mint\u0000USDSM Etherlink proxy owner": "etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de",
+};
+
 function readJson(path: string): unknown {
   return JSON.parse(readFileSync(path, "utf8")) as unknown;
 }
@@ -178,8 +227,7 @@ function loadAssetControlMetadata(root: string): Map<string, AssetControlMetadat
   const coinsDir = resolve(root, "shared/data/stablecoins/coins");
   for (const file of sortedDirEntries(coinsDir, ".json")) {
     const coin = readJson(resolve(coinsDir, file)) as Record<string, unknown>;
-    if (typeof coin.id !== "string") continue;
-    record(coin.id);
+    if (typeof coin.id === "string") record(coin.id);
   }
   const profileDir = resolve(root, "shared/data/stablecoins/domains/risk-review");
   for (const file of sortedDirEntries(profileDir, ".json")) {
@@ -198,9 +246,8 @@ function loadAssetControlMetadata(root: string): Map<string, AssetControlMetadat
   for (const file of sortedDirEntries(mintDir, ".json")) {
     const sidecar = readJson(resolve(mintDir, file)) as Record<string, unknown>;
     if (typeof sidecar.id !== "string") continue;
-    const entry = record(sidecar.id);
     const mint = sidecar.mintAuthority as { controls?: readonly MintControlMetadata[] } | undefined;
-    entry.mintControls = mint?.controls ?? [];
+    record(sidecar.id).mintControls = mint?.controls ?? [];
   }
   return assets;
 }
@@ -242,10 +289,7 @@ export function buildAuthoredCandidates(
 ): Map<string, AuthoredCandidate> {
   const candidates = new Map<string, AuthoredCandidate>();
   const add = (key: string, candidate: AuthoredCandidate): void => {
-    const existing = candidates.get(key);
-    // Distinct payloads sharing a truncated digest would make the migration
-    // ambiguous; throw instead of picking one deterministically-but-arbitrarily.
-    if (existing !== undefined) {
+    if (candidates.has(key)) {
       throw new Error(`Incident review migration candidate collision for ${assetId}: ${key}`);
     }
     candidates.set(key, candidate);
@@ -259,8 +303,9 @@ export function buildAuthoredCandidates(
     const controlRouteIds = [...new Set(control.routeRefs.map(normalizeDeploymentId).filter((id) => id !== ""))];
     for (const routeId of controlRouteIds) {
       add(structuredControlKey(assetId, control.id, routeId), {
-        resolution: "lane",
+        resolution: "control",
         routeId,
+        controlId: control.id,
       });
     }
   }
@@ -270,51 +315,55 @@ export function buildAuthoredCandidates(
       .filter((control) => control.routeRefs.some((ref) => normalizeDeploymentId(ref) === routeId))
       .map((control) => control.id)
       .sort(compareText);
-    if (controlIds.length > 0) {
-      add(structuredRouteAggregateKey(assetId, routeId, controlIds), {
-        resolution: "lane-aggregate",
-        routeId,
-        controlIds,
-      });
-    }
+    if (controlIds.length === 0) continue;
+    // IR-0 emits `authoredControlId: <id>` for a one-id lane and the id set only
+    // above one, so a one-id aggregate must migrate to the single form.
+    add(structuredRouteAggregateKey(assetId, routeId, controlIds), controlIds.length === 1
+      ? { resolution: "control", routeId, controlId: controlIds[0]! }
+      : { resolution: "lane-aggregate", routeId, controlIds });
   }
   for (const control of metadata.mintControls) {
-    add(mintControlKey(assetId, control), { resolution: "mint-control", label: control.label });
+    const routeId = MINT_DEPLOYMENT_SCOPED_ROUTES[`${assetId}\u0000${control.label}`];
+    add(mintControlKey(assetId, control), { resolution: "mint-control", label: control.label, ...(routeId === undefined ? {} : { routeId }) });
   }
   return candidates;
 }
 
 function authoredIdentity(assetId: string, candidate: AuthoredCandidate): IncidentReviewAuthoredIdentity {
   if (candidate.resolution === "mint-control") {
-    return { assetId, routeId: null, controlId: candidate.label };
+    return { assetId, ...(candidate.routeId === undefined ? {} : { routeId: candidate.routeId }), controlId: candidate.label };
   }
   if (candidate.resolution === "lane-aggregate") {
-    return { assetId, routeId: candidate.routeId, controlId: null, controlIds: candidate.controlIds };
+    return { assetId, routeId: candidate.routeId, controlIds: candidate.controlIds };
   }
-  return { assetId, routeId: candidate.routeId, controlId: null };
+  if (candidate.resolution === "control") {
+    return { assetId, routeId: candidate.routeId, controlId: candidate.controlId };
+  }
+  return { assetId, routeId: candidate.routeId, controlId: "*" };
 }
 
 /**
- * Re-derive the legacy digest key from a migrated authored identity. Used by the
- * migration-only equivalence harness: an equal digest proves the rewrite cannot
- * change which compiled control the review resolves to.
+ * Re-derive the legacy digest key from a migrated authored identity. An equal
+ * digest proves the rewrite cannot change which compiled control resolves.
  */
 export function legacyControlKeyForAuthored(
   assetId: string,
   identity: IncidentReviewAuthoredIdentity,
   metadata: ReadonlyMap<string, AssetControlMetadata>,
+  resolution?: IncidentReviewMigrationResolution,
 ): string | null {
-  if (identity.routeId === null && identity.controlId !== null) {
-    const control = (metadata.get(assetId)?.mintControls ?? []).find((entry) => entry.label === identity.controlId);
-    if (!control) return null;
-    return mintControlKey(assetId, control);
+  const mintLabel = identity.routeId === undefined || resolution === "mint-control" ? identity.controlId : undefined;
+  if (mintLabel !== undefined && mintLabel !== "*") {
+    const control = (metadata.get(assetId)?.mintControls ?? []).find((entry) => entry.label === mintLabel);
+    if (control) return mintControlKey(assetId, control);
   }
-  if (identity.routeId === null) return null;
+  if (identity.routeId === undefined) return null;
   const routeId = normalizeDeploymentId(identity.routeId);
   if (identity.controlIds !== undefined) {
     return structuredRouteAggregateKey(assetId, routeId, [...identity.controlIds]);
   }
-  return bridgeControlKey(assetId, routeId);
+  if (identity.controlId === "*") return bridgeControlKey(assetId, routeId);
+  return identity.controlId === undefined ? null : structuredControlKey(assetId, identity.controlId, routeId);
 }
 
 function canonicalReviewId(candidate: string, reviewId: string): string {
@@ -324,7 +373,7 @@ function canonicalReviewId(candidate: string, reviewId: string): string {
   return candidate;
 }
 
-/** Whitespace/slash/uppercase route ids and mint labels must not leak into a canonical key. */
+/** Route ids/mint labels can carry uppercase, slashes or spaces; keys cannot. */
 function canonicalKeySegment(value: string): string {
   const lowered = value.toLowerCase();
   const slug = lowered.replace(/[^a-z0-9._:-]+/gu, "-").replace(/^-+|-+$/gu, "");
@@ -339,10 +388,22 @@ function stableReviewIdFor(
   windowEndSec: number,
   row: Pick<IncidentReviewKeyMigrationRow, "resolution" | "authored">,
 ): string {
-  if ((row.resolution === "lane" || row.resolution === "lane-aggregate") && row.authored?.routeId != null) {
+  if (row.resolution === "mint-control" && row.authored?.controlId !== undefined) {
+    return canonicalReviewId(
+      `mint:${canonicalKeySegment(assetId)}:${canonicalKeySegment(row.authored.controlId)}:${windowEndSec}`,
+      reviewId,
+    );
+  }
+  if (row.authored?.routeId !== undefined) {
     const controlId = row.authored.controlId ?? "lane";
     return canonicalReviewId(
       `bridge:${canonicalKeySegment(assetId)}:${canonicalKeySegment(row.authored.routeId)}:${canonicalKeySegment(controlId)}:${windowEndSec}`,
+      reviewId,
+    );
+  }
+  if (row.resolution === "mint-control" && row.authored?.controlId !== undefined) {
+    return canonicalReviewId(
+      `mint:${canonicalKeySegment(assetId)}:${canonicalKeySegment(row.authored.controlId)}:${windowEndSec}`,
       reviewId,
     );
   }
@@ -351,24 +412,68 @@ function stableReviewIdFor(
 
 export function buildIncidentReviewKeyMigration(
   root: string,
-  reviewsValue: unknown = readJson(resolve(root, "shared/data/safety-score-v9/incident-reviews-v1.json")),
+  reviewsValue: unknown = readJson(resolve(root, INCIDENT_REVIEWS_PATH)),
 ): IncidentReviewKeyMigrationArtifact {
   const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(reviewsValue);
+  // The envelope's rows are pre-expansion (`scope` is a passthrough object and
+  // the rest is unknown); the migration reads only the fields and admitted
+  // scope shapes above, which the strict schemas admit after expansion.
+  const negativeReviews = authored.negativeReviews as readonly unknown[] as readonly IncidentReviewMigrationSourceRow[];
   const metadata = loadAssetControlMetadata(root);
   const rows: IncidentReviewKeyMigrationRow[] = [];
-  for (const review of authored.negativeReviews) {
+  for (const review of negativeReviews) {
     const assetId = review.assetId;
+    const stableReviewId = (resolution: IncidentReviewMigrationResolution, authoredValue: IncidentReviewAuthoredIdentity | null) =>
+      stableReviewIdFor(review.reviewId, assetId, review.windowEndSec, { resolution, authored: authoredValue });
     if (review.scope.kind === "deployment") {
       rows.push({
         reviewId: review.reviewId,
         assetId,
         legacyControlKey: null,
         resolution: "deployment",
-        authored: { assetId, routeId: null, controlId: null },
+        authored: { assetId },
         digestMatch: true,
         collidesWithCurrentCandidate: false,
+        applied: "unchanged",
         reason: "deployment-scope review keeps its deploymentKey identity (ImplIncidentReviews §3.2)",
         stableReviewId: review.reviewId,
+      });
+      continue;
+    }
+    if (!("controlKey" in review.scope)) {
+      // Idempotent re-run on the applied registry: derive the same row from the
+      // authored identity. Legacy provenance is re-derived; a one-id lane
+      // authored under the aggregate namespace lands on the single-form digest,
+      // which selects the same compiled fact (asserted below).
+      const scope = review.scope;
+      const isMintLabel = scope.controlId !== undefined && scope.controlId !== "*" &&
+        (metadata.get(assetId)?.mintControls ?? []).some((control) => control.label === scope.controlId);
+      const resolution: IncidentReviewMigrationResolution = scope.controlIds !== undefined
+        ? "lane-aggregate"
+        : isMintLabel
+          ? "mint-control"
+          : scope.routeId === undefined
+            ? "mint-control"
+            : scope.controlId === "*"
+              ? "lane"
+              : "control";
+      const identity: IncidentReviewAuthoredIdentity = {
+        assetId,
+        ...(scope.routeId === undefined ? {} : { routeId: scope.routeId }),
+        ...(scope.controlId === undefined ? {} : { controlId: scope.controlId }),
+        ...(scope.controlIds === undefined ? {} : { controlIds: scope.controlIds }),
+      };
+      rows.push({
+        reviewId: review.reviewId,
+        assetId,
+        legacyControlKey: legacyControlKeyForAuthored(assetId, identity, metadata, resolution),
+        resolution,
+        authored: identity,
+        digestMatch: true,
+        collidesWithCurrentCandidate: false,
+        applied: "authored",
+        reason: "authored identity already applied; legacy digest key re-derived from metadata",
+        stableReviewId: stableReviewId(resolution, identity),
       });
       continue;
     }
@@ -383,6 +488,7 @@ export function buildIncidentReviewKeyMigration(
         authored: null,
         digestMatch: false,
         collidesWithCurrentCandidate: adjudication.collision,
+        applied: "retired",
         reason: adjudication.reason,
         stableReviewId: review.reviewId,
       });
@@ -395,78 +501,89 @@ export function buildIncidentReviewKeyMigration(
     });
     const candidate = candidates.get(legacyControlKey);
     if (candidate === undefined) {
-      // Fail closed: a digest nobody has adjudicated must never be guessed.
       throw new Error(
         `Incident review ${review.reviewId} has no authored candidate for ${legacyControlKey}; add an explicit adjudication`,
       );
     }
+    const identity = authoredIdentity(assetId, candidate);
     rows.push({
       reviewId: review.reviewId,
       assetId,
       legacyControlKey,
       resolution: candidate.resolution,
-      authored: authoredIdentity(assetId, candidate),
+      authored: identity,
       digestMatch: true,
       collidesWithCurrentCandidate: false,
-      reason:
-        candidate.resolution === "mint-control"
-          ? `mint-meta digest recomputed from mintAuthority control "${candidate.label}"`
-          : candidate.resolution === "lane-aggregate"
-            ? `structured route digest recomputed from route ${candidate.routeId} and ${candidate.controlIds.length} control ids`
+      applied: "authored",
+      reason: candidate.resolution === "mint-control"
+        ? `mint-meta digest recomputed from mintAuthority control "${candidate.label}" (${candidate.routeId === undefined ? "asset-local" : `deployment ${candidate.routeId}`})`
+        : candidate.resolution === "lane-aggregate"
+          ? `structured route digest recomputed from route ${candidate.routeId} and ${candidate.controlIds.length} control ids`
+          : candidate.resolution === "control"
+            ? `structured control digest recomputed from route ${candidate.routeId} and control ${candidate.controlId}`
             : `route-fallback digest recomputed from route ${candidate.routeId}`,
-      stableReviewId: stableReviewIdFor(review.reviewId, assetId, review.windowEndSec, {
-        resolution: candidate.resolution,
-        authored: authoredIdentity(assetId, candidate),
-      }),
+      stableReviewId: stableReviewId(candidate.resolution, identity),
     });
   }
   rows.sort((left, right) => compareText(left.reviewId, right.reviewId));
   const countOf = (resolution: IncidentReviewMigrationResolution): number =>
     rows.filter((row) => row.resolution === resolution).length;
-  const adjudications = Object.keys(INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS).length;
+  const appliedCount = (applied: IncidentReviewMigrationApplication): number =>
+    rows.filter((row) => row.applied === applied).length;
   const counts = {
-    "lane-aggregate": countOf("lane-aggregate"),
     lane: countOf("lane"),
+    control: countOf("control"),
+    "lane-aggregate": countOf("lane-aggregate"),
     "mint-control": countOf("mint-control"),
     deployment: countOf("deployment"),
     retired: countOf("retired"),
     total: rows.length,
+    mapped: rows.filter((row) => row.resolution !== "retired").length,
     orphans: countOf("retired"),
     collisions: rows.filter((row) => row.collidesWithCurrentCandidate).length,
+    authoredApplied: appliedCount("authored"),
+    legacyBlocked: appliedCount("legacy-blocked"),
+    digestKeysRemaining: appliedCount("legacy-blocked") + countOf("retired"),
   };
-  if (counts.total !== authored.negativeReviews.length) {
+  if (counts.total !== negativeReviews.length) {
     throw new Error(
-      `Incident review migration rows ${counts.total} do not cover ${authored.negativeReviews.length} reviews`,
+      `Incident review migration rows ${counts.total} do not cover ${negativeReviews.length} reviews`,
     );
   }
   return {
-    schemaVersion: 1,
+    schemaVersion: 2,
     generatedFrom: {
-      reviews: "shared/data/safety-score-v9/incident-reviews-v1.json",
+      reviews: INCIDENT_REVIEWS_PATH,
       metadata: "shared/data/stablecoins/coins + domains/risk-review + domains/mint-authority",
-      adjudications,
+      adjudications: Object.keys(INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS).length,
     },
     counts,
     rows,
   };
 }
 
-/** Every auto-migrated row must re-derive the legacy digest key exactly. */
+/** Every applied authored row must re-derive the legacy digest key exactly. */
 export function assertMigrationPreservesLegacyKeys(root: string, artifact: IncidentReviewKeyMigrationArtifact): void {
   const metadata = loadAssetControlMetadata(root);
   const failures: string[] = [];
   for (const row of artifact.rows) {
-    if (row.resolution === "retired") {
-      if (row.digestMatch) failures.push(`${row.reviewId}: retired row claims a digest match`);
+    if (row.applied === "retired" || row.applied === "legacy-blocked" || row.applied === "unchanged") {
+      if (row.applied === "retired" && row.digestMatch) failures.push(`${row.reviewId}: retired row claims a digest match`);
       continue;
     }
     if (row.authored === null) {
       failures.push(`${row.reviewId}: ${row.resolution} row has no authored identity`);
       continue;
     }
-    if (row.resolution === "deployment") continue;
-    const derived = legacyControlKeyForAuthored(row.assetId, row.authored, metadata);
-    if (derived !== row.legacyControlKey) {
+    const derived = legacyControlKeyForAuthored(row.assetId, row.authored, metadata, row.resolution);
+    // A one-contributor lane compiles with `authoredControlId: <id>`; the digest
+    // namespace it was authored under may be either the aggregate or the single
+    // form. Both select the same fact, so both digests are outcome-equivalent.
+    const oneIdAggregate = row.authored.routeId !== undefined && row.authored.controlId !== undefined
+      && row.authored.controlId !== "*" && row.authored.controlIds === undefined
+      ? structuredRouteAggregateKey(row.assetId, normalizeDeploymentId(row.authored.routeId), [row.authored.controlId])
+      : null;
+    if (derived !== row.legacyControlKey && oneIdAggregate !== row.legacyControlKey) {
       failures.push(`${row.reviewId}: derived ${derived} != legacy ${row.legacyControlKey}`);
     }
   }
@@ -475,17 +592,67 @@ export function assertMigrationPreservesLegacyKeys(root: string, artifact: Incid
   }
 }
 
+function scopeForAuthored(identity: IncidentReviewAuthoredIdentity): Record<string, unknown> {
+  if (identity.routeId === undefined) {
+    if (identity.controlId === undefined) throw new Error("Authored mint identity lacks a control id");
+    return { kind: "control", controlId: identity.controlId };
+  }
+  if (identity.controlIds !== undefined) {
+    return { kind: "control", routeId: identity.routeId, controlIds: [...identity.controlIds] };
+  }
+  return { kind: "control", routeId: identity.routeId, controlId: identity.controlId ?? "*" };
+}
+
+/**
+ * Apply the migration to the authored registry value. Only `scope` and
+ * `retired` change; provenance, windows, sources, surfaces and `reviewId` are
+ * preserved byte-for-byte (key order aside).
+ */
+export function applyIncidentReviewMigration(reviewsValue: unknown, artifact: IncidentReviewKeyMigrationArtifact): Record<string, unknown> {
+  const envelope = reviewsValue as Record<string, unknown> & { negativeReviews?: unknown[] };
+  const byId = new Map(artifact.rows.map((row) => [row.reviewId, row]));
+  const negativeReviews = (envelope.negativeReviews ?? []).map((row) => {
+    const review = row as Record<string, unknown> & { reviewId?: unknown };
+    const migration = typeof review.reviewId === "string" ? byId.get(review.reviewId) : undefined;
+    if (migration === undefined) {
+      throw new Error(`Incident review ${String(review.reviewId)} is missing from the key migration`);
+    }
+    if (migration.applied === "retired") {
+      return { ...review, retired: { reviewedAt: REVIEW_KEY_MIGRATION_RETIRED_AT, reviewer: REVIEW_KEY_MIGRATION_REVIEWER, reason: migration.reason } };
+    }
+    if (migration.applied !== "authored") return review;
+    if (migration.authored === null) throw new Error(`Applied review ${String(review.reviewId)} lacks an authored identity`);
+    return { ...review, scope: scopeForAuthored(migration.authored) };
+  });
+  // Preserve the authored row order: the registry does not require review-id
+  // ordering, and reordering would rewrite the whole file for no semantic gain.
+  return { ...envelope, negativeReviews };
+}
+
 export function runCli(argv = process.argv.slice(2)): void {
   const { values } = parseStrictCliArgs(argv, {
-    options: { check: { type: "boolean" }, "assert-equivalent": { type: "boolean" } },
+    options: {
+      check: { type: "boolean" },
+      "assert-equivalent": { type: "boolean" },
+      apply: { type: "boolean" },
+    },
   });
-  const artifact = buildIncidentReviewKeyMigration(ROOT);
-  if (values["assert-equivalent"] === true || values.check === true) {
+  const reviewsValue = readJson(resolve(ROOT, INCIDENT_REVIEWS_PATH));
+  let artifact = buildIncidentReviewKeyMigration(ROOT, reviewsValue);
+  if (values["assert-equivalent"] === true || values.check === true || values.apply === true) {
     assertMigrationPreservesLegacyKeys(ROOT, artifact);
     process.stdout.write(
-      `Incident review migration preserves every legacy key (${artifact.counts.total - artifact.counts.orphans} mapped, ` +
-        `${artifact.counts.orphans} retired, ${artifact.counts.collisions} collisions)\n`,
+      `Incident review migration preserves every applied legacy key (${artifact.counts.authoredApplied} authored, ` +
+        `${artifact.counts.legacyBlocked} mint held, ${artifact.counts.orphans} retired, ` +
+        `${artifact.counts.collisions} collisions)\n`,
     );
+  }
+  if (values.apply === true) {
+    const next = applyIncidentReviewMigration(reviewsValue, artifact);
+    writeFileSync(resolve(ROOT, INCIDENT_REVIEWS_PATH), `${JSON.stringify(next, null, 2)}\n`);
+    artifact = buildIncidentReviewKeyMigration(ROOT, next);
+    writeFileSync(resolve(ROOT, INCIDENT_REVIEW_KEY_MIGRATION_PATH), `${JSON.stringify(artifact)}\n`);
+    process.stdout.write("Applied Safety Score incident review key migration\n");
   }
   syncGeneratedArtifacts({
     artifacts: [{

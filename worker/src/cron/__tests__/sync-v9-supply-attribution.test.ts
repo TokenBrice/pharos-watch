@@ -26,6 +26,17 @@ import { SUPPLY_ATTRIBUTION_CAPTURE_BUDGET } from "@shared/lib/safety-score-v9-s
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import * as economicObserver from "../../lib/safety-score-v9/economic-supply-observer";
 import * as xautObserver from "../../lib/safety-score-v9/xaut-supply-observer";
+import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
+import type { DeploymentSupplyCensusEvmDependencies } from "../../lib/safety-score-v9/deployment-supply-census-evm";
+import {
+  deploymentSupplyCensusTargets,
+  type DeploymentSupplyCensusRegistryMeta,
+} from "../../lib/safety-score-v9/deployment-supply-census";
+import {
+  createSafetyScoreV9DeploymentSupplyCensusGeneration,
+  readSafetyScoreV9DeploymentSupplyCensus,
+  writeSafetyScoreV9DeploymentSupplyCensusGeneration,
+} from "../../lib/safety-score-v9/deployment-supply-census-store";
 
 const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
@@ -45,7 +56,7 @@ vi.mock(
   },
 );
 
-const { syncSafetyScoreV9SupplyAttribution } =
+const { syncSafetyScoreV9SupplyAttribution, deploymentSupplyCensusCohort, deploymentSupplyCensusSelection } =
   await import("../sync-v9-supply-attribution");
 
 
@@ -562,6 +573,377 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
       sqlite.close();
     }
   });
+
+const CENSUS_CLOCK_SEC = Date.parse("2026-10-29T09:16:00Z") / 1_000;
+const CENSUS_TOKEN = `0x${"d".repeat(40)}`;
+
+function censusRoute(chain: string, address: string, reviewed = true) {
+  return {
+    id: `${chain}:${address}`,
+    destinationChain: chain,
+    contractAddress: address,
+    protocol: "fixture-bridge",
+    issuanceModel: reviewed ? "bridge-representation" : "unknown",
+    routeClass: reviewed ? "canonical" : "unknown",
+    riskTier: reviewed ? "canonical-rollup-bridge" : "opaque-or-unknown",
+    semantics: reviewed ? "lock-mint" : "unknown",
+    scope: reviewed ? "canonical" : "unknown",
+    reviewDisposition: reviewed ? "reviewed" : "unresolved",
+    reviewNote: "Fixture route review",
+    observedAt: "2026-10-29",
+    sources: [{ label: "Fixture", url: "https://example.com" }],
+  } as const;
+}
+
+function censusMeta(
+  assetId: string,
+  routes: readonly { chain: string; address: string; reviewed?: boolean }[],
+): DeploymentSupplyCensusRegistryMeta {
+  return {
+    id: assetId,
+    contracts: routes
+      .filter(route => route.chain !== "xrpl")
+      .map(route => ({ chain: route.chain, address: route.address, decimals: 6 })),
+    bridgeRouteRisk: {
+      tier: "canonical-rollup-bridge",
+      summary: "Fixture bridge route review.",
+      reviewedAt: "2026-10-29",
+      reviewer: "fixture",
+      confidence: "verified",
+      routes: routes.map(route => censusRoute(route.chain, route.address, route.reviewed)),
+    },
+  } as unknown as DeploymentSupplyCensusRegistryMeta;
+}
+
+function censusSourceFixture(): SafetyScoreV9SupplyAttributionSource {
+  return {
+    ...xautSourceFixture(),
+    clockSec: CENSUS_CLOCK_SEC,
+    activeAssetIds: ["shadow-fixture"],
+    aggregateCirculatingById: {
+      "shadow-fixture": { circulating: { peggedUSD: 1_000_000 }, observedAtSec: CENSUS_CLOCK_SEC },
+    },
+    // No provider chain row for the fixture: its reviewed deployment has no
+    // reviewed share, which is exactly the open gap the census cohort selects.
+    chainCirculatingById: {},
+    navPriceById: {
+      "shadow-fixture": {
+        priceUsd: 1, sourceId: "fixture-price", confidence: "high",
+        observedAtSec: CENSUS_CLOCK_SEC - 60,
+      },
+    },
+  };
+}
+
+function word(value: bigint): `0x${string}` {
+  return `0x${value.toString(16).padStart(64, "0")}`;
+}
+
+function censusEvmDependencies(options: { pin?: boolean } = {}) {
+  const multicall = vi.fn(async (
+    _chain: string | undefined,
+    calls: readonly { label: string; target: string; callData: string }[],
+  ) => calls.map(call => ({
+    label: call.label,
+    success: true,
+    returnData: word(call.callData === TOTAL_SUPPLY_SELECTOR ? 1_000_000n : 6n),
+  })));
+  const dependencies = {
+    resolveClosestBlockAtOrBeforeTimestamp: async () => options.pin === false ? null : 100,
+    fetchEvmBlockHeader: async () => ({
+      number: 100,
+      hash: `0x${"ab".repeat(32)}` as `0x${string}`,
+      timestamp: CENSUS_CLOCK_SEC - 60,
+    }),
+    fetchEvmCodeStatusAtBlock: async () => ({ status: "available" as const, code: "0x6000" as `0x${string}` }),
+    fetchEvmMulticall3Aggregate3AtBlock: multicall,
+    sha256Hex: async () => "f".repeat(64),
+  } as unknown as Partial<DeploymentSupplyCensusEvmDependencies>;
+  return { dependencies, multicall };
+}
+
+const CENSUS_CHAIN_RPCS = new Map([["ethereum", {
+  chainId: "ethereum", chainName: "Ethereum", type: "evm" as const, endpoints: [], explorerUrl: "",
+}]]);
+
+describe("V9 supply attribution shadow census lane", () => {
+  beforeEach(() => {
+    mocks.capture.mockReset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => vi.useRealTimers());
+
+  it("cohorts only the open gap population inside the 96-asset and 256-deployment caps", () => {
+    const targets = (rows: readonly [string, number, number][]) =>
+      rows.map(([assetId, gapRoutes, reviewedRoutes]) => ({
+        assetId, gapRoutes, reviewedRoutes, rosterRoutes: reviewedRoutes,
+      }));
+
+    // An asset with no open gap never consumes a slot.
+    expect(deploymentSupplyCensusCohort({
+      targets: targets([["resolved", 0, 4], ["gap-small", 1, 2]]),
+    })).toEqual(["gap-small"]);
+
+    // Selection ranks by open-gap count (then smaller roster, then code units);
+    // the returned cohort is the stable alphabetical set.
+    expect(deploymentSupplyCensusCohort({
+      targets: targets([
+        ["limited", 2, 1], ["wide", 5, 3], ["tie-b", 2, 5], ["tie-a", 2, 5],
+      ]),
+    })).toEqual(["limited", "tie-a", "tie-b", "wide"]);
+    expect(deploymentSupplyCensusCohort({
+      targets: targets([["limited", 2, 1], ["wide", 5, 3]]),
+      maxAssets: 1,
+    })).toEqual(["wide"]);
+
+    // Caps: 85 x 3 = 255 deployments, a 96th single-deployment asset, and a
+    // target that cannot fit the remaining deployment budget is skipped.
+    const many = Array.from({ length: 120 }, (_, index) => ({
+      assetId: `asset-${String(index).padStart(3, "0")}`,
+      gapRoutes: 1, reviewedRoutes: 3, rosterRoutes: 3,
+    }));
+    expect(deploymentSupplyCensusCohort({ targets: many })).toHaveLength(85);
+    expect(deploymentSupplyCensusCohort({
+      targets: many.map(target => ({ ...target, reviewedRoutes: 1, rosterRoutes: 1 })),
+    })).toHaveLength(96);
+    expect(deploymentSupplyCensusCohort({
+      targets: [
+        { assetId: "too-large", gapRoutes: 9, reviewedRoutes: 257, rosterRoutes: 257 },
+        { assetId: "fits", gapRoutes: 1, reviewedRoutes: 1, rosterRoutes: 1 },
+      ],
+    })).toEqual(["fits"]);
+  });
+
+  it("fits the cohort inside the run request budget and names what it leaves open", () => {
+    const target = (assetId: string, gapRoutes: number, evmRoutes: number, evmChains: string[]) =>
+      ({ assetId, gapRoutes, reviewedRoutes: evmRoutes, rosterRoutes: evmRoutes, evmRoutes, evmChains });
+    const targets = [
+      target("wide", 5, 4, ["ethereum"]),
+      target("same-chain", 4, 2, ["ethereum"]),
+      target("new-chain", 3, 2, ["base"]),
+      target("no-gap", 0, 2, ["ethereum"]),
+    ];
+
+    // wide 4+1 code/supply +32 pin +2 slack = 39; same-chain 2+1+0+2 = 5;
+    // new-chain 2+1+32+2 = 37; total 81 inside a 100-request run budget.
+    const fitted = deploymentSupplyCensusSelection({ targets, maxRequests: 100 });
+    expect(fitted.assetIds).toEqual(["new-chain", "same-chain", "wide"]);
+    expect(fitted.estimatedRequests).toBe(81);
+    expect(fitted.skippedAssetIds).toEqual([]);
+
+    // A budget that cannot fit the new chain leaves the asset every gap route
+    // open instead of half-reading it after the gate starts rejecting.
+    const tight = deploymentSupplyCensusSelection({ targets, maxRequests: 60 });
+    expect(tight.assetIds).toEqual(["same-chain", "wide"]);
+    expect(tight.estimatedRequests).toBe(44);
+    expect(tight.skippedAssetIds).toEqual(["new-chain"]);
+
+    // Deterministic: insertion order never changes the fit.
+    expect(deploymentSupplyCensusSelection({ targets: [...targets].reverse(), maxRequests: 60 }))
+      .toEqual(tight);
+  });
+
+  it("derives targets from open null-share deployments, never from roster size", () => {
+    const metaById = new Map<string, DeploymentSupplyCensusRegistryMeta>([
+      ["single", censusMeta("single", [{ chain: "ethereum", address: `0x${"1".repeat(40)}` }])],
+      ["ambiguous", censusMeta("ambiguous", [
+        { chain: "ethereum", address: `0x${"2".repeat(40)}` },
+        { chain: "ethereum", address: `0x${"3".repeat(40)}` },
+      ])],
+      ["no-row", censusMeta("no-row", [{ chain: "base", address: `0x${"4".repeat(40)}` }])],
+      ["unreviewed", censusMeta("unreviewed", [{
+        chain: "ethereum", address: `0x${"5".repeat(40)}`, reviewed: false,
+      }])],
+      ["over-cap", censusMeta("over-cap", Array.from({ length: 65 }, (_, index) => ({
+        chain: "ethereum", address: `0x${(index + 256).toString(16).padStart(40, "0")}`,
+      })))],
+    ]);
+    const chainCirculatingById = {
+      single: { ethereum: { current: 1_000_000 } },
+      ambiguous: { ethereum: { current: 1_000_000 } },
+    } as const;
+    const targets = deploymentSupplyCensusTargets({
+      assetIds: [...metaById.keys()],
+      metaById,
+      chainCirculatingById,
+    });
+    // `unreviewed` (a partial roster rejects the asset) and `over-cap` (the
+    // 65th deployment can never admit) are not targets at all.
+    expect(targets).toEqual([
+      { assetId: "single", gapRoutes: 0, reviewedRoutes: 1, rosterRoutes: 1,
+        evmRoutes: 1, evmChains: ["ethereum"] },
+      { assetId: "ambiguous", gapRoutes: 2, reviewedRoutes: 2, rosterRoutes: 2,
+        evmRoutes: 2, evmChains: ["ethereum"] },
+      { assetId: "no-row", gapRoutes: 1, reviewedRoutes: 1, rosterRoutes: 1,
+        evmRoutes: 1, evmChains: ["base"] },
+    ]);
+
+    // A reviewed economic deployment partition already resolves every share.
+    expect(deploymentSupplyCensusTargets({
+      assetIds: ["ambiguous", "no-row"],
+      metaById,
+      chainCirculatingById,
+      supplyAttributionById: {
+        ambiguous: { model: "reviewed-economic-deployment-partition-v1" },
+      },
+    }).map(target => target.gapRoutes)).toEqual([0, 1]);
+  });
+
+  it("persists one shadow generation after capture settles and journals every outcome", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const source = censusSourceFixture();
+      const nowSec = source.clockSec + 15 * 60;
+      insertSourceInput(sqlite, source);
+      vi.setSystemTime(nowSec * 1_000);
+      const { dependencies, multicall } = censusEvmDependencies();
+      mocks.capture.mockImplementation(async () => {
+        // Serial phases: the census lane must not open a connection while the
+        // attribution capture is still running (peak stays 3/6, not 6/6).
+        expect(multicall).not.toHaveBeenCalled();
+        return { captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [] };
+      });
+      const metaById = new Map([["shadow-fixture",
+        censusMeta("shadow-fixture", [{ chain: "ethereum", address: CENSUS_TOKEN }])]]);
+      const window = {
+        slotStartedAtSec: nowSec,
+        deadlineMs: (nowSec + 180) * 1_000,
+        minimumRemainingMs: 60_000,
+      };
+
+      const result = await syncSafetyScoreV9SupplyAttribution(
+        db, CENSUS_CHAIN_RPCS, undefined, window, undefined,
+        { metaById, dependencies: { evm: dependencies } },
+      );
+      expect(result.status).toBe("ok");
+      const outcome = JSON.parse(result.metadata ?? "{}").deploymentSupplyCensus;
+      expect(outcome).toMatchObject({
+        status: "published",
+        reason: null,
+        written: true,
+        skippedBecauseNewer: false,
+        cohortAssetIds: ["shadow-fixture"],
+        measuredAssetIds: ["shadow-fixture"],
+        rejectedByAssetId: {},
+        excluded: [],
+      });
+      expect(multicall).toHaveBeenCalled();
+      const stored = await readSafetyScoreV9DeploymentSupplyCensus(db, { clockSec: source.clockSec });
+      expect(stored).toMatchObject({
+        state: "ok",
+        generationId: outcome.generationId,
+        capturedAtSec: source.clockSec,
+      });
+      const packet = stored.byId["shadow-fixture"]!;
+      expect(packet.conservation).toMatchObject({ rosterComplete: true, conserved: true });
+      expect(packet.deployments).toHaveLength(1);
+      expect(packet.deployments[0]).toMatchObject({
+        routeId: `ethereum:${CENSUS_TOKEN}`,
+        evidenceKind: "upper-bound",
+      });
+      expect(packet.deployments[0]!.shareUpper).toBeLessThan(0.01);
+      // DRY-CENSUS F1: the census built in this run is carried into the
+      // attribution generation that same run publishes, bound to this input.
+      // node:sqlite rows are untyped; the cache insert above fixes the shape.
+      const generationRow = sqlite.prepare("SELECT value FROM cache WHERE key=?")
+        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as { value: string } | undefined;
+      const published = parseSafetyScoreV9SupplyAttributionGeneration(generationRow?.value);
+      expect(published.deploymentSupplyCensusById).toEqual({ "shadow-fixture": packet });
+      expect(published.deploymentSupplyCensusBinding).toEqual({
+        generationId: outcome.generationId,
+        registryFingerprint: source.registryFingerprint,
+        sourceBaseInputGenerationId: source.baseInputGenerationId,
+      });
+    } finally { sqlite.close(); }
+  });
+
+  it("journals a census rejection with its machine reason instead of a zero packet", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const source = censusSourceFixture();
+      const nowSec = source.clockSec + 15 * 60;
+      insertSourceInput(sqlite, source);
+      vi.setSystemTime(nowSec * 1_000);
+      const { dependencies } = censusEvmDependencies({ pin: false });
+      mocks.capture.mockResolvedValue({
+        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
+      });
+      const metaById = new Map([["shadow-fixture",
+        censusMeta("shadow-fixture", [{ chain: "ethereum", address: CENSUS_TOKEN }])]]);
+      const window = {
+        slotStartedAtSec: nowSec,
+        deadlineMs: (nowSec + 180) * 1_000,
+        minimumRemainingMs: 60_000,
+      };
+
+      const result = await syncSafetyScoreV9SupplyAttribution(
+        db, CENSUS_CHAIN_RPCS, undefined, window, undefined,
+        { metaById, dependencies: { evm: dependencies } },
+      );
+      // A shadow failure never degrades the attribution run.
+      expect(result.status).toBe("ok");
+      expect(JSON.parse(result.metadata ?? "{}").deploymentSupplyCensus).toMatchObject({
+        status: "published",
+        measuredAssetIds: [],
+        rejectedByAssetId: {
+          "shadow-fixture": ["census-rejected:missing-block-pin"],
+        },
+      });
+      const stored = await readSafetyScoreV9DeploymentSupplyCensus(db, { clockSec: source.clockSec });
+      const packet = stored.byId["shadow-fixture"]!;
+      expect(packet.deployments).toEqual([]);
+      expect(packet.conservation).toMatchObject({ rosterComplete: false, conserved: false });
+      expect(packet.rejected).toEqual([{
+        routeId: `ethereum:${CENSUS_TOKEN}`,
+        code: "census-rejected:missing-block-pin",
+      }]);
+    } finally { sqlite.close(); }
+  });
+
+  it("does not re-observe a generation that already covers the fixed input", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const source = censusSourceFixture();
+      const nowSec = source.clockSec + 15 * 60;
+      insertSourceInput(sqlite, source);
+      vi.setSystemTime(nowSec * 1_000);
+      const generation = createSafetyScoreV9DeploymentSupplyCensusGeneration({
+        schemaVersion: 1,
+        kind: "safety-score-v9-deployment-supply-census-generation",
+        sourceBaseInputGenerationId: source.baseInputGenerationId,
+        registryFingerprint: source.registryFingerprint,
+        capturedAtSec: source.clockSec,
+        censusById: {},
+      });
+      await writeSafetyScoreV9DeploymentSupplyCensusGeneration(db, generation);
+      const { dependencies, multicall } = censusEvmDependencies();
+      mocks.capture.mockResolvedValue({
+        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
+      });
+      const window = {
+        slotStartedAtSec: nowSec,
+        deadlineMs: (nowSec + 180) * 1_000,
+        minimumRemainingMs: 60_000,
+      };
+
+      const result = await syncSafetyScoreV9SupplyAttribution(
+        db, CENSUS_CHAIN_RPCS, undefined, window, undefined, {
+          metaById: new Map([["shadow-fixture",
+            censusMeta("shadow-fixture", [{ chain: "ethereum", address: CENSUS_TOKEN }])]]),
+          dependencies: { evm: dependencies },
+        },
+      );
+      expect(JSON.parse(result.metadata ?? "{}").deploymentSupplyCensus).toMatchObject({
+        status: "skipped",
+        reason: "deployment-supply-census-generation-fresh",
+        generationId: generation.generationId,
+        capturedAtSec: source.clockSec,
+      });
+      expect(multicall).not.toHaveBeenCalled();
+    } finally { sqlite.close(); }
+  });
+});
 
   it("fails closed before capture when the source fixed input is stale", async () => {
     const { sqlite, db } = openDb();

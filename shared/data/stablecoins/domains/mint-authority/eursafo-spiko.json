@@ -3040,14 +3040,26 @@
       "scopedQuestions": [
         {
           "controlRef": "Spiko daily-operator backend (current addresses unresolved)",
-          "question": "Which principals control native EURSAFO minting on each non-Ethereum deployment, and which exact current signing addresses are covered by Dfns-managed custody or other documented key protections? Ethereum PermissionManager groups 0, 2, 9 and 10 were recovered from complete filtered event history and current reads at block 26098764. Group 10 initiates and group 9 approves the Minter's pending operations; those rosters are no longer unknown. The reach of the five other-token group-2 contracts must remain token-bound in any cross-fund capability analysis.",
+          "question": "Which principals control native EURSAFO minting on each non-Ethereum deployment, and which exact current signing addresses are covered by Dfns-managed custody or other documented key protections? Ethereum PermissionManager groups 0, 2, 9 and 10 were recovered from complete filtered event history and current reads at block 26098764, and re-read at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z: super-admin Safe 0x4eaa52b6280593a8820c45ce38f974290ae52cea still reports group 0, Minter proxy 0x5ed5a75eeed1934ea060186e35187eaa73331366 group 2, initiators 0x7a493c05479f6132cb895c72c49439139b595eb4 group 10 and 0xe582cddcb3d2374adbb34c9afe76683d019c8a2b groups 4/6/10, approver 0x4896f23ff83242d8d4eb5fa1dedf8c57e9145949 groups 6/9 and the other six group 9; getGroupAdmins(0/9/10) each resolve to the group-0 mask, canCall(Minter, EURSAFO, 0x40c10f19)=true and canCall(super-admin Safe, EURSAFO, 0x4f1ef286)=true. Group 10 initiates and group 9 approves the Minter's pending operations; those rosters are no longer unknown. The current issuer register additionally lists a second Arbitrum One register (ArbitrumUk 0x59dbe110efbc17e8e9b18d23de2abb2aba1f6665, reviewed 2026-10-26 in the risk-review sidecar) that no mint-authority control binds yet. Non-Ethereum operator identities and their Dfns or fund-account protection remain unresolved. The reach of the five other-token group-2 contracts must remain token-bound in any cross-fund capability analysis. Solana reach, re-read at Solana finalized slot 462980000 (blockTime 2026-10-29T18:21:26Z): the eurSAFO mint 6ALgseJyDVHbXVep9hcqEB92xNUZJFLQ66PWoHbGu4P7 still names MinterConfig BDvZMhgdCAv1HooiymSCkgH2Rupoqv8Yf15gneHMyWcZ as mint authority, that account is owned by the verified issuer minter program 8CVKFptWa13Z43e82tYufueoWH7tqJfsNQXB33g1WeVw, decimals are 5 and freeze authority is CF9vGWa1aLpEuCdcYCSs7YhoGAkbtX4z684LjCebyQJX. The folded PF-E2-1 packet (same-day pinned read at slot 462985440, 2026-10-29T18:40:49Z, plus the issuer deployment table and the minter source at commit afdab14) reports MinterConfig admin = Squads vault 2duhrjMfZdX1TX3sKzc9ZPkdJ1TtnXVgCYcxToTq3Kv9 with pending_admin unset and mint_initiator 5CgAHs1K779jzqgB1K5kgTYozcexBGF9voi9zo2WCPMd; that Squads is 1-of-1 with sole member GhRFGntEPkDi3ass8HYPqdqWMZQ4F4hs8a3QfNtT622h, which is also the minter program upgrade authority, and in the 12-instruction minter source the admin can raise the daily limit arbitrarily while approve_mint bypasses it. Reach is therefore not bounded to this catalog entry: the same MinterConfig is the mint authority for the pinned repo's non-catalog Solana deployment files (czk, dkk, huf, nok, pln and sek SAFO, eurUKTBL, eurUSTBL), so a liabilityInventory closed on eurSAFO alone would understate reach and an owner decision is required before any eurSAFO or SAFO closure attempt. Three blockers stay explicit: the liability census across those deployment files, an access-only entrypoint census (cancel_mint, cancel_admin_nomination, accept_admin, initialize), and unreviewed Token-ACL program semantics. No selector-level permission matrix is published, so the control identity stays cause B rather than a fabricated bound.",
           "subject": "authority-semantics",
-          "reviewedAt": "2026-10-01",
-          "reviewer": "Sol curation pass 2026-10-01 (R2WSpikoEur)",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
+            {
+              "label": "Spiko PermissionManager 0x344278aff344d6fb960705dc18a4912221608472 group reads; Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z",
+              "url": "https://eth-mainnet.g.alchemy.com/v2/"
+            },
+            {
+              "label": "Spiko issuer share-class register list, fetched 2026-10-29",
+              "url": "https://public-api.spiko.io/share-classes"
+            },
             {
               "label": "Spiko permission and daily-operator architecture",
               "url": "https://tech.spiko.io/posts/spiko-smart-contracts/"
+            },
+            {
+              "label": "PF-E2-1 packet pinned Solana read at slot 462985440 (2026-10-29T18:40:49Z): MinterConfig admin/initiator, Squads 1-of-1, program upgrade authority",
+              "url": "https://solana-mainnet.g.alchemy.com/v2/"
             }
           ]
         }

@@ -95,6 +95,10 @@ export const RLUSD_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
   },
   isReportCandidate: (href) => /RLUSD/i.test(decodeURIComponent(href)) && /(?:Reserves?|Attestation)[ _]Reports?/i.test(decodeURIComponent(href)),
   reportDateFromCandidate: rlusdReportDate,
+  // Candidate-scoped dating: only this profile publishes the verified reviewed
+  // artifact when a non-reviewed index entry cannot be dated; the engine then
+  // emits `undated-index-report-candidate` per entry instead of failing the
+  // whole snapshot. The reviewed URL itself must still date to the manifest.
   // Decode HTML-escaped apostrophes/ampersands before the shared URL matcher;
   // percent-encode quotes so decoding cannot change the attribute boundary.
   // The archive year annotation runs on the decoded markup.

@@ -1,4 +1,4 @@
-import type { SafetyScoreV9CurrentCard, V9DocumentationOnlyPillar } from "@shared/types";
+import type { SafetyScoreV9CurrentCard, V9QualityPillar } from "@shared/types";
 import {
   exitReasonFallback,
   pillarBreakdown,
@@ -49,7 +49,7 @@ export interface StablecoinSafetyScoreV9Presentation {
  */
 export function buildStablecoinSafetyScoreV9Presentation(
   card: SafetyScoreV9CurrentCard,
-  documentationOnlyLimited?: readonly V9DocumentationOnlyPillar[],
+  documentationOnlyLimited?: readonly V9QualityPillar[],
 ): StablecoinSafetyScoreV9Presentation {
   const hasIncompleteDexCoverage = card.scoreTrace.evidenceResponsibility.summaries.some(
     (summary) => summary.reasonCodes?.includes("incomplete-dex-route-coverage"),

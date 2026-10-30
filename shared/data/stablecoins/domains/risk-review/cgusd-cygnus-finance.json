@@ -24,6 +24,53 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "cgUSD is a rebasing share token whose NAV is issuer-set. In the verified Base CgUSD source, handleOracleReport accepts a new invested-asset figure only from the Locator-resolved accountingOracle, after oracleReportSanityChecker checks and positive-rebase smoothing, and mint() issues shares from the stored buffered/invested assets with no external price read. Cygnus documents a price feed service that computes token prices and relays them to an on-chain price oracle with a price guard, and names RedStone feeds only for TON and BSquared. No Base feed address, heartbeat, staleness bound, fallback provider or aggregator quorum is published, and the accounting-oracle operator identity and key custody remain undisclosed.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Sprint RS-068 research sprint 2026-10-29",
+      "rationale": "cgUSD has no borrower collateral market or liquidation branch. Holder economics come from one issuer-computed portfolio NAV and a 1:1 USDC request-and-claim queue, so the reviewed pricing authority is the fund-level NAV lever rather than a set of collateral branches. Inventing borrower branches would describe a mechanism cgUSD does not operate.",
+      "sources": [
+        {
+          "label": "Cygnus cgUSD daily NAV and supply-rebase disclosure",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/how-it-works"
+        },
+        {
+          "label": "Cygnus cgUSD withdrawal queue and oracle-update claim mechanics",
+          "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/protocol-mechanics/redemption"
+        },
+        {
+          "label": "Verified Base CgUSD source: handleOracleReport/accountingOracle restriction and mint path",
+          "url": "https://base.blockscout.com/api/v2/smart-contracts/0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sprint RS-068 research sprint 2026-10-29",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Cygnus cgUSD on-chain price oracle and RedStone deployments on TON and BSquared",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/on-chain-price-oracle"
+      },
+      {
+        "label": "Cygnus cgUSD daily NAV and rebase formula",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/token-and-contract/cgusd/how-it-works"
+      },
+      {
+        "label": "Cygnus withdrawal FAQ: claim amount varies with Treasury-bill price",
+        "url": "https://wiki.cygnus.finance/whitepaper/cygnus-omnichain-liquidity-validation-system-lvs/cygnus-lvs-integration/cgusd-v1/faq/withdrawals"
+      },
+      {
+        "label": "Verified Base CgUSD source (oracle-report and mint paths)",
+        "url": "https://base.blockscout.com/api/v2/smart-contracts/0xca72827a3d211cfd8f6b00ac98824872b72cab49"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "cgUSD has one tracked Base deployment: a direct, non-proxy rebasing token administered by a TimelockController (10-second delay, 2-of-11 Safe proposer). Native minting takes the token's configured USDC asset. Issuer docs describe Axelar communication for deposits from other chains, with cgUSD existing solely on Base; no satellite cgUSD representation is authored here.",

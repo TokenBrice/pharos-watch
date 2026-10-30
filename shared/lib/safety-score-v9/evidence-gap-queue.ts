@@ -16,7 +16,6 @@ import {
   type V9EvidenceGapQueueEntryV2,
   type V9EvidenceGapQueueEntryV3,
   type V9EvidenceGapQueue,
-  type V9EvidenceGapQueueV2,
   type V9EvidenceGapQueueV3,
   type V9EvidenceGapReviewState,
   type V9EvidenceGapSupplyWeightV1,

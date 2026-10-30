@@ -31,9 +31,28 @@ const payload = {
   }, makeReportCardsV9Card, { cards: [] }),
 };
 
+const nextPayload = {
+  ...payload,
+  reportCards: makeReportCardsV9Response({
+    safetyScoreIdentity: payload.reportCards.safetyScoreIdentity,
+    defaultUpdatedAt: 1, asOfSec: 1,
+    source: payload.reportCards.source,
+  }, makeReportCardsV9Card, { cards: [] }),
+};
+
 describe("PharosVille shared payload contract", () => {
   it("accepts a complete six-endpoint bundle", () => {
     expect(PharosVilleApiPayloadsSchema.parse(payload)).toEqual(payload);
+  });
+
+  it("accepts both report8 and report9 report-card payloads", () => {
+    expect(PharosVilleApiPayloadsSchema.parse(nextPayload)).toEqual(nextPayload);
+    expect(nextPayload.reportCards.schemaVersion).toBe(9);
+  });
+
+  it("rejects a retired report-card schemaVersion", () => {
+    const retired = { ...payload, reportCards: { ...payload.reportCards, schemaVersion: 7 } };
+    expect(PharosVilleApiPayloadsSchema.safeParse(retired).success).toBe(false);
   });
 
   it.each([

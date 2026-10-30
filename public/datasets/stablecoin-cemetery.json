@@ -7,7 +7,7 @@
   "jsonUrl": "https://pharos.watch/datasets/stablecoin-cemetery.json",
   "csvUrl": "https://pharos.watch/datasets/stablecoin-cemetery.csv",
   "sourceDataPath": "shared/lib/cemetery-merged.ts",
-  "sourceChecksum": "sha256:7b1ecc6f0ddd8bdb44f850e4be7cad4fca7c5303eb57c37a3e7ddf291d3bd8e5",
+  "sourceChecksum": "sha256:76dfa848284ac6627218ac89b67c01689371080bef82b1a68665317d76fa4aa8",
   "sourceData": [
     {
       "path": "shared/data/dead-stablecoins.json",
@@ -16,7 +16,7 @@
     },
     {
       "path": "shared/lib/cemetery-merged.ts#frozenCemeteryProjection",
-      "checksum": "sha256:9e7690d74e458072ded711e1ae7e6370e2ce6d39c7feca6c8715256b6fce55fd",
+      "checksum": "sha256:3fbdfda62c71a2c813646cf91cbccdff55335713ccf4b20bc4e7a1adf0adccc2",
       "role": "Canonical frozen tracked-stablecoin projection merged into cemetery rows."
     },
     {
@@ -26,8 +26,8 @@
     }
   ],
   "recordsOrderedBy": "deathDate descending by year, month, then day (a month-precision date sorts as the start of its month, after that month's day-precision rows; an unparseable date sorts last), then peakMcapUsd descending (rows without a peak after rows with one), then symbol ascending, then id ascending (symbol and id compared by UTF-16 code unit)",
-  "rowCount": 116,
-  "updatedAt": "2026-10-29",
+  "rowCount": 118,
+  "updatedAt": "2026-10-30",
   "limitations": [
     "Death dates are month-level unless a row explicitly uses a day-level date.",
     "Peak market capitalization is optional and may be absent when no reliable public figure was curated.",
@@ -59,6 +59,82 @@
     "recordedAt": "UTC cemetery-entry/documentation date (YYYY-MM-DD); tracked rows default to frozenAt unless obituary.recordedAt explicitly overrides it. Distinct from deathDate; null when not recorded."
   },
   "rows": [
+    {
+      "id": "dusd-dtrinity",
+      "name": "dTRINITY dUSD",
+      "symbol": "dUSD",
+      "llamaId": "224",
+      "logoUrl": "https://pharos.watch/logos/dusd-dtrinity.png",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-10-29",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 1839044,
+      "epitaph": "Subsidized borrowing that ran out of runway",
+      "obituary": "dTRINITY launched dUSD in December 2024 as the debt asset of its subsidized lending market, minting it 1:1 against whitelisted reserve stablecoins and supporting the peg with Curve AMO and buyback operations. On October 29, 2026 the team announced it would sunset the protocol, saying it needed more capital to keep building, including defences against AI-enabled security threats, and could not raise it in the current market. The protocol kept operating for an orderly wind-down: redemption fees fell to 10 bps, dLEND interest rebates, Curve rewards and the points program ended, AMO liquidity was to be phased out, and the planned TRIN token was cancelled. Holders exit by redeeming reserve assets or selling on Curve; borrowers must repay before lenders and stakers can fully withdraw. About 1.31M dUSD remained outstanding at capture.",
+      "sourceUrl": "https://x.com/dTRINITY_DeFi/status/2115908296821653978",
+      "sourceLabel": "dTRINITY: Sunsetting dTRINITY",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
+          "decimals": 18
+        },
+        {
+          "chain": "fraxtal",
+          "address": "0x788d96f655735f52c676a133f4dfc53cec614d4a",
+          "decimals": 6
+        },
+        {
+          "chain": "katana",
+          "address": "0xca52d08737e6af8763a2bf6034b3b03868f24dda",
+          "decimals": 18
+        },
+        {
+          "chain": "sonic",
+          "address": "0x53a6abb52b2f968fa80df6a894e4f1b1020da975",
+          "decimals": 18
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/dusd-dtrinity/",
+      "mechanismArchetype": "fiat-cash",
+      "recordedAt": "2026-10-30"
+    },
+    {
+      "id": "sdusd-dtrinity",
+      "name": "dTRINITY Staked dUSD",
+      "symbol": "sdUSD",
+      "llamaId": null,
+      "logoUrl": "https://pharos.watch/logos/sdusd-dtrinity.svg",
+      "pegCurrency": "USD",
+      "causeOfDeath": "abandoned",
+      "causeLabel": "Abandoned",
+      "deathDate": "2026-10-29",
+      "deathDatePrecision": "day",
+      "peakMcapUsd": 546431,
+      "epitaph": "A savings vault that closed with its lending market",
+      "obituary": "sdUSD was dTRINITY's staked dUSD receipt: deposits were supplied into dLEND and the share price accrued lending yield. It ended with its protocol. On October 29, 2026 dTRINITY announced it would sunset, discontinuing Curve rewards for the dUSD and sdUSD pools along with dLEND interest rebates. Holders can unstake only when dLEND has idle liquidity, which returns as dUSD borrowers repay; sharply higher borrowing rates while liquidity is low were meant to drive that deleveraging. About $317K of sdUSD remained outstanding at capture.",
+      "sourceUrl": "https://x.com/dTRINITY_DeFi/status/2115908296821653978",
+      "sourceLabel": "dTRINITY: Sunsetting dTRINITY",
+      "archivedDataAvailable": true,
+      "contracts": [
+        {
+          "chain": "ethereum",
+          "address": "0x7cb20517776636ed76b68edb3d99dcce356abf02",
+          "decimals": 18
+        },
+        {
+          "chain": "fraxtal",
+          "address": "0x58acc2600835211dcb5847c5fa422791fd492409",
+          "decimals": 6
+        }
+      ],
+      "pharosUrl": "https://pharos.watch/stablecoin/sdusd-dtrinity/",
+      "mechanismArchetype": "protocol-position",
+      "recordedAt": "2026-10-30"
+    },
     {
       "id": "usdv-solomon",
       "name": "Solomon USDv (Legacy)",

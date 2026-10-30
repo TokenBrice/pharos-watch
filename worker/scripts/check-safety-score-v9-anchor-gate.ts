@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { pathToFileURL } from "node:url";
-import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
+import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-publication-response";
 import { z } from "zod";
 import {
   assertCliUsage,

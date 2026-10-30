@@ -25,6 +25,45 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "oracleless",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "MXNe is minted and burned by Brale as a 1:1 MXN claim against fully reserved, segregated fiat backing, so its stabilization path has no borrower collateral, no liquidation engine and no on-chain price feed. Brale's complete documentation index contains no oracle, price-feed, lending or liquidation page; the reserve disclosure names only cash at U.S. banks, liquid money-market funds and short-duration Treasury bills. Issuance and redemption are issuer-administered at par rather than read from an external feed, and secondary-market DEX pools do not price the issuer path.",
+    "branchApplicability": {
+      "disposition": "not-applicable",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS035 research sprint 2026-10-29 (RS-035)",
+      "rationale": "No price-sensitive control exists on the MXNe mint, redemption or reserve path: holders post no collateral, no borrower market or liquidation path exists on Base, Solana or Stellar, and the issuer publishes no feed identity or privileged on-chain price setter. This documentary finding does not assert how third parties price MXNe in secondary markets.",
+      "sources": [
+        {
+          "label": "Brale reserve structure: fully reserved 1:1, segregated accounts, cash, money-market funds, Treasury bills",
+          "url": "https://docs.brale.xyz/documentation/platform/reserves.md"
+        },
+        {
+          "label": "Brale MXNe product page with exact Base, Solana and Stellar deployments, retrieved 2026-10-29",
+          "url": "https://brale.xyz/stablecoins/MXNe"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS035 research sprint 2026-10-29 (RS-035)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Brale reserve structure: fully reserved 1:1 and segregated reserve assets",
+        "url": "https://docs.brale.xyz/documentation/platform/reserves.md"
+      },
+      {
+        "label": "Brale MXNe product page, retrieved 2026-10-29",
+        "url": "https://brale.xyz/stablecoins/MXNe"
+      },
+      {
+        "label": "Brale documentation index: complete page list, no oracle or price-feed page",
+        "url": "https://docs.brale.xyz/llms.txt"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "MXNe is issuer-minted natively by Brale on Base (MINTER_ROLE verified on-chain), Solana, and Stellar; no bridge carries the claim.",

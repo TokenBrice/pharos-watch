@@ -173,18 +173,16 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     expect(current.supplyRestored).toBe(true);
   });
 
-  it.each([undefined, null])("admits an undated prior gap-fill (%s) within the publication carry limit", async (observedAt) => {
+  it.each([undefined, null])("refuses an undated prior gap-fill (%s) instead of re-dating it to the run", async (observedAt) => {
     const original = makeAsset();
     mockCoinGeckoAt(130);
     await reconcileTrackedSupplyGaps([original]);
     original.supplyObservedAt = observedAt;
     const current = makeAsset();
-    expect(carryForwardSupplyGapFill(current, original)).toBe(true);
-    expect(current.circulating).toEqual(original.circulating);
-    expect(current.chainCirculating).toEqual(original.chainCirculating);
-    expect(current.supplyObservedAt).toBe(observedAt);
-    expect(current.supplyRestored).toBe(true);
-    expect(current.supplyGapFill).toEqual({ ...original.supplyGapFill, carryForwardRuns: 1 });
+    expect(carryForwardSupplyGapFill(current, original)).toBe(false);
+    expect(current.supplyObservedAt).toBeUndefined();
+    expect(current.supplyRestored).toBeUndefined();
+    expect(current.supplyGapFill).toBeUndefined();
   });
 
   it("carries previously filled candidates deferred by the per-run request cap", async () => {
@@ -786,6 +784,15 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
     vi.mocked(fetchCuratedAggregateOnChainMcap).mockImplementation(async (meta) =>
       onchainById[String(meta.id)] ?? null,
     );
+    // A carried row repaired by a current read is an observation, not a carry.
+    Object.assign(assets[0]!, {
+      supplyRestored: true,
+      supplyGapFill: {
+        method: "coingecko-single-missing-chain", admission: "entered", missingChainId: "base",
+        canonicalSource: "defillama", canonicalCurrentUsd: 0, supplementalSource: "coingecko",
+        supplementalCurrentUsd: 0, ratio: 1, maxRatio: 1.5, observedAt: 1_789_900_000,
+      },
+    });
     fetchTextWithRetryMock.mockResolvedValue({
       response: { ok: true },
       body: JSON.stringify([]),
@@ -804,7 +811,8 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
       },
     );
 
-    expect(result.totalReconciled).toBe(4);
+    // Only the probe that names its observation clock is admitted.
+    expect(result.totalReconciled).toBe(1);
     expect(
       vi.mocked(fetchCuratedAggregateOnChainMcap).mock.calls.map(([meta, priceUsd]) => [
         String(meta.id),
@@ -825,10 +833,14 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
         observedAt: 1_789_968_296,
         observedAgeSec: expect.any(Number),
       },
-      { id: "jpym-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 103_627.12712522845, observedAt: null, observedAgeSec: null },
-      { id: "zarm-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 8_598.7022994136, observedAt: null, observedAgeSec: null },
-      { id: "xofm-mento", reason: "onchain-total-supply", fromSource: "defillama", toValue: 33_000.819008033395, observedAt: null, observedAgeSec: null },
     ]);
+    expect(logWorkerEventMock).toHaveBeenCalledWith(expect.objectContaining({
+      event: "onchain-supply-gap-clock-missing",
+      metadata: {
+        stablecoinId: "jpym-mento",
+        source: "onchain-total-supply",
+      },
+    }));
     const byId = new Map(assets.map((asset) => [asset.id, asset]));
     expect(byId.get("cadd-cad-digital")).toMatchObject({
       supplySource: "onchain-total-supply",
@@ -839,21 +851,14 @@ describe("CoinGecko missing-chain remainder reconciliation", () => {
         Base: { current: 189_873, chainId: "base" },
       },
     });
-    expect(byId.get("jpym-mento")).toMatchObject({
-      supplySource: "onchain-total-supply",
-      circulating: { peggedJPY: 103_627.12712522845 },
-    });
-    const jpymCirculating = byId.get("jpym-mento")?.circulating;
-    expect(jpymCirculating?.peggedCHF).toBeUndefined();
-    expect(byId.get("zarm-mento")).toMatchObject({
-      supplySource: "onchain-total-supply",
-      circulating: { peggedZAR: 8_598.7022994136 },
-    });
-    expect(byId.get("xofm-mento")).toMatchObject({
-      supplySource: "onchain-total-supply",
-      circulating: { peggedXOF: 33_000.819008033395 },
-      chainCirculating: { Celo: { current: 33_000.819008033395, chainId: "celo" } },
-    });
+    expect(byId.get("cadd-cad-digital")?.supplyRestored).toBeUndefined();
+    expect(byId.get("cadd-cad-digital")?.supplyGapFill).toBeUndefined();
+    // An on-chain read with no observation clock publishes no supply and no clock.
+    for (const id of ["jpym-mento", "zarm-mento", "xofm-mento"]) {
+      expect(byId.get(id)?.supplySource).toBe("defillama");
+      expect(getCirculatingRawOrNull(byId.get(id)!)).toBe(0);
+      expect(byId.get(id)?.supplyObservedAt).toBeUndefined();
+    }
   });
 
   it("does not par-value a NAV token when chart history is unavailable", async () => {

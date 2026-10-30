@@ -800,12 +800,28 @@ export const V9ReviewedIncidentSchema = z
   });
 export type V9ReviewedIncident = z.infer<typeof V9ReviewedIncidentSchema>;
 export type V9ControlIncident = Extract<V9ReviewedIncident, { domain: "control" }>;
+/**
+ * Every asset-attributed negative-review kind the expanded registry admits: the
+ * pre-migration digest row (retirement keeps its provenance), the authored
+ * control identity and the asset-wide issuer surface. Provider-wide reviews
+ * carry no asset; the build fans them out per covered asset before reference
+ * expansion, so a registry row is always asset-attributed.
+ */
+export const V9AttributedNegativeIncidentReviewSchema = z.union([
+  V9RetirableNegativeIncidentReviewSchema,
+  V9AuthoredNegativeIncidentReviewSchema,
+  V9IssuerSurfaceIncidentReviewSchema,
+]);
+export type V9AttributedNegativeIncidentReview = z.output<typeof V9AttributedNegativeIncidentReviewSchema>;
+
 // Incident ids are globally unique registry keys, not asset-scoped aliases.
+// Authored review ids are globally unique before fan-out, so `reviewId` stays
+// the registry key and matches the build's canonical digest ordering.
 export const V9ReviewedIncidentRegistrySchema = z
   .object({
     schemaVersion: z.literal(1),
     incidents: canonicalArrayBy(V9ReviewedIncidentSchema, (incident) => incident.incidentId),
-    negativeReviews: canonicalArrayBy(V9NegativeIncidentReviewSchema, (review) => review.reviewId).optional(),
+    negativeReviews: canonicalArrayBy(V9AttributedNegativeIncidentReviewSchema, (review) => review.reviewId).optional(),
   })
   .strict();
 

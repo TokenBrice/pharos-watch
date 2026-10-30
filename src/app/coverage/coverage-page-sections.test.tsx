@@ -11,6 +11,11 @@ import { makeReportCardsV9Response, makeV9Card } from "@/test/fixtures/safety-sc
 import type { StablecoinMeta } from "@shared/types";
 import { CoverageCoinIdentity } from "@/components/coverage/coverage-coin-identity";
 import { makeReportCardsV9PipelineGapCard } from "@shared/test-utils/report-cards-v9";
+import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+
+const NO_SCORING_PATH_LABEL = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation!.reasons.find(
+  (entry) => entry.reason === "no-scoring-path",
+)!.publicLabel;
 
 vi.mock("next/link", async () => {
   const { createNextLinkMock } = await import("@/test-utils/frontend");
@@ -166,8 +171,8 @@ describe("CoverageSafetyScoreDataCard", () => {
         { responsibility: "mixed" as const, questions: 1, obligations: 1 },
       ],
       reasons: [
-        { code: "unresolved-control-identity" as const, bucket: "open" as const, questions: 3, obligations: 6 },
         { code: "missing-reserve-composition" as const, bucket: "issuer" as const, questions: 2, obligations: 3 },
+        { code: "unresolved-control-identity" as const, bucket: "open" as const, questions: 3, obligations: 6 },
       ],
       documentation: {
         questions: 1,
@@ -181,7 +186,15 @@ describe("CoverageSafetyScoreDataCard", () => {
         oldestReviewedAtSec: reviewedAt,
         newestReviewedAtSec: reviewedAt,
       },
-      byCard: [],
+      byCard: [
+        {
+          id: "asset-a",
+          openBucketQuestionsCarried: 3,
+          inheritedOpenBucketQuestionsCarried: 0,
+          openBucketObligationsCarried: 6,
+          documentationObligationsCarried: 256,
+        },
+      ],
     };
     const safetyScoreDataCoverage = buildDataCoverageModel(
       makeReportCardsV9Response({
@@ -200,7 +213,7 @@ describe("CoverageSafetyScoreDataCard", () => {
     expect(container.textContent).toContain("269 evidence obligations behind them · 256 of which documentation");
     expect(container.textContent).toContain("Open questions · Controlling entity not identified");
     expect(container.textContent).toContain("Not disclosed by issuers · Reserve composition not published");
-    expect(container.textContent).toContain("Documentation gaps · No scoring path");
+    expect(container.textContent).toContain(`Documentation gaps · ${NO_SCORING_PATH_LABEL}`);
     expect(container.textContent).toContain("256 datums");
     expect(container.textContent).toContain(
       "Not disclosed by issuers. Reviewed Oct 3, 2026; the issuer does not publish this datum.",

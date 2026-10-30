@@ -3,7 +3,8 @@ import type { V9EvidenceCauseProof } from "../../types/safety-score-v9-causes";
 import { V9_UNRESEARCHED_CAUSE_PROOF } from "../../types/safety-score-v9-causes";
 import { CompiledV9FactSetV3Schema } from "../../types/safety-score-v9-facts";
 import { countV9EvidenceObligations } from "../../types/safety-score-v9-public-evidence-facts";
-import type { V9EvaluatedAsset } from "../safety-score-v9/score";
+import type { V9DependencyEvaluationPlan } from "../safety-score-v9/dependencies";
+import type { V9EvaluatedAsset } from "../safety-score-v9/evaluate-set";
 import {
   evaluateV9Asset,
   v9DependencyGraphRestatementAliasGapIds,
@@ -19,7 +20,6 @@ import {
   compileNativeV3FactSet,
   coreFixture,
   createV9FactStatus,
-  fullAsset,
   knownStatus,
   requiredV9Applicability,
 } from "./safety-score-v9-facts.fixture-support";
@@ -153,7 +153,10 @@ function evaluatedExitFixture(phantomOutputGap: boolean) {
     evaluated: evaluateV9Asset({
       asset,
       resolved: { assetId: "alpha", basket: [], serial: [], cycleBlocked: false },
-      dependencyPlan: { serialCycleAssetIds: [], serialBlockedDescendants: [] },
+      // A lone asset has no dependency edges: only these two plan fields are
+      // read on the single-asset evaluation path, so the richer plan identity
+      // fields are irrelevant to this fixture.
+      dependencyPlan: { serialCycleAssetIds: [], serialBlockedDescendants: [] } as unknown as V9DependencyEvaluationPlan,
       envelope: V9_CANDIDATE_POLICY_V1,
       evaluatedById: new Map(),
       unavailabilityRootsById: new Map(),

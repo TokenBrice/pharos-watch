@@ -93,7 +93,7 @@ import {
   buildSafetyScoreV9RouteReviews,
 } from "./extension-routes";
 import {
-  buildSafetyScoreV9SupplyReview,
+  buildSafetyScoreV9SupplyAdmission,
 } from "./extension-supply";
 import {
   normalizeSafetyScoreV9CompilerInput,
@@ -1112,6 +1112,11 @@ function adaptMintControl(
   const globalControl: ControlOverlay = {
     controlKey,
     deploymentKey: `asset:${assetId}`,
+    // Authored identity (IR-1a/IR-2b/IR-5, contract C3): incident reviews bind
+    // the mint-authority label, never the digest payload, so re-deriving
+    // `controlKey` (address, refs, role) cannot orphan a reviewed closure. Every
+    // path/deployment row below inherits it from this base.
+    authoredControlId: control.label,
     ...(control.controllerAssetId ? { controllerAssetId: control.controllerAssetId } : {}),
     controlKind,
     scope: "global",
@@ -2086,6 +2091,9 @@ function adaptMintReview(
   const expiredCustodyQuestionFor = (control: MintAuthorityControl) =>
     (control.address != null ? expiredCustodyQuestionByRef.get(`${control.chain ?? ""}:${control.address.toLowerCase()}`) : undefined)
     ?? expiredCustodyQuestionByRef.get(control.label.toLowerCase()) ?? null;
+  const hasFreshScopedQuestion = (control: MintAuthorityControl) =>
+    (control.address != null && freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
+    freshScopedQuestionRefs.has(control.label.toLowerCase());
   const authoredControls = profile.controls ?? [];
   const controlProjections = compileReviewedMintControlScopes(profile, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC).map((projection) =>
     resolvedBook.diagnostics.length === 0 ? projection : { ...projection, processDiagnostics: sortV1005ProcessDiagnostics([...projection.processDiagnostics ?? [], ...resolvedBook.diagnostics]) });
@@ -2105,7 +2113,11 @@ function adaptMintReview(
   // individually identified. Retain those controls in a partial review while
   // the unresolved deployment surfaces remain bounded and fail closed.
   const controls = authoredControls.flatMap((control, index, allControls) => {
-    const retainedExpiredCustodyQuestion = expiredCustodyQuestionFor(control);
+    const controlHasFreshQuestion = hasFreshScopedQuestion(control);
+    // A lapse is documentation only while no fresh question of any subject
+    // names this control: a live obligation is never relabelled as custody by
+    // an older overdue question, and its dated evidence row is not duplicated.
+    const retainedExpiredCustodyQuestion = controlHasFreshQuestion ? null : expiredCustodyQuestionFor(control);
     const rows = adaptMintControl(
       meta.id,
       control,
@@ -2119,17 +2131,14 @@ function adaptMintReview(
             candidateIndex !== index && candidate.chain === control.chain && candidate.canRaiseCap === true,
         ),
       profile.economicCapSemantics,
-      (control.address != null &&
-        freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
-        freshScopedQuestionRefs.has(control.label.toLowerCase()),
+      controlHasFreshQuestion,
       supplyReview,
       clockSec,
       controlProjections[index]!,
       issuanceFacts?.ref,
       !((control.address != null && semanticQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
         semanticQuestionRefs.has(control.label.toLowerCase())) &&
-        ((control.address != null && freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
-          freshScopedQuestionRefs.has(control.label.toLowerCase())),
+        controlHasFreshQuestion,
       retainedExpiredCustodyQuestion,
     );
     if (retainedExpiredCustodyQuestion !== null) {
@@ -2682,7 +2691,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           });
         }
         admissionPath = "supplyReview";
-        const supplyReview = buildSafetyScoreV9SupplyReview(
+        const supplyAdmission = buildSafetyScoreV9SupplyAdmission(
           fixedInput,
           assetId,
           meta.bridgeRouteRisk,
@@ -2691,6 +2700,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
             transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
           },
         );
+        const supplyReview = supplyAdmission.review;
         const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
         const deployedChainCount = Object.keys(chainRows).length;
         admissionPath = "economicControlReview.mint";
@@ -2708,6 +2718,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           reviewEvidence,
           clockSec,
           chainRows,
+          supplyAdmission.censusDiagnostics,
         );
         admissionPath = "controlReview";
         const incidentControlRoute = routeSafetyScoreV9ControlIncidents(

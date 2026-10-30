@@ -754,6 +754,25 @@ describe("generate-public-datasets", () => {
       .toThrow("invalid V9 Safety publication");
   });
 
+  it("reads a report9 publication with the same scores-latest projection", () => {
+    const envelope = makeCurrentEnvelope("2026-05-16");
+    const reportCards = makeReportCardsV9Response({
+      cards: [makeV9Card({ id: "usdc-circle", score: 88, grade: "A+" })],
+    });
+    const spec = testExports.buildTopicSpecs({
+      ...envelope,
+      safetyScoreIdentity: reportCards.safetyScoreIdentity,
+      reportCards,
+    }, [], "2026-05-16").find((item) => item.topic === "scores-latest")!;
+    expect(spec.rows[0]).toMatchObject({ stablecoinId: "usdc-circle", safetyScore: 88, safetyGrade: "A+" });
+    // Report9 without a supplied block is the retained pre-cutover pair: v2 says so.
+    expect(spec.displayProjection).toMatchObject({
+      version: 2,
+      openEvidence: null,
+      openEvidenceUnavailableReason: "open-evidence-unavailable",
+    });
+  });
+
   it("admits old dated score artifacts but requires the projection on the current alias target", async () => {
     const root = await makeRoot();
     const datasetsDir = path.join(root, "datasets");

@@ -1,4 +1,4 @@
-import { projectNegativeIncidentReview } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
+import { projectNegativeIncidentReview, V9AttributedNegativeIncidentReviewSchema } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 import { describe, expect, it } from "vitest";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -17,7 +17,6 @@ import {
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
-import { V9ReviewedIncidentRegistrySchema } from "@shared/types/safety-score-v9-incidents";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
@@ -185,10 +184,12 @@ describe("Safety Score v9 independent negative incident routing", () => {
   it("rebuilds the full-payload evidence identity of two-digit source indexes from the runtime projection", () => {
     // Keys embed the sorted-source index, so indexes 10+ order before 2 in the
     // finished evidence list; every review with 11+ sources exercises that.
-    const reviews = V9ReviewedIncidentRegistrySchema.parse(expandReviewedRegistryReferences(incidentRegistry, "negativeReviews", {
+    const expanded = expandReviewedRegistryReferences(incidentRegistry, "negativeReviews", {
       sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-    })).negativeReviews!
-      .filter((review) => review.sources.length >= 11);
+    }) as { negativeReviews: unknown[] };
+    const reviews = expanded.negativeReviews
+      .map((row) => V9AttributedNegativeIncidentReviewSchema.parse(row))
+      .filter((review) => review.sources.length >= 11 && review.retired === undefined);
     expect(reviews.length).toBeGreaterThan(0);
     for (const review of reviews) {
       const reviewedSec = v9NegativeIncidentReviewTimeSec(review.reviewedAt);
@@ -212,8 +213,9 @@ describe("Safety Score v9 authored incident-review identity", () => {
   function runtimeReview(
     scope: unknown,
     overrides: {
+      reviewId?: string;
       retired?: { reviewedAt: string; reviewer: string; reason: string };
-      laneScreeningRefs?: { routeId: string; certificateId: string }[];
+      laneScreeningRefs?: { assetId: string; routeId: string; certificateId: string }[];
     } = {},
   ) {
     return NegativeIncidentRuntimeSchema.parse({
@@ -248,6 +250,20 @@ describe("Safety Score v9 authored incident-review identity", () => {
       ...(identity.id === undefined ? {} : { authoredControlId: identity.id }),
       ...(identity.ids === undefined ? {} : { authoredControlIds: identity.ids }),
     } as unknown as ControlOverlay;
+  }
+
+  function providerRow(routeId = ROUTE_A) {
+    return runtimeReview(
+      {
+        kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+        coveredRoutes: [{ assetId: "fixture", routeId }],
+      },
+      { reviewId: "provider-review", laneScreeningRefs: [{ assetId: "fixture", routeId, certificateId: "lane-cert" }] },
+    );
+  }
+
+  function issuerRow(routeIds: readonly string[] = [ROUTE_A]) {
+    return runtimeReview({ kind: "issuer-surface", coveredRoutes: [...routeIds] }, { reviewId: "issuer-review" });
   }
 
   it("resolves authored control identity across compiled digest churn", () => {
@@ -324,21 +340,48 @@ describe("Safety Score v9 authored incident-review identity", () => {
   });
 
   it("admits provider and issuer-surface witnesses without closing a control", () => {
-    const provider = runtimeReview(
-      { kind: "provider", providerKey: "layerzero", surface: "dvn-set", coveredRoutes: [ROUTE_A] },
-      { laneScreeningRefs: [{ routeId: ROUTE_A, certificateId: "lane-cert" }] },
-    );
-    const issuer = runtimeReview({ kind: "issuer-surface", coveredRoutes: [ROUTE_A] });
+    const provider = providerRow();
+    const issuer = issuerRow();
     const target = bridgeRow(ROUTE_A, "bridge-meta:fixture:provider-owned");
     expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer], [])[0]).toBe(target);
-    expect(() => runtimeReview({ kind: "provider", providerKey: "layerzero", surface: "dvn-set", coveredRoutes: [ROUTE_A] })).toThrow();
+    // A provider-screening coverage block on the fact grants no closure in
+    // v10.38: the three-witness rule moved to v10.39, so the datum stays unknown
+    // even when the provider review and the issuer surface both resolve.
+    const covered: ControlOverlay = {
+      ...withAuthoredIdentity(target, { id: "alpha" }),
+      incidentCoverage: {
+        source: "provider-screening",
+        providerReviewId: "provider-review",
+        issuerSurfaceReviewId: "issuer-review",
+        certificateRefs: [{ controlId: "alpha", certificateId: `lane-cert:ethereum:0x${"e".repeat(40)}:100-200:${"a".repeat(64)}` }],
+      },
+    };
+    expect(routeSafetyScoreV9NegativeIncidentReviews([covered], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer], [])[0]).toBe(covered);
+    // A provider row without its per-lane certificate references is rejected.
+    expect(() => runtimeReview({
+      kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+      coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_A }],
+    })).toThrow();
+    // Lane screening references belong to provider rows only.
     expect(() => runtimeReview(
       { kind: "issuer-surface", coveredRoutes: [ROUTE_A] },
-      { laneScreeningRefs: [{ routeId: ROUTE_A, certificateId: "lane-cert" }] },
+      { laneScreeningRefs: [{ assetId: "fixture", routeId: ROUTE_A, certificateId: "lane-cert" }] },
     )).toThrow();
+    // References may only name a covered (asset, lane).
     expect(() => runtimeReview(
-      { kind: "provider", providerKey: "layerzero", surface: "dvn-set", coveredRoutes: [ROUTE_A] },
-      { laneScreeningRefs: [{ routeId: ROUTE_B, certificateId: "lane-cert" }] },
+      {
+        kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+        coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_A }],
+      },
+      { laneScreeningRefs: [{ assetId: "fixture", routeId: ROUTE_B, certificateId: "lane-cert" }] },
+    )).toThrow();
+    // One certificate reference per covered lane is mandatory.
+    expect(() => runtimeReview(
+      {
+        kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+        coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_A }, { assetId: "fixture", routeId: ROUTE_B }],
+      },
+      { laneScreeningRefs: [{ assetId: "fixture", routeId: ROUTE_A, certificateId: "lane-cert" }] },
     )).toThrow();
   });
 

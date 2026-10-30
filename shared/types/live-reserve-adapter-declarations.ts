@@ -12,7 +12,7 @@ import type {
 } from "./live-reserve-core";
 import { RedemptionHolderEligibilitySchema } from "./redemption";
 import type { ReserveEvidenceSourceOriginClass } from "./report-card-evidence-journal";
-import { StrictIsoDateSchema } from "./safety-schema-primitives";
+import { StrictIsoDateOrUtcInstantSchema, StrictIsoDateSchema } from "./safety-schema-primitives";
 import { ReserveNavSupplyAdmissionReviewSchema } from "./reserve-nav-supply";
 import {
   ReserveAssetClassSchema,
@@ -1343,6 +1343,50 @@ const liquityNativeActivePoolParamsSchema = z
   })
   .strict();
 
+// A Monolith Lender instance owns one immutable reserve roster: the collateral
+// token and the PSM asset/vault pair. Every address, label and classification is
+// reviewed config, so one adapter can bind another instance (invUSD) without
+// code changes. `psmAssetUnitValueUsd` is the reviewed par value of one whole PSM
+// asset unit: the sell rail pays it 1:1 and the adapter never looks up a price.
+const monolithLenderCollateralSchema = z
+  .object({
+    ...EvmAddressFields,
+    decimals: z.number().int().nonnegative().max(36),
+    name: z.string(),
+    ...TrackedExposureFields,
+  })
+  .strict();
+
+const monolithLenderPsmAssetSchema = z
+  .object({
+    ...EvmAddressFields,
+    decimals: z.number().int().nonnegative().max(36),
+    name: z.string(),
+  })
+  .strict();
+
+const monolithLenderPsmVaultSchema = z
+  .object({
+    ...EvmAddressFields,
+    name: z.string(),
+    ...TrackedExposureFields,
+  })
+  .strict();
+
+const monolithLenderParamsSchema = z
+  .object({
+    lenderAddress: EvmAddressSchema,
+    collateral: monolithLenderCollateralSchema,
+    psmAsset: monolithLenderPsmAssetSchema,
+    psmVault: monolithLenderPsmVaultSchema,
+    psmAssetUnitValueUsd: z.number().finite().positive().max(10),
+    /** Canonical tracked id the PSM sell pays out, emitted as the route output identity. */
+    redemptionOutputAssetKey: z.string().trim().min(1),
+    ...RequiredSourceUrlsFields,
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
 const originVaultAssetSchema = z
   .object({
     ...EvmAddressFields,
@@ -1915,6 +1959,11 @@ const astherusEarnWrapperParamsSchema = z
 const initiaWrapperVaultParamsSchema = z
   .object({
     lcdUrl: AbsoluteUrlSchema,
+    // Reviewed LCD transport list (1-3). The first entry must repeat `lcdUrl`
+    // exactly; failover is transport-only and every endpoint must prove the
+    // reviewed chain id before its reads are used.
+    lcdUrls: z.array(AbsoluteUrlSchema).min(1).max(3).optional(),
+    chainId: z.literal("interwoven-1").optional(),
     iusdDenom: z.literal("move/6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"),
     iusdMetadataAddress: z.literal("0x6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e"),
     vaultOwnerAddress: z.literal("0xfd6a07594842ac5d7501ff55243aff06e4f991f320828be05a4590970145e90a"),
@@ -1925,7 +1974,31 @@ const initiaWrapperVaultParamsSchema = z
       depType: z.literal("wrapper"),
     }),
   })
-  .strict();
+  .strict()
+  .superRefine((params, ctx) => {
+    if (params.lcdUrls === undefined) return;
+    if (params.chainId === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["chainId"],
+        message: "chainId is required when lcdUrls is present",
+      });
+    }
+    if (new Set(params.lcdUrls).size !== params.lcdUrls.length) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["lcdUrls"],
+        message: "lcdUrls must not repeat an endpoint",
+      });
+    }
+    if (params.lcdUrls[0] !== params.lcdUrl) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["lcdUrls"],
+        message: "lcdUrls[0] must equal lcdUrl",
+      });
+    }
+  });
 
 
 // XPR Network (Antelope) account reads: token supply from one contract's
@@ -2176,6 +2249,78 @@ const afiProofParamsSchema = z
   })
   .strict();
 
+// Midas mTBILL's signed checkpoint authenticates the aggregate, but the
+// historical composition rows are unsigned. Selection stays fail-closed: the
+// adapter accepts only an exact URL from its reviewed allowlist, and the
+// declaration keeps the value optional so the reviewed default applies when
+// ops does not name a source.
+const midasMtbillParamsSchema = z
+  .object({
+    historicalSourceUrl: AbsoluteUrlSchema.optional(),
+  })
+  .strict();
+
+// MegaUSD custody is read on-chain at one pinned block: the issuer JSON is
+// geo-gated from Workers and its amounts are never published, only used to
+// flag roster drift. Params therefore pin the reviewed custodian roster itself.
+const megausdCustodyRosterEntrySchema = z
+  .object({
+    chain: z.string().trim().min(1),
+    token: EvmAddressSchema,
+    custodian: EvmAddressSchema,
+    assetKey: z.enum(["usdc", "usdtb"]),
+  })
+  .strict();
+
+const megausdCustodyOnchainParamsSchema = z
+  .object({
+    rosterReviewedAt: StrictIsoDateOrUtcInstantSchema,
+    roster: z.array(megausdCustodyRosterEntrySchema).min(1),
+  })
+  .strict()
+  .superRefine((params, ctx) => {
+    const [first] = params.roster;
+    if (first === undefined) return;
+    const seen = new Set<string>();
+    const tokenByAsset = new Map<string, string>();
+    for (const [index, entry] of params.roster.entries()) {
+      if (entry.chain.toLowerCase() !== first.chain.toLowerCase()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["roster", index, "chain"],
+          message: "one pinned block cannot read a roster that spans chains",
+        });
+      }
+      const duplicate = `${entry.assetKey}:${entry.custodian.toLowerCase()}`;
+      if (seen.has(duplicate)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["roster", index, "custodian"],
+          message: `duplicate ${entry.assetKey} custodian ${entry.custodian}`,
+        });
+      }
+      seen.add(duplicate);
+      const token = tokenByAsset.get(entry.assetKey);
+      if (token !== undefined && token.toLowerCase() !== entry.token.toLowerCase()) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["roster", index, "token"],
+          message: `${entry.assetKey} uses more than one token contract`,
+        });
+      }
+      tokenByAsset.set(entry.assetKey, entry.token);
+    }
+    for (const assetKey of ["usdc", "usdtb"] as const) {
+      if (!tokenByAsset.has(assetKey)) {
+        ctx.addIssue({
+          code: "custom",
+          path: ["roster"],
+          message: `the reviewed roster does not cover ${assetKey}`,
+        });
+      }
+    }
+  });
+
 export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "spark-usdc-v1-inventory": declareAdapter(noParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
     configValidation: CONFIG_COLLATERAL_V2,
@@ -2234,6 +2379,22 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     },
   }),
   "agora-independent-assurance": declareAdapter(agoraAssuranceParamsSchema, HTTP_DISCLOSURE_ATTESTATION_V3),
+  // Axis publishes issuer asset classes on a Next.js transparency dashboard,
+  // not the Accountable location feed: different host, transport, clock and
+  // validation. Verified freshness requires the page's own `last_updated`;
+  // the 48.75% unclassified hedge share is deliberately uncapped so the one
+  // residual row stays visible instead of degrading every snapshot.
+  "axis-issuer-classes": declareAdapter(noParamsSchema, {
+    primaryInputKinds: ["http-html"],
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    sourceOriginClass: "issuer-attested",
+    preferredFreshnessMode: "verified",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
+    validation: DASHBOARD_VERIFIED_VALIDATION,
+  }),
   "anzen-usdz": declareAdapter(noParamsSchema, ONCHAIN_SINGLE_ASSET_V2, {
     sourceOriginClass: "onchain-observation",
   }),
@@ -2383,7 +2544,7 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   },
   "midas-mtbill": {
     primaryInputKinds: ["onchain-evm"],
-    paramsSchema: noParamsSchema,
+    paramsSchema: midasMtbillParamsSchema,
     sourceModel: "dynamic-mix",
     evidenceClass: "independent",
     sourceOriginClass: "issuer-attested",
@@ -2813,6 +2974,20 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
   "megausd-custody": declareAdapter(noParamsSchema, HTTP_DASHBOARD_COLLATERAL_V1, {
     sourceOriginClass: "issuer-attested",
     validation: DASHBOARD_VALIDATION,
+    // catalog binding moved to the block-pinned roster on 2026-10-29: Worker
+    // egress is geo-gated to /restricted, so the JSON can no longer carry a
+    // published snapshot. The transport stays registered as the discovery
+    // comparator inside megausd-custody-onchain.
+    provenance: {
+      status: "staged",
+      rationale: "Issuer transparency JSON is geo-gated from Worker egress; it is retained only as MegaUSD roster discovery inside megausd-custody-onchain and no catalog coin binds this adapter.",
+    },
+  }),
+  // MegaUSD's two reviewed slice keys stay unchanged; only the transport moves
+  // from the geo-gated issuer JSON to ERC-20 balances at one pinned block.
+  "megausd-custody-onchain": declareAdapter(megausdCustodyOnchainParamsSchema, ONCHAIN_DYNAMIC_MIX_NO_TELEMETRY_V1, {
+    preferredFreshnessMode: "verified",
+    validation: VERIFIED_ONLY_VALIDATION,
   }),
   mento: {
     primaryInputKinds: ["http-json"],
@@ -2840,6 +3015,22 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
+  },
+  // One pinned Multicall batch reads the Lender's immutable wiring, both
+  // holdings, the protocol oracle and the debt/supply counters; the PSM sell
+  // capacity is the Lender's own freePsmAssets accounting, cross-bounded by the
+  // sUSDS payout ceiling, so both capacity and the 0 bps fee are direct same-run
+  // measurements rather than a proxy for the CDP collateral.
+  "monolith-lender": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: monolithLenderParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
+    validation: LATEST_STATE_VALIDATION,
   },
   "nest-vault-positions": {
     primaryInputKinds: ["http-json"],

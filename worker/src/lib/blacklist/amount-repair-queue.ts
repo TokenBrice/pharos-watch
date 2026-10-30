@@ -1,5 +1,6 @@
 const MAX_RETRY_DELAY_SEC = 6 * 60 * 60;
 const BASE_RETRY_DELAY_SEC = 5 * 60;
+export const MAX_LEGACY_EVM_REVIEW_ATTEMPTS = 3;
 // Deterministic failures (a ledger beyond the page cap, shared-millisecond
 // evidence, missing config) cannot be fixed by retrying, so they are parked far
 // enough out that they stop consuming the run's page budget while staying
@@ -24,6 +25,8 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
            ELSE 40
          END,
          CASE
+           WHEN amount_status = 'permanently_unavailable' AND amount_last_error_class = 'event_time_unproven'
+             THEN 'legacy-evm-event-time-unproven'
            WHEN amount_source = 'derived' AND amount_native = 0 THEN 'legacy-derived-zero'
            ELSE 'missing-event-amount'
          END,
@@ -32,10 +35,13 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
          ?
        FROM blacklist_events
        WHERE event_type IN ('blacklist', 'unblacklist', 'destroy')
+         AND suppression_reason IS NULL
          AND (
            amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
            OR (amount_source = 'derived' AND amount_native = 0 AND amount_status = 'resolved'
                AND COALESCE(provenance_source, '') NOT LIKE 'trongrid-transfer-replay-zero%')
+           OR (amount_status = 'permanently_unavailable' AND amount_last_error_class = 'event_time_unproven'
+               AND event_type IN ('blacklist', 'unblacklist') AND chain_id != 'tron')
          )`,
     )
     .bind(now, now)

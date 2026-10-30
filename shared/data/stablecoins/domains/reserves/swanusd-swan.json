@@ -1,0 +1,108 @@
+{
+  "id": "swanusd-swan",
+  "reserves": [
+    {
+      "sourceKey": "monolith-lender:ethereum:0x7f39c581f595b53c5cb19bd0b3f8da6c935e2ca0",
+      "name": "wstETH collateral (Monolith Lender)",
+      "pct": 90.31,
+      "risk": "low",
+      "assetClass": "cryptoasset",
+      "issuerOrObligor": "Lido DAO and Ethereum validators",
+      "riskFactors": [
+        "market",
+        "liquidity",
+        "smart-contract",
+        "custody",
+        "concentration"
+      ],
+      "liquidityHorizon": "immediate"
+    },
+    {
+      "sourceKey": "monolith-lender:ethereum:0xa3931d71877c0e7a3148cb7eb4463524fec27fbd",
+      "name": "sUSDS PSM reserve (Monolith Lender)",
+      "pct": 9.69,
+      "risk": "low",
+      "coinId": "susds-sky",
+      "depType": "collateral",
+      "assetClass": "protocol-position",
+      "issuerOrObligor": "Sky Protocol (sUSDS savings vault over USDS)",
+      "riskFactors": [
+        "smart-contract",
+        "market",
+        "liquidity",
+        "counterparty"
+      ],
+      "liquidityHorizon": "immediate"
+    }
+  ],
+  "reserveReview": {
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Claude swanUSD promotion 2026-10-29",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned swanUSD Lender state at Ethereum block 26299913 (2026-10-29T17:31:59Z, hash 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13): wstETH.balanceOf(lender) 203.850825454123900563, sUSDS.balanceOf(lender) 57608.760096683371289431, freePsmAssets 64205.193253000784236399, totalPaidDebt 351326.006993430199851968, totalFreeDebt 4561, Coin.totalSupply 420092.200246430984088367",
+        "url": "https://etherscan.io/address/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15#readContract"
+      },
+      {
+        "label": "Pinned sUSDS vault and wstETH conversion reads at the same block: convertToAssets 1.114511760651739046 (totalAssets 4687125208.069346768830864906, totalSupply 4205541272.465739896413109827), previewRedeem and convertToAssets of the Lender's 57608.760096683371289431 shares both 64205.640644318232649923 against freePsmAssets 64205.193253000784236399 and accruedLocalReserves 0, stEthPerToken 1.247480841390501154, Chainlink ETH/USD 235252475238 at 2026-10-29T16:33:23Z",
+        "url": "https://etherscan.io/address/0xa3931d71877c0e7a3148cb7eb4463524fec27fbd#readContract"
+      },
+      {
+        "label": "Lender identity reads at the same block: collateral()=wstETH, psmAsset()=USDS, psmVault()=sUSDS, coin()=swanUSD, psmAssetDecimals 18, totalSupply 420092.200246430984088367",
+        "url": "https://etherscan.io/address/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e#readContract"
+      },
+      {
+        "label": "Monolith peg stability module: the Lender itself holds PSM assets as sUSDS and pays USDS 1:1 through buy/sell",
+        "url": "https://docs.monolith.market/protocol/peg-stability-module.md"
+      },
+      {
+        "label": "Monolith Lender reference: immutable collateral, psmAsset and psmVault; free versus paid debt",
+        "url": "https://docs.monolith.market/reference/Lender.md"
+      },
+      {
+        "label": "swanUSD lender and coin on the issuer app",
+        "url": "https://app.monolith.market/1/coin/2"
+      }
+    ],
+    "rationale": "At Ethereum block 26299913 (2026-10-29T17:31:59Z) the swanUSD Lender held exactly two reserve assets. wstETH collateral: 203.850825454123900563 wstETH times stEthPerToken 1.247480841390501154 = 254.299999255658672976 stETH, times the Chainlink ETH/USD answer 2352.52475238 (updated 2026-10-29T16:33:23Z) = 598247.04 USD. PSM reserve: 57608.760096683371289431 sUSDS times convertToAssets 1.114511760651739046 = 64205.64 USDS; the Lender's own freePsmAssets() is 64205.193253000784236399 USDS, 0.447391317448413524 USDS lower, and it is what sell() pays. That gap is not rounding: previewRedeem and convertToAssets both returned 64205.640644318232649923 for the same 57608.760096683371289431 shares at the pin, so the difference is sUSDS appreciation that accruePsmProfit() has not yet recognised, because that booking runs only inside pullLocalReserves(), which would move the surplus into accruedLocalReserves (mintable to the operator) while raising freePsmAssets to the vault value. The two slices are 598247.04 and 64205.19, so 90.31% wstETH and 9.69% PSM; the weights move only by basis points as ETH and the sUSDS rate move. Conservation is exact: totalPaidDebt 351326.006993430199851968 plus totalFreeDebt 4561 plus freePsmAssets 64205.193253000784236399 equals totalSupply 420092.200246430984088367 to the wei, and accruedLocalReserves and accruedGlobalReserves are both zero, so no unminted fee obligation sits outside that identity. The same reads give 157.69% reserve cover of supply (662452.24 / 420092.20), 186.14% against total debt (355887.01) and 168.10% wstETH against that debt. The live monolith-lender adapter re-reads exactly these two holdings, the Lender's getCollateralPrice() oracle and its debt/supply counters in one block-pinned Multicall, so its published weights only move with ETH and the sUSDS rate. It publishes both ratios with explicit bases: collateralizationRatio is wstETH value over CDP debt (168.04% at the pin, 3 bp below the 168.10% above because the protocol oracle differs from the market Chainlink answer), and redemption capacity is the freePsmAssets PSM sell bound rather than a share of supply. The 157.69% cover of supply stays a reviewed figure because supply also includes the separately PSM-issued 64205.19, which the adapter reports as a second reserve slice and never as CDP debt. This review does not establish independent assurance, legal segregation or any bound beyond the same-run on-chain reads.",
+    "compositionBasis": "Same-block Ethereum reads at block 26299913: wstETH balance valued with stEthPerToken and the Chainlink ETH/USD answer, sUSDS balance valued with the vault convertToAssets rate and cross-checked against freePsmAssets; USD weights recomputed against the two-slice total",
+    "compositionAsOf": "2026-10-29",
+    "compositionSource": "live-adapter",
+    "scope": "full-composition",
+    "knownUnknownExposure": "Both reserve assets are identified and measured; there is no unclassified reserve row. The protocol-accounted backing roster is complete: collateral, psmAsset and psmVault are immutable constructor state, the verified Lender source transfers only those two tokens and its reserve-withdrawal functions mint the protocol's own coin rather than moving an arbitrary token. Arbitrary ERC-20 transfers to the Lender remain possible, but a stray token balance is not a protocol-accounted backing claim and adds no reserve row. Open items that are not reserve-composition gaps: no issuer proof-of-reserves or independent assurance exists; the wstETH price is market-marked; and the PSM sell leg is bounded by the Lender's freePsmAssets accounting and Sky sUSDS liquidity, so the reserve covers supply without proving that every holder can exit at par.",
+    "knownUnknownExposurePct": 0,
+    "nonLinkDispositions": []
+  },
+  "custodyProfile": {
+    "providers": [
+      {
+        "name": "Monolith Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15 (immutable, non-proxy)",
+        "role": "other",
+        "jurisdiction": "Ethereum"
+      }
+    ],
+    "segregation": "unknown",
+    "bankruptcyRemoteness": "unknown",
+    "rehypothecation": "unknown",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Claude swanUSD promotion 2026-10-29",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Pinned Lender identity and reserve reads at Ethereum block 26299913: collateral()=wstETH, psmVault()=sUSDS, wstETH and sUSDS balances held by the Lender itself",
+        "url": "https://etherscan.io/address/0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15#readContract"
+      },
+      {
+        "label": "Monolith Lender reference: collateral and PSM vault addresses are immutable constructor state",
+        "url": "https://docs.monolith.market/reference/Lender.md"
+      },
+      {
+        "label": "Monolith security and risk documentation, which does not name a custodian, legal wrapper or insolvency-remote structure",
+        "url": "https://docs.monolith.market/security/risks.md"
+      }
+    ],
+    "uncertainty": "Reserve assets sit in an immutable on-chain Lender contract rather than with a named custodian, so the on-chain holding is verified while every legal attribute is not: the reviewed sources establish no segregation, no bankruptcy remoteness and no rehypothecation terms, and there is no identifiable legal entity behind SwanDAO. The wstETH leg is additionally subject to Lido staking and withdrawal mechanics and the sUSDS leg to Sky Protocol's savings vault, but those are asset issuers rather than custodians of swanUSD reserves.",
+    "knownUnknownExposurePct": 100
+  }
+}

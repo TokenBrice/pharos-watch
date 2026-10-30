@@ -62,6 +62,17 @@ export interface BuildSafetyScoreV9SupplyReviewOptions {
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
 }
 
+/**
+ * One built supply review plus the census packet outcomes that travelled with
+ * it. The review is hashed into the fact extension, so a diagnostic cannot live
+ * inside it; returning them together keeps a rejection reason out of the
+ * published bytes without retaining any state after the build returns.
+ */
+export interface SafetyScoreV9SupplyAdmission {
+  readonly review: SupplyReview | null;
+  readonly censusDiagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[];
+}
+
 export type SafetyScoreV9NullSupplyReviewOutcomeState =
   | "missing-profile"
   | "ambiguous-route-join"
@@ -692,21 +703,6 @@ const EMPTY_DEPLOYMENT_CENSUS_ADMISSION: DeploymentSupplyCensusAdmission = {
   diagnostics: [],
 };
 
-// Admission outcomes travel beside the review object instead of inside it: the
-// supply review is hashed into the fact extension, so a diagnostic must not
-// change its bytes. `extension-bridge` reads them for `.pipeline`.
-const DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS = new WeakMap<
-  SupplyReview,
-  readonly V9DeploymentSupplyCensusDiagnosticV1[]
->();
-
-/** Census outcomes for a review built this run; empty when none were recorded. */
-export function deploymentSupplyCensusDiagnostics(
-  review: SupplyReview | null | undefined,
-): readonly V9DeploymentSupplyCensusDiagnosticV1[] {
-  return review == null ? [] : DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS.get(review) ?? [];
-}
-
 /**
  * Admits the fixed-input census packet (`safetyScoreV9DeploymentSupplyCensusById`)
  * as a reconciled per-deployment partition. Every bound must be current, carry
@@ -734,6 +730,19 @@ function admitDeploymentSupplyCensus(
     byChain: new Map(),
     diagnostics: sortDeploymentSupplyCensusDiagnostics(diagnostics),
   });
+  // F2: a packet is only evidence for the generation it was built against. An
+  // unbound map and a map captured under another registry or compiler base
+  // generation are rejected by name; neither may bound a row under this roster.
+  const binding = fixedInput.safetyScoreV9DeploymentSupplyCensusBinding;
+  if (binding === undefined) {
+    reject("generation-unbound");
+    return rejected();
+  }
+  if (binding.registryFingerprint !== fixedInput.registryFingerprint ||
+    binding.sourceBaseInputGenerationId !== fixedInput.baseInputGenerationId) {
+    reject("generation-mismatch");
+    return rejected();
+  }
   // R3: a bound carries its own clock. There is no carry-forward and no
   // re-dating, so a packet past the census observation window returns every
   // deployment to required on the next capture.
@@ -753,12 +762,18 @@ function admitDeploymentSupplyCensus(
     reject("conservation-breach");
     return rejected();
   }
+  // R4: the reason names the exact failed read. No usable aggregate
+  // denominator on this asset is an unavailable read, not a conservation
+  // mismatch: the packet's own conservation was checked above.
+  if (aggregateUsd === null || aggregateUsd <= 0) {
+    reject("read-unavailable");
+    return rejected();
+  }
   // The producer bounded each share against its own aggregate. Shares are only
   // comparable to this review's rows when both name the same denominator.
   const toleranceUsd = packet.conservation.absoluteToleranceUsd +
-    packet.conservation.relativeTolerance * Math.max(packet.conservation.aggregateSupplyUsd, aggregateUsd ?? 0);
-  if (aggregateUsd === null || aggregateUsd <= 0 ||
-    Math.abs(packet.conservation.aggregateSupplyUsd - aggregateUsd) > toleranceUsd) {
+    packet.conservation.relativeTolerance * Math.max(packet.conservation.aggregateSupplyUsd, aggregateUsd);
+  if (Math.abs(packet.conservation.aggregateSupplyUsd - aggregateUsd) > toleranceUsd) {
     reject("conservation-breach");
     return rejected();
   }
@@ -807,6 +822,33 @@ function sortDeploymentSupplyCensusDiagnostics(
 
 /**
  * Reconciles the exact captured per-chain circulating supply against the
+ * reviewed bridge-route rows and returns the census packet outcomes beside the
+ * review. A rejected packet never produces a review to carry its reasons, so
+ * callers that publish them read this one result instead of a module-level
+ * record keyed by asset; nothing outlives the request that built it.
+ */
+export function buildSafetyScoreV9SupplyAdmission(
+  fixedInput: Readonly<SafetyScoreV9CompilerInput>,
+  assetId: string,
+  profile: BridgeRouteRiskProfile | undefined,
+  options: BuildSafetyScoreV9SupplyReviewOptions = {},
+): SafetyScoreV9SupplyAdmission {
+  const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
+  if (quarantine) throw quarantine;
+  const census = admitDeploymentSupplyCensus(
+    fixedInput,
+    assetId,
+    profile,
+    getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {}),
+  );
+  return {
+    review: buildSupplyReview(fixedInput, assetId, profile, options, census),
+    censusDiagnostics: census.diagnostics,
+  };
+}
+
+/**
+ * Reconciles the exact captured per-chain circulating supply against the
  * reviewed bridge-route rows. A reviewed native-only chain can be attributed
  * without a within-chain share-class split; other non-unique joins stay unknown.
  */
@@ -816,19 +858,7 @@ export function buildSafetyScoreV9SupplyReview(
   profile: BridgeRouteRiskProfile | undefined,
   options: BuildSafetyScoreV9SupplyReviewOptions = {},
 ): SupplyReview | null {
-  const quarantine = REVIEWED_ECONOMIC_SUPPLY_PLAN_QUARANTINES.get(assetId);
-  if (quarantine) throw quarantine;
-  const census = admitDeploymentSupplyCensus(
-    fixedInput,
-    assetId,
-    profile,
-    getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {}),
-  );
-  const review = buildSupplyReview(fixedInput, assetId, profile, options, census);
-  if (review !== null && census.diagnostics.length > 0) {
-    DEPLOYMENT_SUPPLY_CENSUS_DIAGNOSTICS.set(review, census.diagnostics);
-  }
-  return review;
+  return buildSafetyScoreV9SupplyAdmission(fixedInput, assetId, profile, options).review;
 }
 
 function buildSupplyReview(
@@ -894,7 +924,7 @@ function buildSupplyReview(
   // rejected dedicated census must not certify its original positive subtotal.
   // An admitted deployment census is itself exhaustive (conserved, complete
   // roster, same aggregate), so it supplies its own denominator.
-  const aggregateUsd = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById[assetId] ?? {});
+  const aggregateUsd = getCirculatingRawOrNull(fixedInput.aggregateCirculatingById?.[assetId] ?? {});
   const censusAdmitted = census.byChain.size > 0;
   const totalUsd = censusAdmitted || requiresExhaustiveProviderSupply
     ? aggregateUsd

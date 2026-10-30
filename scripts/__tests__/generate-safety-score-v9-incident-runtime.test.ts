@@ -1,16 +1,16 @@
 import { describe, expect, it } from "vitest";
 import source from "../../shared/data/safety-score-v9/incident-reviews-v1.json";
 import {
+  fanOutProviderIncidentReview,
   isProviderReview,
-  projectIncidentReviews,
   projectNegativeIncidentReview,
-  projectProviderIncidentReview,
   V9AttributedNegativeIncidentReviewSchema,
 } from "../lib/safety-score-v9-incident-runtime";
 import { readFileSync } from "node:fs";
 import { buildIncidentRuntime } from "../build-data/generate-safety-score-v9-incident-runtime";
 import { expandReviewedRegistryReferences } from "../../shared/lib/safety-score-v9/reviewed-registry";
 import {
+  V9AuthoredIncidentRegistryEnvelopeSchema,
   V9ProviderIncidentReviewSchema,
   V9RetirableNegativeIncidentReviewSchema,
 } from "../../shared/types/safety-score-v9-incidents";
@@ -233,8 +233,9 @@ describe("incident runtime projection", () => {
     expect(retired.retired).toEqual({ reviewedAt: "2026-10-08", reviewer: "Fixture reviewer", reason: "Lane re-authored" });
   });
 
-  it("fans a provider-wide review out to one row per covered asset", () => {
-    const rows = projectProviderIncidentReview(withEvidence(providerRow()));
+  it("fans a provider-wide review out to one row per covered asset before expansion", () => {
+    expect(providerRow()).not.toHaveProperty("assetId");
+    const rows = fanOutProviderIncidentReview(providerRow());
     expect(rows.map((row) => row.assetId)).toEqual([ASSET_B, ASSET_A]);
     expect(rows.map((row) => row.reviewId)).toEqual(["provider:layerzero:fixture", "provider:layerzero:fixture"]);
     expect(rows[0]!.scope).toEqual({ kind: "provider", providerKey: "layerzero", surface: "dvn-set",
@@ -249,31 +250,38 @@ describe("incident runtime projection", () => {
     expect(rows[1]!.laneScreeningRefs).toEqual([
       { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
     ]);
-    expect(rows[0]).not.toHaveProperty("retired");
+    expect(rows[0]).not.toHaveProperty("sources");
 
-    expect(projectIncidentReviews(withEvidence(providerRow()))).toHaveLength(2);
+    const runtime = buildIncidentRuntime(referencedEnvelope([providerRow()]));
+    expect(runtime.negativeReviews.map((row) => `${row.assetId}\u0000${row.reviewId}`)).toEqual([
+      `${ASSET_B}\u0000provider:layerzero:fixture`,
+      `${ASSET_A}\u0000provider:layerzero:fixture`,
+    ]);
+    expect(runtime.negativeReviews.every((row) => row.sources.length > 0)).toBe(true);
     // A provider-wide row is not an attributed row; it never projects as one.
     expect(() => projectNegativeIncidentReview(withEvidence(providerRow()))).toThrow();
   });
 
   it("fails closed on provider coverage it cannot witness", () => {
-    const withoutRefs: Record<string, unknown> = withEvidence(providerRow());
+    const withoutRefs: Record<string, unknown> = { ...providerRow() };
     delete withoutRefs.laneScreeningRefs;
-    expect(() => projectProviderIncidentReview(withoutRefs)).toThrow();
+    expect(() => fanOutProviderIncidentReview(withoutRefs)).toThrow();
 
-    expect(() => projectProviderIncidentReview(withEvidence(providerRow({
+    expect(() => buildIncidentRuntime(referencedEnvelope([providerRow({
       laneScreeningRefs: [{ assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" }],
-    })))).toThrow(/requires a lane screening certificate reference/);
-    expect(() => projectProviderIncidentReview(withEvidence(providerRow({
+    })]))).toThrow(/requires a lane screening certificate reference/);
+    expect(() => buildIncidentRuntime(referencedEnvelope([providerRow({
       laneScreeningRefs: [
         { assetId: ASSET_B, routeId: ROUTE_BASE, certificateId: "cert:base" },
         { assetId: ASSET_A, routeId: ROUTE_ETH, certificateId: "cert:eth" },
         { assetId: ASSET_A, routeId: "polygon:0x3333333333333333333333333333333333333333", certificateId: "cert:extra" },
       ],
-    })))).toThrow(/only name covered routes/);
-    expect(() => projectProviderIncidentReview(withEvidence(providerRow({
+    })]))).toThrow(/only name covered routes/);
+    expect(() => fanOutProviderIncidentReview(providerRow({
       scope: providerScope({ coveredControls: [{ assetId: "fixture-third", controlId: "x-dvn" }] }),
-    })))).toThrow(/must belong to a covered asset/);
+    }))).toThrow(/must resolve to its covered assets/);
+    expect(() => buildIncidentRuntime(referencedEnvelope([{ ...providerRow(), assetId: ASSET_A }])))
+      .toThrow(/must not name an asset/);
   });
 
   it("rejects a digest-stored or incomplete authored control identity", () => {
@@ -281,9 +289,9 @@ describe("incident runtime projection", () => {
       .toThrow(/requires controlId or controlIds/);
     expect(() => projectNegativeIncidentReview(withEvidence(negativeReview(
       { kind: "control", routeId: ROUTE_ETH, controlId: "*", controlKey: "mint-meta:fixture-vault:54" })))).toThrow();
-    expect(() => projectProviderIncidentReview(withEvidence(providerRow({
+    expect(() => fanOutProviderIncidentReview(providerRow({
       scope: providerScope({ providerKey: "stargate" }),
-    })))).toThrow();
+    }))).toThrow();
   });
 
   it("keeps the build identity independent of authored identity-array order", () => {
@@ -318,17 +326,22 @@ describe("incident runtime projection", () => {
 
   it("reproduces the build identity from the admitted schemas for every record kind", () => {
     const envelope = referencedEnvelope([providerRow(), authoredRow(), issuerRow()]);
-    const expandedRows = expandReviewedRegistryReferences(envelope, "negativeReviews", {
+    const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(envelope);
+    const fannedRows = authored.negativeReviews.flatMap((row) =>
+      isProviderReview(row) ? fanOutProviderIncidentReview(row) : [row]);
+    const expandedRows = expandReviewedRegistryReferences({ ...authored, negativeReviews: fannedRows }, "negativeReviews", {
       sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-    }, isProviderReview).negativeReviews as Record<string, unknown>[];
+    }).negativeReviews as Record<string, unknown>[];
     const expected = {
       schemaVersion: 1,
       incidents: [],
-      negativeReviews: expandedRows
-        .map((row) => isProviderReview(row)
-          ? V9ProviderIncidentReviewSchema.parse(row)
-          : V9AttributedNegativeIncidentReviewSchema.parse(row))
-        .sort((left, right) => left.reviewId < right.reviewId ? -1 : left.reviewId > right.reviewId ? 1 : 0),
+      negativeReviews: expandedRows.map((row) => {
+        if (!isProviderReview(row)) return V9AttributedNegativeIncidentReviewSchema.parse(row);
+        const authoredProvider = { ...row };
+        delete authoredProvider.assetId;
+        // The digest covers the fanned registry, so the fan-out attribution is part of it.
+        return { ...V9ProviderIncidentReviewSchema.parse(authoredProvider), assetId: row.assetId };
+      }).sort((left, right) => left.reviewId < right.reviewId ? -1 : left.reviewId > right.reviewId ? 1 : 0),
     };
     expect(buildIncidentRuntime(envelope).digest)
       .toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.incident-reviews.v1", payload: expected })));

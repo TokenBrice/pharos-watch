@@ -139,8 +139,7 @@
         "observedBlock": 453074463,
         "executionScope": {
           "controllerDeployment": "solana:9ECeczLtFZDYE3NX6G7uNw5BUGjoJAu1kFyEihA5hMaM",
-          "reviewedAt": "2026-10-21", "observedAt": "2026-10-21", "expiresAt": "2026-11-20",
-          "reviewer": "NR3 exact source and archived permission census",
+          "reviewedAt": "2026-10-29", "observedAt": "2026-10-29", "expiresAt": "2026-11-28",
           "confidence": "partial",
           "sources": [
             {"label": "Exact immutable Squads completed source build; vendor requester trust is separately false", "url": "https://verify.osec.io/job/80f5742f-fdcb-4a6d-b8b4-aa6aeda0d824"},
@@ -148,8 +147,9 @@
             {"label": "Exact Squads permission, configuration, batch and spending-limit source", "url": "https://github.com/Squads-Protocol/v4/tree/2a47b4cc76068fb8accec3d5a599e6020c50f796/programs/squads_multisig_program/src"},
             {"label": "Exact archive slot459474170; current finalized discovery censuses retained separately", "url": "https://solana-mainnet.g.alchemy.com/v2/"}
           ],
-          "pin": {"position": "459474170", "hash": "2m9schg65a7aBNYZnF1Ev4YXChmwE6MXTpJp2wdkbqpE", "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0", "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:sha256:6ad9189de58cef9b4124be027db8cca9790f5e70ab0c4c3c5446b49cb27c085e"},
-          "observedState": {"position": "459474170", "hash": "2m9schg65a7aBNYZnF1Ev4YXChmwE6MXTpJp2wdkbqpE", "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0", "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:sha256:6ad9189de58cef9b4124be027db8cca9790f5e70ab0c4c3c5446b49cb27c085e"},
+          "pin": {"position": "462975000", "hash": "Ai81oVb3rPaijq6riGzV1Bjg1FizhU5iR82fazYjt3k5", "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0", "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:4-of-7:permissions=7:timelockSec=7200:configAuthority=none"},
+          "observedState": {"position": "462975000", "hash": "Ai81oVb3rPaijq6riGzV1Bjg1FizhU5iR82fazYjt3k5", "runtimeIdentity": "squads-v4:sha256:d48660833989ecea3145ff726164fe640bd90696f03ce00dfd0cda258cbf2fac;gm:sha256:dc49355e579318b7e33e1ded2bec04a22853177a5acecd35fdd304d9b2b22ec8;vault:0", "signerIdentity": "multisig:EfMUASGwCsPBafiPi8rwdZfUJSUt7pxAoxayR39PVpMr:4-of-7:permissions=7:timelockSec=7200:configAuthority=none"},
+          "reviewer": "R-MINT-6 renewal 2026-10-29",
           "inventory": "partial",
           "closure": {"entrypoints": true, "mutableTargets": false, "delegateAndFallback": true, "permissions": true, "upgrades": true, "bypasses": true, "liabilityInventory": false},
           "paths": [

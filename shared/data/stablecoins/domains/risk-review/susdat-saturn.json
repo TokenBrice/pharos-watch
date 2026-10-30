@@ -5,9 +5,18 @@
     "reviewedAt": "2026-10-15",
     "reviewer": "Rev_SusdatSaturn batch64 primary-source review",
     "sources": [
-      { "label": "Verified deployed StakedUSDat blacklist/enforcement source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a" },
-      { "label": "SaturnOFT representation restrictions and recovery", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" },
-      { "label": "Saturn terms explicitly name sUSDat seizure", "url": "https://saturn.credit/legal/terms-conditions" }
+      {
+        "label": "Verified deployed StakedUSDat blacklist/enforcement source",
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x2b7074cf6681382b70e239063931ebe83c0f4e0a"
+      },
+      {
+        "label": "SaturnOFT representation restrictions and recovery",
+        "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+      },
+      {
+        "label": "Saturn terms explicitly name sUSDat seizure",
+        "url": "https://saturn.credit/legal/terms-conditions"
+      }
     ],
     "evidence": "At Ethereum block 26197300 (2026-10-15T10:25:11Z), implementation remained 0x2b7074cf6681382b70e239063931ebe83c0f4e0a and hasRole confirmed BLACKLISTER_ROLE at 0xf5a93281ac8604f99755cc489317e75ac334cfe2 and ENFORCER_ROLE at 0x6f72de4f529a03bfa883825152656a8c62cbb626. Verified native code checks local blacklisting and inherited USDat freezes, with seize moving locally blacklisted holders' shares to recoveryAddress. Saturn terms section 9 acknowledges seizure in USDat and sUSDat. Historical BNB and Monad SaturnOFT observations retain restricted transfers and DEFAULT_ADMIN_ROLE recoverFunds; allowlistMode() was 1 at blocks 125385350 and 110032586. Direct holder-control powers establish this verdict independently of mint roles or centralized governance."
   },
@@ -200,9 +209,18 @@
     "reviewer": "Rev_SusdatSaturn batch64 primary-source review",
     "confidence": "manual-review",
     "sources": [
-      { "label": "Chainlink exact sUSDat directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
-      { "label": "Saturn official token addresses", "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md" },
-      { "label": "Saturn representation role-gated mint/burn and recovery source", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" }
+      {
+        "label": "Chainlink exact sUSDat directory",
+        "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+      },
+      {
+        "label": "Saturn official token addresses",
+        "url": "https://saturncredit.gitbook.io/saturn-docs/operations-and-governance/key-addresses.md"
+      },
+      {
+        "label": "Saturn representation role-gated mint/burn and recovery source",
+        "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+      }
     ],
     "routes": [
       {
@@ -221,8 +239,14 @@
         "observedBlock": 26197300,
         "reviewNote": "At block 26197300 (2026-10-15T10:25:11Z), asset() remained USDat and decimals() 18. Exact CCIP pool 0xf3fc7fde5081192177f38895e57a1489e4bd56f2 remains LockReleaseTokenPool 1.6.1 with owner 0x44835bbba9d40deda9b64858095ecfb2693c9449. Current selectors, peers and mutable buckets are re-observed; escrow is a bridge custody rail, not another native issuer.",
         "sources": [
-          { "label": "Official sUSDat CCIP home pool", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
-          { "label": "Ethereum observation block", "url": "https://etherscan.io/block/26108096" }
+          {
+            "label": "Official sUSDat CCIP home pool",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "Ethereum observation block",
+            "url": "https://etherscan.io/block/26108096"
+          }
         ]
       },
       {
@@ -244,8 +268,14 @@
         "observedBlock": 127775019,
         "reviewNote": "At BNB block 127775019 (2026-10-15T11:01:26Z), getToken() and 18-decimal sUSDat identity match this deployment. Complete getRoleMembers confirms the exact pool as sole MINTER_ROLE/BURNER_ROLE; pool type is BurnWithFromMintTokenPool 1.6.1. Token name is Staked Saturn USD, symbol sUSDat, and allowlistMode is 1. Peer and rate-limit inventory is independently refreshed at the same pin; these are represented vault shares, not additional native issuance.",
         "sources": [
-          { "label": "Official exact sUSDat BNB pool", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
-          { "label": "BNB sUSDat representation", "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" }
+          {
+            "label": "Official exact sUSDat BNB pool",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "BNB sUSDat representation",
+            "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+          }
         ]
       },
       {
@@ -267,8 +297,14 @@
         "observedBlock": 113595955,
         "reviewNote": "At Monad block 113595955 (2026-10-15T11:01:43Z), getToken() and 18-decimal sUSDat identity match this deployment. Complete getRoleMembers confirms the exact pool as sole MINTER_ROLE/BURNER_ROLE; pool type is BurnWithFromMintTokenPool 1.6.1. Token name is Staked Saturn USD, symbol sUSDat, and allowlistMode is 1. Current peers and rate limits are refreshed at the same pin; upstream owner signing and validator closure remain unresolved.",
         "sources": [
-          { "label": "Official exact sUSDat Monad pool", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
-          { "label": "Monad sUSDat representation", "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" }
+          {
+            "label": "Official exact sUSDat Monad pool",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "Monad sUSDat representation",
+            "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+          }
         ]
       }
     ],
@@ -276,8 +312,15 @@
       {
         "id": "susdat-ethereum-ccip-lockbox",
         "label": "sUSDat Ethereum CCIP lock/release pool",
-        "routeRefs": ["ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"],
-        "capabilities": ["escrow", "peer-config", "rate-limit", "admin"],
+        "routeRefs": [
+          "ethereum:0xd166337499e176bbc38a1fbd113ab144e5bd2df7"
+        ],
+        "capabilities": [
+          "escrow",
+          "peer-config",
+          "rate-limit",
+          "admin"
+        ],
         "controllerChain": "ethereum",
         "controllerAddress": "0xf3fc7fde5081192177f38895e57a1489e4bd56f2",
         "authorityType": "contract",
@@ -291,17 +334,34 @@
         "observedAt": "2026-10-11",
         "observedBlock": 26155000,
         "sources": [
-          { "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
-          { "label": "Verified exact LockRelease pool and TokenPool authority source", "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3fc7fde5081192177f38895e57a1489e4bd56f2" },
-          { "label": "Pinned Ethereum RPC", "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com" }
+          {
+            "label": "Exact sUSDat CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "Verified exact LockRelease pool and TokenPool authority source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3fc7fde5081192177f38895e57a1489e4bd56f2"
+          },
+          {
+            "label": "Pinned Ethereum RPC",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          }
         ],
         "evidence": "Sol curation campaign 2026-10-11 (C13USDat), observed 2026-10-11T00:52:03.715Z and peer/bucket batch on the same hash pin: Ethereum block 26155000, hash 0x66b0949c52520c504b6f19d8d7924c3f0ad9eafa82828f22ba34cb759192e5aa, timestamp 2026-10-09T12:57:47Z. getToken() returned native sUSDat and typeAndVersion() returned LockReleaseTokenPool 1.6.1. Current peer and mutable bucket facts are known; the complete owner/validator execution census and historical pending accounting are not claimed."
       },
       {
         "id": "susdat-bsc-ccip-pool",
         "label": "sUSDat BNB CCIP representation mint/burn pool",
-        "routeRefs": ["bsc:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
-        "capabilities": ["bridge-mint", "bridge-burn", "peer-config", "rate-limit", "admin"],
+        "routeRefs": [
+          "bsc:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config",
+          "rate-limit",
+          "admin"
+        ],
         "controllerChain": "bsc",
         "controllerAddress": "0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c",
         "authorityType": "contract",
@@ -314,16 +374,30 @@
         "observedAt": "2026-10-11",
         "observedBlock": 126925693,
         "sources": [
-          { "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
-          { "label": "Pinned BNB RPC", "url": "https://bnb-mainnet.g.alchemy.com/v2/" }
+          {
+            "label": "Exact sUSDat CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "Pinned BNB RPC",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          }
         ],
         "evidence": "Sol curation campaign 2026-10-11 (C13USDat): successful separate token, pool and peer batches at BNB block 126925693, hash 0xfc5168b34cf05860069c0aedcb5bb85b35fc806c1f9a49874464f2a4610c201c, timestamp 2026-10-11T00:43:01Z. Token census observed 2026-10-11T00:50:57.284Z; pool batch observed 2026-10-11T00:52:06.621Z. getToken() returned the exact representation and typeAndVersion() was BurnWithFromMintTokenPool 1.6.1. Local sole-mint/burn role and complete current peer/bucket inventories are known; no whole controller, incident-history or pending-message closure is claimed."
       },
       {
         "id": "susdat-monad-ccip-pool",
         "label": "sUSDat Monad CCIP representation mint/burn pool",
-        "routeRefs": ["monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
-        "capabilities": ["bridge-mint", "bridge-burn", "peer-config", "rate-limit", "admin"],
+        "routeRefs": [
+          "monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+        ],
+        "capabilities": [
+          "bridge-mint",
+          "bridge-burn",
+          "peer-config",
+          "rate-limit",
+          "admin"
+        ],
         "controllerChain": "monad",
         "controllerAddress": "0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e",
         "authorityType": "contract",
@@ -336,17 +410,31 @@
         "observedAt": "2026-10-11",
         "observedBlock": 112328913,
         "sources": [
-          { "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" },
-          { "label": "Verified exact Monad representation source", "url": "https://sourcify.dev/server/v2/contract/143/0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c?fields=abi,sources" },
-          { "label": "Pinned Monad RPC", "url": "https://api-monad-mainnet-full.n.dwellir.com" }
+          {
+            "label": "Exact sUSDat CCIP directory",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "Verified exact Monad representation source",
+            "url": "https://sourcify.dev/server/v2/contract/143/0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c?fields=abi,sources"
+          },
+          {
+            "label": "Pinned Monad RPC",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
         ],
         "evidence": "Sol curation campaign 2026-10-11 (C13USDat): successful separate token, pool and peer batches at Monad block 112328913, hash 0x316684406b5ca79b106600a5f39c58a75141dbe8495d71eafdbe0043fd9c339b, timestamp 2026-10-11T00:45:29Z. Token census observed 2026-10-11T00:51:00.751Z. getToken() returned the exact representation and typeAndVersion() was BurnWithFromMintTokenPool 1.6.1. Current sole-mint/burn and complete peer/bucket facts do not establish full upstream signing, bypass, validator or pending-history closure."
       },
       {
         "id": "susdat-bsc-representation-admin",
         "label": "sUSDat BNB two-day representation admin timelock",
-        "routeRefs": ["bsc:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
-        "capabilities": ["upgrade", "admin"],
+        "routeRefs": [
+          "bsc:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
         "controllerChain": "bsc",
         "controllerAddress": "0xf0237a1cb794ea830129966049ef99243082ff0c",
         "authorityType": "timelock",
@@ -355,18 +443,35 @@
         "observedAt": "2026-10-11",
         "observedBlock": 126925693,
         "sources": [
-          { "label": "Saturn representation source", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" },
-          { "label": "BNB representation proxy", "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" },
-          { "label": "Pinned BNB role and ProxyAdmin owner census", "url": "https://bnb-mainnet.g.alchemy.com/v2/" },
-          { "label": "Verified non-enumerable SaturnTimelock source", "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources" }
+          {
+            "label": "Saturn representation source",
+            "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+          },
+          {
+            "label": "BNB representation proxy",
+            "url": "https://bscscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+          },
+          {
+            "label": "Pinned BNB role and ProxyAdmin owner census",
+            "url": "https://bnb-mainnet.g.alchemy.com/v2/"
+          },
+          {
+            "label": "Verified non-enumerable SaturnTimelock source",
+            "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources"
+          }
         ],
         "evidence": "Sol curation campaign 2026-10-11 (C13USDat), BNB block 126925693 (2026-10-11T00:43:01Z), token census observed 2026-10-11T00:50:57.284Z. The EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e; owner() is this timelock and getMinDelay() is 172800. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = CCIP pool 0xe2f5aeff1c065fac95e7f48ba854470d41b66b7c; sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548. pendingDefaultAdmin() was zero, isPaused() false and allowlistMode() 1 (blacklist). The two direct pause/list accounts each had code 0x and nonce 0; their signing custody or counterfactual status is not inferred. SaturnTimelock inherits non-enumerable AccessControl, so full current proposer/executor/canceller membership still requires authenticated complete grant/revoke history; the reverted getRoleMembers batch is not evidence of absent roles."
       },
       {
         "id": "susdat-monad-representation-admin",
         "label": "sUSDat Monad two-day representation admin timelock",
-        "routeRefs": ["monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"],
-        "capabilities": ["upgrade", "admin"],
+        "routeRefs": [
+          "monad:0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+        ],
+        "capabilities": [
+          "upgrade",
+          "admin"
+        ],
         "controllerChain": "monad",
         "controllerAddress": "0xf0237a1cb794ea830129966049ef99243082ff0c",
         "authorityType": "timelock",
@@ -375,11 +480,26 @@
         "observedAt": "2026-10-11",
         "observedBlock": 112328913,
         "sources": [
-          { "label": "Saturn representation source", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" },
-          { "label": "Monad representation proxy", "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25" },
-          { "label": "Verified exact Monad representation source", "url": "https://sourcify.dev/server/v2/contract/143/0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c?fields=abi,sources" },
-          { "label": "Verified non-enumerable SaturnTimelock source", "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources" },
-          { "label": "Pinned Monad role and ProxyAdmin owner census", "url": "https://api-monad-mainnet-full.n.dwellir.com" }
+          {
+            "label": "Saturn representation source",
+            "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+          },
+          {
+            "label": "Monad representation proxy",
+            "url": "https://monadscan.com/address/0x9cd57d3685e6868cacaa8bdcaaf52cbdebf4fa25"
+          },
+          {
+            "label": "Verified exact Monad representation source",
+            "url": "https://sourcify.dev/server/v2/contract/143/0x6a79bfb5849fd54bcbda3613fc8c064a9c1ee27c?fields=abi,sources"
+          },
+          {
+            "label": "Verified non-enumerable SaturnTimelock source",
+            "url": "https://sourcify.dev/server/v2/contract/143/0xf0237a1cb794ea830129966049ef99243082ff0c?fields=abi,sources"
+          },
+          {
+            "label": "Pinned Monad role and ProxyAdmin owner census",
+            "url": "https://api-monad-mainnet-full.n.dwellir.com"
+          }
         ],
         "evidence": "Sol curation campaign 2026-10-11 (C13USDat), Monad block 112328913 (2026-10-11T00:45:29Z), token census observed 2026-10-11T00:51:00.751Z. The EIP-1967 admin is ProxyAdmin 0x158828e0476f6e52bdcb35f7c141b19ce9455f8e; owner() is this timelock and getMinDelay() is 172800. Complete token getRoleMembers() returned sole DEFAULT_ADMIN_ROLE and UNPAUSER_ROLE = timelock; sole MINTER_ROLE/BURNER_ROLE = pool 0x2768f0d350ac6876e5d056317ccf394ecd5d7c5e; sole PAUSER_ROLE = 0x5f6a8e6a616a1b7da3fd178357a0517033a81edd; sole BLACKLISTER_ROLE/WHITELISTER_ROLE = 0x39b340a2f4794241d08a0e9dd4d8a4c331599548. pendingDefaultAdmin() was zero, isPaused() false and allowlistMode() 1 (blacklist). The two direct pause/list accounts each had code 0x and nonce 0, which does not prove EOA signing custody or the absence of counterfactual contracts. Non-enumerable timelock proposer/executor/canceller history and full bypass closure remain unresolved."
       }
@@ -389,25 +509,60 @@
         "controlRef": "susdat-ethereum-ccip-lockbox",
         "question": "What complete upstream owner-execution and validator inventory constrains the canonical sUSDat escrow and both representation pools? Exact current peers, rate limits and token mint/burn roles are now enumerated; those inventories do not close upstream signing or bypass scope.",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-03",
-        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-        "sources": [{ "label": "Exact sUSDat CCIP directory", "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat" }]
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
+        "sources": [
+          {
+            "label": "ethereum block 26300237, 2026-10-29T18:37:11Z: LockRelease pool owner()=0x44835bbba9d40deda9b64858095ecfb2693c9449 (unchanged); re-read 2026-10-29",
+            "url": "https://api-ethereum-mainnet-erigon.n.dwellir.com"
+          },
+          {
+            "label": "Chainlink CCIP sUSDat directory accessed 2026-10-29: three networks and pools unchanged (Ethereum LockRelease 0xf3fc..56f2, BNB BurnMint 0xe2f5..6B7c, Monad BurnMint 0x2768..7C5E); no owner/validator/signer census published",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          }
+        ]
       },
       {
         "controlRef": "susdat-bsc-representation-admin",
         "question": "What is the complete current destination admin/proposer/executor census, including alternate representation mint authorities and emergency bypasses?",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-03",
-        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-        "sources": [{ "label": "Representation source and admin roles", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" }]
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
+        "sources": [
+          {
+            "label": "bsc block 130521910, 2026-10-29T18:34:11Z: representation ProxyAdmin owner()=0xf0237a1cb794ea830129966049ef99243082ff0c and pool owner()=0x950350b073956bd1d22bb1c18c4d45263b5aa3a5 (unchanged); re-read 2026-10-29",
+            "url": "https://bsc-dataseed.binance.org"
+          },
+          {
+            "label": "Chainlink CCIP sUSDat directory accessed 2026-10-29: three networks and pools unchanged (Ethereum LockRelease 0xf3fc..56f2, BNB BurnMint 0xe2f5..6B7c, Monad BurnMint 0x2768..7C5E); no owner/validator/signer census published",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "Representation source and admin roles",
+            "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+          }
+        ]
       },
       {
         "controlRef": "susdat-monad-representation-admin",
         "question": "What is the complete current Monad admin/proposer/executor census, including alternate representation mint authorities and emergency bypasses?",
         "subject": "execution-scope",
-        "reviewedAt": "2026-10-03",
-        "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
-        "sources": [{ "label": "Representation source and admin roles", "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol" }]
+        "reviewedAt": "2026-10-29",
+        "reviewer": "R-SCOPE-1 renewal 2026-10-29 (pinned primary-source re-read)",
+        "sources": [
+          {
+            "label": "monad block 117670523, 2026-10-29T17:21:53Z: representation ProxyAdmin owner()=0xf0237a1cb794ea830129966049ef99243082ff0c and pool owner()=0x0c43bb1a15a1ff1cbddff2b8f9518c1b0d3b17e2 (unchanged); re-read 2026-10-29",
+            "url": "https://rpc.monad.xyz"
+          },
+          {
+            "label": "Chainlink CCIP sUSDat directory accessed 2026-10-29: three networks and pools unchanged (Ethereum LockRelease 0xf3fc..56f2, BNB BurnMint 0xe2f5..6B7c, Monad BurnMint 0x2768..7C5E); no owner/validator/signer census published",
+            "url": "https://docs.chain.link/ccip/directory/mainnet/token/sUSDat"
+          },
+          {
+            "label": "Representation source and admin roles",
+            "url": "https://raw.githubusercontent.com/saturn-organization/evm-contracts-monorepo/main/contracts/evm/SaturnOFT.sol"
+          }
+        ]
       }
     ]
   }

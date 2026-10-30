@@ -591,7 +591,7 @@ function policyWithDocumentation(documentation: unknown): unknown {
 }
 
 describe("documentation-class policy", () => {
-  it("authors the block while the schema keeps it optional for earlier policies", () => {
+  it("authors the block and binds it into the digest, while earlier policies may omit it", () => {
     expect(V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation).toEqual(documentationFixture());
     const loaded = loadV9MethodologyPolicy(policyWithDocumentation(documentationFixture()));
     expect(loaded.policy.semantic.evidence.documentation).toEqual(documentationFixture());

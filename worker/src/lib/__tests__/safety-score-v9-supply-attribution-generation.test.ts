@@ -15,6 +15,11 @@ import {
   type ReportCardsFixedInput,
 } from "../report-cards-fixed-input";
 import {
+  SafetyScoreV9DeploymentSupplyCensusSchema,
+  type SafetyScoreV9DeploymentSupplyCensus,
+} from "@shared/types/safety-score-v9-deployment-supply-census";
+import { deriveNativeV9BaseInputGenerationId } from "../safety-score-v9/native-input";
+import {
   deriveReviewedDeploymentUnitPartition,
   CENTRIFUGE_BURN_MINT_ASSET_IDS,
   REVIEWED_ECONOMIC_SUPPLY_PLANS,
@@ -152,6 +157,43 @@ function createAcceptedGenerationFromFixture(
       attributionById: { "xaut-tether": fixture.attribution },
       journalRecords: [journal],
     },
+  });
+}
+
+function censusPacket(clockSec: number): SafetyScoreV9DeploymentSupplyCensus {
+  return SafetyScoreV9DeploymentSupplyCensusSchema.parse({
+    model: "deployment-supply-census-v1",
+    observedAtSec: clockSec,
+    deployments: [{
+      routeId: "ethereum:0x0000000000000000000000000000000000000001",
+      chainId: "ethereum",
+      tokenAddress: "0x0000000000000000000000000000000000000001",
+      readKind: "evm-total-supply",
+      pin: {
+        kind: "evm-header",
+        blockNumber: 1,
+        blockHash: `0x${"1".repeat(64)}`,
+        blockTimeSec: clockSec - 120,
+        runtimeCodeSha256: "2".repeat(64),
+      },
+      decimals: 6,
+      totalSupplyRaw: "100000000",
+      referencePriceUsd: 1,
+      referencePriceObservedAtSec: clockSec - 60,
+      supplyUsdUpper: 100,
+      shareUpper: 1,
+      evidenceKind: "upper-bound",
+    }],
+    conservation: {
+      aggregateSupplyUsd: 100,
+      measuredSupplyUsd: 100,
+      measuredShareSum: 1,
+      relativeTolerance: 1e-12,
+      absoluteToleranceUsd: 0.000001,
+      rosterComplete: true,
+      conserved: true,
+    },
+    rejected: [],
   });
 }
 
@@ -1490,5 +1532,104 @@ describe("isolated Safety Score V9 supply attribution generation", () => {
         },
       }),
     ).toThrow(/journal outcome mismatch/);
+  });
+
+  it("carries the census projection and its binding onto the applied fixed input without moving the base generation", () => {
+    const fixture = fixtures.acceptedFixture;
+    const packet = censusPacket(fixture.fixedInput.clockSec);
+    const binding = {
+      generationId: "safety-score-v9-deployment-supply-census:v1:fixture",
+      registryFingerprint: fixture.fixedInput.registryFingerprint,
+      sourceBaseInputGenerationId: fixture.fixedInput.baseInputGenerationId,
+    };
+    const generation = createSafetyScoreV9SupplyAttributionGeneration({
+      fixedInput: fixture.fixedInput,
+      capturedAtSec: fixture.completedAtSec,
+      capture: {
+        captureClockSec: fixture.fixedInput.clockSec,
+        expectedAssetIds: ["xaut-tether"],
+        attributionById: { "xaut-tether": fixture.attribution },
+        journalRecords: [createSupplyAttributionJournalV1(fixture.journalPayload)],
+      },
+      deploymentSupplyCensus: { byId: { "xaut-tether": packet }, binding },
+    });
+    expect(
+      parseSafetyScoreV9SupplyAttributionGeneration(
+        serializeSafetyScoreV9SupplyAttributionGeneration(generation),
+      ).deploymentSupplyCensusById,
+    ).toEqual({ "xaut-tether": packet });
+
+    const application = applySafetyScoreV9SupplyAttributionGeneration(
+      withClockAndAggregate(fixture.fixedInput, SOURCE_CLOCK_SEC + 300, SOURCE_AGGREGATE_USD),
+      generation,
+    );
+    expect(application.status).toBe("applied");
+    expect(application.fixedInput.safetyScoreV9DeploymentSupplyCensusById)
+      .toEqual({ "xaut-tether": packet });
+    expect(application.fixedInput.safetyScoreV9DeploymentSupplyCensusBinding)
+      .toEqual(binding);
+    // The census is accepted enrichment: it rides on the input but never moves
+    // the base-input identity the generation is bound to.
+    expect(deriveNativeV9BaseInputGenerationId({
+      ...fixture.fixedInput,
+      safetyScoreV9DeploymentSupplyCensusById: { "xaut-tether": packet },
+      safetyScoreV9DeploymentSupplyCensusBinding: binding,
+    } as never)).toBe(deriveNativeV9BaseInputGenerationId(fixture.fixedInput as never));
+
+    const withoutCensus = createSafetyScoreV9SupplyAttributionGeneration({
+      fixedInput: fixture.fixedInput,
+      capturedAtSec: fixture.completedAtSec,
+      capture: {
+        captureClockSec: fixture.fixedInput.clockSec,
+        expectedAssetIds: ["xaut-tether"],
+        attributionById: { "xaut-tether": fixture.attribution },
+        journalRecords: [createSupplyAttributionJournalV1(fixture.journalPayload)],
+      },
+    });
+    expect(computeSafetyScoreV9SupplyAttributionGenerationId(generation))
+      .not.toBe(computeSafetyScoreV9SupplyAttributionGenerationId(withoutCensus));
+    const bare = applySafetyScoreV9SupplyAttributionGeneration(
+      withClockAndAggregate(fixture.fixedInput, SOURCE_CLOCK_SEC + 300, SOURCE_AGGREGATE_USD),
+      withoutCensus,
+    );
+    expect(bare.status).toBe("applied");
+    expect(Object.keys(bare.fixedInput))
+      .not.toContain("safetyScoreV9DeploymentSupplyCensusById");
+  });
+
+  it("refuses an unpaired, empty or foreign census binding at capture", () => {
+    const fixture = fixtures.acceptedFixture;
+    const packet = censusPacket(fixture.fixedInput.clockSec);
+    const binding = {
+      generationId: "safety-score-v9-deployment-supply-census:v1:fixture",
+      registryFingerprint: fixture.fixedInput.registryFingerprint,
+      sourceBaseInputGenerationId: fixture.fixedInput.baseInputGenerationId,
+    };
+    const create = (deploymentSupplyCensus: unknown) =>
+      createSafetyScoreV9SupplyAttributionGeneration({
+        fixedInput: fixture.fixedInput,
+        capturedAtSec: fixture.completedAtSec,
+        capture: {
+          captureClockSec: fixture.fixedInput.clockSec,
+          expectedAssetIds: ["xaut-tether"],
+          attributionById: { "xaut-tether": fixture.attribution },
+          journalRecords: [createSupplyAttributionJournalV1(fixture.journalPayload)],
+        },
+        deploymentSupplyCensus: deploymentSupplyCensus as never,
+      });
+
+    expect(() => create({ byId: { "xaut-tether": packet } }))
+      .toThrow(/travel together/);
+    expect(() => create({ binding })).toThrow(/travel together/);
+    expect(() => create({ byId: {}, binding }))
+      .toThrow(/at least one packet/);
+    expect(() => create({
+      byId: { "xaut-tether": packet },
+      binding: { ...binding, registryFingerprint: "f".repeat(64) },
+    })).toThrow(/must name this generation's registry and base input/);
+    expect(() => create({
+      byId: { "xaut-tether": packet },
+      binding: { ...binding, sourceBaseInputGenerationId: `report-cards-input:v1:${"f".repeat(64)}` },
+    })).toThrow(/must name this generation's registry and base input/);
   });
 });

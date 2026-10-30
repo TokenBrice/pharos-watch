@@ -8,6 +8,9 @@ import { D1_BATCH_SIZE } from "../../lib/constants";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { getBlacklistConfigsForSymbolAndChain } from "../../lib/blacklist-contracts";
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";
+import { fetchEvmTokenBalanceRaw } from "../../lib/blacklist/balance-providers";
+import { fetchAlchemyLogs } from "../../lib/alchemy-logs";
+import type { ChainRpcConfig } from "../../lib/chain-registry";
 
 const sqliteFixtures = createLatestSchemaFixtureTracker();
 
@@ -15,6 +18,8 @@ stubCryptoForAuth();
 
 vi.mock("../../lib/blacklist-summary-service", () => ({}));
 vi.mock("../../lib/fetch-retry", () => ({ fetchJsonWithRetry: vi.fn() }));
+vi.mock("../../lib/blacklist/balance-providers", () => ({ fetchEvmTokenBalanceRaw: vi.fn() }));
+vi.mock("../../lib/alchemy-logs", () => ({ fetchAlchemyLogs: vi.fn() }));
 
 const { handleRemediateBlacklistAmountGapsTrusted } = await import("../remediate-blacklist-amount-gaps");
 const destroyConfig = getBlacklistConfigsForSymbolAndChain("USDT", "avalanche")[0]!;
@@ -35,6 +40,8 @@ function receiptResponse(amount: number | null) {
 beforeEach(() => {
   vi.clearAllMocks();
   vi.mocked(fetchJsonWithRetry).mockReset().mockResolvedValue(null);
+  vi.mocked(fetchEvmTokenBalanceRaw).mockReset().mockResolvedValue(null);
+  vi.mocked(fetchAlchemyLogs).mockReset().mockResolvedValue(null);
 });
 
 afterEach(() => {
@@ -101,7 +108,7 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       .toEqual({ amount_native: 25, amount_status: "resolved", has_config: 1, has_contract: 1 });
   });
 
-  it.each([0, 100])("keeps an unproved EURC balance of %s out of event amounts and mirror suppression", async (priorBalance) => {
+  it.each([0, 100])("rejects ambiguous EURC event identity without balance reads (%s)", async (priorBalance) => {
     const { db, sqlite } = sqliteFixtures.open();
     sqlite.prepare(`INSERT INTO blacklist_events
       (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
@@ -122,11 +129,84 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     expect(sqlite.prepare(`SELECT amount_native, amount_usd_at_event, amount_status, suppression_reason,
       amount_last_error_class FROM blacklist_events WHERE id = 'old-eurc'`).get()).toEqual({
       amount_native: null, amount_usd_at_event: null, amount_status: "permanently_unavailable",
-      suppression_reason: null, amount_last_error_class: "event_time_unproven",
+      suppression_reason: null, amount_last_error_class: "event_time_unreconciled",
     });
     expect(fetchJsonWithRetry).not.toHaveBeenCalled();
     expect(sqlite.prepare("SELECT status FROM blacklist_amount_repair_queue WHERE event_id = 'old-eurc'").get())
       .toEqual({ status: "unrecoverable" });
+  });
+
+  it.each(["resolved", "unreconciled", "provider-failed"] as const)(
+    "remediates a canonical EURC freeze with the bracket lane (%s)", async (outcome) => {
+      const { db, sqlite } = sqliteFixtures.open();
+      const tx = `0x${"ab".repeat(32)}`;
+      const id = `avalanche-${tx}-0x2`;
+      sqlite.prepare(`INSERT INTO blacklist_events
+        (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+         timestamp, amount_status, amount_source, explorer_tx_url, explorer_address_url)
+        VALUES (?, 'EURC', 'avalanche', 'Avalanche', 'blacklist', ?, ?, 100,
+          1700000000, 'recoverable_pending', 'unavailable', '', '')`).run(id, affectedAddress, tx);
+      await refreshBlacklistAmountRepairQueue(db, 1_700_000_000);
+      const chainRpcs = new Map<string, ChainRpcConfig>([["avalanche", {
+        chainId: "avalanche", chainName: "Avalanche", type: "evm", explorerUrl: "",
+        endpoints: [{ url: "https://rpc.example", operator: "public", keyed: false,
+          position: "registry", stateHistory: "archive", logsHistory: "full" }],
+      }]]);
+      vi.mocked(fetchEvmTokenBalanceRaw).mockResolvedValueOnce(outcome === "provider-failed" ? null : 0n)
+        .mockResolvedValueOnce(outcome === "unreconciled" ? 1n : 0n);
+      vi.mocked(fetchAlchemyLogs).mockResolvedValue({ logs: [], complete: true, scannedToBlock: 100, calls: 1, maxDepth: 0 });
+      const response = await handleRemediateBlacklistAmountGapsTrusted({
+        db, chainRpcs, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
+        request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+      });
+      expect((await readJsonResponse(response, 200) as { applied: { resolved: number } }).applied.resolved)
+        .toBe(outcome === "resolved" ? 1 : 0);
+      expect(vi.mocked(fetchEvmTokenBalanceRaw).mock.calls[0]?.[8]).toBe(chainRpcs);
+      expect(sqlite.prepare(`SELECT amount_native, amount_usd_at_event, amount_status, amount_source,
+        suppression_reason, amount_last_error_class FROM blacklist_events WHERE id = ?`).get(id)).toEqual({
+        amount_native: outcome === "resolved" ? 0 : null,
+        amount_usd_at_event: null,
+        amount_status: outcome === "resolved" ? "resolved" : outcome === "unreconciled" ? "permanently_unavailable" : "provider_failed",
+        amount_source: outcome === "resolved" ? "historical_balance" : "unavailable",
+        suppression_reason: null,
+        amount_last_error_class: outcome === "resolved" ? null : outcome === "unreconciled" ? "event_time_unreconciled" : "provider_null",
+      });
+    },
+  );
+
+  it.each(["runtime_budget", "budget_exhausted"] as const)("reports a mid-bracket %s stop on the last candidate without consuming an attempt", async (reason) => {
+    const { db, sqlite } = sqliteFixtures.open();
+    const tx = `0x${"ab".repeat(32)}`;
+    const id = `avalanche-${tx}-0x2`;
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_status, amount_source, explorer_tx_url, explorer_address_url)
+      VALUES (?, 'EURC', 'avalanche', 'Avalanche', 'blacklist', ?, ?, 100,
+        1700000000, 'recoverable_pending', 'unavailable', '', '')`).run(id, affectedAddress, tx);
+    await refreshBlacklistAmountRepairQueue(db, 1_700_000_000);
+    const before = sqlite.prepare("SELECT * FROM blacklist_events WHERE id = ?").get(id);
+    const queueBefore = sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = ?").get(id);
+    vi.mocked(fetchEvmTokenBalanceRaw).mockImplementationOnce(async (...args) => {
+      if (reason === "runtime_budget") {
+        vi.spyOn(Date, "now").mockReturnValue(args[9]!.deadlineMs!);
+      } else {
+        args[6].count = args[6].limit;
+      }
+      return 0n;
+    });
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db, url: makeApiUrl("/api/remediate-blacklist-amount-gaps?dryRun=false"),
+      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+    });
+    expect(await readJsonResponse(response, 200)).toMatchObject({
+      budgetExhausted: true, skippedDueBudget: 1,
+      applied: { resolved: 0, resolvedZero: 0, providerFailed: 0 },
+      cacheInvalidation: { attempted: 0 },
+    });
+    expect(fetchEvmTokenBalanceRaw).toHaveBeenCalledTimes(1);
+    expect(fetchAlchemyLogs).not.toHaveBeenCalled();
+    expect(sqlite.prepare("SELECT * FROM blacklist_events WHERE id = ?").get(id)).toEqual(before);
+    expect(sqlite.prepare("SELECT * FROM blacklist_amount_repair_queue WHERE event_id = ?").get(id)).toEqual(queueBefore);
   });
 
   it.each([true, false])("rejects explicit Tron remediation before reads or writes (dryRun=%s)", async (dryRun) => {
@@ -160,6 +240,27 @@ describe("handleRemediateBlacklistAmountGaps", () => {
     const selection = db.getHistory().find((entry) => entry.sql.includes("FROM blacklist_events"));
     expect(selection?.sql).toContain("chain_id != 'tron'");
     expect(db.getHistory().some((entry) => entry.sql.includes("UPDATE blacklist_events"))).toBe(false);
+  });
+
+  it.each([true, false])("leaves legacy proof re-review and suppressed gaps to their owning lanes (dryRun=%s)", async (dryRun) => {
+    const { db, sqlite } = sqliteFixtures.open();
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_status, amount_source, amount_last_error_class, suppression_reason,
+       explorer_tx_url, explorer_address_url)
+      VALUES (?, 'USDT', 'avalanche', 'Avalanche', 'blacklist', ?, '0xtx', 100,
+        1700000000, ?, 'unavailable', ?, ?, '', '')`);
+    insert.run("legacy-review", affectedAddress, "permanently_unavailable", "event_time_unproven", null);
+    insert.run("suppressed-gap", affectedAddress, "recoverable_pending", null, "operator-suppressed");
+    const before = sqlite.prepare("SELECT * FROM blacklist_events ORDER BY id").all();
+    const response = await handleRemediateBlacklistAmountGapsTrusted({
+      db, url: makeApiUrl(`/api/remediate-blacklist-amount-gaps?dryRun=${dryRun}`),
+      request: makeApiRequest("/api/remediate-blacklist-amount-gaps", { method: "POST" }),
+    });
+    expect(await readJsonResponse(response, 200)).toMatchObject({ candidateCount: 0 });
+    expect(sqlite.prepare("SELECT * FROM blacklist_events ORDER BY id").all()).toEqual(before);
+    expect(fetchEvmTokenBalanceRaw).not.toHaveBeenCalled();
+    expect(fetchAlchemyLogs).not.toHaveBeenCalled();
   });
 
 
