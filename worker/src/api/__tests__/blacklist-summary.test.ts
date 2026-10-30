@@ -77,6 +77,20 @@ function makeBlacklistSummaryFallbackTables() {
 
 
 describe("handleBlacklistSummary", () => {
+  it("keeps raw gap counts visible while queued proofs do not degrade summary status", async () => {
+    const tables = makeBlacklistSummaryFallbackTables().map((table) => table.match === "blacklist-gap-aggregate"
+      ? { ...table, first: { total: 100, missing: 5, missing_recent: 0, classification_missing: 0, classification_watch: 5 } }
+      : table);
+    const response = await handleBlacklistSummary(mockD1(tables));
+    const body = await readJsonResponse(response, 200) as BlacklistSummaryResponse;
+    expect(body.stats.recoverableGapCount).toBe(5);
+    expect(body.dataQuality).toMatchObject({
+      status: "ok",
+      amountGaps: { totalEvents: 100, recoverable: 5, recentRecoverable: 0, missingRatio: 0.05, recentWindowSec: 86_400 },
+    });
+    expect(JSON.stringify(body)).not.toMatch(/classificationMissingAmounts|classificationWatchCount/);
+  });
+
   it.each([
     ["blacklist-summary-public-aggregate", "blacklist-summary-aggregate-missing"],
     ["blacklist-gap-aggregate", "blacklist-gap-aggregate-missing"],

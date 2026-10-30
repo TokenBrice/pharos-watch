@@ -15,6 +15,8 @@ const emptyBlacklistMetrics: BlacklistGapMetrics = {
   recentMissingAmounts: 0,
   recentWindowSec: BLACKLIST_RECENT_WINDOW_SEC,
   missingRatio: 0,
+  classificationMissingAmounts: 0,
+  classificationWatchCount: 0,
   unrecoverableMissingAmounts: 0,
   oldestRecoverableAgeSec: null,
   neverAttemptedCount: 0,

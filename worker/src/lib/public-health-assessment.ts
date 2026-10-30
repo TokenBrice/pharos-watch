@@ -189,7 +189,11 @@ export function buildPublicHealthResponse(
     safetyScorePublicationUnavailableReason: assessment.safetyScorePublicationUnavailableReason ?? null,
     schedulerLiveness: assessment.schedulerLiveness,
   };
-  return { ...body, ...projectPublicStatus(body) };
+  const blacklistImpactStatus = assessment.blacklistMetrics == null
+    ? undefined
+    : getBlacklistGapStatus({ missingRatio: assessment.blacklistMetrics.totalEvents > 0
+      ? assessment.blacklistMetrics.classificationMissingAmounts / assessment.blacklistMetrics.totalEvents : 0 });
+  return { ...body, ...projectPublicStatus(body, undefined, blacklistImpactStatus) };
 }
 
 function publicHealthErrorMessage(kind: "blacklist" | "db" | "mint-burn"): string {
@@ -856,7 +860,9 @@ export async function assessPublicHealth(
     ? "degraded"
     : blacklistResult.metrics
       ? getBlacklistGapStatus({
-          missingRatio: blacklistResult.metrics.missingRatio,
+          missingRatio: blacklistResult.metrics.totalEvents > 0
+            ? blacklistResult.metrics.classificationMissingAmounts / blacklistResult.metrics.totalEvents
+            : 0,
         })
       : "healthy";
 

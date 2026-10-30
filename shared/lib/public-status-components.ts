@@ -28,6 +28,7 @@ import {
   type PublicStatusHeadline,
   type PublicStatusTransitionComponent,
 } from "../types/status";
+import type { StatusHealthValue } from "../types/status/core";
 
 /**
  * Public status projection (ADR-32: one authority). Maps the public health
@@ -194,7 +195,7 @@ function hasWarning(health: HealthResponse, predicate: (warning: string) => bool
   return health.warnings.find(predicate);
 }
 
-function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, ComponentFinding[]> {
+function collectFindings(health: HealthResponse, blacklistImpactStatus?: StatusHealthValue): Map<PublicStatusComponentId, ComponentFinding[]> {
   const findings = new Map<PublicStatusComponentId, ComponentFinding[]>(
     PUBLIC_STATUS_COMPONENT_IDS.map((id) => [id, []]),
   );
@@ -357,7 +358,12 @@ function collectFindings(health: HealthResponse): Map<PublicStatusComponentId, C
     }
   }
 
-  const blacklistStatus = getBlacklistGapStatus({ missingRatio: health.blacklist.missingRatio });
+  const retainedBlacklist = health.components?.find((component) => component.id === "blacklist");
+  const blacklistStatus = health.blacklist.missingRatio == null
+    ? getBlacklistGapStatus({ missingRatio: null })
+    : blacklistImpactStatus
+      ?? (retainedBlacklist ? (retainedBlacklist.state === "operational" ? "healthy" : "degraded") : null)
+      ?? getBlacklistGapStatus({ missingRatio: health.blacklist.missingRatio });
   if (blacklistStatus !== "healthy") {
     add("blacklist", {
       state: "degraded",
@@ -472,12 +478,15 @@ export function buildPublicHeadline(
 /**
  * Project a public health payload onto components and a headline. `previous`
  * carries persisted `since` values forward while a component keeps its state.
+ * Fresh classification is internal; subsequent projections retain its component,
+ * because public gap counts deliberately include queued proofs.
  */
 export function projectPublicStatus(
   health: HealthResponse,
   previous: PublicComponentSinceMap = {},
+  blacklistImpactStatus?: StatusHealthValue,
 ): PublicStatusProjection {
-  const findings = collectFindings(health);
+  const findings = collectFindings(health, blacklistImpactStatus);
 
   // R2 fail-safe: surface a raw failure only when no non-operational finding
   // explains it. Asset-scoped findings still attribute the raw verdict; their

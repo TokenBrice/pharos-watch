@@ -129,6 +129,27 @@ afterEach(() => sqliteFixtures.closeAll());
 
 describe("enrichRowBalances", () => {
   it.each([
+    { rows: 10, count: 751, limit: 900, attempted: 0 },
+    { rows: 520, count: 0, limit: 10_000, attempted: 500 },
+  ])("keeps destroy repair inside the shared reserve and total row ceiling: $attempted", async ({ rows, count, limit, attempted }) => {
+    const { db, sqlite } = sqliteFixtures.open();
+    await insertBlacklistRows(db, Array.from({ length: rows }, (_, index) => makePendingBlacklistRow({
+      id: `destroy-${index}`, stablecoin: "USDT", chain_id: "ethereum", event_type: "destroy",
+      config_key: recoveryConfig.configKey, contract_address: recoveryConfig.contractAddress,
+      address: "0x1111111111111111111111111111111111111111",
+    })));
+    vi.mocked(fetchJsonWithRetry).mockReset().mockResolvedValue(receiptResponse(25));
+
+    const result = await backfillAmounts(db, null, async <T>(fn: () => Promise<T>) => fn(),
+      makeRunBudget({ subrequestBudget: { count, limit } }));
+    expect(result).toMatchObject({ runtimeBudgetReached: false, attempted, resolved: attempted });
+    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(attempted);
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls.every(([, , retries]) => retries === 0)).toBe(true);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_amount_repair_queue WHERE status = 'pending'").get())
+      .toEqual({ n: rows - attempted });
+  });
+
+  it.each([
     [10, "resolved"], [null, "resolved"], [10, "suppressed"], [null, "suppressed"],
   ] as const)("rejects stale recovery %s after an operator %s generation", async (providerAmount, mutation) => {
     const { db, sqlite } = sqliteFixtures.open();
@@ -447,7 +468,7 @@ describe("enrichRowBalances", () => {
     const candidateQuery = db.getHistory().find((entry) =>
       entry.sql.includes("blacklist-amount-recovery-evm-candidates"),
     );
-    expect(candidateQuery?.binds).toEqual([3, 10]);
+    expect(candidateQuery?.binds).toEqual([3, "[]", 10]);
   });
 
   it("marks exhausted legacy derived-zero rows permanently unavailable when config cannot be resolved", async () => {

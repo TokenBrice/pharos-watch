@@ -1,8 +1,62 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { BLACKLIST_PROOF_CATCHUP_WINDOW_SEC, BLACKLIST_RECENT_WINDOW_SEC, getBlacklistGapStatus } from "@shared/lib/status-thresholds";
 import { materializeBlacklistGapMetrics, queryBlacklistGapMetrics } from "../blacklist-gaps";
+import { getBlacklistGapMetricsCacheKey } from "../blacklist-cache-keys";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => fixtures.closeAll());
 
 describe("queryBlacklistGapMetrics", () => {
+  it.each(["classificationMissingAmounts", "classificationWatchCount"])("rejects cached metrics missing internal %s", async (field) => {
+    const now = 1_800_000_000;
+    const { sqlite, db } = fixtures.open();
+    const metrics = await queryBlacklistGapMetrics(db, now, { includeDistributions: false });
+    const cached: Record<string, unknown> = { ...metrics, missingAmounts: 5, missingRatio: 1 };
+    delete cached[field];
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)").run(
+      getBlacklistGapMetricsCacheKey({ recentWindowSec: BLACKLIST_RECENT_WINDOW_SEC, includeDistributions: false }, "request"),
+      JSON.stringify({ version: 3, recentWindowSec: BLACKLIST_RECENT_WINDOW_SEC, includeDistributions: false, metrics: cached }),
+      now,
+    );
+    expect(await queryBlacklistGapMetrics(db, now, { includeDistributions: false, cacheTtlSec: 300 })).toEqual(metrics);
+  });
+
+  it.each([
+    ["queued EVM freeze", "ethereum", "blacklist", "recoverable_pending", BLACKLIST_RECENT_WINDOW_SEC + 1, 0, 1],
+    ["recent queued EVM freeze", "ethereum", "blacklist", "recoverable_pending", 60, 0, 1],
+    ["catch-up boundary", "ethereum", "blacklist", "recoverable_pending", BLACKLIST_PROOF_CATCHUP_WINDOW_SEC, 0, 1],
+    ["expired EVM freeze", "ethereum", "blacklist", "recoverable_pending", BLACKLIST_PROOF_CATCHUP_WINDOW_SEC + 1, 1, 0],
+    ["failed EVM freeze", "ethereum", "blacklist", "provider_failed", BLACKLIST_RECENT_WINDOW_SEC + 1, 1, 0],
+    ["ambiguous EVM freeze", "ethereum", "blacklist", "ambiguous", 60, 1, 1],
+    ["Tron freeze", "tron", "blacklist", "recoverable_pending", BLACKLIST_RECENT_WINDOW_SEC + 1, 1, 0],
+    ["EVM destroy", "ethereum", "destroy", "recoverable_pending", BLACKLIST_RECENT_WINDOW_SEC + 1, 1, 0],
+    ["recent Tron freeze", "tron", "blacklist", "recoverable_pending", 60, 1, 1],
+    ["recent EVM destroy", "ethereum", "destroy", "recoverable_pending", 60, 1, 1],
+    ["legacy re-review", "ethereum", "blacklist", "permanently_unavailable", 60, 0, 0],
+  ] as const)("classifies %s while retaining raw gap counts", async (_name, chainId, eventType, status, age, missing, recent) => {
+    const now = 1_800_000_000;
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, explorer_tx_url, explorer_address_url, amount_status)
+      VALUES ('event', 'USDT', ?, ?, ?, 'address', 'tx', 1, ?, '', '', ?)`)
+      .run(chainId, chainId, eventType, now - age, status);
+
+    const metrics = await queryBlacklistGapMetrics(db, now, { includeDistributions: false });
+    const rawMissing = status === "permanently_unavailable" ? 0 : 1;
+    expect(metrics).toMatchObject({
+      totalEvents: 1,
+      missingAmounts: rawMissing,
+      recentMissingAmounts: age <= BLACKLIST_RECENT_WINDOW_SEC ? rawMissing : 0,
+      missingRatio: rawMissing,
+      classificationMissingAmounts: missing,
+      classificationWatchCount: recent,
+    });
+    expect(getBlacklistGapStatus({ missingRatio: metrics.classificationMissingAmounts })).toBe(missing ? "stale" : "healthy");
+  });
+
   it("rejects an absent aggregate without writing fabricated metrics", async () => {
     const db = mockD1([
       { match: "blacklist-gap-metrics-cache-read", rows: [], first: null },
@@ -55,6 +109,8 @@ describe("queryBlacklistGapMetrics", () => {
       recentMissingAmounts: 1,
       recentWindowSec: 86_400,
       missingRatio: 0.04,
+      classificationMissingAmounts: 4,
+      classificationWatchCount: 1,
       unrecoverableMissingAmounts: 3,
       oldestRecoverableAgeSec: 86_400,
       neverAttemptedCount: 2,
@@ -106,6 +162,8 @@ describe("queryBlacklistGapMetrics", () => {
       recentMissingAmounts: 1,
       recentWindowSec: 86_400,
       missingRatio: 0.04,
+      classificationMissingAmounts: 4,
+      classificationWatchCount: 1,
       unrecoverableMissingAmounts: 3,
       oldestRecoverableAgeSec: 86_400,
       neverAttemptedCount: 2,
@@ -117,9 +175,9 @@ describe("queryBlacklistGapMetrics", () => {
       {
         match: "SELECT value, updated_at FROM cache WHERE key = ?",
         rows: [{
-          key: "blacklist:gap-metrics:v2:86400:core",
+          key: "blacklist:gap-metrics:v3:86400:core",
           value: JSON.stringify({
-            version: 2,
+            version: 3,
             includeDistributions: false,
             recentWindowSec: 86_400,
             metrics,
@@ -149,6 +207,8 @@ describe("queryBlacklistGapMetrics", () => {
       recentMissingAmounts: 1,
       recentWindowSec: 86_400,
       missingRatio: 0.1,
+      classificationMissingAmounts: 2,
+      classificationWatchCount: 1,
       unrecoverableMissingAmounts: 0,
       oldestRecoverableAgeSec: 3600,
       neverAttemptedCount: 1,
@@ -160,9 +220,9 @@ describe("queryBlacklistGapMetrics", () => {
       {
         match: "blacklist-gap-metrics-cache-read",
         rows: [{
-          key: "blacklist:gap-metrics:producer:v2:86400:core",
+          key: "blacklist:gap-metrics:producer:v3:86400:core",
           value: JSON.stringify({
-            version: 2,
+            version: 3,
             includeDistributions: false,
             recentWindowSec: 86_400,
             metrics,
@@ -181,7 +241,7 @@ describe("queryBlacklistGapMetrics", () => {
 
     expect(result.oldestRecoverableAgeSec).toBe(3720);
     expect(db.getHistory()).toHaveLength(1);
-    expect(db.getHistory()[0]?.binds).toEqual(["blacklist:gap-metrics:producer:v2:86400:core"]);
+    expect(db.getHistory()[0]?.binds).toEqual(["blacklist:gap-metrics:producer:v3:86400:core"]);
   });
 
   it("materializes full and core producer snapshots from one live full query", async () => {
@@ -222,8 +282,8 @@ describe("queryBlacklistGapMetrics", () => {
     expect(result).toEqual({ written: 2 });
     const writes = db.getHistory().filter((entry) => entry.sql.includes("blacklist-gap-metrics-cache-write"));
     expect(writes.map((entry) => entry.binds[0]).sort()).toEqual([
-      "blacklist:gap-metrics:producer:v2:86400:core",
-      "blacklist:gap-metrics:producer:v2:86400:full",
+      "blacklist:gap-metrics:producer:v3:86400:core",
+      "blacklist:gap-metrics:producer:v3:86400:full",
     ]);
     expect(writes.every((entry) => entry.binds[2] === 1_699_999_000)).toBe(true);
     expect(writes.every((entry) => {

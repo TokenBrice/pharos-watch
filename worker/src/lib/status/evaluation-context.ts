@@ -102,7 +102,10 @@ export interface StatusAssessmentInputs {
   onchainAssessment: OnchainDataQualityAssessment;
 }
 
-export function deriveStatusAssessmentInputs(dataQuality: DataQuality): StatusAssessmentInputs {
+export function deriveStatusAssessmentInputs(
+  dataQuality: DataQuality,
+  blacklistMetrics?: PublicHealthAssessment["blacklistMetrics"],
+): StatusAssessmentInputs {
   const missingPriceRatio =
     dataQuality.totalStablecoins > 0 ? dataQuality.missingPrices / dataQuality.totalStablecoins : 0;
   const hasActiveOnchainMonitor = dataQuality.onchainSupplyMonitoring === "active";
@@ -118,8 +121,10 @@ export function deriveStatusAssessmentInputs(dataQuality: DataQuality): StatusAs
 
   return {
     missingPriceRatio,
-    blacklistMissingRatio: dataQuality.blacklistMissingRatio,
-    blacklistRecentMissing: dataQuality.blacklistRecentMissingAmounts,
+    blacklistMissingRatio: blacklistMetrics
+      ? (blacklistMetrics.totalEvents > 0 ? blacklistMetrics.classificationMissingAmounts / blacklistMetrics.totalEvents : 0)
+      : dataQuality.blacklistMissingRatio,
+    blacklistRecentMissing: blacklistMetrics?.classificationWatchCount ?? dataQuality.blacklistRecentMissingAmounts,
     hasActiveOnchainMonitor,
     onchainAssessment,
   };

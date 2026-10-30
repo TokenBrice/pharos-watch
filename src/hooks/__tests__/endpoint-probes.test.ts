@@ -2,6 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { collectEndpointProbes, ENDPOINT_GROUPS, ENDPOINT_PROBE_CONCURRENCY } from "../use-endpoint-probes";
 
 describe("collectEndpointProbes", () => {
+  it("uses the published blacklist component while raw gap counts include queued proofs", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
+      status: "healthy", warnings: [],
+      blacklist: { missingAmounts: 5, missingRatio: 0.05, recentMissingAmounts: 0 },
+      components: [{ id: "blacklist", state: "operational" }],
+    })));
+    const [probe] = await collectEndpointProbes(["/api/health"]);
+    expect(probe).toMatchObject({ semanticStatus: "healthy" });
+    expect(probe.semanticDetail).toBeNull();
+  });
+
   it("admits explicit unavailable blacklist evidence as a degraded observation, not invalid JSON", async () => {
     vi.spyOn(globalThis, "fetch").mockResolvedValue(new Response(JSON.stringify({
       status: "degraded", warnings: [], blacklist: { missingAmounts: null, missingRatio: null,

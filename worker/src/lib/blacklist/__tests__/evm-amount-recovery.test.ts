@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { CONTRACT_CONFIGS } from "../../blacklist-contracts";
 import type { EtherscanLogEntry } from "../../evm-logs";
+import type { ChainRpcConfig, RpcEndpoint } from "../../chain-registry";
 import { fetchJsonWithRetry } from "../../fetch-retry";
 import { enrichRowBalances, recoverBlacklistAmountForRow } from "../amount-recovery";
 import { reconcileEvmEventBalance, type EvmBracketRow } from "../evm-amount-recovery";
@@ -36,6 +37,10 @@ function transfer(index: number, raw: bigint, from = other, to = address): Ether
     data: rawWord(raw), timeStamp: "0x65000000",
   };
 }
+
+const rpcTransfer = (log: EtherscanLogEntry) => ({
+  ...log, blockHash: "0x" + "cd".repeat(32), transactionIndex: "0x0", removed: false,
+});
 
 function mockBracket(before: bigint, after: bigint, logs: EtherscanLogEntry[] = []) {
   vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
@@ -120,6 +125,94 @@ describe("reconcileEvmEventBalance", () => {
 });
 
 describe("EVM bracket recovery", () => {
+  function mockRpcBracket(batchResults: unknown[], corrupt?: (rows: Array<{ id: number; result?: unknown; error?: unknown }>) => void) {
+    mockBracket(100_000000n, 67_000000n, [transfer(1, 10_000000n), transfer(2, 20_000000n, address, other),
+      transfer(7, 30_000000n, address, other), transfer(8, 7_000000n)]);
+    const mock = vi.mocked(fetchJsonWithRetry);
+    const etherscan = mock.getMockImplementation()!;
+    mock.mockImplementation(async (...args) => {
+      if (new URL(String(args[0])).hostname === "api.etherscan.io") return etherscan(...args);
+      args[3]?.beforeRequest?.();
+      const payload = JSON.parse(String(args[1]?.body));
+      if (!Array.isArray(payload)) return { response: new Response(null, { status: 503 }), body: null };
+      const body = batchResults.map((result, index) => ({ id: index + 1, result }));
+      corrupt?.(body);
+      return { response: new Response(null, { status: 200 }), body };
+    });
+  }
+
+  const bracketResults = (): unknown[] => [rawWord(100_000000n), rawWord(67_000000n),
+    [rpcTransfer(transfer(2, 20_000000n, address, other)), rpcTransfer(transfer(7, 30_000000n, address, other))],
+    [rpcTransfer(transfer(1, 10_000000n)), rpcTransfer(transfer(8, 7_000000n))]];
+
+  it("batches the same event-position proof into one metered request", async () => {
+    mockRpcBracket(bracketResults());
+    const options = { ...recoveryOptions(), drpcApiKey: "test-drpc" };
+    expect(await recoverBlacklistAmountForRow({ ...row, event_type: "blacklist" }, config, options))
+      .toMatchObject({ amount: 90, amountStatus: "resolved", lastProvider: "drpc" });
+    expect(options.runBudget.subrequestBudget.count).toBe(1);
+    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(1);
+    const [, init, retries, transport] = vi.mocked(fetchJsonWithRetry).mock.calls[0];
+    const calls = JSON.parse(String(init?.body));
+    expect(calls.map((call: { method: string }) => call.method)).toEqual(["eth_call", "eth_call", "eth_getLogs", "eth_getLogs"]);
+    expect(calls.slice(0, 2).map((call: { params: unknown[] }) => call.params[1])).toEqual(["0x63", "0x64"]);
+    expect(calls.slice(2).map((call: { params: unknown[] }) => call.params[0])).toEqual([
+      { address: config.contractAddress, fromBlock: "0x64", toBlock: "0x64", topics: [transferTopic, word(address)] },
+      { address: config.contractAddress, fromBlock: "0x64", toBlock: "0x64", topics: [transferTopic, null, word(address)] },
+    ]);
+    expect(retries).toBe(0);
+    expect(transport?.deadlineMs).toBe(options.runBudget.deadlineMs);
+  });
+
+  it.each(["error", "missing-id", "duplicate-id", "empty-balance", "odd-before-balance", "odd-after-balance", "overflow", "non-array", "malformed", "missing-rpc-fields", "wrong-block", "removed", "unfiltered"])(
+    "rejects the whole %s batch and uses fresh sequential Etherscan evidence", async (fault) => {
+      const results = bracketResults();
+      // Poison valid sibling balances too: a fallback must not retain any batch evidence.
+      results[0] = rawWord(999n);
+      if (fault === "empty-balance") results[1] = "0x";
+      if (fault === "odd-before-balance") results[0] = "0x1";
+      if (fault === "odd-after-balance") results[1] = "0x1";
+      if (fault === "overflow") results[1] = "0x1" + "0".repeat(64);
+      if (fault === "non-array") results[2] = {};
+      if (fault === "malformed") results[2] = [{ topics: null }];
+      if (fault === "missing-rpc-fields") results[2] = [transfer(1, 1n, address, other)];
+      if (fault === "wrong-block") results[2] = [{ ...rpcTransfer(transfer(1, 1n, address, other)), blockNumber: "0x65" }];
+      if (fault === "removed") results[2] = [{ ...rpcTransfer(transfer(1, 1n, address, other)), removed: true }];
+      if (fault === "unfiltered") results[2] = [rpcTransfer(transfer(1, 1n))];
+      mockRpcBracket(results, (rows) => {
+        if (fault === "error") rows[2] = { id: 3, error: { code: -1 } };
+        if (fault === "missing-id") rows.pop();
+        if (fault === "duplicate-id") rows[3].id = 3;
+      });
+      const options = { ...recoveryOptions(), drpcApiKey: "test-drpc" };
+      expect(await recoverBlacklistAmountForRow({ ...row, event_type: "blacklist" }, config, options))
+        .toMatchObject({ amount: 90, amountStatus: "resolved", lastProvider: "etherscan" });
+      expect(options.runBudget.subrequestBudget.count).toBe(9); // rejected batch, four rejected RPC reads, four Etherscan reads
+    },
+  );
+
+  it.each([false, true])("uses shared balance/log endpoints after a rejected dRPC batch (%s)", async (rejectFirst) => {
+    let batches = 0;
+    mockRpcBracket(bracketResults(), (rows) => { if (rejectFirst && batches++ === 0) rows.pop(); });
+    const endpoint = (url: string, overrides: Partial<RpcEndpoint> = {}): RpcEndpoint => ({
+      url, operator: "public", keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full", ...overrides,
+    });
+    const chainRpcs = new Map<string, ChainRpcConfig>([["ethereum", {
+      chainId: "ethereum", chainName: "Ethereum", type: "evm", explorerUrl: "https://etherscan.io",
+      endpoints: [endpoint("https://dwellir.test", { operator: "dwellir" }),
+        endpoint("https://disabled.test", { routingDisabled: true }),
+        endpoint("https://supplemental.test", { position: "supplemental" }),
+        endpoint("https://no-batch.test", { noBatch: true }), endpoint("https://shared.test")],
+    }]]);
+    const options = { ...recoveryOptions(), chainRpcs, drpcApiKey: rejectFirst ? "test-drpc" : null };
+    expect(await recoverBlacklistAmountForRow({ ...row, event_type: "blacklist" }, config, options))
+      .toMatchObject({ amount: 90, lastProvider: "chain_rpc" });
+    expect(vi.mocked(fetchJsonWithRetry).mock.calls.map(([url]) => String(url))).toEqual([
+      ...(rejectFirst ? ["https://lb.drpc.org/ogrpc?network=ethereum&dkey=test-drpc"] : []), "https://shared.test",
+    ]);
+    expect(options.runBudget.subrequestBudget.count).toBe(rejectFirst ? 2 : 1);
+  });
+
   it.each(["blacklist", "unblacklist"])("resolves a no-transfer %s with four sequential numbered reads", async (event_type) => {
     mockBracket(12_500000n, 12_500000n);
     const mock = vi.mocked(fetchJsonWithRetry);
@@ -225,6 +318,22 @@ describe("EVM bracket recovery", () => {
     expect(await enrichRowBalances({ rows, config, ...options })).toEqual({ attempted: 1, succeeded: 1, failed: 0 });
     expect(options.runBudget.subrequestBudget.count).toBe(4);
     expect(rows[1]).toMatchObject({ amount_native: null, amount_status: "recoverable_pending", amount_attempt_count: 0 });
+  });
+
+  it("proves only the ten newest pending EVM rows and leaves deferred attempts untouched", async () => {
+    mockRpcBracket(bracketResults());
+    const rows = Array.from({ length: 12 }, (_, index) => pendingRow({
+      id: row.id + `-${index}`, timestamp: 1_700_000_000 + index,
+      amount_attempt_count: 0, amount_last_attempted_at: null,
+    }));
+    const options = { ...recoveryOptions(100), drpcApiKey: "test-drpc" };
+    expect(await enrichRowBalances({ rows, config, ...options })).toEqual({ attempted: 10, succeeded: 10, failed: 0 });
+    expect(rows.slice(0, 2)).toEqual(expect.arrayContaining([
+      expect.objectContaining({ amount_native: null, amount_status: "recoverable_pending", amount_attempt_count: 0, amount_last_attempted_at: null }),
+      expect.objectContaining({ amount_native: null, amount_status: "recoverable_pending", amount_attempt_count: 0, amount_last_attempted_at: null }),
+    ]));
+    expect(rows.slice(2).every((candidate) => candidate.amount_status === "resolved" && candidate.amount_attempt_count === 1)).toBe(true);
+    expect(options.runBudget.subrequestBudget.count).toBe(10);
   });
 
   it("stops a partial bracket before exceeding its subrequest budget", async () => {

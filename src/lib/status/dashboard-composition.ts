@@ -110,7 +110,9 @@ function buildDashboardNotices({
       if (sync.lastSuccessfulSyncAt != null) reasons.push(`Last successful mint/burn sync ${formatElapsedSeconds(Math.max(0, timestamp - sync.lastSuccessfulSyncAt))} ago.`);
       if (healthData.mintBurn.majorStaleCount != null && healthData.mintBurn.majorStaleCount > 0 && healthData.mintBurn.staleMajorSymbols != null) reasons.push(`Impacted majors: ${healthData.mintBurn.staleMajorSymbols.join(", ")}.`);
     }
-    if (getBlacklistGapStatus({ missingRatio: healthData.blacklist.missingRatio }) !== "healthy") {
+    const blacklistComponent = healthData.components?.find((component) => component.id === "blacklist");
+    if (healthData.blacklist.missingRatio == null || (blacklistComponent ? blacklistComponent.state !== "operational"
+      : getBlacklistGapStatus({ missingRatio: healthData.blacklist.missingRatio }) !== "healthy")) {
       reasons.push(healthData.blacklist.missingAmounts == null ? "Blacklist gap evidence unavailable."
         : `Blacklist gaps tracked by /api/health: ${healthData.blacklist.missingAmounts}.`);
     }

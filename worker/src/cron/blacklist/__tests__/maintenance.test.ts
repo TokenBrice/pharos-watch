@@ -8,6 +8,30 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => fixtures.closeAll());
 
 describe("blacklist amount repair queue", () => {
+  it("backs off initial enqueue after an ingestion attempt while untouched pending rows stay due", async () => {
+    const { db, sqlite } = fixtures.open();
+    await insertBlacklistRows(db, [
+      makePendingBlacklistRow({ id: "deferred" }),
+      makePendingBlacklistRow({ id: "failed", amount_status: "provider_failed", amount_attempt_count: 1, amount_last_attempted_at: 1000 }),
+      makePendingBlacklistRow({ id: "old-failure", amount_status: "provider_failed", amount_attempt_count: 1, amount_last_attempted_at: 500 }),
+    ]);
+
+    await refreshBlacklistAmountRepairQueue(db, 1000);
+    expect(sqlite.prepare("SELECT event_id, available_at, attempt_count FROM blacklist_amount_repair_queue ORDER BY event_id").all()).toEqual([
+      { event_id: "deferred", available_at: 0, attempt_count: 0 },
+      { event_id: "failed", available_at: 1300, attempt_count: 0 },
+      { event_id: "old-failure", available_at: 800, attempt_count: 0 },
+    ]);
+    expect(sqlite.prepare("SELECT event_id FROM blacklist_amount_repair_queue WHERE available_at <= ? ORDER BY event_id").all(1000))
+      .toEqual([{ event_id: "deferred" }, { event_id: "old-failure" }]);
+
+    await refreshBlacklistAmountRepairQueue(db, 1200);
+    expect(sqlite.prepare("SELECT available_at FROM blacklist_amount_repair_queue WHERE event_id = 'failed'").get())
+      .toEqual({ available_at: 1300 });
+    expect(sqlite.prepare("SELECT event_id FROM blacklist_amount_repair_queue WHERE available_at <= ? ORDER BY event_id").all(1300))
+      .toEqual([{ event_id: "deferred" }, { event_id: "failed" }, { event_id: "old-failure" }]);
+  });
+
   it("enqueues legacy EVM proof reviews without reopening gap status or terminal queue attempts", async () => {
     const { db, sqlite } = fixtures.open();
     await insertBlacklistRows(db, [

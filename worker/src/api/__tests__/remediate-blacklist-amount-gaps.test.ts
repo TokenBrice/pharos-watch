@@ -576,11 +576,11 @@ describe("handleRemediateBlacklistAmountGaps", () => {
       .map((entry) => entry.binds[0])
       .sort();
     expect(deletedCacheKeys).toEqual([
-      "blacklist:gap-metrics:producer:v2:86400:core",
-      "blacklist:gap-metrics:producer:v2:86400:full",
-      "blacklist:gap-metrics:v2:86400:core",
-      "blacklist:gap-metrics:v2:86400:full",
-      "blacklist:summary:producer:v4",
+      "blacklist:gap-metrics:producer:v3:86400:core",
+      "blacklist:gap-metrics:producer:v3:86400:full",
+      "blacklist:gap-metrics:v3:86400:core",
+      "blacklist:gap-metrics:v3:86400:full",
+      "blacklist:summary:producer:v5",
     ]);
   });
 

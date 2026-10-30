@@ -41,7 +41,10 @@ beforeEach(() => {
     amount: null, lastErrorClass: "provider_null", lastProvider: "chain_rpc",
   });
 });
-afterEach(() => fixtures.closeAll());
+afterEach(() => {
+  fixtures.closeAll();
+  vi.restoreAllMocks();
+});
 
 describe("legacy EVM event-time re-review", () => {
   it.each([0, 25])("automatically resolves an unchanged legacy generation to %s without mirror suppression", async (amount) => {
@@ -116,20 +119,107 @@ describe("legacy EVM event-time re-review", () => {
       .toEqual({ status: "pending", attempt_count: 0 });
   });
 
-  it("caps proofs per run and keeps a subrequest reserve, leaving deferred rows queued", async () => {
+  it("processes successive candidate pages without retrying a raced row", async () => {
     const { db, sqlite } = fixtures.open();
-    await insertBlacklistRows(db, Array.from({ length: 30 }, (_, index) =>
+    await insertBlacklistRows(db, Array.from({ length: 130 }, (_, index) =>
+      legacyRow({ id: `ethereum-${tx}-0x${(index + 1).toString(16)}`, timestamp: 1_700_000_000 + index })));
+    const newestId = `ethereum-${tx}-0x82`;
+    vi.mocked(recoverEvmBracketAmount).mockImplementation(async ({ row }) => {
+      if (row.id === newestId) {
+        sqlite.prepare("UPDATE blacklist_events SET provenance_source = 'operator-refresh' WHERE id = ?").run(row.id);
+      }
+      return { amount: null, lastErrorClass: "provider_null", lastProvider: "chain_rpc" };
+    });
+    const wide = { ...runBudget(), subrequestBudget: { count: 0, limit: 900 } };
+
+    expect(await backfillAmounts(db, null, limiter, wide)).toMatchObject({ attempted: 129, retried: 129 });
+    const attemptedIds = vi.mocked(recoverEvmBracketAmount).mock.calls.map(([{ row }]) => row.id);
+    expect(attemptedIds).toHaveLength(130);
+    expect(new Set(attemptedIds).size).toBe(130);
+    expect(attemptedIds[0]).toBe(newestId);
+    expect(sqlite.prepare("SELECT status, attempt_count FROM blacklist_amount_repair_queue WHERE event_id = ?").get(newestId))
+      .toEqual({ status: "pending", attempt_count: 0 });
+  });
+
+  it("stops paging when no event CAS applies", async () => {
+    const { db, sqlite } = fixtures.open();
+    await insertBlacklistRows(db, Array.from({ length: 130 }, (_, index) =>
+      legacyRow({ id: `ethereum-${tx}-0x${(index + 1).toString(16)}` })));
+    vi.mocked(recoverEvmBracketAmount).mockImplementation(async ({ row }) => {
+      sqlite.prepare("UPDATE blacklist_events SET provenance_source = 'operator-refresh' WHERE id = ?").run(row.id);
+      return { amount: null, lastErrorClass: "provider_null", lastProvider: "chain_rpc" };
+    });
+    const wide = { ...runBudget(), subrequestBudget: { count: 0, limit: 900 } };
+
+    expect(await backfillAmounts(db, null, limiter, wide)).toMatchObject({ attempted: 0 });
+    expect(recoverEvmBracketAmount).toHaveBeenCalledTimes(100);
+    expect(sqlite.prepare("SELECT SUM(attempt_count) AS n FROM blacklist_amount_repair_queue").get()).toEqual({ n: 0 });
+  });
+
+  it("stops at the subrequest reserve and leaves deferred rows queued", async () => {
+    const { db, sqlite } = fixtures.open();
+    await insertBlacklistRows(db, Array.from({ length: 10 }, (_, index) =>
+      legacyRow({ id: `ethereum-${tx}-0x${(index + 1).toString(16)}` })));
+    const reserved = { ...runBudget(), subrequestBudget: { count: 748, limit: 900 } };
+    vi.mocked(recoverEvmBracketAmount).mockImplementation(async () => {
+      reserved.subrequestBudget.count++;
+      return { amount: null, lastErrorClass: "provider_null", lastProvider: "chain_rpc" };
+    });
+
+    expect(await backfillAmounts(db, null, limiter, reserved)).toMatchObject({ attempted: 3, retried: 3 });
+    expect(recoverEvmBracketAmount).toHaveBeenCalledTimes(3);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_amount_repair_queue WHERE status = 'pending'").get())
+      .toEqual({ n: 7 });
+  });
+
+  it("stops admitting rows when the runtime deadline is reached", async () => {
+    const { db, sqlite } = fixtures.open();
+    await insertBlacklistRows(db, Array.from({ length: 10 }, (_, index) =>
       legacyRow({ id: `ethereum-${tx}-0x${(index + 1).toString(16)}` })));
     const wide = { ...runBudget(), subrequestBudget: { count: 0, limit: 900 } };
-    expect(await backfillAmounts(db, null, limiter, wide)).toMatchObject({ attempted: 25, retried: 25 });
-    expect(recoverEvmBracketAmount).toHaveBeenCalledTimes(25);
-    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_amount_repair_queue WHERE status = 'pending'").get())
-      .toEqual({ n: 5 });
+    const now = vi.spyOn(Date, "now");
+    vi.mocked(recoverEvmBracketAmount).mockImplementation(async () => {
+      now.mockReturnValue(wide.deadlineMs);
+      return { amount: null, lastErrorClass: "provider_null", lastProvider: "chain_rpc" };
+    });
 
-    vi.mocked(recoverEvmBracketAmount).mockClear();
-    const reserved = { ...runBudget(), subrequestBudget: { count: 800, limit: 900 } };
-    expect(await backfillAmounts(db, null, limiter, reserved)).toMatchObject({ attempted: 0 });
-    expect(recoverEvmBracketAmount).not.toHaveBeenCalled();
+    expect(await backfillAmounts(db, null, limiter, wide)).toMatchObject({ runtimeBudgetReached: true, attempted: 1, retried: 1 });
+    expect(recoverEvmBracketAmount).toHaveBeenCalledTimes(1);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_amount_repair_queue WHERE status = 'pending'").get())
+      .toEqual({ n: 9 });
+  });
+
+  it("stops at its repair deadline without reporting maintenance exhaustion", async () => {
+    const { db, sqlite } = fixtures.open();
+    await insertBlacklistRows(db, Array.from({ length: 130 }, (_, index) =>
+      legacyRow({ id: `ethereum-${tx}-0x${(index + 1).toString(16)}` })));
+    let nowMs = Date.now();
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
+    const wide = { ...runBudget(), subrequestBudget: { count: 0, limit: 900 } };
+    const attemptDeadlineMs = nowMs + 1_000;
+    vi.mocked(recoverEvmBracketAmount).mockImplementation(async ({ runBudget: proofBudget }) => {
+      expect(proofBudget.deadlineMs).toBe(attemptDeadlineMs);
+      nowMs += 600;
+      return { amount: null, lastErrorClass: nowMs >= attemptDeadlineMs ? "runtime_budget" : "provider_null", lastProvider: "chain_rpc" };
+    });
+
+    expect(await backfillAmounts(db, null, limiter, wide, undefined, { attemptDeadlineMs }))
+      .toMatchObject({ runtimeBudgetReached: false, repairWindowExhausted: true, attempted: 1, retried: 1 });
+    expect(recoverEvmBracketAmount).toHaveBeenCalledTimes(2);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_amount_repair_queue WHERE status = 'pending'").get())
+      .toEqual({ n: 129 });
+  });
+
+  it("keeps the 500-row runaway ceiling even when mocked proofs spend no budget", async () => {
+    const { db, sqlite } = fixtures.open();
+    await insertBlacklistRows(db, Array.from({ length: 520 }, (_, index) =>
+      legacyRow({ id: `ethereum-${tx}-0x${(index + 1).toString(16)}` })));
+    const wide = { ...runBudget(), subrequestBudget: { count: 0, limit: 900 } };
+
+    expect(await backfillAmounts(db, null, limiter, wide)).toMatchObject({ attempted: 500, retried: 500 });
+    expect(recoverEvmBracketAmount).toHaveBeenCalledTimes(500);
+    expect(sqlite.prepare("SELECT COUNT(*) AS n FROM blacklist_amount_repair_queue WHERE status = 'pending'").get())
+      .toEqual({ n: 20 });
   });
 
   it("leaves suppressed and other terminal generations untouched before attempting proof", async () => {

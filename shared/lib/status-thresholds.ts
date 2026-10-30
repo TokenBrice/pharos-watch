@@ -64,12 +64,16 @@ export function classifyPublicationDiagnostic(surface: PublicationSurfaceHealth 
 // --- Blacklist gap thresholds ---
 /** Rolling window (seconds) used to count "recent" missing blacklist amounts when classifying blacklist gap status. */
 export const BLACKLIST_RECENT_WINDOW_SEC = 24 * 3600;
+/** Catch-up window (seconds) in which queued EVM freezes await proof without degrading blacklist gap status. */
+export const BLACKLIST_PROOF_CATCHUP_WINDOW_SEC = 72 * 3600;
 /**
  * Ratios are fractions of total events (0.01 = 1%) and are the only inputs that
- * degrade status: a material share of events without amounts. A burst of recent
- * freezes whose amounts are still being recovered (one issuer wave can add dozens
- * in an hour) is a watch signal at `missingRecentWatch` absolute amounts within
- * BLACKLIST_RECENT_WINDOW_SEC, never an app-wide degradation on its own.
+ * degrade status. Internal classification excludes queued recoverable_pending EVM
+ * freezes within BLACKLIST_PROOF_CATCHUP_WINDOW_SEC from that share. Its watch
+ * count includes gaps within BLACKLIST_RECENT_WINDOW_SEC and those awaiting proof;
+ * `missingRecentWatch` alone never degrades status. Failed attempts, older freezes,
+ * Tron and destroy events retain ordinary accounting. Public gap counts and ratios
+ * retain all gaps and the ordinary recent window.
  */
 export const STATUS_BLACKLIST_THRESHOLDS = {
   missingRatioDegraded: 0.01,

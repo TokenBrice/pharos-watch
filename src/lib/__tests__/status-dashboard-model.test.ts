@@ -83,6 +83,17 @@ describe("triage and detailed cache parity", () => {
 });
 
 describe("status dashboard model", () => {
+  it("uses the served blacklist component rather than treating queued proof counts as an incident", () => {
+    const healthData = makeHealthyHealthResponse();
+    healthData.blacklist = { ...healthData.blacklist, missingAmounts: 5, missingRatio: 0.05, recentMissingAmounts: 0 };
+    Object.assign(healthData, projectPublicStatus(healthData, undefined, "healthy"));
+    healthData.status = "degraded";
+    healthData.warnings = ["named-provider-warning"];
+    const detail = buildModel(undefined, { healthData }).notices.find((entry) => entry.id === "public-health")?.detail;
+    expect(detail).toContain("named-provider-warning");
+    expect(detail).not.toContain("Blacklist gaps");
+  });
+
   it.each(["unattributed", "cache age", "cache quality", "unknown coverage", "served projection"])(
     "uses canonical component summaries for warningless unhealthy health (%s)",
     (scenario) => {

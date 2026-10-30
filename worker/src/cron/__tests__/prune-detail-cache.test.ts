@@ -33,6 +33,11 @@ describe("runPruneDetailCache", () => {
       ["mint-burn-flows:v4:aggregate:24", cutoff - 1],
       ["blacklist:summary:producer:v3", cutoff - 1],
       ["blacklist:summary:producer:v4", cutoff - 1],
+      ["blacklist:gap-metrics:v2:86400:core", now],
+      ["blacklist:gap-metrics:producer:v2:3600:full", now],
+      ["blacklist:summary:producer:v5", cutoff - 1],
+      ["blacklist:gap-metrics:v3:86400:core", cutoff - 1],
+      ["blacklist:gap-metrics:producer:v3:86400:full", cutoff - 1],
       ["blacklist:summary:producer:v2:unreviewed", cutoff - 1],
       ["ops:unreviewed", cutoff - 1],
       ["stablecoins", cutoff - 1],
@@ -40,17 +45,19 @@ describe("runPruneDetailCache", () => {
       ["rpc:dwellir:credits:v1:2026-10", cutoff - 1],
     ] as const) insert.run(key, clock);
     const result = await runPruneDetailCache(db);
-    expect(result.itemCount).toBe(9);
+    expect(result.itemCount).toBe(13);
     expect(sqlite.prepare("SELECT key FROM cache ORDER BY key").all().map((row) => row.key)).toEqual([
-      "blacklist:summary:producer:v2:unreviewed", "blacklist:summary:producer:v3",
-      "blacklist:summary:producer:v4",
+      "blacklist:gap-metrics:producer:v3:86400:full", "blacklist:gap-metrics:v3:86400:core",
+      "blacklist:summary:producer:v2:unreviewed", "blacklist:summary:producer:v5",
       "cron:budget-surface:fresh", "cron:event:boundary:failure",
       "mint-burn-flows:v4:aggregate:24", "ops:unreviewed", "report-cards:v9",
       "rpc:dwellir:credits:v1:2026-10", "stablecoins",
     ]);
     const metadata = JSON.parse(result.metadata!);
     expect(metadata.cacheHygiene.retiredMintBurnV1).toEqual({ deleted: 1, retentionTruncated: false });
-    expect(Object.keys(metadata.retentionTruncated)).toHaveLength(10);
+    expect(metadata.cacheHygiene.retiredBlacklistSummaryV4).toEqual({ deleted: 1, retentionTruncated: false });
+    expect(metadata.cacheHygiene.retiredBlacklistGapMetricsProducerV2).toEqual({ deleted: 1, retentionTruncated: false });
+    expect(Object.keys(metadata.retentionTruncated)).toHaveLength(14);
   });
 
   it("caps each telemetry namespace and reports retained backlog", async () => {

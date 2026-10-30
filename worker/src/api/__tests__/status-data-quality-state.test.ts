@@ -1,5 +1,5 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { STATUS_ONCHAIN_FRESH_WINDOW_SEC, getActiveAssetServiceBreadthThreshold } from "@shared/lib/status-thresholds";
+import { BLACKLIST_PROOF_CATCHUP_WINDOW_SEC, STATUS_ONCHAIN_FRESH_WINDOW_SEC, getActiveAssetServiceBreadthThreshold } from "@shared/lib/status-thresholds";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { fxRatesCacheRows } from "../../lib/__tests__/fx-rate-state.test-support";
@@ -558,6 +558,32 @@ describe("handleStatus", () => {
     expect(body.dataQualityStatus).toBe("healthy");
   });
 
+  it("keeps queued proof catch-up info-only without changing published gap measurements", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    const stablecoinsCache = JSON.stringify({
+      peggedAssets: [{ id: "usdt-tether", symbol: "USDT", price: 1, circulating: { peggedUSD: 100_000_000 } }],
+    });
+    const db = fixtureMockD1([
+      { match: "dex_liquidity", rows: [], first: { age: 60 } },
+      { match: "yield_data", rows: [], first: { age: 60 } },
+      { match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [], first: { value: stablecoinsCache, updated_at: now - 60 } },
+      { match: "blacklist-gap-aggregate", rows: [], first: { total: 100, missing: 5, missing_recent: 0, classification_missing: 0, classification_watch: 5 } },
+    ]);
+    const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
+    const response = await handleStatus({ db, trustedAdmin: true, request });
+    const body = await readJsonResponse(response, 200) as {
+      dataQualityStatus: string;
+      dataQuality: Record<string, unknown>;
+      causes: { dataQuality: Array<{ code: string; severity: string; message: string }> };
+    };
+    expect(body.dataQuality).toMatchObject({ blacklistMissingAmounts: 5, blacklistMissingRatio: 0.05, blacklistRecentMissingAmounts: 0 });
+    expect(body.dataQualityStatus).toBe("healthy");
+    expect(body.causes.dataQuality.find((cause) => cause.code === "blacklist_gaps_recent")).toMatchObject({
+      severity: "info", message: expect.stringContaining("freezes awaiting proof"),
+    });
+    expect(JSON.stringify(body)).not.toMatch(/classificationMissingAmounts|classificationWatchCount/);
+  });
+
   it("excludes intentional Tron null amounts but counts recoverable gaps", async () => {
     const now = Math.floor(Date.now() / 1000);
     const { db, sqlite } = fixtures.open();
@@ -565,22 +591,25 @@ describe("handleStatus", () => {
       (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
        timestamp, explorer_tx_url, explorer_address_url, amount_status)
       VALUES (?, 'USDT', ?, ?, ?, 'address', ?, 1, ?, '', '', ?)`);
-    for (const [id, chain, event, status] of [
-      ["intentional-blacklist", "tron", "blacklist", "permanently_unavailable"],
-      ["intentional-unblacklist", "tron", "unblacklist", "permanently_unavailable"],
-      ["recoverable", "ethereum", "blacklist", "recoverable_pending"],
-      ["failed", "tron", "blacklist", "provider_failed"],
-      ["ambiguous", "ethereum", "blacklist", "ambiguous"],
-    ]) insert.run(id, chain, chain, event, id, now - 60, status);
+    for (const [id, chain, event, status, age] of [
+      ["intentional-blacklist", "tron", "blacklist", "permanently_unavailable", 60],
+      ["intentional-unblacklist", "tron", "unblacklist", "permanently_unavailable", 60],
+      ["recoverable", "ethereum", "blacklist", "recoverable_pending", BLACKLIST_PROOF_CATCHUP_WINDOW_SEC + 60],
+      ["queued", "ethereum", "blacklist", "recoverable_pending", 60],
+      ["failed", "tron", "blacklist", "provider_failed", 60],
+      ["ambiguous", "ethereum", "blacklist", "ambiguous", 60],
+    ] as const) insert.run(id, chain, chain, event, id, now - age, status);
     const request = fixtureMakeApiRequest("/api/status", { adminKey: "secret-key" });
     const res = await handleStatus({ db, trustedAdmin: true, request });
     const body = await readJsonResponse(res, 200) as { dataQuality: Record<string, unknown> };
-    // Unblacklist events are outside the blacklist/destroy metric denominator.
+    // Unblacklist events are outside the blacklist/destroy metric denominator. A
+    // freeze still queued for proof within the catch-up window is a recent watch
+    // signal, not a degrading gap; once past the window it counts again.
     expect(body.dataQuality).toMatchObject({
-      blacklistTotal: 4,
-      blacklistMissingAmounts: 3,
+      blacklistTotal: 5,
+      blacklistMissingAmounts: 4,
       blacklistRecentMissingAmounts: 3,
-      blacklistMissingRatio: 0.75,
+      blacklistMissingRatio: 0.8,
     });
   });
 

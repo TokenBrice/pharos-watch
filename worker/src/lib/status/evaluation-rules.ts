@@ -963,7 +963,7 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
       return null;
   },
   (input) => {
-      const detail = `ratio=${formatPercentFromRatio(input.blacklistMissingRatio)}, recent=${input.blacklistRecentMissing}`;
+      const detail = `classification ratio=${formatPercentFromRatio(input.blacklistMissingRatio)}, watch=${input.blacklistRecentMissing}`;
       if (input.blacklistMissingRatio >= STATUS_BLACKLIST_THRESHOLDS.missingRatioStale) {
         return ruleResult("stale", [makeCause(
           "data-quality",
@@ -989,7 +989,7 @@ const DATA_QUALITY_STATUS_RULES: readonly StatusRule<DataQualityEvaluationInput>
           "data-quality",
           "blacklist_gaps_recent",
           "info",
-          `Recent blacklist events are awaiting amount recovery (${detail}); below the degrading share.`,
+          `Blacklist gaps or freezes awaiting proof meet the watch threshold (${detail}); below the degrading share.`,
           { metric: "blacklistRecentMissing", value: input.blacklistRecentMissing, threshold: STATUS_BLACKLIST_THRESHOLDS.missingRecentWatch },
         )]);
       }
