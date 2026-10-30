@@ -152,6 +152,7 @@ export function adaptUsdAiProofOfReserves(
     chain: typeof entry.chain === "number" && Number.isFinite(entry.chain) ? entry.chain : null,
     share: parseIntegerLike(entry.share),
     amount: parseIntegerLike(entry.amount),
+    remainingAmount: parseIntegerLike(entry.remainingAmount),
   }));
   const totalShareDeclared = parsedEntries.reduce(
     (acc, entry) => acc + (entry.share && entry.share > 0n ? entry.share : 0n),
@@ -159,6 +160,19 @@ export function adaptUsdAiProofOfReserves(
   );
   const totalAmountDeclared = parsedEntries.reduce(
     (acc, entry) => acc + (entry.amount && entry.amount > 0n ? entry.amount : 0n),
+    0n,
+  );
+  // Amount-mode weights the deployed book: remaining principal where the
+  // issuer discloses it, the custody amount for non-deal buckets. A DEAL row
+  // with no remaining principal is stage-1/stage-2 pipeline or offchain escrow,
+  // never deployed exposure.
+  const amountModeWeight = (entry: (typeof parsedEntries)[number]): bigint | null => {
+    if (entry.remainingAmount != null && entry.remainingAmount > 0n) return entry.remainingAmount;
+    if (entry.type === "DEAL") return null;
+    return entry.amount != null && entry.amount > 0n ? entry.amount : null;
+  };
+  const amountWeightTotal = parsedEntries.reduce(
+    (acc, entry) => acc + (amountModeWeight(entry) ?? 0n),
     0n,
   );
   let syntheticUndisclosedShare = 0n;
@@ -189,6 +203,9 @@ export function adaptUsdAiProofOfReserves(
   const ignoredAmountOnlyEntries = weightMode === "share"
     ? parsedEntries.filter((entry) => entry.share == null && entry.amount != null && entry.amount > 0n)
     : [];
+  const excludedAmountModeDeals = weightMode === "amount"
+    ? parsedEntries.filter((entry) => amountModeWeight(entry) == null && entry.amount != null && entry.amount > 0n)
+    : [];
   let dealShare = 0n;
   let unknownShare = 0n;
   let totalWeight = 0n;
@@ -196,13 +213,16 @@ export function adaptUsdAiProofOfReserves(
 
   for (const entry of parsedEntries) {
     const { type, name } = entry;
-    const weight = weightMode === "share" ? entry.share : entry.amount;
+    const weight = weightMode === "share" ? entry.share : amountModeWeight(entry);
 
     if (!type) {
       throw new Error("usdai-proof-of-reserves entry is missing a reserve type");
     }
     if (weight == null) {
       if (weightMode === "share" && entry.amount != null && entry.amount > 0n) {
+        continue;
+      }
+      if (weightMode === "amount" && excludedAmountModeDeals.includes(entry)) {
         continue;
       }
       throw new Error(`usdai-proof-of-reserves entry is missing a valid ${weightMode}: ${name || type}`);
@@ -239,6 +259,10 @@ export function adaptUsdAiProofOfReserves(
     unknownTypes.add(type);
   }
 
+  if (weightMode === "amount" && amountWeightTotal <= 0n) {
+    throw new Error("usdai-proof-of-reserves amount fallback found no remaining-principal weights");
+  }
+
   if (ignoredAmountOnlyEntries.length > 0) {
     warnings.push(
       reserveInfoWarning(
@@ -250,10 +274,22 @@ export function adaptUsdAiProofOfReserves(
     );
   }
 
+  if (excludedAmountModeDeals.length > 0) {
+    const excludedAmount = excludedAmountModeDeals.reduce((sum, entry) => sum + (entry.amount ?? 0n), 0n);
+    warnings.push(
+      reserveDegradedWarning(
+        "usdai-amount-weight-rows-excluded",
+        `${excludedAmountModeDeals.length} USD.AI deal ${pluralizeEntries(excludedAmountModeDeals.length)} `
+        + `without remaining principal ($${Number(excludedAmount / SHARE_SCALE).toLocaleString("en-US")} originated, `
+        + "undisbursed pipeline or offchain escrow) excluded from the amount-mode book",
+      ),
+    );
+  }
+
   const weightToPct = (value: bigint) => (
     weightMode === "share"
       ? shareToPct(value)
-      : ratioToPct(value, totalAmountDeclared)
+      : ratioToPct(value, amountWeightTotal)
   );
 
   const sliceInputs = Array.from(tbillBuckets.values()).map(({ share, bucket }) => ({
@@ -326,6 +362,7 @@ export function adaptUsdAiProofOfReserves(
       ...(chains.size > 0 ? { chains: Array.from(chains).sort((a, b) => a - b) } : {}),
       ...(unknownTypes.size > 0 ? { unknownReserveTypes: Array.from(unknownTypes).sort() } : {}),
       ...(ignoredAmountOnlyEntries.length > 0 ? { ignoredMissingShareEntryCount: ignoredAmountOnlyEntries.length } : {}),
+      ...(excludedAmountModeDeals.length > 0 ? { excludedAmountModeDealCount: excludedAmountModeDeals.length } : {}),
       ...(totalWeight > 0n || syntheticUndisclosedShare > 0n ? { unknownExposurePct: weightToPct(unknownExposureWeight) } : {}),
       ...unverifiedFreshnessMetadata(
         "usdai-proof-of-reserves-api",

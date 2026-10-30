@@ -67,6 +67,9 @@ export interface ChainlinkNavData {
   roundId: bigint;
   updatedAt: number;
   oracleTimestampSource?: "oracle-round" | "ondo-price-data" | "unavailable";
+  /** Deployment whose contract supply is read; the datum is chain-scoped. */
+  chain?: string;
+  tokenAddress?: string;
 }
 
 function parseAddressResult(raw: string | null): `0x${string}` | null {
@@ -207,6 +210,9 @@ export function adaptChainlinkNavResponse(data: ChainlinkNavData, params: Chainl
       navPerToken: decimalStringFromBigInt(data.navPerToken, data.navDecimals),
       totalSupplyFormatted: decimalStringFromBigInt(data.totalSupply, data.tokenDecimals),
       totalSupplyRaw: data.totalSupply.toString(),
+      // The contract read is one deployment, never the token's cross-chain total.
+      ...(data.chain ? { totalSupplyChain: data.chain } : {}),
+      ...(data.tokenAddress ? { totalSupplyTokenAddress: data.tokenAddress } : {}),
       navDecimals: data.navDecimals,
       tokenDecimals: data.tokenDecimals,
       oracleRoundId: data.roundId.toString(),
@@ -404,6 +410,8 @@ export async function fetchChainlinkNavCore(
       roundId,
       updatedAt,
       oracleTimestampSource,
+      chain: input.chain,
+      tokenAddress: params.tokenAddress,
     },
     params,
   );

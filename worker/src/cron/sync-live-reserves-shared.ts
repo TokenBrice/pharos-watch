@@ -258,7 +258,9 @@ export function classifyFailure(reason: string, lastError: string | null): Reser
   if (message.includes("layout-changed")) return "parser-drift";
   if (message.includes("parse-failed") || message.includes("json parse failed")) return "parse-failure";
   if (message.includes("d1 write timeout") || message.includes("sqlite") || message.includes("database")) return "storage-write";
-  if (/\bhttp\s+[45]\d{2}\b/.test(message)) return "upstream-http";
+  // Adapters render transport statuses as "http-502"; accept the hyphen/slash
+  // forms as well as "HTTP 502" so transport outages are not "unknown".
+  if (/\bhttp[\s_/-]+[45]\d{2}\b/.test(message)) return "upstream-http";
   if (
     message.includes("fetch failed")
     || message.includes("no-response")

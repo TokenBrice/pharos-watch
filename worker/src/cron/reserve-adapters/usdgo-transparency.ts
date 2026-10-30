@@ -40,7 +40,7 @@ export const USDGO_INDEPENDENT_ASSURANCE_PROFILE: IndependentAssuranceProfile = 
       name: "Goldman Sachs STBXX (CUSIP 38151N205)",
       risk: "low",
       assetClass: "money-market-fund",
-      issuerOrObligor: "Goldman Sachs Financial Square Government Fund",
+      issuerOrObligor: "Goldman Sachs Stablecoin Reserves Fund",
       riskFactors: ["credit", "liquidity", "custody", "counterparty", "duration"],
       liquidityHorizon: "one-day",
     },

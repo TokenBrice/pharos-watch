@@ -171,6 +171,16 @@ describe("buildReserveCompositionNote", () => {
     expect(buildReserveCompositionNote(makeReserves({ mode: "live" }))).toBeNull();
   });
 
+  it("labels a gross-asset denominator and its excluded financing debt", () => {
+    const note = buildReserveCompositionNote(makeReserves({ mode: "live", metadata: {
+      details: { compositionScope: "gross-assets", compositionDenominatorUsd: 4_308_294.317841 },
+      totalLiabilitiesUsd: 2_462_439.015314,
+    } }));
+    expect(note).toBe(
+      "Composition shares are of gross assets ($4,308,294.32); $2,462,439.02 of protocol financing debt is excluded and shown separately.",
+    );
+  });
+
   it("combines reference NAV with existing composition notes", () => {
     const note = buildReserveCompositionNote(
       makeReserves({ mode: "live", metadata: { referenceNavUsd: 1.034963, yieldBasisCollateralPct: 33.456 } }),

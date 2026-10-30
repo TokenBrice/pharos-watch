@@ -228,6 +228,14 @@ describe("fetchInitiaWrapperVaultReserves", () => {
     await expect(runInitia(network, REVIEWED_TRANSPORT)).rejects.toThrow(/disagree on iusdSupply/);
   });
 
+  it("suspends live admission for the halted chain until the 2026-11-03 review", async () => {
+    const run = await runInitia(twoProviders(), REVIEWED_TRANSPORT);
+    expect(run.config.suspended).toMatchObject({ since: "2026-10-23", reviewBy: "2026-11-03" });
+    const admission = evaluateAdapterSnapshotAdmission(run, NOW);
+    expect(admission.eligible).toBe(false);
+    expect(admission.reasons).toContain("suspended");
+  });
+
   it("publishes exact multi-provider agreement with the agreeing providers and block clock", async () => {
     // The catalog feed is suspended while Initia is halted; this covers the adapter
     // path that resumes once the suspension is lifted.
@@ -238,7 +246,10 @@ describe("fetchInitiaWrapperVaultReserves", () => {
       config: { suspended: undefined },
     });
     const { result } = run;
-    expect(evaluateAdapterSnapshotAdmission(run, NOW).eligible).toBe(true);
+    // Admission is asserted on the unsuspended binding: the catalog suspension
+    // above is a lifecycle decision, not an adapter-output rejection.
+    const unsuspended = { ...run, config: { ...run.config, suspended: undefined } };
+    expect(evaluateAdapterSnapshotAdmission(unsuspended, NOW).eligible).toBe(true);
     expect(result.metadata?.collateralizationRatio).toBe(1);
     expect(result.metadata?.details).toMatchObject({
       lcdProvider: BASE_URL,

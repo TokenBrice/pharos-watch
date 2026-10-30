@@ -120,9 +120,19 @@
         "coinId": "ausd-agora",
         "depType": "wrapper"
       }
+    },
+    "suspended": {
+      "reason": "Initia L1 halted 2026-10-23 after a MoveVM exploit; iUSD collateral (AUSD0/Noble USDC/WETH) short up to 1.4M AUSD0 / 1.08M USDC / 105 ETH pending foundation top-up; resume after the 2026-11-02 restart and an on-chain backing re-read",
+      "since": "2026-10-23",
+      "reviewBy": "2026-11-03"
     }
   },
   "notices": [
+    {
+      "type": "danger",
+      "title": "Initia L1 halted; iUSD collateral short",
+      "message": "On 2026-10-23 a MoveVM script-cache exploit minted unbacked balances on Initia; L1 and rollups were halted at 15:41:30 UTC. The Initia Foundation approved topping up the iUSD collateral (Noble USDC, WETH, AUSD0) up to 1.08M USDC / 105 ETH / 1.4M AUSD0, to be executed after reconciliation and restored before the planned 2026-11-02 restart. Pharos' last successful vault read (2026-10-29T04:14:20Z) came from the halted chain and is not a current backing observation; no redemption is possible while the chain is down."
+    },
     {
       "type": "warning",
       "title": "Initia halted 2026-10-23; iUSD transfers paused",

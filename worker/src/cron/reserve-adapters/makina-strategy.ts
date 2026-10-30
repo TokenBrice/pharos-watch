@@ -16,6 +16,7 @@ import {
   fetchEvmCallHexAtBlock,
   fetchEvmCodeAtBlock,
   fetchEvmStorageAtBlock,
+  type EvmBlockHeader,
 } from "../../lib/evm-rpc";
 import {
   buildRedemptionSnapshotMetadata,
@@ -194,6 +195,8 @@ export interface MakinaRedemptionState {
 
 interface MakinaRedemptionRead {
   state: MakinaRedemptionState | null;
+  /** Same-run Machine AUM anchor, retained when only the redeemer proof fails. */
+  machineAccounting?: MakinaMachineAccounting;
   warning?: LiveReserveWarning;
 }
 
@@ -232,11 +235,66 @@ function readSafeOnchainNumber(value: bigint | null): number | null {
   return Number(value);
 }
 
-function redemptionTelemetryUnavailable(message: string): MakinaRedemptionRead {
+function redemptionTelemetryUnavailable(
+  message: string,
+  machineAccounting?: MakinaMachineAccounting,
+): MakinaRedemptionRead {
   return {
     state: null,
+    ...(machineAccounting ? { machineAccounting } : {}),
     warning: reserveInfoWarning("makina-redemption-telemetry-unavailable", message),
   };
+}
+
+/**
+ * Machine `lastTotalAum`/`lastGlobalAccountingTime` is independent of the
+ * AsyncRedeemer: the identity checks that precede this anchor prove canonical
+ * Ethereum USDC and the tracked share token. Incomplete accounting evidence
+ * cannot create an anchor.
+ */
+function buildMachineAccounting(args: {
+  accountingDecimals: number;
+  machineAumRaw: bigint | null;
+  machineAccountedAt: number | null;
+  blockHeader: EvmBlockHeader | null;
+  blockNumber: number;
+  nowSec: number;
+}): MakinaMachineAccounting | undefined {
+  const machineAumUsd = args.machineAumRaw == null ? null : finiteDecimalNumberFromBigInt(args.machineAumRaw, 6);
+  return args.accountingDecimals === 6 && args.blockHeader != null &&
+    Number.isFinite(args.nowSec) && args.nowSec > 0 &&
+    args.blockHeader.timestamp <= args.nowSec + MACHINE_ACCOUNTING_BLOCK_FUTURE_SKEW_SEC &&
+    args.nowSec - args.blockHeader.timestamp <= MACHINE_ACCOUNTING_BLOCK_MAX_AGE_SEC &&
+    machineAumUsd != null && machineAumUsd > 0 && args.machineAccountedAt != null &&
+    args.machineAccountedAt > 0 && args.machineAccountedAt <= args.blockHeader.timestamp
+    ? {
+        aumUsd: machineAumUsd,
+        accountedAt: args.machineAccountedAt,
+        blockNumber: args.blockNumber,
+        blockTimestamp: args.blockHeader.timestamp,
+        blockHash: args.blockHeader.hash,
+      }
+    : undefined;
+}
+
+/** Machine accounting read from the same Multicall3 batch as the redeemer route. */
+function readMachineAccountingFromBatch(args: {
+  reads: Parameters<typeof multicallResultByLabel>[0];
+  accountingDecimals: number;
+  blockHeader: EvmBlockHeader | null;
+  blockNumber: number;
+  nowSec: number;
+}): MakinaMachineAccounting | undefined {
+  return buildMachineAccounting({
+    accountingDecimals: args.accountingDecimals,
+    machineAumRaw: decodeUint256Word(multicallResultByLabel(args.reads, "machine-last-total-aum")),
+    machineAccountedAt: readSafeOnchainNumber(decodeUint256Word(
+      multicallResultByLabel(args.reads, "machine-last-global-accounting-time"),
+    )),
+    blockHeader: args.blockHeader,
+    blockNumber: args.blockNumber,
+    nowSec: args.nowSec,
+  });
 }
 
 export function buildMakinaRedemptionMetadata(state: MakinaRedemptionState) {
@@ -357,6 +415,17 @@ async function fetchMakinaRedemptionState(
       return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: same-block route state read failed");
     }
 
+    const accountingDecimals = params.accountingTokenDecimals ?? DEFAULT_ACCOUNTING_DECIMALS;
+    // The Machine accounting read is part of the same batch and does not need
+    // the reviewed AsyncRedeemer: keep it when only the redeemer proof fails.
+    const machineAccounting = readMachineAccountingFromBatch({
+      reads,
+      accountingDecimals,
+      blockHeader,
+      blockNumber,
+      nowSec: ctx?.nowSec ?? Math.floor(Date.now() / 1000),
+    });
+
     const redeemerMachine = decodeAddressWord(multicallResultByLabel(reads, "redeemer-machine"));
     if (redeemerMachine !== machineAddress) {
       return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: redeemer machine() does not match the configured Machine");
@@ -388,7 +457,10 @@ async function fetchMakinaRedemptionState(
     );
     const implementationAddress = decodeAddressWord(implementationRaw);
     if (implementationAddress !== REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION) {
-      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: proxy implementation changed from the reviewed standard AsyncRedeemer");
+      return redemptionTelemetryUnavailable(
+        "Makina AsyncRedeemer telemetry withheld: proxy implementation changed from the reviewed standard AsyncRedeemer",
+        machineAccounting,
+      );
     }
     const implementationCode = await runAdapterIo(
       ctx,
@@ -398,7 +470,10 @@ async function fetchMakinaRedemptionState(
     );
     const implementationRuntimeCodeHash = runtimeCodeHash(implementationCode);
     if (implementationRuntimeCodeHash !== REVIEWED_ASYNC_REDEEMER_IMPLEMENTATION_CODE_HASH) {
-      return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry withheld: reviewed AsyncRedeemer runtime code hash did not match");
+      return redemptionTelemetryUnavailable(
+        "Makina AsyncRedeemer telemetry withheld: reviewed AsyncRedeemer runtime code hash did not match",
+        machineAccounting,
+      );
     }
 
     const lockedSharesRaw = decodeUint256Word(multicallResultByLabel(reads, "redeemer-locked-shares"));
@@ -445,7 +520,6 @@ async function fetchMakinaRedemptionState(
       return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: route counters or balances failed validation");
     }
 
-    const accountingDecimals = params.accountingTokenDecimals ?? DEFAULT_ACCOUNTING_DECIMALS;
     const grossIdleCapacityUsd = finiteDecimalNumberFromBigInt(machineIdleRaw, accountingDecimals);
     const queueDepthUsd = finiteDecimalNumberFromBigInt(queueDepthRaw, accountingDecimals);
     const reservedUnclaimedUsdc = finiteDecimalNumberFromBigInt(reservedUnclaimedRaw, accountingDecimals);
@@ -460,23 +534,6 @@ async function fetchMakinaRedemptionState(
     ) {
       return redemptionTelemetryUnavailable("Makina AsyncRedeemer telemetry unavailable: route amounts failed decimal normalization");
     }
-
-    const machineAumRaw = decodeUint256Word(multicallResultByLabel(reads, "machine-last-total-aum"));
-    const machineAccountedAt = readSafeOnchainNumber(decodeUint256Word(
-      multicallResultByLabel(reads, "machine-last-global-accounting-time"),
-    ));
-    const machineAumUsd = machineAumRaw == null ? null : finiteDecimalNumberFromBigInt(machineAumRaw, 6);
-    const readClockSec = ctx?.nowSec ?? Math.floor(Date.now() / 1000);
-    // The identity checks above prove canonical Ethereum USDC and the tracked
-    // share token. Incomplete accounting evidence cannot create another anchor.
-    const machineAccounting = accountingDecimals === 6 && blockHeader != null &&
-      Number.isFinite(readClockSec) && readClockSec > 0 &&
-      blockHeader.timestamp <= readClockSec + MACHINE_ACCOUNTING_BLOCK_FUTURE_SKEW_SEC &&
-      readClockSec - blockHeader.timestamp <= MACHINE_ACCOUNTING_BLOCK_MAX_AGE_SEC &&
-      machineAumUsd != null && machineAumUsd > 0 && machineAccountedAt != null &&
-      machineAccountedAt > 0 && machineAccountedAt <= blockHeader.timestamp
-      ? { aumUsd: machineAumUsd, accountedAt: machineAccountedAt, blockNumber, blockTimestamp: blockHeader.timestamp, blockHash: blockHeader.hash }
-      : undefined;
 
     return {
       state: {
@@ -609,6 +666,7 @@ export function adaptMakinaStrategyReserves(
   params: MakinaStrategyParams,
   redemptionState?: MakinaRedemptionState | null,
   redemptionWarning?: LiveReserveWarning,
+  sameRunMachineAccounting?: MakinaMachineAccounting,
 ): AdapterResult {
   const { strategyData, allocationData, sourceTimestamp: inputTimestamp } = normalizeMakinaInput(strategy, allocations, params);
   const strategyAddress = strategyData.address;
@@ -751,7 +809,7 @@ export function adaptMakinaStrategyReserves(
     params.reconciliationTolerancePct ?? DEFAULT_RECONCILIATION_TOLERANCE_PCT;
   let reconciliationAumUsd = currentAumUsd;
   let reconciliationKind = "allocation-net-value-equals-current-aum";
-  const machineAccounting = redemptionState?.machineAccounting;
+  const machineAccounting = redemptionState?.machineAccounting ?? sameRunMachineAccounting;
   const onchainDiffPct = machineAccounting
     ? Math.abs(netReserveUsd - machineAccounting.aumUsd) / machineAccounting.aumUsd * 100
     : null;
@@ -940,5 +998,12 @@ export async function fetchMakinaStrategyReserves(
     fetchJsonWithRetry<unknown>(params.allocationsUrl, signal, 12_000, ctx),
     fetchMakinaRedemptionState(coin, params, signal, ctx),
   ]);
-  return adaptMakinaStrategyReserves(strategy, allocations, params, redemptionRead.state, redemptionRead.warning);
+  return adaptMakinaStrategyReserves(
+    strategy,
+    allocations,
+    params,
+    redemptionRead.state,
+    redemptionRead.warning,
+    redemptionRead.machineAccounting,
+  );
 }

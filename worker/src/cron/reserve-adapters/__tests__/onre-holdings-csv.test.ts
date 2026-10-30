@@ -103,6 +103,31 @@ describe("adaptOnReSchedule", () => {
     expect(result.warnings?.find((warning) => warning.code === "schedule-exceeds-nav")).toMatchObject({ effect: "info" });
   });
 
+  it("maps the venue-qualified lending rows instead of publishing them as unrecognized exposure", () => {
+    const csv = CSV
+      .replace("USDG (Lending),\"3,750,767.96\",1.349950701", [
+        "USDG (Kamino Lending),\"1,000,000.00\",0.3446821621",
+        "USDG (Kamino Fixed Rate Lending),\"1,750,767.96\",0.6034358744",
+        "USDG (Loopscale Lending),\"1,000,000.00\",0.3446821621",
+      ].join("\n"))
+      .replace("USDC (Lending),\"10,050,588.00\",3.597539938", "USDC (Kamino Lending),\"10,050,588.00\",3.597539938");
+    const result = adaptOnReSchedule(parseOnReSchedule(csv));
+
+    expect(result.slices.some((slice) => slice.sourceKey === "onre-holdings-csv:unmapped-schedule-rows")).toBe(false);
+    expect(result.metadata?.unknownExposurePct).toBeUndefined();
+    for (const key of [
+      "usdg-kamino-lending",
+      "usdg-kamino-fixed-rate-lending",
+      "usdg-loopscale-lending",
+      "usdc-kamino-lending",
+    ]) {
+      const slice = result.slices.find((candidate) => candidate.sourceKey === `onre-holdings-csv:${key}`)!;
+      expect(slice, key).toMatchObject({ coinId: key.startsWith("usdg") ? "usdg-paxos" : "usdc-circle", assetClass: "protocol-position" });
+    }
+    expect(result.slices.find((slice) => slice.sourceKey === "onre-holdings-csv:usdg-kamino-fixed-rate-lending")!.pct)
+      .toBeCloseTo(1_750_767.96 / 290_132_322.20 * 100, 10);
+  });
+
   it("fails closed when asset amounts disagree with the declared Total", () => {
     const tampered = CSV.replace("142,768,536.03", "142,768,000.00");
     expect(() => adaptOnReSchedule(parseOnReSchedule(tampered)))

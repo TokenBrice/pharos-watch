@@ -3,7 +3,7 @@
   "reserves": [
     {
       "name": "Direct U.S. Treasury bills",
-      "pct": 99.50431807,
+      "pct": 99.91773953,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -13,7 +13,7 @@
     },
     {
       "name": "Dreyfus Institutional Preferred Treasury Obligations Fund",
-      "pct": 0.42476766,
+      "pct": 0.04545853,
       "risk": "low",
       "assetClass": "money-market-fund",
       "issuerOrObligor": "Dreyfus / BNY Mellon",
@@ -22,7 +22,7 @@
     },
     {
       "name": "Coinbase USDC and cash equivalents",
-      "pct": 0.07066055,
+      "pct": 0.03557734,
       "risk": "low",
       "coinId": "usdc-circle",
       "depType": "collateral",
@@ -33,7 +33,7 @@
     },
     {
       "name": "Accrued interest receivable",
-      "pct": 0.00025372,
+      "pct": 0.0012246,
       "risk": "low",
       "assetClass": "other",
       "issuerOrObligor": "TBILL portfolio counterparties",
@@ -42,7 +42,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-14",
+    "reviewedAt": "2026-10-30",
     "reviewer": "owner-triage",
     "confidence": "verified",
     "sources": [
@@ -51,39 +51,39 @@
         "url": "https://prod-gw.openeden.com/v3/vault/reports?folderId=1cHhy4p0iL242Wq6fwuYyczJPoXJiI6Tc"
       },
       {
-        "label": "TBILL Daily NAV Report - July 10, 2026",
-        "url": "https://drive.google.com/file/d/1zkGEy-ZUWvH4sKtoppk0Ktl32eHRCgC7/view"
+        "label": "TBILL Daily NAV Report - October 28, 2026",
+        "url": "https://drive.google.com/file/d/1-cBlwBNo20pDNElpoTk6KnQNrOWJ4ho6/view"
       },
       {
         "label": "OpenEden trust and transparency",
         "url": "https://docs.openeden.com/tbill/trust-and-transparency"
       }
     ],
-    "rationale": "OpenEden's pinned July 10, 2026 balance sheet reports USD 212,779,806.05 of assets: USD 211,725,095.00 of direct Treasury bills, USD 903,819.80 in the Dreyfus Treasury money-market fund, USD 150,351.39 of Coinbase USDC/cash-equivalent balances, and USD 539.87 of accrued interest receivable. The four normalized weights replace the unsupported legacy 95/5 split.",
+    "rationale": "OpenEden's October 28, 2026 daily NAV balance sheet reports USD 318,111,184.76 of assets: USD 317,849,505.00 of direct Treasury bills across 15 holdings, USD 144,608.68 in the Dreyfus Treasury money-market fund, USD 113,175.50 of Coinbase USDC/cash-equivalent balances (USD 113,174.08 cash plus USD 1.42 USDC securities), and USD 3,895.58 of accrued interest receivable. The four normalized weights replace the stale July 10 pin and reconcile to the same four categories.",
     "compositionBasis": "Pinned OpenEden TBILL daily NAV balance sheet",
-    "compositionAsOf": "2026-07-10",
+    "compositionAsOf": "2026-10-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "The retained July 10 balance-sheet categories are classified but do not establish provider safeguards or a separate assurance opinion. Source-maintenance check 2026-10-07: public v3 positions/aggregates APIs expose dated named securities with live nested book clock 20:48:04.208Z; the independently dated close packet must not be mixed into that live book. Positions total $294140375.145 versus live account $294141376.725, leaving $1001.58 unidentified; do not label the residual cash/accrued interest or rescale already normalized weights. Ethereum details/1 supply is not the full multichain fund denominator, and estimated/on-chain exchange rates are distinct. Listing remains quarantined: producer implementation does not activate lifecycle. Candidate 3-day source/48-hour fetch requires full scope and liability reconciliation; holiday cadence is unverified and cannot justify widening to 4 days. New API observations do not replace retained composition weights or dates.",
+    "knownUnknownExposure": "The retained October 28 balance-sheet categories are classified but do not establish provider safeguards or a separate assurance opinion. The close packet is an independently dated issuer report and must not be mixed with live positions/aggregates API observations; the 2026-10-07 live-book check left $1,001.58 (0.0003%) unidentified versus the live account. Ethereum details/1 supply is not the full multichain fund denominator, and estimated/on-chain exchange rates are distinct. Listing remains quarantined: producer implementation does not activate lifecycle. Candidate 3-day source/48-hour fetch requires full scope and liability reconciliation; holiday cadence is unverified and cannot justify widening to 4 days. New API observations do not replace retained composition weights or dates.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "Direct U.S. Treasury bills",
-        "pct": 99.50431807,
+        "pct": 99.91773953,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Direct U.S. Treasury bills are external reserve assets rather than tracked stablecoin dependencies."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Dreyfus Institutional Preferred Treasury Obligations Fund",
-        "pct": 0.42476766,
+        "pct": 0.04545853,
         "disposition": "untracked-exogenous-asset",
         "rationale": "The Dreyfus Treasury money-market fund is an external reserve asset rather than a tracked stablecoin dependency."
       },
       {
         "reserveIndex": 3,
         "reserveName": "Accrued interest receivable",
-        "pct": 0.00025372,
+        "pct": 0.0012246,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Accrued interest receivable is an external accounting asset rather than a tracked stablecoin dependency."
       }
