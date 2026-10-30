@@ -208,10 +208,13 @@ export function adaptFraxBalanceSheet(payload: FraxBalanceSheetResponse, subject
   // The sync core rejects malformed slices before it reads fatal warnings, so a
   // withheld attempt still shares its rows over their own sum; they never publish.
   const shareBasisUsd = reconciliation.rowsExceedTotalWarning ? categorizedAssetTotal : total;
-  const stableRedeemableUsd = ["USDC", "USDS", "PYUSD", "DAI", "FRAX"].reduce(
-    (sum, symbol) => sum + (bySymbol.get(symbol) ?? 0),
-    0,
-  );
+  // Only another stablecoin can be exit capacity for the subject coin: its own
+  // balance-sheet rows are issuer/protocol-owned inventory (FraxFerry bridges,
+  // Curve/Convex LPs) that offsets its own supply, so redeeming FRAX with FRAX
+  // is circular. The subject row stays visible in the composition.
+  const stableRedeemableUsd = ["USDC", "USDS", "PYUSD", "DAI", "FRAX"]
+    .filter((symbol) => TOKEN_DISPLAY[symbol]?.coinId !== subjectId)
+    .reduce((sum, symbol) => sum + (bySymbol.get(symbol) ?? 0), 0);
   if (stableRedeemableUsd > total) {
     warnings.push(reserveDegradedWarning("redeemable-capacity-exceeds-total",
       "Frax redeemable asset rows exceed totalAssets; capacity is unavailable"));

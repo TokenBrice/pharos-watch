@@ -89,6 +89,11 @@
         "depType": "wrapper",
         "expectedAssetAddress": "0xdac17f958d2ee523a2206206994597c13d831ec7"
       },
+      "deployedExposure": {
+        "basis": "Morpho VaultV2 deployment 0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9 allocates user USDT through adapters rather than a V1 withdrawal queue; every non-idle supplied USDT unit is the reviewed Steakhouse-curated lending claim, while vault-held USDT is a separate idle balance",
+        "reviewedAt": "2026-10-01",
+        "sourceUrl": "https://app.morpho.org/ethereum/vault/0xbeef003c68896c7d2c3c60d363e8d71a49ab2bf9/steakhouse-prime-instant"
+      },
       "redemptionLiquidity": {
         "source": "morpho-vault-v2",
         "chainId": 1

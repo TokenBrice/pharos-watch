@@ -316,6 +316,33 @@ describe("fetchReMetricsReserves", () => {
       validate: false,
     })).rejects.toThrow("layout-changed");
   });
+
+  it.each([
+    ["an empty breakdowns object", {}],
+    ["chains whose rows all report no value", {
+      ethereum: { asOf: "2026-09-30", rows: [] },
+      base: { asOf: "2026-09-30", rows: [{ tokenSymbol: "usdc", valueWei: "0", valueKnown: true }] },
+    }],
+  ])("withholds composition for %s instead of publishing 100%% off-chain capital", (_label, initialChainBreakdowns) => {
+    const payload = {
+      initialChainBreakdowns,
+      initialCards: [{
+        seriesKey: "offchain_capital",
+        stats: { current: 250_178_472.84 },
+        points: [{ date: "2026-09-30", value: 250_178_472.84 }],
+      }],
+    };
+    const html = `<script>self.__next_f.push([1,${JSON.stringify(JSON.stringify(payload))}]);</script>`;
+    const result = adaptReMetrics(html);
+
+    expect(result.slices).toEqual([]);
+    expect(result.metadata).not.toHaveProperty("stableAssetUsd");
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "re-metrics-reserve-rows-unavailable",
+      effect: "fatal",
+    }));
+    expect(validateAdapterOutput(result, { now: Math.floor(Date.parse("2026-09-30") / 1000) }).valid).toBe(false);
+  });
 });
 
 

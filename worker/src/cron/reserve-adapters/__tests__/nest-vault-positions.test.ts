@@ -76,6 +76,8 @@ describe("fetchNestVaultPositionsReserves", () => {
         name: "Superstate USTB Treasury Fund", coinId: "ustb-superstate" },
       { slug: "superstate-uscc", symbol: "USCC", key: "uscc",
         name: "Superstate USCC cash-and-carry fund", coinId: undefined },
+      { slug: "nest-basis-vault", symbol: "nBASIS", key: "nbasis",
+        name: "Nest Basis vault (nBASIS)", coinId: "nbasis-nest" },
       { slug: "unfamiliar", symbol: "unfamiliar", key: "credit-vaults",
         name: "Nest private and structured credit vaults", coinId: undefined },
     ];
@@ -385,10 +387,10 @@ describe("fetchNestVaultPositionsReserves", () => {
         symbol: fixture.symbol, position: { value: 100 },
         pendingTransactions: [{ type: "PendingWithdrawal", amount: 2, price: 10, value: 20 }],
       }] }],
-    } } }, { data: { nav: 119 } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    } } }, { data: { nav: 119, price: 1, totalSupply: 119 } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-basis-vault/calculated-price"] = { data: {
       grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: fixture.fees,
-      claimableFeesAdjusted: true, unrealizedDividends: 0, errors: fixture.errors,
+      claimableFeesAdjusted: true, unrealizedDividends: 0, calculatedPrice: 1, errors: fixture.errors,
     } };
     const attempt = runAdapter("nest-vault-positions", "nbasis-nest", {
       network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
@@ -413,9 +415,10 @@ describe("fetchNestVaultPositionsReserves", () => {
         symbol: "USCC", position: { value: 100 },
         pendingTransactions: [{ type: "PendingWithdrawal", amount: 2, price: 10, value: 20 }],
       }] }],
-    } } }, { data: { nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    } } }, { data: { nav, price: 1, totalSupply: nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-basis-vault/calculated-price"] = { data: {
       grossCalculatedNav: 120, calculatedNav: 119, claimableFees: 1, claimableFeesAdjusted: true, unrealizedDividends: 0,
+      calculatedPrice: 1,
     } };
     const attempt = runAdapter("nest-vault-positions", "nbasis-nest", {
       network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
@@ -531,10 +534,10 @@ describe("fetchNestVaultPositionsReserves", () => {
         symbol: "OALS2T", position: { value: 100 },
         pendingTransactions: [{ type: "PendingWithdrawal", amount: 2, price: 10, value: 20 }],
       }] }],
-    } } }, { data: { nav: fixture.nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    } } }, { data: { nav: fixture.nav, price: 1, totalSupply: fixture.nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = { data: {
       grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: fixture.fees,
-      claimableFeesAdjusted: true, unrealizedDividends: 0,
+      claimableFeesAdjusted: true, unrealizedDividends: 0, calculatedPrice: 1,
     } };
     const attempt = runAdapter("nest-vault-positions", "nopal-nest", {
       network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
@@ -546,6 +549,46 @@ describe("fetchNestVaultPositionsReserves", () => {
     const { result } = await attempt;
     expect(result.metadata).toMatchObject({ totalReserveUsd: 120, calculatedNavUsd: 119,
       claimableFeesUsd: 1, pendingWithdrawalUsd: 20, unknownExposurePct: 100 });
+    expect(result.metadata?.navBasisSpreadUsd).toBe(0);
+    expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
+    expectWarnings(result, []);
+  });
+
+  it("admits a reconciling live payload whose published NAV is on a different price basis", async () => {
+    // 2026-10-30 nest-opal-vault: two queued OALS2T withdrawals reconcile the
+    // gross NAV exactly, while /price.nav is the pushed accountant price
+    // (1.11044) and /calculated-price is the live assetNav (1.1107696967).
+    const totalSupply = 106_842_510.14416999;
+    const network = nestNetwork("nopal-nest", { data: { positions: {
+      liquidAssets: [], yieldAssets: [{ slug: "liquid-stone", tokens: [{
+        symbol: "OALS2T", position: { value: 113_877_063.45276515 },
+        pendingTransactions: [
+          { type: "PendingWithdrawal", amount: 2_444_053, price: 1.0231981631960003, value: 2_500_750.540353674, requestId: 12 },
+          { type: "PendingWithdrawal", amount: 2_248_528, price: 1.0231981631960003, value: 2_300_689.7194947763, requestId: 13 },
+        ],
+      }] }],
+    } } }, { data: { nav: 118_642_196.96449214, price: 1.11044, totalSupply } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = { data: {
+      grossCalculatedNav: 118_678_503.7126136,
+      claimableFees: 1_081.121811,
+      claimableFeesAdjusted: true,
+      calculatedNav: 118_677_422.5908026,
+      calculatedPrice: 1.1107696967308514,
+      unrealizedDividends: 0,
+      totalSupply,
+      yieldStrategyPrices: { ewma: 1.1104659802430388, assetNav: 1.1107696967308514 },
+    } };
+    const { result } = await runAdapter("nest-vault-positions", "nopal-nest", {
+      network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,
+    });
+
+    expect(result.metadata).toMatchObject({
+      totalReserveUsd: 118_678_503.7126136,
+      calculatedNavUsd: 118_677_422.5908026,
+      navUsd: 118_642_196.96449214,
+      pendingWithdrawalUsd: expect.closeTo(4_801_440.25984845, 6),
+    });
+    expect(result.metadata?.navBasisSpreadUsd).toBeCloseTo(35_225.6263, 3);
     expect(result.metadata?.navReconciliationResidualUsd).toBeUndefined();
     expectWarnings(result, []);
   });
@@ -570,10 +613,16 @@ describe("fetchNestVaultPositionsReserves", () => {
   it("reconciles the saved nOPAL $60,000 dividend gap without assigning a held-asset identity", async () => {
     const fixture = JSON.parse(readFileSync(join(dirname(fileURLToPath(import.meta.url)), "fixtures", "nest-dividends-2026-10-18.json"), "utf8")) as {
       positions: unknown;
-      calculatedPrice: { data: { grossCalculatedNav: number; calculatedNav: number; claimableFees: number } };
+      calculatedPrice: { data: { grossCalculatedNav: number; calculatedNav: number; claimableFees: number; calculatedPrice: number; totalSupply: number } };
     };
     const network = nestNetwork("nopal-nest", fixture.positions,
-      { data: { nav: fixture.calculatedPrice.data.calculatedNav } },
+      {
+        data: {
+          nav: fixture.calculatedPrice.data.calculatedNav,
+          price: fixture.calculatedPrice.data.calculatedPrice,
+          totalSupply: fixture.calculatedPrice.data.totalSupply,
+        },
+      },
       { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = fixture.calculatedPrice;
     const { result } = await runAdapter("nest-vault-positions", "nopal-nest", {
@@ -629,10 +678,10 @@ describe("fetchNestVaultPositionsReserves", () => {
         symbol: "OALS2T", position: { value: 0 },
         pendingTransactions: [{ type: "PendingWithdrawal", amount: 20, price: 1, value: 20 }],
       }] }],
-    } } }, { data: { nav: fixture.nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
+    } } }, { data: { nav: fixture.nav, price: 1, totalSupply: fixture.nav } }, { data: { lastPriceUpdates: [{ updatedAt: FIXTURE_NOW }] } });
     network.json!["https://api.nest.credit/v1/vaults/nest-opal-vault/calculated-price"] = { data: {
       grossCalculatedNav: fixture.gross, calculatedNav: fixture.net, claimableFees: 1,
-      claimableFeesAdjusted: true, unrealizedDividends: fixture.dividends,
+      claimableFeesAdjusted: true, unrealizedDividends: fixture.dividends, calculatedPrice: 1,
     } };
     const attempt = runAdapter("nest-vault-positions", "nopal-nest", {
       network: installAdapterNetwork(network), nowSec: FIXTURE_NOW,

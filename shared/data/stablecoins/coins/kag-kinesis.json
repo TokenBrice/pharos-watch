@@ -89,8 +89,8 @@
     },
     "params": {
       "porFeedAddress": "0x3F0543aA057BcAeA152Fe9462Cb3ffaB305a6F8D",
-      "assetLabel": "Physical silver reserves",
-      "assetRisk": "very-low",
+      "assetLabel": "Native KAG reserve claim with physical-silver look-through",
+      "assetRisk": "medium",
       "reserveUnit": "XAG",
       "liabilityScope": {
         "basis": "not-comparable",

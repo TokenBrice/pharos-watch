@@ -234,6 +234,43 @@ describe("fetchErc4626SingleAssetReserves", () => {
     },
   );
 
+  it("fails closed when the idle balance exceeds totalAssets instead of clamping to a 100% idle mix", async () => {
+    const totalAssets = 414_526_138_576_951_556_405_870_020n;
+    installErc4626Network({
+      vault: "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+      asset: "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+      decimals: 18,
+      totalAssets,
+      totalSupply: totalAssets,
+      convertedAssets: totalAssets,
+      idleBalance: totalAssets + totalAssets / 100n,
+    });
+
+    await expect(runTrackedVault("senrlusdv2-sentora")).rejects.toThrow(/exceeds totalAssets/);
+  });
+
+  it("still absorbs a rounding-wei overage above totalAssets as fully idle", async () => {
+    const totalAssets = 414_526_138_576_951_556_405_870_020n;
+    installErc4626Network({
+      vault: "0x6dc58a0fdfc8d694e571dc59b9a52eeea780e6bf",
+      asset: "0x8292bb45bf1ee4d140127049757c2e0ff06317ed",
+      decimals: 18,
+      totalAssets,
+      totalSupply: totalAssets,
+      convertedAssets: totalAssets,
+      idleBalance: totalAssets + 1n,
+    });
+
+    const result = await runTrackedVault("senrlusdv2-sentora");
+
+    expect(result.metadata).toMatchObject({
+      idleUnderlyingBalanceRaw: (totalAssets + 1n).toString(),
+      deployedPct: 0,
+      unknownExposurePct: 0,
+    });
+    expect(result.slices).toEqual([expect.objectContaining({ pct: 100, coinId: "rlusd-ripple", depType: "wrapper" })]);
+  });
+
   it.each([0n, 25_000_000n, 100_000_000n, null])(
     "keeps Maple's pooled claim opaque regardless of observed idle cash %s",
     async (idleBalance) => {
