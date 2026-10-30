@@ -180,6 +180,13 @@ export interface V9BackingContribution {
   readonly wholeAssetWeight?: number | null;
   readonly effectiveScoringWeight?: number;
   readonly factors?: readonly V9BackingFactorContribution[];
+  /**
+   * Components this contribution excluded from its own computation under an
+   * A/B cause while the contribution itself stayed priced. The pillar's
+   * exclusion inventory fails closed without them: a published A/B exclusion
+   * must name the component it removed.
+   */
+  readonly excludedComponentKeys?: readonly string[];
 }
 
 export interface V9EffectiveBackingContribution extends V9BackingContribution {
