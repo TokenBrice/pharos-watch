@@ -788,20 +788,33 @@ function evaluateRoute(
     const causal = routeCause(route, key);
     return { factor: causal.excluded ? 1 : value, cause: causal.cause, causeGapIds: causal.causeGapIds };
   };
-  // The scored point's certification class is the confidence authority for an
-  // admitted certificate: a complete measurement of the ask is priced at parity
-  // with the model it confirms, while a lower bound keeps the certificate
-  // discount because it proves only its served fraction.
-  const certificatePoint = route.executionCertificate
+  // Credit a certificate for the share of the *current* stress ask its point
+  // measured, interpolating between the two declared rows. A capture-time
+  // `exact-complete` label is not a claim about today's request: supply drift
+  // can move the ask above the measured point. A `low`/`unknown` observation
+  // label is never lifted; it keeps its table value (R2, fail closed).
+  const certificatePoint = route.executionModelId && route.executionCertificate
     ? resolveExitExecutionBoundPoint(route.executionCertificate, request)
     : null;
   const certificateConfidence = certificatePoint !== null &&
     (certificatePoint.certification === "exact-complete" || certificatePoint.certification === "exact-lower-bound")
-    ? policy.certificateConfidenceByCertification[certificatePoint.certification]
+    ? (() => {
+        const lower = policy.certificateConfidenceByCertification["exact-lower-bound"];
+        const complete = policy.certificateConfidenceByCertification["exact-complete"];
+        const covered = certificatePoint.certification === "exact-complete"
+          ? Math.min(1, certificatePoint.requestedNotionalUsd / request.requestedNotionalUsd)
+          : 0;
+        return {
+          observationFactor: lower.observationFactor + covered * (complete.observationFactor - lower.observationFactor),
+          modelFactor: lower.modelFactor + covered * (complete.modelFactor - lower.modelFactor),
+        };
+      })()
     : null;
   const confidenceDimensions: V9ConfidenceDimensions = {
     observation: confidenceDimension("observationConfidence", Math.min(
-      certificateConfidence?.observationFactor ?? policy.observationConfidenceFactors[route.observationConfidence],
+      certificateConfidence !== null && route.observationConfidence === "medium"
+        ? certificateConfidence.observationFactor
+        : policy.observationConfidenceFactors[route.observationConfidence],
       staleObservationFactor(route, envelope))),
     model: confidenceDimension("executionConfidence",
       certificateConfidence !== null && route.modelConfidence === "medium"

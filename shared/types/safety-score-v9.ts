@@ -1105,12 +1105,12 @@ const V9ExitPolicySchema = z
       })
       .strict(),
     /**
-     * Confidence priced by what an admitted execution certificate proves.
-     * `exact-complete` measured the whole stress ask, so it is priced at
-     * parity with the fully confident model it confirms; `exact-lower-bound`
-     * proves only its served fraction and keeps the certificate discount.
-     * Certification class already owns same-rail supersession, so it owns this
-     * too instead of the producer's flat `medium` label.
+     * Confidence rows for an admitted execution certificate, interpolated by
+     * the fraction of the current stress ask its scored point measured.
+     * `exact-complete` at or above the ask earns the full row; anything below
+     * the ask scales toward `exact-lower-bound`, so supply drift cannot hand a
+     * partial measurement full credit and the certificate keeps the discount
+     * for the fraction it did not measure.
      */
     certificateConfidenceByCertification: z
       .object({

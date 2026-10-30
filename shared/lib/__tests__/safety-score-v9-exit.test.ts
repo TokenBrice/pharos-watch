@@ -835,10 +835,10 @@ describe("evaluateV9Exit", () => {
   });
 
   it.each([
-    { modelConfidence: "medium", modelFactor: 1, confidenceFactor: 1 },
-    { modelConfidence: "high", modelFactor: 1, confidenceFactor: 1 },
+    { modelConfidence: "medium", modelFactor: 0.865, confidenceFactor: 0.865 },
+    { modelConfidence: "high", modelFactor: 1, confidenceFactor: 0.865 },
     { modelConfidence: "low", modelFactor: 0.35, confidenceFactor: 0.35 },
-  ] as const)("prices an exact-complete certificate at parity and keeps a $modelConfidence review priced as reviewed", ({ modelConfidence, modelFactor, confidenceFactor }) => {
+  ] as const)("prices certificate credit by measured coverage and keeps a $modelConfidence review priced as reviewed", ({ modelConfidence, modelFactor, confidenceFactor }) => {
     const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
       .find((entry) => entry.identity.assetId === "susds-sky")!;
     const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
@@ -901,7 +901,8 @@ describe("evaluateV9Exit", () => {
       expect(result.routes.find((entry) => entry.routeKey === "modeled:duplicate")!.included).toBe(false);
       const primary = result.routes.find((entry) => entry.routeKey === "redemption:issuer")!;
       expect(primary.confidenceDimensions!.model.factor).toBe(modelFactor);
-      expect(primary.confidenceDimensions!.observation.factor).toBe(1);
+      // The fixture measures $100k of the $1M stress floor: 0.85 + 0.1 * 0.15.
+      expect(primary.confidenceDimensions!.observation.factor).toBe(0.865);
       expect(primary.confidenceFactor).toBe(confidenceFactor);
       return result.routes.find((entry) => entry.routeKey === "redemption:issuer")!;
     });
@@ -911,29 +912,28 @@ describe("evaluateV9Exit", () => {
     expect(traces[1]!.score).toBeLessThanOrEqual(traces[0]!.score!);
   });
 
-  it("prices a lower-bound certificate below the same-rail model it competes with", () => {
+  it("scales certificate credit by the share of the current stress ask it measured", () => {
     const lowerBound = certificateRoute({
       routeKey: "certificate", certification: "exact-lower-bound", physicalResourceKeys: ["rail:fixture"],
     });
     const complete = certificateRoute({
       routeKey: "certificate", certification: "exact-complete", physicalResourceKeys: ["rail:fixture"],
     });
-    const evaluate = (subject: typeof lowerBound) => evaluateV9Exit({
-      circulatingUsd: 2_000_000, assetId: subject.assetId, clockSec: subject.clockSec, routes: [subject.route],
-    }, V9_CANDIDATE_POLICY_V1).routes.find((entry) => entry.routeKey === "certificate")!;
-    const lowerTrace = evaluate(lowerBound);
-    const completeTrace = evaluate(complete);
-    // A lower bound proves only its served fraction, so it keeps the discount.
-    expect(lowerTrace.confidenceDimensions).toMatchObject({
-      observation: { factor: 0.85 }, model: { factor: 0.85 },
-    });
-    expect(lowerTrace.confidenceFactor).toBe(0.85);
-    // A complete measurement is priced at parity with the model it confirms.
-    expect(completeTrace.confidenceDimensions).toMatchObject({
-      observation: { factor: 1 }, model: { factor: 1 },
-    });
-    expect(completeTrace.confidenceFactor).toBe(1);
-    expect(completeTrace.score).toBeCloseTo(lowerTrace.score! / 0.85, 6);
+    const factorAt = (subject: typeof lowerBound, circulatingUsd: number) => evaluateV9Exit({
+      circulatingUsd, assetId: subject.assetId, clockSec: subject.clockSec, routes: [subject.route],
+    }, V9_CANDIDATE_POLICY_V1).routes.find((entry) => entry.routeKey === "certificate")!.confidenceFactor;
+    // A lower bound measured none of the ask: it keeps the declared floor.
+    expect(factorAt(lowerBound, 2_000_000)).toBeCloseTo(0.85, 10);
+    // The fixture measured $100k against the $1M stress floor: 0.85 + 0.1 * 0.15.
+    expect(factorAt(complete, 2_000_000)).toBeCloseTo(0.85 + 0.1 * 0.15, 10);
+    // A larger ask shrinks the measured share without touching the certificate.
+    expect(factorAt(complete, 26_000_000)).toBeCloseTo(0.85 + (0.1 / 1.3) * 0.15, 10);
+    // A weak producer label is never lifted into the certificate credit (R2).
+    const lowLabel = { ...complete.route, observationConfidence: "low" as const };
+    expect(evaluateV9Exit({
+      circulatingUsd: 2_000_000, assetId: complete.assetId, clockSec: complete.clockSec, routes: [lowLabel],
+    }, V9_CANDIDATE_POLICY_V1).routes.find((entry) => entry.routeKey === "certificate")!.confidenceFactor)
+      .toBeCloseTo(0.6, 10);
   });
 
   it("retains non-certificate on-chain medium model confidence at 0.75", () => {
