@@ -3,6 +3,20 @@
   "name": "Noble Dollar",
   "symbol": "USDN",
   "oneLiner": "USDN is Noble's yield-bearing representation of M0's M token, backed by short-term U.S. T-bills; Noble holders must claim rewards to increase balances.",
+  "status": "frozen",
+  "frozenAt": "2026-07-07",
+  "windDownAnnouncedAt": "2026-07-07",
+  "windDownSourceUrl": "https://x.com/noble_xyz/status/2074478458353430896",
+  "obituary": {
+    "causeOfDeath": "abandoned",
+    "deathDate": "2026-07-07",
+    "recordedAt": "2026-10-30",
+    "epitaph": "Noble's dollar entered maintenance mode",
+    "obituary": "Noble moved USDN to maintenance mode on 2026-07-07 and said the USDC-USDN swaps pool on Noble would be closing soon. Holders may bridge USDN to Ethereum as wM and exchange wM for USDC on Uniswap.",
+    "peakMcap": 128014818,
+    "sourceUrl": "https://x.com/noble_xyz/status/2074478458353430896",
+    "sourceLabel": "Noble USDN maintenance-mode announcement"
+  },
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized",
@@ -73,27 +87,6 @@
   ],
   "custodyModel": "onchain",
   "governanceQuality": "multisig",
-  "liveReservesConfig": {
-    "adapter": "m0",
-    "version": 1,
-    "semantics": "protocol-reserve",
-    "breakerScope": "m0",
-    "suspended": {
-      "reason": "The shared M0 gateway adapter observes upstream M collateral rather than USDN's immediate locked-M representation claim and local liabilities. Resume only with an identity-bound Noble wrapper reserve producer.",
-      "since": "2026-10-20",
-      "reviewBy": "2026-11-20"
-    },
-    "display": {
-      "url": "https://dashboard.m0.org/",
-      "label": "M0 Dashboard"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "http-json",
-        "url": "https://protocol-api.m0.org/graphql"
-      }
-    }
-  },
   "yieldConfig": {
     "yieldSource": "M0 T-bill rebase",
     "yieldType": "rebase"

@@ -714,7 +714,7 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
   });
 
   it("retires the recovered IDRT review and the expired M0-family reviews that would acknowledge nothing", () => {
-    for (const id of ["idrt-rupiah-token", "usdn-noble", "usdk-kast"]) {
+    for (const id of ["idrt-rupiah-token", "usdk-kast"]) {
       expect(ACTIVE_STABLECOINS.some((coin) => coin.id === id)).toBe(true);
       expect(STABLECOIN_PRICE_GAP_REVIEWS.some((review) => review.stablecoinId === id)).toBe(false);
       const first = evaluateStablecoinActivePriceCoverage(

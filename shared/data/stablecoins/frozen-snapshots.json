@@ -1989,5 +1989,69 @@
         }
       ]
     }
+  },
+  {
+    "id": "usdn-noble",
+    "capturedAt": "2026-10-30T16:09:57.502Z",
+    "peggedAssetRow": {
+      "id": "usdn-noble",
+      "name": "Noble Dollar",
+      "symbol": "USDN",
+      "geckoId": "noble-dollar-usdn",
+      "pegType": "peggedUSD",
+      "pegMechanism": "fiat-backed",
+      "price": 0.9989697860151064,
+      "priceSource": "coingecko",
+      "priceConfidence": "single-source",
+      "priceUpdatedAt": 1793376063,
+      "priceObservedAt": 1793376063,
+      "priceObservedAtMode": "upstream",
+      "priceDerivation": {
+        "inheritedFrom": "m-m0",
+        "parentSource": "coingecko",
+        "parentConfidence": "single-source",
+        "parentObservedAt": 1793376063,
+        "parentObservedAtMode": "upstream",
+        "parentReplaySafe": true
+      },
+      "priceSyncedAt": 1793376034,
+      "consensusSources": [
+        "coingecko"
+      ],
+      "agreeSources": [
+        "coingecko"
+      ],
+      "supplySource": "defillama",
+      "circulating": {
+        "peggedUSD": 1421397.317586
+      },
+      "circulatingPrevDay": {
+        "peggedUSD": 1422678.838328
+      },
+      "circulatingPrevWeek": {
+        "peggedUSD": 1440989.870998
+      },
+      "circulatingPrevMonth": {
+        "peggedUSD": 1604118.164177
+      },
+      "chainCirculating": {
+        "Noble": {
+          "current": 1421397.317586,
+          "circulatingPrevDay": 1422678.838328,
+          "circulatingPrevWeek": 1440989.870998,
+          "circulatingPrevMonth": 1604118.164177
+        }
+      },
+      "chains": [
+        "Noble"
+      ],
+      "contracts": [
+        {
+          "chain": "noble",
+          "address": "uusdn",
+          "decimals": 6
+        }
+      ]
+    }
   }
 ]

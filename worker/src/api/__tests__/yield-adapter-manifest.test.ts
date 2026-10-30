@@ -106,7 +106,7 @@ describe("handleYieldAdapterManifest", () => {
       body.entries.some((entry) => entry.stablecoinId === "susde-ethena" && entry.sourceKey === "defillama:susde-ethena"),
     ).toBe(false);
 
-    for (const stablecoinId of ["cgusd-cygnus-finance", "usdn-noble"]) {
+    for (const stablecoinId of ["cgusd-cygnus-finance"]) {
       expect(RATE_DERIVED_CONFIGS.some((config) => config.stablecoinId === stablecoinId)).toBe(true);
       expect(
         body.entries.find((entry) =>

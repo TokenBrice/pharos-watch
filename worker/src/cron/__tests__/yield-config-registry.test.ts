@@ -167,6 +167,7 @@ describe("yield config registry", () => {
       expect(YIELD_POOL_MAP[id], id).toBeUndefined();
       expect(YIELD_VARIANT_MAP[id], id).toBeUndefined();
       expect(ON_CHAIN_RATE_CONFIGS.some((entry) => entry.stablecoinId === id), id).toBe(false);
+      expect(RATE_DERIVED_CONFIGS.some((entry) => entry.stablecoinId === id), id).toBe(false);
       expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === id), id).toBeUndefined();
     }
   });
@@ -521,7 +522,6 @@ describe("yield config registry", () => {
 
     for (const stablecoinId of [
       "cgusd-cygnus-finance",
-      "usdn-noble",
       "benji-franklin-templeton",
       "wtgxx-wisdomtree",
       "ustbl-spiko",
@@ -574,7 +574,6 @@ describe("yield config registry", () => {
       "cgusd-cygnus-finance",
       "ylds-figure",
       "mtbill-midas",
-      "usdn-noble",
       "ousg-ondo-finance",
       "susd-solayer",
       "benji-franklin-templeton",
@@ -649,7 +648,7 @@ describe("yield config registry", () => {
       });
     }
 
-    for (const stablecoinId of ["cgusd-cygnus-finance", "usdn-noble"]) {
+    for (const stablecoinId of ["cgusd-cygnus-finance"]) {
       expect(rateDerivedIds.has(stablecoinId), stablecoinId).toBe(true);
       expect(intentionalGapIds.has(stablecoinId), stablecoinId).toBe(false);
       expect(YIELD_ADAPTER_MANIFEST.find((entry) => entry.stablecoinId === stablecoinId)).toMatchObject({
