@@ -249,6 +249,41 @@ describe("incident runtime projection", () => {
     expect(() => projectNegativeIncidentReview(withEvidence(providerRow()))).toThrow();
   });
 
+  it("narrows per-asset OQ-1 exemptions and keeps the runtime row admissible", () => {
+    const disclosure = {
+      incidentKey: "kelpdao-dvn-2026-04-18",
+      class: "verifier-compromise",
+      surface: "dvn-set",
+      occurredAt: "2026-04-18",
+      exposureStartSec: Date.parse("2026-04-18T00:00:00Z") / 1_000,
+      exposureEndSec: Date.parse("2026-04-25T00:00:00Z") / 1_000,
+      affectedRoutes: [],
+      sourceUrls: ["https://example.com/status"],
+      exemptions: [ASSET_B, ASSET_A].map((assetId) => ({
+        assetId,
+        routeId: assetId === ASSET_A ? ROUTE_ETH : ROUTE_BASE,
+        kind: "deployed-after-exposure",
+        creationTxHash: `0x${"1".repeat(64)}`,
+        creationBlock: 300,
+        creationTimestampSec: Date.parse("2026-05-01T00:00:00Z") / 1_000,
+      })),
+    };
+    const rows = fanOutProviderIncidentReview(providerRow({ providerIncidents: [disclosure] }));
+    expect(rows.map((row) => (row.providerIncidents as { exemptions: { assetId: string }[] }[])[0]!.exemptions
+      .map((exemption) => exemption.assetId))).toEqual([[ASSET_B], [ASSET_A]]);
+    // The per-asset runtime row must re-admit the strict provider schema: a
+    // global exemption list would make every covered asset quarantine.
+    const runtime = buildIncidentRuntime(referencedEnvelope([providerRow({ providerIncidents: [disclosure] })]));
+    for (const row of runtime.negativeReviews) {
+      expect(row.providerIncidents).toHaveLength(1);
+      expect(row.providerIncidents![0]!.exemptions).toHaveLength(1);
+      expect(row.providerIncidents![0]!.exemptions[0]!.assetId).toBe(row.assetId);
+      expect(Object.keys(row).sort()).toEqual([
+        "assetId", "providerIncidents", "reviewId", "reviewedAt", "scope", "sources", "windowEndSec", "windowStartSec",
+      ]);
+    }
+  });
+
   it("fails closed on provider coverage it cannot admit", () => {
     expect(() => buildIncidentRuntime(referencedEnvelope([providerRow({ providerIncidents: undefined })])))
       .toThrow(/providerIncidents/);

@@ -1,10 +1,12 @@
 import { z } from "zod";
 import {
   V9AttributedNegativeIncidentReviewSchema,
+  V9ProviderIncidentDisclosureSchema,
   V9ProviderIncidentReviewSchema,
   V9ProviderIncidentReviewScopeSchema,
   v9NegativeIncidentReviewTimeSec,
   type V9IncidentReviewRetirement,
+  type V9ProviderIncidentDisclosure,
   type V9ProviderIncidentReviewScope,
 } from "../../shared/types/safety-score-v9-incidents";
 import { isRecord } from "../../shared/lib/type-guards";
@@ -28,6 +30,12 @@ export type ProjectedNegativeIncidentReview = {
   assetId: string;
   scope: V9AttributedNegativeIncidentReview["scope"] | V9ProviderIncidentReviewScope;
   retired?: V9IncidentReviewRetirement;
+  /**
+   * Provider scope only. Carried into the runtime row because OQ-1 evaluates
+   * exposures there; dropping it would make the runtime schema reject every
+   * covered asset and would leave the exposure check with an empty list.
+   */
+  providerIncidents?: V9ProviderIncidentDisclosure[];
   reviewedAt: string;
   windowStartSec: number;
   windowEndSec: number;
@@ -39,6 +47,7 @@ type ProjectedReviewInput = {
   assetId: string;
   scope: ProjectedNegativeIncidentReview["scope"];
   retired?: V9IncidentReviewRetirement;
+  providerIncidents?: V9ProviderIncidentDisclosure[];
   reviewedAt: string;
   windowStartSec: number;
   windowEndSec: number;
@@ -50,10 +59,13 @@ type ProjectedReviewInput = {
  * The parts of an authored provider row that decide its per-asset fan-out. The
  * full record (including expanded sources) is admitted after reference
  * expansion, so a malformed row still fails the build closed. Certificates are
- * joined at evaluation time, so a provider row names no certificate here.
+ * joined at evaluation time, so a provider row names no certificate here;
+ * incident disclosures and their lane exemptions are validated here so the
+ * per-asset narrowing below cannot emit an invalid row.
  */
 const AuthoredProviderReviewSchema = z.object({
   scope: V9ProviderIncidentReviewScopeSchema,
+  providerIncidents: z.array(V9ProviderIncidentDisclosureSchema).optional(),
 }).passthrough();
 
 /**
@@ -68,6 +80,7 @@ function projectReview(review: ProjectedReviewInput): ProjectedNegativeIncidentR
     payload: review.payload, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC });
   return { reviewId: review.reviewId, assetId: review.assetId, scope: review.scope,
     ...(review.retired === undefined ? {} : { retired: review.retired }),
+    ...(review.providerIncidents === undefined ? {} : { providerIncidents: review.providerIncidents }),
     reviewedAt: review.reviewedAt, windowStartSec: review.windowStartSec, windowEndSec: review.windowEndSec,
     // Map insertion order is the builder's source index, which each evidence key embeds.
     // Digest first: a URL ending in a key-like word must not precede the hex value.
@@ -98,7 +111,7 @@ export function projectNegativeIncidentReview(value: unknown): ProjectedNegative
  * build.
  */
 export function fanOutProviderIncidentReview(value: Record<string, unknown>): Record<string, unknown>[] {
-  const { scope } = AuthoredProviderReviewSchema.parse(value);
+  const { scope, providerIncidents } = AuthoredProviderReviewSchema.parse(value);
   const rows: Record<string, unknown>[] = [...new Set(scope.coveredRoutes.map((ref) => ref.assetId))].sort(compareText).map((assetId) => {
     const lanes = scope.coveredRoutes.filter((ref) => ref.assetId === assetId);
     return {
@@ -110,6 +123,15 @@ export function fanOutProviderIncidentReview(value: Record<string, unknown>): Re
         surface: scope.surface,
         coveredRoutes: lanes,
       },
+      // Lane exemptions are asset-scoped evidence: the per-asset row may only
+      // carry its own, or the strict re-admission of this row rejects the whole
+      // lane even though the authored review was valid.
+      ...(providerIncidents === undefined ? {} : {
+        providerIncidents: providerIncidents.map((incident) => ({
+          ...incident,
+          exemptions: incident.exemptions.filter((exemption) => exemption.assetId === assetId),
+        })),
+      }),
     };
   });
   const fannedLanes = rows.reduce((count, row) => count + (row.scope as V9ProviderIncidentReviewScope).coveredRoutes.length, 0);
@@ -134,6 +156,7 @@ export function projectProviderIncidentRow(value: Record<string, unknown>): Proj
     reviewId: review.reviewId,
     assetId,
     scope: review.scope,
+    ...(review.providerIncidents === undefined ? {} : { providerIncidents: review.providerIncidents }),
     ...(review.retired === undefined ? {} : { retired: review.retired }),
     reviewedAt: review.reviewedAt,
     windowStartSec: review.windowStartSec,
