@@ -127,6 +127,7 @@
     "check:sql-safety": "node --import tsx scripts/ci/check-sql-interpolation-safety.ts",
     "check:stablecoin-data": "tsx scripts/ci/check-stablecoin-data.ts",
     "check:incident-review-keys": "node --import tsx scripts/ci/check-incident-review-keys.ts",
+    "check:new-asset-evidence-packet": "node --import tsx scripts/ci/check-new-asset-evidence-packet.ts",
     "check:editorial-content": "node --import tsx scripts/ci/check-editorial-content.ts",
     "check:failure-scenarios": "node --import tsx scripts/ci/check-failure-scenarios.ts",
     "scenarios:approve": "node --import tsx scripts/maintenance/approve-failure-scenario.ts",

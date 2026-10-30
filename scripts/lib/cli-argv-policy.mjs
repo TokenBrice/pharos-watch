@@ -31,6 +31,7 @@ export const CLI_ARGV_POLICY = Object.freeze({
     strict("scripts/ci/check-failure-scenarios.ts"),
     strict("scripts/ci/check-html-fixture-age.ts"),
     strict("scripts/ci/check-live-api-cache-policy.mjs"),
+    strict("scripts/ci/check-new-asset-evidence-packet.ts"),
     strict("scripts/ci/guard-worker-deploy.ts"),
     strict("scripts/ci/open-automated-refresh-pr.ts"),
     strict("scripts/ci/verify-mechanism-refresh-diff.ts"),
