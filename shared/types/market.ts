@@ -17,7 +17,7 @@ import {
   DexExitRouteObservationsSchema,
   ExitRouteObservationCoverageSchema,
 } from "./exit-route";
-import { DexMeasuredExecutionPublicProfileSchema } from "./measured-execution";
+import { DexMeasuredExecutionPublicProfileSchema, DexMeasuredExecutionValidationReasonSchema } from "./measured-execution";
 import { StrictIsoDateSchema } from "./safety-schema-primitives";
 import { MECHANISM_ARCHETYPE_VALUES } from "./stablecoin-taxonomy";
 import {
@@ -604,6 +604,8 @@ export const DexExecutionCapabilityGateSchema = z.object({
     "deployment-code-mismatch",
     "activation-pending",
   ]),
+  validationIssues: z.array(DexMeasuredExecutionValidationReasonSchema)
+    .max(DexMeasuredExecutionValidationReasonSchema.options.length).optional(),
 });
 export type DexExecutionCapabilityGate = z.infer<typeof DexExecutionCapabilityGateSchema>;
 

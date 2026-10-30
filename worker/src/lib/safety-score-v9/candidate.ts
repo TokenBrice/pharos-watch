@@ -186,6 +186,13 @@ export interface BuildSafetyScoreV9CandidateInput {
   allowRegistryMismatch?: boolean;
   registry?: Pick<BuildSafetyScoreV9BaselineExtensionOptions, "metaById" | "registryFingerprint" | "reviewedTransferFacts">;
   /**
+   * v10.39 lane closure inputs, assembled once by the caller: admitted
+   * certificate chains per lane and the reviewed lane descriptors. Omitted keeps
+   * the closure inert (no certificate read, no `none`).
+   */
+  laneIncidentCertificates?: BuildSafetyScoreV9BaselineExtensionOptions["laneIncidentCertificates"];
+  laneEmitterDescriptors?: BuildSafetyScoreV9BaselineExtensionOptions["laneEmitterDescriptors"];
+  /**
    * 10.35 asset-local measured-route expiry: the prior accepted baseline and the
    * input's embedded-window projection. Detected assets are quarantined and the
    * cohort recompiled; omitted only by callers without accepted context.
@@ -661,6 +668,8 @@ function materializeCandidateExtension(input: BuildSafetyScoreV9CandidateFromNor
       ...input.registry,
       ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
       transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
+      ...(input.laneIncidentCertificates === undefined ? {} : { laneIncidentCertificates: input.laneIncidentCertificates }),
+      ...(input.laneEmitterDescriptors === undefined ? {} : { laneEmitterDescriptors: input.laneEmitterDescriptors }),
     }));
 }
 
@@ -812,6 +821,8 @@ function buildSafetyScoreV9CandidatePipeline(
     ...input.registry,
     ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
     transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
+    ...(input.laneIncidentCertificates === undefined ? {} : { laneIncidentCertificates: input.laneIncidentCertificates }),
+    ...(input.laneEmitterDescriptors === undefined ? {} : { laneEmitterDescriptors: input.laneEmitterDescriptors }),
   };
   const streamExtension = !retainIntermediates && input.extension === undefined && input.liveWithheldCompilation === undefined;
   let extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;

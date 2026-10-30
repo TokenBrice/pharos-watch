@@ -1,4 +1,4 @@
-import type { ExitExecutionCanonicalAttempt, ExitExecutionCertificate, ExitExecutionModelReview, ExitRouteObservation } from "@shared/types/exit-route";
+import type { ExitExecutionCanonicalAttempt, ExitExecutionCertificate, ExitExecutionModelReview, ExitExecutionRouteFailure, ExitRouteObservation } from "@shared/types/exit-route";
 import { ExitRouteObservationSchema } from "@shared/types/exit-route";
 import type { V9ValidatedPolicyEnvelope } from "@shared/types/safety-score-v9";
 import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
@@ -13,10 +13,7 @@ import { loadStablecoinsCache, type StablecoinsCacheLoadResult } from "../stable
 import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 import { getFxReferenceTypeFromState, loadFxRateState, type FxRateState } from "../fx-rate-state";
 
-type ExitExecutionRuntimeFailure = {
-  modelId: string;
-  reason: string;
-  responsibility: "producer-failed" | "method-unsupported";
+type ExitExecutionRuntimeFailure = ExitExecutionRouteFailure & {
   canonicalAttempt?: ExitExecutionCanonicalAttempt;
 };
 
@@ -48,7 +45,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
   const failures: ExitExecutionRuntimeFailure[] = [];
   if (reviews.length === 0) return { observations, failures };
   const request = selectV9ExitStressRequest(args.circulatingUsd, envelope);
-  if (!request) return { observations, failures: reviews.map((review) => ({ modelId: review.modelId, reason: "canonical-supply-unavailable", responsibility: "producer-failed" as const })) };
+  if (!request) return { observations, failures: reviews.map((review): ExitExecutionRuntimeFailure => ({ modelId: review.modelId, reason: "canonical-supply-unavailable", responsibility: "producer-failed" })) };
   const requests = [...new Set([...envelope.policy.semantic.exit.stressRequest.notionalGridUsd, request.requestedNotionalUsd])]
     .sort((left, right) => left - right)
     .map((requestedNotionalUsd) => ({ requestedNotionalUsd, maxCostBps: request.maxCostBps }));
@@ -63,9 +60,13 @@ export async function observeReviewedExitExecutionRoutes(args: {
       if (!policy || policy.admission !== "enabled") { failures.push({ modelId: review.modelId, reason: "execution-model-unreviewed", responsibility: "method-unsupported" }); continue; }
       let inputReference = args.inputReference;
       let outputReference = args.outputReference;
+      let inputPrice = null;
+      let outputPrice = null;
       if (cache?.kind === "ok") {
         const input = cache.payload.peggedAssets.find((asset) => asset.id === args.assetId);
         const output = cache.payload.peggedAssets.find((asset) => asset.id === review.identity.outputAssetKeys[0]);
+        inputPrice = input ?? null;
+        outputPrice = output ?? null;
         // A future-dated price is not an observed reference: the evaluator
         // would fail-close it on `futureSkewSec`, so capturing it only burns a
         // certificate that can never be admitted.
@@ -103,6 +104,23 @@ export async function observeReviewedExitExecutionRoutes(args: {
       // inside `priceMaxAgeSec` here can age past it before evaluation, so the
       // capture margin withholds it earlier and names the binding leg.
       const capturePriceMaxAgeSec = policy.priceMaxAgeSec - (policy.evaluationLagSec ?? 0);
+      const priceFailure = (leg: "input" | "output"): ExitExecutionRuntimeFailure => {
+        const reference = leg === "input" ? inputReference : outputReference;
+        const price = leg === "input" ? inputPrice : outputPrice;
+        const observedAtSec = reference?.observedAtSec ?? price?.priceObservedAt ?? null;
+        return {
+          modelId: review.modelId,
+          reason: reference ? `execution-price-leg-stale:${leg}`
+            : observedAtSec !== null && observedAtSec > args.clockSec
+              ? `execution-price-leg-future:${leg}` : "execution-price-reference-unavailable",
+          responsibility: "producer-failed",
+          priceLeg: {
+            leg, observedAtSec, capturePriceMaxAgeSec,
+            sourceId: reference?.sourceId ?? price?.priceSource ?? null,
+            sourceGenerationId: reference?.sourceGenerationId ?? (cache?.kind === "ok" ? `stablecoins:${cache.updatedAt}` : null),
+          },
+        };
+      };
       const outputFresh = !!outputReference && args.clockSec - outputReference.observedAtSec <= capturePriceMaxAgeSec;
       const inputFresh = !!inputReference && args.clockSec - inputReference.observedAtSec <= capturePriceMaxAgeSec;
       // A vault without an external share token re-derives a stale share price
@@ -110,10 +128,10 @@ export async function observeReviewedExitExecutionRoutes(args: {
       const refreshInputFromOutput = isVault && !externalShares && outputFresh && !inputFresh &&
         !!outputReference && outputReference.observedAtSec <= args.clockSec;
       if (!outputReference || !outputFresh) {
-        failures.push({ modelId: review.modelId, reason: outputReference ? "execution-price-leg-stale:output" : "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue;
+        failures.push(priceFailure("output")); continue;
       }
       if (!inputFresh && !refreshInputFromOutput) {
-        failures.push({ modelId: review.modelId, reason: inputReference ? "execution-price-leg-stale:input" : "execution-price-reference-unavailable", responsibility: "producer-failed" }); continue;
+        failures.push(priceFailure("input")); continue;
       }
       const observed = isVault
         // Only the canonical request is published/admitted. Bounded fallback
@@ -169,7 +187,7 @@ export async function observeReviewedExitExecutionRoutes(args: {
       if (admission.state === "unavailable") failures.push({ modelId: review.modelId, reason: admission.reason, responsibility: admission.responsibility === "method-unsupported" ? "method-unsupported" : "producer-failed" });
     } catch (error) {
       if (args.signal?.aborted) throw error;
-      failures.push({ modelId: review.modelId, reason: error instanceof Error ? error.message : "execution-producer-failed", responsibility: "producer-failed",
+      failures.push({ modelId: review.modelId, reason: error instanceof Error && error.message ? error.message : "execution-producer-failed", responsibility: "producer-failed",
         ...(error instanceof Erc4626CanonicalAttemptError ? { canonicalAttempt: error.canonicalAttempt } : {}) });
     }
   }

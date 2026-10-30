@@ -273,6 +273,21 @@ export const ExitExecutionCanonicalAttemptSchema = z.object({
 }).strict();
 export type ExitExecutionCanonicalAttempt = z.output<typeof ExitExecutionCanonicalAttemptSchema>;
 
+/** Diagnostic-only verdict for an execution route withheld by its producer. */
+export const ExitExecutionRouteFailureSchema = z.object({
+  modelId: z.string().min(1),
+  reason: z.string().min(1),
+  responsibility: z.enum(["producer-failed", "method-unsupported"]),
+  priceLeg: z.object({
+    leg: z.enum(["input", "output"]),
+    observedAtSec: z.number().int().nonnegative().nullable(),
+    capturePriceMaxAgeSec: z.number().int().nonnegative(),
+    sourceId: z.string().nullable(),
+    sourceGenerationId: z.string().nullable(),
+  }).strict().optional(),
+}).strict();
+export type ExitExecutionRouteFailure = z.output<typeof ExitExecutionRouteFailureSchema>;
+
 export const ExitExecutionRequestPointSchema = z.object({
   requestedNotionalUsd: z.number().finite().positive(),
   maxCostBps: z.number().finite().nonnegative(),

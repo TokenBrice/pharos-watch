@@ -4,17 +4,13 @@ import {
   V9ReviewedIncidentRegistrySchema,
   V9ReviewedIncidentSchema,
   V9NegativeIncidentReviewSchema,
+  V9AuthoredIncidentRegistryEnvelopeSchema,
 } from "../safety-score-v9-incidents";
-import {
-  V9_WRAPPER_LOCAL_FACT_KEYS,
-  V9WrapperLocalFactsSchema,
-} from "../safety-score-v9-wrapper";
 import { V9OperationalResilienceIncidentSchema } from "../safety-score-v9-operational-resilience-primitives";
-import { expandReviewedRegistryReferences } from "../../lib/safety-score-v9/reviewed-registry";
+import { buildIncidentRuntime } from "../../../scripts/lib/safety-score-v9-incident-runtime";
 
-const expandedIncidentReviews = expandReviewedRegistryReferences(incidentReviewsAsset, "negativeReviews", {
-  sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-});
+// Admit the authored provider-wide rows before their asset-attributed expansion.
+const incidentRuntime = buildIncidentRuntime(incidentReviewsAsset);
 
 const BASE_INCIDENT = {
   incidentId: "fixture-control-incident",
@@ -131,9 +127,11 @@ describe("Safety Score v9 researched-negative incident schema", () => {
     }
   });
 
-  it("rejects duplicate negative-review IDs and admits only the expanded runtime envelope", () => {
+  it("rejects duplicate asset-scoped IDs and admits authored provider rows through the runtime boundary", () => {
     expect(V9ReviewedIncidentRegistrySchema.safeParse(incidentReviewsAsset).success).toBe(false);
-    expect(V9ReviewedIncidentRegistrySchema.safeParse(expandedIncidentReviews).success).toBe(true);
+    expect(V9AuthoredIncidentRegistryEnvelopeSchema.safeParse(incidentReviewsAsset).success).toBe(true);
+    expect(incidentRuntime.negativeReviews.map((review) => review.scope.kind)).toContain("provider");
+    expect(incidentRuntime.negativeReviews.map((review) => review.scope.kind)).toContain("issuer-surface");
     expect(V9ReviewedIncidentRegistrySchema.safeParse({
       schemaVersion: 1, incidents: [], negativeReviews: [NEGATIVE_REVIEW, NEGATIVE_REVIEW],
     }).success).toBe(false);
@@ -165,8 +163,7 @@ describe("Safety Score v9 reviewed incident schema", () => {
 
 
   it("admits only scoped, verified, non-realized informational vulnerability history", () => {
-    const registry = V9ReviewedIncidentRegistrySchema.parse(expandedIncidentReviews);
-    const history = registry.incidents.find((incident) => incident.assetId === "xaut-tether")!;
+    const history = incidentRuntime.incidents.find((incident) => incident.assetId === "xaut-tether")!;
     expect(history).toMatchObject({
       domain: "security-history",
       realization: "no-reported-exploit",
@@ -335,40 +332,14 @@ describe("Safety Score v9 reviewed incident schema", () => {
     }).success).toBe(false);
   });
 
-  it("rejects a wrapper incident overlay with a non-canonical deployment key", () => {
-    const facts = Object.fromEntries(
-      V9_WRAPPER_LOCAL_FACT_KEYS.map((key) => [
-        key,
-        {
-          disposition: "integration-missing",
-          assessment: null,
-          signals: [`fixture:${key}`],
-          evidenceRefIds: [],
-          ...(key === "measuredUnwind"
-            ? {
-                incidentPostures: [{
-                  incidentId: "fixture-wrapper-incident",
-                  scope: {
-                    kind: "deployment",
-                    deploymentKey: "Ethereum:Fixture",
-                    exposureShare: 1,
-                  },
-                  assessment: "high",
-                  evidenceRefIds: ["fixture-evidence"],
-                }],
-              }
-            : {}),
-        },
-      ]),
-    );
-    expect(V9WrapperLocalFactsSchema.safeParse({
-      schemaVersion: 1,
-      applicability: "wrapper",
-      form: "strategy-vault",
-      formDisposition: "integration-missing",
-      formSignals: ["fixture-wrapper"],
-      formEvidenceRefIds: [],
-      facts,
-    }).success).toBe(false);
+  it("rejects a non-canonical deployment key on a reviewed incident", () => {
+    const result = V9ReviewedIncidentSchema.safeParse({
+      ...BASE_INCIDENT,
+      scope: { kind: "deployment", deploymentKey: "Ethereum:Fixture", exposureShare: 1 },
+    });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.issues).toContainEqual(expect.objectContaining({ path: ["scope", "deploymentKey"] }));
+    }
   });
 });

@@ -8,7 +8,7 @@ import {
   V9AuthoredEvidenceGapClassificationsEnvelopeSchema, V9EvidenceGapClassificationsV1Schema, V9EvidenceGapClassificationSchema,
 } from "@shared/types/safety-score-v9-causes";
 import { V9AccessLookthroughOverlaySchema } from "@shared/types/safety-score-v9-access-lookthrough";
-import { V9ReviewedIncidentRegistrySchema } from "@shared/types/safety-score-v9-incidents";
+import { V9AuthoredIncidentRegistryEnvelopeSchema } from "@shared/types/safety-score-v9-incidents";
 import { SafetyScoreV9MechanismReviewOverlayFileSchema } from "@shared/types/safety-score-v9-mechanism-overlays";
 import { SafetyScoreV9ReviewedTransferFileSchema } from "@shared/types/safety-score-v9-transfer-overlays";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -19,14 +19,17 @@ import { SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST } from "../safety-score-v9/exte
 import { SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST } from "../safety-score-v9/extension-mechanism";
 import { computeSafetyScoreV9ReviewedTransferFactsDigest } from "../safety-score-v9/extension-transfer";
 import { canonicalizeReviewedRegistryDigest, createReviewedAssetRegistry, createReviewedRegistryReferenceExpander, expandReviewedRegistryReferences, reviewedRegistryDigestKey } from "@shared/lib/safety-score-v9/reviewed-registry";
+import { buildIncidentRuntime } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 
 describe("reviewed registry provenance identity", () => {
   it("keeps all four full-file digest identities from eager schema admission", () => {
     expect(computeSafetyScoreV9AccessClaimGraphReviewsDigest()).toBe(domainDigest("safety-score-v9.access-lookthrough-reviews.v1", V9AccessLookthroughOverlaySchema.parse(access)));
-    const expandedIncidents = expandReviewedRegistryReferences(incidents, "negativeReviews", {
-      sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-    });
-    expect(SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.incident-reviews.v1", payload: V9ReviewedIncidentRegistrySchema.parse(expandedIncidents) })));
+    // Authored providers have no assetId. The current runtime pipeline admits
+    // their fan-outs with the strict provider schema as well as every local row.
+    const eagerIncidents = buildIncidentRuntime(V9AuthoredIncidentRegistryEnvelopeSchema.parse(incidents));
+    expect(SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST).toBe(eagerIncidents.digest);
+    // Deliberate incident curation rotates this independent full-file pin.
+    expect(eagerIncidents.digest).toBe("e651ca0a8931b0d85d4265936b42f8dd09d2ec1802d347686fb22dab36d2d928");
     expect(SAFETY_SCORE_V9_MECHANISM_REVIEW_OVERLAYS_DIGEST).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.mechanism-review-overlays.v1", overlays: SafetyScoreV9MechanismReviewOverlayFileSchema.parse(mechanism) })));
     expect(computeSafetyScoreV9ReviewedTransferFactsDigest()).toBe(sha256Hex(stableJsonStringifyV1({ domain: "safety-score-v9.reviewed-transfer-overlays.v1", schemaVersion: 1, reviews: SafetyScoreV9ReviewedTransferFileSchema.parse(transfer).reviews.sort((a, b) => compareText(a.assetId, b.assetId)) })));
   });
@@ -53,7 +56,7 @@ describe("reviewed registry provenance identity", () => {
     });
     expect(V9EvidenceGapClassificationsV1Schema.parse(expanded).entries).toHaveLength(gaps.entries.length);
     // Full authored-registry identity pin; deliberate curation rotates this snapshot.
-    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("597da41d74c724c672a137a64a808c48584e91e251f029b47dd12e36d3571bf1");
+    expect(sha256Hex(stableJsonStringifyV1(expanded))).toBe("6ae7063df6d387ac914f5a194735a78de65ead1cdddf7161de909730af915d91");
     expect(V9EvidenceGapClassificationsV1Schema.safeParse(gaps).success).toBe(false);
   });
 

@@ -1,8 +1,8 @@
-import { projectNegativeIncidentReview, V9AttributedNegativeIncidentReviewSchema } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
-import { describe, expect, it } from "vitest";
+import { fanOutProviderIncidentReview, isProviderReview, projectNegativeIncidentReview, V9AttributedNegativeIncidentReviewSchema } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
+import { describe, expect, it, vi } from "vitest";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
-import { V9NegativeIncidentReviewSchema, V9ReviewedIncidentSchema, v9NegativeIncidentReviewTimeSec } from "@shared/types/safety-score-v9-incidents";
+import { V9LaneIncidentCertificateSchema, V9NegativeIncidentReviewSchema, V9ProviderIncidentReviewSchema, V9ReviewedIncidentSchema, v9NegativeIncidentReviewTimeSec } from "@shared/types/safety-score-v9-incidents";
 import incidentRegistry from "@shared/data/safety-score-v9/incident-reviews-v1.json";
 import {
   getSafetyScoreV9ReviewedIncidents,
@@ -17,6 +17,11 @@ import {
 import type { ControlOverlay } from "../safety-score-v9/extension-shared";
 import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
+import { laneIncidentCertificateScreeningSetId } from "../safety-score-v9/lane-incident-certificate-store";
+import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "../safety-score-v9/bridge-lane-admin-events";
+import { localRegistrySnapshot, registrySnapshotFingerprint } from "../../../scripts/lib/safety-score-v9-registry";
+import { createReplayFixedInput } from "../../../scripts/__tests__/safety-score-v9-replay.test-support";
+import { normalizeFixedInput } from "../report-cards-fixed-input";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
@@ -184,10 +189,22 @@ describe("Safety Score v9 independent negative incident routing", () => {
   it("rebuilds the full-payload evidence identity of two-digit source indexes from the runtime projection", () => {
     // Keys embed the sorted-source index, so indexes 10+ order before 2 in the
     // finished evidence list; every review with 11+ sources exercises that.
-    const expanded = expandReviewedRegistryReferences(incidentRegistry, "negativeReviews", {
+    // Provider-wide rows are fanned out per covered asset before reference
+    // expansion; the attributed expander rejects an un-fanned provider row.
+    const fanned = (incidentRegistry.negativeReviews as readonly unknown[]).flatMap((row) =>
+      isProviderReview(row) ? fanOutProviderIncidentReview(row) : [row]);
+    const expanded = expandReviewedRegistryReferences({ ...incidentRegistry, negativeReviews: fanned }, "negativeReviews", {
       sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
     }) as { negativeReviews: unknown[] };
     const reviews = expanded.negativeReviews
+      // Provider and issuer-surface rows bind no evidence without a closed lane
+      // and are not admitted by the attributed union.
+      .filter((row) => {
+        if (row === null || typeof row !== "object" || !("scope" in row)) return false;
+        const scope = row.scope;
+        if (scope === null || typeof scope !== "object" || !("kind" in scope)) return false;
+        return scope.kind === "control" || scope.kind === "deployment";
+      })
       .map((row) => V9AttributedNegativeIncidentReviewSchema.parse(row))
       .filter((review) => review.sources.length >= 11 && review.retired === undefined);
     expect(reviews.length).toBeGreaterThan(0);
@@ -198,7 +215,7 @@ describe("Safety Score v9 independent negative incident routing", () => {
         reviewedAtSec: reviewedSec, observedAtSec: review.windowEndSec, confidence: "manual-review",
         sources: review.sources, payload: review, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC });
       const runtime = getSafetyScoreV9NegativeIncidentReviews(review.assetId, Math.max(reviewedSec, review.windowEndSec))
-        .filter((row) => row.reviewId === review.reviewId);
+        .reviews.filter((row) => row.reviewId === review.reviewId);
       const rebuilt = new ReviewEvidenceBuilder(review.assetId, reviewedSec);
       addSafetyScoreV9NegativeIncidentEvidence(rebuilt, runtime);
       expect(rebuilt.finish()).toEqual(original.finish());
@@ -215,7 +232,7 @@ describe("Safety Score v9 authored incident-review identity", () => {
     overrides: {
       reviewId?: string;
       retired?: { reviewedAt: string; reviewer: string; reason: string };
-      laneScreeningRefs?: { assetId: string; routeId: string; certificateId: string }[];
+      providerIncidents?: unknown[];
     } = {},
   ) {
     return NegativeIncidentRuntimeSchema.parse({
@@ -252,13 +269,13 @@ describe("Safety Score v9 authored incident-review identity", () => {
     } as unknown as ControlOverlay;
   }
 
-  function providerRow(routeId = ROUTE_A) {
+  function providerRow(overrides: { reviewId?: string; providerIncidents?: unknown[] } = {}) {
     return runtimeReview(
       {
         kind: "provider", providerKey: "layerzero", surface: "dvn-set",
-        coveredRoutes: [{ assetId: "fixture", routeId }],
+        coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_A }],
       },
-      { reviewId: "provider-review", laneScreeningRefs: [{ assetId: "fixture", routeId, certificateId: "lane-cert" }] },
+      { reviewId: "provider-review", providerIncidents: [], ...overrides },
     );
   }
 
@@ -339,50 +356,387 @@ describe("Safety Score v9 authored incident-review identity", () => {
     )).toThrow();
   });
 
-  it("admits provider and issuer-surface witnesses without closing a control", () => {
+  const POLICY_DIGEST = LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST;
+  const EMITTER = `0x${"e".repeat(40)}`;
+
+  function laneCertificate(overrides: Partial<Record<string, unknown>> = {}) {
+    return V9LaneIncidentCertificateSchema.parse({
+      schemaVersion: 1,
+      certificateId: "lane-cert:ethereum:0xeeee:100-200:deadbeef",
+      evidenceClass: "explorer-events",
+      subjectDeploymentKey: ROUTE_A,
+      fromBlock: 100,
+      toBlock: 200,
+      toBlockHash: `0x${"f".repeat(64)}`,
+      windowStartSec: NEGATIVE_CLOCK_SEC - 86_400,
+      windowEndSec: NEGATIVE_CLOCK_SEC - 3_600,
+      observedAtSec: NEGATIVE_CLOCK_SEC - 1_800,
+      screeningPolicyDigest: POLICY_DIGEST,
+      logDigest: "d".repeat(64),
+      emitters: [{
+        address: EMITTER,
+        expectedRuntimeCodeSha256: "a".repeat(64),
+        runtimeCodeSha256: "a".repeat(64),
+        families: ["OwnershipTransferred"],
+      }],
+      screenedTopics: [{
+        family: "OwnershipTransferred",
+        topic0: `0x${"1".repeat(64)}`,
+        signature: "OwnershipTransferred(address,address)",
+      }],
+      eventCounts: { OwnershipTransferred: 0 },
+      finding: "no-material-admin-event",
+      ...overrides,
+    });
+  }
+
+  const SET_ID = laneIncidentCertificateScreeningSetId({ ...laneCertificate(), contributorControlIds: ["alpha"] });
+
+  function descriptor(overrides: Partial<Record<string, unknown>> = {}) {
+    return {
+      schemaVersion: 1 as const,
+      subjectDeploymentKey: ROUTE_A,
+      assetId: "fixture",
+      contributorControlIds: ["alpha"],
+      screeningPolicyDigest: POLICY_DIGEST,
+      screeningSetId: SET_ID,
+      emitters: [{ address: EMITTER, reviewedRuntimePin: `sha256-decoded-runtime-bytes:${"a".repeat(64)}`, families: ["OwnershipTransferred" as const] }],
+      ...overrides,
+    };
+  }
+
+  function closureInputs(overrides: Partial<{
+    descriptors: unknown[];
+    certificates: Map<string, unknown>;
+    routes: Map<string, unknown>;
+  }> = {}) {
+    return {
+      descriptors: (overrides.descriptors ?? [descriptor()]) as never,
+      certificates: (overrides.certificates ?? new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate() }]])) as never,
+      routes: (overrides.routes ?? new Map([[ROUTE_A, { rail: null, providerKeys: ["layerzero"] }]])) as never,
+    };
+  }
+
+  it("rejects forged sets, stale policy, changed pins and widened emitter families", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    for (const altered of [
+      descriptor({ screeningSetId: "v1-foreign-set" }),
+      descriptor({ screeningPolicyDigest: "c".repeat(64) }),
+      descriptor({ emitters: [{ ...descriptor().emitters[0], reviewedRuntimePin: `sha256-decoded-runtime-bytes:${"b".repeat(64)}` }] }),
+      descriptor({ emitters: [{ ...descriptor().emitters[0], families: ["OwnershipTransferred", "Upgraded"] }] }),
+    ]) {
+      const inputs = closureInputs({ descriptors: [altered],
+        certificates: new Map([[ROUTE_A, { screeningSetId: altered.screeningSetId,
+          certificate: laneCertificate({ screeningPolicyDigest: altered.screeningPolicyDigest }) }]]) });
+      expect(routeSafetyScoreV9NegativeIncidentReviews(
+        [target], "fixture", NEGATIVE_CLOCK_SEC, [providerRow(), issuerRow()], [], inputs)[0]).toBe(target);
+    }
+  });
+
+  it("rejects a self-consistent descriptor and certificate from a superseded policy", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    const certificate = laneCertificate({ screeningPolicyDigest: "c".repeat(64) });
+    const screeningSetId = laneIncidentCertificateScreeningSetId({ ...certificate, contributorControlIds: ["alpha"] });
+    const inputs = closureInputs({
+      descriptors: [descriptor({ screeningPolicyDigest: certificate.screeningPolicyDigest, screeningSetId })],
+      certificates: new Map([[ROUTE_A, { screeningSetId, certificate }]]),
+    });
+    expect(routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, [providerRow(), issuerRow()], [], inputs)[0]).toBe(target);
+  });
+
+  it.each([
+    { afterWindows: true, otherLane: false, otherAsset: false },
+    { afterWindows: false, otherLane: true, otherAsset: false },
+    { afterWindows: true, otherLane: true, otherAsset: false },
+    { afterWindows: true, otherLane: true, otherAsset: true },
+  ])("blocks current provider disclosures through the evaluation clock: %o", ({ afterWindows, otherLane, otherAsset }) => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    const windowEndSec = NEGATIVE_CLOCK_SEC - 86_400;
+    const provider = { ...providerRow(), windowEndSec };
+    const issuer = { ...issuerRow(), windowEndSec };
+    const disclosure = {
+      incidentKey: "late-verifier-compromise", class: "verifier-compromise" as const, surface: "dvn-set" as const,
+      occurredAt: "2026-10-07", exposureStartSec: windowEndSec + (afterWindows ? 1 : -1),
+      exposureEndSec: null, affectedRoutes: [], sourceUrls: ["https://example.com/compromise"], exemptions: [],
+    };
+    const disclosing = providerRow({ reviewId: "disclosing-review", providerIncidents: [disclosure] });
+    const reviews = otherLane
+      ? [provider, issuer, { ...disclosing, assetId: otherAsset ? "other-asset" : "fixture",
+        scope: { kind: "provider" as const, providerKey: "layerzero" as const, surface: "dvn-set" as const,
+        coveredRoutes: [{ assetId: otherAsset ? "other-asset" : "fixture", routeId: ROUTE_B }] } }]
+      : [{ ...disclosing, windowEndSec }, issuer];
+    expect(routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, reviews, [], closureInputs())[0]).toBe(target);
+    // A future exposure must not block an otherwise covered lane.
+    const future = { ...disclosing, providerIncidents: [{ ...disclosure, exposureStartSec: NEGATIVE_CLOCK_SEC + 1 }] };
+    expect(routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer, future], [], closureInputs())[0]!.incidentState).toBe("none");
+  });
+
+  it.each(["earlier-exempted-compromise", "foreign-review-compromise"])(
+    "loads provider disclosure %s without losing a covering review's exemption", async (incidentKey) => {
+    const incident = {
+      incidentKey, class: "verifier-compromise" as const, surface: "dvn-set" as const,
+      occurredAt: "2026-10-07", exposureStartSec: NEGATIVE_CLOCK_SEC - 1,
+      exposureEndSec: null, affectedRoutes: [], sourceUrls: ["https://example.com/compromise"], exemptions: [],
+    };
+    const exempted = { ...incident, incidentKey: "earlier-exempted-compromise",
+      exposureStartSec: NEGATIVE_CLOCK_SEC - 4, exposureEndSec: NEGATIVE_CLOCK_SEC - 3,
+      exemptions: [{ assetId: "fixture", routeId: ROUTE_A, kind: "deployed-after-exposure" as const,
+        creationTxHash: `0x${"3".repeat(64)}`, creationBlock: 300, creationTimestampSec: NEGATIVE_CLOCK_SEC - 2 }] };
+    const provider = providerRow({ providerIncidents: [exempted] });
+    const foreign = { ...providerRow({ reviewId: "foreign-disclosure",
+      providerIncidents: [incidentKey === exempted.incidentKey ? { ...exempted, exemptions: [] } : incident] }),
+      assetId: "other-asset", scope: { kind: "provider" as const, providerKey: "layerzero" as const,
+        surface: "dvn-set" as const, coveredRoutes: [{ assetId: "other-asset", routeId: ROUTE_B }] } };
+    const runtime = await vi.importActual<{ default: Record<string, unknown> }>("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+    vi.doMock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
+      default: { ...runtime.default, negativeReviews: [provider, issuerRow(), foreign,
+        { ...foreign, reviewId: provider.reviewId, providerIncidents: [{ ...exempted, exemptions: [] }] }] },
+    }));
+    vi.resetModules();
+    try {
+      // Re-import intentionally exercises admission of the substituted runtime registry.
+      const isolated = await import("../safety-score-v9/extension-incidents");
+      const { reviews } = isolated.getSafetyScoreV9NegativeIncidentReviews("fixture", NEGATIVE_CLOCK_SEC);
+      expect(reviews.map((review) => review.reviewId)).toEqual(["provider-review", "issuer-review", "foreign-disclosure"]);
+      const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+      const routed = isolated.routeSafetyScoreV9NegativeIncidentReviews(
+        [target], "fixture", NEGATIVE_CLOCK_SEC, reviews, [], closureInputs());
+      expect(routed[0]!.incidentState).toBe(incidentKey === exempted.incidentKey ? "none" : "unknown");
+      const withoutExemption = reviews.map((review) => review.reviewId !== provider.reviewId ? review :
+        { ...review, providerIncidents: [{ ...exempted, exemptions: [] }] });
+      expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
+        [target], "fixture", NEGATIVE_CLOCK_SEC, withoutExemption, [], closureInputs())[0]!.incidentState).toBe("unknown");
+      expect(reviews[0]!.providerIncidents).toEqual([exempted]);
+      expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
+        [target], "fixture", NEGATIVE_CLOCK_SEC, reviews.filter((review) => review.reviewId !== foreign.reviewId),
+        [], closureInputs())[0]!.incidentState).toBe("none");
+    } finally {
+      vi.doUnmock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+      vi.resetModules();
+    }
+  });
+
+  it("keeps an asset rated while an unreadable foreign provider review blocks only its lane", async () => {
+    const assetId = "frnt-wyoming";
+    const clockSec = 1_793_404_800;
+    const original = localRegistrySnapshot();
+    const meta = original.activeStablecoins.find((coin) => coin.id === assetId)!;
+    const routeId = meta.bridgeRouteRisk!.routes!.find((route) => route.id.startsWith("arbitrum:"))!.id;
+    const contributors = meta.bridgeRouteRisk!.controls!.filter((row) => row.routeRefs.includes(routeId)).map((row) => row.id);
+    const rows = { ...original, activeStablecoins: original.activeStablecoins.map((coin) => coin.id !== assetId ? coin :
+      { ...coin, mintAuthority: undefined, bridgeRouteRisk: { ...coin.bridgeRouteRisk!,
+        routes: coin.bridgeRouteRisk!.routes!.map((route) => route.id !== routeId ? route :
+          { ...route, rail: undefined, providerKeys: ["layerzero" as const],
+            routeClass: "canonical" as const, issuanceModel: "bridge-representation" as const }),
+      } }) };
+    const registrySnapshot = { ...rows, fingerprint: registrySnapshotFingerprint(rows) };
+    const { baseInputGenerationId: _base, ...draft } = createReplayFixedInput(clockSec, { activeAssetIds: [assetId] });
+    const fixedInput = normalizeFixedInput({ ...draft, registryFingerprint: registrySnapshot.fingerprint });
+    const provider = { ...providerRow(), assetId, scope: { kind: "provider" as const, providerKey: "layerzero" as const,
+      surface: "dvn-set" as const, coveredRoutes: [{ assetId, routeId }] } };
+    const issuer = { ...issuerRow(), assetId, scope: { kind: "issuer-surface" as const, coveredRoutes: [routeId] } };
+    const foreign = { ...provider, assetId: "other-asset", reviewId: "invalid-foreign-review", providerIncidents: undefined,
+      scope: { ...provider.scope, coveredRoutes: [{ assetId: "other-asset", routeId: ROUTE_B }] } };
+    const certificate = laneCertificate({ subjectDeploymentKey: routeId });
+    const screeningSetId = laneIncidentCertificateScreeningSetId({ ...certificate, contributorControlIds: contributors });
+    const laneDescriptor = { ...descriptor(), assetId, subjectDeploymentKey: routeId, contributorControlIds: contributors, screeningSetId };
+    const runtime = await vi.importActual<{ default: Record<string, unknown> }>("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+    vi.doMock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
+      default: { ...runtime.default, negativeReviews: [provider, issuer, foreign] },
+    }));
+    vi.resetModules();
+    try {
+      // Module loading is intentional: the evaluator must admit the substituted registry.
+      const { buildSafetyScoreV9ReplayArtifact } = await import("../../../scripts/replay-safety-score-v9");
+      const { buildSafetyScoreV9ReplayLaneScreening } = await import("../safety-score-v9/publication-replay-capture");
+      const replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, registrySnapshot, publishedAtSec: clockSec,
+        laneScreening: buildSafetyScoreV9ReplayLaneScreening({ descriptors: [laneDescriptor],
+          certificates: new Map([[routeId, { screeningSetId, certificate }]]) }),
+      });
+      expect(replay.pipeline.candidate.cards.find((card) => card.id === assetId)!.ratingStatus).toBe("rated");
+      expect(replay.pipeline.quarantines).toEqual([]);
+      expect(replay.pipeline.compiledFacts.assets.find((asset) => asset.assetId === assetId)!.controls
+        .find((control) => control.deploymentKey === routeId)!.incidentState).toBe("unknown");
+      expect(replay.pipeline.bridgeJoinDiagnostics.find((row) => row.assetId === assetId)).toMatchObject({
+        incidentClosureFailures: [{ deploymentRouteKey: routeId, providerKey: "layerzero",
+          code: "provider-incident-disclosures-unreadable", foreignAssetIds: ["other-asset"] }],
+      });
+      const isolated = await import("../safety-score-v9/extension-incidents");
+      const read = isolated.getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
+      expect(read.unreadableProviders).toEqual(new Map([["layerzero", ["other-asset"]]]));
+      expect(() => isolated.getSafetyScoreV9NegativeIncidentReviews("other-asset", clockSec)).toThrow();
+      const target = withAuthoredIdentity(bridgeRow(routeId, "bridge-meta:frnt-wyoming:fixture"),
+        { id: "*", ids: contributors });
+      const inputs = { descriptors: [laneDescriptor], certificates: new Map([[routeId, { screeningSetId, certificate }]]),
+        routes: new Map([[routeId, { rail: null, providerKeys: ["layerzero"] }]]) };
+      // All positive witnesses really close this synthetic deployment; only the unreadable key blocks it.
+      expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
+        [target], assetId, clockSec, read.reviews, [], inputs)[0]!.incidentState).toBe("none");
+      expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
+        [target], assetId, clockSec, read.reviews, [], { ...inputs, unreadableProviders: read.unreadableProviders })[0]!.incidentState)
+        .toBe("unknown");
+    } finally {
+      vi.doUnmock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+      vi.resetModules();
+    }
+  });
+
+  it("closes only with all three witnesses and writes derived coverage", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
     const provider = providerRow();
     const issuer = issuerRow();
-    const target = bridgeRow(ROUTE_A, "bridge-meta:fixture:provider-owned");
-    expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer], [])[0]).toBe(target);
-    // A provider-screening coverage block on the fact grants no closure in
-    // v10.38: the three-witness rule moved to v10.39, so the datum stays unknown
-    // even when the provider review and the issuer surface both resolve.
-    const covered: ControlOverlay = {
-      ...withAuthoredIdentity(target, { id: "alpha" }),
-      incidentCoverage: {
-        source: "provider-screening",
-        providerReviewId: "provider-review",
-        issuerSurfaceReviewId: "issuer-review",
-        certificateRefs: [{ controlId: "alpha", certificateId: `lane-cert:ethereum:0x${"e".repeat(40)}:100-200:${"a".repeat(64)}` }],
-      },
+    const routed = routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer], [], closureInputs());
+    expect(routed[0]!.incidentState).toBe("none");
+    expect(routed[0]!.incidentCoverage).toEqual({
+      source: "provider-screening",
+      providerReviewIds: ["provider-review"],
+      issuerSurfaceReviewId: "issuer-review",
+      screeningSetId: SET_ID,
+      certificateId: expect.any(String),
+      contributorControlIds: ["alpha"],
+    });
+    // Evidence binds to the closed lane's control component, not the pillar.
+    const builder = new ReviewEvidenceBuilder("fixture", NEGATIVE_CLOCK_SEC);
+    addSafetyScoreV9NegativeIncidentEvidence(builder, [issuer], routed);
+    expect([...builder.finish().componentEvidence.map((row) => row.componentKey)]).toEqual([
+      `control:${target.controlKey}`,
+    ]);
+  });
+
+  it("keeps the lane open when any witness is missing or not current", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    const provider = providerRow();
+    const issuer = issuerRow();
+    const route = (overrides: Record<string, unknown>) =>
+      new Map([[ROUTE_A, { rail: null, providerKeys: ["layerzero"], ...overrides }]]);
+    const cases = [
+      // No provider review.
+      [closureInputs(), [issuer]],
+      // No issuer review.
+      [closureInputs(), [provider]],
+      // The route's provider key is not covered by any review.
+      [closureInputs({ routes: route({ providerKeys: ["wormhole"] }) }), [provider, issuer]],
+      // No descriptor, and a descriptor that does not match the fact's contributors.
+      [closureInputs({ descriptors: [] }), [provider, issuer]],
+      [closureInputs({ descriptors: [descriptor({ contributorControlIds: ["alpha", "beta"] })] }), [provider, issuer]],
+      // No certificate for the lane, and a certificate from another screening set.
+      [closureInputs({ certificates: new Map() }), [provider, issuer]],
+      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: "set-2", certificate: laneCertificate() }]]) }), [provider, issuer]],
+      // A material-event certificate.
+      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate({
+        finding: "material-event",
+        materialEvents: [{ address: EMITTER, family: "OwnershipTransferred", transactionHash: `0x${"2".repeat(64)}`, blockNumber: 150, logIndex: 0 }],
+        eventCounts: { OwnershipTransferred: 1 },
+      }) }]]) }), [provider, issuer]],
+      // An expired certificate (window end older than the policy budget).
+      [closureInputs({ certificates: new Map([[ROUTE_A, { screeningSetId: SET_ID, certificate: laneCertificate({
+        windowStartSec: NEGATIVE_CLOCK_SEC - 4_000_000,
+        windowEndSec: NEGATIVE_CLOCK_SEC - 3_000_000,
+        observedAtSec: NEGATIVE_CLOCK_SEC - 3_000_000,
+      }) }]]) }), [provider, issuer]],
+    ] as const;
+    for (const [inputs, reviews] of cases) {
+      expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [...reviews], [], inputs)[0])
+        .toBe(target);
+    }
+  });
+
+  it("blocks a verifier-compromise exposure until the lane carries an exemption (OQ-1)", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    const disclosure = {
+      incidentKey: "kelpdao-dvn-2026-04-18",
+      class: "verifier-compromise" as const,
+      surface: "dvn-set" as const,
+      occurredAt: "2026-04-18",
+      exposureStartSec: Date.parse("2026-04-18T00:00:00Z") / 1_000,
+      exposureEndSec: Date.parse("2026-04-25T00:00:00Z") / 1_000,
+      affectedRoutes: [],
+      sourceUrls: ["https://example.com/status"],
+      exemptions: [],
     };
-    expect(routeSafetyScoreV9NegativeIncidentReviews([covered], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer], [])[0]).toBe(covered);
-    // A provider row without its per-lane certificate references is rejected.
+    const exposed = providerRow({ providerIncidents: [disclosure] });
+    const issuer = issuerRow();
+    expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [exposed, issuer], [], closureInputs())[0])
+      .toBe(target);
+    const shifted = { ...exposed, windowStartSec: disclosure.exposureEndSec + 1 };
+    expect(routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, [shifted, issuer], [], closureInputs())[0]).toBe(target);
+    const exempted = providerRow({ providerIncidents: [{ ...disclosure, exemptions: [{
+      assetId: "fixture", routeId: ROUTE_A, kind: "deployed-after-exposure" as const,
+      creationTxHash: `0x${"3".repeat(64)}`, creationBlock: 300,
+      creationTimestampSec: Date.parse("2026-05-01T00:00:00Z") / 1_000,
+    }] }] });
+    expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [exempted, issuer], [], closureInputs())[0]!.incidentState)
+      .toBe("none");
+    const invalidProof = {
+      ...exempted,
+      providerIncidents: exempted.providerIncidents!.map((incident) => ({
+        ...incident,
+        exemptions: incident.exemptions.map((exemption) => ({
+          ...exemption, creationTimestampSec: disclosure.exposureStartSec - 1,
+        })),
+      })),
+    };
+    expect(routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, [invalidProof, issuer], [], closureInputs())[0]).toBe(target);
+    // The authored provider record refuses an unexempted exposed covered lane.
+    expect(() => V9ProviderIncidentReviewSchema.parse({
+      reviewId: "provider-review", scope: { kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+        coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_A }] },
+      reviewedAt: "2026-10-07T14:00:00Z", reviewer: "Fixture researcher",
+      windowStartSec: Date.parse("2024-01-01T00:00:00Z") / 1_000, windowEndSec: NEGATIVE_CLOCK_SEC,
+      conclusion: "no-known-incident",
+      searchedSurfaces: [
+        { kind: "issuer-status", url: "https://example.com/status", finding: "searched" },
+        { kind: "explorer-events", url: "https://example.com/events", finding: "searched" },
+        { kind: "incident-tracker", url: "https://example.com/t", finding: "searched" },
+      ],
+      sources: [{ label: "s", url: "https://example.com/status", observedAt: "2026-10-07T14:00:00Z", location: "l", excerpt: "e" }],
+      providerIncidents: [disclosure],
+    })).toThrow();
+  });
+
+  it("uses the issuer surface as the rail witness on an issuer-operated route (OQ-2)", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    const issuer = issuerRow();
+    const routes = new Map([[ROUTE_A, { rail: "issuer-operated" as const, providerKeys: [] }]]);
+    const routed = routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, [issuer], [], closureInputs({ routes }));
+    expect(routed[0]!.incidentState).toBe("none");
+    expect(routed[0]!.incidentCoverage?.providerReviewIds).toEqual([]);
+    // The certificate is still required.
+    expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [issuer], [],
+      closureInputs({ routes, certificates: new Map() }))[0]).toBe(target);
+  });
+
+  it("rejects contradictory issuer-operated authorities instead of bypassing provider review", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    for (const authority of [
+      { rail: "issuer-operated", providerKeys: ["layerzero"] },
+      { rail: "issuer-operated", providerKeys: [], routeClass: "third-party" },
+    ]) {
+      const inputs = closureInputs({ routes: new Map([[ROUTE_A, authority]]) });
+      expect(routeSafetyScoreV9NegativeIncidentReviews(
+        [target], "fixture", NEGATIVE_CLOCK_SEC, [issuerRow()], [], inputs)[0]).toBe(target);
+    }
+  });
+
+  it("rejects removed and forbidden authored shapes", () => {
+    // laneScreeningRefs no longer exists, and a provider row must disclose its search.
     expect(() => runtimeReview({
       kind: "provider", providerKey: "layerzero", surface: "dvn-set",
       coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_A }],
+    })).toThrow(/providerIncidents/);
+    expect(() => NegativeIncidentRuntimeSchema.parse({
+      ...providerRow(),
+      laneScreeningRefs: [{ assetId: "fixture", routeId: ROUTE_A, certificateId: "lane-cert" }],
     })).toThrow();
-    // Lane screening references belong to provider rows only.
-    expect(() => runtimeReview(
-      { kind: "issuer-surface", coveredRoutes: [ROUTE_A] },
-      { laneScreeningRefs: [{ assetId: "fixture", routeId: ROUTE_A, certificateId: "lane-cert" }] },
-    )).toThrow();
-    // References may only name a covered (asset, lane).
-    expect(() => runtimeReview(
-      {
-        kind: "provider", providerKey: "layerzero", surface: "dvn-set",
-        coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_A }],
-      },
-      { laneScreeningRefs: [{ assetId: "fixture", routeId: ROUTE_B, certificateId: "lane-cert" }] },
-    )).toThrow();
-    // One certificate reference per covered lane is mandatory.
-    expect(() => runtimeReview(
-      {
-        kind: "provider", providerKey: "layerzero", surface: "dvn-set",
-        coveredRoutes: [{ assetId: "fixture", routeId: ROUTE_A }, { assetId: "fixture", routeId: ROUTE_B }],
-      },
-      { laneScreeningRefs: [{ assetId: "fixture", routeId: ROUTE_A, certificateId: "lane-cert" }] },
-    )).toThrow();
+    expect(() => runtimeReview({ kind: "issuer-surface", coveredRoutes: ["asset:fixture"] })).toThrow();
+    expect(() => runtimeReview({ kind: "issuer-surface", coveredRoutes: [ROUTE_A], coveredControls: ["alpha"] })).toThrow();
   });
 
   it("resolves asset-local mint identity only when the fact carries it", () => {

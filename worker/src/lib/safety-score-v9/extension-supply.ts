@@ -730,16 +730,21 @@ function admitDeploymentSupplyCensus(
     byChain: new Map(),
     diagnostics: sortDeploymentSupplyCensusDiagnostics(diagnostics),
   });
-  // F2: a packet is only evidence for the generation it was built against. An
-  // unbound map and a map captured under another registry or compiler base
-  // generation are rejected by name; neither may bound a row under this roster.
+  // F2: a packet is evidence for the roster it was measured under, not for the
+  // compiler base input of the publication that reads it. The census rides the
+  // supply-attribution generation, and that generation is consumed one prepare
+  // cycle after it was captured (the carrier's own gate admits it by
+  // `sourceClockSec <= clockSec`, never by base-input equality). Comparing the
+  // census binding to *this* input's base id therefore rejected every packet
+  // `generation-mismatch` in every real cycle (2026-10-30 first cycle). The
+  // roster is pinned by the registry fingerprint, the denominator by the
+  // packet's own aggregate check below, and recency by the two clocks.
   const binding = fixedInput.safetyScoreV9DeploymentSupplyCensusBinding;
   if (binding === undefined) {
     reject("generation-unbound");
     return rejected();
   }
-  if (binding.registryFingerprint !== fixedInput.registryFingerprint ||
-    binding.sourceBaseInputGenerationId !== fixedInput.baseInputGenerationId) {
+  if (binding.registryFingerprint !== fixedInput.registryFingerprint) {
     reject("generation-mismatch");
     return rejected();
   }

@@ -130,6 +130,7 @@ function run(
 ) {
   return observeSafetyScoreV9DeploymentSupplyCensusGeneration({
     fixedInput: fixedInput("wi-mirror", aggregateUsd),
+    observationClockSec: fixedInput("wi-mirror", aggregateUsd).clockSec,
     assetIds: ["wi-mirror"],
     chainRpcs: CHAIN_RPCS,
     metaById: new Map([["wi-mirror", meta("wi-mirror", routes)]]),

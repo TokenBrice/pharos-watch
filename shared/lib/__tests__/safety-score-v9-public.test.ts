@@ -1574,7 +1574,7 @@ describe("Safety Score v9 public projection", () => {
     expect(readable.message).toBe("The assurance and reconciliation input is unavailable; score 80.");
     expect(readable.reason).toBe("The cost datum for route (redemption) has not been established.");
     expect(readableV9PublicText("The maturityDaysMax factor and incidentState datum remain unresolved."))
-      .toBe("The maximum reserve maturity factor and incident status datum remain unresolved.");
+      .toBe("The maximum reserve maturity factor and control incident status datum remain unresolved.");
     expect(original.message).toContain("assuranceAndReconciliation");
   });
 

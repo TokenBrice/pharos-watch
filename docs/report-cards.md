@@ -196,6 +196,10 @@ Score-map/yield retain null denominators/ratios, empty map, reason and null iden
 
 ## History
 
+v10.39 closes no lane yet, even after post-deploy v2 certificates arrive. FRNT Arbitrum, Base and Optimism are global-scope native facts; the certificate router closes deployment-scope lanes only. FRNT Ethereum is already closed by an existing review, not a certificate. yUSD Ethereum has no provider keys and no issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Router scope is unchanged; extending it requires a separate owner decision.
+
+The five-lane screening catalog is not closure authority. The join still requires current issuer/provider witnesses, contributor parity, reviewed emitter pins/families, frozen policy and a contiguous current v2 certificate chain; retained v1 or missing certificates close nothing. OQ-1 checks current provider disclosures through evaluation, including exposure after witness windows and reviews not covering the lane. Replay retains the exact descriptors/certificates consumed.
+
 Asset-local build/admission/schema/evaluation/public-card failures yield technical `pipeline-gap` with null score/grade, never issuer NR. Continue unaffected assets only with ≥90% unaffected active assets, counting quarantines and their affected dependents, and every other gate passing; unattributable graph/aggregate/evaluator/identity/global failures hold the cohort.
 
 Since v10.35 an expired, previously mature contributing [measured DEX route](process/report-cards-appendix.md#canonical-publication) quarantines only its asset, keeping an expiry witness. Recovery needs fresh same-route evidence, not a new liquidity timestamp or discovery-priority hint. Pre-9.07 captures are read-only compatibility, never a legacy publisher/live fallback; reproduction uses recorded registry/policy/build, while current-tree replay is a separate comparison ([compatibility](process/report-cards-appendix.md#historical-capture-compatibility)).

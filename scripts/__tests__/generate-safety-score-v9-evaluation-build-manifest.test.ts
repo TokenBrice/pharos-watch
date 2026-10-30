@@ -21,6 +21,7 @@ const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "../..");
 const EVALUATOR_ENTRY = "shared/lib/safety-score-v9/evaluate-set.ts";
 const POLICY_ENTRY = "shared/lib/safety-score-v9/policy.ts";
 const CANDIDATE_ENTRY = "worker/src/lib/safety-score-v9/candidate.ts";
+const LANE_CATALOG_ENTRY = "worker/src/lib/safety-score-v9/lane-emitter-catalog.ts";
 // The evaluator embeds this generated digest; hashing it would be recursive.
 const MANIFEST_PATH = "shared/data/safety-score-v9/evaluation-build-manifest-v1.ts";
 
@@ -87,7 +88,7 @@ function runtimeImports(path: string): string[] {
 
 function collectRuntimeImportClosure(): Set<string> {
   const closure = new Set<string>();
-  const pending = [CANDIDATE_ENTRY, EVALUATOR_ENTRY, POLICY_ENTRY];
+  const pending = [CANDIDATE_ENTRY, EVALUATOR_ENTRY, POLICY_ENTRY, LANE_CATALOG_ENTRY];
   while (pending.length > 0) {
     const current = pending.pop();
     if (!current || closure.has(current) || current === MANIFEST_PATH) continue;
@@ -131,7 +132,6 @@ describe("Safety Score v9 evaluation-build manifest", () => {
       "worker/src/lib/safety-score-v9/economic-supply-observer.ts",
       "worker/src/lib/safety-score-v9/supply-attribution-source.ts",
       "worker/src/lib/safety-score-v9/supply-attribution-capture-budget.ts",
-      "worker/src/lib/evm-rpc.ts", "worker/src/lib/fetch-retry.ts",
     ]) {
       expect(selectChangedGeneratedArtifactIds([source]), source).not.toContain("safety-score-v9-evaluation-build");
     }
@@ -195,6 +195,9 @@ describe("Safety Score v9 evaluation-build manifest", () => {
     "shared/data/safety-score-v9/chain-maturity-reviews-v1.ts",
     CANDIDATE_ENTRY,
     "worker/src/lib/safety-score-v9/extension.ts",
+    LANE_CATALOG_ENTRY,
+    "worker/src/lib/safety-score-v9/bridge-lane-admin-events.ts",
+    "worker/src/lib/safety-score-v9/lane-incident-certificate-store.ts",
     "worker/src/lib/safety-score-v9/extension-oracle.ts",
     "worker/src/lib/safety-score-v9/fact-set.ts",
     "worker/src/lib/safety-score-v9/fact-set-exit.ts",

@@ -3,6 +3,7 @@ import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-inp
 import { buildNativeV9InputCacheEntry } from "../safety-score-v9/native-input";
 import {
   buildSafetyScoreV9SupplyAttributionSource,
+  deploymentSupplyCensusSourceView,
   parseSafetyScoreV9SupplyAttributionSource,
   serializeSafetyScoreV9SupplyAttributionSource,
 } from "../safety-score-v9/supply-attribution-source";
@@ -39,6 +40,33 @@ describe("Safety Score V9 supply-attribution source", () => {
     expect(new TextEncoder().encode(value).byteLength).toBeLessThan(
       exactEntry.uncompressedBytes / 20,
     );
+  });
+
+  it("selects the census population only from a projection, never the attribution allowlist", () => {
+    const input = createNativeSafetyScoreV9FullRegistryInput();
+    const source = buildSafetyScoreV9SupplyAttributionSource(input);
+    const projected = parseSafetyScoreV9SupplyAttributionSource({
+      ...source,
+      censusProjection: {
+        activeAssetIds: ["cngn-compliant-naira"],
+        aggregateCirculatingById: {
+          "cngn-compliant-naira": { circulating: { peggedUSD: 1_000_000 }, observedAtSec: input.clockSec - 60 },
+        },
+        chainCirculatingById: { "cngn-compliant-naira": {} },
+        navPriceById: {},
+        pegReferenceById: { "cngn-compliant-naira": { valueUsd: 1.02, asOf: input.clockSec - 30 } },
+      },
+    });
+
+    const view = deploymentSupplyCensusSourceView(projected);
+    expect(view).not.toBeNull();
+    expect(view!.activeAssetIds).toEqual(["cngn-compliant-naira"]);
+    expect(view!.pegReferenceById).toEqual({ "cngn-compliant-naira": { valueUsd: 1.02, asOf: input.clockSec - 30 } });
+
+    // A source that predates the projection has no population data: the lane
+    // must skip by name, not measure the 10-asset attribution allowlist.
+    const { censusProjection: _projection, ...legacy } = projected;
+    expect(deploymentSupplyCensusSourceView(legacy as typeof projected)).toBeNull();
   });
 
   it("rejects malformed serialized and object source payloads", () => {

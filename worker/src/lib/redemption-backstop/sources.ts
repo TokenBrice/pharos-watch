@@ -574,6 +574,14 @@ export async function buildRedemptionBackstopEntry(
       exitRouteObservations: routeObservations,
     } };
   }
+  if (executionRoutes.failures.length > 0) {
+    const unsupportedReasons: Record<string, number> = {};
+    finalizedEntry.executionRouteFailures = executionRoutes.failures.map(({ modelId, reason, responsibility, priceLeg }) => {
+      unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
+      return { modelId, reason, responsibility, ...(priceLeg ? { priceLeg } : {}) };
+    });
+    finalizedEntry.exitRouteObservationCoverage = { unsupportedReasons };
+  }
   if (directObservation && finalizedEntry.routeStatusSource === directObservation.routeStatusSource &&
       finalizedEntry.routeStatus === directObservation.routeStatus) {
     options.onDirectObserverExecution?.("consumed");

@@ -28,6 +28,53 @@
     "reviewer": "GPT SOL-NR-A wave6",
     "reviewedAt": "2026-07-22"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "rwaUSDi is a permissioned private-credit pool token whose value is an issuer-computed net asset value. The issuer documents its oracle architecture as signed NAV/share messages from an authorized signer set (issuer admin, fund admin or designated oracle operators) verified by quorum and freshness checks with delta and divergence guards, and it publishes Chainlink rwaUSDi NAV and Proof of Reserves feeds for the Monad deployment. No independent external price-feed quorum, public feed-controller inventory or published liquidation market for rwaUSDi is disclosed, so the valuation authority is issuer-internal pricing relayed to an external feed rather than independent market-price discovery. Private-credit reserve risk, the documented liquid-pool PriceRouter/UnwindEngine design and the destination CCIP bridge controls remain separate reviews.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2-013 research sprint 2026-10-30 (RS2 shard 13)",
+      "rationale": "The reviewed price authority converts rwaUSDi supply into a USD NAV for issuance and redemption; it is not a borrower-collateral liquidation oracle. The issuer's documented UnwindEngine/AuctionHouse flow belongs to the public liquid-collateral pool, while rwaUSDi is described as permissioned private credit pools with scheduled redemptions, defined horizons and no continuous public liquidation path.",
+      "sources": [
+        {
+          "label": "Multipli Collateral and Oracle Profile: authorized-signer signed NAV, quorum, staleness and divergence guards",
+          "url": "https://docs.multipli.fi/technical-architecture/collateral-and-oracle-profile"
+        },
+        {
+          "label": "Multipli rwaUSDi product scope: permissioned private-credit pools with scheduled redemptions",
+          "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
+        },
+        {
+          "label": "Multipli Unwind and Peg Module: liquidation and auction design for the liquid-collateral pool",
+          "url": "https://docs.multipli.fi/technical-architecture/unwind-and-peg-module"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-013 research sprint 2026-10-30 (RS2 shard 13)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Multipli documentation index",
+        "url": "https://docs.multipli.fi/llms.txt"
+      },
+      {
+        "label": "Multipli Chainlink Data Feed page: rwaUSDi NAV (Monad) and Proof of Reserves (Monad)",
+        "url": "https://docs.multipli.fi/rwausd/chainlink-data-feed"
+      },
+      {
+        "label": "Multipli Collateral and Oracle Profile: signed NAV feeds with N-of-M signer quorum and price guards",
+        "url": "https://docs.multipli.fi/technical-architecture/collateral-and-oracle-profile"
+      },
+      {
+        "label": "Multipli rwaUSDi: permissioned institutional credit layer for private markets",
+        "url": "https://docs.multipli.fi/rwausd/liquidity-classes-why-segmentation-by-design/rwausdi-the-institutional-credit-layer-for-tokenized-private-markets"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
     "summary": "Multipli issues rwaUSDi natively on Ethereum, Base, Monad, Arbitrum, X Layer, Robinhood Chain, and Pharos; the seven reviewed routes remain issuer-native. The latest implementation is CCIP-admin/IBurnMintERC20-compatible, but the three added implementations expose no remote-token or route-peer configuration, and Robinhood Chain and Pharos TokenAdminRegistry getPool(token) reads were zero. The unresolved CCIP binding is bridge-evidence follow-up in Bridge Risk; it does not make the seven authored deployments representations. Ethereum in the peripheral route rows is an identity/accounting convention, not evidence that the other deployments are bridged.",

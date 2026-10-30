@@ -461,22 +461,24 @@ export function toDexMeasuredExecutionPublicProfile(
   });
 }
 
-export type DexMeasuredExecutionValidationReason =
-  | "invalid-profile"
-  | "target-generation-mismatch"
-  | "quote-generation-mismatch"
-  | "target-snapshot-mismatch"
-  | "identity-mismatch"
-  | "tracked-input-mismatch"
-  | "stale-observation"
-  | "future-observation"
-  | "retained-price-mismatch"
-  | "retained-tvl-mismatch"
-  | "token-reference-price-mismatch"
-  | "quote-price-mismatch"
-  | "capacity-above-retained-tvl-bound"
-  | "invalid-capacity-curve"
-  | "invalid-quote-proof";
+export const DexMeasuredExecutionValidationReasonSchema = z.enum([
+  "invalid-profile",
+  "target-generation-mismatch",
+  "quote-generation-mismatch",
+  "target-snapshot-mismatch",
+  "identity-mismatch",
+  "tracked-input-mismatch",
+  "stale-observation",
+  "future-observation",
+  "retained-price-mismatch",
+  "retained-tvl-mismatch",
+  "token-reference-price-mismatch",
+  "quote-price-mismatch",
+  "capacity-above-retained-tvl-bound",
+  "invalid-capacity-curve",
+  "invalid-quote-proof",
+]);
+export type DexMeasuredExecutionValidationReason = z.infer<typeof DexMeasuredExecutionValidationReasonSchema>;
 
 function canonicalPart(value: string): string {
   return value.trim().toLowerCase();

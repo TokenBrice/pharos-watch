@@ -17,6 +17,7 @@ function descriptor(): LaneScreeningDescriptor {
       families: ["OwnershipTransferred"],
     }],
     lookbackBlocks: 50_000,
+    provenance: { controlIds: ["fixture-owner"] },
   };
 }
 

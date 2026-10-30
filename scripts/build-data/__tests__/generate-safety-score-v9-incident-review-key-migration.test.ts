@@ -26,27 +26,23 @@ describe("incident review key migration", () => {
   it("reproduces the committed mapping golden from the applied registry and metadata", () => {
     const generated = buildIncidentReviewKeyMigration(ROOT);
     expect(generated).toEqual(readJson(INCIDENT_REVIEW_KEY_MIGRATION_PATH));
-    expect(generated.counts).toMatchObject({
-      lane: 242,
-      control: 91,
-      "lane-aggregate": 222,
-      "mint-control": 59,
-      deployment: 12,
-      retired: 23,
-      mapped: 626,
-      orphans: 23,
-      collisions: 11,
-      authoredApplied: 614,
-      legacyBlocked: 0,
-      digestKeysRemaining: 23,
-      total: 649,
-    });
+    // The golden above pins the mapping; these invariants keep it honest while
+    // provider/issuer fragments merge into the registry.
+    const registry = readJson(INCIDENT_REVIEWS_PATH) as { negativeReviews: readonly RawReview[] };
+    const subjects = registry.negativeReviews.filter((review) =>
+      review.scope.kind !== "issuer-surface" && review.scope.kind !== "provider");
+    expect(generated.counts.total).toBe(subjects.length);
+    expect(generated.counts.skipped).toBe(registry.negativeReviews.length - subjects.length);
+    expect(generated.counts.total + generated.counts.skipped).toBe(registry.negativeReviews.length);
+    expect(generated.counts.orphans).toBe(generated.counts.retired);
+    expect(generated.counts.mapped + generated.counts.orphans).toBe(generated.counts.total);
   });
 
   it("keeps every applied authored identity outcome-equivalent to its digest key", () => {
     const generated = buildIncidentReviewKeyMigration(ROOT);
     expect(() => assertMigrationPreservesLegacyKeys(ROOT, generated)).not.toThrow();
-    expect(generated.rows.filter((row) => row.applied === "authored")).toHaveLength(614);
+    expect(generated.counts.authoredApplied).toBeGreaterThan(0);
+    expect(generated.rows.filter((row) => row.applied === "authored")).toHaveLength(generated.counts.authoredApplied);
     expect(generated.rows
       .filter((row) => row.applied === "authored")
       .every((row) => row.authored !== null && typeof row.legacyControlKey === "string")).toBe(true);
@@ -62,23 +58,64 @@ describe("incident review key migration", () => {
     expect(retired.every((row) => row.authored === null && row.reason.length > 0 && row.applied === "retired")).toBe(true);
   });
 
-  it("applies authored scopes to 614 rows and retires 23 with provenance, keeping 23 legacy keys", () => {
+  it("applies every authored scope and retires the adjudicated orphans with provenance", () => {
     const reviews = readJson(INCIDENT_REVIEWS_PATH) as { negativeReviews: RawReview[] };
+    const generated = buildIncidentReviewKeyMigration(ROOT);
     const authored = reviews.negativeReviews.filter((review) =>
       review.scope.kind === "control" && review.scope.controlKey === undefined);
     const retired = reviews.negativeReviews.filter((review) => review.retired !== undefined);
     const legacyDigests = reviews.negativeReviews.filter((review) =>
       typeof review.scope.controlKey === "string");
-    expect(authored).toHaveLength(614);
+    expect(authored).toHaveLength(generated.counts.authoredApplied + generated.counts.legacyBlocked);
     expect(authored.every((review) => typeof review.scope.routeId === "string" || review.scope.controlId !== undefined)).toBe(true);
-    expect(retired).toHaveLength(23);
+    expect(retired).toHaveLength(generated.counts.retired);
     expect(retired.every((review) =>
       review.retired?.reviewedAt === REVIEW_KEY_MIGRATION_RETIRED_AT && review.retired.reason.length > 0)).toBe(true);
-    // Only the 23 retired rows keep the digest scope they were adjudicated under.
-    expect(legacyDigests).toHaveLength(23);
+    // Only the retired rows keep the digest scope they were adjudicated under.
+    expect(legacyDigests).toHaveLength(retired.length);
     const deploymentScopedMint = authored.find((review) =>
       review.scope.controlId === "USDSM Etherlink proxy owner");
     expect(deploymentScopedMint?.scope.routeId).toBe("etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de");
+  });
+
+  it("skips issuer-surface and provider reviews, which are not key-migration subjects", () => {
+    const registry = readJson(INCIDENT_REVIEWS_PATH) as {
+      negativeReviews: readonly RawReview[];
+    } & Record<string, unknown>;
+    const reviews = {
+      ...registry,
+      negativeReviews: [
+        ...registry.negativeReviews,
+        {
+          reviewId: "fixture-provider",
+          scope: {
+            kind: "provider", providerKey: "layerzero", surface: "dvn-set",
+            coveredRoutes: [{ assetId: "usdc-circle", routeId: "ethereum:0x2222222222222222222222222222222222222222" }],
+          },
+          reviewedAt: "2026-10-30",
+          windowStartSec: 1,
+          windowEndSec: 2,
+        },
+        {
+          reviewId: "fixture-issuer",
+          assetId: "usdc-circle",
+          scope: { kind: "issuer-surface", coveredRoutes: ["ethereum:0x2222222222222222222222222222222222222222"] },
+          reviewedAt: "2026-10-30",
+          windowStartSec: 1,
+          windowEndSec: 2,
+        },
+      ],
+    };
+    const generated = buildIncidentReviewKeyMigration(ROOT, reviews);
+    const nonSubjects = registry.negativeReviews.filter((review) =>
+      review.scope.kind === "issuer-surface" || review.scope.kind === "provider").length;
+    expect(generated.counts.skipped).toBe(nonSubjects + 2);
+    expect(generated.counts.total).toBe(registry.negativeReviews.length - nonSubjects);
+    expect(generated.counts.total + generated.counts.skipped).toBe(reviews.negativeReviews.length);
+    // No migration row claims a certificate/lane witness: a provider row has no
+    // assetId, so a row for it would fail the checker's artifact schema.
+    expect(generated.rows.some((row) => row.reviewId === "fixture-provider" || row.reviewId === "fixture-issuer")).toBe(false);
+    expect(generated.rows.every((row) => typeof row.assetId === "string")).toBe(true);
   });
 
   it("emits only canonical colon-separated stable review ids", () => {
