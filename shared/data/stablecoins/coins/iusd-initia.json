@@ -95,6 +95,11 @@
     "version": 1,
     "semantics": "single-asset",
     "breakerScope": "iusd-initia",
+    "suspended": {
+      "reason": "Initia L1 halted 2026-10-23; rest.initia.xyz returns HTTP 404 and only AUSD0 of the issuer's three iUSD collateral assets is read",
+      "since": "2026-10-23",
+      "reviewBy": "2026-11-20"
+    },
     "display": {
       "url": "https://rest.initia.xyz/cosmos/bank/v1beta1/supply/by_denom?denom=move%2F6c69733a9e722f3660afb524f89fce957801fa7e4408b8ef8fe89db9627b570e",
       "label": "Initia LCD — iusd-vault AUSD0 balance vs iUSD supply"

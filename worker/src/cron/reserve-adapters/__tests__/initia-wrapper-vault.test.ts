@@ -229,7 +229,14 @@ describe("fetchInitiaWrapperVaultReserves", () => {
   });
 
   it("publishes exact multi-provider agreement with the agreeing providers and block clock", async () => {
-    const run = await runInitia(twoProviders(), REVIEWED_TRANSPORT);
+    // The catalog feed is suspended while Initia is halted; this covers the adapter
+    // path that resumes once the suspension is lifted.
+    const run = await runAdapter("initia-wrapper-vault", "iusd-initia", {
+      network: twoProviders(),
+      nowSec: NOW,
+      params: REVIEWED_TRANSPORT,
+      config: { suspended: undefined },
+    });
     const { result } = run;
     expect(evaluateAdapterSnapshotAdmission(run, NOW).eligible).toBe(true);
     expect(result.metadata?.collateralizationRatio).toBe(1);

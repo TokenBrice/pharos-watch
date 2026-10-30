@@ -2,7 +2,7 @@
   "id": "usdvb-versabank",
   "name": "VersaBank VUSD",
   "symbol": "VUSD",
-  "oneLiner": "VUSD is VersaBank USA’s planned dollar deposit token, piloted as USDVB and issued one-for-one against bank deposits ahead of conditional commercialization.",
+  "oneLiner": "VUSD is VersaBank USA’s dollar deposit token, piloted as USDVB and issued one-for-one against deposits; its U.S. commercial phase began October 15, 2026.",
   "flags": {
     "backing": "rwa-backed",
     "governance": "centralized"

@@ -49,9 +49,6 @@
       "url": "https://docs.plume.org/plume/tokens/plume-usd"
     }
   ],
-  "jurisdiction": {
-    "country": "Marshall Islands"
-  },
   "contracts": [
     {
       "chain": "ethereum",

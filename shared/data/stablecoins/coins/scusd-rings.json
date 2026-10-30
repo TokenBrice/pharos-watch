@@ -50,9 +50,14 @@
   "governanceQuality": "multisig",
   "notices": [
     {
+      "type": "warning",
+      "title": "Stream Finance loss impaired staking wrappers",
+      "message": "Trevee's stkscUSD/stkscETH lost backing in the Nov 2025 Stream Finance fraud; staking and unstaking remain disabled and remaining backing depends on Stream legal cases (issuer, 2026-04-01)."
+    },
+    {
       "type": "info",
       "title": "On-chain reserve tracking pending",
-      "message": "Trevee publishes the Ethereum stablecoin BoringVault and Sonic scUSD staking-vault addresses at https://docs.trevee.xyz/trevee-earn/sonic-scassets/treasury-backing-address. A complete dated allocation across underlying assets and DeFi strategies is still needed for reserve tracking; idle token balances alone do not establish the full backing composition."
+      "message": "Trevee publishes backing addresses but no dated allocation; idle balances alone do not prove full backing composition."
     }
   ],
   "launchDate": "2024-12-09",

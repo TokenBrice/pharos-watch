@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Adapter-held positions include historical Curve USDU/USDC LP and USDU-denominated Morpho/TermMax vault claims, plus reviewed USDC- and USDT-denominated ERC-4626 positions in SwapBridgeMorphoV1 modules. The issuer's legacy three-rail backing API does not establish a complete current all-module allocation.",
+  "collateral": "Adapter-held positions include Curve LP in the USDU/CHFU, USDU/EURU and USDU/USDC pools, USDU-denominated Morpho/TermMax claims, and reviewed USDC/USDT ERC-4626 positions in SwapBridgeMorphoV1 modules. The issuer's legacy backing API does not establish a complete all-module allocation.",
   "pegMechanism": "Protocol-minted via DAO-approved adapters; secondary-market conversion and reviewed USDC/USDT swap modules provide liquidity-dependent exits with nominal-parity accounting.",
   "llamaId": "304",
   "detailProvider": "defillama",

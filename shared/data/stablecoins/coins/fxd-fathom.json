@@ -2,7 +2,7 @@
   "id": "fxd-fathom",
   "name": "Fathom Dollar",
   "symbol": "FXD",
-  "oneLiner": "FXD is Fathom Protocol's CDP-minted dollar on XDC, overcollateralized by XDC and stabilized by liquidations plus a StableSwap Module.",
+  "oneLiner": "FXD is Fathom Protocol's CDP-minted dollar on XDC; the issuer wound it down in 2026, leaving only pro-rata redemption.",
   "llamaId": "176",
   "detailProvider": "defillama",
   "geckoId": "fathom-dollar",
@@ -12,7 +12,7 @@
     "governance": "centralized-dependent"
   },
   "collateral": "Overcollateralized XDC and protocol collateral-pool positions in Fathom Protocol",
-  "pegMechanism": "Users mint FXD from collateralized debt positions, repay and burn FXD to close positions, and rely on liquidations plus the StableSwap Module to support the dollar peg",
+  "pegMechanism": "FXD was minted from overcollateralized CDPs; liquidations and a StableSwap Module supported the peg until the issuer's 2026 wind-down closed the repay-to-close flow",
   "mechanismArchetype": "cdp",
   "mechanismArchetypeReview": {
     "disposition": "resolved",
@@ -58,5 +58,7 @@
   ],
   "collateralQuality": "exotic",
   "custodyModel": "onchain",
-  "governanceQuality": "single-entity"
+  "governanceQuality": "single-entity",
+  "windDownAnnouncedAt": "2026-08-05",
+  "windDownSourceUrl": "https://x.com/Fathom_fi/article/2084909905287487609"
 }
