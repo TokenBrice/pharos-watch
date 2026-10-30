@@ -160,6 +160,7 @@
     "worker/src/lib/dews/contracts.ts": 100,
     "worker/src/lib/dews/evidence-policy.ts": 100,
     "worker/src/lib/dews/input-assembly.ts": 95.8,
+    "worker/src/lib/dews/malformed-input.ts": 100,
     "worker/src/lib/dews/persistence.ts": 97.9,
     "worker/src/lib/dews/progress.ts": 100,
     "worker/src/lib/dews/scoring.ts": 97.5,

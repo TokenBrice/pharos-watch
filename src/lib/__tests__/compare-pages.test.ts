@@ -118,7 +118,7 @@ const PILOT_REPORT_FACTS: Record<string, { left: { period: string; scope: string
     right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
   },
   "rlusd-ripple-vs-usdc-circle": {
-    left: { period: "2026-08-31", scope: EXAMINATION_SCOPE },
+    left: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
     right: { period: "2026-09-30", scope: EXAMINATION_SCOPE },
   },
   "paxg-paxos-vs-xaut-tether": {

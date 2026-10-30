@@ -1960,19 +1960,24 @@ describe("syncLiveReserves", () => {
   });
 
   it("emits a primary-fallback-used info warning when the fallback succeeds", async () => {
+    // USDD now sums chain feeds through `params.additionalCollateralUrls`, so the
+    // plain primary/fallback chain this test exercises comes from another coin.
     const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
-      (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0
-      && coin.liveReservesConfig?.inputs.primary.kind === "http-json"
-      && coin.liveReservesConfig.inputs.primary.url.includes("chain=tron")
+      coin.liveReservesConfig?.inputs.primary.kind === "http-json"
+      && coin.liveReservesConfig.inputs.fallbacks?.length === 1
+      && coin.liveReservesConfig.inputs.fallbacks[0]?.kind === "http-json"
     ));
     expect(fallbackCoin).toBeDefined();
+    const primary = fallbackCoin!.liveReservesConfig!.inputs.primary;
+    if (primary.kind !== "http-json") throw new Error("expected an http-json primary");
+    const primaryUrl = primary.url;
 
     mockAdapterRegistry(async (_coin, config) => {
       const currentInput = config?.inputs.primary;
       if (!currentInput || (currentInput.kind !== "http-json" && currentInput.kind !== "http-html")) {
         throw new Error("unexpected input kind");
       }
-      if (currentInput.url.includes("chain=tron")) {
+      if (currentInput.url === primaryUrl) {
         throw new Error("primary source down");
       }
       return { slices: [{ name: "Tracked vaults", pct: 100, risk: "low" as const }] };
@@ -2016,19 +2021,24 @@ describe("syncLiveReserves", () => {
   });
 
   it("persists full primary-plus-fallback failure context for reserve source chains", async () => {
+    // USDD now sums chain feeds through `params.additionalCollateralUrls`, so the
+    // plain primary/fallback chain this test exercises comes from another coin.
     const fallbackCoin = ACTIVE_STABLECOINS.find((coin) => (
-      (coin.liveReservesConfig?.inputs.fallbacks?.length ?? 0) > 0
-      && coin.liveReservesConfig?.inputs.primary.kind === "http-json"
-      && coin.liveReservesConfig.inputs.primary.url.includes("chain=tron")
+      coin.liveReservesConfig?.inputs.primary.kind === "http-json"
+      && coin.liveReservesConfig.inputs.fallbacks?.length === 1
+      && coin.liveReservesConfig.inputs.fallbacks[0]?.kind === "http-json"
     ));
     expect(fallbackCoin).toBeDefined();
+    const primary = fallbackCoin!.liveReservesConfig!.inputs.primary;
+    if (primary.kind !== "http-json") throw new Error("expected an http-json primary");
+    const primaryUrl = primary.url;
 
     mockAdapterRegistry(async (_coin, config) => {
       const currentInput = config?.inputs.primary;
       if (!currentInput || (currentInput.kind !== "http-json" && currentInput.kind !== "http-html")) {
         throw new Error("unexpected input kind");
       }
-      if (currentInput.url.includes("chain=tron")) {
+      if (currentInput.url === primaryUrl) {
         throw new Error("primary reserve source failed");
       }
       throw new Error("fallback reserve source failed");

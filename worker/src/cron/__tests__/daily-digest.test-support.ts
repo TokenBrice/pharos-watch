@@ -234,6 +234,9 @@ export function publishedGaugePayload(overrides: Record<string, unknown> = {}): 
       { stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: 100, netFlow24hUsd: 200_000_000, gaugeWeightUsd: 100e9, valuation: COMPLETE_FLOW_VALUATION },
       { stablecoinId: "usdc-circle", symbol: "USDC", pressureShiftScore: -83.33, netFlow24hUsd: -50_000_000, gaugeWeightUsd: 50e9, valuation: COMPLETE_FLOW_VALUATION },
       { stablecoinId: "paxg-paxos", symbol: "PAXG", pressureShiftScore: null, netFlow24hUsd: -3_000_000, valuation: COMPLETE_FLOW_VALUATION },
+      // Both classified risky coins need a published net: an omitted cohort
+      // member is unbounded, so its absence would withhold the FTQ verdict.
+      { stablecoinId: "xaut-tether", symbol: "XAUT", pressureShiftScore: null, netFlow24hUsd: 0, valuation: COMPLETE_FLOW_VALUATION },
     ],
     chains: [
       { chainId: "ethereum", netFlow24hUsd: 150_000_000, valuation: "complete" },
