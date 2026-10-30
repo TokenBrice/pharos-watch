@@ -252,6 +252,7 @@
     "worker/src/lib/safety-score-v9/fact-set-wrapper.ts": 100,
     "worker/src/lib/safety-score-v9/fact-set.ts": 97.3,
     "worker/src/lib/safety-score-v9/l2-messenger-pending-observer.ts": 97.9,
+    "worker/src/lib/safety-score-v9/lane-emitter-catalog.ts": 100,
     "worker/src/lib/safety-score-v9/lane-incident-certificate-store.ts": 91,
     "worker/src/lib/safety-score-v9/layerzero-oft-pending-observer.ts": 97.8,
     "worker/src/lib/safety-score-v9/native-input.ts": 100,
