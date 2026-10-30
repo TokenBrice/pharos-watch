@@ -13,13 +13,6 @@ interface PrimaryPriceAssetLike {
   geckoId?: string | null;
 }
 
-interface RedstoneQuote {
-  price: number;
-  venueCount: number;
-  venueAgreementPct: number;
-  timestamp: number;
-}
-
 interface DexProtocolSourceQuote {
   protocol: string;
   price: number;
@@ -110,7 +103,6 @@ export interface PrimaryCollectedQuotes {
   bitstampObservedAt: number | null;
   coinbasePrice: number | null;
   coinbaseObservedAt: number | null;
-  redstoneQuote?: RedstoneQuote;
   curvePrice: number | null;
   curveObservedAt: number | null;
   curveOraclePrice: number | null;
@@ -301,23 +293,6 @@ export function buildPrimarySourceCandidates(
     }),
   ].filter((source): source is SourcePrice => source != null);
   sources.push(...baseSources);
-
-  const redstoneQuote = collected.redstoneQuote;
-  if (redstoneQuote && redstoneQuote.venueCount >= 2 && redstoneQuote.venueAgreementPct >= 60) {
-    const redstoneSource = buildSourcePrice({
-      source: "redstone",
-      price: redstoneQuote.price,
-      observedAt: redstoneQuote.timestamp,
-      nowSec,
-      metadata: {
-        venueCount: redstoneQuote.venueCount,
-        venueAgreementPct: redstoneQuote.venueAgreementPct,
-      },
-    });
-    if (redstoneSource) {
-      sources.push(redstoneSource);
-    }
-  }
 
   const dexCandidateTelemetry: PrimaryDexCandidateTelemetry[] = [];
   const promotedDexProtocolCandidates: SourcePrice[] = [];

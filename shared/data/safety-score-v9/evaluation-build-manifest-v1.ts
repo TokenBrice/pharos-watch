@@ -126,7 +126,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/circuit-sources.ts",
-      "sha256": "1ecafc39bc752df7d68193511046307c78feefaecf0067891035d9ab841ba74a"
+      "sha256": "aad39675f8662d44e11f18ca9765440221d7be5089222adb8d7ca05598d08e7a"
     },
     {
       "path": "shared/lib/classification/resolve-implementation-launch-date.ts",
@@ -306,7 +306,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/pricing-source-registry-market-feeds.ts",
-      "sha256": "79494fe99b50cd3c5c144c2322135f7c4288270199dfb97bf2d8e1c544cc3d15"
+      "sha256": "eba5d40aa2f534cf14a62423b6e535f3ddfab0245df34d4b656c58b93a084423"
     },
     {
       "path": "shared/lib/pricing-source-registry-presets.ts",
@@ -874,7 +874,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/pricing-source-health.ts",
-      "sha256": "9895f42d1fc22f7a483f68737727fc5da44bb6b0da5ec14997d28c91f1f63ef9"
+      "sha256": "dba6ef0dbce73f8fb663b5489a7658d5ce34c5b9dead4548221be4e40102241c"
     },
     {
       "path": "shared/types/redemption.ts",
@@ -1447,7 +1447,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "cc8d55cb6bd2f7861a6da18b487229e3ed853fa5b2ac489249b1a6b17d952e0e"
+  "digest": "3cefb190115c7248d5c1226b145e2f954d683b83d9b3b2ed4542cc83488d4857"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

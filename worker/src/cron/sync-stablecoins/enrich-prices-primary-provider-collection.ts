@@ -24,11 +24,6 @@ import {
 import { isSuccessfulOutcome } from "../../lib/fetcher-result";
 import type { PricingProviderAttemptDiagnostic } from "../../lib/pricing-provider-diagnostics";
 import {
-  fetchRedstonePrices,
-  getRedstoneMetaSymbolForStablecoinId,
-  REDSTONE_TRACKED_STABLECOIN_IDS,
-} from "../../lib/redstone";
-import {
   createDexPriceSourceLoadTelemetry,
   loadDexPrices,
   type DexPriceSourceLoadTelemetry,
@@ -68,7 +63,6 @@ export interface PrimaryPricePlan {
   coinbaseSymbols: string[];
   krakenSymbols: string[];
   shouldFetchBitstamp: boolean;
-  redstoneSymbols: string[];
   navPriceIds: string[];
   sourceAllowed: {
     cg: boolean;
@@ -77,7 +71,6 @@ export interface PrimaryPricePlan {
     kraken: boolean;
     bitstamp: boolean;
     coinbase: boolean;
-    redstone: boolean;
     curve: boolean;
     curveOracle: boolean;
     hiveMarket: boolean;
@@ -97,7 +90,6 @@ export interface PrimaryConsensusQuoteMaps {
   bitstampObservedAtBySymbol: Map<string, number>;
   coinbasePrices: Map<string, number>;
   coinbaseObservedAtBySymbol: Map<string, number>;
-  redstonePrices: Map<string, { price: number; venueCount: number; venueAgreementPct: number; timestamp: number }>;
   curvePrices: Map<string, number>;
   curveObservedAtByCoinId: Map<string, number>;
   curveOraclePrice: number | null;
@@ -120,7 +112,6 @@ export function createEmptyPrimaryConsensusQuoteMaps(): PrimaryConsensusQuoteMap
     bitstampObservedAtBySymbol: new Map(),
     coinbasePrices: new Map(),
     coinbaseObservedAtBySymbol: new Map(),
-    redstonePrices: new Map(),
     curvePrices: new Map(),
     curveObservedAtByCoinId: new Map(),
     curveOraclePrice: null,
@@ -255,7 +246,6 @@ export async function buildPrimaryPricePlan(
   const coinbaseKnownSet = new Set(COINBASE_KNOWN_SYMBOLS);
   const krakenKnownSet = new Set(KRAKEN_KNOWN_SYMBOLS);
   const bitstampKnownSet = new Set(BITSTAMP_KNOWN_SYMBOLS);
-  const redstoneStablecoinIdSet = new Set<string>(REDSTONE_TRACKED_STABLECOIN_IDS);
   const curveEligibleIds = new Set(CURVE_POOL_CONFIGS.map((config) => config.stablecoinId));
   curveEligibleIds.add("crvusd-curve");
 
@@ -274,7 +264,6 @@ export async function buildPrimaryPricePlan(
       coinbaseKnownSet.has(symbolUpper) ||
       krakenKnownSet.has(symbolUpper) ||
       bitstampKnownSet.has(symbolUpper) ||
-      redstoneStablecoinIdSet.has(asset.id) ||
       curveEligibleIds.has(asset.id) ||
       navEligible ||
       dexRows.has(asset.id) ||
@@ -295,7 +284,6 @@ export async function buildPrimaryPricePlan(
       coinbaseSymbols: [],
       krakenSymbols: [],
       shouldFetchBitstamp: false,
-      redstoneSymbols: [],
       navPriceIds,
       sourceAllowed: {
         cg: false,
@@ -304,7 +292,6 @@ export async function buildPrimaryPricePlan(
         kraken: false,
         bitstamp: false,
         coinbase: false,
-        redstone: false,
         curve: false,
         curveOracle: false,
         hiveMarket: false,
@@ -319,7 +306,6 @@ export async function buildPrimaryPricePlan(
     krakenAllowed,
     bitstampAllowed,
     coinbaseAllowed,
-    redstoneAllowed,
     curveAllowed,
     curveOracleAllowed,
     hiveMarketAllowed,
@@ -330,7 +316,6 @@ export async function buildPrimaryPricePlan(
     shouldAttemptFetch(db, CIRCUIT_SOURCE.KRAKEN_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.BITSTAMP_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.COINBASE_PRICES),
-    shouldAttemptFetch(db, CIRCUIT_SOURCE.REDSTONE_PRICES),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ONCHAIN),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.CURVE_ORACLE),
     shouldAttemptFetch(db, CIRCUIT_SOURCE.HIVE_MARKET),
@@ -343,7 +328,6 @@ export async function buildPrimaryPricePlan(
     !krakenAllowed &&
     !bitstampAllowed &&
     !coinbaseAllowed &&
-    !redstoneAllowed &&
     !curveAllowed &&
     !curveOracleAllowed
   ) {
@@ -357,13 +341,6 @@ export async function buildPrimaryPricePlan(
   const coinbaseSymbols = candidateSymbolsUpper.filter((symbol) => coinbaseKnownSet.has(symbol));
   const krakenSymbols = candidateSymbolsUpper.filter((symbol) => krakenKnownSet.has(symbol));
   const shouldFetchBitstamp = candidateSymbolsUpper.some((symbol) => bitstampKnownSet.has(symbol));
-  const redstoneSymbols = [
-    ...new Set(
-      candidates
-        .map((asset) => getRedstoneMetaSymbolForStablecoinId(asset.id))
-        .filter((symbol): symbol is string => symbol != null),
-    ),
-  ];
 
   return {
     candidates,
@@ -375,7 +352,6 @@ export async function buildPrimaryPricePlan(
     coinbaseSymbols,
     krakenSymbols,
     shouldFetchBitstamp,
-    redstoneSymbols,
     navPriceIds,
     sourceAllowed: {
       cg: cgAllowed,
@@ -384,7 +360,6 @@ export async function buildPrimaryPricePlan(
       kraken: krakenAllowed,
       bitstamp: bitstampAllowed,
       coinbase: coinbaseAllowed,
-      redstone: redstoneAllowed,
       curve: curveAllowed,
       curveOracle: curveOracleAllowed,
       hiveMarket: hiveMarketAllowed,
@@ -410,7 +385,6 @@ export async function collectPrimaryProviderQuotes(params: {
     geckoIds,
     krakenSymbols,
     nowSec,
-    redstoneSymbols,
     navPriceIds,
     shouldFetchBitstamp,
     sourceAllowed,
@@ -423,7 +397,6 @@ export async function collectPrimaryProviderQuotes(params: {
     krakenPrices,
     bitstampPrices,
     coinbasePrices,
-    redstonePrices,
     curvePrices,
     curveObservedAtByCoinId,
     cgTickerPrices,
@@ -564,25 +537,6 @@ export async function collectPrimaryProviderQuotes(params: {
     fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.COINBASE_PRICES));
   }
 
-  if (sourceAllowed.redstone && redstoneSymbols.length > 0) {
-    fetches.push(() =>
-      runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.REDSTONE_PRICES, "RedStone API", async () => {
-        const outcome = await fetchRedstonePrices(redstoneSymbols, signal);
-        for (const [symbol, result] of outcome.value) {
-          redstonePrices.set(symbol, {
-            price: result.price,
-            venueCount: result.venueCount,
-            venueAgreementPct: result.venueAgreementPct,
-            timestamp: result.timestamp,
-          });
-        }
-        return isSuccessfulOutcome(outcome);
-      }),
-    );
-  } else if (redstoneSymbols.length === 0) {
-    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.REDSTONE_PRICES));
-  }
-
   if (sourceAllowed.curve && CURVE_POOL_CONFIGS.length > 0) {
     fetches.push(() =>
       runPrimaryProviderFetch(db, signal, CIRCUIT_SOURCE.CURVE_ONCHAIN, "Curve on-chain", async () => {
@@ -668,7 +622,6 @@ export async function collectPrimaryProviderQuotes(params: {
       bitstampObservedAtBySymbol,
       coinbasePrices,
       coinbaseObservedAtBySymbol,
-      redstonePrices,
       curvePrices,
       curveObservedAtByCoinId,
       curveOraclePrice,

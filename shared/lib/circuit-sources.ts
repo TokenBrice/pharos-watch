@@ -32,7 +32,6 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   KRAKEN_PRICES: { key: "kraken-prices", scope: "source-wide" },
   BITSTAMP_PRICES: { key: "bitstamp-prices", scope: "source-wide" },
   COINBASE_PRICES: { key: "coinbase-prices", scope: "source-wide" },
-  REDSTONE_PRICES: { key: "redstone-prices", scope: "source-wide" },
   KAVA_PRICEFEED: { key: "kava-pricefeed", scope: "asset-scoped" },
   AZND_CURVE_POOL: { key: "aznd-curve-pool", scope: "asset-scoped" },
   SWANUSD_CURVE_POOL: { key: "swanusd-curve-pool", scope: "asset-scoped" },
@@ -74,6 +73,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   DEFILLAMA_CONFIRM: { key: "defillama-confirm", scope: "retired" },
   DEXSCREENER_SEARCH: { key: "dexscreener-search", scope: "retired" },
   JUSD_CITREA_BRIDGE: { key: "jusd-citrea-bridge", scope: "retired" },
+  REDSTONE_PRICES: { key: "redstone-prices", scope: "retired" },
   USX_STABLE_POOLS: { key: "usx-stable-pools", scope: "retired" },
 } as const satisfies Record<string, { key: string; scope: CircuitScope }>;
 

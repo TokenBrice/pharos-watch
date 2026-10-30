@@ -256,7 +256,7 @@ describe("methodology registry", () => {
     const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
     const release = methodology.entries.find((candidate) => candidate.version === "6.47")!;
     const previous = methodology.entries.find((candidate) => candidate.version === "6.46")!;
-    expect(methodology.currentLabel).toBe("v6.62");
+    expect(methodology.currentLabel).toBe("v6.63");
     expect(release).toMatchObject({
       version: "6.47",
       date: "2026-10-11",
@@ -272,7 +272,7 @@ describe("methodology registry", () => {
     expect(sofidRelease.effectiveAt).toBe(release.effectiveAt);
     expect(sofidRelease.title).toBe("Observed SOFID consensus without nominal-par override");
     expect(release.title).toBe("Conserved historical missing-chain attribution");
-    expect(methodology.entries.slice(0, 8).map((candidate) => candidate.version)).toEqual(["6.62", "6.61", "6.60", "6.59", "6.58", "6.57", "6.56", "6.55"]);
+    expect(methodology.entries.slice(0, 8).map((candidate) => candidate.version)).toEqual(["6.63", "6.62", "6.61", "6.60", "6.59", "6.58", "6.57", "6.56"]);
   });
 
   it("activates the October 28 Pricing releases at one cut, with 6.60 resolving from it", () => {
@@ -294,6 +294,14 @@ describe("methodology registry", () => {
     expect(getMethodologyVersionAt("pricing-pipeline", 1_793_232_000 - 1)).toBe("6.60");
     // sUSN's NAV opt-in ships as 6.62 at the same midnight cut, so the newer version resolves there.
     expect(getMethodologyVersionAt("pricing-pipeline", 1_793_232_000)).toBe("6.62");
+  });
+
+  it("activates the RedStone retirement at the October 30 cut", () => {
+    const methodology = METHODOLOGY_CHANGELOG_REGISTRY.find((candidate) => candidate.key === "pricing-pipeline")!;
+    expect(methodology.entries.find((candidate) => candidate.version === "6.63"))
+      .toMatchObject({ date: "2026-10-30", effectiveAt: 1_793_318_400, reconstructed: false });
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_318_400 - 1)).toBe("6.62");
+    expect(getMethodologyVersionAt("pricing-pipeline", 1_793_318_400)).toBe("6.63");
   });
 
   it.each([

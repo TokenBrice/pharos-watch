@@ -49,12 +49,8 @@ describe("buildPrimaryConsensusResults", () => {
       if (input.withIndependentLegs && !input.aggregatorLegsOnly) {
         quoteMaps.krakenPrices.set("USDC", 0.9999);
         quoteMaps.krakenObservedAt = nowSec - 60;
-        quoteMaps.redstonePrices.set("usdc-circle", {
-          price: 1.0001,
-          venueCount: 3,
-          venueAgreementPct: 100,
-          timestamp: nowSec - 30,
-        });
+        quoteMaps.binancePrices.set("USDC", 1.0001);
+        quoteMaps.binanceObservedAt = nowSec - 30;
       }
       const dexRows = new Map([[
         "usdc-circle",
@@ -144,45 +140,5 @@ describe("buildPrimaryConsensusResults", () => {
       stats: createStats(),
     });
     expect(results.size).toBe(0);
-  });
-
-  it("attributes RedStone quotes by stablecoin id instead of same-symbol peers", () => {
-    const nowSec = 1_780_752_600;
-    const candidates: PeggedAsset[] = [
-      {
-        id: "usdh-hubble",
-        name: "Hubble USDH",
-        symbol: "USDH",
-        pegType: "peggedUSD",
-      },
-      {
-        id: "usdh-native-markets",
-        name: "Native Markets USDH",
-        symbol: "USDH",
-        pegType: "peggedUSD",
-      },
-    ];
-    const quoteMaps = createEmptyPrimaryConsensusQuoteMaps();
-    quoteMaps.redstonePrices.set("usdh-native-markets", {
-      price: 0.9999,
-      venueCount: 2,
-      venueAgreementPct: 100,
-      timestamp: nowSec,
-    });
-
-    const results = new Map<string, PrimaryPriceResult>();
-    buildPrimaryConsensusResults({
-      candidates,
-      quoteMaps,
-      dexRows: new Map() as PrimaryDexRows,
-      dexPriceSources: new Map() as PrimaryDexPriceSources,
-      nowSec,
-      resolveDlListQuote: () => undefined,
-      results,
-      stats: createStats(),
-    });
-
-    expect(results.has("usdh-hubble")).toBe(false);
-    expect(results.get("usdh-native-markets")?.source).toBe("redstone");
   });
 });

@@ -310,7 +310,6 @@ function confirmationFamilyForSource(source: string, family: SourceFamily): stri
 
 function circuitForSource(source: string, family: SourceFamily): string {
   if (getPricingSourceRegistryEntry(source)?.isRetired) return "retired";
-  if (source === "redstone") return "redstone-prices";
   if (family === "dex") return "dex-discovery";
   if (family === "fallback-search") return "fallback-search";
   if (family === "protocol" || family === "protocol-override") return "protocol";

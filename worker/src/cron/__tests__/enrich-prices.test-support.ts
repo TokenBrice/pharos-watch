@@ -1,14 +1,4 @@
 import { vi } from "vitest";
-vi.mock("../../lib/abort", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../../lib/abort")>();
-  return {
-    ...actual,
-    sleepWithSignal: vi.fn(async (_ms: number, signal?: AbortSignal) => {
-      actual.throwIfAborted(signal);
-    }),
-  };
-});
-
 import type { PrimaryPriceResult } from "../sync-stablecoins/enrich-prices";
 import type { PriceValidationStats } from "../sync-stablecoins/enrich-prices-shared";
 import { mockD1 } from "@shared/test-utils/mock-d1";

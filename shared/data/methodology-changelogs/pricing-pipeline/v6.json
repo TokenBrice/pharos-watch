@@ -1,5 +1,19 @@
 [
   {
+    "version": "6.63",
+    "title": "Retired the RedStone price lane",
+    "date": "2026-10-30",
+    "effectiveAt": 1793318400,
+    "summary": "RedStone permanently switched off its public gateways on 2026-10-29, so the weight-1 oracle lane is retired while historical `redstone` provenance stays readable.",
+    "impact": [
+      "RedStone's public gateways stopped serving for good at 2026-10-29T00:00:00Z: `https://api.redstone.finance/prices` now returns HTTP 500 or an empty payload, and the only remaining API-keyed gateway publishes one aggregate per signer without the per-venue breakdown the ≥2-venue and ≥60%-agreement admission rule requires.",
+      "Primary consensus runs without the weight-1 RedStone oracle lane. `worker/src/lib/redstone.ts`, `REDSTONE_SYMBOL_CONFIG`, the `redstone-prices` circuit source and the provider metadata audit no longer collect or admit new RedStone data; the 20 formerly configured coins price through their remaining admitted sources or stay unavailable.",
+      "The retired `redstone` pricing-registry key and its `oracle:redstone` family remain readable for historical provenance, and permissive record schemas keep old `redstone` source strings, health distributions and breaker rows loading without errors; retired keys cannot rejoin live consensus or public outage counts."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.62",
     "title": "sUSN NAV pricing through its USN parent",
     "date": "2026-10-29",

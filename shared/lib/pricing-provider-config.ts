@@ -62,31 +62,3 @@ export const CEX_PROVIDER_AUDIT_CONFIG = {
   bitstamp: { metadataUrl: "https://www.bitstamp.net/api/v2/trading-pairs-info/" },
   coinbase: { metadataUrl: "https://api.exchange.coinbase.com/products" },
 } as const;
-
-export const REDSTONE_SYMBOL_CONFIG = [
-  { stablecoinId: "alusd-alchemix", metaSymbol: "alUSD", apiSymbol: "ALUSD" },
-  { stablecoinId: "ausd-agora", metaSymbol: "AUSD", apiSymbol: "aUSD" },
-  { stablecoinId: "cetes-etherfuse", metaSymbol: "CETES", apiSymbol: "CETES" },
-  { stablecoinId: "dai-makerdao", metaSymbol: "DAI", apiSymbol: "DAI" },
-  { stablecoinId: "eurc-circle", metaSymbol: "EURC", apiSymbol: "EUROC" },
-  { stablecoinId: "eusd-electronic-usd", metaSymbol: "EUSD", apiSymbol: "eUSD" },
-  { stablecoinId: "fdusd-first-digital", metaSymbol: "FDUSD", apiSymbol: "FDUSD" },
-  { stablecoinId: "frax-frax", metaSymbol: "FRAX", apiSymbol: "FRAX" },
-  { stablecoinId: "frxusd-frax", metaSymbol: "FRXUSD", apiSymbol: "frxUSD" },
-  { stablecoinId: "gho-aave", metaSymbol: "GHO", apiSymbol: "GHO" },
-  // Berachain renamed the same token BUSD; RedStone retains its HONEY feed.
-  { stablecoinId: "honey-berachain", metaSymbol: "BUSD", apiSymbol: "HONEY" },
-  { stablecoinId: "lusd-liquity", metaSymbol: "LUSD", apiSymbol: "LUSD" },
-  { stablecoinId: "pyusd-paypal", metaSymbol: "PYUSD", apiSymbol: "PYUSD" },
-  { stablecoinId: "usd1-world-liberty-financial", metaSymbol: "USD1", apiSymbol: "USD1" },
-  { stablecoinId: "usdc-circle", metaSymbol: "USDC", apiSymbol: "USDC" },
-  { stablecoinId: "usdt-tether", metaSymbol: "USDT", apiSymbol: "USDT" },
-  { stablecoinId: "usde-ethena", metaSymbol: "USDe", apiSymbol: "USDe" },
-  { stablecoinId: "xaut-tether", metaSymbol: "XAUT", apiSymbol: "XAUt" },
-  { stablecoinId: "crvusd-curve", metaSymbol: "crvUSD", apiSymbol: "crvUSD" },
-  { stablecoinId: "fxusd-f-x-protocol", metaSymbol: "fxUSD", apiSymbol: "fxUSD" },
-] as const;
-
-export const REDSTONE_PROVIDER_AUDIT_CONFIG = {
-  metadataUrl: "https://api.redstone.finance/prices",
-} as const;

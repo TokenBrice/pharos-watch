@@ -125,6 +125,7 @@ export const PRICING_SOURCE_REGISTRY_MARKET_FEEDS = [
     depegSourceFamily: "oracle:redstone",
     maxTrustedAgeSec: 5 * 60,
     defaultWeight: 1,
+    isRetired: true,
     capabilities: {
       hasUpstreamTimestamp: true,
     },
