@@ -54,6 +54,20 @@ function assetScopedHealth(): HealthResponse {
 }
 
 describe("public status components", () => {
+  it("retains classified blacklist components while public raw gaps include queued proofs", () => {
+    const health = makeHealthyHealthResponse();
+    health.blacklist = { ...health.blacklist, missingAmounts: 5, missingRatio: 0.05, recentMissingAmounts: 0 };
+    const projection = projectPublicStatus(health, undefined, "healthy");
+    expect(projection.components.find((entry) => entry.id === "blacklist")).toMatchObject({ state: "operational", reasons: [] });
+    const projectedHealth = { ...health, ...projection };
+    expect(component(projectedHealth, "blacklist")).toMatchObject({ state: "operational", reasons: [] });
+    expect(projectPublicStatus(projectedHealth, undefined, "stale").components.find((entry) => entry.id === "blacklist"))
+      .toMatchObject({ state: "degraded", reasons: ["blacklist-amounts-missing"] });
+    expect(health.blacklist).toMatchObject({ missingAmounts: 5, missingRatio: 0.05, recentMissingAmounts: 0 });
+    projectedHealth.blacklist = { ...health.blacklist, missingRatio: null, unavailableReason: "blacklist-read-failed" };
+    expect(component(projectedHealth, "blacklist")).toMatchObject({ state: "degraded", reasons: ["blacklist-read-failed"] });
+  });
+
   it("maps every registered cache lane to a component (ADR-32 completeness)", () => {
     for (const key of PUBLIC_STATUS_CACHE_REGISTRY_KEYS) {
       expect(PUBLIC_CACHE_COMPONENT[key], key).toBeDefined();

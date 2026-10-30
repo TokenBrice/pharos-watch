@@ -161,7 +161,7 @@ export async function computeRawStatus(
     blacklistRecentMissing,
     hasActiveOnchainMonitor,
     onchainAssessment,
-  } = deriveStatusAssessmentInputs(dataQuality);
+  } = deriveStatusAssessmentInputs(dataQuality, publicHealth.blacklistMetrics);
   const reserveCompositionStatus = reserveComposition.status === "unavailable"
     ? "unavailable"
     : evaluateReserveCompositionStatus(reserveComposition).status;

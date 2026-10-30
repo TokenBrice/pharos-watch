@@ -32,6 +32,9 @@ const SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS = 10 * 60_000 + 45_000;
 const SYNC_BLACKLIST_MIN_CONFIG_WINDOW_MS = 60_000;
 const BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT = 10;
 const BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS = 10_000;
+// Preserve the existing maintenance-tail allowance for Tron/debt, plus snapshot publication.
+const BLACKLIST_POST_EVM_REPAIR_RESERVE_MS = SYNC_BLACKLIST_MAINTENANCE_BUDGET_MS
+  - SYNC_BLACKLIST_RUNTIME_BUDGET_MS + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS;
 // createRateLimiter is intentionally serial. Keep the declared live
 // concurrency aligned with that implementation and the shared six-connection
 // trigger budget; throughput is controlled independently by requests/second.
@@ -152,12 +155,15 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         signal,
         {
           ...(scanBudgetExhausted ? { maxRows: BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT } : {}),
+          attemptDeadlineMs: maintenanceRunBudget.deadlineMs - BLACKLIST_POST_EVM_REPAIR_RESERVE_MS,
           drpcApiKey,
           chainRpcs,
         },
       );
       runtimeBudgetHit ||= amountBackfill.runtimeBudgetReached;
-      amountRepair = measuredRepair(amountBackfill.runtimeBudgetReached);
+      amountRepair = amountBackfill.repairWindowExhausted
+        ? { outcome: "partial", reason: "maintenance-tail-reserved" }
+        : measuredRepair(amountBackfill.runtimeBudgetReached);
     } catch (err) {
       amountRepair = { outcome: "failed", reason: REPAIR_EXCEPTION_REASON };
       logWorkerEventArgs("handler", "warn", "[sync-blacklist] Backfill failed:", err);
@@ -241,12 +247,12 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
       ? "degraded"
       : derivedStatus;
   const producerSnapshotWindowUnavailable =
-    Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= runBudget.deadlineMs;
+    Date.now() + BLACKLIST_PRODUCER_SNAPSHOT_MIN_WINDOW_MS >= maintenanceRunBudget.deadlineMs;
 
   // Refresh observed totals during catch-up without advancing the full-coverage freshness clock.
   if (
     runtimeBudgetHit ||
-    blacklistRuntimeBudgetReached(runBudget) ||
+    blacklistRuntimeBudgetReached(maintenanceRunBudget) ||
     subrequestBudgetReached ||
     producerSnapshotWindowUnavailable
   ) {
@@ -386,7 +392,7 @@ export async function syncBlacklist(opts: SyncBlacklistOptions): Promise<SyncBla
         amountRepairRetried: amountBackfill?.retried ?? null,
         amountRepairUnrecoverable: amountBackfill?.unrecoverable ?? null,
         amountRepairTailWindowUsed: scanBudgetExhausted,
-        amountRepairTailLimit: scanBudgetExhausted ? BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT : 100,
+        amountRepairTailLimit: scanBudgetExhausted ? BLACKLIST_AMOUNT_REPAIR_EXHAUSTED_SCAN_LIMIT : null,
         tronAmountRepairOutcome: tronAmountRepair.outcome,
         tronAmountRepairReason: tronAmountRepair.reason,
         tronAmountRepairAttempted: tronAmountBackfill?.attempted ?? null,

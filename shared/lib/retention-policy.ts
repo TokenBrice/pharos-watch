@@ -157,6 +157,10 @@ export const CACHE_RETENTION_POLICIES: readonly CacheRetentionPolicy[] = [
   { name: "retiredMintBurnV3", match: "prefix", key: "mint-burn-flows:v3:", windowSec: null, owner: "prune-detail-cache" },
   { name: "retiredBlacklistSummaryV1", match: "exact", key: "blacklist:summary:producer:v1", windowSec: null, owner: "prune-detail-cache" },
   { name: "retiredBlacklistSummaryV2", match: "exact", key: "blacklist:summary:producer:v2", windowSec: null, owner: "prune-detail-cache" },
+  { name: "retiredBlacklistSummaryV3", match: "exact", key: "blacklist:summary:producer:v3", windowSec: null, owner: "prune-detail-cache" },
+  { name: "retiredBlacklistSummaryV4", match: "exact", key: "blacklist:summary:producer:v4", windowSec: null, owner: "prune-detail-cache" },
+  { name: "retiredBlacklistGapMetricsV2", match: "prefix", key: "blacklist:gap-metrics:v2:", windowSec: null, owner: "prune-detail-cache" },
+  { name: "retiredBlacklistGapMetricsProducerV2", match: "prefix", key: "blacklist:gap-metrics:producer:v2:", windowSec: null, owner: "prune-detail-cache" },
 ];
 
 /** Domain owners remain the sole executable authority for specialized policies. */

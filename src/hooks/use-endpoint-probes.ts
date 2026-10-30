@@ -165,6 +165,13 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
     && ["missingAmounts", "missingRatio", "recentMissingAmounts"].every((key) =>
       key in blacklist && (blacklist as Record<string, unknown>)[key] === null);
   if (!blacklistUnavailable && (missingAmounts === null || missingRatio === null || recentMissingAmounts === null)) return null;
+  const blacklistComponent = "components" in body && Array.isArray(body.components)
+    ? body.components.find((component: unknown) => component != null && typeof component === "object"
+      && "id" in component && component.id === "blacklist" && "state" in component)
+    : null;
+  const blacklistDegraded = blacklistComponent
+    ? blacklistComponent.state !== "operational"
+    : getBlacklistGapStatus({ missingRatio }) !== "healthy";
   const mintBurnWarning =
     mintBurn &&
     "sync" in mintBurn &&
@@ -182,7 +189,7 @@ function extractHealthProbeSemantics(body: unknown): Partial<EndpointProbeResult
       warnings[0] ??
       mintBurnWarning ??
       (blacklistUnavailable ? "Blacklist health evidence unavailable." : null) ??
-      (getBlacklistGapStatus({ missingRatio }) !== "healthy"
+      (blacklistDegraded
         ? `Blacklist gaps missing amounts: ${missingAmounts}.`
         : null),
   };

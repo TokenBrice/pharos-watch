@@ -1,5 +1,5 @@
 import { logWorkerEventArgs } from "./structured-log";
-import { BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
+import { BLACKLIST_PROOF_CATCHUP_WINDOW_SEC, BLACKLIST_RECENT_WINDOW_SEC } from "@shared/lib/status-thresholds";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { isBlacklistAmountGapStatus } from "@shared/lib/blacklist";
 import { BLACKLIST_AMOUNT_STATUS_VALUES } from "@shared/types/market";
@@ -16,6 +16,9 @@ export interface BlacklistGapMetrics {
   recentMissingAmounts: number;
   recentWindowSec: number;
   missingRatio: number;
+  /** Internal status inputs; public counts retain all gaps and their ordinary recent window. */
+  classificationMissingAmounts: number;
+  classificationWatchCount: number;
   unrecoverableMissingAmounts: number;
   oldestRecoverableAgeSec: number | null;
   neverAttemptedCount: number;
@@ -69,6 +72,8 @@ function isMetricsPayload(value: unknown): value is BlacklistGapMetrics {
     && typeof candidate.recentMissingAmounts === "number"
     && typeof candidate.recentWindowSec === "number"
     && typeof candidate.missingRatio === "number"
+    && typeof candidate.classificationMissingAmounts === "number"
+    && typeof candidate.classificationWatchCount === "number"
     && typeof candidate.unrecoverableMissingAmounts === "number"
     && (typeof candidate.oldestRecoverableAgeSec === "number" || candidate.oldestRecoverableAgeSec == null)
     && typeof candidate.neverAttemptedCount === "number"
@@ -183,26 +188,31 @@ async function queryLiveBlacklistGapMetrics(
     isBlacklistAmountGapStatus(status),
   );
   const gapStatusSql = gapStatuses.map((status) => `'${status}'`).join(", ");
+  const awaitingProofSql = `amount_status = 'recoverable_pending'
+    AND chain_id != 'tron' AND event_type = 'blacklist' AND timestamp >= ?`;
   const rowPromise = db
     .prepare(
       `/* blacklist-gap-aggregate */
          SELECT
            COUNT(*) as total,
+           SUM(CASE WHEN amount_status IN (${gapStatusSql}) THEN 1 ELSE 0 END) as missing,
+           SUM(CASE WHEN amount_status IN (${gapStatusSql}) AND timestamp >= ? THEN 1 ELSE 0 END) as missing_recent,
            SUM(
              CASE
                WHEN amount_status IN (${gapStatusSql})
+                 AND NOT (${awaitingProofSql})
                THEN 1
                ELSE 0
              END
-           ) as missing,
+           ) as classification_missing,
            SUM(
              CASE
                WHEN amount_status IN (${gapStatusSql})
-                 AND timestamp >= ?
+                 AND (timestamp >= ? OR (${awaitingProofSql}))
                THEN 1
                ELSE 0
              END
-           ) as missing_recent,
+           ) as classification_watch,
            MAX(
              CASE
                WHEN amount_status IN (${gapStatusSql})
@@ -237,11 +247,19 @@ async function queryLiveBlacklistGapMetrics(
          WHERE event_type IN ('blacklist', 'destroy')
            AND ${BLACKLIST_PUBLIC_EVENT_SQL}`,
     )
-    .bind(now - options.recentWindowSec, now)
+    .bind(
+      now - options.recentWindowSec,
+      now - BLACKLIST_PROOF_CATCHUP_WINDOW_SEC,
+      now - options.recentWindowSec,
+      now - BLACKLIST_PROOF_CATCHUP_WINDOW_SEC,
+      now,
+    )
     .first<{
       total: number;
       missing: number | null;
       missing_recent: number | null;
+      classification_missing: number | null;
+      classification_watch: number | null;
       oldest_gap_age_sec: number | null;
       never_attempted: number | null;
       repeated_failures: number | null;
@@ -297,6 +315,8 @@ async function queryLiveBlacklistGapMetrics(
     recentMissingAmounts,
     recentWindowSec: options.recentWindowSec,
     missingRatio: totalEvents > 0 ? missingAmounts / totalEvents : 0,
+    classificationMissingAmounts: row.classification_missing ?? missingAmounts,
+    classificationWatchCount: row.classification_watch ?? recentMissingAmounts,
     unrecoverableMissingAmounts: row.unrecoverable ?? 0,
     oldestRecoverableAgeSec: row.oldest_gap_age_sec ?? null,
     neverAttemptedCount: row.never_attempted ?? 0,

@@ -90,6 +90,22 @@ function makeDataQualityEvaluationInput(
 }
 
 describe("status evaluation policy", () => {
+  it("keeps queued proof catch-up info-only while expired or failed gaps retain severity", () => {
+    const watch = evaluateDataQualityStatus(makeDataQualityEvaluationInput({ blacklistRecentMissing: 500 }));
+    expect(watch.status).toBe("healthy");
+    expect(watch.causes.filter((cause) => cause.code.startsWith("blacklist_gaps"))).toMatchObject([
+      { code: "blacklist_gaps_recent", severity: "info", value: 500 },
+    ]);
+    const failed = evaluateDataQualityStatus(makeDataQualityEvaluationInput({
+      blacklistMissingRatio: STATUS_BLACKLIST_THRESHOLDS.missingRatioDegraded,
+      blacklistRecentMissing: 500,
+    }));
+    expect(failed.status).toBe("degraded");
+    expect(failed.causes.filter((cause) => cause.code.startsWith("blacklist_gaps"))).toMatchObject([
+      { code: "blacklist_gaps_degraded", severity: "warning" },
+    ]);
+  });
+
   it.each([
     ["healthy", "healthy", "healthy"], ["healthy", "degraded", "degraded"],
     ["healthy", "stale", "stale"], ["degraded", "healthy", "degraded"],

@@ -848,7 +848,42 @@ describe("syncBlacklist", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-summary-snapshot-write"))).toBe(false);
   });
 
-  it("uses the bounded maintenance tail to repair queued amounts after scan exhaustion", async () => {
+  it("preserves later maintenance and snapshots when a long EVM repair reaches its own deadline", async () => {
+    const db = makeDb();
+    const startedAt = Date.now();
+    vi.mocked(backfillAmounts).mockImplementationOnce(async (_db, _key, _limiter, budget, _signal, options) => {
+      expect(options?.attemptDeadlineMs).toBe(budget.deadlineMs - 55_000);
+      expect(options?.attemptDeadlineMs).toBe(startedAt + 590_000);
+      vi.setSystemTime(options!.attemptDeadlineMs!);
+      return { runtimeBudgetReached: false, repairWindowExhausted: true,
+        attempted: 400, resolved: 400, retried: 0, unrecoverable: 0 };
+    });
+    vi.mocked(resolveTronBlacklistOrder).mockImplementationOnce(async () => {
+      vi.setSystemTime(Date.now() + 10_000);
+      return { blocksAttempted: 1, positionsResolved: 2, blocksDeferred: 0 };
+    });
+    vi.mocked(backfillTronBlacklistAmounts).mockImplementationOnce(async () => {
+      vi.setSystemTime(Date.now() + 10_000);
+      return { runtimeBudgetReached: false, attempted: 0, resolved: 0, retried: 0, parked: 0, limit: 24 };
+    });
+    installFetch(async () => new Response(JSON.stringify({ success: true, data: [] }), {
+      status: 200, headers: { "Content-Type": "application/json" },
+    }));
+
+    const result = await syncBlacklist(buildTestOpts({ db }));
+    expect(result.status).toBe("ok");
+    expect(JSON.parse(result.metadata)).toMatchObject({
+      runtimeBudgetReached: false, amountRepairOutcome: "partial", amountRepairReason: "maintenance-tail-reserved",
+      amountRepairAttempted: 400, tronOrderOutcome: "ok", tronAmountRepairOutcome: "ok",
+      producerSnapshotSkipped: false, producerSnapshotWindowUnavailable: false,
+      producerSummarySnapshot: true, producerGapMetricSnapshots: 2,
+    });
+    expect(resolveTronBlacklistOrder).toHaveBeenCalledOnce();
+    expect(backfillTronBlacklistAmounts).toHaveBeenCalledOnce();
+    expect(db.getHistory().some((entry) => entry.sql.includes("FROM cache AS debt"))).toBe(true);
+  });
+
+  it("keeps the exhausted-scan row cap while deferring EVM repair to preserve the remaining tail", async () => {
     const db = mockD1([
       { match: "blacklist_sync_state", rows: [] },
       {
@@ -897,14 +932,17 @@ describe("syncBlacklist", () => {
     expect(meta.runtimeBudgetReached).toBe(true);
     expect(meta.amountRepairTailWindowUsed).toBe(true);
     expect(meta.amountRepairTailLimit).toBe(10);
-    expect(meta.amountRepairAttempted).toBe(1);
+    expect(meta.amountRepairAttempted).toBe(0);
     expect(meta.amountRepairResolved).toBe(0);
-    expect(meta.amountRepairRetried).toBe(1);
+    expect(meta.amountRepairRetried).toBe(0);
+    expect(meta.amountRepairOutcome).toBe("partial");
+    expect(meta.amountRepairReason).toBe("maintenance-tail-reserved");
     expect(meta.maintenanceRuntimeBudgetMs).toBe(645_000);
     const candidateQuery = db.getHistory().find((entry) =>
       entry.sql.includes("blacklist-amount-recovery-evm-candidates"),
     );
-    expect(candidateQuery?.binds).toEqual([3, 10]);
+    expect(candidateQuery).toBeUndefined();
+    expect(vi.mocked(backfillAmounts).mock.calls[0][5]?.maxRows).toBe(10);
   });
 
   it("degrades a one-contract runtime tail and withholds producer snapshots", async () => {

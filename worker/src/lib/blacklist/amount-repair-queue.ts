@@ -30,7 +30,7 @@ export async function refreshBlacklistAmountRepairQueue(db: D1Database, now: num
            WHEN amount_source = 'derived' AND amount_native = 0 THEN 'legacy-derived-zero'
            ELSE 'missing-event-amount'
          END,
-         0,
+         COALESCE(amount_last_attempted_at + ${BASE_RETRY_DELAY_SEC}, 0),
          ?,
          ?
        FROM blacklist_events

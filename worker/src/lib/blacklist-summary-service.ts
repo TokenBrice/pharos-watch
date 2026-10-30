@@ -310,7 +310,7 @@ function buildDataQuality(
   ambiguousOrderCount: number,
 ): BlacklistSummaryPayload["dataQuality"] {
   const gapStatus = getBlacklistGapStatus({
-    missingRatio: gapMetrics.missingRatio,
+    missingRatio: gapMetrics.totalEvents > 0 ? gapMetrics.classificationMissingAmounts / gapMetrics.totalEvents : 0,
   });
   // Retained historical snapshot age stays visible in freezeLedgerMeta.currentFreshnessDistribution;
   // ledger status degrades on provider failures and recoverable amount gaps, not on snapshot age.

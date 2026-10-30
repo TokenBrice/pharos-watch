@@ -32,13 +32,11 @@ import { BlacklistDecodeError } from "./decode-quarantine";
 import type { ChainRpcConfig } from "../chain-registry";
 import { evmBracketProofAdmitted, recoverEvmBracketAmount } from "./evm-amount-recovery";
 
-// Conservative scheduled recovery cap: one D1 batch chunk and well below the
-// sync-blacklist 900-subrequest run budget observed in production.
+// Read candidates one D1 batch chunk at a time.
 const BACKFILL_BATCH_SIZE = 100;
 const MAX_DERIVED_RECOVERY_ATTEMPTS = 3;
-// Four or more reads per proof; 25 per run drains a freeze wave without
-// crowding out the run's other repair stages.
-const MAX_EVM_BRACKET_PROOFS_PER_RUN = 25;
+// Budget and deadline admission normally stop repair before this runaway ceiling.
+const MAX_EVM_REPAIR_ROWS_PER_RUN = 500;
 
 export type BlacklistRecoveryErrorClass =
   | "provider_null"
@@ -103,7 +101,8 @@ export async function enrichRowBalances(opts: {
   const { rows, config, etherscanApiKey, etherscanLimiter, runBudget, signal } =
     opts;
   const counters = { attempted: 0, succeeded: 0, failed: 0 };
-  for (const row of rows) {
+  let bracketProofs = 0;
+  for (const row of [...rows].sort((a, b) => b.timestamp - a.timestamp || b.block_number - a.block_number)) {
     throwIfAborted(signal);
     if (blacklistRuntimeBudgetReached(runBudget)) break;
     if (blacklistSubrequestBudgetReached(runBudget)) break;
@@ -119,8 +118,11 @@ export async function enrichRowBalances(opts: {
       // Keep them unresolved rather than substituting a current balance.
       continue;
     } else if (config.chain.evmChainId != null) {
-      // Deferred rows stay recoverable_pending for the capped scheduled repair.
-      if (row.event_type !== "destroy" && !evmBracketProofAdmitted(runBudget)) continue;
+      // Deferred rows keep their pending status and attempt clock for post-scan repair.
+      if (row.event_type !== "destroy") {
+        if (bracketProofs >= 10 || !evmBracketProofAdmitted(runBudget)) continue;
+        bracketProofs++;
+      }
       counters.attempted++;
       markRecoveryAttempt(row, "none", null);
       try {
@@ -210,6 +212,7 @@ async function fetchDestroyAmountFromLog(
   rateLimit: RateLimitedFetch,
   budget: SubrequestBudget,
   signal?: AbortSignal,
+  deadlineMs?: number,
 ): Promise<number | null> {
   if (budgetExhausted(budget)) return null;
   if (config.contractAddress.toLowerCase() !== contractAddress.toLowerCase()) return null;
@@ -223,11 +226,16 @@ async function fetchDestroyAmountFromLog(
   if (apiKey) params.set("apikey", apiKey);
 
   try {
-    budget.count++;
     const json = await rateLimit(async () => {
+      throwIfAborted(signal);
+      const remainingMs = deadlineMs == null ? 10_000 : deadlineMs - Date.now();
+      if (budgetExhausted(budget) || remainingMs <= 0) return null;
+      budget.count++;
       const result = await fetchJsonWithRetry<{ result?: { logs?: EtherscanLogEntry[] } }>(
         `${ETHERSCAN_V2_BASE}?${params}`,
         signal ? { signal } : undefined,
+        0,
+        { deadlineMs, timeoutMs: Math.min(10_000, remainingMs) },
       );
       if (!result?.response.ok) return null;
       return result.body;
@@ -271,6 +279,7 @@ export interface RecoverBlacklistAmountForRowResult {
 
 export interface BlacklistAmountBackfillResult {
   runtimeBudgetReached: boolean;
+  repairWindowExhausted?: true;
   attempted: number;
   resolved: number;
   retried: number;
@@ -279,6 +288,8 @@ export interface BlacklistAmountBackfillResult {
 
 export interface BlacklistAmountBackfillOptions {
   maxRows?: number;
+  /** Stop repair early enough for the remaining maintenance stages. */
+  attemptDeadlineMs?: number;
   drpcApiKey?: string | null;
   chainRpcs?: Map<string, ChainRpcConfig>;
 }
@@ -328,6 +339,7 @@ async function recoverEvmEventAmount(opts: {
       etherscanLimiter,
       runBudget.subrequestBudget,
       signal,
+      runBudget.deadlineMs,
     );
     throwIfAborted(signal);
     if (amount != null) {
@@ -399,8 +411,9 @@ export async function backfillAmounts(
 ): Promise<BlacklistAmountBackfillResult> {
   const maxRows = Math.max(
     1,
-    Math.min(BACKFILL_BATCH_SIZE, Math.floor(options.maxRows ?? BACKFILL_BATCH_SIZE)),
+    Math.min(MAX_EVM_REPAIR_ROWS_PER_RUN, Math.floor(options.maxRows ?? MAX_EVM_REPAIR_ROWS_PER_RUN)),
   );
+  const repairRunBudget = { ...runBudget, deadlineMs: Math.min(runBudget.deadlineMs, options.attemptDeadlineMs ?? runBudget.deadlineMs) };
   if (blacklistRuntimeBudgetReached(runBudget)) {
     return { runtimeBudgetReached: true, attempted: 0, resolved: 0, retried: 0, unrecoverable: 0 };
   }
@@ -422,257 +435,278 @@ export async function backfillAmounts(
       amountStatus: status,
     }, { selectedState: row });
 
-  const result = await db
-    .prepare(
-      `/* blacklist-amount-recovery-evm-candidates */
-       SELECT events.id, events.chain_id, events.event_type, events.address, events.block_number,
-              events.stablecoin, events.tx_hash, events.config_key, events.contract_address,
-              events.amount_attempt_count, events.amount_last_attempted_at,
-              events.amount_last_error_class, events.amount_last_provider, events.amount_source,
-              events.amount_native, events.amount_usd_at_event, events.amount_status,
-              events.provenance_source, events.provenance_observed_at,
-              COALESCE(queue.attempt_count, 0) AS queue_attempt_count
-       FROM blacklist_events AS events
-       LEFT JOIN blacklist_amount_repair_queue AS queue ON queue.event_id = events.id
-       WHERE events.event_type IN ('blacklist', 'unblacklist', 'destroy')
-         AND chain_id != 'tron'
-         AND events.suppression_reason IS NULL
-         AND (
-               events.amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
-               OR (
-                 events.amount_status = 'permanently_unavailable'
-                 AND events.amount_last_error_class = 'event_time_unproven'
-                 AND events.event_type IN ('blacklist', 'unblacklist')
-                 AND COALESCE(queue.attempt_count, 0) < ${MAX_LEGACY_EVM_REVIEW_ATTEMPTS}
-               )
-               OR (
-                 events.amount_source = 'derived'
-                 AND events.amount_native = 0
-                 AND events.amount_status = 'resolved'
-                 AND (
-                   COALESCE(events.amount_attempt_count, 0) < ?
-                   OR events.amount_last_error_class IN ('runtime_budget', 'budget_exhausted')
-                 )
-               )
-             )
-         AND COALESCE(queue.status, 'pending') IN ('pending', 'retry')
-         AND COALESCE(queue.available_at, 0) <= unixepoch()
-       ORDER BY
-         COALESCE(queue.priority, 100) ASC,
-         CASE WHEN events.amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous') THEN 0 ELSE 1 END ASC,
-         events.timestamp DESC
-       LIMIT ?`,
-    )
-    .bind(MAX_DERIVED_RECOVERY_ATTEMPTS, maxRows)
-    .all<{
-      id: string;
-      chain_id: string;
-      event_type: string;
-      address: string;
-      block_number: number;
-      stablecoin: string;
-      tx_hash: string;
-      config_key: string | null;
-      contract_address: string | null;
-      amount_attempt_count: number | null;
-      amount_last_attempted_at: number | null;
-      amount_last_error_class: string | null;
-      amount_last_provider: string | null;
-      amount_source: string;
-      amount_native: number | null;
-      amount_usd_at_event: number | null;
-      amount_status: string;
-      provenance_source: string | null;
-      provenance_observed_at: number | null;
-      queue_attempt_count: number;
-    }>();
-
-  if (!result.results?.length) {
-    return { runtimeBudgetReached: false, attempted: 0, resolved: 0, retried: 0, unrecoverable: 0 };
-  }
-
-  const stmts: D1PreparedStatement[] = [];
-  const outcomes: Array<"resolved" | "retry" | "unrecoverable"> = [];
   let processedRepairRows = 0;
   let resolvedRepairRows = 0;
   let retriedRepairRows = 0;
   let unrecoverableRepairRows = 0;
   let runtimeBudgetHit = false;
-  let bracketProofs = 0;
-
-  for (const row of result.results) {
+  let repairWindowExhausted = false;
+  const seenIds = new Set<string>();
+  let stopPaging = false;
+  while (seenIds.size < maxRows && !stopPaging) {
     throwIfAborted(signal);
-    if (blacklistRuntimeBudgetReached(runBudget)) {
-      runtimeBudgetHit = true;
+    if (blacklistRuntimeBudgetReached(repairRunBudget)) {
+      runtimeBudgetHit = blacklistRuntimeBudgetReached(runBudget);
+      repairWindowExhausted = !runtimeBudgetHit;
       break;
     }
     if (blacklistSubrequestBudgetReached(runBudget)) break;
+    const result = await db
+      .prepare(
+        `/* blacklist-amount-recovery-evm-candidates */
+         SELECT events.id, events.chain_id, events.event_type, events.address, events.block_number,
+                events.stablecoin, events.tx_hash, events.config_key, events.contract_address,
+                events.amount_attempt_count, events.amount_last_attempted_at,
+                events.amount_last_error_class, events.amount_last_provider, events.amount_source,
+                events.amount_native, events.amount_usd_at_event, events.amount_status,
+                events.provenance_source, events.provenance_observed_at,
+                COALESCE(queue.attempt_count, 0) AS queue_attempt_count
+         FROM blacklist_events AS events
+         LEFT JOIN blacklist_amount_repair_queue AS queue ON queue.event_id = events.id
+         WHERE events.event_type IN ('blacklist', 'unblacklist', 'destroy')
+           AND chain_id != 'tron'
+           AND events.suppression_reason IS NULL
+           AND (
+                 events.amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous')
+                 OR (
+                   events.amount_status = 'permanently_unavailable'
+                   AND events.amount_last_error_class = 'event_time_unproven'
+                   AND events.event_type IN ('blacklist', 'unblacklist')
+                   AND COALESCE(queue.attempt_count, 0) < ${MAX_LEGACY_EVM_REVIEW_ATTEMPTS}
+                 )
+                 OR (
+                   events.amount_source = 'derived'
+                   AND events.amount_native = 0
+                   AND events.amount_status = 'resolved'
+                   AND (
+                     COALESCE(events.amount_attempt_count, 0) < ?
+                     OR events.amount_last_error_class IN ('runtime_budget', 'budget_exhausted')
+                   )
+                 )
+               )
+           AND COALESCE(queue.status, 'pending') IN ('pending', 'retry')
+           AND COALESCE(queue.available_at, 0) <= unixepoch()
+           AND events.id NOT IN (SELECT value FROM json_each(?))
+         ORDER BY
+           COALESCE(queue.priority, 100) ASC,
+           CASE WHEN events.amount_status IN ('recoverable_pending', 'provider_failed', 'ambiguous') THEN 0 ELSE 1 END ASC,
+           events.timestamp DESC
+         LIMIT ?`,
+      )
+      .bind(MAX_DERIVED_RECOVERY_ATTEMPTS, JSON.stringify([...seenIds]), Math.min(BACKFILL_BATCH_SIZE, maxRows - seenIds.size))
+      .all<{
+        id: string;
+        chain_id: string;
+        event_type: string;
+        address: string;
+        block_number: number;
+        stablecoin: string;
+        tx_hash: string;
+        config_key: string | null;
+        contract_address: string | null;
+        amount_attempt_count: number | null;
+        amount_last_attempted_at: number | null;
+        amount_last_error_class: string | null;
+        amount_last_provider: string | null;
+        amount_source: string;
+        amount_native: number | null;
+        amount_usd_at_event: number | null;
+        amount_status: string;
+        provenance_source: string | null;
+        provenance_observed_at: number | null;
+        queue_attempt_count: number;
+      }>();
 
-    const attemptAt = Math.floor(Date.now() / 1000);
-    const legacyReview = row.amount_status === "permanently_unavailable"
-      && row.amount_last_error_class === "event_time_unproven";
-    const legacyRetryExhausted = legacyReview && row.queue_attempt_count + 1 >= MAX_LEGACY_EVM_REVIEW_ATTEMPTS;
-    const symbol = row.stablecoin as ContractEventConfig["stablecoin"];
-    const config = row.config_key
-      ? getBlacklistConfigByKey(row.config_key)
-      : row.contract_address
-        ? getBlacklistConfigByContract(row.chain_id, row.contract_address)
-        : (() => {
-            const matches = getBlacklistConfigsForSymbolAndChain(symbol, row.chain_id);
-            return matches.length === 1 ? matches[0] : undefined;
-          })();
-    if (!config) {
-      const wasLegacyDerived = row.amount_source === "derived";
-      const derivedRetryExhausted =
-        wasLegacyDerived &&
-        row.amount_last_error_class !== "runtime_budget" &&
-        row.amount_last_error_class !== "budget_exhausted" &&
-        (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
-      stmts.push(
-        buildAttemptUpdate(
-          row,
-          attemptAt,
-          legacyReview ? "event_time_unproven" : row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
-          "none",
-          derivedRetryExhausted ? "permanently_unavailable" : undefined,
-        ),
-      );
-      stmts.push(
-        buildBlacklistAmountRepairQueueUpdate(db, {
-          eventId: row.id,
-          outcome: derivedRetryExhausted || legacyRetryExhausted ? "unrecoverable" : "retry",
-          attemptedAt: attemptAt,
-          priorAttempts: row.queue_attempt_count ?? 0,
-          errorClass: row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
-          requireChangedEvent: true,
-        }),
-      );
-      outcomes.push(derivedRetryExhausted || legacyRetryExhausted ? "unrecoverable" : "retry");
-      continue;
-    }
+    if (!result.results?.length) break;
 
+    const stmts: D1PreparedStatement[] = [];
+    const outcomes: Array<"resolved" | "retry" | "unrecoverable"> = [];
 
-    if (config.chain.evmChainId != null && (row.event_type === "blacklist" || row.event_type === "unblacklist")) {
-      // Untouched rows stay queued for the next run.
-      if (bracketProofs >= MAX_EVM_BRACKET_PROOFS_PER_RUN || !evmBracketProofAdmitted(runBudget)) continue;
-      bracketProofs++;
-    }
+    const processedBeforePage = processedRepairRows;
+    for (const row of result.results) {
+      throwIfAborted(signal);
+      if (seenIds.has(row.id)) continue;
+      seenIds.add(row.id);
+      if (blacklistRuntimeBudgetReached(repairRunBudget)) {
+        runtimeBudgetHit = blacklistRuntimeBudgetReached(runBudget);
+        repairWindowExhausted = !runtimeBudgetHit;
+        break;
+      }
+      if (blacklistSubrequestBudgetReached(runBudget)) break;
 
-    let amount: number | null = null;
-    let amountSource: EvmAmountRecoveryResult["amountSource"] = "unavailable";
-    let amountStatus: BlacklistAmountStatus = "provider_failed";
-    let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
-    let lastProvider: BlacklistRecoveryProvider = "none";
-
-    // Tron rows remain unresolved because no historical balance provider is available.
-    if (config.chain.evmChainId != null) {
-      const recovered = await recoverEvmEventAmount({
-        row,
-        config,
-        etherscanApiKey,
-        drpcApiKey: options.drpcApiKey,
-        chainRpcs: options.chainRpcs,
-        etherscanLimiter,
-        runBudget,
-        signal,
-      });
-      amount = recovered.amount;
-      amountSource = recovered.amountSource;
-      lastErrorClass = recovered.lastErrorClass;
-      lastProvider = recovered.lastProvider;
-    }
-
-    if (lastErrorClass === "runtime_budget") {
-      runtimeBudgetHit = true;
-      break;
-    }
-    if (lastErrorClass === "budget_exhausted") break;
-
-    amountStatus = recoveryAmountStatus(amount, row.event_type, lastErrorClass);
-    if (amount != null) {
-      const persistence = buildRecoveredBlacklistAmountPersistence(db, {
-        eventId: row.id,
-        eventType: row.event_type,
-        config,
-        amount,
-        amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
-        amountSource,
-        amountStatus: "resolved",
-        attemptedAt: attemptAt,
-        lastErrorClass,
-        lastProvider,
-      }, { selectedState: row });
-      const { targetStatus } = persistence;
-      stmts.push(persistence.statement);
-      stmts.push(
-        buildBlacklistAmountRepairQueueUpdate(db, {
-          eventId: row.id,
-          outcome: targetStatus === "permanently_unavailable" ? "unrecoverable" : "resolved",
-          attemptedAt: attemptAt,
-          priorAttempts: row.queue_attempt_count ?? 0,
-          errorClass: lastErrorClass,
-          requireChangedEvent: true,
-        }),
-      );
-      outcomes.push(targetStatus === "permanently_unavailable" ? "unrecoverable" : "resolved");
-    } else {
-      const wasLegacyDerived = row.amount_source === "derived";
-      const derivedRetryExhausted =
-        wasLegacyDerived &&
-        row.amount_last_error_class !== "runtime_budget" &&
-        row.amount_last_error_class !== "budget_exhausted" &&
-        (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
-      const unrecoverable = derivedRetryExhausted || legacyRetryExhausted || amountStatus === "permanently_unavailable";
-      if (legacyReview) {
-        stmts.push(buildAttemptUpdate(row, attemptAt,
-          amountStatus === "permanently_unavailable" ? lastErrorClass : "event_time_unproven", lastProvider));
-      } else if (wasLegacyDerived) {
+      const attemptAt = Math.floor(Date.now() / 1000);
+      const legacyReview = row.amount_status === "permanently_unavailable"
+        && row.amount_last_error_class === "event_time_unproven";
+      const legacyRetryExhausted = legacyReview && row.queue_attempt_count + 1 >= MAX_LEGACY_EVM_REVIEW_ATTEMPTS;
+      const symbol = row.stablecoin as ContractEventConfig["stablecoin"];
+      const config = row.config_key
+        ? getBlacklistConfigByKey(row.config_key)
+        : row.contract_address
+          ? getBlacklistConfigByContract(row.chain_id, row.contract_address)
+          : (() => {
+              const matches = getBlacklistConfigsForSymbolAndChain(symbol, row.chain_id);
+              return matches.length === 1 ? matches[0] : undefined;
+            })();
+      if (!config) {
+        const wasLegacyDerived = row.amount_source === "derived";
+        const derivedRetryExhausted =
+          wasLegacyDerived &&
+          row.amount_last_error_class !== "runtime_budget" &&
+          row.amount_last_error_class !== "budget_exhausted" &&
+          (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
         stmts.push(
           buildAttemptUpdate(
             row,
             attemptAt,
-            lastErrorClass,
-            lastProvider,
-            unrecoverable ? "permanently_unavailable" : undefined,
+            legacyReview ? "event_time_unproven" : row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
+            "none",
+            derivedRetryExhausted ? "permanently_unavailable" : undefined,
           ),
         );
-      } else {
-        stmts.push(buildAttemptUpdate(row, attemptAt, lastErrorClass, lastProvider, amountStatus));
+        stmts.push(
+          buildBlacklistAmountRepairQueueUpdate(db, {
+            eventId: row.id,
+            outcome: derivedRetryExhausted || legacyRetryExhausted ? "unrecoverable" : "retry",
+            attemptedAt: attemptAt,
+            priorAttempts: row.queue_attempt_count ?? 0,
+            errorClass: row.contract_address == null && row.config_key == null ? "config_missing" : "ambiguous_config",
+            requireChangedEvent: true,
+          }),
+        );
+        outcomes.push(derivedRetryExhausted || legacyRetryExhausted ? "unrecoverable" : "retry");
+        continue;
       }
-      stmts.push(
-        buildBlacklistAmountRepairQueueUpdate(db, {
-          eventId: row.id,
-          outcome: unrecoverable ? "unrecoverable" : "retry",
-          attemptedAt: attemptAt,
-          priorAttempts: row.queue_attempt_count ?? 0,
-          errorClass: lastErrorClass,
-          requireChangedEvent: true,
-        }),
-      );
-      outcomes.push(unrecoverable ? "unrecoverable" : "retry");
-    }
-  }
 
-  // Keep each event CAS and its changes()-guarded queue transition together.
-  for (let offset = 0; offset < stmts.length; offset += BACKFILL_BATCH_SIZE) {
-    const results = await executeAtomicBatch(db, stmts.slice(offset, offset + BACKFILL_BATCH_SIZE), {
-      signal, returnResults: true,
-    });
-    for (let index = 0; index < results.length; index += 2) {
-      if (Number(results[index]?.meta?.changes ?? 0) === 0) continue;
-      processedRepairRows++;
-      const outcome = outcomes[(offset + index) / 2];
-      if (outcome === "resolved") resolvedRepairRows++;
-      else if (outcome === "unrecoverable") unrecoverableRepairRows++;
-      else retriedRepairRows++;
+
+      // Destroy receipts share the reserve with freeze/release proofs.
+      if (config.chain.evmChainId != null && !evmBracketProofAdmitted(runBudget)) {
+        stopPaging = true;
+        break;
+      }
+
+      let amount: number | null = null;
+      let amountSource: EvmAmountRecoveryResult["amountSource"] = "unavailable";
+      let amountStatus: BlacklistAmountStatus = "provider_failed";
+      let lastErrorClass: BlacklistRecoveryErrorClass | null = "provider_null";
+      let lastProvider: BlacklistRecoveryProvider = "none";
+
+      // Tron rows remain unresolved because no historical balance provider is available.
+      if (config.chain.evmChainId != null) {
+        const recovered = await recoverEvmEventAmount({
+          row,
+          config,
+          etherscanApiKey,
+          drpcApiKey: options.drpcApiKey,
+          chainRpcs: options.chainRpcs,
+          etherscanLimiter,
+          runBudget: repairRunBudget,
+          signal,
+        });
+        amount = recovered.amount;
+        amountSource = recovered.amountSource;
+        lastErrorClass = recovered.lastErrorClass;
+        lastProvider = recovered.lastProvider;
+      }
+
+      if (lastErrorClass === "runtime_budget" || (amount == null && repairRunBudget.deadlineMs < runBudget.deadlineMs
+        && blacklistRuntimeBudgetReached(repairRunBudget))) {
+        runtimeBudgetHit = repairRunBudget.deadlineMs === runBudget.deadlineMs || blacklistRuntimeBudgetReached(runBudget);
+        repairWindowExhausted = !runtimeBudgetHit;
+        break;
+      }
+      if (lastErrorClass === "budget_exhausted") {
+        stopPaging = true;
+        break;
+      }
+
+      amountStatus = recoveryAmountStatus(amount, row.event_type, lastErrorClass);
+      if (amount != null) {
+        const persistence = buildRecoveredBlacklistAmountPersistence(db, {
+          eventId: row.id,
+          eventType: row.event_type,
+          config,
+          amount,
+          amountUsd: computeBlacklistAmountUsdAtEvent(config.stablecoin, amount),
+          amountSource,
+          amountStatus: "resolved",
+          attemptedAt: attemptAt,
+          lastErrorClass,
+          lastProvider,
+        }, { selectedState: row });
+        const { targetStatus } = persistence;
+        stmts.push(persistence.statement);
+        stmts.push(
+          buildBlacklistAmountRepairQueueUpdate(db, {
+            eventId: row.id,
+            outcome: targetStatus === "permanently_unavailable" ? "unrecoverable" : "resolved",
+            attemptedAt: attemptAt,
+            priorAttempts: row.queue_attempt_count ?? 0,
+            errorClass: lastErrorClass,
+            requireChangedEvent: true,
+          }),
+        );
+        outcomes.push(targetStatus === "permanently_unavailable" ? "unrecoverable" : "resolved");
+      } else {
+        const wasLegacyDerived = row.amount_source === "derived";
+        const derivedRetryExhausted =
+          wasLegacyDerived &&
+          row.amount_last_error_class !== "runtime_budget" &&
+          row.amount_last_error_class !== "budget_exhausted" &&
+          (row.amount_attempt_count ?? 0) + 1 >= MAX_DERIVED_RECOVERY_ATTEMPTS;
+        const unrecoverable = derivedRetryExhausted || legacyRetryExhausted || amountStatus === "permanently_unavailable";
+        if (legacyReview) {
+          stmts.push(buildAttemptUpdate(row, attemptAt,
+            amountStatus === "permanently_unavailable" ? lastErrorClass : "event_time_unproven", lastProvider));
+        } else if (wasLegacyDerived) {
+          stmts.push(
+            buildAttemptUpdate(
+              row,
+              attemptAt,
+              lastErrorClass,
+              lastProvider,
+              unrecoverable ? "permanently_unavailable" : undefined,
+            ),
+          );
+        } else {
+          stmts.push(buildAttemptUpdate(row, attemptAt, lastErrorClass, lastProvider, amountStatus));
+        }
+        stmts.push(
+          buildBlacklistAmountRepairQueueUpdate(db, {
+            eventId: row.id,
+            outcome: unrecoverable ? "unrecoverable" : "retry",
+            attemptedAt: attemptAt,
+            priorAttempts: row.queue_attempt_count ?? 0,
+            errorClass: lastErrorClass,
+            requireChangedEvent: true,
+          }),
+        );
+        outcomes.push(unrecoverable ? "unrecoverable" : "retry");
+      }
     }
+
+    // Keep each event CAS and its changes()-guarded queue transition together.
+    for (let offset = 0; offset < stmts.length; offset += BACKFILL_BATCH_SIZE) {
+      const results = await executeAtomicBatch(db, stmts.slice(offset, offset + BACKFILL_BATCH_SIZE), {
+        signal, returnResults: true,
+      });
+      for (let index = 0; index < results.length; index += 2) {
+        if (Number(results[index]?.meta?.changes ?? 0) === 0) continue;
+        processedRepairRows++;
+        const outcome = outcomes[(offset + index) / 2];
+        if (outcome === "resolved") resolvedRepairRows++;
+        else if (outcome === "unrecoverable") unrecoverableRepairRows++;
+        else retriedRepairRows++;
+      }
+    }
+    if (runtimeBudgetHit || repairWindowExhausted || processedRepairRows === processedBeforePage) break;
   }
-  if (stmts.length > 0) {
+  if (processedRepairRows > 0) {
     logWorkerEventArgs("lib", "info", `[sync-blacklist] Backfilled amounts for ${processedRepairRows} events`);
   }
 
   return {
     runtimeBudgetReached: runtimeBudgetHit,
+    ...(repairWindowExhausted ? { repairWindowExhausted: true } : {}),
     attempted: processedRepairRows,
     resolved: resolvedRepairRows,
     retried: retriedRepairRows,

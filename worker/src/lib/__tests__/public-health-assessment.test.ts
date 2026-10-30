@@ -16,6 +16,7 @@ import type { V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { CRON_INTERVALS } from "@shared/lib/cron-jobs";
 import { getCacheQualityImpact, maxPublicStatus } from "@shared/lib/public-health";
 import type { PublicHealthAssessment } from "../public-health-assessment";
+import { projectPublicStatus } from "@shared/lib/public-status-components";
 
 const fixtures = createLatestSchemaFixtureTracker();
 /** A USYC-sized asset: the retired $1B rule used to degrade on one such gap. */
@@ -96,6 +97,7 @@ function makeMintBurnAssessmentDb(
     safetyScorePublication?: V9PublicationHealth | null;
     producerHistoryError?: unknown;
     blacklistError?: unknown;
+    blacklistAggregate?: { total: number; missing: number; missing_recent: number; classification_missing?: number; classification_watch?: number };
     dbError?: unknown;
     dbSentinelMissing?: boolean;
     cacheError?: unknown;
@@ -168,7 +170,7 @@ function makeMintBurnAssessmentDb(
               : null,
           }),
     },
-    { match: "blacklist-gap-aggregate", rows: [], first: { total: 0, missing: 0, missing_recent: 0 }, ...(options.blacklistError ? { throwError: options.blacklistError } : {}) },
+    { match: "blacklist-gap-aggregate", rows: [], first: options.blacklistAggregate ?? { total: 0, missing: 0, missing_recent: 0 }, ...(options.blacklistError ? { throwError: options.blacklistError } : {}) },
     { match: "SELECT 1", rows: [], first: options.dbSentinelMissing ? null : { value: 1 }, ...(options.dbError ? { throwError: options.dbError } : {}) },
     { match: "cache WHERE key IN", rows: options.cacheMissing ? cacheRows.filter((row) => row.key !== "stablecoins") : cacheRows,
       ...(options.cacheError ? { throwError: options.cacheError } : {}) },
@@ -377,6 +379,24 @@ describe("assessPublicHealth upstream provider enrichment", () => {
   it("keeps a successfully read empty blacklist aggregate as observed zero", async () => {
     const result = await assessPublicHealth(makeMintBurnAssessmentDb(1_800_000_000), 1_800_000_000);
     expect(result.blacklist).toMatchObject({ totalEvents: 0, missingAmounts: 0, recentMissingAmounts: 0, missingRatio: 0, unavailableReason: null });
+  });
+
+  it.each([
+    ["queued proofs", 0, "healthy"],
+    ["expired or failed proofs", 5, "stale"],
+  ] as const)("classifies %s while preserving public counts", async (_name, classificationMissing, status) => {
+    const now = 1_800_000_000;
+    const result = await assessPublicHealth(makeMintBurnAssessmentDb(now, {
+      publicationMetadata: makePriceCoverageMetadata(now, null),
+      blacklistAggregate: { total: 100, missing: 5, missing_recent: 0, classification_missing: classificationMissing, classification_watch: 5 },
+    }), now, { logPrefix: "test" });
+    expect(result.blacklist).toEqual({ totalEvents: 100, missingAmounts: 5, recentMissingAmounts: 0, recentWindowSec: 86_400, missingRatio: 0.05, unavailableReason: null });
+    const response = buildPublicHealthResponse(result, now);
+    expect(response.blacklist).toEqual(result.blacklist);
+    expect(response.components?.find((entry) => entry.id === "blacklist")?.state).toBe(status === "healthy" ? "operational" : "degraded");
+    expect(projectPublicStatus(response).components.find((entry) => entry.id === "blacklist")?.state).toBe(status === "healthy" ? "operational" : "degraded");
+    expect(JSON.stringify(response)).not.toMatch(/classificationMissingAmounts|classificationWatchCount/);
+    expect(result.overallStatus).toBe(status);
   });
 
   it.each([false, true])("keeps missing or unread cache aggregate freshness unavailable (failure: %s)", async (failed) => {
