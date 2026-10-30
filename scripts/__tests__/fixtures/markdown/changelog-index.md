@@ -15,6 +15,8 @@ Safety Score counts each open question once, and /coverage/ publishes the three 
 
 - **Open-question counts**: /coverage/ now opens with three server-counted numbers: open questions, not disclosed by issuers, and documentation gaps. Each is counted once at its root asset, and an older publication reads as unavailable, never zero.
 - **Report-cards API 9**: The report-cards API gains an additive openEvidence block with the same three totals, owner and reason rows, the issuer review window and per-card rows. Scores, grades and evidence levels stay untouched.
+- **Documentation gaps**: A policy-owned documentation class now marks the open questions whose resolution cannot materially move a score, under six published reasons and two strict bars. Pricing, causes, caps and evidence levels stay byte-identical, and a card reads "limited · documentation gaps only" only when every limiting witness is documentation.
+- **Missing-data registry v3**: The curation registry gains documentation and issuer bands, keys its questions through the shared counting authority, and drops a supplement only when every obligation it carries is already a compiled task, so the worklist shows 72 supplements instead of 469 on the current capture.
 - **Scores dataset v2**: The scores dataset display projection carries the same totals with their semantics, plus a machine-readable reason when a generation predates them, so missing counts never read as zero.
 - **Plainer gap language**: A cause-A pillar gap now reads "data pipeline unavailable" rather than implying an issuer omission, and one shared vocabulary names all three buckets on the page and in its explanations.
 

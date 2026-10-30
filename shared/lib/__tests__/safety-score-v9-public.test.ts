@@ -878,6 +878,53 @@ describe("Safety Score v9 public projection", () => {
     expect(SafetyScoreV9CurrentCardSchema.safeParse(mismatched).success).toBe(false);
   });
 
+  it("carries documentation facts on the trace and publishes only resolvable documentation cause gaps", () => {
+    const documented = "asset:gap:keyCustody";
+    const input = fixture("asset", { score: 91.8, grade: "A+" });
+    input.trace.unresolvedFacts = [
+      { code: "unresolved-control-identity", path: "control:custody", reason: "Custody question.",
+        critical: false, responsibility: "unresearched", sourceGapId: documented,
+        cause: "U", causeGapIds: [documented], scoringDisposition: "bounded-uncertainty" },
+      { code: "bounded-mechanism-review", path: "backing:mechanism", reason: "Mechanism review.",
+        critical: false, responsibility: "unresearched", sourceGapId: "asset:gap:mechanism",
+        cause: "U", causeGapIds: ["asset:gap:mechanism"], scoringDisposition: "bounded-uncertainty" },
+    ];
+    input.documentationGapIds = new Map([
+      [documented, { reason: "no-scoring-path", policyRef: "semantic.evidence.documentation.reasons.no-scoring-path", threshold: null }],
+    ]);
+    const response = buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
+      documentationCauseGaps: [documented, "asset:gap:absent"],
+      candidateId: "safety-score-v9:v1:documentation-carrier-test", policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:documentation-carrier-test", publishedAtSec: 1_001, results: [input],
+    });
+    const card = SafetyScoreV9CurrentResponseSchema.parse(JSON.parse(JSON.stringify(response))).cards[0]!;
+    const evidence = card.scoreTrace.evidenceResponsibility;
+    expect(evidence.documentation).toEqual({
+      semantics: "documentation-class-v1",
+      totalFactCount: 1,
+      criticalFactCount: 0,
+      summaries: [{ reason: "no-scoring-path", factCount: 1 }],
+    });
+    expect(evidence.summaries.find(summary => summary.responsibility === "unresearched"))
+      .toMatchObject({ factCount: 2, documentationFactCount: 1 });
+    expect(response.documentationCauseGaps).toEqual([documented]);
+  });
+
+  it("refuses to publish a critical evidence fact as documentation", () => {
+    const gapId = "asset:gap:critical-datum";
+    const input = fixture("asset", { score: 91.8, grade: "A+" });
+    input.trace.unresolvedFacts = [{
+      code: "unresolved-control-identity", path: "control:critical", reason: "Critical datum.",
+      critical: true, responsibility: "unresearched", sourceGapId: gapId,
+      cause: "U", causeGapIds: [gapId], scoringDisposition: "diagnostic",
+    }];
+    input.documentationGapIds = new Map([
+      [gapId, { reason: "no-scoring-path", policyRef: "semantic.evidence.documentation.reasons.no-scoring-path", threshold: null }],
+    ]);
+    expect(() => projectSafetyScoreV9Card(input)).toThrow(/critical evidence fact as documentation/u);
+  });
+
   it("counts critical roots once and preserves distinct, foreign, gapless and multi-root obligations", () => {
     const facts = [
       { source: "local:gap:first", causes: ["local:gap:first"], critical: false },

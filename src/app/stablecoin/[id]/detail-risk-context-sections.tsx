@@ -477,6 +477,11 @@ export function DetailRiskContextSections({
   const showReserves =
     viewModel.reserves != null || viewModel.reserveFetchError != null || reservesLoading || hasReviewedSlices;
   const { reportCard, reportCardsResponse } = viewModel;
+  // Server authority: the detail projection mirrors the selected card's
+  // open-evidence annotation (C2). Absent means the plain "limited" copy.
+  const documentationOnlyLimited = reportCardsResponse && "projection" in reportCardsResponse
+    ? reportCardsResponse.documentationOnlyLimited
+    : undefined;
   const showScoreCard = reportCard != null && reportCardsResponse != null;
   // Pair side by side only when a reviewed composition fills the Reserves
   // half; a live-feed-only module would leave a mostly empty box beside the score.
@@ -524,6 +529,7 @@ export function DetailRiskContextSections({
                 updatedAtMs={viewModel.reportCardUpdatedAt}
                 stablecoinName={viewModel.coin.name}
                 evidenceAnchors={evidenceAnchors}
+                documentationOnlyLimited={documentationOnlyLimited}
               />
             ) : null}
           </section>

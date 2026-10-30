@@ -2,7 +2,7 @@
 
 import { IntentLink } from "@/components/intent-link";
 import { History, Table2 } from "lucide-react";
-import type { SafetyScoreV9CurrentCard } from "@shared/types";
+import type { SafetyScoreV9CurrentCard, V9QualityPillar } from "@shared/types";
 import type { ReportCardsV9Response } from "@shared/types/report-cards-v9";
 import { API_FRESHNESS_MAX_AGE_SEC } from "@shared/lib/api-freshness";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -96,6 +96,8 @@ export interface StablecoinSafetyScoreV9CardProps {
   stablecoinName?: string;
   /** Which pillar evidence boards the page renders; omitted, every pillar row links to its board. */
   evidenceAnchors?: PillarEvidenceAnchors;
+  /** Server-computed `openEvidence.byCard[].documentationOnlyLimited`; omitted renders plain limited. */
+  documentationOnlyLimited?: readonly V9QualityPillar[];
 }
 
 export function StablecoinSafetyScoreV9Card({
@@ -104,8 +106,9 @@ export function StablecoinSafetyScoreV9Card({
   updatedAtMs,
   stablecoinName,
   evidenceAnchors,
+  documentationOnlyLimited,
 }: StablecoinSafetyScoreV9CardProps) {
-  const presentation = buildStablecoinSafetyScoreV9Presentation(card);
+  const presentation = buildStablecoinSafetyScoreV9Presentation(card, documentationOnlyLimited);
 
   return (
     <Card className={DETAIL_MODULE_SHELL_CLASS} data-safety-model="v9">
