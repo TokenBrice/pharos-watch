@@ -14,6 +14,7 @@ import type { V9AccessClaimGraph, V9AccessClaimGraphReview } from "@shared/types
 import { buildSafetyScoreV9AccessClaimGraph, computeSafetyScoreV9AccessClaimGraphReviewsDigest } from "./extension-access-lookthrough";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import type { V9LaneEmitterDescriptor } from "@shared/types/safety-score-v9-incidents";
 import { compileReviewedMintControlScopes, resolveV1005MintAuthorityProfile, partialControlScopeSemantics, weightedReviewIsCurrent, sortV1005ProcessDiagnostics, v1005ProofIsClosed, v1005ReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -35,7 +36,7 @@ import type {
   MintAuthorityProfile,
   MintAuthorityScopedQuestion,
 } from "@shared/types/core";
-import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl } from "@shared/types/safety-score-v9-facts";
+import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl, V9LaneIncidentClosureFailure } from "@shared/types/safety-score-v9-facts";
 import { V1005VotingControllerSchema, createV9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
 import type { StablecoinMeta } from "@shared/types";
 import {
@@ -69,6 +70,8 @@ import {
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
   SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
+  type LaneIncidentCertificateView,
+  type LaneRouteAuthority,
 } from "./extension-incidents";
 import { getSafetyScoreV9WrapperAllocationReview, getSafetyScoreV9WrapperLocalReviews, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "./extension-wrapper-reviews";
 import { allocationReviewClockSec, type V9AllocationScopeIdentityReview, type SafetyScoreV9WrapperAllocationReview } from "@shared/types/safety-score-v9-allocation";
@@ -153,6 +156,14 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
   accessClaimGraphReviews?: ReadonlyMap<string, V9AccessClaimGraphReview>;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+  /**
+   * Evaluation inputs of the v10.39 lane closure, loaded by the publication
+   * runner: the admitted certificate chain per lane (only `current` reads are
+   * accepted) and the reviewed lane descriptors. Omitted means no closure, which
+   * is the fail-closed default (an unread certificate cannot grant `none`).
+   */
+  laneIncidentCertificates?: ReadonlyMap<string, LaneIncidentCertificateView>;
+  laneEmitterDescriptors?: readonly V9LaneEmitterDescriptor[];
   /**
    * Replay-only projection: build these assets while retaining the full input's
    * active set, dependency diagnostics, source generations and identity.
@@ -2551,8 +2562,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
-        const negativeIncidentReviews = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
-        addSafetyScoreV9NegativeIncidentEvidence(reviewEvidence, negativeIncidentReviews);
+        const negativeIncidentRead = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
+        const negativeIncidentReviews = negativeIncidentRead.reviews;
         admissionPath = "wrapperAllocationReview";
         const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
         admissionPath = "wrapperLocalReviews";
@@ -2726,13 +2737,44 @@ export function createSafetyScoreV9BaselineExtensionSource(
           mint.review,
           reviewedIncidents,
         );
+        const laneRoutes = new Map<string, LaneRouteAuthority>();
+        for (const route of meta.bridgeRouteRisk?.routes ?? []) {
+          const deploymentKey = normalizeDeploymentId(route.id);
+          if (deploymentKey.length === 0) continue;
+          laneRoutes.set(deploymentKey, {
+            rail: route.rail ?? null,
+            routeClass: route.routeClass,
+            providerKeys: [...(route.providerKeys ?? [])],
+          });
+        }
         const controls = routeSafetyScoreV9NegativeIncidentReviews(
           incidentControlRoute.controls,
           assetId,
           clockSec,
           negativeIncidentReviews,
           reviewedIncidents,
+          {
+            descriptors: options.laneEmitterDescriptors ?? [],
+            certificates: options.laneIncidentCertificates ?? new Map(),
+            routes: laneRoutes,
+            unreadableProviders: negativeIncidentRead.unreadableProviders,
+          },
         ).sort((left, right) => compareText(left.controlKey, right.controlKey));
+        addSafetyScoreV9NegativeIncidentEvidence(reviewEvidence, negativeIncidentReviews, controls);
+        const incidentClosureFailures: V9LaneIncidentClosureFailure[] = [];
+        if (negativeIncidentRead.unreadableProviders.size > 0) {
+          for (const [deploymentRouteKey, route] of laneRoutes) {
+            if (!controls.some((control) => control.deploymentKey === deploymentRouteKey &&
+                control.controlKind === "bridge" && control.scope === "deployment" && control.incidentState === "unknown")) continue;
+            for (const providerKey of route.providerKeys) {
+              const foreignAssetIds = negativeIncidentRead.unreadableProviders.get(providerKey);
+              if (foreignAssetIds !== undefined) incidentClosureFailures.push({
+                deploymentRouteKey, providerKey, foreignAssetIds: [...foreignAssetIds],
+                code: "provider-incident-disclosures-unreadable",
+              });
+            }
+          }
+        }
         admissionPath = "accessReview";
         const reviewedTransferFact = reviewedTransferFacts
           ? reviewedTransferFacts.get(assetId)
@@ -2811,7 +2853,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
               ? {
                   mint: incidentControlRoute.mintReview,
                   oracle,
-                  bridge: bridge.review,
+                  bridge: incidentClosureFailures.length === 0 ? bridge.review : { ...bridge.review,
+                    diagnostics: { ...bridge.review.diagnostics!, incidentClosureFailures } },
                 }
               : null,
           accessReview,

@@ -420,23 +420,33 @@ this section records only what v10.38 admits.
   contributor set, and an authored review never falls back to a digest key.
 - The runtime registry keys a row by `(assetId, reviewId)`. A provider-wide review is
   authored once per provider and fanned out at build time to one row per covered asset
-  while keeping its `reviewId`; every authored lane, control and reference must survive
-  the fan-out.
-- Provider and issuer-surface reviews are parsed, schema-checked and key-checked, and
-  **close nothing in v10.38**: no router branch lets either scope set
-  `incidentState: "none"`, and the evaluator emits no `incidentCoverage` provenance.
-  Certificate-based lane closure — provider review plus issuer-surface review plus an
-  exact-lane admin-event certificate per contributor — is **not active** in v10.38; it is
-  v10.39 work after the incident-review rulings. The policy's
-  `semantic.evidence.laneIncidentCertificateMaxAgeSec` budget and a provider review's
-  `laneScreeningRefs` are therefore not admission inputs here: the refs must be
-  structurally complete (one per covered lane, all on covered routes), and nothing reads a
-  certificate's existence, freshness, finding or screened contributors.
-- Authored data never carries a certificate placeholder. `npm run check:incident-review-keys`
-  rejects any `laneScreeningRefs.certificateId` whose `-`/`.`/`:`-delimited segments contain
-  `pending`, `placeholder`, `tbd`, `todo`, `to-be-authored` or `unresolved`; the known
-  `lane-cert-pending:` form names a read that has not happened, and an unresolvable
-  reference is worse than no reference because it reads as coverage.
+  while keeping its `reviewId`; every authored lane must survive the fan-out.
+- v10.39 closes no lane yet, even with v2 certificates. FRNT Arbitrum/Base/Optimism
+  are global-scope native facts, excluded by the deployment-scope router; FRNT Ethereum
+  is already closed by an existing review. yUSD Ethereum lacks provider keys and an
+  issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Scope is unchanged;
+  the five-lane catalog is screening coverage, not closure authority.
+- Deployment-scope closure needs current provider reviews per authored provider key (or the
+  issuer surface for `rail: "issuer-operated"`), a current issuer surface naming the lane,
+  descriptor/fact contributor parity and the newest v2 certificate for
+  `(subjectDeploymentKey, screeningSetId)`: `no-material-admin-event`, contiguous coverage
+  and a window end within `laneIncidentCertificateMaxAgeSec`. Missing/v1 certificates close nothing.
+- Certificate identifiers are never authored. `laneScreeningRefs` and `coveredControls`
+  are removed shapes; `npm run check:incident-review-keys` rejects either, rejects an
+  `asset:<id>` route on an issuer row, and rejects a provider renewal that drops an incident
+  another current review of the same provider discloses.
+- `providerIncidents` is required (empty = searched, none found). OQ-1 checks current same-key
+  disclosures from earliest witness start through evaluation, including non-covering reviews
+  and post-window exposure. Exemptions aggregate per `incidentKey` only from covering reviews:
+  deployment after finite exposure or pinned exposure-time config excluding compromised-only
+  verification. No observed exploit/current config is an exemption; only verifier compromise
+  permits exemptions. Other classes cannot name covered lanes.
+  Unreadable foreign reviews never quarantine the local asset: affected provider lanes stay
+  unknown with `bridge.diagnostics.incidentClosureFailures` code
+  `provider-incident-disclosures-unreadable`, naming lane, provider and foreign assets.
+- `incidentCoverage` on a compiled fact is derived provenance written by the router
+  (`provider-screening`: provider review ids, the issuer-surface review id, the screening
+  set, the certificate id and the contributor ids), never authored input.
 - A review is admitted only when the evaluation clock is at or after both `reviewedAt` and
   `windowEndSec`, and no more than 365 days past either (the policy's reviewed-research
   budget). A date-only `reviewedAt` is admitted after its UTC day ends; a timestamp is

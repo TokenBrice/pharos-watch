@@ -32,7 +32,9 @@ import { CanonicalKeySchema } from "../../shared/types/safety-schema-primitives"
 import {
   V9AuthoredIncidentRegistryEnvelopeSchema,
   type V9AuthoredNegativeIncidentReviewScope,
+  type V9IssuerSurfaceIncidentReviewScope,
   type V9NegativeIncidentReviewScope,
+  type V9ProviderIncidentReviewScope,
 } from "../../shared/types/safety-score-v9-incidents";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { parseStrictCliArgs } from "../lib/cli-args.mjs";
@@ -96,6 +98,8 @@ export interface IncidentReviewKeyMigrationArtifact {
   };
   readonly counts: Record<IncidentReviewMigrationResolution, number> & {
     readonly total: number;
+    /** Issuer-surface and provider reviews: not key-migration subjects, no row. */
+    readonly skipped: number;
     readonly mapped: number;
     readonly orphans: number;
     readonly collisions: number;
@@ -114,11 +118,21 @@ export interface IncidentReviewKeyMigrationArtifact {
  * the unchanged deployment scope — so it narrows the parsed rows to that view
  * instead of re-validating them (the expansion admits the strict schemas).
  */
-type IncidentReviewMigrationScope = V9NegativeIncidentReviewScope | V9AuthoredNegativeIncidentReviewScope;
+type IncidentReviewMigrationScope =
+  | V9NegativeIncidentReviewScope
+  | V9AuthoredNegativeIncidentReviewScope
+  | V9IssuerSurfaceIncidentReviewScope
+  | V9ProviderIncidentReviewScope;
 
 type IncidentReviewMigrationSourceRow = {
   readonly reviewId: string;
-  readonly assetId: string;
+  /**
+   * Absent on a provider-wide row by construction. Issuer-surface and provider
+   * reviews are not key-migration subjects (they carry no digest control key and
+   * keep `reviewId` as identity), so the migration skips them before reading
+   * this; asset-scoped subjects are guaranteed it by the authored envelope.
+   */
+  readonly assetId?: string;
   readonly windowEndSec: number;
   readonly scope: IncidentReviewMigrationScope;
 };
@@ -421,8 +435,22 @@ export function buildIncidentReviewKeyMigration(
   const negativeReviews = authored.negativeReviews as readonly unknown[] as readonly IncidentReviewMigrationSourceRow[];
   const metadata = loadAssetControlMetadata(root);
   const rows: IncidentReviewKeyMigrationRow[] = [];
+  let skipped = 0;
   for (const review of negativeReviews) {
+    // A provider-wide or issuer-surface review is not a key-migration subject:
+    // its identity is `reviewId` plus its scope, it has no digest `controlKey`,
+    // and a provider row has no `assetId` at all. Emitting a row for either
+    // would claim a migration that cannot exist and would fail the artifact
+    // schema. The checker tolerates a review with no migration row; leaving one
+    // out here is the recorded skip, not a silent drop.
+    if (review.scope.kind === "issuer-surface" || review.scope.kind === "provider") {
+      skipped += 1;
+      continue;
+    }
     const assetId = review.assetId;
+    if (assetId === undefined) {
+      throw new Error(`Incident review migration subject ${review.reviewId} has no assetId`);
+    }
     const stableReviewId = (resolution: IncidentReviewMigrationResolution, authoredValue: IncidentReviewAuthoredIdentity | null) =>
       stableReviewIdFor(review.reviewId, assetId, review.windowEndSec, { resolution, authored: authoredValue });
     if (review.scope.kind === "deployment") {
@@ -538,6 +566,8 @@ export function buildIncidentReviewKeyMigration(
     deployment: countOf("deployment"),
     retired: countOf("retired"),
     total: rows.length,
+    /** Issuer-surface and provider reviews: not key-migration subjects. */
+    skipped,
     mapped: rows.filter((row) => row.resolution !== "retired").length,
     orphans: countOf("retired"),
     collisions: rows.filter((row) => row.collidesWithCurrentCandidate).length,
@@ -545,9 +575,9 @@ export function buildIncidentReviewKeyMigration(
     legacyBlocked: appliedCount("legacy-blocked"),
     digestKeysRemaining: appliedCount("legacy-blocked") + countOf("retired"),
   };
-  if (counts.total !== negativeReviews.length) {
+  if (counts.total + skipped !== negativeReviews.length) {
     throw new Error(
-      `Incident review migration rows ${counts.total} do not cover ${negativeReviews.length} reviews`,
+      `Incident review migration rows ${counts.total} plus ${skipped} skipped reviews do not cover ${negativeReviews.length} reviews`,
     );
   }
   return {

@@ -138,7 +138,7 @@ describe("Safety Score v9 deterministic replay CLI", () => {
       await runSafetyScoreV9ReplayCli(args);
       const expected = buildSafetyScoreV9ReplayArtifact({
         fixedInput: base, registrySnapshot: capture.registrySnapshot, transferMaterialityGeneration: transfer,
-        publishedAtSec: base.clockSec, sourceAdmissionBaseline: prior,
+        publishedAtSec: base.clockSec, sourceAdmissionBaseline: prior, laneScreening: null,
       });
       expect(readFileSync(replayPath, "utf8")).toBe(serializeSafetyScoreV9ReplayArtifact(expected));
       // The witness reproduces the publication-time quarantine instead of a raw rating.

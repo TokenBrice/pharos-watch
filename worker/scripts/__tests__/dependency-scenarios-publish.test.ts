@@ -26,6 +26,10 @@ import { scoreToGrade } from "@shared/types/safety-score-v9-grade";
 import { sha256Hex } from "@shared/lib/sha256";
 import { buildSafetyScoreV9AcceptedPublicationBaseline, type SafetyScoreV9AcceptedPublicationBaseline } from "../../src/lib/safety-score-v9/publication-assessment";
 import { verifyAcceptedPublicationCards } from "../compute-dependency-scenarios";
+import { localRegistrySnapshot, registrySnapshotFingerprint } from "../lib/safety-score-v9-registry";
+import { loadReviewedLaneEmitterCatalog } from "../../src/lib/safety-score-v9/lane-emitter-catalog";
+import { buildSafetyScoreV9ReplayLaneScreening } from "../../src/lib/safety-score-v9/publication-replay-capture";
+import { V9LaneIncidentCertificateSchema } from "@shared/types/safety-score-v9-incidents";
 
 const temporaryDirectories: string[] = [];
 afterEach(() => temporaryDirectories.splice(0).forEach(directory => rmSync(directory, { recursive: true, force: true })));
@@ -168,6 +172,55 @@ async function prepareSupplyAttributionReplayFixture() {
 }
 
 describe("dependency scenario accepted-publication verification stamp", () => {
+  it("rebuilds an accepted certificate-closed deployment from captured lane witnesses", () => {
+    const fixture = setup();
+    const clockSec = 1_793_404_800;
+    const descriptor = loadReviewedLaneEmitterCatalog().descriptors.find((row) => row.assetId === "frnt-wyoming" &&
+      row.subjectDeploymentKey.startsWith("arbitrum:"))!;
+    // Synthetic registry scenario only: production FRNT remains global-scope.
+    const original = localRegistrySnapshot();
+    const rows = { ...original, activeStablecoins: original.activeStablecoins.map((coin) =>
+      coin.id !== descriptor.assetId ? coin : { ...coin, mintAuthority: undefined, bridgeRouteRisk: { ...coin.bridgeRouteRisk!,
+        routes: coin.bridgeRouteRisk!.routes!.map((route) => route.id !== descriptor.subjectDeploymentKey ? route :
+          { ...route, routeClass: "canonical" as const, issuanceModel: "bridge-representation" as const }),
+      } }) };
+    const registrySnapshot = { ...rows, fingerprint: registrySnapshotFingerprint(rows) };
+    const { baseInputGenerationId: _base, ...draft } = createReplayFixedInput(clockSec, { activeAssetIds: [descriptor.assetId] });
+    const fixedInput = normalizeFixedInput({ ...draft, registryFingerprint: registrySnapshot.fingerprint });
+    const families = [...new Set(descriptor.emitters.flatMap((emitter) => emitter.families))];
+    const certificate = V9LaneIncidentCertificateSchema.parse({
+      schemaVersion: 1, certificateId: "lane-cert:scenario-current", evidenceClass: "explorer-events",
+      subjectDeploymentKey: descriptor.subjectDeploymentKey, fromBlock: 100, toBlock: 200,
+      toBlockHash: `0x${"1".repeat(64)}`, windowStartSec: clockSec - 100, windowEndSec: clockSec - 60, observedAtSec: clockSec - 30,
+      screeningPolicyDigest: descriptor.screeningPolicyDigest, logDigest: "d".repeat(64),
+      emitters: descriptor.emitters.map((emitter) => ({ address: emitter.address, families: emitter.families,
+        expectedRuntimeCodeSha256: emitter.reviewedRuntimePin.split(":")[1], runtimeCodeSha256: emitter.reviewedRuntimePin.split(":")[1] })),
+      screenedTopics: families.map((family) => ({ family, topic0: `0x${"2".repeat(64)}`, signature: `${family}()` })),
+      eventCounts: Object.fromEntries(families.map((family) => [family, 0])), finding: "no-material-admin-event",
+    });
+    const laneScreening = buildSafetyScoreV9ReplayLaneScreening({ descriptors: [descriptor],
+      certificates: new Map([[descriptor.subjectDeploymentKey, { screeningSetId: descriptor.screeningSetId, certificate }]]) });
+    const replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, registrySnapshot, laneScreening, publishedAtSec: clockSec });
+    const without = buildSafetyScoreV9ReplayArtifact({ fixedInput, registrySnapshot, publishedAtSec: clockSec });
+    expect(replay.pipeline.compiledFacts.v9FactSetDigest).not.toBe(without.pipeline.compiledFacts.v9FactSetDigest);
+    const candidate = replay.pipeline.candidate;
+    const source = projectSafetyScoreV9PublicationToPublicSnapshot(candidate, { schemaVersion: 2, status: "current",
+      acceptedPublicationGenerationId: candidate.publicationGenerationId, acceptedAtSec: clockSec, attemptedAtSec: clockSec, heldSinceSec: null, reasons: [] });
+    writeFileSync(resolve(fixture.directory, "publication.json"), JSON.stringify(source));
+    const capturePath = resolve(fixture.directory, "capture.json");
+    const invoke = () => spawnSync(process.execPath, ["--import", "tsx", "worker/scripts/compute-dependency-scenarios.ts",
+      "--mode", "compute", "--input", capturePath, "--publication", resolve(fixture.directory, "publication.json"),
+      "--out-dir", fixture.directory], { encoding: "utf8", timeout: 30_000 });
+    writeFileSync(capturePath, JSON.stringify({ fixedInput, registrySnapshot, laneScreening }));
+    const complete = invoke();
+    expect(complete.status, complete.stderr).toBe(0);
+    expect(JSON.parse(complete.stdout).acceptedPublicationVerified).toBe(true);
+    writeFileSync(capturePath, JSON.stringify({ fixedInput, registrySnapshot }));
+    const stripped = invoke();
+    expect(stripped.status).not.toBe(0);
+    expect(stripped.stderr).toContain("Capture replay does not match accepted publication identity");
+  }, 60_000);
+
   it("rejects a stripped base capture that lacks accepted compute-time supply attribution", async () => {
     const fixture = await prepareSupplyAttributionReplayFixture();
     const incomplete = fixture.invoke();

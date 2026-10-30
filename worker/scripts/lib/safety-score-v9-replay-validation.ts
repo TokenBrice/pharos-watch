@@ -17,6 +17,7 @@ import type { V9ProductionScoreTrace } from "@shared/lib/safety-score-v9/score";
 import { sha256Hex } from "@shared/lib/sha256";
 import type { SafetyScoreV9TransferMaterialityGeneration } from "../../src/lib/safety-score-v9/transfer-materiality";
 import { Sha256Schema } from "@shared/types/safety-schema-primitives";
+import { parseSafetyScoreV9ReplayLaneScreening } from "../../src/lib/safety-score-v9/publication-replay-capture";
 
 const CardProjectionSchema = z.object({
   id: z.string().min(1).refine(id => id.trim() === id && id.length > 0, "canonical nonempty asset ID"),
@@ -111,6 +112,7 @@ export function validateSafetyScoreV9ReplayIntegrity(value: unknown): asserts va
   }).loose().parse(value);
   const p = value as SafetyScoreV9ReplayArtifact;
   const pipeline = p.pipeline;
+  if (p.laneScreening != null) parseSafetyScoreV9ReplayLaneScreening(p.laneScreening);
   const ids = uniqueIds(envelope.pipeline.fixedInput.activeAssetIds, "fixed input");
   for (const [label, rows] of [
     ["compiled IDs", envelope.pipeline.compiledFacts.activeAssetIds],
@@ -200,6 +202,8 @@ export function reproduceSafetyScoreV9Replay(value: unknown, context: ReplayRepr
   same([value.pipeline.candidateIdentity.policyId, value.pipeline.candidateIdentity.policyDigest, value.pipeline.candidateIdentity.evaluationBuildDigest, value.pipeline.candidate.publishedAtSec], [context.policyId, context.policyDigest, context.evaluationBuildDigest, context.publishedAtSec], "intended policy/build/clock");
   same(value.pipeline.fixedInput.registryFingerprint, verifyRegistrySnapshot(context.registrySnapshot).fingerprint, "intended registry");
   const rebuilt = buildSafetyScoreV9ReplayArtifact({ fixedInput: value.pipeline.fixedInput, extension: value.pipeline.extension, publishedAtSec: context.publishedAtSec, registrySnapshot: context.registrySnapshot, transferMaterialityGeneration: context.transferMaterialityGeneration, ...(/^v9-rc-[1-9][0-9]*$/.test(value.pipeline.candidate.candidateId) ? { releaseCandidateId: value.pipeline.candidate.candidateId } : {}),
-    ...(value.sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline: AcceptedPublicationBaselineSchema.nullable().parse(value.sourceAdmissionBaseline) }) });
+    ...(value.sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline: AcceptedPublicationBaselineSchema.nullable().parse(value.sourceAdmissionBaseline) }),
+    ...(value.laneScreening === undefined ? {} : { laneScreening: value.laneScreening === null ? null : parseSafetyScoreV9ReplayLaneScreening(value.laneScreening) }) });
   same(rebuilt.pipeline, value.pipeline, "intended-revision reproduction");
+  same(rebuilt.laneScreening, value.laneScreening, "intended lane witnesses");
 }

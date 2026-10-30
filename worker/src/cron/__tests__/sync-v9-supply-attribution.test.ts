@@ -160,6 +160,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
           subjectDeploymentKey: lane, lookbackBlocks: 100_000,
           emitters: [{ address: "0x1111111111111111111111111111111111111111",
             expectedRuntimeCodeSha256: sha256HexFromBytes(new Uint8Array([0x60, 0])), families: ["Paused"] }],
+          provenance: { controlIds: ["fixture-owner"] },
         }] },
       );
       // This suite uses synchronous SQLite and RPC clock advances, so assert the

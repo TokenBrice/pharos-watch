@@ -747,64 +747,28 @@ const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applica
 
 const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
 
-/** One contributor's evidence binding: the authored control id, or "*" for a control without authored ids. */
-export const V9IncidentCoverageCertificateRefSchema = z
-  .object({
-    controlId: CanonicalTextSchema,
-    certificateId: CanonicalKeySchema,
-  })
-  .strict();
-export type V9IncidentCoverageCertificateRef = z.output<typeof V9IncidentCoverageCertificateRefSchema>;
-
 /**
- * How a deployment control's negative `incidentState` was proved. Optional and
- * additive: absent keeps the compiler's previous behaviour byte-for-byte.
- * `provider-screening` names all three witnesses — the provider review, the
- * asset issuer-surface review and one exact-lane certificate per authored
- * contributor — so provenance names what was read (R6) and a provider review
- * alone never closes a control. The certificate freshness budget lives in policy
- * (`semantic.evidence.laneIncidentCertificateMaxAgeSec`), not in this shape.
+ * Derived provenance of a `provider-screening` negative `incidentState` (OP-IR
+ * ruling 5a). The router writes it; nobody authors it, so it restates no join a
+ * second time (R5). Every witness is named (R6): the provider review per route
+ * provider key, the asset issuer-surface review, the descriptor's screening set,
+ * the newest admitted certificate for that set, and the exact contributor ids
+ * this fact covers. Certificates are joined by
+ * `(subjectDeploymentKey, screeningSetId)`, never by an authored id, and the
+ * budget lives in `semantic.evidence.laneIncidentCertificateMaxAgeSec`.
  */
 export const V9IncidentCoverageSchema = z
   .object({
-    source: z.enum(["control", "deployment", "provider-screening"]),
-    providerReviewId: CanonicalKeySchema.optional(),
-    issuerSurfaceReviewId: CanonicalKeySchema.optional(),
-    certificateRefs: canonicalArrayBy(
-      V9IncidentCoverageCertificateRefSchema,
-      (ref) => ref.controlId,
-      1,
-      "covered control",
-    ).optional(),
+    source: z.literal("provider-screening"),
+    // Empty on an issuer-operated rail (OQ-2), where the issuer surface is the
+    // rail witness; otherwise one id per provider key the route authors.
+    providerReviewIds: canonicalArrayBy(CanonicalKeySchema, (reviewId) => reviewId, 0, "provider review"),
+    issuerSurfaceReviewId: CanonicalKeySchema,
+    screeningSetId: CanonicalKeySchema,
+    certificateId: CanonicalKeySchema,
+    contributorControlIds: canonicalArrayBy(CanonicalTextSchema, (controlId) => controlId, 1, "contributor control id"),
   })
-  .strict()
-  .superRefine((coverage, ctx) => {
-    if (coverage.source !== "provider-screening") {
-      for (const field of ["providerReviewId", "issuerSurfaceReviewId", "certificateRefs"] as const) {
-        if (coverage[field] !== undefined) {
-          issue(ctx, [field], "Only provider-screening coverage carries closure witnesses");
-        }
-      }
-      return;
-    }
-    if (coverage.providerReviewId === undefined) {
-      issue(ctx, ["providerReviewId"], "Provider review coverage requires the covering provider review id");
-    }
-    if (coverage.issuerSurfaceReviewId === undefined) {
-      issue(ctx, ["issuerSurfaceReviewId"], "Provider review coverage requires the asset issuer-surface review id");
-    }
-    if (coverage.certificateRefs === undefined) {
-      issue(ctx, ["certificateRefs"], "Provider review coverage requires at least one exact-lane certificate reference");
-      return;
-    }
-    const wildcardBindings = coverage.certificateRefs.filter((ref) => ref.controlId === "*").length;
-    if (wildcardBindings > 1) {
-      issue(ctx, ["certificateRefs"], "A lane-level certificate binding is unique");
-    }
-    if (wildcardBindings > 0 && coverage.certificateRefs.length > 1) {
-      issue(ctx, ["certificateRefs"], "A lane-level binding cannot be mixed with per-contributor bindings");
-    }
-  });
+  .strict();
 export type V9IncidentCoverage = z.output<typeof V9IncidentCoverageSchema>;
 
 const V1005ProcessReasonSchema = z.enum([
@@ -1066,27 +1030,14 @@ export const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   .strict()
   .superRefine((control, ctx) => {
     const coverage = control.incidentCoverage;
-    if (coverage?.source === "provider-screening" && coverage.certificateRefs !== undefined) {
+    if (coverage !== undefined) {
       const expectedControlIds = control.authoredControlId === "*"
         ? (control.authoredControlIds ?? [])
-        : control.authoredControlId === undefined ? [] : [control.authoredControlId];
-      const laneLevelBinding = coverage.certificateRefs.length === 1 && coverage.certificateRefs[0]!.controlId === "*";
-      if (expectedControlIds.length === 0) {
-        if (!laneLevelBinding) {
-          issue(ctx, ["incidentCoverage", "certificateRefs"], "A control without authored ids requires the lane-level certificate binding");
-        }
-      } else if (laneLevelBinding) {
-        issue(ctx, ["incidentCoverage", "certificateRefs"], "A fact with authored contributor ids requires per-contributor certificate bindings");
-      } else {
-        const bound = new Set(coverage.certificateRefs.map((ref) => ref.controlId));
-        for (const controlId of expectedControlIds) {
-          if (!bound.has(controlId)) {
-            issue(ctx, ["incidentCoverage", "certificateRefs"], `Coverage is missing contributor ${controlId}`);
-          }
-        }
-        if (bound.size !== expectedControlIds.length) {
-          issue(ctx, ["incidentCoverage", "certificateRefs"], "Coverage must bind exactly this fact's authored contributors");
-        }
+        : control.authoredControlId === undefined ? ["*"] : [control.authoredControlId];
+      const bound = [...coverage.contributorControlIds].sort();
+      const expected = [...expectedControlIds].sort();
+      if (bound.length !== expected.length || bound.some((controlId, index) => controlId !== expected[index])) {
+        issue(ctx, ["incidentCoverage", "contributorControlIds"], "Coverage must name exactly this fact's authored contributor ids, or the lane wildcard when it has none");
       }
     }
     if (control.issuanceFactsRef !== undefined &&
@@ -1292,6 +1243,14 @@ const V9DeploymentSupplyCensusDiagnosticV1Schema = z
   })
   .strict();
 
+export const V9LaneIncidentClosureFailureSchema = z.object({
+  deploymentRouteKey: DeploymentIdSchema,
+  providerKey: CanonicalKeySchema,
+  code: z.literal("provider-incident-disclosures-unreadable"),
+  foreignAssetIds: CanonicalStringArraySchema,
+}).strict();
+export type V9LaneIncidentClosureFailure = z.output<typeof V9LaneIncidentClosureFailureSchema>;
+
 export const V9BridgeJoinDiagnosticsV1Schema = z
   .object({
     profileRouteCount: z.number().int().nonnegative(),
@@ -1319,6 +1278,11 @@ export const V9BridgeJoinDiagnosticsV1Schema = z
     deploymentSupplyCensus: canonicalArrayBy(
       V9DeploymentSupplyCensusDiagnosticV1Schema,
       (row) => `${row.deploymentRouteKey ?? "*"}:${row.code}`,
+    ).optional(),
+    // Absent unless a foreign provider disclosure read blocked this asset's lane.
+    incidentClosureFailures: canonicalArrayBy(
+      V9LaneIncidentClosureFailureSchema,
+      (row) => `${row.deploymentRouteKey}:${row.providerKey}`,
     ).optional(),
   })
   .strict();

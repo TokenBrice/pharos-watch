@@ -19,6 +19,8 @@ import {
   type LaneScreeningDescriptor,
 } from "../sync-v9-lane-admin-events";
 
+import { persistLaneIncidentCertificates } from "../../lib/safety-score-v9/lane-incident-certificate-store";
+import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "../../lib/safety-score-v9/bridge-lane-admin-events";
 const mocks = vi.hoisted(() => ({ screen: vi.fn(), head: vi.fn() }));
 
 vi.mock("../../lib/safety-score-v9/bridge-lane-admin-events", async importOriginal => ({
@@ -57,7 +59,7 @@ beforeEach(() => {
 });
 
 function descriptor(subjectDeploymentKey = LANE, lookbackBlocks = 1_000): LaneScreeningDescriptor {
-  return { subjectDeploymentKey, emitters: [EMITTER], lookbackBlocks };
+  return { subjectDeploymentKey, emitters: [EMITTER], lookbackBlocks, provenance: { controlIds: ["fixture-owner"] } };
 }
 
 function certificate(
@@ -263,6 +265,20 @@ describe("lane screening attempt records", () => {
 });
 
 describe("syncV9LaneAdminEvents", () => {
+  it("resumes the contributor-bound v2 certificate chain without an attempt backoff", async () => {
+    const { db } = fixtures.open();
+    const prior = { ...certificate(LANE, 4_001, 5_000), screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST };
+    await persistLaneIncidentCertificates(db, [{ certificate: prior, contributorControlIds: descriptor().provenance.controlIds }], NOW);
+    expect(await readAttempt(db)).toBeNull();
+    mocks.screen.mockResolvedValue(admitted({
+      ...certificate(LANE, 5_001, 10_000), screeningPolicyDigest: LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST,
+    }));
+    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, { descriptors: [descriptor()], observedAtSec: NOW });
+    expect(result.status).toBe("ok");
+    expect(mocks.screen.mock.calls[0]![0]).toMatchObject({ fromBlock: 5_001, toBlock: 10_000 });
+    expect(await certificateRows(db)).toBe(2);
+  });
+
   it("records a deadline deferral when the finalized-head read consumes the remaining window", async () => {
     const { db } = fixtures.open();
     vi.useFakeTimers();
