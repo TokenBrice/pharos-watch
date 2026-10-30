@@ -23,7 +23,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "Specialty-finance credit principal and accrued cash/PIK interest, plus idle canonical USDC in an Ethereum reserve. The current book is concentrated in renewable-energy facilities to one borrower, alongside a small related-party digital-assets facility. Forest Road originates and services the book; loan facts enter through threshold-signed attestations, not independent financial assurance.",
+  "collateral": "Specialty-finance credit principal and accrued cash/PIK interest, plus idle canonical USDC in an Ethereum reserve. The book spans renewables (one borrower), film/TV media tax credits and receivables, and a small related-party digital-assets facility. Forest Road originates and services the book; loan facts enter through threshold-signed attestations, not independent financial assurance.",
   "pegMechanism": "KYC-approved participants mint USDfr 1:1 with USDC. Direct USDfr-to-USDC redemption pays 1:1 while fully backed and is limited to idle USDC, with transfer blocklisting and pause controls. A separate Uniswap v4 market supports secondary exit. USDfr itself earns no yield; sUSDfr is a separate instrument.",
   "mechanismArchetype": "rwa-credit-fund",
   "mechanismArchetypeReview": {

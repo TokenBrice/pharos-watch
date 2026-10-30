@@ -866,7 +866,7 @@ const PUBLIC_API_ARTIFACT_INPUTS = [
   {
     key: "digest-snapshot",
     summary: "Digest snapshot",
-    description: "Build-time digest context snapshot for a specific digest date.",
+    description: "Build-time digest context snapshot for a specific digest date. An elapsed UTC day is archive data; an in-progress day omits `blacklistSummary` and uses the standard 5-minute profile because its cohort is not complete.",
     tags: ["Digest"],
     responseSchema: "DigestSnapshotResponse",
     parameters: [

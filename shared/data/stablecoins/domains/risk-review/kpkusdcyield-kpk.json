@@ -38,7 +38,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "One exact native Ethereum vault-share deployment; no token-specific bridge representation is authored. Parent and borrower collateral bridge risks remain separate.",
+    "summary": "Two exact native vault-share deployments (Ethereum and Base); no bridge representation is authored. Parent and borrower collateral bridge risks remain separate.",
     "reviewedAt": "2026-10-02",
     "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
     "confidence": "probable",
@@ -112,6 +112,35 @@
           {
             "label": "Morpho VaultV2 exact deployment/control inventory, read 2026-10-03",
             "url": "https://blue-api.morpho.org/graphql"
+          }
+        ]
+      },
+      {
+        "id": "base:0x392b3ccf36c8adb8094f45573346b457414cd752",
+        "destinationChain": "base",
+        "contractAddress": "0x392b3ccf36c8adb8094f45573346b457414cd752",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "KPK's own vault docs list this exact Base USDC Yield vault, and Base Blockscout shows a verified Morpho VaultV2 at 18 decimals with the same product name/symbol as the Ethereum KPK vault; the vault issues shares locally against Base USDC, so it is a native ERC-4626 deployment rather than a bridge representation. Vault allocator/owner and live strategy allocation were not re-read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "KPK USDC Yield Base vault documentation",
+            "url": "https://docs.kpk.io/vaults/vaults/morpho/base/usdc-yield.md"
+          },
+          {
+            "label": "KPK USDC Yield Base token metadata",
+            "url": "https://base.blockscout.com/api/v2/tokens/0x392B3CCf36C8adB8094F45573346B457414cD752"
+          },
+          {
+            "label": "Verified Morpho VaultV2 source on Base",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x392B3CCf36C8adB8094F45573346B457414cD752"
           }
         ]
       }

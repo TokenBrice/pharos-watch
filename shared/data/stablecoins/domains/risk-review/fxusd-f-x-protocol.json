@@ -227,7 +227,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "fxUSD crosses from its Ethereum home chain to Base via a LayerZero V2 OFT Adapter: the FxUSDOFTAdaptor lockbox (0xA07d8cc4...) locks canonical fxUSD ERC-20 on Ethereum while the Base deployment is a native LayerZero OFT that mints/burns 1:1. The durable cross-chain supply path is thus an external lock/mint bridge with a LayerZero control surface. The Base OFT owner's peer and messaging authority is structured here and excluded from native Mint Authority.",
+    "summary": "fxUSD crosses from its Ethereum home chain to Base and Tempo via LayerZero V2 OFT Adapters: the Ethereum FxUSDOFTAdaptor lockbox (0xA07d8cc4...) locks canonical fxUSD ERC-20 while each destination deployment is a LayerZero representation that mints/burns 1:1. Base's owner/peer/messaging authority is structured here; Tempo's adapter machinery is recorded at route level only, and neither is native Mint Authority.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Pharos bridge-route re-verification",
     "confidence": "verified",
@@ -367,6 +367,43 @@
           {
             "label": "LayerZero OFT technical reference",
             "url": "https://docs.layerzero.network/v2/concepts/technical-reference/oft-reference"
+          }
+        ]
+      },
+      {
+        "id": "tempo:0x20c000000000000000000000850e533bd762b72c",
+        "sourceChain": "ethereum",
+        "destinationChain": "tempo",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x20c000000000000000000000850e533bd762b72c",
+        "protocol": "LayerZero V2 OFT Adapter route",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "AladdinDAO's deployment registry lists this exact Tempo TIP-20 fxUSD and Tempo OFTAdapter 0xd87bbc92431f2908fbba780ce902f309a171335c; the Tempo token page shows an active 6-decimal TIP-20 with 1,000,000 fxUSD and DEFAULT_ADMIN 0xd5a56c51a9a4b62788635edbbc635e031beda161, while the Ethereum Tempo adapter 0x06013f99661b59e5a5bfd62afeed6fe7c10bdde9 is a verified LayerZero OFT Adapter whose constructor binds token, endpoint and owner. This is an external lock/mint representation; the Tempo adapter owner, peers, lockbox balance and rate limits were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:ethereum:0x06013f99661b59e5a5bfd62afeed6fe7c10bdde9",
+          "contract:tempo:0xd87bbc92431f2908fbba780ce902f309a171335c",
+          "contract:tempo:0x20c000000000000000000000850e533bd762b72c"
+        ],
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "AladdinDAO deployment registry (Tempo TIP-20 and OFTAdapter)",
+            "url": "https://raw.githubusercontent.com/aladdindao/deployments/main/deployments.mainnet.md"
+          },
+          {
+            "label": "fxUSD TIP-20 on the Tempo explorer",
+            "url": "https://explorer.tempo.xyz/token/0x20C000000000000000000000850e533bD762B72c"
+          },
+          {
+            "label": "Ethereum Tempo OFT Adapter",
+            "url": "https://etherscan.io/token/0x06013F99661B59e5A5BFD62AFEEd6fe7C10bdDE9"
           }
         ]
       }

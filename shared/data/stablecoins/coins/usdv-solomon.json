@@ -87,7 +87,7 @@
     "deathDate": "2026-10-16",
     "epitaph": "An 18-month beta retired behind its successor",
     "obituary": "Solomon Labs began an orderly wind-down of the original USDv and sUSDv system in preparation for the public launch of the new USDv. Legacy rewards ended and the final distribution occurred on August 27, 2026, the sUSDv unstaking-request deadline was October 9, 2026, and the legacy front end and support ended on October 16, 2026. The two tokens are separate with no automatic conversion: holders exit legacy USDv into USDC through the Meteora USDv/USDC pool, then acquire the new USDv. The basis positions are being closed and the legacy programs deprecated. About 1.51M USDv remained outstanding at capture; Pharos freezes the original mint as an archived legacy asset and continues to track the replacement mint separately.",
-    "peakMcap": 6081883,
+    "peakMcap": 3032248,
     "sourceUrl": "https://blog.solomonlabs.org/p/winding-down-the-original-usdv",
     "sourceLabel": "Solomon Labs: Winding Down the Original USDv"
   }

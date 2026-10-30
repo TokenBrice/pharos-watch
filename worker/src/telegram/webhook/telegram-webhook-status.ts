@@ -19,6 +19,7 @@ import {
 import { loadStressSignalCurrentRowForCoin } from "../../lib/stress-signals-current-rows";
 
 import { TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
+import { isObservedPrice } from "@shared/lib/pricing-source-policy";
 
 /**
  * Data loader for the `/status <ticker>` command.
@@ -27,7 +28,8 @@ import { TELEGRAM_FLOW_CONTEXT_MAX_AGE_SEC } from "@shared/lib/api-freshness";
  * - published `stress_signals` generation for the latest DEWS band + score per coin
  * - canonical Safety Score V9 publication and identity
  * - `depeg_events`            only rows with `ended_at IS NULL` (an active event)
- * - `price_cache`             latest cached price by `asset_id = stablecoin_id`
+ * - canonical `stablecoins` publication for price and supply (never `price_cache`,
+ *   whose last-good rows can outlive a quote the publication withheld)
  *
  * Peg math is NOT recomputed here. If a user wants live deviation context on a
  * stable coin, the formatted message links back to the Pharos detail page.
@@ -148,7 +150,7 @@ async function loadTelegramSafetyState(db: D1Database): Promise<TelegramSafetySt
 export async function loadStatusForCoin(db: D1Database, stablecoinId: string): Promise<StatusForCoin> {
   const nowSec = Math.floor(Date.now() / 1000);
   const isMintBurnTracked = getMintBurnConfigsForStablecoin(stablecoinId).length > 0;
-  const [dewsRow, safetyState, depegRow, priceRow, liquidityRow, yieldState, stablecoinsCache, flowCache] =
+  const [dewsRow, safetyState, depegRow, liquidityRow, yieldState, stablecoinsCache, flowCache] =
     await Promise.all([
       loadStressSignalCurrentRowForCoin(db, stablecoinId, nowSec, { staleAfterSec: 30 * 60 }),
       loadTelegramSafetyState(db),
@@ -163,10 +165,6 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
           peg_reference: number;
           started_at: number;
         }>(),
-      db
-        .prepare("SELECT price, updated_at FROM price_cache WHERE asset_id = ?")
-        .bind(stablecoinId)
-        .first<{ price: number; updated_at: number }>(),
       db
         .prepare(
           `SELECT liquidity_score, total_tvl_usd, updated_at, coverage_class, coverage_confidence
@@ -204,12 +202,31 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
   let supplyUsd: number | null = null;
   let supplyObservedAt: number | null = null;
   let supplyCurrent = false;
+  let priceUsd: number | null = null;
+  let priceUpdatedAt: number | null = null;
   if (stablecoinsCache?.kind === "ok") {
     const asset = stablecoinsCache.payload.peggedAssets.find((candidate) => candidate.id === stablecoinId);
     const supplyContext = projectTelegramSupplyContext(asset, stablecoinsCache.updatedAt, nowSec);
     supplyUsd = supplyContext.supplyUsd;
     supplyObservedAt = supplyContext.observedAt;
     supplyCurrent = supplyContext.current;
+    // Read the publication, not `price_cache`: a last-good or fallback cache row
+    // can resurrect a quote the current pricing pipeline deliberately withheld.
+    const observedAt = asset?.priceObservedAt ?? asset?.priceUpdatedAt ?? null;
+    if (
+      asset != null
+      && isObservedPrice(asset)
+      && typeof asset.price === "number"
+      && Number.isFinite(asset.price)
+      && asset.price > 0
+      && typeof observedAt === "number"
+      && Number.isFinite(observedAt)
+      && observedAt > 0
+      && observedAt <= nowSec
+    ) {
+      priceUsd = asset.price;
+      priceUpdatedAt = observedAt;
+    }
   }
 
   const safetyCard =
@@ -232,8 +249,8 @@ export async function loadStatusForCoin(db: D1Database, stablecoinId: string): P
 
   return {
     stablecoinId,
-    priceUsd: priceRow?.price ?? null,
-    priceUpdatedAt: priceRow?.updated_at ?? null,
+    priceUsd,
+    priceUpdatedAt,
     supplyUsd,
     supplyObservedAt,
     supplyCurrent,

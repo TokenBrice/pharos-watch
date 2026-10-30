@@ -110,5 +110,12 @@
       "risk": "very-low"
     }
   },
+  "notices": [
+    {
+      "type": "info",
+      "title": "Redemption limited to professional investors",
+      "message": "AnchorX's service terms state that subscription and redemption are currently provided to Professional Investors only."
+    }
+  ],
   "launchDate": "2025-09-17"
 }

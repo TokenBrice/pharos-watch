@@ -89,6 +89,9 @@ export function alphaMeta(overrides: Partial<V9ExtensionRegistryMeta> = {}): V9E
 export function pinnedUusdMeta(): Map<string, V9ExtensionRegistryMeta> {
   const meta = structuredClone(ACTIVE_META_BY_ID.get("uusd-anything-labs")!);
   meta.mintAuthority!.review.reviewedAt = "2026-08-08";
+  // The bridge profile was reviewed after this historical fixture clock.
+  meta.bridgeRouteRisk!.reviewedAt = "2026-08-08";
+  for (const route of meta.bridgeRouteRisk!.routes ?? []) route.observedAt = "2026-08-08";
   return new Map([["uusd-anything-labs", meta as V9ExtensionRegistryMeta]]);
 }
 

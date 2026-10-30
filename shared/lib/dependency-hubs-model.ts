@@ -40,6 +40,26 @@ export interface DependencyHubsModel {
   marketCapAsOf: number | null;
 }
 
+/**
+ * A dependent's published wrapper form within one relationship set. Mechanism
+ * claims publish a null wrapperForm by design, so they do not erase a sibling
+ * wrapper claim's published form; a dependent with no published form, or with
+ * conflicting published forms, stays unavailable. Hub rows classify only their
+ * own edges, while the mapped total classifies the dependent once across parents.
+ */
+function resolveWrapperForm(
+  relationships: readonly ReportCardsV9DependencyEdge[],
+  id: string,
+): WrapperClaimForm {
+  let form: ReportCardsV9DependencyEdge["wrapperForm"];
+  for (const edge of relationships) {
+    if (edge.to !== id || edge.kind !== "serial" || edge.wrapperForm == null) continue;
+    if (form !== undefined && form !== edge.wrapperForm) return "unknown";
+    form = edge.wrapperForm;
+  }
+  return form == null ? "unknown" : form === "pure" || form === "native-staked" ? "pass-through" : "vault-claim";
+}
+
 export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf = null }: {
   cards: readonly DependencyHubCard[];
   edges: readonly ReportCardsV9DependencyEdge[];
@@ -67,15 +87,7 @@ export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf 
       }
       return null;
     },
-    wrapperFormOf: (id: string): WrapperClaimForm => {
-      let form: ReportCardsV9DependencyEdge["wrapperForm"];
-      for (const edge of liveEdges) {
-        if (edge.to !== id || edge.kind !== "serial") continue;
-        if (edge.wrapperForm == null || (form !== undefined && form !== edge.wrapperForm)) return "unknown";
-        form = edge.wrapperForm;
-      }
-      return form == null ? "unknown" : form === "pure" || form === "native-staked" ? "pass-through" : "vault-claim";
-    },
+    wrapperFormOf: (id: string): WrapperClaimForm => resolveWrapperForm(liveEdges, id),
   };
   // Serial supply is counted once per dependent, just like the exposure aggregates.
   // A missing published form is unavailable classification, not a zero-dollar category.
@@ -86,20 +98,26 @@ export function buildDependencyHubsModel({ cards, edges, mcapMap, marketCapAsOf 
       complete: claims.every(edge => supplyOf(edge.to) !== null) };
   };
   const wrapperSplit = (relationships: readonly ReportCardsV9DependencyEdge[]) => {
-    const split: DependencyWrapperSplit & { classifiedOwnFamilyUsd: number } = { unknownFormUsd: null, unknownFormCount: 0, passThroughCount: 0, vaultClaimCount: 0, classifiedOwnFamilyUsd: 0,
+    const split: DependencyWrapperSplit & { classifiedOwnFamilyUsd: number; passThroughUsd: number; vaultClaimUsd: number } = {
+      unknownFormUsd: null, unknownFormCount: 0, passThroughCount: 0, vaultClaimCount: 0, classifiedOwnFamilyUsd: 0, passThroughUsd: 0, vaultClaimUsd: 0,
       claimAvailability: { "pass-through": claimAvailability(relationships, "pass-through"), "vault-claim": claimAvailability(relationships, "vault-claim"), classified: claimAvailability(relationships, "classified") } };
     const seen = new Set<string>();
     for (const edge of relationships) {
       if (edge.kind !== "serial" || seen.has(edge.to)) continue;
       seen.add(edge.to);
-      const form = opts.wrapperFormOf(edge.to);
+      const form = resolveWrapperForm(relationships, edge.to);
       const usd = supplyOf(edge.to)?.usd;
       if (form === "unknown") {
         split.unknownFormCount++;
         if (usd !== undefined) split.unknownFormUsd = (split.unknownFormUsd ?? 0) + usd;
       } else if (usd !== undefined) {
-        if (form === "pass-through") split.passThroughCount++;
-        else split.vaultClaimCount++;
+        if (form === "pass-through") {
+          split.passThroughCount++;
+          split.passThroughUsd += usd;
+        } else {
+          split.vaultClaimCount++;
+          split.vaultClaimUsd += usd;
+        }
         const family = opts.familyOf(edge.from);
         if (family !== null && family === opts.familyOf(edge.to)) split.classifiedOwnFamilyUsd += usd;
       }

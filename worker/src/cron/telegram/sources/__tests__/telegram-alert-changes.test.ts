@@ -160,6 +160,36 @@ describe("telegram alert change builders", () => {
       },
     );
 
+    it("treats a first rating after NR as an upgrade, not a live severe downgrade", () => {
+      const unrated: SafetySnapshot[string] = {
+        grade: "NR", score: null, ratingStatus: "not-rated", partialEvidence: null, methodologyVersion: "10.26",
+      };
+      const rated = ratedRow("B", 70);
+
+      // NR is the known unavailable rating (rank -1), so leaving it improves on
+      // the same ladder the routing predicate uses; upgrades are never sent live.
+      let run = runSafety({ alpha: unrated }, { alpha: rated }, T0);
+      expect(run.summary).toMatchObject({
+        changes: [], suppressedUpgradeSafetyChanges: 1, suppressedCooldownSafetyChanges: 0,
+      });
+      expect(run.baseline.alpha).toMatchObject({ grade: "NR", pendingKind: "upgrade", pendingSinceSec: T0 });
+
+      run = runSafety(run.baseline, { alpha: rated }, T0 + DWELL);
+      expect(run.summary.changes).toEqual([]);
+      expect(run.baseline.alpha).toMatchObject({ grade: "B" });
+      expect(run.baseline.alpha!.lastAlertedAtSec).toBeUndefined();
+
+      // The silent upgrade did not spend the downgrade cooldown: a genuine
+      // severe downgrade right after it still fires once its own dwell passes.
+      const downgraded = { alpha: ratedRow("D", 44) };
+      run = runSafety(run.baseline, downgraded, T0 + DWELL + 1800);
+      expect(run.summary.changes).toEqual([]);
+      run = runSafety(run.baseline, downgraded, T0 + 2 * DWELL + 1800);
+      expect(run.summary.changes).toEqual([
+        { stablecoinId: "alpha", symbol: "ALPHA", oldGrade: "B", newGrade: "D", oldScore: 70, newScore: 44 },
+      ]);
+    });
+
     it("does not turn score-only movement or a new coin into a grade transition", () => {
       const result = buildSafetyChanges(
         { alpha: ratedRow("A", 89), newcomer: ratedRow("B", 70) },

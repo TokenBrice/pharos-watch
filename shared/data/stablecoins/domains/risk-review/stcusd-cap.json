@@ -77,6 +77,88 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "bridgeRouteRisk": {
+    "tier": "external-validated-network",
+    "summary": "Ethereum stcUSD is a native ERC-4626 vault share. MegaETH stcUSD is a LayerZero OFT V2 representation at the same registry address, minted and burned by the OFT rather than a second native vault.",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Codex bridge route review",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Cap contract addresses",
+        "url": "https://docs.cap.app/developers/addresses"
+      },
+      {
+        "label": "MegaETH stcUSD token metadata",
+        "url": "https://megaeth.blockscout.com/api/v2/tokens/0x88887be419578051ff9f4eb6c858a951921d8888"
+      },
+      {
+        "label": "Verified L2TokenUpgradeable OFT implementation",
+        "url": "https://megaeth.blockscout.com/api/v2/smart-contracts/0x3b2bf0834130878e0568b8047061a77e234ef37b"
+      }
+    ],
+    "routes": [
+      {
+        "id": "ethereum:0x88887be419578051ff9f4eb6c858a951921d8888",
+        "destinationChain": "ethereum",
+        "contractAddress": "0x88887be419578051ff9f4eb6c858a951921d8888",
+        "protocol": "Cap stcUSD (ERC-4626 vault)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Ethereum stcUSD is a native ERC-4626 vault share: Cap's address registry lists this proxy, and the existing reserve and oracle reviews read asset() as cUSD with standard vault share accounting. No representation mint or canonical escrow exists on this chain.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Cap contract addresses",
+            "url": "https://docs.cap.app/developers/addresses"
+          },
+          {
+            "label": "Ethereum stcUSD token metadata",
+            "url": "https://eth.blockscout.com/api/v2/tokens/0x88887be419578051ff9f4eb6c858a951921d8888"
+          }
+        ]
+      },
+      {
+        "id": "megaeth:0x88887be419578051ff9f4eb6c858a951921d8888",
+        "sourceChain": "ethereum",
+        "destinationChain": "megaeth",
+        "contractAddress": "0x88887be419578051ff9f4eb6c858a951921d8888",
+        "protocol": "LayerZero OFT V2",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Cap's address registry lists this exact MegaETH vault, and MegaETH Blockscout shows an EIP-1967 proxy over L2TokenUpgradeable 0x3b2bf0834130878e0568b8047061a77e234ef37b; that implementation is a LayerZero OFT V2 whose constructor binds endpoint 0x6f475642a6e85809b1c36fa62763669b1b48dd5b, so this is a bridged share representation, not a second native ERC-4626 vault (6,672,059.46 shares at review). The OFT owner, peer, DVN configuration and rate limits were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:layerzero-oft-v2",
+          "contract:megaeth:0x88887be419578051ff9f4eb6c858a951921d8888"
+        ],
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Cap contract addresses",
+            "url": "https://docs.cap.app/developers/addresses"
+          },
+          {
+            "label": "MegaETH stcUSD token metadata",
+            "url": "https://megaeth.blockscout.com/api/v2/tokens/0x88887be419578051ff9f4eb6c858a951921d8888"
+          },
+          {
+            "label": "Verified L2TokenUpgradeable OFT implementation",
+            "url": "https://megaeth.blockscout.com/api/v2/smart-contracts/0x3b2bf0834130878e0568b8047061a77e234ef37b"
+          }
+        ]
+      }
+    ]
+  },
   "oracleRisk": {
     "tier": "standard-external",
     "summary": "stcUSD is valued by Cap's on-chain Oracle 0xcD7f45566bc0E7303fB92A93969BB4D3f6e662bb through external price adapters, measured at Ethereum block 26300000 (0xfeb02dce39436b4d1f400d128fa774891b94451859a56e6c9d548b8574629b56, 2026-10-29T17:49:23Z) via https://api-ethereum-mainnet.n.dwellir.com. getPrice(stcUSD) returned 1.08742165 USD (8 decimals, lastUpdated 2026-10-29T15:23:47Z) through adapter 0x697f57522c62a6d29d1931d488977717d14eb49f with a price(address) payload, and getPrice(cUSD) returned 0.99977397 USD through adapter 0xacc9ce4c15a0f6a2bec49c3f81261d60553d2faf. Reserve-asset pricing is external and partly redundant: the USDC slot's primary source is the RedStone feed adapter 0xeef31c7d9f2e82e8a497b140cc60cc082be4b94e (description() = \"RedStone Price Feed for USDC_V2\") and its backup is the distinct Chainlink aggregator 0x8fffffd4afb6115b954bd326cbe7b4ba576818f6 (description() = \"USDC / USD\"), both called through adapter 0xc850409dc3587039e87930008217b6622cc3b2e2. Two measured weaknesses are recorded rather than scored away: the cUSD and stcUSD slots' configured backup is a byte-identical duplicate of the primary (same adapter, same payload), so the coin/basket valuation slot has no independent failover, and staleness is 86,600 s (24.06 h) for cUSD, stcUSD and USDC alike with an admin-settable bound. The USDT slot is unconfigured (adapter 0x0) at this pin. Cap documents RedStone as the primary reserve-asset oracle, Chainlink for delegation assets, and CapTokenAdapter/StakedCapAdapter for cUSD/stcUSD valuation, and documents that adapter failures fall through to the backup and revert with PriceError only when both fail.",

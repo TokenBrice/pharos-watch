@@ -100,6 +100,11 @@
       "chain": "worldchain",
       "address": "0x2c537e5624e4af88a7ae4060c022609376c8d0eb",
       "decimals": 6
+    },
+    {
+      "chain": "arc",
+      "address": "0xfb0705023603dc86325b83d9ff6b0da7921fec17",
+      "decimals": 18
     }
   ],
   "custodyModel": "institutional-unregulated",

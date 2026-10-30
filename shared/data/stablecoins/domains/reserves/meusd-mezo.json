@@ -20,7 +20,7 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-07-20",
+    "reviewedAt": "2026-10-30",
     "reviewer": "Kimi P2 reserve cohort rc-7 (lead tusd-trueusd)",
     "confidence": "verified",
     "sources": [
@@ -31,13 +31,17 @@
       {
         "label": "Mezo MUSD liquidation and redemption mechanics",
         "url": "https://mezo.org/docs/users/borrow/liquidation-mechanics/"
+      },
+      {
+        "label": "Mezo explorer ActivePool 0x3012C2fE (2026-10-30)",
+        "url": "https://explorer.mezo.org/address/0x3012C2fE1240e3754E5C200A0946bb0E07474876"
       }
     ],
-    "rationale": "The exact current fixed input reports one live row, BTC collateral in Mezo ActivePool, at 100%, and that row is the entire observed reserve envelope. Mezo documents the ActivePool as the BTC collateral account for its Liquity-style CDP path; collateral returns on repayment, is paid out on redemption, or moves through the StabilityPool and DefaultPool on liquidation. The structured classification covers that observed aggregate BTC slice and retains native, wrapped, bridge, custody, and contract risks without inventing a variant allocation. The scope is restated as full-composition over the observed envelope so the reviewed classification overlays the live row; whether every separate MUSD mint-authority path is backed by the ActivePool remains a mint-authority question, not a reserve-composition one.",
+    "rationale": "The live capture reports one row, BTC collateral in Mezo ActivePool, at 100% of that pool's collateral; it is not MUSD's whole backing book. This classification-only review classifies that keyed ActivePool slice and certifies no whole-book weight or liability attribution. Mezo documents the ActivePool as the collateral account for its Liquity-style CDP path; collateral returns on repayment, is paid on redemption, or moves through the StabilityPool and DefaultPool on liquidation. MUSD is also issued through an EnclaveDebtManager path whose veBTC collateral sits in a Mezo Enclave outside the ActivePool, and that weight is not measured here.",
     "compositionBasis": "Mezo ActivePool live-reserve capture and MUSD collateral documentation",
     "compositionAsOf": "2026-07-15",
-    "scope": "full-composition",
-    "knownUnknownExposure": "No unresolved part of the recorded ActivePool slice remains; native-versus-wrapped BTC source-path weights are not published and are retained as aggregate risk factors. Separate non-CDP MUSD issuance paths are outside this reserve-composition review.",
+    "scope": "classification-only",
+    "knownUnknownExposure": "MUSD issued outside the ActivePool, including the EnclaveDebtManager veBTC path, is not measured by this review; only the ActivePool slice is classified.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

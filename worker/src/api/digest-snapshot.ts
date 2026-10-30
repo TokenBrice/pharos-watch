@@ -78,6 +78,10 @@ export const handleDigestSnapshot = async (
   // Compute UTC day boundaries (epoch seconds)
   const dayStart = startOfUtcDaySec(parsed);
   const dayEnd = dayStart + 86_400;
+  const nowSec = Math.floor(Date.now() / 1000);
+  // A day still in progress has not produced its full cohort yet; a day-to-date
+  // read is not the day's total and must not be frozen by the archive profile.
+  const dayOpen = dayEnd > nowSec;
 
   const targetFilter = isWeekly
     ? "json_extract(digest_meta, '$.type') = 'weekly'"
@@ -216,7 +220,7 @@ export const handleDigestSnapshot = async (
     total_events: number; valued_events: number; known_amount_usd: number | null;
   }>)[0];
   if (!blacklistAggregate) return errorResponse(503, "Blacklist context is unavailable");
-  const blacklistSummary = {
+  const blacklistSummary = dayOpen ? undefined : {
     totalEvents: blacklistAggregate.total_events,
     knownAmountUsd: blacklistAggregate.total_events === 0 ? 0 : blacklistAggregate.known_amount_usd,
     valuedEvents: blacklistAggregate.valued_events,
@@ -231,5 +235,5 @@ export const handleDigestSnapshot = async (
     depegEvents,
     blacklistEvents,
     blacklistSummary,
-  }, { headers: { "Cache-Control": CACHE_PROFILES.archive } });
+  }, { headers: { "Cache-Control": dayOpen ? CACHE_PROFILES.standard : CACHE_PROFILES.archive } });
 };

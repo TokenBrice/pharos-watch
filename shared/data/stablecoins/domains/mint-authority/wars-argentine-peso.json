@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "manual-review",
-    "summary": "WARS has six reviewed independent native issuer deployments on Ethereum, Base, World Chain, BSC, Polygon, and Gnosis. The shared issuer EOA 0x466c02e2 has direct DEFAULT_ADMIN, MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE on each; the 4-of-7 WARS Safe 0x2b839174 can authorize native minters; and the Ethereum LimitedMinter 0xd168cfbb is a separate fixed-destination native mint facility. The BridgeDeposit/LimitedMinterBridge transfer rail is assessed only in Bridge Risk. Celo is catalog-listed and reviewed separately as a bridge representation in Bridge Risk, not included in this native Mint Authority scope.",
+    "summary": "WARS has seven reviewed native issuer deployments: Ethereum, Base, World Chain, BSC, Polygon, Gnosis and HyperEVM. The shared issuer EOA 0x466c02e2 holds DEFAULT_ADMIN, MINTER_ROLE, UPGRADER_ROLE and PAUSER_ROLE on the first six; the 4-of-7 Safe 0x2b839174 holds HyperEVM mint authority and can authorize native minters; the Ethereum LimitedMinter 0xd168cfbb is a separate fixed-destination native facility. The BridgeDeposit/LimitedMinterBridge rail is assessed only in Bridge Risk. Celo is reviewed separately as a bridge representation in Bridge Risk, outside this native scope.",
     "upgradeability": {
       "model": "uups",
       "deploymentRefs": [
@@ -105,7 +105,8 @@
           "worldchain:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
           "bsc:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
           "polygon:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
-          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
+          "gnosis:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d",
+          "hyperevm:0x0dc4f92879b7670e5f4e4e6e3c801d229129d90d"
         ],
         "label": "Ripio WARS Safe multisig (DEFAULT_ADMIN_ROLE)",
         "role": "minter-admin",
@@ -145,7 +146,7 @@
             "url": "https://ethereum-rpc.publicnode.com"
           }
         ],
-        "evidence": "The current WARS Safe is 4-of-7 with the reviewed owners and remains the shared DEFAULT_ADMIN_ROLE authority able to authorize native minters and upgrades on the six authored deployments. The token exposes no supply cap, so mint authorized by this Safe is unbounded. Safe module and guard state was not fully re-enumerated after the current owner read and remains explicitly unknown here. This does not change the native posture."
+        "evidence": "The current WARS Safe is 4-of-7 with the reviewed owners and remains the shared DEFAULT_ADMIN_ROLE authority able to authorize native minters and upgrades on the seven authored deployments. The token exposes no supply cap, so mint authorized by this Safe is unbounded. Safe module and guard state was not fully re-enumerated after the current owner read and remains explicitly unknown here. This does not change the native posture. HyperEVM MINTER_ROLE for this Safe was read at block 48090420 on 2026-10-09."
       },
       {
         "chain": "ethereum",
@@ -208,7 +209,7 @@
           "url": "https://raw.githubusercontent.com/ripio/latam-stables/main/src/LimitedMinter.sol"
         }
       ],
-      "evidence": "On 2026-08-16, current fixed reads verified the shared issuer EOA's direct MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE on the six authored native WARS deployments: Ethereum block 25771188, Base 50068421, World Chain 33795277, BSC 116367712, Polygon 92147450, and Gnosis 47763061. The EOA is empty-code on Ethereum; the WARS Safe remains 4-of-7 and can authorize native minters and upgrades. The Ethereum LimitedMinter is a fixed-destination native facility. The separate BridgeDeposit plus LimitedMinterBridge arbitrary-recipient burn/mint rail, its operators, route configuration, fees, pause, and daily limit are deliberately excluded from Mint Authority and preserved in bridgeRouteRisk. The six native paths remain uncapped, periodically reconciled, and subject only to attestation-style reserve supervision. Celo is a live official-network deployment but remains explicitly unlisted pending catalog-owner adjudication.",
+      "evidence": "On 2026-08-16, current fixed reads verified the shared issuer EOA's direct MINTER_ROLE, UPGRADER_ROLE, and PAUSER_ROLE on the six authored native WARS deployments: Ethereum block 25771188, Base 50068421, World Chain 33795277, BSC 116367712, Polygon 92147450, and Gnosis 47763061. The Safe's HyperEVM MINTER_ROLE was read at block 48090420 on 2026-10-09. The EOA is empty-code on Ethereum; the WARS Safe remains 4-of-7 and can authorize native minters and upgrades. The Ethereum LimitedMinter is a fixed-destination native facility. The separate BridgeDeposit plus LimitedMinterBridge arbitrary-recipient burn/mint rail, its operators, route configuration, fees, pause, and daily limit are deliberately excluded from Mint Authority and preserved in bridgeRouteRisk. The seven native paths remain uncapped, periodically reconciled, and subject only to attestation-style reserve supervision. Celo is a live official-network deployment but remains explicitly unlisted pending catalog-owner adjudication.",
       "reviewer": "Codex mint/bridge boundary migration; verified Ripio native issuance review",
       "reviewedAt": "2026-08-16"
     }

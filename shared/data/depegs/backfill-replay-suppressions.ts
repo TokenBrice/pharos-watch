@@ -428,6 +428,61 @@ export const BACKFILL_REPLAY_SUPPRESSIONS: readonly BackfillReplaySuppression[] 
     ],
     reviewedAt: "2026-10-30",
   },
+  // 2026-10-30 t5-w3 verified plausibility review (second wave). The four
+  // tracked-coin entries below record reviewed artifact verdicts; the
+  // untracked RAI/IRON/RUBT/GOLD-VRO rows cannot be registered here because
+  // the corpus rejects ids absent from canonical-order.json.
+  {
+    coinId: "axcnh-anchorx",
+    direction: "below",
+    windowStart: 1_785_808_966, // 2026-08-04T02:02:46Z (stored start − 2h)
+    windowEnd: 1_785_844_983, // 2026-08-04T12:03:03Z (stored end + 2h)
+    reason:
+      "CoinGecko native-CNY quote artifact: vs_currencies=cny returned 0.4717-0.4714 while the same provider's USD feed pinned AxCNH at $0.1438-0.1453 (=0.985 CNH, −148 bps) through 04:02-10:03 UTC; no supply change (5,627,925 -> 5,685,720 USD) and a 346-day USD range of 0.1363-0.1505.",
+    evidenceUrls: [
+      "https://pharos.watch/depeg/axcnh-2026-08-04/",
+      "https://coinmarketcap.com/currencies/axcnh/",
+    ],
+    reviewedAt: "2026-10-30",
+  },
+  {
+    coinId: "satusd-river",
+    direction: "below",
+    windowStart: 1_764_201_687, // 2025-11-27T00:01:27Z (stored start − 2h)
+    windowEnd: 1_764_237_693, // 2025-11-27T10:01:33Z (stored end + 2h)
+    reason:
+      "CoinGecko satUSD hourly series carries one 0.6488937042791159 sample at 07:00Z bracketed by 0.9759037 and 0.9950772; the episode is a routine ~2% discount that the single-point backfill peak raised to −3511 bps.",
+    evidenceUrls: [
+      "https://api.coingecko.com/api/v3/coins/satoshi-stablecoin/market_chart/range?vs_currency=usd&from=1764201600&to=1764288000",
+    ],
+    reviewedAt: "2026-10-30",
+  },
+  {
+    coinId: "jpyc-jpyc",
+    direction: "above",
+    windowStart: 1_778_552_331, // 2026-05-12T02:18:51Z (stored start − 2h)
+    windowEnd: 1_780_075_277, // 2026-05-29T17:21:17Z (stored end + 2h)
+    reason:
+      "Catalog mis-attribution: from 2026-05-11 to 2026-05-29 the current JPYC row carried the deprecated JPYC v2 geckoId 'jpy-coin', so the primary CoinGecko lane published that token's ~$0.0076 quote against the current coin's 0.00634 peg reference for 17.5 days; the coin's own contract held par and the +2102 bps 'recovery' is the catalog revert.",
+    evidenceUrls: [
+      "https://www.coingecko.com/en/coins/jpy-coin",
+      "https://coins.llama.fi/prices/historical/1778803200/ethereum:0xe7c3d8c9a439fede00d2600032d5db0be71c3c29",
+    ],
+    reviewedAt: "2026-10-30",
+  },
+  {
+    coinId: "usdt-tether",
+    direction: "below",
+    windowStart: 1_533_490_538, // 2018-08-05T17:35:38Z (cluster start − 2h)
+    windowEnd: 1_534_238_686, // 2018-08-14T09:24:46Z (cluster end + 2h)
+    reason:
+      "USDT's 2018-08-05..08-14 hourly CoinGecko series prints 0.7518-0.9850 against a $1 peg while the verified 2018 low was $0.9251 and the same hours print TUSD 1.2346 / sUSD 0.8255; the two-point confirmation was satisfied by two consecutive corrupted samples, not a market depeg.",
+    evidenceUrls: [
+      "https://www.coinlore.com/coin/tether/historical-data",
+      "https://www.caixinglobal.com/2018-10-16/dollar-pegged-cryptocurrency-drops-to18-month-low-on-transparency-concerns-101335654.html",
+    ],
+    reviewedAt: "2026-10-30",
+  },
 ];
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);

@@ -85,6 +85,11 @@
       "chain": "ethereum",
       "address": "0x91600e31fbedc72433d4a57f16639cfe661be7d8",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x1e9e47583f15d45a10df48c0b1846e0492c795d7",
+      "decimals": 18
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",

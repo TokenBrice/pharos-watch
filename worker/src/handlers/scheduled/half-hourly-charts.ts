@@ -152,8 +152,9 @@ async function recoverLastAcceptedDexPublication(
 
 /**
  * Whether the hour's :16 preparation committed a capture. The capture-control
- * row is written in the same transaction as the input, stamped with its commit
- * wall clock. An unreadable row re-prepares: extra work, never a public claim.
+ * row's `updated_at` is written only by the commit, stamped with its commit
+ * wall clock; a recapture request leaves it in place. An unreadable row
+ * re-prepares: extra work, never a public claim.
  */
 async function loadHourlyV9CaptureState(
   db: D1Database,

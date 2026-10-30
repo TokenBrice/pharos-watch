@@ -33,6 +33,8 @@ function isGuardedNavReferencePrice(asset: StablecoinData, nowSec: number): bool
     typeof observedAt === "number" &&
     Number.isFinite(observedAt) &&
     observedAt > 0 &&
+    // An observation clock ahead of this stage's clock is not freshness.
+    observedAt <= nowSec &&
     nowSec - observedAt <= DEPEG_PRIMARY_PRICE_MAX_AGE_SEC
   );
 }

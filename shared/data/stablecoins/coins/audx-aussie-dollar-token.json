@@ -68,6 +68,16 @@
       "chain": "xdc",
       "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
       "decimals": 18
+    },
+    {
+      "chain": "redbelly",
+      "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+      "decimals": 18
     }
   ],
   "collateralQuality": "rwa",

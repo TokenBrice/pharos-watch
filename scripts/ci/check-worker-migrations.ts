@@ -634,6 +634,14 @@ function seedPreMigrationFixture(db: DatabaseSync, targets: readonly string[]): 
       `);
       continue;
     }
+    if (target === "telegram_watcher_lifecycle_events_daily") {
+      db.exec(`
+        INSERT INTO telegram_watcher_lifecycle_events_daily (
+          day, subscribe_events, unsubscribe_events, reactivate_events, updated_at
+        ) VALUES ('2026-01-01', 1, 1, 0, 1);
+      `);
+      continue;
+    }
     if (target === "tape_events") {
       db.exec(`
         INSERT INTO tape_events (

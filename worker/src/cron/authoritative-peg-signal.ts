@@ -52,6 +52,17 @@ export function deriveAuthoritativePegSignal(input: {
     contributorCount: pegType ? input.pegRateCounts[pegType] : undefined,
   };
 
+  // VAR/OTHER are unreviewed floating pegs: their derived "reference" is a
+  // peer median of unrelated coins, not a peg. Measuring a coin against that
+  // median can open an event whose deviation is another peer's level (RAI
+  // 2026-03-25, 13,603 bps against SILK's quote), so fail closed here.
+  if (
+    input.pegCurrency === "VAR" || input.pegCurrency === "OTHER" ||
+    pegType === "peggedVAR" || pegType === "peggedOTHER"
+  ) {
+    return { kind: "rejected", reason: "non-authoritative-reference", evidence };
+  }
+
   if (!isAuthoritativeDepegPegReference({
     pegCurrency: input.pegCurrency,
     pegType,

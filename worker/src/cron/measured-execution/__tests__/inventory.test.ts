@@ -144,10 +144,11 @@ describe("measured execution target inventory", () => {
         expect(build({ ...fresh, ...override })).toBeNull();
       }
       const stale = { ...fresh, typeByPeg: { peggedEUR: "stale" as const } };
-      if (family === "pancake" || family === "univ3") {
-        expect(build(fresh, "usdc-circle")?.tokenOut.referencePriceUsd).toBe(1.08);
-        expect(build(stale, "usdc-circle")).toBeNull();
-      }
+      // The tracked EURC counter-asset needs its own admitted reference in every
+      // family: the pool-implied fallback is only for untracked counters, so an
+      // unavailable FX reference leaves the direction unresolved.
+      expect(build(fresh, "usdc-circle")?.tokenOut.referencePriceUsd).toBe(1.08);
+      expect(build(stale, "usdc-circle")).toBeNull();
       expect(getTokenReferenceUsdPrice(tokens[0], chain, common.chainAddressToId, common.symbolToChainScopedIds, stale)).toBe(1.08);
     },
   );

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchCgPriceHistoryHourly, fetchMarketBackfillPriceSeries } from "../historical-market-prices";
+import { fetchCgPriceHistoryHourly, fetchMarketBackfillPriceSeries, screenDailyPriceOutliers } from "../historical-market-prices";
 import { RATE_LIMITS } from "../rate-limit";
 import { USER_AGENT } from "../constants";
 
@@ -31,6 +31,35 @@ async function finish<T>(promise: Promise<T>): Promise<T> {
   await vi.runAllTimersAsync();
   return promise;
 }
+
+describe("screenDailyPriceOutliers", () => {
+  const day = (offset: number, price: number) => ({ timestamp: NOW + offset * DAY, price });
+
+  it("withholds a one-day 10^-6 scaling defect instead of publishing it", () => {
+    const prices = [day(-2, 0.787), day(-1, 0.787), day(0, 8.302818387614223e-7), day(1, 0.789), day(2, 0.789)];
+    expect(screenDailyPriceOutliers(prices)).toEqual({
+      prices: [prices[0], prices[1], prices[3], prices[4]],
+      removed: [prices[2]],
+    });
+  });
+
+  it("withholds a two-day thin-venue excursion that the surrounding week does not corroborate", () => {
+    const prices = [
+      day(-3, 0.169), day(-2, 0.169), day(-1, 0.1692),
+      day(0, 0.0795), day(1, 0.077), day(2, 0.1727), day(3, 0.173), day(4, 0.1727),
+    ];
+    const result = screenDailyPriceOutliers(prices);
+    expect(result.removed).toEqual([prices[3], prices[4]]);
+    expect(result.prices).toEqual([prices[0], prices[1], prices[2], prices[5], prices[6], prices[7]]);
+  });
+
+  it("keeps gradual moves, short series, and points with fewer than two neighbours", () => {
+    const gradual = [day(0, 0.9), day(1, 1.0), day(2, 1.1), day(3, 1.2)];
+    expect(screenDailyPriceOutliers(gradual)).toEqual({ prices: gradual, removed: [] });
+    const short = [day(0, 1), day(1, 5)];
+    expect(screenDailyPriceOutliers(short)).toEqual({ prices: short, removed: [] });
+  });
+});
 
 describe("historical CoinGecko prices-only transport parity", () => {
   it.each([undefined, { startSec: EPOCH, endSec: NOW }])("retains the daily URL and unpaced positive-price decoding (%j)", async (range) => {

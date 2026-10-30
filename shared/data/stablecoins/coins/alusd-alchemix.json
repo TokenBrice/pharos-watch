@@ -70,22 +70,12 @@
   ],
   "collateralQuality": "exotic",
   "governanceQuality": "multisig",
-  "liveReservesConfig": {
-    "adapter": "curated-validated",
-    "version": 1,
-    "semantics": "collateral-mix",
-    "breakerScope": "alusd-alchemix",
-    "display": {
-      "url": "https://alchemix.fi/",
-      "label": "Alchemix"
-    },
-    "inputs": {
-      "primary": {
-        "kind": "onchain-evm",
-        "chain": "ethereum",
-        "rpcMode": "public-rpc"
-      }
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Arbitrum wind-down approved (AIP-124)",
+      "message": "Alchemix AIP-124 passed, deprecating alAsset bridging and winding down v3 on Arbitrum; execution steps unannounced. alUSD stays live on Ethereum and Optimism."
     }
-  },
+  ],
   "launchDate": "2021-02-27"
 }

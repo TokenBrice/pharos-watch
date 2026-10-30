@@ -73,7 +73,6 @@ describe("handleTelegramWebhook", () => {
 
   it("answers addressed /coverage in groups with the status card and a Follow button", async () => {
     const db = makeTelegramWebhookDb([
-      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
       { match: "FROM depeg_events", rows: [] },
       { match: "FROM dex_liquidity", rows: [] },
       { match: "FROM cache WHERE key = ?", rows: [] },

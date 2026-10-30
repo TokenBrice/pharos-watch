@@ -168,9 +168,9 @@
         "semantics": "native-mint",
         "scope": "canonical",
         "reviewDisposition": "reviewed",
-        "reviewNote": "Canonical Ethereum-native trUSD is issued through ToriMinting. Chainlink and Tori list the Ethereum LockReleaseTokenPool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 as its CCIP escrow, with peripheral BurnMint representations on Monad and Pharos. At block 26095800 the pool getToken() returned this native token, typeAndVersion() returned LockReleaseTokenPool 1.5.1 and owner() returned the 3-of-5 Tori administration Safe. This native issuance row remains separate from the escrow/bridge administration path; no whole-supply share is inferred from the stale single-chain catalog.",
+        "reviewNote": "Canonical Ethereum-native trUSD is issued through ToriMinting. Chainlink and Tori list the Ethereum LockReleaseTokenPool 0x6823666fd0869050a0530eb15ba568936234d463, version 2.0.0, as its CCIP escrow, releasing from ERC20LockBox 0x8d21eb2945c6084797de85d7ae0c163e1971a37f, with peripheral BurnMint representations on Monad and Pharos. Its verified source pins token 0xd0580192e98ea6ceb9c7b6191ed2e27560911697 and that lockbox; owner is the Tori administration Safe 0x0c6bbfd2d5666d44bf28580edeec0263692c8316. This row stays separate from the escrow administration path.",
         "mappingVersion": "bridge-route-facts-v1",
-        "observedAt": "2026-10-01",
+        "observedAt": "2026-10-26",
         "sources": [
           {
             "label": "Tori mainnet deployments and CCIP configuration",
@@ -181,7 +181,7 @@
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
           }
         ],
-        "observedBlock": 26095800
+        "observedBlock": 26277972
       },
       {
         "id": "monad:0x770a579ea200784723b31b8668b0773ba80393c9",
@@ -264,7 +264,7 @@
         "controllerAddress": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
         "authorityType": "multisig",
         "routeChecks": {
-          "lockboxOrEscrow": "Tori and Chainlink identify Ethereum LockRelease pool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 as the canonical escrow; the ethereum pool getToken() returned its authored trUSD token.",
+          "lockboxOrEscrow": "Tori and Chainlink list Ethereum LockRelease pool 0x6823666fd0869050a0530eb15ba568936234d463 releasing from lockbox 0x8d21eb2945c6084797de85d7ae0c163e1971a37f as the canonical escrow.",
           "pausersAdminsUpgraders": "Pool owner() returned 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 at the pinned observation block. Remote peers, numeric rate limits, pool rate-limit-admin delegation and token-level mint/upgrade roles were not fully enumerated; no timelock for this bridge controller is claimed."
         },
         "capDescription": "Current numeric bridge capacity and the ability to alter it remain unverified.",
@@ -272,8 +272,8 @@
         "failureDomainKeys": [
           "safe:0x0c6bbfd2d5666d44bf28580edeec0263692c8316"
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095800,
+        "observedAt": "2026-10-26",
+        "observedBlock": 26277972,
         "sources": [
           {
             "label": "Tori mainnet deployments and CCIP configuration",
@@ -284,7 +284,7 @@
             "url": "https://docs.chain.link/ccip/directory/mainnet/token/trUSD"
           }
         ],
-        "evidence": "At ethereum block 26095800, pool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 returned owner 0x0c6bbfd2d5666d44bf28580edeec0263692c8316; getToken() and typeAndVersion() matched the published pool mapping. The owner Safe returned threshold 3, the same five owners, and no enabled modules. Guard, fallback-handler and module-guard state were not freshly read for this bridge review.",
+        "evidence": "At ethereum block 26277972 (2026-10-26), LockReleaseTokenPool 2.0.0 0x6823666fd0869050a0530eb15ba568936234d463 was owned by 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 after OwnershipTransferred; its verified source pins token 0xd0580192e98ea6ceb9c7b6191ed2e27560911697 and lockbox 0x8d21eb2945c6084797de85d7ae0c163e1971a37f. At block 26095800 the owner Safe returned threshold 3, the same five owners, and no enabled modules; guard, fallback-handler and module-guard state were not freshly read for this bridge review.",
         "threshold": 3,
         "signerCount": 5,
         "safe": {
@@ -316,7 +316,7 @@
         "controllerAddress": "0x0c6bbfd2d5666d44bf28580edeec0263692c8316",
         "authorityType": "multisig",
         "routeChecks": {
-          "lockboxOrEscrow": "Tori and Chainlink identify Ethereum LockRelease pool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 as the canonical escrow; the monad pool getToken() returned its authored trUSD token.",
+          "lockboxOrEscrow": "Tori and Chainlink identify Ethereum LockRelease pool 0x6823666fd0869050a0530eb15ba568936234d463 as the canonical escrow; the monad pool getToken() returned its authored trUSD token.",
           "pausersAdminsUpgraders": "Pool owner() returned 0x0c6bbfd2d5666d44bf28580edeec0263692c8316 at the pinned observation block. Remote peers, numeric rate limits, pool rate-limit-admin delegation and token-level mint/upgrade roles were not fully enumerated; no timelock for this bridge controller is claimed."
         },
         "capDescription": "Current numeric bridge capacity and the ability to alter it remain unverified.",
@@ -368,7 +368,7 @@
         "controllerAddress": "0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64",
         "authorityType": "eoa",
         "routeChecks": {
-          "lockboxOrEscrow": "Tori and Chainlink identify Ethereum LockRelease pool 0x558d77ff4b6c760c1034536e379feb69db5a96e2 as the canonical escrow; the pharos pool getToken() returned its authored trUSD token.",
+          "lockboxOrEscrow": "Tori and Chainlink identify Ethereum LockRelease pool 0x6823666fd0869050a0530eb15ba568936234d463 as the canonical escrow; the pharos pool getToken() returned its authored trUSD token.",
           "pausersAdminsUpgraders": "Pool owner() returned 0x07adfa5e8c7e8e80d1449dac46c3d6e739850e64 at the pinned observation block. Remote peers, numeric rate limits, pool rate-limit-admin delegation and token-level mint/upgrade roles were not fully enumerated; no timelock for this bridge controller is claimed."
         },
         "capDescription": "Current numeric bridge capacity and the ability to alter it remain unverified.",

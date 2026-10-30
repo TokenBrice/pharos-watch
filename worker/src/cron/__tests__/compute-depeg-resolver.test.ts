@@ -869,6 +869,71 @@ describe("computeDepegResolver", () => {
     );
   });
 
+  it("leaves a promoted lock unsealed when the pending-outcome clock read fails", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW_SEC * 1000);
+    // Backstop crossed five minutes ago: inside the on-time grace window, so a
+    // default verdict would be the fabricated `on_time`.
+    const event = activeEvent({
+      started_at: NOW_SEC - 72 * 3600 - 300,
+      confirmation_sources: "dex:curve",
+      pending_reason: "large-cap",
+    });
+    const { stores } = storesFor();
+    const sealInputs: unknown[] = [];
+    stores.sealPublicNoCall = vi.fn(async (_db, input) => {
+      sealInputs.push(input);
+      throw new Error("sealing requires the promotion clock");
+    });
+    stores.loadSealedPublicPredictions = vi.fn(async () => []);
+    const db = resolverDb([
+      // Training-history reads also join `depeg_pending_outcomes`; keep them on
+      // their own empty fixture so only the promotion-clock read fails.
+      { match: "pharos:ddr-training-history", rows: [] },
+      { match: "FROM depeg_events_with_provenance WHERE (provenance_audit_verdict", rows: [event] },
+      { match: "FROM depeg_events_with_provenance WHERE ended_at IS NULL", rows: [event] },
+      {
+        match: "FROM depeg_pending_outcomes",
+        rows: [
+          {
+            stablecoin_id: "lane-b-test",
+            peg_type: "peggedUSD",
+            direction: "below",
+            first_seen_at: event.started_at,
+            outcome_at: event.started_at + 72 * 3600 + 60,
+          },
+        ],
+        throwError: new Error("D1_ERROR: internal error"),
+      },
+      ...healthyDewsPublicationTables(),
+      { match: "FROM depeg_resolver_assessments", rows: [] },
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
+
+    const result = await computeDepegResolver({
+      db,
+      ddrRunId: "ddr:quarter-hour:1779984600:test",
+      runAt: NOW_SEC,
+      slot: "quarter-hour",
+      stablecoinsCacheSafe: true,
+      depegPipelineHealthy: true,
+      storeContracts: stores,
+    });
+
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.v2ConfirmationTimingError).toContain("D1_ERROR");
+    expect(metadata.v2ConfirmationSealSkipped).toBe(1);
+    // The immutable published prediction must not freeze a timeliness verdict
+    // derived from an unread confirmation clock.
+    expect(sealInputs).toEqual([]);
+    const payload = readDdrSnapshotPayload(db);
+    const row = payload.rows.find((entry: { eventId: number }) => entry.eventId === 42);
+    expect(row).toMatchObject({
+      kind: "pending",
+      prediction: { state: "lock_deferred", publicPredictionId: null, lockTiming: null },
+    });
+  });
+
   it("seals a policy-eligible prediction with canonical row hash metadata", async () => {
     const row = resolverRow();
     const incident = canonicalIncident();
@@ -888,6 +953,7 @@ describe("computeDepegResolver", () => {
       activeEventById: new Map([[42, activeEvent({ started_at: row.startedAt })]]),
       incidentsByEventId: new Map([[42, incident]]),
       existingSealed: [],
+      confirmationTimingUnknownEventIds: new Set(),
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
@@ -950,6 +1016,7 @@ describe("computeDepegResolver", () => {
       ]),
       incidentsByEventId: new Map([[42, incident]]),
       existingSealed: [],
+      confirmationTimingUnknownEventIds: new Set(),
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
@@ -999,6 +1066,7 @@ describe("computeDepegResolver", () => {
       activeEventById: new Map([[42, activeEvent({ started_at: row.startedAt })]]),
       incidentsByEventId: new Map([[42, incident]]),
       existingSealed: [],
+      confirmationTimingUnknownEventIds: new Set(),
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
@@ -1071,6 +1139,7 @@ describe("computeDepegResolver", () => {
         [43, noCallIncident],
       ]),
       existingSealed: [],
+      confirmationTimingUnknownEventIds: new Set(),
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,
@@ -1123,6 +1192,7 @@ describe("computeDepegResolver", () => {
       activeEventById: new Map([[42, activeEvent({ started_at: row.startedAt })]]),
       incidentsByEventId: new Map([[42, incident]]),
       existingSealed: [existing],
+      confirmationTimingUnknownEventIds: new Set(),
       nowSec: NOW_SEC,
       ddrRunId: "ddr:quarter-hour:1779984600:test",
       runAt: NOW_SEC,

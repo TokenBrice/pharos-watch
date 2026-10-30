@@ -25,7 +25,7 @@
       "disposition": "branches-required",
       "reviewedAt": "2026-10-01",
       "reviewer": "Sol curation pass 2026-10-01 (CurM14USDX)",
-      "rationale": "Current complete role/factory census contains 16 authorized markets, including three post-July additions. Thirteen have positive debt shares. All 16 have collateral and remain applicable: the fully paused msETH/OETH market is retained rather than excluded, and msETH/WETH has positive debt, a 500,000 USG cap, deposit pause true and withdrawal/borrowing pauses false. Old recursive leaf configurations are not re-dated by current outer-price reads.",
+      "rationale": "Factory census at block 26236645 has 18 authorized markets; branches cover only the 13 created through 2026-07-13, leaving msETH/OETH, cbBTC/WBTC, reUSD/sDOLA, CVX/ETH and frxUSD/DUSD unassessed.",
       "sources": [
         {
           "label": "Tangent USG contracts and markets",

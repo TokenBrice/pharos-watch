@@ -125,6 +125,8 @@
     }
   ],
   "marketAvailability": "legacy-or-wind-down",
+  "windDownAnnouncedAt": "2026-10-03",
+  "windDownSourceUrl": "https://medium.com/@avalonlabs/important-notice-regarding-recent-asset-adjustments-1c2831aae329",
   "notices": [
     {
       "type": "warning",

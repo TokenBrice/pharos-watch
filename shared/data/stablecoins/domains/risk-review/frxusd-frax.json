@@ -1191,6 +1191,45 @@
             "url": "https://api-hyperliquid-mainnet-evm.n.dwellir.com"
           }
         ]
+      },
+      {
+        "id": "somnia:0x00000000d61733e7a393a10a5b48c311abe8f1e5",
+        "sourceChain": "ethereum",
+        "destinationChain": "somnia",
+        "canonicalChain": "ethereum",
+        "contractAddress": "0x00000000d61733e7a393a10a5b48c311abe8f1e5",
+        "protocol": "LayerZero OFT (FraxZero)",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "third-party",
+        "riskTier": "external-lock-mint",
+        "semantics": "lock-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Frax's cross-chain address registry lists this exact frxUSD OFT on Somnia as part of the deterministic Robinhood/Somnia/Tempo set, and the Somnia explorer returns Frax USD/frxUSD at 18 decimals with 3,261,031.96 supply; the verified proxy source is Frax's LayerZero v2 TransparentUpgradeableProxy, so the OFT itself is the representation's mint/burn authority. The Somnia 3-of-6 multisig, peers, DVN configuration and rate limits were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:layerzero-v2",
+          "contract:somnia:0x00000000d61733e7a393a10a5b48c311abe8f1e5"
+        ],
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Frax cross-chain addresses (Somnia deterministic set)",
+            "url": "https://docs.frax.com/protocol/crosschain/addresses"
+          },
+          {
+            "label": "frxUSD on the Somnia explorer",
+            "url": "https://explorer.somnia.network/api/v2/tokens/0x00000000D61733e7A393A10A5B48c311AbE8f1E5"
+          },
+          {
+            "label": "Verified Frax LayerZero proxy source on Somnia",
+            "url": "https://explorer.somnia.network/api/v2/smart-contracts/0x00000000D61733e7A393A10A5B48c311AbE8f1E5"
+          },
+          {
+            "label": "Frax frxUSD balance sheet",
+            "url": "https://api.frax.finance/v2/frxusd/balance-sheet/latest"
+          }
+        ]
       }
     ],
     "controls": [

@@ -148,8 +148,12 @@ function prepareSubscriberPurge(
   ];
 }
 
+/** Shared with migration 0290: a chat-id move is not a watcher transition. */
+const TELEGRAM_WATCHER_MIGRATION_SUPPRESSION_CACHE_PREFIX = "telegram:watcher-migration-suppress:";
+
 const CHAT_CACHE_EXACT_KEY_BUILDERS = [
   (chatId: string) => `${TELEGRAM_CHAT_BACKOFF_CACHE_PREFIX}${chatId}`,
+  (chatId: string) => `${TELEGRAM_WATCHER_MIGRATION_SUPPRESSION_CACHE_PREFIX}${chatId}`,
   (chatId: string) => `telegram:command-flood:${chatId}`,
   (chatId: string) => `telegram:re-engagement-warned:${chatId}`,
   (chatId: string) => `telegram:chat-admins:${chatId}`,
@@ -401,7 +405,22 @@ export async function migrateTelegramChatId(
 ): Promise<void> {
   if (!oldChatId || !newChatId || oldChatId === newChatId) return;
 
+  const suppressionKeys = [oldChatId, newChatId].map(
+    (chatId) => `${TELEGRAM_WATCHER_MIGRATION_SUPPRESSION_CACHE_PREFIX}${chatId}`,
+  );
+  const now = unixNow();
   const statements: D1PreparedStatement[] = [
+    // Migration 0290 makes the 0246 triggers skip transition events while a
+    // chat-id move is in flight. The batch's rollback removes these keys if any
+    // statement fails, so a move can never leave transitions suppressed.
+    ...suppressionKeys.map((key) =>
+      db
+        .prepare(
+          `INSERT INTO cache (key, value, updated_at) VALUES (?, '', ?)
+           ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = excluded.updated_at`,
+        )
+        .bind(key, now),
+    ),
     ...MIGRATION_TABLE_DESCRIPTORS.map((descriptor) =>
       buildMigrationStatement(db, descriptor).bind(newChatId, oldChatId),
     ),
@@ -417,6 +436,7 @@ export async function migrateTelegramChatId(
     db.prepare("DELETE FROM telegram_chat_delivery_diagnostics WHERE chat_id = ?").bind(oldChatId),
     db.prepare("DELETE FROM telegram_subscribers WHERE chat_id = ?").bind(oldChatId),
     ...prepareChatMigrationCacheStatements(db, oldChatId, newChatId),
+    ...suppressionKeys.map((key) => db.prepare("DELETE FROM cache WHERE key = ?").bind(key)),
     ...(options.operationStatements ?? []),
   ];
 

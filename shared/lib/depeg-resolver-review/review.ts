@@ -185,6 +185,7 @@ function reviewHorizons(
   assessment: DdrrAssessmentInput,
   outcome: DdrrDerivedOutcome,
   nowSec: number,
+  verdictReview: DdrrVerdictReview,
 ): DdrrHorizonReview[] {
   const evaluationNow = Number.isFinite(nowSec) ? nowSec : assessment.assessedAt;
   const anchorSec = getAssessmentReviewAnchorSec(assessment);
@@ -196,7 +197,10 @@ function reviewHorizons(
       outcome.actualOutcome === "recovered" && outcome.actualEndedAt != null && outcome.actualEndedAt <= horizonEndAt;
 
     let result: DdrrHorizonReview["result"];
-    if (isDataIssueOutcome(outcome.actualOutcome) || !isScoreableHorizonState(cell.state) || cell.probability == null) {
+    // A terminal event already settled at the lock is registry curation debt, not
+    // a forecast hit or miss; keep it out of every accuracy denominator.
+    if (isDataIssueOutcome(outcome.actualOutcome) || verdictReview === "terminal_at_lock" ||
+      !isScoreableHorizonState(cell.state) || cell.probability == null) {
       result = "unscored";
     } else if (resolvedWithinHorizon) {
       result = "hit";
@@ -290,7 +294,7 @@ export function reviewDepegResolverAssessment(
   const outcome = deriveActualOutcome(assessment, actualEvent);
   const verdictReview = reviewVerdict(assessment, outcome);
   const duration = reviewDuration(assessment, outcome, nowSec);
-  const horizonReviews = reviewHorizons(assessment, outcome, nowSec);
+  const horizonReviews = reviewHorizons(assessment, outcome, nowSec, verdictReview);
   const lockedAt = getAssessmentReviewAnchorSec(assessment);
 
   return {

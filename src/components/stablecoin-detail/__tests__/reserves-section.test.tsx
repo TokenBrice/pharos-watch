@@ -116,7 +116,7 @@ afterEach(() => {
 });
 
 describe("ReservesSection", () => {
-  it.each(["alusd-alchemix", "stusd-stoneyield"])(
+  it.each(["zaru-blocktower", "stusd-stoneyield"])(
     "keeps selected historical slices contextual rather than whole-basket quality or look-through (%s)",
     (id) => {
       const coin = TRACKED_META_BY_ID.get(id)!;

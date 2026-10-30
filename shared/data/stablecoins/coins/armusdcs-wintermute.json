@@ -13,7 +13,7 @@
   "variantOf": "usdc-circle",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdc-circle",
-  "collateral": "USDC lender positions in seven Morpho markets secured by cbBTC, WBTC, wstETH, PT-reUSD-10DEC2026, PT-USDat-14JAN2027, Wildcat debt-token wrapper v-wmtUSDC and 3Jane USD3 collateral",
+  "collateral": "USDC lender positions in eight Morpho markets secured by cbBTC, WBTC, wstETH, PT-reUSD-10DEC2026, PT-USDat-14JAN2027, PT-USD3-17DEC2026, Wildcat v-wmtUSDC, 3Jane USD3 collateral",
   "pegMechanism": "ERC-4626 shares accrue lending interest and realize losses against USDC; direct redemption uses idle USDC and a configured liquidity adapter, subject to market liquidity. A separate in-kind redemption route retains underlying lending-position exposure; forceDeallocate itself withdraws available cash to the vault. VaultV2 maxWithdraw and maxRedeem deliberately return zero as conservative underestimates, not measurements of available exit liquidity. At the reviewed pin, the current adapter's force-deallocation penalty is 0% of assets deallocated; this separate route still requires market liquidity and is not an ordinary withdrawal fee.",
   "mechanismArchetype": "protocol-position",
   "archetypeOverride": true,

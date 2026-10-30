@@ -191,14 +191,19 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
 
   await runIfCacheSafe("snapshot-supply", (signal) => snapshotSupply(runtime.db, signal));
   await runIfCacheSafe("snapshot-chain-supply", (signal) => snapshotChainSupply(runtime.db, signal));
+  // One slot-clock day decides both the admission checks and the writers, so a
+  // delivery that crosses UTC midnight still repairs the day it admitted.
+  const slotDay = currentUtcDay(runtime.slotStartedAt);
   await runIfCacheSafe(
     "snapshot-psi",
-    (signal) => snapshotPsiDaily(runtime.db, signal, { completionReason: SAME_DAY_CATCH_UP_REASON }),
+    (signal) => snapshotPsiDaily(runtime.db, signal, {
+      completionReason: SAME_DAY_CATCH_UP_REASON,
+      slotStartedAtSec: runtime.slotStartedAt,
+    }),
     async () => {
-      const { todayMidnight, dailySlotStartedAt } = currentUtcDay(runtime.slotStartedAt);
-      const computedAt = todayMidnight - DAY_SECONDS;
-      if (runtime.slotStartedAt < dailySlotStartedAt) {
-        return createNeutralSkippedCronResult(BEFORE_DAILY_SLOT_REASON, { computedAt, dailySlotStartedAt });
+      const computedAt = slotDay.todayMidnight - DAY_SECONDS;
+      if (runtime.slotStartedAt < slotDay.dailySlotStartedAt) {
+        return createNeutralSkippedCronResult(BEFORE_DAILY_SLOT_REASON, { computedAt, dailySlotStartedAt: slotDay.dailySlotStartedAt });
       }
       if (await hasPsiDailySnapshot(runtime.db, computedAt)) {
         return createNeutralSkippedCronResult("same_day_snapshot_exists", { computedAt });
@@ -206,20 +211,22 @@ export async function runQuarterHourlySlot(runtime: ScheduledRuntimeContext) {
       return null;
     },
   );
-  const { snapshotDate, dailySlotStartedAt } = currentUtcDay(runtime.slotStartedAt);
   await runIfCacheSafe(
     "snapshot-public-dataset",
     (signal) => snapshotPublicDataset(runtime.db, signal, {
       completionReason: SAME_DAY_CATCH_UP_REASON,
-      minStablecoinsCacheUpdatedAtSec: dailySlotStartedAt,
+      minStablecoinsCacheUpdatedAtSec: slotDay.dailySlotStartedAt,
       freshnessGateLabel: "daily0800Utc",
+      slotStartedAtSec: runtime.slotStartedAt,
     }),
     async () => {
-      if (runtime.slotStartedAt < dailySlotStartedAt) {
-        return createNeutralSkippedCronResult(BEFORE_DAILY_SLOT_REASON, { snapshotDate, dailySlotStartedAt });
+      if (runtime.slotStartedAt < slotDay.dailySlotStartedAt) {
+        return createNeutralSkippedCronResult(BEFORE_DAILY_SLOT_REASON, {
+          snapshotDate: slotDay.snapshotDate, dailySlotStartedAt: slotDay.dailySlotStartedAt,
+        });
       }
-      if (await hasPublicDatasetSnapshot(runtime.db, snapshotDate)) {
-        return createNeutralSkippedCronResult("same_day_snapshot_exists", { snapshotDate });
+      if (await hasPublicDatasetSnapshot(runtime.db, slotDay.snapshotDate)) {
+        return createNeutralSkippedCronResult("same_day_snapshot_exists", { snapshotDate: slotDay.snapshotDate });
       }
       return null;
     },

@@ -2,7 +2,7 @@
   "id": "gtusdcp-gauntlet",
   "name": "Gauntlet USDC Prime",
   "symbol": "gtUSDCp",
-  "oneLiner": "Three specific Gauntlet-curated USDC vaults on Ethereum, Base and Arbitrum, with independent share prices rather than one fungible cross-chain token.",
+  "oneLiner": "Ethereum Gauntlet USDC Prime V2 vault share; the Base and Arbitrum Prime vaults are separate, non-fungible tokens outside its market cap.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",
@@ -74,6 +74,11 @@
     {
       "chain": "arbitrum",
       "address": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
+      "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x050ce30b927da55177a4914ec73480238bad56f0",
       "decimals": 18
     }
   ],

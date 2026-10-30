@@ -348,6 +348,8 @@ describe("DDRR scoring", () => {
   });
 
   it("classifies terminal evidence settled before the lock as curation debt, not a forecast outcome", () => {
+    // Past the 6h landmark so a horizon cell that still counts as forecast-scored has matured.
+    const reviewedAfterSixHours = LOCKED_AT + 7 * 3_600;
     const settled = reviewDepegResolverAssessment(
       assessment({ resolutionTier: "at_risk" }),
       actualEvent({
@@ -358,7 +360,7 @@ describe("DDRR scoring", () => {
         terminalEvidenceInterval: { start: LOCKED_AT - 2 * 86_400, end: LOCKED_AT - 86_400 },
         terminalEvidencePrecision: "day",
       }),
-      REVIEWED_AT,
+      reviewedAfterSixHours,
     );
     // Evidence whose interval straddles the lock was not yet settled: still a forecast outcome.
     const straddling = reviewDepegResolverAssessment(
@@ -371,7 +373,7 @@ describe("DDRR scoring", () => {
         terminalEvidenceInterval: { start: LOCKED_AT - 3_600, end: LOCKED_AT + 82_800 },
         terminalEvidencePrecision: "day",
       }),
-      REVIEWED_AT,
+      reviewedAfterSixHours,
     );
 
     expect(settled.actual.kind).toBe("terminal");
@@ -379,6 +381,18 @@ describe("DDRR scoring", () => {
     expect(straddling.verdictReview).toBe("risk_noted_terminal");
     const metrics = summarizeDdrrRows([settled, straddling]).byPredictionPolicy.find((segment) => segment.segmentKind === "all")!.metrics;
     expect(metrics).toMatchObject({ terminalAtLockCount: 1, recoveryLikelihoodScoredCount: 1, terminalOutcomeCount: 1 });
+
+    // Curation debt stays out of every accuracy denominator: no horizon hit rate or Brier observation.
+    const settledHeadline = summarizeDdrrRows([settled]).headline;
+    expect(settled.horizonReviews.find((review) => review.horizon === "6h")).toMatchObject({ result: "unscored" });
+    expect(settledHeadline.horizonHitRates.find((cell) => cell.horizon === "6h")).toEqual({
+      horizon: "6h", scored: 0, hits: 0, misses: 0, hitRate: null,
+    });
+    expect(settledHeadline.horizonSkill?.find((cell) => cell.horizon === "6h")).toEqual({
+      horizon: "6h", scored: 0, brier: null, baseRateBrier: null, brierSkill: null,
+    });
+    // Evidence straddling the lock was not yet settled, so it remains a genuine matured miss.
+    expect(straddling.horizonReviews.find((review) => review.horizon === "6h")).toMatchObject({ result: "miss" });
   });
 
   it("grades a still-open incident past its upper band as slower than band", () => {

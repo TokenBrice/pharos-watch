@@ -4,7 +4,7 @@
     "mintPath": "issuer-direct-mint",
     "authorityPosture": "unbounded-reconciled",
     "confidence": "verified",
-    "summary": "nOPAL has independent native issuance on Ethereum, Plume, BSC, and Plasma. On each native deployment, the nOPAL BoringVault is owned by the Nest Timelock 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a (172,800-second minimum delay), while the Teller and Manager are owned by the same current 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982; fresh 2026-09-05 Plasma reads confirm the same graph there, including the Manager's vault() linkage and the Safe holding proposer and canceller roles on the Plasma Timelock. The Plasma deployment is live per the issuer registry but dormant, with zero supply at the reviewed block, and the Plasma Safe's modules state could not be read this pass, so no Plasma Safe control row is authored. These are native issuance controls on four independent liability surfaces, not bridge-admin controls; issuance remains unbounded and no independent whole-supply reconciliation or prudential supervision was found.",
+    "summary": "nOPAL has independent native issuance on Ethereum, Plume, BSC, and Plasma. On Ethereum the nOPAL BoringVault is owned by TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062, while the Teller and Manager are owned by the same current 3-of-6 Gnosis Safe 0xa08a0dc480bd60d1d56c8eec6c722125eafea982; fresh 2026-09-05 Plasma reads confirm the same graph there, including the Manager's vault() linkage and the Safe holding proposer and canceller roles on the Plasma Timelock. The Plasma deployment is live per the issuer registry but dormant, with zero supply at the reviewed block, and the Plasma Safe's modules state could not be read this pass, so no Plasma Safe control row is authored. These are native issuance controls on four independent liability surfaces, not bridge-admin controls; issuance remains unbounded and no independent whole-supply reconciliation or prudential supervision was found.",
     "upgradeability": {
       "model": "immutable",
       "deploymentRefs": [
@@ -146,20 +146,20 @@
         "timelockDelaySec": 172800,
         "modulesOrGuardsStatus": "not-applicable",
         "chain": "ethereum",
-        "address": "0x8faacdc65de5d78975df4f9dc4b6548979ceb23a",
+        "address": "0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062",
         "sources": [
           {
             "label": "Ethereum nOPAL token verified source",
             "url": "https://eth.blockscout.com/address/0x119dd7daff816f29d7ee47596ae5e4bdc4299165?tab=contract"
           },
           {
-            "label": "Ethereum nOPAL Timelock verified source",
-            "url": "https://eth.blockscout.com/address/0x8faacdc65de5d78975df4f9dc4b6548979ceb23a?tab=contract"
+            "label": "Ethereum nOPAL TimelockController verified source",
+            "url": "https://eth.blockscout.com/address/0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062?tab=contract"
           }
         ],
-        "observedAt": "2026-10-01",
-        "observedBlock": 26095800,
-        "evidence": "At ethereum block 26095800 on 2026-10-01, nOPAL owner() returned 0x8faacdc65de5d78975df4f9dc4b6548979ceb23a and getMinDelay() returned 172800 seconds. hasRole() confirmed the current 3-of-6 Safe holds PROPOSER_ROLE and CANCELLER_ROLE. This observation does not establish signer key custody or enumerate every authorization path."
+        "observedAt": "2026-10-30",
+        "observedBlock": 26307171,
+        "evidence": "At ethereum block 26307171 on 2026-10-30, nOPAL owner() returned TimelockController 0x34e8bb9e0fa50d63bfca1d8e83ddba0d9fd5c062, which the current 3-of-6 Safe schedules with a 172800-second delay. Signer key custody, getMinDelay(), and every authorization path remain unverified."
       },
       {
         "label": "Nest BlackOpal LiquidStone II Vault Teller (issuance/redemption) — Plume",

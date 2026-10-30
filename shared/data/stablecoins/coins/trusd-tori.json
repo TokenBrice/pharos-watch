@@ -9,7 +9,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Delta-neutral trading positions across global markets: hedged money markets, futures arbitrage, calendar spreads, and options strategies; all positions backed by USDC and USDT deposits with real-time verification via Accountable DVN",
+  "collateral": "Hedged, market-neutral positions: money markets and Treasury-collateralised reverse repo, listed-equity arbitrage, bank cash and derivatives margin, plus a minority of on-chain USDC/USDT; verified live by Accountable.",
   "pegMechanism": "trUSD targets $1 through NAV arbitrage and a hedged reserve portfolio. Approved, KYC/AML-whitelisted participants can mint against supported assets and request repurchase for USDC or USDT, with disclosed 0.1% fees. Tori BVI terms make repurchases discretionary, cap the notional repurchase value at $1 per trUSD, and permit a lower or zero value; secondary holders have no primary repurchase right until approved.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "detailProvider": "defillama",

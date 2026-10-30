@@ -26,7 +26,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "TRYB's native issuer deployments remain separate from Polygon's reviewed PoS lock/mint representation. Reciprocal Ethereum/Polygon mappings resolve the root token, ERC20Predicate escrow and sole ChildChainManager depositor. The Polygon upgrade path terminates at a 5-of-9 Safe through a legacy 1-of-1 wallet; Ethereum bridge upgrades terminate at a separate 5-of-9 Safe through a zero-delay timelock. No single-key or mandatory-delay protection is inferred from those intermediate contracts.",
+    "summary": "TRYB's native issuer deployments, including the Circle FiatToken Arc deployment, remain separate from Polygon's PoS lock/mint representation. Reciprocal Ethereum/Polygon mappings resolve the root token, ERC20Predicate escrow and sole ChildChainManager depositor. The Polygon upgrade path terminates at a 5-of-9 Safe via a legacy 1-of-1 wallet; Ethereum upgrades terminate at a separate 5-of-9 Safe through a zero-delay timelock. No single-key or mandatory-delay protection is inferred.",
     "reviewedAt": "2026-10-01",
     "reviewer": "Sol curation pass 2026-10-01 (R2WTether)",
     "confidence": "verified",
@@ -261,6 +261,35 @@
           {
             "label": "BiLira",
             "url": "https://www.bilira.co/"
+          }
+        ]
+      },
+      {
+        "id": "arc:0xfb0705023603dc86325b83d9ff6b0da7921fec17",
+        "destinationChain": "arc",
+        "contractAddress": "0xfb0705023603dc86325b83d9ff6b0da7921fec17",
+        "protocol": "BiLira TRYB (Circle FiatToken on Arc)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Circle's StableFX supported-currency table lists this exact Arc contract as TRYB issued by Bilira, and Arc Blockscout shows a verified FiatTokenV2_2 proxy at 18 decimals with 4,428,178.09 TRYB, so it is chain-local FiatToken issuance rather than a bridge representation. The Arc masterMinter/owner and minter roles were not read, and BiLira's own product page does not yet name Arc.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Circle StableFX supported currencies (TRYB on Arc)",
+            "url": "https://developers.circle.com/stablefx/references/supported-currencies"
+          },
+          {
+            "label": "TRYB token metadata on Arc",
+            "url": "https://explorer.arc.io/api/v2/tokens/0xfb0705023603dc86325b83d9ff6b0da7921fec17"
+          },
+          {
+            "label": "TRYB FiatTokenV2_2 proxy on Arc",
+            "url": "https://explorer.arc.io/api/v2/addresses/0xFb0705023603dc86325b83D9ff6b0DA7921fEc17"
           }
         ]
       }

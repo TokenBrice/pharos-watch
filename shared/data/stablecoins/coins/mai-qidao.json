@@ -8,8 +8,8 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Overcollateralized crypto vault collateral across QiDao markets, including bridged and wrapped assets",
-  "pegMechanism": "Borrowers mint MAI against overcollateralized vault positions and repay or liquidate through QiDao market rules",
+  "collateral": "Overcollateralized crypto vaults, including bridged and wrapped assets, plus stablecoin PSM liquidity",
+  "pegMechanism": "Borrowers mint MAI against overcollateralized vaults; the PSM mints and redeems 1:1 for USDC after a 3-day wait",
   "mechanismArchetype": "cdp",
   "detailProvider": "coingecko",
   "geckoId": "mimatic",
@@ -103,6 +103,11 @@
     {
       "chain": "linea",
       "address": "0xf3b001d64c656e30a62fbaaca003b1336b4ce12a",
+      "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0xb9c8f0d3254007ee4b98970b94544e473cd610ec",
       "decimals": 18
     }
   ],

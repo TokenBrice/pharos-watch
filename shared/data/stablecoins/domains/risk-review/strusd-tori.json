@@ -179,7 +179,7 @@
           },
           {
             "label": "ethereum CCIP pool",
-            "url": "https://etherscan.io/address/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
+            "url": "https://etherscan.io/address/0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9"
           }
         ]
       },
@@ -288,14 +288,14 @@
           "peer-config"
         ],
         "controllerChain": "ethereum",
-        "controllerAddress": "0xb12e0794fb2191672ba7a1811edc9713c8c2c38b",
+        "controllerAddress": "0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9",
         "authorityType": "contract",
         "modulesOrGuardsStatus": "not-applicable",
         "failureDomainKeys": [
           "bridge:chainlink-ccip-strusd"
         ],
-        "observedAt": "2026-10-15",
-        "observedBlock": 26197398,
+        "observedAt": "2026-10-30",
+        "observedBlock": 26307437,
         "sources": [
           {
             "label": "Tori strUSD staking and unstaking terms",
@@ -315,14 +315,14 @@
           },
           {
             "label": "ethereum CCIP pool",
-            "url": "https://etherscan.io/address/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
+            "url": "https://etherscan.io/address/0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9"
           }
         ],
         "routeChecks": {
-          "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
+          "lockboxOrEscrow": "Ethereum LockRelease pool 0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9 holds canonical shares; Monad and Pharos use BurnMint pools.",
           "trustedPeerOrRemote": "Fresh getSupportedChains, getRemoteToken and getRemotePools agree with the other two authored deployments and pools."
         },
-        "evidence": "At Ethereum block 26197398 (2026-10-15T10:44:47Z), getToken and LockReleaseTokenPool 1.5.1 match the official mapping. Both remote tokens/pools match Monad and Pharos. The pool holds 9629711.608474332752276164 existing canonical shares; it locks/releases rather than mints native shares. This observed escrow is not an exhaustive in-flight liability reconciliation."
+        "evidence": "At Ethereum block 26307437 (2026-10-30), the issuer-listed strUSD LockReleaseTokenPool 2.0.0 0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9 locks/releases canonical shares via ERC20LockBox 0xc1a9e4bbb58573b8971c9b3c24e17f9851268f86. Old pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds no strUSD. Escrow is not an exhaustive in-flight liability reconciliation."
       },
       {
         "id": "strusd-ethereum-ccip-owner",
@@ -364,7 +364,7 @@
           },
           {
             "label": "ethereum CCIP pool",
-            "url": "https://etherscan.io/address/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
+            "url": "https://etherscan.io/address/0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9"
           }
         ],
         "capDescription": "Both Ethereum lanes have enabled inbound/outbound capacities of 1500000 shares and refill rates of 69.444444444444444444 shares per second. Verified TokenPool setters authorize the owner or separately appointed rateLimitAdmin to change these configurations immediately; the owner can replace that admin. Current buckets are not immutable issuance ceilings.",
@@ -415,7 +415,7 @@
           }
         ],
         "routeChecks": {
-          "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
+          "lockboxOrEscrow": "Ethereum LockRelease pool 0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9 holds canonical shares; Monad and Pharos use BurnMint pools.",
           "trustedPeerOrRemote": "Fresh getSupportedChains, getRemoteToken and getRemotePools agree with the other two authored deployments and pools."
         },
         "evidence": "At Monad block 113592633 (2026-10-15T10:45:00Z), getToken and BurnMintTokenPool 1.5.1 match the official mapping, and both remote tokens/pools match Ethereum and Pharos. getMinters/getBurners name this pool as sole member. Token owner can change minter/burner authorization; maxSupply=0 means the verified token has no fixed maximum. Representation mint/burn is not new native vault issuance."
@@ -511,7 +511,7 @@
           }
         ],
         "routeChecks": {
-          "lockboxOrEscrow": "Ethereum LockRelease pool 0xb12e0794fb2191672ba7a1811edc9713c8c2c38b holds canonical shares; Monad and Pharos use BurnMint pools.",
+          "lockboxOrEscrow": "Ethereum LockRelease pool 0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9 holds canonical shares; Monad and Pharos use BurnMint pools.",
           "trustedPeerOrRemote": "Fresh getRemoteToken and getRemotePools match the two issuer-listed peers. getSupportedChains failed; exhaustive current selector enumeration is not established by this read."
         },
         "evidence": "At Pharos block 20300349 (2026-10-15T10:44:57Z), getToken and BurnMintTokenPool 2.0.0 match the official mapping. getRemoteToken/getRemotePools for both known peers match Ethereum and Monad; the attempted getSupportedChains read failed, so no new exhaustive-selector claim is made. getMinters/getBurners name this pool as sole member. The token runtime is byte-identical to verified Monad StakedTrUSDL2; its owner can replace mint/burn roles and maxSupply=0 is uncapped. Pool runtime retrieval failed; no new pool build-equivalence claim is made."
@@ -584,7 +584,7 @@
         "sources": [
           {
             "label": "Verified TokenPool rate-limit authorization",
-            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb12e0794fb2191672ba7a1811edc9713c8c2c38b"
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x63aaefd6e9f8a306ad6ad60f18f882ee7da866b9"
           },
           {
             "label": "Ethereum state at block 26197398, 2026-10-15T10:44:47Z",

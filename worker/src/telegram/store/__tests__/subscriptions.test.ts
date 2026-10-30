@@ -5,6 +5,7 @@ import { prepareCoinSettingStatements } from "../../webhook/telegram-webhook-set
 import type { ParsedSetCommand } from "../../webhook/telegram-webhook-shared";
 import type { TelegramMiniAppOperation } from "@shared/lib/telegram-mini-app-contract";
 import { applyTelegramMiniAppMutation } from "../../mini-app/telegram-mini-app-mutations";
+import { D1_MAX_BOUND_PARAMETERS } from "../../../lib/d1-primitives";
 
 type SettingCase = {
   name: string;
@@ -108,6 +109,29 @@ describe("per-coin subscription persistence", () => {
       }
     },
   );
+
+  it("loads 100 distinct coin rows under D1's bound-parameter ceiling", async () => {
+    const isolated = createLatestSchemaFixtureTracker({ uncached: true });
+    try {
+      const { db, sqlite } = isolated.open();
+      // node:sqlite's default ceiling is far above D1's, so model the platform
+      // limit that a 100-coin /subscribe actually has to meet.
+      sqlite.limits.variableNumber = D1_MAX_BOUND_PARAMETERS;
+      const coinIds = Array.from({ length: D1_MAX_BOUND_PARAMETERS }, (_, index) => `coin-${index}`);
+      const insert = sqlite.prepare(
+        "INSERT INTO telegram_subscriptions (chat_id, stablecoin_id, alert_dews) VALUES ('42', ?, 1)",
+      );
+      for (const coinId of coinIds) insert.run(coinId);
+
+      // One chat id plus 100 coin ids is 101 binds: over D1's limit unless the
+      // id list is chunked.
+      const rows = await loadSubscriptionsByIds(db, "42", coinIds);
+
+      expect(rows.map((row) => row.stablecoin_id).sort()).toEqual([...coinIds].sort());
+    } finally {
+      isolated.closeAll();
+    }
+  });
 
   it.each([
     ["off", "0", { ticker: "USDC", setting: "depeg", enabled: false }, 0, null],

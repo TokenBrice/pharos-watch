@@ -88,6 +88,11 @@
       "chain": "tac",
       "address": "0x5ced7f73b76a555ccb372cc0f0137bec5665f81e",
       "decimals": 18
+    },
+    {
+      "chain": "sui",
+      "address": "0x0a672389b7b73df60d40666ac9545433d59d3128086b9e3a425a66bbffdf4dc5::susn::SUSN",
+      "decimals": 6
     }
   ],
   "collateralQuality": "exotic",

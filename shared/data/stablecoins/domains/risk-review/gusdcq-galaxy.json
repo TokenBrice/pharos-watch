@@ -38,7 +38,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "One exact native Ethereum vault-share deployment; no token-specific bridge representation is authored. Parent and borrower collateral bridge risks remain separate.",
+    "summary": "Two exact native vault-share deployments (Ethereum and Base); no bridge representation is authored. Parent and borrower collateral bridge risks remain separate.",
     "reviewedAt": "2026-10-15",
     "reviewer": "Batch64 exact-vault review (Rev_GusdcqGalaxy)",
     "confidence": "probable",
@@ -114,6 +114,35 @@
         ],
         "reviewDisposition": "reviewed",
         "reviewNote": "Single exact native holder-share deployment in reviewed Morpho vault metadata; immutable deposit/fee-share accounting is native issuance, not a representation mint/burn bridge. No attributed runtime liability shares or uncatalogued bridge absence is asserted."
+      },
+      {
+        "id": "base:0x1e9e47583f15d45a10df48c0b1846e0492c795d7",
+        "destinationChain": "base",
+        "contractAddress": "0x1e9e47583f15d45a10df48c0b1846e0492c795d7",
+        "protocol": "Morpho Vault V2",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Galaxy's own curation app lists this exact Base vault under the same USDC Quality product, and Base Blockscout shows a verified Morpho VaultV2 created by VaultV2Factory with Base USDC as asset, 18 decimals and about 1.99M shares; it issues shares locally against Base USDC, so it is a native vault deployment, not a representation of the Ethereum vault. Galaxy curator/allocator roles were not re-read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Galaxy USDC Quality curation page (Base vault)",
+            "url": "https://curation.galaxy.com/vaults/0x1e9e47583f15d45a10df48c0b1846e0492c795d7"
+          },
+          {
+            "label": "gUSDCq Base token metadata",
+            "url": "https://base.blockscout.com/api/v2/tokens/0x1e9e47583f15D45a10Df48c0b1846E0492c795D7"
+          },
+          {
+            "label": "gUSDCq Base VaultV2 deployment",
+            "url": "https://base.blockscout.com/api/v2/addresses/0x1e9e47583f15D45a10Df48c0b1846E0492c795D7"
+          }
+        ]
       }
     ]
   },

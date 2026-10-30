@@ -2050,7 +2050,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
-    "summary": "Historical-only Bridge Risk: MAI had Multichain-era external lock/mint exposure, and public governance and post-incident reporting tied historical cross-chain supply and bad debt to that infrastructure. No exact historical lockbox, bridge controller, message path, or dated burn/mint event route is currently verified, so external-lock-mint is retained as a profile-level historical tier with manual-review confidence rather than as a current route classification. All 15 reviewed deployments are chain-local QiDao native issuance routes, not bridge representations; Polygon and Base are currently described by QiDao as fully live, the other nonzero-supply deployments are legacy native routes with current mintability unresolved, and Fraxtal is native but sunset with ownership renounced and zero supply. No bridge control is authored because no current or historical bridge controller is sufficiently verified to scope to a reviewed route.",
+    "summary": "Historical-only Bridge Risk: MAI had Multichain-era external lock/mint exposure, and public governance and post-incident reporting tied historical cross-chain supply and bad debt to that infrastructure. No exact historical lockbox, bridge controller, message path, or dated burn/mint event route is currently verified, so external-lock-mint is retained as a profile-level historical tier with manual-review confidence rather than a current route classification. All 16 reviewed deployments are chain-local QiDao native issuance routes, not bridge representations; Polygon and Base are currently described by QiDao as fully live, the other nonzero-supply deployments are legacy native routes with current mintability unresolved, and Fraxtal is native but sunset with ownership renounced and zero supply. No bridge control is authored because no current or historical bridge controller is sufficiently verified to scope to a reviewed route.",
     "reviewedAt": "2026-08-16",
     "reviewer": "Mint/bridge boundary migration; verified mai-qidao finding 2026-08-16",
     "confidence": "manual-review",
@@ -2480,6 +2480,35 @@
           {
             "label": "QiDao documentation",
             "url": "https://docs.mai.finance/"
+          }
+        ]
+      },
+      {
+        "id": "celo:0xb9c8f0d3254007ee4b98970b94544e473cd610ec",
+        "destinationChain": "celo",
+        "contractAddress": "0xb9c8f0d3254007ee4b98970b94544e473cd610ec",
+        "protocol": "QiDao native multichain MAI",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Celo Blockscout shows this exact address as verified EditableERC20 MAI/MIMATIC at 18 decimals with 1,000,000 totalSupply; its creator 0xe00eaa2787a8830a485153b7bf508bc781e4a220 is the same deployer as the reviewed Optimism MAI token, so this is chain-local QiDao issuance rather than a bridge representation. Owner/minter roles were not read, and the 999,866 units at the burn address are not treated as circulating supply.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "MAI on Celo Blockscout",
+            "url": "https://celo.blockscout.com/api/v2/tokens/0xb9c8f0d3254007ee4b98970b94544e473cd610ec"
+          },
+          {
+            "label": "Celo MAI deployment and creator",
+            "url": "https://celo.blockscout.com/api/v2/addresses/0xb9c8f0d3254007ee4b98970b94544e473cd610ec"
+          },
+          {
+            "label": "CoinGecko mimatic platform metadata",
+            "url": "https://api.coingecko.com/api/v3/coins/mimatic?localization=false&tickers=false"
           }
         ]
       }

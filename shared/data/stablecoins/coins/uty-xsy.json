@@ -38,8 +38,7 @@
       }
     ]
   },
-  "llamaId": "305",
-  "detailProvider": "defillama",
+  "detailProvider": "coingecko",
   "geckoId": "unity-2",
   "links": [
     {
@@ -75,6 +74,13 @@
   "collateralQuality": "exotic",
   "custodyModel": "cex",
   "governanceQuality": "single-entity",
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Migrated to V2 in April 2026",
+      "message": "YieldPoint replaced the Avalanche UTY token 0xdbc5192a6b6ffee7451301bb4ec312f844f02b4a with the Base-hub V2 deployment in April 2026; holders of the old token must migrate."
+    }
+  ],
   "liveReservesConfig": {
     "adapter": "accountable",
     "version": 1,

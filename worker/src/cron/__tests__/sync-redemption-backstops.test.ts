@@ -1169,6 +1169,25 @@ describe("syncRedemptionBackstops", () => {
     expect(metadata.liquidityStale).toBe(true);
   });
 
+  it("marks a future-dated DEX liquidity snapshot as stale instead of fresh", async () => {
+    const now = Math.floor(Date.now() / 1000);
+    loadDexLiquidityScoresMock.mockResolvedValue({
+      map: {
+        "cusd-cap": { liquidityScore: 29 },
+        "iusd-infinifi": { liquidityScore: 47 },
+      },
+      latestUpdatedAt: now + 60,
+    });
+
+    const { syncRedemptionBackstops } = await import("../sync-redemption-backstops");
+    const result = await syncRedemptionBackstops(mockD1(), new AbortController().signal);
+
+    expect(result.status).toBe("degraded");
+    const metadata = JSON.parse(result.metadata ?? "{}") as Record<string, unknown>;
+    expect(metadata.liquidityStale).toBe(true);
+    expect(metadata.reason).toBe("liquidity-evidence-stale");
+  });
+
   it("marks missing DEX liquidity snapshots as stale", async () => {
     loadDexLiquidityScoresMock.mockResolvedValue({
       map: {},

@@ -376,6 +376,40 @@ describe("handleDepegEvents", () => {
     expect(dataQuery?.sql).toContain("links.event_id != incidents.current_event_id");
   });
 
+  it("counts a superseded alias's linked rows in the projected public incident", async () => {
+    const { sqlite, db } = fixtures.open();
+    const canonicalKey = `ddr2:${"a".repeat(32)}`;
+    const aliasKey = `ddr2:${"b".repeat(32)}`;
+    const insertEvent = sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, ended_at,
+       start_price, peg_reference, source)
+      VALUES (?, 'apxusd-apyx', 'apxUSD', 'peggedUSD', 'below', 635, ?, ?, ?, 1, 'live')`);
+    insertEvent.run(90089, 1_780_671_044, 1_781_624_981, 0.9365);
+    insertEvent.run(90203, 1_781_632_159, null, 0.94);
+    const insertLink = sqlite.prepare(`INSERT INTO depeg_resolver_incident_event_links
+      (incident_key, event_id, relation, linked_at) VALUES (?, ?, 'observed', 1781632160)`);
+    insertLink.run(canonicalKey, 90089);
+    insertLink.run(aliasKey, 90203);
+    const insertIncident = sqlite.prepare(`INSERT INTO depeg_resolver_incidents
+      (incident_key, stablecoin_id, peg_currency, direction, first_event_id, current_event_id,
+       first_started_at, current_started_at, first_observed_peak_bucket_bps, incident_state,
+       superseded_by_incident_key, source_fingerprint, created_at, updated_at)
+      VALUES (?, 'apxusd-apyx', 'USD', 'below', ?, ?, ?, ?, 635, ?, ?, ?, 1781632160, 1781632160)`);
+    insertIncident.run(canonicalKey, 90089, 90089, 1_780_671_044, 1_780_671_044, "active", null, "a".repeat(64));
+    // Migration 0162's shape: the sealed duplicate keeps its own tail crossing.
+    insertIncident.run(aliasKey, 90203, 90203, 1_781_632_159, 1_781_632_159, "superseded", canonicalKey, "b".repeat(64));
+
+    const body = await readJsonResponse(
+      await handleDepegEvents(db, new URL("https://x/api/depeg-events?stablecoin=apxusd-apyx&includeTotal=false")),
+      200,
+    ) as { events: Array<Record<string, unknown>> };
+
+    // One public row groups both raw threshold crossings, including the row it publishes.
+    expect(body.events).toEqual([expect.objectContaining({
+      id: 90203, startedAt: 1_780_671_044, constituentEventCount: 2,
+    })]);
+  });
+
   it.each([0, 0.9893])("projects observed first-event price %s without replacing zero", async (startPrice) => {
     const currentRow = makeDepegRow({
       id: 90089,

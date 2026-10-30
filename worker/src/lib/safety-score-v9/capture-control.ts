@@ -89,6 +89,11 @@ function captureBinds(capture: SafetyScoreV9CaptureTuple): (string | number | nu
     capture.safetyScoreIdentity.evaluationBuildDigest, capture.workerVersion, capture.workerUploadedAtSec];
 }
 
+/**
+ * Records a deployment recapture request inside the control value. The row's
+ * `updated_at` stays the capture-commit clock (commitCaptureControl is its only
+ * writer), so a request never makes an uncommitted hour look captured.
+ */
 export async function requestRecapture(
   db: D1Database, capture: SafetyScoreV9CaptureTuple,
   target: { workerVersion: string; workerUploadedAtSec: number; evaluationBuildDigest: string; registryFingerprint: string },
@@ -100,11 +105,11 @@ export async function requestRecapture(
     sourceCaptureTuple: capture, requestedAtSec: Math.floor(Date.now() / 1_000),
   });
   const result = await runWithOverloadRetry(() => db.prepare(`UPDATE cache SET
-    value = json_set(value, '$.recaptureRequest', json(?)), updated_at = ?
+    value = json_set(value, '$.recaptureRequest', json(?))
     WHERE key = ? AND ${CAPTURE_CAS_SQL}
     AND (json_extract(value, '$.recaptureRequest') IS NULL
       OR json_extract(value, '$.recaptureRequest.targetWorkerUploadedAtSec') <= ?)`).bind(
-    stableJsonStringifyV1(request), request.requestedAtSec, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
+    stableJsonStringifyV1(request), SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
     ...captureBinds(capture), target.workerUploadedAtSec,
   ).run(), 3, signal);
   if ((result.meta.changes ?? 0) > 0) return "requested";

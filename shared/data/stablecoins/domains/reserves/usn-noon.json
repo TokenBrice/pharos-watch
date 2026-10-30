@@ -7,7 +7,7 @@
       "pct": 64.4,
       "risk": "high",
       "assetClass": "private-credit",
-      "issuerOrObligor": "Fasanara Capital's FTAC fund, which both deploys and custodies the position, and its underlying borrowers",
+      "issuerOrObligor": "Fasanara Capital's FTAC fund, which deploys the position, and its underlying borrowers",
       "riskFactors": [
         "credit",
         "liquidity",
@@ -201,7 +201,7 @@
         "reserveName": "Private Credit (Fasanara FTAC)",
         "pct": 64.4,
         "disposition": "insufficient-evidence",
-        "rationale": "Accountable identifies the FTAC strategy and Noon's custody page states that the private-credit fund custodies the position it deploys, but current borrower identities, terms, seniority, and any independent custodian remain unpublished."
+        "rationale": "Accountable identifies the FTAC strategy and Noon's custody page says an unnamed independent third party administers and custodies the fund, but borrower identities, terms, seniority, and the custodian's name remain unpublished."
       },
       {
         "reserveIndex": 1,
@@ -250,7 +250,7 @@
   "custodyProfile": {
     "providers": [
       {
-        "name": "Fasanara Capital (FTAC private-credit fund; deploys and custodies the private-credit position)",
+        "name": "Fasanara Capital (FTAC fund; deploys the position; custody is an unnamed third party)",
         "role": "custodian",
         "sharePct": 64.44
       },
@@ -317,6 +317,6 @@
         "url": "https://etherscan.io/token/0xc9e3df3d230980b45adc623c81c3df4a73a5350f"
       }
     ],
-    "uncertainty": "Provider shares are pinned to the reserves_split in the Accountable payload of 2026-10-27T08:31:12.450Z and move with every deployment change, so they are a dated snapshot rather than a standing allocation. A 0% undisclosed share means every reserve dollar in that snapshot carries a named custodian of record; it does not mean the custody chain is documented end to end. Noon's custody page assigns funding-rate-arbitrage collateral to Ceffu, while the dated split leaves Ceffu with $1.00 and places the entire $8,847,789.24 funding-rate book inside the ForDefi bucket. The ForDefi wallet set behind that bucket is unpublished, and its undeployed USDC/USDT residual plus the Ethereum wallet row do not reconcile with the two collateral wallets on Noon's transparency page. Fasanara both deploys and custodies the private-credit position, so no independent custodian stands behind 64.44% of reserves, and no sub-custodian, trust, or special-purpose vehicle is named anywhere. Alpaca's FINRA and SIPC membership and its excess Lloyd's of London cover are issuer claims from the custody page rather than verified documents, and Noon reaches Alpaca only through Dinari's permissioned USD+ token and the JAAA fund token. A second Dinari USD+ contract 0x98C6616F1CC0D3E938A16200830DD55663dd7DD3 holds 7,718,967.41 units and maps to no Accountable bucket. Segregation is contractual only: ToS Section 1 segregates the reserves from the Company's corporate operating funds, names no custodian, trust, or special-purpose vehicle, and ToS Section 6 makes a validly submitted redemption request an unsecured debt of the issuer, so holders have no bankruptcy-remote structure. Rehypothecation is conditional because ToS Section 5 authorizes redeployment only within a disclosed category list of stablecoin balances, tokenized and direct traditional-finance products, lending protocols, and delta-neutral funding-rate positions, rather than granting custodians open reuse rights."
+    "uncertainty": "Provider shares are pinned to the reserves_split in the Accountable payload of 2026-10-27T08:31:12.450Z and move with every deployment change, so they are a dated snapshot rather than a standing allocation. A 0% undisclosed share means every reserve dollar in that snapshot carries a named custodian of record; it does not mean the custody chain is documented end to end. Noon's custody page assigns funding-rate-arbitrage collateral to Ceffu, while the dated split leaves Ceffu with $1.00 and places the entire $8,847,789.24 funding-rate book inside the ForDefi bucket. The ForDefi wallet set behind that bucket is unpublished, and its undeployed USDC/USDT residual plus the Ethereum wallet row do not reconcile with the two collateral wallets on Noon's transparency page. Fasanara deploys the private-credit position; the issuer says an unnamed third party administers and custodies it, and no sub-custodian, trust, or SPV is named. Alpaca's FINRA and SIPC membership and its excess Lloyd's of London cover are issuer claims from the custody page rather than verified documents, and Noon reaches Alpaca only through Dinari's permissioned USD+ token and the JAAA fund token. A second Dinari USD+ contract 0x98C6616F1CC0D3E938A16200830DD55663dd7DD3 holds 7,718,967.41 units and maps to no Accountable bucket. Segregation is contractual only: ToS Section 1 segregates the reserves from the Company's corporate operating funds, names no custodian, trust, or special-purpose vehicle, and ToS Section 6 makes a validly submitted redemption request an unsecured debt of the issuer, so holders have no bankruptcy-remote structure. Rehypothecation is conditional because ToS Section 5 authorizes redeployment only within a disclosed category list of stablecoin balances, tokenized and direct traditional-finance products, lending protocols, and delta-neutral funding-rate positions, rather than granting custodians open reuse rights."
   }
 }

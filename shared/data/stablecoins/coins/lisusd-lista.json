@@ -2,7 +2,7 @@
   "id": "lisusd-lista",
   "name": "Lista USD",
   "symbol": "lisUSD",
-  "oneLiner": "lisUSD is Lista DAO's BNB Chain stablecoin, with crypto-collateralized CDPs, documented USDT/USDC PSM minting and credit-based D3M issuance.",
+  "oneLiner": "lisUSD is Lista DAO's BNB Chain stablecoin; the CDP that mints it is winding down by 2026-10-31 as positions move to Lista Lending.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
@@ -40,5 +40,12 @@
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",
   "governanceQuality": "multisig",
+  "notices": [
+    {
+      "type": "info",
+      "title": "lisUSD CDP winding down: 31 October 2026",
+      "message": "Lista DAO is retiring the CDP that mints lisUSD; existing positions must migrate to Lista Lending or be repaid and withdrawn by 31 October 2026. New CDP borrowing already reverts protocol-wide, and lisUSD continues in Lista Lending and the PSM."
+    }
+  ],
   "launchDate": "2022-08-19"
 }

@@ -487,19 +487,26 @@ export async function loadSubscriptionsByIds(
 ): Promise<SubscriptionRow[]> {
   const uniqueIds = Array.from(new Set(stablecoinIds));
   if (uniqueIds.length === 0) return [];
-  const placeholders = uniqueIds.map(() => "?").join(", ");
-  const result = await db
-    .prepare(
-      `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
-              alert_dews_override, alert_depeg_override, alert_safety_override,
-              alert_launch_override, alert_reserve_override, alert_freeze_override,
-              dews_min_band, safety_mode, depeg_worsening_bps_step
-         FROM telegram_subscriptions
-        WHERE chat_id = ?
-          AND stablecoin_id IN (${placeholders})
-        ORDER BY stablecoin_id`,
-    )
-    .bind(chatId, ...uniqueIds)
-    .all<SubscriptionRow>();
-  return result.results ?? [];
+  const rows: SubscriptionRow[] = [];
+  // Bound one chat id plus the ids: an unchunked list overflows D1's
+  // bound-parameter ceiling once a chat follows 100 coins.
+  for (const idChunk of chunkArray(uniqueIds, D1_SAFE_IN_CLAUSE_BIND_LIMIT - 1)) {
+    const placeholders = idChunk.map(() => "?").join(", ");
+    const result = await db
+      .prepare(
+        `SELECT stablecoin_id, alert_dews, alert_depeg, alert_safety, alert_launch, alert_reserve, alert_freeze,
+                alert_dews_override, alert_depeg_override, alert_safety_override,
+                alert_launch_override, alert_reserve_override, alert_freeze_override,
+                dews_min_band, safety_mode, depeg_worsening_bps_step
+           FROM telegram_subscriptions
+          WHERE chat_id = ?
+            AND stablecoin_id IN (${placeholders})
+          ORDER BY stablecoin_id`,
+      )
+      .bind(chatId, ...idChunk)
+      .all<SubscriptionRow>();
+    rows.push(...(result.results ?? []));
+  }
+  return rows.sort((left, right) =>
+    left.stablecoin_id < right.stablecoin_id ? -1 : left.stablecoin_id > right.stablecoin_id ? 1 : 0);
 }

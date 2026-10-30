@@ -134,8 +134,7 @@
     "semantics": "attestation-mix",
     "breakerScope": "frax-frax",
     "display": {
-      "url": "https://frax.com/transparency",
-      "label": "Frax Reserve Index"
+      "url": "https://api.frax.finance/v2/frax/balance-sheet/latest"
     },
     "inputs": {
       "primary": {

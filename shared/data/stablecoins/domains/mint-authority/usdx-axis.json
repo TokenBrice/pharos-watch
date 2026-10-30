@@ -62,12 +62,12 @@
         "observedAt": "2026-10-15",
         "observedBlock": 26197360,
         "safe": {
-          "owners": ["0xae89fd944a412a3e1f6a8dec586f9a040e8d69a3", "0x79170f93ca5d2d3cb56c3cdff84015960259c41a", "0xc39fdd5c692f8778f7357e7f6cb72f359b96151b", "0x1623016a129e3acd16cb4a56d215e60f7f7a7027", "0x73a50922f75a2e4a7cdb949489738f23251b7fb7"],
+          "owners": ["0xae89fd944a412a3e1f6a8dec586f9a040e8d69a3", "0x79170f93ca5d2d3cb56c3cdff84015960259c41a", "0x5cf29d864b929f4388ae1bdef5aef0e10c0c639e", "0xf43778acc624f04bbb3499f13694e9d1b728ac57", "0x73a50922f75a2e4a7cdb949489738f23251b7fb7"],
           "threshold": 3,
           "enabledModules": [],
           "guard": null,
-          "observedBlock": 26197360,
-          "observedAt": "2026-10-15",
+          "observedBlock": 26297271,
+          "observedAt": "2026-10-29",
           "source": "onchain"
         },
         "sources": [

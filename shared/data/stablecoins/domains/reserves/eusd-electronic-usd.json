@@ -2,69 +2,51 @@
   "id": "eusd-electronic-usd",
   "reserves": [
     {
-      "name": "Wrapped Compound USDT (wcUSDTv3)",
-      "pct": 33.33,
+      "sourceKey": "reserve-protocol-dtf:0x8c106eedad96553e64287a5a6839c3cc78afa3d0",
+      "name": "Gauntlet USDC Prime vault (gtusdcp)",
+      "pct": 30.01,
+      "risk": "medium",
+      "coinId": "gtusdcp-gauntlet",
+      "depType": "collateral",
+      "assetClass": "protocol-position"
+    },
+    {
+      "sourceKey": "reserve-protocol-dtf:0x27f2f159fe990ba83d57f39fd69661764bebf37a",
+      "name": "Wrapped Compound USDC (wcUSDCv3)",
+      "pct": 25.01,
       "risk": "low",
+      "coinId": "usdc-circle",
+      "depType": "collateral",
+      "assetClass": "protocol-position"
+    },
+    {
+      "sourceKey": "reserve-protocol-dtf:0x7133ebcb1a23e3d8be7ff09362b02b2a2e4c3da4",
+      "name": "Static Aave USDT (saEthUSDT)",
+      "pct": 24.97,
+      "risk": "medium",
       "coinId": "usdt-tether",
       "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Compound III USDT market and its collateralized borrowers",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "reserve-protocol-dtf:0xeb74ec1d4c1dab412d5d6674f6833fd19d3118ce"
+      "assetClass": "protocol-position"
     },
     {
-      "name": "Static Aave USDC (saEthUSDC)",
-      "pct": 33.34,
-      "risk": "low",
-      "coinId": "usdc-circle",
+      "sourceKey": "reserve-protocol-dtf:0xb576765fb15505433af24fee2c0325895c559fb2",
+      "name": "Sentora PYUSD Main vault (senPYUSDmain)",
+      "pct": 10.01,
+      "risk": "medium",
+      "coinId": "senpyusdmain-sentora",
       "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Aave V3 Ethereum USDC market and its supplied-liquidity borrowers",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "reserve-protocol-dtf:0x0adc69041a2b086f8772acce2a754f410f211bed"
-    },
-    {
-      "name": "Wrapped Compound USDC (wcUSDCv3)",
-      "pct": 33.33,
-      "risk": "low",
-      "coinId": "usdc-circle",
-      "depType": "collateral",
-      "assetClass": "protocol-position",
-      "issuerOrObligor": "Compound III USDC market and its collateralized borrowers",
-      "riskFactors": [
-        "credit",
-        "liquidity",
-        "counterparty",
-        "smart-contract",
-        "concentration"
-      ],
-      "liquidityHorizon": "unknown",
-      "sourceKey": "reserve-protocol-dtf:0x27f2f159fe990ba83d57f39fd69661764bebf37a"
+      "assetClass": "protocol-position"
     },
     {
       "sourceKey": "reserve-protocol-dtf:0x9a1d6bd5b8642c41f25e0958129b85f8e1176f3e",
       "name": "Gauntlet USDC Frontier vault (gtusdcf)",
-      "pct": 0,
+      "pct": 10,
       "risk": "high",
       "assetClass": "protocol-position"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-20",
+    "reviewedAt": "2026-10-30",
     "reviewer": "FD19 bottom-up refinement 2026-10-21 (classification only)",
     "confidence": "verified",
     "sources": [
@@ -99,13 +81,17 @@
       {
         "label": "eUSD current collateral basket proposal identifies Frontier strategy, retrieved 2026-10-20",
         "url": "https://forum.reserve.org/t/rfc-collateral-basket-change-proposal-methodology-v2-alignment/1656"
+      },
+      {
+        "label": "Reserve Protocol DTF basket API (read 2026-10-30)",
+        "url": "https://api.reserve.org/discover/dtfs"
       }
     ],
-    "rationale": "Classification-only review on 2026-10-20 adds the exact keyed Frontier Morpho VaultV2 as a protocol-position. Explorer-verified source at 0x9a1d6bd5b8642c41f25e0958129b85f8e1176f3e implements ERC-4626 shares over adapter investments, rather than a direct USDC balance. The issuer basket proposal identifies the same Frontier strategy. Its zero-percent row is classification metadata for the live adapter key, not measured zero exposure; runtime weights remain producer-owned. No coinId, obligor census, maturity maximum, reserve realization horizon or executable liquidity is inferred. The retained 33.33/33.34/33.33 rows remain the historical July 20 composition, not today's basket. That historical observation at Ethereum block 25575568 (2026-07-20T17:58:47Z) measured BackingManager 0xf014fef41ccb703975827c8569a3f0940cfd80a4 balances of 6513292.234353 wcUSDCv3, 7129655.677323 wcUSDTv3 and 6595709.630305 saEthUSDC, corroborating BasketHandler's three equal-weight positions and rejecting an earlier invented secondary-manager split. This classification review does not renew that composition or claim full current portfolio coverage. All liquidity questions require same-pin positions and available assets, gates/caps and actual withdrawal mechanics; generic permission to withdraw is insufficient.",
-    "compositionBasis": "Historical July 20, 2026 pinned BasketHandler/BackingManager observation at Ethereum block 25575568, cross-checked against 25537982; separate zero-percent live-key classification metadata reviewed 2026-10-20",
-    "compositionAsOf": "2026-07-20",
+    "rationale": "Composition updated to the issuer-published basket from the 2026-09-29 basket RFC: saEthUSDT 24.97%, wcUSDCv3 25.01%, gtusdcp 30.01%, gtusdcf 10.00%, senPYUSDmain 10.01%. BackingManager 0xf014fef41ccb703975827c8569a3f0940cfd80a4 holds all five; wcUSDTv3 is dust and no saEthUSDC balance remains.",
+    "compositionBasis": "Issuer basket weights (api.reserve.org/discover/dtfs) read 2026-10-30, corroborated by eUSD BackingManager balances",
+    "compositionAsOf": "2026-10-30",
     "scope": "classification-only",
-    "knownUnknownExposure": "Historical July basket rows remain linked to their underlying stablecoins. The live Frontier keyed row establishes protocol-position class only; current borrowers/obligors, allocations, maturity and amount-specific liquidity are not established by the vault name or denomination.",
+    "knownUnknownExposure": "Vault rows establish protocol-position class only; obligors, allocations, maturity and amount-specific liquidity are not established by the vault name.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

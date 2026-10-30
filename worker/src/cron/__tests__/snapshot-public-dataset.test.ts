@@ -223,6 +223,33 @@ describe("snapshotPublicDataset", () => {
     expect(insert).toBeUndefined();
   });
 
+  it("writes the admitted slot's write-once day when a late delivery crosses UTC midnight", async () => {
+    const slotStartedAtSec = Date.parse("2026-05-15T23:45:00Z") / 1000;
+    const slotDayStartedAtSec = Date.parse("2026-05-15T00:00:00Z") / 1000;
+    // The wall clock is already 2026-05-16; the admitted slot is 2026-05-15 23:45.
+    const db = mockD1([
+      publishedDewsPointer(),
+      snapshotCacheRows([
+        { key: "stablecoins", value: STABLECOINS_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+        { key: "report_card_cache", value: REPORT_CARD_CACHE_PAYLOAD, updatedAt: NOW_SEC },
+      ]),
+      { match: "FROM stability_index", rows: [], first: {
+        ...PSI_ROW, computed_at: slotDayStartedAtSec - 86_400,
+      } },
+      { match: "FROM stress_signal_publication_rows", rows: STRESS_ROWS },
+      { match: "FROM dex_liquidity", rows: [...DEX_ROWS] },
+      { match: "INSERT OR IGNORE INTO public_snapshots", rows: [], runMeta: { changes: 1 } },
+    ]);
+
+    const result = await snapshotPublicDataset(db, undefined, {
+      completionReason: "same_day_catch_up",
+      slotStartedAtSec,
+    });
+
+    expect(getInsertBinds(db)![0]).toBe("2026-05-15");
+    expect(result.metadata).toContain('"snapshotDate":"2026-05-15"');
+  });
+
   it("degrades before immutable insert when the stablecoins cache predates the scheduled slot", async () => {
     const staleForSlotUpdatedAt = NOW_SEC - 15 * 60;
     const db = mockD1([stablecoinsCacheTable({

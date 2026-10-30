@@ -4,7 +4,7 @@
     {
       "sourceKey": "quantoz-transparency:government-bonds",
       "name": "US Treasuries",
-      "pct": 66,
+      "pct": 70,
       "risk": "very-low",
       "assetClass": "government-security",
       "issuerOrObligor": "United States Treasury",
@@ -18,7 +18,7 @@
     {
       "sourceKey": "quantoz-transparency:cash",
       "name": "Cash deposits at Tier 1 European banks",
-      "pct": 33,
+      "pct": 30,
       "risk": "very-low",
       "assetClass": "bank-deposit",
       "riskFactors": [
@@ -27,17 +27,10 @@
         "concentration"
       ],
       "liquidityHorizon": "immediate"
-    },
-    {
-      "name": "Unclassified residual in published reserve percentages",
-      "pct": 1,
-      "risk": "high",
-      "unclassifiedResidual": true,
-      "residualReason": "insufficient-evidence"
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-03",
+    "reviewedAt": "2026-10-30",
     "reviewer": "Unknown wave W1R71 primary-source reserve review",
     "confidence": "verified",
     "sources": [
@@ -54,21 +47,12 @@
         "url": "https://www.dnb.nl/en/public-register/information-detail/?registerCode=WFTEG&relationNumber=R186418"
       }
     ],
-    "rationale": "The issuer snapshot explicitly published 30 August 2026 reports USDQ reserves at 33% cash and 66% government bonds, with 101.91% reserve coverage. Dollar reserve policy identifies US Treasuries. The named percentages sum to 99%; retain the unexplained 1% as a measured unclassified tail without normalizing the named categories. The publication date is the only dated basis disclosed, not an independent attestation or an assertion of a later measured book.",
-    "compositionBasis": "Whole USDQ reserve denominator in the issuer snapshot published 30 August 2026: 33% cash + 66% government bonds + 1% unexplained residual",
-    "compositionAsOf": "2026-08-30",
+    "rationale": "The issuer snapshot published 14 October 2026 reports USDQ reserves at 30% cash and 70% government bonds with a 102.10% reserve ratio. The two published categories total 100%, closing the earlier 1% unclassified tail; the 30 August 2026 snapshot (33% cash, 66% bonds, 101.91%) is superseded and not carried forward. Bank identities, bond maturities and independent assurance remain undisclosed.",
+    "compositionBasis": "Issuer snapshot dated 14 October 2026: 30% cash + 70% government bonds (whole reserve)",
+    "compositionAsOf": "2026-10-14",
     "scope": "full-composition",
-    "knownUnknownExposure": "The issuer does not classify the missing percentage point, name its deposit banks, give a maximum maturity, or quantify bond realization time. The 1% tail remains unclassified.",
-    "knownUnknownExposurePct": 1,
-    "nonLinkDispositions": [
-      {
-        "reserveIndex": 2,
-        "reserveName": "Unclassified residual in published reserve percentages",
-        "pct": 1,
-        "disposition": "insufficient-evidence",
-        "rationale": "The disclosed 33% cash and 66% bonds sum to 99%. The issuer does not identify the remaining percentage point or confirm a rounding interpretation."
-      }
-    ]
+    "knownUnknownExposure": "The issuer does not name its deposit banks, give a maximum government-bond maturity or quantify bond realization time.",
+    "knownUnknownExposurePct": 0
   },
   "custodyProfile": {
     "providers": [

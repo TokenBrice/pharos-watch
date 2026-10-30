@@ -1,4 +1,4 @@
-import { WORKER_TRACKED_META_BY_ID } from "./stablecoins/worker-runtime-registry";
+import { WORKER_ACTIVE_IDS, WORKER_TRACKED_META_BY_ID } from "./stablecoins/worker-runtime-registry";
 import { REDEMPTION_BACKSTOP_CONFIGS } from "./redemption-backstop-configs";
 import type { ExitRouteOutput } from "../types/exit-route";
 import type { RedemptionBackstopConfig } from "./redemption-backstop-configs/shared";
@@ -118,6 +118,11 @@ export function getRedemptionBackstopConfig(stablecoinId: string): RedemptionBac
   return REDEMPTION_BACKSTOP_CONFIGS[stablecoinId] ?? null;
 }
 
+/**
+ * Live producer cohort: configured routes whose stablecoin is still active.
+ * Frozen, pre-launch, quarantined and delisted configs remain archive history
+ * and are excluded from write-side crons and live aggregates.
+ */
 export function getConfiguredRedemptionBackstopIds(): string[] {
-  return Object.keys(REDEMPTION_BACKSTOP_CONFIGS);
+  return Object.keys(REDEMPTION_BACKSTOP_CONFIGS).filter((stablecoinId) => WORKER_ACTIVE_IDS.has(stablecoinId));
 }

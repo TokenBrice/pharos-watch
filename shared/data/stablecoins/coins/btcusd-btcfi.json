@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Overcollateralized Bitcoin (WBTC, BTCB, cbBTC, native BTC) via CDP vaults",
+  "collateral": "Overcollateralized CDP vaults: WBTC, BTCB, cbBTC, native BTC, JPYC",
   "pegMechanism": "Overcollateralized CDP with liquidation mechanisms",
   "mechanismArchetype": "cdp",
   "llamaId": "183",

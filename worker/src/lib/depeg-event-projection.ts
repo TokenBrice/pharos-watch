@@ -157,7 +157,7 @@ function activeIncidentProjectionSql(stablecoinId: string | null): string {
          JOIN depeg_events alias_current_event
            ON alias_current_event.id = alias.current_event_id
          LEFT JOIN depeg_resolver_incident_event_links links
-           ON links.incident_key = canonical.incident_key
+           ON links.incident_key IN (canonical.incident_key, alias.incident_key)
         WHERE alias.incident_state = 'superseded'
           AND canonical.incident_state = 'active'
           AND alias.current_event_id != canonical.current_event_id

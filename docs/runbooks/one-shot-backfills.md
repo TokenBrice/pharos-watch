@@ -123,7 +123,7 @@ Epoch text requires unsigned integer digits or calendar-valid ISO date/date-time
 
 Backfills per-coin supply history snapshots. When historical market-price series are available, the job also persists daily `supply_history.price` values on restored rows so historical PSI replay can use day-level deviation instead of blunt peak fallback.
 
-DefiLlama detail history preserves complete observed zero circulation, inserting missing days or replacing prior positive rows. Native non-USD zero needs no USD valuation and may carry `price: null`; positive native observations still require historical valuation or the explicitly enabled recent-window emergency fallback. Missing, empty or malformed circulating buckets never become zero and leave existing history unchanged.
+DefiLlama detail history preserves complete observed zero circulation, inserting missing days or replacing prior positive rows. Native non-USD zero needs no USD valuation and may carry `price: null`; positive native observations still require historical valuation or the explicitly enabled recent-window emergency fallback. Missing, empty or malformed circulating buckets never become zero and leave existing history unchanged. A daily price outside 2x the median of its neighbouring week is withheld from valuation: a non-USD day interpolates from admitted neighbours or stays unwritten, so a provider scale defect or one-day venue wick cannot value supply.
 
 Commodity/CoinGecko history pairs prices and caps at the same timestamp, selecting the first valid pair per UTC day. Missing caps may use historical EVM `totalSupply()` at day close only for a complete roster containing exactly one canonically supported EVM deployment; mixed-family/multi-deployment rosters fail closed with `unsupported-complete-roster`. Current supply is never projected backward. Protocol-TVL fallback stores `price: null` outside returned price-chart coverage rather than extrapolating jobs.
 
@@ -160,7 +160,7 @@ The replay supply window includes the full 21-day lookback needed by target/prio
 
 ## backfill-cg-prices
 
-Backfills market prices for the PSI-eligible universe, including off-catalog historical assets such as `ust-terra`. It fills NULL `supply_history.price` gaps and inserts missing daily supply rows only when upstream market-cap history exists.
+Backfills market prices for the PSI-eligible universe, including off-catalog historical assets such as `ust-terra`. It fills NULL `supply_history.price` gaps and inserts missing daily supply rows only when upstream market-cap history exists and CoinGecko is that coin's admitted supply provider (not `detailProvider: "defillama"`); for DefiLlama-authority coins it fills prices only, leaving supply to `backfill-supply-history`. Isolated daily price excursions outside 2x their neighbouring-week median are withheld from price filling as well.
 
 **Query parameters**
 

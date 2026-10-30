@@ -160,8 +160,10 @@ function classifySafetyMove(oldGrade: string, newGrade: string): SafetyMoveKind 
   const oldRank = getReportCardGradeRank(oldGrade);
   const newRank = getReportCardGradeRank(newGrade);
   const floorRank = getReportCardGradeRank(SAFETY_POLICY.severeFloorGrade);
-  // Unrankable grades are treated as severe so they are never silently dropped.
-  if (oldRank == null || newRank == null || oldRank < 0 || newRank < 0) return "severe-downgrade";
+  // Truly unrankable grades are treated as severe so they are never silently
+  // dropped. NR is the known unavailable rating (rank -1), not a grade: a coin
+  // leaving NR is an improvement on the same rank ladder the router uses.
+  if (oldRank == null || newRank == null) return "severe-downgrade";
   if (newRank === oldRank) return null;
   if (newRank > oldRank) return "upgrade";
   const intoFloor = floorRank != null && newRank <= floorRank;

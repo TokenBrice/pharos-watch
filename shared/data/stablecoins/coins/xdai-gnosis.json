@@ -8,7 +8,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "USDS locked or bridged through Gnosis Chain bridge infrastructure, with wrapped WXDAI used for ERC-20 integrations",
+  "collateral": "Mostly sUSDS shares plus a small USDS buffer in the Ethereum xDAI Foreign Bridge; WXDAI is only the ERC-20 wrapper",
   "pegMechanism": "Native gas token on Gnosis Chain backed by bridged USDS; users can bridge between USDS and xDAI through official Gnosis bridge routes",
   "detailProvider": "coingecko",
   "geckoId": "xdai",

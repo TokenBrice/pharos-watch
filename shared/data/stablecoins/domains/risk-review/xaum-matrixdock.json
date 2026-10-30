@@ -30,7 +30,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "external-validated-network",
-    "summary": "Matrixdock retired Polygon, HashKey Chain and Tron on August 7, 2026. Six deployments are issuer-native; the HyperEVM deployment is a verified UUPS MTokenSide representation whose configured messenger mints and burns against cross-chain messages, with LayerZero peer configuration and a four-hour owner delay.",
+    "summary": "Matrixdock retired Polygon, HashKey Chain and Tron on August 7, 2026. Six deployments are issuer-native; HyperEVM and Arc are UUPS MTokenSide representations whose messengers mint and burn against cross-chain messages. HyperEVM peers and a four-hour owner delay are reviewed; Arc messenger and owner unread.",
     "reviewedAt": "2026-09-21",
     "reviewer": "Claude curation campaign 2026-09-21 (Ctrl3)",
     "confidence": "verified",
@@ -263,6 +263,44 @@
           {
             "label": "HyperEVM XAUm messenger proxy and LayerZero transaction history",
             "url": "https://hyperevmscan.io/address/0xdb132ebae3fcce50d6c55088f079386dcca8ff24#code"
+          }
+        ]
+      },
+      {
+        "id": "arc:0x178b01f61cbea1d2a5581fe1621be607835ec349",
+        "destinationChain": "arc",
+        "contractAddress": "0x178b01f61cbea1d2a5581fe1621be607835ec349",
+        "protocol": "Matrixdock MTokenSide via LayerZero messenger",
+        "issuanceModel": "bridge-representation",
+        "routeClass": "canonical",
+        "riskTier": "external-validated-network",
+        "semantics": "burn-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Matrixdock's address registry lists this exact Arc token, and Arc Blockscout shows an EIP-1967 proxy over MTokenSide implementation 0x8fac22684c16fdb25514cafc17c8643355753dd1; the verified implementation exposes ccReceive/ccSend mint-budget and messenger/operator/revoker roles, the same Matrixdock side-chain model reviewed on HyperEVM. Arc supply is 1,060.884 XAUm at 18 decimals. The Arc messenger address, peers, owner delay and rate limits were not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "failureDomainKeys": [
+          "protocol:matrixdock-mtoken-messaging",
+          "protocol:layerzero",
+          "contract:arc:0x178b01f61cbea1d2a5581fe1621be607835ec349"
+        ],
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Matrixdock XAUm contract addresses",
+            "url": "https://matrixdock.gitbook.io/matrixdock-docs/english/gold-token-xaum/smart-contract/contract-address"
+          },
+          {
+            "label": "XAUm Arc proxy and MTokenSide implementation",
+            "url": "https://explorer.arc.io/api/v2/addresses/0x178b01f61cbea1d2a5581fe1621be607835ec349"
+          },
+          {
+            "label": "Verified MTokenSide source on Arc",
+            "url": "https://explorer.arc.io/api/v2/smart-contracts/0x8FAC22684C16FdB25514Cafc17c8643355753dd1"
+          },
+          {
+            "label": "XAUm Arc token metadata",
+            "url": "https://explorer.arc.io/api/v2/tokens/0x178b01f61cbea1d2a5581fe1621be607835ec349"
           }
         ]
       }

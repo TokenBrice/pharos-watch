@@ -43,5 +43,86 @@
     "evidence": "At a current-live BSC PublicNode read on 2026-07-15 (head 110070558), tracked UUSD proxy 0x61a10e8556bed032ea176330e7f17d6a12a10000 had EIP-1967 implementation 0xA4f44c290CC693fC0c985d679281c61e99d9Be9a and proxy-admin slot 0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE. The verified implementation exposes freeze/unfreeze and pause/unpause to admin or owner; its _update path rejects frozen senders and recipients and all updates while paused, transferFrom separately rejects a frozen spender, and approvals reject frozen owners or spenders. The live proxy reported owner=4/6 Safe 0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4, admin=zero, paused=false, and frozen(random)=false. Safe-origin eth_call simulations of freeze(random) and pause() both succeeded without broadcast; an unprivileged random-account zero-value transfer returned true. The free BSC endpoint rejects archival calls without a personal token, so this is a current-live observation rather than a retained fixed-block claim. The proxy-admin chain is 0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE -> owner 0x2D49CB4194dFa42d711699a87C10C6BbC05d94b6 -> the same Safe, so it also retains an upgrade path, although the live direct freeze/pause functions already resolve this as Yes. UUSD's official issuance page and repository describe the same controls, and the March 2026 SlowMist report identifies arbitrary account freeze and global pause; its then-reported 3/5 Safe configuration is treated as historical because the current live read is 4/6. The current UUSD pages did not link Terms, Privacy, or a reserve-attestation page, and Arquivo.pt returned no UUSD site snapshot; neither the whitepaper nor the contract audit supplies a proof of reserves. Those legal/transparency gaps are not used to infer the direct on-chain result. Quorum reconciliation 2026-10-19: a BSC PublicNode read at block 128580479 returned getOwners() = seven owners and getThreshold() = 4 for Safe 0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4, matching the mint-authority sidecar's 4/7 reads at blocks 103627514 and 125056528, which bracket this review's 2026-07-15 read; the 4/6 label above is treated as a miscount and the current owner configuration is 4/7.",
     "reviewer": "Codex Safety Score V9 access review",
     "reviewedAt": "2026-07-15"
+  },
+  "bridgeRouteRisk": {
+    "tier": "issuer-native-burn-mint",
+    "summary": "UUSD is issued natively at one CREATE2 address on BSC and Robinhood Chain. Both deployments use the same verified UUSD implementation and no bridge representation is identified; Robinhood proxy owner and minter roles were not read.",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "Codex bridge route review",
+    "confidence": "manual-review",
+    "sources": [
+      {
+        "label": "UUSD developers page (CREATE2 multi-chain contract)",
+        "url": "https://uusd.ai/developers"
+      },
+      {
+        "label": "UUSD on Robinhood Chain Blockscout",
+        "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x61a10e8556bed032ea176330e7f17d6a12a10000"
+      },
+      {
+        "label": "UUSD BSC transparent proxy",
+        "url": "https://bscscan.com/address/0x61a10e8556bed032ea176330e7f17d6a12a10000#code"
+      }
+    ],
+    "routes": [
+      {
+        "id": "bsc:0x61a10e8556bed032ea176330e7f17d6a12a10000",
+        "destinationChain": "bsc",
+        "contractAddress": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
+        "protocol": "Anything Labs UUSD (CREATE2 native issuance)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "The BSC UUSD proxy at this address is a verified EIP-1967 TransparentUpgradeableProxy over the same UUSD implementation 0xa4f44c290cc693fc0c985d679281c61e99d9be9a, with owner 4-of-7 Safe 0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4 and freeze/pause controls recorded in the blacklistability review; it is chain-local native issuance, not a bridge representation. No bridge controller is identified.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "UUSD developers page (CREATE2 multi-chain contract)",
+            "url": "https://uusd.ai/developers"
+          },
+          {
+            "label": "UUSD BSC transparent proxy",
+            "url": "https://bscscan.com/address/0x61a10e8556bed032ea176330e7f17d6a12a10000#code"
+          },
+          {
+            "label": "UUSD BSC verified implementation",
+            "url": "https://bscscan.com/address/0xa4f44c290cc693fc0c985d679281c61e99d9be9a#code"
+          }
+        ]
+      },
+      {
+        "id": "robinhood:0x61a10e8556bed032ea176330e7f17d6a12a10000",
+        "destinationChain": "robinhood",
+        "contractAddress": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
+        "protocol": "Anything Labs UUSD (CREATE2 native issuance)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Anything Labs' developer page states UUSD is issued at this same CREATE2 address on BNB Chain, Ethereum, Base and Robinhood Chain; Robinhood Blockscout shows Unity USD/UUSD at 18 decimals with 100,000,000 total supply, and the EIP-1967 implementation 0xa4f44c290cc693fc0c985d679281c61e99d9be9a is the same verified UUSD implementation recorded for BSC. Issuer coverage describes native issuance per chain, not a bridge representation. The Robinhood proxy owner/minter was not read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "UUSD developers page (CREATE2 multi-chain contract)",
+            "url": "https://uusd.ai/developers"
+          },
+          {
+            "label": "UUSD on Robinhood Chain Blockscout",
+            "url": "https://robinhoodchain.blockscout.com/api/v2/tokens/0x61a10e8556bed032ea176330e7f17d6a12a10000"
+          },
+          {
+            "label": "UUSD Robinhood proxy and implementation",
+            "url": "https://robinhoodchain.blockscout.com/api/v2/addresses/0x61a10e8556bed032ea176330e7f17d6a12a10000"
+          }
+        ]
+      }
+    ]
   }
 }

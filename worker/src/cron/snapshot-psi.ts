@@ -10,6 +10,12 @@ import { round1 } from "@shared/lib/math";
 
 interface SnapshotPsiDailyOptions {
   completionReason?: string;
+  /**
+   * Admitted slot clock. The aggregated UTC day comes from this clock, so a
+   * late delivery that crosses midnight still writes the day its admission
+   * checked. Defaults to the wall clock.
+   */
+  slotStartedAtSec?: number;
 }
 
 interface DailyAggregateRow {
@@ -32,7 +38,7 @@ export async function snapshotPsiDaily(
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const now = Math.floor(Date.now() / 1000);
-  const todayMidnight = bucketUnixSecondsToUtcDay(now);
+  const todayMidnight = bucketUnixSecondsToUtcDay(options.slotStartedAtSec ?? now);
   const yesterdayMidnight = todayMidnight - DAY_SECONDS;
 
   let row: DailyAggregateRow | null;

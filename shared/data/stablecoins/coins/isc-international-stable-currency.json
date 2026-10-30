@@ -61,5 +61,12 @@
     "yieldType": "nav-appreciation"
   },
   "custodyModel": "unknown",
-  "governanceQuality": "multisig"
+  "governanceQuality": "multisig",
+  "notices": [
+    {
+      "type": "info",
+      "title": "Issuer entered survival mode 2024-12-04",
+      "message": "ISC Money's co-founder announced that business development, marketing, integrations and the points system shut down; the token stayed live."
+    }
+  ]
 }

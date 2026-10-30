@@ -61,6 +61,87 @@ describe("buildDependencyHubsModel", () => {
     expect(model.mappedSupply.knownUsd).toBe(1200);
   });
 
+  it("classifies each hub's own published wrapper form when the dependent also has a mechanism parent", () => {
+    const mixedCards = [
+      ...cards,
+      { id: "usdt-tether", name: "Tether", symbol: "USDT" },
+      { id: "susdc-spark", name: "Spark Savings USDC", symbol: "spUSDC" },
+      { id: "susdt-spark", name: "Spark Savings USDT", symbol: "spUSDT" },
+      { id: "usdb-blast", name: "USD Balance", symbol: "USDB" },
+    ];
+    const mixedEdges: ReportCardsV9DependencyEdge[] = [
+      { from: "usdc-circle", to: "susdc-spark", kind: "serial", materiality: "serial", weight: null, upstreamScore: 88, wrapperForm: "native-staked" },
+      { from: "usds-sky", to: "susdc-spark", kind: "serial", materiality: "serial", weight: null, upstreamScore: 71, wrapperForm: null },
+      { from: "usdt-tether", to: "susdt-spark", kind: "serial", materiality: "serial", weight: null, upstreamScore: 69, wrapperForm: "native-staked" },
+      { from: "usds-sky", to: "susdt-spark", kind: "serial", materiality: "serial", weight: null, upstreamScore: 71, wrapperForm: null },
+      { from: "dai-makerdao", to: "usdb-blast", kind: "serial", materiality: "serial", weight: null, upstreamScore: 76, wrapperForm: null },
+    ];
+    const model = buildDependencyHubsModel({
+      cards: mixedCards,
+      edges: mixedEdges,
+      mcapMap: new Map([
+        ["susdc-spark", 309_688_947.03],
+        ["susdt-spark", 735_077_798.78],
+        ["usdb-blast", 10_453_191.52],
+      ]),
+    });
+
+    // The mechanism parent publishes no form; it must not erase the wrapper
+    // parent's published form from that hub's own claim split.
+    const usdc = model.hubs.find(hub => hub.id === "usdc-circle")!;
+    expect(usdc.passThroughCount).toBe(1);
+    expect(usdc.passThroughUsd).toBeCloseTo(309_688_947.03, 2);
+    expect(usdc.unknownFormCount).toBe(0);
+    expect(usdc.unknownFormUsd).toBeNull();
+
+    const tether = model.hubs.find(hub => hub.id === "usdt-tether")!;
+    expect(tether.passThroughUsd).toBeCloseTo(735_077_798.78, 2);
+    expect(tether.unknownFormCount).toBe(0);
+
+    // This hub's own edges all lack a published form and stay unavailable.
+    const sky = model.hubs.find(hub => hub.id === "usds-sky")!;
+    expect(sky.passThroughCount + sky.vaultClaimCount).toBe(0);
+    expect(sky.passThroughUsd + sky.vaultClaimUsd).toBe(0);
+    expect(sky.unknownFormCount).toBe(2);
+    expect(sky.unknownFormUsd).toBeCloseTo(1_044_766_745.81, 2);
+
+    expect(model.mappedSupply.passThroughCount).toBe(2);
+    expect(model.mappedSupply.passThroughUsd).toBeCloseTo(1_044_766_745.81, 2);
+    expect(model.mappedSupply.unknownFormCount).toBe(1);
+    expect(model.mappedSupply.unknownFormUsd).toBeCloseTo(10_453_191.52, 2);
+  });
+
+  it("scopes a hub's USD split to its own published edge forms and classifies the dependent once globally", () => {
+    const scopedEdges: ReportCardsV9DependencyEdge[] = [
+      { from: "usdc-circle", to: "susdc-spark", kind: "serial", materiality: "serial", weight: null, upstreamScore: 88, wrapperForm: "native-staked" },
+      { from: "usds-sky", to: "susdc-spark", kind: "serial", materiality: "serial", weight: null, upstreamScore: 71, wrapperForm: null },
+      { from: "usds-sky", to: "susds-sky", kind: "serial", materiality: "serial", weight: null, upstreamScore: 80, wrapperForm: "pure" },
+    ];
+    const model = buildDependencyHubsModel({
+      cards: [...cards, { id: "susdc-spark", name: "Spark Savings USDC", symbol: "spUSDC" }],
+      edges: scopedEdges,
+      mcapMap: new Map([["susdc-spark", 300], ["susds-sky", 100]]),
+    });
+
+    // The hub published no form on its susdc edge, so that supply stays unavailable
+    // even though another parent published one; its own pure edge is pass-through.
+    const sky = model.hubs.find(hub => hub.id === "usds-sky")!;
+    expect(sky.passThroughCount).toBe(1);
+    expect(sky.passThroughUsd).toBe(100);
+    expect(sky.unknownFormCount).toBe(1);
+    expect(sky.unknownFormUsd).toBe(300);
+
+    const usdc = model.hubs.find(hub => hub.id === "usdc-circle")!;
+    expect(usdc.passThroughCount).toBe(1);
+    expect(usdc.passThroughUsd).toBe(300);
+
+    // The mapped total counts the dependent once, preferring the published wrapper form.
+    expect(model.mappedSupply.passThroughCount).toBe(2);
+    expect(model.mappedSupply.passThroughUsd).toBe(400);
+    expect(model.mappedSupply.unknownFormCount).toBe(0);
+    expect(model.mappedSupply.unknownFormUsd).toBeNull();
+  });
+
   it("uses v6 shared-book member supply as the fallback for both board and hero", () => {
     const skyCards = cards.map(card => ({ ...card, sharedBookId: card.id === "dai-makerdao" || card.id === "usds-sky" ? "sky-maker" : null }));
     const skyEdges: ReportCardsV9DependencyEdge[] = [

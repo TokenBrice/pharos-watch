@@ -12,7 +12,7 @@
   "variantOf": "usdt-tether",
   "variantKind": "strategy-vault",
   "pegReferenceId": "usdt-tether",
-  "collateral": "USDT0 was the only enabled deposit token at the fixed HyperEVM review block; Hyperbeat's documentation also lists USDe and USR as broader or legacy vault inputs. Deposits enter a dynamic HyperEVM DeFi strategy allocation, so the current constituent mix is not represented by fixed authored weights. Direct USDT is not an accepted deposit asset.",
+  "collateral": "USDT0 was the only enabled deposit token at the fixed HyperEVM review block; docs also list USDe and USR as broader or legacy inputs. Deposits enter a dynamic allocation whose largest tracked holding is Hyperbeat's own USD+ (masterUSD) vault token, a USDC and beatUSD lending vault rather than Tether. Direct USDT is not accepted.",
   "pegMechanism": "hbUSDT is a yield-bearing vault token over USDT strategy exposure. Hyperbeat's holder integration documentation specifies USDT0 output through a separate redemption contract, with liquidity-conditional instant redemption and a classic request route; it does not establish exact current executable capacity. Ultimate fiat par exit additionally depends on USDT0 realization and Tether's issuer route",
   "mechanismArchetypeReview": {
     "disposition": "unresolved",

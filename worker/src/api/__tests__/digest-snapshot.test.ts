@@ -1,12 +1,16 @@
 import { readJsonResponse } from "../../test-helpers/__shared/auth";
-import { afterEach, describe, it, expect } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
 import { handleDigestSnapshot } from "../digest-snapshot";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { DigestSnapshotResponseSchema } from "@shared/types/digest";
+import { API_CACHE_PROFILES } from "@shared/lib/api-cache-profiles";
 
 const fixtures = createLatestSchemaFixtureTracker();
-afterEach(() => fixtures.closeAll());
+afterEach(() => {
+  fixtures.closeAll();
+  vi.useRealTimers();
+});
 
 const nowSec = Math.floor(Date.now() / 1000);
 const todayStr = new Date(nowSec * 1000).toISOString().slice(0, 10);
@@ -291,5 +295,40 @@ describe("handleDigestSnapshot", () => {
     expect(body.blacklistEvents).toHaveLength(50);
     expect(body.blacklistEvents[0].address).toBe("address-51");
     expect(body.blacklistSummary).toEqual({ totalEvents: 52, knownAmountUsd: 500, valuedEvents: 50, unavailableAmountEvents: 2 });
+  });
+
+  it("withholds an open day's blacklist total and archive profile until the day closes", async () => {
+    const now = Date.parse("2026-10-01T10:00:00Z");
+    const day = Date.parse("2026-10-01T00:00:00Z") / 1000;
+    vi.useFakeTimers();
+    vi.setSystemTime(now);
+    const { sqlite, db } = fixtures.open();
+    const insertDigest = sqlite.prepare("INSERT INTO daily_digest (generated_at, digest_text, input_data) VALUES (?, '', ?)");
+    insertDigest.run(day + 8 * 3600 + 300, JSON.stringify({ totalMcapUsd: 100e9 }));
+    insertDigest.run(day - 86400 + 8 * 3600 + 300, JSON.stringify({ totalMcapUsd: 99e9 }));
+    const insert = sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number,
+       timestamp, amount_usd_at_event, amount_status, explorer_tx_url, explorer_address_url, suppression_reason)
+      VALUES (?, 'USDC', 'ethereum', 'Ethereum', 'blacklist', ?, ?, 1, ?, ?, 'resolved', '', '', NULL)`);
+    insert.run("observed-1", "address-1", "tx-1", day + 2 * 3600, 4e6);
+    insert.run("observed-2", "address-2", "tx-2", day + 5 * 3600, 4e6);
+    insert.run("observed-3", "address-3", "tx-3", day + 9 * 3600, 4e6);
+    // A completed day's cohort, so the control still resolves a full-day read.
+    insert.run("closed-1", "address-closed", "tx-closed", day - 86400 + 3 * 3600, 1e6);
+
+    const open = await handleDigestSnapshot(db, new URL("https://x/api/digest-snapshot?date=2026-10-01"));
+    const openBody = await readJsonResponse<{ blacklistSummary?: unknown }>(open, 200);
+    // Three events observed so far are a day-to-date read, not the day's total.
+    expect(openBody.blacklistSummary).toBeUndefined();
+    expect(open.headers.get("Cache-Control")).not.toBe(API_CACHE_PROFILES.archive);
+
+    const closed = await handleDigestSnapshot(db, new URL("https://x/api/digest-snapshot?date=2026-09-30"));
+    const closedBody = await readJsonResponse<{
+      blacklistSummary?: { totalEvents: number; knownAmountUsd: number | null; valuedEvents: number; unavailableAmountEvents: number };
+    }>(closed, 200);
+    expect(closedBody.blacklistSummary).toEqual({
+      totalEvents: 1, knownAmountUsd: 1e6, valuedEvents: 1, unavailableAmountEvents: 0,
+    });
+    expect(closed.headers.get("Cache-Control")).toBe(API_CACHE_PROFILES.archive);
   });
 });

@@ -40,7 +40,7 @@
     "compositionBasis": "Historical BSC block 117054691 route context; issuer documentation re-read 2026-10-09 without refreshed balances",
     "compositionAsOf": "2026-08-20",
     "scope": "selected-slices",
-    "knownUnknownExposure": "The documented Venus USDC route is confirmed, but current allocation, supply-to-vault reconciliation and BSC representation custody are unresolved. A 100% historical strategy statement is not a current measured Circle USDC share.",
+    "knownUnknownExposure": "The documented Venus USDC route is deployed but has carried only dust (the router holds the vault's whole share supply; hUSDC keeps dust USDC); current allocation, supply-to-vault reconciliation and custody remain unresolved.",
     "knownUnknownExposurePct": 0
   },
   "custodyProfile": {

@@ -7,7 +7,7 @@
     "backing": "crypto-backed",
     "governance": "centralized-dependent"
   },
-  "collateral": "Live Accountable reserves split across Binance off-exchange/perp margin and on-chain Solana/BSC reserves; ~10% of protocol fees route to an Insurance Fund",
+  "collateral": "Live Accountable reserves: native Bitcoin, Solana JLP, Binance off-exchange margin and BSC vaults; ~10% of protocol fees route to an Insurance Fund",
   "pegMechanism": "Overcollateralized, delta-neutral: long JLP + short perpetuals rebalanced via Copper/Ceffu off-exchange settlement; direct mint/redeem against USDC is restricted to whitelisted participants on Solana and BSC, while retail access is primarily secondary-market.",
   "mechanismArchetype": "synthetic-delta-neutral",
   "llamaId": "283",
