@@ -160,6 +160,7 @@ describe("syncSafetyScoreV9SupplyAttribution", () => {
           subjectDeploymentKey: lane, lookbackBlocks: 100_000,
           emitters: [{ address: "0x1111111111111111111111111111111111111111",
             expectedRuntimeCodeSha256: sha256HexFromBytes(new Uint8Array([0x60, 0])), families: ["Paused"] }],
+          provenance: { controlIds: ["fixture-owner"] },
         }] },
       );
       // This suite uses synchronous SQLite and RPC clock advances, so assert the
@@ -670,9 +671,7 @@ function censusMeta(
 }
 
 function censusSourceFixture(): SafetyScoreV9SupplyAttributionSource {
-  return {
-    ...xautSourceFixture(),
-    clockSec: CENSUS_CLOCK_SEC,
+  const censusProjection: NonNullable<SafetyScoreV9SupplyAttributionSource["censusProjection"]> = {
     activeAssetIds: ["shadow-fixture"],
     aggregateCirculatingById: {
       "shadow-fixture": { circulating: { peggedUSD: 1_000_000 }, observedAtSec: CENSUS_CLOCK_SEC },
@@ -686,6 +685,17 @@ function censusSourceFixture(): SafetyScoreV9SupplyAttributionSource {
         observedAtSec: CENSUS_CLOCK_SEC - 60,
       },
     },
+    pegReferenceById: {},
+  };
+  return {
+    ...xautSourceFixture(),
+    clockSec: CENSUS_CLOCK_SEC,
+    // The census population is independent of the attribution allowlist.
+    activeAssetIds: [],
+    aggregateCirculatingById: {},
+    chainCirculatingById: {},
+    navPriceById: {},
+    censusProjection,
   };
 }
 
@@ -704,7 +714,9 @@ function censusEvmDependencies(options: { pin?: boolean } = {}) {
   })));
   const dependencies = {
     resolveClosestBlockAtOrBeforeTimestamp: async () => options.pin === false ? null : 100,
-    fetchEvmBlockHeader: async () => ({
+    // A missing pin requires both the bracket search and finalized fallback
+    // to be unavailable; a successful finalized read is valid evidence.
+    fetchEvmBlockHeader: async () => options.pin === false ? null : ({
       number: 100,
       hash: `0x${"ab".repeat(32)}` as `0x${string}`,
       timestamp: CENSUS_CLOCK_SEC - 60,
@@ -883,13 +895,14 @@ describe("V9 supply attribution shadow census lane", () => {
         excluded: [],
       });
       expect(multicall).toHaveBeenCalled();
-      const stored = await readSafetyScoreV9DeploymentSupplyCensus(db, { clockSec: source.clockSec });
+      const stored = await readSafetyScoreV9DeploymentSupplyCensus(db, { clockSec: nowSec });
       expect(stored).toMatchObject({
         state: "ok",
         generationId: outcome.generationId,
-        capturedAtSec: source.clockSec,
+        capturedAtSec: nowSec,
       });
       const packet = stored.byId["shadow-fixture"]!;
+      expect(packet.observedAtSec).toBe(nowSec);
       expect(packet.conservation).toMatchObject({ rosterComplete: true, conserved: true });
       expect(packet.deployments).toHaveLength(1);
       expect(packet.deployments[0]).toMatchObject({
@@ -944,7 +957,7 @@ describe("V9 supply attribution shadow census lane", () => {
           "shadow-fixture": ["census-rejected:missing-block-pin"],
         },
       });
-      const stored = await readSafetyScoreV9DeploymentSupplyCensus(db, { clockSec: source.clockSec });
+      const stored = await readSafetyScoreV9DeploymentSupplyCensus(db, { clockSec: nowSec });
       const packet = stored.byId["shadow-fixture"]!;
       expect(packet.deployments).toEqual([]);
       expect(packet.conservation).toMatchObject({ rosterComplete: false, conserved: false });

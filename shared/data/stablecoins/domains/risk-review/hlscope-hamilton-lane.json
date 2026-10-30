@@ -208,5 +208,72 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "HLSCOPE is priced by the manager's fund valuation, not by an independent market: Hamilton Lane measures the SCOPE fund at fair market value with monthly valuations calculated by its valuation team and approved by its valuation committee, and the feeder's subscriptions and redemptions convert at fund NAV. RedStone transports that fundamental value on-chain through per-feed push contracts (Ethereum, Optimism and Polygon rows; 0.01% deviation trigger and 24h heartbeat each). At pinned Ethereum block 26305000 the feed contract 0x1f14a50bA904A28CF6088e71B6a15561074398d7 reported dataFeedId HLScope_FUNDAMENTAL, description 'RedStone Price Feed for HLScope_FUNDAMENTAL', 8 decimals and answer 1272.284184 last updated 2026-10-29T20:47:35Z, so the on-chain value tracks a per-unit NAV within the disclosed heartbeat. RedStone's relayer is permissionless and its update conditions are transport cadence, not an independent appraisal; the reviewed pricing authority stays with the manager's monthly valuation.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-30",
+      "reviewer": "RS2 research sprint 2026-10-30 (RS2-022)",
+      "rationale": "HLSCOPE is a tokenized feeder interest in a senior private-credit fund whose only price-sensitive conversion is subscription and redemption at fund NAV. The token is not borrower collateral and no liquidation engine consumes a price feed, so no collateral-parameter, liquidation, backstop or shutdown/bad-debt branch applies. The reviewed exposure is the top-level fund-share pricing authority.",
+      "sources": [
+        {
+          "label": "RedStone push-feed row: HLScope_FUNDAMENTAL on Ethereum at 0x1f14a50bA904A28CF6088e71B6a15561074398d7, 0.01% answer deviation, 24h heartbeat (observed 2026-10-30)",
+          "url": "https://app.redstone.finance/push-feeds/HLScope_FUNDAMENTAL/ethereumMultiFeed"
+        },
+        {
+          "label": "RedStone push-feed list: HLScope_FUNDAMENTAL Optimism 0x85C4F855Bc0609D2584405819EdAEa3aDAbfE97D and Polygon 0x780fe28dBac08eBa781de833A5E860C86D524251 rows, each 0.01% deviation / 24h heartbeat (observed 2026-10-30)",
+          "url": "https://app.redstone.finance/push-feeds?search=HLScope"
+        },
+        {
+          "label": "RedStone push-model documentation: relayer update conditions (time interval heartbeat, minimum deviation) and PriceFeedsAdapter contract (observed 2026-10-30)",
+          "url": "https://docs.redstone.finance/docs/dapps/redstone-push/"
+        },
+        {
+          "label": "Pinned Ethereum block 26305000 (0x6ad6101c88724d91f023af32cd83d4cc3c05a33c94c34f3627f762d6cae4d0c5, 2026-10-30T10:33:35Z): getDataFeedId=HLScope_FUNDAMENTAL, description='RedStone Price Feed for HLScope_FUNDAMENTAL', decimals=8, latestRoundData answer 1272.284184 updated 2026-10-29T20:47:35Z",
+          "url": "https://api-ethereum-mainnet.n.dwellir.com"
+        },
+        {
+          "label": "Ethereum feed contract page for the HLScope_FUNDAMENTAL push feed",
+          "url": "https://etherscan.io/address/0x1f14a50bA904A28CF6088e71B6a15561074398d7"
+        },
+        {
+          "label": "Hamilton Lane SCOPE strategy page: fund size measured at fair market value; valuations calculated monthly by Hamilton Lane's valuation team and reviewed/approved by its valuation committee; share-class performance as of 30/09/2026 (observed 2026-10-30)",
+          "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2 research sprint 2026-10-30 (RS2-022)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "RedStone push-feed row: HLScope_FUNDAMENTAL on Ethereum at 0x1f14a50bA904A28CF6088e71B6a15561074398d7, 0.01% answer deviation, 24h heartbeat (observed 2026-10-30)",
+        "url": "https://app.redstone.finance/push-feeds/HLScope_FUNDAMENTAL/ethereumMultiFeed"
+      },
+      {
+        "label": "RedStone push-feed list: HLScope_FUNDAMENTAL Optimism 0x85C4F855Bc0609D2584405819EdAEa3aDAbfE97D and Polygon 0x780fe28dBac08eBa781de833A5E860C86D524251 rows, each 0.01% deviation / 24h heartbeat (observed 2026-10-30)",
+        "url": "https://app.redstone.finance/push-feeds?search=HLScope"
+      },
+      {
+        "label": "RedStone push-model documentation: relayer update conditions (time interval heartbeat, minimum deviation) and PriceFeedsAdapter contract (observed 2026-10-30)",
+        "url": "https://docs.redstone.finance/docs/dapps/redstone-push/"
+      },
+      {
+        "label": "Pinned Ethereum block 26305000 (0x6ad6101c88724d91f023af32cd83d4cc3c05a33c94c34f3627f762d6cae4d0c5, 2026-10-30T10:33:35Z): getDataFeedId=HLScope_FUNDAMENTAL, description='RedStone Price Feed for HLScope_FUNDAMENTAL', decimals=8, latestRoundData answer 1272.284184 updated 2026-10-29T20:47:35Z",
+        "url": "https://api-ethereum-mainnet.n.dwellir.com"
+      },
+      {
+        "label": "Ethereum feed contract page for the HLScope_FUNDAMENTAL push feed",
+        "url": "https://etherscan.io/address/0x1f14a50bA904A28CF6088e71B6a15561074398d7"
+      },
+      {
+        "label": "Hamilton Lane SCOPE strategy page: fund size measured at fair market value; valuations calculated monthly by Hamilton Lane's valuation team and reviewed/approved by its valuation committee; share-class performance as of 30/09/2026 (observed 2026-10-30)",
+        "url": "https://www.hamiltonlane.com/en-us/strategies/evergreen/global/senior-credit-opportunities-fund"
+      }
+    ]
   }
 }

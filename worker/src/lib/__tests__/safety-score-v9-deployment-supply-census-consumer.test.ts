@@ -201,7 +201,27 @@ describe("deployment supply census admission", () => {
     });
   });
 
-  it("rejects an unbound census map and one built for another generation", () => {
+  it("admits a census captured under the previous prepare cycle's base input", () => {
+    // Production shape: the census run binds the source it measured (10:17's
+    // base id); the publication that reads it is prepared one cycle later, so
+    // its own base id differs. The carrier generation was admitted by its
+    // source clock, so the packet is evidence for this roster, not for the
+    // producer's base id.
+    const bound = fixedInput(packet());
+    const nextCycle = {
+      ...bound,
+      baseInputGenerationId: `report-cards-input:v1:${"3".repeat(64)}`,
+    } as SafetyScoreV9CompilerInput;
+    const { review: admitted, censusDiagnostics } = buildSafetyScoreV9SupplyAdmission(
+      nextCycle,
+      ASSET_ID,
+      profile(),
+    );
+    expect(admitted!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(true);
+    expect(censusDiagnostics.some((entry) => entry.code.startsWith("census-rejected:"))).toBe(false);
+  });
+
+  it("rejects an unbound census map and one built under another roster", () => {
     const bound = fixedInput(packet());
     const unbound = { ...bound, safetyScoreV9DeploymentSupplyCensusBinding: undefined };
     const { review: unboundReview, censusDiagnostics: unboundDiagnostics } =
@@ -211,23 +231,22 @@ describe("deployment supply census admission", () => {
       { deploymentRouteKey: null, code: "census-rejected:generation-unbound" },
     ]);
 
-    for (const binding of [
-      { ...bound.safetyScoreV9DeploymentSupplyCensusBinding!, registryFingerprint: "0".repeat(64) },
-      {
+    const foreignRoster = {
+      ...bound,
+      safetyScoreV9DeploymentSupplyCensusBinding: {
         ...bound.safetyScoreV9DeploymentSupplyCensusBinding!,
-        sourceBaseInputGenerationId: `report-cards-input:v1:${"0".repeat(64)}`,
+        registryFingerprint: "0".repeat(64),
       },
-    ]) {
-      const { review: mismatched, censusDiagnostics: mismatchedDiagnostics } = buildSafetyScoreV9SupplyAdmission(
-        { ...bound, safetyScoreV9DeploymentSupplyCensusBinding: binding },
-        ASSET_ID,
-        profile(),
-      );
-      expect(mismatched!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
-      expect(mismatchedDiagnostics).toEqual([
-        { deploymentRouteKey: null, code: "census-rejected:generation-mismatch" },
-      ]);
-    }
+    };
+    const { review: mismatched, censusDiagnostics: mismatchedDiagnostics } = buildSafetyScoreV9SupplyAdmission(
+      foreignRoster,
+      ASSET_ID,
+      profile(),
+    );
+    expect(mismatched!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(mismatchedDiagnostics).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:generation-mismatch" },
+    ]);
   });
 
   it("returns an expired bound to required with a named rejection", () => {

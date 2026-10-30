@@ -60,22 +60,32 @@ export const LANE_INCIDENT_CERTIFICATE_READ_STATES = [
 export type LaneIncidentCertificateReadState =
   (typeof LANE_INCIDENT_CERTIFICATE_READ_STATES)[number];
 
-/** Declared certificate fields that identify its screening set. */
-export type LaneIncidentCertificateScreeningSetInput = Pick<
-  V9LaneIncidentCertificate,
-  "screeningPolicyDigest" | "emitters"
->;
+/**
+ * Declared fields that identify a lane's screening set. The subject lane (OP-IR
+ * 5b) and the sorted contributor control ids are part of the identity: an added
+ * contributor, emitter or pin starts a new chain and inherits nothing.
+ */
+export interface LaneIncidentCertificateScreeningSetInput {
+  subjectDeploymentKey: string;
+  screeningPolicyDigest: string;
+  contributorControlIds: readonly string[];
+  emitters: readonly { address: string; expectedRuntimeCodeSha256: string }[];
+}
 
 export type LaneIncidentCertificateCacheKeyInput = LaneIncidentCertificateScreeningSetInput &
   Pick<
     V9LaneIncidentCertificate,
-    | "subjectDeploymentKey"
     | "fromBlock"
     | "toBlock"
     | "windowStartSec"
     | "windowEndSec"
   >;
 
+/** One certificate to persist with the contributors its descriptor screens. */
+export interface LaneIncidentCertificatePersistenceRow {
+  certificate: V9LaneIncidentCertificate;
+  contributorControlIds: readonly string[];
+}
 interface ParsedCertificateKey {
   deploymentKey: string;
   screeningSetId: string;
@@ -91,15 +101,16 @@ interface ParsedCertificateKey {
  * under different screening policies never chain with each other (R3/R5).
  */
 export function laneIncidentCertificateScreeningSetId(
-  certificate: LaneIncidentCertificateScreeningSetInput,
+  screeningSet: LaneIncidentCertificateScreeningSetInput,
 ): string {
   return sha256Hex(stableJsonStringifyV1({
-    domain: "safety-score-v9.lane-incident-certificate.screening-set.v1",
-    screeningPolicyDigest: certificate.screeningPolicyDigest,
-    emitters: certificate.emitters.map(({ address, expectedRuntimeCodeSha256 }) => ({
-      address,
-      expectedRuntimeCodeSha256,
-    })),
+    domain: "safety-score-v9.lane-incident-certificate.screening-set.v2",
+    subjectDeploymentKey: screeningSet.subjectDeploymentKey,
+    screeningPolicyDigest: screeningSet.screeningPolicyDigest,
+    contributorControlIds: [...screeningSet.contributorControlIds].sort(compareText),
+    emitters: screeningSet.emitters
+      .map(({ address, expectedRuntimeCodeSha256 }) => ({ address, expectedRuntimeCodeSha256 }))
+      .sort((left, right) => compareText(left.address, right.address)),
   }));
 }
 
@@ -270,12 +281,16 @@ function decodeRow(
   if (stableJsonStringifyV1(certificate) !== value) {
     return { detail: "stored certificate JSON is not canonical" };
   }
-  let expectedKey: string;
-  try {
-    expectedKey = laneIncidentCertificateCacheKey(certificate);
-  } catch {
-    return { detail: "stored certificate lane cannot carry a canonical cache key" };
-  }
+  // Rebuild the stored identity from the key's screening set: the certificate
+  // alone cannot rederive it, because the set also pins the descriptor's
+  // contributors (OP-IR 5b).
+  const expectedKey = [
+    CACHE_PREFIX,
+    certificate.subjectDeploymentKey,
+    parsedKey.screeningSetId,
+    `${padded(certificate.windowStartSec)}-${padded(certificate.windowEndSec)}`,
+    `${padded(certificate.fromBlock)}-${padded(certificate.toBlock)}`,
+  ].join(CACHE_SEPARATOR);
   if (expectedKey !== key) {
     return { detail: "cache key does not match the stored certificate" };
   }
@@ -408,25 +423,31 @@ function assessLane(
  * expired, gapped, future-dated, missing and malformed rows never become a
  * positive incident claim and are never re-dated on read.
  */
+export interface LaneIncidentCertificateReadTarget {
+  deploymentKey: string;
+  screeningSetId: string;
+}
+
 export async function loadLaneIncidentCertificate(
   db: D1Database,
-  deploymentKey: string,
+  target: LaneIncidentCertificateReadTarget,
   options: LoadLaneIncidentCertificateOptions,
 ): Promise<LaneIncidentCertificateRead> {
-  const results = await loadLaneIncidentCertificates(db, [deploymentKey], options);
-  const result = results.get(deploymentKey);
-  if (!result) throw new Error(`Lane incident certificate read dropped lane ${deploymentKey}`);
+  const results = await loadLaneIncidentCertificates(db, [target], options);
+  const result = results.get(target.deploymentKey);
+  if (!result) throw new Error(`Lane incident certificate read dropped lane ${target.deploymentKey}`);
   return result;
 }
 
 export async function loadLaneIncidentCertificates(
   db: D1Database,
-  deploymentKeys: readonly string[],
+  targets: readonly LaneIncidentCertificateReadTarget[],
   options: LoadLaneIncidentCertificateOptions,
 ): Promise<Map<string, LaneIncidentCertificateRead>> {
   throwIfAborted(options.signal);
   assertClock(options.nowSec);
-  const lanes = [...new Set(deploymentKeys)].sort(compareText);
+  const expectedSets = new Map(targets.map((target) => [target.deploymentKey, target.screeningSetId]));
+  const lanes = [...expectedSets.keys()].sort(compareText);
   const maxAgeSec = resolveLaneIncidentCertificateMaxAgeSec(options.policy, options.nowSec);
   const results = new Map<string, LaneIncidentCertificateRead>();
   if (lanes.length === 0) return results;
@@ -447,6 +468,7 @@ export async function loadLaneIncidentCertificates(
       continue;
     }
     if (!requested.has(parsed.deploymentKey)) continue;
+    if (parsed.screeningSetId !== expectedSets.get(parsed.deploymentKey)) continue;
     const laneKeys = keysByLane.get(parsed.deploymentKey);
     if (laneKeys) laneKeys.push(key);
     else keysByLane.set(parsed.deploymentKey, [key]);
@@ -467,53 +489,6 @@ export async function loadLaneIncidentCertificates(
   return results;
 }
 
-export interface LaneIncidentCertificateHead {
-  deploymentKey: string;
-  screeningSetId: string;
-  windowStartSec: number;
-  windowEndSec: number;
-  fromBlock: number;
-  toBlock: number;
-  cacheKey: string;
-}
-
-/**
- * Scheduling hint for the screening producer: the newest retained pinned window
- * per lane, read from keys only so no certificate body is transferred. Chain
- * continuity and freshness remain the read API's verdict, not this list's.
- */
-export async function listLaneIncidentCertificateHeads(
-  db: D1Database,
-  options: { signal?: AbortSignal } = {},
-): Promise<LaneIncidentCertificateHead[]> {
-  throwIfAborted(options.signal);
-  const familyKeys = await readFamilyKeys(db, options.signal);
-  const newestByLane = new Map<string, LaneIncidentCertificateHead>();
-  for (const key of familyKeys) {
-    const parsed = parseLaneIncidentCertificateKey(key);
-    if (!parsed) continue;
-    const current = newestByLane.get(parsed.deploymentKey);
-    if (
-      current === undefined ||
-      parsed.windowEndSec > current.windowEndSec ||
-      (parsed.windowEndSec === current.windowEndSec && parsed.windowStartSec > current.windowStartSec) ||
-      (parsed.windowEndSec === current.windowEndSec &&
-        parsed.windowStartSec === current.windowStartSec &&
-        compareText(parsed.screeningSetId, current.screeningSetId) < 0)
-    ) {
-      newestByLane.set(parsed.deploymentKey, {
-        deploymentKey: parsed.deploymentKey,
-        screeningSetId: parsed.screeningSetId,
-        windowStartSec: parsed.windowStartSec,
-        windowEndSec: parsed.windowEndSec,
-        fromBlock: parsed.fromBlock,
-        toBlock: parsed.toBlock,
-        cacheKey: key,
-      });
-    }
-  }
-  return [...newestByLane.values()].sort((left, right) => compareText(left.deploymentKey, right.deploymentKey));
-}
 
 interface PruneCandidate {
   cacheKey: string;
@@ -558,25 +533,26 @@ function selectPrunableKeys(rows: readonly PruneCandidate[]): string[] {
  */
 export async function persistLaneIncidentCertificates(
   db: D1Database,
-  certificates: readonly V9LaneIncidentCertificate[],
+  rows: readonly LaneIncidentCertificatePersistenceRow[],
   nowSec: number,
   signal?: AbortSignal,
 ): Promise<{ written: number; pruned: number }> {
   throwIfAborted(signal);
   assertClock(nowSec);
-  if (certificates.length === 0) return { written: 0, pruned: 0 };
+  if (rows.length === 0) return { written: 0, pruned: 0 };
 
   const byKey = new Map<string, PendingCertificate>();
   const newByGroup = new Map<string, Map<string, PendingCertificate>>();
-  for (const input of certificates) {
-    const certificate = V9LaneIncidentCertificateSchema.parse(input);
-    const key = laneIncidentCertificateCacheKey(certificate);
+  for (const input of rows) {
+    const certificate = V9LaneIncidentCertificateSchema.parse(input.certificate);
+    const screeningSet = { ...certificate, contributorControlIds: input.contributorControlIds };
+    const key = laneIncidentCertificateCacheKey(screeningSet);
     const value = stableJsonStringifyV1(certificate);
     const existing = byKey.get(key);
     if (existing && existing.value !== value) {
       throw new Error(`Conflicting lane incident certificates for one pinned window: ${key}`);
     }
-    const groupKey = `${certificate.subjectDeploymentKey}\u0000${laneIncidentCertificateScreeningSetId(certificate)}`;
+    const groupKey = `${certificate.subjectDeploymentKey}\u0000${laneIncidentCertificateScreeningSetId(screeningSet)}`;
     const pending = { certificate, value, groupKey };
     byKey.set(key, pending);
     const group = newByGroup.get(groupKey);

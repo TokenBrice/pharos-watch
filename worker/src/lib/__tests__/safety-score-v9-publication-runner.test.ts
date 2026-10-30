@@ -22,6 +22,10 @@ import { runSafetyScoreV9Publication, getSafetyScoreV9PublicationBudgetMs, retry
 import { V9_PUBLIC_MATERIALIZATION_CACHE_KEY } from "@shared/types/report-cards-v9-materialization";
 import * as publicationCodec from "../safety-score-v9/publication-codec";
 import * as evaluateSet from "@shared/lib/safety-score-v9/evaluate-set";
+import { loadReviewedLaneEmitterCatalog } from "../safety-score-v9/lane-emitter-catalog";
+import { persistLaneIncidentCertificates } from "../safety-score-v9/lane-incident-certificate-store";
+import { V9LaneIncidentCertificateSchema } from "@shared/types/safety-score-v9-incidents";
+import { parseSafetyScoreV9PublicationReplayCapture, replayLaneIncidentCertificates } from "../safety-score-v9/publication-replay-capture";
 
 const mocks = vi.hoisted(() => ({
   assess: vi.fn(),
@@ -70,6 +74,8 @@ vi.mock("../safety-score-v9/accepted-projection-readers", async (importOriginal)
 
 const fixedInput = makeV9FixedInput({ assetId: "usdc-circle" });
 const noMeasuredExitExpiry = { assetIds: [], witnessesByAssetId: {} };
+const missingLaneCertificateWarnings = loadReviewedLaneEmitterCatalog().descriptors
+  .map((row) => `lane-incident-certificate-missing:${row.subjectDeploymentKey}`).sort();
 
 function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = false) {
   return {
@@ -83,6 +89,43 @@ function acceptedBaseline(publication: SafetyScoreV9CurrentResponse, held = fals
 }
 
 describe("Safety Score V9 publication runner", () => {
+  it("retains exactly the compiled lane witnesses in the accepted replay capture", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
+    const descriptors = loadReviewedLaneEmitterCatalog().descriptors;
+    const descriptor = descriptors[0]!;
+    const families = [...new Set(descriptor.emitters.flatMap((emitter) => emitter.families))];
+    const certificate = V9LaneIncidentCertificateSchema.parse({
+      schemaVersion: 1, certificateId: "lane-cert:runner-current", evidenceClass: "explorer-events",
+      subjectDeploymentKey: descriptor.subjectDeploymentKey, fromBlock: 100, toBlock: 200,
+      toBlockHash: `0x${"1".repeat(64)}`, windowStartSec: fixedInput.clockSec - 100,
+      windowEndSec: fixedInput.clockSec - 60, observedAtSec: fixedInput.clockSec - 30,
+      screeningPolicyDigest: descriptor.screeningPolicyDigest, logDigest: "d".repeat(64),
+      emitters: descriptor.emitters.map((emitter) => ({ address: emitter.address, families: emitter.families,
+        expectedRuntimeCodeSha256: emitter.reviewedRuntimePin.split(":")[1],
+        runtimeCodeSha256: emitter.reviewedRuntimePin.split(":")[1] })),
+      screenedTopics: families.map((family) => ({ family, topic0: `0x${"2".repeat(64)}`, signature: `${family}()` })),
+      eventCounts: Object.fromEntries(families.map((family) => [family, 0])), finding: "no-material-admin-event",
+    });
+    try {
+      await persistLaneIncidentCertificates(db, [{ certificate, contributorControlIds: descriptor.contributorControlIds }], fixedInput.clockSec);
+      mocks.persist.mockImplementation(store.persistSafetyScoreV9Publication);
+      const result = await runSafetyScoreV9Publication({ db, fixedInput, fixedInputCacheValue: "exact-base" });
+      expect(result.status).toBe("published");
+      if (result.status !== "published") throw new Error("expected published");
+      const compiled = mocks.build.mock.calls[0]![0];
+      const expectedCertificates = new Map([[descriptor.subjectDeploymentKey, { screeningSetId: descriptor.screeningSetId, certificate }]]);
+      expect(compiled.laneIncidentCertificates).toEqual(expectedCertificates);
+      expect(compiled.laneEmitterDescriptors).toEqual(descriptors);
+      const retained = sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY)!;
+      const capture = await parseSafetyScoreV9PublicationReplayCapture(String(retained.value), fixedInput);
+      expect(capture.laneScreening).not.toBeNull();
+      expect(replayLaneIncidentCertificates(capture.laneScreening!)).toEqual(expectedCertificates);
+      expect(capture.laneScreening!.descriptors).toEqual(descriptors);
+      expect(result.warnings).toEqual(missingLaneCertificateWarnings.filter((warning) => !warning.endsWith(descriptor.subjectDeploymentKey)));
+    } finally { sqlite.close(); }
+  });
+
   it("retries an unselected acceptance without changing canonical bytes", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
     const store = await vi.importActual<typeof PublicationStore>("../safety-score-v9/publication-store");
@@ -1207,7 +1250,7 @@ describe("Safety Score V9 publication runner", () => {
           expect(stagingCalls).toBeLessThanOrEqual(40);
           expect(elapsedMs).toBeLessThan(165_000);
           expect(result).toMatchObject({
-            publicationGenerationId: candidate.publicationGenerationId, abortCause: null, warnings: [],
+            publicationGenerationId: candidate.publicationGenerationId, abortCause: null, warnings: missingLaneCertificateWarnings,
             publicMaterialization: { status: "materialized", publicationGenerationId: candidate.publicationGenerationId, siteRepresentationCount: 398 },
           });
           expect(sqlite.prepare("SELECT count(*) AS n FROM safety_score_site_manifests WHERE generation_id = ? AND retired_at IS NULL")
@@ -1324,7 +1367,7 @@ describe("Safety Score V9 publication runner", () => {
       const result = await runSafetyScoreV9Publication({ db, fixedInput, signal: caller.signal });
       expect(result).toMatchObject({ status: "published",
         publicationGenerationId: mocks.build.mock.results[0]!.value.candidate.publicationGenerationId,
-        warnings: ["publication-committed-before-post-commit-failure"],
+        warnings: [...missingLaneCertificateWarnings, "publication-committed-before-post-commit-failure"],
         abortCause: { source: "caller" }, phaseElapsedMs: { persist: expect.any(Number) },
       });
       expect((await publicationHealth.loadSafetyScoreV9PublicationHealth(db))?.status).toBe("current");
@@ -1347,7 +1390,7 @@ describe("Safety Score V9 publication runner", () => {
         captureArchiveBucket: { put } as unknown as R2Bucket,
       });
       expect(result).toMatchObject({
-        status: "published", warnings: ["publication-committed-before-abort"],
+        status: "published", warnings: [...missingLaneCertificateWarnings, "publication-committed-before-abort"],
         publicMaterialization: { status: "skipped", reason: "post-commit-interrupted" },
         postCommitFailure: { stage: "archive", message: "archive cancelled" },
         abortCause: { source: "caller", name: "AbortError" },
@@ -1373,7 +1416,7 @@ describe("Safety Score V9 publication runner", () => {
       const result = await runSafetyScoreV9Publication({ db, fixedInput });
       expect(result).toMatchObject({
         status: "published", abortCause: null,
-        warnings: ["publication-committed-before-post-commit-failure"],
+        warnings: [...missingLaneCertificateWarnings, "publication-committed-before-post-commit-failure"],
         postCommitFailure: { stage: "publication-write", message: "D1 response lost after commit" },
         phaseTimingBasis: "workers-io-boundary-attributed",
       });

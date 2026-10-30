@@ -10,7 +10,7 @@ The public grade-distribution total is labeled **assets**, since its A/B/C/D/F/N
 ## Methodology Identity
 
 - Active model: <!-- GENERATED-START: report-cards-active-model -->`v10`<!-- GENERATED-END: report-cards-active-model -->
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.38`<!-- GENERATED-END: methodology-version-safety-score -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-safety-score -->`v10.39`<!-- GENERATED-END: methodology-version-safety-score -->
 - Public breakdown/publication schema v8, API wrapper v9 and score trace v4; retained older publications require explicit historical dispatch or refusal, never fabricated causes or route identity
 - Policy: `shared/data/safety-score-v9/methodology-policy-candidate-v1.json`, parsed and digested by `shared/lib/safety-score-v9/policy.ts`
 - **Evaluation build:** `SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST` in `shared/data/safety-score-v9/evaluation-build-manifest-v1.ts` binds the offline candidate runtime import graph: captured fixed-input normalization, extension construction, fact-set compilation, evaluation and projection, including executable admission schemas, reviewed score-input data and full-catalog bytes/decoder. Edits anywhere in that evaluation-time closure rotate replay/publication identity; domain `safety-score-v9.evaluation-build.v2` hashes reviewed JSON data by its stable parsed value, so formatting/key-order-only edits do not, while executable sources stay byte-hashed. Capture-only network observers/producers and build-time generators are outside it; exact-input/fact digests bind their admitted output. Capture binding and runtime identity consumers are unchanged.
@@ -195,6 +195,10 @@ Current-only reads reject held/>7200 s ratings. Held-data displays require notic
 Score-map/yield retain null denominators/ratios, empty map, reason and null identity/time when unavailable, never `0%`/`100%` ([yield wire](./yield-intelligence.md#public-wire-contract)). Selector creation recomputes live V9 (`functions/lib/selector-canonical-snapshot.ts`); `503`: source/schema failure, not policy hold. Signed snapshots retain historical reads.
 
 ## History
+
+v10.39 closes no lane yet, even after post-deploy v2 certificates arrive. FRNT Arbitrum, Base and Optimism are global-scope native facts; the certificate router closes deployment-scope lanes only. FRNT Ethereum is already closed by an existing review, not a certificate. yUSD Ethereum has no provider keys and no issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Router scope is unchanged; extending it requires a separate owner decision.
+
+The five-lane screening catalog is not closure authority. The join still requires current issuer/provider witnesses, contributor parity, reviewed emitter pins/families, frozen policy and a contiguous current v2 certificate chain; retained v1 or missing certificates close nothing. OQ-1 checks current provider disclosures through evaluation, including exposure after witness windows and reviews not covering the lane. Replay retains the exact descriptors/certificates consumed.
 
 Asset-local build/admission/schema/evaluation/public-card failures yield technical `pipeline-gap` with null score/grade, never issuer NR. Continue unaffected assets only with ≥90% unaffected active assets, counting quarantines and their affected dependents, and every other gate passing; unattributable graph/aggregate/evaluator/identity/global failures hold the cohort.
 

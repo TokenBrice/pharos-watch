@@ -1,18 +1,29 @@
 import { z } from "zod";
 import {
+  V9AuthoredIncidentRegistryEnvelopeSchema,
+  V9ReviewedIncidentRegistryEnvelopeSchema,
+  V9ReviewedIncidentSchema,
   V9AttributedNegativeIncidentReviewSchema,
-  V9LaneScreeningRefSchema,
+  V9ProviderIncidentDisclosureSchema,
   V9ProviderIncidentReviewSchema,
   V9ProviderIncidentReviewScopeSchema,
   v9NegativeIncidentReviewTimeSec,
   type V9IncidentReviewRetirement,
-  type V9LaneScreeningRef,
+  type V9ProviderIncidentDisclosure,
   type V9ProviderIncidentReviewScope,
 } from "../../shared/types/safety-score-v9-incidents";
 import { isRecord } from "../../shared/lib/type-guards";
 import { compareText } from "../../shared/lib/safety-score-v9/primitives";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "../../shared/lib/safety-score-v9/evidence";
 import { ReviewEvidenceBuilder } from "../../shared/lib/safety-score-v9/review-evidence";
+import {
+  canonicalizeReviewedRegistryDigest,
+  expandReviewedRegistryReferences,
+  reviewedRegistryDigestKey,
+  reviewedRegistryEnvelopeDigest,
+  reviewedRegistryTextKey,
+  reviewedRegistryTupleKey,
+} from "../../shared/lib/safety-score-v9/reviewed-registry";
 
 /** The asset-attributed reviewed record kinds; the shared registry owns the union. */
 export { V9AttributedNegativeIncidentReviewSchema };
@@ -30,7 +41,12 @@ export type ProjectedNegativeIncidentReview = {
   assetId: string;
   scope: V9AttributedNegativeIncidentReview["scope"] | V9ProviderIncidentReviewScope;
   retired?: V9IncidentReviewRetirement;
-  laneScreeningRefs?: V9LaneScreeningRef[];
+  /**
+   * Provider scope only. Carried into the runtime row because OQ-1 evaluates
+   * exposures there; dropping it would make the runtime schema reject every
+   * covered asset and would leave the exposure check with an empty list.
+   */
+  providerIncidents?: V9ProviderIncidentDisclosure[];
   reviewedAt: string;
   windowStartSec: number;
   windowEndSec: number;
@@ -41,8 +57,8 @@ type ProjectedReviewInput = {
   reviewId: string;
   assetId: string;
   scope: ProjectedNegativeIncidentReview["scope"];
-  laneScreeningRefs?: V9LaneScreeningRef[];
   retired?: V9IncidentReviewRetirement;
+  providerIncidents?: V9ProviderIncidentDisclosure[];
   reviewedAt: string;
   windowStartSec: number;
   windowEndSec: number;
@@ -53,11 +69,14 @@ type ProjectedReviewInput = {
 /**
  * The parts of an authored provider row that decide its per-asset fan-out. The
  * full record (including expanded sources) is admitted after reference
- * expansion, so a malformed row still fails the build closed.
+ * expansion, so a malformed row still fails the build closed. Certificates are
+ * joined at evaluation time, so a provider row names no certificate here;
+ * incident disclosures and their lane exemptions are validated here so the
+ * per-asset narrowing below cannot emit an invalid row.
  */
 const AuthoredProviderReviewSchema = z.object({
   scope: V9ProviderIncidentReviewScopeSchema,
-  laneScreeningRefs: z.array(V9LaneScreeningRefSchema).min(1),
+  providerIncidents: z.array(V9ProviderIncidentDisclosureSchema).optional(),
 }).passthrough();
 
 /**
@@ -72,7 +91,7 @@ function projectReview(review: ProjectedReviewInput): ProjectedNegativeIncidentR
     payload: review.payload, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC });
   return { reviewId: review.reviewId, assetId: review.assetId, scope: review.scope,
     ...(review.retired === undefined ? {} : { retired: review.retired }),
-    ...(review.laneScreeningRefs === undefined ? {} : { laneScreeningRefs: review.laneScreeningRefs }),
+    ...(review.providerIncidents === undefined ? {} : { providerIncidents: review.providerIncidents }),
     reviewedAt: review.reviewedAt, windowStartSec: review.windowStartSec, windowEndSec: review.windowEndSec,
     // Map insertion order is the builder's source index, which each evidence key embeds.
     // Digest first: a URL ending in a key-like word must not precede the hex value.
@@ -97,22 +116,15 @@ export function projectNegativeIncidentReview(value: unknown): ProjectedNegative
 
 /**
  * Fan one authored provider-wide row into one authored row per covered asset,
- * before any asset-attributed reference expansion. Scope and lane screening
- * references are narrowed to that asset's lanes, so a provider check can never
- * speak to another asset's route. Every authored lane, control and reference
- * must survive the fan-out; a silently dropped one fails the build.
+ * before any asset-attributed reference expansion. Scope is narrowed to that
+ * asset's lanes, so a provider check can never speak to another asset's route.
+ * Every authored lane must survive the fan-out; a silently dropped one fails the
+ * build.
  */
 export function fanOutProviderIncidentReview(value: Record<string, unknown>): Record<string, unknown>[] {
-  const { scope, laneScreeningRefs } = AuthoredProviderReviewSchema.parse(value);
-  const coveredControls = scope.coveredControls;
-  type FanOutRow = Record<string, unknown> & {
-    assetId: string;
-    scope: V9ProviderIncidentReviewScope;
-    laneScreeningRefs: V9LaneScreeningRef[];
-  };
-  const rows: FanOutRow[] = [...new Set(scope.coveredRoutes.map((ref) => ref.assetId))].sort(compareText).map((assetId) => {
+  const { scope, providerIncidents } = AuthoredProviderReviewSchema.parse(value);
+  const rows: Record<string, unknown>[] = [...new Set(scope.coveredRoutes.map((ref) => ref.assetId))].sort(compareText).map((assetId) => {
     const lanes = scope.coveredRoutes.filter((ref) => ref.assetId === assetId);
-    const controls = coveredControls?.filter((ref) => ref.assetId === assetId);
     return {
       ...value,
       assetId,
@@ -121,13 +133,20 @@ export function fanOutProviderIncidentReview(value: Record<string, unknown>): Re
         providerKey: scope.providerKey,
         surface: scope.surface,
         coveredRoutes: lanes,
-        ...(controls === undefined || controls.length === 0 ? {} : { coveredControls: controls }),
       },
-      laneScreeningRefs: laneScreeningRefs.filter((ref) => ref.assetId === assetId),
+      // Lane exemptions are asset-scoped evidence: the per-asset row may only
+      // carry its own, or the strict re-admission of this row rejects the whole
+      // lane even though the authored review was valid.
+      ...(providerIncidents === undefined ? {} : {
+        providerIncidents: providerIncidents.map((incident) => ({
+          ...incident,
+          exemptions: incident.exemptions.filter((exemption) => exemption.assetId === assetId),
+        })),
+      }),
     };
   });
-  if (rows.reduce((count, row) => count + row.laneScreeningRefs.length, 0) !== laneScreeningRefs.length ||
-      rows.reduce((count, row) => count + (row.scope.coveredControls ?? []).length, 0) !== (coveredControls ?? []).length) {
+  const fannedLanes = rows.reduce((count, row) => count + (row.scope as V9ProviderIncidentReviewScope).coveredRoutes.length, 0);
+  if (fannedLanes !== scope.coveredRoutes.length) {
     throw new Error("Provider review coverage must resolve to its covered assets");
   }
   return rows;
@@ -142,15 +161,13 @@ export function projectProviderIncidentRow(value: Record<string, unknown>): Proj
   const { assetId, ...authored } = value;
   if (typeof assetId !== "string") throw new Error("A provider-wide runtime row requires its fan-out asset");
   const review = V9ProviderIncidentReviewSchema.parse(authored);
-  const assetLocal = review.scope.coveredRoutes.every((ref) => ref.assetId === assetId) &&
-    (review.scope.coveredControls ?? []).every((ref) => ref.assetId === assetId) &&
-    review.laneScreeningRefs.every((ref) => ref.assetId === assetId);
+  const assetLocal = review.scope.coveredRoutes.every((ref) => ref.assetId === assetId);
   if (!assetLocal) throw new Error("A provider-wide runtime row may only carry its own asset's lanes");
   return projectReview({
     reviewId: review.reviewId,
     assetId,
     scope: review.scope,
-    laneScreeningRefs: review.laneScreeningRefs,
+    ...(review.providerIncidents === undefined ? {} : { providerIncidents: review.providerIncidents }),
     ...(review.retired === undefined ? {} : { retired: review.retired }),
     reviewedAt: review.reviewedAt,
     windowStartSec: review.windowStartSec,
@@ -163,4 +180,37 @@ export function projectProviderIncidentRow(value: Record<string, unknown>): Proj
 /** Provider-wide rows are the only review kind without a top-level authored asset id. */
 export function isProviderReview(value: unknown): value is Record<string, unknown> {
   return isRecord(value) && isRecord(value.scope) && value.scope.kind === "provider";
+}
+
+const REVIEW_TABLES = { sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations" } as const;
+
+// Issuer-surface routes are plain ids; provider lanes are authored refs.
+const providerLaneKey = reviewedRegistryTupleKey("assetId", "routeId");
+
+export function buildIncidentRuntime(value: unknown) {
+  const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(value);
+  // A provider-wide review becomes one asset-attributed row per covered asset
+  // before reference expansion; every row the expander sees carries its asset.
+  const rows = authored.negativeReviews.flatMap((row) =>
+    isProviderReview(row) ? fanOutProviderIncidentReview(row) : [row]);
+  const envelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(expandReviewedRegistryReferences(
+    { ...authored, negativeReviews: rows }, "negativeReviews", REVIEW_TABLES));
+  const reviews = envelope.negativeReviews ?? [];
+  const canonical = canonicalizeReviewedRegistryDigest(envelope, {
+    incidents: reviewedRegistryDigestKey("incidentId"),
+    "incidents.*.primarySources": reviewedRegistryDigestKey("url"),
+    "incidents.*.remediation.sources": reviewedRegistryDigestKey("url"),
+    "incidents.*.posture.controlKinds": reviewedRegistryTextKey,
+    negativeReviews: reviewedRegistryDigestKey("reviewId"),
+    "negativeReviews.*.sources": reviewedRegistryDigestKey("url"),
+    "negativeReviews.*.scope.controlKinds": reviewedRegistryTextKey,
+    // Authored identity arrays are canonical sets, not ordered prose: their
+    // authored order must not become part of the build identity.
+    "negativeReviews.*.scope.controlIds": reviewedRegistryTextKey,
+    "negativeReviews.*.scope.coveredRoutes": (row: unknown) => typeof row === "string" ? row : providerLaneKey(row),
+  });
+  return { schemaVersion: 1, digest: reviewedRegistryEnvelopeDigest("safety-score-v9.incident-reviews.v1", "payload", canonical),
+    incidents: envelope.incidents.map((row) => V9ReviewedIncidentSchema.parse(row)),
+    negativeReviews: reviews.map((row) =>
+      isProviderReview(row) ? projectProviderIncidentRow(row) : projectNegativeIncidentReview(row)) };
 }
