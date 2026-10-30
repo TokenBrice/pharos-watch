@@ -396,3 +396,59 @@ the independent admission diagnostics; replay against an unchanged capture and r
 directional factor changes, unknown tails, original ceilings and public evidence references.
 Issuer non-disclosure keeps its charge. Registry entries and coin data require a separate
 reviewed authoring pass; this capability does not manufacture evidence closure.
+
+## Incident reviews and lane closure (v10.38)
+
+A curated negative incident review is a separate claim kind from a mechanism-overlay
+quality claim: it resolves a control's `incidentState`, not a component quality. Its
+authoring contract stays in
+[Incident-Review Authoring And Research](report-cards-appendix.md#incident-review-authoring-and-research);
+this section records only what v10.38 admits.
+
+- `conclusion: "no-known-incident"` asserts **no known control-domain incident on the
+  named scope inside the stated window**: compromise of a key, signer, verifier or admin;
+  unauthorized or unbacked mint, release or burn; theft or escrow drain; stuck or lost
+  supply; an unauthorized upgrade, peer or verification-config change; or a pause or
+  suspension still current at `reviewedAt`. Operational availability, peg, wrapper and
+  reserve events are disclosed in the review's findings and sources; they never carry the
+  conclusion and never become a positive incident row.
+- Identity is authored, never a compiler digest. Admitted scopes are the authored control
+  tuple (`routeId` with one `controlId`, or a sorted `controlIds` contributor set, or
+  `controlId: "*"` for the route-level fact that carries no authored ids), the asset-local
+  mint form (`controlId` without a route), and the unchanged deployment scope. A `"*"`
+  review never matches a fact with authored ids, an aggregate never matches a different
+  contributor set, and an authored review never falls back to a digest key.
+- The runtime registry keys a row by `(assetId, reviewId)`. A provider-wide review is
+  authored once per provider and fanned out at build time to one row per covered asset
+  while keeping its `reviewId`; every authored lane must survive the fan-out.
+- v10.39 closes no lane yet, even with v2 certificates. FRNT Arbitrum/Base/Optimism
+  are global-scope native facts, excluded by the deployment-scope router; FRNT Ethereum
+  is already closed by an existing review. yUSD Ethereum lacks provider keys and an
+  issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Scope is unchanged;
+  the five-lane catalog is screening coverage, not closure authority.
+- Deployment-scope closure needs current provider reviews per authored provider key (or the
+  issuer surface for `rail: "issuer-operated"`), a current issuer surface naming the lane,
+  descriptor/fact contributor parity and the newest v2 certificate for
+  `(subjectDeploymentKey, screeningSetId)`: `no-material-admin-event`, contiguous coverage
+  and a window end within `laneIncidentCertificateMaxAgeSec`. Missing/v1 certificates close nothing.
+- Certificate identifiers are never authored. `laneScreeningRefs` and `coveredControls`
+  are removed shapes; `npm run check:incident-review-keys` rejects either, rejects an
+  `asset:<id>` route on an issuer row, and rejects a provider renewal that drops an incident
+  another current review of the same provider discloses.
+- `providerIncidents` is required (empty = searched, none found). OQ-1 checks current same-key
+  disclosures from earliest witness start through evaluation, including non-covering reviews
+  and post-window exposure. Exemptions aggregate per `incidentKey` only from covering reviews:
+  deployment after finite exposure or pinned exposure-time config excluding compromised-only
+  verification. No observed exploit/current config is an exemption; only verifier compromise
+  permits exemptions. Other classes cannot name covered lanes.
+  Unreadable foreign reviews never quarantine the local asset: affected provider lanes stay
+  unknown with `bridge.diagnostics.incidentClosureFailures` code
+  `provider-incident-disclosures-unreadable`, naming lane, provider and foreign assets.
+- `incidentCoverage` on a compiled fact is derived provenance written by the router
+  (`provider-screening`: provider review ids, the issuer-surface review id, the screening
+  set, the certificate id and the contributor ids), never authored input.
+- A review is admitted only when the evaluation clock is at or after both `reviewedAt` and
+  `windowEndSec`, and no more than 365 days past either (the policy's reviewed-research
+  budget). A date-only `reviewedAt` is admitted after its UTC day ends; a timestamp is
+  admitted at its instant. Retirement keeps the row's provenance but removes it from
+  routing and evidence.

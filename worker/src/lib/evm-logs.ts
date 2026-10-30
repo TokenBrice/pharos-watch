@@ -2,6 +2,7 @@ import { ETHERSCAN_V2_BASE } from "./constants";
 import { decimalNumberFromBigInt, parseQuantityHex } from "./bigint";
 import { fetchJsonWithRetry } from "./fetch-retry";
 import { logWorkerEvent } from "./structured-log";
+import { throwIfAborted } from "./abort";
 
 const MAX_RECURSION_DEPTH = 8;
 const ETHERSCAN_MAX_RESULTS = 1000;
@@ -204,16 +205,18 @@ export async function fetchEvmLogsForTopicWithCompleteness(
   budget: SubrequestBudget,
   signal?: AbortSignal,
   timeoutMs = 30_000,
+  indexedTopic?: { index: 1 | 2; value: string },
+  deadlineMs?: number,
 ): Promise<EvmLogFetchResult> {
   const unscannedBlock = fromBlock - 1;
-  if (budgetExhausted(budget)) {
+  if (budgetExhausted(budget) || (deadlineMs != null && Date.now() >= deadlineMs)) {
     return {
       logs: [],
       complete: false,
       scannedToBlock: unscannedBlock,
       calls: 0,
       maxDepth: depth,
-      failureReason: "budget-exhausted",
+      failureReason: budgetExhausted(budget) ? "budget-exhausted" : "runtime-budget",
     };
   }
   if (depth > MAX_RECURSION_DEPTH) {
@@ -237,16 +240,26 @@ export async function fetchEvmLogsForTopicWithCompleteness(
     topic0: topicHash,
   });
   if (apiKey) params.set("apikey", apiKey);
+  if (indexedTopic) {
+    params.set(`topic${indexedTopic.index}`, indexedTopic.value);
+    params.set(`topic0_${indexedTopic.index}_opr`, "and");
+  }
 
-  budget.count++;
+  let calls = 0;
   const json = await rateLimit(async () => {
-    const timeout = AbortSignal.timeout(timeoutMs);
+    throwIfAborted(signal);
+    const remainingMs = deadlineMs == null ? timeoutMs : Math.min(timeoutMs, deadlineMs - Date.now());
+    if (budgetExhausted(budget) || remainingMs <= 0) return null;
+    budget.count++;
+    calls++;
+    const timeout = AbortSignal.timeout(remainingMs);
     const result = await fetchJsonWithRetry<{ status: string; message: string; result: unknown }>(
       `${ETHERSCAN_V2_BASE}?${params}`,
       {
         signal: signal ? AbortSignal.any([signal, timeout]) : timeout,
       },
-      1,
+      indexedTopic ? 0 : 1,
+      { deadlineMs },
     );
     if (!result?.response.ok) {
       if (result) {
@@ -258,8 +271,9 @@ export async function fetchEvmLogsForTopicWithCompleteness(
   });
 
   if (!json || json.status !== "1" || !Array.isArray(json.result)) {
-    if (json?.message === "No records found") {
-      return { logs: [], complete: true, scannedToBlock: toBlock, calls: 1, maxDepth: depth };
+    if (json?.message === "No records found" && (!indexedTopic
+      || (json.status === "0" && Array.isArray(json.result) && json.result.length === 0))) {
+      return { logs: [], complete: true, scannedToBlock: toBlock, calls, maxDepth: depth };
     }
     // API error — return incomplete so callers know the scan was not reliable.
     if (json) {
@@ -269,7 +283,7 @@ export async function fetchEvmLogsForTopicWithCompleteness(
       logs: [],
       complete: false,
       scannedToBlock: unscannedBlock,
-      calls: 1,
+      calls,
       maxDepth: depth,
       failureReason: json?.message ?? "etherscan-api-error",
     };
@@ -295,7 +309,7 @@ export async function fetchEvmLogsForTopicWithCompleteness(
         logs,
         complete: false,
         scannedToBlock: unscannedBlock,
-        calls: 1,
+        calls,
         maxDepth: depth,
         failureReason: "etherscan-result-cap-unsplittable",
       };
@@ -315,11 +329,13 @@ export async function fetchEvmLogsForTopicWithCompleteness(
       budget,
       signal,
       timeoutMs,
+      indexedTopic,
+      deadlineMs,
     );
     if (!first.complete) {
       return {
         ...first,
-        calls: first.calls + 1,
+        calls: first.calls + calls,
         maxDepth: Math.max(depth, first.maxDepth),
       };
     }
@@ -335,12 +351,14 @@ export async function fetchEvmLogsForTopicWithCompleteness(
       budget,
       signal,
       timeoutMs,
+      indexedTopic,
+      deadlineMs,
     );
     return {
       logs: [...first.logs, ...second.logs],
       complete: second.complete,
       scannedToBlock: second.complete ? toBlock : second.scannedToBlock,
-      calls: 1 + first.calls + second.calls,
+      calls: calls + first.calls + second.calls,
       maxDepth: Math.max(depth, first.maxDepth, second.maxDepth),
       failureReason: second.failureReason,
       rejectedLogs: [...(first.rejectedLogs ?? []), ...(second.rejectedLogs ?? [])],
@@ -359,7 +377,7 @@ export async function fetchEvmLogsForTopicWithCompleteness(
         ? parsedBlock - 1 : unscannedBlock);
   }
   return {
-    logs, complete: rejectedLogs.length === 0, scannedToBlock, calls: 1, maxDepth: depth,
+    logs, complete: rejectedLogs.length === 0, scannedToBlock, calls, maxDepth: depth,
     ...(rejectedLogs.length > 0 ? { rejectedLogs, validatedToBlock: toBlock, failureReason: "etherscan-malformed-logs" } : {}),
   };
 }

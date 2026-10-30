@@ -28,6 +28,53 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "ISC has no on-chain price feed and no borrower market. The issuer computes the ISC Target Price off-chain as the summed value of the Reserve Basket (p_isc = sum of p_asset x q_asset), the daily rebalance trades that basket at the next day's VWAP, and the ISC Issuer sizes and recalls ISC loans to the Reserves using the liquidity and price of ISC. At Solana mainnet slot 462996906 (2026-10-29T19:21:38Z) the ISC mint is a plain SPL Token-program mint whose mint authority and freeze authority are the 2-of-3 multisig 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ, so no program can gate issuance on an external price. This review classifies the documented top-level pricing authority only; it does not verify individual execution prices or the discretion applied to loan sizing.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "RS-088 ISC pricing-authority primary-source review",
+      "rationale": "The only price-sensitive control in the live stabilization path is the top-level issuance/redemption quote struck against the issuer's Target Price. The reviewed mechanism has no borrower collateral, liquidation or backstop branches (no CDP, lending market or liquidation engine consumes an ISC price), so declaring a borrower-branch set would invent one.",
+      "sources": [
+        {
+          "label": "ISC Key Concepts: Target Price is the summed basket value and the daily rebalance executes at the next day's VWAP",
+          "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-concepts.md"
+        },
+        {
+          "label": "ISC Advanced Mechanics: loan issuance/recall is the peg path; no external feed is named",
+          "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/advanced-mechanics.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RS-088 ISC pricing-authority primary-source review",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "ISC Key Concepts: Target Price = basket asset prices times quantities; daily rebalance priced at next-day VWAP",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/key-concepts.md"
+      },
+      {
+        "label": "ISC Advanced Mechanics: issuer issues or recalls ISC loans when market price diverges from target price",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/advanced-mechanics.md"
+      },
+      {
+        "label": "ISC Basic Mechanics: loan size is issuer-set from ISC liquidity and price; reserves buy and sell ISC",
+        "url": "https://wp.isc.money/how-isc-works/the-isc-reserves/basic-mechanics.md"
+      },
+      {
+        "label": "ISC mint account read at Solana slot 462996906 (2026-10-29T19:21:38Z): SPL Token-program mint, decimals 6, mint and freeze authority 3XM6WqYLx5gKpRNwnCcUrBmJAhRHx3imktwEvbRwXavZ",
+        "url": "https://api.mainnet-beta.solana.com"
+      },
+      {
+        "label": "ISC Solana token page for mint J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD",
+        "url": "https://solscan.io/token/J9BcrQfX4p9D1bvLzRNCbMDv8f44a9LFdeqNE4Yk2WMD"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "ISC has a single Solana deployment in the reviewed metadata and no sourced bridge, lockbox, or cross-chain route was resolved. Pharos treats this secondary-triage row as single-chain/native.",

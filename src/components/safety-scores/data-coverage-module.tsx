@@ -2,9 +2,16 @@
 
 import { ChevronDown, PauseCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { COVERAGE_GAP_OWNER_SWATCH_CLASSES } from "@shared/lib/classification";
+import {
+  COVERAGE_GAP_OWNER_SWATCH_CLASSES,
+  SAFETY_SCORE_OPEN_EVIDENCE_BUCKET_LABELS,
+} from "@shared/lib/classification";
 import { formatDecimal } from "@shared/lib/format";
-import type { DataCoverageModel } from "@/lib/safety-score-data-coverage";
+import {
+  describeIssuerReview,
+  type DataCoverageModel,
+  type DataCoverageReasonGap,
+} from "@/lib/safety-score-data-coverage";
 
 /** Static swatch per gap owner, in the canonical owner order of the view model. */
 const OWNER_SWATCHES: Record<string, string> = COVERAGE_GAP_OWNER_SWATCH_CLASSES;
@@ -21,6 +28,9 @@ const OWNER_SHORT_LABELS: Record<string, string> = {
   "producer-failed": "Feed",
   "method-unsupported": "Method",
   "published-evidence-expired": "Pharos",
+  unresearched: "Unresolved",
+  "public-data-uncurated": "Curation",
+  mixed: "Several",
 };
 
 function formatCount(value: number): string {
@@ -38,13 +48,33 @@ function Count({ value }: { value: number }) {
   return <span className="font-semibold text-foreground">{formatCount(value)}</span>;
 }
 
-/** Headline counts, read as one sentence rather than a tile row. */
+/** "1 documentation gap" reads correctly; the published label stays the vocabulary. */
+function bucketNoun(label: string, count: number): string {
+  return count === 1 ? label.replace(/s$/, "") : label;
+}
+
+/**
+ * Headline counts, read as one sentence rather than a tile row. The three
+ * bucket numbers are server-computed from `openEvidence`; this component only
+ * formats them, and says "unavailable" instead of inventing a zero when the
+ * payload predates the block (R1).
+ */
 function StatsSentence({ model }: { model: DataCoverageModel }) {
+  const evidence = model.openEvidence;
+  const buckets = SAFETY_SCORE_OPEN_EVIDENCE_BUCKET_LABELS;
   return (
     <p className="text-sm leading-relaxed text-muted-foreground">
       <Count value={model.assetCount} /> {model.assetCount === 1 ? "asset is" : "assets are"} assessed through the evaluation of{" "}
-      <Count value={model.inputsEvaluated} /> inputs with <Count value={model.openGapCount} />{" "}
-      remaining open data points.
+      <Count value={model.inputsEvaluated} /> inputs.{" "}
+      {evidence ? (
+        <>
+          <Count value={evidence.open} /> {bucketNoun(buckets.open, evidence.open).toLowerCase()} ·{" "}
+          <Count value={evidence.issuer} /> {bucketNoun(buckets.issuer, evidence.issuer).toLowerCase()} ·{" "}
+          <Count value={evidence.documentation} /> {bucketNoun(buckets.documentation, evidence.documentation).toLowerCase()}.
+        </>
+      ) : (
+        "Open-question counts are unavailable for this publication."
+      )}
     </p>
   );
 }
@@ -54,7 +84,7 @@ function GapOwnerBar({ model }: { model: DataCoverageModel }) {
     <div
       className="flex h-2.5 w-full gap-0.5 overflow-hidden rounded-md bg-background/70"
       role="img"
-      aria-label="Open data points by cause"
+      aria-label={`${SAFETY_SCORE_OPEN_EVIDENCE_BUCKET_LABELS.open} by owner`}
     >
       {model.gapOwners.map((owner, index) => (
         <span
@@ -64,8 +94,8 @@ function GapOwnerBar({ model }: { model: DataCoverageModel }) {
             index === 0 && "rounded-l-md",
             index === model.gapOwners.length - 1 && "rounded-r-md",
           )}
-          style={{ flexGrow: owner.count }}
-          title={`${owner.label}: ${formatCount(owner.count)}`}
+          style={{ flexGrow: owner.questions }}
+          title={`${owner.label}: ${formatCount(owner.questions)}`}
           aria-hidden="true"
         />
       ))}
@@ -91,7 +121,7 @@ function GapOwnerLegend({ model }: { model: DataCoverageModel }) {
           </span>
           <span className="hidden text-2xs text-muted-foreground lg:inline">{owner.label}</span>
           <span className="pharos-numeric text-2xs font-semibold tabular-nums text-foreground">
-            {formatCount(owner.count)}
+            {formatCount(owner.questions)}
           </span>
         </li>
       ))}
@@ -99,7 +129,7 @@ function GapOwnerLegend({ model }: { model: DataCoverageModel }) {
   );
 }
 
-/** The same five owners spelled out, shown once the rail is expanded. */
+/** The same owners spelled out, shown once the rail is expanded. */
 function GapOwnerDetail({ model }: { model: DataCoverageModel }) {
   return (
     <ul className="grid gap-x-6 gap-y-2 sm:grid-cols-2">
@@ -117,7 +147,7 @@ function GapOwnerDetail({ model }: { model: DataCoverageModel }) {
             <span className="block text-2xs leading-snug text-muted-foreground">{owner.detail}</span>
           </span>
           <span className="pharos-numeric shrink-0 text-sm font-semibold tabular-nums text-foreground">
-            {formatCount(owner.count)}
+            {formatCount(owner.questions)}
           </span>
         </li>
       ))}
@@ -127,10 +157,18 @@ function GapOwnerDetail({ model }: { model: DataCoverageModel }) {
 
 /** Per-stat breakdowns, demoted out of the rail so the headline stays one line. */
 function StatDetail({ model }: { model: DataCoverageModel }) {
+  const evidence = model.openEvidence;
+  const pipelineGaps = model.pipelineGapCount === 1 ? "1 unrated pipeline gap" : `${formatCount(model.pipelineGapCount)} unrated pipeline gaps`;
+  const critical =
+    model.criticalGapCount === 0
+      ? "none block a rating outright"
+      : model.criticalGapCount === 1
+        ? "1 blocks a rating outright"
+        : `${formatCount(model.criticalGapCount)} block a rating outright`;
   const rows = [
     {
       label: "Assets assessed",
-      detail: `${formatCount(model.ratedCount)} rated (${formatCount(model.partialRatedCount)} partial) · ${formatCount(model.notRatedCount)} not rated · ${formatCount(model.pipelineGapCount)} pipeline gap`,
+      detail: `${formatCount(model.ratedCount)} rated (${formatCount(model.partialRatedCount)} partial) · ${formatCount(model.notRatedCount)} not rated · ${pipelineGaps}`,
     },
     {
       label: "Inputs evaluated",
@@ -139,11 +177,10 @@ function StatDetail({ model }: { model: DataCoverageModel }) {
         .join(" · "),
     },
     {
-      label: "Open data points",
-      detail:
-        model.criticalGapCount > 0
-          ? `${formatCount(model.criticalGapCount)} block a rating outright`
-          : "None block a rating outright",
+      label: "Evidence obligations",
+      detail: evidence
+        ? `${formatCount(evidence.obligations)} evidence obligations behind them · ${formatCount(evidence.documentationDatums)} of which documentation · ${critical}`
+        : "Unavailable for this publication",
     },
   ];
   return (
@@ -160,12 +197,21 @@ function StatDetail({ model }: { model: DataCoverageModel }) {
   );
 }
 
-function GapTypeRow({ label, assetCount }: { label: string; assetCount: number }) {
+/** One reason row, prefixed by the server-assigned bucket so the split stays visible. */
+function ReasonRow({ row }: { row: DataCoverageReasonGap }) {
+  const unit =
+    row.count === 1 ? row.countUnit.slice(0, -1) : row.countUnit;
   return (
     <li className="flex items-baseline justify-between gap-3 border-b border-border/30 py-1.5 last:border-b-0">
-      <span className="min-w-0 text-xs text-foreground/85">{label}</span>
+      <span className="min-w-0 text-xs text-foreground/85">
+        <span className="text-muted-foreground">
+          {SAFETY_SCORE_OPEN_EVIDENCE_BUCKET_LABELS[row.bucket]}
+        </span>
+        {" · "}
+        {row.label}
+      </span>
       <span className="pharos-numeric shrink-0 text-2xs tabular-nums text-muted-foreground">
-        {formatCount(assetCount)} {assetCount === 1 ? "asset" : "assets"}
+        {formatCount(row.count)} {unit}
       </span>
     </li>
   );
@@ -219,11 +265,28 @@ export function SafetyScoreDataCoverage({ model }: { model: DataCoverageModel | 
   const expanded = (
     <div className="space-y-4 pt-4">
       {hasOwners ? <GapOwnerDetail model={model} /> : null}
+      {model.openEvidence && model.openEvidence.issuer > 0 ? (
+        <p className="text-2xs leading-relaxed text-muted-foreground">
+          <span className="font-medium text-foreground">
+            {SAFETY_SCORE_OPEN_EVIDENCE_BUCKET_LABELS.issuer}
+          </span>
+          {". "}
+          {model.openEvidence.issuerReview
+            ? describeIssuerReview(model.openEvidence.issuerReview)
+            : "The issuer does not publish these data; no review date is recorded."}
+        </p>
+      ) : null}
       <StatDetail model={model} />
-      {model.gapTypes.length > 0 ? (
+      {model.openEvidence === null ? (
+        <p className="text-2xs leading-relaxed text-muted-foreground">
+          This publication predates the open-evidence block, so the three open-question counts
+          cannot be shown. They are unavailable, not zero.
+        </p>
+      ) : null}
+      {model.reasons.length > 0 ? (
         <ul>
-          {model.gapTypes.map((gap) => (
-            <GapTypeRow key={gap.code} label={gap.label} assetCount={gap.assetCount} />
+          {model.reasons.map((reason) => (
+            <ReasonRow key={`${reason.bucket}:${reason.code}`} row={reason} />
           ))}
         </ul>
       ) : null}
@@ -255,8 +318,8 @@ export function SafetyScoreDataCoverage({ model }: { model: DataCoverageModel | 
         <summary className="pharos-focus-ring flex min-h-11 cursor-pointer list-none flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-sm md:min-h-0">
           {hasOwners ? <GapOwnerLegend model={model} /> : <span className="pharos-label">Score inputs</span>}
           <span className="flex shrink-0 items-center gap-1.5 text-2xs font-medium text-muted-foreground">
-            {model.gapTypes.length > 0
-              ? `Which inputs are missing (${formatCount(model.gapTypes.length)})`
+            {model.reasons.length > 0
+              ? `Which inputs are missing (${formatCount(model.reasons.length)})`
               : "Coverage detail"}
             <ChevronDown
               className="h-3.5 w-3.5 shrink-0 transition-transform group-open:rotate-180"

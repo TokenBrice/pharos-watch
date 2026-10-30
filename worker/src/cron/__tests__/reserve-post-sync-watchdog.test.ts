@@ -1,0 +1,270 @@
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { emptyReserveCompositionOverview } from "@shared/types/live-reserves";
+
+const mocks = vi.hoisted(() => ({
+  drift: vi.fn(),
+  overview: vi.fn(),
+  maxAge: vi.fn(),
+  states: vi.fn(),
+  acknowledged: vi.fn(),
+}));
+const cache = vi.hoisted(() => new Map<string, string>());
+
+vi.mock("../../lib/collateral-drift", () => ({ checkCollateralDrift: mocks.drift }));
+vi.mock("../../lib/live-reserves/store", () => ({
+  computeReserveCompositionOverview: mocks.overview,
+  getMaxSyncAge: mocks.maxAge,
+  loadReserveSyncStateMap: mocks.states,
+}));
+vi.mock("../../lib/reserve-feed-reviews", () => ({
+  resolveAcknowledgedReserveFeedIds: mocks.acknowledged,
+}));
+vi.mock("../../lib/db-cache", () => ({
+  getCache: vi.fn(async (_db: D1Database, key: string) =>
+    cache.has(key) ? { value: cache.get(key)!, updatedAt: 0 } : null),
+  setCache: vi.fn(async (_db: D1Database, key: string, value: string) => {
+    cache.set(key, value);
+  }),
+}));
+
+import {
+  evaluateReserveAdapterAlerts,
+  runReservePostSyncWatchdog,
+  type ReserveAdapterAlertAttempt,
+  type ReserveAdapterAlertState,
+} from "../reserve-post-sync-watchdog";
+
+const COIN = "iusd-infinifi";
+const NOW = 1_000_000;
+
+function attempt(overrides: Partial<ReserveAdapterAlertAttempt> & { attemptedAt: number }): ReserveAdapterAlertAttempt {
+  return {
+    status: "error",
+    failureCategory: "upstream-http",
+    sourceTimestamp: null,
+    freshnessMode: null,
+    ...overrides,
+  };
+}
+
+function evaluate(
+  attempts: ReserveAdapterAlertAttempt[],
+  options: {
+    prior?: ReserveAdapterAlertState;
+    acknowledged?: string[];
+    budget?: number;
+    nowSec?: number;
+  } = {},
+) {
+  return evaluateReserveAdapterAlerts({
+    nowSec: options.nowSec ?? NOW,
+    attemptsByCoin: new Map([[COIN, attempts]]),
+    sourceAgeBudgetByCoin: new Map([[COIN, options.budget ?? 7_200]]),
+    acknowledgedCoinIds: new Set(options.acknowledged ?? []),
+    previous: options.prior ?? { version: 1, coins: {} },
+  });
+}
+
+describe("evaluateReserveAdapterAlerts", () => {
+  it("raises the failure rule at the third consecutive failed cycle, not before", () => {
+    const two = evaluate([
+      attempt({ attemptedAt: NOW - 14_400 }),
+      attempt({ attemptedAt: NOW - 28_800 }),
+    ]);
+    expect(two.raised).toEqual([]);
+    expect(two.state.coins[COIN] ?? null).toBeNull();
+
+    const three = evaluate([
+      attempt({ attemptedAt: NOW }),
+      attempt({ attemptedAt: NOW - 14_400 }),
+      attempt({ attemptedAt: NOW - 28_800 }),
+    ]);
+    expect(three.raised).toEqual(["reserve-adapter-failure-sustained"]);
+    expect(three.failedSources).toEqual([{ stablecoinId: COIN, failedCycles: 3 }]);
+    expect(three.state.coins[COIN]).toEqual({ failureRaised: true, clockRaised: false });
+  });
+
+  it("does not re-raise a sustained failure and recovers exactly once", () => {
+    const prior: ReserveAdapterAlertState = {
+      version: 1,
+      coins: { [COIN]: { failureRaised: true, clockRaised: false } },
+    };
+    const stillFailing = evaluate([
+      attempt({ attemptedAt: NOW }),
+      attempt({ attemptedAt: NOW - 14_400 }),
+      attempt({ attemptedAt: NOW - 28_800 }),
+      attempt({ attemptedAt: NOW - 43_200 }),
+    ], { prior });
+    expect(stillFailing.raised).toEqual([]);
+    expect(stillFailing.recovered).toEqual([]);
+    expect(stillFailing.state.coins[COIN]?.failureRaised).toBe(true);
+
+    const recovered = evaluate([
+      attempt({ attemptedAt: NOW, status: "ok", failureCategory: null }),
+    ], { prior: stillFailing.state });
+    expect(recovered.recovered).toEqual(["reserve-adapter-failure-sustained"]);
+    expect(recovered.state.coins[COIN]).toBeUndefined();
+
+    const afterRecovery = evaluate([
+      attempt({ attemptedAt: NOW + 14_400, status: "ok", failureCategory: null }),
+    ], { prior: recovered.state });
+    expect(afterRecovery.recovered).toEqual([]);
+  });
+
+  it.each([
+    ["error", "upstream-http"],
+    ["skipped", "circuit-open"],
+  ])("counts %s/%s as a failed cycle", (status, failureCategory) => {
+    const result = evaluate([
+      attempt({ attemptedAt: NOW, status, failureCategory }),
+      attempt({ attemptedAt: NOW - 14_400, status: "error" }),
+      attempt({ attemptedAt: NOW - 28_800, status: "skipped", failureCategory: "circuit-open" }),
+    ]);
+    expect(result.raised).toContain("reserve-adapter-failure-sustained");
+  });
+
+  it("does not count a producer budget deferral toward the failure streak", () => {
+    const result = evaluate([
+      attempt({ attemptedAt: NOW, status: "skipped", failureCategory: "run-budget-exhausted" }),
+      attempt({ attemptedAt: NOW - 14_400, status: "error" }),
+      attempt({ attemptedAt: NOW - 28_800, status: "error" }),
+    ]);
+    expect(result.raised).toEqual([]);
+    expect(result.failedSources).toEqual([]);
+  });
+
+  it("keeps an exact-failure acknowledgement from raising, then raises once it lapses", () => {
+    const attempts = [
+      attempt({ attemptedAt: NOW }),
+      attempt({ attemptedAt: NOW - 14_400 }),
+      attempt({ attemptedAt: NOW - 28_800 }),
+    ];
+    const acknowledged = evaluate(attempts, { acknowledged: [COIN] });
+    expect(acknowledged.raised).toEqual([]);
+    expect(acknowledged.failedSources).toHaveLength(1);
+    expect(acknowledged.state.coins[COIN]).toBeUndefined();
+
+    const lapsed = evaluate(attempts, { prior: acknowledged.state });
+    expect(lapsed.raised).toEqual(["reserve-adapter-failure-sustained"]);
+  });
+
+  it("never treats an acknowledgement as recovery for an already-raised failure", () => {
+    const prior: ReserveAdapterAlertState = {
+      version: 1,
+      coins: { [COIN]: { failureRaised: true, clockRaised: false } },
+    };
+    const result = evaluate([
+      attempt({ attemptedAt: NOW }),
+      attempt({ attemptedAt: NOW - 14_400 }),
+      attempt({ attemptedAt: NOW - 28_800 }),
+    ], { prior, acknowledged: [COIN] });
+    expect(result.recovered).toEqual([]);
+    expect(result.state.coins[COIN]?.failureRaised).toBe(true);
+  });
+
+  it("raises the stalled-clock rule only when a successful verified clock is frozen past its budget", () => {
+    const frozen = (sourceTimestamp: number, freshnessMode: string | null = "verified") => [
+      attempt({ attemptedAt: NOW, status: "ok", failureCategory: null, sourceTimestamp, freshnessMode }),
+      attempt({ attemptedAt: NOW - 14_400, status: "ok", failureCategory: null, sourceTimestamp, freshnessMode }),
+    ];
+
+    const stalled = evaluate(frozen(NOW - 101), { budget: 100 });
+    expect(stalled.raised).toEqual(["reserve-source-clock-stalled"]);
+    expect(stalled.stalledSources).toEqual([{
+      stablecoinId: COIN,
+      sourceTimestamp: NOW - 101,
+      sourceAgeSec: 101,
+      sourceAgeBudgetSec: 100,
+    }]);
+
+    expect(evaluate(frozen(NOW - 100), { budget: 100 }).raised).toEqual([]);
+    expect(evaluate([
+      attempt({ attemptedAt: NOW, status: "ok", failureCategory: null, sourceTimestamp: NOW - 500 }),
+      attempt({ attemptedAt: NOW - 14_400, status: "ok", failureCategory: null, sourceTimestamp: NOW - 900 }),
+    ], { budget: 100 }).raised).toEqual([]);
+    expect(evaluate(frozen(NOW - 500, "unverified"), { budget: 100 }).raised).toEqual([]);
+    expect(evaluate([
+      attempt({ attemptedAt: NOW, status: "error", sourceTimestamp: NOW - 500 }),
+      attempt({ attemptedAt: NOW - 14_400, status: "ok", failureCategory: null, sourceTimestamp: NOW - 500 }),
+      attempt({ attemptedAt: NOW - 28_800, status: "ok", failureCategory: null, sourceTimestamp: NOW - 500 }),
+    ], { budget: 100 }).raised).toEqual([]);
+  });
+
+  it("recovers the stalled-clock rule once the clock advances", () => {
+    const prior: ReserveAdapterAlertState = {
+      version: 1,
+      coins: { [COIN]: { failureRaised: false, clockRaised: true } },
+    };
+    const advanced = evaluate([
+      attempt({ attemptedAt: NOW, status: "ok", failureCategory: null, sourceTimestamp: NOW - 10 }),
+      attempt({ attemptedAt: NOW - 14_400, status: "ok", failureCategory: null, sourceTimestamp: NOW - 500 }),
+    ], { prior, budget: 100 });
+    expect(advanced.recovered).toEqual(["reserve-source-clock-stalled"]);
+    expect(advanced.state.coins[COIN]).toBeUndefined();
+  });
+});
+
+describe("runReservePostSyncWatchdog reserve adapter alerts", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    cache.clear();
+    mocks.drift.mockResolvedValue({ driftCoins: [], fallbackCoins: [], observedIds: [] });
+    mocks.overview.mockResolvedValue({ ...emptyReserveCompositionOverview() });
+    mocks.maxAge.mockResolvedValue(0);
+    mocks.states.mockResolvedValue(new Map([[COIN, { lastStatus: "error" }]]));
+    mocks.acknowledged.mockResolvedValue(new Set<string>());
+  });
+
+  function historyDb(rows: Array<Record<string, unknown>>): D1Database {
+    return {
+      prepare: () => ({ bind: () => ({ all: async () => ({ results: rows, success: true, meta: {} }) }) }),
+    } as unknown as D1Database;
+  }
+
+  function historyRow(attemptedAt: number, status: string) {
+    return {
+      stablecoin_id: COIN,
+      attempted_at: attemptedAt,
+      status,
+      failure_category: status === "skipped" ? "circuit-open" : "upstream-http",
+      source_timestamp: null,
+      freshness_mode: null,
+    };
+  }
+
+  async function readAlert(rows: Array<Record<string, unknown>>) {
+    const result = await runReservePostSyncWatchdog(historyDb(rows));
+    return JSON.parse(result.metadata ?? "{}") as {
+      firedRuleIds: string[];
+      reserveAdapterAlert: {
+        raised: string[];
+        recovered: string[];
+        failedSources: Array<{ stablecoinId: string; failedCycles: number }>;
+      } | null;
+    };
+  }
+
+  it("fires once at the third cycle and recovers once when a cycle succeeds", async () => {
+    const second = await readAlert([historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error")]);
+    expect(second.reserveAdapterAlert?.raised).toEqual([]);
+    expect(second.firedRuleIds).not.toContain("reserve-adapter-failure-sustained");
+
+    const third = await readAlert([
+      historyRow(NOW, "error"), historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error"),
+    ]);
+    expect(third.reserveAdapterAlert?.raised).toEqual(["reserve-adapter-failure-sustained"]);
+    expect(third.firedRuleIds).toContain("reserve-adapter-failure-sustained");
+
+    const fourth = await readAlert([
+      historyRow(NOW + 14_400, "error"), historyRow(NOW, "error"),
+      historyRow(NOW - 14_400, "error"), historyRow(NOW - 28_800, "error"),
+    ]);
+    expect(fourth.reserveAdapterAlert?.raised).toEqual([]);
+    expect(fourth.reserveAdapterAlert?.failedSources).toEqual([{ stablecoinId: COIN, failedCycles: 4 }]);
+    expect(fourth.firedRuleIds).toContain("reserve-adapter-failure-sustained");
+
+    const recovered = await readAlert([historyRow(NOW + 28_800, "ok")]);
+    expect(recovered.reserveAdapterAlert?.recovered).toEqual(["reserve-adapter-failure-sustained"]);
+    expect(recovered.firedRuleIds).not.toContain("reserve-adapter-failure-sustained");
+  });
+});

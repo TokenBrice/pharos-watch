@@ -36,14 +36,14 @@ export function BlacklistTrackerMethodologySection() {
                 historical event-time USD valuation requires a quote attributed to the event, never today&apos;s price.
               </p>
               <p>
-                Historical quantities must be attributable to the event&apos;s execution position. A preceding-block
-                balance can differ after earlier transfers or wipes in the same block, so amountless EVM actions
-                remain unavailable without exact evidence. Emitted destroy amounts are usable only when unambiguous
-                for the affected account. EURC mirror suppression requires emitted event-time zero, never a
-                block-before or current-balance approximation. Previously suppressed history is not automatically restored.
-                Deterministic EVM freeze/unfreeze quantities with event_time_unproven are permanently unavailable,
-                not indefinitely retried. Destroy-receipt failures remain retryable; current-balance snapshots
-                retain their independent recovery rules.
+                Historical quantities require evidence at the event&apos;s execution position. Amountless EVM freezes
+                and releases use every affected-account transfer in the event block, reconciled exactly against
+                balances before and after the block, then replay transfers before the target log. Ambiguous positions,
+                negative intermediate balances or failed reconciliation leave the amount unavailable. Recovered zero
+                is measured zero, but EURC mirror suppression still requires emitted event-time zero. Previously
+                unproved EVM freeze and release amounts receive bounded re-review; suppressed history stays
+                untouched. Emitted destroy amounts retain their unambiguous receipt proof, and current-balance
+                snapshots remain independent.
               </p>
               <p>
                 Public frozen totals are last-known successful freeze-ledger snapshots rather than live balance guarantees.

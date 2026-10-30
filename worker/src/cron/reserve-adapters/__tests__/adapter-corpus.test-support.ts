@@ -25,6 +25,9 @@ import { BTCFI_HANDLER_ROWS, BTCFI_MARKET_ROWS } from "./reserve-adapter-payload
 import { MAKINA_ALLOCATIONS_FIXTURE, makinaNetworkSpec } from "./makina-strategy.test-support";
 import { JPMORGAN_JLTXX_PUBLISHER_URL } from "../jpmorgan-nav";
 import { FRNT_LEDGERLENS_URL } from "../frnt-ledgerlens";
+import { AXIS_TRANSPARENCY_URL } from "../axis-issuer-classes";
+import { MEGAUSD_CUSTODY_DISCOVERY_URL } from "../megausd-custody-onchain";
+import { encodeBalanceOfCallData } from "../../../lib/evm-selectors";
 import COINBASE_ONED_CAPTURE from "./fixtures/coinbase-oned-por.json";
 const BLACKROCK_BRSRV_URL = "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund";
 const BLACKROCK_BRSRV_CAPTURE = readFileSync(new URL("./fixtures/blackrock-brsrv-holdings.txt", import.meta.url), "utf8")
@@ -131,6 +134,50 @@ const TETHER_CAPTURE = {
 // Verbatim official publisher capture; this http-html input is text/markdown.
 const JPMORGAN_NAV_CAPTURE = readFileSync(new URL("./fixtures/jpmorgan-nav.html", import.meta.url), "utf8");
 
+// Captured 2026-10-29T18:21Z from the Axis asset-composition tab; the fixture
+// keeps the exact Next.js flight script and no page chrome.
+const AXIS_TRANSPARENCY_CAPTURE = readFileSync(
+  new URL("./fixtures/axis-transparency-2026-10-29.html", import.meta.url),
+  "utf8",
+);
+const AXIS_DASHBOARD_ANCHOR = '\\"initialDashboard\\":';
+
+// RA-3b reviewed custodian roster with the packet's exact USDC/USDtb raws at
+// Ethereum block 26300177 (2026-10-29T18:25:11Z). Discovery is answered with a
+// geo-block, the production steady state.
+const MEGAUSD_ONCHAIN_CUSTODIANS = [
+  "0xe0406bee6d58bcd7c1ca78191b6fde9ca060f6f2",
+  "0x343c18b0f1710b65ce33a7ce720b5d540215d343",
+  "0x01b3afebda3ed0e55fedb10dada5ef8dbe8f8d0c",
+  "0x99f97f2822478f71e6ea8bd872e61df10ae19ccd",
+  "0xf6a4347fe4f2c8d7228d3d53ab8e0d0cfc507ddc",
+] as const;
+const MEGAUSD_USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
+const MEGAUSD_USDTB = "0xc139190f447e929f090edeb554d95abb8b18ac1c";
+const MEGAUSD_ONCHAIN_NOW = Math.floor(Date.parse("2026-10-29T19:25:11Z") / 1000);
+const MEGAUSD_ONCHAIN_NETWORK: AdapterNetworkSpec = {
+  json: { [MEGAUSD_CUSTODY_DISCOVERY_URL]: { status: 403, body: "geo-restricted" } },
+  rpc: {
+    [`${MEGAUSD_USDC}:decimals()`]: 6,
+    [`${MEGAUSD_USDTB}:decimals()`]: 18,
+    [`${MEGAUSD_USDC}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[0]!)}`]: 1_439_084_060_991n,
+    [`${MEGAUSD_USDC}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[1]!)}`]: 13_906_617_077_171n,
+    [`${MEGAUSD_USDC}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[2]!)}`]: 438_000_622n,
+    [`${MEGAUSD_USDC}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[3]!)}`]: 1_000_109_000n,
+    [`${MEGAUSD_USDC}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[4]!)}`]: 0n,
+    [`${MEGAUSD_USDTB}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[0]!)}`]: 1_607_822_777_000_000_000_000n,
+    [`${MEGAUSD_USDTB}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[1]!)}`]: 19_187_018_863_100_000_000_000n,
+    [`${MEGAUSD_USDTB}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[2]!)}`]: 121_000_000_000_000_000_000n,
+    [`${MEGAUSD_USDTB}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[3]!)}`]: 0n,
+    [`${MEGAUSD_USDTB}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[4]!)}`]: 0n,
+  },
+  block: {
+    number: 26_300_177,
+    timestamp: Math.floor(Date.parse("2026-10-29T18:25:11Z") / 1000),
+    hash: "0x1b5fbdd505a18ba64354cec733c7bf147210f62d60b1b1dbd1e0b6220aa105fe",
+  },
+};
+
 export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
   "spark-usdc-v1-inventory": {
     coinId: "susdc-spark-v1",
@@ -198,6 +245,39 @@ export const CORPUS_CASES: Record<string, AdapterCorpusCase> = {
               ...entry, total_assets: "not-a-number",
             })),
           },
+        },
+      },
+      outcome: "error",
+    },
+  },
+  "axis-issuer-classes": {
+    coinId: "usdx-axis",
+    nowSec: Math.floor(Date.parse("2026-10-29T18:29:04Z") / 1000),
+    network: { html: { [AXIS_TRANSPARENCY_URL]: AXIS_TRANSPARENCY_CAPTURE } },
+    drift: {
+      label: "the issuer page no longer carries the initialDashboard flight payload",
+      network: {
+        html: {
+          [AXIS_TRANSPARENCY_URL]: AXIS_TRANSPARENCY_CAPTURE
+            .split(AXIS_DASHBOARD_ANCHOR).join('\\"initialDashboardRenamed\\":'),
+        },
+      },
+      outcome: "error",
+    },
+  },
+  "megausd-custody-onchain": {
+    coinId: "usdm-mega",
+    nowSec: MEGAUSD_ONCHAIN_NOW,
+    // Production Worker egress is geo-gated, so discovery-unavailable is the
+    // steady state; the roster identities come from reviewed params.
+    network: MEGAUSD_ONCHAIN_NETWORK,
+    drift: {
+      label: "one roster custodian balance is unreadable",
+      network: {
+        ...MEGAUSD_ONCHAIN_NETWORK,
+        rpc: {
+          ...MEGAUSD_ONCHAIN_NETWORK.rpc,
+          [`${MEGAUSD_USDC}:${encodeBalanceOfCallData(MEGAUSD_ONCHAIN_CUSTODIANS[2]!)}`]: null,
         },
       },
       outcome: "error",

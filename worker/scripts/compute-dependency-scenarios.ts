@@ -7,7 +7,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { DependencyScenarioArtifactSchema, DEPENDENCY_SCENARIOS_CACHE_PREFIX, type DependencyScenarioArtifact } from "@shared/types/dependency-scenarios";
 import { DEPENDENCY_SCENARIO_CHUNK_BYTES, DEPENDENCY_SCENARIO_CHUNK_STORAGE_FORMAT, DEPENDENCY_SCENARIO_READER_CAPABILITY_HEADER, DEPENDENCY_SCENARIO_READER_VERSION_HEADER } from "@shared/types/dependency-scenario-storage";
 import { chunkDependencyScenarioPayload, reassembleDependencyScenarioPayload } from "@shared/lib/dependency-scenario-storage";
-import { ReportCardsV9CurrentResponseSchema, buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
+import { buildReportCardsV9DependencyGraph } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { buildDirectHubExposures } from "@shared/lib/dependency-exposure";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type { ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
@@ -16,7 +17,7 @@ import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/po
 import type { ContagionShock } from "@shared/types/contagion";
 import { buildSafetyScoreV9ReplayArtifact, parseSafetyScoreV9ReplayFixedInput } from "./replay-safety-score-v9";
 import { assertCliUsage, parseStrictCliArgs, runCliEntrypoint, writeCliHelpIfRequested } from "../../scripts/lib/cli-args.mjs";
-import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture, parseSafetyScoreV9SourceAdmissionBaseline, type SafetyScoreV9SourceAdmissionBaseline } from "../src/lib/safety-score-v9/publication-replay-capture";
+import { parseSafetyScoreV9PublicationReplayCacheRows, parseSafetyScoreV9PublicationReplayCapture, parseSafetyScoreV9ReplayLaneScreening, parseSafetyScoreV9SourceAdmissionBaseline, type SafetyScoreV9SourceAdmissionBaseline } from "../src/lib/safety-score-v9/publication-replay-capture";
 import { applySafetyScoreV9GradeHysteresis } from "@shared/lib/safety-score-v9/grade-hysteresis";
 import { resolveDependencyScenarioEvaluatorSource } from "./lib/dependency-scenario-source";
 import { parseSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../src/lib/safety-score-v9/publication-codec";
@@ -154,7 +155,7 @@ async function main(): Promise<void> {
   }
   if (values.mode === "resolve-source") {
     assertCliUsage(typeof values["trusted-ref"] === "string", "--trusted-ref is required for resolve-source");
-    const source = ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(sourcePath, "utf8")));
+    const source = ReportCardsV9ReaderResponseSchema.parse(JSON.parse(readFileSync(sourcePath, "utf8")));
     const capture = JSON.parse(readFileSync(resolve(directory, "capture.json"), "utf8"));
     const captureRegistryFingerprint = capture?.fixedInput?.registryFingerprint;
     if (typeof captureRegistryFingerprint !== "string") throw new Error("dependency-scenario-source-capture-registry-unavailable");
@@ -167,7 +168,7 @@ async function main(): Promise<void> {
   if (values.mode === "publish") {
     const bytes = readFileSync(artifactPath, "utf8");
     const artifact = DependencyScenarioArtifactSchema.parse(JSON.parse(bytes));
-    const source = ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(sourcePath, "utf8")));
+    const source = ReportCardsV9ReaderResponseSchema.parse(JSON.parse(readFileSync(sourcePath, "utf8")));
     if (source.safetyScoreIdentity.publicationGenerationId !== artifact.sourcePublicationGenerationId) throw new Error("Publish source generation mismatch");
     if (source.safetyScoreIdentity.baseInputGenerationId !== artifact.sourceBaseInputGenerationId ||
         source.safetyScoreIdentity.evaluationBuildDigest !== artifact.evaluationBuildDigest ||
@@ -248,11 +249,12 @@ async function main(): Promise<void> {
   const start = performance.now(), cpu = process.cpuUsage();
   const capture = JSON.parse(readFileSync(resolve(values.input as string), "utf8"));
   const fixedInput = await parseSafetyScoreV9ReplayFixedInput(capture.fixedInput ?? capture, capture.registrySnapshot);
-  const source = values.publication ? ReportCardsV9CurrentResponseSchema.parse(JSON.parse(readFileSync(resolve(values.publication as string), "utf8"))) : null;
+  const source = values.publication ? ReportCardsV9ReaderResponseSchema.parse(JSON.parse(readFileSync(resolve(values.publication as string), "utf8"))) : null;
   const admission = "sourceAdmissionBaseline" in capture ? parseSafetyScoreV9SourceAdmissionBaseline(capture.sourceAdmissionBaseline, fixedInput.clockSec) : undefined;
   const transferMaterialityGeneration = capture.transferMaterialityGeneration == null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration);
-  // v3 accepted captures forward their prior accepted baseline so measured-route quarantine reproduces.
-  let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), ...(admission === undefined ? {} : { sourceAdmissionBaseline: admission?.baseline ?? null }), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
+  const laneScreening = capture.laneScreening == null ? capture.laneScreening : parseSafetyScoreV9ReplayLaneScreening(capture.laneScreening);
+  // Accepted captures retain both the prior baseline and exact lane witnesses.
+  let replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, transferMaterialityGeneration, laneScreening, ...(capture.registrySnapshot ? { registrySnapshot: capture.registrySnapshot } : {}), ...(admission === undefined ? {} : { sourceAdmissionBaseline: admission?.baseline ?? null }), publishedAtSec: source?.updatedAt ?? fixedInput.clockSec });
   const candidate = replay.pipeline.candidate;
   let publishedById: Map<string, ReplayCard> | null = null;
   if (source) {

@@ -461,22 +461,24 @@ export function toDexMeasuredExecutionPublicProfile(
   });
 }
 
-export type DexMeasuredExecutionValidationReason =
-  | "invalid-profile"
-  | "target-generation-mismatch"
-  | "quote-generation-mismatch"
-  | "target-snapshot-mismatch"
-  | "identity-mismatch"
-  | "tracked-input-mismatch"
-  | "stale-observation"
-  | "future-observation"
-  | "retained-price-mismatch"
-  | "retained-tvl-mismatch"
-  | "token-reference-price-mismatch"
-  | "quote-price-mismatch"
-  | "capacity-above-retained-tvl-bound"
-  | "invalid-capacity-curve"
-  | "invalid-quote-proof";
+export const DexMeasuredExecutionValidationReasonSchema = z.enum([
+  "invalid-profile",
+  "target-generation-mismatch",
+  "quote-generation-mismatch",
+  "target-snapshot-mismatch",
+  "identity-mismatch",
+  "tracked-input-mismatch",
+  "stale-observation",
+  "future-observation",
+  "retained-price-mismatch",
+  "retained-tvl-mismatch",
+  "token-reference-price-mismatch",
+  "quote-price-mismatch",
+  "capacity-above-retained-tvl-bound",
+  "invalid-capacity-curve",
+  "invalid-quote-proof",
+]);
+export type DexMeasuredExecutionValidationReason = z.infer<typeof DexMeasuredExecutionValidationReasonSchema>;
 
 function canonicalPart(value: string): string {
   return value.trim().toLowerCase();
@@ -694,11 +696,13 @@ export function validateDexMeasuredExecutionProfile(input: {
     Math.abs(profile.tokenOut.referencePriceUsd - quotedTarget.tokenOut.referencePriceUsd) <= 0.00000001;
   if (!exactSnapshotMatches) issues.add("target-snapshot-mismatch");
 
+  // Token symbols are display labels resolved from the pool source and can be
+  // absent upstream (the target builder then substitutes the tracked asset id).
+  // They are not identity: address, decimals, tracked asset id, fee, tick
+  // spacing, hook and pool order below pin the same pool exactly.
   const currentIdentityMatches =
     canonicalPart(profile.tokenIn.address) === canonicalPart(currentTarget.tokenIn.address) &&
     canonicalPart(profile.tokenOut.address) === canonicalPart(currentTarget.tokenOut.address) &&
-    profile.tokenIn.symbol === currentTarget.tokenIn.symbol &&
-    profile.tokenOut.symbol === currentTarget.tokenOut.symbol &&
     profile.tokenIn.decimals === currentTarget.tokenIn.decimals &&
     profile.tokenOut.decimals === currentTarget.tokenOut.decimals &&
     profile.tokenIn.trackedAssetId === currentTarget.tokenIn.trackedAssetId &&

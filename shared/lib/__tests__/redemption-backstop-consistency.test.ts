@@ -143,6 +143,7 @@ describe("redemption backstop config consistency", () => {
     ["usdcx-movement", "queue-redeem", "reserve-sync-metadata", "dynamic-or-unclear"],
     ["usdn-noble", "queue-redeem", "unquantified", "dynamic-or-unclear"],
     ["usdon-ondo", "psm-swap", "unquantified", "dynamic-or-unclear"],
+    ["swanusd-swan", "psm-swap", "reserve-sync-metadata", "fee-bps"],
     ["dai-makerdao", "psm-swap", "reserve-sync-metadata", "fee-bps"],
     ["usds-sky", "psm-swap", "reserve-sync-metadata", "fee-bps"],
     ["gho-aave", "psm-swap", "reserve-sync-metadata", "fee-bps"],
@@ -158,6 +159,26 @@ describe("redemption backstop config consistency", () => {
     expect(config?.routeFamily).toBe(routeFamily);
     expect(config?.capacityModel.kind).toBe(capacityKind);
     expect(config?.costModel.kind).toBe(costKind);
+  });
+
+  it("binds swanUSD's PSM exit to the same-run freePsmAssets telemetry, never to supply", () => {
+    const config = REDEMPTION_BACKSTOP_CONFIGS["swanusd-swan"]!;
+    expect(config.outputAssets).toEqual(["usds-sky"]);
+    expect(config.capacityModel).toEqual({
+      kind: "reserve-sync-metadata",
+      basis: "live-direct-telemetry",
+      requiredOutputAssetKeys: ["usds-sky"],
+    });
+    // The only reviewed term gap was capacity; live telemetry closes it, so no
+    // bounded-terms-gap may be re-introduced here.
+    expect(config.v9RouteReviewTerms).toBeUndefined();
+    // No supply-ratio or fixed-USD fallback can stand in for a same-run read.
+    expect(config.capacityModel).not.toHaveProperty("fallbackRatio");
+    expect(config.capacityModel).not.toHaveProperty("fallbackUsd");
+    for (const doc of config.docs ?? []) expect(doc.supports?.length, doc.url).toBeGreaterThan(0);
+    // The separate collateral-redemption rail is documented in notes only; one
+    // route config per id means it must never become configured capacity.
+    expect(config.notes?.some((note) => note.includes("redeem(borrower"))).toBe(true);
   });
 
   it("non-issuer documented supply-full routes do not force issuer-term capacity basis", () => {

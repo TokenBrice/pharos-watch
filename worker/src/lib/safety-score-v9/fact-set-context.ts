@@ -31,7 +31,8 @@ import type {
 import classificationsAsset from "@shared/data/safety-score-v9/evidence-gap-classifications-v1.json";
 import {
   V9EvidenceGapClassificationSchema, V9TypedReviewGapClassificationSchema, v9EvidenceCauseScopeKey,
-  type V9EvidenceCauseScope, type V9RuntimeProducerVerdict, type V9CauseResolutionDiagnostic,
+  type V9EvidenceCauseScope, type V9EvidenceGapClassification, type V9RuntimeProducerVerdict,
+  type V9CauseResolutionDiagnostic,
 } from "@shared/types/safety-score-v9-causes";
 import { createReviewedAssetRegistry, createReviewedRegistryReferenceExpander } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
@@ -49,6 +50,11 @@ const classifications = createReviewedAssetRegistry({
     searchedSurfaces: classificationsAsset.searchedSurfaceObservations,
   }, "evidenceGapClassifications.entries"),
 });
+
+/** Reviewed authored classifications for one asset; callers re-filter by datum scope. */
+export function evidenceGapClassificationsFor(assetId: string): readonly V9EvidenceGapClassification[] {
+  return classifications.getAll(assetId);
+}
 
 function scopeForGap(gap: Pick<V9FactGapV3, "path" | "ownerDomain" | "policyRuleId">): V9EvidenceCauseScope {
   const pillar = gap.ownerDomain === "exit" ? "exit" : gap.ownerDomain === "control" ? "control" : "backing";
@@ -291,6 +297,41 @@ function capturedPegSupplyFailure(context: AssetBuildContext, scope: V9EvidenceC
   });
 }
 
+/** One curated reviewed-but-unpublished component expressed as a dated typed review. */
+export interface V9TypedMechanismReview {
+  id: string;
+  assetId: string;
+  scope: V9EvidenceCauseScope;
+  cause: "C";
+  assertion: "researched-nondisclosure";
+  reviewedAt: string;
+  sources: { url: string }[];
+  searchedSurfaces: string[];
+  rationale: string;
+}
+
+/**
+ * The typed-review classification for one `mechanism-review:<component>` scope.
+ * `reviewedAt` is the component review's own date: the typed schema admits a
+ * calendar date, so a curated UTC instant is a parse failure the caller must
+ * diagnose rather than a review that silently reverts its question to U.
+ */
+export function v9TypedMechanismReview(
+  asset: Pick<AssetExtension, "assetId" | "mechanismReviewedUnavailable">,
+  scope: V9EvidenceCauseScope,
+): V9TypedMechanismReview | undefined {
+  if (!scope.componentKey.startsWith("mechanism-review:") || scope.factorKey !== null) return undefined;
+  const componentKey = scope.componentKey.slice("mechanism-review:".length);
+  const reviewed = asset.mechanismReviewedUnavailable?.find((row) => row.componentKey === componentKey);
+  if (reviewed === undefined) return undefined;
+  return {
+    id: `mechanism-review:${asset.assetId}:${componentKey}:${reviewed.reviewedAt}`,
+    assetId: asset.assetId, scope, cause: "C", assertion: "researched-nondisclosure",
+    reviewedAt: reviewed.reviewedAt, sources: [{ url: reviewed.sourceUrl }],
+    searchedSurfaces: reviewed.searchedSurfaces, rationale: reviewed.rationale,
+  };
+}
+
 export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
   const scope = gap.causeScope ?? scopeForGap(gap);
   const scopeKey = v9EvidenceCauseScopeKey(context.asset.assetId, scope, "research");
@@ -307,29 +348,29 @@ export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
   // cannot exclude this established subject. Independent runtime failures still apply.
   const classification = gap.policyRuleId === "v9.exit.reviewed-terms" && scoped[0]?.cause !== "C"
     ? undefined : scoped[0];
-  let typedReview: unknown;
-  if (scope.componentKey.startsWith("mechanism-review:") && scope.factorKey === null) {
-    const componentKey = scope.componentKey.slice("mechanism-review:".length);
-    const reviewed = context.asset.mechanismReviewedUnavailable?.find((row) => row.componentKey === componentKey);
-    if (reviewed) typedReview = {
-      id: `mechanism-review:${context.asset.assetId}:${componentKey}:${reviewed.reviewedAt}`,
-      assetId: context.asset.assetId, scope, cause: "C", assertion: "researched-nondisclosure",
-      reviewedAt: reviewed.reviewedAt, sources: [{ url: reviewed.sourceUrl }],
-      searchedSurfaces: reviewed.searchedSurfaces, rationale: reviewed.rationale,
-    };
-  }
+  const typedReview = v9TypedMechanismReview(context.asset, scope);
   const classificationEvidence = classification && Date.parse(classification.reviewedAt) / 1000 <= context.fixedInput.clockSec
     ? createV9ClassificationEvidence(classification, context.fixedInput.clockSec) : undefined;
   if (classificationEvidence) addEvidence(context, classificationEvidence);
   let typedReviewEvidence: V9EvidenceReferenceV2 | undefined;
-  let historyDiagnostic: V9CauseResolutionDiagnostic | undefined;
+  let typedReviewDiagnostic: V9CauseResolutionDiagnostic | undefined;
   const parsedTypedReview = typedReview === undefined ? undefined : V9TypedReviewGapClassificationSchema.safeParse(typedReview);
-  if (parsedTypedReview?.success && Date.parse(parsedTypedReview.data.reviewedAt) / 1000 <= context.fixedInput.clockSec) {
+  if (typedReview !== undefined && parsedTypedReview !== undefined && !parsedTypedReview.success) {
+    // A curated reviewed-but-unpublished row that cannot convert to a typed
+    // review must not revert its question to an undiagnosed U. Name the row and
+    // each failing field, and withhold the raw row from the resolver so one
+    // malformed review yields exactly one diagnostic.
+    if (gap.causeProof.cause === "U") {
+      typedReviewDiagnostic = { code: "cause-proof-conversion-failed", scope,
+        message: `${typedReview.id}: ${parsedTypedReview.error.issues.map((issue) =>
+          `${issue.path.length === 0 ? "review" : issue.path.join(".")}: ${issue.message}`).join("; ")}` };
+    }
+  } else if (parsedTypedReview?.success && Date.parse(parsedTypedReview.data.reviewedAt) / 1000 <= context.fixedInput.clockSec) {
     try {
       typedReviewEvidence = createV9TypedReviewEvidence(parsedTypedReview.data, context.fixedInput.clockSec);
       addEvidence(context, typedReviewEvidence);
     } catch (error) {
-      historyDiagnostic = { code: "cause-proof-conversion-failed", scope,
+      typedReviewDiagnostic = { code: "cause-proof-conversion-failed", scope,
         message: error instanceof Error ? error.message : "Typed research history could not be bound" };
     }
   }
@@ -346,10 +387,11 @@ export function addGap(context: AssetBuildContext, gap: V9FactGapV3): string {
     ? resolveV9EvidenceCause({
         assetId: context.asset.assetId, scope, asOfSec: context.fixedInput.clockSec,
         sourceGenerationId: captured?.verdict.proof.sourceGenerationId ?? context.fixedInput.sourceGeneration,
-        evidenceReferences: references, runtimeVerdict: captured?.verdict, classification, typedReview,
+        evidenceReferences: references, runtimeVerdict: captured?.verdict, classification,
+        typedReview: parsedTypedReview?.success ? typedReview : undefined,
       })
     : { causeProof: gap.causeProof, responsibility: gap.responsibility, evidenceReferences: references };
-  const diagnostics = result.diagnostics ?? (historyDiagnostic ? [historyDiagnostic] : undefined);
+  const diagnostics = result.diagnostics ?? (typedReviewDiagnostic ? [typedReviewDiagnostic] : undefined);
   if (diagnostics) context.causeResolutionDiagnostics.push(...diagnostics);
   for (const evidence of result.evidenceReferences) {
     if (!context.evidence.has(evidence.evidenceId)) addEvidence(context, evidence);

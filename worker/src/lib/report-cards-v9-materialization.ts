@@ -10,11 +10,11 @@ import {
   V9_PUBLIC_MATERIALIZATION_CACHE_KEY,
   type V9PublicRepresentationManifest,
 } from "@shared/types/report-cards-v9-materialization";
-import { SafetyScoreV9ResolvedCurrentCardSchema, type SafetyScoreV9CurrentCard, type SafetyScoreV9CurrentResponse } from "@shared/types/safety-score-v9-public";
+import { SafetyScoreV9ResolvedCurrentCardSchema, type SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { buildReportCardsV9DependencyGraph, ReportCardsV9DependencyGraphSchema, type V9PublicationHealth } from "@shared/types/report-cards-v9";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { projectSafetyScoreV9PublicationForMaterialization } from "./report-cards-v9-cache";
-import { SafetyScoreV9StorageMetadataSchema, publicationIdentityFromStorageEnvelope } from "./safety-score-v9/publication-codec";
+import { SafetyScoreV9StorageMetadataSchema, publicationIdentityFromStorageEnvelope, type SafetyScoreV9AdmittedPublication } from "./safety-score-v9/publication-codec";
 import { SAFETY_SCORE_V9_CACHE_KEYS, parseSafetyScoreV9PublicationHealthCache, resolveSafetyScoreV9EffectivePublicationHealth } from "./safety-score-v9/publication-health";
 import { D1_MAX_BOUND_PARAMETERS, executeAtomicBatch, prepareMultiRowInsertStatements } from "./db";
 import { D1_BATCH_SIZE } from "./constants";
@@ -57,7 +57,7 @@ const V9_PUBLIC_FRAGMENT_READ_MAX_BYTES = 4 * 1024 * 1024;
 
 /** Admit the cohort once, then expand/serialize only one bounded fragment at a time. */
 function* buildV9PublicMaterializations(
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
   health: V9PublicationHealth,
   payloadSha256: string,
 ): Generator<V9PublicMaterialization> {
@@ -87,7 +87,7 @@ function* buildV9PublicMaterializations(
  */
 export async function stageV9PublicMaterialization(
   db: D1Database,
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
   health: V9PublicationHealth,
   payloadSha256: string,
   signal?: AbortSignal,
@@ -221,7 +221,7 @@ export function v9StagedPublicMaterializationStatements(
 }
 
 export interface V9AcceptedPublicMaterializationSource {
-  publication: SafetyScoreV9CurrentResponse;
+  publication: SafetyScoreV9AdmittedPublication;
   health: V9PublicationHealth;
   payloadSha256: string;
 }
@@ -282,7 +282,7 @@ export async function materializeV9AcceptedPublication(
 
 function buildMaterialization(
   snapshot: ReportCardsV9ProjectionSource | ReportCardsV9TableResponse | ReportCardsV9DetailResponse,
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
   payloadSha256: string,
 ): V9PublicMaterialization {
   // Foreign keys require the complete manifest before fragments can be staged.
@@ -296,7 +296,7 @@ function buildMaterialization(
 
 function* serializeMaterialization(
   snapshot: ReportCardsV9ProjectionSource | ReportCardsV9TableResponse | ReportCardsV9DetailResponse,
-  publication: SafetyScoreV9CurrentResponse,
+  publication: SafetyScoreV9AdmittedPublication,
   payloadSha256: string,
 ): Generator<V9PublicMaterializationFragment, V9PublicRepresentationManifest> {
   const encoder = new TextEncoder();

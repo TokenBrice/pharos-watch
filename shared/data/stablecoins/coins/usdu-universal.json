@@ -4,21 +4,42 @@
     "version": 1,
     "semantics": "attestation-mix",
     "breakerScope": "usdu-universal",
-    "scoring": { "maxSourceAgeSec": 6048000 },
-    "display": { "url": "https://www.universal.ae/transparency", "label": "Universal USDU examination index" },
-    "inputs": { "primary": { "kind": "http-html", "url": "https://www.universal.ae/transparency" } },
+    "scoring": {
+      "maxSourceAgeSec": 6048000
+    },
+    "display": {
+      "url": "https://www.universal.ae/transparency",
+      "label": "Universal USDU examination index"
+    },
+    "inputs": {
+      "primary": {
+        "kind": "http-html",
+        "url": "https://www.universal.ae/transparency"
+      }
+    },
     "params": {
       "linkMatch": "USDU.*Examination",
       "reviewedReport": {
         "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf",
         "balanceDate": "2026-08-31"
       },
-      "slices": [{
-        "name": "USD bank deposits", "pct": 100, "risk": "low", "assetClass": "bank-deposit",
-        "issuerOrObligor": "UAE Central Bank-regulated reserve banks",
-        "riskFactors": ["credit", "counterparty", "custody", "legal", "concentration"],
-        "liquidityHorizon": "unknown"
-      }]
+      "slices": [
+        {
+          "name": "USD bank deposits",
+          "pct": 100,
+          "risk": "low",
+          "assetClass": "bank-deposit",
+          "issuerOrObligor": "UAE Central Bank-regulated reserve banks",
+          "riskFactors": [
+            "credit",
+            "counterparty",
+            "custody",
+            "legal",
+            "concentration"
+          ],
+          "liquidityHorizon": "unknown"
+        }
+      ]
     }
   },
   "id": "usdu-universal",
@@ -29,7 +50,7 @@
     "backing": "rwa-backed",
     "governance": "centralized"
   },
-  "collateral": "U.S. dollar deposits at UAE banks; the August 31, 2026 Crowe examination reconciles $30,651,543.81 of deposits to the same number of Ethereum USDU tokens.",
+  "collateral": "U.S. dollar deposits at UAE banks; the September 30, 2026 Crowe examination reconciles $30,759,928.73 of deposits to the same number of Ethereum USDU tokens.",
   "pegMechanism": "Universal mints against validated USD reserve deposits through Aquanow; onboarded professional clients redeem at $1 per USDU, generally within two business days after due diligence, with fees and extension rights.",
   "mechanismArchetype": "fiat-cash",
   "mechanismArchetypeReview": {
@@ -38,10 +59,22 @@
     "reviewer": "Pharos batch64 review (Rev_UsduUniversal)",
     "rationale": "USDU is an issuer-native fixed-dollar fiat obligation supported by bank deposits, deposit validation and par redemption, not an oracle-valued share or borrower collateral mechanism. The issuer explicitly announced the public product launch on January 29, 2026. Ethereum logic and proxy creation on August 5, 2025 are earlier deployment facts, not evidence of that public launch. No later implementation boundary is established. The dated CertiK audit reference is code-security evidence, not reserve assurance.",
     "sources": [
-      {"label": "USDU January 30, 2026 whitepaper", "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"},
-      {"label": "Universal public USDU launch, January 29, 2026", "url": "https://www.universal.ae/news/universal-launches-uaes-first-central-bank-registered-usd-stablecoin"},
-      {"label": "Exact current TokenV1 implementation creation", "url": "https://etherscan.io/tx/0xbdaaa67b4efbe639b70a452d981ac4c024abb8b5d8ae0a0fb6ea09dddb0eedc0"},
-      {"label": "Ethereum proxy creation", "url": "https://etherscan.io/tx/0xb26eb7562ed95893f67960b2deaf1eb4c98609b7759e366449b4a708548c6a9d"}
+      {
+        "label": "USDU January 30, 2026 whitepaper",
+        "url": "https://cdn.prod.website-files.com/644c2f7bb9ee913b81ea51df/69a5e87340361f8d03e80be5_USDU_Whitepaper_English_Arabic_Jan_2026.pdf"
+      },
+      {
+        "label": "Universal public USDU launch, January 29, 2026",
+        "url": "https://www.universal.ae/news/universal-launches-uaes-first-central-bank-registered-usd-stablecoin"
+      },
+      {
+        "label": "Exact current TokenV1 implementation creation",
+        "url": "https://etherscan.io/tx/0xbdaaa67b4efbe639b70a452d981ac4c024abb8b5d8ae0a0fb6ea09dddb0eedc0"
+      },
+      {
+        "label": "Ethereum proxy creation",
+        "url": "https://etherscan.io/tx/0xb26eb7562ed95893f67960b2deaf1eb4c98609b7759e366449b4a708548c6a9d"
+      }
     ]
   },
   "llamaId": "410",
@@ -57,18 +90,18 @@
     "attestorJurisdiction": "United Arab Emirates",
     "attestorLicense": "Registration No. 000002075",
     "latestReport": {
-      "periodEnd": "2026-08-31",
-      "publishedAt": "2026-09-18",
+      "periodEnd": "2026-09-30",
+      "publishedAt": "2026-10-27",
       "publishedAtBasis": "signed-date-standin",
       "assuranceMethod": "examination",
       "scope": "assets-and-liabilities",
       "liabilityReconciliation": "full",
-      "reviewer": "Sol addition batch 2026-10-03 (orchestrated)",
+      "reviewer": "Pharos W0 renewal review 2026-10-29 (R-COMP-8)",
       "confidence": "verified",
       "sources": [
         {
-          "label": "Crowe August 2026 ISAE3000 examination",
-          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6aba3d94e9697870784a49e5_Final%20USDU%20Examination%20Report%20-%20August%202026%20Countersigned.pdf"
+          "label": "Crowe September 2026 ISAE3000 examination (signed 27 October 2026)",
+          "url": "https://cdn.prod.website-files.com/68cf1072d23d4d5b68d8f496/6ae352f067821aadfb307fb9_Final%20USDU%20Examination%20Report%20-%20SEP%2026%20SIGNED.pdf"
         }
       ]
     }

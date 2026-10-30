@@ -36,6 +36,49 @@
     "reviewer": "Batch64 Rev_MantrausdMantra primary-source review",
     "reviewedAt": "2026-10-15"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "mantraUSD is a fixed-USD extension of M0's $M: minting and burning are nominal par conversions handled by M0's MinterGateway and the local MYieldToOne extension, and the verified MantraUSD implementation (27 verified source files) reads no price feed, NAV quote, borrower health or liquidation path. Collateral valuation and the mint ratio are administered inside M0's permissioned issuer and validator process, not by a market oracle consumed by the token.",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS018 research sprint 2026-10-29 (RS-018)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "mantraUSD minting and burning: par redemption and T+2 settlement",
+        "url": "https://docs.mantrausd.com/how-it-works/minting-burning"
+      },
+      {
+        "label": "Verified MantraUSD implementation (27 source files, no price-feed read)",
+        "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+      },
+      {
+        "label": "M0 MinterGateway minting and burning with validator-attested collateral",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      }
+    ],
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS018 research sprint 2026-10-29 (RS-018)",
+      "rationale": "Mint, burn and wrap/unwrap convert the same M claim at nominal 1:1; the reviewed structure has no borrower position, collateral-health threshold or liquidation branch. The verified child source contains no oracle, price, Chainlink or latestRoundData reference, so the only price authority is M0's privileged issuer and validator administration of collateral value and mint ratio. This review classifies documented pricing authority only; it establishes no redemption capacity, settlement guarantee or reserve assurance.",
+      "sources": [
+        {
+          "label": "mantraUSD minting and burning mechanics",
+          "url": "https://docs.mantrausd.com/how-it-works/minting-burning"
+        },
+        {
+          "label": "Verified MantraUSD implementation source inventory",
+          "url": "https://blockscout.mantrascan.io/api/v2/smart-contracts/0x9d7a7b406568668e7943740f5b370c86e13dcca8"
+        },
+        {
+          "label": "M0 minting and burning (MinterGateway)",
+          "url": "https://docs.m0.org/protocol/minting-burning"
+        }
+      ]
+    }
+  },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
     "summary": "Sole authored native child-token deployment. The reviewed local wrapping/custodian mint path issues the child on this chain; parent-token cross-chain and custody risks remain inherited. No global uncatalogued bridge-liability absence is asserted.",

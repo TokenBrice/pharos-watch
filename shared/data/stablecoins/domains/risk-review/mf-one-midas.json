@@ -1,5 +1,65 @@
 {
   "id": "mf-one-midas",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "mF-ONE mints and redeems at a Midas-administered net asset value rather than an independent market price. Midas documents that the strategy manager supplies the NAV, that Midas validates it internally with at least two trained co-signers and deviation bounds, and that the approved value is pushed onchain to the Oracle Feed consumed by the minter and redeemer; payment tokens are priced by Chainlink and Pyth inside a 0.997-1.003 stablecoin band. Pricing authority is therefore issuer and strategy-manager administered NAV. No mF-ONE Oracle Feed address, heartbeat or threshold was read onchain this run, so no redundancy, failover or independently verified publisher set is credited.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS081 research sprint 2026-10-29 (RS-081)",
+      "rationale": "mF-ONE is a tokenized certificate over the Fasanara F-ONE private-credit and digital-asset strategy: holders open no debt position and the issuer documents no borrower collateral, liquidation engine or liquidatable branch. The administered NAV prices issuance and redemption at the token level only.",
+      "sources": [
+        {
+          "label": "Midas Oracle Architecture: NAV verification, co-signers, oracle feed and payment-token bands",
+          "url": "https://docs.midas.app/transparency/oracle-architecture"
+        },
+        {
+          "label": "Midas Open Liquidity Architecture: standard and instant redemption against the NAV",
+          "url": "https://docs.midas.app/liquidity-and-composability/open-liquidity-architecture"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS081 research sprint 2026-10-29 (RS-081)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "Midas Oracle Architecture: NAV verification, co-signers, oracle feed and payment-token bands",
+        "url": "https://docs.midas.app/transparency/oracle-architecture"
+      },
+      {
+        "label": "Midas Open Liquidity Architecture: standard and instant redemption against the NAV",
+        "url": "https://docs.midas.app/liquidity-and-composability/open-liquidity-architecture"
+      }
+    ],
+    "paths": [
+      {
+        "id": "ethereum:0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+        "chain": "ethereum",
+        "address": "0x238a700ed6165261cf8b2e544ba797bc11e466ba",
+        "pricingAuthority": "internal-price",
+        "applicability": {
+          "disposition": "top-level-only",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "SprintRS081 research sprint 2026-10-29 (RS-081)",
+          "confidence": "probable",
+          "rationale": "The Ethereum mF-ONE proxy is the exact deployment verified in this sidecar at block 26095810 against implementation 0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2. Its mint and redemption paths consume the Midas NAV Datafeed described by the issuer oracle architecture, which is an issuer-published price rather than an external borrower-collateral feed. The Solana solmF-ONE deployment is not claimed here because its exact mint identity was not re-read this run.",
+          "sources": [
+            {
+              "label": "Midas Oracle Architecture: offchain NAV to Oracle Feed to Datafeed",
+              "url": "https://docs.midas.app/transparency/oracle-architecture"
+            },
+            {
+              "label": "Exact Ethereum mF-ONE proxy implementation read retained by this sidecar",
+              "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x32fb951ce9be3cd9a0a406ea86647a3c7d6406e2"
+            }
+          ]
+        }
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

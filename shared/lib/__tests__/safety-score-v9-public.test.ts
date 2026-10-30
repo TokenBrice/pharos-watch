@@ -1,3 +1,4 @@
+import type { V9OpenEvidence } from "@shared/types/safety-score-v9-public";
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { assertV9PublicCardProjections, projectV9DetailNeighborhoodCard, projectV9TableCard } from "../report-cards-v9-projections";
@@ -23,11 +24,11 @@ import type { V9ProductionScoreTrace } from "../safety-score-v9/score";
 import {
   SafetyScoreV9AccessPostureSchema,
   SafetyScoreV9CurrentCardSchema,
-  SafetyScoreV9CurrentResponseSchema,
   SafetyScoreV9EvidenceSummarySchema,
   SafetyScoreV9HistoricalTypedCardSchema,
   SafetyScoreV9PillarSchema,
 } from "../../types/safety-score-v9-public";
+import { SafetyScoreV9CurrentResponseSchema } from "../../types/safety-score-v9-publication-response";
 import { makeDeploymentControl, makeCompiledVotingControl, makeOperationalIssuanceProcess } from "./safety-score-v9-fixtures.test-support";
 import { reviewedScope, weightedQuorum } from "./safety-score-v9-control-scope.test-support";
 import supplyAttributionReviews from "../../data/safety-score-v9/supply-attribution-reviews-v1.json";
@@ -329,6 +330,19 @@ function cap(args: Pick<V9CapTrace, "kind" | "limit" | "source" | "reason" | "bi
   return args;
 }
 
+/** Empty schema-valid block: these cases project cards, not open-evidence counts. */
+function openEvidenceFixture(): V9OpenEvidence {
+  return {
+    semantics: "open-question-v1",
+    totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 0 },
+    owners: [],
+    reasons: [],
+    documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+    issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+    byCard: [],
+  };
+}
+
 describe("Safety Score v9 public projection", () => {
   it("keeps card shards byte-identical, immutable and independent across cache eviction", () => {
     const compact = createV9PublicCardShardViewFactory();
@@ -589,6 +603,7 @@ describe("Safety Score v9 public projection", () => {
     // The owned shards must not depend on the producer's later object lifetime.
     inputs[0]!.display = { ...inputs[0]!.display, labels: { "control:mint": "Changed after projection" } };
     const response = projector.finalize({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:shard-round-trip",
       policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:shard-round-trip",
@@ -610,6 +625,7 @@ describe("Safety Score v9 public projection", () => {
       }],
     };
     const args = {
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:common-mode-ownership", policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:common-mode-ownership", publishedAtSec: 1_001,
       commonModeGroups: [{
@@ -806,6 +822,7 @@ describe("Safety Score v9 public projection", () => {
         cause: "U", causeGapIds: [gapId], scoringDisposition: "bounded-uncertainty" },
     ];
     const response = buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:obligation-test", policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:obligation-test", publishedAtSec: 1_001, results: [input],
     });
@@ -840,6 +857,7 @@ describe("Safety Score v9 public projection", () => {
         scoringDisposition: "bounded-uncertainty" },
     ];
     const response = buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:canonical-causes-test", policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:canonical-causes-test", publishedAtSec: 1_001, results: [input],
     });
@@ -858,6 +876,53 @@ describe("Safety Score v9 public projection", () => {
     const mismatched = structuredClone(card);
     mismatched.scoreTrace.evidenceResponsibility.summaries.find(summary => summary.responsibility === "unresearched")!.factCount = 2;
     expect(SafetyScoreV9CurrentCardSchema.safeParse(mismatched).success).toBe(false);
+  });
+
+  it("carries documentation facts on the trace and publishes only resolvable documentation cause gaps", () => {
+    const documented = "asset:gap:keyCustody";
+    const input = fixture("asset", { score: 91.8, grade: "A+" });
+    input.trace.unresolvedFacts = [
+      { code: "unresolved-control-identity", path: "control:custody", reason: "Custody question.",
+        critical: false, responsibility: "unresearched", sourceGapId: documented,
+        cause: "U", causeGapIds: [documented], scoringDisposition: "bounded-uncertainty" },
+      { code: "bounded-mechanism-review", path: "backing:mechanism", reason: "Mechanism review.",
+        critical: false, responsibility: "unresearched", sourceGapId: "asset:gap:mechanism",
+        cause: "U", causeGapIds: ["asset:gap:mechanism"], scoringDisposition: "bounded-uncertainty" },
+    ];
+    input.documentationGapIds = new Map([
+      [documented, { reason: "no-scoring-path", policyRef: "semantic.evidence.documentation.reasons.no-scoring-path", threshold: null }],
+    ]);
+    const response = buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
+      documentationCauseGaps: [documented, "asset:gap:absent"],
+      candidateId: "safety-score-v9:v1:documentation-carrier-test", policyVersion: "9.0",
+      publicationGenerationId: "report-cards:v9:v1:documentation-carrier-test", publishedAtSec: 1_001, results: [input],
+    });
+    const card = SafetyScoreV9CurrentResponseSchema.parse(JSON.parse(JSON.stringify(response))).cards[0]!;
+    const evidence = card.scoreTrace.evidenceResponsibility;
+    expect(evidence.documentation).toEqual({
+      semantics: "documentation-class-v1",
+      totalFactCount: 1,
+      criticalFactCount: 0,
+      summaries: [{ reason: "no-scoring-path", factCount: 1 }],
+    });
+    expect(evidence.summaries.find(summary => summary.responsibility === "unresearched"))
+      .toMatchObject({ factCount: 2, documentationFactCount: 1 });
+    expect(response.documentationCauseGaps).toEqual([documented]);
+  });
+
+  it("refuses to publish a critical evidence fact as documentation", () => {
+    const gapId = "asset:gap:critical-datum";
+    const input = fixture("asset", { score: 91.8, grade: "A+" });
+    input.trace.unresolvedFacts = [{
+      code: "unresolved-control-identity", path: "control:critical", reason: "Critical datum.",
+      critical: true, responsibility: "unresearched", sourceGapId: gapId,
+      cause: "U", causeGapIds: [gapId], scoringDisposition: "diagnostic",
+    }];
+    input.documentationGapIds = new Map([
+      [gapId, { reason: "no-scoring-path", policyRef: "semantic.evidence.documentation.reasons.no-scoring-path", threshold: null }],
+    ]);
+    expect(() => projectSafetyScoreV9Card(input)).toThrow(/critical evidence fact as documentation/u);
   });
 
   it("counts critical roots once and preserves distinct, foreign, gapless and multi-root obligations", () => {
@@ -909,6 +974,7 @@ describe("Safety Score v9 public projection", () => {
       cause: "U", causeGapIds: [gapId], scoringDisposition: "bounded-uncertainty",
     }];
     const response = buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:causal-path-test", policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:causal-path-test",
       publishedAtSec: 1_001, results: [input],
@@ -935,6 +1001,7 @@ describe("Safety Score v9 public projection", () => {
       return input;
     });
     const response = buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:foreign-gap-test", policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:foreign-gap-test",
       publishedAtSec: 1_001, results,
@@ -950,6 +1017,7 @@ describe("Safety Score v9 public projection", () => {
 
   it("keeps the publication clock boundary after individual card admission", () => {
     expect(() => buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:clock-test", policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:clock-test", publishedAtSec: 999,
       results: [fixture("alpha", { score: 91.8, grade: "A+" })],
@@ -1022,6 +1090,7 @@ describe("Safety Score v9 public projection", () => {
       },
     ];
     const response = buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:wrapper-diagnostic-test", policyVersion: "10.12",
       publicationGenerationId: "report-cards:v9:v1:wrapper-diagnostic-test",
       publishedAtSec: 1_001, results: [input],
@@ -1087,6 +1156,7 @@ describe("Safety Score v9 public projection", () => {
         };
       }
       const response = buildSafetyScoreV9Response({
+        openEvidence: openEvidenceFixture(),
         candidateId: "safety-score-v9:v1:parent-gap-test", policyVersion: "9.0",
         publicationGenerationId: "report-cards:v9:v1:parent-gap-test",
         publishedAtSec: 1_001, results: [input],
@@ -1133,7 +1203,6 @@ describe("Safety Score v9 public projection", () => {
     expect(card.scoreTrace.providerRowExclusions![0]!.review).toMatchObject({
       belongsToAssetId: "frxusd-frax", providerChainLabel: "Fraxtal",
       contractAddress: "0xfc00000000000000000000000000000000000001",
-      provenance: { blockNumber: 43153493 },
     });
   });
   it("publishes effective weighted signatures without turning unknown key bypasses into quorum credit", () => {
@@ -1505,7 +1574,7 @@ describe("Safety Score v9 public projection", () => {
     expect(readable.message).toBe("The assurance and reconciliation input is unavailable; score 80.");
     expect(readable.reason).toBe("The cost datum for route (redemption) has not been established.");
     expect(readableV9PublicText("The maturityDaysMax factor and incidentState datum remain unresolved."))
-      .toBe("The maximum reserve maturity factor and incident status datum remain unresolved.");
+      .toBe("The maximum reserve maturity factor and control incident status datum remain unresolved.");
     expect(original.message).toContain("assuranceAndReconciliation");
   });
 
@@ -1553,6 +1622,7 @@ describe("Safety Score v9 public projection", () => {
     });
 
     const response = buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:public-test",
       policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:public-test",
@@ -1561,7 +1631,7 @@ describe("Safety Score v9 public projection", () => {
     });
 
     expect(response.model).toBe("v9-critical-path");
-    expect(response.schemaVersion).toBe(7);
+    expect(response.schemaVersion).toBe(8);
     expect(response.lifecycle).toBe("active");
     expect(response.cards.map((card) => card.id)).toEqual(["capped", "complete", "dependency", "not-rated", "pipeline-gap"]);
     expect(response.completeness).toEqual({
@@ -1955,6 +2025,7 @@ describe("Safety Score v9 public projection", () => {
 
   function publish(results: V9PublicCardProjectionInput[]) {
     return buildSafetyScoreV9Response({
+      openEvidence: openEvidenceFixture(),
       candidateId: "safety-score-v9:v1:public-test",
       policyVersion: "9.0",
       publicationGenerationId: "report-cards:v9:v1:public-test",
@@ -2108,6 +2179,7 @@ describe("Safety Score v9 public projection", () => {
     const base = fixture("alpha", { score: 91.8, grade: "A+" });
     expect(() =>
       buildSafetyScoreV9Response({
+        openEvidence: openEvidenceFixture(),
         candidateId: "safety-score-v9:v1:public-test",
         policyVersion: "9.0",
         publicationGenerationId: "report-cards:v9:v1:public-test",
@@ -2120,6 +2192,7 @@ describe("Safety Score v9 public projection", () => {
     mixed.trace.evaluationBuildDigest = "f".repeat(64);
     expect(() =>
       buildSafetyScoreV9Response({
+        openEvidence: openEvidenceFixture(),
         candidateId: "safety-score-v9:v1:public-test",
         policyVersion: "9.0",
         publicationGenerationId: "report-cards:v9:v1:public-test",

@@ -6,12 +6,15 @@ import {
   V9ResolvedMechanismArchetypeSchema,
 } from "./safety-score-v9-facts";
 import {
+  V9DocumentationReasonSchema,
+  V9DocumentationThresholdKindSchema,
   V9ManualInputClassificationSchema,
   V9PolicyTreatmentSchema,
   V9ReasonCodeSchema,
   V9ReasonOwnerDomainSchema,
   V9ReasonReleaseSeveritySchema,
 } from "./safety-score-v9";
+import { parseIsoDateOrUtcInstantSec } from "./date-primitives";
 import { issue,
   BaseInputGenerationIdSchema,
   CanonicalTextSchema,
@@ -227,31 +230,127 @@ const V9EvidenceGapBridgeJoinV1Schema = z
   .strict();
 export type V9EvidenceGapBridgeJoinV1 = z.infer<typeof V9EvidenceGapBridgeJoinV1Schema>;
 
-const V9EvidenceGapQueueEntryV2Schema = z
+const V9EvidenceGapDocumentationThresholdSchema = z
   .object({
-    ...V9EvidenceGapQueueEntryV1Fields,
-    responsibility: V9EvidenceResponsibilitySchema,
-    cause: V9EvidenceCauseSchema,
-    causeProof: V9EvidenceCauseProofSchema,
-    causeScope: V9EvidenceCauseScopeSchema.nullable(),
-    causeGapIds: CanonicalStringArraySchema.min(1),
-    /** Present only on bridge-scoped gaps; null everywhere else. */
-    bridgeJoin: V9EvidenceGapBridgeJoinV1Schema.nullable(),
+    kind: V9DocumentationThresholdKindSchema,
+    /** The policy bar resolved to a share (percent keys are divided by 100). */
+    value: z.number().finite().nonnegative(),
+    /** 3e admits a reviewed upper bound; the bound is not a measurement. */
+    evidenceKind: z.enum(["exact", "upper-bound"]).optional(),
+  })
+  .strict();
+
+/**
+ * The documentation class copied from the shared classifier
+ * (`shared/lib/safety-score-v9/documentation.ts`). Counting and routing only:
+ * nothing here may be read by scoring, and the gap keeps its identity,
+ * treatment, cause and binding.
+ */
+const V9EvidenceGapDocumentationSchema = z
+  .object({
+    class: z.literal("documentation"),
+    reason: V9DocumentationReasonSchema,
+    policyRef: CanonicalTextSchema,
+    /** Present exactly on the two barrier reasons; null on the predicate reasons. */
+    threshold: V9EvidenceGapDocumentationThresholdSchema.nullable(),
+  })
+  .strict()
+  .superRefine((documentation, ctx) => {
+    if (documentation.policyRef !== `semantic.evidence.documentation.reasons.${documentation.reason}`) {
+      issue(ctx, ["policyRef"], "A documentation reference names the policy reason it was classified under");
+    }
+    const kind =
+      documentation.reason === "reserve-dust"
+        ? "reserve-book-share"
+        : documentation.reason === "immaterial-deployment"
+          ? "known-share-pct"
+          : null;
+    if (kind === null ? documentation.threshold !== null : documentation.threshold?.kind !== kind) {
+      issue(ctx, ["threshold"], "Only the bar-bounded documentation reasons carry a threshold");
+    }
+  });
+export type V9EvidenceGapDocumentation = z.infer<typeof V9EvidenceGapDocumentationSchema>;
+
+/**
+ * The issuer researched-terminal band (PLAN §4.3): a cause-C proof records that
+ * the issuer was researched and does not publish the datum, so the item leaves
+ * the default drain for a dated recheck at the proof's own research horizon.
+ */
+const V9EvidenceGapReviewStateSchema = z
+  .object({
+    state: z.literal("researched-terminal"),
+    reviewedAtSec: UnixSecondsSchema,
+    recheckAtSec: UnixSecondsSchema,
+    trigger: z.literal("cause-proof-expiry"),
+  })
+  .strict()
+  .superRefine((review, ctx) => {
+    if (review.recheckAtSec <= review.reviewedAtSec) {
+      issue(ctx, ["recheckAtSec"], "A recheck must follow the review it re-examines");
+    }
+  });
+export type V9EvidenceGapReviewState = z.infer<typeof V9EvidenceGapReviewStateSchema>;
+
+const V9EvidenceGapQueueEntryV2Fields = {
+  ...V9EvidenceGapQueueEntryV1Fields,
+  responsibility: V9EvidenceResponsibilitySchema,
+  cause: V9EvidenceCauseSchema,
+  causeProof: V9EvidenceCauseProofSchema,
+  causeScope: V9EvidenceCauseScopeSchema.nullable(),
+  causeGapIds: CanonicalStringArraySchema.min(1),
+  /** Present only on bridge-scoped gaps; null everywhere else. */
+  bridgeJoin: V9EvidenceGapBridgeJoinV1Schema.nullable(),
+} as const;
+
+type V9EvidenceGapQueueEntryV2Base = z.infer<z.ZodObject<typeof V9EvidenceGapQueueEntryV2Fields>>;
+
+function addEntryProofConsistencyIssues(entry: V9EvidenceGapQueueEntryV2Base, ctx: z.RefinementCtx): void {
+  addEntryConsistencyIssues(entry, ctx);
+  if (entry.cause !== entry.causeProof.cause ||
+      entry.responsibility !== v9EvidenceResponsibilityForCauseProof(entry.causeProof) ||
+      !entry.causeGapIds.includes(entry.gapId) ||
+      entry.causeProof.evidenceRefIds.some((id) => !entry.evidenceRefIds.includes(id)) ||
+      ((entry.cause === "A" || entry.cause === "B") && (entry.critical || entry.treatment !== "diagnostic")) ||
+      ((entry.cause === "C" || entry.cause === "U") && entry.treatment === "NR") ||
+      ((entry.cause === "A" || entry.cause === "B" || entry.cause === "C") && entry.causeScope === null)) {
+    ctx.addIssue({ code: "custom", message: "Queue responsibility, critical treatment and exact causal identity must match the proof" });
+  }
+}
+
+const V9EvidenceGapQueueEntryV2Schema = z
+  .object(V9EvidenceGapQueueEntryV2Fields)
+  .strict()
+  .superRefine(addEntryProofConsistencyIssues);
+export type V9EvidenceGapQueueEntryV2 = z.infer<typeof V9EvidenceGapQueueEntryV2Schema>;
+
+const V9EvidenceGapQueueEntryV3Schema = z
+  .object({
+    ...V9EvidenceGapQueueEntryV2Fields,
+    /** Documentation band; null for open and issuer work. */
+    documentation: V9EvidenceGapDocumentationSchema.nullable(),
+    /** Issuer band; null for open and documentation work (precedence documentation > issuer). */
+    reviewState: V9EvidenceGapReviewStateSchema.nullable(),
   })
   .strict()
   .superRefine((entry, ctx) => {
-    addEntryConsistencyIssues(entry, ctx);
-    if (entry.cause !== entry.causeProof.cause ||
-        entry.responsibility !== v9EvidenceResponsibilityForCauseProof(entry.causeProof) ||
-        !entry.causeGapIds.includes(entry.gapId) ||
-        entry.causeProof.evidenceRefIds.some((id) => !entry.evidenceRefIds.includes(id)) ||
-        ((entry.cause === "A" || entry.cause === "B") && (entry.critical || entry.treatment !== "diagnostic")) ||
-        ((entry.cause === "C" || entry.cause === "U") && entry.treatment === "NR") ||
-        ((entry.cause === "A" || entry.cause === "B" || entry.cause === "C") && entry.causeScope === null)) {
-      ctx.addIssue({ code: "custom", message: "Queue responsibility, critical treatment and exact causal identity must match the proof" });
+    addEntryProofConsistencyIssues(entry, ctx);
+    if (entry.documentation !== null) {
+      if (entry.cause !== "C" && entry.cause !== "U") {
+        issue(ctx, ["documentation"], "Only a compiled cause-C/U gap can be documentation");
+      }
+      if (entry.reviewState !== null) {
+        issue(ctx, ["reviewState"], "Documentation work never joins the issuer band");
+      }
+    }
+    if (entry.reviewState === null) return;
+    const proof = entry.causeProof;
+    if (proof.cause !== "C" || proof.assertion !== "researched-nondisclosure") {
+      issue(ctx, ["reviewState"], "A researched-terminal recheck requires an issuer-nondisclosure proof");
+    } else if (entry.reviewState.reviewedAtSec !== Math.floor(parseIsoDateOrUtcInstantSec(proof.reviewedAt))) {
+      issue(ctx, ["reviewState", "reviewedAtSec"], "The recheck band must carry the proof's own review date");
     }
   });
-export type V9EvidenceGapQueueEntryV2 = z.infer<typeof V9EvidenceGapQueueEntryV2Schema>;
+export type V9EvidenceGapQueueEntryV3 = z.infer<typeof V9EvidenceGapQueueEntryV3Schema>;
 
 const V9EvidenceGapDomainCountSchema = z
   .object({ domain: V9ReasonOwnerDomainSchema, count: z.number().int().nonnegative() })
@@ -412,11 +511,15 @@ const V9EvidenceGapQueueCoreV2Fields = {
   entries: z.array(V9EvidenceGapQueueEntryV2Schema),
 } as const;
 
-function addQueueV2ConsistencyIssues(
-  queue: z.infer<z.ZodObject<typeof V9EvidenceGapQueueCoreV2Fields>>,
+type V9EvidenceGapQueueResponsibilityValue = {
+  summary: { responsibilityCounts: readonly { responsibility: z.infer<typeof V9EvidenceResponsibilitySchema>; count: number }[] };
+  entries: readonly { responsibility: z.infer<typeof V9EvidenceResponsibilitySchema> }[];
+};
+
+function addResponsibilityConsistencyIssues(
+  queue: V9EvidenceGapQueueResponsibilityValue,
   ctx: z.RefinementCtx,
 ): void {
-  addQueueConsistencyIssues(queue, ctx);
   const expectedResponsibilities = [...V9EvidenceResponsibilitySchema.options].sort(compareText);
   const actualResponsibilities = queue.summary.responsibilityCounts.map((entry) => entry.responsibility);
   addCanonicalStringArrayIssues(actualResponsibilities, ctx, ["summary", "responsibilityCounts"]);
@@ -434,6 +537,14 @@ function addQueueV2ConsistencyIssues(
   }
 }
 
+function addQueueV2ConsistencyIssues(
+  queue: z.infer<z.ZodObject<typeof V9EvidenceGapQueueCoreV2Fields>>,
+  ctx: z.RefinementCtx,
+): void {
+  addQueueConsistencyIssues(queue, ctx);
+  addResponsibilityConsistencyIssues(queue, ctx);
+}
+
 const V9EvidenceGapQueueCoreObjectV2Schema = z.object(V9EvidenceGapQueueCoreV2Fields).strict();
 export const V9EvidenceGapQueueCoreV2Schema =
   V9EvidenceGapQueueCoreObjectV2Schema.superRefine(addQueueV2ConsistencyIssues);
@@ -445,4 +556,75 @@ export const V9EvidenceGapQueueV2Schema = z
   .superRefine(addQueueV2ConsistencyIssues);
 export type V9EvidenceGapQueueV2 = z.infer<typeof V9EvidenceGapQueueV2Schema>;
 
-export type V9EvidenceGapQueue = V9EvidenceGapQueueV1 | V9EvidenceGapQueueV2;
+const V9EvidenceGapDocumentationReasonCountSchema = z
+  .object({
+    reason: V9DocumentationReasonSchema,
+    count: z.number().int().nonnegative(),
+  })
+  .strict();
+
+/**
+ * Documentation-band totals. `documentationGapCount` counts queue datums, not
+ * questions: every documentation entry stays in `entries` and stays addressable.
+ */
+const V9EvidenceGapQueueSummaryV3Fields = {
+  ...V9EvidenceGapQueueSummaryV1Fields,
+  responsibilityCounts: z.array(V9EvidenceResponsibilityCountSchema),
+  documentationGapCount: z.number().int().nonnegative(),
+  researchedTerminalGapCount: z.number().int().nonnegative(),
+  documentationReasonCounts: z.array(V9EvidenceGapDocumentationReasonCountSchema),
+} as const;
+
+const V9EvidenceGapQueueCoreV3Fields = {
+  schemaVersion: z.literal(4),
+  purpose: z.literal("evidence-work-queue-not-release-gate"),
+  status: z.enum(["clear", "work-required"]),
+  facts: V9EvidenceGapQueueFactsV2Schema,
+  policy: z.object({ policyId: CanonicalTextSchema, semanticDigest: Sha256Schema }).strict(),
+  summary: z.object(V9EvidenceGapQueueSummaryV3Fields).strict(),
+  entries: z.array(V9EvidenceGapQueueEntryV3Schema),
+} as const;
+
+type V9EvidenceGapQueueConsistencyValueV3 = z.infer<z.ZodObject<typeof V9EvidenceGapQueueCoreV3Fields>>;
+
+function addQueueV3ConsistencyIssues(queue: V9EvidenceGapQueueConsistencyValueV3, ctx: z.RefinementCtx): void {
+  addQueueConsistencyIssues(queue, ctx);
+  addResponsibilityConsistencyIssues(queue, ctx);
+
+  const documentationEntries = queue.entries.filter((entry) => entry.documentation !== null);
+  if (queue.summary.documentationGapCount !== documentationEntries.length) {
+    issue(ctx, ["summary", "documentationGapCount"], `Expected ${documentationEntries.length}`);
+  }
+  const researchedTerminalCount = queue.entries.filter((entry) => entry.reviewState !== null).length;
+  if (queue.summary.researchedTerminalGapCount !== researchedTerminalCount) {
+    issue(ctx, ["summary", "researchedTerminalGapCount"], `Expected ${researchedTerminalCount}`);
+  }
+  const expectedReasons = V9DocumentationReasonSchema.options;
+  const actualReasons = queue.summary.documentationReasonCounts.map((entry) => entry.reason);
+  if (JSON.stringify(actualReasons) !== JSON.stringify(expectedReasons)) {
+    issue(ctx, ["summary", "documentationReasonCounts"], "Documentation counts must list every reason once, in vocabulary order");
+  }
+  const counts = new Map<string, number>(expectedReasons.map((reason) => [reason, 0]));
+  for (const entry of documentationEntries) {
+    const reason = entry.documentation!.reason;
+    counts.set(reason, (counts.get(reason) ?? 0) + 1);
+  }
+  for (const entry of queue.summary.documentationReasonCounts) {
+    if (entry.count !== counts.get(entry.reason)) {
+      issue(ctx, ["summary", "documentationReasonCounts"], `Count mismatch for ${entry.reason}`);
+    }
+  }
+}
+
+const V9EvidenceGapQueueCoreObjectV3Schema = z.object(V9EvidenceGapQueueCoreV3Fields).strict();
+export const V9EvidenceGapQueueCoreV3Schema =
+  V9EvidenceGapQueueCoreObjectV3Schema.superRefine(addQueueV3ConsistencyIssues);
+export type V9EvidenceGapQueueCoreV3 = z.infer<typeof V9EvidenceGapQueueCoreV3Schema>;
+
+export const V9EvidenceGapQueueV3Schema = z
+  .object({ ...V9EvidenceGapQueueCoreV3Fields, queueDigest: Sha256Schema })
+  .strict()
+  .superRefine(addQueueV3ConsistencyIssues);
+export type V9EvidenceGapQueueV3 = z.infer<typeof V9EvidenceGapQueueV3Schema>;
+
+export type V9EvidenceGapQueue = V9EvidenceGapQueueV1 | V9EvidenceGapQueueV2 | V9EvidenceGapQueueV3;

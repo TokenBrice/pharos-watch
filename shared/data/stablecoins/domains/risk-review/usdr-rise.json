@@ -132,5 +132,56 @@
         ]
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "USDR has no external price feed and no borrower-liquidation branch. The verified JMIExtension deployed on RISE exposes only a SwapFacility-gated quantity wrap of M and contains no oracle, aggregator, price or rate-provider call; the M0 SwapFacility converts approved extensions deterministically 1:1 and atomically with no trading fee. USDR's dollar value is therefore set by permissioned mechanisms inside the M parent — issuer-par redemption through M0 and governance-set minter/earner rate parameters — not by an independent market measure. RISE retaining reserve yield is a revenue split, not a price input.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Pharos research sprint RS-023 (2026-10-29)",
+      "rationale": "USDR pricing is top-level only: wrapping escrows M and unwrapping returns M at a 1:1 quantity ratio through the SwapFacility, and conversions between approved M0 extensions are deterministic and atomic. The verified extension source and the reviewed M0 wrapper, swap and rate documentation expose no price-feed, collateral-parameter, liquidation, backstop or shutdown function, so no borrower-collateral branch applies.",
+      "sources": [
+        {
+          "label": "RISE Dollar product documentation: 1:1 wrapper of M, solver-based minting and reserve yield retained by RISE",
+          "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+        },
+        {
+          "label": "M0 Extensions documentation: SwapFacility deterministic 1:1 approved-extension conversions",
+          "url": "https://docs.m0.org/protocol/extensions"
+        },
+        {
+          "label": "Verified RISE USDR implementation JMIExtension: SwapFacility-gated quantity wrap with no oracle call",
+          "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Pharos research sprint RS-023 (2026-10-29)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "RISE Dollar product documentation: 1:1 wrapper of M, solver-based minting and reserve yield retained by RISE",
+        "url": "https://docs.risechain.com/docs/rise-evm/usdr"
+      },
+      {
+        "label": "M0 Extensions documentation: SwapFacility deterministic 1:1 approved-extension conversions, no slippage or trading fees",
+        "url": "https://docs.m0.org/protocol/extensions"
+      },
+      {
+        "label": "M0 Rate Models documentation: minter and earner rates are governance-set parameters, not an external price feed",
+        "url": "https://docs.m0.org/protocol/rate-models"
+      },
+      {
+        "label": "M0 liquidity documentation: deterministic 1:1 swaps and issuer-onboarded primary-market access",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "Verified RISE USDR implementation JMIExtension: SwapFacility-gated quantity wrap, no oracle or price-feed call",
+        "url": "https://explorer.risechain.com/api/v2/smart-contracts/0xf9733d0bf530b02929ab81cf78e7d0befd3a2d7b"
+      }
+    ]
   }
 }

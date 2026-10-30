@@ -194,36 +194,43 @@ describe("enrichRowBalances", () => {
 
   it.each([
     [0, "incoming"], [100, "outgoing"],
-  ] as const)("leaves EURC freeze amounts unavailable after same-block %s balance / %s transfer", async (priorBalance, direction) => {
+  ] as const)("proves EURC freeze amounts after same-block %s balance / %s transfer", async (priorBalance, direction) => {
     const config = CONTRACT_CONFIGS.find((candidate) => candidate.stablecoin === "EURC" && candidate.chain.chainId === "ethereum")!;
     const address = "0x1111111111111111111111111111111111111111";
     const other = "0x2222222222222222222222222222222222222222";
     const identity = { blockNumber: "0x64", transactionHash: "0x" + "ab".repeat(32), timeStamp: "0x65000000" };
-    const rows = parseEvmLogsWithCoverage(config, [{
+    const transfer = {
       ...identity, address: config.contractAddress, logIndex: "0x0",
       topics: ["0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef",
         "0x" + word(direction === "incoming" ? other : address),
         "0x" + word(direction === "incoming" ? address : other)],
       data: "0x" + amountWord(50_000000n),
-    }, {
+    };
+    const rows = parseEvmLogsWithCoverage(config, [transfer, {
       ...identity, address: config.contractAddress, logIndex: "0x1",
       topics: [config.events.find((event) => event.eventType === "blacklist")!.topicHash, "0x" + word(address)],
       data: "0x",
     }]).rows;
-    vi.mocked(fetchJsonWithRetry).mockResolvedValue({
-      response: new Response(null, { status: 200 }),
-      body: { result: "0x" + (BigInt(priorBalance) * 1_000_000n).toString(16).padStart(64, "0") },
+    vi.mocked(fetchJsonWithRetry).mockImplementation(async (url) => {
+      const params = new URL(String(url)).searchParams;
+      const balance = params.get("tag") === "0x63" ? priorBalance : 50;
+      const result = params.get("action") === "eth_call"
+        ? "0x" + amountWord(BigInt(balance) * 1_000_000n)
+        : (params.has("topic1") ? transfer.topics[1] === params.get("topic1")
+          : transfer.topics[2] === params.get("topic2")) ? [transfer] : [];
+      return { response: new Response(null, { status: 200 }), body: { status: "1", message: "OK", result } };
     });
     expect(await enrichRowBalances({
-      rows, config, etherscanApiKey: null,
-      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(), runBudget: makeRunBudget(),
-    })).toEqual({ attempted: 1, succeeded: 0, failed: 1 });
+      rows, config, etherscanApiKey: "test-key",
+      etherscanLimiter: async <T>(fn: () => Promise<T>) => fn(),
+      runBudget: makeRunBudget({ subrequestBudget: { count: 0, limit: 4 } }),
+    })).toEqual({ attempted: 1, succeeded: 1, failed: 0 });
     expect(rows).toHaveLength(1);
     expect(rows[0]).toMatchObject({
-      amount_native: null, amount_usd_at_event: null, amount_source: "unavailable",
-      amount_status: "permanently_unavailable", amount_last_error_class: "event_time_unproven", suppression_reason: null,
+      amount_native: 50, amount_usd_at_event: null, amount_source: "historical_balance",
+      amount_status: "resolved", amount_last_error_class: null, suppression_reason: null,
     });
-    expect(fetchJsonWithRetry).not.toHaveBeenCalled();
+    expect(fetchJsonWithRetry).toHaveBeenCalledTimes(4);
   });
 
   it.each([[0, "incoming"], [100, "outgoing"]] as const)("does not attribute same-block transfers to an amountless wipe (prior balance %s, %s)", async (priorBalance, direction) => {
@@ -357,7 +364,7 @@ describe("enrichRowBalances", () => {
     })).rejects.toMatchObject({ name: "AbortError" });
   });
 
-  it("keeps EURC native/USD amounts unavailable without event-position proof, regardless of current quotes", async () => {
+  it("keeps EURC native/USD amounts unavailable with ambiguous event identity, regardless of current quotes", async () => {
     const { db, sqlite } = sqliteFixtures.open();
     const config = CONTRACT_CONFIGS.find((candidate) => candidate.stablecoin === "EURC" && candidate.chain.chainId === "ethereum")!;
     await insertBlacklistRows(db, [makePendingBlacklistRow({
@@ -372,7 +379,7 @@ describe("enrichRowBalances", () => {
     expect(sqlite.prepare(`SELECT amount_native, amount_usd_at_event, amount_status, suppression_reason,
       amount_last_error_class FROM blacklist_events WHERE id = 'eurc-unproved'`).get()).toEqual({
       amount_native: null, amount_usd_at_event: null, amount_status: "permanently_unavailable",
-      suppression_reason: null, amount_last_error_class: "event_time_unproven",
+      suppression_reason: null, amount_last_error_class: "event_time_unreconciled",
     });
     expect(fetchJsonWithRetry).not.toHaveBeenCalled();
     expect(sqlite.prepare("SELECT status FROM blacklist_amount_repair_queue WHERE event_id = 'eurc-unproved'").get())
@@ -471,7 +478,7 @@ describe("enrichRowBalances", () => {
     expect(sqlite.prepare(`SELECT amount_native, amount_status, amount_attempt_count, amount_last_error_class
       FROM blacklist_events WHERE id = 'exhausted'`).get()).toEqual({
       amount_native: 0, amount_status: "permanently_unavailable", amount_attempt_count: 3,
-      amount_last_error_class: "event_time_unproven",
+      amount_last_error_class: "event_time_unreconciled",
     });
     expect(sqlite.prepare("SELECT status, attempt_count FROM blacklist_amount_repair_queue WHERE event_id = 'exhausted'").get())
       .toEqual({ status: "unrecoverable", attempt_count: 1 });

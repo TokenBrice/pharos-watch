@@ -2,34 +2,12 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { V9AuthoredIncidentRegistryEnvelopeSchema, V9ReviewedIncidentRegistryEnvelopeSchema, V9ReviewedIncidentSchema } from "../../shared/types/safety-score-v9-incidents";
-import { projectNegativeIncidentReview } from "../lib/safety-score-v9-incident-runtime";
-import { canonicalizeReviewedRegistryDigest, expandReviewedRegistryReferences, reviewedRegistryDigestKey, reviewedRegistryEnvelopeDigest } from "../../shared/lib/safety-score-v9/reviewed-registry";
+import { buildIncidentRuntime } from "../lib/safety-score-v9-incident-runtime";
 import { syncGeneratedArtifacts } from "../lib/generated-artifacts";
 import { parseStrictCliArgs } from "../lib/cli-args.mjs";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
 
 const ROOT = fileURLToPath(new URL("../../", import.meta.url));
-
-
-export function buildIncidentRuntime(value: unknown) {
-  const authored = V9AuthoredIncidentRegistryEnvelopeSchema.parse(value);
-  const envelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(expandReviewedRegistryReferences(authored, "negativeReviews", {
-    sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
-  }));
-  const canonical = canonicalizeReviewedRegistryDigest(envelope, {
-    incidents: reviewedRegistryDigestKey("incidentId"),
-    "incidents.*.primarySources": reviewedRegistryDigestKey("url"),
-    "incidents.*.remediation.sources": reviewedRegistryDigestKey("url"),
-    "incidents.*.posture.controlKinds": (row) => typeof row === "string" ? row : "",
-    negativeReviews: reviewedRegistryDigestKey("reviewId"),
-    "negativeReviews.*.sources": reviewedRegistryDigestKey("url"),
-    "negativeReviews.*.scope.controlKinds": (row) => typeof row === "string" ? row : "",
-  });
-  return { schemaVersion: 1, digest: reviewedRegistryEnvelopeDigest("safety-score-v9.incident-reviews.v1", "payload", canonical),
-    incidents: envelope.incidents.map((row) => V9ReviewedIncidentSchema.parse(row)),
-    negativeReviews: (envelope.negativeReviews ?? []).map(projectNegativeIncidentReview) };
-}
 
 export function runCli(argv = process.argv.slice(2)): void {
   const { values } = parseStrictCliArgs(argv, { options: { check: { type: "boolean" } } });

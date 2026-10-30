@@ -49,6 +49,31 @@ export function resolveReserveFeedReviews(
   return { activeById, expiredIds: [...new Set(expiredIds)], invalidIds: [...new Set(invalidIds)] };
 }
 
+/**
+ * Exact-failure acknowledgements for the reserve alerting predicates: a coin is
+ * returned only when an unexpired review matches its adapter, failure category,
+ * complete warning set and full error. Failure readings are fail-closed — an
+ * unreadable match or circuit history never suppresses an alert.
+ */
+export async function resolveAcknowledgedReserveFeedIds(
+  db: D1Database,
+  states: Iterable<ReserveSyncStateRecord>,
+  now: number,
+): Promise<Set<string>> {
+  const activeById = resolveReserveFeedReviews(now).activeById;
+  const acknowledged = new Set<string>();
+  for (const state of states) {
+    if (!activeById.has(state.stablecoinId)) continue;
+    try {
+      const review = await matchReserveFeedReview(db, state, now, activeById);
+      if (review !== null && now < review.expiresAt) acknowledged.add(state.stablecoinId);
+    } catch {
+      // Fail closed: the alert stays eligible rather than inheriting a review.
+    }
+  }
+  return acknowledged;
+}
+
 export async function matchReserveFeedReview(
   db: D1Database,
   state: ReserveSyncStateRecord | null,

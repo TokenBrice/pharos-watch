@@ -2,7 +2,7 @@
   "id": "bbqusdc-steakhouse",
   "oracleRisk": {
     "tier": "privileged-internal-pricing",
-    "summary": "R1 exact-endpoint artifact parity review, reviewed 2026-10-21. Book content as of 2026-10-20: morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2, 18 chain-qualified root-oracle branches covering 20 NAV-accounted current market rows. Each original block/hash and nested feed observation clock is retained. Matching is exact chain+oracle source identity, not a sibling-vault risk assumption. No borrowed allocation, debt-share percentage, new successful RPC read, complete historical/off-list census or fresh capacity measurement is asserted. Missing nested topology stays bounded; live positive unmatched claims retain fail-closed aggregate behavior. Internal vault share NAV is not evidence that borrower markets are oracleless.",
+    "summary": "R1 exact-endpoint artifact parity review, reviewed 2026-10-21. Book content as of 2026-10-20: morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2, 18 chain-qualified root-oracle branches covering 20 NAV-accounted current market rows. Each original block/hash and nested feed observation clock is retained. Matching is exact chain+oracle source identity, not a sibling-vault risk assumption. No borrowed allocation, debt-share percentage, new successful RPC read, complete historical/off-list census or fresh capacity measurement is asserted. Missing nested topology stays bounded; live positive unmatched claims retain fail-closed aggregate behavior. Internal vault share NAV is not evidence that borrower markets are oracleless. Re-reviewed 2026-10-30: the four roots previously left bounded-unknown (0x68066d28…, 0x873cd44b…, 0xdcc04ffa…, 0xf3efa462…) now carry pinned MorphoChainlinkOracleV2 getter reads at ethereum block 26305151 and their feed/vault identity; the other paths are unchanged. This rereview asserts no allocation, lender-claim, or market-census refresh.",
     "role": "collateral-pricing",
     "branchModel": "multi-branch",
     "branchApplicability": {
@@ -21,8 +21,8 @@
         }
       ]
     },
-    "reviewedAt": "2026-10-21",
-    "reviewer": "Pharos Safety Score R1 vault parity review",
+    "reviewedAt": "2026-10-30",
+    "reviewer": "RS2-032 research sprint 2026-10-30 (oracle topology rereview)",
     "confidence": "probable",
     "sources": [
       {
@@ -348,6 +348,14 @@
       {
         "label": "Morpho borrower liquidation and supplier loss mechanics; retrieved in C04/C13/C17 on 2026-10-20",
         "url": "https://docs.morpho.org/learn/concepts/liquidation.md"
+      },
+      {
+        "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+        "url": "https://eth.blockscout.com/block/26305151"
+      },
+      {
+        "label": "Chainlink reference data directory (heartbeat seconds), accessed 2026-10-30",
+        "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
       }
     ],
     "branches": [
@@ -470,8 +478,8 @@
       {
         "id": "oracle-0x68066d2891254f1f3285cac0bb16b65b28ee3cab",
         "label": "ethereum borrower-pricing root 0x68066d2891254f1f3285cac0bb16b65b28ee3cab",
-        "tier": "opaque-or-unknown",
-        "summary": "Book content as of 2026-10-20T19:53:59Z at block 26236015: 0x1a9ccaca2dba9469cd9cba3d077466761b05f465c412d2bf2c71614c4963dd84: collateral 0x14d60e7fdc0d71d8611742720e4c50e7a974020c, LLTV raw 915000000000000000, included lender claim 0 raw loan-token units. The frozen book establishes the exact oracle and borrower-collateral identity, but these dossiers and retained source reviews do not establish complete nested feeds, price-setting authority, fallback independence or consumer-enforced freshness for this exact root. It remains bounded unknown, not oracleless, proven unsafe or priced as standard-external.",
+        "tier": "privileged-internal-pricing",
+        "summary": "Book content as of 2026-10-20T19:53:59Z at block 26236015: 0x1a9ccaca2dba9469cd9cba3d077466761b05f465c412d2bf2c71614c4963dd84: collateral 0x14d60e7fdc0d71d8611742720e4c50e7a974020c, LLTV raw 915000000000000000, included lender claim 0 raw loan-token units. Pinned reads at ethereum block 26305151 (2026-10-30) show a verified MorphoChainlinkOracleV2 whose only configured input is BASE_FEED_1 0xaffd8f5578e8590665de561bde9e7badb99300d9, an EACAggregatorProxy with description \"USCC NAV\" and 6 decimals; BASE_FEED_2, QUOTE_FEED_1, QUOTE_FEED_2, BASE_VAULT and QUOTE_VAULT are the zero address with conversion samples of 1. The price is therefore a single administrator-published NAV for USCC, not an independent market quote: one source, no alternate feed, no vault conversion and no consumer-visible deviation check. The observed USCC NAV round last updated 22.3 hours before the pin (updatedAt 1793277587).",
         "collateralAssets": [
           "0x14d60e7fdc0d71d8611742720e4c50e7a974020c"
         ],
@@ -487,7 +495,7 @@
             "note": "Maximum immutable LLTV among the explicitly listed current markets using this exact oracle/collateral; not vault utilization, an asset allocation or a liquidation execution guarantee."
           }
         ],
-        "fallbackBehavior": "Exact nested fallback, operator independence and source freshness remain unresolved; no alternative or successful price call is inferred from market membership.",
+        "fallbackBehavior": "No fallback exists: every other feed and vault slot is the zero address. A wrong or stale USCC NAV is a single-source pricing failure with no alternate provider or on-chain sanity bound inside this oracle.",
         "liquidationMechanism": "Morpho borrower liquidation depends on the market oracle price and immutable LLTV. This lender position therefore retains borrower-pricing exposure even with zero own borrowing; exact successful liquidation execution and stressed cash realization were not measured here.",
         "backstop": "No funded exact-market or whole-vault recovery commitment is established by this review; no absence-of-insurance or guaranteed rescuer claim is inferred.",
         "shutdownOrBadDebtBehavior": "Morpho borrower bad debt can reduce supplier assets and the lending claim carried by vault shares. Ordinary withdrawal or in-kind position delivery is not guaranteed par cash recovery.",
@@ -499,6 +507,28 @@
           {
             "label": "Exact ethereum oracle identity in frozen Morpho market parameters; nested source verification is separately scoped",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68066d2891254f1f3285cac0bb16b65b28ee3cab"
+          },
+          {
+            "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+            "url": "https://eth.blockscout.com/block/26305151"
+          },
+          {
+            "label": "Verified MorphoChainlinkOracleV2 source and ABI",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68066d2891254f1f3285cac0bb16b65b28ee3cab"
+          },
+          {
+            "label": "USCC NAV EACAggregatorProxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xaffd8f5578e8590665de561bde9e7badb99300d9"
+          }
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink-format EACAggregatorProxy (\"USCC NAV\")",
+            "path": "BASE_FEED_1: USCC NAV",
+            "address": "0xaffd8f5578e8590665de561bde9e7badb99300d9",
+            "chain": "ethereum",
+            "observedAt": "2026-10-30",
+            "observedBlock": 26305151
           }
         ]
       },
@@ -1159,8 +1189,8 @@
       {
         "id": "oracle-0x873cd44b860dedfe139f93e12a4acca0926ffb87",
         "label": "ethereum borrower-pricing root 0x873cd44b860dedfe139f93e12a4acca0926ffb87",
-        "tier": "opaque-or-unknown",
-        "summary": "Book content as of 2026-10-20T19:53:59Z at block 26236015: 0x85c7f4374f3a403b36d54cc284983b2b02bbd8581ee0f3c36494447b87d9fcab: collateral 0x9d39a5de30e57443bff2a8307a4256c8797a3497, LLTV raw 915000000000000000, included lender claim 0 raw loan-token units. The frozen book establishes the exact oracle and borrower-collateral identity, but these dossiers and retained source reviews do not establish complete nested feeds, price-setting authority, fallback independence or consumer-enforced freshness for this exact root. It remains bounded unknown, not oracleless, proven unsafe or priced as standard-external.",
+        "tier": "privileged-internal-pricing",
+        "summary": "Book content as of 2026-10-20T19:53:59Z at block 26236015: 0x85c7f4374f3a403b36d54cc284983b2b02bbd8581ee0f3c36494447b87d9fcab: collateral 0x9d39a5de30e57443bff2a8307a4256c8797a3497, LLTV raw 915000000000000000, included lender claim 0 raw loan-token units. Pinned reads at ethereum block 26305151 (2026-10-30) show a verified MorphoChainlinkOracleV2 with every feed slot zero and BASE_VAULT set to the verified StakedUSDeV2 0x9d39a5de30e57443bff2a8307a4256c8797a3497 (symbol sUSDe), BASE_VAULT_CONVERSION_SAMPLE 1000000000000000000 and SCALE_FACTOR 1000000; sUSDe.asset() is USDe 0x4c9edd5852cd905f086c759e8383e09bff1e68b3. The price is the vault's own ERC-4626 exchange rate expressed in USDe with USDe treated at par: protocol accounting rather than a market quote, with no external feed, backup provider or deviation guard.",
         "collateralAssets": [
           "0x9d39a5de30e57443bff2a8307a4256c8797a3497"
         ],
@@ -1176,7 +1206,7 @@
             "note": "Maximum immutable LLTV among the explicitly listed current markets using this exact oracle/collateral; not vault utilization, an asset allocation or a liquidation execution guarantee."
           }
         ],
-        "fallbackBehavior": "Exact nested fallback, operator independence and source freshness remain unresolved; no alternative or successful price call is inferred from market membership.",
+        "fallbackBehavior": "No external feed and no fallback: the oracle returns the sUSDe vault's own share conversion and assumes USDe par. Vault accounting or a USDe peg failure is therefore an unhedged single pricing failure domain.",
         "liquidationMechanism": "Morpho borrower liquidation depends on the market oracle price and immutable LLTV. This lender position therefore retains borrower-pricing exposure even with zero own borrowing; exact successful liquidation execution and stressed cash realization were not measured here.",
         "backstop": "No funded exact-market or whole-vault recovery commitment is established by this review; no absence-of-insurance or guaranteed rescuer claim is inferred.",
         "shutdownOrBadDebtBehavior": "Morpho borrower bad debt can reduce supplier assets and the lending claim carried by vault shares. Ordinary withdrawal or in-kind position delivery is not guaranteed par cash recovery.",
@@ -1188,6 +1218,18 @@
           {
             "label": "Exact ethereum oracle identity in frozen Morpho market parameters; nested source verification is separately scoped",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x873cd44b860dedfe139f93e12a4acca0926ffb87"
+          },
+          {
+            "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+            "url": "https://eth.blockscout.com/block/26305151"
+          },
+          {
+            "label": "Verified MorphoChainlinkOracleV2 source and ABI",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x873cd44b860dedfe139f93e12a4acca0926ffb87"
+          },
+          {
+            "label": "Verified sUSDe (StakedUSDeV2) source and ERC-4626 getters",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x9d39a5de30e57443bff2a8307a4256c8797a3497"
           }
         ]
       },
@@ -1378,8 +1420,8 @@
       {
         "id": "oracle-0xdcc04ffacd7b49035ccdbbba59a5f955944129db",
         "label": "ethereum borrower-pricing root 0xdcc04ffacd7b49035ccdbbba59a5f955944129db",
-        "tier": "opaque-or-unknown",
-        "summary": "Book content as of 2026-10-20T19:53:59Z at block 26236015: 0xbf02d6c6852fa0b8247d5514d0c91e6c1fbde9a168ac3fd2033028b5ee5ce6d0: collateral 0x8236a87084f8b84306f72007f36f2618a5634494, LLTV raw 860000000000000000, included lender claim 0 raw loan-token units. The frozen book establishes the exact oracle and borrower-collateral identity, but these dossiers and retained source reviews do not establish complete nested feeds, price-setting authority, fallback independence or consumer-enforced freshness for this exact root. It remains bounded unknown, not oracleless, proven unsafe or priced as standard-external.",
+        "tier": "single-source-or-laggy",
+        "summary": "Book content as of 2026-10-20T19:53:59Z at block 26236015: 0xbf02d6c6852fa0b8247d5514d0c91e6c1fbde9a168ac3fd2033028b5ee5ce6d0: collateral 0x8236a87084f8b84306f72007f36f2618a5634494, LLTV raw 860000000000000000, included lender claim 0 raw loan-token units. Pinned reads at ethereum block 26305151 (2026-10-30) show a verified MorphoChainlinkOracleV2 with BASE_FEED_1 0xb415eaa355d8440ac7ecb602d3fb67ccc1f0bc81, a verified TransparentUpgradeableProxy (EIP-1967 implementation 0x6978de4916DF8cD2BF7732BedEBBE7090f028555) whose aggregator describes itself as \"Redstone Price Feed\" (8 decimals, round 1, answer 100521786), and BASE_FEED_2 0xf4030086522a5beea4988f8ca5b36dbc97bee88c (Chainlink BTC/USD, 8 decimals, published heartbeat 3600s); SCALE_FACTOR is 1e18 and both vault slots are zero. The composite multiplies one Redstone base ratio by Chainlink BTC/USD: the BTC/USD leg has many OCR transmitters and a published heartbeat, but the base ratio has a single provider, round 1, no alternate and no published heartbeat, so the composite is single-source-bounded.",
         "collateralAssets": [
           "0x8236a87084f8b84306f72007f36f2618a5634494"
         ],
@@ -1395,7 +1437,7 @@
             "note": "Maximum immutable LLTV among the explicitly listed current markets using this exact oracle/collateral; not vault utilization, an asset allocation or a liquidation execution guarantee."
           }
         ],
-        "fallbackBehavior": "Exact nested fallback, operator independence and source freshness remain unresolved; no alternative or successful price call is inferred from market membership.",
+        "fallbackBehavior": "No failover composer: the oracle has exactly one base feed and one quote feed. Chainlink redundancy on BTC/USD does not cover a wrong Redstone base ratio, and no published heartbeat or staleness check exists for that leg.",
         "liquidationMechanism": "Morpho borrower liquidation depends on the market oracle price and immutable LLTV. This lender position therefore retains borrower-pricing exposure even with zero own borrowing; exact successful liquidation execution and stressed cash realization were not measured here.",
         "backstop": "No funded exact-market or whole-vault recovery commitment is established by this review; no absence-of-insurance or guaranteed rescuer claim is inferred.",
         "shutdownOrBadDebtBehavior": "Morpho borrower bad debt can reduce supplier assets and the lending claim carried by vault shares. Ordinary withdrawal or in-kind position delivery is not guaranteed par cash recovery.",
@@ -1407,14 +1449,57 @@
           {
             "label": "Exact ethereum oracle identity in frozen Morpho market parameters; nested source verification is separately scoped",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdcc04ffacd7b49035ccdbbba59a5f955944129db"
+          },
+          {
+            "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+            "url": "https://eth.blockscout.com/block/26305151"
+          },
+          {
+            "label": "Verified MorphoChainlinkOracleV2 source and ABI",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdcc04ffacd7b49035ccdbbba59a5f955944129db"
+          },
+          {
+            "label": "Redstone feed proxy",
+            "url": "https://eth.blockscout.com/address/0xb415eaa355d8440ac7ecb602d3fb67ccc1f0bc81"
+          },
+          {
+            "label": "Redstone proxy verified implementation",
+            "url": "https://eth.blockscout.com/address/0x6978de4916DF8cD2BF7732BedEBBE7090f028555"
+          },
+          {
+            "label": "Chainlink BTC/USD proxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf4030086522a5beea4988f8ca5b36dbc97bee88c"
+          },
+          {
+            "label": "Chainlink reference data directory (heartbeat seconds), accessed 2026-10-30",
+            "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+          }
+        ],
+        "feeds": [
+          {
+            "provider": "Redstone aggregator behind a verified TransparentUpgradeableProxy (description \"Redstone Price Feed\")",
+            "path": "BASE_FEED_1: Redstone base ratio",
+            "address": "0xb415eaa355d8440ac7ecb602d3fb67ccc1f0bc81",
+            "chain": "ethereum",
+            "observedAt": "2026-10-30",
+            "observedBlock": 26305151
+          },
+          {
+            "provider": "Chainlink EACAggregatorProxy",
+            "path": "BASE_FEED_2: BTC / USD",
+            "address": "0xf4030086522a5beea4988f8ca5b36dbc97bee88c",
+            "chain": "ethereum",
+            "heartbeatSec": 3600,
+            "observedAt": "2026-10-30",
+            "observedBlock": 26305151
           }
         ]
       },
       {
         "id": "oracle-0xf3efa46246d319381f5e7023ae83f9c23c11b0f6",
         "label": "ethereum borrower-pricing root 0xf3efa46246d319381f5e7023ae83f9c23c11b0f6",
-        "tier": "opaque-or-unknown",
-        "summary": "Book content as of 2026-10-20T19:53:59Z at block 26236015: 0xc498f4bfdda99e60ea8eb04c1e145654a70bc59da76ef9c6ed54a1314d78e5b5: collateral 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f, LLTV raw 915000000000000000, included lender claim 234653009081 raw loan-token units. The frozen book establishes the exact oracle and borrower-collateral identity, but these dossiers and retained source reviews do not establish complete nested feeds, price-setting authority, fallback independence or consumer-enforced freshness for this exact root. It remains bounded unknown, not oracleless, proven unsafe or priced as standard-external.",
+        "tier": "single-source-or-laggy",
+        "summary": "Book content as of 2026-10-20T19:53:59Z at block 26236015: 0xc498f4bfdda99e60ea8eb04c1e145654a70bc59da76ef9c6ed54a1314d78e5b5: collateral 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f, LLTV raw 915000000000000000, included lender claim 234653009081 raw loan-token units. Pinned reads at ethereum block 26305151 (2026-10-30) show a verified MorphoChainlinkOracleV2 with BASE_FEED_1 0xb49f677943bc038e9857d61e7d053caa2c1734c1 (Chainlink EUR/USD, 8 decimals, published heartbeat 86400s), BASE_VAULT set to the verified Morpho vault 0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f (symbol steakEURCV) with BASE_VAULT_CONVERSION_SAMPLE 100000000 and SCALE_FACTOR 100000000; every other slot is zero and steakEURCV.asset() is EURCV 0x5f7827fdeb7c20b443265fc2f40845b715385ff2. The price is the vault's internal EUR NAV converted at one Chainlink EUR/USD feed: a single 24-hour-heartbeat FX source with no alternate and no independent NAV check, with the vault's own accounting as the other leg.",
         "collateralAssets": [
           "0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
         ],
@@ -1430,7 +1515,7 @@
             "note": "Maximum immutable LLTV among the explicitly listed current markets using this exact oracle/collateral; not vault utilization, an asset allocation or a liquidation execution guarantee."
           }
         ],
-        "fallbackBehavior": "Exact nested fallback, operator independence and source freshness remain unresolved; no alternative or successful price call is inferred from market membership.",
+        "fallbackBehavior": "No fallback: the only external input is one Chainlink EUR/USD aggregator with a 24-hour heartbeat; the vault conversion is read on-chain but is not an independent price check. A stale FX round or a vault-accounting error is an unhedged single failure domain.",
         "liquidationMechanism": "Morpho borrower liquidation depends on the market oracle price and immutable LLTV. This lender position therefore retains borrower-pricing exposure even with zero own borrowing; exact successful liquidation execution and stressed cash realization were not measured here.",
         "backstop": "No funded exact-market or whole-vault recovery commitment is established by this review; no absence-of-insurance or guaranteed rescuer claim is inferred.",
         "shutdownOrBadDebtBehavior": "Morpho borrower bad debt can reduce supplier assets and the lending claim carried by vault shares. Ordinary withdrawal or in-kind position delivery is not guaranteed par cash recovery.",
@@ -1442,6 +1527,37 @@
           {
             "label": "Exact ethereum oracle identity in frozen Morpho market parameters; nested source verification is separately scoped",
             "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3efa46246d319381f5e7023ae83f9c23c11b0f6"
+          },
+          {
+            "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+            "url": "https://eth.blockscout.com/block/26305151"
+          },
+          {
+            "label": "Verified MorphoChainlinkOracleV2 source and ABI",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3efa46246d319381f5e7023ae83f9c23c11b0f6"
+          },
+          {
+            "label": "Chainlink EUR/USD proxy source",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xb49f677943bc038e9857d61e7d053caa2c1734c1"
+          },
+          {
+            "label": "Verified steakEURCV vault source (asset/getters)",
+            "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xbeef0c075da5d01112ae5cf34d257074fb5ddb2f"
+          },
+          {
+            "label": "Chainlink reference data directory (heartbeat seconds), accessed 2026-10-30",
+            "url": "https://reference-data-directory.vercel.app/feeds-mainnet.json"
+          }
+        ],
+        "feeds": [
+          {
+            "provider": "Chainlink EACAggregatorProxy",
+            "path": "BASE_FEED_1: EUR / USD",
+            "address": "0xb49f677943bc038e9857d61e7d053caa2c1734c1",
+            "chain": "ethereum",
+            "heartbeatSec": 86400,
+            "observedAt": "2026-10-30",
+            "observedBlock": 26305151
           }
         ]
       },
@@ -1702,21 +1818,25 @@
         "id": "ethereum:0x68066d2891254f1f3285cac0bb16b65b28ee3cab",
         "chain": "ethereum",
         "address": "0x68066d2891254f1f3285cac0bb16b65b28ee3cab",
-        "pricingAuthority": "unknown",
+        "pricingAuthority": "internal-price",
         "branchId": "oracle-0x68066d2891254f1f3285cac0bb16b65b28ee3cab",
         "applicability": {
-          "disposition": "unresolved",
-          "reviewedAt": "2026-10-21",
-          "reviewer": "Pharos Safety Score R1 vault parity review",
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-30",
+          "reviewer": "RS2-032 research sprint 2026-10-30 (oracle topology rereview)",
           "confidence": "probable",
-          "rationale": "The existing complete NAV-accounted book at ethereum block 26236015 binds this exact root to the named borrower markets. Current lender exposure requires collateral pricing; zero vault borrowing and internal share accounting are not an oracle exemption. Nested pricing authority remains unestablished; this path stays unresolved.",
+          "rationale": "The frozen book at ethereum block 26236015 binds this root to market 0x1a9ccaca… with USCC collateral 0x14d60e7f…. At ethereum block 26305151 the verified oracle exposes exactly one input, BASE_FEED_1 0xaffd8f55… (EACAggregatorProxy, description \"USCC NAV\", 6 decimals), with every other feed and vault slot zero. Pricing authority is an administrator-published NAV consumed by a borrower-liquidation market, so collateral pricing applies; it is internal/privileged valuation, not an independent external market price.",
           "sources": [
             {
-              "label": "Existing frozen complete NAV-accounted lender book morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2; ethereum block 26236015, hash 0xa4ed7279a8c4640cc0c887129811ae3a28ce2dee6eb5544a302a28c63a5c7371, as of 2026-10-20T19:53:59Z; not a new RPC observation",
+              "label": "Existing frozen complete NAV-accounted lender book morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2; ethereum block 26236015; not a new RPC observation",
               "url": "https://eth.blockscout.com/block/26236015"
             },
             {
-              "label": "Exact ethereum oracle identity in frozen Morpho market parameters; nested source verification is separately scoped",
+              "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+              "url": "https://eth.blockscout.com/block/26305151"
+            },
+            {
+              "label": "Verified MorphoChainlinkOracleV2 source and ABI",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x68066d2891254f1f3285cac0bb16b65b28ee3cab"
             }
           ]
@@ -1918,21 +2038,25 @@
         "id": "ethereum:0x873cd44b860dedfe139f93e12a4acca0926ffb87",
         "chain": "ethereum",
         "address": "0x873cd44b860dedfe139f93e12a4acca0926ffb87",
-        "pricingAuthority": "unknown",
+        "pricingAuthority": "internal-price",
         "branchId": "oracle-0x873cd44b860dedfe139f93e12a4acca0926ffb87",
         "applicability": {
-          "disposition": "unresolved",
-          "reviewedAt": "2026-10-21",
-          "reviewer": "Pharos Safety Score R1 vault parity review",
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-30",
+          "reviewer": "RS2-032 research sprint 2026-10-30 (oracle topology rereview)",
           "confidence": "probable",
-          "rationale": "The existing complete NAV-accounted book at ethereum block 26236015 binds this exact root to the named borrower markets. Current lender exposure requires collateral pricing; zero vault borrowing and internal share accounting are not an oracle exemption. Nested pricing authority remains unestablished; this path stays unresolved.",
+          "rationale": "The frozen book at ethereum block 26236015 binds this root to market 0x85c7f437… with sUSDe collateral 0x9d39a5de…. At ethereum block 26305151 the verified oracle has every feed slot zero and BASE_VAULT = the StakedUSDeV2 vault, with conversion sample 1e18 and scale 1e6. Price is the vault's own ERC-4626 exchange rate in USDe at par: borrower collateral pricing applies, the authority is protocol-internal accounting, and no external market quote or fallback exists.",
           "sources": [
             {
-              "label": "Existing frozen complete NAV-accounted lender book morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2; ethereum block 26236015, hash 0xa4ed7279a8c4640cc0c887129811ae3a28ce2dee6eb5544a302a28c63a5c7371, as of 2026-10-20T19:53:59Z; not a new RPC observation",
+              "label": "Existing frozen complete NAV-accounted lender book morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2; ethereum block 26236015; not a new RPC observation",
               "url": "https://eth.blockscout.com/block/26236015"
             },
             {
-              "label": "Exact ethereum oracle identity in frozen Morpho market parameters; nested source verification is separately scoped",
+              "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+              "url": "https://eth.blockscout.com/block/26305151"
+            },
+            {
+              "label": "Verified MorphoChainlinkOracleV2 source and ABI",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x873cd44b860dedfe139f93e12a4acca0926ffb87"
             }
           ]
@@ -1990,21 +2114,25 @@
         "id": "ethereum:0xdcc04ffacd7b49035ccdbbba59a5f955944129db",
         "chain": "ethereum",
         "address": "0xdcc04ffacd7b49035ccdbbba59a5f955944129db",
-        "pricingAuthority": "unknown",
+        "pricingAuthority": "external-price",
         "branchId": "oracle-0xdcc04ffacd7b49035ccdbbba59a5f955944129db",
         "applicability": {
-          "disposition": "unresolved",
-          "reviewedAt": "2026-10-21",
-          "reviewer": "Pharos Safety Score R1 vault parity review",
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-30",
+          "reviewer": "RS2-032 research sprint 2026-10-30 (oracle topology rereview)",
           "confidence": "probable",
-          "rationale": "The existing complete NAV-accounted book at ethereum block 26236015 binds this exact root to the named borrower markets. Current lender exposure requires collateral pricing; zero vault borrowing and internal share accounting are not an oracle exemption. Nested pricing authority remains unestablished; this path stays unresolved.",
+          "rationale": "The frozen book at ethereum block 26236015 binds this root to market 0xbf02d6c6… with LBTC collateral 0x8236a870…. At ethereum block 26305151 the verified oracle composes BASE_FEED_1 0xb415eaa3… (Redstone, 8 decimals) with BASE_FEED_2 0xf4030086… (Chainlink BTC/USD, heartbeat 3600s) at scale 1e18. Borrower collateral pricing applies; the authority is external-price, with the base ratio single-provider despite Chainlink redundancy on the denomination leg.",
           "sources": [
             {
-              "label": "Existing frozen complete NAV-accounted lender book morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2; ethereum block 26236015, hash 0xa4ed7279a8c4640cc0c887129811ae3a28ce2dee6eb5544a302a28c63a5c7371, as of 2026-10-20T19:53:59Z; not a new RPC observation",
+              "label": "Existing frozen complete NAV-accounted lender book morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2; ethereum block 26236015; not a new RPC observation",
               "url": "https://eth.blockscout.com/block/26236015"
             },
             {
-              "label": "Exact ethereum oracle identity in frozen Morpho market parameters; nested source verification is separately scoped",
+              "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+              "url": "https://eth.blockscout.com/block/26305151"
+            },
+            {
+              "label": "Verified MorphoChainlinkOracleV2 source and ABI",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xdcc04ffacd7b49035ccdbbba59a5f955944129db"
             }
           ]
@@ -2014,21 +2142,25 @@
         "id": "ethereum:0xf3efa46246d319381f5e7023ae83f9c23c11b0f6",
         "chain": "ethereum",
         "address": "0xf3efa46246d319381f5e7023ae83f9c23c11b0f6",
-        "pricingAuthority": "unknown",
+        "pricingAuthority": "internal-price",
         "branchId": "oracle-0xf3efa46246d319381f5e7023ae83f9c23c11b0f6",
         "applicability": {
-          "disposition": "unresolved",
-          "reviewedAt": "2026-10-21",
-          "reviewer": "Pharos Safety Score R1 vault parity review",
+          "disposition": "branches-required",
+          "reviewedAt": "2026-10-30",
+          "reviewer": "RS2-032 research sprint 2026-10-30 (oracle topology rereview)",
           "confidence": "probable",
-          "rationale": "The existing complete NAV-accounted book at ethereum block 26236015 binds this exact root to the named borrower markets. Current lender exposure requires collateral pricing; zero vault borrowing and internal share accounting are not an oracle exemption. Nested pricing authority remains unestablished; this path stays unresolved.",
+          "rationale": "The frozen book at ethereum block 26236015 binds this root to market 0xc498f4bf… with the steakEURCV vault 0xbeef0c07… as collateral and a current lender claim of 234653009081 raw loan-token units. At ethereum block 26305151 the verified oracle converts the vault's internal EUR NAV through a single Chainlink EUR/USD feed (heartbeat 86400s) with all other slots zero. Borrower collateral pricing applies; the vault NAV is internal accounting and the FX leg is the only external input, with no alternate or fallback.",
           "sources": [
             {
-              "label": "Existing frozen complete NAV-accounted lender book morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2; ethereum block 26236015, hash 0xa4ed7279a8c4640cc0c887129811ae3a28ce2dee6eb5544a302a28c63a5c7371, as of 2026-10-20T19:53:59Z; not a new RPC observation",
+              "label": "Existing frozen complete NAV-accounted lender book morpho-lender-book:v1:3a9e404a79f61bb299a452595e0de5889f3fdd72595c0911e21252b2326a0bb2; ethereum block 26236015; not a new RPC observation",
               "url": "https://eth.blockscout.com/block/26236015"
             },
             {
-              "label": "Exact ethereum oracle identity in frozen Morpho market parameters; nested source verification is separately scoped",
+              "label": "Pinned ethereum block 26305151, hash 0x864eec6a351243dfbf5bf2463f1da96f2aacde536845b3b268de0d29758481e6, timestamp 2026-10-30T11:03:47Z; eth_call reads completed 2026-10-30T11:04:33Z",
+              "url": "https://eth.blockscout.com/block/26305151"
+            },
+            {
+              "label": "Verified MorphoChainlinkOracleV2 source and ABI",
               "url": "https://eth.blockscout.com/api/v2/smart-contracts/0xf3efa46246d319381f5e7023ae83f9c23c11b0f6"
             }
           ]

@@ -287,5 +287,30 @@
         "evidence": "At Ethereum block 25770497 on 2026-08-16, the canonical-side OFTLockboxUpgradeable proxy 0xa62571ebdffabc3051a2e5b9e1f57b23d830c8fd pointed to implementation 0x5ed9f8095e8c559AA07aE0e7dC748894B825F80E, token() returned the Ethereum cUSD deployment, owner() returned TimelockController 0xD8236031d8279d82E615aF2BFab5FC0127A329ab, peers(30398) returned the MegaETH cUSD representation, and sharedDecimals() returned 6. The lockbox owner controls escrow, bridge burn/mint accounting, upgrades, administration, and peer configuration through the 86400-second timelock; the LayerZero validator/DVN/executor and route-limit details remain unresolved."
       }
     ]
+  },
+  "oracleRisk": {
+    "tier": "standard-external",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "Cap stores a primary and a backup OracleData slot per asset in one central Oracle contract and resolves getPrice() by trying the primary adapter, falling through to the backup when the result is zero or older than the per-asset staleness bound, and reverting with PriceError when both are unusable; mint and burn are disabled while prices are stale. RedStone is the documented primary source for reserve assets (USDC, USDT, pyUSD, cUSD) and Chainlink for delegation assets (wstETH, wBTC), with CapTokenAdapter and StakedCapAdapter composing cUSD and stcUSD value from the underlying prices. The docs name Oracle 0xcD7f45566bc0E7303fB92A93969BB4D3f6e662bb and the RedStone cUSD fundamental wrapper 0x9A5a3c3Ed0361505cC1D4e824B3854De5724434A but publish no per-asset primary/backup adapter identities or staleness values, which stay admin-set state.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "RS-027 research sprint 2026-10-29",
+      "rationale": "Vault mint, burn, borrow and redemption consume one protocol-level getPrice() route per asset rather than borrower-owned collateral branches of this token, so the reviewed applicability is the top-level coin-price feed; the per-asset adapter census and staleness bounds that would be needed for a branch-level inventory are unpublished admin configuration.",
+      "sources": [
+        { "label": "Cap Oracles", "url": "https://docs.cap.app/concepts/oracles.md" },
+        { "label": "Cap Oracle Contract Reference", "url": "https://docs.cap.app/developers/contracts/oracle.md" }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "RS-027 research sprint 2026-10-29",
+    "confidence": "probable",
+    "sources": [
+      { "label": "Cap Oracles (named data sources)", "url": "https://docs.cap.app/concepts/oracles.md" },
+      { "label": "Cap Oracle Contract Reference (primary/backup and staleness failover)", "url": "https://docs.cap.app/developers/contracts/oracle.md" },
+      { "label": "Cap Price Sources (RedStone cUSD fundamental feed and Oracle address)", "url": "https://docs.cap.app/developers/price-sources.md" },
+      { "label": "Cap Vault (mint/burn disabled while oracle prices are stale)", "url": "https://docs.cap.app/concepts/vault.md" }
+    ]
   }
 }

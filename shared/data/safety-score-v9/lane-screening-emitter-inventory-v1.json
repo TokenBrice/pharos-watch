@@ -1,0 +1,395 @@
+{
+  "schemaVersion": 1,
+  "reviewedAt": "2026-10-30",
+  "policy": {
+    "laneIdentity": "bridge-route-deployment",
+    "subjectRule": "subjectDeploymentKey is the reviewed bridge route id (`bridgeRouteRisk.routes[].id`, `chain:contractAddress`), never a controller: IR-1c closure compares certificate.subjectDeploymentKey with the compiled bridge control's deploymentKey.",
+    "emitterRule": "Emitters are the contracts that emit the lane's admin events: the route deployment itself, and per contributor the governed contract whose ownership/role/config events encode that contributor's power. Holder Safes and EOAs are never emitters; their power appears as the governed contract's OwnershipTransferred/RoleGranted/RoleRevoked events. Every contributor maps to at least one lane emitter, recorded in the inventory.",
+    "abiCompletenessRule": "Each emitter records the admin-relevant events of its verified ABI (ownership, roles, pause, upgrade, peer/remote-pool/chain config, router/rate limits, and fund-moving rescue/freeze administration). A lane is admissible only when every recorded admin event is a frozen V9 lane admin-event family; otherwise the lane is `no-reviewed-emitter` with `abi-not-covered` and the uncovered names, so a clean certificate can never assert absence for an unscreened admin surface (R1/R2).",
+    "pinConvention": "sha256-decoded-runtime-bytes:<64 lowercase hex>, sha256 of the decoded runtime code read with eth_getCode at the recorded pinned block. Proxy addresses are the emitters because logs are emitted at the proxy; the ABI is the implementation ABI.",
+    "minimumLookbackBlocks": 50000,
+    "lookbackRule": "Per chain, at least 50,000 blocks (IR-3a's explorer-events floor) and never more than the 32-page x 10,000-block certificate budget.",
+    "abiBasisRule": "A non-Ethereum emitter reuses a recorded ABI only with an explicit basis: `same-runtime-code` when the reviewed proxy and implementation runtime code hashes are identical to the Ethereum basis, `same-verified-type` when the deployment has the same verified contract type and byte length but chain-specific immutables, and `verified-source` when the emitter itself was verified on its own chain.",
+    "sources": [
+      "https://etherscan.io/address/0xf077771c2a09ab77678e3945b07db8586d205340#code",
+      "https://eth.blockscout.com/address/0x6be164af10879a86e4643089638b6864ef12b1ee?tab=contract",
+      "https://eth.blockscout.com/address/0x5bf44d32260aee6b807c490e92ef0481d15ab493?tab=contract",
+      "https://eth.blockscout.com/address/0x19056eb5ea89f22202ae1c9cefe685193a894d64?tab=contract",
+      "https://docs.chain.link/ccip"
+    ]
+  },
+  "lookbackBlocksByChain": {
+    "ethereum": 216000,
+    "arbitrum": 200000,
+    "base": 50000,
+    "optimism": 50000
+  },
+  "lanes": [
+    {
+      "subjectDeploymentKey": "ethereum:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+      "assetIds": ["frnt-wyoming"],
+      "rail": "chainlink-ccip",
+      "contributors": [
+        {
+          "controlId": "frnt-ethereum-ccip-burn-mint-pool",
+          "emitterAddresses": ["0x5e817f2abccb9095585d26c2a3ce234a440574fc", "0xf077771c2a09ab77678e3945b07db8586d205340"]
+        },
+        {
+          "controlId": "frnt-ethereum-ccip-pool-owner",
+          "emitterAddresses": ["0xf077771c2a09ab77678e3945b07db8586d205340"]
+        },
+        {
+          "controlId": "frnt-current-ccip-transfer-rail",
+          "emitterAddresses": ["0x5e817f2abccb9095585d26c2a3ce234a440574fc", "0xf077771c2a09ab77678e3945b07db8586d205340"]
+        }
+      ],
+      "emitters": [
+        {
+          "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "chain": "ethereum",
+          "role": "route-deployment",
+          "label": "FRNT token (ERC-1967 proxy; implementation FrontierERC20F)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:4918eaf3984301ba219b6c86439ba0676766bc5255d2bd039f3e669e74b200b5",
+          "observedBlock": 26304000,
+          "observedAt": "2026-10-30T07:12:47Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "ethereum",
+            "address": "0x87b589879ab3e22de54c980396bd944ac2b5dc6c",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:2a93413cbd9378720618cedd3315e608e8a897952ccfed7945bc30f031a76c29",
+            "verifiedSourceUrl": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          "adminEvents": [
+            "AccessRegistryUpdated", "AdminChanged", "BeaconUpgraded", "ContractUriUpdated", "GasTokenSalvaged",
+            "MintedToFrozen", "Paused", "RoleAdminChanged", "RoleGranted", "RoleRevoked", "TokenSalvaged",
+            "TokensRecovered", "TransferredToFrozen", "Unpaused", "Upgraded"
+          ],
+          "sources": [
+            { "label": "FRNT Ethereum proxy", "url": "https://etherscan.io/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc#readProxyContract" },
+            { "label": "FrontierERC20F verified implementation", "url": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code" }
+          ]
+        },
+        {
+          "address": "0xf077771c2a09ab77678e3945b07db8586d205340",
+          "chain": "ethereum",
+          "role": "governed-contract",
+          "label": "FRNT CCIP BurnMintTokenPool (immutable deployment)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:4a9358690ff0a1224d4448f4d48e2bdc7041433400ea9e20d5d43cf93b2ff987",
+          "observedBlock": 26304000,
+          "observedAt": "2026-10-30T07:12:47Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "ethereum",
+            "address": "0xf077771c2a09ab77678e3945b07db8586d205340",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:4a9358690ff0a1224d4448f4d48e2bdc7041433400ea9e20d5d43cf93b2ff987",
+            "verifiedSourceUrl": "https://etherscan.io/address/0xf077771c2a09ab77678e3945b07db8586d205340#code"
+          },
+          "adminEvents": [
+            "AllowListAdd", "AllowListRemove", "ChainAdded", "ChainConfigured", "ChainRemoved", "ConfigChanged",
+            "OwnershipTransferRequested", "OwnershipTransferred", "RateLimitAdminSet", "RemotePoolAdded",
+            "RemotePoolRemoved", "RouterUpdated"
+          ],
+          "sources": [
+            { "label": "Verified Ethereum BurnMintTokenPool", "url": "https://etherscan.io/address/0xf077771c2a09ab77678e3945b07db8586d205340#code" }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectDeploymentKey": "arbitrum:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+      "assetIds": ["frnt-wyoming"],
+      "rail": "chainlink-ccip",
+      "contributors": [
+        {
+          "controlId": "frnt-arbitrum-ccip-pool",
+          "emitterAddresses": ["0x5e817f2abccb9095585d26c2a3ce234a440574fc", "0xd071062d0b99b78c7ce6d036c7c79aa2690ca9a7"]
+        },
+        {
+          "controlId": "frnt-arbitrum-ccip-pool-owner",
+          "emitterAddresses": ["0xd071062d0b99b78c7ce6d036c7c79aa2690ca9a7"]
+        },
+        {
+          "controlId": "frnt-current-ccip-transfer-rail",
+          "emitterAddresses": ["0x5e817f2abccb9095585d26c2a3ce234a440574fc", "0xd071062d0b99b78c7ce6d036c7c79aa2690ca9a7"]
+        }
+      ],
+      "emitters": [
+        {
+          "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "chain": "arbitrum",
+          "role": "route-deployment",
+          "label": "FRNT token proxy (same proxy runtime and implementation code as the Ethereum reviewed deployment)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:4918eaf3984301ba219b6c86439ba0676766bc5255d2bd039f3e669e74b200b5",
+          "observedBlock": 510000000,
+          "observedAt": "2026-09-29T10:23:25Z",
+          "abiBasis": {
+            "kind": "same-runtime-code",
+            "chain": "ethereum",
+            "address": "0x87b589879ab3e22de54c980396bd944ac2b5dc6c",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:2a93413cbd9378720618cedd3315e608e8a897952ccfed7945bc30f031a76c29",
+            "verifiedSourceUrl": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          "adminEvents": [
+            "AccessRegistryUpdated", "AdminChanged", "BeaconUpgraded", "ContractUriUpdated", "GasTokenSalvaged",
+            "MintedToFrozen", "Paused", "RoleAdminChanged", "RoleGranted", "RoleRevoked", "TokenSalvaged",
+            "TokensRecovered", "TransferredToFrozen", "Unpaused", "Upgraded"
+          ],
+          "sources": [
+            { "label": "Arbitrum FRNT token proxy", "url": "https://arbitrum.blockscout.com/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc?tab=contract" }
+          ]
+        },
+        {
+          "address": "0xd071062d0b99b78c7ce6d036c7c79aa2690ca9a7",
+          "chain": "arbitrum",
+          "role": "governed-contract",
+          "label": "FRNT Arbitrum CCIP BurnMintTokenPool (same verified type and byte length; chain immutables differ)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:ebc4d5306324f2fc301ad1daff70bda93826ea973b1fbbb5a491ea5b5a8bddf7",
+          "observedBlock": 510000000,
+          "observedAt": "2026-09-29T10:23:25Z",
+          "abiBasis": {
+            "kind": "same-verified-type",
+            "chain": "ethereum",
+            "address": "0xf077771c2a09ab77678e3945b07db8586d205340",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:4a9358690ff0a1224d4448f4d48e2bdc7041433400ea9e20d5d43cf93b2ff987",
+            "verifiedSourceUrl": "https://etherscan.io/address/0xf077771c2a09ab77678e3945b07db8586d205340#code"
+          },
+          "adminEvents": [
+            "AllowListAdd", "AllowListRemove", "ChainAdded", "ChainConfigured", "ChainRemoved", "ConfigChanged",
+            "OwnershipTransferRequested", "OwnershipTransferred", "RateLimitAdminSet", "RemotePoolAdded",
+            "RemotePoolRemoved", "RouterUpdated"
+          ],
+          "sources": [
+            { "label": "Exact Arbitrum transfer-pool deployment", "url": "https://arbitrum.blockscout.com/address/0xd071062d0b99b78c7ce6d036c7c79aa2690ca9a7?tab=contract" }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectDeploymentKey": "base:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+      "assetIds": ["frnt-wyoming"],
+      "rail": "chainlink-ccip",
+      "contributors": [
+        {
+          "controlId": "frnt-base-ccip-pool",
+          "emitterAddresses": ["0x5e817f2abccb9095585d26c2a3ce234a440574fc", "0x792408ecd66c3db361c0fbdd3358846735ce966d"]
+        },
+        {
+          "controlId": "frnt-base-ccip-pool-owner",
+          "emitterAddresses": ["0x792408ecd66c3db361c0fbdd3358846735ce966d"]
+        },
+        {
+          "controlId": "frnt-current-ccip-transfer-rail",
+          "emitterAddresses": ["0x5e817f2abccb9095585d26c2a3ce234a440574fc", "0x792408ecd66c3db361c0fbdd3358846735ce966d"]
+        }
+      ],
+      "emitters": [
+        {
+          "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "chain": "base",
+          "role": "route-deployment",
+          "label": "FRNT token proxy (same proxy runtime and implementation code as the Ethereum reviewed deployment)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:4918eaf3984301ba219b6c86439ba0676766bc5255d2bd039f3e669e74b200b5",
+          "observedBlock": 53200000,
+          "observedAt": "2026-10-28T12:09:07Z",
+          "abiBasis": {
+            "kind": "same-runtime-code",
+            "chain": "ethereum",
+            "address": "0x87b589879ab3e22de54c980396bd944ac2b5dc6c",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:2a93413cbd9378720618cedd3315e608e8a897952ccfed7945bc30f031a76c29",
+            "verifiedSourceUrl": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          "adminEvents": [
+            "AccessRegistryUpdated", "AdminChanged", "BeaconUpgraded", "ContractUriUpdated", "GasTokenSalvaged",
+            "MintedToFrozen", "Paused", "RoleAdminChanged", "RoleGranted", "RoleRevoked", "TokenSalvaged",
+            "TokensRecovered", "TransferredToFrozen", "Unpaused", "Upgraded"
+          ],
+          "sources": [
+            { "label": "Base FRNT token proxy", "url": "https://base.blockscout.com/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc?tab=contract" }
+          ]
+        },
+        {
+          "address": "0x792408ecd66c3db361c0fbdd3358846735ce966d",
+          "chain": "base",
+          "role": "governed-contract",
+          "label": "FRNT Base CCIP BurnMintTokenPool (same verified type and byte length; chain immutables differ)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:9ed6bb340b09dec92b00af545ff8eecd0432cde1c7ae587019966265c090c4d4",
+          "observedBlock": 53200000,
+          "observedAt": "2026-10-28T12:09:07Z",
+          "abiBasis": {
+            "kind": "same-verified-type",
+            "chain": "ethereum",
+            "address": "0xf077771c2a09ab77678e3945b07db8586d205340",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:4a9358690ff0a1224d4448f4d48e2bdc7041433400ea9e20d5d43cf93b2ff987",
+            "verifiedSourceUrl": "https://etherscan.io/address/0xf077771c2a09ab77678e3945b07db8586d205340#code"
+          },
+          "adminEvents": [
+            "AllowListAdd", "AllowListRemove", "ChainAdded", "ChainConfigured", "ChainRemoved", "ConfigChanged",
+            "OwnershipTransferRequested", "OwnershipTransferred", "RateLimitAdminSet", "RemotePoolAdded",
+            "RemotePoolRemoved", "RouterUpdated"
+          ],
+          "sources": [
+            { "label": "Exact Base transfer-pool deployment", "url": "https://base.blockscout.com/address/0x792408ecd66c3db361c0fbdd3358846735ce966d?tab=contract" }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectDeploymentKey": "optimism:0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+      "assetIds": ["frnt-wyoming"],
+      "rail": "chainlink-ccip",
+      "contributors": [
+        {
+          "controlId": "frnt-optimism-ccip-pool",
+          "emitterAddresses": ["0x5e817f2abccb9095585d26c2a3ce234a440574fc", "0xeaa7e1f805747ae29d5618b568d1b044a8b37a01"]
+        },
+        {
+          "controlId": "frnt-optimism-ccip-pool-owner",
+          "emitterAddresses": ["0xeaa7e1f805747ae29d5618b568d1b044a8b37a01"]
+        },
+        {
+          "controlId": "frnt-current-ccip-transfer-rail",
+          "emitterAddresses": ["0x5e817f2abccb9095585d26c2a3ce234a440574fc", "0xeaa7e1f805747ae29d5618b568d1b044a8b37a01"]
+        }
+      ],
+      "emitters": [
+        {
+          "address": "0x5e817f2abccb9095585d26c2a3ce234a440574fc",
+          "chain": "optimism",
+          "role": "route-deployment",
+          "label": "FRNT token proxy (same proxy runtime and implementation code as the Ethereum reviewed deployment)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:4918eaf3984301ba219b6c86439ba0676766bc5255d2bd039f3e669e74b200b5",
+          "observedBlock": 158850000,
+          "observedAt": "2026-10-29T18:32:57Z",
+          "abiBasis": {
+            "kind": "same-runtime-code",
+            "chain": "ethereum",
+            "address": "0x87b589879ab3e22de54c980396bd944ac2b5dc6c",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:2a93413cbd9378720618cedd3315e608e8a897952ccfed7945bc30f031a76c29",
+            "verifiedSourceUrl": "https://etherscan.io/address/0x87b589879ab3e22de54c980396bd944ac2b5dc6c#code"
+          },
+          "adminEvents": [
+            "AccessRegistryUpdated", "AdminChanged", "BeaconUpgraded", "ContractUriUpdated", "GasTokenSalvaged",
+            "MintedToFrozen", "Paused", "RoleAdminChanged", "RoleGranted", "RoleRevoked", "TokenSalvaged",
+            "TokensRecovered", "TransferredToFrozen", "Unpaused", "Upgraded"
+          ],
+          "sources": [
+            { "label": "Optimism FRNT token proxy", "url": "https://optimism.blockscout.com/address/0x5e817f2abccb9095585d26c2a3ce234a440574fc?tab=contract" }
+          ]
+        },
+        {
+          "address": "0xeaa7e1f805747ae29d5618b568d1b044a8b37a01",
+          "chain": "optimism",
+          "role": "governed-contract",
+          "label": "FRNT Optimism CCIP BurnMintTokenPool (same verified type and byte length; chain immutables differ)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:fac9def560e611b52c6a700f56d4e18a3b8874308b04a875f0b57f21148f0d0e",
+          "observedBlock": 158850000,
+          "observedAt": "2026-10-29T18:32:57Z",
+          "abiBasis": {
+            "kind": "same-verified-type",
+            "chain": "ethereum",
+            "address": "0xf077771c2a09ab77678e3945b07db8586d205340",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:4a9358690ff0a1224d4448f4d48e2bdc7041433400ea9e20d5d43cf93b2ff987",
+            "verifiedSourceUrl": "https://etherscan.io/address/0xf077771c2a09ab77678e3945b07db8586d205340#code"
+          },
+          "adminEvents": [
+            "AllowListAdd", "AllowListRemove", "ChainAdded", "ChainConfigured", "ChainRemoved", "ConfigChanged",
+            "OwnershipTransferRequested", "OwnershipTransferred", "RateLimitAdminSet", "RemotePoolAdded",
+            "RemotePoolRemoved", "RouterUpdated"
+          ],
+          "sources": [
+            { "label": "Exact Optimism transfer-pool deployment", "url": "https://optimism.blockscout.com/address/0xeaa7e1f805747ae29d5618b568d1b044a8b37a01?tab=contract" }
+          ]
+        }
+      ]
+    },
+    {
+      "subjectDeploymentKey": "ethereum:0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+      "assetIds": ["yusd-yieldfi"],
+      "rail": "chainlink-ccip",
+      "contributors": [
+        {
+          "controlId": "yusd-administrator-bridge-role-registry",
+          "emitterAddresses": ["0x19ebd191f7a24ece672ba13a302212b5ef7f35cb", "0x6be164af10879a86e4643089638b6864ef12b1ee", "0x659b5bc7f2f888db3d5901b78cdb34df270e2231"]
+        },
+        {
+          "controlId": "yusd-ethereum-bridge-ccip",
+          "emitterAddresses": ["0x6be164af10879a86e4643089638b6864ef12b1ee"]
+        },
+        {
+          "controlId": "yusd-ethereum-lockbox",
+          "emitterAddresses": ["0x659b5bc7f2f888db3d5901b78cdb34df270e2231"]
+        },
+        {
+          "controlId": "yusd-chainlink-ccip-validation",
+          "emitterAddresses": ["0x6be164af10879a86e4643089638b6864ef12b1ee"]
+        }
+      ],
+      "emitters": [
+        {
+          "address": "0x19ebd191f7a24ece672ba13a302212b5ef7f35cb",
+          "chain": "ethereum",
+          "role": "route-deployment",
+          "label": "yUSD YToken (TransparentUpgradeableProxy; implementation YToken)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:1dc122069fb3e1ca9bfb211456209c7b0f0808da72a120f97848899dc6afe891",
+          "observedBlock": 26304000,
+          "observedAt": "2026-10-30T07:12:47Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "ethereum",
+            "address": "0x5bf44d32260aee6b807c490e92ef0481d15ab493",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:d7f55b8aa40645416a8803920a2c171b47880ec4d01ae57d7715a66b00985be6",
+            "verifiedSourceUrl": "https://eth.blockscout.com/address/0x5bf44d32260aee6b807c490e92ef0481d15ab493?tab=contract"
+          },
+          "adminEvents": [
+            "AdminChanged", "AdministratorSet", "FeeSet", "GasFeeSet", "ManagerSet", "Rescue", "Upgraded",
+            "VestingPeriodSet", "YieldSet"
+          ],
+          "sources": [
+            { "label": "Ethereum yUSD token proxy", "url": "https://etherscan.io/address/0x19ebd191f7a24ece672ba13a302212b5ef7f35cb#readProxyContract" },
+            { "label": "Verified YieldFi YToken implementation", "url": "https://eth.blockscout.com/address/0x5bf44d32260aee6b807c490e92ef0481d15ab493?tab=contract" }
+          ]
+        },
+        {
+          "address": "0x6be164af10879a86e4643089638b6864ef12b1ee",
+          "chain": "ethereum",
+          "role": "governed-contract",
+          "label": "yUSD Ethereum BridgeCCIP",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:14ffb09d10d86c39f52bb1d64a9dc10545c1c32a6bcb9bd9444be44e0520d03d",
+          "observedBlock": 26304000,
+          "observedAt": "2026-10-30T07:12:47Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "ethereum",
+            "address": "0x6be164af10879a86e4643089638b6864ef12b1ee",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:14ffb09d10d86c39f52bb1d64a9dc10545c1c32a6bcb9bd9444be44e0520d03d",
+            "verifiedSourceUrl": "https://eth.blockscout.com/address/0x6be164af10879a86e4643089638b6864ef12b1ee?tab=contract"
+          },
+          "adminEvents": ["ManagerSet", "OwnershipTransferred", "SetAdministrator", "SetLockbox", "SetToken"],
+          "sources": [
+            { "label": "Ethereum BridgeCCIP verified source", "url": "https://eth.blockscout.com/address/0x6be164af10879a86e4643089638b6864ef12b1ee?tab=contract" }
+          ]
+        },
+        {
+          "address": "0x659b5bc7f2f888db3d5901b78cdb34df270e2231",
+          "chain": "ethereum",
+          "role": "governed-contract",
+          "label": "yUSD Ethereum LockBox (proxy; implementation LockBox)",
+          "runtimeIdentity": "sha256-decoded-runtime-bytes:d8e59531c7ab1eb5ee5bc90d98ee5dacd2cdcbd4808af10115f29d9c19d12e0b",
+          "observedBlock": 26304000,
+          "observedAt": "2026-10-30T07:12:47Z",
+          "abiBasis": {
+            "kind": "verified-source",
+            "chain": "ethereum",
+            "address": "0x19056eb5ea89f22202ae1c9cefe685193a894d64",
+            "runtimeIdentity": "sha256-decoded-runtime-bytes:f87361dd7a588afa7358e1370fe3792683f3ad5b9f6ec8b396ee5baa91381202",
+            "verifiedSourceUrl": "https://eth.blockscout.com/address/0x19056eb5ea89f22202ae1c9cefe685193a894d64?tab=contract"
+          },
+          "adminEvents": ["AdministratorSet", "ManagerSet"],
+          "sources": [
+            { "label": "Verified YieldFi LockBox implementation", "url": "https://eth.blockscout.com/address/0x19056eb5ea89f22202ae1c9cefe685193a894d64?tab=contract" }
+          ]
+        }
+      ]
+    }
+  ]
+}

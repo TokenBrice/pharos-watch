@@ -159,48 +159,59 @@ function completenessFor(rows: readonly PreviewTestRow[]) {
   };
 }
 
-function makePreviewDataset(
+type PreviewProjectionOverrides = {
+  snapshotDate?: string;
+  publishedAtSec?: number;
+  identity?: Record<string, unknown>;
+  completeness?: Record<string, unknown>;
+  safety?: null;
+  safetyUnavailableReason?: "legacy-source-metadata-unavailable" | null;
+};
+
+function makePreviewProjection(
   rows: readonly PreviewTestRow[],
-  overrides: {
-    snapshotDate?: string;
-    publishedAtSec?: number;
-    methodologyLabel?: string;
-    identity?: Record<string, unknown>;
-    completeness?: Record<string, unknown>;
-    safety?: null;
-    safetyUnavailableReason?: "legacy-source-metadata-unavailable" | null;
-    displayProjection?: unknown;
-  } = {},
+  overrides: PreviewProjectionOverrides = {},
 ) {
   const publishedAtSec = overrides.publishedAtSec ?? PREVIEW_PUBLISHED_AT_SEC;
   const identity = overrides.identity ?? PREVIEW_IDENTITY;
   return {
+    version: 1 as const,
+    snapshotDate: overrides.snapshotDate ?? PREVIEW_SNAPSHOT_DATE,
+    capturedAtSec: publishedAtSec + 300,
+    sourceSnapshotPath: `/api/snapshots/${overrides.snapshotDate ?? PREVIEW_SNAPSHOT_DATE}.json`,
+    safety: overrides.safety === null ? null : {
+      identity,
+      asOfSec: publishedAtSec - 60,
+      publishedAtSec,
+      sourceGenerations: { reportCards: "source-1" },
+      publicationHealth: {
+        schemaVersion: 2,
+        status: "current",
+        acceptedPublicationGenerationId: (identity as { publicationGenerationId?: string }).publicationGenerationId,
+        acceptedAtSec: publishedAtSec,
+        attemptedAtSec: publishedAtSec,
+        heldSinceSec: null,
+        reasons: [],
+      },
+      completeness: overrides.completeness ?? completenessFor(rows),
+    },
+    safetyUnavailableReason: overrides.safetyUnavailableReason ?? null,
+  };
+}
+
+function makePreviewDataset(
+  rows: readonly PreviewTestRow[],
+  overrides: PreviewProjectionOverrides & {
+    methodologyLabel?: string;
+    displayProjection?: unknown;
+  } = {},
+) {
+  const publishedAtSec = overrides.publishedAtSec ?? PREVIEW_PUBLISHED_AT_SEC;
+  return {
     _meta: {
       methodologyLabel: overrides.methodologyLabel ?? "safety-score v10.34 | dews v6.38 | liquidity v6.98",
       asOfISO: new Date(publishedAtSec * 1000).toISOString(),
-      displayProjection: overrides.displayProjection ?? {
-        version: 1,
-        snapshotDate: overrides.snapshotDate ?? PREVIEW_SNAPSHOT_DATE,
-        capturedAtSec: publishedAtSec + 300,
-        sourceSnapshotPath: `/api/snapshots/${overrides.snapshotDate ?? PREVIEW_SNAPSHOT_DATE}.json`,
-        safety: overrides.safety === null ? null : {
-          identity,
-          asOfSec: publishedAtSec - 60,
-          publishedAtSec,
-          sourceGenerations: { reportCards: "source-1" },
-          publicationHealth: {
-            schemaVersion: 2,
-            status: "current",
-            acceptedPublicationGenerationId: (identity as { publicationGenerationId?: string }).publicationGenerationId,
-            acceptedAtSec: publishedAtSec,
-            attemptedAtSec: publishedAtSec,
-            heldSinceSec: null,
-            reasons: [],
-          },
-          completeness: overrides.completeness ?? completenessFor(rows),
-        },
-        safetyUnavailableReason: overrides.safetyUnavailableReason ?? null,
-      },
+      displayProjection: overrides.displayProjection ?? makePreviewProjection(rows, overrides),
     },
     rows,
   };
@@ -402,5 +413,34 @@ describe("buildSafetyScoresPreview", () => {
       PREVIEW_ASSESSED_AT_SEC,
     );
     expect(usdt).toBeNull();
+  });
+
+  it("admits both readable projection versions and refuses an unknown one", () => {
+    const score = 85;
+    const rows = [ratedRow("asset-a", score, scoreToGrade(score))];
+
+    expect(buildSafetyScoresPreview(makePreviewDataset(rows), PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC))
+      .toMatchObject({ eligibleRatedCount: 1, rows: [{ id: "asset-a" }] });
+
+    // v2 adds the open-question counts; the Safety block this preview reads is
+    // unchanged, and the counts stay the generator's contract.
+    const v2 = makePreviewDataset(rows, {
+      displayProjection: {
+        ...makePreviewProjection(rows),
+        version: 2,
+        openEvidence: {
+          semantics: "open-question-v1",
+          totals: { questions: 2, open: 1, issuer: 1, documentation: 0, obligations: 3 },
+        },
+        openEvidenceUnavailableReason: null,
+      },
+    });
+    expect(buildSafetyScoresPreview(v2, PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC))
+      .toMatchObject({ eligibleRatedCount: 1, rows: [{ id: "asset-a" }] });
+
+    const unknown = makePreviewDataset(rows, {
+      displayProjection: { ...makePreviewProjection(rows), version: 3 },
+    });
+    expect(buildSafetyScoresPreview(unknown, PREVIEW_REGISTRY, PREVIEW_ASSESSED_AT_SEC)).toBeNull();
   });
 });

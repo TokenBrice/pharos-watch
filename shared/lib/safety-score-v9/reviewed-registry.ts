@@ -219,3 +219,18 @@ export function canonicalizeReviewedRegistryDigest(
 export function reviewedRegistryDigestKey(field: string) {
   return (value: unknown): string => isRecord(value) && typeof value[field] === "string" ? value[field] : "";
 }
+
+/**
+ * Canonical digest position for an unordered authored string list (route ids,
+ * control ids). The strict schemas sort these with code-unit ordering, so the
+ * digest sort must use the same comparison or authored order becomes identity.
+ */
+export function reviewedRegistryTextKey(value: unknown): string {
+  return typeof value === "string" ? value : "";
+}
+
+/** Canonical digest position over several stable fields, joined in the given order. */
+export function reviewedRegistryTupleKey(...fields: readonly string[]) {
+  const keys = fields.map((field) => reviewedRegistryDigestKey(field));
+  return (value: unknown): string => keys.map((key) => key(value)).join("\u0000");
+}

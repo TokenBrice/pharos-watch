@@ -30,7 +30,12 @@ export type CronSentinelRuleSource =
  * - `reserve-post-sync`: `reserve-collateral-drift`, `reserve-curated-fallback`,
  *   `reserve-persistent-stale-warning`, `reserve-drift-cache-age`,
  *   `reserve-persistent-stale`, `reserve-sync-degraded` (a configured coin's
- *   latest reserve sync is `degraded` or `error`).
+ *   latest reserve sync is `degraded` or `error`),
+ *   `reserve-adapter-failure-sustained` (three consecutive failed cycles) and
+ *   `reserve-source-clock-stalled` (successful verified attempts whose source
+ *   clock is not advancing inside its source-age budget). Those two are
+ *   transition-only and send no Telegram: they stay on `/status` and in this
+ *   run metadata.
  * - `growth`: `mint-burn-row-growth` (event rows reach 2,300,000).
  * - `repair-debt`: `repair-debt-due`, `repair-debt-stale-claim`.
  */
@@ -59,6 +64,8 @@ export const CRON_SENTINEL_RULE_IDS: Record<CronSentinelRuleSource, readonly str
     "reserve-drift-cache-age",
     "reserve-persistent-stale",
     "reserve-sync-degraded",
+    "reserve-adapter-failure-sustained",
+    "reserve-source-clock-stalled",
   ],
   growth: ["mint-burn-row-growth"],
   "repair-debt": ["repair-debt-due", "repair-debt-stale-claim"],

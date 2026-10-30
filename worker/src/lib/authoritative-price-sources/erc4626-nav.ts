@@ -53,7 +53,9 @@ const ERC4626_NAV_VAULTS: readonly Erc4626NavVaultConfig[] = [
   defineRegistryErc4626NavVault({ id: "autousd-auto-finance", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "eearn-ember", parentId: USDC_CIRCLE_ID, chain: ETHEREUM_CHAIN }),
   defineRegistryErc4626NavVault({ id: "savusd-avant", parentId: AVUSD_AVANT_ID, chain: "avalanche" }),
-  defineRegistryErc4626NavVault({ id: "susn-noon", parentId: USN_NOON_ID, chain: ETHEREUM_CHAIN }),
+  // USN prices single-source from CoinGecko. Inherit that fresh replay-safe
+  // quote and its confidence instead of the sUSN last trade.
+  defineRegistryErc4626NavVault({ id: "susn-noon", parentId: USN_NOON_ID, chain: ETHEREUM_CHAIN, allowFreshReplaySafeSingleSourceParent: true }),
   // RPC resolved via public-rpc-registry ("plasma" entry) — no inline override needed
   defineRegistryErc4626NavVault({ id: "syzusd-yuzu", parentId: YZUSD_YUZU_ID, chain: "plasma", allowFreshReplaySafeSingleSourceParent: true }),
   defineRegistryErc4626NavVault({ id: "stkgho-umbrella-aave", parentId: GHO_AAVE_ID, chain: ETHEREUM_CHAIN }),

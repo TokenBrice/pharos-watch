@@ -97,6 +97,26 @@ describe("mint-burn-contracts Base Dollar config", () => {
   });
 });
 
+describe("mint-burn-contracts swanUSD config", () => {
+  it("tracks canonical swanUSD zero-address Transfers from the Monolith creation block", () => {
+    const configs = getMintBurnConfigsForStablecoin("swanusd-swan");
+    expect(configs).toHaveLength(1);
+    expect(configs[0]).toMatchObject({
+      chain: { chainId: "ethereum" },
+      symbol: "swanUSD",
+      contractAddress: "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+      decimals: 18,
+      dustThreshold: 500,
+      startBlock: 26_249_209,
+      tier: "extended",
+      adapterKind: "transfer-zero-address",
+      startBlockSource: "ethereum-creation-receipt-0xfc70d106fba81de4179012dbc0497cb77301b8e5bfdf6217e0bcce6bae05274b-reviewed-2026-10-29",
+      startBlockConfidence: "high",
+    });
+    expect(configs[0]!.events).toEqual(EXPECTED_TRANSFER_EVENTS);
+  });
+});
+
 describe("mint-burn-contracts removals", () => {
   it("does not track explicitly removed no-signal tokens", () => {
     for (const removedId of REMOVED_STABLECOIN_IDS) {
@@ -293,7 +313,6 @@ describe("mint-burn-contracts Ethereum transfer expansion", () => {
     { stablecoinId: "vchf-vnx", symbol: "VCHF", address: "0x79d4f0232a66c4c91b89c76362016a1707cfbf4f", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "ussd-sonic-labs", symbol: "USSD", address: "0x000000000eccff26b795f73fb0a70d48da657fef", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "cadc-cad-coin", symbol: "CADC", address: "0xcadc0acd4b445166f12d2c07eac6e2544fbe2eef", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
-    { stablecoinId: "dusd-dtrinity", symbol: "dUSD", address: "0x07fff99e1664d9b116fbc158c0e99785f81ca236", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "usdaf-asymmetry", symbol: "USDaf", address: "0x9cf12ccd6020b6888e4d4c4e4c7aca33c1eb91f8", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "eurau-allunity", symbol: "EURAU", address: "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2", decimals: 6, dustThreshold: 10_000, startBlock: 21_900_000 },
     { stablecoinId: "dusd-alto", symbol: "DUSD", address: "0x63d74d22e689c715a04f2c13962b1f77f443d35b", decimals: 18, dustThreshold: 10_000, startBlock: 21_900_000 },

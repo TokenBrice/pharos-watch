@@ -37,11 +37,18 @@ export const V9BridgeSupplyRouteV2Schema = z
     reviewState: z.enum(["selected-reviewed", "selected-unresolved", "unmatched"]),
     // Retained V2 facts/extensions predate the native/controlled discriminator.
     reviewedRouteKind: z.enum(["native", "controlled"]).optional(),
+    // v10.38 deployment supply census (`deployment-supply-census-v1`): the row's
+    // `supplyShare` is a proven upper bound on the deployment's share, never an
+    // exact datum. Absent means the row is an exact/reconciled share.
+    evidenceKind: z.literal("upper-bound").optional(),
   })
   .strict()
   .superRefine((route, ctx) => {
     if (route.reviewState !== "selected-reviewed" && route.reviewedRouteKind !== undefined) {
       issue(ctx, ["reviewedRouteKind"], "Only selected-reviewed supply rows carry a reviewed route kind");
+    }
+    if (route.evidenceKind !== undefined && route.reviewState !== "selected-reviewed") {
+      issue(ctx, ["evidenceKind"], "Only selected-reviewed supply rows carry an upper bound");
     }
   });
 

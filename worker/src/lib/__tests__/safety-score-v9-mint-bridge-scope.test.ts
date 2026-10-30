@@ -212,7 +212,9 @@ function compileFixtureWithScopedBridgeIncidentReview(
       ],
       sources: [{ ...SOURCE, observedAt: reviewedAt, location: "Incident archive", excerpt: "No matching incident in reviewed window." }],
     }));
-  const reviewMock = vi.spyOn(incidentAdapters, "getSafetyScoreV9NegativeIncidentReviews").mockReturnValue(reviews.map(projectNegativeIncidentReview));
+  const reviewMock = vi.spyOn(incidentAdapters, "getSafetyScoreV9NegativeIncidentReviews").mockReturnValue({
+    reviews: reviews.map(projectNegativeIncidentReview), unreadableProviders: new Map(),
+  });
   try {
     return compileFixture(metadata, options);
   } finally {
@@ -852,14 +854,14 @@ describe("Safety Score v9 Mint Authority / Bridge Risk scope", () => {
       for (const reviews of [[], [{ ...negative, scope: {
         kind: "deployment" as const, deploymentKey: ETHEREUM_ROUTE, controlKinds: ["bridge" as const],
       } }]]) {
-        reviewMock.mockReturnValue(reviews.map(projectNegativeIncidentReview));
+        reviewMock.mockReturnValue({ reviews: reviews.map(projectNegativeIncidentReview), unreadableProviders: new Map() });
         const asset = compileFixture(metadata, { clockSec }).compiled.assets[0]!;
         const bridge = asset.controls.find((control) => control.controlKind === "bridge")!;
         expect(bridge.incidentState).toBe("unknown");
         expect(bridge.factorStatuses?.incidentState?.observationState).not.toBe("known");
         expect(asset.gaps.map((gap) => gap.gapId)).toContain(`${metadata.id}:gap:control:${bridge.controlKey}:incidentState`);
       }
-      reviewMock.mockReturnValue([projectNegativeIncidentReview(negative)]);
+      reviewMock.mockReturnValue({ reviews: [projectNegativeIncidentReview(negative)], unreadableProviders: new Map() });
       const asset = compileFixture(metadata, { clockSec }).compiled.assets[0]!;
       const bridge = asset.controls.find((control) => control.controlKind === "bridge")!;
       expect(bridge.incidentState).toBe("none");

@@ -36,6 +36,35 @@ regexTarget = "match"
 regexes = ['''^(?:[a-z0-9]+(?:-[a-z0-9]+)*:)+[1-9A-HJ-NP-Za-km-z]{32,44}"$''']
 paths = ['''(?:^|/)shared/data/stablecoins/domains/(?:risk-review|mint-authority)/[^/]+\.json$''']
 
+# Incident-review identities embed an asset slug and a hex digest. The gldt-gold-dao
+# slug starts with GitLab's deploy-token prefix, and slugs containing "token"
+# (tgbp-tokenised, eurot-token-teknoloji) trip generic-api-key on the digest that
+# follows them. Match only those identifier spans, only in the generated incident-review
+# key migration, so a credential anywhere else in that file stays detectable.
+[[allowlists]]
+description = "Asset-slug incident-review identifiers in the generated key migration are not credentials"
+targetRules = ["gitlab-deploy-token", "generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = [
+  '''^gldt-gold-dao-[0-9a-f]{11}$''',
+  '''^[a-z0-9-]*token[a-z0-9-]*:[0-9a-f]{20}"$''',
+]
+paths = ['''(?:^|/)shared/data/safety-score-v9/incident-review-key-migration-v1\.generated\.json$''']
+
+# Lane emitter descriptors list reviewed route ids in compact JSON arrays. A route id
+# containing "token" (susds-base-l1-token-bridge) followed by `","` and the next route
+# id reads to generic-api-key as `token` = <value>. Match only that adjacency of
+# kebab route ids, only in the generated descriptors, so any other high-entropy
+# value in that file (a UUID-shaped token included) still fails the scan.
+[[allowlists]]
+description = "Adjacent reviewed route ids in the generated lane emitter descriptors are not credentials"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "match"
+regexes = ['''^[a-z0-9-]*token[a-z0-9-]*","[a-z][a-z0-9]*(?:-[a-z][a-z0-9]*)+"$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/lane-emitter-descriptors-v1\.generated\.json$''']
+
 # Repo-relative source paths are not credentials. CI gates that enumerate route roots
 # (`src/app/api`, `src/app/funding`, ...) otherwise trip the generic-api-key rule on
 # their own configuration constants.
@@ -192,6 +221,43 @@ condition = "AND"
 regexTarget = "secret"
 regexes = ['''^fe24dc683177afe51d19$''']
 paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
+
+# Research batch 2 cites Matrixdock's STBT terms PDF (the reviewed capability above,
+# issuer page matrixdock.gitbook.io/.../stbt-terms-and-conditions) from STBT's reserve
+# review as well. Same exact value, pinned to that one citing file.
+[[allowlists]]
+description = "Matrixdock publicly linked STBT terms download token in STBT's reserve review"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^79d5fd49-deae-41b4-a809-9e1afaa02f32$''']
+paths = ['''(?:^|/)shared/data/stablecoins/domains/reserves/stbt-matrixdock\.json$''']
+
+# A research excerpt quotes Unitas's published program table verbatim
+# ("USDu Token Mint: <pubkey>"); the word "Token" makes the public Solana mint read
+# as a credential. Exact value only, only in the evidence-gap registry.
+[[allowlists]]
+description = "Reviewed USDu Solana token mint quoted in evidence-gap research excerpts"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^9ckR7pPPvyPadACDTzLwK2ZAEeUJ3qGSnzPs8bVaHrSy$''']
+paths = ['''(?:^|/)shared/data/safety-score-v9/evidence-gap-classifications-v1\.json$''']
+
+# Incident-lane tests name the reviewed KelpDAO verifier-compromise incident by its
+# incident key (a slug ending in its date); `incidentKey:` trips generic-api-key.
+# Exact value, only in the three fixtures that use it.
+[[allowlists]]
+description = "Reviewed KelpDAO incident key in incident-lane test fixtures"
+targetRules = ["generic-api-key"]
+condition = "AND"
+regexTarget = "secret"
+regexes = ['''^kelpdao-dvn-2026-04-18$''']
+paths = [
+  '''(?:^|/)scripts/__tests__/generate-safety-score-v9-incident-runtime\.test\.ts$''',
+  '''(?:^|/)shared/types/__tests__/safety-score-v9-incident-evidence-contracts\.test\.ts$''',
+  '''(?:^|/)worker/src/lib/__tests__/safety-score-v9-extension-incidents\.test\.ts$''',
+]
 
 # Gold DAO's GLDT symbol in reviewed wave ids and the issuer's public article slug
 # resembles a GitLab deploy token. Pin only the exact default-rule match spans.

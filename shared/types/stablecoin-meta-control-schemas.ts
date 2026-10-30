@@ -262,6 +262,33 @@ export const OracleRiskProfileSchema = /* @__PURE__ */ (() => z
     }
   }))();
 
+/**
+ * Canonical bridge-provider identity (R5, one authority). Authored `protocol` and
+ * `slug` prose stays display-only; provider reviews, lane certificates and the
+ * bridge compiler match on this enum instead. Extending the list is a reviewed
+ * schema change, never an authoring shortcut.
+ */
+export const BRIDGE_ROUTE_PROVIDER_KEY_VALUES = [
+  "layerzero",
+  "chainlink-ccip",
+  "wormhole",
+  "hyperlane",
+  "axelar",
+  "circle-cctp",
+] as const;
+export type BridgeRouteProviderKey = (typeof BRIDGE_ROUTE_PROVIDER_KEY_VALUES)[number];
+
+/** Provider-owned verification surfaces a provider review or lane certificate may address. */
+export const BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES = [
+  "dvn-set",
+  "guardian-set",
+  "rmn-set",
+  "ism-validator-set",
+  "endpoint",
+  "attestation-set",
+] as const;
+export type BridgeRouteProviderSurface = (typeof BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES)[number];
+
 const BridgeRouteProtocolEvidenceSchema = /* @__PURE__ */ (() => z
   .object({
     source: z.enum(BRIDGE_ROUTE_RISK_SOURCE_VALUES),
@@ -270,6 +297,17 @@ const BridgeRouteProtocolEvidenceSchema = /* @__PURE__ */ (() => z
     url: HttpUrlSchema.optional(),
     bridgeTypes: z.array(z.string().min(1)).min(1).optional(),
     note: z.string().min(1).optional(),
+    // Optional so every existing authored profile keeps its exact bytes and
+    // meaning; absent provider identity stays unresolved (fail-closed) instead
+    // of being inferred from the prose slug.
+    providerKey: z.enum(BRIDGE_ROUTE_PROVIDER_KEY_VALUES).optional(),
+    providerSurfaces: z
+      .array(z.enum(BRIDGE_ROUTE_PROVIDER_SURFACE_VALUES))
+      .min(1)
+      .refine((surfaces) => new Set(surfaces).size === surfaces.length, {
+        message: "provider surfaces must be unique",
+      })
+      .optional(),
   })
   .strict())();
 
@@ -282,6 +320,23 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
     contractAddress: z.string().min(1),
     representationId: z.string().min(1).optional(),
     protocol: z.string().min(1),
+    /**
+     * OQ-2 route-level rail authority. `issuer-operated` means the issuer is the
+     * provider: that asset's issuer-surface review is the rail witness, so no
+     * provider review exists for the route. Absent keeps the provider rail; on
+     * such a route `providerKeys` names the verification networks it uses.
+     */
+    rail: z.literal("issuer-operated").optional(),
+    /**
+     * OP-IR 5c.7: the provider keys this route's verification actually uses,
+     * from the closed `BRIDGE_ROUTE_PROVIDER_KEY_VALUES` vocabulary. Absent means
+     * no provider-screening closure for the route, never "no provider".
+     */
+    providerKeys: z
+      .array(z.enum(BRIDGE_ROUTE_PROVIDER_KEY_VALUES))
+      .min(1)
+      .refine((keys) => new Set(keys).size === keys.length, { message: "providerKeys must be unique" })
+      .optional(),
     issuanceModel: z.enum(BRIDGE_ROUTE_ISSUANCE_MODEL_VALUES),
     routeClass: z.enum(BRIDGE_ROUTE_CLASS_VALUES),
     riskTier: z.enum(BRIDGE_ROUTE_RISK_TIER_VALUES),
@@ -300,6 +355,10 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
   })
   .strict()
   .superRefine((route, ctx) => {
+    if (route.rail === "issuer-operated" &&
+        (route.providerKeys !== undefined || route.routeClass === "third-party")) {
+      ctx.addIssue({ code: "custom", path: ["rail"], message: "An issuer-operated rail cannot carry providerKeys or be third-party" });
+    }
     if ((route.controllerChain == null) !== (route.controllerAddress == null)) {
       issue(ctx, [route.controllerChain == null ? "controllerChain" : "controllerAddress"], "bridge route controllerChain and controllerAddress must be authored together");
     }

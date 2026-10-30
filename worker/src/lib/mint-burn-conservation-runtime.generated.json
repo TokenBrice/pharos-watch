@@ -302,15 +302,6 @@
     },
     {
       "chainId": "ethereum",
-      "stablecoinId": "dusd-dtrinity",
-      "address": "0x07fff99e1664d9b116fbc158c0e99785f81ca236",
-      "decimals": 18,
-      "disposition": "admitted",
-      "eventSet": "transfer",
-      "invariant": "transfer-supply"
-    },
-    {
-      "chainId": "ethereum",
       "stablecoinId": "eurau-allunity",
       "address": "0x4933a85b5b5466fbaf179f72d3de273c287ec2c2",
       "decimals": 6,
@@ -904,6 +895,27 @@
       "disposition": "admitted",
       "eventSet": "transfer",
       "invariant": "transfer-supply"
+    },
+    {
+      "chainId": "ethereum",
+      "stablecoinId": "swanusd-swan",
+      "address": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+      "decimals": 18,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
+      }
     },
     {
       "chainId": "ethereum",

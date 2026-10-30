@@ -14,6 +14,7 @@ import type { V9AccessClaimGraph, V9AccessClaimGraphReview } from "@shared/types
 import { buildSafetyScoreV9AccessClaimGraph, computeSafetyScoreV9AccessClaimGraphReviewsDigest } from "./extension-access-lookthrough";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC, V9_SCOPED_QUESTION_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
+import type { V9LaneEmitterDescriptor } from "@shared/types/safety-score-v9-incidents";
 import { compileReviewedMintControlScopes, resolveV1005MintAuthorityProfile, partialControlScopeSemantics, weightedReviewIsCurrent, sortV1005ProcessDiagnostics, v1005ProofIsClosed, v1005ReviewIsCurrent, type V9ReviewedControlProjection } from "@shared/lib/safety-score-v9/control-scope";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
@@ -33,8 +34,9 @@ import type {
   MintAuthorityControl,
   MintAuthorityEconomicCapSemantics,
   MintAuthorityProfile,
+  MintAuthorityScopedQuestion,
 } from "@shared/types/core";
-import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl } from "@shared/types/safety-score-v9-facts";
+import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl, V9LaneIncidentClosureFailure } from "@shared/types/safety-score-v9-facts";
 import { V1005VotingControllerSchema, createV9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
 import type { StablecoinMeta } from "@shared/types";
 import {
@@ -68,6 +70,8 @@ import {
   getSafetyScoreV9ReviewedIncidents,
   routeSafetyScoreV9ControlIncidents,
   SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST,
+  type LaneIncidentCertificateView,
+  type LaneRouteAuthority,
 } from "./extension-incidents";
 import { getSafetyScoreV9WrapperAllocationReview, getSafetyScoreV9WrapperLocalReviews, SAFETY_SCORE_V9_WRAPPER_ALLOCATION_REVIEWS_DIGEST, SAFETY_SCORE_V9_WRAPPER_LOCAL_REVIEWS_DIGEST } from "./extension-wrapper-reviews";
 import { allocationReviewClockSec, type V9AllocationScopeIdentityReview, type SafetyScoreV9WrapperAllocationReview } from "@shared/types/safety-score-v9-allocation";
@@ -92,7 +96,7 @@ import {
   buildSafetyScoreV9RouteReviews,
 } from "./extension-routes";
 import {
-  buildSafetyScoreV9SupplyReview,
+  buildSafetyScoreV9SupplyAdmission,
 } from "./extension-supply";
 import {
   normalizeSafetyScoreV9CompilerInput,
@@ -152,6 +156,14 @@ export interface BuildSafetyScoreV9BaselineExtensionOptions {
   reviewedTransferFacts?: ReadonlyMap<string, SafetyScoreV9ReviewedTransferFact>;
   accessClaimGraphReviews?: ReadonlyMap<string, V9AccessClaimGraphReview>;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
+  /**
+   * Evaluation inputs of the v10.39 lane closure, loaded by the publication
+   * runner: the admitted certificate chain per lane (only `current` reads are
+   * accepted) and the reviewed lane descriptors. Omitted means no closure, which
+   * is the fail-closed default (an unread certificate cannot grant `none`).
+   */
+  laneIncidentCertificates?: ReadonlyMap<string, LaneIncidentCertificateView>;
+  laneEmitterDescriptors?: readonly V9LaneEmitterDescriptor[];
   /**
    * Replay-only projection: build these assets while retaining the full input's
    * active set, dependency diagnostics, source generations and identity.
@@ -1007,6 +1019,7 @@ function adaptMintControl(
   projection: V9ReviewedControlProjection,
   issuanceFactsRef: string | undefined,
   scopedQuestionIsCustodyOnly: boolean,
+  retainedExpiredCustodyQuestion: { reviewedAtSec: number } | null,
 ): ControlOverlay[] {
   const controlKind = mintControlKind(control);
   const coarseCapabilities = mintCapabilities(control, upgradeCapable);
@@ -1104,9 +1117,17 @@ function adaptMintControl(
       .map(normalizeDeploymentId)
       .sort(compareText),
   }).slice(0, 20)}`;
+  // Subject without `scopedQuestionFresh` marks a retained lapsed question:
+  // the datum remains documented, but it no longer softens the control.
+  const custodyQuestionSubject = scopedQuestionIsCustodyOnly || retainedExpiredCustodyQuestion !== null;
   const globalControl: ControlOverlay = {
     controlKey,
     deploymentKey: `asset:${assetId}`,
+    // Authored identity (IR-1a/IR-2b/IR-5, contract C3): incident reviews bind
+    // the mint-authority label, never the digest payload, so re-deriving
+    // `controlKey` (address, refs, role) cannot orphan a reviewed closure. Every
+    // path/deployment row below inherits it from this base.
+    authoredControlId: control.label,
     ...(control.controllerAssetId ? { controllerAssetId: control.controllerAssetId } : {}),
     controlKind,
     scope: "global",
@@ -1117,7 +1138,7 @@ function adaptMintControl(
     delaySec: control.timelockDelaySec ?? null,
     materialSupplyShare: null,
     ...(scopedQuestionFresh ? { scopedQuestionFresh: true } : {}),
-    ...(scopedQuestionIsCustodyOnly ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
+    ...(custodyQuestionSubject ? { scopedQuestionSubject: "key-custody-independence" as const } : {}),
     keyCustody,
     ...(control.keyCustodyAttestation?.kind === "hardware-wallet" && keyCustody === "unknown"
       ? { keyCustodyReviewUnavailable: true } : {}),
@@ -1990,6 +2011,22 @@ export function hasPublishedReserveReconciliationEvidence(
   return cadence != null && cadence !== "none" && cadence !== "undisclosed";
 }
 
+/**
+ * Durable lapse for documentation-class scoped questions (PLAN §4.2, contract
+ * C1). A lapsed custody-only question stays a `stale` factor gap with its
+ * original review date instead of silently disappearing at 90 days.
+ *
+ * The activation switch is the single authority (OP-R0 S-1 removed the
+ * per-reason `retention` field); listing the `no-scoring-path` reason keeps the
+ * gate tied to the documented reason vocabulary, so a captured overlay cannot
+ * be retained after the policy is rolled back.
+ */
+const RETAIN_EXPIRED_SCOPED_QUESTIONS = (() => {
+  const documentation = V9_CANDIDATE_POLICY_V1.policy.semantic.evidence.documentation;
+  return documentation?.retainExpiredScopedQuestions === true &&
+    documentation.reasons.some((entry) => entry.reason === "no-scoring-path");
+})();
+
 function adaptMintReview(
   meta: V9ExtensionRegistryMeta,
   metaById: ReadonlyMap<string, V9ExtensionRegistryMeta>,
@@ -2040,11 +2077,34 @@ function adaptMintReview(
   const upgradeability = profile.upgradeability;
   // A scoped question softens only the one control it names, and only while
   // its review date sits inside the freshness window.
-  const freshScopedQuestions = (profile.review.scopedQuestions ?? []).filter((question) =>
-    clockSec - parseBoundedDateSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`) <= V9_SCOPED_QUESTION_MAX_AGE_SEC);
-  const freshScopedQuestionRefs = new Set(freshScopedQuestions.map((question) => question.controlRef.toLowerCase()));
-  const semanticQuestionRefs = new Set(freshScopedQuestions.filter((question) =>
-    question.subject !== "key-custody-independence").map((question) => question.controlRef.toLowerCase()));
+  const scopedQuestions = (profile.review.scopedQuestions ?? []).map((question) => ({
+    question,
+    reviewedAtSec: parseBoundedDateSec(question.reviewedAt, clockSec, `${meta.id}:scoped-question`),
+  }));
+  const freshScopedQuestions = scopedQuestions.filter(({ reviewedAtSec }) =>
+    clockSec - reviewedAtSec <= V9_SCOPED_QUESTION_MAX_AGE_SEC);
+  const freshScopedQuestionRefs = new Set(freshScopedQuestions.map(({ question }) => question.controlRef.toLowerCase()));
+  const semanticQuestionRefs = new Set(freshScopedQuestions.filter(({ question }) =>
+    question.subject !== "key-custody-independence").map(({ question }) => question.controlRef.toLowerCase()));
+  // A lapsed custody-only question remains documentation: retain the authored
+  // review date as stale evidence instead of silently dropping the datum.
+  const expiredScopedQuestions = RETAIN_EXPIRED_SCOPED_QUESTIONS
+    ? scopedQuestions.filter(({ question, reviewedAtSec }) =>
+        question.subject === "key-custody-independence" && clockSec - reviewedAtSec > V9_SCOPED_QUESTION_MAX_AGE_SEC)
+    : [];
+  const expiredCustodyQuestionByRef = new Map<string, { question: MintAuthorityScopedQuestion; reviewedAtSec: number }>();
+  for (const entry of expiredScopedQuestions) {
+    const ref = entry.question.controlRef.toLowerCase();
+    const existing = expiredCustodyQuestionByRef.get(ref);
+    // Never re-date: a duplicated ref keeps its most recent authored review.
+    if (existing === undefined || entry.reviewedAtSec > existing.reviewedAtSec) expiredCustodyQuestionByRef.set(ref, entry);
+  }
+  const expiredCustodyQuestionFor = (control: MintAuthorityControl) =>
+    (control.address != null ? expiredCustodyQuestionByRef.get(`${control.chain ?? ""}:${control.address.toLowerCase()}`) : undefined)
+    ?? expiredCustodyQuestionByRef.get(control.label.toLowerCase()) ?? null;
+  const hasFreshScopedQuestion = (control: MintAuthorityControl) =>
+    (control.address != null && freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
+    freshScopedQuestionRefs.has(control.label.toLowerCase());
   const authoredControls = profile.controls ?? [];
   const controlProjections = compileReviewedMintControlScopes(profile, meta.id, clockSec, V9_REVIEW_EVIDENCE_MAX_AGE_SEC).map((projection) =>
     resolvedBook.diagnostics.length === 0 ? projection : { ...projection, processDiagnostics: sortV1005ProcessDiagnostics([...projection.processDiagnostics ?? [], ...resolvedBook.diagnostics]) });
@@ -2063,8 +2123,13 @@ function adaptMintReview(
   // An unresolved aggregate inventory does not erase controls that were
   // individually identified. Retain those controls in a partial review while
   // the unresolved deployment surfaces remain bounded and fail closed.
-  const controls = authoredControls.flatMap((control, index, allControls) =>
-    adaptMintControl(
+  const controls = authoredControls.flatMap((control, index, allControls) => {
+    const controlHasFreshQuestion = hasFreshScopedQuestion(control);
+    // A lapse is documentation only while no fresh question of any subject
+    // names this control: a live obligation is never relabelled as custody by
+    // an older overdue question, and its dated evidence row is not duplicated.
+    const retainedExpiredCustodyQuestion = controlHasFreshQuestion ? null : expiredCustodyQuestionFor(control);
+    const rows = adaptMintControl(
       meta.id,
       control,
       profile.mintIncidents,
@@ -2077,19 +2142,31 @@ function adaptMintReview(
             candidateIndex !== index && candidate.chain === control.chain && candidate.canRaiseCap === true,
         ),
       profile.economicCapSemantics,
-      (control.address != null &&
-        freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
-        freshScopedQuestionRefs.has(control.label.toLowerCase()),
+      controlHasFreshQuestion,
       supplyReview,
       clockSec,
       controlProjections[index]!,
       issuanceFacts?.ref,
       !((control.address != null && semanticQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
         semanticQuestionRefs.has(control.label.toLowerCase())) &&
-        ((control.address != null && freshScopedQuestionRefs.has(`${control.chain ?? ""}:${control.address.toLowerCase()}`)) ||
-          freshScopedQuestionRefs.has(control.label.toLowerCase())),
-    ),
-  ).map((control) => resolvedBook.diagnostics.length === 0 ? control : { ...control, executionScopeComplete: false,
+        controlHasFreshQuestion,
+      retainedExpiredCustodyQuestion,
+    );
+    if (retainedExpiredCustodyQuestion !== null) {
+      // The question's own review is the evidence: its observation stays the
+      // authored date, so the retained factor gap is never re-dated.
+      evidence.add({
+        componentKeys: rows.map((row) => `control:${row.controlKey}:keyCustody`),
+        sourceId: "stablecoin-meta.mint-authority.scoped-question",
+        reviewedAtSec: retainedExpiredCustodyQuestion.reviewedAtSec,
+        publishedBy: "unknown",
+        confidence: "manual-review",
+        payload: retainedExpiredCustodyQuestion.question,
+        maxAgeSec: V9_SCOPED_QUESTION_MAX_AGE_SEC,
+      });
+    }
+    return rows;
+  }).map((control) => resolvedBook.diagnostics.length === 0 ? control : { ...control, executionScopeComplete: false,
     scopeDiagnostics: [...new Set([...control.scopeDiagnostics ?? [], ...resolvedBook.diagnostics.map((row) => row.code)])].sort() });
   const directMintControl =
     controls.find((control) => control.controlKind !== "bridge" && control.capabilities.includes("mint")) ?? null;
@@ -2485,8 +2562,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
-        const negativeIncidentReviews = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
-        addSafetyScoreV9NegativeIncidentEvidence(reviewEvidence, negativeIncidentReviews);
+        const negativeIncidentRead = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
+        const negativeIncidentReviews = negativeIncidentRead.reviews;
         admissionPath = "wrapperAllocationReview";
         const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
         admissionPath = "wrapperLocalReviews";
@@ -2625,7 +2702,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           });
         }
         admissionPath = "supplyReview";
-        const supplyReview = buildSafetyScoreV9SupplyReview(
+        const supplyAdmission = buildSafetyScoreV9SupplyAdmission(
           fixedInput,
           assetId,
           meta.bridgeRouteRisk,
@@ -2634,6 +2711,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
             transferMaterialityGeneration: options.transferMaterialityGeneration ?? null,
           },
         );
+        const supplyReview = supplyAdmission.review;
         const chainRows = safetyScoreV9ChainRows(fixedInput, assetId);
         const deployedChainCount = Object.keys(chainRows).length;
         admissionPath = "economicControlReview.mint";
@@ -2651,6 +2729,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           reviewEvidence,
           clockSec,
           chainRows,
+          supplyAdmission.censusDiagnostics,
         );
         admissionPath = "controlReview";
         const incidentControlRoute = routeSafetyScoreV9ControlIncidents(
@@ -2658,13 +2737,44 @@ export function createSafetyScoreV9BaselineExtensionSource(
           mint.review,
           reviewedIncidents,
         );
+        const laneRoutes = new Map<string, LaneRouteAuthority>();
+        for (const route of meta.bridgeRouteRisk?.routes ?? []) {
+          const deploymentKey = normalizeDeploymentId(route.id);
+          if (deploymentKey.length === 0) continue;
+          laneRoutes.set(deploymentKey, {
+            rail: route.rail ?? null,
+            routeClass: route.routeClass,
+            providerKeys: [...(route.providerKeys ?? [])],
+          });
+        }
         const controls = routeSafetyScoreV9NegativeIncidentReviews(
           incidentControlRoute.controls,
           assetId,
           clockSec,
           negativeIncidentReviews,
           reviewedIncidents,
+          {
+            descriptors: options.laneEmitterDescriptors ?? [],
+            certificates: options.laneIncidentCertificates ?? new Map(),
+            routes: laneRoutes,
+            unreadableProviders: negativeIncidentRead.unreadableProviders,
+          },
         ).sort((left, right) => compareText(left.controlKey, right.controlKey));
+        addSafetyScoreV9NegativeIncidentEvidence(reviewEvidence, negativeIncidentReviews, controls);
+        const incidentClosureFailures: V9LaneIncidentClosureFailure[] = [];
+        if (negativeIncidentRead.unreadableProviders.size > 0) {
+          for (const [deploymentRouteKey, route] of laneRoutes) {
+            if (!controls.some((control) => control.deploymentKey === deploymentRouteKey &&
+                control.controlKind === "bridge" && control.scope === "deployment" && control.incidentState === "unknown")) continue;
+            for (const providerKey of route.providerKeys) {
+              const foreignAssetIds = negativeIncidentRead.unreadableProviders.get(providerKey);
+              if (foreignAssetIds !== undefined) incidentClosureFailures.push({
+                deploymentRouteKey, providerKey, foreignAssetIds: [...foreignAssetIds],
+                code: "provider-incident-disclosures-unreadable",
+              });
+            }
+          }
+        }
         admissionPath = "accessReview";
         const reviewedTransferFact = reviewedTransferFacts
           ? reviewedTransferFacts.get(assetId)
@@ -2743,7 +2853,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
               ? {
                   mint: incidentControlRoute.mintReview,
                   oracle,
-                  bridge: bridge.review,
+                  bridge: incidentClosureFailures.length === 0 ? bridge.review : { ...bridge.review,
+                    diagnostics: { ...bridge.review.diagnostics!, incidentClosureFailures } },
                 }
               : null,
           accessReview,

@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "policyId": "safety-score-v9",
   "lifecycle": "active",
-  "releaseVersion": "10.36",
+  "releaseVersion": "10.39",
   "semantic": {
     "unknownQuality": {
       "backing": { "C": 35, "U": 50 },
@@ -39,6 +39,26 @@
         "base": 600,
         "optimism": 900,
         "megaeth": 1500
+      },
+      "chainSupplyMaxAgeBySource": {
+        "defaultMaxAgeSec": 1800,
+        "carryForwardExtraSec": 3600,
+        "maxAgeSecBySource": {
+          "report-cards-chain-circulating": 5400,
+          "deployment-supply-census-v1": 5400
+        }
+      },
+      "deploymentSupplyCensus": {
+        "model": "deployment-supply-census-v1",
+        "tier0ChainBound": true,
+        "tier1Read": "total-supply",
+        "pinnedHeaderPerChain": true,
+        "requireRuntimeCodeHash": true,
+        "evmMulticallMaxBatchSize": 64,
+        "solanaCommitment": "finalized",
+        "solanaMaxAccountsPerRequest": 100,
+        "movePin": "ledger-version",
+        "maxDeploymentsPerAsset": 64
       }
     },
     "formula": {
@@ -249,6 +269,58 @@
           "publicLabel": "Material evidence is stale"
         }
       ],
+      "documentation": {
+        "reasonOrder": [
+          "no-scoring-path",
+          "unknown-scores-as-no-credit",
+          "unscored-diagnostic",
+          "coverage-label",
+          "immaterial-deployment",
+          "reserve-dust"
+        ],
+        "reasons": [
+          {
+            "reason": "no-scoring-path",
+            "publicLabel": "Custody question outside the scoring path",
+            "threshold": null
+          },
+          {
+            "reason": "unknown-scores-as-no-credit",
+            "publicLabel": "Mint control credit already withheld",
+            "threshold": null
+          },
+          {
+            "reason": "unscored-diagnostic",
+            "publicLabel": "Diagnostic datum, not scored",
+            "threshold": null
+          },
+          {
+            "reason": "coverage-label",
+            "publicLabel": "DEX coverage label only",
+            "threshold": null
+          },
+          {
+            "reason": "immaterial-deployment",
+            "publicLabel": "Deployment share below the immaterial bar",
+            "threshold": {
+              "sharePctKey": "documentationImmaterialSharePct"
+            }
+          },
+          {
+            "reason": "reserve-dust",
+            "publicLabel": "Reserve exposure below the dust bar",
+            "threshold": {
+              "sharePctKey": "reserveDustBookSharePct"
+            }
+          }
+        ],
+        "documentationImmaterialSharePct": 1,
+        "maxAttributableScorePoints": 0.1,
+        "reserveDustBookSharePct": 0.01,
+        "reserveDustResidualMaxBookSharePct": 0.1,
+        "retainExpiredScopedQuestions": true
+      },
+      "laneIncidentCertificateMaxAgeSec": 2592000,
       "evidenceExpiry": {
         "reviewedResearchMaxAgeSec": 31536000,
         "accessReviewMaxAgeSec": 31536000,
@@ -752,6 +824,7 @@
           "exactRequestRequired": true,
           "sourceMaxAgeSec": 18000,
           "priceMaxAgeSec": 18000,
+          "evaluationLagSec": 7200,
           "futureSkewSec": 60,
           "permittedBases": ["transaction-simulation"],
           "maximumCertification": "exact-complete"

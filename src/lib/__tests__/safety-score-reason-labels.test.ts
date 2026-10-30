@@ -1,5 +1,6 @@
 import { spawnSync } from "node:child_process";
 import { describe, expect, it } from "vitest";
+import { SAFETY_SCORE_GAP_CAUSE_LABELS } from "@shared/lib/classification";
 import {
   humanizeSafetyScoreReason,
   describePartialEvidence,
@@ -37,6 +38,14 @@ describe("safety score reason labels", () => {
       partialEvidence: { excludedPillars: ["exit"], causes: ["B"] } })!;
     expect(result.gaps.map(formatPartialEvidenceGap)).toEqual(["Exit excluded · awaiting curation"]);
     expect(result.summary).not.toContain("pipeline");
+  });
+
+  it("names cause A as a data-pipeline unavailability, not the technical pipeline-gap status", () => {
+    expect(SAFETY_SCORE_GAP_CAUSE_LABELS.A).toBe("data pipeline unavailable");
+    const result = describePartialEvidence({ ratingStatus: "rated",
+      partialEvidence: { excludedPillars: ["exit"], causes: ["A"] } })!;
+    expect(result.gaps.map(formatPartialEvidenceGap)).toEqual(["Exit excluded · data pipeline unavailable"]);
+    expect(result.summary).toContain("data pipeline unavailable");
   });
   it("handles long malformed digit runs through the public humanizer in a bounded child", () => {
     // A process timeout contains a regression in either synchronous regex;

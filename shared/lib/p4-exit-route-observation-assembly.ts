@@ -98,6 +98,12 @@ export function buildP4DexExitRouteObservations(params: {
           ? `executionCapabilityGate:${executionCapabilityGate.family}:${executionCapabilityGate.reason}`
           : "conflictingExecutionCapabilityEvidence";
       unsupportedReasons[reason] = (unsupportedReasons[reason] ?? 0) + 1;
+      if (ammModel == null && executionCapabilityGate.family === "measured-execution") {
+        for (const issue of new Set(executionCapabilityGate.validationIssues ?? [])) {
+          const issueReason = `invalidMeasuredExecution:${issue}`;
+          unsupportedReasons[issueReason] = (unsupportedReasons[issueReason] ?? 0) + 1;
+        }
+      }
       continue;
     }
     const measuredProfiles = measuredExecutionProfilesForPool(pool);

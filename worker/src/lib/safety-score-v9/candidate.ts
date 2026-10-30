@@ -19,8 +19,19 @@ import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
 import { compareText, domainDigest } from "@shared/lib/safety-score-v9/primitives";
+import type { V9DocumentationAssetFacts, V9DocumentationClassification } from "@shared/lib/safety-score-v9/documentation";
+import { createV9OpenEvidenceCounter, type V9OpenEvidenceCounter } from "@shared/lib/safety-score-v9/open-questions";
 import { deepFreeze } from "@shared/types/safety-score-v9-immutable";
-import { buildSafetyScoreV9Response, createSafetyScoreV9ResponseProjector, V9PublicCardProjectionError, type V9PublicCardProjectionInput, type V9PublicResponseProjector } from "@shared/lib/safety-score-v9/public";
+import {
+  buildSafetyScoreV9Response,
+  buildV9DocumentationCarriers,
+  collectV9DocumentationGapIds,
+  createSafetyScoreV9ResponseProjector,
+  V9PublicCardProjectionError,
+  type V9DocumentationCarrierCard,
+  type V9PublicCardProjectionInput,
+  type V9PublicResponseProjector,
+} from "@shared/lib/safety-score-v9/public";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import type {
   CompiledV9FactSetV3,
@@ -174,6 +185,13 @@ export interface BuildSafetyScoreV9CandidateInput {
    */
   allowRegistryMismatch?: boolean;
   registry?: Pick<BuildSafetyScoreV9BaselineExtensionOptions, "metaById" | "registryFingerprint" | "reviewedTransferFacts">;
+  /**
+   * v10.39 lane closure inputs, assembled once by the caller: admitted
+   * certificate chains per lane and the reviewed lane descriptors. Omitted keeps
+   * the closure inert (no certificate read, no `none`).
+   */
+  laneIncidentCertificates?: BuildSafetyScoreV9BaselineExtensionOptions["laneIncidentCertificates"];
+  laneEmitterDescriptors?: BuildSafetyScoreV9BaselineExtensionOptions["laneEmitterDescriptors"];
   /**
    * 10.35 asset-local measured-route expiry: the prior accepted baseline and the
    * input's embedded-window projection. Detected assets are quarantined and the
@@ -650,6 +668,8 @@ function materializeCandidateExtension(input: BuildSafetyScoreV9CandidateFromNor
       ...input.registry,
       ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
       transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
+      ...(input.laneIncidentCertificates === undefined ? {} : { laneIncidentCertificates: input.laneIncidentCertificates }),
+      ...(input.laneEmitterDescriptors === undefined ? {} : { laneEmitterDescriptors: input.laneEmitterDescriptors }),
     }));
 }
 
@@ -670,6 +690,69 @@ function projectCandidatePublicationFacts(
         (input.registry?.metaById ?? ACTIVE_META_BY_ID).get(asset.assetId)),
     ])),
   };
+}
+
+const DOCUMENTATION_PILLARS = ["backing", "exit", "control"] as const;
+
+/**
+ * Documentation-classification state of one publication attempt: the union map
+ * every carrier reads, compact per-card witnesses, and the counter bound to it.
+ */
+interface DocumentationState {
+  gapIds: Map<string, V9DocumentationClassification>;
+  cards: V9DocumentationCarrierCard[];
+  counter: V9OpenEvidenceCounter;
+}
+
+function createDocumentationState(assets: CompiledV9FactSetV3["assets"]): DocumentationState {
+  const gapIds = new Map<string, V9DocumentationClassification>();
+  return {
+    gapIds,
+    cards: [],
+    // Every carrier reads this one advancing union, so a gap classifies
+    // identically in the count, the trace and the card annotation.
+    counter: createV9OpenEvidenceCounter(assets, (gap) => gapIds.get(gap.gapId)?.reason ?? null),
+  };
+}
+
+/**
+ * Classify one evaluated asset's gaps into the publication union. A route-scoped
+ * diagnostic is documentation only on a route the evaluator admitted, so the
+ * asset joins the union once its Exit result exists; an inherited witness keeps
+ * resolving at its owner (fail closed until that owner registers).
+ */
+function registerDocumentationAsset(
+  state: DocumentationState,
+  envelope: V9ValidatedPolicyEnvelope,
+  asset: V9EvaluatedAsset,
+  facts: V9DocumentationAssetFacts,
+): void {
+  const admittedExitRouteKeys = new Set<string>();
+  for (const route of asset.exit.routes) if (route.included) admittedExitRouteKeys.add(route.routeKey);
+  const enriched: V9DocumentationAssetFacts = {
+    ...facts,
+    admittedExitRouteKeys,
+  };
+  const localDocumentationGapIds = new Set<string>();
+  for (const [gapId, classification] of collectV9DocumentationGapIds(envelope, [enriched])) {
+    localDocumentationGapIds.add(gapId);
+    state.gapIds.set(gapId, classification);
+  }
+  // Keep only classified ids and witnesses, not the evaluator's current shard.
+  state.cards.push({
+    assetId: asset.assetId,
+    localDocumentationGapIds,
+    pillars: DOCUMENTATION_PILLARS.map((pillar) => ({
+      pillar,
+      evidenceLevel: asset.scoreInput.pillars[pillar].evidenceLevel,
+      limitingCauseGapIds: asset.scoreInput.pillars[pillar].limitingCauseGapIds,
+    })),
+  });
+}
+
+/** Count after registration so inherited gaps use the advancing owner union. */
+function countDocumentationCard(state: DocumentationState, asset: V9EvaluatedAsset): void {
+  state.counter.add(asset);
 }
 
 /** Trusted runtime entrypoint for an already normalized exact input. */
@@ -738,6 +821,8 @@ function buildSafetyScoreV9CandidatePipeline(
     ...input.registry,
     ...(input.allowRegistryMismatch === true ? { allowRegistryMismatch: true } : {}),
     transferMaterialityGeneration: input.transferMaterialityGeneration ?? null,
+    ...(input.laneIncidentCertificates === undefined ? {} : { laneIncidentCertificates: input.laneIncidentCertificates }),
+    ...(input.laneEmitterDescriptors === undefined ? {} : { laneEmitterDescriptors: input.laneEmitterDescriptors }),
   };
   const streamExtension = !retainIntermediates && input.extension === undefined && input.liveWithheldCompilation === undefined;
   let extensionSource = streamExtension ? createSafetyScoreV9BaselineExtensionSource(fixedInput, extensionOptions) : null;
@@ -769,6 +854,10 @@ function buildSafetyScoreV9CandidatePipeline(
   const bridgeJoinDiagnostics = "bridgeJoinDiagnostics" in compilation
     ? compilation.bridgeJoinDiagnostics : retainedBridgeJoinDiagnostics;
   let compiledFacts: CompiledV9FactSetV3 | null = compilation.factSet;
+  // Open-evidence counting and the documentation carriers derive at build time
+  // from the compiled gap table plus each evaluated card; the classifier is the
+  // single authority (T2/DOC-3), never a scoring module.
+  let documentation = createDocumentationState(compiledFacts.assets);
   const compilerIdentity = compilerFactSchemaIdentity(fixedInput, extension, compiledFacts);
   const compilerFactSchemaDigest = computeSafetyScoreV9CompilerFactSchemaDigest(compilerIdentity);
   const capabilityIdentity = producerCapabilityIdentity(fixedInput, extension);
@@ -797,6 +886,7 @@ function buildSafetyScoreV9CandidatePipeline(
     compilation =
       compileFacts(retryExtension, evaluationFailures);
     compiledFacts = compilation.factSet;
+    documentation = createDocumentationState(compiledFacts.assets);
     quarantines = compilation.quarantines;
     publicationFacts = projectCandidatePublicationFacts(compiledFacts, quarantines, { ...input, fixedInput });
     compilation = null;
@@ -816,12 +906,21 @@ function buildSafetyScoreV9CandidatePipeline(
     try {
       if (retainIntermediates) {
         evaluatedSet = evaluateValidatedV9FactSet(compiledFacts!, policy);
+        // Classify the whole cohort before the first card is counted, so even an
+        // inherited (foreign) witness resolves at its owner.
+        const factsById = new Map(compiledFacts!.assets.map((asset) => [asset.assetId, asset]));
+        for (const asset of evaluatedSet.assets) registerDocumentationAsset(documentation, policy, asset, factsById.get(asset.assetId)!);
+        for (const asset of evaluatedSet.assets) countDocumentationCard(documentation, asset);
         publication = publishEvaluatedCandidate();
       } else {
         const projector = createSafetyScoreV9ResponseProjector();
         const factOwner = { factSet: compiledFacts };
         compiledFacts = null;
-        const projected = evaluateValidatedV9FactSetForPublication(factOwner, policy, (asset) => {
+        const projected = evaluateValidatedV9FactSetForPublication(factOwner, policy, (asset, facts) => {
+          // Register before counting or projecting: route-scoped diagnostics need
+          // this asset's Exit admission, and the trace reads the same union.
+          registerDocumentationAsset(documentation, policy, asset, facts);
+          countDocumentationCard(documentation, asset);
           projector.project(publicProjectionInput(asset));
           publicationFacts.displayByAssetId.delete(asset.assetId);
           publicationFacts.dependencyMetadataByAssetId.delete(asset.assetId);
@@ -884,6 +983,7 @@ function buildSafetyScoreV9CandidatePipeline(
       display: publicationFacts.displayByAssetId.get(asset.assetId),
       freshness: { exit: exitPillarFreshnessFromDexInput(clockSec, dexObservedAtSec.get(asset.assetId), dexExitRouteMaxAgeSec) },
       dexObservedAtSec: dexObservedAtSec.get(asset.assetId) ?? null,
+      documentationGapIds: documentation.gapIds,
     };
   }
 
@@ -937,9 +1037,27 @@ function buildSafetyScoreV9CandidatePipeline(
       commonModeGroups: evaluated.commonModeGroups,
       dexMaxAgeSec: dexExitRouteMaxAgeSec,
     };
+    const openEvidence = documentation.counter.finish();
+    const carriers = buildV9DocumentationCarriers({
+      envelope: policy,
+      gapIds: documentation.gapIds,
+      cards: documentation.cards,
+      openEvidence,
+    });
+    // An empty publication union is omitted, never published as `[]`; the
+    // envelope rejects an annotation without the gap set.
+    const documentationCauseGaps = carriers.causeGapIds.length === 0
+      ? {}
+      : { documentationCauseGaps: carriers.causeGapIds };
     const candidate = projector === undefined
-      ? buildSafetyScoreV9Response({ ...responseArgs, results: takePublicResults })
-      : projector.finalize({ ...responseArgs, resultDigest: evaluated.scoreResultDigest });
+      ? buildSafetyScoreV9Response({
+        ...responseArgs, openEvidence: carriers.openEvidence, ...documentationCauseGaps,
+        results: takePublicResults(),
+      })
+      : projector.finalize({
+        ...responseArgs, openEvidence: carriers.openEvidence, ...documentationCauseGaps,
+        resultDigest: evaluated.scoreResultDigest,
+      });
     return { candidate, candidateIdentity, retained };
   }
 

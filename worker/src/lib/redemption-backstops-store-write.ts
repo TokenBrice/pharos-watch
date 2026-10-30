@@ -76,6 +76,8 @@ function buildDetailsJson(record: RedemptionBackstopSnapshotRecord): string {
       ...(record.capacityBasis ? { capacityBasis: record.capacityBasis } : {}),
       capacitySemantics: record.capacitySemantics,
       ...(record.capacityProfile ? { capacityProfile: record.capacityProfile } : {}),
+      ...(record.executionRouteFailures ? { executionRouteFailures: record.executionRouteFailures } : {}),
+      ...(record.exitRouteObservationCoverage ? { exitRouteObservationCoverage: record.exitRouteObservationCoverage } : {}),
       feeConfidence: record.feeConfidence,
       feeModelKind: record.feeModelKind,
       modelConfidence: record.modelConfidence,

@@ -19,7 +19,7 @@ import { validatePricingSourceFreshness } from "../../lib/pricing-source-freshne
 import type { PeggedAsset } from "./enrich-prices";
 import { fetchCuratedAggregateOnChainMcap, toPublicChainCirculating } from "./supplemental-assets/onchain-supply";
 import { toPositiveFiniteNumber } from "./supplemental-assets/shared";
-import { isSupplyObservationWithinRestoreCeiling } from "./shared";
+import { isSupplyObservationWithinRestoreCeiling, supplyObservationClock } from "./shared";
 
 /**
  * DEC-01 CoinGecko aggregate gap-fill limits (ratio = CoinGecko market cap / DefiLlama list total).
@@ -58,7 +58,11 @@ export function carryForwardSupplyGapFill(
 ): boolean {
   const provenance = previous?.supplyGapFill;
   if (previous?.supplySource !== "coingecko-gap-fill" || !provenance) return false;
-  if (previous.supplyObservedAt != null && !isSupplyObservationWithinRestoreCeiling(previous.supplyObservedAt, nowSec)) return false;
+  const observedAt = supplyObservationClock(previous);
+  // A carry must name the observation it republishes. An undated prior value has
+  // no age a consumer could bound, and re-dating it to this run would publish a
+  // stale carry as current, so it is not carried at all (B2/R1).
+  if (observedAt == null || !isSupplyObservationWithinRestoreCeiling(observedAt, nowSec)) return false;
   const runs = provenance.carryForwardRuns ?? 0;
   if (runs >= MAX_GAP_FILL_CARRY_RUNS) return false;
   asset.circulating = previous.circulating;
@@ -68,7 +72,7 @@ export function carryForwardSupplyGapFill(
   asset.chainCirculating = previous.chainCirculating;
   asset.chains = previous.chains;
   asset.supplySource = previous.supplySource;
-  asset.supplyObservedAt = previous.supplyObservedAt;
+  asset.supplyObservedAt = observedAt;
   asset.supplyRestored = true;
   asset.supplyGapFill = { ...provenance, carryForwardRuns: runs + 1 };
   return true;
@@ -724,7 +728,7 @@ async function applyCuratedOnChainSupplyGap(input: {
   dwellirNative?: DwellirNativeCapability;
   fxFallbackRates?: Record<string, number>;
   signal?: AbortSignal;
-}): Promise<{ mcap: number; observedAt: number | null } | null> {
+}): Promise<{ mcap: number; observedAt: number } | null> {
   const meta = ACTIVE_META_BY_ID.get(String(input.candidate.asset.id));
   if (!meta) return null;
 
@@ -739,20 +743,37 @@ async function applyCuratedOnChainSupplyGap(input: {
     input.dwellirNative,
   );
   if (!onChainMcap) return null;
+  const observedAt = onChainMcap.observedAt;
+  // A current read must name its clock. A value with no observation time cannot
+  // be aged, so it is withheld instead of being published as a current repair.
+  if (observedAt == null) {
+    logWorkerEvent({
+      scope: "lib",
+      job: "sync-stablecoins",
+      level: "warn",
+      event: "onchain-supply-gap-clock-missing",
+      message: "Curated on-chain supply repair returned no observation clock; withholding the value",
+      metadata: { stablecoinId: String(input.candidate.asset.id), source: onChainMcap.supplySource },
+    });
+    return null;
+  }
 
   input.candidate.asset.circulating = { [input.candidate.pegKey]: onChainMcap.mcap };
   input.candidate.asset.circulatingPrevDay = null;
   input.candidate.asset.circulatingPrevWeek = null;
   input.candidate.asset.circulatingPrevMonth = null;
   input.candidate.asset.supplySource = onChainMcap.supplySource;
-  input.candidate.asset.supplyObservedAt = onChainMcap.observedAt ?? null;
+  input.candidate.asset.supplyObservedAt = observedAt;
+  // This run's read produced the value: it is an observation, not a carry.
+  delete input.candidate.asset.supplyRestored;
+  delete input.candidate.asset.supplyGapFill;
   input.candidate.asset.chains = buildKnownDisplayChains(input.candidate.asset.id, input.candidate.asset.chains);
 
   if (onChainMcap.chainCirculating) {
     input.candidate.asset.chainCirculating = toPublicChainCirculating(onChainMcap.chainCirculating);
   }
 
-  return { mcap: onChainMcap.mcap, observedAt: onChainMcap.observedAt ?? null };
+  return { mcap: onChainMcap.mcap, observedAt };
 }
 
 export async function reconcileTrackedSupplyGaps(
@@ -873,7 +894,7 @@ export async function reconcileTrackedSupplyGaps(
         fromSource,
         toValue: onChainMcap.mcap,
         observedAt: onChainMcap.observedAt,
-        observedAgeSec: onChainMcap.observedAt == null ? null : Math.max(0, nowSec - onChainMcap.observedAt),
+        observedAgeSec: Math.max(0, nowSec - onChainMcap.observedAt),
       });
       byReason["onchain-total-supply"] += 1;
       continue;

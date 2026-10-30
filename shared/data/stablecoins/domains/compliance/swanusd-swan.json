@@ -1,0 +1,77 @@
+{
+  "id": "swanusd-swan",
+  "genius": {
+    "applicability": "unclear",
+    "applicabilityBasis": {
+      "summary": "swanUSD is a crypto-collateralised CDP dollar minted permissionlessly through Monolith and governed by SwanDAO, with no legal entity, jurisdiction, named team or contact published. It is marketed as a dollar unit and traded on a Curve pool, but no conventional legal issuer obligated to redeem a fixed monetary value is identified, so GENIUS payment-stablecoin applicability stays unclear rather than an exclusion.",
+      "references": [
+        {
+          "label": "GENIUS Act: payment stablecoin definition",
+          "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+          "sourceKind": "statute",
+          "sourceDate": "2025-07-18",
+          "accessedAt": "2026-10-29"
+        },
+        {
+          "label": "Monolith risks disclosure",
+          "url": "https://docs.monolith.market/security/risks",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-29"
+        },
+        {
+          "label": "Monolith redemptions and free-debt scope",
+          "url": "https://docs.monolith.market/protocol/redemptions",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-29"
+        },
+        {
+          "label": "swanUSD website (issuer copy, no entity or terms)",
+          "url": "https://swanusd.com",
+          "sourceKind": "issuer-disclosure",
+          "accessedAt": "2026-10-29"
+        }
+      ]
+    },
+    "authorizationStatus": "unknown",
+    "issuerPathway": "unknown",
+    "reserveDisclosurePresent": false,
+    "redemptionPolicyPresent": true,
+    "monthlyAttestationPresent": false,
+    "notes": "Reviewed 2026-10-29. SwanDAO publishes no legal entity, jurisdiction, named team, contact, terms of service, privacy policy or risk disclosure on swanusd.com; the site is a single promotional page, and Monolith describes instances as separately created and not necessarily endorsed by its core team. Mint and redemption run through permissionless contracts and a DAO with no registered issuer, so the GENIUS definition's issuer that issues and redeems for monetary value is not clearly met. No PPSI approval, state qualification, public application, foreign-issuer exception or token-specific enforcement action appears in issuer or protocol materials. No regulator-domain negative search was run, so authorizationStatus stays unknown rather than a reviewed no-public-authorization-found finding. Transparency is on-chain only: there is no issuer reserve dashboard, reserve report or monthly attestation, while redemption mechanics are documented by Monolith. No legal issuerEntity or issuerDomicile is identified or added.",
+    "references": [
+      {
+        "label": "GENIUS Act: payment stablecoin definition and issuer limitation",
+        "url": "https://www.govinfo.gov/content/pkg/PLAW-119publ27/html/PLAW-119publ27.htm",
+        "sourceKind": "statute",
+        "sourceDate": "2025-07-18",
+        "accessedAt": "2026-10-29"
+      },
+      {
+        "label": "Monolith risks disclosure",
+        "url": "https://docs.monolith.market/security/risks",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-29"
+      },
+      {
+        "label": "Monolith redemptions",
+        "url": "https://docs.monolith.market/protocol/redemptions",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-29"
+      },
+      {
+        "label": "Monolith general FAQ (Inverse Finance origin and instance endorsement caveat)",
+        "url": "https://docs.monolith.market/faq/general",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-29"
+      },
+      {
+        "label": "swanUSD website (issuer copy, no entity or terms)",
+        "url": "https://swanusd.com",
+        "sourceKind": "issuer-disclosure",
+        "accessedAt": "2026-10-29"
+      }
+    ],
+    "reviewer": "Pharos compliance research",
+    "reviewedAt": "2026-10-29"
+  }
+}

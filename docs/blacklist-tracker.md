@@ -4,7 +4,7 @@ FreezeWatch tracks observed stablecoin blacklist, freeze, release and destroy ev
 
 ## Methodology And Ownership
 
-- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.61`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
+- **Current methodology version:** <!-- GENERATED-START: methodology-version-blacklist-tracker -->`v4.62`<!-- GENERATED-END: methodology-version-blacklist-tracker -->
 - **Public changelog:** [Blacklist Tracker history](https://pharos.watch/methodology/blacklist-tracker-changelog/)
 
 ## Public Exposure Contract
@@ -97,11 +97,11 @@ Conflicting Tron effects without proven transaction positions remain ambiguous. 
 
 ### Amount evidence
 
-An emitted destroy or seize amount is preferred. A preceding-block balance cannot prove an amountless event's historical quantity because transfers or wipes in the same block may change it. Amountless EVM freezes and releases remain unavailable; a burn-shaped transfer alone cannot prove a wipe amount. Missing amounts never become zero, and the event remains in history.
+An emitted destroy or seize amount is preferred. Amountless EVM freezes and releases require all affected-account transfers in the event block to reconcile exactly with balances before and after that block. Replaying transfers before the freeze or release log then proves its quantity. Ambiguous log positions, negative intermediate balances or failed reconciliation leave it unavailable. A burn-shaped transfer alone cannot prove a wipe amount; missing amounts never become zero.
 
 Confirmed Tron transfer replay can reconstruct an amount only with the exact freeze receipt, unique ordered transfer identities, complete pagination and a ledger reconciling exactly with balances bracketing the same solidified head. Shared-millisecond transfers need proven transaction ordering; negative intermediate balances, duplicate transfers and incomplete evidence are rejected. A provider response timestamp is not proof that indexed history is complete.
 
-A recovered zero additionally requires positive-value pre-freeze activity, nonnegative ordered history and a complete confirmed window excluding every configured destroy family for the affected address. Empty or zero-only histories, matching destroys and missing, stale or malformed windows cannot prove zero.
+A Tron replay zero additionally requires positive-value pre-freeze activity, nonnegative ordered history and a complete confirmed window excluding every configured destroy family for the affected address. Empty or zero-only histories, matching destroys and missing, stale or malformed windows cannot prove zero.
 
 Circle mirror actions are suppressed only when an emitted event-time zero proves the mirror action. Suppressed rows remain auditable but do not contribute to public events, active records or frozen-value totals. Seize-only BUIDL coverage records destroys without inventing an active blacklist state.
 

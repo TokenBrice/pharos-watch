@@ -1,5 +1,44 @@
 {
   "id": "eur0-usual",
+  "oracleRisk": {
+    "tier": "single-source-or-laggy",
+    "summary": "DaoCollateral prices every supported euro collateral through an upgradable ClassicalOracle that maps each token to one ChainlinkV3Aggregator-compatible feed registered by an admin, with the feed update-timeout check performed only at registration; EURC is priced by the immutable CircleEurcOracle cross-rate of the Chainlink EURC/USD and EUR/USD feeds. All documented feeds sit in one provider family, with no second provider, failover or per-call staleness bound, and the stablecoin depeg guard only reverts outside the admin-set variation band.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "SprintRS099 research sprint 2026-10-29 (RS-099)",
+      "rationale": "EUR0 mints and redeems against euro RWA collateral and has no borrower debt or liquidation engine. The price-sensitive surface the issuer documents is the collateral valuation DaoCollateral reads from ClassicalOracle and the immutable EURC/EUR cross-rate oracle, so the profile is a single top-level valuation path.",
+      "sources": [
+        {
+          "label": "Usual tech docs — EUR0 token contract (oracle-priced collateralization check)",
+          "url": "https://tech.usual.money/smart-contracts/token-contracts/eur0.md"
+        },
+        {
+          "label": "Usual tech docs — EUR0 Classical Oracle",
+          "url": "https://tech.usual.money/smart-contracts/utility-contracts/eur0/eur0-classical-oracle.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "SprintRS099 research sprint 2026-10-29 (RS-099)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "Usual tech docs — EUR0 token contract (oracle-priced collateralization check)",
+        "url": "https://tech.usual.money/smart-contracts/token-contracts/eur0.md"
+      },
+      {
+        "label": "Usual tech docs — EUR0 Classical Oracle (per-token feed registration and depeg band)",
+        "url": "https://tech.usual.money/smart-contracts/utility-contracts/eur0/eur0-classical-oracle.md"
+      },
+      {
+        "label": "Usual tech docs — Circle EURC/EUR Oracle (Chainlink cross-rate)",
+        "url": "https://tech.usual.money/smart-contracts/utility-contracts/eur0/circle-eurc-eur-oracle.md"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [

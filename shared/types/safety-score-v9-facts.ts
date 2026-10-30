@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { issue } from "./safety-schema-primitives";
+import { issue, CanonicalKeySchema } from "./safety-schema-primitives";
 import methodologyPolicy from "../data/safety-score-v9/methodology-policy-candidate-v1.json";
 import { RedemptionRouteSuspensionSchema } from "./redemption";
 import { V9ReserveBoundedFactSchema } from "./reserve-bounded-facts";
@@ -747,6 +747,30 @@ const V9ModulesOrGuardsSchema = z.enum(["present", "none-detected", "not-applica
 
 const V9IncidentStateSchema = z.enum(["none", "active", "resolved", "unknown"]);
 
+/**
+ * Derived provenance of a `provider-screening` negative `incidentState` (OP-IR
+ * ruling 5a). The router writes it; nobody authors it, so it restates no join a
+ * second time (R5). Every witness is named (R6): the provider review per route
+ * provider key, the asset issuer-surface review, the descriptor's screening set,
+ * the newest admitted certificate for that set, and the exact contributor ids
+ * this fact covers. Certificates are joined by
+ * `(subjectDeploymentKey, screeningSetId)`, never by an authored id, and the
+ * budget lives in `semantic.evidence.laneIncidentCertificateMaxAgeSec`.
+ */
+export const V9IncidentCoverageSchema = z
+  .object({
+    source: z.literal("provider-screening"),
+    // Empty on an issuer-operated rail (OQ-2), where the issuer surface is the
+    // rail witness; otherwise one id per provider key the route authors.
+    providerReviewIds: canonicalArrayBy(CanonicalKeySchema, (reviewId) => reviewId, 0, "provider review"),
+    issuerSurfaceReviewId: CanonicalKeySchema,
+    screeningSetId: CanonicalKeySchema,
+    certificateId: CanonicalKeySchema,
+    contributorControlIds: canonicalArrayBy(CanonicalTextSchema, (controlId) => controlId, 1, "contributor control id"),
+  })
+  .strict();
+export type V9IncidentCoverage = z.output<typeof V9IncidentCoverageSchema>;
+
 const V1005ProcessReasonSchema = z.enum([
   "process-certificate-unavailable", "authority-census-incomplete", "execution-scope-unreviewed",
   "runtime-unmatched", "implementation-unmatched", "instance-state-unmatched", "authority-state-changed", "authority-state-mismatch",
@@ -944,6 +968,24 @@ export const V9DeploymentControlFactBaseSchema = z
     // Optional only for retained fact compatibility. Current compilers emit
     // the tracked native asset that owns a reused controller when reviewed.
     controllerAssetId: CanonicalTextSchema.nullable().optional(),
+    /**
+     * Authored bridge-control identity, independent of the compiler-chosen
+     * digest `controlKey`: the metadata `bridgeRouteRisk.controls[].id`, or
+     * `"*"` when one compiled lane fact merges several authored controls.
+     * Absent when no authored tuple exists (mint/meta records, pooled
+     * `bridge-group` rows, unmatched `bridge-supply` rows, the route fallback
+     * without a control, and native external-transfer rails); the digest key is
+     * then the only identity. Published question keys read this token; review
+     * matching stays keyed on `controlKey` until the review-key migration.
+     */
+    authoredControlId: CanonicalTextSchema.optional(),
+    /**
+     * Exact authored contributor ids behind an aggregate lane fact
+     * (`authoredControlId === "*"`), canonical sorted unique. Per-contributor
+     * incident coverage reads this set, so adding a control leaves an older
+     * review uncovered instead of silently inheriting it.
+     */
+    authoredControlIds: canonicalArrayBy(CanonicalTextSchema, (value) => value, 2).optional(),
     controlKind: V9ControlKindSchema,
     scope: V9ControlScopeSchema,
     capabilities: canonicalArrayBy(V9ControlCapabilitySchema, (capability) => capability),
@@ -974,11 +1016,12 @@ export const V9DeploymentControlFactBaseSchema = z
     issuanceProcess: V1005IssuanceProcessSchema.optional(),
     processDiagnostics: z.array(V1005ProcessDiagnosticSchema).optional(),
     incidentState: V9IncidentStateSchema,
+    incidentCoverage: V9IncidentCoverageSchema.optional(),
     failureDomains: CanonicalFailureDomainsSchema,
   })
   .strict();
 
-const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
+export const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   .extend({
     sourceGenerationId: CanonicalTextSchema,
     status: V9FactStatusV2Schema,
@@ -986,6 +1029,17 @@ const V9DeploymentControlFactV2Schema = V9DeploymentControlFactBaseSchema
   })
   .strict()
   .superRefine((control, ctx) => {
+    const coverage = control.incidentCoverage;
+    if (coverage !== undefined) {
+      const expectedControlIds = control.authoredControlId === "*"
+        ? (control.authoredControlIds ?? [])
+        : control.authoredControlId === undefined ? ["*"] : [control.authoredControlId];
+      const bound = [...coverage.contributorControlIds].sort();
+      const expected = [...expectedControlIds].sort();
+      if (bound.length !== expected.length || bound.some((controlId, index) => controlId !== expected[index])) {
+        issue(ctx, ["incidentCoverage", "contributorControlIds"], "Coverage must name exactly this fact's authored contributor ids, or the lane wildcard when it has none");
+      }
+    }
     if (control.issuanceFactsRef !== undefined &&
         (control.controlKind === "bridge" || control.issuanceGovernance !== undefined ||
           control.issuanceProcess !== undefined || control.processDiagnostics !== undefined)) {
@@ -1175,6 +1229,28 @@ const V9BridgeSupplyRouteJoinV1Schema = z
   .strict();
 export type V9BridgeSupplyRouteJoinV1 = z.infer<typeof V9BridgeSupplyRouteJoinV1Schema>;
 
+/**
+ * One v10.38 deployment supply census outcome (PLAN §4.6 Interfaces). A packet
+ * rejection carries C4's `census-rejected:<reason>`; a share the consumer
+ * refused to set carries `deployment-supply-share-requires-reviewed-escrow`
+ * (OP-R0 S-15: the datum stays required, the bound is not itself a rejection).
+ */
+const V9DeploymentSupplyCensusDiagnosticV1Schema = z
+  .object({
+    /** The deployment the outcome names; null for an asset-level outcome. */
+    deploymentRouteKey: CanonicalTextSchema.nullable(),
+    code: CanonicalTextSchema,
+  })
+  .strict();
+
+export const V9LaneIncidentClosureFailureSchema = z.object({
+  deploymentRouteKey: DeploymentIdSchema,
+  providerKey: CanonicalKeySchema,
+  code: z.literal("provider-incident-disclosures-unreadable"),
+  foreignAssetIds: CanonicalStringArraySchema,
+}).strict();
+export type V9LaneIncidentClosureFailure = z.output<typeof V9LaneIncidentClosureFailureSchema>;
+
 export const V9BridgeJoinDiagnosticsV1Schema = z
   .object({
     profileRouteCount: z.number().int().nonnegative(),
@@ -1196,9 +1272,24 @@ export const V9BridgeJoinDiagnosticsV1Schema = z
       V9BridgeSupplyRouteJoinV1Schema,
       (row) => row.deploymentRouteKey,
     ).default([]),
+    // v10.38 census admission band. Optional, never defaulted: retained
+    // diagnostics that never recorded a census must keep their exact bytes and
+    // digests (OP-R0 S-18). Absent = not recorded, not "no rejections".
+    deploymentSupplyCensus: canonicalArrayBy(
+      V9DeploymentSupplyCensusDiagnosticV1Schema,
+      (row) => `${row.deploymentRouteKey ?? "*"}:${row.code}`,
+    ).optional(),
+    // Absent unless a foreign provider disclosure read blocked this asset's lane.
+    incidentClosureFailures: canonicalArrayBy(
+      V9LaneIncidentClosureFailureSchema,
+      (row) => `${row.deploymentRouteKey}:${row.providerKey}`,
+    ).optional(),
   })
   .strict();
 export type V9BridgeJoinDiagnosticsV1 = z.infer<typeof V9BridgeJoinDiagnosticsV1Schema>;
+export type V9DeploymentSupplyCensusDiagnosticV1 = z.infer<
+  typeof V9DeploymentSupplyCensusDiagnosticV1Schema
+>;
 
 const V9BridgeControlReviewV2Schema = z
   .object({

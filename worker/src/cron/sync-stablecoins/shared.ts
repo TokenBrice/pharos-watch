@@ -103,6 +103,19 @@ function normalizeOptionalTimestamp(value: unknown): number | null {
   return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
+/**
+ * B2 supply evidence contract. `supplyRestored` is provenance: this run's reads
+ * did not produce the value. `supplyObservedAt` is the evidence clock: when the
+ * read that did produce the value observed it. Only the clock ages evidence, so
+ * a carried value keeps its original clock and is never re-dated to the run
+ * that republished it. When the original clock is unknown the value is not a
+ * publishable supply observation (R1/R2): a consumer with no clock ages the row
+ * from the payload and would read a stale carry as a current one.
+ */
+export function supplyObservationClock(asset: Pick<PeggedAsset, "supplyObservedAt">): number | null {
+  return normalizeOptionalTimestamp(asset.supplyObservedAt);
+}
+
 /** Same refusal applies to fresh, provider and restored rows at final publication. */
 export function reviewedOnchainSupplyHoldFields(asset: Pick<PeggedAsset,
   "id" | "supplySource" | "supplyObservedAt" | "supplyRestored" | "supplyUnavailableReason" | "supplyPerimeter" | "circulating" | "chainCirculating" | "chainPartition"
@@ -343,14 +356,27 @@ function stampPreviousSupplyObservedAt(asset: PeggedAsset, cacheUpdatedAt: numbe
   if (supply === null || supply <= 0) {
     return cloned;
   }
-  cloned.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt) ?? cacheUpdatedAt;
+  const observedAt = supplyObservationClock(asset);
+  if (observedAt == null && asset.supplyRestored === true) {
+    // A carried value was observed by an earlier read, so this publication's
+    // clock is not its observation clock. Leave it unclocked: no restore may
+    // carry it and no consumer may age it from the payload.
+    delete cloned.supplyObservedAt;
+    return cloned;
+  }
+  // A row the producer observed now (its own lane read or the DefiLlama list
+  // payload) names this publication as its observation clock.
+  cloned.supplyObservedAt = observedAt ?? cacheUpdatedAt;
   return cloned;
 }
 
-function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset {
+/** Carries a prior observation, or refuses when it cannot name that observation. */
+function markRestoredSupply(asset: PeggedAsset, nowSec: number): PeggedAsset | null {
+  const observedAt = supplyObservationClock(asset);
+  if (observedAt == null) return null;
   const restored = cloneCachedAsset(asset);
   restored.supplyRestored = true;
-  restored.supplyObservedAt = normalizeOptionalTimestamp(asset.supplyObservedAt);
+  restored.supplyObservedAt = observedAt;
   if (asset.chainPartition || (asset.supplySource === "coingecko-fallback" && isOnchainSupplyPartitionExcluded(String(asset.id)))) {
     const partition = restoreCuratedAggregateChainPartition({ ...restored, chainCirculating: {} }, asset, nowSec, true);
     restored.chainCirculating = partition && !partition.expired ? partition.asset.chainCirculating : {};
@@ -654,9 +680,16 @@ export function mergeSupplementalLastKnownGood(
   previousAssetsById: Map<string, PeggedAsset>,
   primaryAssetIds: Set<string>,
   nowSec: number = Math.floor(Date.now() / 1000),
-): { assets: PeggedAsset[]; restoredCount: number; skippedDuplicates: number; expiredRestoreIds: string[] } {
+): {
+  assets: PeggedAsset[];
+  restoredCount: number;
+  skippedDuplicates: number;
+  expiredRestoreIds: string[];
+  unclockedRestoreIds: string[];
+} {
   const resolved = new Map<string, PeggedAsset>();
   const expiredRestoreIds: string[] = [];
+  const unclockedRestoreIds: string[] = [];
   let restoredCount = 0;
   let skippedDuplicates = 0;
 
@@ -699,6 +732,14 @@ export function mergeSupplementalLastKnownGood(
         continue;
       }
       const merged = markRestoredSupply(previous, nowSec);
+      if (merged === null) {
+        // The prior value cannot name its observation clock, so it is a carry of
+        // unknown age rather than a supply observation: publish the current
+        // (unavailable) row instead of re-dating it to this run.
+        unclockedRestoreIds.push(id);
+        resolved.set(id, asset);
+        continue;
+      }
       if (asset.price != null && typeof asset.price === "number" && asset.price > 0) {
         merged.price = asset.price;
         merged.priceSource = asset.priceSource;
@@ -725,6 +766,7 @@ export function mergeSupplementalLastKnownGood(
     restoredCount,
     skippedDuplicates,
     expiredRestoreIds,
+    unclockedRestoreIds,
   };
 }
 
@@ -761,10 +803,13 @@ export function restoreMissingTrackedAssets(
     const previous = previousAssetsById.get(id);
     const meta = ACTIVE_META_BY_ID.get(id)!;
     if (prefersOnChainSupplyMcap(meta) && !getOnchainSupplyHoldReason(id)) {
-      const current = previous ? markRestoredSupply(previous, nowSec) : {
+      const restoredBase = previous ? markRestoredSupply(previous, nowSec) : null;
+      // A prior row that cannot name its observation clock keeps only identity
+      // and price: the native supply packet is withheld, never re-dated.
+      const current = restoredBase ?? (previous ? cloneCachedAsset(previous) : {
         id, name: meta.name, symbol: meta.symbol, geckoId: meta.geckoId,
         pegType: pegTypeFromCurrency(meta.flags.pegCurrency), pegMechanism: meta.flags.backing, price: null,
-      };
+      });
       const retained = restorePreferredNativeSupply(current, previous, nowSec);
       restoredAssets.push(retained);
       if (retained.supplyRestored) restoredIds.push(id);
@@ -775,11 +820,46 @@ export function restoreMissingTrackedAssets(
       droppedIds.push(id);
       continue;
     }
-    restoredAssets.push(markRestoredSupply(previous, nowSec));
+    const restored = markRestoredSupply(previous, nowSec);
+    if (restored === null) {
+      droppedIds.push(id);
+      continue;
+    }
+    restoredAssets.push(restored);
     restoredIds.push(id);
   }
 
   return { assets: restoredAssets, restoredIds, droppedIds };
+}
+
+/**
+ * B2 final admission for the published payload. A carried value whose
+ * observation clock is unknown cannot be aged by any consumer, so it is
+ * withheld (empty aggregate, null chain currents) instead of being republished
+ * with an implied current clock. Covers rows written by a previous Worker and
+ * any lane that publishes a carry without its clock; returns the withheld ids.
+ */
+export function withholdUnclockedCarriedSupply(assets: PeggedAsset[]): string[] {
+  const withheldIds: string[] = [];
+  for (const asset of assets) {
+    if (asset.supplyRestored !== true || supplyObservationClock(asset) != null) continue;
+    for (const [label, row] of Object.entries(asset.chainCirculating ?? {})) {
+      asset.chainCirculating![label] = {
+        ...(row.chainId ? { chainId: row.chainId } : {}),
+        current: null,
+      };
+    }
+    asset.circulating = {};
+    asset.circulatingPrevDay = null;
+    asset.circulatingPrevWeek = null;
+    asset.circulatingPrevMonth = null;
+    delete asset.supplyRestored;
+    delete asset.supplyObservedAt;
+    delete asset.supplyGapFill;
+    delete asset.supplyPerimeter;
+    withheldIds.push(String(asset.id));
+  }
+  return withheldIds;
 }
 
 export async function loadFreshFxRates(

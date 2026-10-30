@@ -79,7 +79,6 @@ const EXTENDED_ETHEREUM_TRANSFER_EXPANSION_SPECS: Array<{
   { stablecoinId: "ussd-sonic-labs", dustThreshold: 10_000 },
   { stablecoinId: "cadc-cad-coin", dustThreshold: 10_000 },
   { stablecoinId: "cadd-cad-digital", dustThreshold: 10_000 },
-  { stablecoinId: "dusd-dtrinity", dustThreshold: 10_000 },
   { stablecoinId: "usdaf-asymmetry", dustThreshold: 10_000 },
   { stablecoinId: "eurau-allunity", dustThreshold: 10_000 },
   { stablecoinId: "dusd-alto", dustThreshold: 10_000 },
@@ -333,6 +332,24 @@ export const MINT_BURN_CONFIG_SPECS: MintBurnContractConfigSpec[] = [
     startBlock: 49_406_521,
     tier: "extended",
     startBlockSource: "blockscout-base-create2-deployment-2026-08-01",
+    startBlockConfidence: "high",
+    events: transferMintBurn(),
+  },
+  {
+    // SwanDAO swanUSD: Monolith V2 Factory deployment index 2. The Coin is a
+    // plain Solmate ERC20 whose only minter is its Lender, so every supply
+    // change is `_mint`/`_burn` with the canonical zero-address Transfer. The
+    // Factory `Deployed` log and the Coin's first code are both in block
+    // 26249209 (creation tx 0xfc70d1…); no code is present at block 26249208.
+    // minDebt is 1,000 swanUSD: 500 keeps every borrower-sized mint and all
+    // observed burns (1,320-20,000) while excluding the sub-economic interest
+    // mints the Lender sends to the Vault and the reserve pulls to the router.
+    chain: ETHEREUM,
+    stablecoinId: "swanusd-swan",
+    dustThreshold: 500,
+    startBlock: 26_249_209,
+    tier: "extended",
+    startBlockSource: "ethereum-creation-receipt-0xfc70d106fba81de4179012dbc0497cb77301b8e5bfdf6217e0bcce6bae05274b-reviewed-2026-10-29",
     startBlockConfidence: "high",
     events: transferMintBurn(),
   },

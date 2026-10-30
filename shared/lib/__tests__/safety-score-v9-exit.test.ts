@@ -29,6 +29,70 @@ function documentedRedemption(overrides: Partial<V9ExitEvaluationRoute> = {}): V
   return makeDocumentedRedemption({ capacityEvidenceTier: "documented", ...overrides });
 }
 
+/** A same-rail execution certificate built from the reviewed susds-sky model. */
+function certificateRoute(options: {
+  routeKey: string;
+  certification: "exact-lower-bound" | "exact-complete";
+  physicalResourceKeys: string[];
+}) {
+  const review = validateExitExecutionModelReviews(executionReviews, V9_CANDIDATE_POLICY_V1)
+    .find((entry) => entry.identity.assetId === "susds-sky")!;
+  const clockSec = Math.ceil(Date.parse(review.reviewedAt) / 1000);
+  const model = V9_CANDIDATE_POLICY_V1.policy.semantic.exit.executionModels[review.modelId]!;
+  const certificate = makeExecutionCertificate();
+  Object.assign(certificate, {
+    modelId: review.modelId, identity: review.identity, holder: review.holder,
+    reviewDigest: exitExecutionReviewDigest(review), observedAtSec: clockSec,
+    sourceMaxAgeSec: model.sourceMaxAgeSec, priceMaxAgeSec: model.priceMaxAgeSec,
+  });
+  certificate.source.timestamp = clockSec;
+  certificate.observationGenerationId = domainDigest("safety-score-v10.exit-execution-source.v1", certificate.source);
+  Object.assign(certificate.inputReference, {
+    assetKey: review.identity.assetId, deployment: review.identity.deployment,
+    decimals: review.producer.inputDecimals, observedAtSec: clockSec,
+  });
+  certificate.inputGenerationId = exitExecutionInputGenerationId(review.identity.assetId,
+    { requestedNotionalUsd: 100_000, maxCostBps: 200 }, certificate.inputReference);
+  certificate.gates = model.requiredGates.map((gateId) => ({
+    gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: clockSec, reason: null,
+  }));
+  const point = certificate.points[0]!;
+  point.certification = options.certification;
+  // The reviewed model's decimals are 18, so the fixture's token-unit point and
+  // outputs must be rewritten to the reviewed identity before admission.
+  Object.assign(point, {
+    executionCostBps: 200, allInCostBps: 200,
+    requestedRawInput: "100000000000000000000000",
+    executedRawInput: "100000000000000000000000",
+    fees: [],
+  });
+  Object.assign(point.outputs[0]!, {
+    assetKey: review.identity.outputAssetKeys[0],
+    deployment: `${review.producer.chain}:${review.producer.outputToken}`,
+    decimals: review.producer.outputDecimals, observedAtSec: clockSec,
+    rawUnits: "98000000000000000000000",
+  });
+  return {
+    assetId: review.identity.assetId,
+    clockSec,
+    route: route({
+      routeKey: options.routeKey,
+      executionModelId: certificate.modelId,
+      executionCertificate: certificate,
+      modelConfidence: "medium",
+      observationConfidence: "medium",
+      coverageClass: options.certification,
+      capacityCurve: [{
+        requestedNotionalUsd: point.requestedNotionalUsd, maxCostBps: point.maxCostBps,
+        executableUsd: point.executableUsd,
+        completionRatio: point.executableUsd / point.requestedNotionalUsd,
+        executionCostBps: point.executionCostBps,
+      }],
+      physicalResourceKeys: options.physicalResourceKeys,
+    }),
+  };
+}
+
 describe("typed Exit route identity", () => {
   it("projects fact identity independently of the opaque publication key", () => {
     const fact = makeNormalizedExitRoute({
@@ -205,6 +269,48 @@ describe("exact physical rail precedence", () => {
     const expired = { ...certified, observationState: "stale" as const };
     expect(resolveV9DistinctExitCapacity([expired, modeled], request, V9_CANDIDATE_POLICY_V1).includedRouteKeys)
       .toContain(modeled.routeKey);
+  });
+
+  it("keeps a higher-scoring model primary when the same-rail certificate is a lower bound", () => {
+    const certificate = certificateRoute({
+      routeKey: "certificate", certification: "exact-lower-bound", physicalResourceKeys: ["rail:fixture"],
+    });
+    const modeled = route({ physicalResourceKeys: ["rail:fixture"] });
+    const request = selectV9ExitStressRequest(2_000_000, V9_CANDIDATE_POLICY_V1);
+    const capacity = resolveV9DistinctExitCapacity([modeled, certificate.route], request, V9_CANDIDATE_POLICY_V1);
+    // A lower bound contradicts nothing: the model stays included and the
+    // shared rail is still valued once, at the larger of the two amounts.
+    expect(capacity.includedRouteKeys).toEqual(["certificate", "redemption:issuer"]);
+    expect(capacity.valuedExecutableUsd).toBe(1_000_000);
+
+    const result = evaluateV9Exit({
+      circulatingUsd: 2_000_000, assetId: certificate.assetId, clockSec: certificate.clockSec,
+      routes: [modeled, certificate.route],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.primaryRouteKey).toBe("redemption:issuer");
+    expect(result.routes.find((entry) => entry.routeKey === "certificate")).toMatchObject({
+      included: true,
+    });
+    expect(result.routes.find((entry) => entry.routeKey === "certificate")!.score).not.toBeNull();
+    expect(result.diversificationBonus).toBe(0);
+  });
+
+  it("still lets a same-rail exact-complete certificate supersede the model", () => {
+    const certificate = certificateRoute({
+      routeKey: "certificate", certification: "exact-complete", physicalResourceKeys: ["rail:fixture"],
+    });
+    const modeled = route({ physicalResourceKeys: ["rail:fixture"] });
+    const request = selectV9ExitStressRequest(2_000_000, V9_CANDIDATE_POLICY_V1);
+    const capacity = resolveV9DistinctExitCapacity([modeled, certificate.route], request, V9_CANDIDATE_POLICY_V1);
+    expect(capacity.includedRouteKeys).toEqual(["certificate"]);
+    expect(capacity.valuedExecutableUsd).toBe(100_000);
+
+    const result = evaluateV9Exit({
+      circulatingUsd: 2_000_000, assetId: certificate.assetId, clockSec: certificate.clockSec,
+      routes: [modeled, certificate.route],
+    }, V9_CANDIDATE_POLICY_V1);
+    expect(result.primaryRouteKey).toBe("certificate");
+    expect(result.routes.find((entry) => entry.routeKey === "redemption:issuer")!.score).toBeNull();
   });
 
   it("does not treat issuer identity as exact rail identity or independent capacity", () => {
@@ -755,6 +861,12 @@ describe("evaluateV9Exit", () => {
         gateId, verdict: "passed", evidenceId: `observed:${gateId}`, observedAtSec: clockSec, reason: null,
       }));
       const point = certificate.points[0]!;
+      // A complete measurement of this rail supersedes the duplicate model, so
+      // the certificate trace is the primary one whose confidence factors this
+      // test prices. A lower-bound certificate competes instead of superseding
+      // (see "keeps a higher-scoring model primary when the same-rail
+      // certificate is a lower bound").
+      point.certification = "exact-complete";
       Object.assign(point, {
         executionCostBps, allInCostBps: executionCostBps,
         requestedRawInput: "100000000000000000000000", executedRawInput: "100000000000000000000000",

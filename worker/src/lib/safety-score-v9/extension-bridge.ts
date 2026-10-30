@@ -13,6 +13,7 @@ import { REVIEWED_ECONOMIC_SUPPLY_PLANS, reviewedSupplyRouteKind } from "./suppl
 import type {
   V9BridgeJoinDiagnosticsV1,
   V9BridgeSupplyRouteJoinV1,
+  V9DeploymentSupplyCensusDiagnosticV1,
   V9FailureDomainRef,
 } from "@shared/types/safety-score-v9-facts";
 import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile } from "@shared/types/core";
@@ -33,6 +34,7 @@ import {
 } from "./extension-shared";
 import type { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-evidence";
 import {
+  DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE,
   safetyScoreV9RouteSupplyShare,
   V9_AMBIGUOUS_CHAIN_ROUTE_PREFIX,
   V9_REPRESENTATION_GROUP_ROUTE_PREFIX,
@@ -45,6 +47,34 @@ type BridgeSupplyRow = NonNullable<
 >["selectedBridgeRoutes"][number];
 
 type BridgeSupplyRowClassification = "accepted-bounded" | "control-required";
+
+/**
+ * The census lane may only hand over rows proven below the documentation bar
+ * (`shareUpper < documentationImmaterialSharePct`, PLAN §4.6). A bound at or
+ * above the bar is not proof of immateriality: the share datum must stay
+ * required, so a row that would otherwise travel as evidence of a sub-material
+ * deployment fails the asset here instead. Uniform row kinds are asserted too:
+ * a bound is always a reviewed row, never an unmatched or unresolved one.
+ */
+function assertDeploymentSupplyCensusBoundRows(
+  assetId: string,
+  supplyReview: ExtensionAsset["supplyReview"],
+): void {
+  for (const row of supplyReview?.selectedBridgeRoutes ?? []) {
+    if (row.evidenceKind !== "upper-bound") continue;
+    if (row.reviewState !== "selected-reviewed") {
+      throw new Error(
+        `Safety Score v9 census bound for ${assetId}:${row.deploymentRouteKey} is not a selected-reviewed row`,
+      );
+    }
+    if (!(row.supplyShare < DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE)) {
+      throw new Error(
+        `Safety Score v9 census bound for ${assetId}:${row.deploymentRouteKey} is ${row.supplyShare}, ` +
+        `not below the ${DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE} documentation bar`,
+      );
+    }
+  }
+}
 
 function classifyBridgeSupplyRow(row: BridgeSupplyRow): BridgeSupplyRowClassification {
   if (row.deploymentRouteKey.startsWith(V9_UNCANONICALIZED_CHAIN_POOL_ROUTE_PREFIX)) {
@@ -299,6 +329,11 @@ function structuredBridgeRouteControl(
     : claims.includes("unbounded") ? "unbounded" : bridgeClaimImpairment(capabilities, capSemantics);
   const delays = entries.map((entry) => entry.overlay.delaySec ?? 0);
   const controlIds = entries.map((entry) => entry.sourceControl.id).sort(compareText);
+  // Authored identity, independent of the digest above: one authored id for a
+  // single-control lane, `"*"` plus the contributor set for a merged lane. The
+  // contributor set is published separately so review coverage stays
+  // per-control and an added control inherits nothing.
+  const authoredControlIds = [...new Set(controlIds)].sort(compareText);
   const deploymentId = normalizedBridgeDeploymentId(route.id);
   const nativeRoute = !isBridgeRepresentationRoute(route, { controls: entries.map((entry) => entry.sourceControl) }, assetId);
   return {
@@ -307,6 +342,8 @@ function structuredBridgeRouteControl(
       { controlIds, routeId: deploymentId },
     ).slice(0, 20)}`,
     deploymentKey: deploymentId,
+    authoredControlId: authoredControlIds.length === 1 ? authoredControlIds[0]! : "*",
+    ...(authoredControlIds.length > 1 ? { authoredControlIds } : {}),
     controlKind: "bridge",
     // Canonical-side bridge controls are retained as global claim facts. They
     // still contribute their capabilities, authority, custody, incident, and
@@ -417,6 +454,7 @@ function structuredBridgeControl(
       { controlId: control.id, routeId: deploymentId },
     ).slice(0, 20)}`,
     deploymentKey: deploymentId,
+    authoredControlId: control.id,
     controlKind: "bridge",
     scope: "deployment",
     capabilities,
@@ -841,6 +879,7 @@ function buildBridgeJoinDiagnostics(
   bridgeClaimControls: readonly ControlOverlay[],
   applicabilityBranch: V9BridgeJoinDiagnosticsV1["applicabilityBranch"],
   unprovenRouteJoins: readonly V9BridgeSupplyRouteJoinV1[] = [],
+  censusDiagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[] = [],
 ): V9BridgeJoinDiagnosticsV1 {
   const routeCountByChain = new Map<string, number>();
   for (const route of profileRoutes) {
@@ -900,6 +939,9 @@ function buildBridgeJoinDiagnostics(
     bridgeClaimControls: [...new Set(bridgeClaimControls.map((control) => control.controlKey))].sort(compareText),
     applicabilityBranch,
     unprovenRouteJoins: [...unprovenRouteJoins],
+    // Optional on the wire: only a run that actually admitted or rejected a
+    // census packet records the band (byte-identical absence otherwise).
+    ...(censusDiagnostics.length === 0 ? {} : { deploymentSupplyCensus: [...censusDiagnostics] }),
   };
 }
 
@@ -910,11 +952,18 @@ export function adaptBridgeReview(
   evidence: ReviewEvidenceBuilder,
   clockSec: number,
   chainRows?: BridgeJoinChainRows,
+  /**
+   * The census packet outcomes returned by `buildSafetyScoreV9SupplyAdmission`
+   * for this asset. A rejected packet yields no supply review to carry them, so
+   * they travel beside it and are never retained module-side.
+   */
+  censusDiagnostics: readonly V9DeploymentSupplyCensusDiagnosticV1[] = [],
 ): {
   review: NonNullable<ExtensionAsset["economicControlReview"]>["bridge"];
   controls: ControlOverlay[];
 } {
   const profile: BridgeRouteRiskProfile | undefined = meta.bridgeRouteRisk;
+  assertDeploymentSupplyCensusBoundRows(meta.id, supplyReview);
   if (!profile) {
     if (deployedChainCount <= 1) {
       return {
@@ -964,6 +1013,8 @@ export function adaptBridgeReview(
           supplyReview,
           [],
           "applicable",
+          [],
+          censusDiagnostics,
         ),
       },
       controls: [],
@@ -1312,6 +1363,8 @@ export function adaptBridgeReview(
           // not-applicable bridge review, so recording unproven rows here would
           // report a failure that no proof ever asks about.
           "native-only-not-applicable",
+          [],
+          censusDiagnostics,
         ),
       },
       controls,
@@ -1332,6 +1385,7 @@ export function adaptBridgeReview(
         bridgeClaimControls,
         "applicable",
         buildUnprovenRouteJoins(meta.id, supplyReview, controls),
+        censusDiagnostics,
       ),
     },
     controls,

@@ -79,6 +79,7 @@
         "destinationChain": "ethereum",
         "contractAddress": "0xc139190f447e929f090edeb554d95abb8b18ac1c",
         "protocol": "Ethena/Anchorage native issuance",
+        "rail": "issuer-operated",
         "issuanceModel": "native-issuance",
         "routeClass": "native",
         "riskTier": "issuer-native-burn-mint",

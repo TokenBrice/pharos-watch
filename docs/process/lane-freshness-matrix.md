@@ -38,7 +38,7 @@
 | `sync-yield-supplemental` | 4h | 8h C | watch | Per-family partial refresh allowed with family age/coverage; no relabeling fallback as fresh acquisition. |
 | `snapshot-supply` | 1d | 2d C | watch | Same-day proven artifact readback allowed; no zero supply for missing inputs or duplicate day. |
 | `snapshot-chain-supply` | 1d | 2d C | watch | Same-day proven readback allowed; absent chain evidence remains absent rather than zero. |
-| `sync-v9-supply-attribution` | 30m | 1h C | watch | Scheduling-expired economic references defer at asset start with `supply-attribution-input-stale-for-reference`; retain exact-source evidence/clocks while wM/XAUT capture. Already-stale-at-build references and unreadable retained journals remain blocking; journal failures isolate per asset. Fully scheduling-deferred runs skip neutrally and inherit required-run health; no output renewal. Exact unexpired requests alone permit attribution-pending; future packets reject. |
+| `sync-v9-supply-attribution` | 30m | 1h C | watch | Scheduling-expired economic references defer at asset start with `supply-attribution-input-stale-for-reference`; retain exact-source evidence/clocks while wM/XAUT capture. Already-stale-at-build references and unreadable retained journals remain blocking; journal failures isolate per asset. Fully scheduling-deferred runs skip neutrally and inherit required-run health; no output renewal. Exact unexpired requests alone permit attribution-pending; future packets reject. After the publication write the same invocation hosts the serialized shadow lane-screening phase (`laneScreening` metadata); it adds no logical job, trigger or connection entry, runs only with ≥60 s of inherited slot budget, and a skipped or failed phase leaves attribution health and every scoring input unchanged. |
 | `compute-safety-score-v9` | 1h | 2h C | watch | Safety publishes hourly at :22; :46 preparation is conditional recovery. Keep :22/:52 publication lead. Held publication keeps prior clock and is publicly visible, not a fresh successful generation. |
 | `prepare-safety-score-v9-input` | 1h | 2h C | watch | Exact-input pending/deferred state allowed; no incomplete/future compiler input treated as ready. |
 | `compute-depeg-resolver` | 15m | 30m C | watch | Bounded repair backlog allowed with event identities; corpus rollup must preserve verdict equivalence. |
@@ -60,6 +60,18 @@
 | `prune-detail-cache` | 1d | 2d O | watch | Bounded orphan/stale cleanup allowed; never delete current admitted generation. |
 | `telegram-inactive-cleanup` | 7d | 14d O | watch | Bounded inactive-user cleanup allowed; partial execution does not claim all eligible users processed. |
 | `telegram-retention-cleanup` | 1d | 2d O | watch | Bounded retention/reconciliation allowed with residual backlog; no lost pending deliveries. |
+
+## Lane-witness freshness (v10.39)
+
+Safety Score incident evidence is authored research plus one on-chain screening lane, not a cron lane.
+
+v10.39 closes no lane yet, even with v2 certificates. FRNT Arbitrum/Base/Optimism are global-scope native facts, excluded by the deployment-scope router; FRNT Ethereum is already closed by an existing review. yUSD Ethereum lacks provider keys and an issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Scope is unchanged; the five-lane catalog is screening coverage, not closure authority.
+
+- Reviews admit after both `reviewedAt` and `windowEndSec`, expiring 365 days past either. Date-only reviews admit after their UTC day; timestamps admit at their instant. Retired rows keep provenance but grant nothing.
+- Deployment-scope closure requires current provider reviews per authored provider key (or the issuer surface for `rail: "issuer-operated"`), a current issuer-surface review naming the lane, and a current v2 certificate with contributor parity. Missing/v1 witnesses close nothing.
+- Join `(subjectDeploymentKey, screeningSetId)`; authored data names no certificate. The set digests subject, frozen policy, sorted contributors and emitter pins. Changed contributors/emitters/pins inherit no chain.
+- The 30-day `laneIncidentCertificateMaxAgeSec` budget is measured from pinned `windowEndSec`. Gapped, expired, future, malformed or failed reads leave the lane unknown and emit `lane-incident-certificate-<state>:<lane>` diagnostics (read failure: `lane-incident-certificates-unavailable:<reason>`). Producer lookback is at least 50,000 recent blocks, preferably 30 days, not an evaluation threshold.
+- OQ-1 checks every current disclosure of the provider key from earliest issuer/provider witness start through evaluation, including reviews not covering the lane and exposure after witness windows. Verifier compromise blocks without valid exposure-time config excluding compromised-only verification or deployment after finite exposure end. No observed exploit/current config is an exemption.
 
 ## Sign-off boundary
 

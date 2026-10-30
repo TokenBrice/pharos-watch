@@ -1,5 +1,60 @@
 {
   "id": "wm-m0",
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "summary": "wM has no external price feed and no borrower-liquidation branch. The verified WrappedMToken holds M 1:1 and accepts wrap/unwrap only from the M0 SwapFacility, and its earning index is derived from the M token's own index rather than an independent wM price. The dollar value of the wrapper is set by permissioned mechanisms: deterministic 1:1 approved-extension conversions in the SwapFacility and threshold-multisigned Validator collateral attestations inside MinterGateway. wM pricing is therefore a privileged internal valuation, not an independent market measure, and no collateral-health or liquidation consumer of a wM-specific feed exists.",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Pharos research sprint RS-043 (2026-10-29)",
+      "rationale": "wM pricing is top-level only: wrapping escrows M and unwrapping returns M to the SwapFacility, conversions between approved M0 extensions are deterministic 1:1, and the wrapper's value link is the M-derived accumulator index. The verified WrappedMToken source exposes pause, account-freeze, forced-transfer and migration controls but no price-feed, collateral-parameter, liquidation, backstop or shutdown function, so no borrower-collateral branch applies.",
+      "sources": [
+        {
+          "label": "M0 Wrapped M documentation: wrapper value link, index and solvency invariant",
+          "url": "https://docs.m0.org/protocol/wrapped-m"
+        },
+        {
+          "label": "M0 Swap Facility: deterministic 1:1 approved-extension conversions, atomic and fee-free",
+          "url": "https://docs.m0.org/build/accessing-liquidity"
+        },
+        {
+          "label": "Wrapped M Token verified source: wrap/unwrap restricted to SwapFacility, no price-feed logic",
+          "url": "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/WrappedMToken.sol"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Pharos research sprint RS-043 (2026-10-29)",
+    "confidence": "verified",
+    "sources": [
+      {
+        "label": "M0 Wrapped M documentation: wrapper value link, index and solvency invariant",
+        "url": "https://docs.m0.org/protocol/wrapped-m"
+      },
+      {
+        "label": "M0 M Token technical docs: 1:1 collateral backing, dual balances and governance-set earner rate model",
+        "url": "https://docs.m0.org/protocol/m-token"
+      },
+      {
+        "label": "M0 MinterGateway docs: Validator-signed collateral updates, mint ratio and permissioned minters",
+        "url": "https://docs.m0.org/protocol/minting-burning"
+      },
+      {
+        "label": "M0 Swap Facility: deterministic 1:1 approved-extension conversions, atomic and fee-free",
+        "url": "https://docs.m0.org/build/accessing-liquidity"
+      },
+      {
+        "label": "Wrapped M Token verified source: wrap/unwrap restricted to SwapFacility, no price-feed logic",
+        "url": "https://github.com/m0-foundation/wrapped-m-token/blob/main/src/WrappedMToken.sol"
+      },
+      {
+        "label": "Ethereum WrappedMToken pinned eth_call batch at block 26285088 (0xcc8cd23cedcdd85f2bd114cc1057297acbdbdb7776785585465fec8904420534, 2026-10-27T15:57:11Z), provider Dwellir, names only: swapFacility()=0xb6807116b3b1b321a390594e31ecd6e0076f6278, mToken()=0x866a2bf4e572cbcf37d5071a7a58503bfb36be1b, registrar()=0x119fbeedd4f4f4298fb59b720d5654442b81ae2c, paused()=false, isEarningEnabled()=true",
+        "url": "https://etherscan.io/block/26285088"
+      }
+    ]
+  },
   "blacklistabilityReview": {
     "reviewedStatus": true,
     "sources": [
@@ -101,6 +156,7 @@
         "destinationChain": "arbitrum",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal (Wormhole NTT)",
+        "providerKeys": ["wormhole"],
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "issuer-native-burn-mint",
@@ -141,6 +197,7 @@
         "destinationChain": "plume",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal Lite (Hyperlane)",
+        "providerKeys": ["hyperlane"],
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "issuer-native-burn-mint",
@@ -173,6 +230,7 @@
         "destinationChain": "base",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal (Wormhole NTT)",
+        "providerKeys": ["wormhole"],
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "issuer-native-burn-mint",
@@ -213,6 +271,7 @@
         "destinationChain": "solana",
         "contractAddress": "mzeroXDoBpRVhnEXBra27qzAMdxgpWVY3DzQW7xMVJp",
         "protocol": "M0 Portal (Wormhole NTT)",
+        "providerKeys": ["wormhole"],
         "issuanceModel": "bridge-representation",
         "routeClass": "canonical",
         "riskTier": "issuer-native-burn-mint",
@@ -256,6 +315,7 @@
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
+        "providerKeys": ["hyperlane"],
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
@@ -294,6 +354,7 @@
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
+        "providerKeys": ["hyperlane"],
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
@@ -328,6 +389,7 @@
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
+        "providerKeys": ["hyperlane"],
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
@@ -366,6 +428,7 @@
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
+        "providerKeys": ["hyperlane"],
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
@@ -404,6 +467,7 @@
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
+        "providerKeys": ["hyperlane"],
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
@@ -442,6 +506,7 @@
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
+        "providerKeys": ["hyperlane"],
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",
@@ -480,6 +545,7 @@
         "controllerAddress": "0xd925c84b55e4e44a53749ff5f2a5a13f63d128fd",
         "contractAddress": "0x437cc33344a0b27a429f795ff6b469c72698b291",
         "protocol": "M0 Portal V2 (Hyperlane default adapter; route semantics unresolved)",
+        "providerKeys": ["hyperlane"],
         "issuanceModel": "unknown",
         "routeClass": "unknown",
         "riskTier": "opaque-or-unknown",

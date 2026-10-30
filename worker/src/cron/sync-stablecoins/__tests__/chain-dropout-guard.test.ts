@@ -344,11 +344,49 @@ describe("chain dropout guard", () => {
       expect(recovered.state.pairs[hyperevmKey]).toMatchObject({ quarantinedSince, baselineUsd: 5_000_000 });
     });
 
-    it("keeps carrying the vetted hold inside the carry ceiling", async () => {
-      const { now, state, asset } = setup(5_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1);
+    it("publishes partial coverage inside the carry ceiling instead of a whole-asset hold", async () => {
+      // 5% of the vetted whole-asset total: the inclusive share bound applies from first detection.
+      const { now, quarantinedSince, state, asset } = setup(5_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1);
       await guardChainDropouts({ assets: [asset], now, state });
-      expect(getCirculatingRawOrNull(asset)).toBe(100_000_000);
-      expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "quarantined" } });
+      expect(getCirculatingRawOrNull(asset)).toBe(95_000_000);
+      expect(asset.supplyRestored).toBeUndefined();
+      expect(asset.supplyObservedAt).toBe(now - 600);
+      expect(asset.chainCirculating!.HyperEVM.current).toBeNull();
+      expect(SupplyChainGuardProvenanceSchema.parse(asset.supplyChainGuard)).toMatchObject({
+        status: "chains-unavailable", partialCoverage: true, quarantinedSince,
+        chains: [{ chainId: "hyperevm", listCurrentUsd: null, baselineUsd: 5_000_000, resolution: "unavailable" }],
+      });
+    });
+
+    it("keeps carrying the vetted hold inside the carry ceiling above the partial-coverage bound", async () => {
+      const { now, quarantinedSince, state, asset } = setup(5_100_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC - 1);
+      await guardChainDropouts({ assets: [asset], now, state });
+      expect(getCirculatingRawOrNull(asset)).toBe(100_100_000);
+      expect(asset).toMatchObject({
+        supplyRestored: true, supplyObservedAt: quarantinedSince - 5 * DAY,
+        supplyChainGuard: { status: "quarantined" },
+      });
+      expect(asset.supplyChainGuard).not.toHaveProperty("partialCoverage");
+    });
+
+    it("never synthesizes a clock when the provider row carries none", async () => {
+      const { now, state, asset } = setup(5_000_000, SUPPLEMENTAL_RESTORE_MAX_AGE_SEC + 1);
+      delete asset.supplyObservedAt;
+      await guardChainDropouts({ assets: [asset], now, state });
+      expect(asset.supplyObservedAt).toBeUndefined();
+      expect(asset.supplyChainGuard).toMatchObject({ status: "chains-unavailable", partialCoverage: true });
+    });
+
+    it("leaves full coverage unchanged", async () => {
+      const asset: PeggedAsset = {
+        ...usdg(), circulating: { peggedUSD: 95_000_000 }, supplyObservedAt: NOW - 600,
+        chains: ["Ethereum"], chainCirculating: { Ethereum: { current: 95_000_000, circulatingPrevDay: 95_000_000 } },
+      };
+      await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
+      expect(asset.supplyChainGuard).toBeUndefined();
+      expect(asset.supplyObservedAt).toBe(NOW - 600);
+      expect(asset.supplyRestored).toBeUndefined();
+      expect(getCirculatingRawOrNull(asset)).toBe(95_000_000);
     });
 
     it("keeps a larger-share dropout unavailable past the carry ceiling", async () => {
@@ -358,6 +396,32 @@ describe("chain dropout guard", () => {
       expect(asset).toMatchObject({ supplyRestored: true, supplyChainGuard: { status: "unavailable" } });
       expect(asset.supplyChainGuard).not.toHaveProperty("partialCoverage");
       expect(result.unavailableAssetIds).toEqual(["usdg-paxos"]);
+    });
+
+    it("withholds a carried baseline that has no usable observation clock", async () => {
+      const { now, state, asset } = setup(5_100_000, 900);
+      const pair = Object.values(state.pairs)[0]!;
+      pair.baselineObservedAt = 0;
+      const result = await guardChainDropouts({ assets: [asset], now, state });
+      expect(getCirculatingRawOrNull(asset)).toBeNull();
+      expect(asset.supplyObservedAt).toBeUndefined();
+      expect(asset.supplyChainGuard).toMatchObject({ status: "unavailable" });
+      expect(result.unavailableAssetIds).toEqual(["usdg-paxos"]);
+    });
+
+    it("never borrows another baseline's clock for an unclocked carried baseline", async () => {
+      const { now, quarantinedSince, state, asset } = setup(5_100_000, 900);
+      const clocked = Object.values(state.pairs)[0]!;
+      state.pairs[JSON.stringify(["usdg-paxos", "sonic"])] = {
+        assetId: "usdg-paxos", chainLabel: "Sonic", chainId: "sonic", baselineUsd: 5_000_000,
+        baselineObservedAt: 0, baselineSource: "state", quarantinedSince,
+      };
+      const result = await guardChainDropouts({ assets: [asset], now, state });
+      expect(getCirculatingRawOrNull(asset)).toBeNull();
+      expect(asset.supplyObservedAt).toBeUndefined();
+      expect(asset.supplyChainGuard).toMatchObject({ status: "unavailable" });
+      expect(result.unavailableAssetIds).toEqual(["usdg-paxos"]);
+      expect(clocked.baselineObservedAt).toBe(quarantinedSince - 5 * DAY);
     });
   });
 
@@ -641,7 +705,7 @@ describe("chain dropout guard", () => {
     expect(result.state.pairs[JSON.stringify(["usdg-paxos", "solana"])]).toMatchObject({ heldTotalUsd: null, quarantinedSince: now - DAY });
   });
 
-  it.each([undefined, NOW - 900])("uses reviewed native onchain units with a local-read clock, preserving aggregate clock %s", async (listObservedAt) => {
+  it.each([undefined, NOW - 900])("stamps the aggregate clock from the native local-read repair (incoming %s)", async (listObservedAt) => {
     const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
     mocks.onchain.mockResolvedValue(1_409_030_000n * 10n ** BigInt(contract.decimals!));
     const asset = usdg();
@@ -650,10 +714,12 @@ describe("chain dropout guard", () => {
     await guardChainDropouts({ assets: [asset], now: NOW, state: { version: 1, pairs: {} } });
     expect(asset.chainCirculating!["X Layer"].current).toBe(1_409_030_000);
     expect(asset.supplyChainGuard?.chains[0]).toMatchObject({ resolution: "onchain-total-supply", observedAt: NOW, observedAtKind: "local-read" });
-    expect(asset.supplyObservedAt).toBe(listObservedAt);
+    // Oldest component observation: the repair read (sync clock) and, when named, the list clock.
+    const aggregateClock = listObservedAt == null ? NOW : Math.min(NOW, listObservedAt);
+    expect(asset.supplyObservedAt).toBe(aggregateClock);
     const published = StablecoinListResponseSchema.parse(normalizeStablecoinsPayload({ peggedAssets: [asset] })).peggedAssets[0];
     expect(published.supplyChainGuard?.chains[0]).toMatchObject({ observedAt: NOW, observedAtKind: "local-read" });
-    expect(published.supplyObservedAt).toBe(listObservedAt);
+    expect(published.supplyObservedAt).toBe(aggregateClock);
     expect(mocks.onchain.mock.calls[0][1]).toBe(contract.address);
   });
 

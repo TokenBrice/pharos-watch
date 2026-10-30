@@ -68,6 +68,45 @@
     "reviewer": "FreezeWatch full-dataset review 2026-10-19",
     "reviewedAt": "2026-10-19"
   },
+  "oracleRisk": {
+    "tier": "privileged-internal-pricing",
+    "summary": "infiniFi publishes its oracle inventory: the Pendle Oracle 0x9a9Fa8338dd5E5B2188006f1Cd2Ef26d921650C2 prices PT positions, and the protocol requires USDC/USD, PT and farm-asset prices for NAV calculations with staleness checks, circuit breakers and multiple sources where available. The farm-asset leg covers the private-credit and fund slices whose valuation is administrator fund NAV rather than a traded market price (the Fasanara Genesis Fund and mGLOBAL report monthly NAV with monthly redemptions; the New Silver slices carry week-plus bucket terms), so the binding pricing authority is privileged internal rather than an external market feed. Mint and redemption settle at accounting NAV, and no borrower liquidation engine consumes a collateral price.",
+    "role": "coin-price-feed",
+    "branchModel": "single-path",
+    "branchApplicability": {
+      "disposition": "top-level-only",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Research shard RS-017 (2026-10-29)",
+      "rationale": "iUSD mint and redemption settle at protocol accounting NAV and the published oracle surfaces feed that NAV; no borrower branch, collateral-health ratio or liquidation price is evidenced, so the oracle review applies to the top-level pricing path only.",
+      "sources": [
+        {
+          "label": "infiniFi Oracles page: Pendle Oracle and required USDC/USD, PT and farm-asset price feeds; accessed 2026-10-29",
+          "url": "https://docs.infinifi.xyz/oracles.md"
+        },
+        {
+          "label": "infiniFi Accounting.sol: protocol NAV calculations",
+          "url": "https://docs.infinifi.xyz/dev-docs/finance/accounting.md"
+        }
+      ]
+    },
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Research shard RS-017 (2026-10-29)",
+    "confidence": "probable",
+    "sources": [
+      {
+        "label": "infiniFi Oracles page: Pendle Oracle and required USDC/USD, PT and farm-asset price feeds; accessed 2026-10-29",
+        "url": "https://docs.infinifi.xyz/oracles.md"
+      },
+      {
+        "label": "infiniFi Accounting.sol: protocol NAV calculations",
+        "url": "https://docs.infinifi.xyz/dev-docs/finance/accounting.md"
+      },
+      {
+        "label": "infiniFi vault book: monthly NAV and monthly redemptions for the Fasanara slices, one-week redemption for New Silver; accessed 2026-10-29",
+        "url": "https://docs.infinifi.xyz/vaults.md"
+      }
+    ]
+  },
   "bridgeRouteRisk": {
     "tier": "external-lock-mint",
     "summary": "infiniFi's Ethereum ReceiptToken is the only canonical native-issuance route. BNB's InfiniFiOFT is a LayerZero burn/mint representation, while Tempo's TIP-20 IUSD and OFT Adapter are a lock/mint representation; their bridge contracts, issuer Safe administration, DVN/peer configuration, and Outland portal reconciliation are assessed here rather than in Mint Authority. The bridge review is source-enriched but blocked from clearance on the Outland path: message-authentication authority, complete destination outpost set, reconciliation cadence, and supply-conservation proof remain unresolved, so no cleared conservation claim is made. The Ethereum adapter and Outland portal mint paths have no verified immutable numeric ceiling, so their bridge-mint cap semantics are conservatively raiseable. The Tempo route remains the weakest documented durable route, so the profile uses external-lock-mint. The issuer-listed Plasma address is excluded because pinned on-chain metadata identifies it as iUSDT rather than iUSD. At Ethereum block 26095983, RECEIPT_TOKEN_MINTER enumerated six members, including the two verified OutlandVault contracts 0x4197f2adfce9fdeb36b02e96737ddf646c841e45 and 0x77776f422b7eb0a95ccd35fbd088a5957d4408ea. This observation does not resolve their complete destination inventory or conservation checks.",

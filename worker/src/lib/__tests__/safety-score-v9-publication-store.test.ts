@@ -292,18 +292,26 @@ describe("Safety Score V9 publication store", () => {
   );
 
   it.each(["baseline", "lender", "cohort"] as const)("fences equal-clock conflicting %s projection bytes but allows identical acceptance", async field => {
-    const { sqlite, db } = database();
-    const publication = makeWorkerSafetyScoreV9Publication();
-    const input = { ...currentInput(publication), publicationReplayBaseValue: "base", publicationReplayCaptureValue: "delta" };
-    await persistSafetyScoreV9Publication(db, input);
-    const before = sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all();
-    await persistSafetyScoreV9Publication(db, input);
-    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(before);
-    await expect(persistSafetyScoreV9Publication(db, { ...input, buildAcceptedProjections: value => {
-      const projections = buildSafetyScoreV9AcceptedProjections(value);
-      return { ...projections, [field]: projections[field] + " " };
-    } })).rejects.toThrow();
-    expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(before);
+    // The materialization marker records `floor(Date.now()/1000)`; freeze Date
+    // (not timers) so a second crossing between the two identical persists
+    // cannot move that derived row and make the equality assertions flaky.
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const { sqlite, db } = database();
+      const publication = makeWorkerSafetyScoreV9Publication();
+      const input = { ...currentInput(publication), publicationReplayBaseValue: "base", publicationReplayCaptureValue: "delta" };
+      await persistSafetyScoreV9Publication(db, input);
+      const before = sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all();
+      await persistSafetyScoreV9Publication(db, input);
+      expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(before);
+      await expect(persistSafetyScoreV9Publication(db, { ...input, buildAcceptedProjections: value => {
+        const projections = buildSafetyScoreV9AcceptedProjections(value);
+        return { ...projections, [field]: projections[field] + " " };
+      } })).rejects.toThrow();
+      expect(sqlite.prepare("SELECT key, value, updated_at FROM cache ORDER BY key").all()).toEqual(before);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("rejects a superseded prior envelope and rolls back all cohort acceptance rows", async () => {
@@ -337,7 +345,7 @@ describe("Safety Score V9 publication store", () => {
       const publication = makeWorkerSafetyScoreV9Publication();
       if (scenario === "card") publication.cards[0]!.scoreTrace.evidenceResponsibility.totalFactCount = -1;
       if (scenario === "legacy-schema") Object.assign(publication, { schemaVersion: 6 });
-      if (scenario === "unsupported-schema") Object.assign(publication, { schemaVersion: 8 });
+      if (scenario === "unsupported-schema") Object.assign(publication, { schemaVersion: 9 });
       if (scenario === "chronology") publication.asOfSec = publication.publishedAtSec + 1;
       if (scenario === "membership") publication.cards.push(structuredClone(publication.cards[0]!));
       if (scenario === "foreign-gap") publication.cards[0]!.foreignCauseGapRefs = [0];

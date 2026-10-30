@@ -435,7 +435,7 @@ export interface PartialEvidenceCard {
  * One rule for every partial card: an unavailable pillar of a rated card
  * stands in at an assumed score (issuer non-disclosure C, or not yet
  * researched U); only A/B exclusions leave evidence out, and only A is a
- * pipeline gap.
+ * data-pipeline unavailability.
  */
 export function describePartialEvidence(card: PartialEvidenceCard): PartialEvidenceDescription | null {
   const partial = card.partialEvidence;
