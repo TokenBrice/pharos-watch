@@ -3,12 +3,13 @@ import { readFileSync } from "node:fs";
 import { URL } from "node:url";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LIVE_RESERVE_ADAPTER_DEFINITIONS, NEXT_MONTH_DISCLOSURE_SOURCE_MAX_AGE_SEC } from "@shared/lib/live-reserve-adapters";
+import * as assurance from "@shared/lib/independent-assurance";
 import { getIndependentAssuranceManifest } from "@shared/lib/independent-assurance";
 import { getReserveAdapter } from "../index";
 import { RLUSD_INDEPENDENT_ASSURANCE_PROFILE as profile } from "../rlusd-independent-assurance-profile";
 import { validateAdapterOutput } from "../validate";
 import { verifyIndependentAssuranceReport } from "../independent-assurance";
-import { installAdapterNetwork } from "./reserve-adapter.test-support";
+import { installAdapterNetwork, resolveAdapterCoin } from "./reserve-adapter.test-support";
 
 const reviewed = getIndependentAssuranceManifest("RLUSD");
 const html = readFileSync(new URL("./fixtures/rlusd-independent-assurance.html", import.meta.url), "utf8");
@@ -28,6 +29,18 @@ function verify(index = html, manifest = fixtureManifest, body = pdf) {
     manifest, indexUrl: reviewed.officialIndexUrl, indexHost: "ripple.com",
     reportHosts: ["cdn.sanity.io"], profile, signal: new AbortController().signal,
   });
+}
+
+/** Run the registered adapter against the fixture manifest so discovery
+ *  outcomes resolve past the real report's byte/SHA gates. */
+async function fetchAdapter(index = html) {
+  vi.spyOn(assurance, "getIndependentAssuranceManifest").mockReturnValue(fixtureManifest);
+  const { coin, config } = resolveAdapterCoin("rlusd-independent-assurance", "rlusd-ripple");
+  installAdapterNetwork({ html: {
+    [reviewed.officialIndexUrl]: index,
+    [reviewed.reportUrl]: { body: pdf, headers: { "content-type": "application/pdf" } },
+  } });
+  return getReserveAdapter("rlusd-independent-assurance")!.fetch(coin, config, new AbortController().signal);
 }
 
 describe("rlusd-independent-assurance", () => {
@@ -97,6 +110,7 @@ describe("rlusd-independent-assurance", () => {
     await expect(verify(`${html}<a href="${newer}">Oct</a>`)).resolves.toMatchObject({
       sourceTimestamp: Date.parse("2026-09-30T21:00:00Z") / 1000,
       newerUnreviewedReport: { reportDate: "2026-10-31", reportUrl: newer },
+      undatedIndexReportCandidates: [],
     });
   });
 
@@ -109,14 +123,61 @@ describe("rlusd-independent-assurance", () => {
       .resolves.toMatchObject({ newerUnreviewedReport: { reportDate: "2027-01-31", reportUrl: january } });
   });
 
-  it("fails closed on unknown report dating and duplicate reviewed reports", async () => {
-    await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_latest.pdf">Latest</a>')).rejects.toThrow("ambiguous report date");
-    await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_September_26.pdf">Sep</a>')).rejects.toThrow("missing or duplicated");
+  it("publishes the reviewed report degraded when a non-reviewed index entry cannot be dated", async () => {
+    const undated = "https://cdn.sanity.io/RLUSD_Attestation_Report_latest.pdf";
+    await expect(verify(html + `<a href="${undated}">Latest</a>`)).resolves.toMatchObject({
+      sourceTimestamp: Date.parse("2026-09-30T21:00:00Z") / 1000,
+      newerUnreviewedReport: null,
+      undatedIndexReportCandidates: [{ reportUrl: undated, label: "Latest" }],
+    });
+
+    const result = await fetchAdapter(html + `<a href="${undated}">Latest</a>`);
+    expect(result.warnings).toContainEqual(expect.objectContaining({
+      code: "undated-index-report-candidate",
+      severity: "warning",
+      effect: "degraded",
+      message: expect.stringContaining(undated),
+    }));
+    expect(result.warnings?.some((warning) => warning.code === "newer-unreviewed-report")).not.toBe(true);
+    expect(result.slices.reduce((total, slice) => total + slice.pct, 0)).toBeCloseTo(100, 5);
+    expect(result.metadata?.sourceTimestamp).toBe(Date.parse("2026-09-30T21:00:00Z") / 1000);
+    expect(validateAdapterOutput(result, {
+      adapter: getReserveAdapter("rlusd-independent-assurance") ?? undefined,
+      now: Date.parse("2026-09-30T21:00:00Z") / 1000 + 60,
+    }).valid).toBe(true);
+
+    const newer = "https://cdn.sanity.io/RLUSD_Attestation_Report_October_26.pdf";
+    const combined = await fetchAdapter(html + `<a href="${undated}">Latest</a><a href="${newer}">Oct</a>`);
+    expect(combined.warnings).toEqual(expect.arrayContaining([
+      expect.objectContaining({ code: "undated-index-report-candidate", effect: "degraded" }),
+      expect.objectContaining({ code: "newer-unreviewed-report", effect: "degraded" }),
+    ]));
   });
 
-  it("does not date a month-only artifact listed outside the archive headings", async () => {
-    await expect(verify(`${html}<a href="https://cdn.sanity.io/files/ior4a5y3/production/unreviewed.pdf/RLUSD%20Attestation%20Report%20(Oct)_Final%20Signed.pdf">Oct</a>`))
-      .rejects.toThrow("ambiguous report date");
+  it("warns instead of throwing when a month-only artifact has no enclosing archive year", async () => {
+    const monthOnly = "https://cdn.sanity.io/files/ior4a5y3/production/unreviewed.pdf/RLUSD%20Attestation%20Report%20(Oct)_Final%20Signed.pdf";
+    await expect(verify(`${html}<a href="${monthOnly}">Oct</a>`)).resolves.toMatchObject({
+      undatedIndexReportCandidates: [{ reportUrl: monthOnly, label: "Oct" }],
+    });
+  });
+
+  it("still fails closed on a missing, duplicated, or mis-dated reviewed URL", async () => {
+    await expect(verify("<p>No reports</p>")).rejects.toThrow("reviewed report URL is missing or duplicated");
+    await expect(verify(html + '<a href="https://cdn.sanity.io/RLUSD_Attestation_Report_September_26.pdf">Sep</a>'))
+      .rejects.toThrow("missing or duplicated");
+    await expect(verify(html, { ...fixtureManifest, reportDate: "2026-09-29" }))
+      .rejects.toThrow("does not match the reviewed manifest");
+  });
+
+  it("publishes no positive claim when the official index read fails", async () => {
+    const { coin, config } = resolveAdapterCoin("rlusd-independent-assurance", "rlusd-ripple");
+    installAdapterNetwork({ html: {
+      [reviewed.officialIndexUrl]: { status: 503, body: "unavailable" },
+      [reviewed.reportUrl]: { body: pdf, headers: { "content-type": "application/pdf" } },
+    } });
+    await expect(
+      getReserveAdapter("rlusd-independent-assurance")!.fetch(coin, config, new AbortController().signal),
+    ).rejects.toThrow("HTTP 503");
   });
 
   it("rejects same-length PDF changes and the unreviewed fixture against the production hash", async () => {

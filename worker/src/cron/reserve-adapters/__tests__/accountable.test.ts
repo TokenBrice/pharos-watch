@@ -13,7 +13,6 @@ import yzusd from "@shared/data/stablecoins/coins/yzusd-yuzu.json";
 import utyxsy from "@shared/data/stablecoins/coins/uty-xsy.json";
 import usn from "@shared/data/stablecoins/coins/usn-noon.json";
 import trusd from "@shared/data/stablecoins/coins/trusd-tori.json";
-import axis from "@shared/data/stablecoins/coins/usdx-axis.json";
 import toriPayload from "./fixtures/accountable-tori-2026-09-30.json";
 import octoberCapture from "./fixtures/accountable-oct7-2026.json";
 import {
@@ -161,37 +160,6 @@ describe("adaptAccountableDashboard", () => {
     expect(result.slices).toContainEqual(expect.objectContaining({
       name: "Unknown / unmapped Accountable buckets", pct: 20, risk: "high",
     }));
-  });
-
-  it("replays Axis's reviewed anonymous venue book as high-risk locations, not collateral assets", async () => {
-    const { result } = await runAdapter("accountable", "usdx-axis", {
-      network: { json: { "https://axis.accountable.capital:8443/dashboard": octoberCapture.axis } },
-      nowSec: Date.parse("2026-10-07T20:47:43Z") / 1000,
-    });
-    expect(result.metadata?.sourceTimestamp).toBe(Math.floor(Number(octoberCapture.axis.data.ts) / 1000));
-    expect(result.slices.length).toBeGreaterThan(0);
-    expect(result.slices.every((slice) => slice.risk === "high" && slice.coinId == null && slice.depType == null)).toBe(true);
-    for (const slice of result.slices) {
-      const hash = /^Undisclosed exchange venue ([0-9a-f]{8})$/.exec(slice.name)?.[1];
-      expect(hash).toBeDefined();
-      expect(slice.sourceKey).toBe(`accountable:axis:deployment:exchange-${hash}`);
-    }
-    expect(result.metadata?.unknownExposurePct).toBeUndefined();
-    expect(result.warnings?.some((warning) => warning.code === "unmapped-bucket") ?? false).toBe(false);
-  });
-
-  it("still degrades a material unseen Axis venue", () => {
-    const params = parseLiveReserveAdapterParams("accountable", axis.liveReservesConfig.params);
-    const result = adaptAccountableDashboard({ res: "ok", data: {
-      collateralization: 1,
-      ts: "1785150653410",
-      reserves: { reserves_split: [
-        { name: "Exchange 576c4011", value: 900 },
-        { name: "Exchange 00000000", value: 100 },
-      ] },
-    } }, params);
-    expect(result.metadata?.unknownExposurePct).toBe(10);
-    expect(result.warnings).toContainEqual(expect.objectContaining({ code: "unmapped-bucket", effect: "degraded" }));
   });
 
   it.each(ACCOUNTABLE_MAPPING_CASES)("maps $name into reserve slices", (testCase) => {

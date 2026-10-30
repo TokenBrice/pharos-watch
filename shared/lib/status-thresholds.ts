@@ -428,6 +428,27 @@ export const STATUS_RESERVE_COMPOSITION_THRESHOLDS = {
 /** Reviews suppress only matched operational health gates, never evidence admission. */
 export const RESERVE_FEED_REVIEW_MAX_AGE_SEC = 14 * 24 * 3600;
 
+// --- Reserve adapter alert thresholds ---
+/**
+ * Single authority for the reserve post-sync alert predicates. One cycle is one
+ * `sync-live-reserves` attempt for a configured coin.
+ * - `failureSustainedCycles`: consecutive failed cycles (`error`, or a
+ *   `circuit-open` skip that withheld the attempt) before
+ *   `reserve-adapter-failure-sustained` raises. A success resets the streak.
+ * - `sourceClockStalledCycles`: consecutive successful (`ok`/`degraded`)
+ *   verified attempts that must report the same `sourceTimestamp` before the
+ *   stall is judged. The age of that frozen clock is then compared with the
+ *   coin/adapter source-age budget from `resolveLiveReserveSourceAgeBudget`,
+ *   never with a second copy of that budget.
+ * Both alerts are transition-only: raise once at the threshold, recover once
+ * when the condition clears. A matching `reserve-feed-reviews` acknowledgement
+ * suppresses a new raise for the exact failure only.
+ */
+export const STATUS_RESERVE_ADAPTER_ALERT_THRESHOLDS = {
+  failureSustainedCycles: 3,
+  sourceClockStalledCycles: 2,
+} as const;
+
 /** Reminder lead time before a currently acknowledging review lapses (price-gap and reserve-feed lanes). */
 export const STATUS_REVIEW_EXPIRY_REMINDER_WINDOW_SEC = 48 * 3600;
 

@@ -114,6 +114,9 @@
         "chain": "ethereum",
         "rpcMode": "public-rpc"
       }
+    },
+    "params": {
+      "historicalSourceUrl": "https://api-prod.midas.app/api/transparency/by-timestamp"
     }
   },
   "yieldConfig": {
