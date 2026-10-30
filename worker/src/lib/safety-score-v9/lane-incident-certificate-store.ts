@@ -75,6 +75,7 @@ export interface LaneIncidentCertificateScreeningSetInput {
 export type LaneIncidentCertificateCacheKeyInput = LaneIncidentCertificateScreeningSetInput &
   Pick<
     V9LaneIncidentCertificate,
+
     | "fromBlock"
     | "toBlock"
     | "windowStartSec"
@@ -86,7 +87,6 @@ export interface LaneIncidentCertificatePersistenceRow {
   certificate: V9LaneIncidentCertificate;
   contributorControlIds: readonly string[];
 }
-
 interface ParsedCertificateKey {
   deploymentKey: string;
   screeningSetId: string;

@@ -261,7 +261,30 @@ export const V9ProviderIncidentDisclosureSchema = z
       "lane exemption",
     ),
   })
-  .strict();
+  .strict()
+  .superRefine((incident, ctx) => {
+    if (incident.exposureEndSec !== null && incident.exposureEndSec < incident.exposureStartSec) {
+      issue(ctx, ["exposureEndSec"], "Exposure end must not precede its start");
+    }
+    for (const [index, exemption] of incident.exemptions.entries()) {
+      let valid = incident.class === "verifier-compromise";
+      if (exemption.kind === "deployed-after-exposure") {
+        valid &&= incident.exposureEndSec !== null &&
+          exemption.creationTimestampSec > incident.exposureEndSec;
+      } else {
+        const compromised = new Set((incident.compromisedVerifiers ?? [])
+          .filter((row) => row.chain === exemption.chain).map((row) => row.address));
+        valid &&= exemption.chain === exemption.routeId.split(":")[0] &&
+          exemption.blockTimestampSec >= incident.exposureStartSec &&
+          (incident.exposureEndSec === null || exemption.blockTimestampSec <= incident.exposureEndSec) &&
+          compromised.size > 0 &&
+          exemption.eids.every((eid) => eid.optionalThreshold <= eid.optionalDVNs.length &&
+            !(eid.requiredDVNs.every((address) => compromised.has(address)) &&
+              eid.optionalDVNs.filter((address) => compromised.has(address)).length >= eid.optionalThreshold));
+      }
+      if (!valid) issue(ctx, ["exemptions", index], "Lane exemption does not prove exclusion from the exposure");
+    }
+  });
 export type V9ProviderIncidentDisclosure = z.output<typeof V9ProviderIncidentDisclosureSchema>;
 
 const V9NegativeIncidentReviewObjectSchema = z.object({
@@ -530,6 +553,41 @@ export const V9_LANE_ADMIN_EVENT_FAMILY_VALUES = [
   "DefaultReceiveLibrarySet",
   "SendLibrarySet",
   "ReceiveLibrarySet",
+  // CCIP TokenPool chain/peer configuration and TokenPool admin surface
+  // (Chainlink BurnMintTokenPool verified ABI, 2026-10-30).
+  "AllowListAdd",
+  "AllowListRemove",
+  "ChainAdded",
+  "ChainConfigured",
+  "ChainRemoved",
+  "ConfigChanged",
+  "OwnershipTransferRequested",
+  "RateLimitAdminSet",
+  "RemotePoolAdded",
+  "RemotePoolRemoved",
+  "RouterUpdated",
+  // FrontierERC20F (FRNT) access, rescue, freeze and role administration
+  // (verified ABI, 2026-10-30).
+  "AccessRegistryUpdated",
+  "ContractUriUpdated",
+  "GasTokenSalvaged",
+  "MintedToFrozen",
+  "RoleAdminChanged",
+  "TokenSalvaged",
+  "TokensRecovered",
+  "TransferredToFrozen",
+  // YieldFi YToken and BridgeCCIP administrator, fee, yield and lockbox
+  // configuration (verified ABI, 2026-10-30).
+  "AdministratorSet",
+  "FeeSet",
+  "GasFeeSet",
+  "ManagerSet",
+  "Rescue",
+  "VestingPeriodSet",
+  "YieldSet",
+  "SetAdministrator",
+  "SetLockbox",
+  "SetToken",
 ] as const;
 export type V9LaneAdminEventFamily = (typeof V9_LANE_ADMIN_EVENT_FAMILY_VALUES)[number];
 export const V9LaneAdminEventFamilySchema = z.enum(V9_LANE_ADMIN_EVENT_FAMILY_VALUES);
