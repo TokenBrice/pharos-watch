@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockFetch } from "@shared/test-utils/mock-fetch";
 import {
   fetchEvmTokenBalance,
+  fetchEvmTokenBalanceRaw,
   fetchTronTokenCurrentBalance,
 } from "../../../lib/blacklist/balance-providers";
 import type { ContractEventConfig } from "../../../lib/blacklist-contracts";
@@ -173,5 +174,94 @@ describe.each([100, "latest"] as const)("fetchEvmTokenBalance at %s", (blockNumb
       "etherscan-key", "drpc-key", async (fn) => fn(), createBudget(10),
     )).toBe(0);
     expect(fetchMock.getHistory()).toHaveLength(1);
+  });
+});
+
+describe("fetchEvmTokenBalanceRaw", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  it.each(["drpc", "chain_rpc", "etherscan"] as const)("preserves raw precision through %s", async (provider) => {
+    const raw = 9_007_199_254_740_993n;
+    const fetchMock = mockFetch([
+      { match: "drpc.org", body: { id: 1, result: "0x" + raw.toString(16) } },
+      { match: "chain-rpc.test", body: { id: 1, result: "0x" + raw.toString(16) } },
+      { match: "etherscan.io", body: { result: "0x" + raw.toString(16) } },
+    ], { requireMatch: true });
+    const budget = createBudget(10);
+    const onProviderAttempt = vi.fn();
+    expect(await fetchEvmTokenBalanceRaw(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", 100,
+      "etherscan-key", provider === "drpc" ? "drpc-key" : null, async (fn) => fn(), budget,
+      undefined, provider === "chain_rpc" ? chainRpcFixture(["https://chain-rpc.test"]) : undefined,
+      { onProviderAttempt },
+    )).toBe(raw);
+    expect(budget.count).toBe(1);
+    expect(fetchMock.getHistory()).toHaveLength(1);
+    expect(onProviderAttempt).toHaveBeenCalledExactlyOnceWith(provider);
+  });
+
+  it.each(["0x", "-1", "0xzz", "0x" + "ff".repeat(33)])("rejects invalid uint256 %s and tries the next provider", async (result) => {
+    const fetchMock = mockFetch([
+      { match: "drpc.org", body: { id: 1, result } },
+      { match: "chain-rpc.test", body: { id: 1, result: "0x00" } },
+    ], { requireMatch: true });
+    const budget = createBudget(10);
+    expect(await fetchEvmTokenBalanceRaw(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", 100,
+      "etherscan-key", "drpc-key", async (fn) => fn(), budget,
+      undefined, chainRpcFixture(["https://chain-rpc.test"]),
+    )).toBe(0n);
+    expect(budget.count).toBe(2);
+    expect(fetchMock.getHistory()).toHaveLength(2);
+  });
+
+  it.each(["drpc", "etherscan"] as const)("does not retry %s or exceed the subrequest budget on HTTP failure", async (provider) => {
+    const fetchMock = mockFetch([
+      { match: provider === "drpc" ? "drpc.org" : "etherscan.io", body: {}, status: 503 },
+    ], { requireMatch: true });
+    const budget = createBudget(1);
+    expect(await fetchEvmTokenBalanceRaw(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", 100,
+      "etherscan-key", provider === "drpc" ? "drpc-key" : null, async (fn) => fn(), budget,
+    )).toBeNull();
+    expect(budget.count).toBe(1);
+    expect(fetchMock.getHistory()).toHaveLength(1);
+  });
+
+  it("stops fallback when the runtime deadline expires after a failed read", async () => {
+    const now = Date.now();
+    const fetchMock = mockFetch([{
+      match: "chain-rpc.test",
+      respond: () => {
+        vi.spyOn(Date, "now").mockReturnValue(now + 100);
+        return { body: { id: 1, result: null } };
+      },
+    }], { requireMatch: true });
+    const budget = createBudget(10);
+    expect(await fetchEvmTokenBalanceRaw(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", 100,
+      "etherscan-key", null, async (fn) => fn(), budget,
+      undefined, chainRpcFixture(["https://chain-rpc.test", "https://fallback.test"]),
+      { deadlineMs: now + 100 },
+    )).toBeNull();
+    expect(budget.count).toBe(1);
+    expect(fetchMock.getHistory()).toHaveLength(1);
+  });
+
+  it("rechecks the deadline after waiting for the Etherscan limiter", async () => {
+    const now = Date.now();
+    const fetchMock = mockFetch([], { requireMatch: true });
+    const budget = createBudget(10);
+    expect(await fetchEvmTokenBalanceRaw(
+      ethereumConfig, "0x0000000000000000000000000000000000000abc", 100,
+      "etherscan-key", null, async (fn) => {
+        vi.spyOn(Date, "now").mockReturnValue(now + 100);
+        return fn();
+      }, budget, undefined, undefined, { deadlineMs: now + 100 },
+    )).toBeNull();
+    expect(budget.count).toBe(0);
+    expect(fetchMock).not.toHaveBeenCalled();
   });
 });
