@@ -3,6 +3,9 @@ import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-sche
 import { getMethodologyVersionAt } from "@shared/lib/methodology-versions/registry";
 import { DEPEG_RECOVERY_CLOSE_REASONS } from "@shared/lib/depeg-closure";
 import { type MockD1Database } from "@shared/test-utils/mock-d1";
+import { TapeEventsResponseSchema } from "@shared/types/tape-event";
+import { handleEvents } from "../../../api/events";
+import { readJsonResponse } from "../../../test-helpers/__shared/auth";
 import { mapTapeEventRow } from "../../tape-event-helpers";
 import { queryTapeEvents } from "../../tape-event-store";
 import { projectDepegOpened, projectDepegPeakWorsened, projectDepegResolved } from "../depeg";
@@ -296,5 +299,31 @@ describe("depeg projector", () => {
         && entry.binds[0] === "tape-projector:peak-worsened-seen");
     const seen = JSON.parse(String(cacheWrites[0]?.binds[1])) as Record<string, number>;
     expect(Object.keys(seen)).toHaveLength(DEFAULT_BATCH_LIMIT + 1);
+  });
+
+  it("stores the peg currency vocabulary that the /api/events peg filter queries", async () => {
+    const { db, sqlite } = fixtures.open();
+    // Live depeg rows carry the canonical peg type (`peggedUSD`).
+    sqlite.prepare(`INSERT INTO depeg_events
+      (id, stablecoin_id, symbol, peg_type, direction, peak_deviation_bps, started_at, start_price, peg_reference, source)
+      VALUES (1, 'usdt-tether', 'USDT', 'peggedUSD', 'below', -450, ?, 0.955, 1, 'live')`).run(SEC);
+    expect(await projectDepegOpened(db)).toEqual({ projected: 1, advanced: SEC });
+
+    vi.mocked(Date.now).mockReturnValue((SEC + 60) * 1000);
+    await projectDepegPeakWorsened(db);
+    sqlite.prepare("UPDATE depeg_events SET peak_deviation_bps = -700 WHERE id = 1").run();
+    expect(await projectDepegPeakWorsened(db)).toEqual({ projected: 1, advanced: null });
+
+    // `/timeline/` sends PEG_FILTER_OPTIONS values (`pegCurrency=USD`), so the
+    // projected events must be reachable through the public peg filter.
+    const body = TapeEventsResponseSchema.parse(await readJsonResponse(
+      await handleEvents(db, new URL("https://x/api/events?pegCurrency=USD&includeTotal=true")),
+      200,
+    ));
+    expect(body.events.map((event) => event.type).sort()).toEqual(["depeg.opened", "depeg.peak_worsened"]);
+    expect(body.events.map((event) => event.pegCurrency)).toEqual(["USD", "USD"]);
+    expect(body.total).toBe(2);
+    expect(sqlite.prepare("SELECT peg_currency FROM tape_events ORDER BY id").all())
+      .toEqual([{ peg_currency: "USD" }, { peg_currency: "USD" }]);
   });
 });
