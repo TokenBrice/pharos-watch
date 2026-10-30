@@ -81,6 +81,9 @@ export async function matchReserveFeedReview(
   reviewsById = resolveReserveFeedReviews(now).activeById,
 ): Promise<ReserveFeedReview | null> {
   if (!state || state.metadata.uncertainWrite === true) return null;
+  // Unreadable stored warnings are not an empty set: the strict decoder could
+  // not corroborate the review's exact-warning match, so the alert stays eligible.
+  if (state.warningIntegrityIssue || state.warningCount !== state.warnings.length) return null;
   const review = reviewsById.get(state.stablecoinId);
   if (!review || review.adapterKey !== state.adapterKey) return null;
   let failure: Pick<ReserveSyncAttemptTimelineEntry, "adapterKey" | "status" | "failureCategory" | "warningCodes" | "lastError"> = {

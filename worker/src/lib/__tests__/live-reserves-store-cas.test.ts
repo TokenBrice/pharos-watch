@@ -1,11 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
 import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import {
   beginReserveSyncAttempt,
   didReserveSyncSuccessBecomeAuthoritative,
+  getReserveSyncState,
   pruneLiveReserveHistory,
 } from "../live-reserves/store";
+import { hasConsistentSnapshotState } from "../live-reserves/store-snapshot-state";
 import { buildReserveSyncRecordDeferredStatement } from "../live-reserves/store-statements";
 import {
   finalizeReserveSuccess,
@@ -111,6 +113,60 @@ describe("live-reserves-store", () => {
       });
     } finally {
       timelySqlite.close();
+    }
+  });
+
+  it("keeps composition and its success linkage consistent when the deadline is crossed mid-batch", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    let sqlNowMs = 1_700_000_000_000;
+    vi.spyOn(Date, "now").mockImplementation(() => sqlNowMs);
+    sqlite.function("julianday", (_when: unknown) => sqlNowMs / 86_400_000 + 2_440_587.5);
+    sqlite.function("advance_reserve_clock", () => {
+      sqlNowMs += 60_000;
+      return 0;
+    });
+    try {
+      await beginReserveSyncAttempt(db, reserveSyncAttemptInput("attempt-before"));
+      await expect(finalizeReserveSuccess(db, "attempt-before", {
+        composition: { fetchedAt: 1_000 },
+        syncState: { lastAttemptedAt: 1_000, lastSuccessAt: 1_000, lastSuccessAttemptId: "attempt-before" },
+        finalizeDeadlineMs: sqlNowMs + 30_000,
+      })).resolves.toEqual({ finalized: true });
+
+      await beginReserveSyncAttempt(db, reserveSyncAttemptInput("attempt-late"));
+      // The write costs enough wall-clock time to cross the finalize deadline
+      // while the success batch is in flight.
+      sqlite.exec(`CREATE TRIGGER advance_reserve_clock
+        AFTER UPDATE ON reserve_composition
+        BEGIN
+          SELECT advance_reserve_clock();
+        END`);
+
+      const result = await finalizeReserveSuccess(db, "attempt-late", {
+        composition: { fetchedAt: 2_000 },
+        syncState: { lastAttemptedAt: 2_000, lastSuccessAt: 2_000, lastSuccessAttemptId: "attempt-late" },
+        finalizeDeadlineMs: sqlNowMs + 30_000,
+      });
+      sqlite.exec("DROP TRIGGER advance_reserve_clock");
+
+      const composition = sqlite
+        .prepare("SELECT fetched_at, attempt_id FROM reserve_composition WHERE stablecoin_id = ?")
+        .get("iusd-infinifi") as { fetched_at: number; attempt_id: string | null };
+      const syncState = await getReserveSyncState(db, "iusd-infinifi");
+      // Both success statements share one clock decision: composition can never
+      // commit while its success linkage is gated off.
+      expect(composition.attempt_id).toBe(syncState?.lastSuccessAttemptId ?? null);
+      expect(composition.fetched_at).toBe(syncState?.lastSuccessAt ?? null);
+      expect(hasConsistentSnapshotState(syncState, {
+        fetchedAt: composition.fetched_at,
+        attemptId: composition.attempt_id,
+      })).toBe(true);
+      if (!result.finalized) {
+        expect(composition).toMatchObject({ fetched_at: 1_000, attempt_id: "attempt-before" });
+      }
+    } finally {
+      vi.restoreAllMocks();
+      sqlite.close();
     }
   });
 

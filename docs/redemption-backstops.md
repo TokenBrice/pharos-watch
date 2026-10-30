@@ -538,7 +538,7 @@ Stored fields:
 - `details_json`
 - `snapshot_run_id`
 
-The cron writes immutable `redemption_backstop_run_rows` first, writes daily history, and marks the run manifest completed only after the immutable row count and bounds are valid. The legacy current-mirror refresh is retired: readers (including the depeg-resolver context, which uses a narrow store reader over the latest valid completed run) consume immutable run rows exclusively, and the `redemption_backstop` table is frozen in place pending a separately coordinated destructive cleanup.
+The cron writes immutable `redemption_backstop_run_rows` first, marks the run manifest completed only after the immutable row count and bounds are valid, and writes daily history only for that admitted run. A run rejected after completion removes its own history rows and is marked `failed`, so an unadmitted generation never replaces the day's close. The legacy current-mirror refresh is retired: readers (including the depeg-resolver context, which uses a narrow store reader over the latest valid completed run) consume immutable run rows exclusively, and the `redemption_backstop` table is frozen in place pending a separately coordinated destructive cleanup.
 
 ### `redemption_backstop_runs`
 
@@ -557,7 +557,7 @@ Stored fields:
 - `max_updated_at`
 - `metadata_json`
 
-The sync inserts a `running` row before writing immutable run rows, writes history after those rows are complete, and marks the manifest `completed` only after the immutable row count and update bounds are valid. If immutable row, history, or completion writes fail after the manifest is started, the writer best-effort marks the manifest `failed` with phase-specific failure metadata before rethrowing. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they return `503`; the legacy current-mirror write and the `MAX(updated_at)` fallback are retired.
+The sync inserts a `running` row before writing immutable run rows, marks the manifest `completed` only after the immutable row count and update bounds are valid, and then writes the day's history. If immutable row, completion, or history writes fail after the manifest is started, the writer best-effort removes the run's history rows and marks the manifest `failed` with phase-specific failure metadata before rethrowing. Readers prefer the latest valid completed run, use its `max_updated_at` for response freshness, and use its `methodology_version` for API methodology attribution. If no completed run exists, they return `503`; the legacy current-mirror write and the `MAX(updated_at)` fallback are retired.
 
 Run manifests and immutable run rows are pruned after successful writes with a 14-day retention window. The prune keeps the just-written run and the latest completed run even when either is older than the cutoff, so current API reads stay intact. Retention failures are recorded as completed-run warnings instead of failing the already-written snapshot.
 

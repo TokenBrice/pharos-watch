@@ -14,7 +14,7 @@ export const DLPriceEntrySchema = z.object({
  * malformed quote is quarantined per key instead of rejecting its siblings.
  */
 export const DLPriceResponseSchema = z.object({
-  coins: z.record(z.string(), z.unknown()).optional().default({}),
+  coins: z.record(z.string(), z.unknown()),
 });
 
 export const CmcCategoryCoinSchema = z.object({

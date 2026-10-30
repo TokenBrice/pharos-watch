@@ -272,4 +272,27 @@ describe("score projector", () => {
     expect(tapeInsertBinds(db)).toHaveLength(0);
     expect(tapeCacheWriteBinds(db, "score.upgraded")).toHaveLength(0);
   });
+
+  it("does not publish a not-rated coin becoming rated as a grade upgrade", async () => {
+    const db = mockTapeD1(
+      tables([gradeRow({ grade: "F", score: 20, prev_grade: "NR", prev_score: null })]),
+    ) as MockD1Database;
+
+    const result = await projectScoreUpgraded(db);
+
+    // NR is the explicit not-rated outcome, not a grade below F.
+    expect(result).toEqual({ projected: 0, advanced: SEC });
+    expect(tapeInsertBinds(db)).toHaveLength(0);
+  });
+
+  it("does not publish a rated coin losing its rating as a severe grade downgrade", async () => {
+    const db = mockTapeD1(
+      tables([gradeRow({ grade: "NR", score: null, prev_grade: "A", prev_score: 85 })]),
+    ) as MockD1Database;
+
+    const result = await projectScoreDowngraded(db);
+
+    expect(result).toEqual({ projected: 0, advanced: SEC });
+    expect(tapeInsertBinds(db)).toHaveLength(0);
+  });
 });

@@ -23,11 +23,16 @@ function makeJsonResponse(body: unknown): Response {
   });
 }
 
+const T0 = 1_700_000_000;
+const SLOW_FAN_OUT_SEC = 600;
+let nowMs = T0 * 1000;
+
 describe("native-peg-quotes", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
     fetchWithRetryMock.mockReset();
-    vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000);
+    nowMs = T0 * 1000;
+    vi.spyOn(Date, "now").mockImplementation(() => nowMs);
   });
   it("keeps over-cap native quote data unavailable", async () => {
     fetchWithRetryMock.mockResolvedValueOnce(new Response("{}", {
@@ -219,6 +224,64 @@ describe("native-peg-quotes", () => {
       success: false,
       snippet: "blocked",
       rejectionReasonCounts: { "non-ok": 1 },
+    });
+  });
+
+  function mockSlowNativePegFanOut(jpyPrice: number, jpyLastUpdatedAt: number): void {
+    fetchWithRetryMock.mockImplementation(async (url: unknown) => {
+      if (String(url).includes("vs_currencies=eur")) {
+        // A degraded provider: the first EUR batch consumes its timeouts, so
+        // the JPY batch is read SLOW_FAN_OUT_SEC after the call started.
+        nowMs = (T0 + SLOW_FAN_OUT_SEC) * 1000;
+        return makeJsonResponse({
+          "euro-coin": { eur: 1.0012, last_updated_at: T0 - 30 },
+        });
+      }
+      return makeJsonResponse({
+        "jpy-coin": { jpy: jpyPrice, last_updated_at: jpyLastUpdatedAt },
+      });
+    });
+  }
+
+  const mixedPegRequests = [
+    { stablecoinId: "eurc-circle", geckoId: "euro-coin", pegCurrency: "EUR" },
+    { stablecoinId: "jpyc", geckoId: "jpy-coin", pegCurrency: "JPY" },
+  ];
+
+  it("measures freshness at each batch read time, not at fan-out start", async () => {
+    // Read at T0+600, the quote is 200 s old: not future-dated, not stale.
+    mockSlowNativePegFanOut(1.0004, T0 + 400);
+    const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+
+    const quotes = await fetchCurrentNativePegQuotes(
+      mixedPegRequests,
+      undefined,
+      undefined,
+      { diagnostics, stage: "fallback" },
+    );
+
+    expect(quotes.get("jpyc")).toMatchObject({ price: 1.0004, updatedAt: T0 + 400 });
+    expect(diagnostics[1]).toMatchObject({ source: "native-peg", ok: true, success: true });
+  });
+
+  it("rejects a quote beyond the 30-minute budget at its batch read time", async () => {
+    // Read at T0+600, the quote is 2350 s old: beyond DEPEG_PRIMARY_PRICE_MAX_AGE_SEC.
+    mockSlowNativePegFanOut(0.9701, T0 - 1750);
+    const diagnostics: PricingProviderAttemptDiagnostic[] = [];
+
+    const quotes = await fetchCurrentNativePegQuotes(
+      mixedPegRequests,
+      undefined,
+      undefined,
+      { diagnostics, stage: "fallback" },
+    );
+
+    expect(quotes.has("jpyc")).toBe(false);
+    expect(diagnostics[1]).toMatchObject({
+      source: "native-peg",
+      ok: true,
+      success: false,
+      rejectionReasonCounts: { stale: 1 },
     });
   });
 });

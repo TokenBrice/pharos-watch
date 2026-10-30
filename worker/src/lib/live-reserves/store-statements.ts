@@ -70,6 +70,7 @@ export function buildReserveCompositionFinalizeSuccessStatement(
   db: D1Database,
   record: ReserveCompositionRecord,
   finalizeDeadlineMs: number,
+  nowMs: number,
 ): D1PreparedStatement {
   return db
     .prepare(
@@ -83,7 +84,7 @@ ${RESERVE_COMPOSITION_INSERT_COLUMNS}
           WHERE stablecoin_id = ?
             AND last_attempt_id = ?
             AND pending_attempt_id = ?
-            AND ${SQLITE_NOW_MS_EXPRESSION} <= ?
+            AND ? <= ?
        )
        ON CONFLICT(stablecoin_id) DO UPDATE SET
 ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
@@ -97,7 +98,7 @@ ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
             WHERE stablecoin_id = ?
               AND last_attempt_id = ?
               AND pending_attempt_id = ?
-              AND ${SQLITE_NOW_MS_EXPRESSION} <= ?
+              AND ? <= ?
          )`,
     )
     .bind(
@@ -115,10 +116,12 @@ ${RESERVE_COMPOSITION_CONFLICT_ASSIGNMENTS}
       record.stablecoinId,
       record.attemptId ?? null,
       record.attemptId ?? null,
+      nowMs,
       finalizeDeadlineMs,
       record.stablecoinId,
       record.attemptId ?? null,
       record.attemptId ?? null,
+      nowMs,
       finalizeDeadlineMs,
     );
 }
@@ -246,6 +249,7 @@ export function buildReserveSyncFinalizeSuccessStatement(
   db: D1Database,
   record: ReserveSyncStateRecord,
   finalizeDeadlineMs: number,
+  nowMs: number,
 ): D1PreparedStatement {
   return db
     .prepare(
@@ -273,7 +277,7 @@ export function buildReserveSyncFinalizeSuccessStatement(
               AND fetched_at = ?
               AND attempt_id = ?
          )
-         AND ${SQLITE_NOW_MS_EXPRESSION} <= ?`,
+         AND ? <= ?`,
     )
     .bind(
       record.adapterKey,
@@ -294,6 +298,7 @@ export function buildReserveSyncFinalizeSuccessStatement(
       record.stablecoinId,
       record.lastSuccessAt ?? null,
       record.lastSuccessAttemptId ?? null,
+      nowMs,
       finalizeDeadlineMs,
     );
 }

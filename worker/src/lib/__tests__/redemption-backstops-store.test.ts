@@ -608,6 +608,69 @@ describe("loadRedemptionBackstopSnapshot", () => {
     });
   });
 
+  it("keeps the prior admitted daily close when a later run fails before its manifest completes", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    vi.useFakeTimers();
+    try {
+      // 2026-10-30T00:00:00Z. Two four-hourly attempts share one publication day.
+      const dayStartSec = Date.UTC(2026, 9, 30) / 1000;
+      const admittedAt = dayStartSec + 8 * 3600;
+      vi.setSystemTime(admittedAt * 1000);
+      await upsertRedemptionBackstopSnapshots(
+        db,
+        [makeRedemptionWriteRecord({ score: 65, updatedAt: admittedAt })],
+        { runId: "daily-close-admitted", nowSec: admittedAt },
+      );
+
+      const rejectedAt = dayStartSec + 20 * 3600 + 11 * 60;
+      vi.setSystemTime(rejectedAt * 1000);
+      sqlite.exec(`
+        CREATE TRIGGER reject_late_run_completion
+        BEFORE UPDATE ON redemption_backstop_runs
+        WHEN NEW.run_id = 'daily-close-rejected' AND NEW.status = 'completed'
+        BEGIN SELECT RAISE(ABORT, 'completion write unavailable'); END;
+      `);
+
+      await expect(
+        upsertRedemptionBackstopSnapshots(
+          db,
+          [makeRedemptionWriteRecord({ score: 99, updatedAt: rejectedAt })],
+          { runId: "daily-close-rejected", nowSec: rejectedAt },
+        ),
+      ).rejects.toThrow("completion write unavailable");
+
+      const manifest = sqlite
+        .prepare("SELECT status, metadata_json FROM redemption_backstop_runs WHERE run_id = ?")
+        .get("daily-close-rejected") as { status: string; metadata_json: string };
+      expect(manifest.status).toBe("failed");
+      expect(JSON.parse(manifest.metadata_json)).toMatchObject({
+        snapshotRunId: "daily-close-rejected",
+        writeStatus: "failed",
+        writePhase: "complete-manifest",
+      });
+
+      // The rejected generation never became an admitted run, so it must not
+      // persist a daily close or replace the day's admitted generation.
+      expect(
+        sqlite
+          .prepare(
+            `SELECT snapshot_run_id, score
+               FROM redemption_backstop_history
+              WHERE stablecoin_id = ? AND snapshot_date = ?`,
+          )
+          .all("eurc-circle", dayStartSec),
+      ).toEqual([{ snapshot_run_id: "daily-close-admitted", score: 65 }]);
+      expect(
+        sqlite
+          .prepare("SELECT COUNT(*) AS count FROM redemption_backstop_history WHERE snapshot_run_id = ?")
+          .get("daily-close-rejected"),
+      ).toEqual({ count: 0 });
+    } finally {
+      vi.useRealTimers();
+      sqlite.close();
+    }
+  });
+
   it("marks a started run as failed when immutable run rows are incomplete", async () => {
     const db = mockRedemptionD1([
       {

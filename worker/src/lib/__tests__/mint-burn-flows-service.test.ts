@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import { MINT_BURN_CONFIGS } from "../mint-burn-contracts";
-import { buildCoinCoverageMap } from "../mint-burn-flows-service";
+import {
+  buildCoinCoverageMap,
+  ETHEREUM_CHAIN_ID,
+  readMintBurnCronSnapshot,
+} from "../mint-burn-flows-service";
 import { mintBurnConfigKey } from "../mint-burn-pipeline/sync-state";
 import { makeMintBurnConfig } from "../../test-helpers/__shared/mint-burn-config";
 import { makeMintBurnScanSegments } from "../../test-helpers/__shared/mint-burn";
@@ -60,5 +65,45 @@ describe("buildCoinCoverageMap", () => {
         { ...recent, from_block: 100, to_block: 298, from_timestamp: END - 90 * DAY, to_timestamp: END - DAY }];
     }).sort((a, b) => a.from_block - b.from_block);
     expect(coverage(rows)).toMatchObject({ has24hWindow: true, has7dWindow: false, has30dWindow: false, has90dWindow: false });
+  });
+});
+
+describe("readMintBurnCronSnapshot chain heads", () => {
+  it("reports an unavailable Ethereum head as unknown instead of lagging against a foreign chain head", async () => {
+    // 2026-10-30T12:00:00Z, an hour boundary after the legacy cutover.
+    const now = Date.UTC(2026, 9, 30, 12) / 1000;
+    const arbitrumHead = 500_000_000;
+    const ethereumCursor = 25_999_000;
+    // The producer writes the cross-chain compatibility head when the Ethereum
+    // head is unavailable, while chainHeads carries only the chains it could read.
+    const db = mockD1([
+      {
+        match: "SELECT started_at, status, metadata",
+        rows: [],
+        first: {
+          started_at: now - 600,
+          status: "degraded",
+          metadata: JSON.stringify({ chainHead: arbitrumHead, chainHeads: { arbitrum: arbitrumHead } }),
+        },
+      },
+    ], { assertMatchesUsed: true });
+
+    const snapshot = await readMintBurnCronSnapshot(db);
+    const config = makeMintBurnConfig();
+    const segments = makeMintBurnScanSegments(now, 1, [config])
+      .map((row) => ({ ...row, to_block: ethereumCursor }));
+    const coverage = buildCoinCoverageMap(
+      now,
+      new Map(segments.map((row) => [row.config_key, [row]])),
+      new Map([[mintBurnConfigKey(config), ethereumCursor]]),
+      snapshot.chainHeads,
+      null,
+      [config],
+    ).get(config.stablecoinId)!;
+
+    // The chain head needed to measure current lag is unavailable: "unknown",
+    // not a lagging verdict measured in another chain's block units.
+    expect(coverage).toMatchObject({ status: "unknown", lagBlocks: null, isPartial: true });
+    expect(snapshot.chainHeads.has(ETHEREUM_CHAIN_ID)).toBe(false);
   });
 });

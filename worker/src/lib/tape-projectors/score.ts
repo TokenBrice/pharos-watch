@@ -150,6 +150,9 @@ async function projectScoreByVariant(
     const prevRank = gradeRank(row.prev_grade);
     const newRank = gradeRank(row.grade);
     if (prevRank === newRank) continue;
+    // NR is the explicit not-rated outcome, not a grade below F; a rated <->
+    // not-rated transition is not a rank movement.
+    if ((row.prev_grade === "NR" && newRank >= 0) || (row.grade === "NR" && prevRank >= 0)) continue;
     const isUpgrade = newRank > prevRank;
     if (variant === "upgraded" && !isUpgrade) continue;
     if (variant === "downgraded" && isUpgrade) continue;

@@ -178,9 +178,12 @@ export async function finalizeReserveSyncSuccess(
   let finalized = false;
 
   try {
+    // One clock decision for both success statements: composition can never
+    // commit while its sync linkage is gated off by a later per-statement read.
+    const finalizeNowMs = Date.now();
     const [compositionRes, finalizeRes] = await executeAtomicBatch(db, [
-        buildReserveCompositionFinalizeSuccessStatement(db, { ...composition, configFingerprint }, finalizeDeadlineMs),
-        buildReserveSyncFinalizeSuccessStatement(db, { ...syncState, configFingerprint }, finalizeDeadlineMs),
+        buildReserveCompositionFinalizeSuccessStatement(db, { ...composition, configFingerprint }, finalizeDeadlineMs, finalizeNowMs),
+        buildReserveSyncFinalizeSuccessStatement(db, { ...syncState, configFingerprint }, finalizeDeadlineMs, finalizeNowMs),
         buildReserveCompositionHistoryInsertStatement(db, composition, payloadSha256),
         buildReserveSyncAttemptHistoryInsertStatement(db, {
           stablecoinId: syncState.stablecoinId,

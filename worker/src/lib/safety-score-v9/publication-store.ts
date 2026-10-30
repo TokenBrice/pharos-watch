@@ -52,6 +52,31 @@ export async function loadSafetyScoreV9Publication(
   return parseSafetyScoreV9Publication(row.value, signal);
 }
 
+type SafetyScoreV9PublicationIdentityRead =
+  | { status: "absent" }
+  | { status: "unreadable" }
+  | { status: "readable"; identity: SafetyScoreV9PublicationIdentity };
+
+async function readSafetyScoreV9PublicationIdentityEnvelope(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<SafetyScoreV9PublicationIdentityRead> {
+  throwIfAborted(signal);
+  const row = await db
+    .prepare("SELECT json_extract(value, '$.identity') AS publication_identity FROM cache WHERE key = ?")
+    .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication)
+    .first<{ publication_identity: string | null }>();
+  throwIfAborted(signal);
+  if (!row) return { status: "absent" };
+  if (!row.publication_identity) return { status: "unreadable" };
+  try {
+    const identity = publicationIdentityFromStorageEnvelope(JSON.parse(row.publication_identity));
+    return identity ? { status: "readable", identity } : { status: "unreadable" };
+  } catch {
+    return { status: "unreadable" };
+  }
+}
+
 /**
  * Reads the active publication identity from the storage envelope via a
  * D1-side extraction, without transferring or inflating the compressed
@@ -61,18 +86,23 @@ export async function loadSafetyScoreV9PublicationIdentityEnvelope(
   db: D1Database,
   signal?: AbortSignal,
 ): Promise<SafetyScoreV9PublicationIdentity | null> {
-  throwIfAborted(signal);
-  const row = await db
-    .prepare("SELECT json_extract(value, '$.identity') AS publication_identity FROM cache WHERE key = ?")
-    .bind(SAFETY_SCORE_V9_CACHE_KEYS.publication)
-    .first<{ publication_identity: string | null }>();
-  throwIfAborted(signal);
-  if (!row?.publication_identity) return null;
-  try {
-    return publicationIdentityFromStorageEnvelope(JSON.parse(row.publication_identity));
-  } catch {
-    return null;
+  const read = await readSafetyScoreV9PublicationIdentityEnvelope(db, signal);
+  return read.status === "readable" ? read.identity : null;
+}
+
+/**
+ * Health admission distinguishes an absent publication row (legacy fallback)
+ * from a present but unreadable identity, which must fail closed.
+ */
+export async function loadSafetyScoreV9PublicationIdentityEnvelopeForHealth(
+  db: D1Database,
+  signal?: AbortSignal,
+): Promise<SafetyScoreV9PublicationIdentity | null> {
+  const read = await readSafetyScoreV9PublicationIdentityEnvelope(db, signal);
+  if (read.status === "unreadable") {
+    throw new Error("Safety Score V9 publication identity is unreadable");
   }
+  return read.status === "readable" ? read.identity : null;
 }
 
 async function loadStoredSafetyScoreV9PublicationReference(
