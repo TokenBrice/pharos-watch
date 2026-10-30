@@ -40,7 +40,6 @@ const NegativeIncidentRuntimeScopeSchema = z.union([
   V9IssuerSurfaceIncidentReviewScopeSchema,
   V9ProviderIncidentReviewScopeSchema,
 ]);
-type NegativeIncidentRuntimeScope = z.output<typeof NegativeIncidentRuntimeScopeSchema>;
 export type AuthoredControlReviewScope = Extract<
   z.output<typeof V9AuthoredNegativeIncidentReviewScopeSchema>,
   { kind: "control" }
