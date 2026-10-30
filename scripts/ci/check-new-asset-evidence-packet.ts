@@ -53,7 +53,7 @@ export const NEW_ASSET_RECEIPT_DIR = ".github/artifacts/new-asset-evidence-packe
 export const NEW_ASSET_RECEIPT_KIND = "safety-score-v9-new-asset-admission-receipt";
 
 const MISSING_MINT_AUTHORITY_CODE = "missing-mint-authority" as const;
-const ASSET_ID_PATTERN = /^[a-z0-9]+(?:-[a-z0-9]+)*$/u;
+const ASSET_ID_PATTERN = /^[a-z0-9](?:[a-z0-9]|-(?=[a-z0-9]))*$/u;
 
 const USAGE = `Usage: npm run check:new-asset-evidence-packet -- [options]
 
