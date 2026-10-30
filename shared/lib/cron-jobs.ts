@@ -645,6 +645,13 @@ const CRON_JOB_DEFINITIONS_BASE: readonly CronJobDefinitionInput[] = [
     intervalSec: SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_REFRESH_INTERVAL_SEC,
     scheduleKey: "v9SupplyAttributionOffset",
     triggerMode: "isolated",
+    // 3 is the attribution child peak (three EVM lanes; native phases follow
+    // serially). After the generation settles, the same invocation runs the
+    // deployment-supply-census shadow lane (3 serial chain tasks) on the
+    // remaining slot time. It raises no peak and owns no separate budget row:
+    // a second 3-connection phase allowed to overlap attribution would reach
+    // 6/6 while `check:cron-connections` still reported 3/6, so the lane must
+    // stay serial. Budget: docs/worker-and-api-limits.md#safety-score-production-budgets.
     maxConnections: 3,
     connectionGroup: "v9-supply-attribution-chain",
   },

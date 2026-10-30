@@ -138,7 +138,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/cron-jobs.ts",
-      "sha256": "3e390613156035aec64ea3d777cc8a8149c2cbe919a9373c82239a7bc97aff77"
+      "sha256": "baa601d70e12ae2322e0de4c3b39b6228380014b9934cae8074b7fb07035b6f1"
     },
     {
       "path": "shared/lib/curve-composite-identities.ts",
@@ -822,7 +822,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/measured-execution.ts",
-      "sha256": "ca692e14a977fe633fd6d8b970b6ecfcdd95d5f3ae4c1cb37f6d39d282532ebf"
+      "sha256": "ad1a06d2d6dc633d5a0e1ef4dad6aa9c18c8238fff43f3dbec1f216d038335ff"
     },
     {
       "path": "shared/types/methodology-envelope.ts",
@@ -930,7 +930,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/safety-score-v9-incidents.ts",
-      "sha256": "69fb4ec4d5db9782af5e2cf134d91fe185b5201bc4b9fdb9b6bf22f90d29ce83"
+      "sha256": "57a98b103fd9e29179c3a3cc8fdd7af0cb82a23d1b614c85f667577e841dfbe6"
     },
     {
       "path": "shared/types/safety-score-v9-l2-messenger-pending.ts",
@@ -1355,7 +1355,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "36dcec760a3f81fe32ba4fcb05777f0e757f128946552749324f1230350843a1"
+  "digest": "8a5a878ac662d12fa010f904d13d16d6dbaa9984cfbe2606e09fafdb4d50f2c7"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =
