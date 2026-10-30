@@ -18,8 +18,9 @@ import { BluechipGradeSchema } from "../../../types/core";
 import { SELECTOR_SNAPSHOT_SUPPORTED_ENGINE_VERSIONS, SELECTOR_VERSION } from "../version";
 import { sha256Hex } from "../../sha256";
 import { runSelector } from "../engine";
-import { FIXTURE_DATASET, makeInput, makeMergedRowWithIdentity } from "./fixture";
+import { FIXTURE_DATASET, FIXTURE_ROWS, makeInput, makeMergedRowWithIdentity } from "./fixture";
 import { makeYieldRailRow } from "./engine.test-support";
+import { CLIENT_TRACKED_META_BY_ID } from "../../stablecoins/client-registry";
 
 function expectValid(value: unknown) {
   const result = validateSelectorSnapshot(value);
@@ -283,6 +284,28 @@ describe("selector snapshot contract", () => {
       recommended: output.recommended.map((rec) => rec.relaxedReason ? { ...rec, relaxedReason: "coverage-too-thin" } : rec),
     });
   });
+
+  it.each(["treasury", "yield", "trading"] as const)(
+    "keeps the last recommendation's margin against the next ranked row for %s",
+    (profile) => {
+      // The engine measures rank 3 against the fourth ranked row, which is not
+      // itself a recommendation and is not persisted. Snapshot replay must not
+      // republish that measured margin as an absent clear-margin verdict.
+      const rows = FIXTURE_ROWS.filter((row) => CLIENT_TRACKED_META_BY_ID.has(row.id));
+      const output = runSelector(
+        makeInput({ profile }),
+        { rows: new Map(rows.map((row) => [row.id, row])) },
+        { ...FIXTURE_DATASET, datasetHash: "a".repeat(64) },
+      );
+      expect(output.recommended).toHaveLength(3);
+      const engineRank3 = output.recommended[2]?.rankRobustness;
+      expect(engineRank3?.scoreMargin).toBeTypeOf("number");
+
+      const persisted = createVerifiedSelectorSnapshot(output);
+      expect(persisted.recommended[2]?.rankRobustness).toEqual(engineRank3);
+      expect(validateVerifiedSelectorSnapshot(persisted).ok).toBe(true);
+    },
+  );
 
   it("accepts a complete selector snapshot and computes a 32-hex sid", () => {
     const snapshot = expectValid(buildSelectorSnapshotOutput());

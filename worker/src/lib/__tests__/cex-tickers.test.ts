@@ -667,6 +667,33 @@ describe("fetchBitstampPrices", () => {
     expect(outcome.value.observedAtBySymbol.get("USDC")).toBe(1776439400);
   });
 
+  it("does not turn an untraded placeholder book into a fresh quote", async () => {
+    // Live 2026-10-30 payload: the pair is still listed but has not traded, and
+    // the placeholder book's 1.1552 midpoint must not become a fresh upstream
+    // observation (docs/process/pricing-pipeline-appendix.md: quiet books never
+    // receive fresh fetch-time provenance).
+    mockFetch([{
+      match: () => true,
+      body: [
+        {
+          pair: "PYUSD/USD", market: "PYUSD/USD", last: "0.9500",
+          volume: "0.00", open_24: "0.0000", bid: "0.8010", ask: "1.5094",
+          timestamp: "1793373945",
+        },
+        {
+          pair: "USDC/USD", market: "USDC/USD", last: "0.99968",
+          volume: "1481982.12", open_24: "0.99970", bid: "0.99965", ask: "0.99971",
+          timestamp: "1793373945",
+        },
+      ],
+    }]);
+
+    const outcome = await fetchBitstampPrices();
+    expect(outcome.kind).toBe("ok");
+    expect(outcome.value.prices.has("PYUSD")).toBe(false);
+    expect(outcome.value.prices.get("USDC")).toBeCloseTo(0.99968, 5);
+  });
+
   it("returns upstream-error when HTTP request fails", async () => {
     const cancel = vi.fn(async () => undefined);
     const failedResponse = () => new Response(new ReadableStream({ cancel }), { status: 500 });

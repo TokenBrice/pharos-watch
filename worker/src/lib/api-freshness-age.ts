@@ -1,4 +1,6 @@
-export const API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC = 60;
+import { STATUS_ALLOWED_FUTURE_SKEW_SEC } from "@shared/lib/status-thresholds";
+
+export const API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC = STATUS_ALLOWED_FUTURE_SKEW_SEC;
 
 export interface FreshnessAge {
   ageSeconds: number;

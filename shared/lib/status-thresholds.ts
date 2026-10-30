@@ -15,6 +15,13 @@ export const FRESHNESS_RATIOS = {
 } as const;
 
 /**
+ * Read-time allowance for a producer clock stamped by another isolate. Status
+ * readers reject a clock past this skew instead of clamping it to age zero; the
+ * worker's API freshness admission uses the same allowance.
+ */
+export const STATUS_ALLOWED_FUTURE_SKEW_SEC = 60;
+
+/**
  * Canonical freshness status tier emitted by API freshness helpers across the
  * worker, shared, and worker test suites. Endpoint-specific extensions
  * (e.g. chains' `"unavailable"` dependency state) compose this union rather

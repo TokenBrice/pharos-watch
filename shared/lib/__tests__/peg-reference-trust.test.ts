@@ -22,6 +22,13 @@ describe("peg reference trust", () => {
       expected: true,
     },
     {
+      // docs/depeg-detection.md: missing live evidence must not be labelled as
+      // an available reference. Only an explicit USD identity anchors at 1.
+      label: "missing peg type does not trust a non-USD fiat peg",
+      input: { pegCurrency: "EUR", pegType: undefined, pegRateSource: null, pegRateContributorCount: null },
+      expected: false,
+    },
+    {
       label: "commodity pegs stay trusted when their rate is present",
       input: { pegCurrency: "GOLD", pegType: "peggedGOLD", pegRateSource: "median", pegRateContributorCount: 1 },
       expected: true,

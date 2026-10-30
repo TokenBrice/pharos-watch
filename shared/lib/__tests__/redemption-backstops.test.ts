@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { resolveCapacitySemantics } from "../redemption-backstop-confidence";
-import { getRedemptionBackstopConfig, resolveV9RedemptionRouteCostBpsAtNotional } from "../redemption-backstops";
+import {
+  getRedemptionBackstopConfig,
+  resolveReviewedRedemptionSettlement,
+  resolveV9RedemptionRouteCostBpsAtNotional,
+} from "../redemption-backstops";
 import { resolveDefaultHolderEligibility, resolveRedemptionCostBpsAtNotional } from "../redemption-backstop-configs/shared";
+import { getLiveReserveAdapterDefinition } from "../live-reserve-adapters";
+import { TRACKED_META_BY_ID } from "../stablecoins/registry";
 import { REVIEWED_REDEMPTION_COVERAGE_DISPOSITIONS } from "../../data/coverage-dispositions/redemption-coverage-dispositions";
 
 describe("getRedemptionBackstopConfig", () => {
@@ -375,5 +381,26 @@ describe("getRedemptionBackstopConfig", () => {
     const config = getRedemptionBackstopConfig(id);
     expect(config).not.toBeNull();
     expect(config?.outputAssets).toBeUndefined();
+  });
+});
+
+describe("reviewed queue-redeem capacity models", () => {
+  // docs/redemption-backstops.md #capacity-models: reserve-sync telemetry must
+  // isolate assets immediately executable through the holder route. USDCx's own
+  // note keeps the xReserve escrow balance as collateral evidence only.
+  it("does not publish USDCx's collateral-only escrow read as live-direct capacity", () => {
+    const stablecoinId = "usdcx-movement";
+    const config = getRedemptionBackstopConfig(stablecoinId)!;
+    const meta = TRACKED_META_BY_ID.get(stablecoinId)!;
+    const adapter = meta.liveReservesConfig
+      ? getLiveReserveAdapterDefinition(meta.liveReservesConfig.adapter)
+      : null;
+
+    expect(adapter?.redemptionTelemetry.capacity).toBe("direct");
+    expect(config.capacityModel).toEqual({ kind: "unquantified" });
+    expect(resolveReviewedRedemptionSettlement(config, 1_793_318_400)).toBe("queued");
+    // A queued route with no observed completion bound carries no atomic
+    // 0-second adapter delay.
+    expect(meta.liveReservesConfig?.params?.settlementDelaySec).toBeUndefined();
   });
 });

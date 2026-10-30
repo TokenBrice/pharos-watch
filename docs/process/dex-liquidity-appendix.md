@@ -557,7 +557,7 @@ The provider registry owns scope, execution order, estimated request cost and cr
 
 Before network, reconcile unmatched legacy coin fence, advance only selected deployments' `last_attempt_at` and atomically attribute the coin fence. Missing/mismatched/legacy attribution fails closed; coin timestamp remains compatibility fence until matched. Unattempted windows retain their evidence. Failed writes never preserve an older empty answer for attempted deployments. Full-footprint gaps need owned expiring waivers; live-supported deployments reject/suppress obsolete unsupported-chain waivers immediately, before recrawl/expiry.
 
-Provider-native query identities are not catalog identity replacements: felt-pad Starknet, long-zero Hedera entity IDs and exact Injective native/EVM forms; URL-encode once while storing registry addresses. MANTRA EVM accepts only 20-byte addresses, not same-chain-ID Cosmos denoms. Registry owns current mappings. Curve uses exactly native registered chains in both source/discovery, serial 8-MiB reads, never credits factory-only capture as provider evidence.
+Provider-native query identities are not catalog identity replacements: felt-pad Starknet, long-zero Hedera entity IDs and exact Injective native/EVM forms; URL-encode once while storing registry addresses. MANTRA EVM accepts only 20-byte addresses, not same-chain-ID Cosmos denoms, and Kava's EVM token-pool venues exclude its native bank rail. Registry owns current mappings. Curve uses exactly native registered chains in both source/discovery, serial 8-MiB reads, never credits factory-only capture as provider evidence.
 
 | Specialized source | Scope/admission boundary |
 | --- | --- |

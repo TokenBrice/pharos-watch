@@ -367,17 +367,17 @@ function projectRecommendation(
 function projectRankRobustness(
   recommendation: SelectorRecommendation,
   next: SelectorRecommendation | undefined,
+  stored: SelectorRecommendation["rankRobustness"],
 ): SelectorRankRobustness {
   if (!next) {
-    return {
-      label: recommendation.rankRobustness?.label === "concentration-adjusted"
-        ? "concentration-adjusted"
-        : "clear-margin",
-      scoreMargin: null,
-    };
+    // The engine measures the last recommendation against the next ranked row,
+    // which is not itself a recommendation and is not persisted. Keep the
+    // engine's measured margin instead of republishing it as an absent
+    // clear-margin verdict.
+    return stored ?? { label: "clear-margin", scoreMargin: null };
   }
   const scoreMargin = round1(Math.max(0, recommendation.score - next.score));
-  const label = recommendation.rankRobustness?.label === "concentration-adjusted"
+  const label = stored?.label === "concentration-adjusted"
     ? "concentration-adjusted"
     : scoreMargin < RANK_MARGIN_NARROW
       ? "narrow-margin"
@@ -406,7 +406,11 @@ function projectRecommendations(
   }
   return projected.map((recommendation, index) => ({
     ...recommendation,
-    rankRobustness: projectRankRobustness(recommendation, projected[index + 1]),
+    rankRobustness: projectRankRobustness(
+      recommendation,
+      projected[index + 1],
+      recommendations[index]?.rankRobustness,
+    ),
   })) as SelectorRecommendation[];
 }
 

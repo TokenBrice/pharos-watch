@@ -298,6 +298,11 @@ export async function fetchM0WrapperUnderlyingReserves(
       routeStatusSource: params.mode === "m-extension" ? "onchain" : "static-config",
       ...(routeStatusReason ? { routeStatusReason } : {}),
       holderEligibility,
+      // In wrapped-m-token mode the measured redeemable balance is the wrapper's
+      // M holding, so the payout identity is the configured M slice.
+      ...(params.mode === "wrapped-m-token" && sliceConfig.coinId
+        ? { outputAssetKeys: [sliceConfig.coinId] }
+        : {}),
       ...(params.sourceUrls ? { sourceUrls: params.sourceUrls } : {}),
     },
   });

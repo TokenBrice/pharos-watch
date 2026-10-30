@@ -1,6 +1,6 @@
 import { logWorkerEventArgs } from "../../lib/structured-log";
 import type { ContractDeployment } from "@shared/types/core";
-import { getGeckoTerminalDiscoveryNetwork } from "@shared/lib/dex-deployment-coverage";
+import { getDexDiscoveryProviders, getGeckoTerminalDiscoveryNetwork } from "@shared/lib/dex-deployment-coverage";
 import { canonicalExitRouteScopedId, canonicalExitRouteScopedKey } from "@shared/types/exit-route-identity";
 import { sleepWithSignal, throwIfAborted } from "../../lib/abort";
 import { shouldAttemptFetch, recordOutcome } from "../../lib/circuit-breaker";
@@ -249,6 +249,11 @@ export async function crawlCoinGeckoPoolsStage({
       }
       continue;
     }
+
+    // The shared registry owns which providers may query one deployment: a chain
+    // can also carry a Cosmos bank rail whose denoms have no CoinGecko onchain
+    // identity (Kava USDX), and a lookup miss there is not a pool census.
+    if (!getDexDiscoveryProviders(chain, address).includes("coingecko")) continue;
 
     if (cgRequests > 0) {
       await dependencies.sleepWithSignal(RATE_LIMITS.COINGECKO_ONCHAIN_MS, context.signal);

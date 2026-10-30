@@ -63,7 +63,11 @@ export const KRAKEN_MARKETS = [
 ] as const;
 
 export const BITSTAMP_MARKETS = [
-  { pair: "PYUSD/USD", symbol: "PYUSD" },
+  // 2026-10-30: PYUSD/USD dropped. The book is listed but untraded
+  // (volume/open_24 zero) and publishes a placeholder 0.8010/1.5094 quote whose
+  // 1.1552 midpoint would become a fresh upstream observation. Re-add only when
+  // the Bitstamp ticker shows non-zero 24h volume and a book inside the reviewed
+  // price band in the same payload.
   { pair: "USDC/USD", symbol: "USDC" },
   { pair: "USDT/USD", symbol: "USDT" },
 ] as const;

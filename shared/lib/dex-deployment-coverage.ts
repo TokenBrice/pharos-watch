@@ -1,4 +1,5 @@
 import { CG_CHAIN_MAP, DS_CHAIN_MAP, GT_CHAIN_MAP } from "./chains";
+import { CHAIN_META } from "../types/chain-identity";
 import { canonicalExitRouteScopedId } from "../types/exit-route-identity";
 import { getAddress } from "viem/utils";
 
@@ -248,6 +249,18 @@ export function isNobleSwapDiscoveryDeployment(chain: string, address?: string):
   return chain === "noble" && address != null && isCosmosDiscoveryDenom(address.trim());
 }
 
+/**
+ * CoinGecko onchain, GeckoTerminal and DexScreener are EVM token-pool queries.
+ * A chain can also carry a Cosmos bank rail (Kava, Osmosis), whose native
+ * denoms have no identity in those namespaces: a lookup "miss" there would be a
+ * completed empty scan of a different token space, not evidence of no pools.
+ * Only an EVM-shaped address may resolve those providers on such a chain.
+ */
+function isEvmDiscoveryIdentity(chain: string, address?: string): boolean {
+  if (CHAIN_META[chain]?.nativeDenomRail == null) return true;
+  return address == null || EVM_ADDRESS_RE.test(address.trim());
+}
+
 /** Translate one eligible registry identity to Horizon's `CODE:ISSUER` filter. */
 export function getHorizonDiscoveryAsset(address: string, symbol?: string): string | null {
   const trimmed = address.trim();
@@ -267,7 +280,7 @@ export function getHorizonDiscoveryAsset(address: string, symbol?: string): stri
 /** Resolve the exact GeckoTerminal network that can query one deployment. */
 export function getGeckoTerminalDiscoveryNetwork(chain: string, address?: string): string | null {
   const configured = GT_CHAIN_MAP[chain];
-  if (configured) return configured;
+  if (configured) return isEvmDiscoveryIdentity(chain, address) ? configured : null;
   if (chain === "mantra") {
     return address != null && EVM_ADDRESS_RE.test(address.trim()) ? "mantra-evm" : null;
   }
@@ -365,7 +378,8 @@ export function isDexCensusAttemptComplete(
 
 export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapter[] = [
   {
-    providerId: "coingecko", lifecycle: "active", supports: (chain) => Boolean(CG_CHAIN_MAP[chain]),
+    providerId: "coingecko", lifecycle: "active",
+    supports: (chain, address) => Boolean(CG_CHAIN_MAP[chain]) && isEvmDiscoveryIdentity(chain, address),
     scope: "paginated-exhaustive", requestCostMs: 1_450, executionOrder: 10,
     crawlerLeaf: "coingecko",
   },
@@ -376,7 +390,8 @@ export const DEX_DISCOVERY_PROVIDER_REGISTRY: readonly DexDiscoveryProviderAdapt
     crawlerLeaf: "geckoterminal",
   },
   {
-    providerId: "dexscreener", lifecycle: "active", supports: (chain) => Boolean(DS_CHAIN_MAP[chain]),
+    providerId: "dexscreener", lifecycle: "active",
+    supports: (chain, address) => Boolean(DS_CHAIN_MAP[chain]) && isEvmDiscoveryIdentity(chain, address),
     scope: "exhaustive", requestCostMs: 1_700, executionOrder: 30,
     crawlerLeaf: "dexscreener",
   },
