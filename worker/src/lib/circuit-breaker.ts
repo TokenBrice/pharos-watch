@@ -318,6 +318,18 @@ export async function recoverBreakerOnNoCandidate(
   }
 }
 
+/** No-candidate recovery is best-effort bookkeeping; a storage fault must not abort the caller's collected work. */
+export async function recoverBreakerOnNoCandidateSafe(
+  db: D1Database,
+  source: string,
+): Promise<void> {
+  try {
+    await recoverBreakerOnNoCandidate(db, source);
+  } catch (err) {
+    logWorkerEvent({ scope: "lib", level: "warn", event: "circuit_outcome_write_failed", message: "Failed to record circuit outcome", provider: source, error: err });
+  }
+}
+
 /** Non-blocking circuit telemetry write for best-effort callers. */
 export async function recordOutcomeSafe(
   db: D1Database,

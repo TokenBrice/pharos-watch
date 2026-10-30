@@ -115,6 +115,8 @@ export interface SupplementalDedupeDiscardedValue {
 }
 
 type SourceFamilyCountRecord = Record<SupplementalSourceFamilyKey, number>;
+/** Counts for the families this invocation actually ran; un-run siblings stay absent. */
+type MeasuredSourceFamilyCountRecord = Partial<SourceFamilyCountRecord>;
 type SourceFamilyExampleRecord = Record<SupplementalSourceFamilyKey, string[]>;
 
 export interface SupplementalDropBucket {
@@ -160,9 +162,8 @@ export interface SupplementalSourceFamilySummary {
   provider?: unknown;
 }
 
-type SupplementalSourceFamilySummaryRecord = Record<
-  SupplementalSourceFamilyKey,
-  SupplementalSourceFamilySummary
+type SupplementalSourceFamilySummaryRecord = Partial<
+  Record<SupplementalSourceFamilyKey, SupplementalSourceFamilySummary>
 >;
 
 const SUPPLEMENTAL_SOURCE_KEY_EXAMPLE_LIMIT = 5;
@@ -331,15 +332,7 @@ function buildSourceFamilySummaries(
   familyResults: SupplementalSourceFamilyResult[],
   malformedSourceDrops: SupplementalDropBucket,
 ): SupplementalSourceFamilySummaryRecord {
-  const summaries = Object.fromEntries(
-    SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => [family, {
-      status: "failed" as SupplementalSourceFamilyStatus,
-      rawCandidateCount: 0,
-      candidateCount: 0,
-      malformedDropCount: malformedSourceDrops.bySourceFamily[family],
-      degraded: true,
-    }]),
-  ) as SupplementalSourceFamilySummaryRecord;
+  const summaries: SupplementalSourceFamilySummaryRecord = {};
 
   for (const result of familyResults) {
     const summary: SupplementalSourceFamilySummary = {
@@ -687,8 +680,8 @@ export async function loadSupplementalSourceFamilies(
 ): Promise<{
   candidates: ResolvedYieldCandidate[];
   familyResults: SupplementalSourceFamilyResult[];
-  sourceFamilyCounts: SourceFamilyCountRecord;
-  sourceFamilyInventoryCounts: SourceFamilyCountRecord;
+  sourceFamilyCounts: MeasuredSourceFamilyCountRecord;
+  sourceFamilyInventoryCounts: MeasuredSourceFamilyCountRecord;
   supplementalSourceAccounting: SupplementalSourceAccounting;
   sourceFamilySummaries: SupplementalSourceFamilySummaryRecord;
   optionalRpcTelemetry: {
@@ -702,8 +695,8 @@ export async function loadSupplementalSourceFamilies(
   const familyResults = rawFamilyResults.map((result) =>
     filterMalformedSupplementalCandidates(result, malformedSourceDrops, apyEnvelopeDrops),
   );
-  const sourceFamilyCounts = buildSourceFamilyCountRecord();
-  const sourceFamilyInventoryCounts = buildSourceFamilyCountRecord();
+  const sourceFamilyCounts: MeasuredSourceFamilyCountRecord = {};
+  const sourceFamilyInventoryCounts: MeasuredSourceFamilyCountRecord = {};
 
   for (const result of familyResults) {
     sourceFamilyCounts[result.key] = result.sourceFamilyCount;

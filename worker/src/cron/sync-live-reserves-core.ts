@@ -489,7 +489,14 @@ export async function syncReserveCoin(args: {
         // Heal transport failure debt without refreshing the retained snapshot.
         const { finalized } = await recordFailure(
           "degraded", `Validation failed: ${message}`, "source-stale", validation.warnings,
-          { durationMs, failureCategory: "validation", sourceTimestamp: result.metadata?.sourceTimestamp },
+          {
+            durationMs,
+            failureCategory: "validation",
+            sourceTimestamp: result.metadata?.sourceTimestamp,
+            ...(result.metadata?.freshnessMode !== undefined
+              ? { freshnessMode: result.metadata.freshnessMode }
+              : {}),
+          },
         );
         return timedResult({
           breakerKey, status: "failed", ...(finalized ? { breakerOutcome: true } : {}),
@@ -553,6 +560,14 @@ export async function syncReserveCoin(args: {
         ? "degraded" : "ok",
       warnings,
       metadata: {
+        // The attempt ledger is the post-sync alert's only evidence source, so a
+        // successful read keeps the clock it was verified against.
+        ...(typeof result.metadata?.sourceTimestamp === "number" && Number.isFinite(result.metadata.sourceTimestamp)
+          ? { sourceTimestamp: result.metadata.sourceTimestamp }
+          : {}),
+        ...(result.metadata?.freshnessMode !== undefined
+          ? { freshnessMode: result.metadata.freshnessMode }
+          : {}),
         warningEffects: {
           info: warnings.filter((warning) => warning.effect === "info").length,
           degraded: warnings.filter((warning) => warning.effect === "degraded").length,

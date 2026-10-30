@@ -205,7 +205,17 @@ export function mergeFrozenSnapshots(
     if (upstreamIds.has(snapshot.id)) {
       continue;
     }
-    additions.push(snapshot.peggedAssetRow as unknown as PeggedAsset);
+    const row = { ...(snapshot.peggedAssetRow as unknown as PeggedAsset) };
+    // The captured row's price was read by DefiLlama at freeze time, not by this
+    // run. Keep that clock so downstream freshness admission cannot stamp the
+    // undated value as a current list observation.
+    if (row.price != null && row.priceObservedAt == null && row.priceUpdatedAt == null) {
+      const capturedAtSec = Math.floor(Date.parse(snapshot.capturedAt) / 1_000);
+      row.priceObservedAt = capturedAtSec;
+      row.priceUpdatedAt = capturedAtSec;
+      row.priceObservedAtMode = "unknown";
+    }
+    additions.push(row);
     upstreamIds.add(snapshot.id);
   }
   if (additions.length === 0) {

@@ -255,7 +255,7 @@ Published Royco source-risk metadata includes `trancheSide`, `underlyingSafetySc
 
 ### Tier 3: Price-Derived APY
 
-For `navToken` coins or explicit `PRICE_DERIVED_FALLBACK_IDS` only when the catalog explicitly identifies `nav-appreciation` or `lending-vault`, the return reference is USD, and no intentional holder-return gap applies. Eligibility follows the catalog's referenced asset when present, not whether a comparison benchmark exists. FPI and ISC retain explicitly reviewed USD-based variable-NAV policies; an unreviewed `VAR` asset is not implicitly USD-return eligible. Derives APY from USD price appreciation in `supply_history` using the oldest available anchor between 7 and 45 days. Manifest price-derived strategies describe this eligible estimate, not every NAV flag or historical fallback ID.
+For `navToken` coins or explicit `PRICE_DERIVED_FALLBACK_IDS` only when the catalog explicitly identifies `nav-appreciation` or `lending-vault`, the return reference is USD, and no intentional holder-return gap applies. Eligibility follows the catalog's referenced asset when present, not whether a comparison benchmark exists. FPI and ISC retain explicitly reviewed USD-based variable-NAV policies; an unreviewed `VAR` asset is not implicitly USD-return eligible. Derives APY from USD price appreciation in `supply_history` using the oldest available anchor between 7 and 45 days; `price_observed_at` is the observation clock for both endpoints (the UTC day label is a bucket only), and a row without one yields no price-derived source. Manifest price-derived strategies describe this eligible estimate, not every NAV flag or historical fallback ID.
 
 ```
 apy = ((price_now / price_anchor) ^ (365.25 / lookbackDays) - 1) * 100

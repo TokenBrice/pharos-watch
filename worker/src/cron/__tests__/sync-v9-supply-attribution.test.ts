@@ -30,7 +30,7 @@ import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import * as economicObserver from "../../lib/safety-score-v9/economic-supply-observer";
 import * as xautObserver from "../../lib/safety-score-v9/xaut-supply-observer";
 import { TOTAL_SUPPLY_SELECTOR } from "../../lib/evm-selectors";
-import type { DeploymentSupplyCensusEvmDependencies } from "../../lib/safety-score-v9/deployment-supply-census-evm";
+import { DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET, type DeploymentSupplyCensusEvmDependencies } from "../../lib/safety-score-v9/deployment-supply-census-evm";
 import {
   deploymentSupplyCensusTargets,
   type DeploymentSupplyCensusRegistryMeta,
@@ -1010,6 +1010,95 @@ describe("V9 supply attribution shadow census lane", () => {
       expect(multicall).not.toHaveBeenCalled();
     } finally { sqlite.close(); }
   });
+
+  it("keeps the attribution publication inside the slot when the census pins exhaust the window", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const source = censusSourceFixture();
+      const nowSec = source.clockSec + 15 * 60;
+      insertSourceInput(sqlite, source);
+      vi.setSystemTime(nowSec * 1_000);
+      mocks.capture.mockResolvedValue({
+        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
+      });
+
+      const window = {
+        slotStartedAtSec: nowSec,
+        // Admission needs 60 s, so the shadow lane starts with barely enough:
+        // a slow pin walk is then the only phase that can consume the window.
+        deadlineMs: Date.now() + 61_000,
+        minimumRemainingMs: 60_000,
+      };
+      // Mirrors `runV9AfterCoreWithinWindow`: the slot's timeout signal aborts
+      // the cron signal at `executionWindow.deadlineMs`.
+      const slotTimeout = new AbortController();
+      const timeoutReason = new DOMException(
+        "sync-v9-supply-attribution exceeded its pre-quarter execution window",
+        "TimeoutError",
+      );
+
+      const pinDeadlines: number[] = [];
+      const dependencies = {
+        resolveClosestBlockAtOrBeforeTimestamp: async (
+          _chainId: string,
+          _clockSec: number,
+          _existing: unknown,
+          options: { deadlineMs?: number },
+        ) => {
+          // A rate-limited provider spends each chain's whole 15 s probe slice.
+          const probeDeadlineMs = options.deadlineMs ?? window.deadlineMs;
+          pinDeadlines.push(probeDeadlineMs);
+          vi.setSystemTime(probeDeadlineMs);
+          if (Date.now() >= window.deadlineMs && !slotTimeout.signal.aborted) {
+            slotTimeout.abort(timeoutReason);
+          }
+          return null;
+        },
+        fetchEvmBlockHeader: async () => null,
+        fetchEvmCodeStatusAtBlock: async () => ({ status: "unavailable" as const }),
+        fetchEvmMulticall3Aggregate3AtBlock: async () => null,
+        sha256Hex: async () => "f".repeat(64),
+      } as unknown as Partial<DeploymentSupplyCensusEvmDependencies>;
+      const chains = ["ethereum", "arbitrum", "base", "optimism", "polygon", "avalanche"] as const;
+      const chainRpcs = new Map(chains.map(chainId => [chainId, {
+        chainId, chainName: chainId, type: "evm" as const, endpoints: [], explorerUrl: "",
+      }]));
+      const metaById = new Map([["shadow-fixture",
+        censusMeta("shadow-fixture", chains.map(chain => ({ chain, address: CENSUS_TOKEN })))]]);
+
+      const outcome = await syncSafetyScoreV9SupplyAttribution(
+        db, chainRpcs, slotTimeout.signal, window, undefined,
+        { metaById, dependencies: { evm: dependencies } },
+      ).then(
+        (value) => ({ status: "resolved" as const, value }),
+        (error: unknown) => ({ status: "rejected" as const, error }),
+      );
+
+      // The shadow lane may journal a failure, but it can never convert the
+      // attribution run into an error.
+      expect(
+        outcome.status,
+        outcome.status === "rejected"
+          ? `the shadow census lane aborted the attribution run: ${String(outcome.error)}`
+          : undefined,
+      ).toBe("resolved");
+      if (outcome.status !== "resolved") return;
+      expect(outcome.value.status).toBe("ok");
+
+      // The generation this run published is the one the consumer reads.
+      const row = sqlite.prepare("SELECT value FROM cache WHERE key = ?")
+        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as { value: string } | undefined;
+      expect(row).toBeDefined();
+      const published = parseSafetyScoreV9SupplyAttributionGeneration(row!.value);
+      expect(published.generationId).toBe(JSON.parse(outcome.value.metadata ?? "{}").generationId);
+
+      // The census must stop a publication reserve early so those writes fit;
+      // its pin pass inherits the slot deadline only after that reserve.
+      expect(Math.max(...pinDeadlines)).toBeLessThanOrEqual(
+        window.deadlineMs - DEPLOYMENT_SUPPLY_CENSUS_EVM_BUDGET.publicationReserveMs,
+      );
+    } finally { sqlite.close(); }
+  });
 });
 
   it("fails closed before capture when the source fixed input is stale", async () => {
@@ -1038,6 +1127,62 @@ describe("V9 supply attribution shadow census lane", () => {
         ageSec: SOURCE_FIXED_INPUT_MAX_AGE_SEC + 1,
       });
       expect(mocks.capture).not.toHaveBeenCalled();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("publishes a generation when the persisted capture-control row is unreadable", async () => {
+    const { sqlite, db } = openDb();
+    try {
+      const source = censusSourceFixture();
+      const nowSec = source.clockSec + 15 * 60;
+      vi.setSystemTime(nowSec * 1_000);
+      insertSourceInput(sqlite, source);
+      // A control row written by a deploy whose sidecar schema grew one field,
+      // read here by a Worker that predates it: `attribution` is a strict
+      // object, so the row is present but unreadable. An absent row is already
+      // inert; present-but-unreadable must be equally inert for a sidecar that
+      // only carries settlement bookkeeping.
+      const control = buildSafetyScoreV9CaptureControl({
+        safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
+          methodologyVersion: "10.05",
+          baseInputGenerationId: source.baseInputGenerationId,
+          publicationGenerationId: source.sourceGeneration,
+        }),
+        baseInputGenerationId: source.baseInputGenerationId,
+        sourceGeneration: source.sourceGeneration,
+        clockSec: source.clockSec,
+        registryFingerprint: source.registryFingerprint,
+        workerVersion: "worker",
+        workerUploadedAtSec: source.clockSec,
+      }, source.clockSec);
+      const driftedControl = {
+        ...control,
+        attribution: { ...control.attribution, settlementAttempts: 0 },
+      };
+      sqlite
+        .prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+        .run(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY, JSON.stringify(driftedControl), source.clockSec);
+      mocks.capture.mockResolvedValue({
+        captureClockSec: nowSec, expectedAssetIds: [], attributionById: {}, journalRecords: [],
+      });
+
+      const result = await syncSafetyScoreV9SupplyAttribution(db, new Map());
+
+      const metadata = JSON.parse(result.metadata ?? "{}");
+      expect(metadata).toMatchObject({ stage: "published", captureControlStatus: "invalid" });
+      const generationRow = sqlite
+        .prepare("SELECT value FROM cache WHERE key = ?")
+        .get(SAFETY_SCORE_V9_SUPPLY_ATTRIBUTION_GENERATION_CACHE_KEY) as
+          | { value: string }
+          | undefined;
+      expect(generationRow).toBeDefined();
+      expect(parseSafetyScoreV9SupplyAttributionGeneration(generationRow!.value)).toMatchObject({
+        sourceBaseInputGenerationId: source.baseInputGenerationId,
+        sourceGeneration: source.sourceGeneration,
+        sourceClockSec: source.clockSec,
+      });
     } finally {
       sqlite.close();
     }

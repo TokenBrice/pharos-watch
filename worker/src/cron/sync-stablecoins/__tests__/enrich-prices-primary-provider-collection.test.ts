@@ -14,6 +14,8 @@ vi.mock("../../../lib/circuit-breaker", async (importOriginal) => {
     ...actual,
     shouldAttemptFetch: vi.fn(async () => false),
     recoverBreakerOnNoCandidate: vi.fn(async () => {}),
+    // The no-candidate recovery test restores the real best-effort wrapper.
+    recoverBreakerOnNoCandidateSafe: vi.fn(async () => {}),
   };
 });
 vi.mock("../../../lib/coingecko-simple-price", () => ({ fetchCoingeckoSimplePrices: vi.fn() }));
@@ -180,6 +182,54 @@ describe("critical publication provider collection", () => {
     expect(result.quoteMaps.cgQuotes.size).toBe(0);
     expect(outcomes.mock.calls.map(([, source, success]) => [source, success])).toEqual([[CIRCUIT_SOURCE.CG_PRICES, false]]);
     expect(warnings.mock.calls.flat().join(" ")).not.toContain("[primary-prices] CG price API failed:");
+  });
+
+  it("keeps a collected quote when no-candidate breaker recovery cannot persist its circuit record", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    // Kraken has a half-open breaker but no candidate symbol for this run, so
+    // collection schedules the no-candidate recovery bookkeeping write. The
+    // circuit row read succeeds; persisting the recovered record fails.
+    const db = mockD1([
+      {
+        match: "FROM cache WHERE key = ?",
+        rows: [
+          {
+            key: `circuit:${CIRCUIT_SOURCE.KRAKEN_PRICES}`,
+            value: JSON.stringify({
+              state: "half-open",
+              consecutiveFailures: 3,
+              lastFailureAt: nowSec - 900,
+              lastSuccessAt: null,
+              openedAt: nowSec - 1800,
+            }),
+            updated_at: nowSec,
+          },
+        ],
+      },
+      { match: "INSERT INTO cache", rows: [], throwError: new Error("circuit cache write unavailable") },
+    ]);
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.CG_PRICES);
+    const actualCircuit = await vi.importActual<typeof circuit>("../../../lib/circuit-breaker");
+    const directRecovery = vi.mocked(circuit.recoverBreakerOnNoCandidate);
+    const safeRecovery = vi.mocked(circuit.recoverBreakerOnNoCandidateSafe);
+    directRecovery.mockImplementation(actualCircuit.recoverBreakerOnNoCandidate);
+    safeRecovery.mockImplementation(actualCircuit.recoverBreakerOnNoCandidateSafe);
+    try {
+      const plan = await buildPrimaryPricePlan([TEST_ASSET], db);
+      expect(plan.krakenSymbols).toEqual([]);
+
+      const quote = { price: 1.002, observedAt: plan.nowSec, observedAtMode: "upstream" as const };
+      vi.mocked(fetchCoingeckoSimplePrices).mockResolvedValue({ kind: "ok", value: new Map([["test-usd", quote]]) });
+
+      const result = await collectPrimaryProviderQuotes({ db, plan });
+
+      // Bookkeeping is best-effort: the circuit write fails, the collected CG
+      // quote still publishes instead of the whole fan-out rejecting.
+      expect(result.quoteMaps.cgQuotes.get("test-usd")).toEqual(quote);
+    } finally {
+      directRecovery.mockReset().mockImplementation(async () => {});
+      safeRecovery.mockReset().mockImplementation(async () => {});
+    }
   });
 
   it("propagates an aborted provider rejection without recording a failed observation", async () => {

@@ -92,13 +92,13 @@ export async function getPriceDerivedApy(
   const [recentRow, anchoredRow] = await Promise.all([
     db
       .prepare(
-        "SELECT price, snapshot_date FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
+        "SELECT price, snapshot_date, price_observed_at FROM supply_history WHERE stablecoin_id = ? AND price IS NOT NULL ORDER BY snapshot_date DESC LIMIT 1",
       )
       .bind(stablecoinId)
-      .first<{ price: number; snapshot_date: number }>(),
+      .first<{ price: number; snapshot_date: number; price_observed_at: number | null }>(),
     db
       .prepare(
-        `SELECT price, snapshot_date
+        `SELECT price, snapshot_date, price_observed_at
          FROM supply_history
          WHERE stablecoin_id = ?
            AND price IS NOT NULL
@@ -107,10 +107,19 @@ export async function getPriceDerivedApy(
          LIMIT 1`,
       )
       .bind(stablecoinId, now - maxLookbackSec, now - minLookbackSec)
-      .first<{ price: number; snapshot_date: number }>(),
+      .first<{ price: number; snapshot_date: number; price_observed_at: number | null }>(),
   ]);
 
   if (!recentRow?.price || !anchoredRow?.price || anchoredRow.price <= 0) return null;
+
+  // `snapshot_date` is a UTC day bucket, not an observation clock. The quote's
+  // own clock (migration 0253) is the only admissible observation time; a row
+  // without one was not observed by this pipeline and cannot yield an APY.
+  const isObservationClock = (value: number | null): value is number =>
+    typeof value === "number" && Number.isInteger(value) && value > 0 && value <= now;
+  if (!isObservationClock(recentRow.price_observed_at) || !isObservationClock(anchoredRow.price_observed_at)) {
+    return null;
+  }
 
   const lookbackDays = (recentRow.snapshot_date - anchoredRow.snapshot_date) / DAY_SECONDS;
   if (!Number.isFinite(lookbackDays) || lookbackDays < 7) return null;
@@ -119,8 +128,8 @@ export async function getPriceDerivedApy(
 
   return {
     apy,
-    sourceObservedAt: recentRow.snapshot_date,
-    comparisonAnchorObservedAt: anchoredRow.snapshot_date,
+    sourceObservedAt: recentRow.price_observed_at,
+    comparisonAnchorObservedAt: anchoredRow.price_observed_at,
   };
 }
 

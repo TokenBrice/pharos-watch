@@ -33,8 +33,8 @@ function benchmarks() {
 async function resolve(product = benchmarks().USD, price = 1.001, previousRate = 1) {
   const db = mockD1([
     { match: "pharos:yield-sync:tier1-previous-rate", rows: [{ stablecoin_id: "sdai-sky", exchange_rate: previousRate, recorded_at: now - 7 * DAY_SECONDS }] },
-    { match: "snapshot_date BETWEEN", rows: [{ price: 1, snapshot_date: now - 30 * DAY_SECONDS }] },
-    { match: "SELECT price, snapshot_date FROM supply_history", rows: [{ price, snapshot_date: now }] },
+    { match: "snapshot_date BETWEEN", rows: [{ price: 1, snapshot_date: now - 30 * DAY_SECONDS, price_observed_at: now - 30 * DAY_SECONDS }] },
+    { match: "SELECT price, snapshot_date, price_observed_at FROM supply_history", rows: [{ price, snapshot_date: now, price_observed_at: now }] },
   ]);
   const riskFreeRates = { ...benchmarks(), USD: product };
   const result = await resolveTrackedYieldSources({ db, startSec: now, sevenDaysAgoSec: now - 7 * DAY_SECONDS,
@@ -66,8 +66,8 @@ describe("derived source admission", () => {
         { match: "pharos:yield-sync:tier1-previous-rate", rows: [
           { stablecoin_id: "xgld-unitas", exchange_rate: 1, recorded_at: now - 7 * DAY_SECONDS },
         ] },
-        { match: "snapshot_date BETWEEN", rows: [{ price: 1, snapshot_date: now - 30 * DAY_SECONDS }] },
-        { match: "SELECT price, snapshot_date FROM supply_history", rows: [{ price: 1.01, snapshot_date: now }] },
+        { match: "snapshot_date BETWEEN", rows: [{ price: 1, snapshot_date: now - 30 * DAY_SECONDS, price_observed_at: now - 30 * DAY_SECONDS }] },
+        { match: "SELECT price, snapshot_date, price_observed_at FROM supply_history", rows: [{ price: 1.01, snapshot_date: now, price_observed_at: now }] },
       ]),
       startSec: now, sevenDaysAgoSec: now - 7 * DAY_SECONDS, dlPools: [],
       onChainRates: rpcAvailable ? new Map([["xgld-unitas", { rate: 1 }]]) : new Map(),
@@ -162,7 +162,7 @@ describe("derived source admission", () => {
         db: mockD1([
           { match: "pharos:yield-sync:tier1-previous-rate", rows: [] },
           { match: "snapshot_date BETWEEN", rows: [] },
-          { match: "SELECT price, snapshot_date FROM supply_history", rows: [] },
+          { match: "SELECT price, snapshot_date, price_observed_at FROM supply_history", rows: [] },
         ]), startSec: now, sevenDaysAgoSec: now - 7 * DAY_SECONDS,
         dlPools: [], onChainRates: new Map(), safetyScores: new Map(), riskFreeRates,
       });
@@ -200,8 +200,8 @@ describe("derived source admission", () => {
   it("rejects overflowing price annualization rather than returning a zero observation", async () => {
     vi.useFakeTimers().setSystemTime(now * 1000);
     const db = mockD1([
-      { match: "snapshot_date BETWEEN", rows: [{ price: 1e-20, snapshot_date: now - 7 * DAY_SECONDS }] },
-      { match: "SELECT price, snapshot_date FROM supply_history", rows: [{ price: 1, snapshot_date: now }] },
+      { match: "snapshot_date BETWEEN", rows: [{ price: 1e-20, snapshot_date: now - 7 * DAY_SECONDS, price_observed_at: now - 7 * DAY_SECONDS }] },
+      { match: "SELECT price, snapshot_date, price_observed_at FROM supply_history", rows: [{ price: 1, snapshot_date: now, price_observed_at: now }] },
     ]);
     expect(await getPriceDerivedApy(db, "sdai-sky")).toBeNull();
   });

@@ -7,7 +7,7 @@ import { fetchHiveNativeHbdPrice } from "../../lib/hive-market-price";
 import type { HiveNativePriceQuote } from "@shared/types/hive-market-price";
 import { createPricingAssetAttempt } from "../../lib/pricing-provider-diagnostics";
 import { runWithOverloadRetry } from "../../lib/d1-overload-retry";
-import { shouldAttemptFetch, recordOutcomeSafe, recoverBreakerOnNoCandidate } from "../../lib/circuit-breaker";
+import { shouldAttemptFetch, recordOutcomeSafe, recoverBreakerOnNoCandidateSafe } from "../../lib/circuit-breaker";
 import { mapWithConcurrency } from "../../lib/concurrency";
 import { decodeCurrentReserveNavPrice, isReserveNavPriceSource, RESERVE_NAV_PRICE_SOURCES, type ReserveNavSnapshotRow } from "../../lib/reserve-nav-price";
 import { throwIfAborted } from "../../lib/abort";
@@ -528,13 +528,13 @@ export async function collectPrimaryProviderQuotes(params: {
   // there is nothing to probe, so mirror the Jupiter pass and coax an
   // open/half-open breaker toward closed instead of leaving it stuck.
   if (krakenSymbols.length === 0) {
-    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.KRAKEN_PRICES));
+    fetches.push(() => recoverBreakerOnNoCandidateSafe(db, CIRCUIT_SOURCE.KRAKEN_PRICES));
   }
   if (!shouldFetchBitstamp) {
-    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.BITSTAMP_PRICES));
+    fetches.push(() => recoverBreakerOnNoCandidateSafe(db, CIRCUIT_SOURCE.BITSTAMP_PRICES));
   }
   if (coinbaseSymbols.length === 0) {
-    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.COINBASE_PRICES));
+    fetches.push(() => recoverBreakerOnNoCandidateSafe(db, CIRCUIT_SOURCE.COINBASE_PRICES));
   }
 
   if (sourceAllowed.curve && CURVE_POOL_CONFIGS.length > 0) {
@@ -551,7 +551,7 @@ export async function collectPrimaryProviderQuotes(params: {
       }),
     );
   } else if (CURVE_POOL_CONFIGS.length === 0) {
-    fetches.push(() => recoverBreakerOnNoCandidate(db, CIRCUIT_SOURCE.CURVE_ONCHAIN));
+    fetches.push(() => recoverBreakerOnNoCandidateSafe(db, CIRCUIT_SOURCE.CURVE_ONCHAIN));
   }
 
   if (sourceAllowed.curveOracle) {
