@@ -1343,6 +1343,50 @@ const liquityNativeActivePoolParamsSchema = z
   })
   .strict();
 
+// A Monolith Lender instance owns one immutable reserve roster: the collateral
+// token and the PSM asset/vault pair. Every address, label and classification is
+// reviewed config, so one adapter can bind another instance (invUSD) without
+// code changes. `psmAssetUnitValueUsd` is the reviewed par value of one whole PSM
+// asset unit: the sell rail pays it 1:1 and the adapter never looks up a price.
+const monolithLenderCollateralSchema = z
+  .object({
+    ...EvmAddressFields,
+    decimals: z.number().int().nonnegative().max(36),
+    name: z.string(),
+    ...TrackedExposureFields,
+  })
+  .strict();
+
+const monolithLenderPsmAssetSchema = z
+  .object({
+    ...EvmAddressFields,
+    decimals: z.number().int().nonnegative().max(36),
+    name: z.string(),
+  })
+  .strict();
+
+const monolithLenderPsmVaultSchema = z
+  .object({
+    ...EvmAddressFields,
+    name: z.string(),
+    ...TrackedExposureFields,
+  })
+  .strict();
+
+const monolithLenderParamsSchema = z
+  .object({
+    lenderAddress: EvmAddressSchema,
+    collateral: monolithLenderCollateralSchema,
+    psmAsset: monolithLenderPsmAssetSchema,
+    psmVault: monolithLenderPsmVaultSchema,
+    psmAssetUnitValueUsd: z.number().finite().positive().max(10),
+    /** Canonical tracked id the PSM sell pays out, emitted as the route output identity. */
+    redemptionOutputAssetKey: z.string().trim().min(1),
+    ...RequiredSourceUrlsFields,
+    ...OptionalEvmRpcFields,
+  })
+  .strict();
+
 const originVaultAssetSchema = z
   .object({
     ...EvmAddressFields,
@@ -2840,6 +2884,22 @@ export const LIVE_RESERVE_ADAPTER_DESCRIPTOR_DECLARATIONS = {
     configValidation: CONFIG_COLLATERAL_V1,
     redemptionTelemetry: NO_REDEMPTION_TELEMETRY,
     validation: LATEST_STATE_WITH_UNKNOWN_CAP_VALIDATION,
+  },
+  // One pinned Multicall batch reads the Lender's immutable wiring, both
+  // holdings, the protocol oracle and the debt/supply counters; the PSM sell
+  // capacity is the Lender's own freePsmAssets accounting, cross-bounded by the
+  // sUSDS payout ceiling, so both capacity and the 0 bps fee are direct same-run
+  // measurements rather than a proxy for the CDP collateral.
+  "monolith-lender": {
+    primaryInputKinds: ["onchain-evm"],
+    paramsSchema: monolithLenderParamsSchema,
+    sourceModel: "dynamic-mix",
+    evidenceClass: "independent",
+    preferredFreshnessMode: "not-applicable",
+    sharedSourceMode: "none",
+    configValidation: CONFIG_COLLATERAL_V1,
+    redemptionTelemetry: DIRECT_CAPACITY_CURRENT_FEE_TELEMETRY,
+    validation: LATEST_STATE_VALIDATION,
   },
   "nest-vault-positions": {
     primaryInputKinds: ["http-json"],

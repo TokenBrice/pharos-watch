@@ -6,7 +6,7 @@
     "methodologyLabel": "safety-score v10.36 | dews v6.38 | liquidity v6.98",
     "freshnessContract": "point-in-time sample; not guaranteed to track production freshness",
     "displayProjection": {
-      "version": 1,
+      "version": 2,
       "snapshotDate": "2026-10-28",
       "capturedAtSec": 1793174453,
       "sourceSnapshotPath": "/api/snapshots/2026-10-28.json",
@@ -53,7 +53,9 @@
           ]
         }
       },
-      "safetyUnavailableReason": null
+      "safetyUnavailableReason": null,
+      "openEvidence": null,
+      "openEvidenceUnavailableReason": "open-evidence-unavailable"
     },
     "rowCount": 625
   },

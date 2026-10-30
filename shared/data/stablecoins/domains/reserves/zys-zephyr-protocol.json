@@ -20,25 +20,29 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-10",
-    "reviewer": "Sol curation campaign 2026-10-11 (L32ZSD)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sol curation campaign 2026-10-29 (R-COMP-4)",
     "confidence": "verified",
     "sources": [
       {
-        "label": "Zephyr reserve snapshot captured 2026-10-10T18:47:02.883Z at height 882485; observed 2026-10-10T23:28:46Z",
+        "label": "Zephyr reserve snapshot captured 2026-10-17T15:17:42.772Z at height 887405; observed 2026-10-29",
         "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       },
       {
         "label": "Zephyr Protocol pinned native yield-price calculation",
         "url": "https://github.com/ZephyrProtocol/zephyr/blob/67c5f53b878fef41fb5e74c4382d5b7a2f37fd8a/src/cryptonote_core/cryptonote_tx_utils.cpp#L1090-L1114"
+      },
+      {
+        "label": "Zephyr reserve snapshot captured 2026-10-10T18:47:02.883Z at height 882485; observed 2026-10-10T23:28:46Z",
+        "url": "https://zephyrprotocol.com/api/v1/reservesnapshots?limit=1&order=desc"
       }
     ],
-    "rationale": "The complete native yield reserve in the primary scanner snapshot at height 882485, captured 2026-10-10T18:47:02.883Z, is 321880805512181821 ZSD atoms, or 321,880.805512181821 ZSD at 10^12 atoms per unit. That same amount is the complete direct-reserve denominator, establishing one 100% ZSD wrapper slice without an inferred residual or changed category. The snapshot also reports 162141293460093467 circulating ZYS atoms and yield_price 1985186500000 atoms. The pinned protocol source calculates the yield price by dividing the ZSD yield reserve by circulating ZYS and truncating the result; this review does not assert exact reserve-to-liability reconciliation or independent explorer corroboration. Underlying ZSD collateral and its unresolved factors stay upstream.",
-    "compositionBasis": "Complete primary native-chain ZSD yield-reserve snapshot at height 882485 and source time 2026-10-10T18:47:02.883Z; 321,880.805512181821 ZSD direct-reserve denominator",
+    "rationale": "The complete native yield reserve in the newest published scanner snapshot at height 887405, captured 2026-10-17T15:17:42.772Z, is 317174052391262472 ZSD atoms, or 317,174.0523912624 ZSD at 10^12 atoms per unit. That same amount is the complete direct-reserve denominator, establishing one 100% ZSD wrapper slice without an inferred residual or changed category. The snapshot also reports 159541897460093467 circulating ZYS atoms (159,541.8974600935 ZYS) and yield_price 1988029270000 atoms. The pinned protocol source calculates the yield price by dividing the ZSD yield reserve by circulating ZYS and truncating the result; the snapshot's own yield_price is 1988029270000 atoms, which is 0.0003% below the ratio of the two balances reported in the same snapshot, so the published price is not recomputed or rounded here. This review does not assert exact reserve-to-liability reconciliation or independent explorer corroboration. The single-slice composition is unchanged from the October 10 review; only the reserve balance, circulating ZYS and yield price moved. Underlying ZSD collateral and its unresolved factors stay upstream.",
+    "compositionBasis": "Complete primary native-chain ZSD yield-reserve snapshot at height 887405 and source time 2026-10-17T15:17:42.772Z; 317,174.0523912624 ZSD direct-reserve denominator",
     "scope": "full-composition",
     "knownUnknownExposure": "No additional direct ZYS reserve slice is identified; underlying ZSD backing remains the upstream asset's reserve question.",
     "knownUnknownExposurePct": 0,
-    "compositionAsOf": "2026-10-10"
+    "compositionAsOf": "2026-10-17"
   },
   "custodyProfile": {
     "providers": [

@@ -18,10 +18,18 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-10",
-    "reviewer": "Sol curation campaign 2026-10-11 (L71DOLA)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sol curation campaign 2026-10-29 (R-COMP-4)",
     "confidence": "verified",
     "sources": [
+      {
+        "label": "Gold Token SA live DGLD network reconciliation, observed 2026-10-29; reconciliation checkpoints 2026-10-29T12:00:01.197Z (Ethereum), 12:00:14.562Z (Base) and 12:00:36.906Z (Solana)",
+        "url": "https://production-gold-mapper-backend.onrender.com/v1/networks"
+      },
+      {
+        "label": "Gold Token SA live allocated PAMP bar registry, observed 2026-10-29; six live bars totalling 2411.955 fine troy ounces",
+        "url": "https://production-gold-mapper-backend.onrender.com/v1/bars"
+      },
       {
         "label": "Gold Token SA live DGLD network reconciliation, observed 2026-10-10T23:29:57Z; reconciliation checkpoints 2026-10-10",
         "url": "https://production-gold-mapper-backend.onrender.com/v1/networks"
@@ -43,11 +51,11 @@
         "url": "https://files.dgld.ch/reports/2026-09-30-GTSA-Inventory-List.pdf"
       }
     ],
-    "rationale": "Observed 2026-10-10T23:29:57Z: Gold Token SA's network registry identifies the exact catalog Ethereum, Base and Solana deployments and reports matched reconciliation at 2026-10-10T12:00:02.057Z, 2026-10-10T12:00:13.715Z and 2026-10-10T12:00:35.746Z respectively. Token supply equals backedWeight at each checkpoint: 1603.687, 401.159 and 407.109 fine troy ounces, with zero reported gaps. The six live PAMP bars in the bar registry reconcile to those same amounts. MKS PAMP's September 30 inventory lists those six serial-numbered bars and 2411.955 total fine troy ounces, corroborating the unchanged gold-only allocation at that earlier inventory date. The October 10 composition uses the issuer registry's own checkpoint, not a re-dated September report. MKS PAMP is the custodian and issuer parent; its inventory and the issuer registry establish no independent financial assurance or independently verified physical-vault inspection.",
-    "compositionBasis": "Gold Token SA October 10 live registry matches all three catalog deployments to six allocated PAMP gold bars; separately dated MKS PAMP September 30 inventory corroborates bar identity without refreshing report dates",
-    "compositionAsOf": "2026-10-10",
+    "rationale": "Observed 2026-10-29: Gold Token SA's network registry identifies the exact catalog Ethereum, Base and Solana deployments and reports matched reconciliation at 2026-10-29T12:00:01.197Z, 2026-10-29T12:00:14.562Z and 2026-10-29T12:00:36.906Z respectively. Token supply equals backedWeight at each checkpoint: 1603.687, 401.159 and 407.109 fine troy ounces, with zero reported gaps. The same six serial-numbered PAMP bars (C030727, C031037, C035696, C035700, C075714 and C076016) remain live in the bar registry and sum to those same amounts, 2411.955 fine troy ounces in total, so the gold-only allocation is unchanged from the October 10 review and only the observation date moves. MKS PAMP's September 30 inventory remains the last dated refinery publication naming those bars; it corroborates bar identity at that earlier inventory date and is not re-dated here. The composition uses the issuer registry's own October 29 checkpoint throughout. MKS PAMP is the custodian and issuer parent; its inventory and the issuer registry establish no independent financial assurance or independently verified physical-vault inspection.",
+    "compositionBasis": "Gold Token SA October 29 live registry matches all three catalog deployments to six allocated PAMP gold bars totalling 2411.955 fine troy ounces; separately dated MKS PAMP September 30 inventory corroborates bar identity without refreshing report dates",
+    "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
-    "knownUnknownExposure": "All three active network entries report token supply matched to allocated PAMP bar weight with zero gaps at their October 10 reconciliation checkpoints. Independent physical-vault verification and independently audited reserve-to-liability assurance remain unestablished; the affiliated custodian's September 30 inventory is not independent assurance.",
+    "knownUnknownExposure": "All three active network entries report token supply matched to allocated PAMP bar weight with zero gaps at their October 29 reconciliation checkpoints. Independent physical-vault verification and independently audited reserve-to-liability assurance remain unestablished; the affiliated custodian's September 30 inventory is not independent assurance.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {

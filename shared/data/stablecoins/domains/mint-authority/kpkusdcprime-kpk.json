@@ -819,88 +819,76 @@
         },
         {
           "controlRef": "ethereum:0xb11fabcf8024a1961bde291a4ddd128bb3a8ae60",
-          "question": "At Ethereum block 26197528 after A1/A2, rebalancer root allocate/deallocate remains wildcard call-only; legacy reallocate is revoked. Legacy target clearance is zero for all three agent roles. The earlier allocator-appointment and live legacy-agent-grant findings are resolved at this pin, not proof of complete closure. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof.",
+          "question": "At Ethereum block 26197528 after A1/A2, rebalancer root allocate/deallocate remains wildcard call-only; legacy reallocate is revoked. Legacy target clearance is zero for all three agent roles. The earlier allocator-appointment and live legacy-agent-grant findings are resolved at this pin, not proof of complete closure. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof. Fresh re-read at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z: controller 0xb11fabcf8024a1961bde291a4ddd128bb3a8ae60 still has no code (no EIP-7702 delegation); VaultV2 0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6 still reports owner 0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537 and curator 0xf8182e5827c06a47a985ec565a3bcd56437a97be, adaptersLength=1 and adapterRegistry 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e; the selector census is unchanged (setIsAllocator 0s; receiveShares/receiveAssets/sendShares gate setters 604801s and abdicated; setSendAssetsGate live at 604801s; setAdapterRegistry abdicated); Roles module 0xd5b66fd462b46b9a08c427ddaf7dc50c05a8df7d is still the EIP-1167 clone of implementation 0x9646fdad06d3e24444381f44362a3b0eb343d337 with avatar, target and owner all set to the curator Safe; and KPK's changelog (accessed 2026-10-29, newest entry 2026-10-28) records no role or agent-permission change for this vault after 2026-10-15. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "KPK signer architecture, issuer-documented signing practices; accessedAt 2026-10-15 (not per-address custody attestation)",
-              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
-            },
-            {
-              "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; Q1 and §A retained in review packet, linked architecture is public corroboration, not the response",
-              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture"
-            },
-            {
-              "label": "Ethereum block 26197528, hash 0xca3ae3bc152678a874a3348efd9b5cb67ad80d34f0d7849f8165a8c82636b6f4, timestamp 2026-10-15T11:11:11Z; Roles scope headers/condition bytecode/legacy clearance and Safe owners/threshold/modules/slots, observed 2026-10-15T19:03:18.503Z–19:03:57.363Z",
+              "label": "VaultV2, Roles and controller reads at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z",
               "url": "https://eth-mainnet.g.alchemy.com/v2/"
             },
             {
-              "label": "Executed A1 ScopeFunction and A2 RevokeFunction/RevokeTarget, Ethereum block 26197520, 2026-10-15T11:09:35.000Z; successful pinned receipt independently decoded 2026-10-15",
-              "url": "https://eth.blockscout.com/api/v2/transactions/0xd93d600b511abf6dfcda3ab13b7018ded5100bab7b232f89bbb09878df0bc16b"
+              "label": "KPK signer architecture, issuer-documented signing practices (not per-address custody attestation)",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
             },
             {
-              "label": "KPK changelog, 15 October 2026 Multiple vaults: A1/A2 execution; accessedAt 2026-10-15",
+              "label": "KPK changelog, accessed 2026-10-29 (newest entry 2026-10-28); no role change for these vaults after 2026-10-15",
               "url": "https://docs.kpk.io/changelog/readme.md"
+            },
+            {
+              "label": "Executed A1/A2 scope and revocation transaction, independently decoded 2026-10-15",
+              "url": "https://eth.blockscout.com/api/v2/transactions/0xd93d600b511abf6dfcda3ab13b7018ded5100bab7b232f89bbb09878df0bc16b"
             }
           ]
         },
         {
           "controlRef": "ethereum:0xc9efbf808c8d1e853c6671a13a06826543d3d94c",
-          "question": "At Ethereum block 26197528 after A1/A2, shutdown root allocate/deallocate/cap-decrease remains wildcard call-only; legacy reallocate/submitCap/updateWithdrawQueue is revoked. Legacy target clearance is zero for all three agent roles. The earlier allocator-appointment and live legacy-agent-grant findings are resolved at this pin, not proof of complete closure. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof.",
+          "question": "At Ethereum block 26197528 after A1/A2, shutdown root allocate/deallocate/cap-decrease remains wildcard call-only; legacy reallocate/submitCap/updateWithdrawQueue is revoked. Legacy target clearance is zero for all three agent roles. The earlier allocator-appointment and live legacy-agent-grant findings are resolved at this pin, not proof of complete closure. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof. Fresh re-read at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z: controller 0xc9efbf808c8d1e853c6671a13a06826543d3d94c still has no code (no EIP-7702 delegation); VaultV2 0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6 still reports owner 0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537 and curator 0xf8182e5827c06a47a985ec565a3bcd56437a97be, adaptersLength=1 and adapterRegistry 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e; the selector census is unchanged (setIsAllocator 0s; receiveShares/receiveAssets/sendShares gate setters 604801s and abdicated; setSendAssetsGate live at 604801s; setAdapterRegistry abdicated); Roles module 0xd5b66fd462b46b9a08c427ddaf7dc50c05a8df7d is still the EIP-1167 clone of implementation 0x9646fdad06d3e24444381f44362a3b0eb343d337 with avatar, target and owner all set to the curator Safe; and KPK's changelog (accessed 2026-10-29, newest entry 2026-10-28) records no role or agent-permission change for this vault after 2026-10-15. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "KPK signer architecture, issuer-documented signing practices; accessedAt 2026-10-15 (not per-address custody attestation)",
-              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
-            },
-            {
-              "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; Q1 and §A retained in review packet, linked architecture is public corroboration, not the response",
-              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture"
-            },
-            {
-              "label": "Ethereum block 26197528, hash 0xca3ae3bc152678a874a3348efd9b5cb67ad80d34f0d7849f8165a8c82636b6f4, timestamp 2026-10-15T11:11:11Z; Roles scope headers/condition bytecode/legacy clearance and Safe owners/threshold/modules/slots, observed 2026-10-15T19:03:18.503Z–19:03:57.363Z",
+              "label": "VaultV2, Roles and controller reads at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z",
               "url": "https://eth-mainnet.g.alchemy.com/v2/"
             },
             {
-              "label": "Executed A1 ScopeFunction and A2 RevokeFunction/RevokeTarget, Ethereum block 26197520, 2026-10-15T11:09:35.000Z; successful pinned receipt independently decoded 2026-10-15",
-              "url": "https://eth.blockscout.com/api/v2/transactions/0xd93d600b511abf6dfcda3ab13b7018ded5100bab7b232f89bbb09878df0bc16b"
+              "label": "KPK signer architecture, issuer-documented signing practices (not per-address custody attestation)",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
             },
             {
-              "label": "KPK changelog, 15 October 2026 Multiple vaults: A1/A2 execution; accessedAt 2026-10-15",
+              "label": "KPK changelog, accessed 2026-10-29 (newest entry 2026-10-28); no role change for these vaults after 2026-10-15",
               "url": "https://docs.kpk.io/changelog/readme.md"
+            },
+            {
+              "label": "Executed A1/A2 scope and revocation transaction, independently decoded 2026-10-15",
+              "url": "https://eth.blockscout.com/api/v2/transactions/0xd93d600b511abf6dfcda3ab13b7018ded5100bab7b232f89bbb09878df0bc16b"
             }
           ]
         },
         {
           "controlRef": "ethereum:0x3e1c3f4bef3b61ebb497e333c540b0ae19f97935",
-          "question": "At Ethereum block 26197528 after A1/A2, monitoring submit is now restricted to setForceDeallocatePenalty on its own adapter at <=2e16 (2%); direct penalty/liquidity setters remain wildcard call-only. Legacy target clearance is zero for all three agent roles. The earlier allocator-appointment and live legacy-agent-grant findings are resolved at this pin, not proof of complete closure. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof.",
+          "question": "At Ethereum block 26197528 after A1/A2, monitoring submit is now restricted to setForceDeallocatePenalty on its own adapter at <=2e16 (2%); direct penalty/liquidity setters remain wildcard call-only. Legacy target clearance is zero for all three agent roles. The earlier allocator-appointment and live legacy-agent-grant findings are resolved at this pin, not proof of complete closure. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof. Fresh re-read at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z: controller 0x3e1c3f4bef3b61ebb497e333c540b0ae19f97935 still has no code (no EIP-7702 delegation); VaultV2 0x4ef53d2caa51c447fdfeeedee8f07fd1962c9ee6 still reports owner 0x8b884f80b3b839f52b6ce168f133e7a5d1f0a537 and curator 0xf8182e5827c06a47a985ec565a3bcd56437a97be, adaptersLength=1 and adapterRegistry 0x3696c5eae4a7ffd04ea163564571e9cd8ed9364e; the selector census is unchanged (setIsAllocator 0s; receiveShares/receiveAssets/sendShares gate setters 604801s and abdicated; setSendAssetsGate live at 604801s; setAdapterRegistry abdicated); Roles module 0xd5b66fd462b46b9a08c427ddaf7dc50c05a8df7d is still the EIP-1167 clone of implementation 0x9646fdad06d3e24444381f44362a3b0eb343d337 with avatar, target and owner all set to the curator Safe; and KPK's changelog (accessed 2026-10-29, newest entry 2026-10-28) records no role or agent-permission change for this vault after 2026-10-15. What closes all mutable permission/unwrapper-owner, Safe signature/delegate/fallback/reconfiguration, pending-change/reactivation and affected-liability paths for this exact controller? A full executionScope certificate remains inadmissible; software-key service operator/recovery facts are still issuer-described, not signed exact-controller custody proof.",
           "subject": "execution-scope",
-          "reviewedAt": "2026-10-15",
-          "reviewer": "Control, KPK questionnaire follow-up 2026-10-15",
+          "reviewedAt": "2026-10-29",
+          "reviewer": "Pharos R-SCOPE-3 renewal 2026-10-29",
           "sources": [
             {
-              "label": "KPK signer architecture, issuer-documented signing practices; accessedAt 2026-10-15 (not per-address custody attestation)",
-              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
-            },
-            {
-              "label": "KPK questionnaire response, 2026-10-14/15, issuer statement; Q1 and §A retained in review packet, linked architecture is public corroboration, not the response",
-              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture"
-            },
-            {
-              "label": "Ethereum block 26197528, hash 0xca3ae3bc152678a874a3348efd9b5cb67ad80d34f0d7849f8165a8c82636b6f4, timestamp 2026-10-15T11:11:11Z; Roles scope headers/condition bytecode/legacy clearance and Safe owners/threshold/modules/slots, observed 2026-10-15T19:03:18.503Z–19:03:57.363Z",
+              "label": "VaultV2, Roles and controller reads at Ethereum block 26300200, hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, timestamp 2026-10-29T18:29:47Z",
               "url": "https://eth-mainnet.g.alchemy.com/v2/"
             },
             {
-              "label": "Executed A1 ScopeFunction and A2 RevokeFunction/RevokeTarget, Ethereum block 26197520, 2026-10-15T11:09:35.000Z; successful pinned receipt independently decoded 2026-10-15",
-              "url": "https://eth.blockscout.com/api/v2/transactions/0xd93d600b511abf6dfcda3ab13b7018ded5100bab7b232f89bbb09878df0bc16b"
+              "label": "KPK signer architecture, issuer-documented signing practices (not per-address custody attestation)",
+              "url": "https://docs.kpk.io/vaults/infrastructure/signer-architecture.md"
             },
             {
-              "label": "KPK changelog, 15 October 2026 Multiple vaults: A1/A2 execution; accessedAt 2026-10-15",
+              "label": "KPK changelog, accessed 2026-10-29 (newest entry 2026-10-28); no role change for these vaults after 2026-10-15",
               "url": "https://docs.kpk.io/changelog/readme.md"
+            },
+            {
+              "label": "Executed A1/A2 scope and revocation transaction, independently decoded 2026-10-15",
+              "url": "https://eth.blockscout.com/api/v2/transactions/0xd93d600b511abf6dfcda3ab13b7018ded5100bab7b232f89bbb09878df0bc16b"
             }
           ]
         }

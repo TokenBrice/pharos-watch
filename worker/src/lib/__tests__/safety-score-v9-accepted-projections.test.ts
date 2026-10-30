@@ -4,7 +4,7 @@ import * as structuredLog from "../structured-log";
 import { sha256Hex } from "@shared/lib/sha256";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
-import { admitAndSerializeSafetyScoreV9Publication, parseSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
+import { admitAndSerializeSafetyScoreV9Publication, parseSafetyScoreV9Publication, requireCurrentSafetyScoreV9Publication } from "../safety-score-v9/publication-codec";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 import {
   buildSafetyScoreV9AcceptedBaselineProjection, buildSafetyScoreV9AcceptedProjections,
@@ -87,7 +87,7 @@ describe("Safety Score V9 accepted projection writers", () => {
     const { publication, stored } = await admitAndSerializeSafetyScoreV9Publication(input);
     expect(publication.cards[0]!.pillars.backing.supportedComponentKeys).toEqual(["a-normalized", "z-normalized"]);
     expect(input.cards[0]!.pillars.backing.supportedComponentKeys).toEqual(["z-normalized", "a-normalized"]);
-    const decoded = await parseSafetyScoreV9Publication(stored);
+    const decoded = requireCurrentSafetyScoreV9Publication(await parseSafetyScoreV9Publication(stored));
     const written = buildSafetyScoreV9LenderCollateralProjection(publication);
     expect(written.byAssetId[publication.cards[0]!.id]!.cardSha256).toBe(sha256Hex(stableJsonStringifyV1(decoded.cards[0])));
     expect(buildSafetyScoreV9LenderCollateralProjection(decoded)).toEqual(written);

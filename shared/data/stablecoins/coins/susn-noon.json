@@ -14,7 +14,7 @@
   "variantOf": "usn-noon",
   "variantKind": "savings-passthrough",
   "pegReferenceId": "usn-noon",
-  "collateral": "USN deposited into Noon's staking wrapper; backing inherits Noon's Accountable-disclosed private credit, CLO, DeFi lending, principal-token, and Treasury-bill reserve mix",
+  "collateral": "USN deposited into Noon's staking wrapper; backing inherits the Accountable-disclosed private credit, funding-rate arbitrage, CLO, DeFi lending, and Treasury-bill reserve mix",
   "pegMechanism": "Stake USN to receive sUSN; sUSN appreciates against USN as Noon strategy yield accrues, while final exits inherit Noon's 1:1 USN mint/redeem and reserve-liquidity constraints",
   "detailProvider": "coingecko",
   "geckoId": "staked-usn",

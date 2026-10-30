@@ -9885,44 +9885,62 @@
       "rationale": "Exact missing datum: maximum maturity days of nBASIS's USCC and USTB fund-share claims, not futures/T-bills in their underlying portfolios. Public issuer fund pages, current holdings, legal risk disclosures and investor dealing docs identify rolling NAV shares with liquidity schedules, not a hard termination/maturity maximum. Definitive investor documents are supplied privately through the Investor Portal; no public claim-level maximum was located. Do not use a Treasury holding maturity or WAM as a share maturity."
     },
     {
-      "id": "uw-nopal-nest-6dd90e76d5279677",
+      "id": "pf-e1-1-nopal-nest-cost-20261029",
       "assetId": "nopal-nest",
       "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
         "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nopal-nest:queue-redeem"
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:c75c4603-75cb-401c-b4c8-0443d02c0a37:redemption:nopal-nest:queue-redeem",
+        "exposureId": null,
+        "requiredDatum": "cost"
       },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:56:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T18:45:42Z",
+      "reviewer": "PF-E1-1 route-terms curation 2026-10-29",
       "sourcesRefs": [
-        "source:108536bd5365a0385a273a4d",
-        "source:62d02f2dc01112a3dadaa30a"
-      ]
+        "source:bc11c90ac7fe480a2e4b7ff6",
+        "source:728e37d0e3a28d26377cb9f8",
+        "source:0a80f341162973ac13eb5bdb",
+        "source:70acc50aba5c9ef04240b97f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:716861cd6930c2d41a2223d9",
+        "surface:ca85159c95fa5debdfda4ff8",
+        "surface:098a08cd3a97f2c6a38c08c6",
+        "surface:aeccb1f184f8de4da75657ac"
+      ],
+      "rationale": "The queued nOPAL fee is a configuration-driven percentage plus flat amount; the single observed Plume pUSD quote returns ratePpm 150 and no published schedule covers other chains or outputs. The only ceiling is the mutable per-vault maxFees rate bounded by the 20% FEE_CAP constant. Nest publishes no all-in bound, so the same-notional cost datum is not established."
     },
     {
-      "id": "uw-nbasis-nest-4249c0717ef50632",
+      "id": "pf-e1-1-nbasis-nest-cost-20261029",
       "assetId": "nbasis-nest",
       "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
         "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:nbasis-nest:queue-redeem"
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:c75c4603-75cb-401c-b4c8-0443d02c0a37:redemption:nbasis-nest:queue-redeem",
+        "exposureId": null,
+        "requiredDatum": "cost"
       },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T22:56:50Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R62)",
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T18:45:42Z",
+      "reviewer": "PF-E1-1 route-terms curation 2026-10-29",
       "sourcesRefs": [
-        "source:25fbe5a5e3cf2803c5f68ef6",
-        "source:fcd8d3f90fc9f7c72bbf4030"
-      ]
+        "source:bc11c90ac7fe480a2e4b7ff6",
+        "source:b1c0e4a119b8e09bd6d1f789",
+        "source:0a80f341162973ac13eb5bdb",
+        "source:70acc50aba5c9ef04240b97f"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:716861cd6930c2d41a2223d9",
+        "surface:c6772c61e115a2414b66ffb4",
+        "surface:098a08cd3a97f2c6a38c08c6",
+        "surface:aeccb1f184f8de4da75657ac"
+      ],
+      "rationale": "The queued nBASIS fee is a configuration-driven percentage plus flat amount. The only numeric ceiling is the mutable per-vault maxFees rate, itself bounded by the contract's 20% FEE_CAP, and the observed quote returns zero for one Plume pUSD request. Nest publishes no fee schedule or unconditional all-in bound, so no same-notional cost datum can be authored without inventing one."
     },
     {
       "id": "uw-euro3-3a-dao-321c4878ade1384d",
@@ -11437,24 +11455,29 @@
       "rationale": "The exact whole-slice liquidityHorizon for Mento's AUSD is not disclosed. Agora publishes par redemption, verified-customer requirements and 48/96-business-hour aims with delay/in-kind discretion, not final maximum delivery. Mento's API includes Ethereum wallets plus Monad wallet/FPMM positions without a whole-position unwind bound. Instant token transfers or authenticated pair quotes cannot prove the entire position immediately realizable."
     },
     {
-      "id": "uw-scusd-rings-9c76af91f44a6436",
+      "id": "pf-e1-1-scusd-rings-cost-20261029",
       "assetId": "scusd-rings",
       "scope": {
-        "componentKey": "exit-route",
-        "exposureId": null,
-        "factorKey": "cost",
         "pillar": "exit",
-        "requiredDatum": "cost",
-        "routeKey": "redemption:redemption:ef133b3f-d928-4538-91a2-afbec72172c6:redemption:scusd-rings:queue-redeem"
+        "componentKey": "exit-route",
+        "factorKey": "cost",
+        "routeKey": "redemption:redemption:c75c4603-75cb-401c-b4c8-0443d02c0a37:redemption:scusd-rings:queue-redeem",
+        "exposureId": null,
+        "requiredDatum": "cost"
       },
-      "cause": "B",
-      "assertion": "required-data-public",
-      "reviewedAt": "2026-10-03T23:08:26Z",
-      "reviewer": "Unknown-resolver wave 2026-10-04 (W1R95)",
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T18:45:42Z",
+      "reviewer": "PF-E1-1 route-terms curation 2026-10-29",
       "sourcesRefs": [
-        "source:3bea7283af3ae120e34758e9",
-        "source:b400c7a1a05189f113216a00"
-      ]
+        "source:58985b8c89349624e04e43e8",
+        "source:21c37c7590aa5683af01f0b1"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:8e938d28d91fb58b1dbf60e0",
+        "surface:d71d3b18104ca359a753af12"
+      ],
+      "rationale": "The scUSD exit cost is a requester-selected queue discount applied to the live accountant rate. The verified queue caps the discount at 3000 bps and stores per-asset min/max discount configuration, but the issuer publishes no redemption-fee schedule, no per-notional quote terms and no all-in bound covering the accountant rate plus discount. Those protocol ceilings are not an authored cost bound, so a same-notional cost datum is not established by current public material."
     },
     {
       "id": "uw-scusd-rings-f6e6af250e0bc58c",
@@ -19048,28 +19071,27 @@
       "id": "uw-cngn-compliant-naira-b60ac9ca151ca5d1",
       "assetId": "cngn-compliant-naira",
       "scope": {
-        "componentKey": "reserve-composition",
-        "exposureId": null,
-        "factorKey": null,
         "pillar": "backing",
-        "requiredDatum": "reserve-composition",
-        "routeKey": null
+        "componentKey": "reserve-composition",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reserve-composition"
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-09T10:35:46Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane24Naira)",
+      "reviewedAt": "2026-10-29T18:45:57Z",
+      "reviewer": "SprintRS002 research sprint 2026-10-29 (RS-002)",
       "sourcesRefs": [
-        "source:f4fdffebb9357b3c8a3e1e90",
-        "source:c28d1e0a5e5fdd36fca91db5"
+        "source:e8efbd394714f5057ec0095b",
+        "source:b4e364bea28f40738aa0d8fd"
       ],
-      "rationale": "The August 31 report publishes the measured reserve categories and assets/liabilities examination, but its practitioner signature on page 5 and management signature on page 7 are undated. The cover and report-period dates identify the measurement, not publication or execution. Current issuer transparency lists dated smart-contract audits without the financial report publication/signing event. Required admissible financial-report chronology is therefore researched non-disclosure. The report remains public; no absence of financial reporting, adverse assurance grade, publication date, or refreshed composition is inferred.",
       "searchedSurfacesRefs": [
-        "surface:46b9a5c1378fe9481b52abe4",
+        "surface:7d2c325ec6d1d2feeee7779f",
         "surface:65030695bae36f6b5a96e342",
-        "surface:3332ce334722d07f09404bc7",
-        "surface:05f33617dd12fde3b922ad6f"
-      ]
+        "surface:c5501d27eade6584ac0311fd"
+      ],
+      "rationale": "The September 30, 2026 ISAE 3000 examination publishes the measured whole-book composition (48% MMFs, 28% Treasury/OMO bills, 13% bank deposits, 11% fixed-term placements) and per-chain circulating liabilities, but its practitioner and management signature blocks are undated and the issuer's monthly archive exposes only bare month labels. No signed, executed, or published date exists for the financial report, so named-report chronology admission is not established. The composition remains authored as measured report context in reserves[]; this classification records the unresolved publication-chronology datum, not absence of reporting or a refreshed composition. Refreshed with the September report observed 2026-10-29, replacing the August-report search of 2026-10-09."
     },
     {
       "id": "uw-usdk-kast-f8429a4fab0c2c94",
@@ -25622,28 +25644,27 @@
       "id": "uw-cngn-compliant-naira-b06c845d2394a17c",
       "assetId": "cngn-compliant-naira",
       "scope": {
-        "componentKey": "mechanism-review:assuranceAndReconciliation",
-        "exposureId": null,
-        "factorKey": null,
         "pillar": "backing",
-        "requiredDatum": "mechanism-review:assuranceAndReconciliation",
-        "routeKey": null
+        "componentKey": "mechanism-review:assuranceAndReconciliation",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "mechanism-review:assuranceAndReconciliation"
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-09T10:35:46Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane24Naira)",
+      "reviewedAt": "2026-10-29T18:45:57Z",
+      "reviewer": "SprintRS002 research sprint 2026-10-29 (RS-002)",
       "sourcesRefs": [
-        "source:f4fdffebb9357b3c8a3e1e90",
-        "source:c28d1e0a5e5fdd36fca91db5"
+        "source:e8efbd394714f5057ec0095b",
+        "source:b4e364bea28f40738aa0d8fd"
       ],
-      "rationale": "The August 31 report publishes the measured reserve categories and assets/liabilities examination, but its practitioner signature on page 5 and management signature on page 7 are undated. The cover and report-period dates identify the measurement, not publication or execution. Current issuer transparency lists dated smart-contract audits without the financial report publication/signing event. Required admissible financial-report chronology is therefore researched non-disclosure. The report remains public; no absence of financial reporting, adverse assurance grade, publication date, or refreshed composition is inferred.",
       "searchedSurfacesRefs": [
-        "surface:46b9a5c1378fe9481b52abe4",
+        "surface:7d2c325ec6d1d2feeee7779f",
         "surface:65030695bae36f6b5a96e342",
-        "surface:3332ce334722d07f09404bc7",
-        "surface:05f33617dd12fde3b922ad6f"
-      ]
+        "surface:c5501d27eade6584ac0311fd"
+      ],
+      "rationale": "The September 30, 2026 ISAE 3000 examination compares NGN4,209,411,443.67 of reserve assets with NGN3,953,275,819.97 of circulating cNGN and reports an unqualified conclusion, but neither the engagement-partner block (p.5) nor the management assertion block (p.7) carries a date or execution stamp, and the issuer archive publishes no report-release date. Publication/signing chronology is therefore required-but-undisclosed for the assurance-and-reconciliation component; the measured report itself is not a missing disclosure and no absence or adverse grade is inferred. Refreshed with the September report observed 2026-10-29, replacing the August-report search of 2026-10-09."
     },
     {
       "id": "uw-paxg-paxos-81121d16184fa8cc",
@@ -38017,20 +38038,17 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-09T10:39:24Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (Lane39Nereus)",
+      "reviewedAt": "2026-10-29T18:45:57Z",
+      "reviewer": "SprintRS002 research sprint 2026-10-29 (RS-002)",
       "sourcesRefs": [
-        "source:2299530846462ae56bfe5417",
-        "source:fe89fd4552ebd12725ef8181",
-        "source:6ea0e96b5836350accb2000f"
+        "source:8854643a17c4a64bbdef061a",
+        "source:559285346464dd832cda4bd3"
       ],
       "searchedSurfacesRefs": [
         "surface:c34524eaf2468035261c632e",
-        "surface:408fce9be10981e3615d692c",
-        "surface:fc071255266cc9cdf1ae247e",
-        "surface:a41fe4aea2554e76542307f2"
+        "surface:408fce9be10981e3615d692c"
       ],
-      "rationale": "No current exhaustive common-clock USD-valued NXUSD reserve composition was disclosed on the successfully reviewed issuer landing page, redirected documentation, rendered operational market table or pinned deployment listing. The current fixed input contains no reserve composition. Operational TVL/debt and an old generic 100% basket cannot be substituted for that required datum. This scoped negative search does not assert that reconstruction from complete pinned on-chain markets is impossible, or classify failed bundle retrieval as issuer silence. Existing compositionAsOf and review dates remain unchanged."
+      "rationale": "Re-opened 2026-10-29: the Nereus landing page still markets derivatives trading and NXUSD borrowing/earning, and docs.nereus.finance redirects to that same landing page. No current, common-clock, USD-valued per-market collateral inventory or weights are published; operational TVL/debt marketing and the old aggregate 100% basket cannot substitute for the required composition datum. This replaces the 2026-10-09 classification with a fresh dated search; existing compositionAsOf, review dates and the pinned market census are unchanged."
     },
     {
       "id": "campaign-lane40-inalpha-nest-reserve-composition",
@@ -40318,7 +40336,7 @@
       "rationale": "The exact canonical V2 vault has a documented ERC-7540 request/service/claim flow. Seven days, and the maximum configurable 90-day cooldown, establish eligibility only. Neither the technical reference nor binding terms commit to a finite privileged-servicing completion bound; the terms also permit service fees without a complete holder fee commitment. No finite liquidity horizon, zero-fee commitment or fully known withdrawal-terms assessment is authored."
     },
     {
-      "id": "w4c01-susdx-axis-reserve-liquidity",
+      "id": "rs005-susdx-axis-reserve-liquidity-20261029",
       "assetId": "susdx-axis",
       "scope": {
         "pillar": "backing",
@@ -40330,18 +40348,21 @@
       },
       "cause": "C",
       "assertion": "researched-nondisclosure",
-      "reviewedAt": "2026-10-09T14:20:01Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (W4C01Aave)",
+      "reviewedAt": "2026-10-29T19:10:00Z",
+      "reviewer": "RS-005 research sprint 2026-10-29 (verified issuer surfaces)",
       "sourcesRefs": [
-        "source:ec8a777b4de3f87981d2a164",
-        "source:55ce740b188bddcf075d3aeb"
+        "source:a192544f97254a65281eae1e",
+        "source:e176aba9ee836536364481ea"
       ],
       "searchedSurfacesRefs": [
         "surface:685b9c6acd9b56809a140a1c",
         "surface:4534500ae71236185f333303",
-        "surface:42fad9cf0455b4a5989be01a"
+        "surface:42fad9cf0455b4a5989be01a",
+        "surface:8cee0c860a53a9724d64a9cc",
+        "surface:2ec70fd10634dce674f6d3f9",
+        "surface:98e9e5aff5dac29998955cfb"
       ],
-      "rationale": "The exact canonical V2 vault has a documented ERC-7540 request/service/claim flow. Seven days, and the maximum configurable 90-day cooldown, establish eligibility only. Neither the technical reference nor binding terms commit to a finite privileged-servicing completion bound; the terms also permit service fees without a complete holder fee commitment. No finite liquidity horizon, zero-fee commitment or fully known withdrawal-terms assessment is authored."
+      "rationale": "The required liquidityHorizon is the maximum cash-realization interval for the 100% USDx claim held in the StakedUSDx vault (reserve:55e0da1c02332e0a2e50bb54). Axis publishes a 7-day cooldown, configurable up to 90 days, that establishes request eligibility only: an account holding REDEMPTION_SERVICER_ROLE must service the request before the holder can claim, and binding Terms of Service clause 5.3 disclaims any particular processing timeframe. The primary-market fee and capacity table describes USDx redemption, not the sUSDx queue. The transparency dashboard publishes capital-location shares and illustrative scenarios described as not guarantees or redemption SLAs, and no realization maximum. No finite horizon is published, so the datum remains undisclosed rather than a converted average of the cooldown."
     },
     {
       "id": "w4-W4C02Bilira-tryb-bilira-cost",
@@ -40435,24 +40456,27 @@
       ]
     },
     {
-      "id": "w4-sfrxusd-frax-cost-20261009",
+      "id": "pf-e1-1-sfrxusd-frax-cost-20261029",
       "assetId": "sfrxusd-frax",
       "scope": {
         "pillar": "exit",
         "componentKey": "exit-route",
         "factorKey": "cost",
-        "routeKey": "redemption:redemption:7bfd0c7b-cf0c-4b32-9258-e8492c7f06ab:redemption:sfrxusd-frax:stablecoin-redeem",
+        "routeKey": "redemption:redemption:c75c4603-75cb-401c-b4c8-0443d02c0a37:redemption:sfrxusd-frax:stablecoin-redeem",
         "exposureId": null,
         "requiredDatum": "cost"
       },
-      "reviewedAt": "2026-10-09T14:19:24Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (W4C03First)",
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T18:45:42Z",
+      "reviewer": "PF-E1-1 route-terms curation 2026-10-29",
       "sourcesRefs": [
-        "source:86001d4ee962ed8d7d26c3bf",
-        "source:73c98848c58b3e4a49920b74"
+        "source:74cb3e8e003dbbda64e6b581"
       ],
-      "cause": "B",
-      "assertion": "required-data-public"
+      "searchedSurfacesRefs": [
+        "surface:aee2c05930ca81a2cc819f96"
+      ],
+      "rationale": "The Ethereum sfrxUSD unstake cost is composed of two request-dependent LayerZero native fees plus the Fraxtal MintRedeemer fee. The issuer's own guide publishes only the RemoteHop.quote() call and no maximum for any component, so no all-in same-notional cost bound is disclosed."
     },
     {
       "id": "w4-sfrxusd-frax-settlement-20261009",
@@ -40843,25 +40867,29 @@
       "rationale": "The exact client-redemption rail provides commercially reasonable efforts, discretionary delay/restriction/refusal, and completion only when the transfer is processed and settled. No unconditional elapsed-time maximum to final USD receipt is disclosed. The existing bounded-terms-gap config remains correct; neither network confirmation nor a generic days horizon supplies this datum."
     },
     {
-      "id": "campaign-W4C07Tether-ftusd-flying-tulip-cost",
+      "id": "pf-e1-1-ftusd-flying-tulip-cost-20261029",
       "assetId": "ftusd-flying-tulip",
       "scope": {
         "pillar": "exit",
         "componentKey": "exit-route",
         "factorKey": "cost",
-        "routeKey": "redemption:redemption:7bfd0c7b-cf0c-4b32-9258-e8492c7f06ab:redemption:ftusd-flying-tulip:stablecoin-redeem",
+        "routeKey": "redemption:redemption:c75c4603-75cb-401c-b4c8-0443d02c0a37:redemption:ftusd-flying-tulip:stablecoin-redeem",
         "exposureId": null,
         "requiredDatum": "cost"
       },
-      "reviewedAt": "2026-10-09T14:24:11Z",
-      "reviewer": "Sol curation campaign 2026-10-09 (W4C07Tether)",
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T18:45:42Z",
+      "reviewer": "PF-E1-1 route-terms curation 2026-10-29",
       "sourcesRefs": [
-        "source:d7139cfa9d61f384268d8313",
-        "source:5bd6c6192875967605b708b1",
-        "source:eb112983b058bf8264cba82e"
+        "source:45d82877dabe66e6c498185d",
+        "source:6054ae71d12b2c99c4683906"
       ],
-      "cause": "B",
-      "assertion": "required-data-public"
+      "searchedSurfacesRefs": [
+        "surface:512813742e5a8240c3c0baff",
+        "surface:6124fd71ed9ed3bb9faaffc7"
+      ],
+      "rationale": "Flying Tulip describes the sell flow only at the prevailing rate with in-app, changeable exit parameters. The deployed MintAndRedeem charges a mutable per-collateral redeemFeeBps whose only bound is below 10000 bps; the earlier 7 bps observation is a live parameter, not a published tariff. With no published fee schedule or ceiling the all-in cost stays undisclosed rather than uncurated."
     },
     {
       "id": "campaign-w4t01-apxusd-settlement-20261009",
@@ -44175,6 +44203,64 @@
         "surface:65bbc040ff5ba8450d7a27da"
       ],
       "rationale": "The October 19 2026 complete issuer portfolio replaced the September 25 LLC residual: the former 5.95% mixed-date remainder is gone and only the published 'Other Cash and Cash Equivalents' line ($33,890.48, 0.0014195% of the $2,387,457,833.02 total) is unclassified. Current issuer page payload, basics page and the October LLC attestation archive were re-read. The issuer names the category and exact value but discloses no constituent instrument, obligor, custodian account or share, and the LLC-only attestation cannot itemize the whole-issuer book. This is scoped issuer non-disclosure, not an unsearched Pharos gap. The remainder stays weighted, high-risk and bounded; no instrument, par value or all-USDY liability reconciliation is inferred."
+    },
+    {
+      "id": "v3-oracle-alusd-alchemix-2026-10-29",
+      "assetId": "alusd-alchemix",
+      "scope": {
+        "pillar": "control",
+        "componentKey": "economic-control:oracle",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "economic-control:oracle"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T18:46:00Z",
+      "reviewer": "RS-003 research sprint 2026-10-29",
+      "sourcesRefs": [
+        "source:fddbdb580f6a6d00f8869c4a",
+        "source:b8276c978966662f3594d580",
+        "source:20a9ced60f061a4f6d028829"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:0c1780fa5a8fa1f046baa5cc",
+        "surface:5b5405b2036c964263d32ee8",
+        "surface:440cda7c2ed5f722443e6e3c",
+        "surface:c94199d37a771fd43affb43b",
+        "surface:320042bf2b7c8f39cc38f463"
+      ],
+      "rationale": "The complete current oracle profile for V3 alUSD is not published. The issuer documents that collateral is valued at the MYT share price with a fixed 95% liquidation threshold and that individual strategies are priced either by a fundamental oracle measuring backing against outstanding shares or by an externally priced oracle, but it publishes no per-deployment feed or aggregator identity, heartbeat/deviation bounds, fallback sequence, or manipulability review for the strategy stack, and it states that MYT strategy weights are a mutable point-in-time configuration read from the live app. The tier and branch applicability required for this datum therefore cannot be established from issuer disclosure; asserting a known topology from the published categories would be inference. This classification binds only to the whole-asset oracle profile, not to any single strategy adapter."
+    },
+    {
+      "id": "v3-reserve-composition-alusd-alchemix-2026-10-29",
+      "assetId": "alusd-alchemix",
+      "scope": {
+        "pillar": "backing",
+        "componentKey": "reserve-composition",
+        "factorKey": null,
+        "routeKey": null,
+        "exposureId": null,
+        "requiredDatum": "reserve-composition"
+      },
+      "cause": "C",
+      "assertion": "researched-nondisclosure",
+      "reviewedAt": "2026-10-29T18:46:00Z",
+      "reviewer": "RS-003 research sprint 2026-10-29",
+      "sourcesRefs": [
+        "source:87eac78b4e6349c119b56cd7",
+        "source:7b0438eb785cd22fa280adaf",
+        "source:9c0c0c0897ac19c8aac0f425"
+      ],
+      "searchedSurfacesRefs": [
+        "surface:0c1780fa5a8fa1f046baa5cc:2",
+        "surface:5b5405b2036c964263d32ee8:2",
+        "surface:440cda7c2ed5f722443e6e3c:2",
+        "surface:c94199d37a771fd43affb43b:2",
+        "surface:320042bf2b7c8f39cc38f463:2"
+      ],
+      "rationale": "The exact current alUSD reserve composition is not published. The issuer's docs describe V3 alUSD as backed by USDC-denominated MYT (Morpho Vaults V2 ERC-4626) and state that the exact strategies, weights and allocations inside each MYT are a point-in-time configuration readable only from live app state; the Transmuter docs describe vesting payouts scaled by bad-debt haircuts without any balance reconciliation. No reviewed surface publishes a composition document, per-strategy balance table, legacy V2 residual statement, Transmuter/AMO balance or bridge-custody reconciliation, so a full-composition review cannot be authored from issuer disclosure. The retained rows in the reserve sidecar are a 2026-07-27 V2-aligned selected-slices snapshot that the existing review itself says must not be revived as current edges. This is non-disclosure of a complete published composition, not a producer failure."
     }
   ],
   "sourceObservations": [
@@ -63207,6 +63293,248 @@
         "excerpt": "The reserve description names US Treasuries, iShares Short Treasury Bond ETF shares and bank demand deposits as USDY backing.",
         "assertion": "Issuer reserve disclosure is category-level; it publishes no line-item cash-equivalent instrument list that would classify the residual."
       }
+    },
+    {
+      "id": "source:fddbdb580f6a6d00f8869c4a",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/concepts/liquidations",
+        "observedAt": "2026-10-29T18:45:05Z",
+        "datumAsOf": null,
+        "location": "Liquidations - triggers and thresholds",
+        "excerpt": "Only a fall in the value the MYT reports, such as an exploit, a strategy reporting negative returns, or an oracle-priced strategy (a liquid staking token, for example) trading below its underlying, can push your LTV toward the fixed 95% liquidation threshold.",
+        "assertion": "The issuer names externally priced strategies as a loss channel and fixes a 95% liquidation threshold, but publishes no feed, aggregator, heartbeat, deviation bound or fallback sequence."
+      }
+    },
+    {
+      "id": "source:b8276c978966662f3594d580",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/concepts/myt-and-yield",
+        "observedAt": "2026-10-29T18:45:05Z",
+        "datumAsOf": null,
+        "location": "Mix-Yield Token - strategy risk classification inputs",
+        "excerpt": "Classification is driven by four inputs: how you enter and exit (contract or DEX), how the strategy is priced (fundamental or external oracle), withdrawal duration risk, and other factors such as the age of the strategy or confidence in the team.",
+        "assertion": "Pricing is disclosed only as a category (fundamental NAV priced against outstanding shares, or an externally priced oracle) at the strategy level; no per-strategy oracle identity is published."
+      }
+    },
+    {
+      "id": "source:20a9ced60f061a4f6d028829",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/concepts/myt-and-yield",
+        "observedAt": "2026-10-29T18:45:05Z",
+        "datumAsOf": null,
+        "location": "Mix-Yield Token - composition mutability",
+        "excerpt": "The exact strategies, weights, and allocations inside each MYT are a point-in-time configuration. Always check the live composition, risk tiers, and allocations",
+        "assertion": "The oracle branch inventory cannot be a stable published fact because the DAO can revote strategy weights and the issuer defers exact composition to live app state."
+      }
+    },
+    {
+      "id": "source:87eac78b4e6349c119b56cd7",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/concepts/myt-and-yield",
+        "observedAt": "2026-10-29T18:45:05Z",
+        "datumAsOf": null,
+        "location": "Mix-Yield Token - live composition deferral",
+        "excerpt": "The exact strategies, weights, and allocations inside each MYT are a point-in-time configuration. Always check the live composition, risk tiers, and allocations",
+        "assertion": "The issuer publishes no composition document or per-strategy balance table and points readers to live app state for current weights."
+      }
+    },
+    {
+      "id": "source:7b0438eb785cd22fa280adaf",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/concepts/liquidations",
+        "observedAt": "2026-10-29T18:45:05Z",
+        "datumAsOf": null,
+        "location": "Liquidations - like-kind collateral",
+        "excerpt": "Because loans and collateral are like-kind, with ETH backing alETH and USDC backing alUSD, a move in the price of ETH or USDC does not force positions to close.",
+        "assertion": "The issuer states V3 alUSD is backed by USDC-denominated MYT collateral but publishes no reconciled asset-side composition."
+      }
+    },
+    {
+      "id": "source:9c0c0c0897ac19c8aac0f425",
+      "value": {
+        "url": "https://docs.alchemix.fi/user/concepts/transmuter",
+        "observedAt": "2026-10-29T18:45:05Z",
+        "datumAsOf": null,
+        "location": "Transmuter - payouts and haircuts",
+        "excerpt": "The Transmuter pays out at a 1:1 exchange rate (no market slippage) but works over time as positions vest. Payouts are scaled down only i",
+        "assertion": "Transmuter payouts depend on buffered collateral and bad-debt haircuts; the issuer publishes no Transmuter or AMO balance reconciliation that a whole-asset composition would need."
+      }
+    },
+    {
+      "id": "source:45d82877dabe66e6c498185d",
+      "value": {
+        "url": "https://docs.flyingtulip.com/product-suite/ft-usd/",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "Selling ftUSD",
+        "excerpt": "Convert ftUSD \u2192 input asset at the prevailing rate. Timing and any small exit/cooldown parameters are shown in-app (subject to change with risk settings and network conditions).",
+        "assertion": "Flying Tulip publishes no numeric redemption fee, fee ceiling or exit-cost bound; the sell flow is described only at the prevailing rate with in-app, changeable exit parameters."
+      }
+    },
+    {
+      "id": "source:6054ae71d12b2c99c4683906",
+      "value": {
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x8852B132B72613a16f1E3960978a3d45c0A7c3C6",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "CollateralInfo.redeemFeeBps and fee validation",
+        "excerpt": "uint16 redeemFeeBps; ... if (redeemFeeBps_ >= BPS) revert InvalidFeeBps(redeemFeeBps_);",
+        "assertion": "The deployed fee is a mutable per-collateral uint16 parameter whose only bound is below 10000 bps and which the owner can change; no published schedule or conservative ceiling exists, and the previously observed 7 bps is a pin, not a tariff."
+      }
+    },
+    {
+      "id": "source:8854643a17c4a64bbdef061a",
+      "value": {
+        "url": "https://www.nereus.finance/",
+        "observedAt": "2026-10-29T18:42:00Z",
+        "datumAsOf": null,
+        "location": "Landing page, NXUSD Stablecoin and NXUSD Earn sections; disclaimer",
+        "excerpt": "Earn up to 16% in Stablecoin, when you stake NXUSD in the Nereus Protocol",
+        "assertion": "The issuer landing page still markets derivatives trading, NXUSD borrowing/earning and cross-chain deposits; it publishes no dated per-market collateral inventory, weights, aggregate reserve composition, or common-clock reconciliation."
+      }
+    },
+    {
+      "id": "source:559285346464dd832cda4bd3",
+      "value": {
+        "url": "https://docs.nereus.finance/",
+        "observedAt": "2026-10-29T18:43:00Z",
+        "datumAsOf": null,
+        "location": "docs.nereus.finance redirect target",
+        "excerpt": "Experience the future of derivatives trading on Polygon with Nereus",
+        "assertion": "The documented documentation host redirects to the same marketing landing page, so no separate protocol documentation page publishes a reserve composition."
+      }
+    },
+    {
+      "id": "source:a192544f97254a65281eae1e",
+      "value": {
+        "url": "https://www.axis.to/terms-of-service",
+        "observedAt": "2026-10-29T19:05:00Z",
+        "datumAsOf": "2026-07-26",
+        "location": "Clause 5.3 Processing of Requests",
+        "excerpt": "The Company does not represent or warrant that any request will be accepted, processed or completed within any particular timeframe. ... The duration of any such period may vary from time to time, and the Company does not guarantee that unstaking or redemption requests will be processed immediately.",
+        "assertion": "Binding issuer terms disclaim any maximum processing timeframe for unstaking or redemption requests."
+      }
+    },
+    {
+      "id": "source:e176aba9ee836536364481ea",
+      "value": {
+        "url": "https://docs.axis.to/reference/staking-contracts.md",
+        "observedAt": "2026-10-29T19:06:00Z",
+        "datumAsOf": null,
+        "location": "Redemption controls & policies",
+        "excerpt": "The cooldown is configurable up to MAX_COOLDOWN_DURATION (90 days); the current value is 7 days. ... A REDEMPTION_SERVICER_ROLE holder moves eligible pending requests to CLAIMABLE.",
+        "assertion": "The cooldown establishes request eligibility only; a privileged servicer must act and no completion maximum is published."
+      }
+    },
+    {
+      "id": "source:e8efbd394714f5057ec0095b",
+      "value": {
+        "url": "https://drive.google.com/file/d/1Qj8ZQco2BaT-6a0dOqx7FZOuyuPms_U9/view?usp=drive_link",
+        "observedAt": "2026-10-29T18:28:00Z",
+        "datumAsOf": "2026-09-30",
+        "location": "Cover p.1; Independent Auditor's Report pp.3-5; Management Assertions p.6; cNGN Tokens in Circulation p.7; Notes pp.8-9",
+        "excerpt": "The reporting date is limited to a point in time as of 30th September 2026. We did not perform any procedure or provide assurance at any other date or time in this report.",
+        "assertion": "Full text and both signature blocks were inspected: p.5 names engagement partner Suleiman Garba without any date, p.7 names Managing Director Charles Okaformbah without any date, and p.1 carries only the measurement date. The document is labelled 'Final Report' but establishes no signed or published date; PDF file metadata is not a signed publication event and is not used as one."
+      }
+    },
+    {
+      "id": "source:b4e364bea28f40738aa0d8fd",
+      "value": {
+        "url": "https://www.cngn.co/transparency",
+        "observedAt": "2026-10-29T18:35:00Z",
+        "datumAsOf": null,
+        "location": "Attestation Report section, 2026 tab expanded in the rendered page",
+        "excerpt": "JAN FEB MAR APR MAY JUN JUL AUG SEP OCT",
+        "assertion": "The 2026 archive exposes Google Drive links for January through September only; each is a bare month label with no report date, publication date, or signing event, and the OCT slot has no link. The page separately lists only dated smart-contract audits. No dated financial-report publication event is disclosed."
+      }
+    },
+    {
+      "id": "source:bc11c90ac7fe480a2e4b7ff6",
+      "value": {
+        "url": "https://docs.nest.credit/about/liquidity-and-redemptions",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "Queued (Asynchronous) Redemption",
+        "excerpt": "Queued redemptions are fulfilled through an ordered settlement process as underlying assets are unwound or liquidity becomes available. This pathway does not incur an instant liquidity fee",
+        "assertion": "Nest's current redemption page publishes a 0.1%-0.5% instant-redemption liquidity fee and states the queued pathway incurs no instant liquidity fee. It publishes no queued percentage or flat schedule, no per-notional quote terms and no all-in cost bound."
+      }
+    },
+    {
+      "id": "source:b1c0e4a119b8e09bd6d1f789",
+      "value": {
+        "url": "https://api.nest.credit/v1/actions/vaults/nest-basis-vault/redeem/quote",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
+        "excerpt": "{\"feeAmount\":\"0\",\"fees\":{\"ratePpm\":0,\"flatAmount\":\"0\",\"maxRatePpm\":0,\"maxFlatAmount\":\"0\"}}",
+        "assertion": "The live nBASIS quote returns a zero fee under the rate-plus-flat formula for this one Plume pUSD request. A per-request quote is not a published schedule and does not establish zero cost for other chains, outputs or notionals."
+      }
+    },
+    {
+      "id": "source:0a80f341162973ac13eb5bdb",
+      "value": {
+        "url": "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/types/NestVaultCoreTypes.sol",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "NestVaultCoreStorage.maxFees and FEE_CAP",
+        "excerpt": "Maximum fee configuration per fee type. The `rate` field caps the percentage fee (e.g. 200000 = 20%). ... uint32 internal constant FEE_CAP = 0.2e6;",
+        "assertion": "The contract's only ceiling on the queued percentage fee is the per-vault mutable maxFees configuration, bounded by the 20% FEE_CAP constant. Governance can change it, so it is not a published all-in tariff."
+      }
+    },
+    {
+      "id": "source:70acc50aba5c9ef04240b97f",
+      "value": {
+        "url": "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/libraries/NestVaultRedeemLogic.sol",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "executeFulfillRedeem fee application",
+        "excerpt": "NestVaultCoreTypes.Fee storage _feeConfig = $.fees[NestVaultCoreTypes.Fees.Redemption]; (uint256 _netReceived, uint256 _feeAmount) = _amountReceived.calculatePostFeeAmounts(_feeConfig.rate, _feeConfig.flat);",
+        "assertion": "The queued redemption fee is a configurable percentage plus flat amount read from vault storage at fulfilment; the code applies no published per-route schedule and the flat component is the only one with an explicit FEE_CAP ratio check."
+      }
+    },
+    {
+      "id": "source:728e37d0e3a28d26377cb9f8",
+      "value": {
+        "url": "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "Read-only POST: chainId 98866, redemptionType nest, shareAmount 100000000000, redemptionAsset 0x222365ef19f7947e5484218551b56bb3965aa7af",
+        "excerpt": "{\"feeAmount\":\"16656705\",\"fees\":{\"ratePpm\":150,\"flatAmount\":\"0\",\"maxRatePpm\":1500,\"maxFlatAmount\":\"0\"}}",
+        "assertion": "The live nOPAL quote returns ratePpm 150, flatAmount 0, feeAmount 16656705 raw units and maxRatePpm 1500 for this one Plume pUSD request. It is a single quote, not a published schedule or an all-in bound."
+      }
+    },
+    {
+      "id": "source:58985b8c89349624e04e43e8",
+      "value": {
+        "url": "https://docs.trevee.xyz/trevee-earn/sonic-scassets/developers/smart-contracts",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "Ethereum and Sonic deployment tables",
+        "excerpt": "| 0x3754480db8b3E607fbE125697EB496a44A1Be720 | scUSD withdraw queue |",
+        "assertion": "The issuer's current contract directory lists scUSD, scETH and scBTC deployment identities for Ethereum and Sonic. It states no redemption fee, queue-discount schedule or all-in exit-cost bound for scUSD."
+      }
+    },
+    {
+      "id": "source:21c37c7590aa5683af01f0b1",
+      "value": {
+        "url": "https://eth.blockscout.com/api/v2/smart-contracts/0x3754480db8b3E607fbE125697EB496a44A1Be720",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "Verified BoringOnChainQueue source: previewAssetsOut and MAX_DISCOUNT",
+        "excerpt": "price = price.mulDivDown(1e4 - discount, 1e4); ... uint16 internal constant MAX_DISCOUNT = 0.3e4;",
+        "assertion": "The verified Ethereum withdraw queue prices shares at the live accountant rate times a requester-selected discount and caps that discount at 3000 bps. The constant and the per-asset min/max discount configuration are protocol ceilings, not a published all-in redemption fee; the accountant rate is read live and the issuer publishes no fee schedule."
+      }
+    },
+    {
+      "id": "source:74cb3e8e003dbbda64e6b581",
+      "value": {
+        "url": "https://docs.frax.com/frxusd/stake-and-unstake-quickstart-ethereum",
+        "observedAt": "2026-10-29T18:45:42Z",
+        "datumAsOf": null,
+        "location": "2. Retrieve FraxZero Quotes",
+        "excerpt": "The quote function returns the native fee amount required for the staking and unstaking operations.",
+        "assertion": "Frax's current Ethereum unstake guide exposes only a per-call RemoteHop.quote() nativeFee covering the outbound and return LayerZero messages. It publishes no maximum for those fees, the Fraxtal MintRedeemer fee or Ethereum gas, so no all-in same-notional cost bound exists."
+      }
     }
   ],
   "searchedSurfaceObservations": [
@@ -74901,6 +75229,78 @@
     {
       "id": "surface:65bbc040ff5ba8450d7a27da",
       "value": "https://www.dropbox.com/scl/fo/375wdvar3rbc7o23nxsgp/AK-03xW6UBqCvZyI-Enizhk/2026/10%20October?rlkey=4icqn1z9bez725wywr30fx52a&dl=1"
+    },
+    {
+      "id": "surface:0c1780fa5a8fa1f046baa5cc",
+      "value": "https://docs.alchemix.fi/user/concepts/liquidations"
+    },
+    {
+      "id": "surface:5b5405b2036c964263d32ee8",
+      "value": "https://docs.alchemix.fi/user/concepts/myt-and-yield"
+    },
+    {
+      "id": "surface:c94199d37a771fd43affb43b",
+      "value": "https://docs.alchemix.fi/user/v3-migration"
+    },
+    {
+      "id": "surface:320042bf2b7c8f39cc38f463",
+      "value": "https://docs.alchemix.fi/governance/guides/contract-roles"
+    },
+    {
+      "id": "surface:0c1780fa5a8fa1f046baa5cc:2",
+      "value": "https://docs.alchemix.fi/user/concepts/liquidations"
+    },
+    {
+      "id": "surface:5b5405b2036c964263d32ee8:2",
+      "value": "https://docs.alchemix.fi/user/concepts/myt-and-yield"
+    },
+    {
+      "id": "surface:440cda7c2ed5f722443e6e3c:2",
+      "value": "https://docs.alchemix.fi/user/concepts/transmuter"
+    },
+    {
+      "id": "surface:c94199d37a771fd43affb43b:2",
+      "value": "https://docs.alchemix.fi/user/v3-migration"
+    },
+    {
+      "id": "surface:320042bf2b7c8f39cc38f463:2",
+      "value": "https://docs.alchemix.fi/governance/guides/contract-roles"
+    },
+    {
+      "id": "surface:6124fd71ed9ed3bb9faaffc7",
+      "value": "https://eth.blockscout.com/api/v2/smart-contracts/0x8852B132B72613a16f1E3960978a3d45c0A7c3C6"
+    },
+    {
+      "id": "surface:8cee0c860a53a9724d64a9cc",
+      "value": "https://docs.axis.to/risk/custody-liquidity-risk.md"
+    },
+    {
+      "id": "surface:2ec70fd10634dce674f6d3f9",
+      "value": "https://docs.axis.to/usdx-the-synthetic-dollar/mint-and-redeem.md"
+    },
+    {
+      "id": "surface:7d2c325ec6d1d2feeee7779f",
+      "value": "https://drive.google.com/file/d/1Qj8ZQco2BaT-6a0dOqx7FZOuyuPms_U9/view?usp=drive_link"
+    },
+    {
+      "id": "surface:c5501d27eade6584ac0311fd",
+      "value": "https://cngn.co/terms-and-condition"
+    },
+    {
+      "id": "surface:c6772c61e115a2414b66ffb4",
+      "value": "https://api.nest.credit/v1/actions/vaults/nest-basis-vault/redeem/quote"
+    },
+    {
+      "id": "surface:098a08cd3a97f2c6a38c08c6",
+      "value": "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/types/NestVaultCoreTypes.sol"
+    },
+    {
+      "id": "surface:aeccb1f184f8de4da75657ac",
+      "value": "https://raw.githubusercontent.com/plumenetwork/nest-protocol/main/contracts/libraries/NestVaultRedeemLogic.sol"
+    },
+    {
+      "id": "surface:ca85159c95fa5debdfda4ff8",
+      "value": "https://api.nest.credit/v1/actions/vaults/nest-opal-vault/redeem/quote"
     }
   ]
 }

@@ -18,7 +18,7 @@ import {
   V9_CANDIDATE_POLICY_V1,
 } from "@shared/lib/safety-score-v9/policy";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
-import { SafetyScoreV9ResponseSchema } from "@shared/types/safety-score-v9-public";
+import { SafetyScoreV9ResponseSchema } from "\@shared/types/safety-score-v9-publication-response";
 import { explainSafetyScoreV9PillarFreshness } from "@shared/types/safety-score-v9-public-facts";
 import { describe, expect, it, vi } from "vitest";
 import {

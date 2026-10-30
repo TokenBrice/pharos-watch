@@ -20,8 +20,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-27",
-    "reviewer": "Claude evidence renewal 2026-10-27 (D02-L3)",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Claude evidence renewal 2026-10-29 (R-COMP-6)",
     "confidence": "verified",
     "sources": [
       {
@@ -45,9 +45,9 @@
         "url": "https://fireworks-git-master-fortunafi.vercel.app/api/reserves/raw"
       }
     ],
-    "rationale": "Re-reviewed 2026-10-27. Reservoir documents wsrUSD as a yield-bearing token minted and redeemed through rUSD. Blockscout's fully verified Savingcoin source shows the constructor (name \"Wrapped Savings rUSD\", symbol \"wsrUSD\", admin 0xb7570e32dED63B25163369D5eb4D8e89E70e5602) setting the ERC-4626 asset to rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, with deposit burning rUSD and withdrawal minting rUSD. At Ethereum block 26285178 (hash 0x779c4c331a8338c27224dd22d5a7ccce60e2470ee3ba037f9bdd8f09ef45836b, 2026-10-27T16:15:11Z), public RPC eth_call reads on 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 returned asset() = rUSD, totalAssets() = 113,890,597.222 rUSD, totalSupply() = 103,041,922.777 wsrUSD (NAV about 1.1053), and rUSD.balanceOf(wrapper) = 0. The zero idle rUSD balance follows from the verified burn/mint accounting and is not evidence of a different direct reserve. The same-day Reservoir raw balance sheet independently lists the wsrUSD liability at $113,890,625.67 of $114,630,514.63 total liabilities (rUSD $116,774.55, srUSD $623,114.41), matching the wrapper's own totalAssets() within same-day timing noise; assets under wrap grew from 107.79M rUSD at the 2026-09-29 review. The direct composition is therefore a single 100% wrapper claim on the tracked parent rusd-reservoir, mirroring srUSD's claim on the same parent; the underlying reserve basket, strategy allocation, and custody remain upstream facts tracked on the rusd-reservoir record (see that record for its own refresh date).",
-    "compositionBasis": "Verified Savingcoin ERC-4626 source/constructor and pinned Ethereum eth_call reads at block 26285178 (2026-10-27T16:15:11Z), corroborated by the same-day Reservoir raw balance sheet",
-    "compositionAsOf": "2026-10-27",
+    "rationale": "Re-reviewed 2026-10-29. Reservoir documents wsrUSD as a yield-bearing token minted and redeemed through rUSD. Blockscout's fully verified Savingcoin source shows the constructor (name \"Wrapped Savings rUSD\", symbol \"wsrUSD\", admin 0xb7570e32dED63B25163369D5eb4D8e89E70e5602) setting the ERC-4626 asset to rUSD 0x09D4214C03D01F49544C0448DBE3A27f768F2b34, with deposit burning rUSD and withdrawal minting rUSD. At Ethereum block 26300200 (hash 0x5e82f30b5281d550458cee26f2cc41e229c41b8b762b986a193ec7570ff8cb09, 2026-10-29T18:29:47Z), public RPC eth_call reads on 0xd3fd63209fa2d55b07a0f6db36c2f43900be3094 returned asset() = rUSD, totalAssets() = 114,837,245.295357 rUSD, totalSupply() = 103,862,276.926083 wsrUSD (NAV about 1.1057), and rUSD.balanceOf(wrapper) = 0. The zero idle rUSD balance follows from the verified burn/mint accounting and is not evidence of a different direct reserve. The same-run Reservoir raw balance sheet reports $115,386,289.04 total assets, $115,138,203.44 total liabilities and $248,085.60 equity; wrap assets grew from 113,890,597.222 rUSD at the 2026-10-27 review. The direct composition is therefore a single 100% wrapper claim on the tracked parent rusd-reservoir, mirroring srUSD's claim on the same parent; the underlying reserve basket, strategy allocation, and custody remain upstream facts tracked on the rusd-reservoir record.",
+    "compositionBasis": "Verified Savingcoin ERC-4626 source/constructor and pinned Ethereum eth_call reads at block 26300200 (2026-10-29T18:29:47Z), corroborated by the same-run Reservoir raw balance sheet",
+    "compositionAsOf": "2026-10-29",
     "scope": "full-composition",
     "knownUnknownExposure": "The direct underlying is fully identified as rUSD. The wrapper intentionally burns rUSD on deposit and mints it on withdrawal, so its idle rUSD balance is zero; reserve-basket and custody details remain upstream facts tracked on rusd-reservoir.",
     "knownUnknownExposurePct": 0

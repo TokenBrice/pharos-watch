@@ -2,8 +2,10 @@ name: Curation Expiry Sweep
 
 # Weekly Safety Score V9 curation sweep: freeze the current production compiler
 # input, replay it at HEAD, and publish the curation worklist, evidence
-# pre-expiry queue, and typed missing-data registry. Read-only against production
-# (one D1 cache-row read); no product data is changed.
+# pre-expiry queue, weekly renewal calendar, typed missing-data registry, and
+# ledger sentinel verdicts. Read-only against production (one D1 cache-row read)
+# and read-only against the ledger: no product data is changed and nothing is
+# booked here (closures go through the applier PR).
 # Runbook: docs/process/safety-score-curation-expiry-sweep.md
 
 on:
@@ -101,6 +103,65 @@ jobs:
           status=${PIPESTATUS[0]}
           echo "status=$status" >> "$GITHUB_OUTPUT"
           exit "$status"
+      - name: Check ledger sentinels against the regenerated registry
+        id: sentinels
+        # Requires the regenerated registry: the checker fails closed on a missing
+        # or unbound registry instead of reporting a verifiable closure. It only
+        # reports verdicts; booking closures stays an applier PR on the ledger.
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' && steps.registry.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          # The registry (~237 MB) plus the replay (~278 MB) exceed the default V8 heap.
+          NODE_OPTIONS: --max-old-space-size=12288
+        shell: bash
+        run: |
+          set +e
+          npx --no-install tsx worker/scripts/check-safety-score-v9-ledger-sentinels.ts \
+            --registry agents/sweep/missing-data-registry.json \
+            --ledger .github/artifacts/safety-score-missing-data-reviewed-ledger.json \
+            --replay agents/sweep/replay.json \
+            --output agents/sweep/sentinel-resolutions.json \
+            --markdown agents/sweep/sentinel-resolutions.md 2>&1 | tee agents/sweep/sentinel-resolutions-command.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Generate the renewals due in the next 14 days (by UTC week)
+        id: renewals
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 10
+        shell: bash
+        run: |
+          set +e
+          npm run safety-score-v9:expiry-queue -- \
+            --replay agents/sweep/replay.json \
+            --days 14 --by-week \
+            --output agents/sweep/renewals-next-14-days.md 2>&1 | tee agents/sweep/renewals-command.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
+      - name: Generate the renewal calendar through the program horizon (by UTC week)
+        id: calendar
+        # RENEWAL_HORIZON is the plan's "renewed before" gate date and the single
+        # maintenance point: the queue reads it as an exclusive UTC start and exits
+        # non-zero once it is no longer after the capture clock, so a stale horizon
+        # fails the run loudly instead of publishing an empty calendar.
+        if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
+        continue-on-error: true
+        timeout-minutes: 10
+        env:
+          RENEWAL_HORIZON: "2027-01-19"
+        shell: bash
+        run: |
+          set +e
+          npm run safety-score-v9:expiry-queue -- \
+            --replay agents/sweep/replay.json \
+            --horizon "$RENEWAL_HORIZON" --by-week \
+            --output agents/sweep/expiry-queue-calendar.md 2>&1 | tee agents/sweep/calendar-command.log
+          status=${PIPESTATUS[0]}
+          echo "status=$status" >> "$GITHUB_OUTPUT"
+          exit "$status"
       - name: Generate the live-withheld counterfactual report
         id: live_withheld
         if: ${{ !cancelled() && steps.capture.outcome == 'success' }}
@@ -125,6 +186,9 @@ jobs:
           queue_status: ${{ steps.queue.outputs.status || '1' }}
           live_withheld_status: ${{ steps.live_withheld.outputs.status || '1' }}
           registry_status: ${{ steps.registry.outputs.status || '1' }}
+          renewals_status: ${{ steps.renewals.outputs.status || '1' }}
+          calendar_status: ${{ steps.calendar.outputs.status || '1' }}
+          sentinels_status: ${{ steps.sentinels.outputs.status || '1' }}
         shell: bash
         run: |
           set +e
@@ -133,6 +197,9 @@ jobs:
           echo "queue_status=$queue_status" >> "$GITHUB_OUTPUT"
           echo "live_withheld_status=$live_withheld_status" >> "$GITHUB_OUTPUT"
           echo "registry_status=$registry_status" >> "$GITHUB_OUTPUT"
+          echo "renewals_status=$renewals_status" >> "$GITHUB_OUTPUT"
+          echo "calendar_status=$calendar_status" >> "$GITHUB_OUTPUT"
+          echo "sentinels_status=$sentinels_status" >> "$GITHUB_OUTPUT"
       - name: Retain complete sweep reports and logs
         id: snapshots
         if: always()
@@ -153,6 +220,9 @@ jobs:
           QUEUE_STATUS: ${{ steps.generate.outputs.queue_status }}
           LIVE_WITHHELD_STATUS: ${{ steps.generate.outputs.live_withheld_status }}
           REGISTRY_STATUS: ${{ steps.generate.outputs.registry_status }}
+          RENEWALS_STATUS: ${{ steps.generate.outputs.renewals_status }}
+          CALENDAR_STATUS: ${{ steps.generate.outputs.calendar_status }}
+          SENTINELS_STATUS: ${{ steps.generate.outputs.sentinels_status }}
         shell: bash
         run: |
           set -euo pipefail
@@ -173,9 +243,38 @@ jobs:
             fi
             echo
             echo "Command status: replay=${REPLAY_STATUS}, worklist=${WORKLIST_STATUS}, expiry queue=${QUEUE_STATUS}, live-withheld=${LIVE_WITHHELD_STATUS}, missing-data registry=${REGISTRY_STATUS}."
+            echo "Process status: renewals (next 14 days)=${RENEWALS_STATUS}, renewal calendar=${CALENDAR_STATUS}, ledger sentinels=${SENTINELS_STATUS}."
             echo
             echo "Full downloadable reports, capture, replay, and logs: ${SNAPSHOT_URL:-artifact upload unavailable}. Retained for 30 days; the excerpts below are not the backlog."
             echo "Snapshot upload: ${SNAPSHOT_STATUS}."
+            echo
+            echo "## Renewals due next 14 days (by UTC week)"
+            echo
+            echo "Re-author or renew each row from current primary sources before its \`Renew by\` date; a renewal never re-dates an unchanged fact. The full week-by-week calendar through the program horizon is \`expiry-queue-calendar.md\` in the artifact."
+            echo '```text'
+            if [ -f agents/sweep/renewals-next-14-days.md ]; then
+              awk 'NR <= 120 {print} NR == 121 {print "... output truncated after 120 lines ..."}' agents/sweep/renewals-next-14-days.md
+            else
+              echo "Renewal view unavailable."
+            fi
+            echo '```'
+            echo
+            echo "## Ledger sentinel check"
+            echo
+            if [ -f agents/sweep/sentinel-resolutions.json ]; then
+              jq -r '"- Closure-bookable claim groups: **\(.summary.verdictCounts["closed"])** (\(.summary.closure.groupsWithOpenItems) still carry open items; \(.summary.closure.derivedFactsClosed) decision task ids are absent from the registry)\n- Verdicts: still-open \(.summary.verdictCounts["still-open"]), replaced-adversely \(.summary.verdictCounts["replaced-adversely"]), unverifiable \(.summary.verdictCounts.unverifiable)\n- Structured-pending-production admission: verified \(.summary.admissionCounts.verified), failed \(.summary.admissionCounts.failed), unverifiable \(.summary.admissionCounts.unverifiable)\n- Missing-data registry fingerprint: \(.inputs.registry.missingDataRegistryFingerprint) at \(.inputs.registry.binding.asOfIso // "unavailable"); closure evidence \(.inputs.closureEvidence)"' agents/sweep/sentinel-resolutions.json
+              echo
+              echo "Verdicts are findings, not bookings: nothing is appended to the ledger here. Book \`closed\` groups only through the sentinel-closure applier PR, copying the row's registry fingerprint, capture clock, and derived task ids."
+            else
+              echo "Sentinel check unavailable."
+            fi
+            echo '```text'
+            if [ -f agents/sweep/sentinel-resolutions.md ]; then
+              awk 'NR <= 100 {print} NR == 101 {print "... output truncated after 100 lines ..."}' agents/sweep/sentinel-resolutions.md
+            else
+              echo "Sentinel report unavailable."
+            fi
+            echo '```'
             echo
             echo "## Live-withheld counterfactual grade-drop report"
             echo '```text'
@@ -210,14 +309,17 @@ jobs:
             fi
             echo '```'
             echo
-            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ]; then
+            if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ] || [ "$RENEWALS_STATUS" != 0 ] || [ "$CALENDAR_STATUS" != 0 ] || [ "$SENTINELS_STATUS" != 0 ]; then
               echo "## Generation failures"
               for spec in \
                 "replay:$REPLAY_STATUS:agents/sweep/replay-command.log" \
                 "worklist:$WORKLIST_STATUS:agents/sweep/worklist-command.log" \
                 "expiry queue:$QUEUE_STATUS:agents/sweep/queue-command.log" \
                 "live-withheld:$LIVE_WITHHELD_STATUS:agents/sweep/live-withheld-command.log" \
-                "missing-data registry:$REGISTRY_STATUS:agents/sweep/missing-data-registry-command.log"; do
+                "missing-data registry:$REGISTRY_STATUS:agents/sweep/missing-data-registry-command.log" \
+                "renewals:$RENEWALS_STATUS:agents/sweep/renewals-command.log" \
+                "renewal calendar:$CALENDAR_STATUS:agents/sweep/calendar-command.log" \
+                "ledger sentinels:$SENTINELS_STATUS:agents/sweep/sentinel-resolutions-command.log"; do
                 IFS=: read -r label status log_file <<< "$spec"
                 if [ "$status" != 0 ]; then
                   echo "### $label (status $status)"
@@ -262,7 +364,7 @@ jobs:
           # Fail the run, not just the issue body, when any generator broke —
           # same rationale as agent-maintenance-candidates: a green run must
           # mean the queues are trustworthy.
-          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ]; then
+          if [ "$REPLAY_STATUS" != 0 ] || [ "$WORKLIST_STATUS" != 0 ] || [ "$QUEUE_STATUS" != 0 ] || [ "$LIVE_WITHHELD_STATUS" != 0 ] || [ "$REGISTRY_STATUS" != 0 ] || [ "$RENEWALS_STATUS" != 0 ] || [ "$CALENDAR_STATUS" != 0 ] || [ "$SENTINELS_STATUS" != 0 ]; then
             echo "::error title=Curation sweep incomplete::See the sweep issue for command status and available output."
             exit 1
           fi

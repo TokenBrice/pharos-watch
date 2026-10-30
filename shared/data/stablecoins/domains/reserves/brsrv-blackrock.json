@@ -4,7 +4,7 @@
     {
       "sourceKey": "blackrock-brsrv-holdings:asset-type:treasury-debt",
       "name": "U.S. Treasury bills",
-      "pct": 61.88737842590144,
+      "pct": 61.55612324688618,
       "risk": "very-low",
       "assetClass": "treasury-bill",
       "issuerOrObligor": "United States Treasury",
@@ -15,7 +15,7 @@
     {
       "sourceKey": "blackrock-brsrv-holdings:asset-type:treasury-repo",
       "name": "Overnight Treasury-secured tri-party repurchase agreements",
-      "pct": 38.11262157409856,
+      "pct": 38.44387675311382,
       "risk": "low",
       "assetClass": "repo",
       "issuerOrObligor": "J.P. Morgan Securities, Credit Agricole CIB, BofA Securities and Mizuho Securities USA",
@@ -25,8 +25,8 @@
     }
   ],
   "reserveReview": {
-    "reviewedAt": "2026-10-15",
-    "reviewer": "Rev_BrsrvBlackrock batch-64 review",
+    "reviewedAt": "2026-10-29",
+    "reviewer": "Sol curation campaign 2026-10-29 (R-COMP-4)",
     "confidence": "verified",
     "sources": [
       {
@@ -34,7 +34,7 @@
         "url": "https://www.blackrock.com/cash/literature/prospectus/pro-brsrv.pdf"
       },
       {
-        "label": "BlackRock BRSRV fund reporting",
+        "label": "BlackRock BRSRV fund reporting; Key Facts as of 2026-10-28 report fund and class size USD 50.4m, 20-day weighted average maturity and 100% weekly liquid assets (observed 2026-10-29)",
         "url": "https://www.blackrock.com/cash/en-us/products/351891/blackrock-daily-reinvestment-stablecoin-reserve-vehicle"
       },
       {
@@ -50,40 +50,44 @@
         "url": "https://www.sec.gov/Archives/edgar/data/844779/000119312526416626/primary_doc.xml"
       },
       {
-        "label": "Ethereum block 26197405, 2026-10-15T10:46:11Z: native BRSRV shares total 50,355,489.68; not the securities denominator",
+        "label": "Ethereum block 26300200, 2026-10-29T18:29:47Z: native BRSRV shares total 50,433,466.59; not the securities denominator",
         "url": "https://api-ethereum-mainnet.n.dwellir.com"
       },
       {
-        "label": "Tempo block 44247376, 2026-10-15T10:46:13Z: zero native BRSRV stock",
+        "label": "Tempo block 46488100, 2026-10-29T18:37:11Z: zero native BRSRV stock",
         "url": "https://api-tempo-mainnet.n.dwellir.com"
       },
       {
-        "label": "Solana atomic finalized slot 457209999, 2026-10-15T10:49:14Z: zero exact native BRSRV mint stock",
+        "label": "Solana atomic finalized slot 462984500, 2026-10-29T18:37:27Z: zero exact native BRSRV mint stock",
         "url": "https://solana-rpc.publicnode.com"
       },
       {
-        "label": "BlackRock complete holdings CSV as of October 14, 2026; accessed October 15, 2026",
+        "label": "BlackRock complete holdings CSV as of October 28, 2026; observed October 29, 2026",
+        "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund"
+      },
+      {
+        "label": "BlackRock complete holdings CSV as of October 14, 2026; accessed October 15, 2026 (superseded observation)",
         "url": "https://www.blackrock.com/cash/en-us/products/351891/fund/1464253357814.ajax?fileType=csv&fileName=RSVXX_holdings&dataType=fund"
       }
     ],
-    "rationale": "The October 14, 2026 holdings CSV publishes eleven Treasury bills with market value USD 32,476,054.32 and four overnight Treasury repos totaling USD 20,000,000, for USD 52,476,054.32 total listed securities. Both slice weights use these published market values, not rounded par percentages. Repo counterparties are J.P. Morgan Securities, Credit Agricole CIB, BofA Securities and Mizuho Securities USA, each USD 5m, with October 15 maturities. Bills mature October 15, 2026 through January 14, 2027; the 93-day maximum is the prospectus mandate, not WAM. Stable source keys bind the two disclosed asset-type categories to the live adapter despite its different display names. Listed securities are not represented as total fund net assets: October 14 fund reporting rounds class/fund assets to USD 50.4m, while the October 15 Ethereum pin reports 50,355,489.68 shares and Tempo/Solana report zero. The gross-securities/net-assets difference is unreconciled, not a measured reserve surplus or shortfall. No whole-token financial assurance, account-level custody or executable redemption capacity is inferred.",
-    "compositionBasis": "October 14, 2026 itemized securities holdings, normalized by exactly summed published security market values; excludes unreported cash and liabilities and is not a reserve-to-liability reconciliation",
-    "compositionAsOf": "2026-10-14",
+    "rationale": "The October 28, 2026 holdings CSV publishes twelve Treasury bills with market value USD 32,023,889.60 and four overnight Treasury repos totaling USD 20,000,000, for USD 52,023,889.60 total listed securities. Both slice weights use these published market values, not rounded par percentages. Repo counterparties are J.P. Morgan Securities, Credit Agricole CIB, BofA Securities and Mizuho Securities USA, each USD 5m, with October 29 maturities. Bills mature October 29, 2026 through January 28, 2027; the 93-day maximum is the prospectus mandate, not WAM, and BlackRock reports a 20-day weighted average maturity as of October 28. Bill weight fell from the October 14 review's 61.8874% to 61.5561% as the securities total grew by USD 1.55m while repo stayed at USD 20m. Stable source keys bind the two disclosed asset-type categories to the live adapter despite its different display names. Listed securities are not represented as total fund net assets: October 28 fund reporting rounds class and fund assets to USD 50.4m, while the October 29 Ethereum pin at block 26300200 reports 50,433,466.59 native BRSRV shares and the Tempo and Solana pins report zero native stock. The gross-securities/net-assets difference is unreconciled, not a measured reserve surplus or shortfall. No whole-token financial assurance, account-level custody or executable redemption capacity is inferred.",
+    "compositionBasis": "October 28, 2026 itemized securities holdings, normalized by exactly summed published security market values; excludes unreported cash and liabilities and is not a reserve-to-liability reconciliation",
+    "compositionAsOf": "2026-10-28",
     "scope": "full-composition",
-    "knownUnknownExposure": "Current whole-token liability reconciliation and account-level custody, collateral and recovery agreements remain unavailable. The October 14 disclosed securities total exceeds rounded fund net assets, but cash, other assets and liabilities are not included in the CSV. The September 30 N-MFP3 separately reports portfolio securities, cash, other assets, liabilities and shares; it does not reconcile the October observations. Named auditors do not establish a signed financial report.",
+    "knownUnknownExposure": "Current whole-token liability reconciliation and account-level custody, collateral and recovery agreements remain unavailable. The October 28 disclosed securities total exceeds rounded fund net assets, but cash, other assets and liabilities are not included in the CSV. The September 30 N-MFP3 separately reports portfolio securities, cash, other assets, liabilities and shares; it does not reconcile the October observations. Named auditors and fund credit ratings do not establish a signed financial report.",
     "knownUnknownExposurePct": 0,
     "nonLinkDispositions": [
       {
         "reserveIndex": 0,
         "reserveName": "U.S. Treasury bills",
-        "pct": 61.88737842590144,
+        "pct": 61.55612324688618,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Itemized U.S. Treasury securities are exogenous assets, not tracked stablecoins."
       },
       {
         "reserveIndex": 1,
         "reserveName": "Overnight Treasury-secured tri-party repurchase agreements",
-        "pct": 38.11262157409856,
+        "pct": 38.44387675311382,
         "disposition": "untracked-exogenous-asset",
         "rationale": "Itemized off-chain secured repo claims are exogenous assets, not tracked stablecoins."
       }

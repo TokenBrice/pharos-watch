@@ -1081,7 +1081,11 @@ describe("safety scores dated preview", () => {
       safetyGrade: "A-",
       ...overrides,
     });
-    const dataset = (rows: unknown[], overrides: Record<string, unknown> = {}) => ({
+    const dataset = (
+      rows: unknown[],
+      overrides: Record<string, unknown> = {},
+      projection: Record<string, unknown> = {},
+    ) => ({
       _meta: {
         methodologyLabel: "safety-score v10.36 | dews v6.38 | liquidity v6.98",
         displayProjection: {
@@ -1089,6 +1093,7 @@ describe("safety scores dated preview", () => {
           snapshotDate: "2026-10-28",
           capturedAtSec: 1793174453,
           sourceSnapshotPath: "/api/snapshots/2026-10-28.json",
+          ...projection,
           safety: {
             identity: { methodologyVersion: "10.36" },
             asOfSec: 1793171906,
@@ -1125,6 +1130,24 @@ describe("safety scores dated preview", () => {
       status: "ok",
       preview: { rows: [{ id: "coin-a", href: "/stablecoin/coin-a/", grade: "A-", score: 80 }], eligibleRatedCount: 1 },
     });
+    // v2 adds the open-question counts; the Safety block this expectation reads
+    // is unchanged, so the dated preview stays admissible.
+    const v2 = await buildExpectation(dataset(
+      [row("coin-a")],
+      {},
+      {
+        version: 2,
+        openEvidence: {
+          semantics: "open-question-v1",
+          totals: { questions: 2, open: 1, issuer: 1, documentation: 0, obligations: 3 },
+        },
+        openEvidenceUnavailableReason: null,
+      },
+    ));
+    expect(v2).toMatchObject({ status: "ok", preview: { rows: [{ id: "coin-a" }] } });
+    // An unknown version is named, never read as an absent projection.
+    expect(await buildExpectation(dataset([row("coin-a")], {}, { version: 3 })))
+      .toEqual({ status: "unavailable", reason: "display-projection-version-unsupported:3" });
   });
 });
 
