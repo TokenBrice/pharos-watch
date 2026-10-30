@@ -15,7 +15,7 @@
     "effort": 10,
     "compressionLevel": 9
   },
-  "documentSha256": "61d84d32964c989f5c796156aa51608e6c28235d199809bfa3a3ed61a6514efc",
+  "documentSha256": "10bcb1df4f6b8ab37c95938d40cfa0802f8cd0beee39ea86337b5e85d15794a9",
   "summary": {
     "total": 123,
     "firstYear": 2018,
@@ -24,8 +24,8 @@
     "atlasImageSha256": "da892f6a6ae6a4932698e93108704925588ec627544ed0f4f249f475b7ad4867"
   },
   "image": {
-    "sha256": "a0a6dac8bc7e7c455a0380a64c54d7d0f9fb046c6f0d3dacb3cb87fae7d45198",
-    "bytes": 146337,
+    "sha256": "635d4a3e9bd8d75613fd21878a51967b2c3f7583aeca1daa53080fc4bc97eed9",
+    "bytes": 146767,
     "width": 1200,
     "height": 630
   }
