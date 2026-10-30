@@ -20,7 +20,6 @@ import {
   type V9ControlIncident,
   type V9LaneEmitterDescriptor,
   type V9LaneIncidentCertificate,
-  type V9ProviderIncidentDisclosure,
   type V9ReviewedIncident,
 } from "@shared/types/safety-score-v9-incidents";
 import { V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
@@ -103,6 +102,11 @@ type NegativeIncidentScope = Pick<
   "reviewId" | "assetId" | "scope" | "reviewedAt" | "windowStartSec" | "windowEndSec" | "retired" | "providerIncidents"
 >;
 export type { NegativeIncidentRuntime, NegativeIncidentScope };
+export interface NegativeIncidentReviewRead {
+  reviews: readonly NegativeIncidentRuntime[];
+  /** Failed foreign asset admission blocks closure only for these provider keys. */
+  unreadableProviders: ReadonlyMap<string, readonly string[]>;
+}
 const { digest, ...runtimeEnvelope } = incidentRuntimeAsset;
 const incidentEnvelope = V9ReviewedIncidentRegistryEnvelopeSchema.parse(runtimeEnvelope);
 export const SAFETY_SCORE_V9_INCIDENT_REVIEWS_DIGEST = Sha256Schema.parse(digest);
@@ -260,6 +264,7 @@ export interface LaneIncidentClosureInputs {
   descriptors: readonly V9LaneEmitterDescriptor[];
   certificates: ReadonlyMap<string, LaneIncidentCertificateView>;
   routes: ReadonlyMap<string, LaneRouteAuthority>;
+  unreadableProviders?: ReadonlyMap<string, readonly string[]>;
 }
 
 type LaneClosureWitnesses = {
@@ -296,19 +301,29 @@ function laneContributorIds(control: ControlOverlay): readonly string[] | null {
  * not an exemption.
  */
 function providerExposureBlocksLane(
-  review: NegativeIncidentScope,
+  reviews: readonly NegativeIncidentScope[],
+  covering: readonly NegativeIncidentScope[],
   assetId: string,
   routeId: string,
   windowStartSec: number,
   clockSec: number,
 ): boolean {
-  const incidents: readonly V9ProviderIncidentDisclosure[] = review.providerIncidents ?? [];
-  return incidents.some((incident) => {
+  const exempted = new Set<string>();
+  for (const review of covering) {
+    for (const incident of review.providerIncidents ?? []) {
+      if (!V9ProviderIncidentDisclosureSchema.safeParse(incident).success) return true;
+      if (incident.class === "verifier-compromise" &&
+          incident.exemptions.some((exemption) => exemption.assetId === assetId && exemption.routeId === routeId)) {
+        exempted.add(incident.incidentKey);
+      }
+    }
+  }
+  return reviews.some((review) => (review.providerIncidents ?? []).some((incident) => {
     if (!V9ProviderIncidentDisclosureSchema.safeParse(incident).success) return true;
-    if (incident.class !== "verifier-compromise") return false;
-    if (!v9ProviderExposureIntersectsWindow(incident, windowStartSec, clockSec)) return false;
-    return !incident.exemptions.some((exemption) => exemption.assetId === assetId && exemption.routeId === routeId);
-  });
+    return incident.class === "verifier-compromise" &&
+      v9ProviderExposureIntersectsWindow(incident, windowStartSec, clockSec) &&
+      !exempted.has(incident.incidentKey);
+  }));
 }
 
 function newestReview(reviews: readonly NegativeIncidentScope[]): NegativeIncidentScope | undefined {
@@ -384,6 +399,7 @@ function laneIncidentClosureWitnesses(
   if (route.rail !== "issuer-operated") {
     if (route.providerKeys.length === 0) return null;
     for (const providerKey of route.providerKeys) {
+      if (inputs.unreadableProviders?.has(providerKey)) return null;
       const providerReviews = current.filter((review) => review.scope.kind === "provider" &&
         review.scope.providerKey === providerKey);
       const covering = providerReviews.filter((review) => review.scope.kind === "provider" &&
@@ -392,8 +408,7 @@ function laneIncidentClosureWitnesses(
       const windowStartSec = Math.min(issuerReview.windowStartSec, ...covering.map((review) => review.windowStartSec));
       // A disclosure remains relevant even if its review does not cover this lane
       // or its exposure begins after the absence witnesses' review windows.
-      if (providerReviews.some((review) =>
-        providerExposureBlocksLane(review, assetId, routeId, windowStartSec, clockSec))) return null;
+      if (providerExposureBlocksLane(providerReviews, covering, assetId, routeId, windowStartSec, clockSec)) return null;
       for (const review of covering) {
         providerReviewIds.add(review.reviewId);
       }
@@ -410,18 +425,28 @@ function laneIncidentClosureWitnesses(
 export function getSafetyScoreV9NegativeIncidentReviews(
   assetId: string,
   clockSec: number,
-): readonly NegativeIncidentRuntime[] {
+): NegativeIncidentReviewRead {
   if (!Number.isFinite(clockSec) || clockSec < 0) {
     throw new Error("Safety Score v9 negative incident-review clock must be finite and non-negative");
   }
   const local = NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID.getAll(assetId).filter((review) =>
     review.retired === undefined && negativeIncidentReviewIsCurrent(review, clockSec));
   const reviews = new Map(local.map((review) => [review.reviewId, review]));
-  for (const review of local) {
-    if (review.scope.kind !== "provider") continue;
-    const providerKey = review.scope.providerKey;
+  const unreadableProviders = new Map<string, string[]>();
+  const providerKeys = new Set(local.flatMap((review) => review.scope.kind === "provider" ? [review.scope.providerKey] : []));
+  for (const providerKey of providerKeys) {
     for (const providerAssetId of PROVIDER_REVIEW_ASSETS_BY_KEY.get(providerKey) ?? []) {
-      for (const disclosureReview of NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID.getAll(providerAssetId)) {
+      if (providerAssetId === assetId) continue;
+      let foreignReviews: readonly NegativeIncidentRuntime[];
+      try {
+        foreignReviews = NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID.getAll(providerAssetId);
+      } catch {
+        const unreadableAssets = unreadableProviders.get(providerKey) ?? [];
+        unreadableAssets.push(providerAssetId);
+        unreadableProviders.set(providerKey, unreadableAssets);
+        continue;
+      }
+      for (const disclosureReview of foreignReviews) {
         if (disclosureReview.scope.kind !== "provider" || disclosureReview.scope.providerKey !== providerKey ||
             disclosureReview.retired !== undefined || !negativeIncidentReviewIsCurrent(disclosureReview, clockSec) ||
             reviews.has(disclosureReview.reviewId)) continue;
@@ -431,7 +456,7 @@ export function getSafetyScoreV9NegativeIncidentReviews(
       }
     }
   }
-  return [...reviews.values()];
+  return { reviews: [...reviews.values()], unreadableProviders };
 }
 /** Rebuilds the build-time evidence rows; each key embeds its sorted-source index. */
 export function negativeIncidentReviewEvidence(review: NegativeIncidentRuntime): ResearchEvidence[] {

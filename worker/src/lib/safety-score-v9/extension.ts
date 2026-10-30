@@ -36,7 +36,7 @@ import type {
   MintAuthorityProfile,
   MintAuthorityScopedQuestion,
 } from "@shared/types/core";
-import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl } from "@shared/types/safety-score-v9-facts";
+import type { V9FailureDomainRef, V1005ProcessDiagnostic, V1005CompiledVotingControl, V9LaneIncidentClosureFailure } from "@shared/types/safety-score-v9-facts";
 import { V1005VotingControllerSchema, createV9ControlExecutionScopeRootReuse } from "@shared/types/safety-score-v9-control-scope";
 import type { StablecoinMeta } from "@shared/types";
 import {
@@ -2562,7 +2562,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
         admissionPath = "reviewedIncidents";
         const reviewedIncidents = getSafetyScoreV9ReviewedIncidents(assetId, clockSec);
         addSafetyScoreV9IncidentEvidence(reviewEvidence, reviewedIncidents);
-        const negativeIncidentReviews = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
+        const negativeIncidentRead = getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
+        const negativeIncidentReviews = negativeIncidentRead.reviews;
         admissionPath = "wrapperAllocationReview";
         const wrapperAllocationReview = getSafetyScoreV9WrapperAllocationReview(assetId, clockSec);
         admissionPath = "wrapperLocalReviews";
@@ -2756,9 +2757,24 @@ export function createSafetyScoreV9BaselineExtensionSource(
             descriptors: options.laneEmitterDescriptors ?? [],
             certificates: options.laneIncidentCertificates ?? new Map(),
             routes: laneRoutes,
+            unreadableProviders: negativeIncidentRead.unreadableProviders,
           },
         ).sort((left, right) => compareText(left.controlKey, right.controlKey));
         addSafetyScoreV9NegativeIncidentEvidence(reviewEvidence, negativeIncidentReviews, controls);
+        const incidentClosureFailures: V9LaneIncidentClosureFailure[] = [];
+        if (negativeIncidentRead.unreadableProviders.size > 0) {
+          for (const [deploymentRouteKey, route] of laneRoutes) {
+            if (!controls.some((control) => control.deploymentKey === deploymentRouteKey &&
+                control.controlKind === "bridge" && control.scope === "deployment" && control.incidentState === "unknown")) continue;
+            for (const providerKey of route.providerKeys) {
+              const foreignAssetIds = negativeIncidentRead.unreadableProviders.get(providerKey);
+              if (foreignAssetIds !== undefined) incidentClosureFailures.push({
+                deploymentRouteKey, providerKey, foreignAssetIds: [...foreignAssetIds],
+                code: "provider-incident-disclosures-unreadable",
+              });
+            }
+          }
+        }
         admissionPath = "accessReview";
         const reviewedTransferFact = reviewedTransferFacts
           ? reviewedTransferFacts.get(assetId)
@@ -2837,7 +2853,8 @@ export function createSafetyScoreV9BaselineExtensionSource(
               ? {
                   mint: incidentControlRoute.mintReview,
                   oracle,
-                  bridge: bridge.review,
+                  bridge: incidentClosureFailures.length === 0 ? bridge.review : { ...bridge.review,
+                    diagnostics: { ...bridge.review.diagnostics!, incidentClosureFailures } },
                 }
               : null,
           accessReview,

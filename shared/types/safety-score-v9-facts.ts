@@ -1243,6 +1243,14 @@ const V9DeploymentSupplyCensusDiagnosticV1Schema = z
   })
   .strict();
 
+export const V9LaneIncidentClosureFailureSchema = z.object({
+  deploymentRouteKey: DeploymentIdSchema,
+  providerKey: CanonicalKeySchema,
+  code: z.literal("provider-incident-disclosures-unreadable"),
+  foreignAssetIds: CanonicalStringArraySchema,
+}).strict();
+export type V9LaneIncidentClosureFailure = z.output<typeof V9LaneIncidentClosureFailureSchema>;
+
 export const V9BridgeJoinDiagnosticsV1Schema = z
   .object({
     profileRouteCount: z.number().int().nonnegative(),
@@ -1270,6 +1278,11 @@ export const V9BridgeJoinDiagnosticsV1Schema = z
     deploymentSupplyCensus: canonicalArrayBy(
       V9DeploymentSupplyCensusDiagnosticV1Schema,
       (row) => `${row.deploymentRouteKey ?? "*"}:${row.code}`,
+    ).optional(),
+    // Absent unless a foreign provider disclosure read blocked this asset's lane.
+    incidentClosureFailures: canonicalArrayBy(
+      V9LaneIncidentClosureFailureSchema,
+      (row) => `${row.deploymentRouteKey}:${row.providerKey}`,
     ).optional(),
   })
   .strict();

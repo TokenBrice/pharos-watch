@@ -435,12 +435,15 @@ this section records only what v10.38 admits.
   are removed shapes; `npm run check:incident-review-keys` rejects either, rejects an
   `asset:<id>` route on an issuer row, and rejects a provider renewal that drops an incident
   another current review of the same provider discloses.
-- `providerIncidents` is required (empty = searched, none found). OQ-1 checks every current
-  provider-key disclosure from earliest witness start through evaluation, including
-  non-covering reviews and exposure after witness windows. Verifier compromise requires
-  deployment after finite exposure end or pinned exposure-time config excluding compromised-only
-  verification; no observed exploit/current config is an exemption. Other classes cannot name
-  covered lanes; only `verifier-compromise` carries exemptions.
+- `providerIncidents` is required (empty = searched, none found). OQ-1 checks current same-key
+  disclosures from earliest witness start through evaluation, including non-covering reviews
+  and post-window exposure. Exemptions aggregate per `incidentKey` only from covering reviews:
+  deployment after finite exposure or pinned exposure-time config excluding compromised-only
+  verification. No observed exploit/current config is an exemption; only verifier compromise
+  permits exemptions. Other classes cannot name covered lanes.
+  Unreadable foreign reviews never quarantine the local asset: affected provider lanes stay
+  unknown with `bridge.diagnostics.incidentClosureFailures` code
+  `provider-incident-disclosures-unreadable`, naming lane, provider and foreign assets.
 - `incidentCoverage` on a compiled fact is derived provenance written by the router
   (`provider-screening`: provider review ids, the issuer-surface review id, the screening
   set, the certificate id and the contributor ids), never authored input.

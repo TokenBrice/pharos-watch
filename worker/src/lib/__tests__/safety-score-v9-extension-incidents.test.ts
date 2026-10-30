@@ -19,6 +19,9 @@ import { ReviewEvidenceBuilder } from "@shared/lib/safety-score-v9/review-eviden
 import { expandReviewedRegistryReferences } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { laneIncidentCertificateScreeningSetId } from "../safety-score-v9/lane-incident-certificate-store";
 import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "../safety-score-v9/bridge-lane-admin-events";
+import { localRegistrySnapshot, registrySnapshotFingerprint } from "../../../scripts/lib/safety-score-v9-registry";
+import { createReplayFixedInput } from "../../../scripts/__tests__/safety-score-v9-replay.test-support";
+import { normalizeFixedInput } from "../report-cards-fixed-input";
 
 const CLOCK_SEC = Date.parse("2026-08-24T23:59:59.000Z") / 1_000;
 
@@ -212,7 +215,7 @@ describe("Safety Score v9 independent negative incident routing", () => {
         reviewedAtSec: reviewedSec, observedAtSec: review.windowEndSec, confidence: "manual-review",
         sources: review.sources, payload: review, maxAgeSec: V9_REVIEW_EVIDENCE_MAX_AGE_SEC });
       const runtime = getSafetyScoreV9NegativeIncidentReviews(review.assetId, Math.max(reviewedSec, review.windowEndSec))
-        .filter((row) => row.reviewId === review.reviewId);
+        .reviews.filter((row) => row.reviewId === review.reviewId);
       const rebuilt = new ReviewEvidenceBuilder(review.assetId, reviewedSec);
       addSafetyScoreV9NegativeIncidentEvidence(rebuilt, runtime);
       expect(rebuilt.finish()).toEqual(original.finish());
@@ -471,9 +474,10 @@ describe("Safety Score v9 authored incident-review identity", () => {
       [target], "fixture", NEGATIVE_CLOCK_SEC, [provider, issuer, future], [], closureInputs())[0]!.incidentState).toBe("none");
   });
 
-  it("loads a provider disclosure from another asset without losing local fan-out exemptions", async () => {
+  it.each(["earlier-exempted-compromise", "foreign-review-compromise"])(
+    "loads provider disclosure %s without losing a covering review's exemption", async (incidentKey) => {
     const incident = {
-      incidentKey: "foreign-review-compromise", class: "verifier-compromise" as const, surface: "dvn-set" as const,
+      incidentKey, class: "verifier-compromise" as const, surface: "dvn-set" as const,
       occurredAt: "2026-10-07", exposureStartSec: NEGATIVE_CLOCK_SEC - 1,
       exposureEndSec: null, affectedRoutes: [], sourceUrls: ["https://example.com/compromise"], exemptions: [],
     };
@@ -482,7 +486,8 @@ describe("Safety Score v9 authored incident-review identity", () => {
       exemptions: [{ assetId: "fixture", routeId: ROUTE_A, kind: "deployed-after-exposure" as const,
         creationTxHash: `0x${"3".repeat(64)}`, creationBlock: 300, creationTimestampSec: NEGATIVE_CLOCK_SEC - 2 }] };
     const provider = providerRow({ providerIncidents: [exempted] });
-    const foreign = { ...providerRow({ reviewId: "foreign-disclosure", providerIncidents: [incident] }),
+    const foreign = { ...providerRow({ reviewId: "foreign-disclosure",
+      providerIncidents: [incidentKey === exempted.incidentKey ? { ...exempted, exemptions: [] } : incident] }),
       assetId: "other-asset", scope: { kind: "provider" as const, providerKey: "layerzero" as const,
         surface: "dvn-set" as const, coveredRoutes: [{ assetId: "other-asset", routeId: ROUTE_B }] } };
     const runtime = await vi.importActual<{ default: Record<string, unknown> }>("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
@@ -494,15 +499,85 @@ describe("Safety Score v9 authored incident-review identity", () => {
     try {
       // Re-import intentionally exercises admission of the substituted runtime registry.
       const isolated = await import("../safety-score-v9/extension-incidents");
-      const reviews = isolated.getSafetyScoreV9NegativeIncidentReviews("fixture", NEGATIVE_CLOCK_SEC);
+      const { reviews } = isolated.getSafetyScoreV9NegativeIncidentReviews("fixture", NEGATIVE_CLOCK_SEC);
       expect(reviews.map((review) => review.reviewId)).toEqual(["provider-review", "issuer-review", "foreign-disclosure"]);
       const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+      const routed = isolated.routeSafetyScoreV9NegativeIncidentReviews(
+        [target], "fixture", NEGATIVE_CLOCK_SEC, reviews, [], closureInputs());
+      expect(routed[0]!.incidentState).toBe(incidentKey === exempted.incidentKey ? "none" : "unknown");
+      const withoutExemption = reviews.map((review) => review.reviewId !== provider.reviewId ? review :
+        { ...review, providerIncidents: [{ ...exempted, exemptions: [] }] });
       expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
-        [target], "fixture", NEGATIVE_CLOCK_SEC, reviews, [], closureInputs())[0]).toBe(target);
+        [target], "fixture", NEGATIVE_CLOCK_SEC, withoutExemption, [], closureInputs())[0]!.incidentState).toBe("unknown");
       expect(reviews[0]!.providerIncidents).toEqual([exempted]);
       expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
         [target], "fixture", NEGATIVE_CLOCK_SEC, reviews.filter((review) => review.reviewId !== foreign.reviewId),
         [], closureInputs())[0]!.incidentState).toBe("none");
+    } finally {
+      vi.doUnmock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+      vi.resetModules();
+    }
+  });
+
+  it("keeps an asset rated while an unreadable foreign provider review blocks only its lane", async () => {
+    const assetId = "frnt-wyoming";
+    const clockSec = 1_793_404_800;
+    const original = localRegistrySnapshot();
+    const meta = original.activeStablecoins.find((coin) => coin.id === assetId)!;
+    const routeId = meta.bridgeRouteRisk!.routes!.find((route) => route.id.startsWith("arbitrum:"))!.id;
+    const contributors = meta.bridgeRouteRisk!.controls!.filter((row) => row.routeRefs.includes(routeId)).map((row) => row.id);
+    const rows = { ...original, activeStablecoins: original.activeStablecoins.map((coin) => coin.id !== assetId ? coin :
+      { ...coin, mintAuthority: undefined, bridgeRouteRisk: { ...coin.bridgeRouteRisk!,
+        routes: coin.bridgeRouteRisk!.routes!.map((route) => route.id !== routeId ? route :
+          { ...route, rail: undefined, providerKeys: ["layerzero" as const],
+            routeClass: "canonical" as const, issuanceModel: "bridge-representation" as const }),
+      } }) };
+    const registrySnapshot = { ...rows, fingerprint: registrySnapshotFingerprint(rows) };
+    const { baseInputGenerationId: _base, ...draft } = createReplayFixedInput(clockSec, { activeAssetIds: [assetId] });
+    const fixedInput = normalizeFixedInput({ ...draft, registryFingerprint: registrySnapshot.fingerprint });
+    const provider = { ...providerRow(), assetId, scope: { kind: "provider" as const, providerKey: "layerzero" as const,
+      surface: "dvn-set" as const, coveredRoutes: [{ assetId, routeId }] } };
+    const issuer = { ...issuerRow(), assetId, scope: { kind: "issuer-surface" as const, coveredRoutes: [routeId] } };
+    const foreign = { ...provider, assetId: "other-asset", reviewId: "invalid-foreign-review", providerIncidents: undefined,
+      scope: { ...provider.scope, coveredRoutes: [{ assetId: "other-asset", routeId: ROUTE_B }] } };
+    const certificate = laneCertificate({ subjectDeploymentKey: routeId });
+    const screeningSetId = laneIncidentCertificateScreeningSetId({ ...certificate, contributorControlIds: contributors });
+    const laneDescriptor = { ...descriptor(), assetId, subjectDeploymentKey: routeId, contributorControlIds: contributors, screeningSetId };
+    const runtime = await vi.importActual<{ default: Record<string, unknown> }>("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
+    vi.doMock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json", () => ({
+      default: { ...runtime.default, negativeReviews: [provider, issuer, foreign] },
+    }));
+    vi.resetModules();
+    try {
+      // Module loading is intentional: the evaluator must admit the substituted registry.
+      const { buildSafetyScoreV9ReplayArtifact } = await import("../../../scripts/replay-safety-score-v9");
+      const { buildSafetyScoreV9ReplayLaneScreening } = await import("../safety-score-v9/publication-replay-capture");
+      const replay = buildSafetyScoreV9ReplayArtifact({ fixedInput, registrySnapshot, publishedAtSec: clockSec,
+        laneScreening: buildSafetyScoreV9ReplayLaneScreening({ descriptors: [laneDescriptor],
+          certificates: new Map([[routeId, { screeningSetId, certificate }]]) }),
+      });
+      expect(replay.pipeline.candidate.cards.find((card) => card.id === assetId)!.ratingStatus).toBe("rated");
+      expect(replay.pipeline.quarantines).toEqual([]);
+      expect(replay.pipeline.compiledFacts.assets.find((asset) => asset.assetId === assetId)!.controls
+        .find((control) => control.deploymentKey === routeId)!.incidentState).toBe("unknown");
+      expect(replay.pipeline.bridgeJoinDiagnostics.find((row) => row.assetId === assetId)).toMatchObject({
+        incidentClosureFailures: [{ deploymentRouteKey: routeId, providerKey: "layerzero",
+          code: "provider-incident-disclosures-unreadable", foreignAssetIds: ["other-asset"] }],
+      });
+      const isolated = await import("../safety-score-v9/extension-incidents");
+      const read = isolated.getSafetyScoreV9NegativeIncidentReviews(assetId, clockSec);
+      expect(read.unreadableProviders).toEqual(new Map([["layerzero", ["other-asset"]]]));
+      expect(() => isolated.getSafetyScoreV9NegativeIncidentReviews("other-asset", clockSec)).toThrow();
+      const target = withAuthoredIdentity(bridgeRow(routeId, "bridge-meta:frnt-wyoming:fixture"),
+        { id: "*", ids: contributors });
+      const inputs = { descriptors: [laneDescriptor], certificates: new Map([[routeId, { screeningSetId, certificate }]]),
+        routes: new Map([[routeId, { rail: null, providerKeys: ["layerzero"] }]]) };
+      // All positive witnesses really close this synthetic deployment; only the unreadable key blocks it.
+      expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
+        [target], assetId, clockSec, read.reviews, [], inputs)[0]!.incidentState).toBe("none");
+      expect(isolated.routeSafetyScoreV9NegativeIncidentReviews(
+        [target], assetId, clockSec, read.reviews, [], { ...inputs, unreadableProviders: read.unreadableProviders })[0]!.incidentState)
+        .toBe("unknown");
     } finally {
       vi.doUnmock("@shared/data/safety-score-v9/incident-runtime-v1.generated.json");
       vi.resetModules();
