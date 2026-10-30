@@ -66,6 +66,7 @@ import {
   readMintBurnSyncStateBatch,
   upsertMintBurnSyncState,
 } from "../mint-burn-pipeline/sync-state";
+import { sweepRecentRoundtrips } from "../mint-burn-pipeline/roundtrip-sweep";
 import type { MintBurnRow } from "../mint-burn-pipeline/types";
 import type { MintBurnContractConfig, MintBurnEventDef } from "../mint-burn-contracts";
 import type { AlchemyLogEntry } from "../alchemy-logs";
@@ -410,6 +411,41 @@ describe("mint-burn shared pipeline modules", () => {
       burn_volume_usd: 25,
       net_flow_usd: 75,
     });
+  });
+
+  it("keeps a tagged atomic roundtrip when a later scan re-observes only its burn", async () => {
+    const { db, sqlite } = fixtures.open();
+    vi.mocked(batchExecute).mockImplementation(realDb.batchExecute);
+    const timestamp = 3_610;
+    const insert = sqlite.prepare(`INSERT INTO mint_burn_events
+      (id, stablecoin_id, symbol, chain_id, direction, amount, amount_usd, burn_type, tx_hash, block_number,
+       timestamp, explorer_tx_url, flow_type)
+      VALUES (?, 'usdt-tether', 'USDT', 'ethereum', ?, 100, 100, ?, '0xroundtrip', 1, ?, '', 'standard')`);
+    insert.run("mint", "mint", null, timestamp);
+    insert.run("burn", "burn", "effective_burn", timestamp);
+    // The post-run sweep tags the cross-config pair while both sides are stored.
+    await sweepRecentRoundtrips(db, timestamp + 1_000);
+    expect(sqlite.prepare("SELECT direction, flow_type FROM mint_burn_events ORDER BY direction").all()).toEqual([
+      { direction: "burn", flow_type: "atomic_roundtrip" },
+      { direction: "mint", flow_type: "atomic_roundtrip" },
+    ]);
+    expect(sqlite.prepare("SELECT burn_count, net_flow_usd FROM mint_burn_hourly WHERE hour_ts = 3600").get())
+      .toEqual({ burn_count: 0, net_flow_usd: 0 });
+
+    // A coverage-repair / held-cursor replay re-observes one side only; the
+    // in-memory detector cannot see the stored peer and reports it standard.
+    const affectedHours = new Map<string, { stablecoinId: string; chainId: string; hourTs: number }>();
+    await persistMintBurnRows(db, [
+      makeRow({ id: "burn", direction: "burn", burn_type: "effective_burn", tx_hash: "0xroundtrip", timestamp }),
+    ], affectedHours);
+    await recalcAffectedHours(db, affectedHours);
+
+    expect.soft(sqlite.prepare("SELECT direction, flow_type FROM mint_burn_events ORDER BY direction").all()).toEqual([
+      { direction: "burn", flow_type: "atomic_roundtrip" },
+      { direction: "mint", flow_type: "atomic_roundtrip" },
+    ]);
+    expect.soft(sqlite.prepare("SELECT mint_count, burn_count, burn_volume_usd, net_flow_usd FROM mint_burn_hourly WHERE hour_ts = 3600").get())
+      .toEqual({ mint_count: 0, burn_count: 0, burn_volume_usd: 0, net_flow_usd: 0 });
   });
 
   it("removes stale hourly rows when an affected bucket has no rows left after recompute", async () => {

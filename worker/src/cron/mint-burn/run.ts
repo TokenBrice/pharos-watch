@@ -121,11 +121,17 @@ export class MintBurnRun {
     const contractsTotal = allTrackableConfigs.length;
     await syncMintBurnPublicationPolicy(db, disabledPublicationKeys, runTimestamp, allActiveConfigs.map(configKey));
     const publicationContext = await readMintBurnWindowContext(db, runTimestamp, allActiveConfigs);
+    // Also the retention-protection set: a leg the scan treats as pending — including
+    // a previously admitted one pending reactivation — can hold a mid-hour cursor and
+    // still owe the rest of that hour's raw siblings. Never-admitted disabled legs
+    // retain the earlier protection as well.
     const pendingAdmissionKeys = new Set(publicationContext.publication.legs
       .filter((leg) => leg.status === "pending-admission").map((leg) => leg.configKey));
     const grandfatheredKeys = new Set(allActiveConfigs.filter(isGrandfatheredMintBurnConfig).map(configKey));
     const pendingRetentionKeys = new Set(publicationContext.publication.legs
-      .filter((leg) => leg.admittedAt == null && !grandfatheredKeys.has(leg.configKey)).map((leg) => leg.configKey));
+      .filter((leg) => leg.status === "pending-admission"
+        || (leg.admittedAt == null && !grandfatheredKeys.has(leg.configKey)))
+      .map((leg) => leg.configKey));
     const unsupportedKeys = new Set(publicationContext.publication.legs
       .filter((leg) => leg.reason === "unsupported-shared-bucket").map((leg) => leg.configKey));
     enabledConfigs = enabledConfigs.filter((config) => !unsupportedKeys.has(configKey(config)));

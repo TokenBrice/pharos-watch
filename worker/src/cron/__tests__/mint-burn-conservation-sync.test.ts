@@ -11,6 +11,7 @@ import { completeMintBurnConservationAudit, conservationOnlyEventDefsFor, persis
   type ConservationEventDef } from "../../lib/mint-burn-conservation";
 import type { MintBurnRow } from "../../lib/mint-burn-pipeline/types";
 import type { MintBurnConservationRecord } from "@shared/types/status";
+import { mockD1 } from "@shared/test-utils/mock-d1";
 import type * as AlchemyLogsModule from "../../lib/alchemy-logs";
 vi.mock("../../lib/alchemy-logs", async (importOriginal) => ({
   ...(await importOriginal<typeof AlchemyLogsModule>()),
@@ -39,8 +40,8 @@ const conservationEventDef: ConservationEventDef = {
   topicArity: 1,
   emitter: `0x${"b".repeat(40)}`,
 };
-function run() {
-  return syncMintBurnConfig({ db: {} as D1Database, config, key: "key", tier: "extended", fromBlock: 101,
+function run(db: D1Database = {} as D1Database) {
+  return syncMintBurnConfig({ db, config, key: "key", tier: "extended", fromBlock: 101,
     scanTo: 102, chainHead: 200, rpcEndpoints: [mintBurnAlchemyEndpoint("https://rpc.example")], configBudgetLimit: 25, runTimestamp: 1200,
     priceContext: { priceObservations: new Map(), priceHistory: new Map() }, chainTimestampCache: new Map(),
     txContextCache: new Map(), affectedHours: new Map() });
@@ -54,6 +55,7 @@ beforeEach(() => {
   vi.mocked(parseMintBurnLogs).mockReturnValue({
     rows: [{ ...row }],
     dropped: 0,
+    droppedMalformed: 0,
     droppedDecode: 0,
     earliestDecodeFailureBlock: null,
   });
@@ -103,6 +105,40 @@ describe("conservation producer publication and cursor fences", () => {
       scannedToBlock: 102, rowsRead: index === 0 ? 1 : 0,
     })));
     expect(result.newLastBlock).toBe(102);
+  });
+  it("withholds the conservation verdict when a decode quarantine removes a raw log", async () => {
+    const quarantined = {
+      data: "0x1234", blockNumber: "0x66", transactionHash: "0xquarantine", logIndex: "0x1",
+    };
+    const db = mockD1([
+      { match: "SELECT value FROM cache", rows: [{
+        value: JSON.stringify({ attempts: 2, quarantined: false, reason: "amount-decode-retry" }),
+      }] },
+      { match: "INSERT INTO cache", rows: [] },
+    ]);
+    vi.mocked(fetchAlchemyLogs).mockReset()
+      .mockResolvedValueOnce({
+        logs: [{ data: `0x${(1_000_000n).toString(16).padStart(64, "0")}`, blockNumber: "0x66",
+          transactionHash: "0xkept", logIndex: "0x0" }, quarantined],
+        complete: true, scannedToBlock: 102, calls: 1, maxDepth: 0,
+      } as never)
+      .mockResolvedValueOnce({ logs: [], complete: true, scannedToBlock: 102, calls: 1, maxDepth: 0 } as never);
+    // The third observation quarantines the truncated log and splices it out of
+    // the audited set. Its supply movement still sits in the boundary delta, so
+    // the audit must not turn the reduced evidence into an arithmetic mismatch.
+    vi.mocked(completeMintBurnConservationAudit).mockImplementation((input) => ({
+      ...audit,
+      status: input.complete ? "mismatch" : "unavailable",
+      reason: input.complete ? "raw-transfer-supply-mismatch" : "incomplete-log-range",
+    }));
+
+    const result = await run(db);
+
+    expect(result.summary.rowsQuarantinedDecode).toBe(1);
+    expect(completeMintBurnConservationAudit).toHaveBeenCalledWith(expect.objectContaining({ complete: false }));
+    expect(persistMintBurnConservation).toHaveBeenCalledWith(expect.anything(),
+      expect.objectContaining({ status: "unavailable", reason: "incomplete-log-range" }), undefined);
+    expect(result.summary.conservationStatus).toBe("unavailable");
   });
   it("keeps ingestion successful when a conservation-only fetch fails", async () => {
     vi.mocked(conservationOnlyEventDefsFor).mockReturnValue([conservationEventDef]);

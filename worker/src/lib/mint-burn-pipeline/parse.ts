@@ -20,6 +20,8 @@ export function parseMintBurnLogs(
 ): {
   rows: MintBurnRow[];
   dropped: number;
+  /** Decodable, above-dust logs without a usable event identity (block/log index). */
+  droppedMalformed: number;
   droppedDecode: number;
   earliestDecodeFailureBlock: number | null;
 } {
@@ -27,6 +29,7 @@ export function parseMintBurnLogs(
   const direction = eventDef.direction;
   const requiresSupplyProof = direction === "burn" && requiresReviewedSupplyBurnProof(config);
   let dropped = 0;
+  let droppedMalformed = 0;
   let droppedDecode = 0;
   let earliestDecodeFailureBlock: number | null = null;
 
@@ -50,8 +53,13 @@ export function parseMintBurnLogs(
 
     const blockNum = parseInt(log.blockNumber, 16);
     const logIndex = parseInt(log.logIndex, 16);
+    if (isNaN(blockNum) || isNaN(logIndex)) {
+      dropped++;
+      droppedMalformed++;
+      continue;
+    }
     const timestamp = blockTimestamps.get(blockNum) ?? 0;
-    if (isNaN(blockNum) || isNaN(logIndex) || !timestamp) {
+    if (!timestamp) {
       dropped++;
       continue;
     }
@@ -102,5 +110,5 @@ export function parseMintBurnLogs(
     });
   }
 
-  return { rows, dropped, droppedDecode, earliestDecodeFailureBlock };
+  return { rows, dropped, droppedMalformed, droppedDecode, earliestDecodeFailureBlock };
 }

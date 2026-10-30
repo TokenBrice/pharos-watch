@@ -393,6 +393,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   }
 
   const allParsedRows: MintBurnRow[] = [];
+  let rowsDroppedMalformed = 0;
   for (const { eventDef, logs } of allConfigLogs) {
     const parseableLogs: AlchemyLogEntry[] = [];
     for (const log of logs) {
@@ -430,6 +431,7 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
     const parsed = parseMintBurnLogs(config, eventDef, parseableLogs, blockTimestamps, priceContext);
 
     summary.rowsDropped += parsed.dropped;
+    rowsDroppedMalformed += parsed.droppedMalformed;
     summary.rowsDroppedDecode += parsed.droppedDecode;
     if (parsed.earliestDecodeFailureBlock != null) {
       summary.earliestDecodeFailureBlock = summary.earliestDecodeFailureBlock == null
@@ -492,13 +494,19 @@ export async function syncMintBurnConfig(input: SyncMintBurnConfigInput): Promis
   const fullEventCoverage =
     summary.eventCoverage.length === config.events.length &&
     summary.eventCoverage.every((coverage) => coverage.complete && coverage.scannedToBlock >= scanTo) &&
-    summary.rowsDroppedDecode === (summary.rowsQuarantinedDecode ?? 0);
+    summary.rowsDroppedDecode === (summary.rowsQuarantinedDecode ?? 0) &&
+    // A decodable non-dust log dropped for a malformed event identity is an
+    // observed event that no row carries, so the range is not exhaustively covered.
+    rowsDroppedMalformed === 0;
   let conservationFence = false;
   let conservationAudit: MintBurnConservationRecord | null = null;
   if (getMintBurnConservationEligibility(config).supported) {
     const audit = completeMintBurnConservationAudit({
       config, logs: allConfigLogs, conservationLogs, fromBlock, toBlock: scanTo, checkedAt: Math.floor(Date.now() / 1000),
-      complete: fullEventCoverage && conservationCoverageComplete, boundary: input.conservationBoundary,
+      // A quarantined raw log is absent from this evidence set while boundary
+      // supply still reflects it, so the audit cannot claim an arithmetic verdict.
+      complete: fullEventCoverage && conservationCoverageComplete && summary.rowsDroppedDecode === 0,
+      boundary: input.conservationBoundary,
     });
     conservationFence = audit.status === "mismatch" || [
       "invalid-rpc-quantity", "unsafe-rpc-quantity", "invalid-raw-log", "inconsistent-log-block-hash",
