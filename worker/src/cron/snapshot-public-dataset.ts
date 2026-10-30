@@ -114,6 +114,12 @@ interface SnapshotPublicDatasetOptions {
   stablecoinsCacheRetryAttempts?: number;
   stablecoinsCacheRetryDelayMs?: number;
   completionReason?: string;
+  /**
+   * Admitted slot clock. The row's UTC day comes from this clock, so a late
+   * delivery that crosses midnight still writes the write-once day its
+   * admission checked. Defaults to the wall clock.
+   */
+  slotStartedAtSec?: number;
 }
 
 const DEFAULT_STABLECOINS_CACHE_RETRY_ATTEMPTS = 0;
@@ -252,8 +258,9 @@ export async function snapshotPublicDataset(
 ): Promise<CronResult> {
   throwIfAborted(signal);
   const nowSec = Math.floor(Date.now() / 1000);
-  const snapshotDate = isoDateUtc(new Date(nowSec * 1000));
-  const expectedPsiComputedAt = bucketUnixSecondsToUtcDay(nowSec) - DAY_SECONDS;
+  const slotDayStartedAtSec = bucketUnixSecondsToUtcDay(options.slotStartedAtSec ?? nowSec);
+  const snapshotDate = isoDateUtc(new Date(slotDayStartedAtSec * 1000));
+  const expectedPsiComputedAt = slotDayStartedAtSec - DAY_SECONDS;
 
   const existingSnapshot = await loadExistingSnapshot(db, snapshotDate, signal);
   throwIfAborted(signal);

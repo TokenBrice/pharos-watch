@@ -278,6 +278,21 @@ describe("score-bearing reference fallback admission", () => {
     };
     expect(getFreshReferencePriceForContext(buildPriceValidationContext({ stablecoinId: "ggbr-goldfish-gold" }), gold, clock)).toBe(2.915);
   });
+
+  it("never derives a NAV token's reference from a peg print", () => {
+    // OUSG is USD-pegged and FPI can carry an FX peg type, but a NAV token's
+    // value comes only from a guarded NAV reference (never nominal $1 or FX).
+    for (const input of [
+      { stablecoinId: "ousg-ondo-finance" },
+      { stablecoinId: "fpi-frax", pegType: "peggedEUR" },
+    ]) {
+      const nav = buildPriceValidationContext(input);
+      expect(nav).toMatchObject({ pegClass: "nav", navToken: true });
+      expect(getReferencePriceForContext(nav, references)).toBeNull();
+      expect(getFreshReferencePriceForContext(nav, references, clock)).toBeNull();
+    }
+    expect(getReferencePriceForContext(buildPriceValidationContext({ pegCurrency: "USD" }), undefined)).toBe(1);
+  });
 });
 
 describe("validatePriceCandidate", () => {

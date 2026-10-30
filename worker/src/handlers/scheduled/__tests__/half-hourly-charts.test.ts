@@ -1,7 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { ScheduledRuntimeContext } from "../context";
 import { makeScheduledRuntime } from "../../../test-helpers/scheduled-runtime.test-support";
 import { makeNoopD1 } from "../../../test-helpers/noop-d1";
+import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { createDwellirNativeCapability } from "../../../lib/dwellir-native";
 
 const mocks = vi.hoisted(() => ({
@@ -38,8 +39,20 @@ vi.mock("../../../lib/peg-analytics-cache", () => ({
 
 import type { CronProgressReporter, CronResult } from "../../../lib/cron-logger";
 import { ACTIVE_STABLECOINS } from "@shared/lib/stablecoins/registry";
+import { buildSafetyScoreV9InputIdentity } from "@shared/lib/safety-score-v9-input-identity";
+import type { SafetyScoreV9CaptureTuple } from "@shared/types/safety-score-v9-capture-control";
+import {
+  buildSafetyScoreV9CaptureControl, commitCaptureControl, parseSafetyScoreV9CaptureControl,
+  requestRecapture, SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY,
+} from "../../../lib/safety-score-v9/capture-control";
 
 import { runHalfHourlyChartsSlot } from "../half-hourly-charts";
+
+const fixtures = createLatestSchemaFixtureTracker();
+afterEach(() => {
+  fixtures.closeAll();
+  vi.useRealTimers();
+});
 
 function runtime(dbOverride?: D1Database): ScheduledRuntimeContext {
   const signal = new AbortController().signal;
@@ -702,5 +715,48 @@ describe("half-hourly charts scheduling", () => {
     expect(readAccepted).not.toHaveBeenCalled();
     expect(mocks.prepareSafetyScoreV9Input).not.toHaveBeenCalled();
     expect(mocks.syncStablecoinCharts).toHaveBeenCalled();
+  });
+
+  it("re-prepares at :46 when a :22 recapture request, not a capture commit, is the only row write", async () => {
+    const { db } = fixtures.open();
+    const captureClockSec = Date.parse("2026-10-07T19:17:00Z") / 1_000;
+    const baseInputGenerationId = `report-cards-input:v1:${"a".repeat(64)}`;
+    const sourceGeneration = "report-cards:10.05:fixture";
+    const capture: SafetyScoreV9CaptureTuple = {
+      safetyScoreIdentity: buildSafetyScoreV9InputIdentity({
+        methodologyVersion: "10.05", baseInputGenerationId, publicationGenerationId: sourceGeneration,
+      }),
+      baseInputGenerationId, sourceGeneration, clockSec: captureClockSec,
+      registryFingerprint: "b".repeat(64), workerVersion: "worker-old", workerUploadedAtSec: captureClockSec - 60,
+    };
+    // Last committed capture: the previous hour's :16 tick, stamped at its commit clock.
+    await commitCaptureControl(db, [], buildSafetyScoreV9CaptureControl(capture, captureClockSec), true, captureClockSec);
+    // A deploy changed the evaluator; the hour's :16 prepare never committed, so
+    // the :22 publisher requests a recapture against the still-current capture.
+    vi.useFakeTimers();
+    vi.setSystemTime(Date.parse("2026-10-07T20:22:00Z"));
+    expect(await requestRecapture(db, capture, {
+      workerVersion: "worker-v2", workerUploadedAtSec: Date.parse("2026-10-07T20:20:00Z") / 1_000,
+      evaluationBuildDigest: "c".repeat(64), registryFingerprint: capture.registryFingerprint,
+    })).toBe("requested");
+    vi.useRealTimers();
+
+    const row = await db.prepare("SELECT value, updated_at FROM cache WHERE key = ?")
+      .bind(SAFETY_SCORE_V9_CAPTURE_CONTROL_CACHE_KEY)
+      .first<{ value: string; updated_at: number }>();
+    expect(row?.updated_at).toBe(captureClockSec);
+    expect(row && parseSafetyScoreV9CaptureControl(row.value).recaptureRequest).not.toBeNull();
+
+    const scheduledRuntime = runtime(db);
+    scheduledRuntime.slotStartedAt = Date.parse("2026-10-07T20:46:00Z") / 1_000;
+    const results = captureJobResults(scheduledRuntime);
+
+    await runHalfHourlyChartsSlot(scheduledRuntime);
+
+    // The hour still has no capture, so the :46 tick must prepare one for the :52 retry.
+    expect(mocks.prepareSafetyScoreV9Input).toHaveBeenCalledOnce();
+    expect(jobMetadata(results, "prepare-safety-score-v9-input")).toMatchObject({
+      hourlyCaptureRecovery: "missing",
+    });
   });
 });

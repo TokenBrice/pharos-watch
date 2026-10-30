@@ -1,6 +1,7 @@
 import * as React from "react";
 import { CardFrame, MetricLabel, TEXT_SECONDARY, FROST_BLUE, SEMANTIC_COLORS, TRACK_BG } from "./shared";
 import { formatCurrency } from "@shared/lib/format";
+import { formatChainShare } from "@shared/lib/chain-share-format";
 import { CHAIN_HEALTH_HEX, CHAIN_HEALTH_UNRATED_HEX } from "@shared/lib/classification";
 
 export interface ChainCardTopStablecoin {
@@ -69,7 +70,7 @@ export function ChainCard({ data }: { data: ChainCardData }) {
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
           <MetricLabel fontSize={13}>SHARE OF GLOBAL</MetricLabel>
           <span style={{ fontSize: 30, fontWeight: 700, color: FROST_BLUE }}>
-            {data.dominanceShare == null ? "Unavailable" : `${(data.dominanceShare * 100).toFixed(1)}%`}
+            {formatChainShare(data.dominanceShare)}
           </span>
         </div>
         <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
@@ -114,7 +115,7 @@ export function ChainCard({ data }: { data: ChainCardData }) {
                 }}
               />
             </div>
-            <span style={{ width: 90, color: TEXT_SECONDARY }}>{(coin.share * 100).toFixed(1)}%</span>
+            <span style={{ width: 90, color: TEXT_SECONDARY }}>{formatChainShare(coin.share)}</span>
             <span style={{ color: TEXT_SECONDARY }}>{formatCurrency(coin.supplyUsd, 1)}</span>
           </div>
         ))}

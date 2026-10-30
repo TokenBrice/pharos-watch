@@ -107,6 +107,39 @@ describe("Horizon pool discovery", () => {
     });
   });
 
+  it("withholds the tracked leg's price when the counter-leg is a NAV token", async () => {
+    // USDY is USD-pegged but a NAV token: its USD value comes only from a
+    // guarded NAV reference, never a nominal $1 peg print.
+    const USDY_ASSET = "USDY:GAJMPX5NBOG6TQFPQGRABJEEB2YE7RFRLUKJDZAZGAD5GFX4J7TADAZ6";
+    const USDC_HORIZON_ASSET = `USDC:${USDC_ADDRESS.slice(USDC_ADDRESS.indexOf("-") + 1)}`;
+    const fetchMock = mockFetch([{
+      match: "reserves=USDC%3AGA5Z",
+      body: payload([{
+        id: POOL_ID,
+        fee_bp: 10,
+        type: "constant_product",
+        reserves: [
+          { asset: USDC_HORIZON_ASSET, amount: "100000.0000000" },
+          { asset: USDY_ASSET, amount: "90909.0909090" },
+        ],
+      }]),
+    }], { requireMatch: true });
+    const stageContext = discoveryContext("usdc-circle", {
+      references: { rates: { peggedEUR: 1.08 }, type: "fresh", updatedAt: 1_800_000_000 },
+    });
+
+    const result = await crawlHorizonPoolsStage({
+      coinTargets: [{ chain: "stellar", address: USDC_ADDRESS, decimals: 7 }],
+      context: stageContext.value,
+    });
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(result.providerChecks[0]?.status).toBe("success");
+    expect(stageContext.pools).toEqual([
+      expect.objectContaining({ poolId: `stellar:${POOL_ID}`, stablecoinId: "usdc-circle", priceUsd: null, tvlUsd: null }),
+    ]);
+  });
+
   it("follows the Horizon cursor until a short page proves the query ended", async () => {
     const nextHref = "https://horizon.stellar.org/liquidity_pools?cursor=page2&limit=200";
     const fetchMock = mockFetch([

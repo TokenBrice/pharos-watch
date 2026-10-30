@@ -69,10 +69,10 @@ function PerformerList({
 }
 
 export function SafetyScoresCard({ data }: { data: SafetyScoresCardData }) {
-  // Filter out zero counts for cleaner display
+  // Filter out zero counts for cleaner display; every nonzero grade must stay
+  // visible (ADR-34: the block is the published distribution, not a top-N slice).
   const filteredDistribution = Object.entries(data.gradeDistribution)
-    .filter(([, count]) => count > 0)
-    .slice(0, 8); // Show max 8 grades
+    .filter(([, count]) => count > 0);
 
   return (
     <CardFrame 

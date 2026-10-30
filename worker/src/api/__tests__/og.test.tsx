@@ -1313,4 +1313,33 @@ describe("og cards render through satori", () => {
     expect(renderToStaticMarkup(<ChainCard data={{ ...data, dominanceShare: 0 }} />)).toContain("0.0%");
   });
 
+  it("rounds a measured sliver of global chain supply below 0.1%, never to an observed zero", () => {
+    // ~$1.2M of a ~$300B observed global supply is dominanceShare 0.000004.
+    const markup = renderToStaticMarkup(<ChainCard data={{
+      name: "Obscure Chain", totalUsd: 1_200_000, change7dPercent: null, stablecoinCount: 1,
+      dominanceShare: 0.000004, healthScore: null, healthBand: null,
+      topStablecoins: [{ symbol: "XUSD", share: 0.000004, supplyUsd: 1_200_000 }],
+    }} />);
+    expect(markup).toContain("&lt;0.1%");
+    expect(markup).not.toContain("0.0%");
+  });
+
+  it("renders every nonzero grade bucket of the published safety distribution", () => {
+    // 2026-10-27 published V9 dataset: 394 graded assets over 11 letter grades,
+    // including the riskiest C- 77, D 82 and F 21 buckets.
+    const gradeDistribution: Record<string, number> = {
+      "A+": 1, A: 8, "A-": 5, "B+": 8, B: 12, "B-": 29,
+      "C+": 72, C: 79, "C-": 77, D: 82, F: 21, NR: 0,
+    };
+    const markup = renderToStaticMarkup(<SafetyScoresCard data={{
+      gradeDistribution, pulseScore: 61.5, coverageRatio: 394 / 624, totalCoins: 624,
+      topPerformers: [], bottomPerformers: [], safetyModel: "v9",
+    }} />);
+    const distribution = markup.slice(markup.indexOf("GRADE DISTRIBUTION"), markup.indexOf("AVERAGE SCORE"));
+    for (const [grade, count] of Object.entries(gradeDistribution).filter(([, count]) => count > 0)) {
+      expect(distribution, `${grade} bucket`).toContain(`>${grade}<`);
+      expect(distribution, `${grade} count`).toContain(`>${count}<`);
+    }
+  });
+
 });

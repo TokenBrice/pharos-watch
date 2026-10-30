@@ -98,6 +98,23 @@ describe("snapshotPsiDaily", () => {
     });
   });
 
+  it("writes the admitted slot's day when a late delivery crosses UTC midnight", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    // The 23:45 slot of day D is delivered at 00:05 on D+1; its admission read
+    // day D-1's midnight-keyed row, so the retry must repair that day.
+    const slotStartedAtSec = Date.parse("2026-10-29T23:45:00Z") / 1000;
+    const admittedDayStart = Date.parse("2026-10-29T00:00:00Z") / 1000;
+    const computedAt = admittedDayStart - 86_400;
+    vi.setSystemTime(new Date("2026-10-30T00:05:00Z"));
+    seedSample(sqlite, computedAt + 12 * 3_600, 80);
+    seedSample(sqlite, admittedDayStart + 300, 20);
+
+    await snapshotPsiDaily(db, undefined, { completionReason: "same_day_catch_up", slotStartedAtSec });
+
+    expect(sqlite.prepare("SELECT computed_at, score FROM stability_index ORDER BY computed_at").all())
+      .toEqual([{ computed_at: computedAt, score: 80 }]);
+  });
+
   it("returns skipped metadata and leaves no daily row when the sample set is empty", async () => {
     const { sqlite, db } = createLatestSchemaSqlite();
 

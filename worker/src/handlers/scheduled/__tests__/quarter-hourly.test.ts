@@ -378,7 +378,7 @@ describe("runQuarterHourlySlot", () => {
     expect(mocks.snapshotPsiDaily).toHaveBeenCalledWith(
       expect.anything(),
       expect.any(AbortSignal),
-      { completionReason: "same_day_catch_up" },
+      { completionReason: "same_day_catch_up", slotStartedAtSec: slotStartedAt },
     );
     expect(mocks.snapshotPublicDataset).toHaveBeenCalledOnce();
     expect(mocks.snapshotPublicDataset).toHaveBeenCalledWith(
@@ -388,6 +388,7 @@ describe("runQuarterHourlySlot", () => {
         completionReason: "same_day_catch_up",
         minStablecoinsCacheUpdatedAtSec: SLOT_0800,
         freshnessGateLabel: "daily0800Utc",
+        slotStartedAtSec: slotStartedAt,
       },
     );
   });

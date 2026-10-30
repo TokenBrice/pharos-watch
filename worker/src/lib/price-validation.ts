@@ -212,6 +212,9 @@ export function getReferencePriceForContext(
   references: PriceValidationReferences | undefined,
 ): number | null {
   if (!context.pegType) return null;
+  // A NAV token's USD value comes only from a guarded NAV reference, never a
+  // peg print; its pegType says nothing about the token's price.
+  if (context.navToken || context.pegClass === "nav") return null;
   if (context.pegType.includes("USD")) {
     return 1;
   }
@@ -227,6 +230,8 @@ export function getFreshReferencePriceForContext(
   references: PriceValidationReferences | undefined,
   assessmentAtSec: number,
 ): number | null {
+  // NAV admission uses only guarded NAV references, never a fresh peg/FX print.
+  if (context.navToken || context.pegClass === "nav") return null;
   if (context.pegType?.includes("USD")) return getReferencePriceForContext(context, references);
   const pegType = context.pegType;
   if (!pegType || references?.typeByPeg?.[pegType] !== "fresh") return null;
