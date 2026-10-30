@@ -46,9 +46,9 @@ function receiptJson({
     registryFingerprint,
     card: {
       id: assetId,
-      openQuestionsCarried: open.length,
-      inheritedOpenQuestionsCarried: open.filter((question) => question.inherited === true).length,
-      openObligationsCarried: open.reduce((total, question) => total + (question.obligations ?? 1), 0),
+      openBucketQuestionsCarried: open.length,
+      inheritedOpenBucketQuestionsCarried: open.filter((question) => question.inherited === true).length,
+      openBucketObligationsCarried: open.reduce((total, question) => total + (question.obligations ?? 1), 0),
       documentationObligationsCarried: questions.reduce(
         (total, question) => total +
           (question.codes ?? []).filter((code) => code.documentation === true)
@@ -171,7 +171,7 @@ describe("new-asset evidence packet gate", () => {
     expect(failKinds(evaluate("{not json"))).toEqual(["invalid-receipt"]);
     expect(failKinds(evaluate(receiptJson({
       questions: openQuestions(2),
-      card: { openQuestionsCarried: 1 },
+      card: { openBucketQuestionsCarried: 1 },
     })))).toEqual(["invalid-receipt"]);
     expect(failKinds(evaluate(valid))).toEqual([]);
   });

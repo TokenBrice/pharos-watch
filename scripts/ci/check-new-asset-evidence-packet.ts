@@ -38,7 +38,7 @@ import { compareCodeUnits } from "@shared/lib/compare";
 import { isActiveStablecoinMeta, isPreLaunchStablecoinMeta } from "@shared/lib/stablecoins/status";
 import type { StablecoinMeta } from "@shared/types";
 import { V9ReasonCodeSchema } from "@shared/types/safety-score-v9";
-import { V9OpenEvidenceByCardSchema, V9OpenQuestionBucketSchema } from "@shared/types/safety-score-v9-public";
+import { V9OpenEvidenceByCardSchema, V9OpenQuestionBucketSchema } from "@shared/types/safety-score-v9-open-evidence";
 import { STABLECOIN_STATUS_VALUES } from "@shared/types/stablecoin-taxonomy";
 import { collectGitPaths } from "../lib/changed-files.mts";
 import { parseStrictCliArgs, runDirectCli, writeCliHelpIfRequested } from "../lib/cli-args.mjs";
@@ -163,27 +163,27 @@ export const NewAssetAdmissionReceiptSchema = z
       ctx.addIssue({ code: "custom", path: ["questions"], message: "question keys are unique" });
     }
     const open = receipt.questions.filter((question) => question.bucket === "open");
-    if (open.length !== receipt.card.openQuestionsCarried) {
+    if (open.length !== receipt.card.openBucketQuestionsCarried) {
       ctx.addIssue({
         code: "custom",
-        path: ["card", "openQuestionsCarried"],
-        message: `card claims ${receipt.card.openQuestionsCarried} open questions, list has ${open.length}`,
+        path: ["card", "openBucketQuestionsCarried"],
+        message: `card claims ${receipt.card.openBucketQuestionsCarried} open questions, list has ${open.length}`,
       });
     }
     const inheritedOpen = open.filter((question) => question.inherited).length;
-    if (inheritedOpen !== receipt.card.inheritedOpenQuestionsCarried) {
+    if (inheritedOpen !== receipt.card.inheritedOpenBucketQuestionsCarried) {
       ctx.addIssue({
         code: "custom",
-        path: ["card", "inheritedOpenQuestionsCarried"],
-        message: `card claims ${receipt.card.inheritedOpenQuestionsCarried} inherited open questions, list has ${inheritedOpen}`,
+        path: ["card", "inheritedOpenBucketQuestionsCarried"],
+        message: `card claims ${receipt.card.inheritedOpenBucketQuestionsCarried} inherited open questions, list has ${inheritedOpen}`,
       });
     }
     const openObligations = open.reduce((total, question) => total + question.obligations, 0);
-    if (openObligations !== receipt.card.openObligationsCarried) {
+    if (openObligations !== receipt.card.openBucketObligationsCarried) {
       ctx.addIssue({
         code: "custom",
-        path: ["card", "openObligationsCarried"],
-        message: `card claims ${receipt.card.openObligationsCarried} open obligations, list has ${openObligations}`,
+        path: ["card", "openBucketObligationsCarried"],
+        message: `card claims ${receipt.card.openBucketObligationsCarried} open obligations, list has ${openObligations}`,
       });
     }
     const documentationObligations = receipt.questions.reduce(
@@ -391,7 +391,7 @@ export function evaluateNewAssetEvidencePacket({
     }
 
     const ownOpen = receipt.questions.filter((question) => question.bucket === "open" && !question.inherited);
-    const inheritedOpen = receipt.card.inheritedOpenQuestionsCarried;
+    const inheritedOpen = receipt.card.inheritedOpenBucketQuestionsCarried;
     const mintDatums = receipt.questions.filter(
       (question) => !question.inherited &&
         question.codes.some((code) => code.code === MISSING_MINT_AUTHORITY_CODE && !code.documentation),

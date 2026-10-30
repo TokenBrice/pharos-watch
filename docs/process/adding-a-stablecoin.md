@@ -555,9 +555,9 @@ Commit one receipt per gated asset at `.github/artifacts/new-asset-evidence-pack
   "registryFingerprint": "<64 lowercase hex>",
   "card": {
     "id": "ausd-acme",
-    "openQuestionsCarried": 1,
-    "inheritedOpenQuestionsCarried": 0,
-    "openObligationsCarried": 1,
+    "openBucketQuestionsCarried": 1,
+    "inheritedOpenBucketQuestionsCarried": 0,
+    "openBucketObligationsCarried": 1,
     "documentationObligationsCarried": 0
   },
   "questions": [
@@ -582,7 +582,7 @@ The gate fails an asset when:
 
 - the receipt is missing, is not valid JSON, fails the schema, or names another asset;
 - its `registryFingerprint` differs from the PR checkout's fingerprint, recomputed over the loaded registry with the same authority the replay snapshot uses;
-- the asset's own open questions exceed `NEW_ASSET_OPEN_QUESTION_LIMIT` (6). Own means `bucket: "open"` with `inherited: false`, i.e. `openQuestionsCarried` minus `inheritedOpenQuestionsCarried`. Inherited questions are counted once at their root: the pass line discloses them, and a non-documentation `missing-mint-authority` datum on an inherited question is a warning, not a failure;
+- the asset's own open questions exceed `NEW_ASSET_OPEN_QUESTION_LIMIT` (6). Own means `bucket: "open"` with `inherited: false`, i.e. `openBucketQuestionsCarried` minus `inheritedOpenBucketQuestionsCarried`. Inherited questions are counted once at their root: the pass line discloses them, and a non-documentation `missing-mint-authority` datum on an inherited question is a warning, not a failure;
 - any of the asset's own questions carries a `missing-mint-authority` datum with `documentation: false`. The condition is per datum, not per code: a `missing-mint-authority` datum the documentation classifier assigned a documentation reason (`documentation: true`, a documentation-only gap such as a narrow reconciliation or supervision item) passes; a whole-profile, authority or topology gap stays counted.
 
 The failure kinds are `invalid-asset-id`, `missing-receipt`, `invalid-receipt`, `mismatched-receipt`, `stale-receipt`, `open-question-limit`, and `missing-mint-authority`.

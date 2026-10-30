@@ -1438,6 +1438,13 @@
         {
           "sources": ["functions/_site-data/**", "functions/lib/site-api-env.ts"],
           "required": [{ "path": "docs/process/worker-infrastructure-appendix.md", "anchor": "site-data-auth" }]
+        },
+        {
+          "sources": ["scripts/ci/check-new-asset-evidence-packet.ts"],
+          "local": [
+            { "path": "docs/testing.md", "anchor": "pr-outcomes-and-transport" },
+            { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }
+          ]
         }
       ],
       "background": [{ "path": "docs/testing.md", "anchor": "ci-pipeline" }, { "path": "docs/testing.md", "anchor": "critical-coverage-gate" }, { "path": "docs/deployment-process.md", "anchor": "ci-deploy-sequence" }, { "path": "docs/scripts.md", "anchor": "pr-and-release-gates" }, {"path": "docs/architecture.md", "anchor": "file-tree-guide"}, "docs/process/feature-flags.md", "docs/process/boundary-waivers.md", { "path": "docs/runbooks/workflow-incidents.md", "runbook": { "label": "Workflow failure triage", "kind": "symptom" } }],
