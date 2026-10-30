@@ -99,6 +99,11 @@
       "chain": "hyperevm",
       "address": "0x14f0dfc32e8af769961b31ba3e89389bd6797652",
       "decimals": 9
+    },
+    {
+      "chain": "arc",
+      "address": "0x178b01f61cbea1d2a5581fe1621be607835ec349",
+      "decimals": 18
     }
   ],
   "custodyModel": "unknown",

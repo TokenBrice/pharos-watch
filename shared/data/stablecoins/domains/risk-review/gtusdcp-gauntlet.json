@@ -2076,7 +2076,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "single-chain-or-native",
-    "summary": "The three registered contracts are distinct, independently priced ERC-4626 vault products, not fungible deployments of one cross-chain gtUSDCp liability. Each vault issues and burns its own shares against local USDC without canonical gtUSDCp escrow. The Prime brand alone does not establish that all same-name vaults belong in this asset. Current CoinGecko identity gauntlet-usdc-prime names only Ethereum V2, while this catalog also retains Base V1 and Arbitrum V1.1; the older Ethereum V1 is separately registered as gtusdc-gauntlet. The prior complete-family inventory and transfer-census eligibility conclusion is withdrawn. Re-admission is deferred pending a reconciled catalog liability scope and evidence that its deployment set and published aggregate are complete for that scope.",
+    "summary": "The four registered contracts are distinct, independently priced ERC-4626 vault products, not fungible deployments of one cross-chain gtUSDCp liability. Each vault issues and burns its own shares against local USDC without canonical gtUSDCp escrow. The Prime brand alone does not establish that all same-name vaults belong in this asset. Current CoinGecko identity gauntlet-usdc-prime names only Ethereum V2, while this catalog also retains Base V1, Base V2 and Arbitrum V1.1; the older Ethereum V1 is separately registered as gtusdc-gauntlet. The prior complete-family inventory and transfer-census conclusion is withdrawn. Re-admission is deferred pending a reconciled catalog liability scope and evidence that its deployment set and published aggregate are complete for that scope.",
     "reviewedAt": "2026-10-09",
     "reviewer": "Sol curation campaign 2026-10-09 (W3ReadmitGauntlet)",
     "confidence": "verified",
@@ -2222,6 +2222,35 @@
           {
             "label": "Arbitrum pinned vault identity and independent share exchange rate (block 513233920)",
             "url": "https://api-arbitrum-mainnet-archive.n.dwellir.com"
+          }
+        ]
+      },
+      {
+        "id": "base:0x050ce30b927da55177a4914ec73480238bad56f0",
+        "destinationChain": "base",
+        "contractAddress": "0x050ce30b927da55177a4914ec73480238bad56f0",
+        "protocol": "Gauntlet USDC Prime (ERC-4626 vault)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "single-chain-or-native",
+        "semantics": "native-mint",
+        "scope": "canonical",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Gauntlet's VaultBook lists this exact Base USDC Prime V2 vault, and Base Blockscout shows a verified Morpho VaultV2 (lib/vault-v2/src/VaultV2.sol) with name Gauntlet USDC Prime, symbol gtusdcp, 18 decimals and about 79.98M shares; the vault issues and burns its own shares against Base USDC, so it is a native vault deployment, not a representation of the existing Base V1 or Ethereum V2. Gauntlet curator/allocator roles were not re-read.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "Gauntlet VaultBook V2 vaults",
+            "url": "https://vaultbook.gauntlet.xyz/vaults/morpho-vaults/v2-vaults.md"
+          },
+          {
+            "label": "Gauntlet USDC Prime V2 token on Base",
+            "url": "https://base.blockscout.com/api/v2/tokens/0x050cE30b927Da55177A4914EC73480238BAD56f0"
+          },
+          {
+            "label": "Verified Morpho VaultV2 source on Base",
+            "url": "https://base.blockscout.com/api/v2/smart-contracts/0x050cE30b927Da55177A4914EC73480238BAD56f0"
           }
         ]
       }

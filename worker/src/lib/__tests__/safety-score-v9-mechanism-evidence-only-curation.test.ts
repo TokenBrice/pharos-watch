@@ -1,5 +1,4 @@
 import { describe, expect, it } from "vitest";
-import { ACTIVE_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import { unknownQuality, V9_CANDIDATE_POLICY_V1 } from "@shared/lib/safety-score-v9/policy";
 import { evaluateV9FactSet } from "@shared/lib/safety-score-v9/evaluate-set";
 import {
@@ -10,6 +9,7 @@ import {
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { compileSafetyScoreV9FactSetFromFixedInput } from "../safety-score-v9/fact-set";
 import { makeV9FixedInput } from "../../test-helpers/v9-fixed-input";
+import { pinnedUusdMeta } from "./safety-score-v9-fact-set.test-support";
 
 function expectNonScoring(overlay: MechanismReviewOverlay, keys: string[]) {
   const expanded = expandOverlayReview(overlay) as unknown as Record<
@@ -51,9 +51,7 @@ describe("Safety Score V9 evidence-only mechanism curation", () => {
     // AM1 prices the unknown subfactors, not the known reserve book.
     const clockSec = Date.parse("2026-08-09T00:00:00Z") / 1_000;
     const fixed = makeV9FixedInput({ assetId: "uusd-anything-labs", clockSec });
-    const meta = structuredClone(ACTIVE_META_BY_ID.get("uusd-anything-labs")!);
-    meta.mintAuthority!.review.reviewedAt = "2026-08-08";
-    const metaById = new Map([["uusd-anything-labs", meta]]);
+    const metaById = pinnedUusdMeta();
 
     const curatedExtension = buildSafetyScoreV9BaselineExtension(fixed, { metaById });
     const curatedCompiled = compileSafetyScoreV9FactSetFromFixedInput(fixed, curatedExtension);

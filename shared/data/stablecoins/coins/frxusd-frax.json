@@ -199,6 +199,11 @@
       "chain": "hyperevm",
       "address": "0x80eede496655fb9047dd39d9f418d5483ed600df",
       "decimals": 18
+    },
+    {
+      "chain": "somnia",
+      "address": "0x00000000d61733e7a393a10a5b48c311abe8f1e5",
+      "decimals": 18
     }
   ],
   "custodyModel": "mixed",

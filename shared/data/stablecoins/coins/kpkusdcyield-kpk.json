@@ -69,6 +69,11 @@
       "chain": "ethereum",
       "address": "0xd5cce260e7a755ddf0fb9cdf06443d593aaeaa13",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x392b3ccf36c8adb8094f45573346b457414cd752",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

@@ -104,6 +104,11 @@
       "chain": "linea",
       "address": "0xf3b001d64c656e30a62fbaaca003b1336b4ce12a",
       "decimals": 18
+    },
+    {
+      "chain": "celo",
+      "address": "0xb9c8f0d3254007ee4b98970b94544e473cd610ec",
+      "decimals": 18
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",

@@ -40,6 +40,11 @@
       "chain": "ethereum",
       "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
       "decimals": 18
+    },
+    {
+      "chain": "megaeth",
+      "address": "0x88887be419578051ff9f4eb6c858a951921d8888",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

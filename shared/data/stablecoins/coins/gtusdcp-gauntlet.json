@@ -75,6 +75,11 @@
       "chain": "arbitrum",
       "address": "0x7c574174da4b2be3f705c6244b4bfa0815a8b3ed",
       "decimals": 18
+    },
+    {
+      "chain": "base",
+      "address": "0x050ce30b927da55177a4914ec73480238bad56f0",
+      "decimals": 18
     }
   ],
   "collateralQuality": "alt-lst-bridged-or-mixed",

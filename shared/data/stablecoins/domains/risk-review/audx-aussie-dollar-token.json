@@ -34,7 +34,7 @@
   },
   "bridgeRouteRisk": {
     "tier": "issuer-native-burn-mint",
-    "summary": "TAU Pty Ltd issuer-native multichain AUDX: terms state issuance on Ethereum and Polygon and expressly permit issuance on other blockchains; the issuer website claims 12+ supported chains. Exact on-chain checks at Conflux eSpace block 153047580 and XDC block 105432932 re-confirm Aussie Dollar Token / AUDX / 18 decimals with MINTER_ROLE held by the same issuer EOAs already inventoried in mintAuthority (0x1274d873 on Conflux; 0xc9d8603b on XDC, matching Ethereum/Polygon). All four tracked deployments are reviewed as native-issuance issuer routes with no third-party bridge controller.",
+    "summary": "TAU Pty Ltd issuer-native multichain AUDX: terms state issuance on Ethereum and Polygon and expressly permit issuance on other blockchains; the issuer website claims 12+ supported chains. Exact on-chain checks at Conflux eSpace block 153047580 and XDC block 105432932 re-confirm Aussie Dollar Token / AUDX / 18 decimals with MINTER_ROLE held by the same issuer EOAs already inventoried in mintAuthority. All six deployments are reviewed as native-issuance issuer routes with no third-party bridge controller.",
     "reviewedAt": "2026-07-28",
     "reviewer": "Grok Safety Score V9 wave-8 controls research",
     "confidence": "verified",
@@ -178,6 +178,64 @@
           {
             "label": "XDC Ankr public RPC",
             "url": "https://rpc.ankr.com/xdc"
+          }
+        ]
+      },
+      {
+        "id": "redbelly:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "destinationChain": "redbelly",
+        "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "protocol": "AUDX issuer-native issuance (TAU Pty Ltd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Routescan token metadata returns Aussie Dollar Token/AUDX at 18 decimals on Redbelly; the EIP-1967 implementation 0x6a0080d607c9ed4ecd7ccc8e1d4ad61c53501e4e is the same AussieDollarToken implementation recorded on XDC, and DEFAULT_ADMIN/MINTER_ROLE resolve to issuer EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28. This is issuer-native issuance, not a bridge representation. Mint transactions from 0x033e71780021712c1590e82b0c913e9e9d02e619 did not match the standard MINTER_ROLE hash and that caller's authority is unresolved.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "AUDX token metadata on Redbelly Routescan",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/151/etherscan/api?module=token&action=tokeninfo&contractaddress=0xD687759f35bb747A29246a4b9495C8f52C49E00C"
+          },
+          {
+            "label": "AUDX EIP-1967 implementation on Redbelly",
+            "url": "https://api.routescan.io/v2/network/mainnet/evm/151/etherscan/api?module=proxy&action=eth_getStorageAt&address=0xD687759f35bb747A29246a4b9495C8f52C49E00C&position=0x360894a13ba1a3210667c828492db98dca3e2076cc3735a920a3ca505d382bbc&tag=latest"
+          },
+          {
+            "label": "Redbelly ecosystem (AUDX active)",
+            "url": "https://redbelly.network/ecosystem"
+          }
+        ]
+      },
+      {
+        "id": "base:0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "destinationChain": "base",
+        "contractAddress": "0xd687759f35bb747a29246a4b9495c8f52c49e00c",
+        "protocol": "AUDX issuer-native issuance (TAU Pty Ltd)",
+        "issuanceModel": "native-issuance",
+        "routeClass": "native",
+        "riskTier": "issuer-native-burn-mint",
+        "semantics": "native-mint",
+        "scope": "peripheral",
+        "reviewDisposition": "reviewed",
+        "reviewNote": "Base Blockscout shows this exact EIP-1967 proxy over the same AussieDollarToken implementation 0x6a0080d607c9ed4ecd7ccc8e1d4ad61c53501e4e recorded on XDC, created by issuer EOA 0xc9d8603bcf23d148a56980e6a7e3e0d375ea3e28; initialize() sets that EOA as admin/minter/pauser/blacklister. This is issuer-native issuance, not a bridge representation. The issuer terms still name only Ethereum and Polygon, and the 50,000 AUDX minted to 0x033e71780021712c1590e82b0c913e9e9d02e619 has no resolved minter role.",
+        "mappingVersion": "bridge-route-facts-v1",
+        "observedAt": "2026-10-30",
+        "sources": [
+          {
+            "label": "AUDX on Base Blockscout",
+            "url": "https://base.blockscout.com/api/v2/tokens/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          },
+          {
+            "label": "AUDX Base proxy, implementation and creator",
+            "url": "https://base.blockscout.com/api/v2/addresses/0xd687759f35bb747a29246a4b9495c8f52c49e00c"
+          },
+          {
+            "label": "AUDX issuer terms",
+            "url": "https://www.audxtoken.com/terms-and-conditions"
           }
         ]
       }

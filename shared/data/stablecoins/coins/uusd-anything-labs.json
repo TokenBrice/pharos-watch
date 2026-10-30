@@ -32,6 +32,11 @@
       "chain": "bsc",
       "address": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
       "decimals": 18
+    },
+    {
+      "chain": "robinhood",
+      "address": "0x61a10e8556bed032ea176330e7f17d6a12a10000",
+      "decimals": 18
     }
   ],
   "collateralQuality": "exotic",

@@ -13,6 +13,9 @@
         "directMintAbility": "direct",
         "chain": "bsc",
         "address": "0x009c5467667dcD2Ab8C310E84B105cC0b570a8F4",
+        "deploymentRefs": [
+          "bsc:0x61a10e8556bed032ea176330e7f17d6a12a10000"
+        ],
         "threshold": 4,
         "signerCount": 7,
         "canRaiseCap": "unknown",
@@ -45,6 +48,9 @@
         "directMintAbility": "upgrade-only",
         "chain": "bsc",
         "address": "0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE",
+        "deploymentRefs": [
+          "bsc:0x61a10e8556bed032ea176330e7f17d6a12a10000"
+        ],
         "canRaiseCap": "unknown",
         "modulesOrGuardsStatus": "not-applicable",
         "observedAt": "2026-10-01",
@@ -86,6 +92,9 @@
       "model": "transparent-proxy",
       "adminAddresses": [
         "0x61108af7de820cAce912F6AEf863c19d1Dc2b7FE"
+      ],
+      "deploymentRefs": [
+        "bsc:0x61a10e8556bed032ea176330e7f17d6a12a10000"
       ],
       "canChangeMintLogic": true,
       "controlRef": "UUSD proxy-admin ownership chain",
