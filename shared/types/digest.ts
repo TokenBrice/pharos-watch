@@ -965,6 +965,6 @@ export const DigestSnapshotResponseSchema = z.object({
     knownAmountUsd: z.number().nullable(),
     valuedEvents: z.number().int().nonnegative(),
     unavailableAmountEvents: z.number().int().nonnegative(),
-  }).optional().describe("Full unsuppressed UTC-day cohort; blacklistEvents is only the latest 50-row sample. Missing summary means legacy unknown totals/valuation."),
+  }).optional().describe("Full unsuppressed UTC-day cohort; blacklistEvents is only the latest 50-row sample. Missing while the requested UTC day is still open, and on legacy snapshots where totals/valuation are unknown."),
 });
 export type DigestSnapshotResponse = z.infer<typeof DigestSnapshotResponseSchema>;

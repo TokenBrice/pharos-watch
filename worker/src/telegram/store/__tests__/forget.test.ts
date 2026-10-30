@@ -4,6 +4,7 @@ import { mockTelegramD1 as mockD1 } from "../../../test-helpers/__shared/telegra
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { forgetSubscriber, migrateTelegramChatId, unsubscribeAll } from "../subscriber-lifecycle";
 import { acquireTelegramMiniAppMutationBurst } from "../../mini-app/telegram-mini-app-rate-limit";
+import { computeTelegramCurrentLifecycleSnapshot } from "../usage-analytics";
 
 const fixtures = createLatestSchemaFixtureTracker({ uncached: true });
 afterEach(() => fixtures.closeAll());
@@ -291,6 +292,46 @@ describe("migrateTelegramChatId", () => {
     const touchedTables = collectTelegramTablesFromSql(db.getHistory());
     expect(chatTables.filter((table) => !touchedTables.has(table))).toEqual([]);
     expect([...touchedTables].filter(isRetiredTelegramTable)).toEqual([]);
+  });
+
+  it("does not fabricate watcher lifecycle events for a chat-id move", async () => {
+    const { sqlite, db } = setupChatMigrationSqlite();
+    const oldChatId = "-4242";
+    const newChatId = "-1001234567890";
+    // The group followed DEWS before Telegram upgraded it. The 0246 triggers
+    // initialize `watcher_active`; the daily counters describe preference
+    // transitions only, so they start empty.
+    insertRow(sqlite, "telegram_subscribers", {
+      chat_id: oldChatId, created_at: 100, last_active_at: 100, global_alert_dews: 1,
+    });
+    insertRow(sqlite, "telegram_subscriptions", {
+      chat_id: oldChatId, stablecoin_id: "usdc-circle", alert_dews: 1,
+    });
+    sqlite.exec("DELETE FROM telegram_watcher_lifecycle_events_daily");
+    expect(sqlite.prepare("SELECT watcher_active FROM telegram_subscribers WHERE chat_id = ?").get(oldChatId))
+      .toEqual({ watcher_active: 1 });
+
+    await migrateTelegramChatId(db, oldChatId, newChatId);
+
+    // The move carries the existing following over; it is neither a
+    // `newWatchers` subscribe nor a `churnedWatchers` unsubscribe.
+    expect(sqlite.prepare("SELECT chat_id, global_alert_dews, watcher_active FROM telegram_subscribers").all())
+      .toEqual([{ chat_id: newChatId, global_alert_dews: 1, watcher_active: 1 }]);
+    const snapshot = await computeTelegramCurrentLifecycleSnapshot(
+      db,
+      Math.floor(Date.now() / 1000),
+      { pendingDeliveryCount: 0 },
+    );
+    expect({ newWatchers: snapshot.newWatchers, churnedWatchers: snapshot.churnedWatchers })
+      .toEqual({ newWatchers: 0, churnedWatchers: 0 });
+    expect(sqlite.prepare(`
+      SELECT COALESCE(SUM(subscribe_events), 0) AS subscribed,
+             COALESCE(SUM(unsubscribe_events), 0) AS unsubscribed,
+             COALESCE(SUM(reactivate_events), 0) AS reactivated
+        FROM telegram_watcher_lifecycle_events_daily
+    `).get()).toEqual({ subscribed: 0, unsubscribed: 0, reactivated: 0 });
+    expect(sqlite.prepare("SELECT COUNT(*) AS count FROM cache WHERE key LIKE 'telegram:watcher-migration-suppress:%'").get())
+      .toEqual({ count: 0 });
   });
 
   it("round-trips every current column in merge-owned chat tables from the latest schema", async () => {

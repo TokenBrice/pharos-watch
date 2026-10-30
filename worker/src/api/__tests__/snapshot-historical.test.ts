@@ -7,7 +7,7 @@ import { HistoricalResolvedReportCardsV9ResponseSchema, HistoricalTypedReportCar
 import { ReportCardsV9ResponseSchema } from "@shared/types/report-cards-v9-current";
 import { ReportCardsV9AcceptedResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { makeWorkerReportCardsV9Response } from "../../test-helpers/report-cards-v9";
-import { handleSnapshotCoin, handleSnapshotDay } from "../snapshot";
+import { handleSnapshotCoin, handleSnapshotDay, handleSnapshotsIndex } from "../snapshot";
 import historicalSnapshot from "./fixtures/snapshot-2026-10-07-v10.09.json";
 
 type HistoricalSnapshotRow = {
@@ -186,6 +186,85 @@ describe("historical snapshot recorded safety contracts", () => {
         scores: { reportCard: envelope.reportCards.cards[0] },
       });
     });
+
+  it("serves an archived report5 row under the contract it recorded", async () => {
+    // Report wire 5 was live while methodology 9.49 was current; the archive
+    // row predates report7 and must stay readable byte-for-byte.
+    const identity = {
+      model: "v9",
+      schemaVersion: 1,
+      methodologyVersion: "9.49",
+      policyId: "safety-score-v9",
+      policyDigest: "a".repeat(64),
+      evaluationBuildDigest: "b".repeat(64),
+      baseInputGenerationId: `report-cards-input:v1:${"c".repeat(64)}`,
+      publicationGenerationId: "report-cards:v9:1",
+    } as const;
+    const card = { id: "usdc-circle", score: 80, grade: "A-" };
+    const envelope = {
+      snapshotDate: "2026-09-15",
+      generatedAt: 1789000000,
+      methodologyVersions: { reportCard: "9.49" },
+      safetyScoreIdentity: identity,
+      stablecoins: [{
+        id: "usdc-circle", name: "USD Coin", symbol: "USDC", pegType: "peggedUSD",
+        pegMechanism: "fiat-backed", price: 1, circulating: { peggedUSD: 50_000_000_000 }, chains: ["Ethereum"],
+      }],
+      fxFallbackRates: null,
+      reportCards: {
+        model: "v9",
+        lifecycle: "active",
+        safetyScoreIdentity: identity,
+        methodology: { version: "9.49", policy: { id: "safety-score-v9", semanticDigest: "a".repeat(64) } },
+        asOfSec: 1788999000,
+        updatedAt: 1789000000,
+        completeness: { expectedCount: 1, ratedCount: 1, notRatedCount: 0, notRatedIds: [] },
+        source: {
+          candidateId: "candidate-v9.49", factSetDigest: "d".repeat(64), resultDigest: "e".repeat(64),
+          sourceGenerations: { registry: "registry-1" },
+        },
+        dependencyGraph: { edges: [] },
+        schemaVersion: 5,
+        publicationHealth: {
+          schemaVersion: 1, status: "current", acceptedPublicationGenerationId: "report-cards:v9:1",
+          acceptedAtSec: 1789000000, attemptedAtSec: 1789000000, heldSinceSec: null, reasons: [],
+        },
+        cards: [card],
+      },
+    };
+    const payload = JSON.stringify(envelope);
+    const row = {
+      snapshot_date: envelope.snapshotDate,
+      payload_gz: gzipSync(payload),
+      methodology_versions: JSON.stringify({
+        ...envelope.methodologyVersions,
+        safetyScoreIdentity: identity,
+      }),
+      content_hash: createHash("sha256").update(payload).digest("hex"),
+      byte_size: Buffer.byteLength(payload),
+      created_at: envelope.generatedAt,
+    };
+    const db = database(row);
+
+    const index = await handleSnapshotsIndex(db);
+    expect(index.status).toBe(200);
+    expect((await index.json() as { snapshots: Array<{ snapshotDate: string }> }).snapshots)
+      .toContainEqual(expect.objectContaining({ snapshotDate: envelope.snapshotDate }));
+
+    const day = await handleSnapshotDay(db, envelope.snapshotDate);
+    expect(day.status).toBe(200);
+    expect(day.headers.get("ETag")).toBe(`"${row.content_hash}"`);
+    expect(await day.text()).toBe(payload);
+
+    const coin = await handleSnapshotCoin(db, envelope.snapshotDate, card.id);
+    expect(coin.status).toBe(200);
+    expect(await coin.json()).toMatchObject({
+      snapshotDate: envelope.snapshotDate,
+      stablecoinId: card.id,
+      safetyScoreIdentity: identity,
+      scores: { reportCard: card },
+    });
+  });
 
 
   it("does not accept witness summaries under the 10.10 accounting contract", async () => {

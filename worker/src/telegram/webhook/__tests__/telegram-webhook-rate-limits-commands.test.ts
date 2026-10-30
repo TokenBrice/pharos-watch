@@ -344,8 +344,23 @@ describe("handleTelegramWebhook", () => {
       { match: "FROM stress_signals", rows: [{ band: "CALM", score: 15, computed_at: 1_700_000_000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
       {
-        match: "FROM price_cache WHERE asset_id = ?",
-        rows: [{ price: 0.9999, updated_at: 1_700_000_000 }],
+        match: "FROM cache WHERE key = ?", matchBinds: ["stablecoins"],
+        rows: [],
+        first: {
+          value: JSON.stringify({
+            peggedAssets: [{
+              id: "usdc-circle",
+              symbol: "USDC",
+              price: 0.9999,
+              priceSource: "coingecko",
+              priceConfidence: "high",
+              priceObservedAt: 1_700_000_000,
+              priceUpdatedAt: 1_700_000_000,
+              priceObservedAtMode: "upstream",
+            }],
+          }),
+          updated_at: 1_700_000_000,
+        },
       },
     ]);
     const res = await handleTelegramWebhook(

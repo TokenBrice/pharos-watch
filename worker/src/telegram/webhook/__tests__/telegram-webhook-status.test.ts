@@ -32,7 +32,6 @@ function mockD1(
     ...tables,
     { match: "FROM dex_liquidity", rows: [], first: null },
     { match: "FROM depeg_events WHERE stablecoin_id = ?", rows: [], first: null },
-    { match: "FROM price_cache WHERE asset_id = ?", rows: [], first: null },
     { match: "FROM yield_data", rows: [], first: null },
     { match: "SELECT value, updated_at FROM cache WHERE key = ?", rows: [], first: null },
   ], options);
@@ -72,6 +71,51 @@ describe("loadStatusForCoin", () => {
     expect(message).not.toContain("DEX liquidity $0");
   });
 
+  it("does not resurrect a quote the current stablecoins publication withheld", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-30T12:00:00Z"));
+    const nowSec = Math.floor(Date.now() / 1000);
+    // The publication revalidated this run's provider candidate and cleared the
+    // asset's price; only the replay cache still carries the previous quote.
+    const publicationRow = {
+      value: JSON.stringify({
+        peggedAssets: [{
+          id: "usdc-circle",
+          symbol: "USDC",
+          price: null,
+          priceSource: null,
+          priceConfidence: null,
+          priceUpdatedAt: null,
+          priceObservedAt: null,
+          priceObservedAtMode: null,
+          circulating: { peggedUSD: 60_000_000_000 },
+          supplyObservedAt: nowSec - 120,
+        }],
+      }),
+      updated_at: nowSec - 60,
+    };
+    const staleCacheRow = {
+      price: 0.98,
+      updated_at: nowSec - 3600,
+      source: "coingecko",
+      confidence: "single-source",
+      observed_at: nowSec - 3600,
+    };
+    const db = mockD1([
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [publicationRow], first: publicationRow },
+      // Present only to prove the withdrawn cache quote is not read.
+      { match: "FROM price_cache WHERE asset_id = ?", rows: [staleCacheRow], first: staleCacheRow, allowUnused: true },
+    ]);
+
+    const status = await loadStatusForCoin(db, "usdc-circle");
+
+    expect(status.priceUsd).toBeNull();
+    expect(status.priceUpdatedAt).toBeNull();
+    const card = buildStatusMessage("USDC", status, nowSec);
+    expect(card).toContain("no recent price");
+    expect(card).not.toContain("$0.9800");
+  });
+
   beforeEach(() => {
     mocks.handleYieldRankings.mockReset().mockImplementation(async () =>
       new Response(JSON.stringify({
@@ -102,6 +146,21 @@ describe("loadStatusForCoin", () => {
   });
 
   it("returns DEWS + safety + depeg=stable when no active event", async () => {
+    const stablecoinsRow = {
+      value: JSON.stringify({
+        peggedAssets: [{
+          id: "usdc-circle",
+          symbol: "USDC",
+          price: 0.9997,
+          priceSource: "coingecko",
+          priceConfidence: "high",
+          priceObservedAt: 1_700_000_000,
+          priceUpdatedAt: 1_700_000_000,
+          priceObservedAtMode: "upstream",
+        }],
+      }),
+      updated_at: 1_700_000_000,
+    };
     const db = mockD1([
       {
         match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"],
@@ -113,7 +172,7 @@ describe("loadStatusForCoin", () => {
       { match: "FROM stress_signals", rows: [{ band: "ALERT", score: 42, computed_at: 1700000000 }] },
       { match: "FROM safety_grade_history", rows: [{ grade: "B+", score: 66, recorded_at: 1700000000 }] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
-      { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.9997, updated_at: 1700000000 }] },
+      { match: "SELECT value, updated_at FROM cache WHERE key = ?", matchBinds: ["stablecoins"], rows: [stablecoinsRow], first: stablecoinsRow },
     ]);
     const status = await loadStatusForCoin(db, "usdc-circle");
     expect(status.dews?.band).toBe("ALERT");
@@ -173,7 +232,6 @@ describe("loadStatusForCoin", () => {
         match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL",
         rows: [{ direction: "below", peak_deviation_bps: 180, started_at: 1700000000, peg_reference: 1.0 }],
       },
-      { match: "FROM price_cache WHERE asset_id = ?", rows: [{ price: 0.982, updated_at: 1700000500 }] },
     ]);
     const status = await loadStatusForCoin(db, "usdc-circle");
     expect(status.depeg.status).toBe("active");
@@ -188,7 +246,6 @@ describe("loadStatusForCoin", () => {
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM safety_grade_history", rows: [] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
-      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
     ]);
     const status = await loadStatusForCoin(db, "newcoin-xyz");
     expect(status.dews).toBeNull();
@@ -209,7 +266,6 @@ describe("loadStatusForCoin", () => {
     const db = mockD1([
       { match: "FROM stress_signals", rows: [] },
       { match: "FROM depeg_events WHERE stablecoin_id = ? AND ended_at IS NULL", rows: [] },
-      { match: "FROM price_cache WHERE asset_id = ?", rows: [] },
     ]);
 
     const status = await loadStatusForCoin(db, "usdc-circle");

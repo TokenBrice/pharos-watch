@@ -182,10 +182,96 @@ function validateV8ReportCards(
   return null;
 }
 
+/**
+ * Report wire 4/5/6 were live before the first archive-only report7 contract.
+ * `public_snapshots` is immutable, so these rows are validated against what
+ * they recorded — envelope, identity and per-card grade — instead of being
+ * re-read through the current scoring model or reported as corrupted.
+ */
+const ARCHIVED_LEGACY_REPORT_SCHEMA_VERSIONS = new Set([4, 5, 6]);
+
+function validateArchivedLegacyReportCards(
+  reportCards: Record<string, unknown>,
+  identity: Extract<SafetyScorePublicationIdentity, { model: "v9" }>,
+): string | null {
+  if (
+    typeof reportCards.schemaVersion !== "number"
+    || !ARCHIVED_LEGACY_REPORT_SCHEMA_VERSIONS.has(reportCards.schemaVersion)
+    || reportCards.model !== "v9"
+    || (reportCards.lifecycle !== "active" && reportCards.lifecycle !== "shadow")
+    || !isRecord(reportCards.methodology)
+    || reportCards.methodology.version !== identity.methodologyVersion
+    || !isRecord(reportCards.methodology.policy)
+    || reportCards.methodology.policy.id !== identity.policyId
+    || reportCards.methodology.policy.semanticDigest !== identity.policyDigest
+  ) {
+    return "safety-score-publication-invalid";
+  }
+  const archivedIdentity = parseSafetyScoreIdentity(reportCards.safetyScoreIdentity);
+  if (archivedIdentity === null || !safetyScorePublicationIdentitiesMatch(identity, archivedIdentity)) {
+    return "safety-score-identity-mismatch";
+  }
+  const source = isRecord(reportCards.source) ? reportCards.source : null;
+  if (
+    source === null
+    || typeof source.candidateId !== "string"
+    || source.candidateId.length === 0
+    || !Sha256Schema.safeParse(source.factSetDigest).success
+    || !Sha256Schema.safeParse(source.resultDigest).success
+    || !isRecord(reportCards.dependencyGraph)
+    || !Array.isArray(reportCards.dependencyGraph.edges)
+  ) {
+    return "safety-score-publication-invalid";
+  }
+  if (
+    typeof reportCards.asOfSec !== "number"
+    || !Number.isInteger(reportCards.asOfSec)
+    || reportCards.asOfSec < 0
+    || typeof reportCards.updatedAt !== "number"
+    || !Number.isInteger(reportCards.updatedAt)
+    || reportCards.updatedAt < reportCards.asOfSec
+  ) {
+    return "safety-score-publication-invalid";
+  }
+  const isValidArchivedCard = (
+    value: unknown,
+  ): value is { id: string; score: number; grade: string } =>
+    isRecord(value) && typeof value.id === "string" && value.id.length > 0 && isValidScoreEntry(value);
+  const cards = Array.isArray(reportCards.cards) ? reportCards.cards : null;
+  if (!cards || !cards.every(isValidArchivedCard)) {
+    return "safety-score-cards-invalid";
+  }
+  const cardIds = cards.map((card) => card.id);
+  const completeness = isRecord(reportCards.completeness) ? reportCards.completeness : null;
+  const listedNotRatedIds: unknown = completeness?.notRatedIds;
+  if (
+    completeness === null
+    || completeness.expectedCount !== cardIds.length
+    || !Array.isArray(listedNotRatedIds)
+    || !listedNotRatedIds.every((id): id is string => typeof id === "string")
+  ) {
+    return "safety-score-completeness-invalid";
+  }
+  const notRatedIds = cards.filter((card) => card.grade === "NR").map((card) => card.id);
+  if (
+    new Set(cardIds).size !== cardIds.length
+    || [...cardIds].sort().some((id, index) => id !== cardIds[index])
+    || new Set(listedNotRatedIds).size !== listedNotRatedIds.length
+    || notRatedIds.length !== listedNotRatedIds.length
+    || notRatedIds.some((id) => !listedNotRatedIds.includes(id))
+  ) {
+    return "safety-score-completeness-mismatch";
+  }
+  return null;
+}
+
 function validateV9ReportCards(
   reportCards: Record<string, unknown>,
   identity: Extract<SafetyScorePublicationIdentity, { model: "v9" }>,
 ): string | null {
+  if (ARCHIVED_LEGACY_REPORT_SCHEMA_VERSIONS.has(Number(reportCards.schemaVersion))) {
+    return validateArchivedLegacyReportCards(reportCards, identity);
+  }
   // Pre-9.15 report-v5 snapshots retained this now-removed nullable digest.
   // Validate that exact historical field, then validate a copy against the live
   // contract. Serving still uses the original immutable bytes and card objects.
