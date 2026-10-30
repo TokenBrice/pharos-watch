@@ -10,7 +10,7 @@
     "governance": "centralized",
     "rwa": true
   },
-  "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's fractional-reserve-safeguard framework",
+  "collateral": "LBMA-accredited 99.9% Good Delivery silver bars held in Asian vaults under Matrixdock's Fungible Reserve Standard",
   "pegMechanism": "KYC-approved holders can redeem XAGm through Matrixdock for supported USDC or USDT at a partner-dependent sale price, or request physical LBMA silver with a 2100 XAGm minimum and inventory-dependent bar availability. Stablecoin orders require an accepted quote and slippage limit; T+3 begins after execution. Physical delivery does not establish a final USD sale price or an end-to-end cash settlement bound. Each redemption order carries a 0.50% issuer fee; currency, delivery and gas costs remain separate. Silver weight follows the applicable ozPerToken ratio.",
   "mechanismArchetype": "commodity-claim",
   "commodityOunces": 1,

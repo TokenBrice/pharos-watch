@@ -121,6 +121,13 @@
       "maxOracleAgeSec": 1209600
     }
   },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Subscriptions paused",
+      "message": "Midas' mRe7YIELD page shows primary-market subscriptions paused as of 2026-10-30; redemptions remain open."
+    }
+  ],
   "launchDate": "2025-02-06",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

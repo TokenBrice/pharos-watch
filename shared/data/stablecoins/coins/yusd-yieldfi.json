@@ -120,6 +120,13 @@
       }
     }
   },
+  "notices": [
+    {
+      "type": "warning",
+      "title": "Mint and redemption paused",
+      "message": "YieldFi states mint and redeem for yUSD and vyUSD are paused pending SAGA remediation."
+    }
+  ],
   "launchDate": "2025-04-28",
   "mechanismArchetypeReview": {
     "disposition": "resolved",

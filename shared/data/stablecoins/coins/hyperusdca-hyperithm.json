@@ -3,7 +3,7 @@
   "name": "Hyperithm USDC Apex",
   "symbol": "hyperUSDCa",
   "launchDate": "2026-01-09",
-  "oneLiner": "hyperUSDCa is Hyperithm's USDC lending vault on Monad; shares earn borrower interest and redeem for liquid USDC, with credit losses reducing NAV.",
+  "oneLiner": "hyperUSDCa is Hyperithm's USDC lending vault on Monad; shares accrue interest and redeem from idle USDC, with credit losses reducing NAV.",
   "flags": {
     "backing": "crypto-backed",
     "governance": "centralized-dependent",

@@ -2,7 +2,7 @@
   "id": "ggbr-goldfish-gold",
   "name": "Goldfish Gold",
   "symbol": "GGBR",
-  "oneLiner": "GGBR is Goldfish Gold (I-On Digital) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure and issuer-controlled mint/redeem contracts.",
+  "oneLiner": "GGBR is Goldfish Gold (GGBR, Ltd) tracking 1/1000th of a troy ounce per token, with issuer-managed gold exposure and issuer-controlled mint/redeem contracts.",
   "flags": {
     "backing": "rwa-backed",
     "pegCurrency": "GOLD",
