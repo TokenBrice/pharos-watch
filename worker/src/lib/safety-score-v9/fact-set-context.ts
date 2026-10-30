@@ -31,7 +31,8 @@ import type {
 import classificationsAsset from "@shared/data/safety-score-v9/evidence-gap-classifications-v1.json";
 import {
   V9EvidenceGapClassificationSchema, V9TypedReviewGapClassificationSchema, v9EvidenceCauseScopeKey,
-  type V9EvidenceCauseScope, type V9RuntimeProducerVerdict, type V9CauseResolutionDiagnostic,
+  type V9EvidenceCauseScope, type V9EvidenceGapClassification, type V9RuntimeProducerVerdict,
+  type V9CauseResolutionDiagnostic,
 } from "@shared/types/safety-score-v9-causes";
 import { createReviewedAssetRegistry, createReviewedRegistryReferenceExpander } from "@shared/lib/safety-score-v9/reviewed-registry";
 import { usesPrimaryRedemptionReviewTerms } from "../redemption-exit-route-observations";
@@ -49,6 +50,11 @@ const classifications = createReviewedAssetRegistry({
     searchedSurfaces: classificationsAsset.searchedSurfaceObservations,
   }, "evidenceGapClassifications.entries"),
 });
+
+/** Reviewed authored classifications for one asset; callers re-filter by datum scope. */
+export function evidenceGapClassificationsFor(assetId: string): readonly V9EvidenceGapClassification[] {
+  return classifications.getAll(assetId);
+}
 
 function scopeForGap(gap: Pick<V9FactGapV3, "path" | "ownerDomain" | "policyRuleId">): V9EvidenceCauseScope {
   const pillar = gap.ownerDomain === "exit" ? "exit" : gap.ownerDomain === "control" ? "control" : "backing";
