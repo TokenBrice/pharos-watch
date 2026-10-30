@@ -5008,7 +5008,7 @@
           "rationale": "The public MoonPay transparency portal lists XO Cash and states that an independent accounting firm performs monthly AICPA-standard reserve examinations. Reports require approved-counterparty magic-link access; the public page does not expose a named firm, report period, signed examination, reserve schedule or XO-specific asset/liability reconciliation. The issuer's cadence claim is recorded but cannot substitute for examining the actual engagement and exact liability scope.",
           "sourceUrl": "https://www.moonpay.com/business/transparency",
           "review": {
-            "reviewedAt": "2026-10-20T22:19:27Z",
+            "reviewedAt": "2026-10-20",
             "reviewer": "NR8 bottom-up refinement 2026-10-21",
             "rationale": "Reopened the rendered public transparency portal without requesting or bypassing access. It claims monthly independent examinations and lists XO, but the financial reports are gated to approved counterparties. Correct the former no-cadence assertion without admitting unexamined assurance or renewing sibling reviews.",
             "sources": [
