@@ -26,6 +26,10 @@ const ADAPTER = "0x1d511811aca9d8817a3e50f29cadff6243a02902";
 const INNER = "0x1111111111111111111111111111111111111111";
 const PIN = { number: 26191269, timestamp: 1791987287, hash: "0xc492993fd90ab9821b6b1124f9f844a8f2230cfc74f45c76767a773359bb2db7" };
 const SMOKE_PIN = { number: 26192161, timestamp: 1791997991, hash: "0x27fcd55ab33c6575b688fa27e4da4f5fb67127946805cb9ec532876c8c319540" };
+// KPK USDC Yield also has a verified Base VaultV2 deployment; the producer
+// observes every configured deployment, not just the primary Ethereum one.
+const BASE_VAULT = "0x392b3ccf36c8adb8094f45573346b457414cd752";
+const BASE_USDC = "0x833589fcd6edb6e08f4c7c32d4f71b54bda02913";
 const WAD = 10n ** 18n;
 function packed(values: (bigint | string)[]): `0x${string}` {
   return `0x${values.map(value => typeof value === "bigint" ? encodeUint256(value) : value.slice(2).padStart(64, "0")).join("")}`;
@@ -79,6 +83,22 @@ function fixture(rows = [market(100n)], assetId = "kpkusdcprime-kpk", mode: "dir
   }
   const code = Object.fromEntries([vault, ADAPTER, INNER, LOAN, CORE, IRM, MULTICALL3_ADDRESS.toLowerCase()].map(address => [address, "0x60006000"]));
   return { spec: { rpc, code, block: PIN }, coin, config, vault, rpc };
+}
+/** KPK USDC Yield's verified Base VaultV2 deployment, modelled as a synthetic
+ * exhaustive zero-adapter book with all NAV held as idle Base USDC. */
+function addBaseDeployment(f: ReturnType<typeof fixture>): void {
+  const total = 1n;
+  f.rpc[`${BASE_VAULT}:adaptersLength()`] = 0n;
+  f.rpc[`${BASE_VAULT}:asset()`] = BASE_USDC;
+  f.rpc[`${BASE_VAULT}:totalAssets()`] = total;
+  f.rpc[`${BASE_VAULT}:totalSupply()`] = total;
+  f.rpc[`${BASE_VAULT}:MORPHO()`] = null;
+  f.rpc[`${BASE_VAULT}:_totalAssets()`] = total;
+  f.rpc[`${BASE_VAULT}:lastUpdate()`] = BigInt(PIN.timestamp);
+  f.rpc[`${BASE_VAULT}:maxRate()`] = 0n;
+  f.rpc[`${BASE_USDC}:${data("balanceOf(address)", BASE_VAULT.slice(2).padStart(64, "0"))}`] = total;
+  f.spec.code![BASE_VAULT] = "0x60006000";
+  f.spec.code![BASE_USDC] = "0x60006000";
 }
 async function observe(f = fixture(), signal = new AbortController().signal) {
   const network = installAdapterNetwork(f.spec);
@@ -188,6 +208,7 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     // tuples intentionally isolate current enumeration from historical positions.
     const amounts = [55489558n, 455553278361n, 6198058117175n, 900750407987n, 1312328375771n, 3387753291335n, 1000607668589n];
     const f = fixture(amounts.map((amount, index) => market(amount, index + 1)), "kpkusdcyield-kpk");
+    addBaseDeployment(f);
     for (let i = 20; i < 24; i++) {
       const row = market(1n, i);
       f.rpc[`${ADAPTER}:${data("expectedSupplyAssets(bytes32)", row.id.slice(2))}`] = 1n;
@@ -195,8 +216,10 @@ describe("Morpho NAV-accounted lender-book producer", () => {
     const { result, network } = await observe(f);
     expect(result.status).toBe("ok");
     if (result.status !== "ok") return;
-    expect(result.deployments[0].totalAssetsRaw).toBe("13255106628776");
-    expect(result.deployments[0].markets).toHaveLength(7);
+    expect(result.deployments).toHaveLength(2);
+    const ethereum = result.deployments.find(deployment => deployment.chain === "ethereum")!;
+    expect(ethereum.totalAssetsRaw).toBe("13255106628776");
+    expect(ethereum.markets).toHaveLength(7);
     expect(network.rpcCalls.filter(row => row.selector === toFunctionSelector("expectedSupplyAssets(bytes32)"))).toHaveLength(7);
   });
   it.each([

@@ -575,7 +575,7 @@ Chain-level stablecoin aggregates with Chain Health Scores; pass `chain` for ful
 
 ```json
 {
-  "healthMethodologyVersion": "1.8"
+  "healthMethodologyVersion": "1.7"
 }
 ```
 
