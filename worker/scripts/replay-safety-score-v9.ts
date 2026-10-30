@@ -40,7 +40,12 @@ import {
   projectExpiredMeasuredExitRoutes,
   type SafetyScoreV9AcceptedPublicationBaseline,
 } from "../src/lib/safety-score-v9/publication-assessment";
-import { parseSafetyScoreV9SourceAdmissionBaseline } from "../src/lib/safety-score-v9/publication-replay-capture";
+import {
+  parseSafetyScoreV9ReplayLaneScreening,
+  parseSafetyScoreV9SourceAdmissionBaseline,
+  replayLaneIncidentCertificates,
+  type SafetyScoreV9ReplayLaneScreening,
+} from "../src/lib/safety-score-v9/publication-replay-capture";
 export interface SafetyScoreV9FutureDatedReview {
   assetId: string;
   field: "reviewedAt" | "compositionAsOf" | "mechanism.reviewedAt" | `mechanism.components.${string}.review.reviewedAt`;
@@ -337,8 +342,10 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
   registrySnapshot?: SafetyScoreV9RegistrySnapshot;
   transferMaterialityGeneration?: SafetyScoreV9TransferMaterialityGeneration | null;
   sourceAdmissionBaseline?: SafetyScoreV9AcceptedPublicationBaseline | null;
+  /** Captured lane witnesses; absent means the capture could not record them. */
+  laneScreening?: SafetyScoreV9ReplayLaneScreening | null;
 }): SafetyScoreV9ReplayArtifact {
-  const { sourceAdmissionBaseline, ...candidateInput } = input;
+  const { sourceAdmissionBaseline, laneScreening, ...candidateInput } = input;
   if (input.registrySnapshot && (!input.fixedInput || typeof input.fixedInput !== "object" ||
     !("registryFingerprint" in input.fixedInput) || input.fixedInput.registryFingerprint !== input.registrySnapshot.fingerprint)) {
     throw new Error("Capture registry fingerprint does not match supplied snapshot");
@@ -354,6 +361,12 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
     ...(sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline }),
     pipeline: buildSafetyScoreV9Candidate({
       ...candidateInput,
+      // The lane witnesses the publication actually read: without them a
+      // replayed publication cannot reproduce a closure it applied.
+      ...(laneScreening === undefined || laneScreening === null ? {} : {
+        laneIncidentCertificates: replayLaneIncidentCertificates(laneScreening),
+        laneEmitterDescriptors: laneScreening.descriptors,
+      }),
       // Reproduce 10.35 measured-route quarantine against the same accepted baseline.
       ...(sourceAdmissionBaseline === undefined ? {} : { measuredExitExpiry: {
         routes: projectExpiredMeasuredExitRoutes(input.fixedInput as SafetyScoreV9CompilerInput),
@@ -400,7 +413,7 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
   );
 
   const raw = await readReplayInput(values.input);
-  const capture = raw as { kind?: string; fixedInput?: unknown; registrySnapshot?: SafetyScoreV9RegistrySnapshot; transferMaterialityGeneration?: unknown; sourceAdmissionBaseline?: unknown };
+  const capture = raw as { kind?: string; fixedInput?: unknown; registrySnapshot?: SafetyScoreV9RegistrySnapshot; transferMaterialityGeneration?: unknown; sourceAdmissionBaseline?: unknown; laneScreening?: unknown };
   const acceptedCapture = capture.kind === "safety-score-v9-accepted-publication-capture";
   const embedded = capture.kind === "safety-score-v9-registry-capture" || acceptedCapture ? capture.registrySnapshot : undefined;
   assertCliUsage(
@@ -443,6 +456,8 @@ export async function runSafetyScoreV9ReplayCli(argv: readonly string[]): Promis
     ...(acceptedCapture ? { transferMaterialityGeneration: capture.transferMaterialityGeneration === null ? null : parseSafetyScoreV9TransferMaterialityGeneration(capture.transferMaterialityGeneration) } : {}),
     ...(acceptedCapture && capture.sourceAdmissionBaseline !== undefined
       ? { sourceAdmissionBaseline: parseSafetyScoreV9SourceAdmissionBaseline(capture.sourceAdmissionBaseline, capturedInput.clockSec)?.baseline ?? null } : {}),
+    ...(acceptedCapture && capture.laneScreening !== undefined
+      ? { laneScreening: capture.laneScreening === null ? null : parseSafetyScoreV9ReplayLaneScreening(capture.laneScreening) } : {}),
     ...(extension === undefined ? {} : { extension }),
     publishedAtSec,
     ...(releaseCandidateId === undefined ? {} : { releaseCandidateId: String(releaseCandidateId) }),

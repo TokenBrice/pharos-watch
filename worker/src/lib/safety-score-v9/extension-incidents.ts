@@ -236,6 +236,7 @@ export interface LaneIncidentCertificateView {
 export interface LaneRouteAuthority {
   rail: "issuer-operated" | null;
   providerKeys: readonly string[];
+  routeClass?: string;
 }
 
 /**
@@ -287,11 +288,15 @@ function providerExposureBlocksLane(
   review: NegativeIncidentScope,
   assetId: string,
   routeId: string,
+  issuerReview: NegativeIncidentScope,
 ): boolean {
   const incidents: readonly V9ProviderIncidentDisclosure[] = review.providerIncidents ?? [];
   return incidents.some((incident) => {
+    if (!V9ProviderIncidentDisclosureSchema.safeParse(incident).success) return true;
     if (incident.class !== "verifier-compromise") return false;
-    if (!v9ProviderExposureIntersectsWindow(incident, review.windowStartSec, review.windowEndSec)) return false;
+    if (!v9ProviderExposureIntersectsWindow(incident,
+      Math.min(review.windowStartSec, issuerReview.windowStartSec),
+      Math.max(review.windowEndSec, issuerReview.windowEndSec))) return false;
     return !incident.exemptions.some((exemption) => exemption.assetId === assetId && exemption.routeId === routeId);
   });
 }
@@ -321,6 +326,9 @@ function laneIncidentClosureWitnesses(
   const routeId = control.deploymentKey;
   const route = inputs.routes.get(routeId);
   if (route === undefined) return null;
+  // Conflicting authorities must not select the issuer-only branch.
+  if (route.rail === "issuer-operated" &&
+      (route.providerKeys.length > 0 || route.routeClass === "third-party")) return null;
   const contributorIds = laneContributorIds(control);
   if (contributorIds === null) return null;
   const descriptor = inputs.descriptors.find(
@@ -352,7 +360,7 @@ function laneIncidentClosureWitnesses(
         review.scope.coveredRoutes.some((ref) => ref.assetId === assetId && ref.routeId === routeId));
       if (covering.length === 0) return null;
       for (const review of covering) {
-        if (providerExposureBlocksLane(review, assetId, routeId)) return null;
+        if (providerExposureBlocksLane(review, assetId, routeId, issuerReview)) return null;
         providerReviewIds.add(review.reviewId);
       }
     }

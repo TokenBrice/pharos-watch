@@ -5,13 +5,22 @@ import { makeV9FixedInput, withV9WmReviewedDeploymentAttribution } from "../../t
 import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import {
   buildSafetyScoreV9PublicationReplayCapture,
+  buildSafetyScoreV9ReplayLaneScreening,
   parseSafetyScoreV9PublicationReplayCapture,
   parseSafetyScoreV9PublicationReplayCacheRows,
+  parseSafetyScoreV9ReplayLaneScreening,
+  replayLaneIncidentCertificates,
   SafetyScoreV9ReplayCaptureIdentityError,
+  SafetyScoreV9ReplayLaneScreeningBudgetError,
+  SAFETY_SCORE_V9_REPLAY_LANE_CERTIFICATE_MAX,
 } from "../safety-score-v9/publication-replay-capture";
+import {
+  V9LaneEmitterDescriptorSchema,
+  V9LaneIncidentCertificateSchema,
+} from "@shared/types/safety-score-v9-incidents";
 import { createRuntimeGapVerdict } from "../safety-score-v9/fact-set-context";
 import { normalizeSafetyScoreV9CompilerInput } from "../safety-score-v9/native-input";
-import { buildFixedInputCacheEntry } from "../report-cards-fixed-input-cache-codec";
+import { buildFixedInputCacheEntry, REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES } from "../report-cards-fixed-input-cache-codec";
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -61,6 +70,135 @@ describe("Safety Score V9 accepted-publication replay capture", () => {
     expect(capture.transferMaterialityGeneration).toBeNull();
     expect(capture.fixedInput.safetyScoreV9SupplyAttributionById).toEqual(enriched.safetyScoreV9SupplyAttributionById);
     expect(capture.fixedInput.baseInputGenerationId).toBe(enriched.baseInputGenerationId);
+  });
+
+  it("captures the lane witnesses the publication read so replay reproduces closures", async () => {
+    const subject = "ethereum:0x1111111111111111111111111111111111111111";
+    const certificate = V9LaneIncidentCertificateSchema.parse({
+      schemaVersion: 1, certificateId: `lane-cert:${subject}:100-200:abcdef`, evidenceClass: "explorer-events",
+      subjectDeploymentKey: subject, fromBlock: 100, toBlock: 200, toBlockHash: `0x${"1".repeat(64)}`,
+      windowStartSec: enriched.clockSec - 86_400, windowEndSec: enriched.clockSec - 3_600, observedAtSec: enriched.clockSec - 1_800,
+      screeningPolicyDigest: "c".repeat(64), logDigest: "d".repeat(64),
+      emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
+      screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
+      eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+    });
+    const descriptor = V9LaneEmitterDescriptorSchema.parse({
+      schemaVersion: 1, subjectDeploymentKey: subject, assetId: "wm-m0", contributorControlIds: ["alpha"],
+      screeningPolicyDigest: "c".repeat(64), screeningSetId: "set-1",
+      emitters: [{ address: `0x${"e".repeat(40)}`, reviewedRuntimePin: `sha256-decoded-runtime-bytes:${"a".repeat(64)}`, families: ["OwnershipTransferred"] }],
+    });
+    const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null, null, {
+      certificates: new Map([[subject, { screeningSetId: "set-1", certificate }]]),
+      descriptors: [descriptor],
+    });
+    const capture = await parseSafetyScoreV9PublicationReplayCapture(entry.value, base);
+    expect(capture.laneScreening).toMatchObject({
+      certificates: [{ deploymentKey: subject, screeningSetId: "set-1", certificate: { certificateId: certificate.certificateId } }],
+      descriptors: [{ subjectDeploymentKey: subject, screeningSetId: "set-1" }],
+    });
+    expect(capture.laneScreening!.digest).toMatch(/^[a-f0-9]{64}$/u);
+    expect(replayLaneIncidentCertificates(capture.laneScreening!).get(subject)?.screeningSetId).toBe("set-1");
+  });
+
+  it("records an explicit empty read and keeps pre-M6 captures readable", async () => {
+    const explicit = await parseSafetyScoreV9PublicationReplayCapture(
+      (await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null, null)).value, base);
+    expect(explicit.laneScreening).toBeNull();
+    const legacy = await buildFixedInputCacheEntry({
+      schemaVersion: 2, sourceGeneration: publication.publicationGenerationId,
+      payload: {
+        schemaVersion: 3, publicationGenerationId: publication.publicationGenerationId,
+        sourceAdmissionBaseline: null, pipelineGapDigest: null,
+        baseInputGenerationId: enriched.baseInputGenerationId,
+        enrichment: {
+          safetyScoreV9SupplyAttributionById: base.safetyScoreV9SupplyAttributionById,
+          evidenceJournalById: base.evidenceJournalById,
+          supplyAttributionJournalById: base.supplyAttributionJournalById,
+          pegProvenanceById: base.pegProvenanceById,
+        },
+        transferMaterialityGeneration: null,
+      },
+      label: "Accepted Safety Score V9 replay delta",
+    });
+    const restored = await parseSafetyScoreV9PublicationReplayCapture(legacy.value, base);
+    expect(restored).not.toHaveProperty("laneScreening");
+  });
+
+  it("rejects a tampered or inconsistent lane screening block", () => {
+    const subject = "ethereum:0x1111111111111111111111111111111111111111";
+    const block = buildSafetyScoreV9ReplayLaneScreening({
+      certificates: new Map([[subject, {
+        screeningSetId: "set-1",
+        certificate: V9LaneIncidentCertificateSchema.parse({
+          schemaVersion: 1, certificateId: `lane-cert:${subject}`, evidenceClass: "explorer-events",
+          subjectDeploymentKey: subject, fromBlock: 1, toBlock: 2, toBlockHash: `0x${"1".repeat(64)}`,
+          windowStartSec: 10, windowEndSec: 20, observedAtSec: 30, screeningPolicyDigest: "c".repeat(64),
+          logDigest: "d".repeat(64),
+          emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
+          screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
+          eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+        }),
+      }]]),
+      descriptors: [],
+    });
+    expect(() => parseSafetyScoreV9ReplayLaneScreening({ ...block, digest: "f".repeat(64) })).toThrow(/digest mismatch/);
+    expect(() => parseSafetyScoreV9ReplayLaneScreening({
+      ...block,
+      certificates: block.certificates.map((row) => ({ ...row, deploymentKey: "base:0x2222222222222222222222222222222222222222" })),
+    })).toThrow(/does not name/);
+  });
+
+  it("keeps a full lane block inside the replay envelope budgets", async () => {
+    const template = V9LaneIncidentCertificateSchema.parse({
+      schemaVersion: 1, certificateId: "lane-cert:template", evidenceClass: "explorer-events",
+      subjectDeploymentKey: "ethereum:0x1111111111111111111111111111111111111111", fromBlock: 1, toBlock: 2,
+      toBlockHash: `0x${"1".repeat(64)}`, windowStartSec: 10, windowEndSec: 20, observedAtSec: 30,
+      screeningPolicyDigest: "c".repeat(64), logDigest: "d".repeat(64),
+      emitters: [
+        { address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] },
+        { address: `0x${"f".repeat(40)}`, expectedRuntimeCodeSha256: "b".repeat(64), runtimeCodeSha256: "b".repeat(64), families: ["UlnConfigSet"] },
+      ],
+      screenedTopics: [
+        { family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" },
+        { family: "UlnConfigSet", topic0: `0x${"3".repeat(64)}`, signature: "UlnConfigSet(address,address,uint32,bytes)" },
+      ],
+      eventCounts: { OwnershipTransferred: 0, UlnConfigSet: 0 }, finding: "no-material-admin-event",
+    });
+    const certificates = new Map<string, { screeningSetId: string; certificate: typeof template }>();
+    for (let index = 0; index < 1_000; index += 1) {
+      const subject = `ethereum:${(index + 0x1000).toString(16).padStart(40, "0")}`;
+      certificates.set(subject, {
+        screeningSetId: "set-1",
+        certificate: { ...template, subjectDeploymentKey: subject, certificateId: `lane-cert:${subject}` },
+      });
+    }
+    const entry = await buildSafetyScoreV9PublicationReplayCapture(publication, enriched, null, null, {
+      certificates, descriptors: [],
+    });
+    expect(entry.storedBytes).toBeLessThanOrEqual(1_900_000);
+    expect(entry.uncompressedBytes).toBeLessThanOrEqual(REPORT_CARDS_FIXED_INPUT_MAX_UNCOMPRESSED_BYTES);
+    const capture = await parseSafetyScoreV9PublicationReplayCapture(entry.value, base);
+    expect(capture.laneScreening?.certificates).toHaveLength(1_000);
+  });
+
+  it("bounds the lane screening block a capture may carry", () => {
+    const template = V9LaneIncidentCertificateSchema.parse({
+      schemaVersion: 1, certificateId: "lane-cert:template", evidenceClass: "explorer-events",
+      subjectDeploymentKey: "ethereum:0x1111111111111111111111111111111111111111", fromBlock: 1, toBlock: 2,
+      toBlockHash: `0x${"1".repeat(64)}`, windowStartSec: 10, windowEndSec: 20, observedAtSec: 30,
+      screeningPolicyDigest: "c".repeat(64), logDigest: "d".repeat(64),
+      emitters: [{ address: `0x${"e".repeat(40)}`, expectedRuntimeCodeSha256: "a".repeat(64), runtimeCodeSha256: "a".repeat(64), families: ["OwnershipTransferred"] }],
+      screenedTopics: [{ family: "OwnershipTransferred", topic0: `0x${"2".repeat(64)}`, signature: "OwnershipTransferred(address,address)" }],
+      eventCounts: { OwnershipTransferred: 0 }, finding: "no-material-admin-event",
+    });
+    const certificates = new Map<string, { screeningSetId: string; certificate: typeof template }>();
+    for (let index = 0; index <= SAFETY_SCORE_V9_REPLAY_LANE_CERTIFICATE_MAX; index += 1) {
+      const subject = `ethereum:${(index + 0x1000).toString(16).padStart(40, "0")}`;
+      certificates.set(subject, { screeningSetId: "set-1", certificate: { ...template, subjectDeploymentKey: subject } });
+    }
+    expect(() => buildSafetyScoreV9ReplayLaneScreening({ certificates, descriptors: [] }))
+      .toThrow(SafetyScoreV9ReplayLaneScreeningBudgetError);
   });
 
   it.each([

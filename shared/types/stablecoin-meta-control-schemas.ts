@@ -355,6 +355,10 @@ const BridgeRouteDeploymentSchema = /* @__PURE__ */ (() => z
   })
   .strict()
   .superRefine((route, ctx) => {
+    if (route.rail === "issuer-operated" &&
+        (route.providerKeys !== undefined || route.routeClass === "third-party")) {
+      ctx.addIssue({ code: "custom", path: ["rail"], message: "An issuer-operated rail cannot carry providerKeys or be third-party" });
+    }
     if ((route.controllerChain == null) !== (route.controllerAddress == null)) {
       issue(ctx, [route.controllerChain == null ? "controllerChain" : "controllerAddress"], "bridge route controllerChain and controllerAddress must be authored together");
     }

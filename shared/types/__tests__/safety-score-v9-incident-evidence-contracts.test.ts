@@ -11,6 +11,7 @@ import {
   V9IssuerSurfaceIncidentReviewSchema,
   V9NegativeIncidentReviewSchema,
   V9ProviderIncidentReviewSchema,
+  V9ProviderIncidentDisclosureSchema,
   V9RetirableNegativeIncidentReviewSchema,
   V9LaneIncidentCertificateSchema,
   V9LaneIncidentScreeningResultSchema,
@@ -308,6 +309,41 @@ describe("provider-wide incident review admission (M-6)", () => {
       providerIncidents: [{ ...disclosure, sourceUrls: ["https://example.com/other"] }],
     }).success).toBe(false);
   });
+
+  it("validates exposure-time deployment and threshold proofs", () => {
+    const exemption = {
+      assetId: ASSET, routeId: ROUTE_ETHEREUM, kind: "threshold-excludes-compromised-verifier",
+      chain: "ethereum", blockNumber: 100, blockTimestampSec: 1500,
+      receiveLibrary: EMITTER_ADDRESS,
+      eids: [{ eid: 1, requiredDVNs: [OTHER_EMITTER_ADDRESS], optionalDVNs: [], optionalThreshold: 0 }],
+      configChangeLogSourceUrl: "https://example.com/logs",
+    };
+    const incident = {
+      incidentKey: "fixture-compromise", class: "verifier-compromise", surface: "dvn-set",
+      occurredAt: "2026-04-18", exposureStartSec: 1000, exposureEndSec: 2000,
+      compromisedVerifiers: [{ chain: "ethereum", address: EMITTER_ADDRESS }],
+      affectedRoutes: [], sourceUrls: ["https://example.com/logs"], exemptions: [exemption],
+    };
+    expect(V9ProviderIncidentDisclosureSchema.safeParse(incident).success).toBe(true);
+    const deployed = {
+      assetId: ASSET, routeId: ROUTE_ETHEREUM, kind: "deployed-after-exposure",
+      creationTxHash: `0x${"1".repeat(64)}`, creationBlock: 300, creationTimestampSec: 2001,
+    };
+    expect(V9ProviderIncidentDisclosureSchema.safeParse({ ...incident, exemptions: [deployed] }).success).toBe(true);
+    for (const invalid of [
+      { exemptions: [{ ...deployed, creationTimestampSec: 999 }] },
+      { exemptions: [{ ...deployed, creationTimestampSec: 2000 }] },
+      { exposureEndSec: null, exemptions: [deployed] },
+      { exemptions: [{ ...exemption, blockTimestampSec: 999 }] },
+      { exemptions: [{ ...exemption, blockTimestampSec: 2001 }] },
+      { exemptions: [{ ...exemption, chain: "base" }] },
+      { compromisedVerifiers: undefined },
+      { exemptions: [{ ...exemption, eids: [{ eid: 1, requiredDVNs: [EMITTER_ADDRESS], optionalDVNs: [], optionalThreshold: 0 }] }] },
+      { exemptions: [{ ...exemption, eids: [{ ...exemption.eids[0], optionalThreshold: 1 }] }] },
+    ]) {
+      expect(V9ProviderIncidentDisclosureSchema.safeParse({ ...incident, ...invalid }).success, JSON.stringify(invalid)).toBe(false);
+    }
+  });
 });
 
 describe("lane incident certificate admission (M-7, S-11)", () => {
@@ -370,6 +406,22 @@ describe("authored bridge provider identity", () => {
     const parsed = BridgeRouteRiskProfileSchema.parse(PROFILE);
     expect(parsed).toEqual(PROFILE);
     expect(parsed.protocols?.[0]).not.toHaveProperty("providerKey");
+  });
+
+  it("rejects issuer-operated routes with third-party authorities", () => {
+    const route = {
+      id: ROUTE_ETHEREUM, destinationChain: "ethereum", contractAddress: ROUTE_ETHEREUM.split(":")[1],
+      protocol: "Fixture issuer", issuanceModel: "native-issuance", routeClass: "native",
+      riskTier: "single-chain-or-native", semantics: "native-mint", scope: "canonical",
+      reviewDisposition: "reviewed", observedAt: "2026-10-01",
+      sources: [{ label: "Issuer", url: "https://example.com/issuer" }], rail: "issuer-operated",
+    };
+    expect(BridgeRouteRiskProfileSchema.safeParse({ ...PROFILE, routes: [route] }).success).toBe(true);
+    for (const conflict of [{ providerKeys: ["layerzero"] }, { routeClass: "third-party" }]) {
+      const result = BridgeRouteRiskProfileSchema.safeParse({ ...PROFILE, routes: [{ ...route, ...conflict }] });
+      expect(result.success).toBe(false);
+      expect(result.error?.issues).toContainEqual(expect.objectContaining({ path: ["routes", 0, "rail"] }));
+    }
   });
 
   it("admits the shared provider key and surface vocabularies only", () => {

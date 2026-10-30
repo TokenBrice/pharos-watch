@@ -2742,6 +2742,7 @@ export function createSafetyScoreV9BaselineExtensionSource(
           if (deploymentKey.length === 0) continue;
           laneRoutes.set(deploymentKey, {
             rail: route.rail ?? null,
+            routeClass: route.routeClass,
             providerKeys: [...(route.providerKeys ?? [])],
           });
         }

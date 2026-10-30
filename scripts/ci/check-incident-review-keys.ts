@@ -34,6 +34,7 @@ import {
   V9NegativeIncidentReviewScopeSchema,
   V9ProviderIncidentDisclosureSchema,
   V9ProviderIncidentReviewScopeSchema,
+  v9ProviderExposureIntersectsWindow,
 } from "../../shared/types/safety-score-v9-incidents";
 import { normalizeDeploymentId } from "../../shared/types/deployment-id";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
@@ -533,6 +534,33 @@ export function checkIncidentReviewKeys(root: string): IncidentReviewKeyReport {
     if (scope.kind === "provider" && review.providerIncidents === undefined) {
       emit("provider-incidents-missing", reviewId,
         "provider review carries no providerIncidents array (an empty array means searched and none found)");
+    }
+
+    if (scope.kind === "provider") {
+      for (const incident of review.providerIncidents ?? []) {
+        for (const exemption of incident.exemptions) {
+          if (exemption.kind === "deployed-after-exposure" &&
+              review.windowStartSec !== undefined && review.windowStartSec > exemption.creationTimestampSec) {
+            emit("review-window-after-creation", reviewId,
+              `${exemption.routeId}: review window starts after its proved deployment creation`);
+          }
+        }
+        if (incident.class !== "verifier-compromise") continue;
+        for (const lane of scope.coveredRoutes) {
+          const issuerWindows = reviews.filter((candidate) => candidate.retired === undefined &&
+            candidate.assetId === lane.assetId && candidate.scope.kind === "issuer-surface" &&
+            candidate.scope.coveredRoutes.includes(lane.routeId));
+          const starts = [review, ...issuerWindows].flatMap((row) =>
+            row.windowStartSec === undefined ? [] : [row.windowStartSec]);
+          const start = starts.length === 0 ? 0 : Math.min(...starts);
+          const end = Math.max(review.windowEndSec, ...issuerWindows.map((row) => row.windowEndSec));
+          if (v9ProviderExposureIntersectsWindow(incident, start, end) &&
+              !incident.exemptions.some((row) => row.assetId === lane.assetId && row.routeId === lane.routeId)) {
+            emit("provider-exposure-unexempted", reviewId,
+              `${lane.assetId}|${lane.routeId}: ${incident.incidentKey} overlaps its witness window without a valid exemption`);
+          }
+        }
+      }
     }
 
     if (migrationRow !== undefined) checkStableId(review, migrationRow, seenStableIds, emit);

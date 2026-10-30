@@ -1,4 +1,4 @@
-import { projectNegativeIncidentReview, V9AttributedNegativeIncidentReviewSchema } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
+import { fanOutProviderIncidentReview, isProviderReview, projectNegativeIncidentReview, V9AttributedNegativeIncidentReviewSchema } from "../../../../scripts/lib/safety-score-v9-incident-runtime";
 import { describe, expect, it } from "vitest";
 import type { V9EconomicControlReviewV2 } from "@shared/types/safety-score-v9-facts";
 import { V9_REVIEW_EVIDENCE_MAX_AGE_SEC } from "@shared/lib/safety-score-v9/evidence";
@@ -184,10 +184,22 @@ describe("Safety Score v9 independent negative incident routing", () => {
   it("rebuilds the full-payload evidence identity of two-digit source indexes from the runtime projection", () => {
     // Keys embed the sorted-source index, so indexes 10+ order before 2 in the
     // finished evidence list; every review with 11+ sources exercises that.
-    const expanded = expandReviewedRegistryReferences(incidentRegistry, "negativeReviews", {
+    // Provider-wide rows are fanned out per covered asset before reference
+    // expansion; the attributed expander rejects an un-fanned provider row.
+    const fanned = (incidentRegistry.negativeReviews as readonly unknown[]).flatMap((row) =>
+      isProviderReview(row) ? fanOutProviderIncidentReview(row) : [row]);
+    const expanded = expandReviewedRegistryReferences({ ...incidentRegistry, negativeReviews: fanned }, "negativeReviews", {
       sources: "sourceObservations", searchedSurfaces: "searchedSurfaceObservations",
     }) as { negativeReviews: unknown[] };
     const reviews = expanded.negativeReviews
+      // Provider and issuer-surface rows bind no evidence without a closed lane
+      // and are not admitted by the attributed union.
+      .filter((row) => {
+        if (row === null || typeof row !== "object" || !("scope" in row)) return false;
+        const scope = row.scope;
+        if (scope === null || typeof scope !== "object" || !("kind" in scope)) return false;
+        return scope.kind === "control" || scope.kind === "deployment";
+      })
       .map((row) => V9AttributedNegativeIncidentReviewSchema.parse(row))
       .filter((review) => review.sources.length >= 11 && review.retired === undefined);
     expect(reviews.length).toBeGreaterThan(0);
@@ -476,6 +488,9 @@ describe("Safety Score v9 authored incident-review identity", () => {
     const issuer = issuerRow();
     expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [exposed, issuer], [], closureInputs())[0])
       .toBe(target);
+    const shifted = { ...exposed, windowStartSec: disclosure.exposureEndSec + 1 };
+    expect(routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, [shifted, issuer], [], closureInputs())[0]).toBe(target);
     const exempted = providerRow({ providerIncidents: [{ ...disclosure, exemptions: [{
       assetId: "fixture", routeId: ROUTE_A, kind: "deployed-after-exposure" as const,
       creationTxHash: `0x${"3".repeat(64)}`, creationBlock: 300,
@@ -483,6 +498,17 @@ describe("Safety Score v9 authored incident-review identity", () => {
     }] }] });
     expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [exempted, issuer], [], closureInputs())[0]!.incidentState)
       .toBe("none");
+    const invalidProof = {
+      ...exempted,
+      providerIncidents: exempted.providerIncidents!.map((incident) => ({
+        ...incident,
+        exemptions: incident.exemptions.map((exemption) => ({
+          ...exemption, creationTimestampSec: disclosure.exposureStartSec - 1,
+        })),
+      })),
+    };
+    expect(routeSafetyScoreV9NegativeIncidentReviews(
+      [target], "fixture", NEGATIVE_CLOCK_SEC, [invalidProof, issuer], [], closureInputs())[0]).toBe(target);
     // The authored provider record refuses an unexempted exposed covered lane.
     expect(() => V9ProviderIncidentReviewSchema.parse({
       reviewId: "provider-review", scope: { kind: "provider", providerKey: "layerzero", surface: "dvn-set",
@@ -511,6 +537,18 @@ describe("Safety Score v9 authored incident-review identity", () => {
     // The certificate is still required.
     expect(routeSafetyScoreV9NegativeIncidentReviews([target], "fixture", NEGATIVE_CLOCK_SEC, [issuer], [],
       closureInputs({ routes, certificates: new Map() }))[0]).toBe(target);
+  });
+
+  it("rejects contradictory issuer-operated authorities instead of bypassing provider review", () => {
+    const target = withAuthoredIdentity(bridgeRow(ROUTE_A, "bridge-meta:fixture:lane"), { id: "alpha" });
+    for (const authority of [
+      { rail: "issuer-operated", providerKeys: ["layerzero"] },
+      { rail: "issuer-operated", providerKeys: [], routeClass: "third-party" },
+    ]) {
+      const inputs = closureInputs({ routes: new Map([[ROUTE_A, authority]]) });
+      expect(routeSafetyScoreV9NegativeIncidentReviews(
+        [target], "fixture", NEGATIVE_CLOCK_SEC, [issuerRow()], [], inputs)[0]).toBe(target);
+    }
   });
 
   it("rejects removed and forbidden authored shapes", () => {

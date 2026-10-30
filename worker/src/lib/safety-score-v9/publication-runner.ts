@@ -906,6 +906,10 @@ export async function runSafetyScoreV9Publication(
       try {
         replayCaptureValue = (await buildSafetyScoreV9PublicationReplayCapture(
           publication, preparedInput.replay!(), input.transferMaterialityGeneration ?? null, acceptedPublication,
+          // M6: the certificate views this compile actually read. Descriptors
+          // are still empty until the descriptor input is wired (M4); that one
+          // argument is the handoff point for the descriptor variable.
+          { certificates: laneIncidentCertificates, descriptors: [] },
         )).value;
       } catch (error) {
         if (error instanceof SafetyScoreV9ReplayCaptureIdentityError) throw error;

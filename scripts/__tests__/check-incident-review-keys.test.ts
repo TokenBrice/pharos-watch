@@ -480,6 +480,38 @@ describe("incident review authored coverage shapes", () => {
     expect(codes(dir)).toEqual(["provider-incidents-missing"]);
   });
 
+  it("rejects invalid deployment exemptions and review windows shifted past creation", () => {
+    for (const [exposureEndSec, creationTimestampSec, windowStartSec] of [
+      [2000, 1500, 1000], [null, 2500, 1000], [2000, 2500, 3000],
+    ] as const) {
+      const incident = {
+        ...(disclosure("kelpdao-dvn") as Record<string, unknown>),
+        exposureEndSec,
+        exemptions: [{
+          assetId: ASSET, routeId: ROUTE, kind: "deployed-after-exposure",
+          creationTxHash: `0x${"a".repeat(64)}`, creationBlock: 100, creationTimestampSec,
+        }],
+      };
+      const dir = fixtureRoot({ reviews: [provider({ windowStartSec, providerIncidents: [incident] })], rows: [] });
+      expect(checkIncidentReviewKeys(dir).findings.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("does not let a provider window hide exposure covered by the issuer witness", () => {
+    const dir = fixtureRoot({
+      reviews: [
+        provider({ windowStartSec: 3000, providerIncidents: [disclosure("kelpdao-dvn")] }),
+        {
+          reviewId: "review-issuer", assetId: ASSET,
+          scope: { kind: "issuer-surface", coveredRoutes: [ROUTE] },
+          reviewedAt: "2026-10-22", windowStartSec: 1000, windowEndSec: 9000,
+        },
+      ],
+      rows: [],
+    });
+    expect(codes(dir)).toContain("provider-exposure-unexempted");
+  });
+
   it("rejects the removed lane screening reference shape", () => {
     const dir = fixtureRoot({
       reviews: [provider({ laneScreeningRefs: [{ assetId: ASSET, routeId: ROUTE, certificateId: "lane-cert" }] })],
@@ -513,8 +545,8 @@ describe("incident review authored coverage shapes", () => {
       rows: [],
     });
     const report = checkIncidentReviewKeys(dir);
-    expect(report.findings.map((finding) => finding.code)).toEqual(["provider-incident-omitted"]);
-    expect(report.findings[0]).toMatchObject({ reviewId: "review-provider-new" });
+    expect(report.findings.map((finding) => finding.code)).toEqual(["provider-exposure-unexempted", "provider-incident-omitted"]);
+    expect(report.findings[1]).toMatchObject({ reviewId: "review-provider-new" });
   });
 });
 
