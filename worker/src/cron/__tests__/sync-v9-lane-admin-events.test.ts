@@ -1,10 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { sha256HexFromBytes } from "@shared/lib/sha256";
+import type * as LaneAdminEventModule from "../../lib/safety-score-v9/bridge-lane-admin-events";
 import type {
   V9LaneIncidentCertificate,
   V9LaneIncidentScreeningResult,
 } from "@shared/types/safety-score-v9-incidents";
 import type { ChainRpcConfig } from "../../lib/chain-registry";
+import * as evmRpc from "../../lib/evm-rpc";
 import {
   LANE_SCREENING_MAX_BLOCKS_PER_CERTIFICATE,
   laneScreeningAttemptCacheKey,
@@ -45,6 +48,8 @@ const fixtures = createLatestSchemaFixtureTracker();
 afterEach(() => {
   fixtures.closeAll();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
+  vi.useRealTimers();
 });
 beforeEach(() => {
   mocks.head.mockResolvedValue(HEADER);
@@ -258,6 +263,76 @@ describe("lane screening attempt records", () => {
 });
 
 describe("syncV9LaneAdminEvents", () => {
+  it("records a deadline deferral when the finalized-head read consumes the remaining window", async () => {
+    const { db } = fixtures.open();
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1_000);
+    const deadlineMs = Date.now() + 10_000;
+    mocks.head.mockImplementation(async () => {
+      vi.setSystemTime(deadlineMs);
+      return null;
+    });
+    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
+      descriptors: [descriptor()], observedAtSec: NOW, deadlineMs,
+    });
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      deadlineExhausted: true, failed: 0, deferred: { deadline: 1 },
+    });
+    expect(await readAttempt(db)).toMatchObject({ outcome: "deferred", reason: "deadline", consecutiveFailures: 0 });
+    expect(mocks.screen).not.toHaveBeenCalled();
+    expect(await certificateRows(db)).toBe(0);
+  });
+
+  it("defers an unfinished slow lane before its deadline without certifying its unscreened tail", async () => {
+    const { db } = fixtures.open();
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW * 1_000);
+    const deadlineMs = Date.now() + 3_500;
+    const actual = await vi.importActual<typeof LaneAdminEventModule>(
+      "../../lib/safety-score-v9/bridge-lane-admin-events",
+    );
+    mocks.screen.mockImplementation(actual.screenLaneAdminEvents);
+    const head = { ...HEADER, number: 50_000 };
+    mocks.head.mockResolvedValue(head);
+    vi.spyOn(evmRpc, "fetchEvmBlockHeader").mockResolvedValue(head);
+    vi.spyOn(evmRpc, "usableCcipRpcEndpoints").mockReturnValue([{
+      url: "https://rpc.example", operator: "public", maxLogBlockSpan: 10_000,
+      keyed: false, position: "registry", stateHistory: "archive", logsHistory: "full",
+    }]);
+    const rpc = vi.spyOn(evmRpc, "fetchEvmRpcBatchDetailed").mockImplementation(async (_chain, calls) => {
+      vi.setSystemTime(Date.now() + 900);
+      return {
+        results: calls.map(call => call.method === "eth_getCode" ? "0x6000"
+          : call.method === "eth_getLogs" ? []
+          : { number: call.params[0], timestamp: `0x${(NOW - 60).toString(16)}`, hash: HEADER.hash }),
+        errors: [],
+      };
+    });
+    const lane = descriptor(LANE, 50_000);
+    lane.emitters = [{ ...EMITTER, expectedRuntimeCodeSha256: sha256HexFromBytes(new Uint8Array([0x60, 0])) }];
+    const result = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
+      descriptors: [lane], observedAtSec: NOW, deadlineMs, timeoutMs: 1_000,
+    });
+    expect(Date.now()).toBeLessThan(deadlineMs);
+    expect(JSON.parse(result.metadata!)).toMatchObject({
+      deadlineExhausted: true, deferred: { deadline: 1 },
+      lanes: [{ outcome: "deferred", reason: "deadline" }],
+    });
+    expect(await readAttempt(db)).toMatchObject({ outcome: "deferred", reason: "deadline", consecutiveFailures: 0 });
+    expect(await certificateRows(db)).toBe(0);
+    expect(rpc.mock.calls.filter(([, calls]) => calls[0]?.method === "eth_getLogs")).toHaveLength(2);
+
+    // A deadline deferral must not impose the successful refresh hold or the
+    // evidence-failure backoff on the next hosting slot.
+    mocks.screen.mockResolvedValue(admitted(certificate(LANE, 1, 50_000)));
+    const resumed = await syncV9LaneAdminEvents(db, CHAIN_RPCS, undefined, {
+      descriptors: [lane], observedAtSec: NOW + 3,
+    });
+    expect(resumed.itemCount).toBe(1);
+    expect(await certificateRows(db)).toBe(1);
+    expect(await readAttempt(db)).toMatchObject({ outcome: "admitted", consecutiveFailures: 0 });
+  });
+
   it("stores an admitted certificate and makes a rerun of the same slot a no-op", async () => {
     const { db } = fixtures.open();
     mocks.screen.mockResolvedValue(admitted(certificate(LANE, 9_001, 10_000)));
