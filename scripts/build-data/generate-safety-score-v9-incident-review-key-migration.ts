@@ -101,7 +101,10 @@ export interface IncidentReviewKeyMigrationArtifact {
     /** Issuer-surface and provider reviews: not key-migration subjects, no row. */
     readonly skipped: number;
     readonly mapped: number;
+    /** Adjudicated legacy-digest orphans, excluding authored retirements. */
     readonly orphans: number;
+    /** Reviews retired because their authored deployment left the catalog. */
+    readonly authoredRetired: number;
     readonly collisions: number;
     readonly authoredApplied: number;
     readonly legacyBlocked: number;
@@ -135,6 +138,7 @@ type IncidentReviewMigrationSourceRow = {
   readonly assetId?: string;
   readonly windowEndSec: number;
   readonly scope: IncidentReviewMigrationScope;
+  readonly retired?: { readonly reason: string };
 };
 
 interface BridgeRouteMetadata {
@@ -453,6 +457,23 @@ export function buildIncidentReviewKeyMigration(
     }
     const stableReviewId = (resolution: IncidentReviewMigrationResolution, authoredValue: IncidentReviewAuthoredIdentity | null) =>
       stableReviewIdFor(review.reviewId, assetId, review.windowEndSec, { resolution, authored: authoredValue });
+    if (review.retired !== undefined && !("controlKey" in review.scope)) {
+      // An authored retirement has no live control to resolve; keep the row and
+      // its provenance, but let no lane or control claim it.
+      rows.push({
+        reviewId: review.reviewId,
+        assetId,
+        legacyControlKey: null,
+        resolution: "retired",
+        authored: null,
+        digestMatch: false,
+        collidesWithCurrentCandidate: false,
+        applied: "retired",
+        reason: review.retired.reason,
+        stableReviewId: review.reviewId,
+      });
+      continue;
+    }
     if (review.scope.kind === "deployment") {
       rows.push({
         reviewId: review.reviewId,
@@ -558,22 +579,25 @@ export function buildIncidentReviewKeyMigration(
     rows.filter((row) => row.resolution === resolution).length;
   const appliedCount = (applied: IncidentReviewMigrationApplication): number =>
     rows.filter((row) => row.applied === applied).length;
+  const retiredRows = rows.filter((row) => row.resolution === "retired");
+  const orphanRows = retiredRows.filter((row) => row.legacyControlKey !== null);
   const counts = {
     lane: countOf("lane"),
     control: countOf("control"),
     "lane-aggregate": countOf("lane-aggregate"),
     "mint-control": countOf("mint-control"),
     deployment: countOf("deployment"),
-    retired: countOf("retired"),
+    retired: retiredRows.length,
     total: rows.length,
     /** Issuer-surface and provider reviews: not key-migration subjects. */
     skipped,
     mapped: rows.filter((row) => row.resolution !== "retired").length,
-    orphans: countOf("retired"),
+    orphans: orphanRows.length,
+    authoredRetired: retiredRows.length - orphanRows.length,
     collisions: rows.filter((row) => row.collidesWithCurrentCandidate).length,
     authoredApplied: appliedCount("authored"),
     legacyBlocked: appliedCount("legacy-blocked"),
-    digestKeysRemaining: appliedCount("legacy-blocked") + countOf("retired"),
+    digestKeysRemaining: appliedCount("legacy-blocked") + orphanRows.length,
   };
   if (counts.total + skipped !== negativeReviews.length) {
     throw new Error(
@@ -648,6 +672,7 @@ export function applyIncidentReviewMigration(reviewsValue: unknown, artifact: In
       throw new Error(`Incident review ${String(review.reviewId)} is missing from the key migration`);
     }
     if (migration.applied === "retired") {
+      if ("retired" in review) return review;
       return { ...review, retired: { reviewedAt: REVIEW_KEY_MIGRATION_RETIRED_AT, reviewer: REVIEW_KEY_MIGRATION_REVIEWER, reason: migration.reason } };
     }
     if (migration.applied !== "authored") return review;
@@ -673,7 +698,7 @@ export function runCli(argv = process.argv.slice(2)): void {
     assertMigrationPreservesLegacyKeys(ROOT, artifact);
     process.stdout.write(
       `Incident review migration preserves every applied legacy key (${artifact.counts.authoredApplied} authored, ` +
-        `${artifact.counts.legacyBlocked} mint held, ${artifact.counts.orphans} retired, ` +
+        `${artifact.counts.legacyBlocked} mint held, ${artifact.counts.retired} retired, ` +
         `${artifact.counts.collisions} collisions)\n`,
     );
   }

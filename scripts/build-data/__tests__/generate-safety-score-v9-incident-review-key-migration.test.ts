@@ -34,8 +34,10 @@ describe("incident review key migration", () => {
     expect(generated.counts.total).toBe(subjects.length);
     expect(generated.counts.skipped).toBe(registry.negativeReviews.length - subjects.length);
     expect(generated.counts.total + generated.counts.skipped).toBe(registry.negativeReviews.length);
-    expect(generated.counts.orphans).toBe(generated.counts.retired);
-    expect(generated.counts.mapped + generated.counts.orphans).toBe(generated.counts.total);
+    expect(generated.counts.orphans).toBe(23);
+    expect(generated.counts.authoredRetired).toBe(1);
+    expect(generated.counts.orphans + generated.counts.authoredRetired).toBe(generated.counts.retired);
+    expect(generated.counts.mapped + generated.counts.retired).toBe(generated.counts.total);
   });
 
   it("keeps every applied authored identity outcome-equivalent to its digest key", () => {
@@ -51,28 +53,40 @@ describe("incident review key migration", () => {
   it("retires exactly the adjudicated orphan digests instead of reattaching collisions", () => {
     const generated = buildIncidentReviewKeyMigration(ROOT);
     const retired = generated.rows.filter((row) => row.resolution === "retired");
-    expect(new Set(retired.map((row) => row.legacyControlKey))).toEqual(
+    const adjudicated = retired.filter((row) => row.legacyControlKey !== null);
+    expect(new Set(adjudicated.map((row) => row.legacyControlKey))).toEqual(
       new Set(Object.keys(INCIDENT_REVIEW_ORPHAN_ADJUDICATIONS)),
     );
+    expect(adjudicated).toHaveLength(23);
+    expect(retired).toHaveLength(24);
     expect(retired.filter((row) => row.collidesWithCurrentCandidate)).toHaveLength(11);
     expect(retired.every((row) => row.authored === null && row.reason.length > 0 && row.applied === "retired")).toBe(true);
+    expect(retired.find((row) => row.reviewId === "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011"))
+      .toMatchObject({ legacyControlKey: null, digestMatch: false, reason: expect.stringContaining("Lisk") });
   });
 
   it("applies every authored scope and retires the adjudicated orphans with provenance", () => {
     const reviews = readJson(INCIDENT_REVIEWS_PATH) as { negativeReviews: RawReview[] };
     const generated = buildIncidentReviewKeyMigration(ROOT);
     const authored = reviews.negativeReviews.filter((review) =>
-      review.scope.kind === "control" && review.scope.controlKey === undefined);
+      review.scope.kind === "control" && review.scope.controlKey === undefined && review.retired === undefined);
     const retired = reviews.negativeReviews.filter((review) => review.retired !== undefined);
+    const adjudicatedRetirements = retired.filter((review) => typeof review.scope.controlKey === "string");
+    const authoredRetirements = retired.filter((review) => typeof review.scope.controlKey !== "string");
     const legacyDigests = reviews.negativeReviews.filter((review) =>
       typeof review.scope.controlKey === "string");
+    expect(authored).toHaveLength(639);
     expect(authored).toHaveLength(generated.counts.authoredApplied + generated.counts.legacyBlocked);
     expect(authored.every((review) => typeof review.scope.routeId === "string" || review.scope.controlId !== undefined)).toBe(true);
     expect(retired).toHaveLength(generated.counts.retired);
-    expect(retired.every((review) =>
+    expect(adjudicatedRetirements).toHaveLength(generated.counts.orphans);
+    expect(adjudicatedRetirements.every((review) =>
       review.retired?.reviewedAt === REVIEW_KEY_MIGRATION_RETIRED_AT && review.retired.reason.length > 0)).toBe(true);
-    // Only the retired rows keep the digest scope they were adjudicated under.
-    expect(legacyDigests).toHaveLength(retired.length);
+    expect(authoredRetirements).toEqual([
+      expect.objectContaining({ reviewId: "i203-cngn-compliant-naira-3ed94b7a7d58976299ac-20261011" }),
+    ]);
+    // Only the adjudicated orphan rows keep the digest scope they were retired under.
+    expect(legacyDigests).toHaveLength(adjudicatedRetirements.length);
     const deploymentScopedMint = authored.find((review) =>
       review.scope.controlId === "USDSM Etherlink proxy owner");
     expect(deploymentScopedMint?.scope.routeId).toBe("etherlink:0x6bde51212203ae5d592cc5180da2abbd41c922de");

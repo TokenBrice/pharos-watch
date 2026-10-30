@@ -66,10 +66,6 @@
         "url": "https://docs.idrx.co/integration/processing-bridge-idrx-request"
       },
       {
-        "label": "Lisk exact IDRX token metadata (retrieved 2026-10-20; name, symbol and two decimals only)",
-        "url": "https://blockscout.lisk.com/api/v2/tokens/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
-      },
-      {
         "label": "Celo exact IDRX token metadata (retrieved 2026-10-20; name, symbol and two decimals only)",
         "url": "https://celo.blockscout.com/api/v2/tokens/0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
       }
@@ -257,19 +253,6 @@
         ]
       },
       {
-        "id": "lisk:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
-        "destinationChain": "lisk",
-        "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
-        "protocol": "IDRX on Lisk (current route/control reconciliation unresolved)",
-        "issuanceModel": "unknown",
-        "routeClass": "unknown",
-        "riskTier": "opaque-or-unknown",
-        "semantics": "unknown",
-        "scope": "unknown",
-        "reviewDisposition": "unresolved",
-        "reviewNote": "Identity researched 2026-10-20: the issuer supported-chain registry lists this exact Lisk deployment with two decimals, independently corroborated by the Lisk Blockscout token API. The September 30 AUP includes a Lisk balance, and historical mint-review prose describes Lisk control reads; neither constitutes a current complete route/controller certificate. Lisk is now supported by the chain registry, so its earlier unsupported-chain omission is removed without copying another chain's controls or backdating historical observations. Current native/representation semantics, authority graph, incident state, pending burns and conserved route liabilities remain unresolved."
-      },
-      {
         "id": "celo:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
         "destinationChain": "celo",
         "contractAddress": "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
@@ -305,7 +288,6 @@
           "contract:etherlink:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
           "contract:gnosis:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
           "contract:klaytn:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
-          "contract:lisk:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22",
           "contract:polygon:0x649a2da7b28e0d54c13d5eff95d3a660652742cc",
           "contract:worldchain:0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22"
         ],

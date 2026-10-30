@@ -233,7 +233,7 @@ const SOLANA_PUBLIC_RPC_CHAIN_ID = "solana";
  * resolution of the recorded failure, and a reviewed edit here. Short-window
  * parity does not prove long-span log completeness; scanners own that frontier.
  * Excluded: hyperevm (stale latest), xdc (freshness sample deficit), flow (head lag),
- * chiliz/lisk/viction (no history). See worker-infrastructure-appendix routing. */
+ * chiliz/viction (no history). See worker-infrastructure-appendix routing. */
 export const DWELLIR_ONLY_REGISTRY_CHAINS: ReadonlySet<string> = new Set([
   "linea", "zksync", "stable", "megaeth", "worldchain", "scroll", "unichain",
   "blast", "manta", "cronos", "pulsechain", "immutable-zkevm", "boba", "astar", "taiko",

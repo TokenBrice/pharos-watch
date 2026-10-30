@@ -1115,8 +1115,8 @@ const CURATED_AGGREGATE_ONCHAIN_SUPPLY_CONTRACTS: Record<
     { chain: "solana" },
   ],
   // cNGN's Bantu-native float has no supported supply reader. Destination
-  // representations (including Lisk and Asset Chain) cannot prove its global
-  // supply; leave it on upstream supply until canonical accounting is available.
+  // representations such as Asset Chain cannot prove its global supply; leave
+  // it on upstream supply until canonical accounting is available.
 
 };
 

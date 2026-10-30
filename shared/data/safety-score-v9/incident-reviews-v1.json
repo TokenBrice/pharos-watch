@@ -23680,7 +23680,12 @@
         "source:a3b622c18e2c41a0850c5195",
         "source:cf0c1ebc36fe3b1e7b1da0f9",
         "source:68003222ae40b291b2cfd195"
-      ]
+      ],
+      "retired": {
+        "reviewedAt": "2026-10-30",
+        "reviewer": "Lisk retirement 2026-10-30",
+        "reason": "Lisk chain shuts down 2026-10-31 and the cNGN Lisk deployment and owner-safe control are no longer catalogued"
+      }
     },
     {
       "reviewId": "w1-s002-usdc-mantle-6426a3b8c824e442633e-20261014",

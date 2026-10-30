@@ -125,10 +125,9 @@ export const RPC_PARITY_TARGETS: readonly RpcParityTarget[] = [
   { chainId: "boba", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x66a2a913e447d6b4bf33efbec43aaef87890fbbc", blockTimeSec: 2, comparator: { source: "pin", url: "https://mainnet.boba.network" } },
   { chainId: "astar", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x6a2d262d56735dba19dd70682b39f6be9a931d98", blockTimeSec: 6, comparator: { source: "pin", url: "https://evm.astar.network" } },
   { chainId: "taiko", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0x07d83526730c7438048d55a4fc0b850e2aab6f0b", blockTimeSec: 2, comparator: { source: "pin", url: "https://rpc.mainnet.taiko.xyz" } },
-  // 2026-10-28: tracked BRZ/IDRX/USDC deployments; local Multicall3 heights.
-  // Ankr and the Lisk/Viction public nodes matched three serial numeric reads.
+  // 2026-10-28: tracked BRZ/USDC deployments; local Multicall3 heights.
+  // Ankr and the Viction public node matched three serial numeric reads.
   { chainId: "chiliz", latestStateProbe: "multicall3-block-number", coinId: "brz-transfero", contract: "0xe9185ee218cae427af7b9764a011bb89fea761b4", blockTimeSec: 3, comparator: { source: "pin", url: "https://rpc.ankr.com/chiliz" } },
-  { chainId: "lisk", latestStateProbe: "multicall3-block-number", coinId: "idrx-idrx", contract: "0x18bc5bcc660cf2b9ce3cd51a404afe1a0cbd3c22", blockTimeSec: 2, comparator: { source: "pin", url: "https://rpc.api.lisk.com" } },
   { chainId: "viction", latestStateProbe: "multicall3-block-number", coinId: "usdc-circle", contract: "0xcca4e6302510d555b654b3eab9c0fcb223bcfdf0", blockTimeSec: 2, comparator: { source: "pin", url: "https://rpc.viction.xyz" } },
 ];
 
