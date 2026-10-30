@@ -16,7 +16,11 @@ import {
 import { CHAIN_META } from "@shared/types/chain-identity";
 import { canonicalExitRouteChain } from "@shared/types/exit-route-identity";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { DEX_UNSUPPORTED_CHAIN_WAIVER_REASON, getDexDiscoveryProviders } from "@shared/lib/dex-deployment-coverage";
+import {
+  DEX_DISCOVERY_PROVIDER_REGISTRY,
+  DEX_UNSUPPORTED_CHAIN_WAIVER_REASON,
+  getDexDiscoveryProviders,
+} from "@shared/lib/dex-deployment-coverage";
 import { liquidityTvlBasisEpoch } from "@shared/lib/dex-liquidity-evidence";
 
 const TREND_BASELINE_CONFIDENCE_MIN = 0.5;
@@ -125,6 +129,24 @@ export function normalizeDexScoreDetails(
   };
 }
 
+const DEX_DISCOVERY_PROVIDER_IDS = new Set<string>(
+  DEX_DISCOVERY_PROVIDER_REGISTRY.map((provider) => provider.providerId),
+);
+
+/**
+ * Read a persisted provider scope with the same admission as the census
+ * reader. Unreadable or invalid evidence returns null instead of an
+ * affirmative empty provider list.
+ */
+function parsePersistedProviderSet(json: string, context: string): string[] | null {
+  const parsed = safeJsonParse<unknown>(json, null, context);
+  return Array.isArray(parsed)
+    && new Set(parsed).size === parsed.length
+    && parsed.every((provider) => typeof provider === "string" && DEX_DISCOVERY_PROVIDER_IDS.has(provider))
+    ? parsed as string[]
+    : null;
+}
+
 export function buildDexDeploymentCoverage(rows: readonly DexDeploymentOutcomeRow[], nowSec: number) {
   const byStablecoin = new Map<
     string,
@@ -142,6 +164,13 @@ export function buildDexDeploymentCoverage(rows: readonly DexDeploymentOutcomeRo
     if (!CURRENT_DEPLOYMENT_KEYS.has(deploymentKey(row.stablecoin_id, row.chain, row.contract_address))) {
       continue;
     }
+    const providers = parsePersistedProviderSet(
+      row.provider_set_json,
+      `dex-liquidity:${row.stablecoin_id}:${row.chain}:providers`,
+    );
+    // The census classifies the same unreadable row invalid and excludes it;
+    // publishing a deployment with an invented provider scope would disagree.
+    if (providers == null) continue;
     const coverage = byStablecoin.get(row.stablecoin_id) ?? {
       observedPools: 0,
       verifiedNoPools: 0,
@@ -160,11 +189,7 @@ export function buildDexDeploymentCoverage(rows: readonly DexDeploymentOutcomeRo
       chain: row.chain,
       contractAddress: row.contract_address,
       outcome: row.outcome,
-      providers: safeJsonParse<string[]>(
-        row.provider_set_json,
-        [],
-        `dex-liquidity:${row.stablecoin_id}:${row.chain}:providers`,
-      ),
+      providers,
       reason: row.reason,
       observedPoolCount: row.observed_pool_count,
       observedAt: row.observed_at,

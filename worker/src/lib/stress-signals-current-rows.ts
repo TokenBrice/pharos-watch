@@ -49,6 +49,9 @@ type CompletedDewsScope =
       expectedRowCount: number | null;
       stablecoinIdsDigest: string | null;
     }
+  // Bootstrap has no accepted generation yet; a failed/invalid pointer read is
+  // unavailable evidence and must be reported, never treated as a first run.
+  | { status: "missing" }
   | { status: "unavailable"; reason: string };
 
 interface StressSignalQueryTags {
@@ -263,7 +266,7 @@ async function loadCompletedDewsScope(db: D1Database, nowSec: number): Promise<C
         stablecoinIdsDigest: result.stablecoinIdsDigest,
       };
     case "no-pointer":
-      return { status: "unavailable", reason: "publication pointer is missing" };
+      return { status: "missing" };
     case "invalid-pointer":
       return { status: "unavailable", reason: result.reason };
     case "read-failed":
@@ -279,7 +282,9 @@ async function loadCurrentRows<Row extends { stablecoin_id: string; computed_at:
   options: CurrentRowsOptions,
 ): Promise<Row[]> {
   const completedScope = await loadCompletedDewsScope(db, nowSec);
+  if (completedScope.status === "missing") return [];
   if (completedScope.status === "unavailable") {
+    options.onReadError?.(new Error(`DEWS published generation unavailable: ${completedScope.reason}`));
     return [];
   }
   const { completedAt, expectedRowCount, stablecoinIdsDigest } = completedScope;
@@ -342,7 +347,9 @@ async function loadCurrentRowForCoin<Row extends { computed_at: number }>(
   options: CurrentRowsOptions,
 ): Promise<Row | null> {
   const completedScope = await loadCompletedDewsScope(db, nowSec);
+  if (completedScope.status === "missing") return null;
   if (completedScope.status === "unavailable") {
+    options.onReadError?.(new Error(`DEWS published generation unavailable: ${completedScope.reason}`));
     return null;
   }
   const { completedAt } = completedScope;

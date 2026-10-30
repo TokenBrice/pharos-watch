@@ -78,7 +78,8 @@ export interface SignalResult {
 export interface DEWSInput {
   stablecoinId: string;
   mcapUsd: number;
-  pegType: string;
+  /** Null when the cache row omitted an admitted peg type (R1). */
+  pegType: string | null;
   // Supply velocity
   circulatingCurrent: number;
   circulatingPrevDay: number;

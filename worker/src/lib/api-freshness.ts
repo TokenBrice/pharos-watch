@@ -25,7 +25,10 @@ import {
   validateFreshnessSentinelPayload,
 } from "./freshness-sentinels";
 import { toErrorMessage } from "@shared/lib/error-utils";
-import { readDewsPublishedGenerationResult } from "./dews-publication-pointer";
+import {
+  DEWS_PUBLICATION_POINTER_CACHE_KEY,
+  readDewsPublishedGenerationResult,
+} from "./dews-publication-pointer";
 import {
   API_FRESHNESS_ALLOWED_FUTURE_SKEW_SEC,
   measureFreshnessAge,
@@ -307,6 +310,12 @@ async function resolveSentinelBackedFreshness(params: {
 
   const sentinelKey = getFreshnessSentinelCacheKey(params.key);
   const sentinelRow = params.cacheRowsByKey.get(sentinelKey);
+  // The caller may retain its scheduled/run-start clock. The pointer read and
+  // validation use this D1 read clock (the same one sentinel validation uses),
+  // so a generation published during the run is not mislabeled as future.
+  const readClock = sentinelRow?.observed_at
+    ?? params.cacheRowsByKey.get(DEWS_PUBLICATION_POINTER_CACHE_KEY)?.observed_at
+    ?? params.now;
   const sentinelValidation = sentinelRow
     ? validateFreshnessSentinelPayload({
         value: sentinelRow.value,
@@ -378,7 +387,7 @@ async function resolveSentinelBackedFreshness(params: {
   try {
     let tableAge: number | null;
     if (params.key === "dews") {
-      const published = await readDewsPublishedGenerationResult(params.db, params.now);
+      const published = await readDewsPublishedGenerationResult(params.db, readClock);
       if (published.status !== "ok") {
         const detail = published.status === "read-failed"
           ? published.error
@@ -459,11 +468,12 @@ export async function buildCacheStatuses(
   );
   const fxMetaKey = getFxRatesMetaKey();
   const cacheLookupKeys = Array.from(
-    new Set(
-      cacheOnlyKeys.includes("fx-rates")
-        ? [...cacheOnlyKeys, ...sentinelCacheKeys, fxMetaKey]
-        : [...cacheOnlyKeys, ...sentinelCacheKeys],
-    ),
+    new Set([
+      ...cacheOnlyKeys,
+      ...sentinelCacheKeys,
+      ...(sentinelBackedCacheKeySet.has("dews") ? [DEWS_PUBLICATION_POINTER_CACHE_KEY] : []),
+      ...(cacheOnlyKeys.includes("fx-rates") ? [fxMetaKey] : []),
+    ]),
   );
   let cacheRows: { results?: CacheRow[] } = { results: [] };
   const failures: CacheStatusFailure[] = [];

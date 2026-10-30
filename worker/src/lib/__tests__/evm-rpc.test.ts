@@ -17,6 +17,17 @@ vi.mock("../fetch-retry", () => ({
     }
     return result;
   },
+  fetchTextWithRetry: async (...args: unknown[]) => {
+    const options = args[3] as { beforeRequest?: () => boolean; deadlineMs?: number } | undefined;
+    if (options?.beforeRequest?.() === false) {
+      throw new FetchRequestNotStartedError("admission-denied", 0);
+    }
+    const result = await fetchWithRetryMock(...args);
+    if (result instanceof Response) {
+      return { response: result, body: await result.clone().text() };
+    }
+    return result;
+  },
 }));
 
 vi.mock("../rpc-provider-budget", () => ({

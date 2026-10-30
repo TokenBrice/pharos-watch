@@ -35,6 +35,18 @@ export function decodeBlacklistEvmPayload(
 
   const topicIndex = event.addressTopicIndex ?? 1;
   const addressFromTopic = typeof event.addressDataIndex !== "number" && log.topics.length > topicIndex;
+  if (typeof event.addressDataIndex !== "number" && !addressFromTopic) {
+    if (typeof event.addressTopicIndex === "number") {
+      throw new BlacklistDecodeError("invalid-address");
+    }
+    // The legacy (address, amount) layout keeps the affected account in data
+    // word 0. A lone data word cannot prove that role for an amount-bearing
+    // event: it may be the truncated amount, so the log is not decodable.
+    const amountEvidenceIndex = event.amountTopicIndex == null ? event.amountDataIndex ?? 1 : null;
+    if (event.hasAmount && amountEvidenceIndex != null && readDataWord(log.data, amountEvidenceIndex) == null) {
+      throw new BlacklistDecodeError("invalid-address");
+    }
+  }
   const addressWord = typeof event.addressDataIndex === "number"
     ? readDataWord(log.data, event.addressDataIndex)
     : addressFromTopic ? log.topics[topicIndex] : readDataWord(log.data, 0);

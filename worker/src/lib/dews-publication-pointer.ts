@@ -6,7 +6,7 @@ import { throwIfAborted } from "./abort";
 import { runWithOverloadRetry } from "./d1-overload-retry";
 import { executeAtomicBatch } from "./db";
 
-const DEWS_PUBLICATION_POINTER_CACHE_KEY = "dews:published-generation";
+export const DEWS_PUBLICATION_POINTER_CACHE_KEY = "dews:published-generation";
 const DEWS_PUBLICATION_POINTER_SOURCE = "compute-dews";
 const DEWS_PUBLICATION_POINTER_STATUS = "published";
 const DEWS_PUBLICATION_POINTER_COVERAGE_VERSION = 2;

@@ -181,7 +181,15 @@ export async function observeReviewedExitExecutionRoutes(args: {
         observedAt: observedAtSec, freshnessSeconds: Math.max(0, observedAtSec - source.timestamp), commonModeKeys: certificate.resourceKeys,
         // Vault receipts certify only this generation-bound canonical request,
         // never a monotonic capacity curve inferred from independent samples.
-        capacityCurve: (isVault ? [point] : observed.points.filter((entry) => !scoreEligible || entry.certification !== "diagnostic")).map((entry) => ({ requestedNotionalUsd: entry.requestedNotionalUsd, maxCostBps: entry.maxCostBps, executableUsd: entry.executableUsd, completionRatio: entry.executableUsd / entry.requestedNotionalUsd, executionCostBps: entry.certification === "diagnostic" ? 0 : entry.executionCostBps })),
+        capacityCurve: (isVault ? [point] : observed.points.filter((entry) => !scoreEligible || entry.certification !== "diagnostic")).map((entry) => ({
+          requestedNotionalUsd: entry.requestedNotionalUsd,
+          maxCostBps: entry.maxCostBps,
+          executableUsd: entry.executableUsd,
+          completionRatio: entry.executableUsd / entry.requestedNotionalUsd,
+          // A diagnostic point's measured cost may exceed maxCostBps; the wire
+          // schema cannot carry it, so omit it rather than publish 0 bps (R7).
+          ...(entry.certification === "diagnostic" ? {} : { executionCostBps: entry.executionCostBps }),
+        })),
         executionModelId: review.modelId, executionCertificate: certificate,
       }));
       if (admission.state === "unavailable") failures.push({ modelId: review.modelId, reason: admission.reason, responsibility: admission.responsibility === "method-unsupported" ? "method-unsupported" : "producer-failed" });

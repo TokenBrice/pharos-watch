@@ -50,6 +50,11 @@ function rpcErrorDecision(error: { code?: number; message?: string }): { decisio
 
 function providerDecision(outcome: JsonRpcTransportOutcome): { decision: CircuitOutcomeDecision; reason: string } {
   if (outcome.status === "control-error") return { decision: "neutral", reason: "request-not-completed" };
+  // A response whose body/deadline read failed arrived; local intake failure
+  // is not a provider verdict.
+  if (outcome.status === "transport-error" && outcome.responseReceived === true) {
+    return { decision: "neutral", reason: "response-body-unreadable" };
+  }
   if (outcome.status === "transport-error" || outcome.status === "parse-error"
     || outcome.status === "invalid-envelope") {
     return { decision: "failure", reason: outcome.status };

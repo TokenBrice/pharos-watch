@@ -17,6 +17,8 @@ import {
   type StressSignalCurrentRow,
 } from "../stress-signals-current-rows";
 import { publishedPointer } from "./stress-signals-current-rows.test-support";
+import { buildDewsStablecoinIdsDigest } from "../dews-publication-pointer";
+import { loadDewsSourceState } from "../dews/source-state";
 
 const nowSec = 1_778_400_000;
 const signalsJson = JSON.stringify({ supply: { value: 10, available: true } });
@@ -740,6 +742,60 @@ describe("stress-signal current-row helpers", () => {
         rows: [row("usdt-tether", completedAt), row("substituted", completedAt)] },
     ]);
     await expect(loadPublishedStressSignalGeneration(db, nowSec)).resolves.toMatchObject({ status: "unavailable" });
+  });
+
+  it.each(["read-failed", "future-clock"] as const)(
+    "reports the previous accepted generation as a source failure when the pointer is %s",
+    async (state) => {
+      const pointer = state === "future-clock"
+        ? {
+            value: JSON.stringify({
+              updatedAt: nowSec + 120,
+              source: "compute-dews",
+              publishStatus: "published",
+              coverageVersion: 2,
+              expectedRowCount: 1,
+              stablecoinIdsDigest: buildDewsStablecoinIdsDigest(["usdt-tether"]),
+            }),
+            updated_at: nowSec + 120,
+          }
+        : null;
+      const db = mockD1([
+        {
+          match: "FROM cache WHERE key = ?",
+          matchBinds: ["dews:published-generation"],
+          rows: pointer == null ? [] : [pointer],
+          first: pointer,
+          ...(state === "read-failed" ? { throwError: new Error("D1 read failed") } : {}),
+        },
+        { match: "", rows: [], allowUnused: true },
+      ]);
+      const failures: string[] = [];
+      await loadDewsSourceState({
+        db,
+        nowSec,
+        registerSourceFailure: (source) => failures.push(source),
+        registerMalformedPersistedInput: () => {},
+      });
+      // R2: an unreadable accepted-generation pointer must not read as "no
+      // previous generation" and publish unsmoothed values as `no-previous`.
+      expect(failures).toEqual(["stress-signals-latest"]);
+    },
+  );
+
+  it("keeps first-run bootstrap healthy when no accepted-generation pointer exists", async () => {
+    const db = mockD1([
+      { match: "FROM cache WHERE key = ?", matchBinds: ["dews:published-generation"], rows: [] },
+      { match: "", rows: [], allowUnused: true },
+    ]);
+    const failures: string[] = [];
+    await loadDewsSourceState({
+      db,
+      nowSec,
+      registerSourceFailure: (source) => failures.push(source),
+      registerMalformedPersistedInput: () => {},
+    });
+    expect(failures).toEqual([]);
   });
 
   it("fails closed on same-count wrong identities in both latest and canonical fallback", async () => {

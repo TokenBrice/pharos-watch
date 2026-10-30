@@ -361,6 +361,34 @@ export async function persistDewsResults(params: {
   const publicationWithheld = params.degradedSources.length > 0;
   throwIfAborted(params.signal);
   if (params.results.length > 0) {
+    // A withheld generation still advances `stress_signals_latest`, so an
+    // accepted generation must compare its band/score with the last *published*
+    // row (the tape only joins published generations). Withheld runs keep
+    // comparing with latest so their diagnostic sample still records a change.
+    const historyChangePredicate = publicationWithheld
+      ? `OR EXISTS (
+                    SELECT 1 FROM stress_signals_latest latest
+                     WHERE latest.stablecoin_id = ?
+                       AND (latest.band != ? OR ABS(latest.score - ?) >= 1)
+                  )`
+      : `OR EXISTS (
+                    SELECT 1 FROM stress_signals published
+                    JOIN surface_publication_generations publication
+                      ON publication.surface = 'dews'
+                     AND publication.generation_id = 'dews:' || CAST(published.computed_at AS TEXT)
+                     AND publication.state = 'published'
+                     WHERE published.stablecoin_id = ?
+                       AND published.computed_at = (
+                             SELECT MAX(candidate.computed_at)
+                               FROM stress_signals candidate
+                               JOIN surface_publication_generations candidate_publication
+                                 ON candidate_publication.surface = 'dews'
+                                AND candidate_publication.generation_id = 'dews:' || CAST(candidate.computed_at AS TEXT)
+                                AND candidate_publication.state = 'published'
+                              WHERE candidate.stablecoin_id = ?
+                           )
+                       AND (published.band != ? OR ABS(published.score - ?) >= 1)
+                  )`;
     const stmts = params.results.map((result) =>
       params.db
         .prepare(
@@ -376,11 +404,7 @@ export async function persistDewsResults(params: {
                     SELECT 1 FROM stress_signals_latest latest
                      WHERE latest.stablecoin_id = ?
                   )
-               OR EXISTS (
-                    SELECT 1 FROM stress_signals_latest latest
-                     WHERE latest.stablecoin_id = ?
-                       AND (latest.band != ? OR ABS(latest.score - ?) >= 1)
-                  )`,
+               ${historyChangePredicate}`,
         )
         .bind(
           result.stablecoinId,
@@ -391,9 +415,9 @@ export async function persistDewsResults(params: {
           result.stablecoinId,
           params.nowSec - 60 * 60,
           result.stablecoinId,
-          result.stablecoinId,
-          result.band,
-          result.score,
+          ...(publicationWithheld
+            ? [result.stablecoinId, result.band, result.score]
+            : [result.stablecoinId, result.stablecoinId, result.band, result.score]),
         ),
     );
     await batchExecute(params.db, stmts, { signal: params.signal });

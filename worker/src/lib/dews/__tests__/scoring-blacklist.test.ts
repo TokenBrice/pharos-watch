@@ -47,6 +47,42 @@ function createSourceState(): DewsSourceState {
   };
 }
 
+describe("buildDewsScoringResult peg reference admission", () => {
+  it("fails a missing peg type closed instead of scoring a non-USD coin against $1", () => {
+    const eurc = {
+      ...createAsset("eurc-circle"),
+      pegType: undefined,
+      price: 1.09,
+      priceConfidence: "high",
+      circulating: { peggedEUR: 50_000_000 },
+      circulatingPrevDay: { peggedEUR: 50_000_000 },
+      circulatingPrevWeek: { peggedEUR: 50_000_000 },
+    } as unknown as StablecoinData;
+
+    const result = buildDewsScoringResult({
+      assetById: new Map([["eurc-circle", eurc]]),
+      pegRates: { peggedEUR: 1.09 },
+      pegRateSources: { peggedEUR: "fallback" },
+      pegRateContributorCounts: { peggedEUR: 2 },
+      sourceState: createSourceState(),
+      registerMalformedPersistedInput: () => {},
+    });
+
+    const row = result.results.find((entry) => entry.stablecoinId === "eurc-circle");
+    expect(row).toBeDefined();
+    // R1: a missing peg type is unreadable evidence, not a $1 reference. The
+    // 1.09 EUR price must not score as a 900 bps depeg or grant market-price
+    // evidence for a coin trading at par.
+    expect(row!.signals.diverg).toMatchObject({
+      available: false,
+      value: 0,
+      unavailableReason: "peg-type-unavailable",
+    });
+    expect(row!.evidenceKinds).not.toContain("market-price");
+    expect(row!.score).toBe(0);
+  });
+});
+
 describe("buildDewsScoringResult blacklist attribution", () => {
   it("applies blacklist counts only to the tracker stablecoin id for same-symbol assets", () => {
     const result = buildDewsScoringResult({

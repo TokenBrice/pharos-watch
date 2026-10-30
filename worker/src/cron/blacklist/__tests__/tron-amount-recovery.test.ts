@@ -95,12 +95,16 @@ interface StubOptions {
   settleFlows?: Flow[];
   balance?: bigint;
   ledgerComplete?: boolean;
+  /** Cap-dependent completeness: overrides `ledgerComplete` per read. */
+  ledgerCompleteForCap?: (maxPages: number) => boolean;
   ledgerStopped?: boolean;
   ledgerWatermarkMs?: number;
   settleComplete?: boolean;
   settleStopped?: boolean;
   settleWatermarkMs?: number;
   receiptTimestampMs?: number;
+  anchorTimestampMs?: number;
+  settleHeadTimestampMs?: number;
   captureMaxPages?: number[];
   consumeLedgerPages?: number;
 }
@@ -122,6 +126,8 @@ async function stubEvidence(flows: Flow[], overrides: StubOptions = {}) {
     }));
   const net = (source: Flow[]) =>
     source.reduce((total, flow) => total + (flow.direction === "in" ? flow.value : -flow.value), BigInt(0));
+  const anchorMs = overrides.anchorTimestampMs ?? ANCHOR_MS;
+  const settleHeadMs = overrides.settleHeadTimestampMs ?? (anchorMs + 3_000);
 
   vi.mocked(fetchTronTransactionInfo).mockResolvedValue({
     blockNumber: FREEZE_BLOCK,
@@ -136,27 +142,27 @@ async function stubEvidence(flows: Flow[], overrides: StubOptions = {}) {
   vi.mocked(fetchTronHeadBlock).mockImplementation(async () => {
     const isAnchor = headCalls++ % 2 === 0;
     return isAnchor
-      ? { blockId: "a".repeat(64), blockNumber: FREEZE_BLOCK + 400, timestampMs: ANCHOR_MS }
-      : { blockId: "b".repeat(64), blockNumber: FREEZE_BLOCK + 401, timestampMs: SETTLE_HEAD_MS };
+      ? { blockId: "a".repeat(64), blockNumber: FREEZE_BLOCK + 400, timestampMs: anchorMs }
+      : { blockId: "b".repeat(64), blockNumber: FREEZE_BLOCK + 401, timestampMs: settleHeadMs };
   });
   let ledgerReads = 0;
   vi.mocked(fetchTronTransferWindow).mockImplementation(
     async (_ctx, _account, _contract, minTimestampMs, maxTimestampMs, maxPages): Promise<TronTransferWindow> => {
       overrides.captureMaxPages?.push(maxPages);
-      if (minTimestampMs === 0 && maxTimestampMs === ANCHOR_MS) {
+      if (minTimestampMs === 0 && maxTimestampMs === anchorMs) {
         ledgerReads++;
         if (ledgerReads === 1) _ctx.pagesFetched.count += overrides.consumeLedgerPages ?? 0;
         return {
           transfers: toTransfers(flows),
           watermarkMs: overrides.ledgerWatermarkMs ?? maxTimestampMs + 60_000,
-          complete: overrides.ledgerComplete ?? true,
+          complete: overrides.ledgerCompleteForCap?.(maxPages) ?? overrides.ledgerComplete ?? true,
           stopped: overrides.ledgerStopped ?? false,
         };
       }
       const settleFlows = overrides.settleFlows ?? [];
       return {
         transfers: toTransfers(settleFlows),
-        watermarkMs: overrides.settleWatermarkMs ?? (overrides.settleComplete === false ? SETTLE_HEAD_MS - 1 : maxTimestampMs + 60_000),
+        watermarkMs: overrides.settleWatermarkMs ?? (overrides.settleComplete === false ? settleHeadMs - 1 : maxTimestampMs + 60_000),
         complete: overrides.settleComplete ?? true,
         stopped: overrides.settleStopped ?? false,
       };
@@ -463,7 +469,9 @@ describe("recoverTronFreezeAmountForRow", () => {
     });
     const recovery = await recoverTronFreezeAmountForRow(await makeRow(), config, provider());
     expect(recovery.amount).toBeNull();
-    expect(recovery.lastErrorClass).toBe("evidence_mismatch");
+    // Too-young index evidence is a transient state race, never a counted
+    // evidence failure (docs/runbooks/blacklist-sync.md#event-and-coverage-rules).
+    expect(recovery.lastErrorClass).toBe("state_raced");
   });
 
   it("classifies provider failures without writing an amount", async () => {
@@ -783,6 +791,71 @@ describe("backfillTronBlacklistAmounts", () => {
     expect(captureMaxPages[0]).toBe(40);
     expect(captureMaxPages[2]).toBe(20);
     expect(captureMaxPages[3]).toBe(20);
+  });
+
+  it("keeps a ledger cut short by the run's remaining pages out of the park path", async () => {
+    const rows = [
+      await makeRow({ id: "tron-heavy" }),
+      await makeRow({ id: "tron-budget-cut", tx_hash: "2".repeat(64) }),
+    ];
+    const captureMaxPages: number[] = [];
+    // The ledger needs 25 pages, inside the 40-page per-history cap; a run with
+    // only 20 pages left truncates it. Only a per-history-cap truncation is
+    // deterministically over-cap.
+    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(4_500_000), direction: "in" }], {
+      captureMaxPages,
+      consumeLedgerPages: 100,
+      ledgerCompleteForCap: (maxPages) => maxPages >= 25,
+    });
+    const db = mockD1([
+      { match: "blacklist-tron-replay-candidates", rows: rows as unknown as Array<Record<string, unknown>> },
+      ...QUEUE_TABLES,
+      { match: "amount_native = ?", rows: [] },
+    ]);
+
+    const result = await backfillTronBlacklistAmounts(db, {
+      trongridApiKey: "tron-key",
+      limiter: createRateLimiter(1000),
+      runBudget: makeRunBudget(),
+    });
+
+    expect(captureMaxPages).toEqual([40, 20, 20]);
+    expect(result).toMatchObject({
+      attempted: 1,
+      resolved: 1,
+      retried: 0,
+      parked: 0,
+      runtimeBudgetReached: true,
+    });
+    const finishedIds = db.getHistory()
+      .filter((entry) => entry.sql.includes("blacklist-amount-repair-queue-finish"))
+      .map((entry) => entry.binds[6]);
+    expect(finishedIds).toEqual(["tron-heavy"]);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("amount_attempt_count = COALESCE") && entry.binds.includes("tron-budget-cut"))).toBe(false);
+  });
+
+  it("does not book an attempt for a freeze younger than the indexing margin", async () => {
+    const row = await makeRow();
+    await stubEvidence([{ timestampMs: FREEZE_MS - 60_000, value: BigInt(4_500_000), direction: "in" }], {
+      // The solidified head trails wall clock by about a minute, so a freeze
+      // admitted at the scan's 15-minute margin has less runway at replay time.
+      anchorTimestampMs: FREEZE_MS + 10 * 60_000,
+    });
+    const db = mockD1([
+      { match: "blacklist-tron-replay-candidates", rows: [row as unknown as Record<string, unknown>] },
+      ...QUEUE_TABLES,
+    ]);
+
+    const result = await backfillTronBlacklistAmounts(db, {
+      trongridApiKey: "tron-key",
+      limiter: createRateLimiter(1000),
+      runBudget: makeRunBudget(),
+    });
+
+    expect(result).toMatchObject({ attempted: 0, resolved: 0, retried: 0, parked: 0 });
+    expect(db.getHistory().some((entry) => entry.sql.includes("amount_attempt_count = COALESCE"))).toBe(false);
+    expect(db.getHistory().some((entry) => entry.sql.includes("blacklist-amount-repair-queue-finish"))).toBe(false);
   });
 
   it("shrinks the settle window's page cap to the pages left in the run", async () => {

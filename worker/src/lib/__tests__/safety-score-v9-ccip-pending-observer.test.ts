@@ -17,7 +17,19 @@ vi.mock("../evm-rpc", async importOriginal => ({
   ...await importOriginal<typeof EvmRpcModule>(),
   fetchEvmBlockHeader: vi.fn(), fetchEvmRpcBatch: vi.fn(),
 }));
-vi.mock("../fetch-retry", () => ({ fetchJsonWithRetry: vi.fn() }));
+vi.mock("../fetch-retry", () => {
+  const fetchJsonWithRetry = vi.fn();
+  // evm-rpc reads bodies as text first; delegate to the same fixture and
+  // stringify its parsed body so legacy mock implementations keep working.
+  const fetchTextWithRetry = vi.fn(async (...args: unknown[]) => {
+    const result = await fetchJsonWithRetry(...args) as { body?: unknown } | null;
+    if (result && typeof result === "object" && "body" in result) {
+      return { ...result, body: typeof result.body === "string" ? result.body : JSON.stringify(result.body) };
+    }
+    return result;
+  });
+  return { fetchJsonWithRetry, fetchTextWithRetry };
+});
 vi.mock("../db-cache", () => ({ getCache: vi.fn(), setCache: vi.fn() }));
 type SendLog = { address: string; topics: string[]; data: `0x${string}`; blockNumber: string; blockHash: string; transactionHash: string; logIndex: string; removed: boolean };
 const addr = (n: number) => `0x${n.toString(16).padStart(40, "0")}` as `0x${string}`;

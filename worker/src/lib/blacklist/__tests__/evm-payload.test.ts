@@ -33,6 +33,15 @@ describe("decodeBlacklistEvmPayload", () => {
     }, 6)).toEqual({ address, amount: 5, eventType: "destroy" });
   });
 
+  it("rejects an amount-bearing data fallback that carries no amount word", () => {
+    // A lone data word cannot prove the legacy (address, amount) layout: it may
+    // be the amount, so the log must quarantine rather than fabricate an address.
+    expect(() => decodeBlacklistEvmPayload(event, {
+      topics: [event.topicHash],
+      data: "0x" + (5_000_000_000n).toString(16).padStart(64, "0"),
+    }, 6)).toThrow("invalid-address");
+  });
+
   it.each(["topic", "data", "override"])("rejects malformed %s address padding", (source) => {
     const malformed = "0x" + "1".repeat(24) + address.slice(2);
     expect(() => decodeBlacklistEvmPayload({ ...event, ...(source === "override" ? { addressDataIndex: 0 } : {}) }, {

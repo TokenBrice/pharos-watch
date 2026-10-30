@@ -163,12 +163,15 @@ describe("single-URL JSON-RPC transport contracts", () => {
     const payload = { jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] };
     network.mockResolvedValueOnce(Response.json({ id: 1, error: { code: -32000, message: "busy" } }, { status: 403 }))
       .mockResolvedValueOnce(Response.json({ id: 1, error: { code: -32000, message: "busy" } }))
-      .mockResolvedValueOnce(new Response("not JSON", { status: 503 }));
+      .mockResolvedValueOnce(new Response("not JSON", { status: 503 }))
+      .mockResolvedValueOnce(new Response("not JSON", { status: 200 }));
     expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, {})).toMatchObject({ status: "http-error", response: { status: 403 } });
     expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, {})).toMatchObject({ status: "rpc-error" });
-    expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, { responseMode: "text" })).toMatchObject({ status: "parse-error", response: { status: 503 } });
+    // A non-2xx status survives a non-JSON body; parse errors are for OK bodies.
+    expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, { responseMode: "text" })).toMatchObject({ status: "http-error", response: { status: 503 } });
+    expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, {})).toMatchObject({ status: "parse-error", response: { status: 200 } });
     expect(await requestJsonRpcAtUrl("https://rpc.invalid", payload, { beforeRequest: () => false })).toMatchObject({ status: "control-error" });
-    expect(network).toHaveBeenCalledTimes(3);
+    expect(network).toHaveBeenCalledTimes(4);
   });
 
   it.each(["single", "batch", "noBatch"] as const)("preserves ordered admission/meter/network/demotion traces for %s", async mode => {

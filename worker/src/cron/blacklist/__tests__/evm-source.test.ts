@@ -327,6 +327,25 @@ describe("parseEvmLogs", () => {
     expect(parsed.failures[0].reason).toBe("invalid-address");
   });
 
+  it("quarantines a destroy log carrying only the amount word instead of decoding it as an address", () => {
+    const usdtConfig = CONTRACT_CONFIGS.find(
+      (candidate) => candidate.stablecoinId === "usdt-tether" && candidate.chain.chainId === "ethereum",
+    )!;
+    const destroyTopic = "0x61e6e66b0d6339b2980aecc6ccc0039736791f0ccde9ed512e789a7fbdd698c6";
+    const parsed = parseEvmLogsWithCoverage(usdtConfig, [{
+      address: usdtConfig.contractAddress,
+      topics: [destroyTopic],
+      data: "0x" + (5_000_000_000n).toString(16).padStart(64, "0"),
+      blockNumber: "0x200",
+      transactionHash: "0x" + "ab".repeat(32),
+      logIndex: "0x0",
+      timeStamp: "0x2000",
+    }]);
+
+    expect(parsed.rows).toEqual([]);
+    expect(parsed.failures.map((failure) => failure.reason)).toEqual(["invalid-address"]);
+  });
+
   it("decodes BUIDL Seize with amountDataIndex=0 (regression for Agent A C1)", async () => {
     const { encodeAbiParameters, keccak256, toBytes } = await import("viem");
     const seizeTopic = keccak256(toBytes("Seize(address,address,uint256,string)"));

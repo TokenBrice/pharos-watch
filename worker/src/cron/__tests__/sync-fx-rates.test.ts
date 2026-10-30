@@ -28,6 +28,7 @@ const fetchRetryMocks = vi.hoisted(() => {
 vi.mock("../../lib/fetch-retry", () => ({
   fetchWithRetry: fetchRetryMocks.fetchWithRetry,
   fetchJsonWithRetry: mockFetchRetry({ failureAsNull: true }).fetchJsonWithRetry,
+  fetchTextWithRetry: mockFetchRetry({ failureAsNull: true }).fetchTextWithRetry,
 }));
 
 import { fetchJsonWithRetry } from "../../lib/fetch-retry";

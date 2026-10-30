@@ -9,7 +9,7 @@ import { makeExitRoute } from "@shared/lib/__tests__/safety-score-v9-exit.test-s
 const CLOCK = 1_791_184_659;
 const VAULT = "0x0000000000000000000000000000000000000001";
 const TOKEN = "0x0000000000000000000000000000000000000002";
-const state = vi.hoisted(() => ({ canonicalCompletion: 1, diagnostic: false }));
+const state = vi.hoisted(() => ({ canonicalCompletion: 1, diagnostic: false, diagnosticCostBps: 0 }));
 vi.mock("@shared/data/safety-score-v9/exit-execution-model-reviews-v1.json", () => ({
   default: { schemaVersion: 1, get reviews() { return [review]; } },
 }));
@@ -29,7 +29,9 @@ vi.mock("../exit-execution/erc4626-instant", () => ({
         requestedNotionalUsd: request.requestedNotionalUsd, maxCostBps: request.maxCostBps,
         requestedRawInput: String(BigInt(request.requestedNotionalUsd) * 1_000_000n),
         executedRawInput: String(BigInt(executableUsd) * 1_000_000n), executableUsd,
-        executionCostBps: 0, allInCostBps: 0, fees: [],
+        executionCostBps: diagnostic ? state.diagnosticCostBps : 0,
+        allInCostBps: diagnostic ? state.diagnosticCostBps : 0,
+        fees: [],
         outputs: executableUsd > 0 ? [{ ...args.outputReference, rawUnits: String(BigInt(executableUsd) * 1_000_000n) }] : [],
         certification: diagnostic ? "diagnostic" : completion === 1 ? "exact-complete" : "exact-lower-bound",
         reason: diagnostic ? "erc4626-redeem-reverted" : completion === 1 ? null : "erc4626-liquidity-limited",
@@ -51,7 +53,13 @@ const inputReference: ExitExecutionCertificate["inputReference"] = {
 };
 const outputReference = { ...inputReference, assetKey: "fixture-underlying", deployment: `ethereum:${TOKEN}` };
 const call = { assetId: "fixture-vault", circulatingUsd: 20_000_000, clockSec: CLOCK, reviews: [review], inputReference, outputReference };
-beforeEach(() => { state.canonicalCompletion = 1; state.diagnostic = false; vi.useFakeTimers(); vi.setSystemTime(CLOCK * 1000); });
+beforeEach(() => {
+  state.canonicalCompletion = 1;
+  state.diagnostic = false;
+  state.diagnosticCostBps = 0;
+  vi.useFakeTimers();
+  vi.setSystemTime(CLOCK * 1000);
+});
 afterEach(() => vi.useRealTimers());
 
 describe("canonical ERC4626 receipt projection", () => {
@@ -83,6 +91,22 @@ describe("canonical ERC4626 receipt projection", () => {
     const failed = await observeReviewedExitExecutionRoutes(call);
     expect(failed.observations[0]).toMatchObject({ completionRatio: 0, scoreEligible: false, settlementBoundUnproven: true });
     expect(failed.failures).not.toEqual([]);
+  });
+
+  it("omits an over-budget diagnostic cost from the published curve instead of zeroing it", async () => {
+    state.diagnostic = true;
+    state.diagnosticCostBps = 201;
+    const result = await observeReviewedExitExecutionRoutes(call);
+    const observation = result.observations[0]!;
+    // The producer's exact measured cost stays visible on the observation and
+    // certificate; the curve point cannot carry >maxCostBps, so it is absent
+    // rather than published as a fabricated 0 bps (R7).
+    expect(observation).toMatchObject({ scoreEligible: false, executionCostBps: 201 });
+    expect(observation.executionCertificate!.points[0]).toMatchObject({
+      certification: "diagnostic",
+      executionCostBps: 201,
+    });
+    expect(observation.capacityCurve?.[0]).not.toHaveProperty("executionCostBps");
   });
 
   it.each([[18_500_000, 1_000_000], [21_500_000, 1_075_000]])("measures supply %s at its floored or continuous canonical request", async (circulatingUsd, requestedNotionalUsd) => {

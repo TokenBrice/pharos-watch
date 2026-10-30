@@ -8,7 +8,19 @@ import { reconcileEvmEventBalance, type EvmBracketRow } from "../evm-amount-reco
 import { createBlacklistRunBudget } from "../run-budget";
 import { buildBlacklistRow, shouldSuppressAsMirrorZero, type BlacklistRow } from "../shared";
 
-vi.mock("../../fetch-retry", () => ({ fetchJsonWithRetry: vi.fn() }));
+vi.mock("../../fetch-retry", () => {
+  const fetchJsonWithRetry = vi.fn();
+  // evm-rpc reads bodies as text first; delegate to the same fixture and
+  // stringify its parsed body so the existing Etherscan fixtures keep working.
+  const fetchTextWithRetry = vi.fn(async (...args: unknown[]) => {
+    const result = await fetchJsonWithRetry(...args) as { body?: unknown } | null;
+    if (result && typeof result === "object" && "body" in result) {
+      return { ...result, body: typeof result.body === "string" ? result.body : JSON.stringify(result.body) };
+    }
+    return result;
+  });
+  return { fetchJsonWithRetry, fetchTextWithRetry };
+});
 
 const config = CONTRACT_CONFIGS.find((candidate) =>
   candidate.stablecoin === "USDC" && candidate.chain.chainId === "ethereum")!;

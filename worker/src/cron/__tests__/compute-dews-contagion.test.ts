@@ -106,7 +106,7 @@ var insertedSignals: Record<string, { score: number; band: string; signalsJson: 
 
 vi.mock("../../lib/db-cache", () => ({
   getCache: vi.fn(async (_db: unknown, key: string) => {
-    if (key === "dews:bootstrap-complete") return null;
+    if (key === "dews:bootstrap-complete" || key === "dews:published-generation") return null;
     return {
       value: JSON.stringify({
         peggedAssets: fixtures.map((fixture) => ({

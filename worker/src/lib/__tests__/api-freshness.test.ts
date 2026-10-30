@@ -893,6 +893,86 @@ describe("buildCacheStatuses", () => {
     expect(caches.dews?.ageSeconds).toBeNull();
   });
 
+  it("grades a DEWS pointer observed after the captured run clock at age zero", async () => {
+    const { db, sqlite } = createLatestSchemaSqlite();
+    try {
+      // The status self-check captures its run clock before probes, then reads
+      // freshness minutes later. compute-dews publishes in between.
+      const pointerUpdatedAt = Math.floor(Date.now() / 1000);
+      const capturedRunClock = pointerUpdatedAt - 30;
+      const previousGenerationAt = pointerUpdatedAt - 1_800;
+      const freshRowUpdatedAt = capturedRunClock - 60;
+      const sentinelValue = (updatedAt: number, source: string, generationId: string) =>
+        JSON.stringify({ updatedAt, source, publishStatus: "ok", generationId });
+
+      const insertCache = sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)");
+      for (const key of ["stablecoins", "stablecoin-charts", "usds-status", "bluechip-ratings"]) {
+        insertCache.run(key, "{}", freshRowUpdatedAt);
+      }
+      for (const row of fxRatesCacheRows(freshRowUpdatedAt)) {
+        insertCache.run(row.key, row.value, row.updated_at);
+      }
+      insertCache.run("freshness:dex-liquidity", sentinelValue(freshRowUpdatedAt, "sync-dex-liquidity", "dex:global"), freshRowUpdatedAt);
+      insertCache.run("freshness:yield-data", sentinelValue(freshRowUpdatedAt, "sync-yield-data", "yield:current"), freshRowUpdatedAt);
+      insertCache.run("yield-rankings", JSON.stringify({ publication: { generationId: "yield:current" } }), freshRowUpdatedAt);
+      // The retained sentinel still names the previous published generation.
+      insertCache.run(
+        "freshness:dews",
+        sentinelValue(previousGenerationAt, "compute-dews", `dews:${previousGenerationAt}`),
+        previousGenerationAt,
+      );
+      // The new pointer is what makes the same cache SELECT classify the
+      // retained sentinel as a generation mismatch.
+      insertCache.run(
+        "dews:published-generation",
+        JSON.stringify({
+          updatedAt: pointerUpdatedAt,
+          source: "compute-dews",
+          publishStatus: "published",
+          coverageVersion: 2,
+          expectedRowCount: 2,
+          stablecoinIdsDigest: "a".repeat(64),
+        }),
+        pointerUpdatedAt,
+      );
+      sqlite.prepare(
+        `INSERT INTO dex_liquidity_publication_generations (
+           generation_id, started_at, state, expected_row_count, written_row_count, created_at
+         ) VALUES (?, ?, 'published', 1, 1, ?)`,
+      ).run("dex:global", freshRowUpdatedAt, freshRowUpdatedAt);
+      sqlite.prepare(
+        `INSERT INTO dex_liquidity (
+           stablecoin_id, symbol, updated_at, liquidity_score, publication_generation_id, publication_state
+         ) VALUES ('__global__', 'ALL', ?, 70, 'dex:global', 'published')`,
+      ).run(freshRowUpdatedAt);
+
+      const { caches, diagnostics, failures, statusFloor, warnings } = await buildCacheStatuses(db, capturedRunClock);
+
+      // The read observed the new pointer, so the lane is graded on that
+      // generation at age zero. Rejecting the pointer as "future" against the
+      // captured clock publishes unavailable/stale at the recovery moment.
+      expect(caches.dews).toMatchObject({
+        ageSeconds: 0,
+        publishedAt: pointerUpdatedAt,
+        freshnessSource: "table-fallback",
+        sentinelValidationReason: "generation-mismatch",
+        degraded: true,
+        degradedReason: "freshness-sentinel-invalid:generation-mismatch",
+        healthy: false,
+      });
+      expect(failures).not.toContainEqual(expect.objectContaining({ key: "dews" }));
+      expect(diagnostics).toContainEqual(expect.objectContaining({
+        key: "dews",
+        freshnessSource: "table-fallback",
+        sentinelValidationReason: "generation-mismatch",
+      }));
+      expect(warnings).toContain("dews: freshness sentinel invalid (generation-mismatch); using table-fallback");
+      expect(statusFloor).toBe("healthy");
+    } finally {
+      sqlite.close();
+    }
+  });
+
   it("does not let producer cron timestamps replace missing DEWS publication evidence", async () => {
     const nowSec = Math.floor(Date.now() / 1000);
     const db = freshnessDb({ cronRows: [{ job: "compute-dews", started_at: nowSec - 300 }] });

@@ -192,19 +192,29 @@ export async function recoverTronFreezeAmountForRow(
     // solidified balance read can both be compared against.
     const anchor = await fetchTronHeadBlock(provider);
     if (anchor.timestampMs - freezeTimestampMs < TRON_REPLAY_MIN_FREEZE_AGE_MS) {
-      throw new TronReplayEvidenceError("evidence_mismatch", "freeze is too recent for an indexed ledger");
+      // The indexed state has not matured yet; this is a transient state race,
+      // not bad evidence, so the lane leaves the row untouched without a
+      // counted attempt.
+      throw new TronReplayEvidenceError("state_raced", "freeze is too recent for an indexed ledger");
     }
 
+    const ledgerPageCap = windowPageCap();
     const history = await fetchTronTransferWindow(
       provider,
       accountBase58,
       config.contractAddress,
       0,
       anchor.timestampMs,
-      windowPageCap(),
+      ledgerPageCap,
     );
     if (history.stopped) throw new TronReplayEvidenceError("runtime_budget", "run window closed mid-ledger");
     if (!history.complete) {
+      // A window cut short only by the run's remaining pages proves nothing
+      // about the ledger's length, so it stays a runtime condition; only a
+      // ledger that exhausts the per-history cap is deterministically over-cap.
+      if (ledgerPageCap < TRON_REPLAY_MAX_PAGES_PER_HISTORY) {
+        throw new TronReplayEvidenceError("runtime_budget", "run page budget truncated the ledger read");
+      }
       // The ledger only grows, so a cap-exceeded history can never resolve on retry.
       throw new TronReplayEvidenceError("history_over_cap", "confirmed transfer ledger exceeds the replay page cap");
     }
