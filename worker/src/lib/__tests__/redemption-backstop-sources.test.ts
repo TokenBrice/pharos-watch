@@ -28,6 +28,10 @@ import { buildChainRpcs } from "../chain-registry";
 import { assessReserveFetchFreshness } from "../live-reserves/store-snapshot-state";
 import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
 import type * as ExecutableObservers from "../../cron/reserve-adapters/executable-redemption-observers";
+import type { ExitExecutionModelReview } from "@shared/types/exit-route";
+import { loadV9CandidateMethodologyPolicy } from "@shared/lib/safety-score-v9/policy";
+import { createLatestSchemaSqlite } from "@shared/test-utils/latest-schema-sqlite";
+import { buildRedemptionBackstopsSnapshot, loadRedemptionBackstopSnapshot, upsertRedemptionBackstopSnapshots } from "../redemption-backstops-store";
 
 const { getReserveSyncStateMock, getLatestSuccessfulReserveSnapshotMetadataMock, observeExecutableRedemptionRouteMock } = vi.hoisted(() => ({
   getReserveSyncStateMock: vi.fn(),
@@ -117,6 +121,62 @@ describe("buildRedemptionBackstopEntry", () => {
     dexScore,
     nowSec: now,
     options: { exitExecutionReviews: [], ...options },
+  });
+  it("persists a withheld stale execution price leg and exposes its exit coverage reason", async () => {
+    const stablecoinId = "usdc-circle";
+    const config = route();
+    const envelope = loadV9CandidateMethodologyPolicy(now);
+    const policy = envelope.policy.semantic.exit.executionModels["erc4626-instant"]!;
+    const capturePriceMaxAgeSec = policy.priceMaxAgeSec - (policy.evaluationLagSec ?? 0);
+    const observedAtSec = now - capturePriceMaxAgeSec - 1;
+    const review: ExitExecutionModelReview = {
+      modelId: "erc4626-instant", holder: "any-holder",
+      reviewedAt: "2023-11-01T00:00:00.000Z", expiresAt: "2023-12-01T00:00:00.000Z",
+      identity: { assetId: stablecoinId, deployment: "ethereum:0x0000000000000000000000000000000000000001",
+        endpoint: "ethereum:0x0000000000000000000000000000000000000001",
+        outputAssetKeys: ["usdt-tether"], implementationIdentity: `sha256:${"1".repeat(64)}` },
+      evidenceIds: ["fixture-review"], sourceUrls: ["https://example.com/vault"],
+      producer: { kind: "erc4626-instant", chain: "ethereum", chainId: 1,
+        contract: "0x0000000000000000000000000000000000000001",
+        outputToken: "0x0000000000000000000000000000000000000002",
+        inputDecimals: 6, outputDecimals: 6, codeSha256: "1".repeat(64), multicallCodeSha256: "1".repeat(64),
+        balanceStorage: { slot: `0x${"0".repeat(64)}`, keyOrder: "account-slot" },
+        maxFunctions: "binding", unrestrictedGateSelectors: [] },
+    };
+    const stablecoinsCache = { kind: "ok" as const, updatedAt: now - 60, payload: { peggedAssets: [
+      makeAsset({ id: stablecoinId, price: 1, priceSource: "coingecko", priceObservedAt: now }),
+      makeAsset({ id: "usdt-tether", price: 1, priceSource: "coingecko", priceObservedAt: observedAtSec }),
+    ] } };
+    const baseline = await buildEntry(stablecoinId, config, 20_000_000, null, { stablecoinsCache });
+    const entry = await buildEntry(stablecoinId, config, 20_000_000, null, {
+      stablecoinsCache, exitExecutionEnvelope: envelope, exitExecutionReviews: [review],
+    });
+    expect(entry.score).toBe(baseline.score);
+    expect(entry.capacityProfile).toEqual(baseline.capacityProfile);
+    const { sqlite, db } = createLatestSchemaSqlite();
+    try {
+      await upsertRedemptionBackstopSnapshots(db, [entry], { runId: "redemption:withheld-price" });
+      const expectedFailures = [{
+        modelId: "erc4626-instant", reason: "execution-price-leg-stale:output", responsibility: "producer-failed",
+        priceLeg: { leg: "output", observedAtSec, capturePriceMaxAgeSec,
+          sourceId: "coingecko", sourceGenerationId: `stablecoins:${now - 60}` },
+      }];
+      for (const table of ["redemption_backstop_run_rows", "redemption_backstop_history"]) {
+        const row = sqlite.prepare(`SELECT details_json FROM ${table} WHERE stablecoin_id = ?`)
+          .get(stablecoinId) as { details_json: string };
+        expect(JSON.parse(row.details_json).executionRouteFailures).toEqual(expectedFailures);
+      }
+      const bulk = await loadRedemptionBackstopSnapshot(db);
+      const coin = await buildRedemptionBackstopsSnapshot(db, stablecoinId);
+      for (const projected of [bulk.map[stablecoinId], coin.coins[stablecoinId]]) {
+        expect(projected.executionRouteFailures).toEqual(expectedFailures);
+        expect(projected.exitRouteObservationCoverage?.unsupportedReasons).toEqual({
+          "execution-price-leg-stale:output": 1,
+        });
+        expect(projected.score).toBe(baseline.score);
+        expect(projected.capacityProfile).toEqual(baseline.capacityProfile);
+      }
+    } finally { sqlite.close(); }
   });
   it("shares captured FX between local-fee scenarios and issuer output admission", async () => {
     const config = route({ routeFamily: "offchain-issuer", reviewedAt: "2023-11-01",

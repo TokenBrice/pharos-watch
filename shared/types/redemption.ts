@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { RedemptionExitRouteObservationsSchema } from "./exit-route";
+import { ExitExecutionRouteFailureSchema, ExitRouteObservationCoverageSchema, RedemptionExitRouteObservationsSchema } from "./exit-route";
 import { MethodologyEnvelopeSchema } from "./methodology-envelope";
 import { ScoreSchema } from "./safety-schema-primitives";
 import { HttpUrlSchema, NonNegativeNumberSchema, PositiveNumberSchema } from "./validators";
@@ -342,6 +342,10 @@ const RedemptionBackstopEntryBaseSchema = z.object({
   capacityBasis: RedemptionCapacityBasisSchema.optional(),
   capacitySemantics: RedemptionCapacitySemanticsSchema,
   capacityProfile: RedemptionCapacityProfileSchema.optional(),
+  executionRouteFailures: z.array(ExitExecutionRouteFailureSchema).optional(),
+  exitRouteObservationCoverage: z.object({
+    unsupportedReasons: ExitRouteObservationCoverageSchema.shape.unsupportedReasons,
+  }).optional(),
   feeConfidence: RedemptionFeeConfidenceSchema,
   feeModelKind: RedemptionFeeModelKindSchema,
   modelConfidence: RedemptionModelConfidenceSchema,
@@ -392,6 +396,8 @@ export const RedemptionBackstopDetailsSchema = RedemptionBackstopEntryBaseSchema
   capacityBasis: true,
   capacitySemantics: true,
   capacityProfile: true,
+  executionRouteFailures: true,
+  exitRouteObservationCoverage: true,
   feeConfidence: true,
   feeModelKind: true,
   modelConfidence: true,

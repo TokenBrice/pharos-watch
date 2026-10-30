@@ -475,7 +475,7 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(certificate.points[0]!.certification).toBe("exact-complete");
     const staleOutput = { ...freshOutput, observedAtSec: CLOCK - 72 * 3600 };
     expect((await observeReviewedExitExecutionRoutes({ ...call, outputReference: staleOutput })).failures)
-      .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-leg-stale:output", responsibility: "producer-failed" });
+      .toContainEqual(expect.objectContaining({ modelId: "erc4626-instant", reason: "execution-price-leg-stale:output", responsibility: "producer-failed" }));
     const changedOutput = await observeReviewedExitExecutionRoutes({ ...call, outputReference: { ...freshOutput, sourceGenerationId: "different-output-generation" } });
     expect(changedOutput.observations[0]!.executionCertificate!.inputGenerationId).not.toBe(certificate.inputGenerationId);
   });
@@ -493,7 +493,8 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       inputReference, outputReference: { ...outputReference, observedAtSec: CLOCK - margin - 1 } });
     expect(staleOutput).toMatchObject({
       observations: [],
-      failures: [{ modelId: "erc4626-instant", reason: "execution-price-leg-stale:output", responsibility: "producer-failed" }],
+      failures: [{ modelId: "erc4626-instant", reason: "execution-price-leg-stale:output", responsibility: "producer-failed",
+        priceLeg: { leg: "output", observedAtSec: CLOCK - margin - 1, capturePriceMaxAgeSec: margin } }],
     });
     // A custodian share token cannot re-derive its leg, so a stale share leg binds.
     const custodianReview = { ...review, producer: { ...review.producer,
@@ -506,7 +507,8 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       inputReference: { ...inputReference, observedAtSec: CLOCK - margin - 1 }, outputReference });
     expect(staleInput).toMatchObject({
       observations: [],
-      failures: [{ modelId: "erc4626-instant", reason: "execution-price-leg-stale:input", responsibility: "producer-failed" }],
+      failures: [{ modelId: "erc4626-instant", reason: "execution-price-leg-stale:input", responsibility: "producer-failed",
+        priceLeg: { leg: "input", observedAtSec: CLOCK - margin - 1, capturePriceMaxAgeSec: margin } }],
     });
     // A vault without a custodian token re-derives its share leg instead of admitting the stale one.
     const refreshed = await observeReviewedExitExecutionRoutes({ ...call,
@@ -546,10 +548,19 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       assetKey: "fixture-vault", deployment: review.identity.deployment, decimals: 6,
       unitValueUsd: 0.99, expectedUnitValueUsd: 0.99, sourceId: "erc4626-nav:coingecko", observedAtSec: CLOCK,
     });
-    for (const [observedAt, reason] of [[CLOCK - 18_001, "execution-price-leg-stale:output"], [CLOCK + 1, "execution-price-reference-unavailable"]] as const) {
+    const capturePriceMaxAgeSec = loadV9CandidateMethodologyPolicy(CLOCK).policy.semantic.exit.executionModels["erc4626-instant"]!.priceMaxAgeSec
+      - (loadV9CandidateMethodologyPolicy(CLOCK).policy.semantic.exit.executionModels["erc4626-instant"]!.evaluationLagSec ?? 0);
+    for (const [observedAt, reason] of [
+      [CLOCK - 18_001, "execution-price-leg-stale:output"],
+      [CLOCK + 1, "execution-price-leg-future:output"],
+      [null, "execution-price-reference-unavailable"],
+    ] as const) {
       cache.payload.peggedAssets[1]!.priceObservedAt = observedAt;
       expect((await observeReviewedExitExecutionRoutes(call))).toMatchObject({
-        observations: [], failures: [{ reason }],
+        observations: [], failures: [{ reason, priceLeg: {
+          leg: "output", observedAtSec: observedAt, capturePriceMaxAgeSec,
+          sourceId: "coingecko", sourceGenerationId: `stablecoins:${cache.updatedAt}`,
+        } }],
       });
     }
     cache.payload.peggedAssets[1]!.priceObservedAt = CLOCK;
@@ -696,7 +707,10 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
     expect(fromNav.failures).toEqual([]);
     expect(fromNav.observations[0]!.executionCertificate!.inputReference.sourceId).toBe("erc4626-nav:coingecko");
     cache.payload.peggedAssets[1]!.priceSource = "protocol-par";
-    expect((await observeReviewedExitExecutionRoutes(call)).failures).toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" });
+    expect((await observeReviewedExitExecutionRoutes(call)).failures).toContainEqual(expect.objectContaining({
+      modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed",
+      priceLeg: expect.objectContaining({ leg: "output", observedAtSec: CLOCK }),
+    }));
   });
   it("measures EUR-denominated vault exits with observed token prices and a proven fresh FX reference", async () => {
     const cache: StablecoinsCacheLoadOk = {
@@ -730,10 +744,10 @@ describe("reviewed synchronous ERC4626 exact execution", () => {
       { ...fxRateState, sourceUpdatedAtByPeg: { peggedEUR: CLOCK - 86_400 } },
     ]) {
       expect((await observeReviewedExitExecutionRoutes({ ...call, fxRateState: invalid })).failures)
-        .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" });
+        .toContainEqual(expect.objectContaining({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }));
     }
     cache.payload.peggedAssets[1]!.priceSource = "protocol-par";
     expect((await observeReviewedExitExecutionRoutes(call)).failures)
-      .toContainEqual({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" });
+      .toContainEqual(expect.objectContaining({ modelId: "erc4626-instant", reason: "execution-price-reference-unavailable", responsibility: "producer-failed" }));
   });
 });

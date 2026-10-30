@@ -246,7 +246,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/lib/p4-exit-route-observation-assembly.ts",
-      "sha256": "232bfccacabb2458c8a6fa0ec7981a79ca5c9f13eecafd37f693a50d8861e33f"
+      "sha256": "94261a9d515069b42691d906035447f4b39a51341a362f48ff6eeda71468e882"
     },
     {
       "path": "shared/lib/peg-score.ts",
@@ -802,7 +802,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/exit-route.ts",
-      "sha256": "1b8fcf0084e0efccd0f26247452898d2a3ef5f66de31413e6efc5a41ee3fe970"
+      "sha256": "3dcd640a0f5aab29eecf50f235f66f02e829efe93073e64e56e6c84ceb70915d"
     },
     {
       "path": "shared/types/live-reserve-adapter-declarations.ts",
@@ -822,7 +822,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/measured-execution.ts",
-      "sha256": "ad1a06d2d6dc633d5a0e1ef4dad6aa9c18c8238fff43f3dbec1f216d038335ff"
+      "sha256": "a78e310f35c99808f61267dd200dfa58f504ff1d17e1c788bf6ae4a9d76d77a4"
     },
     {
       "path": "shared/types/methodology-envelope.ts",
@@ -838,7 +838,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
     },
     {
       "path": "shared/types/redemption.ts",
-      "sha256": "7b05a2778e24f976031f0abc9006c62ba4e881770f0815c8c286ff0af8ccd9df"
+      "sha256": "97e2976f194cb5587616341b3e928c0823fc76d42e6612c412bb6f53219430a1"
     },
     {
       "path": "shared/types/report-card-evidence-journal.ts",
@@ -1355,7 +1355,7 @@ export const SAFETY_SCORE_V9_EVALUATION_BUILD_MANIFEST = {
       "r2Key": "captures/lusd-liquity/2026-10-30-block-26304890-shock-coverage.json.gz"
     }
   ],
-  "digest": "6b2dda255583bc0d60de951fe6a8ba01a4daf2f522a7b42d0fba16d12315c321"
+  "digest": "37d83f18ba638ae279c0b04990d1f47e0dd04268ef92528d885dc03f6c505fb8"
 } as const;
 
 export const SAFETY_SCORE_V9_EVALUATION_BUILD_DIGEST =

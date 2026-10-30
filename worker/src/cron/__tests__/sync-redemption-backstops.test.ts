@@ -101,7 +101,7 @@ vi.mock("../reserve-adapters/executable-redemption-observers", async (importOrig
 }));
 
 vi.mock("../../lib/exit-execution/runtime", () => ({
-  observeReviewedExitExecutionRoutes: async () => ({ observations: [] }),
+  observeReviewedExitExecutionRoutes: async () => ({ observations: [], failures: [] }),
 }));
 
 vi.mock("../../lib/accepted-reserve-generation", async (importOriginal) => ({
