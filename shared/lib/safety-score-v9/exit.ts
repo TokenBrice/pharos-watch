@@ -511,22 +511,32 @@ function supersededModeledRoutes(
   request: V9ExitStressRequest,
   envelope: V9ValidatedPolicyEnvelope,
 ): Set<string> {
-  const certified = routes.filter((route) => {
+  const certified = new Map<V9ExitEvaluationRoute, number>();
+  for (const route of routes) {
     if (!route.executionModelId || !route.executionCertificate || !route.scoreEligible ||
-      route.observationState !== "known" || !route.outputResolved || routeExclusionReason(route, envelope) !== null) return false;
+      route.observationState !== "known" || !route.outputResolved || routeExclusionReason(route, envelope) !== null) continue;
     const point = resolveExitExecutionBoundPoint(route.executionCertificate, request);
-    // Only a full measurement of the rail at the ask contradicts a model. A
-    // lower bound proves at least its amount and competes on route score
-    // instead of erasing a same-rail modelled route (v10.38 M4); overlapping
-    // resources are still valued once by the max merge below.
-    return point !== null && point.certification === "exact-complete";
-  });
+    if (point?.certification === "exact-complete") certified.set(route, point.requestedNotionalUsd);
+  }
   const superseded = new Set<string>();
+  if (certified.size === 0) return superseded;
   for (const route of routes) {
     if (route.executionModelId) continue;
-    if (certified.some((certificate) => certificate.lane === route.lane &&
-      route.physicalResourceKeys.some((key) => !key.startsWith("issuer:") && !key.startsWith("protocol:") &&
-        certificate.physicalResourceKeys.includes(key)))) superseded.add(route.routeKey);
+    const modeledPoint = resolveV9ExitCapacityAtRequest(route.capacityCurve, request);
+    if (modeledPoint === null) continue;
+    // A complete receipt contradicts only the modeled amount it measured,
+    // capped at today's ask. Smaller receipts and lower bounds compete on
+    // score; overlapping resources are still valued once by the max merge.
+    const requiredNotionalUsd = Math.min(request.requestedNotionalUsd, modeledPoint.executableUsd);
+    for (const [certificate, measuredNotionalUsd] of certified) {
+      if (measuredNotionalUsd >= requiredNotionalUsd &&
+        certificate.lane === route.lane &&
+        route.physicalResourceKeys.some((key) => !key.startsWith("issuer:") && !key.startsWith("protocol:") &&
+          certificate.physicalResourceKeys.includes(key))) {
+        superseded.add(route.routeKey);
+        break;
+      }
+    }
   }
   return superseded;
 }
