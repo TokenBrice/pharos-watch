@@ -299,6 +299,11 @@ function structuredBridgeRouteControl(
     : claims.includes("unbounded") ? "unbounded" : bridgeClaimImpairment(capabilities, capSemantics);
   const delays = entries.map((entry) => entry.overlay.delaySec ?? 0);
   const controlIds = entries.map((entry) => entry.sourceControl.id).sort(compareText);
+  // Authored identity, independent of the digest above: one authored id for a
+  // single-control lane, `"*"` plus the contributor set for a merged lane. The
+  // contributor set is published separately so review coverage stays
+  // per-control and an added control inherits nothing.
+  const authoredControlIds = [...new Set(controlIds)].sort(compareText);
   const deploymentId = normalizedBridgeDeploymentId(route.id);
   const nativeRoute = !isBridgeRepresentationRoute(route, { controls: entries.map((entry) => entry.sourceControl) }, assetId);
   return {
@@ -307,6 +312,8 @@ function structuredBridgeRouteControl(
       { controlIds, routeId: deploymentId },
     ).slice(0, 20)}`,
     deploymentKey: deploymentId,
+    authoredControlId: authoredControlIds.length === 1 ? authoredControlIds[0]! : "*",
+    ...(authoredControlIds.length > 1 ? { authoredControlIds } : {}),
     controlKind: "bridge",
     // Canonical-side bridge controls are retained as global claim facts. They
     // still contribute their capabilities, authority, custody, incident, and
@@ -417,6 +424,7 @@ function structuredBridgeControl(
       { controlId: control.id, routeId: deploymentId },
     ).slice(0, 20)}`,
     deploymentKey: deploymentId,
+    authoredControlId: control.id,
     controlKind: "bridge",
     scope: "deployment",
     capabilities,

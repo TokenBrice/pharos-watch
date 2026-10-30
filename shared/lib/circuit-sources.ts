@@ -35,6 +35,7 @@ export const CIRCUIT_SOURCE_REGISTRY = {
   REDSTONE_PRICES: { key: "redstone-prices", scope: "source-wide" },
   KAVA_PRICEFEED: { key: "kava-pricefeed", scope: "asset-scoped" },
   AZND_CURVE_POOL: { key: "aznd-curve-pool", scope: "asset-scoped" },
+  SWANUSD_CURVE_POOL: { key: "swanusd-curve-pool", scope: "asset-scoped" },
   MENTO_FPMM: { key: "mento-fpmm", scope: "asset-scoped" },
   MENTO_BROKER: { key: "mento-broker", scope: "asset-scoped" },
   BD_AERODROME: { key: "bd-aerodrome", scope: "asset-scoped" },

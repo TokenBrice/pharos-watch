@@ -209,26 +209,49 @@ export interface SafetyScoresPreview {
 
 type RegistryIdentity = Pick<StablecoinMeta, "id" | "name" | "symbol">;
 
-const SafetyScoresPreviewDisplayProjectionSchema = z
+const SafetyScoresPreviewSafetyProjectionSchema = z
   .object({
-    version: z.literal(1),
-    snapshotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
-    capturedAtSec: z.number().int().nonnegative(),
-    sourceSnapshotPath: z.string().min(1),
-    safety: z
-      .object({
-        identity: SafetyScoreV9PublicationIdentitySchema,
-        asOfSec: z.number().int().nonnegative(),
-        publishedAtSec: z.number().int().nonnegative(),
-        sourceGenerations: z.record(z.string().min(1), z.string().min(1)),
-        publicationHealth: V9PublicationHealthSchema,
-        completeness: SafetyScoreV9CompletenessSchema,
-      })
-      .strict()
-      .nullable(),
-    safetyUnavailableReason: z.literal("legacy-source-metadata-unavailable").nullable(),
+    identity: SafetyScoreV9PublicationIdentitySchema,
+    asOfSec: z.number().int().nonnegative(),
+    publishedAtSec: z.number().int().nonnegative(),
+    sourceGenerations: z.record(z.string().min(1), z.string().min(1)),
+    publicationHealth: V9PublicationHealthSchema,
+    completeness: SafetyScoreV9CompletenessSchema,
   })
   .strict();
+
+/** Fields both projection versions share; this preview reads only the Safety block. */
+const SAFETY_SCORES_PREVIEW_PROJECTION_FIELDS = {
+  snapshotDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  capturedAtSec: z.number().int().nonnegative(),
+  sourceSnapshotPath: z.string().min(1),
+  safety: SafetyScoresPreviewSafetyProjectionSchema.nullable(),
+  safetyUnavailableReason: z.literal("legacy-source-metadata-unavailable").nullable(),
+} as const;
+
+/**
+ * v1 is the pre-open-evidence projection still present in retained dated
+ * artifacts and pre-cutover mirrors; v2 adds the open-question counts, which
+ * this scores-only preview never reads, so they stay opaque here. Any other
+ * version is unrecognized: the page serves its neutral skeleton and the build
+ * wrapper warns with the reason instead of quietly dropping the preview.
+ */
+const SafetyScoresPreviewDisplayProjectionSchema = z.discriminatedUnion("version", [
+  z
+    .object({
+      version: z.literal(1),
+      ...SAFETY_SCORES_PREVIEW_PROJECTION_FIELDS,
+    })
+    .strict(),
+  z
+    .object({
+      version: z.literal(2),
+      ...SAFETY_SCORES_PREVIEW_PROJECTION_FIELDS,
+      openEvidence: z.unknown(),
+      openEvidenceUnavailableReason: z.unknown(),
+    })
+    .strict(),
+]);
 
 const SafetyScoresPreviewDatasetSchema = z
   .object({
@@ -269,6 +292,26 @@ const SafetyScoresPreviewRowSchema = z
 interface PreviewAdmission {
   preview: SafetyScoresPreview | null;
   omitted: Array<{ id: string; reason: string }>;
+  /** Why a present display projection could not be admitted; absent when there was none to admit. */
+  projectionUnavailableReason?: string;
+}
+
+/**
+ * Names the projection refusal in build logs. A valid-but-unusable projection
+ * (`display-projection-invalid`) is distinct from a version this release does
+ * not know (`display-projection-version-unsupported:<version>`), which is the
+ * signal that the artifact and the consumer are out of step.
+ */
+function describeProjectionRefusal(value: unknown): string {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return "display-projection-missing";
+  }
+  if (!("version" in value)) return "display-projection-missing";
+  const { version } = value;
+  if (version === 1 || version === 2) return "display-projection-invalid";
+  return version === undefined
+    ? "display-projection-missing"
+    : `display-projection-version-unsupported:${String(version)}`;
 }
 
 function admitSafetyScoresPreview(
@@ -278,12 +321,16 @@ function admitSafetyScoresPreview(
 ): PreviewAdmission {
   const parsedDataset = SafetyScoresPreviewDatasetSchema.safeParse(dataset);
   if (!parsedDataset.success) return { preview: null, omitted: [] };
-  const projection = SafetyScoresPreviewDisplayProjectionSchema.safeParse(
-    parsedDataset.data._meta?.displayProjection,
-  );
+  const rawProjection = parsedDataset.data._meta?.displayProjection;
+  const projection = SafetyScoresPreviewDisplayProjectionSchema.safeParse(rawProjection);
   if (!projection.success) {
-    // Legacy exports and missing metadata deliberately yield no preview.
-    return { preview: null, omitted: [] };
+    // Legacy exports and missing metadata yield no preview; a projection this
+    // release cannot read is named so the build wrapper can warn about it.
+    return {
+      preview: null,
+      omitted: [],
+      projectionUnavailableReason: describeProjectionRefusal(rawProjection),
+    };
   }
   const display = projection.data;
   if (display.safety === null) return { preview: null, omitted: [] };
@@ -453,6 +500,11 @@ export function getSafetyScoresPreview(): SafetyScoresPreview | null {
     ACTIVE_STABLECOINS,
     Math.floor(Date.now() / 1000),
   );
+  if (admission.projectionUnavailableReason) {
+    console.warn(
+      `[safety-grade-preview] dated preview unavailable (${admission.projectionUnavailableReason})`,
+    );
+  }
   if (admission.omitted.length > 0) {
     console.warn(
       "[safety-grade-preview] omitted rated rows: "

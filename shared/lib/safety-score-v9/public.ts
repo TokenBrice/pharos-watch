@@ -5,22 +5,37 @@ import { createV9PublicCardShardViewFactory } from "./public-card-shard";
 import { resolveV9PublicWitnessText, resolveV9PublicWitnessTexts } from "../../types/safety-score-v9-public-witness-texts";
 import {
   SafetyScoreV9CurrentCardSchema,
-  SafetyScoreV9CurrentResponseSchema,
   type SafetyScoreV9EvidenceFreshness,
   type SafetyScoreV9NrReason,
   type SafetyScoreV9PublicReason,
-  type SafetyScoreV9CurrentResponse,
   type SafetyScoreV9CurrentCard,
   type SafetyScoreV9CommonModeGroups,
 } from "../../types/safety-score-v9-public";
+import {
+  SafetyScoreV9CurrentResponseSchema,
+  type SafetyScoreV9CurrentResponse,
+} from "../../types/safety-score-v9-publication-response";
 import { computeV9UnknownPricedWeightShare, type SafetyScoreV9IssuanceSummary } from "../../types/safety-score-v9-public-breakdowns";
 import type {
+  V9DocumentationReason,
   V9EvidenceLevel,
   V9QualityPillar,
   V9ReasonCode,
   V9ValidatedPolicyEnvelope,
 } from "../../types/safety-score-v9";
-import type { V1005ProcessDiagnostic, V1005AssetIssuanceFacts, V9DeploymentControlFactV2 } from "../../types/safety-score-v9-facts";
+import type {
+  V1005ProcessDiagnostic,
+  V1005AssetIssuanceFacts,
+  V9DeploymentControlFactV2,
+  V9EvidenceResponsibility,
+} from "../../types/safety-score-v9-facts";
+import {
+  documentationGapIds,
+  documentationOnlyLimitedPillars,
+  type V9DocumentationAssetFacts,
+  type V9DocumentationClassification,
+  type V9DocumentationPillarWitness,
+} from "./documentation";
 import { projectV9CompactPartialEvidence } from "../../types/safety-score-v9-causes";
 import { projectExitExecutionCertificate } from "./exit-execution";
 import { V9_PUBLIC_EVIDENCE_RESPONSIBILITIES as RESPONSIBILITIES } from "../../types/safety-score-v9-vocabulary";
@@ -39,6 +54,7 @@ import { effectiveAuthoritySignatureRequirement } from "./control-scope";
 import { v9BridgeMintControlKey, v9ControlChainLabel } from "./control-component-keys";
 import { readableV9PublicText, readableV9PublicWitnesses } from "./public-witness-texts";
 import { assertV9PublicCardProjections } from "../report-cards-v9-projections";
+import type { V9OpenEvidence } from "../../types/safety-score-v9-open-evidence";
 
 type V9PublicAccessProjectionInput = V9AccessPostureResult & {
   reasons?: readonly V9PillarReason[];
@@ -58,6 +74,12 @@ export interface V9PublicCardProjectionInput {
   access: V9PublicAccessProjectionInput;
   dependencyInputs: V9ResolvedDependencyInputs;
   policy: V9ValidatedPolicyEnvelope;
+  /**
+   * Publication-wide documentation classification (`collectV9DocumentationGapIds`):
+   * the same map the open-question counter classifies with. Absent classifies
+   * nothing, so the trace carrier stays omitted (fail closed).
+   */
+  documentationGapIds?: ReadonlyMap<string, V9DocumentationClassification>;
   backing?: Pick<V9BackingResult, "archetype" | "score" | "contributions">;
   exit?: Pick<
     V9ExitEvaluationResult,
@@ -88,6 +110,15 @@ export interface V9PublicCardProjectionInput {
 
 export interface BuildSafetyScoreV9ResponseArgs {
   candidateId: string;
+  /** Server-computed open-evidence block; `open-questions.ts` is its only authority. */
+  openEvidence: V9OpenEvidence;
+  /**
+   * Publication union of documentation-classified cause gaps
+   * (`buildV9DocumentationCarriers().causeGapIds`). Only ids the response can
+   * resolve are published, so an untracked classification never publishes a
+   * dangling id.
+   */
+  documentationCauseGaps?: readonly string[];
   policyVersion: string;
   publicationGenerationId: string;
   publishedAtSec: number;
@@ -888,6 +919,67 @@ function projectDependencies(input: V9PublicCardProjectionInput): V9UninternedPu
   };
 }
 
+/** One published evidence fact, as the responsibility and documentation carriers read it. */
+interface V9DocumentationCarrierFact {
+  readonly responsibility: V9EvidenceResponsibility;
+  readonly sourceGapId: string | null;
+  readonly causeGapIds: readonly string[];
+  readonly critical: boolean;
+}
+
+/**
+ * Documentation reason of one published evidence fact: the fact's single causal
+ * gap, resolved exactly like the obligation counter resolves it (`sourceGapId`,
+ * else a one-root `causeGapIds`). A multi-root or unresolvable witness stays
+ * unclassified, and an absent classification classifies nothing (fail closed).
+ */
+function documentationReasonForFact(
+  classified: ReadonlyMap<string, V9DocumentationClassification> | undefined,
+  sourceGapId: string | null,
+  causeGapIds: readonly string[],
+): V9DocumentationReason | null {
+  if (classified === undefined) return null;
+  const resolved = sourceGapId ?? (causeGapIds.length === 1 ? causeGapIds[0]! : null);
+  return resolved === null ? null : classified.get(resolved)?.reason ?? null;
+}
+
+/**
+ * Per-card `documentation-class-v1` carrier: the card's documentation-classed
+ * evidence facts by reason. Omitted when nothing is classified, so a T1 payload
+ * keeps its published bytes.
+ */
+function projectDocumentationEvidence(
+  assetId: string,
+  rows: readonly { readonly fact: V9DocumentationCarrierFact; readonly reason: V9DocumentationReason | null }[],
+): {
+  semantics: "documentation-class-v1";
+  totalFactCount: number;
+  criticalFactCount: 0;
+  summaries: { reason: V9DocumentationReason; factCount: number }[];
+} | undefined {
+  const byReason = new Map<V9DocumentationReason, number>();
+  let totalFactCount = 0;
+  for (const { fact, reason } of rows) {
+    if (reason === null) continue;
+    // The schema publishes `criticalFactCount: 0` as a release invariant: a
+    // critical datum can move a score, so it must never be documentation.
+    if (fact.critical) {
+      throw new Error(`Safety Score v9 ${assetId} classifies a critical evidence fact as documentation`);
+    }
+    totalFactCount++;
+    byReason.set(reason, (byReason.get(reason) ?? 0) + 1);
+  }
+  if (totalFactCount === 0) return undefined;
+  return {
+    semantics: "documentation-class-v1",
+    totalFactCount,
+    criticalFactCount: 0,
+    summaries: [...byReason.entries()]
+      .sort(([left], [right]) => compareText(left, right))
+      .map(([reason, factCount]) => ({ reason, factCount })),
+  };
+}
+
 function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPublicCard["scoreTrace"] {
   const trace = input.trace;
   if (trace.aggregation !== null && trace.aggregation.method !== "smooth-bounded-headroom") {
@@ -934,6 +1026,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
         reason: signal.reason,
       };
     });
+  const documentationReasons: (V9DocumentationReason | null)[] = [];
   const responsibilityFacts = trace.unresolvedFacts.map((fact) => {
     if (fact.path === undefined) {
       throw new Error(
@@ -943,6 +1036,12 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
     if (fact.cause === undefined || fact.scoringDisposition === undefined) {
       throw new Error(`Safety Score v9 ${trace.assetId} unresolved fact ${fact.code} lacks cause-aware scoring disposition`);
     }
+    const causeGapIds = uniqueSorted(fact.causeGapIds ?? (fact.sourceGapId ? [fact.sourceGapId] : []));
+    documentationReasons.push(documentationReasonForFact(
+      input.documentationGapIds,
+      typeof fact.sourceGapId === "string" ? fact.sourceGapId : null,
+      causeGapIds,
+    ));
     return {
       reasonCode: fact.code,
       exactFactPath: fact.path,
@@ -950,12 +1049,16 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
       responsibility: fact.responsibility,
       critical: fact.critical,
       cause: fact.cause,
-      causeGapIds: uniqueSorted(fact.causeGapIds ?? (fact.sourceGapId ? [fact.sourceGapId] : [])),
+      causeGapIds,
       scoringDisposition: fact.scoringDisposition,
     };
   });
+  const documentedFacts = responsibilityFacts.map((fact, index) => ({
+    fact,
+    reason: documentationReasons[index]!,
+  }));
   const responsibilitySummaries = RESPONSIBILITIES.map((responsibility) => {
-    const facts = responsibilityFacts.filter((fact) => {
+    const rows = documentedFacts.filter(({ fact }) => {
       if (fact.responsibility === undefined) {
         throw new Error(
           `Safety Score v9 ${trace.assetId} unresolved fact ${fact.reasonCode} lacks evidence responsibility`,
@@ -963,6 +1066,13 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
       }
       return fact.responsibility === responsibility;
     });
+    const facts = rows.map(({ fact }) => fact);
+    const documentationFactCount = countV9EvidenceObligations(
+      rows.filter(({ reason }) => reason !== null).map(({ fact }) => fact),
+      (fact) => fact.sourceGapId,
+      (fact) => fact.causeGapIds,
+      (fact) => fact.critical,
+    ).factCount;
     return {
       responsibility,
       ...countV9EvidenceObligations(
@@ -974,8 +1084,10 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
         (fact) => fact.critical,
       ),
       reasonCodes: uniqueSorted(facts.map((fact) => fact.reasonCode)),
+      ...(documentationFactCount === 0 ? {} : { documentationFactCount }),
     };
   });
+  const documentation = projectDocumentationEvidence(trace.assetId, documentedFacts);
   const deploymentAdjustmentPoints =
     trace.baseAssetScore === null || trace.deploymentAdjustedScore === null
       ? null
@@ -1071,6 +1183,7 @@ function projectScoreTrace(input: V9PublicCardProjectionInput): V9UninternedPubl
       totalFactCount: trace.unresolvedFacts.length,
       facts: responsibilityFacts,
       summaries: responsibilitySummaries,
+      ...(documentation === undefined ? {} : { documentation }),
     },
     scoreAdjustments: trace.scoreAdjustments.map((adjustment) => ({ ...adjustment })),
     wrapperParentLimit:
@@ -1474,6 +1587,17 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       seen.clear();
       const notRatedIds = cards.filter((card) => card.ratingStatus === "not-rated").map((card) => card.id);
       const pipelineGapIds = cards.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
+      // Publish only documentation ids the response can resolve: an id outside
+      // every card's cause graph and the foreign table is not a cause gap here,
+      // and the envelope rejects a dangling id (R1: never publish it).
+      let documentationCauseGaps: string[] | undefined;
+      if (args.documentationCauseGaps !== undefined) {
+        const resolvable = new Set<string>(foreignCauseGaps);
+        for (const card of cards) {
+          for (const gapId of card.localCauseGaps) resolvable.add(`${card.id}:gap:${gapId}`);
+        }
+        documentationCauseGaps = uniqueSorted(args.documentationCauseGaps.filter((id) => resolvable.has(id)));
+      }
       const commonModeGroups = args.commonModeGroups === undefined
         ? undefined
         : projectSafetyScoreV9CommonModeGroups(args.commonModeGroups, commonModeResults, cards);
@@ -1487,7 +1611,8 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
       });
       return responseSchema.parse({
         model: "v9-critical-path",
-        schemaVersion: 7,
+        schemaVersion: 8,
+        openEvidence: args.openEvidence,
         lifecycle: "active",
         candidateId: args.candidateId,
         policyVersion: args.policyVersion,
@@ -1510,6 +1635,7 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
         },
         cards,
         foreignCauseGaps,
+        ...(documentationCauseGaps === undefined ? {} : { documentationCauseGaps }),
         ...(args.dexMaxAgeSec === undefined ? {} : { pillarFreshness: {
           dexMaxAgeSec: args.dexMaxAgeSec,
           dexObservedAtSec: ids.map(id => {
@@ -1520,6 +1646,88 @@ export function createSafetyScoreV9ResponseProjector(): V9PublicResponseProjecto
         ...(commonModeGroups === undefined ? {} : { commonModeGroups }),
       });
     },
+  };
+}
+
+/** One evaluated card's compiled facts and the pillar witnesses it published. */
+export interface V9DocumentationCarrierCard {
+  /**
+   * Compiled V3 facts. Set `admittedExitRouteKeys` from the evaluated Exit
+   * routes when they exist: without it route-scoped diagnostics stay required.
+   */
+  readonly asset: V9DocumentationAssetFacts;
+  readonly pillars: readonly V9DocumentationPillarWitness[];
+}
+
+export interface V9DocumentationCarrierInput {
+  readonly envelope: V9ValidatedPolicyEnvelope;
+  /** `collectV9DocumentationGapIds` output; the same map classifies open questions. */
+  readonly gapIds: ReadonlyMap<string, V9DocumentationClassification>;
+  readonly cards: readonly V9DocumentationCarrierCard[];
+  readonly openEvidence: V9OpenEvidence;
+}
+
+export interface V9DocumentationCarriers {
+  /** Sorted publication union of documentation-classified gap ids (`documentationCauseGaps`). */
+  readonly causeGapIds: readonly string[];
+  /** Card id → pillars limited only by documentation gaps; a missing card is plain limited. */
+  readonly documentationOnlyLimited: ReadonlyMap<string, readonly V9QualityPillar[]>;
+  /** `openEvidence` with `byCard[].documentationOnlyLimited` filled under the fail-closed rule. */
+  readonly openEvidence: V9OpenEvidence;
+}
+
+/**
+ * Publication-wide documentation classification of the compiled cohort: the
+ * per-asset classifier union, keyed by gap id. This map is the one classifier
+ * authority every carrier (open-question counter, trace block, registry band)
+ * reads, so a gap classifies identically everywhere.
+ */
+export function collectV9DocumentationGapIds(
+  envelope: V9ValidatedPolicyEnvelope,
+  assets: readonly V9DocumentationAssetFacts[],
+): ReadonlyMap<string, V9DocumentationClassification> {
+  const classified = new Map<string, V9DocumentationClassification>();
+  for (const asset of assets) {
+    for (const [gapId, classification] of documentationGapIds(envelope, asset)) {
+      classified.set(gapId, classification);
+    }
+  }
+  return classified;
+}
+
+/**
+ * Decision B carriers (PLAN §2.3): the documentation-only-limited annotation and
+ * the publication cause-gap union, both derived from the unchanged witnesses.
+ * The rule itself is `documentationOnlyLimitedPillars`; this function only feeds
+ * it the publication-wide classification. A card absent from `openEvidence.byCard`
+ * is never annotated, and an empty list is omitted, never `[]`.
+ */
+export function buildV9DocumentationCarriers(input: V9DocumentationCarrierInput): V9DocumentationCarriers {
+  const foreign = input.gapIds;
+  const documentationOnlyLimited = new Map<string, readonly V9QualityPillar[]>();
+  for (const card of input.cards) {
+    const listed = documentationOnlyLimitedPillars({
+      envelope: input.envelope,
+      asset: card.asset,
+      pillars: card.pillars,
+      foreignDocumentationGapIds: foreign.keys(),
+    });
+    if (listed.length > 0) {
+      documentationOnlyLimited.set(card.asset.assetId, [...listed].sort(compareText));
+    }
+  }
+  let annotated = input.openEvidence;
+  if (documentationOnlyLimited.size > 0) {
+    const byCard = input.openEvidence.byCard.map((entry) => {
+      const listed = documentationOnlyLimited.get(entry.id);
+      return listed === undefined ? entry : { ...entry, documentationOnlyLimited: [...listed] };
+    });
+    annotated = { ...input.openEvidence, byCard };
+  }
+  return {
+    causeGapIds: [...foreign.keys()].sort(compareText),
+    documentationOnlyLimited,
+    openEvidence: annotated,
   };
 }
 

@@ -7,6 +7,11 @@ export const COVERAGE_FAQ_ITEMS = [
       "Pharos tracks twelve coverage surfaces per stablecoin: price/depeg monitoring, Safety Score report cards, DEX price coverage, reserve views, modeled redemption backstop routes, yield intelligence, configured issuance-chain mint/burn flows, FreezeWatch/freezable-status review, EU MiCA assessment status, U.S. GENIUS implementation-watch status, dependency-map visibility, and mint-authority review.",
   },
   {
+    question: "How are the Safety Score's open questions counted?",
+    answer:
+      "Each missing datum is counted once as a question, at the root stablecoin of its supply chain, and grouped by what it measures (a control, an exit route, a reserve exposure) rather than per card. Every question lands in exactly one bucket: Open questions still need research; Not disclosed by issuers means Pharos reviewed the input and the issuer does not publish it, dated to that review; Documentation gaps are inputs the score cannot materially use. The per-datum obligation count is published alongside them, so the detail behind each question stays listed.",
+  },
+  {
     question: "Why do some stablecoins have incomplete coverage?",
     answer:
       "Coverage gaps typically stem from three factors: data availability (some newer or smaller stablecoins lack sufficient on-chain history for certain metrics), technical constraints (not all chains support the same level of RPC access for mint/burn tracking), and design differences (some wrapper or protocol-native designs do not expose traditional reserve reporting, while many assets do not expose a direct issuer or protocol redemption path). Pharos marks these gaps clearly rather than showing misleading placeholders.",

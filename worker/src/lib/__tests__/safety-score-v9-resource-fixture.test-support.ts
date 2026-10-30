@@ -21,7 +21,7 @@ import { loadSafetyScoreV9PublicationStoredRow } from "../safety-score-v9/public
 import { SAFETY_SCORE_V9_CACHE_KEYS } from "../safety-score-v9/publication-health";
 import { ALERT_SAFETY_V9_SOURCE_CACHE_KEY, parsePersistedAlertSafetyV9SourceEnvelope } from "../alert-safety-source-cache";
 import { parseNativeV9InputCacheArtifact } from "../safety-score-v9/native-input";
-import { SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../safety-score-v9/publication-codec";
+import { requireCurrentSafetyScoreV9Publication, SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY, SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY } from "../safety-score-v9/publication-codec";
 import { parseSafetyScoreV9PublicationReplayCapture } from "../safety-score-v9/publication-replay-capture";
 import { resolveV9PublicWitnessTexts } from "@shared/types/safety-score-v9-public-witness-texts";
 import { iterateEvidenceResponsibilityFacts } from "@shared/types/safety-score-v9-public-evidence-facts";
@@ -180,11 +180,12 @@ try {
         evidenceFacts: semantic.scoreTrace.evidenceResponsibility.facts,
       })) witnessViewBytes[view] = (witnessViewBytes[view] ?? 0) + Buffer.byteLength(JSON.stringify(value));
     }
-    const acceptedBaselineBytes = Buffer.byteLength(JSON.stringify(buildSafetyScoreV9AcceptedPublicationBaseline(publication)));
-    assert(publication.pillarFreshness, "pillar-freshness-operands-required");
-    const pillarFreshnessBytes = Buffer.byteLength(`,"pillarFreshness":${JSON.stringify(publication.pillarFreshness)}`);
+    const currentPublication = requireCurrentSafetyScoreV9Publication(publication);
+    const acceptedBaselineBytes = Buffer.byteLength(JSON.stringify(buildSafetyScoreV9AcceptedPublicationBaseline(currentPublication)));
+    assert(currentPublication.pillarFreshness, "pillar-freshness-operands-required");
+    const pillarFreshnessBytes = Buffer.byteLength(`,"pillarFreshness":${JSON.stringify(currentPublication.pillarFreshness)}`);
     assert(pillarFreshnessBytes <= 15_000, "pillar-freshness-byte-budget");
-    const publicationBytes = measurePublicationByteBudget(publication, envelope.uncompressedBytes);
+    const publicationBytes = measurePublicationByteBudget(currentPublication, envelope.uncompressedBytes);
     assert(envelope.compressedBytes <= SAFETY_SCORE_V9_PUBLICATION_MAX_WRITE_COMPRESSED_BYTES, "publication-compressed-byte-budget");
     assert(Buffer.byteLength(transport) > 0, "publication-stored-bytes");
     assert(enrichment.uncompressedBytes > 300_000, "replay-enrichment-size-floor");
@@ -213,10 +214,11 @@ try {
     assert.equal(metadata?.captureArchive?.status, "written", JSON.stringify(metadata));
     const publication = await loadSafetyScoreV9Publication(db);
     assert(publication);
+    const current = requireCurrentSafetyScoreV9Publication(publication);
     const rawBytes = Number(JSON.parse(String(sqlite.prepare("SELECT value FROM cache WHERE key = ?").get(SAFETY_SCORE_V9_CACHE_KEYS.publication)!.value)).uncompressedBytes);
     const cycles = [await seedCycle(1, baseClock + 1800), await seedCycle(2, baseClock + 3600)];
     writeFileSync(process.env.PHAROS_RESOURCE_MANIFEST!, JSON.stringify({ prior, cycles, fixtureRawPublicationBytes: rawBytes,
-      publicationBytes: measurePublicationByteBudget(publication, rawBytes),
+      publicationBytes: measurePublicationByteBudget(current, rawBytes),
       reserveJournalAssets: ACTIVE_STABLECOINS.length, reserveJournalRows: ACTIVE_STABLECOINS.length + 100, supplyJournalAssets: 1 }));
   }
 } finally { sqlite.close(); }

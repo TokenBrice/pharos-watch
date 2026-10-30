@@ -9,6 +9,7 @@ import { executeAtomicBatch } from "../db";
 import { logWorkerEvent } from "../structured-log";
 import {
   parseSafetyScoreV9Publication,
+  type SafetyScoreV9AdmittedPublication,
   publicationIdentityFromStorageEnvelope,
   SAFETY_SCORE_V9_PUBLICATION_REPLAY_BASE_CACHE_KEY,
   SAFETY_SCORE_V9_PUBLICATION_REPLAY_CACHE_KEY,
@@ -45,7 +46,7 @@ class SafetyScoreV9PublicationConflictError extends Error {
 export async function loadSafetyScoreV9Publication(
   db: D1Database,
   signal?: AbortSignal,
-): Promise<SafetyScoreV9CurrentResponse | null> {
+): Promise<SafetyScoreV9AdmittedPublication | null> {
   const row = await loadSafetyScoreV9PublicationStoredRow(db, signal);
   if (!row) return null;
   return parseSafetyScoreV9Publication(row.value, signal);

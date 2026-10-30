@@ -8187,6 +8187,111 @@
     },
     {
       "chainId": "ethereum",
+      "stablecoinId": "swanusd-swan",
+      "address": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+      "decimals": 18,
+      "disposition": "unsupported",
+      "unsupportedReason": "zero-address-transfer-without-supply-change:transfer",
+      "supplyBurnProof": {
+        "directCalls": [
+          {
+            "signature": "burn(uint256)",
+            "selector": "0x42966c68",
+            "dataWords": 1,
+            "amountSlot": 0,
+            "account": "sender"
+          }
+        ]
+      },
+      "supplyBurnProofEvidence": "Coin.sol:19-21 burn(uint256) is permissionless self-burn: solmate ERC20.sol:195-205 decrements stored totalSupply and balanceOf[msg.sender] and emits exactly Transfer(msg.sender,0,amount), with no external calls. Proof requires a successful transaction addressed directly to this token with exact calldata. Lender-mediated burns call coin.burn() internally and stay review_required.",
+      "eventSet": "transfer",
+      "invariant": "transfer-supply",
+      "identity": {
+        "explorerSourceUrl": "https://sourcify.dev/server/v2/contract/1/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e?fields=sources",
+        "sourceVerified": true,
+        "contractName": "Coin",
+        "proxy": {
+          "isProxy": false,
+          "kind": "none",
+          "implementation": null,
+          "implementationSourceVerified": true
+        },
+        "externalMatches": [
+          {
+            "source": "coingecko",
+            "geckoId": "swanusd",
+            "value": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+            "matches": true,
+            "decimalPlace": 18,
+            "detail": "https://api.coingecko.com/api/v3/coins/swanusd (retrieved 2026-10-29T17:58Z): platforms.ethereum and detail_platforms.ethereum.contract_address are this Coin, decimal_place 18"
+          }
+        ],
+        "onChain": {
+          "block": 26299913,
+          "blockHash": "0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13",
+          "decimals": 18,
+          "symbol": "SwanUSD",
+          "totalSupplyRaw": "420092200246430984088367",
+          "minter": "0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15",
+          "eip1967ImplementationSlot": "0x0000000000000000000000000000000000000000000000000000000000000000",
+          "codeBytes": 2988,
+          "hasCode": true
+        }
+      },
+      "supplyPaths": [
+        {
+          "function": "mint(address,uint256)",
+          "internal": "_mint -> solmate ERC20._mint",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Coin.sol:14-17 requires msg.sender == immutable minter (Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15) then solmate ERC20.sol:183-193 totalSupply += amount, balanceOf[to] += amount, emit Transfer(address(0), to, amount). Exactly one matching zero-address Transfer per call."
+        },
+        {
+          "function": "burn(uint256)",
+          "internal": "_burn -> solmate ERC20._burn",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Coin.sol:19-21 is permissionless self-burn: solmate ERC20.sol:195-205 balanceOf[msg.sender] -= amount, totalSupply -= amount, emit Transfer(msg.sender, address(0), amount). Exactly one matching zero-address Transfer per call."
+        },
+        {
+          "function": "Lender.adjust / liquidate / redeem / sell (protocol burn paths)",
+          "internal": "coin.transferFrom(msg.sender, address(this), amount) then coin.burn(amount)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Lender.sol:269 (repay), 366 (liquidation), 459 (redeem), 473 (PSM sell) pull the coins into the Lender and call coin.burn(amount), so the burn-shaped Transfer is emitted by an internal call from the Lender transaction. Real supply destruction; only the proof path limits its classification (see notes)."
+        },
+        {
+          "function": "Lender.adjust (borrow) / buy / accrueInterest / pullLocalReserves (protocol mint paths)",
+          "internal": "coin.mint(recipient, amount)",
+          "emitsZeroTransfer": true,
+          "sameAmount": true,
+          "note": "Lender.sol:256 borrow mint to msg.sender, 510 PSM buy mint to msg.sender, 217/222 staked interest mint to the Vault 0xfa80c7349cc2357c42a64c2954b24b1a61c29435, 900 local-reserve mint to operator 0xf69f74148687ca4860544f865581f05ca3f9098c, and 909 pullGlobalReserves to the factory fee recipient, which is unset (feeRecipient 0, feeBps 0) and therefore produces no events today. All reachable recipients are non-zero and all are real supply increases; the Vault and router recipients are protocol addresses rather than end users."
+        }
+      ],
+      "unpairedPaths": [
+        {
+          "function": "transfer(address,uint256)",
+          "reason": "solmate ERC20.sol:76-88 has no zero-recipient guard: transfer(address(0), amount) debits the sender, credits balanceOf[address(0)], and emits Transfer(sender, address(0), amount) while totalSupply is unchanged - a burn-shaped event without a supply change, which is why the Transfer conservation law is not admitted for this identity"
+        },
+        {
+          "function": "transferFrom(address,address,uint256)",
+          "reason": "solmate ERC20.sol:90-110 likewise accepts to == address(0). The from == address(0) direction additionally needs allowance[0][spender], which cannot be created (no permit or approve path with owner == 0), so only the to-zero direction is reachable"
+        }
+      ],
+      "totalSupplyView": {
+        "isStoredSum": true,
+        "note": "solmate ERC20.sol:31 `uint256 public totalSupply`; the only writers are _mint (plus) and _burn (minus), reached through Coin.mint/Coin.burn. No rebasing, fee-on-transfer, hook or assembly storage writes exist in Coin.sol."
+      },
+      "zeroRecipientTransferReverts": false,
+      "zeroRecipientTransferBurns": false,
+      "identityIssue": null,
+      "notes": "Verified source: Sourcify exact_match bundle for the Coin (src/Coin.sol plus lib/solmate/src/tokens/ERC20.sol, pragma 0.8.24), read in lane R1 (agents/swanusd/research/r1/src/). The Coin is a plain non-proxy ERC20 (2988 bytes, EIP-1967 implementation slot zero at the pin) whose immutable minter is the Monolith Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15 (read at the pin; on-chain symbol SwanUSD, 18 decimals). Mint/burn pairing itself is exact: the only supply writers are Coin.mint (gated to the Lender) and Coin.burn, both of which route through solmate _mint/_burn and emit exactly one zero-address Transfer with the same amount. Admission blocker is the reverse condition: solmate ERC20.transfer/transferFrom carry no zero-address checks, so any holder can transfer to address(0), which changes no supply while emitting a burn-shaped Transfer. Real supply changes reach the token only through the Lender: borrow/buy mints to msg.sender, accrueInterest mints staked interest to the Vault, pullLocalReserves mints to the RevenueRouter operator, and repay/liquidate/redeem/sell burn after coin.transferFrom. Quantitative sample over the coin's entire life (production audit path, window 26249210-26299913 ending at pin 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, opening boundary 0x42d512e1f177dd8e350116f19407bab7262c89a598d5e57590de0b56812ba83e): 559 mints and 21 burns, mintRaw 587007059106025618068198, burnRaw 166914858859594633979831, supplyDeltaRaw 420092200246430984088367 (equal to totalSupply() at the pin), residualRaw 0, 577 non-zero logs, journal SHA-256 deafc781546a375beadb68d62166623a527c2699fe91d0adadc5bf40eedadbb6. A passing window is a sample, not proof of the reverse condition, and any to-zero transfer inside a later window would produce a false mismatch. Consequence for burn classification: all 21 observed burns (1320.672256341-20000.0 swanUSD) come from the Lender via internal coin.burn, never from a transaction addressed directly to the Coin, and the Coin emits no other event, so the accepted direct-call receipt proof cannot match them; those burns remain review_required (not counted in flow) until a reviewed Lender-receipt proof path exists. Mint recipients include non-user protocol addresses: the Vault (373 interest mints totalling 13.647751 swanUSD) and the RevenueRouter (39 reserve mints totalling 92.376381 swanUSD); both are genuine supply increases and are counted as mints when above the dust cutoff. Dust threshold 500 = half the Lender minDebt (1000): it retains all 21 burns and 137 of 559 mints (585217.82838 of 587007.059106 swanUSD) while excluding the sub-economic interest and reserve drips. Full-life reads: agents/swanusd/research/d2/.",
+      "windows": [],
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Claude swanUSD promotion 2026-10-29"
+    },
+    {
+      "chainId": "ethereum",
       "stablecoinId": "syrupusdc-maple",
       "address": "0x80ac24aa929eaf5013f6436cda2a7ba190f5cc0b",
       "decimals": 6,

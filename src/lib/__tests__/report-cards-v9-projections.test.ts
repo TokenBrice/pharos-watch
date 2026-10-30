@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { projectV9Table, projectV9TableCard, projectV9Detail } from "@shared/lib/report-cards-v9-projections";
 import { ReportCardsV9DetailResponseSchema, ReportCardsV9TableResponseSchema } from "@shared/types/report-cards-v9-projections";
-import { ReportCardsV9CurrentResponseSchema } from "@shared/types/report-cards-v9";
+import { ReportCardsV9CurrentResponseSchema } from "\@shared/types/report-cards-v9-current";
 import { makeReportCardsV9PartialCard, makeReportCardsV9PipelineGapCard, makeReportCardsV9PricedExcludedCard } from "@shared/test-utils/report-cards-v9";
 import { resolveSchemaLike } from "@shared/lib/schema-like";
 import { makeReportCardsV9Response, makeV9Card, makeV9Pillars } from "@/test/fixtures/safety-score-v9";

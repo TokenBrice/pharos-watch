@@ -1564,7 +1564,7 @@
           "contractOrTokenId": "0xda67b4284609d2d48e5d10cfac411572727dc1ed",
           "scope": "canonical",
           "posture": "restrictable",
-          "evidence": "At Ethereum block 26036288 on 2026-09-22, Noon's official registry address 0xda67b4284609d2d48e5d10cfac411572727dc1ed remained the canonical USN ERC-1967 proxy, resolving to verified USNUpgradeableHyperlane implementation 0x961e78b26f6984a2ddac42e4ce5b8014a311608e (the 2026-07-20 review's 0x6bdc8104... was superseded by the timelocked 2026-08-04 upgrade). Current permissionless() is true, but the implementation's _update is guarded by whenNotPaused and rejects blacklisted senders and recipients, and its nonzero owner, the Noon 3-of-6 admin Safe, can pause all transfers or blacklist accounts instantly with no timelock; the 48-hour timelock covers only proxy upgrades through ProxyAdmin 0x55f39512cb43111a13e8440ee3e3602e72628239, whose owner is also nonzero. Holder transfers are therefore selectively restrictable rather than permissionless.",
+          "evidence": "At Ethereum block 26036288 on 2026-09-22, Noon's official registry address 0xda67b4284609d2d48e5d10cfac411572727dc1ed remained the canonical USN ERC-1967 proxy, resolving to verified USNUpgradeableHyperlane implementation 0x961e78b26f6984a2ddac42e4ce5b8014a311608e (the 2026-07-20 review's 0x6bdc8104... was superseded by the timelocked 2026-08-04 upgrade). Current permissionless() is true, but the implementation's _update is guarded by whenNotPaused and rejects blacklisted senders and recipients, and its nonzero owner, the Noon 3-of-5 admin Safe, can pause all transfers or blacklist accounts instantly with no timelock; the 48-hour timelock covers only proxy upgrades through ProxyAdmin 0x55f39512cb43111a13e8440ee3e3602e72628239, whose owner is also nonzero. Holder transfers are therefore selectively restrictable rather than permissionless.",
           "sources": [
             {
               "label": "Sourcify exact-matched Ethereum USN proxy",
@@ -1576,11 +1576,15 @@
             },
             {
               "label": "Noon official USN deployment registry",
-              "url": "https://docs.noon.capital/built-for-safety/2.-audited-and-secured-infrastructure/contracts-and-addresses"
+              "url": "https://docs.noon.capital/6.-resources/contract-addresses-and-oracles.md"
             },
             {
               "label": "Ethereum public RPC observation",
               "url": "https://ethereum-rpc.publicnode.com"
+            },
+            {
+              "label": "Noon admin Safe RemovedOwner log, block 26246910 (2026-10-22)",
+              "url": "https://eth.blockscout.com/address/0x1ea169EcCcf7714E7ba04900e1a3357cCA77327f?tab=logs"
             }
           ]
         }
@@ -12242,6 +12246,38 @@
             {
               "label": "Verified Polygon dEURO holder-facing upgrade proxy",
               "url": "https://polygon.blockscout.com/api/v2/smart-contracts/0xc2ff25dd99e467d2589b2c26edd270f220f14e47"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "assetId": "swanusd-swan",
+      "reviewedAt": "2026-10-29",
+      "reviewer": "Claude swanUSD promotion 2026-10-29",
+      "deployments": [
+        {
+          "chainId": "ethereum",
+          "contractOrTokenId": "0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e",
+          "scope": "canonical",
+          "posture": "permissionless",
+          "evidence": "At Ethereum block 26299913 (hash 0x511909c46dc120a98158ce2e4448efcc536f871038d22645ba2ee24e16d0eb13, 2026-10-29T17:31:59Z) the swanUSD Coin returned 2,988 bytes of runtime code with keccak256 0x0d6b80dfade50c8222758c0424dd99c82fd0f087c58cae1085eb0b79b1cc6afb and zero at the EIP-1967 implementation, admin and beacon slots, and Coin.minter() returned the swanUSD Lender 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15. Sourcify reports exact_match for creation and runtime (matchId 56723412, verified 2026-10-22T16:00:40Z) on a 547-byte Coin.sol plus solmate ERC20: transfer and transferFrom perform balance and allowance arithmetic only, permit changes allowance only, burn(uint256) burns the caller's own balance only, and mint is gated on the immutable minter. The deployment has no owner, no blacklist or allowlist, no pause, no freeze or seizure path, no arbitrary-holder burn, no transfer hook and no upgrade path, so holder transfers are unrestricted. Issuance authority, including PSM buy(), is a separate economic-control question and is not asserted absent here.",
+          "sources": [
+            {
+              "label": "Sourcify exact-match swanUSD Coin source, ABI and runtime (chain 1)",
+              "url": "https://sourcify.dev/server/v2/contract/1/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e?fields=all"
+            },
+            {
+              "label": "Pinned eth_getCode and EIP-1967 implementation, admin and beacon slot reads at Ethereum block 26299913",
+              "url": "https://etherscan.io/block/26299913"
+            },
+            {
+              "label": "Keyless Ethereum JSON-RPC (dRPC) used for the pinned eth_getCode, eth_getStorageAt and eth_call reads at block 26299913: runtime 2,988 bytes, keccak256 0x0d6b80dfade50c8222758c0424dd99c82fd0f087c58cae1085eb0b79b1cc6afb, zero implementation/admin/beacon slots, minter 0x4ed5c72816abc1b67ac31ddabe31cff4a8c56a15",
+              "url": "https://eth.drpc.org"
+            },
+            {
+              "label": "Etherscan verified swanUSD Coin",
+              "url": "https://etherscan.io/address/0x9bf2b2f57a2968a0e81546ed50cbbbb7c9d6e05e#code"
             }
           ]
         }

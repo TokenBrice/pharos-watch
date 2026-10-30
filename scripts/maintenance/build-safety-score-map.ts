@@ -54,10 +54,8 @@ import { V9_GRADE_THRESHOLDS } from "@shared/lib/report-card-core";
 import { admitSupplyBuckets, getCirculatingRawOrNull } from "@shared/lib/supply";
 import { StablecoinListResponseSchema, type StablecoinListResponse } from "@shared/types/market";
 import type { DigestSafetyMapSummary } from "@shared/types/digest-safety-map-contract";
-import {
-  ReportCardsV9CurrentResponseSchema,
-  type ReportCardsV9CurrentResponse,
-} from "@shared/types/report-cards-v9";
+import { type ReportCardsV9CurrentResponse } from "@shared/types/report-cards-v9";
+import { ReportCardsV9ReaderResponseSchema } from "@shared/types/report-cards-v9-accepted";
 import { StabilityIndexResponseSchema, type StabilityIndexCurrent } from "@shared/types/stability";
 import { buildSvgBrowserDocument, escapeXml } from "../lib/og-svg.mts";
 import {
@@ -454,7 +452,7 @@ export function parseMapReportCards(payload: unknown): {
   updatedAt: number;
   publicationHealth: ReportCardsV9CurrentResponse["publicationHealth"];
 } {
-  const response = parseCanonicalPayload("Report-card", ReportCardsV9CurrentResponseSchema, payload);
+  const response = parseCanonicalPayload("Report-card", ReportCardsV9ReaderResponseSchema, payload);
   const cards = response.cards.map((card) => {
     // Technical gaps have no grade; they cannot enter any rendered grade band.
     if (card.ratingStatus === "pipeline-gap") return null;

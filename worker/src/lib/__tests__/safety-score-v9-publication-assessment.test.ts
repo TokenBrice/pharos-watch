@@ -35,7 +35,15 @@ function candidate(
   const pipelineGapIds = cardList.filter((card) => card.ratingStatus === "pipeline-gap").map((card) => card.id);
   return {
     model: "v9-critical-path",
-    schemaVersion: 7,
+    schemaVersion: 8,
+    openEvidence: {
+      semantics: "open-question-v1",
+      totals: { questions: 0, open: 0, issuer: 0, documentation: 0, obligations: 0 },
+      owners: [], reasons: [],
+      documentation: { questions: 0, datums: 0, facts: 0, reasons: [] },
+      issuer: { questions: 0, assets: 0, oldestReviewedAtSec: null, newestReviewedAtSec: null },
+      byCard: [],
+    },
     lifecycle: "active",
     candidateId: `v9-rc-1`,
     policyVersion: "9.0",

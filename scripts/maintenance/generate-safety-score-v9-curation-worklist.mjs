@@ -4,13 +4,29 @@
 // walk the generated document to completion and regenerate it after each
 // batch; an item disappears from the regenerated list when its codes clear.
 //
+// Two classes of open reason are routed out of the default sweep instead of
+// into it, without removing anything from the typed registry:
+//   - documentation-class gaps (policy `semantic.evidence.documentation`):
+//     hidden from the streams and listed only in the documentation band that
+//     `--include-documentation` appends. The class is read from the
+//     evidence-gap queue's copy of the shared classifier — never re-derived.
+//   - parked claim groups (ledger churn policy): hidden from every band. The
+//     park state is read from the reviewed ledger through the ledger tooling's
+//     own predicate — never re-derived.
+//
 // Usage:
 //   npm run safety-score-v9:curation-worklist -- \
-//     --replay <replay-v9.json> [--output <worklist.md>]
+//     --replay <replay-v9.json> [--output <worklist.md>] \
+//     [--ledger <reviewed-ledger.json>] [--include-documentation]
 // (The .ts imports resolve through tsconfig paths, so run via the npm script's
 // `node --import tsx` — bare `node` cannot resolve @shared/lib.)
 import { readFileSync, writeFileSync } from "node:fs";
 import { REDEMPTION_BACKSTOP_METHODOLOGY_VERSION } from "../../shared/lib/methodology-versions/constants.ts";
+import {
+  buildV9EvidenceGapQueue,
+  isV9DocumentationGapEntry,
+} from "../../shared/lib/safety-score-v9/evidence-gap-queue.ts";
+import { loadV9MethodologyPolicy } from "../../shared/lib/safety-score-v9/policy.ts";
 import { loadPerCoinStablecoinEntries } from "../lib/stablecoin-catalog-sources.ts";
 import {
   classifyV9CurationWorklistStream,
@@ -18,6 +34,12 @@ import {
 } from "./generate-safety-score-v9-missing-data-registry.ts";
 import { PRIORITY_BANDS, priorityBand } from "../lib/safety-score-v9-missing-data-work-types.ts";
 import { isDirectRun } from "../lib/smoke-runtime.mjs";
+
+const POLICY_PATH = new URL(
+  "../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json",
+  import.meta.url,
+);
+const DEFAULT_LEDGER_PATH = ".github/artifacts/safety-score-missing-data-reviewed-ledger.json";
 
 const STREAMS = [
   {
@@ -77,13 +99,38 @@ const STREAMS = [
   },
 ];
 
-export function renderCurationWorklist(replay, registry, replayPath) {
+/**
+ * Render the markdown worklist.
+ *
+ * @param {object} replay parsed V9 replay artifact
+ * @param {object} registry typed missing-data registry for the same replay
+ * @param {string} replayPath path shown in the header
+ * @param {object} [options]
+ * @param {boolean} [options.includeDocumentation] list the non-scoring documentation band
+ * @param {ReadonlyMap<string, { reason: string }>} [options.documentationGaps]
+ *   gapId -> documentation classification copied from the evidence-gap queue
+ * @param {ReadonlySet<string>} [options.parkedClaimGroups] claim group ids parked by the ledger churn rule
+ */
+export function renderCurationWorklist(replay, registry, replayPath, options = {}) {
+const includeDocumentation = options.includeDocumentation === true;
+const documentationGaps = options.documentationGaps ?? new Map();
+const parkedClaimGroups = options.parkedClaimGroups ?? new Set();
 const cards = replay.pipeline.candidate.cards;
 if (registry.summary.stablecoinCount !== cards.length) {
   throw new Error("Typed missing-data registry and replay card counts differ");
 }
 const assets = new Map(replay.pipeline.evaluatedSet.assets.map((asset) => [asset.assetId, asset]));
 const registryAssets = new Map(registry.stablecoins.map((asset) => [asset.assetId, asset]));
+// The registry is the only map from a compiled gap to its claim group; both
+// bands key on that identity, never on a reason code or a work-type guess.
+const claimGroupByGapId = new Map();
+for (const asset of registry.stablecoins) {
+  for (const row of asset.missingItems ?? []) {
+    if (typeof row.gapId === "string" && typeof row.claimGroupId === "string") {
+      claimGroupByGapId.set(row.gapId, row.claimGroupId);
+    }
+  }
+}
 
 function money(value) {
   if (value === null) return "unavailable (missing-captured-supply)";
@@ -93,15 +140,84 @@ function money(value) {
   return `$${Math.round(value / 1e3)}k`;
 }
 
-const items = new Map(); // `${stream}:${assetId}` -> { codes: Map(code -> Set(path)), critical }
-function addItem(streamKey, assetId, code, path, critical = false) {
-  const key = `${streamKey}:${assetId}`;
-  const item = items.get(key) ?? { streamKey, assetId, codes: new Map(), critical: false };
-  const paths = item.codes.get(code) ?? new Set();
+// Gap identity for a replay reason. `causeGapIds` is the projected witness
+// list; a reason without one (synthetic or overlay) has no gap and therefore
+// can never be hidden by either band.
+function reasonGapIds(reason) {
+  const ids = Array.isArray(reason.causeGapIds)
+    ? reason.causeGapIds.filter((gapId) => typeof gapId === "string")
+    : [];
+  if (ids.length > 0) return ids;
+  return typeof reason.sourceGapId === "string" ? [reason.sourceGapId] : [];
+}
+
+// Every witness must resolve to a parked claim group; one unresolved or active
+// witness keeps the reason in the default sweep (fail-closed).
+function parkedGroupsOf(reason) {
+  const gapIds = reasonGapIds(reason);
+  if (gapIds.length === 0) return null;
+  const groups = new Set();
+  for (const gapId of gapIds) {
+    const claimGroupId = claimGroupByGapId.get(gapId);
+    if (claimGroupId === undefined || !parkedClaimGroups.has(claimGroupId)) return null;
+    groups.add(claimGroupId);
+  }
+  return groups;
+}
+
+// Same fail-closed composition for the documentation class: every witness gap
+// must carry the classifier's class.
+function documentationOf(reason) {
+  const gapIds = reasonGapIds(reason);
+  if (gapIds.length === 0) return null;
+  const reasons = new Set();
+  for (const gapId of gapIds) {
+    const classification = documentationGaps.get(gapId);
+    if (classification === undefined) return null;
+    reasons.add(classification.reason);
+  }
+  return { gapIds, reasons };
+}
+
+const items = new Map(); // `${stream}:${assetId}` -> { codes, documentationCodes, documentationReasons, documentationGapIds, critical }
+function addCode(codes, code, path) {
+  const paths = codes.get(code) ?? new Set();
   if (path) paths.add(path);
-  item.codes.set(code, paths);
-  item.critical ||= critical;
+  codes.set(code, paths);
+}
+
+function addItem(streamKey, assetId, code, path, critical = false, documentation = null) {
+  const key = `${streamKey}:${assetId}`;
+  const item = items.get(key) ?? {
+    streamKey,
+    assetId,
+    critical: false,
+    codes: new Map(),
+    documentationCodes: new Map(),
+    documentationReasons: new Set(),
+    documentationGapIds: new Set(),
+  };
+  if (documentation === null) {
+    addCode(item.codes, code, path);
+    item.critical ||= critical;
+  } else {
+    addCode(item.documentationCodes, code, path);
+    for (const reason of documentation.reasons) item.documentationReasons.add(reason);
+    for (const gapId of documentation.gapIds) item.documentationGapIds.add(gapId);
+  }
   items.set(key, item);
+}
+
+let parkedReasonCount = 0;
+const parkedGroupsSeen = new Set();
+function addRoutedItem(streamKey, assetId, reason, code, path, critical) {
+  const parked = parkedGroupsOf(reason);
+  if (parked !== null) {
+    parkedReasonCount += 1;
+    for (const claimGroupId of parked) parkedGroupsSeen.add(claimGroupId);
+    return;
+  }
+  addItem(streamKey, assetId, code, path, critical, documentationOf(reason));
 }
 
 for (const card of cards) {
@@ -119,13 +235,13 @@ for (const card of cards) {
   for (const reason of lanes) {
     const streamKey = classifyV9CurationWorklistStream(reason.code);
     if (streamKey) {
-      addItem(streamKey, card.id, reason.code, reason.path, criticalReasonCodes.has(reason.code));
+      addRoutedItem(streamKey, card.id, reason, reason.code, reason.path, criticalReasonCodes.has(reason.code));
     }
   }
   for (const reason of card.nrReasons ?? []) {
     const streamKey = classifyV9CurationWorklistStream(reason.code);
     if (streamKey) {
-      addItem(streamKey, card.id, reason.code, reason.field ?? null, criticalReasonCodes.has(reason.code));
+      addRoutedItem(streamKey, card.id, reason, reason.code, reason.field ?? null, criticalReasonCodes.has(reason.code));
     }
   }
   const mechStream = STREAMS.find((stream) => stream.key === "MECH");
@@ -138,6 +254,16 @@ for (const card of cards) {
     addItem("MECH", card.id, `overlay:${asset.backing.archetype}`, null);
   }
 }
+
+const isDocumentationOnly = (item) => item.codes.size === 0 && item.documentationCodes.size > 0;
+const openItems = [...items.values()];
+const requiredItems = openItems.filter((item) => !isDocumentationOnly(item));
+const documentationItems = openItems.filter(isDocumentationOnly);
+const defaultCauseRowsOf = (assetId) =>
+  (registryAssets.get(assetId)?.missingItems ?? []).filter((row) =>
+    row.cause !== undefined &&
+    !(typeof row.claimGroupId === "string" && parkedClaimGroups.has(row.claimGroupId)) &&
+    !(typeof row.gapId === "string" && documentationGaps.has(row.gapId)));
 
 const supplyOf = (assetId) => {
   const supply = assets.get(assetId)?.stressState?.exitPortfolio?.circulatingUsd;
@@ -167,6 +293,7 @@ lines.push("```bash");
 lines.push("# 0. npx tsx scripts/maintenance/generate-stablecoin-per-coin-asset.ts  # generated catalog aggregate is gitignored and goes stale against coin edits");
 lines.push("# 1. fresh exact capture + replay");
 lines.push("# 2. npm run safety-score-v9:curation-worklist -- --replay <replay.json> --output <this file>");
+lines.push("#    add --include-documentation to append the non-scoring documentation band");
 lines.push("```");
 lines.push("");
 lines.push("## Protocol for agents");
@@ -182,29 +309,55 @@ lines.push("");
 
 lines.push("## Summary");
 lines.push("");
-lines.push("| Stream | Items | Scoring scope |");
-lines.push("|---|---|---|");
+lines.push("| Stream | Items | Documentation | Scoring scope |");
+lines.push("|---|---|---|---|");
 for (const stream of STREAMS) {
-  const count = [...items.values()].filter((item) => item.streamKey === stream.key).length;
-  lines.push(`| ${stream.key} | ${count} | ${stream.ceiling} |`);
+  const count = requiredItems.filter((item) => item.streamKey === stream.key).length;
+  const documentationCount = documentationItems.filter((item) => item.streamKey === stream.key).length;
+  lines.push(`| ${stream.key} | ${count} | ${documentationCount} | ${stream.ceiling} |`);
 }
-lines.push(`| **Total** | **${items.size}** | |`);
+lines.push(`| **Total** | **${requiredItems.length}** | **${documentationItems.length}** | |`);
 lines.push("");
+if (documentationItems.length > 0 && !includeDocumentation) {
+  lines.push(`Documentation-class items are not in the streams: **${documentationItems.length}** hidden (rerun with \`--include-documentation\` to list them in the documentation band).`);
+  lines.push("");
+}
+if (parkedGroupsSeen.size > 0) {
+  lines.push(`Parked claim groups are hidden from every band: **${parkedGroupsSeen.size}** groups (${parkedReasonCount} open reasons). They stay in the typed registry and the reviewed ledger; a group leaves the park state only through an explicit \`unpark\` decision.`);
+  lines.push("");
+}
+
+function sortStreamItems(list) {
+  return [...list].sort((left, right) => {
+    if (left.critical !== right.critical) return left.critical ? -1 : 1;
+    const leftSupply = supplyOf(left.assetId);
+    const rightSupply = supplyOf(right.assetId);
+    if (leftSupply === null && rightSupply !== null) return -1;
+    if (rightSupply === null && leftSupply !== null) return 1;
+    const leftPriority = priorityBand(left.critical, leftSupply);
+    const rightPriority = priorityBand(right.critical, rightSupply);
+    const priorityOrder = PRIORITY_BANDS.indexOf(leftPriority) - PRIORITY_BANDS.indexOf(rightPriority);
+    return priorityOrder || (rightSupply ?? 0) - (leftSupply ?? 0) || left.assetId.localeCompare(right.assetId);
+  });
+}
+
+function renderCodes(codes) {
+  return [...codes.entries()]
+    .map(([code, paths]) => {
+      const list = [...paths].slice(0, 4).join(", ");
+      const extra = paths.size > 4 ? ` +${paths.size - 4}` : "";
+      return paths.size > 0 ? `${code} (${list}${extra})` : code;
+    })
+    .join("; ");
+}
+
+function v9Status(assetId) {
+  const card = cards.find((entry) => entry.id === assetId);
+  return card.ratingStatus === "pipeline-gap" ? "Pipeline gap" : `${card.grade}/${card.score ?? "—"}`;
+}
 
 for (const stream of STREAMS) {
-  const streamItems = [...items.values()]
-    .filter((item) => item.streamKey === stream.key)
-    .sort((left, right) => {
-      if (left.critical !== right.critical) return left.critical ? -1 : 1;
-      const leftSupply = supplyOf(left.assetId);
-      const rightSupply = supplyOf(right.assetId);
-      if (leftSupply === null && rightSupply !== null) return -1;
-      if (rightSupply === null && leftSupply !== null) return 1;
-      const leftPriority = priorityBand(left.critical, leftSupply);
-      const rightPriority = priorityBand(right.critical, rightSupply);
-      const priorityOrder = PRIORITY_BANDS.indexOf(leftPriority) - PRIORITY_BANDS.indexOf(rightPriority);
-      return priorityOrder || (rightSupply ?? 0) - (leftSupply ?? 0) || left.assetId.localeCompare(right.assetId);
-    });
+  const streamItems = sortStreamItems(requiredItems.filter((item) => item.streamKey === stream.key));
   lines.push(`## ${stream.key} — ${stream.title} (${streamItems.length})`);
   lines.push("");
   lines.push(`**Scoring scope:** ${stream.ceiling}. **How to fix:** ${stream.fix}`);
@@ -218,26 +371,86 @@ for (const stream of STREAMS) {
   lines.push("|---|---|---|---|---|---|---|");
   for (const item of streamItems) {
     const supply = supplyOf(item.assetId);
-    const card = cards.find((entry) => entry.id === item.assetId);
-    const codes = [...item.codes.entries()]
-      .map(([code, paths]) => {
-        const list = [...paths].slice(0, 4).join(", ");
-        const extra = paths.size > 4 ? ` +${paths.size - 4}` : "";
-        return paths.size > 0 ? `${code} (${list}${extra})` : code;
-      })
-      .join("; ");
-    const causeRows = registry.stablecoins.find((asset) => asset.assetId === item.assetId)?.missingItems ?? [];
-    const causes = causeRows.filter(row => row.cause !== undefined)
-      .map(row => `${row.cause}: ${row.gapId}`).join("; ") || "U: score-projection-only (research required)";
+    const causes = defaultCauseRowsOf(item.assetId)
+      .map((row) => `${row.cause}: ${row.gapId}`).join("; ") ||
+      ((registryAssets.get(item.assetId)?.missingItems ?? []).some((row) => row.cause !== undefined)
+        ? "— (this row's causes are documentation-class or parked)"
+        : "U: score-projection-only (research required)");
     lines.push(
       `| ☐ | ${stream.key}-${item.assetId} | ${supply === null && !item.critical ? "unknown supply" : priorityBand(item.critical, supply)} | ${money(supply)} | ` +
-        `${card.ratingStatus === "pipeline-gap" ? "Pipeline gap" : card.grade}/${card.score ?? "—"} | ${causes} | ${codes} |`,
+        `${v9Status(item.assetId)} | ${causes} | ${renderCodes(item.codes)} |`,
     );
   }
   lines.push("");
 }
 
+if (includeDocumentation) {
+  const documentationStreamItems = sortStreamItems(documentationItems);
+  lines.push(`## DOC — Documentation class, non-scoring (${documentationStreamItems.length})`);
+  lines.push("");
+  lines.push("**Scoring scope:** none. These gaps cannot materially move a published score under policy `semantic.evidence.documentation`, so they sit outside the default streams. They stay open facts in the registry: never close them by date-bump, and they re-enter the streams automatically when a threshold no longer holds.");
+  lines.push("");
+  if (documentationStreamItems.length === 0) {
+    lines.push("_No documentation-class items._");
+    lines.push("");
+  } else {
+    lines.push("| ID | Stream | Pri | Supply | V9 status | Documentation reason | Causes and gap IDs | Codes (paths) |");
+    lines.push("|---|---|---|---|---|---|---|---|");
+    for (const item of documentationStreamItems) {
+      const supply = supplyOf(item.assetId);
+      const causes = (registryAssets.get(item.assetId)?.missingItems ?? [])
+        .filter((row) => row.cause !== undefined && item.documentationGapIds.has(row.gapId))
+        .map((row) => `${row.cause}: ${row.gapId}`).join("; ");
+      lines.push(
+        `| ${item.streamKey}-${item.assetId} | ${item.streamKey} | ${supply === null && !item.critical ? "unknown supply" : priorityBand(item.critical, supply)} | ${money(supply)} | ` +
+          `${v9Status(item.assetId)} | ${[...item.documentationReasons].join("; ")} | ${causes || "—"} | ${renderCodes(item.documentationCodes)} |`,
+      );
+    }
+    lines.push("");
+  }
+}
+
 return lines.join("\n");
+}
+
+/**
+ * Documentation-class gaps, copied verbatim from the evidence-gap queue (which
+ * owns the classifier call). Never re-derive the predicate here.
+ */
+function collectDocumentationGaps(replay, policy) {
+  const queue = buildV9EvidenceGapQueue({
+    factSet: replay.pipeline.compiledFacts,
+    policy: loadV9MethodologyPolicy(policy),
+  });
+  const documentationGaps = new Map();
+  for (const entry of queue.entries) {
+    if (isV9DocumentationGapEntry(entry)) documentationGaps.set(entry.gapId, entry.documentation);
+  }
+  return documentationGaps;
+}
+
+/**
+ * Parked claim groups, read through the ledger tooling's own churn predicate.
+ * The ledger module ships with the tooling/durability branch, so the worklist
+ * must not grow a second copy of the rule: without the module the CLI stops
+ * instead of silently claiming that nothing is parked.
+ */
+async function collectParkedClaimGroups(ledgerPath) {
+  let ledgerTooling;
+  try {
+    ledgerTooling = await import("./ledger-append.ts");
+  } catch (error) {
+    throw new Error(
+      "Parked-group suppression needs scripts/maintenance/ledger-append.ts (durability/tooling branch). " +
+      `Rebase before regenerating worklists. Cause: ${error instanceof Error ? error.message : String(error)}`,
+    );
+  }
+  const { ledger } = ledgerTooling.readCurationLedger(ledgerPath);
+  const parked = new Set();
+  for (const [claimGroupId, state] of ledgerTooling.curationLedgerParkState(ledger.decisions)) {
+    if (state === "parked") parked.add(claimGroupId);
+  }
+  return parked;
 }
 
 if (isDirectRun(import.meta.url, process.argv[1])) {
@@ -248,18 +461,24 @@ function arg(name) {
 
 const replayPath = arg("--replay");
 if (!replayPath) {
-  console.error("Usage: npm run safety-score-v9:curation-worklist -- --replay <replay.json> [--output <md>]");
+  console.error(
+    "Usage: npm run safety-score-v9:curation-worklist -- --replay <replay.json> " +
+    "[--output <md>] [--ledger <reviewed-ledger.json>] [--include-documentation]",
+  );
   process.exit(2);
 }
+const policy = JSON.parse(readFileSync(POLICY_PATH, "utf8"));
 const replay = JSON.parse(readFileSync(replayPath, "utf8"));
 const registry = generateV9MissingDataRegistry({
   replay,
-  policy: JSON.parse(
-    readFileSync(new URL("../../shared/data/safety-score-v9/methodology-policy-candidate-v1.json", import.meta.url), "utf8"),
-  ),
+  policy,
   catalogEntries: loadPerCoinStablecoinEntries(),
 });
-const output = renderCurationWorklist(replay, registry, replayPath);
+const output = renderCurationWorklist(replay, registry, replayPath, {
+  includeDocumentation: process.argv.includes("--include-documentation"),
+  documentationGaps: collectDocumentationGaps(replay, policy),
+  parkedClaimGroups: await collectParkedClaimGroups(arg("--ledger") ?? DEFAULT_LEDGER_PATH),
+});
 const outputPath = arg("--output");
 if (outputPath) {
   writeFileSync(outputPath, output);
