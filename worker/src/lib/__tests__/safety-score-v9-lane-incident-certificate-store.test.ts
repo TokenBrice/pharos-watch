@@ -14,7 +14,6 @@ import {
   LANE_INCIDENT_CERTIFICATE_MAX_WINDOWS_PER_GROUP,
   laneIncidentCertificateCacheKey,
   laneIncidentCertificateScreeningSetId,
-  listLaneIncidentCertificateHeads,
   loadLaneIncidentCertificate,
   loadLaneIncidentCertificates,
   persistLaneIncidentCertificates,
@@ -274,19 +273,4 @@ describe("lane incident certificate store", () => {
     expect(read.certificate).toEqual(windows[windows.length - 1]);
   });
 
-  it("lists the newest pinned window per lane for scheduling", async () => {
-    const { db } = fixtures.open();
-    const [first, second] = chain();
-    await persistLaneIncidentCertificates(db, [first, second].map((certificate) => ({ certificate, contributorControlIds: ["fixture-owner"] })), NOW);
-
-    await expect(listLaneIncidentCertificateHeads(db)).resolves.toEqual([{
-      deploymentKey: LANE,
-      screeningSetId: laneIncidentCertificateScreeningSetId({ ...second, contributorControlIds: ["fixture-owner"] }),
-      windowStartSec: second.windowStartSec,
-      windowEndSec: second.windowEndSec,
-      fromBlock: second.fromBlock,
-      toBlock: second.toBlock,
-      cacheKey: laneIncidentCertificateCacheKey({ ...second, contributorControlIds: ["fixture-owner"] }),
-    }]);
-  });
 });

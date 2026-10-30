@@ -34,12 +34,9 @@ import { laneIncidentCertificateScreeningSetId } from "./lane-incident-certifica
 import { LANE_ADMIN_EVENT_SCREENING_POLICY_DIGEST } from "./bridge-lane-admin-events";
 
 /**
- * Admitted review scopes: the pre-migration digest scope, authored control
- * identity, the asset-wide issuer surface and provider scope. Provider and
- * issuer-surface witnesses are admitted (a fan-out row keeps its per-lane
- * certificate references) but close no control in v10.38; the
- * provider-screening closure is v10.39 work (OP-IR ruling 5), so unknown kinds
- * stay rejected.
+ * Admitted review scopes: legacy digest, authored control, issuer surface and
+ * provider. Provider/issuer witnesses close only through the three-witness join;
+ * they never act as standalone control reviews.
  */
 const NegativeIncidentRuntimeScopeSchema = z.union([
   V9NegativeIncidentReviewScopeSchema,
@@ -129,6 +126,18 @@ const NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID = createReviewedAssetRegistry({
     : undefined,
   keyPath: "reviewId",
 });
+
+// Provider disclosures are provider-wide even when their review covers only
+// another asset. Keep a raw attribution index; strict admission remains lazy.
+const PROVIDER_REVIEW_ASSETS_BY_KEY = new Map<string, Set<string>>();
+for (const row of incidentEnvelope.negativeReviews ?? []) {
+  const scope = row.scope;
+  if (scope === null || typeof scope !== "object" || !("kind" in scope) || scope.kind !== "provider" ||
+      !("providerKey" in scope) || typeof scope.providerKey !== "string") continue;
+  const assets = PROVIDER_REVIEW_ASSETS_BY_KEY.get(scope.providerKey) ?? new Set<string>();
+  assets.add(row.assetId);
+  PROVIDER_REVIEW_ASSETS_BY_KEY.set(scope.providerKey, assets);
+}
 
 function negativeIncidentReviewIsCurrent(review: NegativeIncidentScope, clockSec: number): boolean {
   const reviewedSec = v9NegativeIncidentReviewTimeSec(review.reviewedAt);
@@ -220,8 +229,8 @@ function negativeReviewCoversControl(
         : authoredControlScopeMatches(scope, control, assetId);
     case "deployment":
       return scope.deploymentKey === control.deploymentKey && scope.controlKinds.includes(control.controlKind);
-    // A provider or issuer-surface witness closes nothing in v10.38; the
-    // provider-screening closure is v10.39 work (OP-IR ruling 5).
+    // These witnesses close only through the separate three-witness lane join,
+    // never as standalone control reviews (OP-IR ruling 5a).
     case "provider":
     case "issuer-surface":
       return false;
@@ -280,9 +289,9 @@ function laneContributorIds(control: ControlOverlay): readonly string[] | null {
 }
 
 /**
- * OQ-1: a `verifier-compromise` the lane could have depended on during the
- * review window blocks closure unless that lane carries a point-in-time
- * exemption (deployed after the exposure, or a pinned read proving the
+ * OQ-1: a `verifier-compromise` the lane could have depended on from the
+ * earliest witness start through evaluation blocks closure unless it carries a
+ * point-in-time exemption (deployed after exposure, or a pinned read proving the
  * compromised verifier set cannot satisfy verification). No observed exploit is
  * not an exemption.
  */
@@ -290,15 +299,14 @@ function providerExposureBlocksLane(
   review: NegativeIncidentScope,
   assetId: string,
   routeId: string,
-  issuerReview: NegativeIncidentScope,
+  windowStartSec: number,
+  clockSec: number,
 ): boolean {
   const incidents: readonly V9ProviderIncidentDisclosure[] = review.providerIncidents ?? [];
   return incidents.some((incident) => {
     if (!V9ProviderIncidentDisclosureSchema.safeParse(incident).success) return true;
     if (incident.class !== "verifier-compromise") return false;
-    if (!v9ProviderExposureIntersectsWindow(incident,
-      Math.min(review.windowStartSec, issuerReview.windowStartSec),
-      Math.max(review.windowEndSec, issuerReview.windowEndSec))) return false;
+    if (!v9ProviderExposureIntersectsWindow(incident, windowStartSec, clockSec)) return false;
     return !incident.exemptions.some((exemption) => exemption.assetId === assetId && exemption.routeId === routeId);
   });
 }
@@ -366,9 +374,9 @@ function laneIncidentClosureWitnesses(
   if (certificate.windowEndSec > clockSec || certificate.observedAtSec > clockSec) return null;
   if (clockSec - certificate.windowEndSec > LANE_INCIDENT_CERTIFICATE_MAX_AGE_SEC) return null;
 
-  const current = reviews.filter((review) => review.assetId === assetId &&
+  const current = reviews.filter((review) =>
     review.retired === undefined && negativeIncidentReviewIsCurrent(review, clockSec));
-  const issuerReview = newestReview(current.filter((review) =>
+  const issuerReview = newestReview(current.filter((review) => review.assetId === assetId &&
     review.scope.kind === "issuer-surface" && review.scope.coveredRoutes.includes(routeId)));
   if (issuerReview === undefined) return null;
 
@@ -376,12 +384,17 @@ function laneIncidentClosureWitnesses(
   if (route.rail !== "issuer-operated") {
     if (route.providerKeys.length === 0) return null;
     for (const providerKey of route.providerKeys) {
-      const covering = current.filter((review) => review.scope.kind === "provider" &&
-        review.scope.providerKey === providerKey &&
+      const providerReviews = current.filter((review) => review.scope.kind === "provider" &&
+        review.scope.providerKey === providerKey);
+      const covering = providerReviews.filter((review) => review.scope.kind === "provider" &&
         review.scope.coveredRoutes.some((ref) => ref.assetId === assetId && ref.routeId === routeId));
       if (covering.length === 0) return null;
+      const windowStartSec = Math.min(issuerReview.windowStartSec, ...covering.map((review) => review.windowStartSec));
+      // A disclosure remains relevant even if its review does not cover this lane
+      // or its exposure begins after the absence witnesses' review windows.
+      if (providerReviews.some((review) =>
+        providerExposureBlocksLane(review, assetId, routeId, windowStartSec, clockSec))) return null;
       for (const review of covering) {
-        if (providerExposureBlocksLane(review, assetId, routeId, issuerReview)) return null;
         providerReviewIds.add(review.reviewId);
       }
     }
@@ -401,8 +414,24 @@ export function getSafetyScoreV9NegativeIncidentReviews(
   if (!Number.isFinite(clockSec) || clockSec < 0) {
     throw new Error("Safety Score v9 negative incident-review clock must be finite and non-negative");
   }
-  return NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID.getAll(assetId).filter((review) =>
+  const local = NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID.getAll(assetId).filter((review) =>
     review.retired === undefined && negativeIncidentReviewIsCurrent(review, clockSec));
+  const reviews = new Map(local.map((review) => [review.reviewId, review]));
+  for (const review of local) {
+    if (review.scope.kind !== "provider") continue;
+    const providerKey = review.scope.providerKey;
+    for (const providerAssetId of PROVIDER_REVIEW_ASSETS_BY_KEY.get(providerKey) ?? []) {
+      for (const disclosureReview of NEGATIVE_INCIDENT_REVIEWS_BY_ASSET_ID.getAll(providerAssetId)) {
+        if (disclosureReview.scope.kind !== "provider" || disclosureReview.scope.providerKey !== providerKey ||
+            disclosureReview.retired !== undefined || !negativeIncidentReviewIsCurrent(disclosureReview, clockSec) ||
+            reviews.has(disclosureReview.reviewId)) continue;
+        // Prefer the local fan-out of a shared review: it retains this lane's
+        // exemption proofs, which foreign fan-outs deliberately omit.
+        reviews.set(disclosureReview.reviewId, disclosureReview);
+      }
+    }
+  }
+  return [...reviews.values()];
 }
 /** Rebuilds the build-time evidence rows; each key embeds its sorted-source index. */
 export function negativeIncidentReviewEvidence(review: NegativeIncidentRuntime): ResearchEvidence[] {

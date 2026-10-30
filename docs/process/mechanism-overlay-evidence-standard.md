@@ -421,26 +421,26 @@ this section records only what v10.38 admits.
 - The runtime registry keys a row by `(assetId, reviewId)`. A provider-wide review is
   authored once per provider and fanned out at build time to one row per covered asset
   while keeping its `reviewId`; every authored lane must survive the fan-out.
-- v10.39 activates closure only for the five reviewed CCIP pilot lanes (FRNT Ethereum,
-  Arbitrum, Base, Optimism; yUSD Ethereum), after the first post-deploy screening cycle
-  writes admitted v2 certificates. Missing or v1 certificates close nothing. Closure
-  needs all of: one current provider review per provider key the route authors (or the
-  issuer-surface review alone when the route metadata declares `rail: "issuer-operated"`),
-  a current issuer-surface review naming the lane, contributor parity between the lane
-  descriptor and the fact's authored control ids, and the newest admitted certificate for
-  `(subjectDeploymentKey, screeningSetId)` with `no-material-admin-event`, a contiguous
-  block chain and a pinned window end within `semantic.evidence.laneIncidentCertificateMaxAgeSec`.
-  The capability gate is gone: a provider review witnesses only the rail.
+- v10.39 closes no lane yet, even with v2 certificates. FRNT Arbitrum/Base/Optimism
+  are global-scope native facts, excluded by the deployment-scope router; FRNT Ethereum
+  is already closed by an existing review. yUSD Ethereum lacks provider keys and an
+  issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Scope is unchanged;
+  the five-lane catalog is screening coverage, not closure authority.
+- Deployment-scope closure needs current provider reviews per authored provider key (or the
+  issuer surface for `rail: "issuer-operated"`), a current issuer surface naming the lane,
+  descriptor/fact contributor parity and the newest v2 certificate for
+  `(subjectDeploymentKey, screeningSetId)`: `no-material-admin-event`, contiguous coverage
+  and a window end within `laneIncidentCertificateMaxAgeSec`. Missing/v1 certificates close nothing.
 - Certificate identifiers are never authored. `laneScreeningRefs` and `coveredControls`
   are removed shapes; `npm run check:incident-review-keys` rejects either, rejects an
   `asset:<id>` route on an issuer row, and rejects a provider renewal that drops an incident
   another current review of the same provider discloses.
-- A provider review carries a required `providerIncidents` array (empty = searched, none
-  found). A `verifier-compromise` whose exposure intersects the review window requires a
-  point-in-time exemption for every covered lane (deployed after the exposure, or a pinned
-  verification-config read that excludes the compromised verifier); no observed exploit and
-  no current DVN configuration exempt a lane. Other classes must not name a covered lane,
-  and only `verifier-compromise` carries exemptions.
+- `providerIncidents` is required (empty = searched, none found). OQ-1 checks every current
+  provider-key disclosure from earliest witness start through evaluation, including
+  non-covering reviews and exposure after witness windows. Verifier compromise requires
+  deployment after finite exposure end or pinned exposure-time config excluding compromised-only
+  verification; no observed exploit/current config is an exemption. Other classes cannot name
+  covered lanes; only `verifier-compromise` carries exemptions.
 - `incidentCoverage` on a compiled fact is derived provenance written by the router
   (`provider-screening`: provider review ids, the issuer-surface review id, the screening
   set, the certificate id and the contributor ids), never authored input.

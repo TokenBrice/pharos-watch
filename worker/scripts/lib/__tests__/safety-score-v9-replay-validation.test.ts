@@ -10,6 +10,8 @@ import { localRegistrySnapshot } from "../safety-score-v9-registry";
 import { domainDigest } from "@shared/lib/safety-score-v9/primitives";
 import { computeV9ResultDigest } from "@shared/lib/safety-score-v9/trace";
 import { validateSafetyScoreV9ReplayIntegrity, reproduceSafetyScoreV9Replay } from "../safety-score-v9-replay-validation";
+import { buildSafetyScoreV9ReplayLaneScreening } from "../../../src/lib/safety-score-v9/publication-replay-capture";
+import { loadReviewedLaneEmitterCatalog } from "../../../src/lib/safety-score-v9/lane-emitter-catalog";
 
 function fixture() {
   const fixedInput = createReplayFixedInput(v9TestClockSec());
@@ -66,6 +68,25 @@ describe("permanent replay integrity", () => {
     if (kind === "card") p.candidate.cards[0]!.score = 99;
     if (kind === "build") p.candidateIdentity.evaluationBuildDigest = "a".repeat(64);
     expect(() => validateSafetyScoreV9ReplayIntegrity(artifact)).toThrow();
+  });
+
+  it("retains, validates and reproduces the exact lane-screening provenance", () => {
+    const fixedInput = createReplayFixedInput(v9TestClockSec());
+    const laneScreening = buildSafetyScoreV9ReplayLaneScreening({
+      certificates: new Map(), descriptors: loadReviewedLaneEmitterCatalog().descriptors,
+    });
+    const artifact = buildSafetyScoreV9ReplayArtifact({ fixedInput, laneScreening, publishedAtSec: fixedInput.clockSec });
+    expect(artifact.laneScreening).toEqual(laneScreening);
+    const p = artifact.pipeline;
+    expect(() => reproduceSafetyScoreV9Replay(artifact, {
+      sourceRevision: execFileSync("git", ["rev-parse", "HEAD"], { encoding: "utf8" }).trim(),
+      policyId: p.candidateIdentity.policyId, policyDigest: p.candidateIdentity.policyDigest,
+      evaluationBuildDigest: p.candidateIdentity.evaluationBuildDigest, registrySnapshot: localRegistrySnapshot(),
+      publishedAtSec: p.candidate.publishedAtSec, transferMaterialityGeneration: null,
+    })).not.toThrow();
+    expect(() => validateSafetyScoreV9ReplayIntegrity({
+      ...artifact, laneScreening: { ...laneScreening, digest: "0".repeat(64) },
+    })).toThrow("Replay lane screening digest mismatch");
   });
 
   it("requires intended source, registry, clock and explicit enrichment for reproduction", () => {

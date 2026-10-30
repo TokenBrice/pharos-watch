@@ -31,4 +31,33 @@ describe("reviewed lane emitter catalog", () => {
     expect(adaptLaneEmitterCatalog([source], "f".repeat(64))).toMatchObject({ descriptors: [],
       reasons: [`lane-descriptor-policy-mismatch:${source.subjectDeploymentKey}`] });
   });
+  it("rejects missing reviewed emitters even when provenance is narrowed consistently", () => {
+    const source = catalog.descriptors.find((row) => row.emitters.length > 1)!;
+    const emitters = source.emitters.slice(1);
+    const addresses = new Set(emitters.map((row) => row.address));
+    const result = adaptLaneEmitterCatalog([{ ...source, emitters, provenance: { ...source.provenance,
+      emitters: source.provenance.emitters.filter((row) => addresses.has(row.address)),
+      contributors: source.provenance.contributors.map((row) => ({
+        ...row, emitterAddresses: row.emitterAddresses.filter((address) => addresses.has(address)),
+      })).filter((row) => row.emitterAddresses.length > 0),
+      controlIds: source.provenance.contributors.filter((row) => row.emitterAddresses.some((address) => addresses.has(address)))
+        .map((row) => row.controlId),
+    } }]);
+    expect(result).toEqual({ descriptors: [], reasons: [`lane-descriptor-inventory-mismatch:${source.subjectDeploymentKey}`] });
+  });
+
+  it("rejects event-family narrowing relative to the reviewed inventory", () => {
+    const source = catalog.descriptors[0];
+    const result = adaptLaneEmitterCatalog([{ ...source, emitters: source.emitters.map((row, index) =>
+      index === 0 ? { ...row, families: row.families.slice(1) } : row) }]);
+    expect(result).toEqual({ descriptors: [], reasons: [`lane-descriptor-inventory-mismatch:${source.subjectDeploymentKey}`] });
+  });
+
+  it("rejects provenance inconsistent with admitted emitter identity", () => {
+    const source = catalog.descriptors[0];
+    const result = adaptLaneEmitterCatalog([{ ...source, provenance: { ...source.provenance,
+      emitters: source.provenance.emitters.map((row, index) => index === 0 ? { ...row, chain: "wrong-chain" } : row),
+    } }]);
+    expect(result).toEqual({ descriptors: [], reasons: [`lane-descriptor-provenance-mismatch:${source.subjectDeploymentKey}`] });
+  });
 });

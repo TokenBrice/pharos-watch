@@ -46,6 +46,13 @@ export function adaptLaneEmitterCatalog(rows: readonly unknown[], policyDigest =
       fail("lane-descriptor-pin-mismatch"); continue;
     }
     const addresses = new Set(row.emitters.map((emitter) => emitter.address));
+    if (addresses.size !== row.emitters.length || reviewed.emitters.length !== addresses.size ||
+        reviewed.emitters.some((entry) => {
+          const emitter = row.emitters.find((candidate) => candidate.address === entry.address);
+          return emitter === undefined || entry.adminEvents.some((family) => !emitter.families.includes(family));
+        })) {
+      fail("lane-descriptor-inventory-mismatch"); continue;
+    }
     if (controls.size !== row.provenance.controlIds.length ||
         row.provenance.contributors.length !== controls.size ||
         new Set(row.provenance.contributors.map((entry) => entry.controlId)).size !== controls.size ||

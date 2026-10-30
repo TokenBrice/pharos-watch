@@ -75,7 +75,6 @@ export interface LaneIncidentCertificateScreeningSetInput {
 export type LaneIncidentCertificateCacheKeyInput = LaneIncidentCertificateScreeningSetInput &
   Pick<
     V9LaneIncidentCertificate,
-
     | "fromBlock"
     | "toBlock"
     | "windowStartSec"
@@ -490,53 +489,6 @@ export async function loadLaneIncidentCertificates(
   return results;
 }
 
-export interface LaneIncidentCertificateHead {
-  deploymentKey: string;
-  screeningSetId: string;
-  windowStartSec: number;
-  windowEndSec: number;
-  fromBlock: number;
-  toBlock: number;
-  cacheKey: string;
-}
-
-/**
- * Scheduling hint for the screening producer: the newest retained pinned window
- * per lane, read from keys only so no certificate body is transferred. Chain
- * continuity and freshness remain the read API's verdict, not this list's.
- */
-export async function listLaneIncidentCertificateHeads(
-  db: D1Database,
-  options: { signal?: AbortSignal } = {},
-): Promise<LaneIncidentCertificateHead[]> {
-  throwIfAborted(options.signal);
-  const familyKeys = await readFamilyKeys(db, options.signal);
-  const newestByLane = new Map<string, LaneIncidentCertificateHead>();
-  for (const key of familyKeys) {
-    const parsed = parseLaneIncidentCertificateKey(key);
-    if (!parsed) continue;
-    const current = newestByLane.get(parsed.deploymentKey);
-    if (
-      current === undefined ||
-      parsed.windowEndSec > current.windowEndSec ||
-      (parsed.windowEndSec === current.windowEndSec && parsed.windowStartSec > current.windowStartSec) ||
-      (parsed.windowEndSec === current.windowEndSec &&
-        parsed.windowStartSec === current.windowStartSec &&
-        compareText(parsed.screeningSetId, current.screeningSetId) < 0)
-    ) {
-      newestByLane.set(parsed.deploymentKey, {
-        deploymentKey: parsed.deploymentKey,
-        screeningSetId: parsed.screeningSetId,
-        windowStartSec: parsed.windowStartSec,
-        windowEndSec: parsed.windowEndSec,
-        fromBlock: parsed.fromBlock,
-        toBlock: parsed.toBlock,
-        cacheKey: key,
-      });
-    }
-  }
-  return [...newestByLane.values()].sort((left, right) => compareText(left.deploymentKey, right.deploymentKey));
-}
 
 interface PruneCandidate {
   cacheKey: string;

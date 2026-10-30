@@ -196,9 +196,9 @@ Score-map/yield retain null denominators/ratios, empty map, reason and null iden
 
 ## History
 
-v10.39 enables incident-lane closure only for the reviewed five-lane CCIP pilot (FRNT on Ethereum, Arbitrum, Base and Optimism; yUSD on Ethereum), after each lane's first admitted certificate and matching current issuer/provider reviews exist. No certificate means no closure. The join binds the reviewed contributors, emitter pins and event families to the frozen screening policy and the descriptor's own contiguous certificate chain; issuer-operated rails cannot bypass third-party provider review, and verifier-compromise exemptions require exposure-time proof. Replay captures the descriptors and certificates actually consumed. Other lanes remain open until reviewed descriptor coverage and all required witnesses exist.
+v10.39 closes no lane yet, even after post-deploy v2 certificates arrive. FRNT Arbitrum, Base and Optimism are global-scope native facts; the certificate router closes deployment-scope lanes only. FRNT Ethereum is already closed by an existing review, not a certificate. yUSD Ethereum has no provider keys and no issuer-surface review. Of 40 issuer-operated lanes, 33 are global-scope. Router scope is unchanged; extending it requires a separate owner decision.
 
-The first eligible certificates must come from the first post-deploy v2 screening cycle; retained v1 certificates cannot satisfy the contributor-bound join.
+The five-lane screening catalog is not closure authority. The join still requires current issuer/provider witnesses, contributor parity, reviewed emitter pins/families, frozen policy and a contiguous current v2 certificate chain; retained v1 or missing certificates close nothing. OQ-1 checks current provider disclosures through evaluation, including exposure after witness windows and reviews not covering the lane. Replay retains the exact descriptors/certificates consumed.
 
 Asset-local build/admission/schema/evaluation/public-card failures yield technical `pipeline-gap` with null score/grade, never issuer NR. Continue unaffected assets only with ≥90% unaffected active assets, counting quarantines and their affected dependents, and every other gate passing; unattributable graph/aggregate/evaluator/identity/global failures hold the cohort.
 

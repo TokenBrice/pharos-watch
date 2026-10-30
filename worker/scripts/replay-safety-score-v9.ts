@@ -152,6 +152,8 @@ export interface SafetyScoreV9ReplayArtifact {
   pipeline: Readonly<SafetyScoreV9CandidatePipelineResult>;
   /** v3 accepted captures: the prior accepted baseline the publication was admitted against (null = bootstrap). */
   sourceAdmissionBaseline?: SafetyScoreV9AcceptedPublicationBaseline | null;
+  /** Exact lane witnesses retained for downstream replay/reproduction. */
+  laneScreening?: SafetyScoreV9ReplayLaneScreening | null;
   replayScenario?: {
     kind: "current-redemption-rederivation";
     sourceBaseInputGenerationId: string;
@@ -359,6 +361,7 @@ export function buildSafetyScoreV9ReplayArtifact(input: {
       reason: "v9-replay-only",
     },
     ...(sourceAdmissionBaseline === undefined ? {} : { sourceAdmissionBaseline }),
+    ...(laneScreening === undefined ? {} : { laneScreening }),
     pipeline: buildSafetyScoreV9Candidate({
       ...candidateInput,
       // The lane witnesses the publication actually read: without them a
