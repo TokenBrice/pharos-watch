@@ -104,6 +104,50 @@ function dedupeAndSortPrices(prices: PricePoint[]): PricePoint[] {
     .sort((left, right) => left.timestamp - right.timestamp);
 }
 
+/**
+ * Withhold a daily price point when it is outside this factor of the median of
+ * its neighbouring week: a 10^-6 scaling defect or a one-day venue wick cannot
+ * be allowed to value native supply. The depeg replay keeps the raw series and
+ * its own confirmation rules; supply valuation fails closed instead.
+ */
+const DAILY_PRICE_OUTLIER_MAX_RATIO = 2;
+const DAILY_PRICE_OUTLIER_WINDOW = 3;
+
+export function screenDailyPriceOutliers(prices: readonly PricePoint[]): {
+  prices: PricePoint[];
+  removed: PricePoint[];
+} {
+  if (prices.length < 3) return { prices: [...prices], removed: [] };
+  const kept: PricePoint[] = [];
+  const removed: PricePoint[] = [];
+  for (let index = 0; index < prices.length; index++) {
+    const point = prices[index]!;
+    const neighbours: number[] = [];
+    for (let offset = 1; offset <= DAILY_PRICE_OUTLIER_WINDOW; offset++) {
+      const before = prices[index - offset];
+      const after = prices[index + offset];
+      if (before) neighbours.push(before.price);
+      if (after) neighbours.push(after.price);
+    }
+    if (neighbours.length < 2) {
+      kept.push(point);
+      continue;
+    }
+    const sorted = neighbours.slice().sort((left, right) => left - right);
+    const middle = sorted.length / 2;
+    const median = sorted.length % 2 === 1
+      ? sorted[Math.floor(middle)]!
+      : (sorted[middle - 1]! + sorted[middle]!) / 2;
+    const ratio = point.price / median;
+    if (ratio > DAILY_PRICE_OUTLIER_MAX_RATIO || ratio < 1 / DAILY_PRICE_OUTLIER_MAX_RATIO) {
+      removed.push(point);
+      continue;
+    }
+    kept.push(point);
+  }
+  return { prices: kept, removed };
+}
+
 function appendUniqueSources(
   target: HistoricalMarketSource[],
   source: HistoricalMarketSource,

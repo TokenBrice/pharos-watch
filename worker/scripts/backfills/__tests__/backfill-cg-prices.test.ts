@@ -79,6 +79,45 @@ describe("handleBackfillCgPrices", () => {
     expect(body.totalRowsInserted).toBe(0);
     expect(body.errors).toBeUndefined();
   });
+
+  it("inserts a CoinGecko market cap only for a CoinGecko-authority coin", async () => {
+    const insertTables = [
+      { match: "SELECT snapshot_date, price, circulating_usd FROM supply_history", rows: [] },
+      { match: "INSERT OR IGNORE INTO supply_history", rows: [] },
+    ];
+    const cgAuthorityDb = mockD1(insertTables);
+    const cgAuthority = await handleBackfillCgPricesTrusted({
+      db: cgAuthorityDb,
+      url: makeApiUrl("/api/backfill-cg-prices?stablecoin=jpyc-jpyc"),
+    });
+    const cgBody = (await readJsonResponse(cgAuthority, 200)) as {
+      totalRowsInserted: number;
+      totalSupplyRowsSkipped?: number;
+      errors?: string[];
+    };
+    expect(cgBody.totalRowsInserted).toBe(1);
+    expect(cgBody.totalSupplyRowsSkipped).toBeUndefined();
+    expect(cgBody.errors).toBeUndefined();
+
+    // feUSD's frozen 75.0M CoinGecko cap is another provider's circulating
+    // snapshot; the DefiLlama detail history owns this coin's supply.
+    const dlAuthorityDb = mockD1([insertTables[0]!]);
+    const dlAuthority = await handleBackfillCgPricesTrusted({
+      db: dlAuthorityDb,
+      url: makeApiUrl("/api/backfill-cg-prices?stablecoin=feusd-felix"),
+    });
+    const dlBody = (await readJsonResponse(dlAuthority, 200)) as {
+      totalRowsInserted: number;
+      totalSupplyRowsSkipped?: number;
+      coinDetails?: Array<{ supplyRowsSkipped?: number }>;
+      errors?: string[];
+    };
+    expect(dlBody.totalRowsInserted).toBe(0);
+    expect(dlBody.totalSupplyRowsSkipped).toBe(1);
+    expect(dlBody.coinDetails?.[0]?.supplyRowsSkipped).toBe(1);
+    expect(dlBody.errors).toBeUndefined();
+    expect(dlAuthorityDb.getHistory().some(({ sql }) => sql.includes("INSERT OR IGNORE INTO supply_history"))).toBe(false);
+  });
 });
 
 it("does not import recycled Solomon CG market caps or prices into either generation", async () => {

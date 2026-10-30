@@ -175,6 +175,7 @@ Validation gates (skip if any fail):
 - Supply >= $1M (via `getCirculatingRawOrNull()`) for live event recording. Observed sub-floor supply, including zero, closes existing rows as `coverage-lost-supply` with `recovery_price = NULL`; unavailable supply keeps the lifecycle open and records blind coverage
 - Peg reference valid: finite and > 0
 - Non-USD fiat peg references use the live FX rate whenever it is available. A peer median is only a fallback when at least 3 live contributors remain; thin peer medians and empty live peer sets fail closed for that cycle
+- Floating `VAR`/`OTHER` pegs have no authoritative reference — their peer median is another coin's level, not a peg — so signal derivation fails closed and they cannot open or mutate live depeg state
 - Supported non-USD fiat pegs with reliable CoinGecko native pairs also consult a fresh native-currency quote before mutating live state; a native quote inside the recovery band or pointing the other way vetoes the derived USD/FX onset for that cycle, while a threshold-crossing native quote can initiate a pending candidate when the primary USD-vs-reference path is still inside threshold
 
 Primary-price trust gates:

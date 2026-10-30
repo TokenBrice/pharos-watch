@@ -43,6 +43,22 @@ describe("deriveAuthoritativePegSignal", () => {
     });
   });
 
+  it.each(["VAR", "OTHER"])("rejects a %s floating peg even when a peer median exists", (pegCurrency) => {
+    const pegType = `pegged${pegCurrency}`;
+    expect(deriveAuthoritativePegSignal({
+      price: 3.3,
+      pegCurrency,
+      pegType,
+      pegRates: { [pegType]: 1.3981271437245135 },
+      pegRateSources: { [pegType]: "median" },
+      pegRateCounts: { [pegType]: 5 },
+    })).toMatchObject({
+      kind: "rejected",
+      reason: "non-authoritative-reference",
+      evidence: { pegType, source: "median", contributorCount: 5 },
+    });
+  });
+
   it("rejects a commodity peg when its derived rate is missing", () => {
     expect(deriveAuthoritativePegSignal({
       price: 3_000,

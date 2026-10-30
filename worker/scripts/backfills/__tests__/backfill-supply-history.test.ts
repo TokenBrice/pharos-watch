@@ -60,21 +60,25 @@ vi.mock("../../../src/lib/evm-rpc", async (importOriginal) => {
   };
 });
 
-vi.mock("../../../src/lib/historical-market-prices", () => ({
-  fetchMarketBackfillPriceSeries: vi.fn(async () => ({
-    prices: [{ timestamp: 1_700_000_000, price: 1.001 }],
-    diagnostics: {
-      granularity: "daily",
-      sourcesUsed: ["coingecko"],
-      quoteMode: "usd",
-      quoteCurrency: "usd",
-      mergeReasons: [],
-      perSourceStats: [],
-      policyAdjustments: [],
-      finalPointCount: 1,
-    },
-  })),
-}));
+vi.mock("../../../src/lib/historical-market-prices", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../../../src/lib/historical-market-prices")>();
+  return {
+    ...actual,
+    fetchMarketBackfillPriceSeries: vi.fn(async () => ({
+      prices: [{ timestamp: 1_700_000_000, price: 1.001 }],
+      diagnostics: {
+        granularity: "daily",
+        sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 1,
+      },
+    })),
+  };
+});
 
 import { handleBackfillSupplyHistoryTrusted } from "../backfill-supply-history";
 import { fetchMarketBackfillPriceSeries } from "../../../src/lib/historical-market-prices";
@@ -516,6 +520,64 @@ describe("handleBackfillSupplyHistory", () => {
     expect(inserts).toHaveLength(0);
     expect(fetchMarketBackfillPriceSeries).toHaveBeenCalled();
     expect(fetchHistoricalFxRates).not.toHaveBeenCalled();
+  });
+
+  it("withholds a non-USD day whose price is an isolated excursion from the surrounding week", async () => {
+    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const days = [1_730_505_600, 1_730_592_000, 1_730_678_400, 1_730_764_800, 1_730_851_200]; // 2024-11-02..06
+    vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValue({
+      prices: [
+        { timestamp: days[0]!, price: 0.169 },
+        { timestamp: days[1]!, price: 0.169 },
+        { timestamp: days[2]!, price: 0.0795 },
+        { timestamp: days[3]!, price: 0.172 },
+        { timestamp: days[4]!, price: 0.172 },
+      ],
+      diagnostics: {
+        granularity: "daily",
+        sourcesUsed: ["coingecko"],
+        quoteMode: "usd",
+        quoteCurrency: "usd",
+        mergeReasons: [],
+        perSourceStats: [],
+        policyAdjustments: [],
+        finalPointCount: 5,
+      },
+    });
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          price: 1,
+          tokens: days.map((date) => ({ date, circulating: { peggedEUR: 1_000_000 } })),
+        }),
+        { status: 200, headers: { "Content-Type": "application/json" } },
+      ),
+    );
+
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db,
+      url: makeApiUrl("/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2024-11-02&endDay=2024-11-06"),
+      request: makeApiRequest("/api/backfill-supply-history?stablecoin=eurc-circle&startDay=2024-11-02&endDay=2024-11-06", {
+        adminKey: "secret",
+      }),
+    });
+
+    const body = (await readJsonResponse(res, 200)) as {
+      coinsProcessed: number;
+      rowsInserted: number;
+      errors?: string[];
+    };
+    expect(body.coinsProcessed).toBe(1);
+    expect(body.rowsInserted).toBe(5);
+    expect(body.errors).toBeUndefined();
+    const inserts = db.getHistory().filter((stmt) =>
+      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+    );
+    // The excursion is withheld from valuation; the day is interpolated from
+    // its neighbours instead of publishing 0.0795 as that day's market price.
+    const outlierDay = inserts.find((stmt) => stmt.binds[1] === days[2]);
+    expect(outlierDay?.binds[3] as number).toBeGreaterThan(0.169);
+    expect(outlierDay?.binds[3] as number).toBeLessThan(0.172);
   });
 
   it("falls back to historical on-chain totalSupply when CoinGecko market caps are all zero", async () => {

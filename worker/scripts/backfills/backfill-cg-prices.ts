@@ -10,6 +10,7 @@ import { RATE_LIMITS } from "../../src/lib/rate-limit";
 import { noCoinsInBatchResponse, selectBackfillCoins } from "../../src/lib/backfill-query";
 import {
   fetchMarketBackfillPriceSeries,
+  screenDailyPriceOutliers,
   type HistoricalMarketSourceDiagnostics,
   type PricePoint,
 } from "../../src/lib/historical-market-prices";
@@ -21,6 +22,7 @@ interface CoinResult {
   symbol: string;
   pricesFilled: number;
   rowsInserted: number;
+  supplyRowsSkipped?: number;
   diagnostics?: HistoricalMarketSourceDiagnostics;
 }
 
@@ -46,6 +48,7 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
   const apiKey = cgApiKey ?? null;
   let totalPricesFilled = 0;
   let totalRowsInserted = 0;
+  let totalSupplyRowsSkipped = 0;
   const coinDetails: CoinResult[] = [];
   const skipped: string[] = [];
   const errors: string[] = [];
@@ -94,7 +97,7 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
         granularity: "daily",
         seedCoinGeckoPrices,
       });
-      const mergedPrices = priceSeries.prices ?? [];
+      const mergedPrices = screenDailyPriceOutliers(priceSeries.prices ?? []).prices;
 
       if (mergedPrices.length === 0) {
         skipped.push(`${meta.symbol} (no historical market price data)`);
@@ -130,9 +133,17 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
         });
       }
 
+      // A CoinGecko market cap is only the coin's supply when CoinGecko is
+      // that coin's admitted supply provider. For a DefiLlama-authority coin
+      // it is another provider's circulating snapshot (feUSD's frozen 75.0M
+      // cap), so inserting it would publish a second authority beside the
+      // DefiLlama detail history owned by backfill-supply-history.
+      const cgIsSupplyAuthority = meta.detailProvider !== "defillama";
+
       const stmts: D1PreparedStatement[] = [];
       let pricesFilled = 0;
       let rowsInserted = 0;
+      let supplyRowsSkipped = 0;
 
       for (const [date, price] of priceByDate) {
         const existingRow = existingDates.get(date);
@@ -151,9 +162,11 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
           }
           // Existing row with price -> skip (preserve DL data)
         } else {
-          // No existing row -> insert with market cap if available
+          // No existing row -> insert with market cap only for a CoinGecko-authority coin
           const mcap = mcapByDate.get(date);
-          if (mcap && mcap > 0) {
+          if (mcap && mcap > 0 && !cgIsSupplyAuthority) {
+            supplyRowsSkipped++;
+          } else if (mcap && mcap > 0) {
             stmts.push(
               db
                 .prepare(
@@ -172,11 +185,13 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
 
       totalPricesFilled += pricesFilled;
       totalRowsInserted += rowsInserted;
+      totalSupplyRowsSkipped += supplyRowsSkipped;
       coinDetails.push({
         id: meta.id,
         symbol: meta.symbol,
         pricesFilled,
         rowsInserted,
+        ...(supplyRowsSkipped > 0 ? { supplyRowsSkipped } : {}),
         diagnostics: priceSeries.diagnostics,
       });
     } catch (err) {
@@ -188,6 +203,7 @@ async function executeBackfillCgPrices(db: D1Database, url: URL, cgApiKey?: stri
     coinsProcessed: coinDetails.length,
     totalPricesFilled,
     totalRowsInserted,
+    totalSupplyRowsSkipped: totalSupplyRowsSkipped > 0 ? totalSupplyRowsSkipped : undefined,
     coinDetails: coinDetails.length > 0 ? coinDetails : undefined,
     skipped: skipped.length > 0 ? skipped : undefined,
     errors: errors.length > 0 ? errors : undefined,

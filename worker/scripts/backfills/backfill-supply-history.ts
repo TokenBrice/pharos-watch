@@ -32,7 +32,7 @@ import {
 } from "../../src/lib/onchain-supply-exclusions";
 import { getPublicFallbackRpcUrls } from "../../src/lib/public-rpc-registry";
 import { extractDefiLlamaCoinChartPrices } from "../../src/api/stablecoin-detail/shared";
-import { fetchMarketBackfillPriceSeries } from "../../src/lib/historical-market-prices";
+import { fetchMarketBackfillPriceSeries, screenDailyPriceOutliers } from "../../src/lib/historical-market-prices";
 import { parseOptionalDayWindow } from "../../src/lib/backfill-day-window";
 import { interpolateRateAtTimestamp, type TimestampedRatePoint } from "@shared/lib/rate-series";
 import {
@@ -197,6 +197,16 @@ function backfillWindowToFetchRange(
 
 function getLastCompletedUtcDay(nowSec = Math.floor(Date.now() / 1000)): number {
   return bucketUnixSecondsToUtcDay(nowSec - DAY_SECONDS);
+}
+
+/** CoinGecko milliseconds pairs minus isolated daily scale excursions. */
+function screenCoinGeckoDailyPrices(prices: [number, number][]): [number, number][] {
+  return screenDailyPriceOutliers(
+    prices
+      .filter(([ts, price]) => Number.isFinite(ts) && Number.isFinite(price) && price > 0)
+      .map(([ts, price]) => ({ timestamp: Math.floor(ts / 1000), price }))
+      .sort((left, right) => left.timestamp - right.timestamp),
+  ).prices.map((point) => [point.timestamp * 1000, point.price]);
 }
 
 function normalizeCoinGeckoDailyPrices(prices: [number, number][]): TimestampedRatePoint[] {
@@ -642,13 +652,15 @@ async function backfillCommodity(
         cgMcapByTimestamp.set(ts, mcap);
       }
     }
+    const screenedPricePairs = screenCoinGeckoDailyPrices(marketHistory.prices);
+    const screenedPrices = screenedPricePairs.map(([ts, price]) => ({ timestamp: ts / 1000, price }));
 
     const stmts: D1PreparedStatement[] = [];
     const seenSnapshotDates = new Set<number>();
     let missingMarketCapDays = 0;
 
-    for (const [ts, price] of marketHistory.prices) {
-      if (!Number.isFinite(ts) || !Number.isFinite(price) || price <= 0) continue;
+    for (const { timestamp, price } of screenedPrices) {
+      const ts = timestamp * 1000;
       const snapshotDate = bucketUnixMillisecondsToUtcDay(ts) / 1000;
       if (seenSnapshotDates.has(snapshotDate)) continue;
       if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
@@ -669,7 +681,7 @@ async function backfillCommodity(
         const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
           chainRpcs: config.chainRpcs,
           blockSearchCachesByChain: config.blockSearchCachesByChain,
-          priceSeries: normalizeCoinGeckoDailyPrices(marketHistory.prices),
+          priceSeries: normalizeCoinGeckoDailyPrices(screenedPricePairs),
           requirePrice: true,
           skipSnapshotDates: seenSnapshotDates,
           window: config.window,
@@ -691,7 +703,7 @@ async function backfillCommodity(
     const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
       chainRpcs: config.chainRpcs,
       blockSearchCachesByChain: config.blockSearchCachesByChain,
-      priceSeries: normalizeCoinGeckoDailyPrices(marketHistory.prices),
+      priceSeries: normalizeCoinGeckoDailyPrices(screenedPricePairs),
       requirePrice: true,
       window: config.window,
       signal: config.signal,
@@ -882,7 +894,9 @@ async function executeBackfillSupplyHistory(
         const result = await backfillHistoricalTotalSupply(db, meta, {
           chainRpcs,
           blockSearchCachesByChain,
-          priceSeries: marketHistory ? normalizeCoinGeckoDailyPrices(marketHistory.prices) : [],
+          priceSeries: marketHistory
+            ? normalizeCoinGeckoDailyPrices(screenCoinGeckoDailyPrices(marketHistory.prices))
+            : [],
           requirePrice: true,
           parPrice: getParPolicyPrice(meta),
           window: supplyBackfillWindow,
@@ -1010,6 +1024,11 @@ async function executeBackfillSupplyHistory(
         price: point.rate,
       }));
     }
+
+    // Supply valuation must not multiply native supply by a lone price-scale
+    // excursion the surrounding week does not corroborate (BRLA 2024-11-04/05,
+    // iUSD 2024-01-11). The day is withheld, never valued at a bad print.
+    historicalPrices = screenDailyPriceOutliers(historicalPrices).prices;
 
     // For non-USD coins: require historical price data by default.
     // Optional emergency fallback can use current price for only a short recent window.
