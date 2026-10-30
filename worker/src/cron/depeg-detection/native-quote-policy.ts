@@ -1,5 +1,5 @@
 import { isNativePegEvent } from "@shared/lib/depeg-quote-domain";
-import type { PegAssetBase } from "@shared/types/core";
+import type { DepegPrimaryTrust, PegAssetBase } from "@shared/types/core";
 import {
   signalCrossesThreshold,
   signalIsWithinThreshold,
@@ -35,7 +35,7 @@ export function resolvePeakUpdateCommand(params: {
   nativePegPrice: number | null;
   primarySignal: DepegSignal;
   primaryPrice: number;
-  primaryTrust: "authoritative" | "confirm_required";
+  primaryTrust: DepegPrimaryTrust;
   dexSupportsDirection: boolean;
 }): Extract<DepegPersistenceCommand, { type: "update-peak" }> | null {
   const nativeEvent = isNativePegEvent(params.existing);
