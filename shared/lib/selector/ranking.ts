@@ -148,6 +148,12 @@ export function rankScoredEntries(
   return ranked;
 }
 
+/** Margin between the published (rounded) scores, so the live run and the
+ * frozen snapshot projection cannot disagree by a rounding tail. */
+function publishedScoreMargin(entry: ScoredEntry, next: ScoredEntry): number {
+  return round1(Math.max(0, round1(entry.score) - round1(next.score)));
+}
+
 export function rankRobustnessFor(
   entries: readonly ScoredEntry[],
   index: number,
@@ -155,10 +161,10 @@ export function rankRobustnessFor(
   const entry = entries[index];
   const next = entries[index + 1];
   if (entry?.concentrationAdjusted) {
-    return { label: "concentration-adjusted", scoreMargin: next ? round1(Math.max(0, entry.score - next.score)) : null };
+    return { label: "concentration-adjusted", scoreMargin: next ? publishedScoreMargin(entry, next) : null };
   }
   if (!entry || !next) return { label: "clear-margin", scoreMargin: null };
-  const margin = round1(Math.max(0, entry.score - next.score));
+  const margin = publishedScoreMargin(entry, next);
   if (margin < RANK_MARGIN_NARROW) return { label: "narrow-margin", scoreMargin: margin };
   if (margin < RANK_MARGIN_CROWDED) return { label: "crowded-field", scoreMargin: margin };
   return { label: "clear-margin", scoreMargin: margin };

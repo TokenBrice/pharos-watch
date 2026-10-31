@@ -157,6 +157,13 @@ describe("selectLowerRanked — Slot B", () => {
     const slotB = result.find((r) => r.slot === "B");
     expect(slotB).toBeDefined();
     expect(slotB!.id).toBe("r4");
+    // Slot B is a survivor that ranked lower on an emphasized weight, not an
+    // excluded coin: the published watch-out must not claim a profile mismatch
+    // or a constraint it missed.
+    expect(slotB!.verdictText).toContain("weaker on");
+    expect(slotB!.verdictText).not.toMatch(/profile mismatch/i);
+    expect(slotB!.teachingText).not.toMatch(/\bmissed\b/i);
+    expect(slotB!.teachingText).not.toMatch(/relaxing that constraint/i);
   });
 
   it("returns 0 when scored.length < 5 (insufficient candidates)", () => {

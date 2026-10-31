@@ -23,6 +23,7 @@ import {
 } from "@shared/lib/telegram-mini-app-contract";
 
 import { createMiniAppSqlite } from "../../webhook/__tests__/telegram-sqlite.test-support.ts";
+import { isQuietHoursActive } from "../../common/quiet-hours";
 
 const sqliteFixtures: Array<{ sqlite: DatabaseSync; db: D1Database }> = [];
 function persistedDb(options: SqliteD1Options = {}) {
@@ -429,6 +430,35 @@ describe("handleTelegramMiniAppMutation", () => {
         quiet_hours_end_utc: index === 3 ? 10 : 9,
       });
     }
+  });
+
+  it.each([
+    { label: "start only", operation: { kind: "set-quiet-hours", enabled: true, startHourUtc: 7 } },
+    { label: "end only", operation: { kind: "set-quiet-hours", enabled: true, endHourUtc: 22 } },
+  ] as const)("never persists an enabled quiet window that suppresses every hour ($label)", async ({ operation }) => {
+    const initData = await privateInitData();
+    const { db, sqlite } = persistedDb();
+
+    const response = await handleTelegramMiniAppMutation(db, makeMiniAppRequest("/api/telegram-mini-app/mutate", {
+      initData,
+      operation,
+    }), BOT_TOKEN);
+
+    const row = sqlite.prepare(`
+      SELECT quiet_hours_enabled, quiet_hours_start_utc, quiet_hours_end_utc
+      FROM telegram_subscribers WHERE chat_id = '42'
+    `).get() as {
+      quiet_hours_enabled: number;
+      quiet_hours_start_utc: number | null;
+      quiet_hours_end_utc: number | null;
+    };
+    const enabled = row.quiet_hours_enabled === 1;
+    const suppressesSomeHour = Array.from({ length: 24 }, (_, hour) =>
+      isQuietHoursActive(hour * 3600, enabled, row.quiet_hours_start_utc, row.quiet_hours_end_utc),
+    ).some(Boolean);
+
+    expect(response.status).not.toBe(500);
+    expect(enabled && !suppressesSomeHour).toBe(false);
   });
 
   it("clears subscriber snooze through the Mini App mutation path", async () => {

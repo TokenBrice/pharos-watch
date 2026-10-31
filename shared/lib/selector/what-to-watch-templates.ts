@@ -291,6 +291,14 @@ export function getLowerRankedText(
   const label = entry.failedComponent
     ? selectorComponentProseLabel(entry.failedComponent) ?? "the emphasized metric"
     : labelForSelectorReason(entry.reasonKey);
+  // Slot B is a survivor that ranked lower on an emphasized weight
+  // (`weak-<component>`), not a coin an exclusion rejected.
+  if (entry.reasonKey.startsWith("weak-")) {
+    return {
+      verdictText: `${entry.symbol}: weaker on ${label}`,
+      teachingText: `This coin cleared every gate but ranks lower on ${label}; that metric is a profile weight, not a constraint to relax.`,
+    };
+  }
   return {
     verdictText: `${entry.symbol}: profile mismatch`,
     teachingText: `This row missed ${label}; compare the live reading before relaxing that constraint.`,

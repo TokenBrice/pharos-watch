@@ -17,6 +17,10 @@ export const TELEGRAM_MINI_APP_CONTRACT_VERSION_PARAM = "mini_app_contract";
 export const TELEGRAM_MINI_APP_CATALOG_VERSION_PARAM = "mini_app_catalog";
 export { TELEGRAM_MINI_APP_CATALOG_VERSION };
 
+/** Default UTC window when quiet hours are enabled without a supplied range. */
+export const DEFAULT_QUIET_START_HOUR = 22;
+export const DEFAULT_QUIET_END_HOUR = 7;
+
 const TELEGRAM_MINI_APP_ERROR_CODES = [
   "stale-auth",
   "not-private",
@@ -200,8 +204,12 @@ export const TelegramMiniAppOperationSchema = z.discriminatedUnion("kind", [
     .refine(
       (operation) => {
         if (!operation.enabled) return true;
-        if (operation.startHourUtc == null || operation.endHourUtc == null) return true;
-        return operation.startHourUtc !== operation.endHourUtc;
+        // Validate the effective pair after the defaults the Worker applies, so
+        // an omitted counterpart cannot complete into an enabled start === end
+        // window that never suppresses a delivery.
+        const startHourUtc = operation.startHourUtc ?? DEFAULT_QUIET_START_HOUR;
+        const endHourUtc = operation.endHourUtc ?? DEFAULT_QUIET_END_HOUR;
+        return startHourUtc !== endHourUtc;
       },
       { message: "quiet-hours start and end must differ" },
     ),

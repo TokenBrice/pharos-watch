@@ -63,6 +63,15 @@ describe("universal exclusions", () => {
     );
   });
 
+  it("fails closed when an active depeg has no readable current deviation", () => {
+    // R2: an unread observation may not imply the deviation is within the
+    // ceiling. The event flag alone is sufficient to exclude.
+    expect(evaluateExclusions(
+      makeRow({ activeDepeg: true, currentDeviationBps: null, pegScore: 95 }),
+      makeInput({ depegTolerance: "zero" }),
+    )).toEqual(expect.objectContaining({ reason: "active-depeg", severity: "hard" }));
+  });
+
 
   it("F grade always excluded", () => {
     expect(evaluateExclusions(makeRow({ safetyGrade: "F" }), makeInput())).toEqual(

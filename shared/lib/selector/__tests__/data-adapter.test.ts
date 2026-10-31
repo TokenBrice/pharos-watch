@@ -1,4 +1,5 @@
 import { afterAll, describe, expect, it, vi } from "vitest";
+import { makeYieldProvenance, makeYieldRanking } from "../../../test-utils/yield-ranking-fixtures";
 import { buildSelectorRows, type BuildSelectorRowsArgs } from "../data-adapter";
 import { applyInputDrivenExclusions, hasRequiredSignals } from "../exclusions";
 import { selectYieldSource } from "../yield-source";
@@ -349,5 +350,68 @@ describe("yield ingestion", () => {
       provenance: { sourceObservedAt: null, sourceAgeSeconds: 60 },
       sourceRisk: { sourceAgeSeconds: 0 },
     }).yieldFreshness).toBeNull();
+  });
+
+  it("keeps dataset identity stable when only the observation age advances", () => {
+    const yieldData = {
+      rankings: [makeYieldRanking({ provenance: makeYieldProvenance({ sourceObservedAt: NOW / 1000 - 60 }) })],
+    } as unknown as BuildSelectorRowsArgs["yieldData"];
+    const buildAt = (now: number) => buildSelectorRows({
+      ...EMPTY_ARGS, now, yieldData,
+    });
+    const first = buildAt(NOW);
+    const later = buildAt(NOW + 60_000);
+    expect(first.rows.get("usdc-circle")?.yieldFreshness).toEqual({ capturedAt: NOW / 1000 - 60, ageSeconds: 60 });
+    expect(later.rows.get("usdc-circle")?.yieldFreshness).toEqual({ capturedAt: NOW / 1000 - 60, ageSeconds: 120 });
+    // Content-addressed identity must not move with the evaluation clock: the
+    // dataset hash keys the snapshot KV entry and the frozen-vs-live comparison.
+    expect(later.datasetHash).toBe(first.datasetHash);
+  });
+
+  it("leaves producer clocks ahead of the assessment clock unavailable instead of clamping to zero", () => {
+    const nowSec = NOW / 1000;
+    const args: BuildSelectorRowsArgs = {
+      ...EMPTY_ARGS,
+      stablecoinsData: {
+        peggedAssets: [{ id: "usdc-circle", circulating: { peggedUSD: 32_000_000_000 } }],
+      } as unknown as StablecoinListResponse,
+      pegCurrency: "USD",
+      pegData: {
+        coins: [{
+          id: "usdc-circle", priceSource: "coingecko", priceObservedAtMode: "upstream",
+          priceObservedAt: nowSec + 3_600, priceUpdatedAt: null, priceSyncedAt: null,
+        }],
+        methodology: { version: "peg-v3" },
+      } as unknown as PegSummaryResponse,
+      stressData: {
+        signals: { "usdc-circle": { score: 20, computedAt: nowSec + 3_600 } },
+        updatedAt: nowSec + 3_600,
+        methodology: { version: "dews-v3" },
+      } as unknown as StressSignalsAllResponse,
+      dexData: {
+        "usdc-circle": { liquidityScore: 80, effectiveTvlUsd: 250_000_000, updatedAt: nowSec + 3_600 },
+      } as unknown as DexLiquidityMap,
+      now: NOW,
+    };
+    const row = buildSelectorRows(args).rows.get("usdc-circle")!;
+    expect(row.pegSummaryAgeSec).toBeNull();
+    expect(row.dexTvlAgeSec).toBeNull();
+    expect(row.dewsAgeSec).toBeNull();
+  });
+
+  it("does not substitute the DEX source deviation for an unread peg deviation", () => {
+    const row = buildSelectorRows({
+      ...EMPTY_ARGS,
+      pegCurrency: "USD",
+      pegData: {
+        coins: [{ id: "usdc-circle", currentDeviationBps: null }],
+        methodology: { version: "peg-v3" },
+      } as unknown as PegSummaryResponse,
+      dexData: {
+        "usdc-circle": { liquidityScore: 80, dexDeviationBps: 8 },
+      } as unknown as DexLiquidityMap,
+      now: NOW,
+    }).rows.get("usdc-circle")!;
+    expect(row.currentDeviationBps).toBeNull();
   });
 });

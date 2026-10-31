@@ -107,7 +107,7 @@ Stale-auth relaunch encodes the visible screen: Coin detail → `coin_<id>`, Set
 
 Time zone is one native picker: suggested zones (current, this device, common) then every IANA zone. Null shows "Not set (UTC)"; choosing UTC persists `"UTC"`. Quiet hours are a switch plus From/To pickers that save on change; a pick that would make start equal end is rejected in the snackbar before any request.
 
-Quiet-hours OFF retains the saved start/end. Enabling with both hours omitted atomically reuses a valid saved window, defaulting to 22–07 only when unconfigured or invalid. Supplying hours is an explicit window update (an omitted counterpart keeps its documented default), distinct from an enabled-state toggle; timezone interpretation is unchanged.
+Quiet-hours OFF retains the saved start/end. Enabling with both hours omitted atomically reuses a valid saved window, defaulting to 22–07 only when unconfigured or invalid. Supplying hours is an explicit window update (an omitted counterpart keeps its documented default; the effective pair must still differ), distinct from an enabled-state toggle; timezone interpretation is unchanged.
 
 ## Effective Alert Source
 

@@ -56,9 +56,19 @@ const REVIEWED_PROTOCOL_INTERNAL_FLOWS: readonly ReviewedProtocolInternalFlow[] 
 export const REVIEWED_PROTOCOL_INTERNAL_FLOW_BY_EVENT_ID: Readonly<Record<string, ReviewedProtocolInternalFlow>> =
   Object.fromEntries(REVIEWED_PROTOCOL_INTERNAL_FLOWS.map((entry) => [entry.eventId, entry]));
 
-/** True when the coin has a reviewed protocol-internal mint or burn at or after `sinceSec`. */
-export function hasReviewedProtocolInternalFlowSince(stablecoinId: string, sinceSec: number): boolean {
+/** True when the coin has a reviewed protocol-internal mint or burn inside
+ * `[sinceSec, untilSec]`. The upper bound is the comparison's own observation
+ * clock: an event after it is not part of the observed move, and a future or
+ * millisecond-mis-entered timestamp cannot suppress the coin indefinitely. */
+export function hasReviewedProtocolInternalFlowSince(
+  stablecoinId: string,
+  sinceSec: number,
+  untilSec: number = Number.POSITIVE_INFINITY,
+): boolean {
   return REVIEWED_PROTOCOL_INTERNAL_FLOWS.some(
-    (entry) => entry.stablecoinId === stablecoinId && entry.occurredAtSec >= sinceSec,
+    (entry) =>
+      entry.stablecoinId === stablecoinId &&
+      entry.occurredAtSec >= sinceSec &&
+      entry.occurredAtSec <= untilSec,
   );
 }
