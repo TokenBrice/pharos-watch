@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { registerRpcAuth, type ChainRpcConfig } from "../chain-registry";
-import { fetchEvmUint256AtBlock } from "../evm-rpc";
+import { fetchEvmUint256AtBlock, requestJsonRpcAtUrl } from "../evm-rpc";
 
 const { recordCredits } = vi.hoisted(() => ({ recordCredits: vi.fn() }));
 vi.mock("../rpc-provider-budget", () => ({ recordDwellirCredits: recordCredits }));
@@ -49,5 +49,29 @@ describe("Dwellir HTTP error classification", () => {
       .toBeNull();
     // docs/worker-and-api-limits.md: "HTTP/RPC errors alone do not ban it".
     expect(fetchMock.mock.calls.map(([input]) => String(input))).toEqual([dwellirUrl, registryUrl]);
+  });
+
+  it("classifies an unreadable non-OK response body as HTTP evidence, not a no-response failure", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const failedBody = new ReadableStream({
+      start(controller) { controller.error(new Error("body unavailable")); },
+    });
+    const fetchMock = vi.fn(async () => new Response(failedBody, { status: 502 }));
+    vi.stubGlobal("fetch", fetchMock);
+
+    const outcome = await requestJsonRpcAtUrl(
+      "https://rpc.example",
+      { jsonrpc: "2.0", id: 1, method: "eth_blockNumber", params: [] },
+      { maxRetries: 0 },
+    );
+
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+    expect(outcome.status).toBe("http-error");
+    if (outcome.status === "http-error") {
+      expect(outcome.response.status).toBe(502);
+      expect(outcome.body).toBeNull();
+      expect(outcome.rows.size).toBe(0);
+      expect(outcome.invalidRows).toBe(0);
+    }
   });
 });

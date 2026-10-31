@@ -5,6 +5,7 @@ import type { BridgeRouteControl, BridgeRouteDeployment, BridgeRouteRiskProfile 
 import { V9NegativeIncidentReviewSchema } from "@shared/types/safety-score-v9-incidents";
 import { buildSafetyScoreV9BaselineExtension } from "../safety-score-v9/extension";
 import { adaptBridgeReview } from "../safety-score-v9/extension-bridge";
+import { DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE } from "../safety-score-v9/extension-supply";
 import { routeSafetyScoreV9NegativeIncidentReviews } from "../safety-score-v9/extension-incidents";
 import type { V9ExtensionRegistryMeta } from "../safety-score-v9/extension-shared";
 import { compileSafetyScoreV9FactSetFromNormalizedInput } from "../safety-score-v9/fact-set";
@@ -236,5 +237,57 @@ describe("Safety Score v9 authored bridge-control identity", () => {
       scope: { kind: "control" as const, controlKey: `${ASSET_ID}:${BASE_ROUTE}:fixture-bridge-control` },
     };
     expect(routeSafetyScoreV9NegativeIncidentReviews([control], ASSET_ID, CLOCK, [authored], [])[0]!.incidentState).toBe("unknown");
+  });
+
+  it("fails closed on census upper bounds that are unreviewed or at the documentation bar", () => {
+    const representationRoute = route("base:0x4444444444444444444444444444444444444444", {
+      issuanceModel: "bridge-representation",
+      routeClass: "third-party",
+      riskTier: "external-lock-mint",
+      semantics: "lock-mint",
+      scope: "peripheral",
+    });
+    const metadata = meta({ bridgeRouteRisk: bridgeProfile([representationRoute]) });
+    type SupplyReview = NonNullable<Parameters<typeof adaptBridgeReview>[1]>;
+    const supplyReview = (row: SupplyReview["selectedBridgeRoutes"][number]): SupplyReview => ({
+      selectedBridgeRoutes: [row],
+      selectedRouteSupplyShare: 0,
+      unknownRouteSupplyShare: row.supplyShare,
+      unreviewedRouteSupplyShare: 0,
+      failureDomains: [],
+    });
+    // Only a selected-reviewed row can carry a bound. A lane that hands over any
+    // other row fails the asset here instead of travelling as sub-material evidence.
+    expect(() => adapt(metadata, supplyReview({
+      deploymentRouteKey: "unmatched-chain:fixture:producer-uuid-a",
+      supplyUsd: 50_000,
+      supplyShare: DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE / 2,
+      reviewState: "unmatched",
+      evidenceKind: "upper-bound",
+    }))).toThrow(/is not a selected-reviewed row/);
+    // At the documentation bar a bound is no proof of immateriality: the share
+    // datum stays required, so the asset is rejected rather than admitted below bar.
+    expect(() => adapt(metadata, supplyReview({
+      deploymentRouteKey: representationRoute.id,
+      supplyUsd: 200_000,
+      supplyShare: DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE,
+      reviewState: "selected-reviewed",
+      evidenceKind: "upper-bound",
+    }))).toThrow(/not below the 0\.01 documentation bar/);
+    // Strictly below the bar the reviewed bound is admitted as a bound: the route
+    // control keeps a missing exact share instead of a spot value.
+    const admitted = adapt(metadata, supplyReview({
+      deploymentRouteKey: representationRoute.id,
+      supplyUsd: 90_000,
+      supplyShare: DEPLOYMENT_SUPPLY_CENSUS_BOUND_SHARE / 2,
+      reviewState: "selected-reviewed",
+      evidenceKind: "upper-bound",
+    }));
+    expect(admitted.controls).toEqual([
+      expect.objectContaining({ deploymentKey: representationRoute.id, materialSupplyShare: null }),
+    ]);
+    expect(admitted.review.routes).toEqual([
+      expect.objectContaining({ tier: "external-lock-mint" }),
+    ]);
   });
 });

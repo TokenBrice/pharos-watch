@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { stableJsonStringifyV1 } from "@shared/lib/stable-json";
 import { SAFETY_SCORE_COHORT_MAX_BYTES, SafetyScoreCohortSchema } from "@shared/types/safety-score-cohort";
-import { makeWorkerSafetyScoreV9Publication } from "../../test-helpers/report-cards-v9";
+import { makeWorkerSafetyScoreV9Publication, makeWorkerV9Card } from "../../test-helpers/report-cards-v9";
 import { currentInput } from "./safety-score-v9-publication-store.test-support";
 import { persistSafetyScoreV9Publication } from "../safety-score-v9/publication-store";
 import { SAFETY_SCORE_V9_CACHE_KEYS as keys } from "../safety-score-v9/publication-health";
@@ -66,6 +66,68 @@ describe("accepted Safety Score cohort", () => {
     expect(await loadActiveSafetyScoreIndex(db)).toMatchObject({ kind: "error", reason: "publication-schema-cutover-pending" });
     expect(await loadActiveSafetyScoreCohort(db)).toMatchObject({ kind: "error", reason: "publication-schema-cutover-pending",
       snapshot: null });
+  });
+
+  it.each([
+    ["malformed JSON", "{", "safety-cohort-health-unavailable"],
+    ["a pre-cutover schema", JSON.stringify({ schemaVersion: 1 }), "publication-schema-cutover-pending"],
+  ])("fails closed on %s publication health", async (_label, value, reason) => {
+    const { db, sqlite } = await fixture();
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(value, keys.publicationHealth);
+    expect(await loadActiveSafetyScoreCohort(db)).toEqual({
+      kind: "error", reason, detail: `Canonical Safety Score cohort unavailable: ${reason}`, snapshot: null,
+    });
+  });
+
+  it.each([
+    ["malformed JSON", "{", "safety-cohort-index-invalid"],
+    ["a schema-invalid envelope", JSON.stringify({ schemaVersion: 2 }), "safety-cohort-index-invalid"],
+  ])("fails closed on %s in the accepted index", async (_label, value, reason) => {
+    const { db, sqlite } = await fixture();
+    sqlite.prepare("UPDATE cache SET value = ? WHERE key = ?").run(value, keys.scoreIndex);
+    expect(await loadActiveSafetyScoreCohort(db)).toEqual({
+      kind: "error", reason, detail: `Canonical Safety Score cohort unavailable: ${reason}`, snapshot: null,
+    });
+  });
+
+  it("reconstructs binding caps and serial dependencies from the accepted cohort graph", async () => {
+    const { db } = fixtures.open();
+    const cap = { kind: "track-record", limit: 49, reason: "Short reviewed track record.", source: "track-record" as const, binding: true };
+    const publication = makeWorkerSafetyScoreV9Publication({
+      cards: [makeWorkerV9Card({
+        caps: [cap],
+        bindingCap: cap,
+        dependencies: {
+          serial: [{
+            upstreamAssetId: "parent-fixture",
+            score: 62,
+            ratingStatus: "rated",
+            partialEvidence: null,
+            causeGapRefs: [],
+            limitedEvidenceCauses: [],
+            blocked: false,
+            dependencyType: "wrapper",
+            wrapperForm: "strategy-vault",
+          }],
+          basket: [],
+          cycleBlocked: false,
+          reasonCodes: [],
+        },
+      })],
+    });
+    await persistSafetyScoreV9Publication(db, { ...currentInput(publication), deferPublicMaterialization: true });
+
+    const result = await loadActiveSafetyScoreCohort(db);
+    expect(result).toMatchObject({
+      kind: "v9",
+      snapshot: {
+        cards: [{
+          id: "usdc-circle",
+          bindingCap: { kind: "track-record", limit: 49, reason: "Short reviewed track record.", binding: true },
+          dependencies: { serial: [{ upstreamAssetId: "parent-fixture" }] },
+        }],
+      },
+    });
   });
 
   it.each(["missing", "other-generation"])("rejects a %s cohort without decoding the publication", async scenario => {

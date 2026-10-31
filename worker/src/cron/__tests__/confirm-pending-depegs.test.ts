@@ -8,6 +8,7 @@ import {
 } from "../../test-helpers/pending-depeg-fixtures";
 import { makeAsset } from "../../test-helpers/__shared/fixtures";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { DEPEG_PENDING_MIN_AGE_SEC } from "@shared/lib/depeg-config";
 import { MAX_OPEN_DEPEG_EVENTS } from "../../lib/constants";
 
 vi.mock("../../lib/fetch-retry", () => mockFetchRetry({ fetchWithRetry: vi.fn(), passthroughNonResponse: true }));
@@ -196,6 +197,30 @@ describe("confirmPendingDepegs", () => {
 
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending").get()).toEqual({ count: 1 });
     expect(sqlite.prepare("SELECT COUNT(*) AS count FROM depeg_pending_outcomes").get()).toEqual({ count: 0 });
+  });
+
+  it("leaves a too-young pending row untouched for the next confirmation cycle", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(NOW_SEC * 1000);
+    const { sqlite, db } = openFixture();
+    const pending = makePendingRow({
+      id: 12,
+      first_seen_at: NOW_SEC - DEPEG_PENDING_MIN_AGE_SEC + 60,
+      last_seen_at: NOW_SEC - 30,
+    });
+    insertPending(sqlite, pending);
+
+    await expect(confirmPendingDepegs(db, [makeAsset({
+      id: pending.stablecoin_id,
+      symbol: pending.symbol,
+      geckoId: "tether",
+      price: 0.94,
+    })])).resolves.toMatchObject({ status: "completed" });
+
+    expect(lifecycle(sqlite, pending.stablecoin_id, pending.id)).toMatchObject({
+      pending: { id: pending.id },
+      events: [],
+      outcomes: [],
+    });
   });
 
   it("promotes with independent DEX confirmations even when Binance throws", async () => {

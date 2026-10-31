@@ -168,6 +168,23 @@ describe("buildDuplicateOpenEventRepair", () => {
     ]);
   });
 
+  it("does not absorb a peak when either row has no usable reference", () => {
+    const result = buildDuplicateOpenEventRepair([
+      makeOpenRow({ id: 1, peak_deviation_bps: -150, peak_price: 0.985, peg_reference: 0, started_at: 100 }),
+      makeOpenRow({ id: 2, peak_deviation_bps: -300, peak_price: 0.97, peg_reference: 1, started_at: 200 }),
+    ]);
+
+    expect(result.openEvents.get("usdt-tether")).toMatchObject({
+      id: 1,
+      peak_deviation_bps: -150,
+      peak_price: 0.985,
+    });
+    expect(result.commands).toEqual([
+      { type: "delete-event", id: 2 },
+      { type: "update-peak", id: 1, peakDeviationBps: -150, peakPrice: 0.985 },
+    ]);
+  });
+
   it("closes stale opposite-direction rows instead of absorbing their peak", () => {
     const result = buildDuplicateOpenEventRepair([
       makeOpenRow({ id: 1, direction: "below", peak_deviation_bps: -150, peak_price: 0.985, started_at: 100 }),

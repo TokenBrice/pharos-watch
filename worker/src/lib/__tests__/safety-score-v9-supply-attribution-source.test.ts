@@ -69,6 +69,37 @@ describe("Safety Score V9 supply-attribution source", () => {
     expect(deploymentSupplyCensusSourceView(legacy as typeof projected)).toBeNull();
   });
 
+  it("travels only admissible census peg references and drops unusable rows by name", () => {
+    const input = createNativeSafetyScoreV9FullRegistryInput();
+    const [validAssetId, nonFiniteAssetId, negativeAsOfAssetId] = input.activeAssetIds;
+    const clockSec = input.clockSec;
+    const censusRow = {
+      circulating: { peggedUSD: 1_000_000 },
+      observedAtSec: clockSec - 30,
+    };
+    input.aggregateCirculatingById = {
+      [validAssetId]: censusRow,
+      [nonFiniteAssetId]: censusRow,
+      [negativeAsOfAssetId]: censusRow,
+    };
+    input.pegDataById[validAssetId]!.pegReference = {
+      valueUsd: 1.02, asOf: clockSec - 10, source: "fx", contributorCount: 0,
+    };
+    input.pegDataById[nonFiniteAssetId]!.pegReference = {
+      valueUsd: Number.NaN, asOf: clockSec - 10, source: "fx", contributorCount: 0,
+    };
+    input.pegDataById[negativeAsOfAssetId]!.pegReference = {
+      valueUsd: 1, asOf: -1, source: "fx", contributorCount: 0,
+    };
+
+    const source = buildSafetyScoreV9SupplyAttributionSource(input);
+
+    // Absence stays absence: a malformed reference is unavailable, never 1.
+    expect(source.censusProjection?.pegReferenceById).toEqual({
+      [validAssetId]: { valueUsd: 1.02, asOf: clockSec - 10 },
+    });
+  });
+
   it("rejects malformed serialized and object source payloads", () => {
     expect(() =>
       parseSafetyScoreV9SupplyAttributionSource("{not-json"),

@@ -15,6 +15,8 @@ import {
   parsePersistedMissingActivePriceState,
   evaluateStablecoinActivePriceCoverage,
   evaluateStablecoinPublicationCoverage,
+  resolveStablecoinPublicationWaivers,
+  selectAppliedStablecoinPublicationWaivers,
   loadPreviousStablecoinActivePriceCoverage,
   seedAbsentActivePriceCoverageMarketCaps,
 } from "../stablecoin-publication-coverage";
@@ -93,6 +95,23 @@ describe("evaluateStablecoinPublicationCoverage", () => {
     expect(unowned.invalidWaiverIds).toContain(missingId);
   });
 
+});
+
+describe("selectAppliedStablecoinPublicationWaivers", () => {
+  it("returns the resolved waiver and fails loudly when an applied id was not resolved", () => {
+    const nowSec = 1_790_000_000;
+    const waiver = {
+      stablecoinId: "missing",
+      owner: "data-operations",
+      reason: "issuer endpoint maintenance",
+      expiresAt: nowSec + 3600,
+    };
+    const resolved = resolveStablecoinPublicationWaivers(["missing"], nowSec, [waiver]);
+
+    expect(selectAppliedStablecoinPublicationWaivers(["missing"], resolved)).toEqual([waiver]);
+    expect(() => selectAppliedStablecoinPublicationWaivers(["missing", "unresolved"], resolved))
+      .toThrow("Missing resolved publication waiver for unresolved");
+  });
 });
 
 describe("classifyStablecoinPublicationGap", () => {
@@ -383,6 +402,18 @@ describe("evaluateStablecoinActivePriceCoverage", () => {
       32_686_926.18, null, null, null,
     ]);
     expect(coverage.missingActiveAssets[0]?.lastKnownMarketCapObservedAt).toBe(nowSec - 900);
+  });
+
+  it("skips supply-history rows with a non-positive circulating value", async () => {
+    const nowSec = 1_790_000_000;
+    const { sqlite, db } = fixtures.open();
+    const insert = sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd) VALUES (?, ?, ?)");
+    insert.run("negative", nowSec - 900, -1);
+    insert.run("valid", nowSec - 900, 42);
+    const coverage = evaluateStablecoinActivePriceCoverage([], ["negative", "valid"], { nowSec });
+    await seedAbsentActivePriceCoverageMarketCaps(db, coverage, nowSec);
+    expect(coverage.missingActiveAssets.map((gap) => [gap.lastKnownMarketCapUsd, gap.lastKnownMarketCapSource]))
+      .toEqual([[null, null], [42, "supply_history"]]);
   });
 
   it("retains unknown compact continuity and still honors review expiry", async () => {

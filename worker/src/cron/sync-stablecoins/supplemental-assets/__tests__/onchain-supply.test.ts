@@ -339,6 +339,74 @@ describe("fetchOnChainMcap", () => {
   beforeEach(() => {
     fetchErc20TotalSupplyMock.mockReset();
     probeTrackedTokenSupplyMock.mockReset();
+    fetchMoveFungibleAssetSupplyMock.mockReset();
+  });
+
+  it("refuses a Movement deployment that is not the reviewed USDCx asset", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const onFailure = vi.fn();
+
+    await expect(fetchOnChainMcap(
+      { ...makeMovementMeta(), id: "usdcx-unconfigured" }, 1, movementChainRpcs(), undefined, undefined, onFailure,
+    )).resolves.toBeNull();
+
+    expect(fetchMoveFungibleAssetSupplyMock).not.toHaveBeenCalled();
+    expect(onFailure).toHaveBeenCalledWith("legs-unreadable");
+    expect(warn.mock.calls.map(([line]) => JSON.parse(String(line)))).toContainEqual(expect.objectContaining({
+      event: "onchain-supply-contract-withheld",
+      metadata: expect.objectContaining({ stablecoinId: "usdcx-unconfigured", reason: "supply-probe-failed" }),
+    }));
+  });
+
+  it("withholds Movement stock whose ledger decimals do not match the tracked deployment", async () => {
+    fetchMoveFungibleAssetSupplyMock.mockResolvedValue({
+      rawSupply: 1_000_000n, decimals: 8, ledgerVersion: "199722477",
+    });
+    const onFailure = vi.fn();
+
+    await expect(fetchOnChainMcap(
+      makeMovementMeta(), 1, movementChainRpcs(), undefined, undefined, onFailure,
+    )).resolves.toBeNull();
+
+    expect(onFailure).toHaveBeenCalledWith("partition-invalid");
+  });
+
+  it.each([
+    {
+      label: "a holder balance read returns null",
+      read: (_data: string, holders: string[]) => (_data.toLowerCase().endsWith(holders[0].slice(2).toLowerCase()) ? null : 0n),
+      failure: "legs-unreadable",
+    },
+    {
+      label: "holder balances consume the whole supply",
+      read: (data: string, holders: string[]) => (data.startsWith("0x70a08231")
+        && holders.some((holder) => data.toLowerCase().endsWith(holder.slice(2).toLowerCase())) ? 100n * 10n ** 18n : 0n),
+      failure: "partition-invalid",
+    },
+  ])("withholds curated exclusions when $label", async ({ read, failure }) => {
+    const meta = TRACKED_META_BY_ID.get("usg-tangent")!;
+    const holders = CURATED_ONCHAIN_SUPPLY_EXCLUSIONS[meta.id].holderAddresses;
+    vi.mocked(evmRpc.fetchEvmUint256AtBlock).mockImplementation(async (_chain, _contract, data) =>
+      data === TOTAL_SUPPLY_SELECTOR ? 100n * 10n ** 18n : read(data, holders));
+    const onFailure = vi.fn();
+
+    await expect(fetchOnChainMcap(meta, 1, undefined, undefined, undefined, onFailure)).resolves.toBeNull();
+
+    expect(onFailure).toHaveBeenCalledWith(failure);
+  });
+
+  it("rejects a curated exclusion on a deployment outside the exclusion chain", async () => {
+    const source = TRACKED_META_BY_ID.get("usg-tangent")!;
+    const meta = {
+      ...source,
+      contracts: [{ ...source.contracts![0], chain: "base" }],
+    };
+    probeTrackedTokenSupplyMock.mockResolvedValue(1_000n * 10n ** 18n);
+    const onFailure = vi.fn();
+
+    await expect(fetchOnChainMcap(meta, 1, undefined, undefined, undefined, onFailure)).resolves.toBeNull();
+
+    expect(onFailure).toHaveBeenCalledWith("partition-invalid");
   });
 
   it("passes through the resolved chain and chain label for the single-contract fallback", async () => {
@@ -668,6 +736,31 @@ describe("fetchCuratedAggregateOnChainMcap", () => {
       chainCirculating: { HyperEVM: { chainId: "hyperevm" } },
     });
     expect(result?.mcap).toBeCloseTo(3_621_063.53, 2);
+  });
+
+  it.each([0, -1, 1.5])("rejects an invalid partition leg concurrency (%s)", async (legConcurrency) => {
+    await expect(fetchCuratedAggregateOnChainMcap(
+      TRACKED_META_BY_ID.get("eurspkcc-spiko")!, 1, undefined, undefined, undefined, undefined, legConcurrency,
+    )).rejects.toThrow("legConcurrency requires a positive integer");
+  });
+
+  it("withholds a summed aggregate whose leg valuations overflow the finite total", async () => {
+    const meta = TRACKED_META_BY_ID.get("susdt-spark")!;
+    // 1e100 units (6-decimal reads) valued at $1e208 per unit: each admitted
+    // leg is a finite 1e308, while their sum overflows the double range.
+    const huge = BigInt(`1${"0".repeat(106)}`);
+    probeTrackedTokenSupplyMock.mockResolvedValue(huge);
+    fetchErc20TotalSupplyMock.mockResolvedValue(huge);
+    const onFailure = vi.fn();
+
+    await expect(fetchCuratedAggregateOnChainMcap(meta, 1e208, undefined, undefined, undefined, onFailure))
+      .resolves.toBeNull();
+
+    // Every leg was admitted and summed; only the overflowed total is rejected.
+    expect(fetchErc20TotalSupplyMock).toHaveBeenCalledTimes(3);
+    expect(onFailure).toHaveBeenCalledWith("partition-invalid");
+    await expect(fetchOnChainSupplyPartition(meta, 1, 1e208, undefined, undefined, undefined, undefined))
+      .resolves.toEqual({ reason: "partition-invalid", ratio: null });
   });
 });
 

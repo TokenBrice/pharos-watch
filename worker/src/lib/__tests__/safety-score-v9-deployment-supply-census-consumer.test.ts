@@ -201,6 +201,26 @@ describe("deployment supply census admission", () => {
     });
   });
 
+  it("rejects a packet dated after the capture clock", () => {
+    const { review: result, censusDiagnostics } = review(packet({ observedAtSec: CLOCK_SEC + 1 }));
+    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toEqual([
+      { deploymentRouteKey: null, code: "census-rejected:future-dated-pin" },
+    ]);
+  });
+
+  it("rejects a bound whose route is not in the reviewed inventory", () => {
+    const unreviewedRoute = `base:0x${"f".repeat(40)}`;
+    const { review: result, censusDiagnostics } = review(packet({
+      deployments: [row(unreviewedRoute, 0.005)],
+      conservation: { ...packet().conservation, measuredSupplyUsd: 0.5, measuredShareSum: 0.005 },
+    }));
+    expect(result!.selectedBridgeRoutes.some((route) => route.evidenceKind === "upper-bound")).toBe(false);
+    expect(censusDiagnostics).toEqual([
+      { deploymentRouteKey: unreviewedRoute, code: "census-rejected:route-unreviewed" },
+    ]);
+  });
+
   it("admits a census captured under the previous prepare cycle's base input", () => {
     // Production shape: the census run binds the source it measured (10:17's
     // base id); the publication that reads it is prepared one cycle later, so

@@ -723,6 +723,20 @@ describe("chain dropout guard", () => {
     expect(mocks.onchain.mock.calls[0][1]).toBe(contract.address);
   });
 
+  it("withholds the aggregate clock when the only repair clock is not an epoch second", async () => {
+    const contract = ACTIVE_META_BY_ID.get("usdg-paxos")!.contracts!.find((entry) => entry.chain === "xlayer")!;
+    mocks.onchain.mockResolvedValue(1_409_030_000n * 10n ** BigInt(contract.decimals!));
+    const asset = usdg();
+    asset.supplyObservedAt = NOW - 900;
+    asset.chainCirculating = { "X Layer": asset.chainCirculating!["X Layer"] };
+    // A fractional sync clock cannot name an observation second. The incoming list clock must
+    // be dropped rather than borrowed for the repaired total.
+    await guardChainDropouts({ assets: [asset], now: NOW + 0.5, state: { version: 1, pairs: {} } });
+    expect(asset.chainCirculating!["X Layer"].current).toBe(1_409_030_000);
+    expect(asset.supplyChainGuard).toMatchObject({ status: "repaired" });
+    expect(asset.supplyObservedAt).toBeUndefined();
+  });
+
   it("uses only upstream chart clocks for a mixed native and chart repair", async () => {
     const asset = usdg();
     asset.supplyObservedAt = NOW - 900;

@@ -325,6 +325,41 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     },
   );
 
+  it("reports an unreviewed deployment route as unresolved instead of reviewed supply", () => {
+    const routes = [
+      { ...ETH_ROUTE, destinationChain: "ethereum", contractAddress: "native" },
+      {
+        id: "base:0x0000000000000000000000000000000000000002",
+        destinationChain: "base",
+        contractAddress: "0x0000000000000000000000000000000000000002",
+        reviewDisposition: "unreviewed",
+      },
+    ] as unknown as BridgeRoutes;
+    const fixed = {
+      chainCirculatingById: { alpha: {} },
+      safetyScoreV9SupplyAttributionById: {
+        alpha: {
+          model: "reviewed-deployment-unit-partition-v1",
+          deployments: [
+            { routeId: "ethereum:native", chainId: "ethereum", contractAddress: "native", currentSupplyUsd: 60 },
+            { routeId: "base:0x0000000000000000000000000000000000000002", chainId: "base",
+              contractAddress: "0x0000000000000000000000000000000000000002", currentSupplyUsd: 40 },
+          ],
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+    const review = buildSafetyScoreV9SupplyReview(fixed, "alpha", profile(routes))!;
+    expect(review.selectedBridgeRoutes).toEqual([
+      { deploymentRouteKey: "base:0x0000000000000000000000000000000000000002",
+        supplyUsd: 40, supplyShare: 0.4, reviewState: "selected-unresolved" },
+      { deploymentRouteKey: "ethereum:native", supplyUsd: 60, supplyShare: 0.6,
+        reviewState: "selected-reviewed", reviewedRouteKind: "native" },
+    ]);
+    expect(review.selectedRouteSupplyShare).toBe(0.6);
+    expect(review.unknownRouteSupplyShare).toBe(0);
+    expect(review.unreviewedRouteSupplyShare).toBeCloseTo(0.4, 12);
+  });
+
   it("returns null without supply rows and without routes on a multi-chain asset", () => {
     expect(buildSafetyScoreV9SupplyReview(fixedInputStub({}), "alpha", undefined)).toBeNull();
     expect(
@@ -758,6 +793,36 @@ describe("buildSafetyScoreV9SupplyReview", () => {
     expect(review!.selectedRouteSupplyShare).toBe(selectedShare);
     expect(review!.unknownRouteSupplyShare).toBe(0);
     expect(review!.unreviewedRouteSupplyShare).toBe(unreviewedShare);
+  });
+
+  it("fails closed when a representation-group packet omits one reviewed route", () => {
+    const profile = xautRiskReview.bridgeRouteRisk as BridgeRouteRiskProfile;
+    const groupRouteIds = profile.routes!
+      .filter((route) => route.representationId === "xaut0-omnichain")
+      .map((route) => route.id)
+      .sort();
+    const fixedInput = {
+      chainCirculatingById: { "xaut-tether": {} },
+      safetyScoreV9SupplyAttributionById: {
+        "xaut-tether": {
+          model: "canonical-lock-mint-group-partition-v2",
+          assetId: "xaut-tether",
+          canonical: { routeId: "ethereum:0x68749665ff8d2d112fa859aa293f07a622782f38",
+            chainId: "ethereum", currentSupplyUsd: 90 },
+          representationGroup: {
+            deploymentRouteKey: "representation-group:xaut-tether:xaut0-omnichain",
+            representationId: "xaut0-omnichain",
+            // The packet claims fewer reviewed routes than the profile carries.
+            routeIds: groupRouteIds.slice(0, -1),
+            riskTier: "external-lock-mint",
+            failureDomainKeys: ["contract:ethereum:0xb9c2321bb7d0db468f570d10a424d1cc8efd696c",
+              "protocol:xaut0-omnichain"],
+            currentSupplyUsd: 10,
+          },
+        },
+      },
+    } as unknown as ReportCardsFixedInput;
+    expect(buildSafetyScoreV9SupplyReview(fixedInput, "xaut-tether", profile)).toBeNull();
   });
 });
 

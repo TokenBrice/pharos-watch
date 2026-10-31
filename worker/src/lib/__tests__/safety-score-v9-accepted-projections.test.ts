@@ -1,4 +1,5 @@
 import { SAFETY_SCORE_COHORT_MAX_BYTES } from "@shared/types/safety-score-cohort";
+import type { SafetyScoreV9CurrentCard } from "@shared/types/safety-score-v9-public";
 import { describe, expect, it, vi } from "vitest";
 import * as structuredLog from "../structured-log";
 import { sha256Hex } from "@shared/lib/sha256";
@@ -8,9 +9,9 @@ import { admitAndSerializeSafetyScoreV9Publication, parseSafetyScoreV9Publicatio
 import { buildSafetyScoreV9AcceptedPublicationBaseline } from "../safety-score-v9/publication-assessment";
 import {
   buildSafetyScoreV9AcceptedBaselineProjection, buildSafetyScoreV9AcceptedProjections,
-  buildSafetyScoreV9LenderCollateralProjection,
+  buildSafetyScoreV9CohortProjection, buildSafetyScoreV9LenderCollateralProjection,
   parseSafetyScoreV9AcceptedBaselineProjection, parseSafetyScoreV9LenderCollateralProjection,
-  serializeSafetyScoreV9AcceptedBaselineProjection, serializeSafetyScoreV9LenderCollateralProjection,
+  serializeSafetyScoreV9AcceptedBaselineProjection, serializeSafetyScoreV9CohortProjection, serializeSafetyScoreV9LenderCollateralProjection,
   SAFETY_SCORE_V9_ACCEPTED_BASELINE_PROJECTION_MAX_BYTES, SAFETY_SCORE_V9_LENDER_COLLATERAL_PROJECTION_MAX_BYTES,
 } from "../safety-score-v9/accepted-projections";
 
@@ -183,6 +184,66 @@ describe("Safety Score V9 accepted projection writers", () => {
     delete rekeyed.byAssetId[assetId];
     rekeyed.byAssetId[`${assetId}-other`] = row;
     expect(() => serializeSafetyScoreV9LenderCollateralProjection(rekeyed)).toThrow(/key must match asset ID/);
+  });
+
+  it("retains pillar reasons, deployment adjustments and role dependencies in the cohort view", () => {
+    // Retained publications may still carry these lanes; the cohort read model
+    // must keep them and drop the ids a retained-publication reader cannot resolve.
+    const roleDependency: NonNullable<SafetyScoreV9CurrentCard["dependencies"]["roles"]>[number] = {
+      edgeKey: "control-operator:mechanism:operator",
+      exposureKey: "control-operator:mechanism:operator",
+      riskEventKey: "dependency-event:mint-control:operator:shared",
+      upstreamAssetId: "operator",
+      role: "control-operator",
+      weight: 0.5,
+      targetPillar: "control",
+      inheritedDimensions: ["control"],
+      unavailableDimensions: [],
+      score: 76,
+      ratingStatus: "rated",
+      partialEvidence: null,
+      boundedUnknown: false,
+      cycleBlocked: false,
+      evidenceRefIds: ["evidence:operator-review"],
+      failureDomains: [{ kind: "mint-control", key: "operator:shared" }],
+    };
+    const adjustment: SafetyScoreV9CurrentCard["scoreTrace"]["deploymentRisk"]["adjustments"][number] = {
+      signalKey: "holder-slice:fixture", sourceSignalKeys: ["holder-slice:fixture"],
+      exposureKey: "exposure:fixture", riskEventKey: "risk-event:fixture", failureDomainKey: "holder-slice:fixture",
+      nominalExposureShare: 0.1, exposureShare: 0.1, exposedScore: 80,
+      scoreBefore: 80, scoreAfter: 78, adjustmentPoints: 2, modeledLossPoints: 2,
+      reason: "Reviewed holder-slice exposure.",
+    };
+    const card = makeWorkerV9Card({ id: "alpha" });
+    card.pillars.backing.reasons = [{ code: "stale-audited-reserve-composition", message: "Reserve composition is stale.", path: "backing.reserves" }];
+    card.pillars.exit.reasons = [{ code: "insufficient-evidence", message: "Exit evidence is incomplete.", path: null }];
+    card.scoreTrace.deploymentRisk.adjustments = [adjustment];
+    card.scoreTrace.deploymentRisk.totalAdjustmentPoints = 2;
+    card.scoreTrace.stages.deploymentAdjustmentPoints = 2;
+    card.dependencies.roles = [roleDependency];
+    const publication = makeWorkerSafetyScoreV9Publication({ cards: [card] });
+
+    const cohort = buildSafetyScoreV9CohortProjection(publication);
+    expect(cohort.cards[0]!.pillars.backing.reasons).toEqual([
+      { code: "stale-audited-reserve-composition", message: "Reserve composition is stale." },
+    ]);
+    expect(cohort.cards[0]!.pillars.exit.reasons).toEqual([
+      { code: "insufficient-evidence", message: "Exit evidence is incomplete." },
+    ]);
+    expect(cohort.cards[0]!.scoreTrace.deploymentRisk.adjustments).toEqual([
+      { scoreBefore: 80, scoreAfter: 78, adjustmentPoints: 2 },
+    ]);
+    expect(cohort.cards[0]!.dependencies.roles).toEqual([
+      { upstreamAssetId: "operator", role: "control-operator", weight: 0.5 },
+    ]);
+    expect(JSON.parse(serializeSafetyScoreV9CohortProjection(cohort)).cards[0].dependencies.roles).toEqual([
+      { upstreamAssetId: "operator", role: "control-operator", weight: 0.5 },
+    ]);
+
+    const bare = buildSafetyScoreV9CohortProjection(makeWorkerSafetyScoreV9Publication({ cards: [makeWorkerV9Card({ id: "alpha" })] }));
+    expect(bare.cards[0]!.dependencies).not.toHaveProperty("roles");
+    expect(bare.cards[0]!.pillars.backing.reasons).toEqual([]);
+    expect(bare.cards[0]!.scoreTrace.deploymentRisk.adjustments).toEqual([]);
   });
 
 });

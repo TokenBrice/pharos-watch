@@ -1,8 +1,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { CIRCUIT_SOURCE } from "../../../lib/constants";
 import { mockD1 } from "@shared/test-utils/mock-d1";
+import { CURVE_POOL_CONFIGS } from "@shared/lib/curve-pool-configs";
+import { computeLiveReserveConfigFingerprint } from "@shared/lib/live-reserve-adapters";
+import { TRACKED_META_BY_ID } from "@shared/lib/stablecoins/registry";
 import * as circuit from "../../../lib/circuit-breaker";
 import { fetchCoingeckoSimplePrices } from "../../../lib/coingecko-simple-price";
+import { fetchCgTickerPricesDetailed } from "../../../lib/cg-ticker";
+import { fetchCoinbasePrices } from "../../../lib/cex-tickers";
+import { fetchCurveOnchainPrices, fetchCurveOracleEma } from "../../../lib/curve-onchain";
 import { shouldAttemptFetch } from "../../../lib/circuit-breaker";
 import { buildPrimaryPricePlan, collectPrimaryProviderQuotes } from "../enrich-prices-primary-provider-collection";
 import type { PeggedAsset } from "../enrich-prices-shared";
@@ -19,6 +25,19 @@ vi.mock("../../../lib/circuit-breaker", async (importOriginal) => {
   };
 });
 vi.mock("../../../lib/coingecko-simple-price", () => ({ fetchCoingeckoSimplePrices: vi.fn() }));
+vi.mock("../../../lib/cg-ticker", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/cg-ticker")>()),
+  fetchCgTickerPricesDetailed: vi.fn(),
+}));
+vi.mock("../../../lib/cex-tickers", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/cex-tickers")>()),
+  fetchCoinbasePrices: vi.fn(),
+}));
+vi.mock("../../../lib/curve-onchain", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../lib/curve-onchain")>()),
+  fetchCurveOnchainPrices: vi.fn(),
+  fetchCurveOracleEma: vi.fn(),
+}));
 
 vi.mock("../../../lib/depeg-helpers", () => ({
   createDexPriceSourceLoadTelemetry: vi.fn(() => ({
@@ -88,6 +107,10 @@ describe("critical publication provider collection", () => {
     vi.clearAllMocks();
     vi.mocked(shouldAttemptFetch).mockResolvedValue(false);
     vi.mocked(fetchCoingeckoSimplePrices).mockReset();
+    vi.mocked(fetchCgTickerPricesDetailed).mockReset();
+    vi.mocked(fetchCoinbasePrices).mockReset();
+    vi.mocked(fetchCurveOnchainPrices).mockReset();
+    vi.mocked(fetchCurveOracleEma).mockReset();
   });
 
   afterEach(() => {
@@ -245,6 +268,156 @@ describe("critical publication provider collection", () => {
 
     await expect(collectPrimaryProviderQuotes({ db, plan, signal: controller.signal })).rejects.toBe(failure);
     expect(outcomes).not.toHaveBeenCalled();
+  });
+
+  it("returns an inert plan when no asset qualifies for any primary source", async () => {
+    const plan = await buildPrimaryPricePlan([
+      { id: "unlisted-test", name: "Unlisted", symbol: "ZZZZ" },
+    ], mockD1([]));
+
+    expect(plan.candidates).toEqual([]);
+    expect(plan.geckoIds).toEqual([]);
+    expect(plan.coinbaseSymbols).toEqual([]);
+    expect(plan.krakenSymbols).toEqual([]);
+    expect(plan.shouldFetchBitstamp).toBe(false);
+    expect(plan.navPriceIds).toEqual([]);
+    expect(Object.values(plan.sourceAllowed)).toEqual(Array(9).fill(false));
+    expect(shouldAttemptFetch).not.toHaveBeenCalled();
+  });
+
+  it("values a non-USD reserve NAV quote at its admitted FX reference rate", async () => {
+    const meta = TRACKED_META_BY_ID.get("eutbl-spiko")!;
+    const config = meta.liveReservesConfig!;
+    const fetchedAt = Math.floor(Date.now() / 1000) - 60;
+    const fingerprint = computeLiveReserveConfigFingerprint(config);
+    const db = mockD1([{
+      match: "FROM reserve_composition",
+      rows: [{
+        stablecoin_id: "eutbl-spiko", fetched_at: fetchedAt, source: config.adapter,
+        metadata: JSON.stringify({ navPerToken: 1.25, sourceTimestamp: fetchedAt }),
+        config_fingerprint: fingerprint, attempt_id: "attempt-1",
+        last_success_at: fetchedAt, last_success_attempt_id: "attempt-1",
+        state_config_fingerprint: fingerprint, last_attempt_id: "attempt-1", pending_attempt_id: null,
+      }],
+    }]);
+    const plan = await buildPrimaryPricePlan([
+      { id: "eutbl-spiko", name: "EUTBL", symbol: "EUTBL", pegType: "peggedEUR" },
+    ], db);
+    expect(plan.navPriceIds).toEqual(["eutbl-spiko"]);
+
+    const result = await collectPrimaryProviderQuotes({
+      db,
+      plan,
+      references: {
+        rates: { peggedEUR: 1.08 },
+        type: "fresh",
+        updatedAt: fetchedAt,
+        typeByPeg: { peggedEUR: "fresh" },
+      },
+    });
+
+    expect(result.quoteMaps.navPrices.get("eutbl-spiko")).toMatchObject({
+      source: config.adapter,
+      price: 1.25 * 1.08,
+      metadata: { reserveFetchedAt: fetchedAt, navPerToken: 1.25, navUsdRate: 1.08 },
+    });
+  });
+
+  it("keeps provider quotes when the reserve NAV telemetry query fails", async () => {
+    const db = mockD1([{
+      match: "FROM reserve_composition",
+      rows: [],
+      throwError: new Error("reserve database unavailable"),
+    }]);
+    const plan = await buildPrimaryPricePlan([
+      { id: "eutbl-spiko", name: "EUTBL", symbol: "EUTBL", pegType: "peggedEUR" },
+    ], db);
+    const warnings = vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    const result = await collectPrimaryProviderQuotes({ db, plan });
+
+    expect(result.quoteMaps.navPrices.size).toBe(0);
+    expect(warnings.mock.calls.flat().join(" ")).toContain(
+      "[primary-prices] Failed to load reserve NAV telemetry: reserve database unavailable",
+    );
+  });
+
+  it("collects CG ticker quotes and stamps their observation clock", async () => {
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.CG_TICKER);
+    const db = mockD1([]);
+    const plan = await buildPrimaryPricePlan([TEST_ASSET], db);
+    vi.mocked(fetchCgTickerPricesDetailed).mockResolvedValue({
+      prices: new Map([["test-usd", 1.01]]),
+      successfulResponses: 1,
+    });
+
+    const result = await collectPrimaryProviderQuotes({ db, plan });
+
+    expect(result.quoteMaps.cgTickerPrices.get("test-usd")).toBe(1.01);
+    expect(result.quoteMaps.cgTickerObservedAt).toBeGreaterThan(0);
+  });
+
+  it("collects Coinbase quotes with their per-symbol observation clocks", async () => {
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.COINBASE_PRICES);
+    const db = mockD1([]);
+    const plan = await buildPrimaryPricePlan([
+      { id: "test-usdt", name: "Test USDT", symbol: "USDT" },
+    ], db);
+    expect(plan.coinbaseSymbols).toEqual(["USDT"]);
+    vi.mocked(fetchCoinbasePrices).mockResolvedValue({
+      kind: "ok",
+      value: {
+        prices: new Map([["USDT", 1.0004]]),
+        observedAtBySymbol: new Map([["USDT", 1_700_000_000]]),
+      },
+    });
+
+    const result = await collectPrimaryProviderQuotes({ db, plan });
+
+    expect(result.quoteMaps.coinbasePrices.get("USDT")).toBe(1.0004);
+    expect(result.quoteMaps.coinbaseObservedAtBySymbol.get("USDT")).toBe(1_700_000_000);
+  });
+
+  it("collects Curve pool quotes with their per-coin observation clocks", async () => {
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.CURVE_ONCHAIN);
+    const coinId = CURVE_POOL_CONFIGS[0].stablecoinId;
+    const db = mockD1([]);
+    const plan = await buildPrimaryPricePlan([
+      { id: coinId, name: "Curve coin", symbol: "CRVCOIN" },
+    ], db);
+    vi.mocked(fetchCurveOnchainPrices).mockResolvedValue({
+      kind: "ok",
+      value: {
+        prices: new Map([[coinId, 0.9995]]),
+        observedAtByCoinId: new Map([[coinId, 1_700_000_000]]),
+        routeTypeByCoinId: new Map(),
+        hopDepthByCoinId: new Map(),
+      },
+    });
+
+    const result = await collectPrimaryProviderQuotes({ db, plan });
+
+    expect(result.quoteMaps.curvePrices.get(coinId)).toBe(0.9995);
+    expect(result.quoteMaps.curveObservedAtByCoinId.get(coinId)).toBe(1_700_000_000);
+  });
+
+  it("admits a fresh crvUSD oracle EMA as a primary quote", async () => {
+    vi.mocked(shouldAttemptFetch).mockImplementation(async (_db, source) => source === CIRCUIT_SOURCE.CURVE_ORACLE);
+    const db = mockD1([]);
+    const plan = await buildPrimaryPricePlan([
+      { id: "crvusd-curve", name: "crvUSD", symbol: "CRVUSD" },
+    ], db);
+    const blockTimestamp = Math.floor(Date.now() / 1000) - 15;
+    vi.mocked(fetchCurveOracleEma).mockResolvedValue({
+      price: 0.9987,
+      blockNumber: 123,
+      blockTimestamp,
+    });
+
+    const result = await collectPrimaryProviderQuotes({ db, plan });
+
+    expect(result.quoteMaps.curveOraclePrice).toBe(0.9987);
+    expect(result.quoteMaps.curveOracleObservedAt).toBe(blockTimestamp);
   });
 
   it("does not fetch when required circuit admission rejects", async () => {

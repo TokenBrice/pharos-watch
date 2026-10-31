@@ -225,6 +225,39 @@ describe("Safety Score V9 lock/mint supply attribution", () => {
     )).rejects.toBe(reason);
   });
 
+  it("drops a hard diagnostic once the bounded store is full of hard failures", async () => {
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockImplementation(
+      async (input) => {
+        for (let index = 0; index < 129; index++) {
+          input.onDiagnostic?.({
+            observer: "economic-deployment", sourceId: `xaut-hard-failure-${index}`,
+            laneId: null, chainId: "ethereum", providerOrigin: null,
+            method: "unknown", phase: "observation",
+            beforeCursor: null, afterCursor: null, targetCursor: null,
+            pinObservedAtSec: null, finalizedLagBlocks: null,
+            persisted: false, authenticatedCursorAdvanced: false,
+            incompleteBootstrap: false, hardEvidenceFailure: true,
+            failurePredicate: "packet-reconciliation-failed",
+          });
+        }
+        return { status: "rejected", rejectionCode: "deployment-state-unavailable", failedRouteId: null };
+      },
+    );
+
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      xautFixedInput(),
+      chainRpcs(),
+    );
+
+    // The bound keeps the authenticated prefix and refuses to rotate out a hard
+    // failure; the 129th diagnostic is dropped, never persisted as evidence.
+    const diagnostics = capture.diagnosticsById?.["xaut-tether"] ?? [];
+    expect(diagnostics).toHaveLength(128);
+    expect(diagnostics[diagnostics.length - 1]?.sourceId).toBe("xaut-hard-failure-127");
+    expect(diagnostics.some((row) => row.sourceId === "xaut-hard-failure-128")).toBe(false);
+    expect(diagnostics.every((row) => row.hardEvidenceFailure)).toBe(true);
+  });
+
   it("rejects a V2 group allocation that underflows aggregate USD supply", () => {
     expect(deriveXautRepresentationGroupSupplyAttribution({
       aggregateSupplyUsd: Number.MIN_VALUE,
@@ -985,6 +1018,36 @@ describe("Supply attribution shadow census projection", () => {
       withoutCensus.sqlite.close();
       vi.useRealTimers();
     }
+  });
+
+  it("keeps the attribution capture when the shadow census store read fails", async () => {
+    rpcMocks.observeXautRepresentationGroupSupplyAttributionAttempt.mockResolvedValue({
+      status: "rejected",
+      rejectionCode: "deployment-state-unavailable",
+      failedRouteId: null,
+    });
+    const failingDb = {
+      prepare: () => {
+        throw new Error("D1 census read unavailable");
+      },
+    } as unknown as D1Database;
+
+    const capture = await captureSafetyScoreV9SupplyAttribution(
+      xautFixedInput(),
+      chainRpcs(),
+      undefined,
+      { clockMode: "source", db: failingDb },
+    );
+
+    // A shadow-generation read failure is unavailable, never an empty census,
+    // and it cannot fail the attribution capture that rides beside it.
+    expect("deploymentSupplyCensusById" in capture).toBe(false);
+    expect("deploymentSupplyCensus" in capture).toBe(false);
+    expect(capture.attributionById).toEqual({});
+    expect(capture.journalRecords).toEqual([expect.objectContaining({
+      assetId: "xaut-tether",
+      rejectionCode: "deployment-state-unavailable",
+    })]);
   });
 });
 describe("Supply attribution complete-provider precedence", () => {

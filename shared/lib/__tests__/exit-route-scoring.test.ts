@@ -87,6 +87,16 @@ describe("policy-owned exit materiality", () => {
       requestedNotionalUsd: (absoluteFloor - 1) / coverageFloor,
     }, v9Exit)).toBe(true);
   });
+
+  it("treats a non-positive or non-finite executable capacity as immaterial", () => {
+    const v9Exit = V9_CANDIDATE_POLICY_V1.policy.semantic.exit;
+    for (const executableCapacityUsd of [0, -1, Number.NaN, Number.POSITIVE_INFINITY]) {
+      expect(hasMaterialExitCapacity({
+        executableCapacityUsd,
+        requestedNotionalUsd: 1_000_000,
+      }, v9Exit)).toBe(false);
+    }
+  });
 });
 
 describe("shared band resolution", () => {

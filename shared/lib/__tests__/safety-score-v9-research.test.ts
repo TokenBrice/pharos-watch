@@ -78,6 +78,23 @@ describe("v9 research handoff contracts", () => {
     expect(trace.effectiveScoringWeights).toEqual({ backing: 0.4, control: 0.25, exit: 0.35 });
   });
 
+  it("prices a missing scenario pillar as unknown and records its diagnostic U cause", () => {
+    const trace = scoreV9ResearchScenarioInput(
+      scoringInput("scenario-missing-backing", {
+        pillars: { backing: null, exit: 90, control: 70 },
+      }),
+      V9_CANDIDATE_POLICY_V1,
+      [],
+    );
+
+    expect(trace.includedPillars).toEqual(["backing", "exit", "control"]);
+    // Priced at the policy's unknown backing quality for cause U.
+    expect(trace.diagnosticPillarScores.backing).toBe(V9_CANDIDATE_POLICY_V1.policy.semantic.unknownQuality.backing.U);
+    expect(trace.limitedEvidenceCauses).toEqual(["U"]);
+    expect(trace.limitingPillars).toEqual([]);
+    expect(trace.ratingStatus).toBe("rated");
+  });
+
   it("gives an active depeg precedence over an equal structural cap", () => {
     const trace = scoreV9ResearchScenarioInput(
       scoringInput("active-depeg-tie", {

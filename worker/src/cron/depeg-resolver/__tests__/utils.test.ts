@@ -2,10 +2,16 @@ import { describe, expect, it } from "vitest";
 import type { StablecoinMeta } from "@shared/types/core";
 import { FROZEN_IDS } from "@shared/lib/stablecoins/registry";
 import {
+  DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
+  DDR_V2_EFFECTIVE_AT,
+} from "@shared/lib/methodology-versions/depeg-resolver";
+import {
+  fallbackIncidentForEvent,
   fallbackStructural,
   buildDdrStructuralContext,
   toStructural,
 } from "../utils";
+import { makeEventRow } from "./depeg-resolver.test-support";
 
 
 describe("peg taxonomy projection", () => {
@@ -82,5 +88,46 @@ describe("V9 dependency impairment", () => {
     expect(toStructural(meta, healthy)).toMatchObject({ dependencyImpaired: false, authorityPosture: "bounded-admin" });
     expect(toStructural(meta, null).dependencyImpaired).toBe(false);
     expect(toStructural(meta, impaired)).toMatchObject({ dependencyImpaired: true, authorityPosture: "unbounded-adverse" });
+  });
+});
+
+describe("fallback incident projection", () => {
+  it("projects a policy-universe incident with backstop eligibility from an open event", () => {
+    const openRow = makeEventRow({
+      id: 321,
+      stablecoin_id: "usdc-circle",
+      symbol: "USDC",
+      started_at: DDR_V2_EFFECTIVE_AT + 60,
+      ended_at: null,
+    });
+
+    expect(fallbackIncidentForEvent(openRow)).toEqual({
+      incidentKey: "unresolved:321",
+      eventId: 321,
+      currentEventId: 321,
+      stablecoinId: "usdc-circle",
+      pegCurrency: "USD",
+      direction: "below",
+      startedAt: openRow.started_at,
+      eligibleAt: openRow.started_at + DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
+      policyUniverseIncluded: true,
+      rolloutActiveAtEnablement: false,
+      confirmedAt: null,
+      lockState: null,
+    });
+  });
+
+  it("excludes a legacy event that closed before DDRv2 took effect", () => {
+    const closedRow = makeEventRow({
+      id: 322,
+      started_at: DDR_V2_EFFECTIVE_AT - 1_000,
+      ended_at: DDR_V2_EFFECTIVE_AT - 500,
+    });
+
+    expect(fallbackIncidentForEvent(closedRow)).toMatchObject({
+      eligibleAt: closedRow.started_at + DDR_PUBLIC_PREDICTION_BACKSTOP_DELAY_SEC,
+      policyUniverseIncluded: false,
+      rolloutActiveAtEnablement: true,
+    });
   });
 });

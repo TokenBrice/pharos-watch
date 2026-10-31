@@ -380,6 +380,17 @@ describe("Safety Score V9 transfer-materiality supply partition", () => {
     expect(review("sfrxusd-frax", generation("sfrxusd-frax"), profile)).toBeNull();
   });
 
+  it("fails closed when an exact-input route names a deployment the census did not observe", () => {
+    const profile = structuredClone(ACTIVE_META_BY_ID.get("sfrxusd-frax")!.bridgeRouteRisk)!;
+    const displaced = profile.routes![0]!;
+    const foreignAddress = `0x${"9".repeat(40)}`;
+    displaced.contractAddress = foreignAddress;
+    displaced.id = `${displaced.destinationChain}:${foreignAddress}`;
+    // The route set keeps full cardinality but no longer joins the packet's
+    // authoritative deployment keys, so no share may be allocated.
+    expect(review("sfrxusd-frax", generation("sfrxusd-frax"), profile)).toBeNull();
+  });
+
   it("keeps wsrUSD aggregate-only when its authoritative Solana row is rejected", () => {
     const rows = observationsFor("wsrusd-reservoir", (row) =>
       row.deploymentKey.startsWith("solana:")
