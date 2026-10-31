@@ -165,7 +165,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("inserts rows for a valid USD stablecoin detail payload", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -193,7 +193,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.coinsProcessed).toBe(1);
     expect(body.rowsInserted).toBe(1);
     expect(body.errors).toBeUndefined();
-    const insertStmt = db.getHistory().find((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    const insertStmt = db.getHistory().find((stmt) => stmt.sql.includes("INTO supply_history"));
     expect(insertStmt?.binds).toEqual([
       "usdt-tether",
       Math.floor(1_700_000_000 / 86400) * 86400,
@@ -208,7 +208,68 @@ describe("handleBackfillSupplyHistory", () => {
     );
   });
 
-  it.each([false, true])("persists observed zero, replacing a prior positive row when present (%s)", async (seedPrior) => {
+  it("inserts only missing days and preserves a cron-owned existing row", async () => {
+    const { db, sqlite } = fixtures.open();
+    const existingDay = Date.UTC(2026, 9, 28) / 1000;
+    const missingDay = existingDay + 86_400;
+    sqlite.prepare(
+      `INSERT INTO supply_history
+         (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at, supply_provenance)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run("usdt-tether", existingDay, 422_000, 1, existingDay + 600, JSON.stringify({ source: "cron" }));
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () => Response.json({
+      tokens: [
+        { date: existingDay, circulating: { peggedUSD: 229_000 } },
+        { date: missingDay, circulating: { peggedUSD: 430_000 } },
+      ],
+    }));
+    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-10-28&endDay=2026-10-29";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+    const body = await readJsonResponse<{ rowsInserted: number; rowsSkippedExisting?: number }>(res, 200);
+    expect(body.rowsInserted).toBe(1);
+    expect(body.rowsSkippedExisting).toBe(1);
+    expect(sqlite.prepare(
+      "SELECT circulating_usd, price, price_observed_at, supply_provenance FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?",
+    ).get("usdt-tether", existingDay)).toEqual({
+      circulating_usd: 422_000,
+      price: 1,
+      price_observed_at: existingDay + 600,
+      supply_provenance: JSON.stringify({ source: "cron" }),
+    });
+    expect(sqlite.prepare("SELECT circulating_usd FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+      .get("usdt-tether", missingDay)).toEqual({ circulating_usd: 430_000 });
+  });
+
+  it("overwrites an existing row only with the explicit overwrite=true opt-in", async () => {
+    const { db, sqlite } = fixtures.open();
+    const day = Date.UTC(2026, 9, 28) / 1000;
+    sqlite.prepare(
+      `INSERT INTO supply_history
+         (stablecoin_id, snapshot_date, circulating_usd, price, price_observed_at, supply_provenance)
+       VALUES (?, ?, ?, ?, ?, ?)`,
+    ).run("usdt-tether", day, 422_000, 1, day + 600, JSON.stringify({ source: "cron" }));
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 229_000 } }] }));
+    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-10-28&endDay=2026-10-28&overwrite=true";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+    const body = await readJsonResponse<{ rowsInserted: number; rowsSkippedExisting?: number }>(res, 200);
+    expect(body.rowsInserted).toBe(1);
+    expect(body.rowsSkippedExisting).toBeUndefined();
+    expect(sqlite.prepare(
+      "SELECT circulating_usd, price, price_observed_at, supply_provenance FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?",
+    ).get("usdt-tether", day)).toEqual({
+      circulating_usd: 229_000,
+      price: null,
+      price_observed_at: null,
+      supply_provenance: null,
+    });
+  });
+
+  it.each([false, true])("persists observed zero, replacing a prior positive row only with overwrite=true (%s)", async (seedPrior) => {
     const { db, sqlite } = fixtures.open();
     const day = Date.UTC(2026, 3, 9) / 1000;
     if (seedPrior) {
@@ -217,13 +278,30 @@ describe("handleBackfillSupplyHistory", () => {
     }
     vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 0 } }] }));
-    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09";
+    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09&overwrite=true";
     const res = await handleBackfillSupplyHistoryTrusted({
       db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
     });
     expect((await readJsonResponse<{ rowsInserted: number }>(res, 200)).rowsInserted).toBe(1);
     expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
       .get("usdt-tether", day)).toEqual({ circulating_usd: 0, price: null });
+  });
+
+  it("keeps a prior positive row when an observed zero arrives without overwrite", async () => {
+    const { db, sqlite } = fixtures.open();
+    const day = Date.UTC(2026, 3, 9) / 1000;
+    sqlite.prepare("INSERT INTO supply_history (stablecoin_id, snapshot_date, circulating_usd, price) VALUES (?, ?, ?, ?)")
+      .run("usdt-tether", day, 100_000_000, 0.99);
+    vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
+      Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 0 } }] }));
+    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09";
+    const res = await handleBackfillSupplyHistoryTrusted({
+      db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
+    });
+    const body = await readJsonResponse<{ rowsInserted: number; rowsSkippedExisting?: number }>(res, 200);
+    expect(body).toMatchObject({ rowsInserted: 0, rowsSkippedExisting: 1 });
+    expect(sqlite.prepare("SELECT circulating_usd, price FROM supply_history WHERE stablecoin_id = ? AND snapshot_date = ?")
+      .get("usdt-tether", day)).toEqual({ circulating_usd: 100_000_000, price: 0.99 });
   });
 
   it.each([false, true])("persists native non-USD zero without valuation even alongside an unpriceable positive (%s)", async (mixed) => {
@@ -273,7 +351,7 @@ describe("handleBackfillSupplyHistory", () => {
     sqlite.exec("CREATE TRIGGER fail_supply_write AFTER INSERT ON supply_history BEGIN SELECT RAISE(ABORT, 'injected supply write failure'); END");
     vi.spyOn(globalThis, "fetch").mockImplementation(async () =>
       Response.json({ tokens: [{ date: day, circulating: { peggedUSD: 0 } }] }));
-    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09";
+    const path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-04-09&endDay=2026-04-09&overwrite=true";
     await expect(handleBackfillSupplyHistoryTrusted({
       db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
     })).rejects.toThrow("injected supply write failure");
@@ -282,7 +360,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("preserves unbounded history for bare backfill calls", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const oldDay = Math.floor(Date.UTC(2020, 0, 1) / 1000);
     const recentDay = Math.floor(Date.UTC(2026, 0, 1) / 1000);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
@@ -326,7 +404,7 @@ describe("handleBackfillSupplyHistory", () => {
     });
 
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     expect(inserts.map((stmt) => stmt.binds[1])).toEqual([oldDay, recentDay]);
     expect(vi.mocked(fetchMarketBackfillPriceSeries).mock.calls[0]?.[2]?.range).toBeUndefined();
@@ -339,7 +417,7 @@ describe("handleBackfillSupplyHistory", () => {
       price: 1,
       tokens: days.map((date) => ({ date, circulating: { peggedUSD: 100_000_000 } })),
     }));
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     let path = "/api/backfill-supply-history?stablecoin=usdt-tether&startDay=2026-01-01&endDay=2026-01-05&windowDays=2";
     const widths: number[] = [];
     for (let page = 0; page < 5; page++) {
@@ -361,12 +439,12 @@ describe("handleBackfillSupplyHistory", () => {
       if (page === 0 && override != null) path += `&windowDays=${override}`;
     }
     expect(widths).toEqual(override === 1 ? [2, 1, 1, 1] : [2, 2, 1]);
-    expect(db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"))
+    expect(db.getHistory().filter((stmt) => stmt.sql.includes("INTO supply_history"))
       .map((stmt) => stmt.binds[1])).toEqual(days);
   });
 
   it("threads the request AbortSignal into supply backfill upstream helpers", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     vi.spyOn(globalThis, "fetch").mockResolvedValue(
       new Response(
         JSON.stringify({
@@ -398,7 +476,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("uses fiat FX history for a non-USD DefiLlama coin without CoinGecko history", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const day1 = 1_700_006_400;
     const day2 = 1_700_092_800;
 
@@ -441,7 +519,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.errors).toBeUndefined();
 
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     expect(inserts).toHaveLength(2);
     expect(inserts[0].binds).toEqual([
@@ -465,7 +543,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("does not clamp sparse non-USD price history outside its covered range", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const beforePriceRange = Math.floor(1_699_913_600 / 86400) * 86400;
     const afterPriceRange = Math.floor(1_700_086_400 / 86400) * 86400;
 
@@ -515,7 +593,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.errors).toBeUndefined();
 
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     expect(inserts).toHaveLength(0);
     expect(fetchMarketBackfillPriceSeries).toHaveBeenCalled();
@@ -523,7 +601,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("withholds a non-USD day whose price is an isolated excursion from the surrounding week", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const days = [1_730_505_600, 1_730_592_000, 1_730_678_400, 1_730_764_800, 1_730_851_200]; // 2024-11-02..06
     vi.mocked(fetchMarketBackfillPriceSeries).mockResolvedValue({
       prices: [
@@ -571,7 +649,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.rowsInserted).toBe(5);
     expect(body.errors).toBeUndefined();
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     // The excursion is withheld from valuation; the day is interpolated from
     // its neighbours instead of publishing 0.0795 as that day's market price.
@@ -584,7 +662,7 @@ describe("handleBackfillSupplyHistory", () => {
     // Simulates a brand-new single-deployment CG-only coin: CoinGecko returns valid prices
     // but market_caps=0 and circulating_supply=0 (upstream data not yet populated).
     // Backfill should replay on-chain totalSupply per historical day and compute mcap = supply × price.
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const fixtureId = useSingleDeploymentSparkSupplyFixture();
 
     const ts1 = 1_775_692_800_000; // CG returns ms timestamps
@@ -638,7 +716,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.skipped).toBeUndefined();
 
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     expect(inserts).toHaveLength(2);
     // 1,000,000 tokens × $1.0002 ≈ 1,000,200
@@ -650,7 +728,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("repairs partial CoinGecko market-cap gaps with historical on-chain totalSupply", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const fixtureId = useSingleDeploymentSparkSupplyFixture();
 
     const ts1 = 1_775_692_800_000;
@@ -701,7 +779,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.skipped).toBeUndefined();
 
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     expect(inserts).toHaveLength(2);
     expect(inserts[0].binds).toEqual([fixtureId, Math.floor(ts1 / 1000 / 86_400) * 86_400, 1_234_567, 1.0002]);
@@ -713,7 +791,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("fails closed instead of replaying one EVM lane for multi-deployment supply fallback", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
 
     const ts = 1_775_692_800_000;
 
@@ -773,7 +851,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
 
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     expect(inserts).toHaveLength(0);
   });
@@ -797,7 +875,7 @@ describe("handleBackfillSupplyHistory", () => {
       }
       throw new Error(`Unexpected fetch: ${url}`);
     });
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-09`;
     const res = await handleBackfillSupplyHistoryTrusted({
       db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
@@ -808,7 +886,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(body.errors?.[0]).toContain("unsupported-complete-roster");
     expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
     expect(fetchSpy.mock.calls.every(([url]) => !String(url).includes("rpc"))).toBe(true);
-    expect(db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"))).toEqual([]);
+    expect(db.getHistory().filter((stmt) => stmt.sql.includes("INTO supply_history"))).toEqual([]);
   });
 
   it.each([
@@ -830,19 +908,19 @@ describe("handleBackfillSupplyHistory", () => {
       if (url.includes("/coins/")) return Response.json({ market_data: { circulating_supply: 0 } });
       throw new Error(`Unexpected fetch: ${url}`);
     });
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-04-09&endDay=2026-04-09`;
     const res = await handleBackfillSupplyHistoryTrusted({
       db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
     });
     expect((await readJsonResponse(res, 200) as { rowsInserted: number }).rowsInserted).toBe(1);
-    const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INTO supply_history"));
     expect(inserts.map((stmt) => stmt.binds)).toEqual([[fixtureId, ts / 1000, cap, price]]);
     expect(evmRpcMocks.resolveClosestBlockAtOrBeforeTimestamp).not.toHaveBeenCalled();
   });
 
   it("skips historical totalSupply when contract decimals are missing", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const fixtureId = useMissingDecimalsHistoricalSupplyFixture();
     const path = `/api/backfill-supply-history?stablecoin=${fixtureId}&startDay=2026-06-09&endDay=2026-06-09`;
 
@@ -860,7 +938,7 @@ describe("handleBackfillSupplyHistory", () => {
   });
 
   it("backfills USD-valued Base Dollar supply from historical totalSupply without a CoinGecko ID", async () => {
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const actual = await vi.importActual<typeof import("@shared/lib/psi-eligible")>("@shared/lib/psi-eligible");
     const baseDollar = actual.PSI_ELIGIBLE_META_BY_ID.get("bd-basedollar")!;
     psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, baseDollar);
@@ -942,7 +1020,7 @@ describe("handleBackfillSupplyHistory", () => {
     expect(fetchSpy).toHaveBeenCalledTimes(2);
 
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     expect(inserts.map((stmt) => stmt.binds)).toEqual([
       ["bd-basedollar", day1, 2_500, 1],
@@ -961,7 +1039,7 @@ describe("handleBackfillSupplyHistory", () => {
     ]);
     psiEligibleMocks.stablecoins.splice(0, psiEligibleMocks.stablecoins.length, ...historicalTotalSupplyCoins);
 
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const fetchSpy = vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("Unpriced days must not fetch"));
     const chainRpcs = ethereumSupplyRpc();
 
@@ -984,14 +1062,14 @@ describe("handleBackfillSupplyHistory", () => {
     expect(fetchSpy).not.toHaveBeenCalled();
 
     const inserts = db.getHistory().filter((stmt) =>
-      stmt.sql.includes("INSERT OR REPLACE INTO supply_history"),
+      stmt.sql.includes("INTO supply_history"),
     );
     expect(inserts).toHaveLength(0);
   });
 
   it.each([null, 1.25])("replays USG exclusions only with a historical price (%s)", async (price) => {
     const day = Date.UTC(2026, 4, 9) / 1000;
-    const db = mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]);
+    const db = mockD1([{ match: "INTO supply_history", rows: [] }]);
     const blockNumber = 24_500_000;
     // Synthetic replay-price availability; the live USG catalog has no CoinGecko ID.
     const source = psiEligibleMocks.metaById.get("usg-tangent")!;
@@ -1019,7 +1097,7 @@ describe("handleBackfillSupplyHistory", () => {
       coingeckoApiKey: null, chainRpcs: ethereumSupplyRpc(),
     });
     const body = await readJsonResponse<{ rowsInserted: number; skippedDays?: number; errors?: string[] }>(res, 200);
-    const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INSERT OR REPLACE INTO supply_history"));
+    const inserts = db.getHistory().filter((stmt) => stmt.sql.includes("INTO supply_history"));
     if (price == null) {
       expect(body.rowsInserted).toBe(0);
       expect(body.skippedDays).toBe(1);
@@ -1055,7 +1133,7 @@ describe("handleBackfillSupplyHistory", () => {
       throw new Error(`Unexpected fetch: ${url}`);
     });
 
-    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]), url: makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09", {
+    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([{ match: "INTO supply_history", rows: [] }]), url: makeApiUrl("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09"), request: makeApiRequest("/api/backfill-supply-history?stablecoin=susdt-spark&startDay=2026-04-09&endDay=2026-04-09", {
         adminKey: "secret",
       }), coingeckoApiKey: null });
 
@@ -1101,7 +1179,7 @@ describe("handleBackfillSupplyHistory", () => {
       if (url.includes("/chart/coingecko:tether-gold")) return Response.json({ coins: {} });
       throw new Error(`Unexpected fetch: ${url}`);
     });
-    const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-09";
+    const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-09&overwrite=true";
     const res = await handleBackfillSupplyHistoryTrusted({
       db, url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }),
     });
@@ -1244,7 +1322,7 @@ describe("handleBackfillSupplyHistory", () => {
     });
 
     const path = "/api/backfill-supply-history?stablecoin=xaut-tether&startDay=2026-04-09&endDay=2026-04-10";
-    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([{ match: "INSERT OR REPLACE INTO supply_history", rows: [] }]), url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }) });
+    const res = await handleBackfillSupplyHistoryTrusted({ db: mockD1([{ match: "INTO supply_history", rows: [] }]), url: makeApiUrl(path), request: makeApiRequest(path, { adminKey: "secret" }) });
 
     const body = (await readJsonResponse(res, 200)) as { errors?: string[] };
     expect(body.errors?.[0]).toContain("no TVL history");

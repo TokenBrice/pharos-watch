@@ -1,5 +1,9 @@
 import { logWorkerEventArgs } from "../../src/lib/structured-log";
-import { SUPPLY_HISTORY_UPSERT_SQL, writeSupplyHistoryBatch } from "../../src/lib/supply-history-db";
+import {
+  SUPPLY_HISTORY_INSERT_MISSING_SQL,
+  SUPPLY_HISTORY_UPSERT_SQL,
+  writeSupplyHistoryBatch,
+} from "../../src/lib/supply-history-db";
 import { PSI_ELIGIBLE_STABLECOINS, PSI_ELIGIBLE_META_BY_ID } from "@shared/lib/psi-eligible";
 import { DAY_SECONDS } from "@shared/lib/time-constants";
 import { bucketUnixMillisecondsToUtcDay, bucketUnixSecondsToUtcDay } from "@shared/lib/time-buckets";
@@ -66,10 +70,11 @@ function pushSupplyUpsert(
   snapshotDate: number,
   circulating: number,
   price: number | null,
+  overwrite: boolean,
 ): void {
   statements.push(
     db
-      .prepare(SUPPLY_HISTORY_UPSERT_SQL)
+      .prepare(overwrite ? SUPPLY_HISTORY_UPSERT_SQL : SUPPLY_HISTORY_INSERT_MISSING_SQL)
       .bind(stablecoinId, snapshotDate, circulating, price),
   );
 }
@@ -367,6 +372,7 @@ async function fetchHistoricalAdjustedSupplyRaw(input: {
 interface HistoricalEvmSupplyOptions {
   priceSeries?: TimestampedRatePoint[];
   parPrice?: number | null;
+  overwrite: boolean;
   chainRpcs?: Map<string, ChainRpcConfig>;
   blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
   window?: SupplyBackfillWindow;
@@ -462,7 +468,7 @@ async function runHistoricalEvmSupplyDays(
       continue;
     }
 
-    pushSupplyUpsert(stmts, db, stablecoinId, snapshotDate, circulatingUsd, price);
+    pushSupplyUpsert(stmts, db, stablecoinId, snapshotDate, circulatingUsd, price, options.overwrite);
   }
 
   return { stmts, blockMisses, supplyMisses, priceMisses };
@@ -472,7 +478,7 @@ async function backfillHistoricalOnChainSupply(
   db: D1Database,
   meta: (typeof PSI_ELIGIBLE_STABLECOINS)[number],
   options: HistoricalEvmSupplyOptions,
-): Promise<{ rows: number; error?: string; skippedDays?: number } | null> {
+): Promise<{ rows: number; error?: string; skippedDays?: number; skippedExisting?: number } | null> {
   const exclusionConfig = getOnChainSupplyExclusionConfig(meta.id);
   if (!exclusionConfig?.historicalBackfillStartDay) return null;
   if (meta.flags.pegCurrency !== "USD") {
@@ -528,13 +534,13 @@ async function backfillHistoricalOnChainSupply(
     };
   }
 
-  await writeSupplyHistoryBatch(db, stmts);
+  const inserted = await writeSupplyHistoryBatch(db, stmts);
   if (blockMisses > 0 || supplyMisses > 0 || priceMisses > 0) {
     logWorkerEventArgs("api", "warn",
       `[backfill-supply] ${meta.symbol}: historical on-chain supply skipped ${blockMisses} block lookup(s), ${supplyMisses} supply read(s), and ${priceMisses} price day(s)`,
     );
   }
-  return { rows: stmts.length, skippedDays: priceMisses };
+  return { rows: inserted, skippedExisting: stmts.length - inserted, skippedDays: priceMisses };
 }
 
 async function backfillHistoricalTotalSupply(
@@ -544,7 +550,7 @@ async function backfillHistoricalTotalSupply(
     requirePrice: boolean;
     skipSnapshotDates?: ReadonlySet<number>;
   },
-): Promise<{ rows: number; error?: string; skippedDays?: number }> {
+): Promise<{ rows: number; error?: string; skippedDays?: number; skippedExisting?: number }> {
   if (meta.flags.pegCurrency !== "USD" && !options.requirePrice) {
     return { rows: 0, error: "historical totalSupply backfill for non-USD assets requires historical prices" };
   }
@@ -598,7 +604,7 @@ async function backfillHistoricalTotalSupply(
     };
   }
 
-  await writeSupplyHistoryBatch(db, stmts);
+  const inserted = await writeSupplyHistoryBatch(db, stmts);
   if (blockMisses > 0 || supplyMisses > 0 || priceMisses > 0) {
     logWorkerEventArgs("api", "warn",
       JSON.stringify({
@@ -612,7 +618,7 @@ async function backfillHistoricalTotalSupply(
       }),
     );
   }
-  return { rows: stmts.length, skippedDays: priceMisses };
+  return { rows: inserted, skippedExisting: stmts.length - inserted, skippedDays: priceMisses };
 }
 
 async function backfillCommodity(
@@ -621,13 +627,14 @@ async function backfillCommodity(
   config: {
     geckoId: string;
     protocolSlug?: string;
+    overwrite: boolean;
     cgApiKey?: string | null;
     chainRpcs?: Map<string, ChainRpcConfig>;
     blockSearchCachesByChain?: EvmBlockSearchCacheByChain;
     window?: SupplyBackfillWindow;
     signal?: AbortSignal;
   },
-): Promise<{ rows: number; error?: string; skippedDays?: number }> {
+): Promise<{ rows: number; error?: string; skippedDays?: number; skippedExisting?: number }> {
   const id = meta.id;
   const marketHistory = await fetchCoinGeckoMarketHistory(config.geckoId, {
     apiKey: config.cgApiKey ?? null,
@@ -672,24 +679,26 @@ async function backfillCommodity(
       }
 
       seenSnapshotDates.add(snapshotDate);
-      pushSupplyUpsert(stmts, db, id, snapshotDate, resolvedMcap, price);
+      pushSupplyUpsert(stmts, db, id, snapshotDate, resolvedMcap, price, config.overwrite);
     }
 
     if (stmts.length > 0) {
-      await writeSupplyHistoryBatch(db, stmts);
+      const inserted = await writeSupplyHistoryBatch(db, stmts);
       if (missingMarketCapDays > 0) {
         const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
           chainRpcs: config.chainRpcs,
           blockSearchCachesByChain: config.blockSearchCachesByChain,
           priceSeries: normalizeCoinGeckoDailyPrices(screenedPricePairs),
           requirePrice: true,
+          overwrite: config.overwrite,
           skipSnapshotDates: seenSnapshotDates,
           window: config.window,
           signal: config.signal,
         });
         if (!historicalTotalSupply.error) {
           return {
-            rows: stmts.length + historicalTotalSupply.rows,
+            rows: inserted + historicalTotalSupply.rows,
+            skippedExisting: (stmts.length - inserted) + (historicalTotalSupply.skippedExisting ?? 0),
             skippedDays: historicalTotalSupply.skippedDays,
           };
         }
@@ -697,7 +706,7 @@ async function backfillCommodity(
           `[backfill-commodity] ${id}: skipped ${missingMarketCapDays} day(s) without CoinGecko market caps; historical totalSupply fallback failed (${historicalTotalSupply.error})`,
         );
       }
-      return { rows: stmts.length };
+      return { rows: inserted, skippedExisting: stmts.length - inserted };
     }
 
     const historicalTotalSupply = await backfillHistoricalTotalSupply(db, meta, {
@@ -705,6 +714,7 @@ async function backfillCommodity(
       blockSearchCachesByChain: config.blockSearchCachesByChain,
       priceSeries: normalizeCoinGeckoDailyPrices(screenedPricePairs),
       requirePrice: true,
+      overwrite: config.overwrite,
       window: config.window,
       signal: config.signal,
     });
@@ -786,13 +796,14 @@ async function backfillCommodity(
     const snapshotDate = bucketUnixSecondsToUtcDay(point.date);
     const price = findPrice(point.date);
     if (!isWithinBackfillWindow(snapshotDate, config.window)) continue;
-    pushSupplyUpsert(stmts, db, id, snapshotDate, mcap, price);
+    pushSupplyUpsert(stmts, db, id, snapshotDate, mcap, price, config.overwrite);
   }
 
-  if (stmts.length > 0) {
-    await writeSupplyHistoryBatch(db, stmts);
+  if (stmts.length === 0) {
+    return { rows: 0 };
   }
-  return { rows: stmts.length };
+  const inserted = await writeSupplyHistoryBatch(db, stmts);
+  return { rows: inserted, skippedExisting: stmts.length - inserted };
 }
 
 export interface BackfillSupplyHistoryRouteContext {
@@ -812,6 +823,7 @@ async function executeBackfillSupplyHistory(
 ): Promise<Response> {
   throwIfAborted(signal);
   const allowConstantPriceFallback = url.searchParams.get("allow-constant-price-fallback") === "true";
+  const overwrite = url.searchParams.get("overwrite") === "true";
   const dayWindow = parseOptionalDayWindow(url, {
     maxEndDay: getLastCompletedUtcDay(),
     invalidDayMessage: "Invalid startDay/endDay. Use Unix seconds/milliseconds or YYYY-MM-DD.",
@@ -837,6 +849,7 @@ async function executeBackfillSupplyHistory(
   }
 
   let totalRows = 0;
+  let rowsSkippedExisting = 0;
   let skippedDays = 0;
   const errors: string[] = [];
   const skipped: string[] = [];
@@ -857,6 +870,7 @@ async function executeBackfillSupplyHistory(
       priceSeries: exclusionPriceSeries?.prices
         ?.map((point) => ({ timestamp: bucketUnixSecondsToUtcDay(point.timestamp), rate: point.price })) ?? [],
       parPrice: getParPolicyPrice(meta),
+      overwrite,
       window: supplyBackfillWindow,
       signal,
     });
@@ -866,6 +880,7 @@ async function executeBackfillSupplyHistory(
         skippedDays += historicalOnChainResult.skippedDays ?? 0;
       } else {
         totalRows += historicalOnChainResult.rows;
+        rowsSkippedExisting += historicalOnChainResult.skippedExisting ?? 0;
         skippedDays += historicalOnChainResult.skippedDays ?? 0;
       }
       return;
@@ -899,6 +914,7 @@ async function executeBackfillSupplyHistory(
             : [],
           requirePrice: true,
           parPrice: getParPolicyPrice(meta),
+          overwrite,
           window: supplyBackfillWindow,
           signal,
         });
@@ -907,6 +923,7 @@ async function executeBackfillSupplyHistory(
           skippedDays += result.skippedDays ?? 0;
         } else {
           totalRows += result.rows;
+          rowsSkippedExisting += result.skippedExisting ?? 0;
           skippedDays += result.skippedDays ?? 0;
         }
       } catch (err) {
@@ -925,6 +942,7 @@ async function executeBackfillSupplyHistory(
       const result = await backfillCommodity(db, meta, {
         geckoId: meta.geckoId,
         protocolSlug: meta.protocolSlug ?? undefined,
+        overwrite,
         cgApiKey,
         chainRpcs,
         blockSearchCachesByChain,
@@ -936,6 +954,7 @@ async function executeBackfillSupplyHistory(
         skippedDays += result.skippedDays ?? 0;
       } else {
         totalRows += result.rows;
+        rowsSkippedExisting += result.skippedExisting ?? 0;
       }
     } catch (err) {
       rethrowIfAborted(err, signal);
@@ -1108,12 +1127,13 @@ async function executeBackfillSupplyHistory(
         marketCapUsd = rawSum;
       }
 
-      pushSupplyUpsert(stmts, db, meta.id, snapshotDate, marketCapUsd, price);
+      pushSupplyUpsert(stmts, db, meta.id, snapshotDate, marketCapUsd, price, overwrite);
     }
 
     if (stmts.length > 0) {
-      await writeSupplyHistoryBatch(db, stmts);
-      totalRows += stmts.length;
+      const inserted = await writeSupplyHistoryBatch(db, stmts);
+      totalRows += inserted;
+      rowsSkippedExisting += stmts.length - inserted;
     }
   }
 
@@ -1121,6 +1141,7 @@ async function executeBackfillSupplyHistory(
     buildAdminJobSummary({
       coinsProcessed: coins.length,
       rowsInserted: totalRows,
+      ...(rowsSkippedExisting > 0 ? { rowsSkippedExisting } : {}),
       ...(skippedDays > 0 ? { skippedDays } : {}),
       skipped,
       errors,
