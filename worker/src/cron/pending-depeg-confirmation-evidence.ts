@@ -22,7 +22,7 @@ import {
 import type { PendingDepegState } from "../lib/depeg-pending";
 import { fetchJsonWithRetry } from "../lib/fetch-retry";
 import { logWorkerEvent } from "../lib/structured-log";
-import { CoinGeckoSimplePriceSchema } from "../lib/upstream-schemas";
+import { CoinGeckoSimplePriceEntrySchema, CoinGeckoSimplePriceSchema } from "../lib/upstream-schemas";
 import {
   addSource,
   addSources,
@@ -131,9 +131,13 @@ async function evaluateOffchainConfirmer(args: {
     }
 
     const parsed = CoinGeckoSimplePriceSchema.safeParse(offchainResult.body);
-    const coin = parsed.success ? parsed.data[geckoId] : undefined;
-    const offchainPrice = coin?.usd;
-    const observedAt = coin?.last_updated_at;
+    // The envelope is per-key: a malformed sibling quote must not hide this
+    // asset's entry, and a malformed own entry stays unavailable.
+    const entry = parsed.success
+      ? CoinGeckoSimplePriceEntrySchema.safeParse(parsed.data[geckoId])
+      : null;
+    const offchainPrice = entry?.success ? entry.data.usd : undefined;
+    const observedAt = entry?.success ? entry.data.last_updated_at : undefined;
 
     const timestampStatus = classifyConfirmationTimestamp(observedAt, now);
     if (offchainPrice && offchainPrice > 0 && timestampStatus === "fresh") {

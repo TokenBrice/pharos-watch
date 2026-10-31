@@ -1,6 +1,7 @@
 import type { DatabaseSync } from "node:sqlite";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
+import { createSqliteD1 } from "@shared/test-utils/sqlite-d1";
 import type { SlotCatchUpMessage } from "@shared/types/slot-catch-up";
 import { CRON_SCHEDULE_CADENCES } from "@shared/lib/cron-cadences";
 import { getCronSlotStartedAtForSchedule } from "@shared/lib/cron-jobs";
@@ -15,6 +16,7 @@ import {
 } from "@shared/lib/scheduled-slot-catch-up-policy";
 import { armDueSlotCatchUps } from "../scheduled-slot-catch-up";
 import { runScheduledSlotWithFence, sweepStaleScheduledSlotExecutions } from "../scheduled-slot-fence";
+import { resolveScheduledSlotPolicy } from "../scheduled-slot-policy";
 import { STALE_SLOT_ERROR } from "../scheduled-slot-reconciliation";
 import { createDeferredPromise } from "./deferred.test-support";
 
@@ -66,6 +68,16 @@ function seedStaleRunningSlot(sqlite: DatabaseSync, slotKey: string, slotStarted
        invocation_id, worker_version, started_at, updated_at, child_marker_version
      ) VALUES (?, ?, 'running', 'dead-owner', 1, 'dead-invocation', 'worker-a', ?, ?, 1)`,
   ).run(slotKey, slotStartedAt, slotStartedAt + 30, slotStartedAt + 60);
+}
+
+/** A stale-slot sweep claimed the slot into 'reconciling' and never reached its finish CAS. */
+function seedParkedReconcilingSlot(sqlite: DatabaseSync, slotKey: string, slotStartedAt: number, claimedAt: number) {
+  sqlite.prepare(
+    `INSERT INTO cron_slot_executions (
+       slot_key, slot_started_at, state, execution_owner, execution_generation,
+       invocation_id, worker_version, started_at, updated_at, child_marker_version
+     ) VALUES (?, ?, 'reconciling', 'stale-slot:quarterHourly', 2, 'dead-invocation', 'worker-a', ?, ?, 1)`,
+  ).run(slotKey, slotStartedAt, slotStartedAt + 1, claimedAt);
 }
 
 function slotRow(sqlite: DatabaseSync, slotKey: string, slotStartedAt: number) {
@@ -263,6 +275,56 @@ describe("one-shot scheduled slot catch-up", () => {
     expect(sent.map(({ scheduleKey, trigger }) => `${scheduleKey}:${trigger}`).sort())
       .toEqual(["hourlyYieldSync:abandoned", "quarterHourly:never-delivered"]);
     expect(slotRow(sqlite, "hourlyYieldSync", YIELD_SLOT)?.metadata?.error).toBe(STALE_SLOT_ERROR);
+  });
+
+  it("keeps the hint when a replayed marker upsert reports zero changes for its own claim", async () => {
+    const fixture = openWithLanes("quarterHourly");
+    const { queue, sent } = createQueue();
+    // D1 applies the forward-only marker write and loses the response; the
+    // overload retry replays it, where the WHERE is now false (zero changes).
+    let replaying = false;
+    const db = createSqliteD1(fixture.sqlite, {
+      rowsWritten(sql, changes) {
+        if (!replaying && changes === 1 && sql.includes("INSERT INTO cache")) {
+          replaying = true;
+          throw new Error("Network connection lost");
+        }
+        return changes;
+      },
+    });
+
+    await expect(armDueSlotCatchUps(
+      { DB: db, RESERVE_CONTINUATION_QUEUE: queue, WORKER_SLOT_CATCH_UP_MODE: "on" } as never,
+      { invocationId: "digest-poll", nowSec: QUARTER_SLOT + 600 },
+    )).resolves.toEqual([{ scheduleKey: "quarterHourly", slotStartedAt: QUARTER_SLOT,
+      trigger: "never-delivered", disposition: "sent" }]);
+    expect(replaying).toBe(true);
+    expect(sent).toEqual([expect.objectContaining({
+      kind: "slot-catch-up", scheduleKey: "quarterHourly", slotStartedAt: QUARTER_SLOT,
+      trigger: "never-delivered", armedByInvocationId: "digest-poll" })]);
+  });
+
+  it("re-drives a due slot parked in reconciling once it is past the shared stale policy", async () => {
+    const { sqlite, db } = openWithLanes("quarterHourly");
+    const { queue, sent } = createQueue();
+    const policy = resolveScheduledSlotPolicy("quarterHourly");
+    // 11:06 minute lane claims the 11:00 slot, then its 15 s detection budget
+    // aborts before the finish CAS; the row stays reconciling.
+    const claimedAt = QUARTER_SLOT + 360;
+    seedParkedReconcilingSlot(sqlite, "quarterHourly", QUARTER_SLOT, claimedAt);
+    const nowSec = claimedAt + policy.slotSilenceSec + 5;
+
+    expect(resolveSlotCatchUpCandidate("quarterHourly", nowSec)).toBe(QUARTER_SLOT);
+    await expect(armDueSlotCatchUps(
+      { DB: db, RESERVE_CONTINUATION_QUEUE: queue, WORKER_SLOT_CATCH_UP_MODE: "on" } as never,
+      { invocationId: "minute-lane", nowSec, reconcileStale: true },
+    )).resolves.toEqual([{ scheduleKey: "quarterHourly", slotStartedAt: QUARTER_SLOT,
+      trigger: "abandoned", disposition: "sent" }]);
+    expect(slotRow(sqlite, "quarterHourly", QUARTER_SLOT)).toMatchObject({
+      state: "finished", result_status: "error", metadata: { error: STALE_SLOT_ERROR } });
+    expect(sent).toEqual([expect.objectContaining({
+      kind: "slot-catch-up", scheduleKey: "quarterHourly", slotStartedAt: QUARTER_SLOT,
+      trigger: "abandoned", armedByInvocationId: "minute-lane" })]);
   });
 
   it("costs one indexed read per detection however many lanes are due, and none when disabled", async () => {

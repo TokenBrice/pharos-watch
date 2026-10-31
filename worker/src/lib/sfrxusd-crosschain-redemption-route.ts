@@ -6,10 +6,20 @@ import { z } from "zod";
 
 const EvmAddressSchema = z.string().regex(/^0x[0-9a-f]{40}$/);
 const Bytes32Schema = z.string().regex(/^0x[0-9a-f]{64}$/);
-const RawAmountSchema = z.string().regex(/^(0|[1-9]\d*)$/);
+const RAW_AMOUNT_PATTERN = /^(0|[1-9]\d*)$/;
+const RawAmountSchema = z.string().regex(RAW_AMOUNT_PATTERN);
 const COST_TOLERANCE = 0.000001;
 const VALUE_TOLERANCE_RATIO = 1e-9;
 const E18 = 10n ** 18n;
+
+/**
+ * Zod runs a refinement even after a child regex failure (dirty result), and
+ * `BigInt()` throws on the rejected strings. Re-check the raw grammar before
+ * any conversion so a schema rejection returns `success: false`, never throws.
+ */
+function everyRawAmountValid(values: readonly string[]): boolean {
+  return values.every((value) => RAW_AMOUNT_PATTERN.test(value));
+}
 
 const SFRXUSD_ROUTE_CONTRACT_ROLES = [
   "ethereum-sfrxusd",
@@ -89,6 +99,11 @@ const SfrxusdRouteProtocolCostPointSchema = z
   })
   .strict()
   .superRefine((point, ctx) => {
+    if (!everyRawAmountValid([
+      point.ethereumToFraxtalNativeFeeRaw,
+      point.remoteHopServiceFeeRaw,
+      point.totalUserNativeFeeRaw,
+    ])) return;
     const outboundFee = BigInt(point.ethereumToFraxtalNativeFeeRaw);
     const serviceFee = BigInt(point.remoteHopServiceFeeRaw);
     const totalUserFee = BigInt(point.totalUserNativeFeeRaw);
@@ -222,6 +237,25 @@ export const SfrxusdCrosschainV9RouteStateSchema = z
   })
   .strict()
   .superRefine((state, ctx) => {
+    if (!everyRawAmountValid([
+      state.ethUsdOracle.answeredInRound,
+      state.ethUsdOracle.roundId,
+      state.vaultOracle.answerE18,
+      state.vaultOracle.storedPriceE18,
+      state.vaultOracle.answeredInRound,
+      state.vaultOracle.roundId,
+      state.capacity.mintRedeemerTotalAssetsFrxUsdRaw,
+      state.capacity.mintRedeemerBalanceFrxUsdRaw,
+      state.capacity.mintRedeemerMdwrWithdrawableFrxUsdRaw,
+      state.capacity.ethereumTotalSupplySharesRaw,
+      state.capacity.mintRedeemerMaxRedeemSharesRaw,
+      state.capacity.cappedRedeemableSharesRaw,
+      state.capacity.cappedPreviewOutputFrxUsdRaw,
+      state.capacity.vaultPriceE18,
+      state.mintRedeemerFeeRaw,
+      state.fraxtalHopNativeBalanceRaw,
+      ...state.protocolCostCurve.map((point) => point.fraxtalToEthereumNativeFeeRaw),
+    ])) return;
     if (
       state.ethereumBlock.chain !== "ethereum" ||
       state.fraxtalBlock.chain !== "fraxtal"

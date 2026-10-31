@@ -106,7 +106,14 @@ export interface SupplySnapshotPreflightOptions<Context> {
 
 export type SupplySnapshotPreflightResult<Context> =
   | { kind: "cache-unavailable"; reason: StablecoinsCacheFailureReason }
-  | { kind: "cache-stale"; cache: StablecoinsCacheLoadOk; cacheAgeSec: number; nowSec: number }
+  | {
+      kind: "cache-stale";
+      cache: StablecoinsCacheLoadOk;
+      /** Null when the generation clock itself is unusable (ahead of the assessment clock). */
+      cacheAgeSec: number | null;
+      nowSec: number;
+      reason: "cache-age-exceeded" | "cache-clock-unusable";
+    }
   | {
       kind: "ready";
       cache: StablecoinsCacheLoadOk;
@@ -192,8 +199,13 @@ export async function preflightSupplySnapshot<Context>(
 
   const nowSec = options.nowSec ?? Math.floor(Date.now() / 1000);
   const cacheAgeSec = nowSec - cache.updatedAt;
+  // A generation clock ahead of the assessment clock cannot prove cache age
+  // (R2/R3); the producer stamps its real run clock, so this is a fault path.
+  if (!Number.isSafeInteger(cache.updatedAt) || cache.updatedAt <= 0 || cache.updatedAt > nowSec) {
+    return { kind: "cache-stale", cache, cacheAgeSec: null, nowSec, reason: "cache-clock-unusable" };
+  }
   if (options.maxCacheAgeSec != null && cacheAgeSec > options.maxCacheAgeSec) {
-    return { kind: "cache-stale", cache, cacheAgeSec, nowSec };
+    return { kind: "cache-stale", cache, cacheAgeSec, nowSec, reason: "cache-age-exceeded" };
   }
   const snapshotDate = startOfUtcDaySec(new Date(nowSec * 1000));
   const requiredActiveIds = [...new Set(options.requiredActiveIds)].sort();

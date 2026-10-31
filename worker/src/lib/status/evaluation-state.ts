@@ -11,8 +11,9 @@ const AVAILABILITY_CONFIDENCE_PENALTY: Record<StatusHealthValue, number> = {
 export function scoreStatusConfidence(input: {
   availabilityStatus: StatusHealthValue;
   dataQualityStatus: StatusHealthValue;
-  unhealthyCrons: number;
-  degradedCrons: number;
+  /** Null when the cron-history read failed: unknown, never an observed zero. */
+  unhealthyCrons: number | null;
+  degradedCrons: number | null;
   diagnosticIssueCount: number;
   missingPriceRatio: number;
   onchainMonitoringActive: boolean;
@@ -23,8 +24,11 @@ export function scoreStatusConfidence(input: {
   if (input.dataQualityStatus === "degraded") confidence -= 0.12;
   if (input.dataQualityStatus === "stale") confidence -= 0.28;
 
-  confidence -= Math.min(0.2, input.unhealthyCrons * 0.03);
-  confidence -= Math.min(0.08, input.degradedCrons * 0.01);
+  // R1 (ADR-28): an unreadable cron population is unknown evidence, not zero
+  // unhealthy/degraded crons; score it at the maximum deduction those observed
+  // counts can earn instead of awarding the unknown population full confidence.
+  confidence -= input.unhealthyCrons == null ? 0.2 : Math.min(0.2, input.unhealthyCrons * 0.03);
+  confidence -= input.degradedCrons == null ? 0.08 : Math.min(0.08, input.degradedCrons * 0.01);
   confidence -= Math.min(0.09, input.diagnosticIssueCount * 0.03);
   confidence -= Math.min(0.18, input.missingPriceRatio * 0.35);
   if (!input.onchainMonitoringActive) confidence -= 0.03;

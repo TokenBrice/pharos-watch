@@ -1,6 +1,7 @@
 import { afterEach, describe, it, expect, vi } from "vitest";
 import { createLatestSchemaFixtureTracker } from "@shared/test-utils/latest-schema-sqlite";
 import { type MockD1Database, type MockTableConfig } from "@shared/test-utils/mock-d1";
+import type { D1Database, D1PreparedStatement } from "@shared/types/cloudflare-runtime";
 import { projectYieldWarningEmitted, projectYieldPysDropped } from "../yield";
 import { mockTapeD1, tapeInsertBindsForType } from "./test-support";
 
@@ -38,6 +39,59 @@ function historyTables(
     { match: MATCH_FETCH_HISTORY, rows: samples },
     { match: MATCH_PRIOR_HISTORY, rows: priorRows },
   ];
+}
+
+/**
+ * Cloudflare's documented D1 ceiling: 1000 queries per Worker invocation
+ * (Workers Paid). The proxy enforces the platform boundary so a projection that
+ * spends the whole budget on corrupt prior-row seeks is observably lost.
+ */
+const D1_QUERIES_PER_INVOCATION = 1_000;
+
+function withInvocationQueryCeiling(db: D1Database, ceiling = D1_QUERIES_PER_INVOCATION): D1Database {
+  let queries = 0;
+  const originals = new WeakMap<D1PreparedStatement, D1PreparedStatement>();
+  const charge = (count: number): void => {
+    queries += count;
+    if (queries > ceiling) {
+      throw new Error(`D1_ERROR: too many queries in one Worker invocation (${ceiling} max)`);
+    }
+  };
+  const wrapStatement = (statement: D1PreparedStatement): D1PreparedStatement => {
+    const wrapped = new Proxy(statement, {
+      get(target, property) {
+        if (property === "bind") {
+          return (...values: unknown[]) => wrapStatement(target.bind(...values));
+        }
+        if (property === "first" || property === "all" || property === "run" || property === "raw") {
+          const method = target[property] as (...args: unknown[]) => Promise<unknown>;
+          return (...args: unknown[]) => {
+            charge(1);
+            return Reflect.apply(method, target, args);
+          };
+        }
+        const value: unknown = Reflect.get(target, property, target);
+        return typeof value === "function" ? value.bind(target) : value;
+      },
+    });
+    originals.set(wrapped, statement);
+    return wrapped;
+  };
+  return new Proxy(db, {
+    get(target, property) {
+      if (property === "prepare") {
+        return (sql: string) => wrapStatement(target.prepare(sql));
+      }
+      if (property === "batch") {
+        return (statements: D1PreparedStatement[]) => {
+          charge(statements.length);
+          return target.batch(statements.map((statement) => originals.get(statement) ?? statement));
+        };
+      }
+      const value: unknown = Reflect.get(target, property, target);
+      return typeof value === "function" ? value.bind(target) : value;
+    },
+  }) as D1Database;
 }
 
 // Seed the watermark cache so `since > 0`; the prior-row lookup is guarded
@@ -616,6 +670,35 @@ describe("yield warning unavailable evidence", () => {
       samples: expect.any(Array),
     });
     expect(warn.mock.calls[0]![1].samples).toHaveLength(10);
+  });
+
+  it("publishes a healthy peer when corrupt prior rows exhaust the D1 invocation budget", async () => {
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+    const { db, sqlite } = fixtures.open();
+    sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+      .run("tape-projector:cursor:yield.warning_emitted", String(SEC), SEC);
+
+    const insert = sqlite.prepare(`INSERT INTO yield_history
+      (stablecoin_id, source_key, recorded_at, is_best, apy, data_source, warning_signals)
+      VALUES (?, 'aave-v3:test', ?, 1, 5, 'defillama', ?)`);
+    // A producer regression leaves sixty coins with a long corrupt streak
+    // immediately behind the watermark; the prior-row seek must stay bounded so
+    // one bad generation cannot starve the whole class of its event batch (R8).
+    for (let coin = 0; coin < 60; coin++) {
+      const coinId = `bad-${String(coin).padStart(2, "0")}`;
+      for (let generation = 0; generation < 20; generation++) {
+        insert.run(coinId, SEC - 1 - generation, "{");
+      }
+      insert.run(coinId, SEC + 60, "{");
+    }
+    insert.run("zzz-healthy", SEC + 60, JSON.stringify(["tvl-outflow"]));
+
+    const result = await projectYieldWarningEmitted(withInvocationQueryCeiling(db), { since: SEC });
+
+    expect(result).toMatchObject({ projected: 1 });
+    expect(sqlite.prepare("SELECT coin_id, type FROM tape_events ORDER BY coin_id").all()).toEqual([
+      { coin_id: "zzz-healthy", type: "yield.warning_emitted" },
+    ]);
   });
 
   it("uses source-key ordering while seeking past corrupt priors and preserves genuine null clears", async () => {

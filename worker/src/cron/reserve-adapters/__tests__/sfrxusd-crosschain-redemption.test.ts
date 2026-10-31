@@ -24,12 +24,14 @@ import {
   buildSfrxusdCrosschainV9ExitRouteObservation,
   parseAcceptedSfrxusdCrosschainV9RouteState,
   SfrxusdCrosschainV9RouteStateSchema,
+  type SfrxusdCrosschainV9RouteState,
 } from "../../../lib/sfrxusd-crosschain-redemption-route";
 import { readRedemptionBackstopLiveMetadata } from "../../../lib/redemption-backstop/live-metadata";
 import { buildRedemptionBackstopEntry } from "../../../lib/redemption-backstop/sources";
 import * as crosschainObserver from "../sfrxusd-crosschain-redemption";
 import type { SfrxusdCrosschainV9RouteAttempt } from "../../../lib/sfrxusd-crosschain-redemption-route";
 import { installErc4626Network, runTrackedVault } from "./erc4626-single-asset.test-support";
+import { liveSnapshot } from "../../../lib/__tests__/redemption-backstop-sources.test-support";
 import { expectRecentPinRouting } from "../../../test-helpers/recent-pin-routing";
 
 const ABI = parseAbi([
@@ -755,6 +757,61 @@ describe("observeSfrxusdCrosschainRedemptionRoute", () => {
       resolutionState: "resolved",
       now: NOW,
     })).toBeNull();
+  });
+
+  it.each<[string, (state: SfrxusdCrosschainV9RouteState) => void]>([
+    ["capacity.cappedPreviewOutputFrxUsdRaw", (state) => { state.capacity.cappedPreviewOutputFrxUsdRaw = "1.5"; }],
+    ["protocolCostCurve[0].totalUserNativeFeeRaw", (state) => { state.protocolCostCurve[0]!.totalUserNativeFeeRaw = "1e18"; }],
+    ["ethUsdOracle.answeredInRound", (state) => { state.ethUsdOracle.answeredInRound = "1.5"; }],
+    ["vaultOracle.answerE18", (state) => { state.vaultOracle.answerE18 = "1.5"; }],
+    ["mintRedeemerFeeRaw", (state) => { state.mintRedeemerFeeRaw = "1.5"; }],
+    ["fraxtalHopNativeBalanceRaw", (state) => { state.fraxtalHopNativeBalanceRaw = "1.5"; }],
+  ])(
+    "rejects a stored raw amount that fails its integer grammar without throwing: %s",
+    async (_field, corrupt) => {
+      const attempt = await observe(client());
+      if (attempt.status !== "accepted") throw new Error("expected accepted packet");
+      corrupt(attempt.state);
+
+      expect(SfrxusdCrosschainV9RouteStateSchema.safeParse(attempt.state).success).toBe(false);
+      expect(parseAcceptedSfrxusdCrosschainV9RouteState(attempt)).toBeNull();
+      expect(buildSfrxusdCrosschainV9ExitRouteObservation({
+        state: attempt.state,
+        modeledExitSizeUsd: 1_000_000,
+        routeStatus: "open",
+        resolutionState: "resolved",
+        now: NOW,
+      })).toBeNull();
+    },
+  );
+
+  it("keeps a retained packet's valid capacity metadata when one stored raw amount is malformed", async () => {
+    const attempt = await observe(client());
+    if (attempt.status !== "accepted") throw new Error("expected accepted packet");
+    attempt.state.capacity.cappedPreviewOutputFrxUsdRaw = "1.5";
+    const metadata = readRedemptionBackstopLiveMetadata(
+      "sfrxusd-frax",
+      liveSnapshot("sfrxusd-frax", {
+        freshnessMode: "verified",
+        sourceTimestamp: NOW - 60,
+        redemption: {
+          capacityUsd: attempt.state.capacity.capacityUsd,
+          capacityKind: "documented-bound",
+          freshnessKind: "same-run-onchain",
+          routeStatus: "open",
+          routeStatusSource: "onchain",
+          feeBps: 10,
+          v9RouteAttempt: attempt,
+        },
+      }, { fetchedAt: NOW - 60, source: "erc4626-single-asset" }),
+      NOW,
+    );
+
+    // Only the optional specialized route is dropped; the same snapshot's
+    // independently valid nested capacity evidence survives.
+    expect(metadata.v9SfrxusdCrosschainRouteState).toBeNull();
+    expect(metadata.canUseCapacity).toBe(true);
+    expect(metadata.immediateRedeemableUsd).toBe(attempt.state.capacity.capacityUsd);
   });
 
   it("keeps zero redemption fees and zero native inventory valid when return quotes are zero", async () => {

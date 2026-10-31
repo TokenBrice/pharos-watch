@@ -13,14 +13,18 @@ import { z } from "zod";
  * deliberately divergent and remain their own exports.
  */
 
-/** CoinGecko `/simple/price?ids=...&vs_currencies=usd&include_last_updated_at=true` response. */
-export const CoinGeckoSimplePriceSchema = z.record(
-  z.string(),
-  z.object({
-    usd: z.number().optional(),
-    last_updated_at: z.number().optional(),
-  }),
-);
+/** One CoinGecko `/simple/price` quote; callers validate each entry separately. */
+export const CoinGeckoSimplePriceEntrySchema = z.object({
+  usd: z.number(),
+  last_updated_at: z.number().optional(),
+});
+
+/**
+ * CoinGecko `/simple/price?ids=...&vs_currencies=usd&include_last_updated_at=true`
+ * envelope. Entries stay unknown so one malformed quote is quarantined per key
+ * instead of rejecting its siblings.
+ */
+export const CoinGeckoSimplePriceSchema = z.record(z.string(), z.unknown());
 
 /** DefiLlama `/coins/prices/current/...` response (permissive — allows missing price/timestamp). */
 export const DefiLlamaCoinsPriceSchema = z.object({

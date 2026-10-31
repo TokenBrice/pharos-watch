@@ -32,11 +32,16 @@ import type {
 import {
   getYieldSupplementalFamilyCacheKey,
   getYieldSupplementalRunOutcomeCacheKey,
-  parseYieldSupplementalRunOutcome,
+  parseYieldSupplementalRunOutcomeDetailed,
   parseYieldSupplementalSourcesCache,
+  supplementalFamilySnapshotHash,
 } from "../../cron/yield-sync/cache";
 import { getSupplementalFamilyStaleThresholdSec } from "../../cron/yield-sync/family-registry";
-import { REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS, SUPPLEMENTAL_SOURCE_FAMILY_KEYS } from "../../cron/yield-sync/family-registry";
+import {
+  REQUIRED_SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  SUPPLEMENTAL_SOURCE_FAMILY_KEYS,
+  type SupplementalSourceFamilyKey,
+} from "../../cron/yield-sync/family-registry";
 import { safeJsonParse } from "../api-cache-read";
 import { loadActiveSafetyScoreIndex } from "../safety-score-index";
 import {
@@ -509,8 +514,10 @@ function buildBenchmarkRegistryHealth(params: {
   const entries = Object.values(benchmarks);
   // A6: keys the producer fetched that no published row uses are monitored but
   // never status-bearing — a stale unused key (CAD) is not an incident.
-  const unusedBenchmarkKeys = Object.entries(registry ?? {})
-    .filter(([key]) => !usage.has(key as YieldBenchmarkKey))
+  // R2: an unreadable ranking cohort proves nothing about usage, and a null
+  // registry slot was never fetched, so neither may become an unused-key claim.
+  const unusedBenchmarkKeys = params.rankings == null ? [] : Object.entries(registry ?? {})
+    .filter(([key, value]) => !usage.has(key as YieldBenchmarkKey) && getObject(value) != null)
     .map(([key, value]) => {
       const meta = getObject(value);
       const recordDate = getString(meta?.recordDate);
@@ -721,9 +728,20 @@ function buildSupplementalHealth(
   // this run's fetch failed. Without it a failing family reads healthy until its
   // marker crosses the age band.
   const runOutcomeRow = byKey.get(getYieldSupplementalRunOutcomeCacheKey()) ?? null;
-  const degradedFamilies = runOutcomeRow?.value != null
-    ? parseYieldSupplementalRunOutcome(runOutcomeRow.value)
-    : [];
+  const runOutcome = runOutcomeRow?.value != null
+    ? parseYieldSupplementalRunOutcomeDetailed(runOutcomeRow.value)
+    : null;
+  const familySnapshot = (family: SupplementalSourceFamilyKey): { value: string; updatedAt: number } | null => {
+    const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;
+    return row && typeof row.updated_at === "number" && row.value != null
+      ? { value: row.value, updatedAt: row.updated_at }
+      : null;
+  };
+  // R6 (ADR-33): honour a degraded outcome only when it binds the exact family
+  // value/publication clock that is published now. A leftover or legacy unbound
+  // outcome must not attribute a previous run's degradation to a replacement row.
+  const degradedFamilies = (runOutcome?.degradedFamilies ?? []).filter((family) =>
+    runOutcome?.familySnapshotHashes[family] === supplementalFamilySnapshotHash(familySnapshot(family)));
   const degradedFamilySet = new Set<string>(degradedFamilies);
   const familyRows = SUPPLEMENTAL_SOURCE_FAMILY_KEYS.map((family) => {
     const row = byKey.get(getYieldSupplementalFamilyCacheKey(family)) ?? null;

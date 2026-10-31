@@ -177,7 +177,7 @@ export async function snapshotSupply(
     return createCronResult({
       status: "degraded",
       itemCount: 0,
-      metadata: { reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec },
+      metadata: { reason: "cache_stale", cacheAgeSec: preflight.cacheAgeSec, cacheClockReason: preflight.reason },
     });
   }
   const {

@@ -96,6 +96,26 @@ describe("snapshotSupply", () => {
     expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
   });
 
+  it("rejects a cache generation clock ahead of the snapshot clock instead of sealing the day", async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const cacheValue = JSON.stringify({
+      peggedAssets: [makeSnapshotAsset({ id: "usdt-tether", symbol: "USDT", price: 1.0, circulating: { peggedUSD: 100_000_000 } })],
+    });
+    // A clock step or restored row can stamp the cache ahead of the preflight
+    // clock; a signed age would otherwise admit it and seal today from it.
+    const db = mockD1({ stablecoins: { assets: cacheValue, updatedAt: nowSec + 3600 } });
+
+    const result = await snapshotSupply(db);
+    expect(result.itemCount).toBe(0);
+    expect(result.status).toBe("degraded");
+    expect(JSON.parse(result.metadata ?? "{}")).toMatchObject({
+      reason: "cache_stale", cacheAgeSec: null, cacheClockReason: "cache-clock-unusable",
+    });
+    expect(db.getHistory().some((entry) => entry.sql.includes("INSERT OR REPLACE INTO supply_history"))).toBe(false);
+    expect(db.getHistory().some((entry) =>
+      entry.sql.includes("INSERT INTO cache") && entry.binds[0] === "snapshot-supply:last-write")).toBe(false);
+  });
+
   it("does not consume the daily write marker when the cache predates the scheduled slot", async () => {
     const slotStartedAt = Math.floor(Date.parse("2025-06-15T08:00:00Z") / 1000);
     vi.setSystemTime(new Date(slotStartedAt * 1000));
