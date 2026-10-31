@@ -1447,6 +1447,31 @@ describe("evm-rpc helpers", () => {
   });
 
 
+  it("fails closed without throwing or metering a malformed RPC URL", async () => {
+    const warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    await expect(fetchEvmUint256AtBlock(undefined, "0xToken", "0x18160ddd", "latest", {
+      extraRpcUrls: ["::malformed"], maxRetries: 0,
+    })).resolves.toBeNull();
+    expect(fetchWithRetryMock).not.toHaveBeenCalled();
+    expect(recordDwellirCreditsMock).not.toHaveBeenCalled();
+    expect(warnSpy).toHaveBeenCalledWith(expect.stringContaining("[evm-rpc] eth_call failed across 1 RPCs"));
+    warnSpy.mockRestore();
+  });
+
+  it("bounds header reads on retained-history Dwellir nodes by the observed head", async () => {
+    const retained = { ...dwellirEndpoint("https://api-header-retention.n.dwellir.com"), logsHistory: { retainedBlocks: 100 } };
+    const chainRpcs = chainRpcsWith("bsc", [retained]);
+    fetchWithRetryMock.mockResolvedValueOnce(rpcResponse({ result: blockResult(950, "0x64") }));
+    expect(await fetchEvmBlockHeader("bsc", 950, { chainRpcs, observedHeadBlock: 1000, maxRetries: 0 }))
+      .toMatchObject({ number: 950 });
+    expect(attemptedUrls()).toEqual([retained.url]);
+
+    fetchWithRetryMock.mockClear();
+    expect(await fetchEvmBlockHeader("bsc", 900, { chainRpcs, observedHeadBlock: 1000, maxRetries: 0 })).toBeNull();
+    expect(await fetchEvmBlockHeader("bsc", 950, { chainRpcs, maxRetries: 0 })).toBeNull();
+    expect(attemptedUrls()).toEqual([]);
+  });
+
   it("meters one credit per Dwellir attempt and none for registry operators", async () => {
     const chainRpcs = chainRpcsWith("celo", [
       registryEndpoint("https://celo-public-a.example"),

@@ -108,6 +108,24 @@ describe("historical CoinGecko prices-only transport parity", () => {
       `[backfill-pricing] CG hourly chunk failed for test-coin/usd (${EPOCH}-${EPOCH + 89 * DAY}):`, error]]);
   });
 
+  it("withholds a non-positive hourly range without querying CoinGecko", async () => {
+    expect(await fetchCgPriceHistoryHourly("test-coin", { startSec: NOW, endSec: NOW })).toEqual([]);
+    expect(mocks.fetch).not.toHaveBeenCalled();
+  });
+
+  it("keeps the hourly chunk pass after a failed pre-epoch phase-one request", async () => {
+    const error = new Error("phase one unavailable");
+    mocks.fetch.mockRejectedValueOnce(error).mockResolvedValueOnce(chart([[EPOCH * 1000, 2]]));
+    expect(await finish(fetchCgPriceHistoryHourly("test-coin", {
+      startSec: EPOCH - DAY, endSec: EPOCH + 1,
+    }))).toEqual([{ timestamp: EPOCH, price: 2 }]);
+    expect(mocks.fetch.mock.calls.map(([url]) => url)).toEqual([
+      rangeUrl(EPOCH - DAY, EPOCH), rangeUrl(EPOCH, EPOCH + 1),
+    ]);
+    expect(mocks.log.mock.calls).toEqual([["api", "error",
+      "[backfill-pricing] CG hourly phase-1 failed for test-coin:", error]]);
+  });
+
   it("falls back to an unpaced daily request only when every hourly point is absent", async () => {
     const times: number[] = [];
     const responses = [null, chart([]), chart([[NOW * 1000, 1]])];
@@ -132,6 +150,53 @@ describe("historical CoinGecko prices-only transport parity", () => {
       kind === "parse" ? "[backfill-pricing] CG market chart validation failed:"
         : "[backfill-pricing] Failed to fetch CG daily price history for test-coin/eur:",
       kind === "parse" ? expect.any(String) : error]]);
+  });
+
+  it("reports DefiLlama fallback exhaustion after an empty CoinGecko series", async () => {
+    const error = new Error("defillama unavailable");
+    mocks.fetch.mockResolvedValueOnce(chart([])).mockRejectedValue(error);
+    const result = await fetchMarketBackfillPriceSeries(
+      { id: "test-coin", flags: { pegCurrency: "USD" } },
+      "test-coin",
+      { granularity: "daily" },
+    );
+    expect(result.prices).toBeNull();
+    expect(result.diagnostics).toMatchObject({
+      sourcesUsed: [],
+      mergeReasons: ["coingecko-empty"],
+      perSourceStats: [
+        { source: "coingecko", points: 0 },
+        { source: "defillama", points: 0 },
+      ],
+      finalPointCount: 0,
+    });
+    expect(mocks.log.mock.calls).toEqual([
+      ["api", "error", "[backfill-pricing] DL fallback failed for coingecko:test-coin:", error],
+      ["api", "error", "[backfill-pricing] DL fallback failed for coingecko:test-coin:", error],
+    ]);
+  });
+
+  it("merges DefiLlama fallback history into an empty CoinGecko series", async () => {
+    const dlPrices = [{ timestamp: NOW - DAY, price: 1.0001 }, { timestamp: NOW, price: 0.9999 }];
+    mocks.fetch.mockResolvedValueOnce(chart([])).mockResolvedValue({
+      response: { ok: true },
+      body: { coins: { "coingecko:test-coin": { prices: dlPrices } } },
+    });
+    const result = await fetchMarketBackfillPriceSeries(
+      { id: "test-coin", flags: { pegCurrency: "USD" } },
+      "test-coin",
+      { granularity: "daily" },
+    );
+    expect(result.prices).toEqual(dlPrices);
+    expect(result.diagnostics).toMatchObject({
+      sourcesUsed: ["defillama"],
+      mergeReasons: ["coingecko-empty"],
+      perSourceStats: [
+        { source: "coingecko", points: 0 },
+        { source: "defillama", points: 2, startTimestamp: NOW - DAY, endTimestamp: NOW },
+      ],
+      finalPointCount: 2,
+    });
   });
 
   it.each(["sleep", "request"])("propagates cancellation during %s without logs or fallback", async (phase) => {

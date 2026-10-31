@@ -93,6 +93,24 @@ describe("address-price provider shared contracts", () => {
     });
   });
 
+  it("falls back to the legacy HTTP-date retry-after conversion for an ISO timestamp", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-10-31T00:00:00Z"));
+    try {
+      vi.mocked(fetchWithRetry).mockResolvedValueOnce(new Response("slow down", {
+        status: 429,
+        headers: { "Retry-After": "2026-10-31T00:30:00Z" },
+      }));
+      const limited = await fetchProviderJson({
+        url: "https://example.test/iso-retry-after",
+        candidateCount: 1,
+      });
+      expect(limited.diagnostic).toMatchObject({ status: 429, retryAfterSec: 1800 });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("parses successful JSON and classifies malformed JSON", async () => {
     vi.mocked(fetchWithRetry)
       .mockResolvedValueOnce(Response.json({ data: [] }))

@@ -534,6 +534,37 @@ describe("buildPrimarySourceCandidates", () => {
     ]);
   });
 
+  it("records missing and invalid DEX observation timestamps as explicit exclusions", () => {
+    const candidate = (updatedAt: number | null) => ({
+      protocol: "balancer",
+      price: 1.0,
+      tvl: 500_000,
+      updatedAt: updatedAt as number,
+      chain: "ethereum",
+    });
+    const nowSec = 1_700_000_030;
+
+    const missing = buildPrimarySourceCandidates(
+      { id: "dusd-test", symbol: "DUSD" },
+      makeCollected({ protocolSources: [candidate(null)] }),
+      { nowSec },
+    );
+    expect(missing.sources).toEqual([]);
+    expect(missing.dexCandidateTelemetry).toMatchObject([
+      { sourceKey: "balancer-dex", status: "excluded", reason: "missing_observed_at" },
+    ]);
+
+    const invalid = buildPrimarySourceCandidates(
+      { id: "dusd-test", symbol: "DUSD" },
+      makeCollected({ protocolSources: [candidate(-1)] }),
+      { nowSec },
+    );
+    expect(invalid.sources).toEqual([]);
+    expect(invalid.dexCandidateTelemetry).toMatchObject([
+      { sourceKey: "balancer-dex", status: "excluded", reason: "invalid_observed_at" },
+    ]);
+  });
+
   it("rejects future-skewed CEX, aggregator, and DEX observations", () => {
     const collected = makeCollected({
       cgPrice: 1.0,

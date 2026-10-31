@@ -47,6 +47,22 @@ describe("BD guarded Aero quote", () => {
   ])("rejects invalid identity, executable inventory, or quotes: %s", async (overrides) => {
     fixture(overrides); expect(await fetchBdAerodromePrice(context())).toBeNull();
   });
+  it("rejects undecodable reserve state with a provider-owned rejection reason", async () => {
+    const ctx = context();
+    fixture({ reserves: "0x" as `0x${string}` });
+    expect(await fetchBdAerodromePrice(ctx)).toBeNull();
+    expect(ctx).toMatchObject({ lastRejectionReason: "aerodrome-exact:state-malformed" });
+    expect(multicall).toHaveBeenCalledTimes(1);
+  });
+  it("skips the guarded live quote when a publishable price already exists", async () => {
+    const priced = { id: "bd-basedollar", symbol: "BD", price: 1, priceSource: "coingecko",
+      priceObservedAt: Math.floor(Date.now() / 1000) - 5 } as PeggedAsset;
+    expect(await bdAerodromeProvider.fetchLivePrice!(priced, context())).toBeNull();
+    expect(blockNumber).not.toHaveBeenCalled();
+    const unpriced = { id: "bd-basedollar", symbol: "BD", price: null } as PeggedAsset;
+    expect(await bdAerodromeProvider.fetchLivePrice!(unpriced, context())).toMatchObject({ price: 0.99103 });
+    expect(blockNumber).toHaveBeenCalledTimes(1);
+  });
   it("bounds the factory's effective fee at the pinned reserves for both quoted notionals", async () => {
     expect(await fetchBdAerodromePrice(context())).toMatchObject({ price: 0.99103 });
     const feeCalls = multicall.mock.calls[1]![1] as { label: string }[];
