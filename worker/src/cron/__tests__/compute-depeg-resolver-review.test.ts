@@ -465,6 +465,44 @@ describe("buildDepegResolverReviewSnapshot", () => {
     expect(snapshot.summary.headline.recoveryLikelihoodScoredCount).toBe(1);
   });
 
+  it("classifies an unparseable sealed prediction payload as a data-quality coverage gap", async () => {
+    const reviewIncident = makeReviewIncident({ incidentKey: "ddr2:malformed-sealed-prediction" });
+    const db = reviewDb([
+      eventRow({ ended_at: ELIGIBLE_AT + 3_600, recovery_price: 1 }),
+    ]);
+    const stores = durableStores({
+      loadCanonicalIncidents: vi.fn(async () => [reviewIncident]),
+      loadSealedPublicPredictions: vi.fn(async () => [
+        sealedPrediction({
+          incidentKey: reviewIncident.incidentKey,
+          // A fractional median survives the store schema but cannot be
+          // represented as the integer assessment the reviewer publishes.
+          sealedPayload: { frozen: { duration: { medianSec: 1.5 } } },
+        }),
+      ]),
+      loadFirstPublicationMembership: vi.fn(async () => [firstPublication({ incidentKey: reviewIncident.incidentKey })]),
+    });
+
+    const snapshot = await buildDepegResolverReviewSnapshot(db, ELIGIBLE_AT + 7_200, undefined, {
+      storeContracts: stores,
+    });
+
+    expect(snapshot.rows).toHaveLength(1);
+    expect(snapshot.rows[0]).toMatchObject({
+      kind: "coverage",
+      incidentKey: reviewIncident.incidentKey,
+      stablecoinId: "lusd-liquity",
+      sourceEventState: "recovered",
+      predictionState: "data_quality_gap",
+      coverageCause: "data_quality_gap",
+      operationalCoverageCause: null,
+      outcomeQualityState: "data_quality_gap",
+      reason: "sealed_payload_parse_failed",
+      failedPublication: null,
+    });
+    expect(snapshot.summary.headline.dataQualityGapCount).toBe(1);
+  });
+
   it("annotates auto-repaired and split incident lineage from one bounded D1 batch", async () => {
     const autoRepairedIncident = makeReviewIncident({
       incidentKey: "ddr2:auto-repaired-lineage",

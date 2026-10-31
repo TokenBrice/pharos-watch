@@ -597,6 +597,46 @@ describe("decideDepegAsset", () => {
     }]);
   });
 
+  it("withholds an extreme native quote when a trusted DEX aggregate stays at peg", () => {
+    const decision = decideDepegAsset({
+      now: 1_750_000_000,
+      asset: makeAsset({
+        id: "brz-transfero",
+        symbol: "BRZ",
+        price: 0.191187,
+        priceSource: "coingecko",
+        priceUpdatedAt: 1_750_000_000 - 60,
+        pegType: "peggedREAL",
+        circulating: { gnosis: 22_000_000 },
+      }),
+      meta: brlMeta,
+      pegRates: { peggedREAL: 0.191895 },
+      pegRateSources: { peggedREAL: "median" },
+      pegRateCounts: { peggedREAL: 3 },
+      dexRow: {
+        stablecoin_id: "brz-transfero",
+        dex_price_usd: 0.1919,
+        deviation_from_primary_bps: null,
+        source_pool_count: 2,
+        source_total_tvl: 5_000_000,
+        updated_at: 1_750_000_000 - 60,
+      },
+      nativePegQuote: {
+        stablecoinId: "brz-transfero",
+        geckoId: "brz",
+        pegCurrency: "BRL",
+        price: 0.2,
+        updatedAt: 1_750_000_000 - 60,
+      },
+    });
+
+    expect(decision.commands).toEqual([]);
+    expect(decision.diagnostics).toEqual([{
+      level: "warn",
+      message: "[depeg] Withheld implausible BRL native quote for BRZ: reason=native-quote-extreme-move",
+    }]);
+  });
+
   it("withholds an above-peg native quote instead of opening a pending row", () => {
     const eurMeta: StablecoinMeta = {
       id: "ceur-celo",
