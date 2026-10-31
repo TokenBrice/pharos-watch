@@ -121,6 +121,22 @@ export function breakDepthBps(active: Pick<DdrActiveEventInput, "peakDeviationBp
   return current != null && Number.isFinite(current) ? Math.max(peak, Math.abs(current)) : peak;
 }
 
+/**
+ * A stored `above` direction with a live deviation that is itself a deep
+ * below-peg break is a stale lifecycle row kept open through an opposite
+ * `confirm_required` reading, not an overpeg premium; it is evaluated by the
+ * below-peg mapping.
+ */
+function hasDeepLiveBelowPegContradiction(
+  active: Pick<DdrActiveEventInput, "direction" | "peakDeviationBps" | "currentDeviationBps">,
+): boolean {
+  return active.direction === "above" &&
+    active.currentDeviationBps != null &&
+    Number.isFinite(active.currentDeviationBps) &&
+    active.currentDeviationBps < 0 &&
+    isDeepBreak(Math.abs(active.currentDeviationBps));
+}
+
 function isDeepBreak(depthBps: number): boolean {
   const bucket = depthBucket(depthBps);
   return bucket === "severe" || bucket === "catastrophic";
@@ -254,7 +270,7 @@ function killSignals(
   asOfSec: number,
 ): RawFactor[] {
   const out: RawFactor[] = [];
-  const below = active.direction === "below";
+  const below = active.direction === "below" || hasDeepLiveBelowPegContradiction(active);
   const depthBps = breakDepthBps(active);
   const deep = isDeepBreak(depthBps);
   const riskyMinter =
@@ -263,7 +279,9 @@ function killSignals(
     (coin.mintAuthorityScoreBand != null && DDR_K1_RISKY_MAS_BANDS.has(coin.mintAuthorityScoreBand));
   const supplyExpanding =
     supply.mintSurge === true ||
-    (supply.mintSurgeCoverage !== "mint-burn-hourly" && supply.change7dPct != null && supply.change7dPct > 20);
+    ((supply.mintSurgeCoverage === "supply-history-proxy" || supply.mintSurgeCoverage == null) &&
+      supply.change7dPct != null &&
+      supply.change7dPct > 20);
   const recentMintIncident = hasRecentMintIncident(active, coin, asOfSec);
 
   // K1 — supply weaponization (below-peg only)
@@ -574,13 +592,14 @@ export function resolveOutlook(
   // "Terminal evidence", at_risk = "Stress signals", recovery_likely = "No
   // break signals". Anchors are published context; they no longer gate a tier.
   let tier: DdrResolutionTier;
-  const deepBelowPegBreak = active.direction === "below" && isDeepBreak(breakDepthBps(active));
+  const belowPegEvidence = active.direction === "below" || hasDeepLiveBelowPegContradiction(active);
+  const deepBelowPegBreak = belowPegEvidence && isDeepBreak(breakDepthBps(active));
 
   if (frozenTerminal || kills.some((kill) => kill.code === "K6_wind_down" && kill.severity === "severe")) {
     // A terminal issuer or announced token wind-down is terminal evidence
     // irrespective of break direction.
     tier = "recovery_unlikely";
-  } else if (active.direction === "above") {
+  } else if (active.direction === "above" && !hasDeepLiveBelowPegContradiction(active)) {
     // Overpeg: recovery is quasi-certain; only exit stress marks a sticky premium.
     const sticky = kills.some((k) => k.code === "K5_exit_collapse");
     tier = sticky ? "at_risk" : "recovery_likely";

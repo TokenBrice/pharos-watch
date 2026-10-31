@@ -285,6 +285,8 @@ interface DepegHistoryRow {
   recoveryPrice: number | null;
   pegReference: number;
   source: "live" | "backfill";
+  /** Reviewed ledger verdict; null when the ledger recorded none. */
+  auditVerdict: string | null;
 }
 
 const DEPEG_HISTORY_COLUMNS: DatasetColumn<DepegHistoryRow>[] = [
@@ -301,6 +303,9 @@ const DEPEG_HISTORY_COLUMNS: DatasetColumn<DepegHistoryRow>[] = [
   { header: "recoveryPrice", accessor: (r) => r.recoveryPrice },
   { header: "pegReference", accessor: (r) => r.pegReference },
   { header: "source", accessor: (r) => r.source },
+  // A reviewed dispute must travel with the row: without it the export shows
+  // an extreme depeg that the ledger has already quarantined (A7A5 2026-08-06).
+  { header: "auditVerdict", accessor: (r) => r.auditVerdict },
 ];
 
 function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegHistoryRow[] {
@@ -322,6 +327,7 @@ function projectDepegHistory(events: DepegEvent[], snapshotDate: string): DepegH
       recoveryPrice: event.recoveryPrice,
       pegReference: event.pegReference,
       source: event.source,
+      auditVerdict: event.provenance?.auditVerdict ?? null,
     }))
     .sort((a, b) => b.startedAtISO.localeCompare(a.startedAtISO) || a.id - b.id);
 }

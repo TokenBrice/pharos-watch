@@ -12,11 +12,11 @@ export const CHAIN_HEALTH_METHODOLOGY_VERSION = "1.8";
 export const CHAIN_HEALTH_METHODOLOGY_VERSION_LABEL = methodologyLabel(CHAIN_HEALTH_METHODOLOGY_VERSION);
 export const CHAIN_HEALTH_METHODOLOGY_CHANGELOG_PATH = "/methodology/chain-health-changelog/";
 
-export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.38";
+export const DEPEG_DEWS_METHODOLOGY_VERSION = "6.39";
 export const DEPEG_DEWS_METHODOLOGY_VERSION_LABEL = methodologyLabel(DEPEG_DEWS_METHODOLOGY_VERSION);
 export const DEPEG_DEWS_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-changelog/";
 
-export const DDR_METHODOLOGY_VERSION = "5.0";
+export const DDR_METHODOLOGY_VERSION = "5.1";
 export const DDR_METHODOLOGY_VERSION_LABEL = methodologyLabel(DDR_METHODOLOGY_VERSION);
 export const DDR_METHODOLOGY_CHANGELOG_PATH = "/methodology/depeg-resolver-changelog/";
 

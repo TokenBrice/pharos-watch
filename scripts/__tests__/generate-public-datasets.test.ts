@@ -262,7 +262,7 @@ describe("generate-public-datasets", () => {
   it.each([
     {
       topic: "depeg-history",
-      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source",
+      header: "id,stablecoinId,symbol,direction,peakDeviationBps,startedAtISO,endedAtISO,durationSec,startPrice,peakPrice,recoveryPrice,pegReference,source,auditVerdict",
     },
     {
       topic: "scores-latest",
@@ -1011,6 +1011,16 @@ describe("generate-public-datasets", () => {
 
     expect(rows).toHaveLength(1);
     expect(rows[0]?.id).toBe(42);
+  });
+
+  it("carries a reviewed audit dispute into the depeg-history rows", () => {
+    const disputed = {
+      ...makeEvent(null),
+      provenance: { auditVerdict: "disputed" as const, pegScoreEligible: false, updatedAt: 1_792_568_092 },
+    };
+
+    expect(testExports.projectDepegHistory([disputed], "2026-05-16")[0]?.auditVerdict).toBe("disputed");
+    expect(testExports.projectDepegHistory([makeEvent(null)], "2026-05-16")[0]?.auditVerdict).toBeNull();
   });
 
   it("requires a source shard for the requested snapshot year", () => {

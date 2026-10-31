@@ -50,7 +50,7 @@ export const PUBLIC_DATASET_JSON_LD_DESCRIPTORS: readonly PublicDatasetDescripto
     slug: "depeg-history",
     name: "Pharos Depeg History Dataset",
     description:
-      "Public history of tracked depeg events with stablecoin IDs, direction, peak deviation, timing, duration, prices, peg reference, and source.",
+      "Public history of tracked depeg events with stablecoin IDs, direction, peak deviation, timing, duration, prices, peg reference, source, and audit verdict.",
     keywords: ["stablecoin depeg history", "depeg events", "peg monitoring", "stablecoin incident data"],
     export: PUBLIC_DATASET_CURRENT_EXPORTS["depeg-history"] as PublicDatasetExport,
     temporalStartField: "startedAtISO",

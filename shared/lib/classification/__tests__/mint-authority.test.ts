@@ -61,6 +61,14 @@ describe("resolveMintAuthorityStatusKind", () => {
     expect(resolveMintAuthorityStatusKind(summary({
       controls: [{ authorityType: "eoa", directMintAbility: "direct" }],
     }))).toBe("issuer-or-backend-mint");
+    // A protocol vault/Fed contract, a governance quorum and a governance
+    // timelock are not an issuer party named by the Issuer badge copy.
+    for (const authorityType of ["contract", "dao-governor", "timelock"] as const) {
+      expect(resolveMintAuthorityStatusKind(summary({
+        mintPath: "user-collateralized-governed",
+        controls: [{ authorityType, directMintAbility: "direct", canRaiseCap: true }],
+      }))).toBe("governed-mint");
+    }
     expect(resolveMintAuthorityStatusKind(summary())).toBe("governed-mint");
   });
 });

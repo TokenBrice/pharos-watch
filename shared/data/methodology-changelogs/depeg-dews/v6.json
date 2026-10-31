@@ -1,5 +1,20 @@
 [
   {
+    "version": "6.39",
+    "title": "Backfill peak corroboration and audited depeg-history export",
+    "date": "2026-10-31",
+    "effectiveAt": 1793404800,
+    "summary": "Backfill replay no longer adopts a lone deeper sample as an episode peak, and the public depeg-history dataset carries the reviewed audit verdict. Live detection, DEWS and PegScore are unchanged.",
+    "impact": [
+      "A deeper sample replaces an open backfill episode's peak only when another sample of that episode lands within 1,000 bps. A lone wick between par readings can still open a sub-$1B episode under the one-point policy, but it cannot become the published peak.",
+      "The depeg-history dataset appends `auditVerdict` from ledger provenance (`null` when the ledger recorded none), so a reviewed `disputed` or `false_positive` verdict travels with the exported row instead of the export presenting an unmarked depeg.",
+      "Live onset, confirmation, recovery, audit eligibility, PegScore and DEWS rules are unchanged; this release changes retrospective backfill rows and the static export only.",
+      "Activation is 2026-10-31 00:00 UTC (1793404800); no backfill replay or production recovery is claimed."
+    ],
+    "commits": [],
+    "reconstructed": false
+  },
+  {
     "version": "6.38",
     "title": "Late yield rankings retained within a named budget",
     "date": "2026-10-23",

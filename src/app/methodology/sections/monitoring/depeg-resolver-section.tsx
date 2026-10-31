@@ -24,19 +24,23 @@ export function DepegResolverMethodologySection() {
         shown with the factors that drove it. Five recovery anchors (non-inflatable supply, hard collateral with live
         redemption, no supply anomaly, no single freeze point, proven mean-reversion) are published as context and no
         longer gate a tier. Predictions sealed before v5 keep their original Recovery Likely, At Risk, and Recovery
-        Unlikely labels.
+        Unlikely labels. K1 supply weaponization and K4 reflexive death-spiral use the seven-day supply-change proxy
+        only under explicit supply-history-proxy coverage or legacy-unmarked null coverage; an explicit unavailable
+        marker is unavailable evidence, not the hourly proxy.
       </p>
       <p>
-        In either direction, a terminal status or a severe issuer wind-down signal is Terminal evidence. Otherwise, above
-        peg, an exit-collapse signal reads as Stress signals and everything else as No break signals, even a severe kill
-        signal. Below peg, any severe kill signal, or two or more kill signals without a strong non-inflatable-supply or
-        hard-collateral/redemption anchor on a break deeper than 1,000 bps (the worse of the stored peak and live
-        deviation), is Terminal evidence. Any other below-peg kill signal, or a deep break with none, reads as Stress
-        signals. Static exit thinness &mdash; a thin route, no viable route, thin liquidity, or thin redemption capacity
-        &mdash; caps at elevated: V9 exit capacity is measured against the dislocation&rsquo;s value gap (supply times
-        break depth) instead of the Safety Score stress request and its $1M floor, which made small-float coins look
-        exhausted in calm periods too. Exit collapse is severe only when DEX TVL falls at least 40% from the
-        event&rsquo;s onset baseline on a thin market.
+        In either direction, a terminal status or a severe issuer wind-down signal is Terminal evidence. An
+        above-direction event whose live signed deviation is itself a below-peg break deeper than 1,000 bps is
+        evaluated by the below-peg mapping, so a stale stored direction cannot publish No break signals for a live deep
+        break. Otherwise, above peg, an exit-collapse signal reads as Stress signals and everything else as No break
+        signals, even a severe kill signal. Below peg, any severe kill signal, or two or more kill signals without a
+        strong non-inflatable-supply or hard-collateral/redemption anchor on a break deeper than 1,000 bps (the worse
+        of the stored peak and live deviation), is Terminal evidence. Any other below-peg kill signal, or a deep break
+        with none, reads as Stress signals. Static exit thinness &mdash; a thin route, no viable route, thin liquidity,
+        or thin redemption capacity &mdash; caps at elevated: V9 exit capacity is measured against the
+        dislocation&rsquo;s value gap (supply times break depth) instead of the Safety Score stress request and its $1M
+        floor, which made small-float coins look exhausted in calm periods too. Exit collapse is severe only when DEX
+        TVL falls at least 40% from the event&rsquo;s onset baseline on a thin market.
       </p>
       <p>
         DDR uses a forecast-readiness-or-72h public contract. Active confirmed incidents show live facts before the

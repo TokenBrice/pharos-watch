@@ -483,6 +483,73 @@ export const BACKFILL_REPLAY_SUPPRESSIONS: readonly BackfillReplaySuppression[] 
     ],
     reviewedAt: "2026-10-30",
   },
+  // 2026-10-30 t5-w4 verified plausibility review (fourth lane). Below-peg
+  // single-feed episodes the current backfill replay would otherwise recreate.
+  {
+    coinId: "gusd-gemini",
+    direction: "below",
+    windowStart: 1_538_134_511, // 2018-09-28T11:35:11Z (stored cluster start − 2h)
+    windowEnd: 1_538_192_117, // 2018-09-29T03:35:17Z (stored cluster end + 2h)
+    reason:
+      "GUSD's 2018-09-28 hourly series flips 0.78↔1.00 three times in 12 hours while the daily series closes near par and CoinCodex's GUSD low carries the same 0.7805 print; an 18-day-old 1:1 redeemable dollar had no venue-level 22% discount.",
+    evidenceUrls: [
+      "https://coins.llama.fi/chart/coingecko:gemini-dollar?start=1538092800&span=72&period=1h",
+      "https://coincodex.com/crypto/gemini-dollar/",
+    ],
+    reviewedAt: "2026-10-30",
+  },
+  {
+    coinId: "idrt-rupiah-token",
+    direction: "below",
+    windowStart: 1_596_319_200, // 2020-08-01T22:00:00Z (stored start − 2h)
+    windowEnd: 1_596_506_400, // 2020-08-04T02:00:00Z (stored end + 2h)
+    reason:
+      "CoinGecko's IDR tape oscillated hourly between two discrete levels (4.5e-05 ↔ 6.9e-05) around the 2020-08-02/03 print; CoinMarketCap's day series stays near the 1.0 IDR peg and no IDRT pool printed the discount.",
+    evidenceUrls: [
+      "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/historical?id=4702&convertId=2781&timeStart=1596326400&timeEnd=1596499200",
+      "https://coins.llama.fi/chart/coingecko:rupiah-token?start=1596240000&span=72&period=1h",
+    ],
+    reviewedAt: "2026-10-30",
+  },
+  {
+    coinId: "idrt-rupiah-token",
+    direction: "below",
+    windowStart: 1_620_079_200, // 2021-05-03T22:00:00Z (stored start − 2h)
+    windowEnd: 1_622_080_800, // 2021-05-27T02:00:00Z (stored end + 2h)
+    reason:
+      "The 2021-05-18 IDR print (4.8779e-05) is one day between two par closes; the hourly tape interleaves 4.8-5.4e-05 with 6.70-6.90e-05 before reverting permanently to peg, so the −3003 bps peak is a feed step, not a market discount.",
+    evidenceUrls: [
+      "https://api.coinmarketcap.com/data-api/v3/cryptocurrency/historical?id=4702&convertId=2781&timeStart=1620086400&timeEnd=1622073600",
+      "https://coins.llama.fi/chart/coingecko:rupiah-token?start=1620000000&span=200&period=1h",
+    ],
+    reviewedAt: "2026-10-30",
+  },
+  {
+    coinId: "msusd-metronome",
+    direction: "below",
+    windowStart: 1_759_975_374, // 2025-10-09T02:02:54Z (stored start − 2h)
+    windowEnd: 1_759_993_382, // 2025-10-09T07:03:02Z (stored end + 2h)
+    reason:
+      "One isolated 0.427908 msUSD provider sample between 0.997375 and 0.998349 readings; the day's own aggregate never left par (0.9984137) and there was no redemption run or issuer report.",
+    evidenceUrls: [
+      "https://coins.llama.fi/chart/coingecko:metronome-synth-usd?start=1759953600&span=12&period=1h",
+      "https://coins.llama.fi/prices/historical/1759982343/ethereum:0xab5eb14c09d416f0ac63661e57edb7aecdb9befa",
+    ],
+    reviewedAt: "2026-10-30",
+  },
+  {
+    coinId: "susd-synthetix",
+    direction: "below",
+    windowStart: 1_584_479_265, // 2020-03-17T21:07:45Z (stored start − 2h)
+    windowEnd: 1_584_547_736, // 2020-03-18T16:08:56Z (stored end + 2h)
+    reason:
+      "sUSD's 2020-03-17/18 hourly series is a 0.44↔0.98 square wave while the daily closes are 1.02-1.06; the stored −5701 bps peak is one step of that feed, not a sustained 57% discount.",
+    evidenceUrls: [
+      "https://coins.llama.fi/chart/coingecko:nusd?period=1h&start=1584400000&span=72",
+      "https://coins.llama.fi/prices/historical/1584518944/coingecko:nusd",
+    ],
+    reviewedAt: "2026-10-30",
+  },
 ];
 
 const KNOWN_STABLECOIN_IDS = new Set(canonicalOrderAsset as readonly string[]);

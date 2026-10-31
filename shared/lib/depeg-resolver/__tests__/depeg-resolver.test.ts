@@ -1542,3 +1542,71 @@ describe("resolveDepeg orchestration", () => {
     expect(row.duration).toMatchObject({ suppressed: false, medianSec: 24 * 3600 });
   });
 });
+
+describe("resolveOutlook — supply-proxy admission", () => {
+  // docs/depeg-resolver.md: "A configured coin with no admitted legs remains
+  // unavailable and does not fall back to a supply-history proxy."
+  it("does not use Δ7d as a surge proxy when mint-surge coverage is unavailable", () => {
+    const supply = baseSupply({
+      covered: true, change7dPct: 30, change30dPct: -4, mintSurge: null, mintSurgeCoverage: "unavailable",
+    });
+    const risky = coin({ authorityPosture: "unbounded-adverse", mintPath: "issuer-direct-mint" });
+    const res = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -300 }),
+      risky,
+      supply,
+      baseLive(),
+    );
+    expect(res.factors.filter((factor) => factor.code === "K1_supply_weaponization")).toEqual([]);
+    expect(res.tier).toBe("recovery_likely");
+
+    // K4 reuses the same supply-expansion predicate.
+    const algorithmic = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -2500 }),
+      coin({ mechanismArchetype: "algorithmic", authorityPosture: "reviewed-non-risky" }),
+      supply,
+      baseLive(),
+    );
+    expect(algorithmic.factors.filter((factor) => factor.code === "K4_reflexive_spiral")).toEqual([]);
+  });
+
+  it("still applies the Δ7d proxy when coverage is explicitly supply-history-proxy", () => {
+    const res = resolveOutlook(
+      event({ direction: "below", peakDeviationBps: -300 }),
+      coin({ authorityPosture: "unbounded-adverse", mintPath: "issuer-direct-mint" }),
+      baseSupply({ change7dPct: 30, mintSurge: null, mintSurgeCoverage: "supply-history-proxy" }),
+      baseLive(),
+    );
+    expect(res.factors.find((factor) => factor.code === "K1_supply_weaponization")).toMatchObject({
+      severity: "elevated",
+    });
+  });
+});
+
+describe("resolveOutlook — contradictory live direction", () => {
+  // A stored above-peg event kept open through an opposite confirm_required
+  // reading can carry a deeply negative live deviation. Its depth is already
+  // read from the live value, so the above-peg rule cannot publish No break
+  // signals for it (docs/depeg-resolver.md #verdict-mapping).
+  it("reads a deep below-peg live deviation on an above event as Stress signals", () => {
+    const active = event({ direction: "above", peakDeviationBps: 300, currentDeviationBps: -9_000 });
+    const structural = coin({ authorityPosture: "none-resolved", mechanismArchetype: "cdp" });
+    const res = resolveOutlook(active, structural, baseSupply(), baseLive());
+
+    expect(res.factors.filter((factor) => factor.kind === "kill")).toEqual([]);
+    expect(res.tier).toBe("at_risk");
+
+    const row = resolveDepeg({
+      active,
+      coin: structural,
+      supply: baseSupply(),
+      live: baseLive(),
+      nowSec: 1_000_000 + 6 * 3600,
+      incidents: [],
+      quarantined: new Set<string>(),
+    });
+    expect(row.currentDeviationBps).toBe(-9_000);
+    expect(row.inputs?.breakDepthBps).toBe(9_000);
+    expect(row.resolution.tier).toBe("at_risk");
+  });
+});
