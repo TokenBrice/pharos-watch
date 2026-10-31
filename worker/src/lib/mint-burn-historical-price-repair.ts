@@ -741,8 +741,7 @@ export async function repairHistoricalMintBurnPrices(
           enqueue: db.prepare(`INSERT INTO mint_burn_dirty_hours (stablecoin_id, chain_id, hour_ts)
             SELECT stablecoin_id, chain_id, (timestamp / 3600) * 3600
             FROM mint_burn_events WHERE id = ? AND amount_usd IS NULL
-            ON CONFLICT (stablecoin_id, chain_id, hour_ts) DO UPDATE SET hour_ts = excluded.hour_ts
-            RETURNING stablecoin_id, chain_id, hour_ts`).bind(disposition.eventId),
+            ON CONFLICT (stablecoin_id, chain_id, hour_ts) DO NOTHING`).bind(disposition.eventId),
           update: db
             .prepare(
               `UPDATE mint_burn_events
@@ -812,6 +811,15 @@ export async function repairHistoricalMintBurnPrices(
     }
     await batchExecute(db, statements);
     const { affectedHours } = await executeMintBurnMaintenanceMutations(db, recoveries);
+    // The operator D1 facade rejects RETURNING writes, so each recovered row names
+    // its own source hour instead of reading the enqueue's returned keys.
+    for (const disposition of dispositions) {
+      if (disposition.disposition !== "recover") continue;
+      const row = rows.find((candidate) => candidate.id === disposition.eventId);
+      if (!row) continue;
+      const hour = { stablecoinId: row.stablecoin_id, chainId: row.chain_id, hourTs: Math.floor(row.timestamp / 3600) * 3600 };
+      affectedHours.set(`${hour.stablecoinId}-${hour.chainId}-${hour.hourTs}`, hour);
+    }
 
     const rebuilt = await rebuildAndFinalizeAggregates(db, [...affectedHours.values()]);
     aggregateCoinsRebuilt = [...new Set([...aggregateCoinsRebuilt, ...rebuilt])].sort();

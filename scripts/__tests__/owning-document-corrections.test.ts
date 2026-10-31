@@ -34,7 +34,7 @@ describe("live reserves frontend-consumer disclosures", () => {
 
   it("does not promise a separate sync-error notice or review rows over retained books", () => {
     expect(consumers).not.toContain("collection failures retain their separate sync-error notice");
-    expect(consumers).toContain("retained-book sync faults have no separate public notice");
+    expect(consumers).toContain("retained-book sync faults get no public notice");
     expect(consumers).not.toContain("to stale/error/bootstrap/fallback disclosure rows");
     expect(consumers).toContain("to the eligible first-sync bootstrap row only");
   });

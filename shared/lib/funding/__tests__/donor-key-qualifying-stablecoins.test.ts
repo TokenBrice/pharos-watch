@@ -24,6 +24,10 @@ const REVIEWED_EXCLUSIONS: Readonly<Record<string, Partial<Record<FundingChain, 
       address: "0x8a037dbca8134ffc72c362e394e35e0cad618f85",
       reason: "EUROC Polygon PoS bridge token; Circle's EURC contract list has no Polygon deployment.",
     },
+    optimism: {
+      address: "0xdcb612005417dc906ff72c87df732e5a90d49e11",
+      reason: "Third-party LayerZero OFT representation; Circle's EURC contract list has no Optimism deployment.",
+    },
   },
   "pyusd-paypal": {
     optimism: {
