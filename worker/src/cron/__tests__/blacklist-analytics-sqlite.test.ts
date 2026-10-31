@@ -41,4 +41,23 @@ describe("public blacklist analytics eligibility", () => {
       degradedReasons: [],
     });
   });
+
+  it("resolves a config-less event by its chain and contract address, not its symbol", async () => {
+    const { sqlite, db } = fixtures.open();
+    sqlite.prepare(`INSERT INTO blacklist_events
+      (id, stablecoin, chain_id, chain_name, event_type, address, tx_hash, block_number, timestamp, amount_usd_at_event,
+       suppression_reason, explorer_tx_url, explorer_address_url, contract_address)
+      VALUES (?, 'USDC.E', 'ethereum', 'Ethereum', 'blacklist', '0x1', ?, 1, ?, 0, NULL, '', '', ?)`)
+      .run("contract-address-1", "0xtx1", NOW - 30, "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48");
+    const registerSourceFailure = vi.fn();
+    const hydrated = await hydrateBlacklistEvents({ db, nowSec: NOW,
+      registerSourceFailure, registerMalformedPersistedInput: vi.fn() });
+    // "USDC.E" is not a tracked symbol, so only the contract-address lookup can name the asset.
+    expect(hydrated).toEqual({
+      blacklistCounts: new Map([["usdc-circle", { count24h: 1, count7d: 1 }]]),
+      blacklistSourceOk: true,
+      rowsRead: 1,
+    });
+    expect(registerSourceFailure).not.toHaveBeenCalled();
+  });
 });

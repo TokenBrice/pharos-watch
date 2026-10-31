@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import type { EvmCodeAtBlockResult } from "../evm-rpc";
+import type { EvmCodeAtBlockResult, EvmMulticall3Call, EvmMulticall3Result } from "../evm-rpc";
 import { TOTAL_SUPPLY_SELECTOR } from "../evm-selectors";
 import { buildChainRpcs } from "../chain-registry";
 import { SafetyScoreV9DeploymentSupplyCensusSchema, V9DeploymentSupplyCensusRowSchema } from "@shared/types/safety-score-v9-deployment-supply-census";
@@ -243,6 +243,82 @@ describe("deployment supply census EVM rows", () => {
     expect(multicall).not.toHaveBeenCalled();
   });
 
+  it("rejects every deployment on a chain whose pin was rejected", async () => {
+    const { dependencies, code } = evmDependencies();
+    const census = await readCensus({
+      targets: [target("ethereum:0x01")],
+      pins: new Map([[ETHEREUM, { kind: "rejected", reason: "observation-stale" }]]),
+    }, dependencies);
+    expect(census).toEqual({
+      rows: [],
+      rejected: [{ routeId: "ethereum:0x01", code: "census-rejected:observation-stale" }],
+    });
+    expect(code).not.toHaveBeenCalled();
+  });
+
+  it("clamps caller-supplied chain concurrency to the census connection budget", async () => {
+    let inFlight = 0;
+    let peak = 0;
+    const code = vi.fn(async (): Promise<EvmCodeAtBlockResult> => {
+      inFlight += 1;
+      peak = Math.max(peak, inFlight);
+      await Promise.resolve();
+      inFlight -= 1;
+      return { status: "available", code: "0x6000" };
+    });
+    const targets = ["ethereum", "base", "arbitrum", "optimism"].map((chainId, index) =>
+      target(`${chainId}:0x0${index + 1}`, { chainId, tokenAddress: address(index + 1) }));
+    const run = async (chainConcurrency?: number) => {
+      peak = 0;
+      const census = await observeDeploymentSupplyCensusEvm({
+        targets,
+        scoringClockSec: CLOCK,
+        aggregateSupplyUsd: AGGREGATE_USD,
+        chainSupplyUsdByChainId: new Map(),
+        referencePrices: new Map(targets.map((row) => [row.routeId, { priceUsd: 1, observedAtSec: CLOCK - 60 }])),
+        pins: new Map(targets.map((row) => [row.chainId, pinned(anchor())])),
+        chainRpcs: new Map(),
+        ...(chainConcurrency === undefined ? {} : { chainConcurrency }),
+      }, { ...evmDependencies().dependencies, fetchEvmCodeStatusAtBlock: code });
+      expect(census.rows.map((row) => row.routeId)).toEqual([
+        "arbitrum:0x03", "base:0x02", "ethereum:0x01", "optimism:0x04",
+      ]);
+      return peak;
+    };
+    expect(await run(1)).toBe(1);
+    // 9 clamps to the budget's 3; an unclamped 9 would read all four chains at once.
+    expect(await run(9)).toBe(3);
+    expect(await run()).toBe(3);
+  });
+
+  it("rejects an unusable USD bound instead of publishing infinity", async () => {
+    const census = await readCensus({
+      targets: [target("ethereum:0x01", { expectedDecimals: 0 })],
+      referencePrices: new Map([["ethereum:0x01", { priceUsd: Number.MAX_VALUE, observedAtSec: CLOCK - 60 }]]),
+    }, evmDependencies({
+      supplies: supplies([[address(1), { raw: 10n ** 70n, decimals: 0n }]]),
+    }).dependencies);
+    expect(census).toEqual({
+      rows: [],
+      rejected: [{ routeId: "ethereum:0x01", code: "census-rejected:read-unavailable" }],
+    });
+  });
+
+  it("stops at the caller's abort between pin resolution and chain reads", async () => {
+    const { dependencies, code } = evmDependencies();
+    await expect(observeDeploymentSupplyCensusEvm({
+      targets: [target("ethereum:0x01")],
+      scoringClockSec: CLOCK,
+      aggregateSupplyUsd: AGGREGATE_USD,
+      chainSupplyUsdByChainId: new Map(),
+      referencePrices: new Map([["ethereum:0x01", { priceUsd: 1, observedAtSec: CLOCK - 60 }]]),
+      pins: new Map([[ETHEREUM, pinned(anchor())]]),
+      chainRpcs: new Map(),
+      signal: AbortSignal.abort(),
+    }, dependencies)).rejects.toThrow(/aborted/i);
+    expect(code).not.toHaveBeenCalled();
+  });
+
   it("serializes two same-chain deployments with different code hashes into one packet", async () => {
     const { dependencies } = evmDependencies({
       codes: codes([
@@ -479,6 +555,126 @@ describe("pinned EVM chain reads", () => {
     });
     expect(chainRead.kind).toBe("measured");
     expect(requests).toEqual([80]);
+  });
+
+  it("falls back to the finalized header when the bracketed block header is unavailable", async () => {
+    const header = vi.fn(async (_chain: unknown, block: unknown) => (block === "finalized"
+      ? { number: 99, hash: `0x${"cd".repeat(32)}`, timestamp: CLOCK - 300 }
+      : null));
+    const pins = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: [ETHEREUM],
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, {
+      resolveClosestBlockAtOrBeforeTimestamp: async () => 98,
+      fetchEvmBlockHeader: header as unknown as DeploymentSupplyCensusEvmDependencies["fetchEvmBlockHeader"],
+    });
+    expect(pins.get(ETHEREUM)).toEqual({
+      kind: "pinned",
+      anchor: { blockNumber: 99, blockHash: `0x${"cd".repeat(32)}`, blockTimeSec: CLOCK - 300 },
+    });
+    expect(header.mock.calls.map(([, block]) => block)).toEqual([98, "finalized"]);
+  });
+
+  it("keeps an unpinned chain when the bracketing search fails without an abort", async () => {
+    const pins = await resolveDeploymentSupplyCensusEvmPins({
+      chainIds: [ETHEREUM],
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, {
+      resolveClosestBlockAtOrBeforeTimestamp: async () => {
+        throw new Error("archive endpoint pruned the exponential walk-back");
+      },
+    });
+    expect(pins.get(ETHEREUM)).toEqual({ kind: "rejected", reason: "missing-block-pin" });
+  });
+
+  it("rejects a malformed token address before any code or multicall read", async () => {
+    const { dependencies, code, multicall } = evmDependencies();
+    const malformed = target("ethereum:0xbad", { tokenAddress: "not-an-address" });
+    const chainRead = await observeDeploymentSupplyCensusEvmChain({
+      chainId: ETHEREUM,
+      targets: [malformed],
+      anchor: anchor(),
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, dependencies);
+    expect(chainRead).toEqual({
+      kind: "measured",
+      rows: new Map(),
+      rejected: new Map([["ethereum:0xbad", "route-unreviewed"]]),
+    });
+    expect(code).not.toHaveBeenCalled();
+    expect(multicall).not.toHaveBeenCalled();
+  });
+
+  it("retries a failed multicall only against the pinned header hash", async () => {
+    const fallbackOptions: unknown[] = [];
+    let round = 0;
+    const multicall = vi.fn(async (
+      _chain: string | undefined,
+      calls: readonly EvmMulticall3Call[],
+      _block: unknown,
+      options: unknown,
+    ): Promise<EvmMulticall3Result[] | null> => {
+      round += 1;
+      if (round === 1) return null;
+      fallbackOptions.push(options);
+      return calls.map((call) => ({
+        label: call.label,
+        success: true,
+        returnData: word(call.callData === TOTAL_SUPPLY_SELECTOR ? 2_000_000n : 6n),
+      }));
+    });
+    const chainRead = await observeDeploymentSupplyCensusEvmChain({
+      chainId: ETHEREUM,
+      targets: [target("ethereum:0x01")],
+      anchor: anchor(),
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, {
+      ...evmDependencies().dependencies,
+      fetchEvmMulticall3Aggregate3AtBlock: multicall as unknown as DeploymentSupplyCensusEvmDependencies["fetchEvmMulticall3Aggregate3AtBlock"],
+    });
+    expect(chainRead.kind).toBe("measured");
+    if (chainRead.kind !== "measured") throw new Error(`Expected a measured chain read, got ${chainRead.reason}`);
+    expect(chainRead.rows.get("ethereum:0x01")).toMatchObject({ totalSupplyRaw: "2000000", decimals: 6 });
+    expect(multicall).toHaveBeenCalledTimes(2);
+    expect(fallbackOptions).toEqual([expect.objectContaining({ multicallFallbackBlockHash: anchor().blockHash })]);
+  });
+
+  it("rejects every read on the chain when the multicall cannot be authenticated", async () => {
+    const chainRead = await observeDeploymentSupplyCensusEvmChain({
+      chainId: ETHEREUM,
+      targets: [target("ethereum:0x01")],
+      anchor: anchor(),
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, {
+      ...evmDependencies().dependencies,
+      fetchEvmMulticall3Aggregate3AtBlock: async () => null,
+    });
+    expect(chainRead).toEqual({
+      kind: "measured",
+      rows: new Map(),
+      rejected: new Map([["ethereum:0x01", "read-unavailable"]]),
+    });
+  });
+
+  it("rejects the whole chain read when an unexpected dependency error escapes", async () => {
+    const chainRead = await observeDeploymentSupplyCensusEvmChain({
+      chainId: ETHEREUM,
+      targets: [target("ethereum:0x01")],
+      anchor: anchor(),
+      scoringClockSec: CLOCK,
+      chainRpcs: new Map(),
+    }, {
+      ...evmDependencies().dependencies,
+      sha256Hex: () => {
+        throw new Error("hash unavailable");
+      },
+    });
+    expect(chainRead).toEqual({ kind: "rejected", reason: "read-unavailable" });
   });
 });
 

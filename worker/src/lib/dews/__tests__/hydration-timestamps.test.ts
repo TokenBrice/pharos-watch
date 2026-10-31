@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mockD1 } from "@shared/test-utils/mock-d1";
-import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateLatestPsiScore, hydrateMintBurn, hydrateYieldRankingsCache } from "../source-state/hydration";
+import { hydrateDexLiquidity, hydrateDexLiquidityHistory, hydrateDexPrices, hydrateLatestPsiScore, hydrateMintBurn, hydrateYieldRankingsCache, hydrateYieldWarnings } from "../source-state/hydration";
 import { DEWS_PSI_FRESHNESS_BUDGET_SEC, DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC } from "../source-state/budgets";
 import { computeDEWS } from "../../dews";
 import { makeDewsInput } from "../../__tests__/dews.test-support";
@@ -250,4 +250,149 @@ describe("DEWS hydration timestamp admission", () => {
       });
     },
   );
+
+  it("hydrates only trusted fresh dex prices and never turns a failed read into a zero count", async () => {
+    const hydrated = await hydrateDexPrices({
+      db: mockD1([{ match: "FROM dex_prices", rows: [
+        { stablecoin_id: "trusted", dex_price_usd: 1, source_total_tvl: 2_000_000, updated_at: RUN_AT - 60 },
+        { stablecoin_id: "old", dex_price_usd: 1, source_total_tvl: 2_000_000, updated_at: RUN_AT - 10 * 3600 },
+        { stablecoin_id: "thin", dex_price_usd: 1, source_total_tvl: 10, updated_at: RUN_AT - 60 },
+      ] }]),
+      nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput: vi.fn(),
+    });
+    expect([...hydrated.dexPriceMap]).toEqual([
+      ["trusted", { dexPriceUsd: 1, sourceTotalTvl: 2_000_000, updatedAt: RUN_AT - 60 }],
+    ]);
+    expect(hydrated.trustedCount).toBe(1);
+    expect([...hydrated.dexPriceAgeSecById]).toEqual([["trusted", 60], ["old", 36_000], ["thin", 60]]);
+    expect([...hydrated.dexPriceStaleIds]).toEqual(["old"]);
+    expect(hydrated.staleCount).toBe(1);
+
+    const registerSourceFailure = vi.fn();
+    const failed = await hydrateDexPrices({
+      db: mockD1([{ match: "FROM dex_prices", rows: [], throwError: new Error("dex_prices read failed") }]),
+      nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+    });
+    expect(registerSourceFailure).toHaveBeenCalledWith("dex-prices", expect.any(Error));
+    expect(failed.staleCount).toBeNull();
+    expect(failed.trustedCount).toBe(0);
+  });
+
+  it("reports malformed yield warning signals without dropping the valid rows", async () => {
+    const registerMalformedPersistedInput = vi.fn();
+    const hydrated = await hydrateYieldWarnings({
+      db: mockD1([{ match: "FROM yield_data", rows: [
+        { stablecoin_id: "usdt-tether", warning_signals: JSON.stringify(["depeg", "supply"]) },
+        { stablecoin_id: "usdc-circle", warning_signals: "[1]" },
+      ] }]),
+      nowSec: RUN_AT, registerSourceFailure: vi.fn(), registerMalformedPersistedInput,
+    });
+    expect([...hydrated.yieldWarnings]).toEqual([["usdt-tether", ["depeg", "supply"]]]);
+    expect(hydrated.rowsRead).toBe(2);
+    // The service, not hydration, owns the published degradesRun value.
+    expect(registerMalformedPersistedInput).toHaveBeenCalledWith(expect.objectContaining({
+      source: "yield_data", context: "yield_data.warning_signals", stablecoinId: "usdc-circle",
+      reason: "invalid-shape",
+    }));
+  });
+
+  it("records a readable but malformed yield-rankings generation as non-degrading", async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(RUN_AT * 1000);
+    const registerMalformedPersistedInput = vi.fn();
+    const registerSourceFailure = vi.fn();
+    const hydrated = await hydrateYieldRankingsCache({
+      db: mockD1([{ match: "pharos:dews:yield-rankings-cache", rows: [], first: {
+        updated_at: RUN_AT - 60,
+        value: JSON.stringify({ rankings: { not: "an array" } }),
+      } }]),
+      nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput,
+    });
+    expect(hydrated.dependencyDiagnostics).toEqual({
+      generationId: null, updatedAt: null, ageSeconds: null,
+      freshnessBudgetSec: DEWS_YIELD_RANKINGS_RETENTION_BUDGET_SEC, reason: "invalid-shape",
+    });
+    expect(registerMalformedPersistedInput).toHaveBeenCalledWith({
+      source: "yield-rankings", context: "cache.yield-rankings", stablecoinId: "aggregate",
+      updatedAt: RUN_AT - 60, reason: "invalid-shape", degradesRun: false,
+    });
+    expect(registerSourceFailure).not.toHaveBeenCalled();
+  });
+
+  it("keeps mint/burn freshness on the 30-day row when the 24-hour window has no events", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const end = Math.floor(RUN_AT / 3600) * 3600;
+    try {
+      insertAdmittedMintBurnGauge(sqlite, end, RUN_AT);
+      sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+        mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+        VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 25 * 3600);
+      const registerSourceFailure = vi.fn();
+      const hydrated = await hydrateMintBurn({
+        db, nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+      });
+      expect(hydrated.mintBurnMap.get("usdt-tether")).toMatchObject({
+        burn24h: 0, burnBaseline: 700_000 / 30, baselineDays: 30,
+      });
+      expect(hydrated.mintBurnAgeSecById.get("usdt-tether")).toBe(0);
+      expect(registerSourceFailure).not.toHaveBeenCalled();
+    } finally {
+      sqlite.close();
+    }
+  });
+
+  it("flags a stale published mint/burn window as stale evidence and a freshness failure", async () => {
+    const { sqlite, db } = createLatestSchemaSqlite();
+    const end = Math.floor(RUN_AT / 3600) * 3600 - 26 * 3600;
+    try {
+      insertAdmittedMintBurnGauge(sqlite, end, RUN_AT - 3600);
+      sqlite.prepare(`INSERT INTO mint_burn_hourly (stablecoin_id, chain_id, hour_ts, mint_count, burn_count,
+        mint_unpriced_event_count, burn_unpriced_event_count, mint_volume_usd, burn_volume_usd, net_flow_usd)
+        VALUES ('usdt-tether', 'ethereum', ?, 0, 1, 0, 0, 0, 700000, -700000)`).run(end - 3600);
+      const registerSourceFailure = vi.fn();
+      const hydrated = await hydrateMintBurn({
+        db, nowSec: RUN_AT, registerSourceFailure, registerMalformedPersistedInput: vi.fn(),
+      });
+      expect(hydrated.mintBurnMap.get("usdt-tether")).toMatchObject({ burn24h: 700_000 });
+      expect([...hydrated.mintBurnStaleIds]).toEqual(["usdt-tether"]);
+      expect(hydrated).toMatchObject({ freshCount: 0, staleCount: 1, freshnessAgeSec: 26 * 3600 });
+      expect(hydrated.mintBurnAgeSecById.get("usdt-tether")).toBe(26 * 3600);
+      expect(registerSourceFailure).toHaveBeenCalledTimes(1);
+      expect(registerSourceFailure).toHaveBeenCalledWith(
+        "mint-burn-hourly-freshness",
+        "mint_burn_hourly age 93600s exceeds 86400s",
+      );
+    } finally {
+      sqlite.close();
+    }
+  });
 });
+
+/**
+ * One admitted gauge generation whose 24h/30d scan windows are both complete.
+ * The payload clock is pinned to the window end so `hydrateMintBurn` reads at one pin.
+ */
+function insertAdmittedMintBurnGauge(
+  sqlite: ReturnType<typeof createLatestSchemaSqlite>["sqlite"],
+  end: number,
+  cacheUpdatedAt: number,
+): void {
+  const window = { complete: true, unavailableReason: null };
+  const value = {
+    gauge: { score: null },
+    updatedAt: end,
+    publication: {
+      evaluatedAt: RUN_AT, requiredBaselineSec: 90 * 86400, freshnessBudgetSec: 7200,
+      legs: [{ configKey: "synthetic", configFingerprint: "synthetic-v1", stablecoinId: "usdt-tether", chainId: "ethereum",
+        status: "admitted", reason: null, admittedAt: null, baselineFrom: end - 90 * 86400, baselineTo: end,
+        coveredSeconds: 90 * 86400, frontierAgeSec: 0 }],
+    },
+    window: { start: end - 86400, end, semantics: "closed-utc-hours" },
+    coins: [{ stablecoinId: "usdt-tether", symbol: "USDT", pressureShiftScore: null, netFlow24hUsd: null,
+      coverage: { startBlock: 1, lastSyncedBlock: 2, lagBlocks: 0, historyStartAt: end - 90 * 86400,
+        has24hWindow: true, has30dWindow: true, has90dWindow: true, isPartial: false, status: "full",
+        windows: { window24h: window, window7d: window, window30d: window, window90d: window } } }],
+  };
+  sqlite.prepare("INSERT INTO cache (key, value, updated_at) VALUES (?, ?, ?)")
+    .run(aggregateFlowCacheKey(24), JSON.stringify(value), cacheUpdatedAt);
+}
